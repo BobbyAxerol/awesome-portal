@@ -1,0 +1,12 @@
+{
+  "schema_version": "research.linked-final-audit.v1",
+  "parent_run_id": "rrun_synthetic_parent",
+  "state": "AWAITING_VERIFICATION",
+  "target_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "profile_id": "p23.delta-pinned-final-audit.v1",
+  "profile_digest": "457267c54edd02fcea53eceb92a81cdec9fdaefc8b9231638540b51a85b92491",
+  "may_create": false,
+  "child_run_id": "rrun_synthetic_child",
+  "progress_href": "/research/quantbt/runs/rrun_synthetic_child/progress",
+  "verification": null
+}

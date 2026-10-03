@@ -998,6 +998,7 @@ export interface components {
             frozen_core: components["schemas"]["FrozenCore"];
             approval_annotation: components["schemas"]["Annotation"];
             exports: components["schemas"]["ExportCapabilities"];
+            linked_final_audit?: components["schemas"]["VerifiedPinnedAudit"];
         };
         ExportCreate: {
             /** @enum {unknown} */
@@ -1028,6 +1029,44 @@ export interface components {
                 message: string;
             };
             request_id?: string;
+        };
+        PinnedAuditResult: {
+            /** @constant */
+            schema_version: "research.pinned-selection-audit-result.v1";
+            run_id: string;
+            parent_run_id: string;
+            target_digest: string;
+            parameters_digest: string;
+            /** @constant */
+            engine_release_id: "er_quantbt_111";
+            /** @constant */
+            engine_version: "1.1.1";
+            snapshot_id: string;
+            snapshot_content_hash: string;
+            source_selection_digest: string;
+            /** @constant */
+            source_selection_kind: "P05_SELECTION_PARAMETERS_JSON";
+            source_selection_part_digest: string;
+            source_config_digest: string;
+            /** @constant */
+            audit_target_kind: "SINGLE_PARAMETER_SET";
+            /** @constant */
+            optimizer_reinvoked: false;
+            /** @constant */
+            optimizer_trials: 0;
+            n_folds: number;
+            bars: number;
+        };
+        /** @description Immutable, worker-fenced receipt whose child and original target/parts were byte-verified. result_digest hashes canonical result; child_run_id=result.run_id. No raw config, params, data, artifact locator or transport secrets. */
+        VerifiedPinnedAudit: {
+            child_run_id: string;
+            child_attempt_id: string;
+            artifact_id: string;
+            artifact_revision: number;
+            manifest_digest: string;
+            result_digest: string;
+            verified_at_utc_ms: number;
+            result: components["schemas"]["PinnedAuditResult"];
         };
     };
     responses: {

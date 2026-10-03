@@ -16,6 +16,8 @@ import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from
 import { ResearchLineageError } from "./lineage.error";
 import { ResearchRunLibraryRepository, type RunLibraryRow } from "./run-library.repository";
 import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
+import { readPinnedAuditProofs } from "./final-audit.read";
+import type { VerifiedPinnedAudit } from "./final-audit.contract";
 
 type JsonColumn = Record<string, unknown> | string | null;
 const OUTER_DECIMAL_PATTERN = "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$";
@@ -113,6 +115,7 @@ export interface LineageBoundary {
 }
 
 export interface LineageChildRunRow {
+  verified_audit?: VerifiedPinnedAudit;
   attempt_id: string;
   run_id: string;
   run_kind: string;
@@ -381,6 +384,17 @@ export class ResearchLineageRepository {
           [scope.workspaceId, ids],
         )).rows;
 
+      const childPrefix = new Map<string, number>();
+      const auditedIds = childRuns.filter(child => {
+        const n = childPrefix.get(child.attempt_id) ?? 0;
+        childPrefix.set(child.attempt_id,n+1);
+        return n < 32 && child.relationship_kind === "AUDIT_OF_SELECTION" && child.state === "READY";
+      }).map(child=>child.run_id);
+      const verifiedAudits = await readPinnedAuditProofs(client,scope.workspaceId,auditedIds);
+      for (const child of childRuns) {
+        const proof = verifiedAudits.get(child.run_id);
+        if (proof) child.verified_audit = proof;
+      }
       const countResult = await client.query<LineageCountsRow>(
         `WITH selected_attempts AS (
            SELECT attempt.attempt_id, attempt.state, attempt.created_at

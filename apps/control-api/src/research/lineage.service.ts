@@ -590,6 +590,7 @@ export class ResearchLineageService {
             parent_run_id: child.parent_run_id,
             state: child.state as Node["child_runs"][number]["state"],
             created_at_utc_ms: requiredUtcMs(child.created_at, "child run timestamp"),
+            ...(child.verified_audit ? { verified_audit: child.verified_audit } : {}),
           };
         });
       if (!ATTEMPT_STATES.has(row.state) || !INTENT_KINDS.has(row.intent_kind)) {

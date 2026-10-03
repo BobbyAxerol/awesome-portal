@@ -73,6 +73,11 @@ _USAGE_MAXIMA = {
 # Profile-specific wording for the two source-built claim sentences and the
 # claim line. The P04 sentences are unchanged byte-for-byte.
 _PROFILE_COPY = {
+    "PINNED_FINAL_AUDIT": {
+        "forecast": "The pinned evaluation does not run an optimizer or issue a release claim.",
+        "not_issued": "The pinned evaluation sealed its evidence; publication is a separate action.",
+        "claimed": "worker claimed a frozen-selection audit; zero optimizer trials",
+    },
     "P04_FIXED": {
         "forecast": "The fixed qualification has not sealed a publishable claim.",
         "not_issued": "The fixed P10 qualification sealed its artifacts but did not issue a release claim.",
@@ -551,8 +556,11 @@ class ResearchProgressJournal:
         self.attempt_id = _identifier(attempt_id, "attempt id")
         if not isinstance(lease_epoch, int) or isinstance(lease_epoch, bool) or lease_epoch < 1:
             raise ResearchProgressError("P11 lease epoch is invalid")
-        if not isinstance(planned_trials, int) or isinstance(planned_trials, bool) or not 1 <= planned_trials <= 2_147_483_647:
+        minimum_trials = 0 if profile == "PINNED_FINAL_AUDIT" else 1
+        if not isinstance(planned_trials, int) or isinstance(planned_trials, bool) or not minimum_trials <= planned_trials <= 2_147_483_647:
             raise ResearchProgressError("P11 planned trial count is invalid")
+        if profile == "PINNED_FINAL_AUDIT" and planned_trials != 0:
+            raise ResearchProgressError("P11 pinned audit must report zero optimizer trials")
         if (
             not isinstance(cpu_cap_seconds, int) or isinstance(cpu_cap_seconds, bool)
             or not 1 <= cpu_cap_seconds <= _max_profile_cpu_seconds()
@@ -1209,7 +1217,7 @@ class ResearchProgressJournal:
             not isinstance(overall, dict)
             or not isinstance(overall.get("trials_declared"), int)
             or isinstance(overall.get("trials_declared"), bool)
-            or overall["trials_declared"] < 1
+            or overall["trials_declared"] < 0
             or not isinstance(readiness, dict)
             or readiness.get("mandatory") not in {"PENDING", "SEALING", "SEALED", "FAILED"}
             or readiness.get("optional") not in {"NOT_APPLICABLE", "PENDING", "READY", "FAILED"}

@@ -25,7 +25,7 @@ export async function assertUtilityCapacity(
         WHERE workspace_id = $1 AND state IN ('QUEUED', 'RUNNING')
        UNION ALL
        SELECT requested_by_user_id AS actor FROM research.jobs
-        WHERE workspace_id = $1 AND job_kind = 'DIAGNOSTIC'
+        WHERE workspace_id = $1 AND job_kind IN ('DIAGNOSTIC', 'AUDIT')
           AND state IN ('QUEUED', 'CLAIMED', 'RUNNING')
        UNION ALL
        SELECT actor_user_id AS actor FROM research.utility_verify_slots_v1

@@ -30,6 +30,8 @@ import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contr
 import { ResearchAllTimeDistributionsSchema } from "./all-time-distributions.contract";
 import { CurrentSourceSummarySchema, CurrentSourceTrialPayloadSchema } from "./current-source.payload";
 import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
+import { readPinnedAuditProofs } from "./final-audit.read";
+import type { VerifiedPinnedAudit } from "./final-audit.contract";
 
 export type { ReleaseCandidateRetainedLane } from "./release-candidate.retained-lane";
 
@@ -43,6 +45,7 @@ export interface ReleaseCandidateArtifact {
 }
 
 export interface ReleaseCandidateSource {
+  verifiedAudit?: VerifiedPinnedAudit;
   runId: string;
   displayLabel?: string | null;
   attemptId: string;
@@ -318,6 +321,7 @@ export function releaseCandidateSourceFingerprint(source: ReleaseCandidateSource
     })),
     // W7: present only on the retained lane, so a P04 fingerprint is unchanged.
     ...(!source.wfo ? {} : { retained_lane: source.wfo }),
+    ...(source.verifiedAudit ? { linked_final_audit: source.verifiedAudit } : {}),
   }), "utf8").digest("hex");
 }
 
@@ -515,7 +519,9 @@ export class ResearchReleaseCandidateRepository {
            (workspace_id, release_candidate_id, run_id, selection_id, final_audit_run_id,
             manifest_digest, schema_version, lifecycle_state)
          VALUES ($1, $2, $3, $4, $5, $6, 'research.release-candidate-pack.v1', 'SEALED')`,
-        [scope.workspaceId, releaseCandidateId, runId, source.selection.selectionId, runId, built.packDigest],
+        [scope.workspaceId, releaseCandidateId, runId, source.selection.selectionId,
+          built.frozenCore.linked_final_audit
+            ? (built.frozenCore.linked_final_audit as VerifiedPinnedAudit).child_run_id : runId, built.packDigest],
       );
       await client.query(
         `INSERT INTO research.release_candidate_packs_v1
@@ -692,6 +698,7 @@ export class ResearchReleaseCandidateRepository {
     );
     const wfo = await this.retainedLane(client, workspaceId, runId, row);
     const selectedTrialNativeFacts = await this.selectedTrialNativeFacts(client, workspaceId, runId, wfo);
+    const verifiedAudit = (await readPinnedAuditProofs(client,workspaceId,[runId])).get(runId);
     return {
       runId: row.run_id,
       displayLabel: await this.readDisplayLabel(client, workspaceId, row.run_id),
@@ -748,6 +755,7 @@ export class ResearchReleaseCandidateRepository {
       asOfUtcMs: safeInteger(row.as_of_utc_ms, "snapshot timestamp"),
       wfo,
       ...(selectedTrialNativeFacts ? { selectedTrialNativeFacts } : {}),
+      ...(verifiedAudit ? { verifiedAudit } : {}),
     };
   }
 

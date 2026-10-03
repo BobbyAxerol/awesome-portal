@@ -231,27 +231,21 @@ export interface ReportAuditRelation {
   relationshipKind: string;
   parentRunId: string | null;
   auditChildren: ReadonlyArray<{ runId: string; state: string }>;
+  verifiedAudit?: import("./final-audit.contract").VerifiedPinnedAudit | null;
 }
 
 const FINAL_AUDIT_NOT_READ = "P18_RUN_LINEAGE_RELATION_NOT_READ";
 
 function linkedChild(relation: ReportAuditRelation, runId: string, target: ResearchReportFinalAudit["audit_target_kind"]): ResearchReportFinalAudit | null {
-  if (relation.relationshipKind === "AUDIT_OF_SELECTION") {
-    return {
-      schema_version: "research.report-final-audit.v1", kind: "LINKED_CHILD", reason_code: null, audit_target_kind: target,
-      final_audit_run_id: runId, audited_run_id: relation.parentRunId, relationship: "AUDIT_OF_SELECTION",
-      optimizer_reinvoked: false, optimizer_basis: "AUDIT_OF_SELECTION_RUNS_THE_PINNED_SELECTION",
-      source_refs: [{ key: "lineage.relationship", ref: `AUDIT_OF_SELECTION of ${relation.parentRunId ?? "unknown"}` }], folds: [],
-    };
-  }
-  const ready = relation.auditChildren.filter((child) => child.state === "READY");
-  if (ready.length === 0) return null;
-  const child = ready[ready.length - 1]!;
+  const proof = relation.verifiedAudit;
+  if (!proof || (runId !== proof.result.parent_run_id && runId !== proof.child_run_id)) return null;
   return {
     schema_version: "research.report-final-audit.v1", kind: "LINKED_CHILD", reason_code: null, audit_target_kind: target,
-    final_audit_run_id: child.runId, audited_run_id: runId, relationship: "AUDIT_OF_SELECTION",
+    final_audit_run_id: proof.child_run_id, audited_run_id: proof.result.parent_run_id, relationship: "AUDIT_OF_SELECTION",
     optimizer_reinvoked: false, optimizer_basis: "AUDIT_OF_SELECTION_RUNS_THE_PINNED_SELECTION",
-    source_refs: [{ key: "lineage.audit_child", ref: `${child.runId} · READY · AUDIT_OF_SELECTION` }], folds: [],
+    source_refs: [{ key: "audit.verified_receipt", ref: proof.result_digest },
+      { key: "audit.original_target", ref: proof.result.target_digest },
+      { key: "audit.sealed_manifest", ref: proof.manifest_digest }], folds: [],
   };
 }
 

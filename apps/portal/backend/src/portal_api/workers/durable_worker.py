@@ -285,10 +285,17 @@ class DurableQuantWorker:
         # same confined child and seals one WHATIF_GRID relation instead of
         # an RS-02 current-source lane.
         is_whatif = is_research_producer and research_request.research.is_whatif
+        is_final_audit = is_research_producer and research_request.research.is_final_audit
         is_imported_alpha = is_research_producer and research_request.research.is_imported_alpha
         executor_settled = False
         whatif_job = research_request.research.whatif if is_whatif else None
         try:
+            if is_final_audit and not (
+                _flag("PORTAL_FEATURE_RESEARCH_WFO_PROFILE")
+                and _flag("PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS")
+                and _flag("PORTAL_FEATURE_RESEARCH_PROGRESS")
+            ):
+                raise _DeltaWfoProfileUnavailable("Pinned audit requires WFO, P05 custody and P11 progress")
             if is_imported_alpha and not (
                 _flag("PORTAL_FEATURE_RESEARCH_IMPORTED_EXECUTION")
                 and _flag("PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS")
@@ -352,15 +359,15 @@ class DurableQuantWorker:
                     attempt_id=attempt.run_attempt_id,
                     lease_epoch=research_request.lease_epoch,
                     planned_trials=(
-                        len(whatif_job.evaluations) if whatif_job is not None
+                        0 if is_final_audit else len(whatif_job.evaluations) if whatif_job is not None
                         else wfo_trials if is_delta_wfo else 1
                     ),
                     cpu_cap_seconds=(
-                        WHATIF_CPU_SECONDS if is_whatif else IMPORTED_ALPHA_CPU_SECONDS
+                        120 if is_final_audit else WHATIF_CPU_SECONDS if is_whatif else IMPORTED_ALPHA_CPU_SECONDS
                         if is_imported_alpha else wfo_cpu_cap if is_delta_wfo else 45
                     ),
                     profile=(
-                        "DELTA_WHATIF" if is_whatif else "IMPORTED_ALPHA"
+                        "PINNED_FINAL_AUDIT" if is_final_audit else "DELTA_WHATIF" if is_whatif else "IMPORTED_ALPHA"
                         if is_imported_alpha else "DELTA_WFO" if is_delta_wfo else "P04_FIXED"
                     ),
                 )
@@ -588,6 +595,7 @@ class DurableQuantWorker:
                             and receipt["fixed_replay_source"].get("state") == "AVAILABLE"
                             else None
                         ),
+                        **({"audit_source_root": engine_root / WFO_SOURCE_DIRNAME / run_id} if is_final_audit else {}),
                     )
             split_digest: str | None = None
             sealed_names: list[str] = []
@@ -681,7 +689,7 @@ class DurableQuantWorker:
                     # (CG-P11-09), never a zero that reads as a measurement.
                     "usage": self._p11_usage(
                         result,
-                        cpu_cap_seconds=WHATIF_CPU_SECONDS if is_whatif else wfo_cpu_cap if is_delta_wfo else 45,
+                        cpu_cap_seconds=120 if is_final_audit else WHATIF_CPU_SECONDS if is_whatif else wfo_cpu_cap if is_delta_wfo else 45,
                     ),
                 }
                 if evidence_digest is not None:

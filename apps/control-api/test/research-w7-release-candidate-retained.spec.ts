@@ -35,6 +35,7 @@ import { currentSourceReadRevision, currentSourceSealDigest } from "../src/resea
 import { DELTA_CAUSAL_INNER_PROFILE } from "../src/research/delta-causal-inner.profile";
 import { ResearchReleaseCandidateService } from "../src/research/release-candidate.service";
 import { openApiValidator } from "./research-rf05-openapi";
+import { auditProof } from "./research-final-audit.fixture";
 
 type Json = Record<string, any>;
 const gz = (name: string) => JSON.parse(gunzipSync(readFileSync(join(__dirname, name))).toString("utf8")) as Json;
@@ -144,6 +145,30 @@ const rows = (compose: Json) => Object.fromEntries((compose.pack as Json[]).map(
 const composeValidator = openApiValidator("research-release-candidate.openapi.json", "ComposeResponseP21");
 
 describe("W7 · P21 retained lane on the real Delta WFO run", () => {
+  it("uses a byte-verified child only for the same frozen parameter digest and preserves the parent trial",async()=>{
+    const original=source();
+    const facts=retainedLaneFacts(original.wfo!);
+    const result={...auditProof.result,parent_run_id:original.runId,parameters_digest:facts.parameterDigest!};
+    const proof={...auditProof,result,result_digest:sha(result)};
+    // This fixture removes generation witnesses, modelling non-reusable
+    // original evidence; the selected trial and raw parent report stay fixed.
+    const noGeneration=lane().folds.map(fold=>{const payload={...fold.payload};delete payload.child_audit;return {...fold,payload};});
+    const value=source({verifiedAudit:proof},{folds:noGeneration});
+    const originalCore=sha(value.report.frozenCore);
+    const noProof=await subject(source(),draft(original)).service.detail(scope,original.runId);
+    expect((await subject(source({}, {folds:noGeneration}),draft(original)).service.detail(scope,original.runId))
+      .pack.find(item=>item.key==="FINAL_AUDIT_REPLAY")?.status).toBe("MISSING");
+    const composed=await subject(value,draft(value)).service.detail(scope,value.runId);
+    expect(composed.fields.find(f=>f.key==="final_audit_run_id")?.value).toBe(proof.child_run_id);
+    expect(composed.fields.find(f=>f.key==="final_audit_attempt_id")?.value).toBe(proof.child_attempt_id);
+    expect(composed.pack.find(item=>item.key==="FINAL_AUDIT_REPLAY")?.digest).toBe(proof.result_digest);
+    expect(composed.selected_params).toEqual(noProof.selected_params);
+    expect(composed.linked_final_audit).toEqual(proof);composeValidator.assert(composed);
+    expect(sha(value.report.frozenCore)).toBe(originalCore);
+    const different={...result,parameters_digest:"0".repeat(64)};
+    const mismatched=source({verifiedAudit:{...proof,result:different,result_digest:sha(different)}});
+    expect((await subject(mismatched,draft(mismatched)).service.detail(scope,mismatched.runId)).linked_final_audit).toBeUndefined();
+  });
   it("resolves v2 by its own immutable digest and preserves the retained audit target", async () => {
     const value = source({}, {executionProfileId: DELTA_WFO_V2_PROFILE_ID, executionProfileDigest: DELTA_WFO_V2_PROFILE_DIGEST});
     const facts = retainedLaneFacts(value.wfo!);

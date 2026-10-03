@@ -32,6 +32,8 @@ import { ResearchReportService } from "../src/research/report.service";
 import { retainedCore, retainedFinalAudit, type RetainedReads } from "../src/research/report-core-v2";
 import { DELTA_CAUSAL_INNER_PROFILE } from "../src/research/delta-causal-inner.profile";
 import { openApiValidator } from "./research-rf05-openapi";
+import { auditProof as syntheticAuditProof } from "./research-final-audit.fixture";
+import type { ReportAuditRelation } from "../src/research/report-core-v2";
 
 type Kind = "OBSERVATION" | "FOLD" | "TRIAL" | "CANDIDATE" | "SELECTION";
 interface Fixture {
@@ -147,7 +149,7 @@ function subject(options: {
   manifestDigest?: string;
   importDigest?: string;
   /** X2 · P18-T10: the run's P19 lineage relation (undefined = the repository cannot answer). */
-  relation?: { relationshipKind: string; parentRunId: string | null; auditChildren: Array<{ runId: string; state: string }> } | null | undefined;
+  relation?: ReportAuditRelation | null | undefined;
 } = {}) {
   let stored: StoredResearchReport | undefined;
   const repository = {
@@ -233,7 +235,8 @@ it("synthetic causal report preserves each actual fold's parameters and labels t
   expect(audit.optimizer_basis).toBe("EVERY_OOS_GENERATION_CHILD_RAN_ITS_FOLD_SELECTED_CANDIDATE");
   expect(audit.source_refs.some(row => row.key === "frozen_candidate")).toBe(false);
   const linked = retainedFinalAudit(real.run_id, { relationshipKind: "PRIMARY", parentRunId: null, auditChildren: [{ runId: "unproven-child", state: "READY" }] }, reads.freeze, reads.search, reads.replay);
-  expect(linked).toMatchObject({ kind: "NOT_PUBLISHED", reason_code: "CAUSAL_LINKED_CHILD_PER_FOLD_AUDIT_TARGET_NOT_PROVEN" });
+  expect(linked).toMatchObject({kind:"REUSED_ORIGINAL",audit_target_kind:"PER_FOLD_PARAMETER_SELECTIONS",
+    optimizer_basis:"EVERY_OOS_GENERATION_CHILD_RAN_ITS_FOLD_SELECTED_CANDIDATE"});
 });
 
 it("B8 terminal split absence cannot be sealed as a completed retained Report", async () => {
@@ -690,11 +693,23 @@ describe("X2 · P18-T10 — reused original vs linked child, with source refs, n
     expect(core.final_audit!.source_refs[1]!.ref).toContain("2671e27b827ab2701d52e6ce");
   });
 
-  it("a READY AUDIT_OF_SELECTION child in the lineage is the linked final audit", async () => {
+  it("a READY relationship without an immutable audit receipt does not prove linked audit", async () => {
     const core = v2(await subject({
       relation: { relationshipKind: "PRIMARY", parentRunId: null, auditChildren: [{ runId: "rrun_audit_1", state: "QUEUED" }, { runId: "rrun_audit_2", state: "READY" }] },
     }).service.materialize(scope, real.run_id, "RS02_RETAINED_CURRENT_SOURCE"));
-    expect(core.final_audit).toMatchObject({ kind: "LINKED_CHILD", final_audit_run_id: "rrun_audit_2", audited_run_id: real.run_id, relationship: "AUDIT_OF_SELECTION", optimizer_reinvoked: false });
+    expect(core.final_audit).toMatchObject({ kind: "REUSED_ORIGINAL", final_audit_run_id: real.run_id,
+      audited_run_id: real.run_id, relationship: "PRIMARY", optimizer_reinvoked: false });
+  });
+
+  it("only a verified child receipt proves linked audit, retaining the explicit receipt/target/manifest refs",async()=>{
+    const result={...syntheticAuditProof.result,parent_run_id:real.run_id};
+    const proof={...syntheticAuditProof,result,result_digest:sha256ResearchJson(result)};
+    const core=v2(await subject({relation:{relationshipKind:"PRIMARY",parentRunId:null,auditChildren:[],verifiedAudit:proof}})
+      .service.materialize(scope,real.run_id,"RS02_RETAINED_CURRENT_SOURCE"));
+    expect(core.final_audit).toMatchObject({kind:"LINKED_CHILD",final_audit_run_id:proof.child_run_id,
+      audited_run_id:real.run_id,optimizer_reinvoked:false});
+    expect(core.final_audit!.source_refs).toEqual([{key:"audit.verified_receipt",ref:proof.result_digest},
+      {key:"audit.original_target",ref:proof.result.target_digest},{key:"audit.sealed_manifest",ref:proof.manifest_digest}]);
   });
 
   it("a lineage that cannot be read leaves the final audit a typed absence", async () => {

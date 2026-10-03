@@ -8,6 +8,7 @@
  */
 
 import { z } from "zod";
+import { VerifiedPinnedAuditSchema } from "./final-audit.contract";
 
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
 const AlphaIdSchema = z.string().regex(/^[a-z][a-z0-9-]{2,63}$/);
@@ -229,6 +230,7 @@ const SemanticDiffSchema = z.object({
 }).strict();
 
 const ChildRunSchema = z.object({
+  verified_audit: VerifiedPinnedAuditSchema.optional(),
   run_id: OpaqueIdSchema,
   run_kind: z.enum(["PRIMARY", "AUDIT", "DIAGNOSTIC", "REPRODUCTION", "EXPORT", "VERIFY", "PROJECTION"]),
   relationship_kind: z.enum([

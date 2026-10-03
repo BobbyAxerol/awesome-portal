@@ -77,7 +77,9 @@ describe("P22 approval-version settlement on disposable PostgreSQL", () => {
            source_fingerprint, schema_version, frozen_core, sealed_by_user_id)
           VALUES ('ws_p22_settle', 'rc_00000000000000000000000000', 'rrun_p22_audit',
             'rcd_AAAAAAAAAAAAAAAAAAAAAAAAAA', repeat('a',64), repeat('b',64),
-            'research.release-candidate-pack.v1', '{}'::jsonb, 'usr_p22_settle');
+            'research.release-candidate-pack.v1',
+            '{"fields":[{"key":"final_audit_run_id","value":"rrun_p22_audit","availability":{"state":"AVAILABLE"}}],"pack":[{"key":"FINAL_AUDIT_REPLAY","status":"COMPLETE","availability":{"state":"AVAILABLE"}}]}'::jsonb,
+            'usr_p22_settle');
         INSERT INTO governance_approval_requests
           (approval_id, workspace_id, gate, subject_type, subject_id, subject_label,
            environment, target_label, requester_user_id, requester_username,
@@ -109,6 +111,12 @@ describe("P22 approval-version settlement on disposable PostgreSQL", () => {
         SET session_replication_role = origin;
       `);
 
+      // This settlement fixture uses sealed same-run replay authority.
+      // AUDIT_OF_SELECTION is a relationship label, not a verified-child
+      // proof; the pinned-audit migration suite covers that refusal separately.
+      expect((await database.query(`SELECT research.p22_final_audit_source_eligible(
+        'ws_p22_settle','rc_00000000000000000000000000','rrun_p22_audit') AS eligible`))
+        .rows[0].eligible).toBe(true);
       await database.query(`SELECT research.p22_record_promotion_pick(
         'ws_p22_settle','rc_00000000000000000000000000','apr_p22_settle',
         'av_p22_settle','att_p22_settle','rrun_p22_audit',NULL,NULL,'[]'::jsonb,

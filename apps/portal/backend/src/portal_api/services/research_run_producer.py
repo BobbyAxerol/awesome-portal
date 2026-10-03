@@ -53,6 +53,7 @@ from portal_api.services.research_supervisor import (
     DELTA_WFO_PREVIEW_LONG_CHILD_LIMITS,
     IMPORTED_ALPHA_CHILD_LIMITS,
     DeltaWfoChildReceipt,
+    PinnedAuditChildReceipt,
     ImportedAlphaChildReceipt,
     IsolatedResearchSupervisor,
     ResearchChildLimits,
@@ -329,6 +330,7 @@ class ResearchRunProducerExecutor:
     wfo_child_limits: ResearchChildLimits = DELTA_WFO_CHILD_LIMITS
     imported_child_limits: ResearchChildLimits = IMPORTED_ALPHA_CHILD_LIMITS
     imported_source_client: ResearchImportedSourceClient | None = None
+    parent_retained_root: Path | None = None
 
     def causal_planned_trials(self, request: ResearchRunProducerRequest) -> int:
         """Plan against the exact immutable snapshot before opening P11."""
@@ -428,6 +430,8 @@ class ResearchRunProducerExecutor:
             if progress_journal is not None:
                 progress_journal.emit(event_type, payload)
 
+        if request.research.is_final_audit:
+            return self._execute_final_audit_sync(request, artifact_root, progress)
         if request.research.is_delta_wfo or request.research.is_whatif:
             return self._execute_delta_wfo_sync(request, artifact_root, progress)
 
@@ -756,6 +760,101 @@ class ResearchRunProducerExecutor:
             "is_qualification_source": child.is_qualification_source,
             "is_qualification_path": child.is_qualification_path,
         }
+
+    def _execute_final_audit_sync(
+        self, request: ResearchRunProducerRequest, artifact_root: Path, progress: Any,
+    ) -> dict[str, Any]:
+        """Evaluate the original byte-pinned snapshot without a new HMD load.
+
+        P06 only accepts its named market root. Copy the original snapshot
+        byte-for-byte there (never crop/rewrite/resample it), then let the
+        confined child verify the snapshot and original retained selection.
+        The worker later seals the output with its live cancellation fence.
+        """
+        if not delta_wfo_enabled() or self.parent_retained_root is None:
+            raise ResearchRunProducerError("Pinned audit requires the WFO/P05 custody binding", code="CAPABILITY_MISMATCH")
+        research = request.research
+        target = research.final_audit_target
+        if target is None or research.final_audit_target_digest != target.target_digest():
+            raise ResearchRunProducerError("Pinned audit target is not bound", code="CAPABILITY_MISMATCH")
+        progress("stage_started", {"stage": "S1"})
+        identity, _ = self.snapshots.describe(target.snapshot_id)
+        if identity.content_hash != target.snapshot_content_hash:
+            raise ResearchRunProducerError("Pinned audit snapshot identity changed", code="CAPABILITY_MISMATCH")
+        frame = self.snapshots.snapshot_path(target.snapshot_id) / "frame.parquet"
+        # All parent directories must be ordinary immutable-custody paths.
+        if any(path.is_symlink() for path in (frame, *frame.parents)) or not frame.is_file():
+            raise ResearchRunProducerError("Pinned audit snapshot is not an immutable file")
+        if not 0 < frame.stat().st_size <= 64 * 1024 ** 2:
+            raise ResearchRunProducerError("Pinned audit snapshot exceeds its byte cap", code="RESOURCE_EXCEEDED")
+        job_directory = self.market_root / request.job_id / request.worker_attempt_id
+        job_directory.mkdir(mode=0o700, parents=True, exist_ok=False)
+        tape = job_directory / "original-snapshot.parquet"
+        try:
+            sha = hashlib.sha256()
+            count = 0
+            with frame.open("rb") as original, tape.open("xb") as copy:
+                for block in iter(lambda: original.read(64 * 1024), b""):
+                    count += len(block)
+                    if count > 64 * 1024 ** 2:
+                        raise ResearchRunProducerError("Pinned audit snapshot grew beyond its cap", code="RESOURCE_EXCEEDED")
+                    sha.update(block)
+                    copy.write(block)
+                copy.flush()
+                os.fsync(copy.fileno())
+            os.chmod(tape, 0o600)
+            if sha.hexdigest() != target.snapshot_content_hash:
+                raise ResearchRunProducerError("Pinned audit original snapshot bytes changed")
+            progress("stage_completed", {"stage": "S1"})
+            progress("stage_started", {"stage": "S2"})
+            receipt = PinnedAuditChildReceipt(job_id=request.job_id, run_id=request.run_id,
+                worker_attempt_id=request.worker_attempt_id, lease_epoch=request.lease_epoch,
+                market_path=tape, artifact_root=self.parent_retained_root, target=target,
+                expected_target_digest=research.final_audit_target_digest)
+            progress("stage_completed", {"stage": "S2"})
+            # Stage 3 resolves the frozen target, not a candidate search.
+            progress("stage_started", {"stage": "S3"})
+            progress("stage_completed", {"stage": "S3"})
+            progress("stage_started", {"stage": "S4"})
+            child = self.supervisor.run_delta_wfo(receipt, limits=DELTA_WFO_CHILD_LIMITS,
+                on_child_alive=lambda: progress("heartbeat", {}))
+            try:
+                source = artifact_root / WFO_SOURCE_DIRNAME / request.run_id
+                source.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+                shutil.copytree(child.output_root / request.run_id, source, symlinks=False)
+                engine = artifact_root / request.run_id
+                (engine / "research").mkdir(mode=0o700, parents=True, exist_ok=True)
+                (engine / "config").mkdir(mode=0o700, exist_ok=True)
+                public_receipt = {"schema_version": "research.p10.pinned-audit-receipt.v1",
+                    "run_id": request.run_id, "execution_profile_id": research.execution_profile_id,
+                    "execution_profile_digest": research.execution_profile_digest,
+                    "requested_spec_digest": research.requested_spec_digest,
+                    "effective_spec_digest": research.effective_spec_digest,
+                    "dataset_binding_digest": research.dataset_binding_digest,
+                    "manifest_digest": research.manifest_digest,
+                    "audit": child.audit_receipt,
+                    "resource": {"elapsed_seconds": child.elapsed_seconds,
+                        "peak_rss_bytes": child.peak_rss_bytes, "cpu_seconds": child.cpu_seconds,
+                        "enforced_limits": child.enforced_limits}}
+                for path, body in ((engine / "config/request.json", {
+                        "schema_version": "research.p10.run-config.v1", "run_id": request.run_id,
+                        "alpha_id": research.alpha_id, "alpha_version_id": research.alpha_version_id,
+                        "execution_profile_id": research.execution_profile_id,
+                        "requested_spec": research.requested_spec,
+                        "audit_target_digest": research.final_audit_target_digest}),
+                        (engine / "research/p10-receipt.json", public_receipt)):
+                    path.write_text(json.dumps(canonicalize(body), sort_keys=True, indent=2) + "\n", encoding="utf-8")
+                    os.chmod(path, 0o600)
+                progress("budget_tick", _cpu_budget_tick_payload(min(child.cpu_seconds, 120), 120))
+                progress("stage_completed", {"stage": "S4"})
+                return {"status": "COMPLETED", "research_receipt": public_receipt,
+                    "research_evidence": None, "research_split": None}
+            finally:
+                shutil.rmtree(child.output_root)
+        except ResearchSupervisorError as exc:
+            raise ResearchRunProducerError("Pinned audit isolated child failed", code=exc.code) from exc
+        finally:
+            shutil.rmtree(job_directory)
 
     def _execute_delta_wfo_sync(
         self,

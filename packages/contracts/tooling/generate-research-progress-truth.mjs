@@ -8,6 +8,10 @@ const obj = properties => ({ type: "object", additionalProperties: false, requir
 export function progressTruthComponents(document) {
   const schemas = document.components.schemas;
   const snapshot = structuredClone(schemas.ProgressSnapshot);
+  snapshot.properties.overall.properties.trials_declared = {
+    type: "integer", minimum: 0,
+    description: "Declared optimizer trial count. A pinned final-audit evaluation has zero; never invent a trial to satisfy progress presentation.",
+  };
   Object.assign(snapshot.properties.overall.properties, {
     pct_basis: { const: "SOURCE_STAGE_WEIGHTED_V1", description: "Source stage-weighted percentage, not trial completion percentage. A terminal failure does not force 100%. Optional for older public captures." },
     elapsed_basis: { const: "SOURCE_JOURNAL_CREATED_TO_LAST_EVENT_V1", description: "elapsed_s is source journal age observed at its last event, with the source's monotonic floor. Not CPU/runtime accounting, control queue age, search throughput duration or a browser timer." },

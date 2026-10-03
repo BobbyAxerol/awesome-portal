@@ -73,6 +73,18 @@ export function executionPreviewBuildArg(value) {
   return `EXECUTION_PREVIEW_ENABLED=${value ?? 'false'}`;
 }
 
+export function stampedComposePrefix(prefix, sha, dirty) {
+  assert(/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(sha) && typeof dirty === 'boolean',
+    'P23_VALID_SOURCE_STAMP_REQUIRED');
+  if (JSON.stringify(prefix) === JSON.stringify(['docker'])) return [...prefix];
+  assert(JSON.stringify(prefix) === JSON.stringify(['sudo', '-n', 'docker']),
+    'P23_EXACT_DOCKER_PREFIX_REQUIRED');
+  // sudo discards inherited environment. Forward these two non-secret source
+  // stamps explicitly, never a private env file or a blanket --preserve-env.
+  return ['sudo', '-n', 'env', `PORTAL_BUILD_COMMIT=${sha}`,
+    `PORTAL_BUILD_DIRTY=${String(dirty)}`, 'docker'];
+}
+
 async function main() {
   const command = process.argv[2];
   assert(['init', 'build', 'up', 'status', 'down', 'credentials', 'compose', 'observer-copy', 'observer-normal'].includes(command),
@@ -122,8 +134,9 @@ async function main() {
   const dirty = execFileSync('git', ['status', '--porcelain'], { cwd: ROOT, encoding: 'utf8' }).trim() !== '';
   const environment = { ...process.env, PORTAL_BUILD_COMMIT: sha, PORTAL_BUILD_DIRTY: String(dirty),
     COMPOSE_PARALLEL_LIMIT: '1' };
+  const composePrefix = stampedComposePrefix(prefix, sha, dirty);
   const compose = (args, capture = false, observerCopy = false) => {
-    const result = spawnSync(prefix[0], [...prefix.slice(1), ...composeArguments(envFile),
+    const result = spawnSync(composePrefix[0], [...composePrefix.slice(1), ...composeArguments(envFile),
       ...(observerCopy ? ['-f', join(ROOT, 'deploy/research-preview/compose.research-p23-observer-copy.yaml')] : []), ...args], {
       env: environment, stdio: capture ? 'pipe' : 'inherit', encoding: 'utf8',
       maxBuffer: 4 * 1024 * 1024,

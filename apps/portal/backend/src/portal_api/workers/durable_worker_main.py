@@ -78,6 +78,7 @@ async def run() -> None:
             ),
             market_root=market_root,
             imported_source_client=ResearchImportedSourceClient.from_environment(),
+            parent_retained_root=Path(store.root),
         )
     worker = DurableQuantWorker(
         broker=broker,

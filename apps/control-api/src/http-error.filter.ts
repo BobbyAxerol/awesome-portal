@@ -41,6 +41,7 @@ import { ResearchSplitError } from "./research/split.error";
 import { ResearchSearchError } from "./research/search.error";
 import { ResearchFreezeError } from "./research/freeze.error";
 import { ResearchWhatIfError } from "./research/whatif.error";
+import { ResearchFinalAuditError } from "./research/final-audit.contract";
 import { ResearchReplayError } from "./research/replay.error";
 import { ResearchCurrentSourceError } from "./research/current-source.error";
 import { ResearchReportError } from "./research/report.error";
@@ -95,6 +96,7 @@ export class HttpErrorFilter implements ExceptionFilter {
       || exception instanceof ResearchSearchError
       || exception instanceof ResearchFreezeError
       || exception instanceof ResearchWhatIfError
+      || exception instanceof ResearchFinalAuditError
       || exception instanceof ResearchReplayError
       || exception instanceof ResearchCurrentSourceError
       || exception instanceof ResearchReportError

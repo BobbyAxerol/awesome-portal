@@ -11,6 +11,8 @@ export const TEST_TABLES = [
   // listing it keeps test cleanup bounded and makes a new relation visible to
   // the shared harness rather than relying on an incidental CASCADE path.
   "research.audit_log",
+  "research.pinned_audit_receipts_v1",
+  "research.pinned_audit_targets_v1",
   "research.child_audit_companion_seals_v1",
   "research.fixed_replay_companion_seals_v1",
   "research.fixed_replay_companion_rows_v1",

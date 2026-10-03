@@ -261,6 +261,8 @@ export class ResearchReleaseCandidateService {
       return result;
     }, { complete: 0, degraded: 0, input: 0, missing: 0 });
     const fields = values.fields;
+    const linkedAudit = source.verifiedAudit && fields.some(item => item.key === "final_audit_run_id"
+      && item.value === source.verifiedAudit!.child_run_id) ? source.verifiedAudit : null;
     const publication = this.publicationFacts(fields, localSeal, context);
     // Source trial ids are zero-based; the displayed trial number is one-based.
     // No source publishes a param_set_id; a digest or selection id is not one.
@@ -274,6 +276,7 @@ export class ResearchReleaseCandidateService {
       ? candidateNumber : null;
     const response = {
       schema_version: "research.release-candidate-compose.v1" as const,
+      ...(linkedAudit ? { linked_final_audit: linkedAudit } : {}),
       read_authority: "PORTAL_PERSISTED_RESEARCH" as const,
       run_id: source.runId,
       display_label: source.displayLabel ?? null,
@@ -601,11 +604,14 @@ export class ResearchReleaseCandidateService {
       throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_NOT_PUBLISHABLE", "Release Candidate declarations are required before sealing.", 422);
     }
     const { values, pack } = this.lane(source, draft, releaseCandidateId);
+    const linkedAudit = source.verifiedAudit && values.fields.some(item => item.key === "final_audit_run_id"
+      && item.value === source.verifiedAudit!.child_run_id) ? source.verifiedAudit : null;
     const frozenCore = {
       fields: values.fields,
       pack,
       source_fingerprint: releaseCandidateSourceFingerprint(source),
       draft: { known_limitations: draft.knownLimitations, proposed_use_restrictions: draft.proposedUseRestrictions },
+      ...(linkedAudit ? { linked_final_audit: linkedAudit } : {}),
     };
     const packDigest = digestOf(frozenCore);
     const p04Pins: ReleaseCandidatePin[] = [
@@ -620,6 +626,10 @@ export class ResearchReleaseCandidateService {
       ...(source.wfo ? this.retainedPins(source) : p04Pins),
       ...source.currentSource.retainedImportDigest ? [{ pinKind: "CURRENT_SOURCE" as const, sourceRef: `artifact-revision-${source.currentSource.artifactRevision}`, sourceDigest: source.currentSource.retainedImportDigest }] : [],
       ...source.artifacts.filter((artifact) => artifact.state === "SEALED").map((artifact) => ({ pinKind: "ARTIFACT" as const, sourceRef: artifact.artifactId, sourceDigest: artifact.manifestDigest })),
+      ...(linkedAudit ? [
+        { pinKind:"RUN" as const, sourceRef:linkedAudit.child_run_id, sourceDigest:linkedAudit.result.target_digest },
+        { pinKind:"ARTIFACT" as const, sourceRef:linkedAudit.artifact_id, sourceDigest:linkedAudit.manifest_digest },
+      ] : []),
     ];
     return { frozenCore, packDigest, pins };
   }
@@ -680,15 +690,18 @@ export class ResearchReleaseCandidateService {
     const childAudit = facts.ordering;
     const childAuditMatches = childAudit !== null && childAudit.counts.folds > 0
       && childAudit.counts.oos_child_match === childAudit.counts.folds;
-    const finalAudit = source.runState === "READY" && facts.replayRetained && childAuditMatches && facts.parameterDigest !== null;
+    const linkedAudit = source.verifiedAudit?.result.parent_run_id === source.runId
+      && source.verifiedAudit.result.parameters_digest === facts.parameterDigest ? source.verifiedAudit : undefined;
+    const finalAudit = source.runState === "READY" && facts.replayRetained && facts.parameterDigest !== null
+      && (childAuditMatches || linkedAudit !== undefined);
     const reportFromLane = retainedReport && this.reportSealed(source)
       && stringAt(reportCore, ["source_revisions", "evidence_revision"]) === facts.evidenceRevision;
     const fields = base.fields.map((item): Field => {
       switch (item.key) {
         case "final_audit_run_id":
-          return field(item.key, item.label, finalAudit ? source.runId : null, finalAudit ? AVAILABLE : absent("P21_FINAL_AUDIT_RUN_NOT_PUBLISHED"));
+          return field(item.key, item.label, finalAudit ? linkedAudit?.child_run_id ?? source.runId : null, finalAudit ? AVAILABLE : absent("P21_FINAL_AUDIT_RUN_NOT_PUBLISHED"));
         case "final_audit_attempt_id":
-          return field(item.key, item.label, finalAudit ? source.attemptId : null, finalAudit ? AVAILABLE : absent("P21_FINAL_AUDIT_RUN_NOT_PUBLISHED"));
+          return field(item.key, item.label, finalAudit ? linkedAudit?.child_attempt_id ?? source.attemptId : null, finalAudit ? AVAILABLE : absent("P21_FINAL_AUDIT_RUN_NOT_PUBLISHED"));
         case "dataset_binding_digest":
           return field(item.key, item.label, strictDatasetDigest, strictDatasetDigest ? AVAILABLE : absent("P21_DATASET_BINDING_IDENTITY_MISMATCH"));
         case "manifest_digest":
@@ -705,7 +718,7 @@ export class ResearchReleaseCandidateService {
     });
     return {
       ...base, fields, facts, manifest, sourceTransform, strictDatasetDigest,
-      parameterBundle: facts.parameterDigest, finalAudit, reportFromLane, childAudit,
+      parameterBundle: facts.parameterDigest, finalAudit, reportFromLane, childAudit, linkedAudit,
     };
   }
 
@@ -753,7 +766,10 @@ export class ResearchReleaseCandidateService {
         facts.parameterDigestConflict ? "The retained selection and the run's hand-off cursor name different parameter digests." : "The retained seal names no selected trial with parameters.");
 
     const ordering = values.childAudit;
-    const audit = !sealed ? unsealed(5) : values.finalAudit && ordering
+    const audit = !sealed ? unsealed(5) : values.finalAudit && values.linkedAudit
+      ? complete(at(5).key,6,at(5).item,at(5).source,values.linkedAudit.result_digest,
+        "Byte-verified linked child evaluated the admitted frozen parameters without optimizer or reselection.")
+      : values.finalAudit && ordering
       ? complete(at(5).key, 6, at(5).item, at(5).source, digestOf({
         replay_revision: facts.replayRevision,
         frozen_candidate_id: ordering.frozen_candidate.candidate_id,

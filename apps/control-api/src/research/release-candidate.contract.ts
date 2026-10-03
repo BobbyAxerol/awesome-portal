@@ -8,6 +8,7 @@
  */
 
 import { z } from "zod";
+import { VerifiedPinnedAuditSchema } from "./final-audit.contract";
 import { PublishBlockedActionSchema, publishBlockedAction } from "./release-candidate-publish-action";
 import { SelectedTrialPresentationSchema } from "./selected-trial-presentation";
 
@@ -156,6 +157,7 @@ export const ResearchReleaseCandidateRunStatusSchema = z.enum([
 ]);
 
 export const ResearchReleaseCandidateComposeResponseSchema = z.object({
+  linked_final_audit: VerifiedPinnedAuditSchema.optional(),
   schema_version: z.literal("research.release-candidate-compose.v1"),
   read_authority: z.literal("PORTAL_PERSISTED_RESEARCH"),
   run_id: ResearchReleaseCandidateRunIdSchema,
@@ -292,6 +294,7 @@ export const ResearchReleaseCandidatePackResponseSchema = z.object({
   pack_digest: DigestSchema,
   sealed_at_utc_ms: UtcMsSchema,
   frozen_core: z.object({
+    linked_final_audit: VerifiedPinnedAuditSchema.optional(),
     fields: z.array(RcFieldSchema).length(17),
     pack: z.array(PackItemSchema).length(12),
     source_fingerprint: DigestSchema,

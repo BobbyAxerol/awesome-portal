@@ -152,6 +152,10 @@ import { ResearchArtifactVerifyService } from "./research/artifact-verify.servic
 import { ResearchWhatIfController } from "./research/whatif.controller";
 import { ResearchWhatIfRepository } from "./research/whatif.repository";
 import { ResearchWhatIfService } from "./research/whatif.service";
+import { ResearchFinalAuditController } from "./research/final-audit.controller";
+import { ResearchFinalAuditClient } from "./research/final-audit.client";
+import { ResearchFinalAuditRepository } from "./research/final-audit.repository";
+import { ResearchFinalAuditService } from "./research/final-audit.service";
 import { ResearchReplayController } from "./research/replay.controller";
 import { ResearchReplayService } from "./research/replay.service";
 import { ResearchCurrentSourceController } from "./research/current-source.controller";
@@ -244,6 +248,7 @@ export class AppModule {
         ResearchSearchController,
         ResearchFreezeController,
         ResearchWhatIfController,
+        ResearchFinalAuditController,
         ResearchReplayController,
         ResearchCurrentSourceController,
         ResearchChildAuditCompanionController,
@@ -331,6 +336,9 @@ export class AppModule {
         // W5a · A10c: exact-evaluation what-if read + one explicit diagnostic job.
         ResearchWhatIfRepository,
         ResearchWhatIfService,
+        ResearchFinalAuditClient,
+        ResearchFinalAuditRepository,
+        ResearchFinalAuditService,
         ResearchReplayService,
         // RS-02 has no source/runtime side effect at module registration.
         // Its private importer and browser reads remain feature-dark until a

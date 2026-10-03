@@ -19,6 +19,7 @@ from typing import Any, Callable
 from urllib.parse import urlparse
 
 import pyarrow as pa
+import pyarrow.parquet as pq
 
 from portal_api.domain.research_run_producer import ResearchRunProducerRequest
 from portal_api.serialization import canonicalize
@@ -29,6 +30,7 @@ from portal_api.services.research_artifacts import (
     ArtifactTableSchema,
     ResearchArtifactStore,
     _sequence_transport_value,
+    _canonical_json_bytes,
 )
 from portal_api.services.research_progress_relay import _service_principal
 from portal_api.services.research_fixed_replay import (
@@ -80,8 +82,20 @@ class ResearchRetainedReceiptClient:
         artifact_root: Path,
         fence_validator: Callable[[ArtifactFence], bool],
         fixed_replay_path: Path | None = None,
+        audit_source_root: Path | None = None,
     ) -> str:
         research = request.research
+        audit_output = None
+        if research.is_final_audit:
+            if audit_source_root is None or fixed_replay_path is not None:
+                raise ResearchRetainedReceiptError("Pinned audit requires its own source output, not fixed replay")
+            from portal_api.services.research_final_audit_retention import pinned_audit_output
+            try:
+                audit_output = pinned_audit_output(request, receipt, audit_source_root)
+            except (OSError, ValueError, TypeError, KeyError) as exc:
+                raise ResearchRetainedReceiptError("Pinned audit source custody validation failed") from exc
+        elif audit_source_root is not None:
+            raise ResearchRetainedReceiptError("Pinned audit output cannot enter another retention profile")
         replay_source = receipt.get("fixed_replay_source")
         replay_available = False
         if replay_source is not None:
@@ -150,6 +164,8 @@ class ResearchRetainedReceiptClient:
                 table_kind="fixed_replay", schema_version=TABLE_SCHEMA_VERSION,
                 arrow_schema=REPLAY_SCHEMA, sequence_column="source_ordinal", id_column="source_ordinal",
             ))
+        if audit_output is not None:
+            definitions.extend(table.definition for table in audit_output.tables)
         registry = ArtifactSchemaRegistry(definitions)
         encoded = json.dumps(canonicalize(receipt), sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
         if len(encoded) > 256 * 1024:
@@ -177,6 +193,20 @@ class ResearchRetainedReceiptClient:
                     pa.array([receipt_digest], type=pa.string()),
                 ], schema=_RECEIPT_SCHEMA))
                 writer.write_small_document("run_receipt", canonicalize(receipt))
+                if audit_output is not None:
+                    from portal_api.services.research_final_audit_retention import verify_audit_output_unchanged
+                    assert audit_source_root is not None
+                    for table in audit_output.tables:
+                        parquet = pq.ParquetFile(table.path)
+                        rows = 0
+                        for batch in parquet.iter_batches(batch_size=128):
+                            writer.append_batch(table.definition.table_kind, batch)
+                            rows += batch.num_rows
+                        if rows != table.source_rows:
+                            raise ResearchRetainedReceiptError("Pinned audit source row count changed")
+                    for name, body in audit_output.documents.items():
+                        writer.write_small_document(name, body)
+                    verify_audit_output_unchanged(audit_source_root, audit_output)
                 if replay_available:
                     assert fixed_replay_path is not None
                     for rows in iter_parquet_rows(fixed_replay_path):
@@ -190,6 +220,17 @@ class ResearchRetainedReceiptClient:
                 raise
         manifest, digest = store._load_and_verify_manifest(identity.artifact_id, verify_parts=True)
         tables = {table.get("table_kind"): table for table in manifest.get("tables", [])}
+        expected_tables = {"run_receipt", "fixed_replay"} if replay_available else {"run_receipt"}
+        if audit_output is not None:
+            expected_tables.update(table.definition.table_kind for table in audit_output.tables)
+            if any(tables.get(table.definition.table_kind, {}).get("rows") != table.source_rows
+                    or tables.get(table.definition.table_kind, {}).get("schema_version") != table.definition.schema_version
+                    for table in audit_output.tables):
+                raise ResearchRetainedReceiptError("Pinned audit sealed table scope changed")
+            documents = {doc["name"]: doc for doc in manifest.get("documents", [])}
+            if any(documents.get(name, {}).get("sha256") != hashlib.sha256(_canonical_json_bytes(body)).hexdigest()
+                    for name, body in audit_output.documents.items()):
+                raise ResearchRetainedReceiptError("Pinned audit sealed receipt changed")
         if (
             manifest.get("artifact_revision") != revision
             or manifest.get("workspace_id") != request.workspace_id
@@ -199,8 +240,8 @@ class ResearchRetainedReceiptClient:
             or manifest.get("input", {}).get("request_spec_digest") != research.requested_spec_digest
             or manifest.get("input", {}).get("effective_spec_digest") != research.effective_spec_digest
             or manifest.get("input", {}).get("dataset_binding_digest") != research.dataset_binding_digest
-            or len(manifest.get("tables", [])) != (2 if replay_available else 1)
-            or set(tables) != ({"run_receipt", "fixed_replay"} if replay_available else {"run_receipt"})
+            or len(manifest.get("tables", [])) != len(expected_tables)
+            or set(tables) != expected_tables
             or tables.get("run_receipt", {}).get("rows") != 1
             or (replay_available and (tables["fixed_replay"].get("schema_version") != TABLE_SCHEMA_VERSION
                 or tables["fixed_replay"].get("rows") != replay_source["row_count"]))
@@ -244,6 +285,13 @@ class ResearchRetainedReceiptClient:
         })
         if result.get("schema_version") != "research.artifact-seal.v1" or result.get("sealed") is not True:
             raise ResearchRetainedReceiptError("P05 seal acknowledgement is incompatible")
+        if audit_output is not None:
+            if not fence_validator(fence):
+                raise ResearchRetainedReceiptError("FENCE_REJECTED: audit proof lease is stale")
+            verified = self._post("audit/seal", {**identity_fields, "artifact_revision": revision,
+                "manifest_digest": digest, "result": audit_output.documents["audit_result"]})
+            if verified.get("schema_version") != "research.pinned-audit-seal.v1" or verified.get("verified") is not True:
+                raise ResearchRetainedReceiptError("Pinned audit proof acknowledgement is incompatible")
         if replay_source is not None:
             try:
                 retain_fixed_replay_companion(

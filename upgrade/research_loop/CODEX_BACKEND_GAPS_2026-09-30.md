@@ -1580,3 +1580,69 @@ owner label in `scripts/contracts-test.sh`; 3 focused isolation checks pass.
 Foreign test outcome is not claimed; no kill/prune workaround. The normal
 hook is retried with the corrected harness. This is verification/resource
 hygiene, not a new Research contract or product phase.
+
+## §39 — Linked final-audit implementation, approved active goal
+
+P22 landed as `b4a6d767` on the clean shared Research branch after the normal
+hook: Control API 1,858 PASS / one explicitly skipped test. No remote push.
+
+Next owned backend slice implements the pinned evaluation beneath P10/P06:
+verify original selection/config/snapshot byte hashes, retain the original
+account/window/temporal settings and evaluate the frozen Delta parameters
+with QuantBT 1.1.1's `optimization_mode=none`, zero trials, no ranges. The
+existing namespace/lease/output limits remain the confinement authority.
+Never substitute the what-if path (it invokes Optuna), optimize once and call
+that an audit, choose the last causal fold, or alter the parent seal/Report.
+
+The child evaluator is not by itself browser admission or product acceptance.
+The complete goal still requires authenticated/idempotent target admission,
+shared utility budget, producer/worker/fenced retention wiring, verified
+Report/RC/lineage reads and an actual owned-cell child receipt. Publish the
+generated browser operation only with that wired boundary. Per-fold causal
+targets must be pinned individually, never flattened to one last-fold map.
+
+Focused source-hash/selection/seed/parameter/namespace negative checks plus a
+real pinned-engine execution gate this slice. Keep frontend, protected kernel,
+Execution runtime and :8095 worker untouched; no production activation.
+
+DR search: the five existing P23 archive indexes contain no missing artifact
+IDs; byte-hashing all 507 manifest entries also found none of the three
+expected original SHA-256 values. No archive was extracted/modified and no
+manifest was regenerated. Owner scope disposition requested separately;
+strict integrity remains false unless actual bytes are recovered.
+
+### §39 implementation checkpoint — 2026-10-03
+
+**IMPLEMENTED / FOCUSED_TESTED; PRODUCT_RECEIPT_PENDING.** The pinned global
+Delta lane now has explicit authenticated/idempotent admission, actor-bound
+immutable snapshot reuse, shared utility quota, isolated producer/worker,
+P05 byte-verified lease ACK and additive Report/RC/Lineage proof contracts.
+P22 accepts only the frozen verified proof and still promotes the original
+parent selection; old parent seals/Reports are unchanged. Per-fold causal
+targets are not flattened or falsely admitted to this single-target profile.
+
+Focused Control 61/61, RC 22/22, real disposable PostgreSQL 5/5, native pinned
+Python 21/21 and canonical contract 5/5 pass. Source fixtures/Control ACK
+doubles are not end-to-end HMD product evidence. Generation/check/build pass;
+the normal coherent hook gates commit, followed by owned-cell product receipt.
+[Exact scope, failures, generated frontend handoff and cleanup](./evidence/P23/LINKED_PINNED_AUDIT_IMPLEMENTATION_2026-10-03.md).
+
+No frontend path/shared worker/production/remote mutation. Temporary PG and
+native-test containers are removed; no volume/image/backup deleted. P22 GET
+runtime is already accepted; remaining active-goal gates are genuine linked
+product proof, current-candidate P23/typed-502/restored browser, original
+missing bytes, second qualified engine and downstream P24/release.
+
+First normal hook stopped at the P01 live-route ledger, before full suites.
+Official regeneration now records exactly four added routes and zero removals,
+with protected kernel unchanged; live check passes. Retry the normal hook,
+do not bypass it or call the initial failure PASS.
+
+The full Control hook then exposed one old P22 settlement fixture depending
+on a bare audit relationship (1,878 pass / one skip / one failure). Its
+same-run replay fixture now freezes explicit authority instead; the affected
+settlement plus pinned-audit PostgreSQL group passes 6/6. Verified-child
+negative proof tests and production constraints were not relaxed. The owned
+P23 helper also forwards only validated non-secret source stamps through sudo,
+so its next runtime can be tied to the exact candidate. Normal hook retry
+and a genuine API child receipt remain required, not presumed PASS.

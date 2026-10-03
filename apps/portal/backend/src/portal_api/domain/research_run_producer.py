@@ -39,6 +39,10 @@ from .research_imported_alpha_profile import (
 from .research_delta_wfo_v2_profile import DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST, temporal_controls
 from .research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST, DELTA_CAUSAL_INNER_PROFILE, causal_inner_controls
 from .research_whatif_profile import WHATIF_MAX_EVALUATIONS, WHATIF_PROFILE_DIGEST, WHATIF_PROFILE_ID
+from .research_final_audit import (
+    PinnedSelectionAuditTarget, PINNED_FINAL_AUDIT_PROFILE_ID,
+    PINNED_FINAL_AUDIT_PROFILE_DIGEST, audit_digest,
+)
 from .research_vn_observed_fixed_profile import (
     VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST,
     validate_vn_observed_fixed_spec, vn_source_instant, vn_observed_fixed_profile,
@@ -134,7 +138,8 @@ class ResearchRunProducerEnvelope(PortalModel):
     # durable request, its spec digest and the child receipt stay byte-equal.
     execution_profile_id: Literal[
         "p04.fixed-qualification.v1", "p10.delta-signal-notional-wfo.v1", "p10.delta-signal-notional-wfo.v2", "p16.delta-whatif-grid.v1",
-        "p17.imported-signal-notional.v1", "p10.delta-signal-notional-causal-inner.v1", "p10.vn-stock-daily-observed-fixed.v1"
+        "p17.imported-signal-notional.v1", "p10.delta-signal-notional-causal-inner.v1", "p10.vn-stock-daily-observed-fixed.v1",
+        "p23.delta-pinned-final-audit.v1"
     ] = P04_FIXED_QUALIFICATION_PROFILE_ID
     execution_profile_digest: str | None = Field(default=None, pattern=_DIGEST)
     p04_parameters: Annotated[dict[str, int | float], Field(min_length=8, max_length=8)] | None = None
@@ -145,6 +150,8 @@ class ResearchRunProducerEnvelope(PortalModel):
     ] | None = None
     work_digest: str = Field(pattern=_DIGEST)
     whatif: WhatIfJob | None = None
+    final_audit_target: PinnedSelectionAuditTarget | None = None
+    final_audit_target_digest: str | None = Field(default=None, pattern=_DIGEST)
     source_observation: VnSourceObservation | None = None
 
     @property
@@ -160,6 +167,10 @@ class ResearchRunProducerEnvelope(PortalModel):
         return self.execution_profile_id == WHATIF_PROFILE_ID
 
     @property
+    def is_final_audit(self) -> bool:
+        return self.execution_profile_id == PINNED_FINAL_AUDIT_PROFILE_ID
+
+    @property
     def is_imported_alpha(self) -> bool:
         return self.execution_profile_id == IMPORTED_ALPHA_PROFILE_ID
 
@@ -173,6 +184,10 @@ class ResearchRunProducerEnvelope(PortalModel):
             data.pop("p04_parameters", None)
         if self.whatif is None:
             data.pop("whatif", None)
+        if self.final_audit_target is None:
+            data.pop("final_audit_target", None)
+        if self.final_audit_target_digest is None:
+            data.pop("final_audit_target_digest", None)
         if self.source_observation is None:
             data.pop("source_observation", None)
         if self.imported_source_digest is None:
@@ -200,6 +215,11 @@ class ResearchRunProducerEnvelope(PortalModel):
             raise ValueError("requested_spec AlphaVersion does not match the immutable producer binding")
         if self.requested_spec.get("strategy_id") != self.alpha_id:
             raise ValueError("requested_spec strategy_id does not match the immutable Alpha identity")
+        if self.is_final_audit:
+            self._validate_final_audit_profile()
+            return self
+        if self.final_audit_target is not None or self.final_audit_target_digest is not None:
+            raise ValueError("a frozen audit target cannot enter another execution profile")
         if self.is_vn_observed_fixed:
             profile = vn_observed_fixed_profile()
             validate_vn_observed_fixed_spec(self.requested_spec)
@@ -277,6 +297,39 @@ class ResearchRunProducerEnvelope(PortalModel):
         if not isinstance(windows, dict) or not all(isinstance(windows.get(name), dict) for name in ("is", "oos", "holdout")):
             raise ValueError("requested_spec must retain three-window boundaries")
         return self
+
+    def _validate_final_audit_profile(self) -> None:
+        target = self.final_audit_target
+        if (target is None or self.intent_kind != "DIAGNOSTIC"
+                or self.execution_profile_digest != PINNED_FINAL_AUDIT_PROFILE_DIGEST
+                or self.final_audit_target_digest != target.target_digest()
+                or target.source_selection_kind != "P05_SELECTION_PARAMETERS_JSON"
+                or self.whatif is not None or self.p04_parameters is not None
+                or self.source_observation is not None or self.imported_source_digest is not None
+                or self.imported_entrypoint is not None or self.imported_parameters is not None):
+            raise ValueError("AUDIT_EXACT_RETAINED_TARGET_AND_PROFILE_REQUIRED")
+        for field_name in ("alpha_version_id", "execution_adapter_id", "adapter_contract_digest",
+                "dataset_binding_digest", "snapshot_id", "snapshot_content_hash"):
+            if getattr(self, field_name) != getattr(target, field_name):
+                raise ValueError("AUDIT_PRODUCER_TARGET_PIN_MISMATCH")
+        spec = self.requested_spec
+        source = target.source_request()
+        if (spec.get("client", {}).get("engine_release_id") != target.engine_release_id
+                or spec.get("execution_route") != "signal_notional" or spec.get("protocol") != "advanced"
+                or spec.get("random_seed") != source.calibration.random_seed
+                or spec.get("data", {}).get("dataset_id") != source.dataset_id
+                or spec.get("data", {}).get("symbol") != source.symbol
+                or spec.get("data", {}).get("timeframe") != source.timeframe):
+            raise ValueError("AUDIT_ORIGINAL_REQUEST_BINDING_REQUIRED")
+        encoded = json.dumps(spec, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        if hashlib.sha256(encoded).hexdigest() != self.requested_spec_digest:
+            raise ValueError("AUDIT_ORIGINAL_REQUEST_DIGEST_MISMATCH")
+        if self.work_digest != audit_digest({"schema_version": "research.pinned-audit-work.v1",
+                "target_digest": self.final_audit_target_digest,
+                "requested_spec_digest": self.requested_spec_digest,
+                "effective_spec_digest": self.effective_spec_digest,
+                "profile_digest": PINNED_FINAL_AUDIT_PROFILE_DIGEST}):
+            raise ValueError("AUDIT_PRODUCER_WORK_DIGEST_MISMATCH")
 
     def _validate_imported_alpha_profile(self) -> None:
         profile = IMPORTED_ALPHA_PROFILE

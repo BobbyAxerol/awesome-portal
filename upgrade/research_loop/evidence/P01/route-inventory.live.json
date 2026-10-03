@@ -2,7 +2,7 @@
   "schema": "research-loop.live-route-ledger.v1",
   "statement": "Live static route ledger. Regenerate with --write-live-routes in the same change that adds or removes a route.",
   "protected_kernel_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
-  "route_count": 255,
+  "route_count": 259,
   "routes": [
     {
       "method": "DELETE",
@@ -741,6 +741,11 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/final-audit",
+      "owner": "apps/control-api/src/research/final-audit.controller.ts"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/quantbt/runs/:runId/freeze",
       "owner": "apps/control-api/src/research/freeze.controller.ts"
     },
@@ -1136,6 +1141,11 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/quantbt/runs/:runId/final-audit",
+      "owner": "apps/control-api/src/research/final-audit.controller.ts"
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/quantbt/runs/:runId/freeze/verify",
       "owner": "apps/control-api/src/research/freeze.controller.ts"
     },
@@ -1216,6 +1226,11 @@
     },
     {
       "method": "POST",
+      "path": "/internal/research/final-audit/prepare",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_research_internal.py"
+    },
+    {
+      "method": "POST",
       "path": "/internal/research/preflight-snapshots",
       "owner": "apps/portal/backend/src/portal_api/api/routes_research_internal.py"
     },
@@ -1223,6 +1238,11 @@
       "method": "POST",
       "path": "/internal/research/progress/{run_id}/cancel",
       "owner": "apps/portal/backend/src/portal_api/api/routes_research_internal.py"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/research/progress/artifacts/audit/seal",
+      "owner": "apps/control-api/src/research/progress-ingress.controller.ts"
     },
     {
       "method": "POST",

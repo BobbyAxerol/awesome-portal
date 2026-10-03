@@ -14,6 +14,7 @@ import { ResearchReportError } from "./report.error";
 import { ResearchUtilitySaturated, assertUtilityCapacity } from "./utility-admission";
 import { runDisplayLabel, runDisplayOrdinal, runDisplayOrdinalSql } from "./run-display-label";
 import type { ReportAuditRelation } from "./report-core-v2";
+import { readPinnedAuditProofs } from "./final-audit.read";
 import { DELTA_WFO_PROFILE_ID, DELTA_WFO_PROFILE_DIGEST } from "./delta-wfo.profile";
 import { DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST } from "./delta-wfo-v2.profile";
 import { DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST } from "./delta-causal-inner.profile";
@@ -342,6 +343,7 @@ export class ResearchReportRepository {
         relationshipKind: run.rows[0]!.relationship_kind,
         parentRunId: run.rows[0]!.parent_run_id,
         auditChildren: children.rows.map((row) => ({ runId: row.run_id, state: row.state })),
+        verifiedAudit: (await readPinnedAuditProofs(client, scope.workspaceId, [runId])).get(runId) ?? null,
       };
     });
   }

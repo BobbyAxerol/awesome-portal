@@ -5,18 +5,56 @@
     "version": "1.0.0",
     "description": "P21 same-origin Release Candidate composer. It reads Portal-persisted Research facts and may persist only actor-local declaration drafts and a Portal-local immutable evidence pack. A local seal is explicitly not publication, downstream delivery, approval, an Execution action, an optimizer invocation, a source/artifact-byte read, or a worker command. P22 alone owns any downstream publication intent."
   },
-  "servers": [{ "url": "/" }],
-  "security": [{ "portalSession": [] }],
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "security": [
+    {
+      "portalSession": []
+    }
+  ],
   "paths": {
     "/api/v1/quantbt/runs/{runId}/release-candidate": {
       "get": {
         "operationId": "researchReleaseCandidateComposeGetV1",
         "summary": "Compose one bounded Screen-11 local Release Candidate view",
         "description": "Returns exactly seventeen server-built YAML/field rows and twelve evidence-pack rows. The browser must render the returned fields verbatim and must never synthesize an approval, mirror, source relation, digest, selection, final audit, or eligibility verdict.",
-        "parameters": [{ "$ref": "#/components/parameters/RunId" }, { "$ref": "#/components/parameters/WorkspaceId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RunId"
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
         "responses": {
-          "200": { "description": "Bounded local composer view; private/no-store, no ETag because draft/publication state can change independently of source_fingerprint.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ComposeResponseP21" } } } },
-          "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "403": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" }, "503": { "$ref": "#/components/responses/Problem" }
+          "200": {
+            "description": "Bounded local composer view; private/no-store, no ETag because draft/publication state can change independently of source_fingerprint.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComposeResponseP21"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     },
@@ -25,11 +63,53 @@
         "operationId": "researchReleaseCandidateDraftPatchV1",
         "summary": "CAS-update the caller's two local declaration inputs",
         "description": "Requires same-origin origin/CSRF checks. The source fingerprint and draft revision are compare-and-swap fences. This operation cannot seal, publish, approve, change a bound Alpha/version, start QuantBT, or contact Execution.",
-        "parameters": [{ "$ref": "#/components/parameters/RunId" }, { "$ref": "#/components/parameters/WorkspaceId" }],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DraftPatch" } } } },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RunId"
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftPatch"
+              }
+            }
+          }
+        },
         "responses": {
-          "200": { "description": "Recomposed view after one successful CAS update.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ComposeResponseP21" } } } },
-          "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "403": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" }, "409": { "$ref": "#/components/responses/Problem" }, "503": { "$ref": "#/components/responses/Problem" }
+          "200": {
+            "description": "Recomposed view after one successful CAS update.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComposeResponseP21"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     },
@@ -38,11 +118,56 @@
         "operationId": "researchReleaseCandidateLocalSealCreateV1",
         "summary": "Create or return one immutable Portal-local evidence pack",
         "description": "Requires same-origin origin/CSRF checks. A valid local seal has delivery_state NOT_DELIVERED and approval_state NOT_APPROVED. It never dispatches a P22 publication intent or changes a Governance/Execution record.",
-        "parameters": [{ "$ref": "#/components/parameters/RunId" }, { "$ref": "#/components/parameters/WorkspaceId" }],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SealRequest" } } } },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RunId"
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SealRequest"
+              }
+            }
+          }
+        },
         "responses": {
-          "201": { "description": "One local immutable seal (or its idempotent prior result).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SealResponse" } } } },
-          "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "403": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" }, "409": { "$ref": "#/components/responses/Problem" }, "422": { "$ref": "#/components/responses/Problem" }, "503": { "$ref": "#/components/responses/Problem" }
+          "201": {
+            "description": "One local immutable seal (or its idempotent prior result).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SealResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     },
@@ -51,56 +176,1989 @@
         "operationId": "researchReleaseCandidatePackGetV1",
         "summary": "Read one immutable local evidence pack",
         "description": "The immutable frozen_core stays separate from the mutable downstream delivery/approval lifecycle. Browser code must not equate a local seal with delivered, approved, or applied state.",
-        "parameters": [{ "$ref": "#/components/parameters/ReleaseCandidateId" }, { "$ref": "#/components/parameters/WorkspaceId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ReleaseCandidateId"
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
         "responses": {
-          "200": { "description": "Immutable local pack and separate mutable downstream state; private/no-store, no ETag because pack_digest covers only the pack.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PackResponse" } } } },
-          "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "403": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" }, "503": { "$ref": "#/components/responses/Problem" }
+          "200": {
+            "description": "Immutable local pack and separate mutable downstream state; private/no-store, no ETag because pack_digest covers only the pack.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     }
   },
   "components": {
-    "securitySchemes": { "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" } },
+    "securitySchemes": {
+      "portalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "portal_session"
+      }
+    },
     "parameters": {
-      "RunId": { "name": "runId", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/RunId" } },
-      "ReleaseCandidateId": { "name": "releaseCandidateId", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/ReleaseCandidateId" } },
-      "WorkspaceId": { "name": "workspace_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/WorkspaceId" } }
+      "RunId": {
+        "name": "runId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/RunId"
+        }
+      },
+      "ReleaseCandidateId": {
+        "name": "releaseCandidateId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/ReleaseCandidateId"
+        }
+      },
+      "WorkspaceId": {
+        "name": "workspace_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/WorkspaceId"
+        }
+      }
     },
     "responses": {
-      "Problem": { "description": "Typed same-origin refusal. No source relation, cursor, worker/lease identity, artifact path, credential, approval payload, or Execution command is disclosed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+      "Problem": {
+        "description": "Typed same-origin refusal. No source relation, cursor, worker/lease identity, artifact path, credential, approval payload, or Execution command is disclosed.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      }
     },
     "schemas": {
-      "WorkspaceId": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$" },
-      "RunId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
-      "ReleaseCandidateId": { "type": "string", "pattern": "^rc_[0-9A-HJKMNP-TV-Z]{26}$" },
-      "DraftId": { "type": "string", "pattern": "^rcd_[0-9A-HJKMNP-TV-Z]{26}$" },
-      "Digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-      "UtcMilliseconds": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
-      "ReasonCode": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,159}$" },
-      "Availability": { "type": "object", "additionalProperties": false, "required": ["state", "reason_code"], "properties": { "state": { "enum": ["AVAILABLE", "NOT_PUBLISHED", "PARTIAL", "NOT_APPLICABLE"] }, "reason_code": { "anyOf": [{ "$ref": "#/components/schemas/ReasonCode" }, { "type": "null" }] } } },
-      "PublishedComparison": { "type": "object", "additionalProperties": false, "required": ["last_release_candidate_id", "availability"], "properties": { "last_release_candidate_id": { "anyOf": [{ "$ref": "#/components/schemas/ReleaseCandidateId" }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
-      "CertificationAxis": { "type": "object", "additionalProperties": false, "required": ["value", "availability"], "properties": { "value": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 128 }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
-      "CertificationAxes": { "type": "object", "additionalProperties": false, "required": ["methodology_claim", "engine_execution_contract"], "properties": { "methodology_claim": { "$ref": "#/components/schemas/CertificationAxis" }, "engine_execution_contract": { "$ref": "#/components/schemas/CertificationAxis" } } },
-      "ComposeRunBinding": { "type": "object", "additionalProperties": false, "required": ["alpha_id", "alpha_version_id", "lifecycle_state"], "properties": { "alpha_id": { "type": "string", "maxLength": 128 }, "alpha_version_id": { "type": "string", "maxLength": 191 }, "lifecycle_state": { "enum": ["DRAFT", "ACTIVE", "SUPERSEDED", "ABANDONED"] } } },
-      "ComposeRun": { "type": "object", "additionalProperties": false, "required": ["id", "attempt", "binding"], "properties": { "id": { "$ref": "#/components/schemas/RunId" }, "attempt": { "type": "string", "maxLength": 191 }, "binding": { "anyOf": [{ "$ref": "#/components/schemas/ComposeRunBinding" }, { "type": "null" }] } } },
-      "ComposeRailNode": {"type":"object","additionalProperties":false,"required":["key","value","detail","tone"],"properties":{"key":{"enum":["alpha","alpha_version","run","selected_params","release_candidate"]},"value":{"type":"string","maxLength":1024},"detail":{"anyOf":[{"type":"string","maxLength":1024},{"type":"null"}]},"tone":{"enum":["ink","gold","green","dim"]},"selected_trial_ordinal":{"anyOf":[{"type":"integer","minimum":1,"maximum":9007199254740991},{"type":"null"}]},"selected_trial_ordinal_scope":{"anyOf":[{"enum":["RUN_GLOBAL","STUDY_LOCAL"]},{"type":"null"}]},"selected_trial_ordinal_reason_code":{"anyOf":[{"enum":["SELECTION_HAS_NO_TRIAL","SOURCE_TRIAL_NUMBER_NOT_PUBLISHED","STUDY_LOCAL_TRIAL_MAPPING_NOT_PUBLISHED"]},{"type":"null"}]}},"description":"Only selected_params carries complete native trial presentation; display-only, never a cursor or identity.","allOf":[{"if":{"anyOf":[{"required":["selected_trial_ordinal"]},{"required":["selected_trial_ordinal_scope"]},{"required":["selected_trial_ordinal_reason_code"]}]},"then":{"required":["selected_trial_ordinal","selected_trial_ordinal_scope","selected_trial_ordinal_reason_code"],"properties":{"key":{"const":"selected_params"}},"anyOf":[{"properties":{"selected_trial_ordinal":{"type":"integer","minimum":1,"maximum":9007199254740991},"selected_trial_ordinal_scope":{"enum":["RUN_GLOBAL","STUDY_LOCAL"]},"selected_trial_ordinal_reason_code":{"type":"null"}}},{"properties":{"selected_trial_ordinal":{"type":"null"},"selected_trial_ordinal_scope":{"type":"null"},"selected_trial_ordinal_reason_code":{"enum":["SELECTION_HAS_NO_TRIAL","SOURCE_TRIAL_NUMBER_NOT_PUBLISHED","STUDY_LOCAL_TRIAL_MAPPING_NOT_PUBLISHED"]}}}]}}]},
-      "SelectedParams": {"type":"object","additionalProperties":false,"required":["param_set_id","param_set_id_availability","selected_trial_number","selected_trial_number_availability"],"properties":{"param_set_id":{"anyOf":[{"type":"string","minLength":1,"maxLength":191},{"type":"null"}]},"param_set_id_availability":{"$ref":"#/components/schemas/Availability"},"selected_trial_number":{"anyOf":[{"type":"integer","minimum":1,"maximum":1000000},{"type":"null"}],"description":"Server-owned source-backed display ordinal; causal numbers are local to selected_trial_study_id. Same native mapping as Search/Freeze, not a parsed rail label or cumulative progress count."},"selected_trial_number_availability":{"$ref":"#/components/schemas/Availability"},"selected_trial_number_scope":{"anyOf":[{"enum":["RUN_GLOBAL","STUDY_LOCAL"]},{"type":"null"}]},"selected_trial_source_id":{"anyOf":[{"type":"string","minLength":1,"maxLength":191},{"type":"null"}]},"selected_trial_study_id":{"anyOf":[{"type":"string","minLength":1,"maxLength":191},{"type":"null"}]}}},
-      "ComposeTaxonomyRow": { "type": "object", "additionalProperties": false, "required": ["what", "state", "consequence"], "properties": { "what": { "type": "string", "maxLength": 120 }, "state": { "enum": ["UNCHANGED", "CHANGED", "UNSET"] }, "consequence": { "type": "string", "maxLength": 512 } } },
-      "ComposeGateVerdict": { "type": "object", "additionalProperties": false, "required": ["title", "body"], "properties": { "title": { "type": "string", "maxLength": 256 }, "body": { "type": "string", "maxLength": 1024 } } },
-      "ComposePackCounts": { "type": "object", "additionalProperties": false, "required": ["complete", "degraded", "input", "missing"], "properties": { "complete": { "type": "integer", "minimum": 0, "maximum": 12 }, "degraded": { "type": "integer", "minimum": 0, "maximum": 12 }, "input": { "type": "integer", "minimum": 0, "maximum": 12 }, "missing": { "type": "integer", "minimum": 0, "maximum": 12 } } },
-      "ComposeActions": {"type":"object","additionalProperties":false,"required":["may_edit_draft","may_seal","seal_blocked_reason","publish"],"properties":{"may_edit_draft":{"type":"boolean"},"may_seal":{"type":"boolean"},"seal_blocked_reason":{"anyOf":[{"$ref":"#/components/schemas/ReasonCode"},{"type":"null"}]},"publish":{"type":"object","additionalProperties":false,"required":["enabled","blocked_reason"],"properties":{"enabled":{"type":"boolean"},"blocked_reason":{"anyOf":[{"$ref":"#/components/schemas/ReasonCode"},{"type":"null"}]},"blocked_action":{"enum":["NONE","SEAL_CANDIDATE","CREATE_NEW_RUN_AND_SEAL","REVIEW_CURRENT_CANDIDATE","WAIT"],"description":"Server-owned guidance, not mutation authority. CREATE_NEW_RUN_AND_SEAL uses the existing new-run flow and a new candidate; it never reopens or reseals the old actor/run draft. NONE does not imply permission."}}}}},
-      "ComposeResponseP21": { "description": "Strict P21 bounded composer including display facts that must never be inferred by a browser.", "type": "object", "additionalProperties": false, "required": ["schema_version", "read_authority", "run_id", "display_label", "state", "availability", "as_of_utc_ms", "source_fingerprint", "run", "rail", "selected_params", "taxonomy", "published_comparison", "certification_axes", "gate_verdict", "draft", "fields", "yaml", "pack", "pack_counts", "local_seal", "actions", "mirror", "source_absences"], "properties": { "schema_version": { "const": "research.release-candidate-compose.v1" }, "read_authority": { "const": "PORTAL_PERSISTED_RESEARCH" }, "run_id": { "$ref": "#/components/schemas/RunId" }, "display_label": { "anyOf": [{ "type": "string", "pattern": "^R-[A-Z0-9]{1,8}-[0-9]{3,6}$" }, { "type": "null" }] }, "state": { "const": "DRAFT" }, "run_status": { "anyOf": [{ "enum": ["QUEUED", "RUNNING", "FINISHING", "COMPLETED", "FAILED", "CANCELLED", "DRAFT", "RECOVERY_REQUIRED"] }, { "type": "null" }] }, "report_sealed": { "type": "boolean" }, "availability": { "$ref": "#/components/schemas/Availability" }, "as_of_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "source_fingerprint": { "$ref": "#/components/schemas/Digest" }, "run": { "$ref": "#/components/schemas/ComposeRun" }, "rail": { "type": "array", "minItems": 5, "maxItems": 5, "items": { "$ref": "#/components/schemas/ComposeRailNode" } }, "selected_params": { "$ref": "#/components/schemas/SelectedParams" }, "taxonomy": { "type": "array", "minItems": 4, "maxItems": 4, "items": { "$ref": "#/components/schemas/ComposeTaxonomyRow" } }, "published_comparison": { "$ref": "#/components/schemas/PublishedComparison" }, "certification_axes": { "$ref": "#/components/schemas/CertificationAxes" }, "gate_verdict": { "$ref": "#/components/schemas/ComposeGateVerdict" }, "draft": { "$ref": "#/components/schemas/Draft" }, "fields": { "type": "array", "minItems": 17, "maxItems": 17, "items": { "$ref": "#/components/schemas/Field" } }, "yaml": { "type": "array", "minItems": 17, "maxItems": 17, "items": { "$ref": "#/components/schemas/Field" } }, "pack": { "type": "array", "minItems": 12, "maxItems": 12, "items": { "$ref": "#/components/schemas/PackItem" } }, "pack_counts": { "$ref": "#/components/schemas/ComposePackCounts" }, "local_seal": { "$ref": "#/components/schemas/LocalSeal" }, "actions": { "$ref": "#/components/schemas/ComposeActions" }, "mirror": { "type": "null" }, "source_absences": { "type": "object", "additionalProperties": { "$ref": "#/components/schemas/Availability" } } } },
-      "FieldKey": { "enum": ["release_candidate_id", "alpha_id", "alpha_version_id", "alpha_code_digest", "alpha_entrypoint", "final_audit_run_id", "final_audit_attempt_id", "requested_spec_digest", "effective_spec_digest", "dataset_binding_digest", "manifest_digest", "source_transform_digest", "engine_release_id", "adapter_contract_digest", "parameter_bundle_digest", "evidence_revision", "report_revision"] },
-      "Field": { "type": "object", "additionalProperties": false, "required": ["key", "label", "value", "tone", "availability"], "properties": { "key": { "$ref": "#/components/schemas/FieldKey" }, "label": { "type": "string", "maxLength": 96 }, "value": { "anyOf": [{ "type": "string", "maxLength": 1024 }, { "type": "null" }] }, "tone": { "enum": ["ink", "gold", "red", "dim"] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
-      "PackItem": { "type": "object", "additionalProperties": false, "required": ["key", "n", "item", "status", "digest", "source", "note", "availability"], "properties": { "key": { "enum": ["ALPHA_VERSION_PASSPORT", "ENGINE_CAPABILITY_BACKEND", "DATASET_UNIVERSE_SNAPSHOTS", "METHODOLOGY_CLAIM", "SELECTED_PARAMS_LINEAGE", "FINAL_AUDIT_REPLAY", "METRICS_SEMANTICS", "EXECUTION_ASSUMPTIONS", "ROBUSTNESS_PARAM_STABILITY_REGIME", "KNOWN_LIMITATIONS_WAIVERS", "REPRODUCIBILITY_PARITY_CHECKSUMS", "PROPOSED_USE_RESTRICTIONS"] }, "n": { "type": "integer", "minimum": 1, "maximum": 12 }, "item": { "type": "string", "maxLength": 160 }, "status": { "enum": ["COMPLETE", "DEGRADED", "INPUT", "MISSING"] }, "digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] }, "source": { "type": "object", "additionalProperties": false, "required": ["label", "href"], "properties": { "label": { "type": "string", "maxLength": 96 }, "href": { "anyOf": [{ "type": "string", "pattern": "^/research/" }, { "type": "null" }] } } }, "note": { "type": "string", "maxLength": 512 }, "availability": { "$ref": "#/components/schemas/Availability" } } },
-      "Draft": { "type": "object", "additionalProperties": false, "required": ["draft_id", "revision", "source_fingerprint", "known_limitations", "proposed_use_restrictions", "state", "updated_at_utc_ms"], "properties": { "draft_id": { "anyOf": [{ "$ref": "#/components/schemas/DraftId" }, { "type": "null" }] }, "revision": { "type": "integer", "minimum": 0 }, "source_fingerprint": { "$ref": "#/components/schemas/Digest" }, "known_limitations": { "anyOf": [{ "type": "string", "maxLength": 4096 }, { "type": "null" }] }, "proposed_use_restrictions": { "anyOf": [{ "type": "string", "maxLength": 4096 }, { "type": "null" }] }, "state": { "enum": ["VIRTUAL", "PERSISTED"] }, "updated_at_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] } } },
-      "LocalSeal": { "type": "object", "additionalProperties": false, "required": ["state", "release_candidate_id", "pack_digest", "sealed_at_utc_ms", "delivery_state", "approval_state", "availability"], "properties": { "state": { "enum": ["UNSEALED", "SEALED_LOCAL"] }, "release_candidate_id": { "anyOf": [{ "$ref": "#/components/schemas/ReleaseCandidateId" }, { "type": "null" }] }, "pack_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] }, "sealed_at_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] }, "delivery_state": { "anyOf": [{ "enum": ["NOT_DELIVERED", "PENDING", "DELIVERED", "UNKNOWN"] }, { "type": "null" }] }, "approval_state": { "anyOf": [{ "enum": ["NOT_APPROVED", "PENDING", "APPROVED", "REJECTED", "UNKNOWN"] }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
-      "ComposeResponse": {"type":"object","additionalProperties":false,"required":["schema_version","read_authority","run_id","display_label","state","availability","as_of_utc_ms","source_fingerprint","run","rail","selected_params","taxonomy","gate_verdict","draft","fields","yaml","pack","pack_counts","local_seal","actions","mirror","source_absences"],"properties":{"schema_version":{"const":"research.release-candidate-compose.v1"},"read_authority":{"const":"PORTAL_PERSISTED_RESEARCH"},"run_id":{"$ref":"#/components/schemas/RunId"},"display_label":{"anyOf":[{"type":"string","pattern":"^R-[A-Z0-9]{1,8}-[0-9]{3,6}$"},{"type":"null"}]},"state":{"const":"DRAFT"},"run_status":{"anyOf":[{"enum":["QUEUED","RUNNING","FINISHING","COMPLETED","FAILED","CANCELLED","DRAFT","RECOVERY_REQUIRED"]},{"type":"null"}]},"report_sealed":{"type":"boolean"},"availability":{"$ref":"#/components/schemas/Availability"},"as_of_utc_ms":{"$ref":"#/components/schemas/UtcMilliseconds"},"source_fingerprint":{"$ref":"#/components/schemas/Digest"},"run":{"type":"object","additionalProperties":false,"required":["id","attempt","binding"],"properties":{"id":{"$ref":"#/components/schemas/RunId"},"attempt":{"type":"string","maxLength":191},"binding":{"anyOf":[{"type":"object","additionalProperties":false,"required":["alpha_id","alpha_version_id","lifecycle_state"],"properties":{"alpha_id":{"type":"string","maxLength":128},"alpha_version_id":{"type":"string","maxLength":191},"lifecycle_state":{"enum":["DRAFT","ACTIVE","SUPERSEDED","ABANDONED"]}}},{"type":"null"}]}}},"rail":{"type":"array","minItems":5,"maxItems":5,"items":{"type":"object","additionalProperties":false,"required":["key","value","detail","tone"],"properties":{"key":{"enum":["alpha","alpha_version","run","selected_params","release_candidate"]},"value":{"type":"string","maxLength":1024},"detail":{"anyOf":[{"type":"string","maxLength":1024},{"type":"null"}]},"tone":{"enum":["ink","gold","green","dim"]},"selected_trial_ordinal":{"anyOf":[{"type":"integer","minimum":1,"maximum":9007199254740991},{"type":"null"}]},"selected_trial_ordinal_scope":{"anyOf":[{"enum":["RUN_GLOBAL","STUDY_LOCAL"]},{"type":"null"}]},"selected_trial_ordinal_reason_code":{"anyOf":[{"enum":["SELECTION_HAS_NO_TRIAL","SOURCE_TRIAL_NUMBER_NOT_PUBLISHED","STUDY_LOCAL_TRIAL_MAPPING_NOT_PUBLISHED"]},{"type":"null"}]}},"description":"Only selected_params carries the complete native trial presentation: nulls plus reason when absent; ordinal plus scope when present. Display-only, never a cursor or identity. Existing selected_params.selected_trial_number remains the same ordinal alias.","allOf":[{"if":{"anyOf":[{"required":["selected_trial_ordinal"]},{"required":["selected_trial_ordinal_scope"]},{"required":["selected_trial_ordinal_reason_code"]}]},"then":{"required":["selected_trial_ordinal","selected_trial_ordinal_scope","selected_trial_ordinal_reason_code"],"properties":{"key":{"const":"selected_params"}},"anyOf":[{"properties":{"selected_trial_ordinal":{"type":"integer","minimum":1,"maximum":9007199254740991},"selected_trial_ordinal_scope":{"enum":["RUN_GLOBAL","STUDY_LOCAL"]},"selected_trial_ordinal_reason_code":{"type":"null"}}},{"properties":{"selected_trial_ordinal":{"type":"null"},"selected_trial_ordinal_scope":{"type":"null"},"selected_trial_ordinal_reason_code":{"enum":["SELECTION_HAS_NO_TRIAL","SOURCE_TRIAL_NUMBER_NOT_PUBLISHED","STUDY_LOCAL_TRIAL_MAPPING_NOT_PUBLISHED"]}}}]}}]}},"selected_params":{"$ref":"#/components/schemas/SelectedParams"},"taxonomy":{"type":"array","minItems":4,"maxItems":4,"items":{"type":"object","additionalProperties":false,"required":["what","state","consequence"],"properties":{"what":{"type":"string","maxLength":120},"state":{"enum":["UNCHANGED","CHANGED","UNSET"]},"consequence":{"type":"string","maxLength":512}}}},"gate_verdict":{"type":"object","additionalProperties":false,"required":["title","body"],"properties":{"title":{"type":"string","maxLength":256},"body":{"type":"string","maxLength":1024}}},"draft":{"$ref":"#/components/schemas/Draft"},"fields":{"type":"array","minItems":17,"maxItems":17,"items":{"$ref":"#/components/schemas/Field"}},"yaml":{"type":"array","minItems":17,"maxItems":17,"items":{"$ref":"#/components/schemas/Field"}},"pack":{"type":"array","minItems":12,"maxItems":12,"items":{"$ref":"#/components/schemas/PackItem"}},"pack_counts":{"type":"object","additionalProperties":false,"required":["complete","degraded","input","missing"],"properties":{"complete":{"type":"integer","minimum":0,"maximum":12},"degraded":{"type":"integer","minimum":0,"maximum":12},"input":{"type":"integer","minimum":0,"maximum":12},"missing":{"type":"integer","minimum":0,"maximum":12}}},"local_seal":{"$ref":"#/components/schemas/LocalSeal"},"actions":{"type":"object","additionalProperties":false,"required":["may_edit_draft","may_seal","seal_blocked_reason","publish"],"properties":{"may_edit_draft":{"type":"boolean"},"may_seal":{"type":"boolean"},"seal_blocked_reason":{"anyOf":[{"$ref":"#/components/schemas/ReasonCode"},{"type":"null"}]},"publish":{"type":"object","additionalProperties":false,"required":["enabled","blocked_reason"],"properties":{"enabled":{"type":"boolean"},"blocked_reason":{"anyOf":[{"$ref":"#/components/schemas/ReasonCode"},{"type":"null"}]},"blocked_action":{"enum":["NONE","SEAL_CANDIDATE","CREATE_NEW_RUN_AND_SEAL","REVIEW_CURRENT_CANDIDATE","WAIT"],"description":"Server-owned guidance, not mutation authority. CREATE_NEW_RUN_AND_SEAL uses the existing new-run flow and a new candidate; it never reopens or reseals the old actor/run draft. NONE does not imply permission."}}}}},"mirror":{"type":"null"},"source_absences":{"type":"object","additionalProperties":{"$ref":"#/components/schemas/Availability"}}}},
-      "DraftPatch": { "type": "object", "additionalProperties": false, "required": ["expected_revision", "expected_source_fingerprint", "known_limitations", "proposed_use_restrictions"], "properties": { "expected_revision": { "type": "integer", "minimum": 0 }, "expected_source_fingerprint": { "$ref": "#/components/schemas/Digest" }, "known_limitations": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 4096 }, { "type": "null" }] }, "proposed_use_restrictions": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 4096 }, { "type": "null" }] } }, "not": { "properties": { "known_limitations": { "type": "null" }, "proposed_use_restrictions": { "type": "null" } }, "required": ["known_limitations", "proposed_use_restrictions"] } },
-      "SealRequest": { "type": "object", "additionalProperties": false, "required": ["draft_id", "expected_draft_revision", "expected_source_fingerprint"], "properties": { "draft_id": { "$ref": "#/components/schemas/DraftId" }, "expected_draft_revision": { "type": "integer", "minimum": 1 }, "expected_source_fingerprint": { "$ref": "#/components/schemas/Digest" } } },
-      "SealResponse": { "type": "object", "additionalProperties": false, "required": ["schema_version", "release_candidate_id", "run_id", "pack_digest", "sealed_at_utc_ms", "delivery_state", "approval_state"], "properties": { "schema_version": { "const": "research.release-candidate-local-seal.v1" }, "release_candidate_id": { "$ref": "#/components/schemas/ReleaseCandidateId" }, "run_id": { "$ref": "#/components/schemas/RunId" }, "pack_digest": { "$ref": "#/components/schemas/Digest" }, "sealed_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "delivery_state": { "const": "NOT_DELIVERED" }, "approval_state": { "const": "NOT_APPROVED" } } },
-      "PackResponse": { "type": "object", "additionalProperties": false, "required": ["schema_version", "read_authority", "release_candidate_id", "run_id", "display_label", "pack_digest", "sealed_at_utc_ms", "frozen_core", "delivery"], "properties": { "schema_version": { "const": "research.release-candidate-pack.v1" }, "read_authority": { "const": "PORTAL_PERSISTED_RESEARCH" }, "release_candidate_id": { "$ref": "#/components/schemas/ReleaseCandidateId" }, "run_id": { "$ref": "#/components/schemas/RunId" }, "display_label": { "anyOf": [{ "type": "string", "pattern": "^R-[A-Z0-9]{1,8}-[0-9]{3,6}$" }, { "type": "null" }] }, "pack_digest": { "$ref": "#/components/schemas/Digest" }, "sealed_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "frozen_core": { "type": "object", "additionalProperties": false, "required": ["fields", "pack", "source_fingerprint", "draft"], "properties": { "fields": { "type": "array", "minItems": 17, "maxItems": 17, "items": { "$ref": "#/components/schemas/Field" } }, "pack": { "type": "array", "minItems": 12, "maxItems": 12, "items": { "$ref": "#/components/schemas/PackItem" } }, "source_fingerprint": { "$ref": "#/components/schemas/Digest" }, "draft": { "type": "object", "additionalProperties": false, "required": ["known_limitations", "proposed_use_restrictions"], "properties": { "known_limitations": { "type": "string", "maxLength": 4096 }, "proposed_use_restrictions": { "type": "string", "maxLength": 4096 } } } } }, "delivery": { "$ref": "#/components/schemas/LocalSeal" } } },
-      "Problem": { "type": "object", "additionalProperties": false, "required": ["error"], "properties": { "error": { "type": "object", "additionalProperties": false, "required": ["code", "message"], "properties": { "code": { "type": "string", "maxLength": 160 }, "message": { "type": "string", "maxLength": 1024, "description": "Diagnostic only, not UI copy; render the typed code and request_id with client-owned wording." } } }, "request_id": { "type": "string", "maxLength": 128 } } }
+      "WorkspaceId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._-]{1,128}$"
+      },
+      "RunId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+      },
+      "ReleaseCandidateId": {
+        "type": "string",
+        "pattern": "^rc_[0-9A-HJKMNP-TV-Z]{26}$"
+      },
+      "DraftId": {
+        "type": "string",
+        "pattern": "^rcd_[0-9A-HJKMNP-TV-Z]{26}$"
+      },
+      "Digest": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "UtcMilliseconds": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "ReasonCode": {
+        "type": "string",
+        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+      },
+      "Availability": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "reason_code"
+        ],
+        "properties": {
+          "state": {
+            "enum": [
+              "AVAILABLE",
+              "NOT_PUBLISHED",
+              "PARTIAL",
+              "NOT_APPLICABLE"
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "PublishedComparison": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "last_release_candidate_id",
+          "availability"
+        ],
+        "properties": {
+          "last_release_candidate_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReleaseCandidateId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
+        }
+      },
+      "CertificationAxis": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "value",
+          "availability"
+        ],
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
+        }
+      },
+      "CertificationAxes": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "methodology_claim",
+          "engine_execution_contract"
+        ],
+        "properties": {
+          "methodology_claim": {
+            "$ref": "#/components/schemas/CertificationAxis"
+          },
+          "engine_execution_contract": {
+            "$ref": "#/components/schemas/CertificationAxis"
+          }
+        }
+      },
+      "ComposeRunBinding": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "alpha_id",
+          "alpha_version_id",
+          "lifecycle_state"
+        ],
+        "properties": {
+          "alpha_id": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "alpha_version_id": {
+            "type": "string",
+            "maxLength": 191
+          },
+          "lifecycle_state": {
+            "enum": [
+              "DRAFT",
+              "ACTIVE",
+              "SUPERSEDED",
+              "ABANDONED"
+            ]
+          }
+        }
+      },
+      "ComposeRun": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "attempt",
+          "binding"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/RunId"
+          },
+          "attempt": {
+            "type": "string",
+            "maxLength": 191
+          },
+          "binding": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ComposeRunBinding"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "ComposeRailNode": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "value",
+          "detail",
+          "tone"
+        ],
+        "properties": {
+          "key": {
+            "enum": [
+              "alpha",
+              "alpha_version",
+              "run",
+              "selected_params",
+              "release_candidate"
+            ]
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 1024
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1024
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tone": {
+            "enum": [
+              "ink",
+              "gold",
+              "green",
+              "dim"
+            ]
+          },
+          "selected_trial_ordinal": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "selected_trial_ordinal_scope": {
+            "anyOf": [
+              {
+                "enum": [
+                  "RUN_GLOBAL",
+                  "STUDY_LOCAL"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "selected_trial_ordinal_reason_code": {
+            "anyOf": [
+              {
+                "enum": [
+                  "SELECTION_HAS_NO_TRIAL",
+                  "SOURCE_TRIAL_NUMBER_NOT_PUBLISHED",
+                  "STUDY_LOCAL_TRIAL_MAPPING_NOT_PUBLISHED"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "description": "Only selected_params carries complete native trial presentation; display-only, never a cursor or identity.",
+        "allOf": [
+          {
+            "if": {
+              "anyOf": [
+                {
+                  "required": [
+                    "selected_trial_ordinal"
+                  ]
+                },
+                {
+                  "required": [
+                    "selected_trial_ordinal_scope"
+                  ]
+                },
+                {
+                  "required": [
+                    "selected_trial_ordinal_reason_code"
+                  ]
+                }
+              ]
+            },
+            "then": {
+              "required": [
+                "selected_trial_ordinal",
+                "selected_trial_ordinal_scope",
+                "selected_trial_ordinal_reason_code"
+              ],
+              "properties": {
+                "key": {
+                  "const": "selected_params"
+                }
+              },
+              "anyOf": [
+                {
+                  "properties": {
+                    "selected_trial_ordinal": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991
+                    },
+                    "selected_trial_ordinal_scope": {
+                      "enum": [
+                        "RUN_GLOBAL",
+                        "STUDY_LOCAL"
+                      ]
+                    },
+                    "selected_trial_ordinal_reason_code": {
+                      "type": "null"
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "selected_trial_ordinal": {
+                      "type": "null"
+                    },
+                    "selected_trial_ordinal_scope": {
+                      "type": "null"
+                    },
+                    "selected_trial_ordinal_reason_code": {
+                      "enum": [
+                        "SELECTION_HAS_NO_TRIAL",
+                        "SOURCE_TRIAL_NUMBER_NOT_PUBLISHED",
+                        "STUDY_LOCAL_TRIAL_MAPPING_NOT_PUBLISHED"
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "SelectedParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "param_set_id",
+          "param_set_id_availability",
+          "selected_trial_number",
+          "selected_trial_number_availability"
+        ],
+        "properties": {
+          "param_set_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "param_set_id_availability": {
+            "$ref": "#/components/schemas/Availability"
+          },
+          "selected_trial_number": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Server-owned source-backed display ordinal; causal numbers are local to selected_trial_study_id. Same native mapping as Search/Freeze, not a parsed rail label or cumulative progress count."
+          },
+          "selected_trial_number_availability": {
+            "$ref": "#/components/schemas/Availability"
+          },
+          "selected_trial_number_scope": {
+            "anyOf": [
+              {
+                "enum": [
+                  "RUN_GLOBAL",
+                  "STUDY_LOCAL"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "selected_trial_source_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "selected_trial_study_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "ComposeTaxonomyRow": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "what",
+          "state",
+          "consequence"
+        ],
+        "properties": {
+          "what": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "state": {
+            "enum": [
+              "UNCHANGED",
+              "CHANGED",
+              "UNSET"
+            ]
+          },
+          "consequence": {
+            "type": "string",
+            "maxLength": 512
+          }
+        }
+      },
+      "ComposeGateVerdict": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "body"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 1024
+          }
+        }
+      },
+      "ComposePackCounts": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "complete",
+          "degraded",
+          "input",
+          "missing"
+        ],
+        "properties": {
+          "complete": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 12
+          },
+          "degraded": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 12
+          },
+          "input": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 12
+          },
+          "missing": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 12
+          }
+        }
+      },
+      "ComposeActions": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "may_edit_draft",
+          "may_seal",
+          "seal_blocked_reason",
+          "publish"
+        ],
+        "properties": {
+          "may_edit_draft": {
+            "type": "boolean"
+          },
+          "may_seal": {
+            "type": "boolean"
+          },
+          "seal_blocked_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "publish": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "enabled",
+              "blocked_reason"
+            ],
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "blocked_reason": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ReasonCode"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "blocked_action": {
+                "enum": [
+                  "NONE",
+                  "SEAL_CANDIDATE",
+                  "CREATE_NEW_RUN_AND_SEAL",
+                  "REVIEW_CURRENT_CANDIDATE",
+                  "WAIT"
+                ],
+                "description": "Server-owned guidance, not mutation authority. CREATE_NEW_RUN_AND_SEAL uses the existing new-run flow and a new candidate; it never reopens or reseals the old actor/run draft. NONE does not imply permission."
+              }
+            }
+          }
+        }
+      },
+      "ComposeResponseP21": {
+        "description": "Strict P21 bounded composer including display facts that must never be inferred by a browser.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "read_authority",
+          "run_id",
+          "display_label",
+          "state",
+          "availability",
+          "as_of_utc_ms",
+          "source_fingerprint",
+          "run",
+          "rail",
+          "selected_params",
+          "taxonomy",
+          "published_comparison",
+          "certification_axes",
+          "gate_verdict",
+          "draft",
+          "fields",
+          "yaml",
+          "pack",
+          "pack_counts",
+          "local_seal",
+          "actions",
+          "mirror",
+          "source_absences"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.release-candidate-compose.v1"
+          },
+          "read_authority": {
+            "const": "PORTAL_PERSISTED_RESEARCH"
+          },
+          "run_id": {
+            "$ref": "#/components/schemas/RunId"
+          },
+          "display_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^R-[A-Z0-9]{1,8}-[0-9]{3,6}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "const": "DRAFT"
+          },
+          "run_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "QUEUED",
+                  "RUNNING",
+                  "FINISHING",
+                  "COMPLETED",
+                  "FAILED",
+                  "CANCELLED",
+                  "DRAFT",
+                  "RECOVERY_REQUIRED"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "report_sealed": {
+            "type": "boolean"
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          },
+          "as_of_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "source_fingerprint": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "run": {
+            "$ref": "#/components/schemas/ComposeRun"
+          },
+          "rail": {
+            "type": "array",
+            "minItems": 5,
+            "maxItems": 5,
+            "items": {
+              "$ref": "#/components/schemas/ComposeRailNode"
+            }
+          },
+          "selected_params": {
+            "$ref": "#/components/schemas/SelectedParams"
+          },
+          "taxonomy": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "$ref": "#/components/schemas/ComposeTaxonomyRow"
+            }
+          },
+          "published_comparison": {
+            "$ref": "#/components/schemas/PublishedComparison"
+          },
+          "certification_axes": {
+            "$ref": "#/components/schemas/CertificationAxes"
+          },
+          "gate_verdict": {
+            "$ref": "#/components/schemas/ComposeGateVerdict"
+          },
+          "draft": {
+            "$ref": "#/components/schemas/Draft"
+          },
+          "fields": {
+            "type": "array",
+            "minItems": 17,
+            "maxItems": 17,
+            "items": {
+              "$ref": "#/components/schemas/Field"
+            }
+          },
+          "yaml": {
+            "type": "array",
+            "minItems": 17,
+            "maxItems": 17,
+            "items": {
+              "$ref": "#/components/schemas/Field"
+            }
+          },
+          "pack": {
+            "type": "array",
+            "minItems": 12,
+            "maxItems": 12,
+            "items": {
+              "$ref": "#/components/schemas/PackItem"
+            }
+          },
+          "pack_counts": {
+            "$ref": "#/components/schemas/ComposePackCounts"
+          },
+          "local_seal": {
+            "$ref": "#/components/schemas/LocalSeal"
+          },
+          "actions": {
+            "$ref": "#/components/schemas/ComposeActions"
+          },
+          "mirror": {
+            "type": "null"
+          },
+          "source_absences": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Availability"
+            }
+          },
+          "linked_final_audit": {
+            "$ref": "#/components/schemas/VerifiedPinnedAudit"
+          }
+        }
+      },
+      "FieldKey": {
+        "enum": [
+          "release_candidate_id",
+          "alpha_id",
+          "alpha_version_id",
+          "alpha_code_digest",
+          "alpha_entrypoint",
+          "final_audit_run_id",
+          "final_audit_attempt_id",
+          "requested_spec_digest",
+          "effective_spec_digest",
+          "dataset_binding_digest",
+          "manifest_digest",
+          "source_transform_digest",
+          "engine_release_id",
+          "adapter_contract_digest",
+          "parameter_bundle_digest",
+          "evidence_revision",
+          "report_revision"
+        ]
+      },
+      "Field": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "label",
+          "value",
+          "tone",
+          "availability"
+        ],
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/FieldKey"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 96
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1024
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tone": {
+            "enum": [
+              "ink",
+              "gold",
+              "red",
+              "dim"
+            ]
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
+        }
+      },
+      "PackItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "n",
+          "item",
+          "status",
+          "digest",
+          "source",
+          "note",
+          "availability"
+        ],
+        "properties": {
+          "key": {
+            "enum": [
+              "ALPHA_VERSION_PASSPORT",
+              "ENGINE_CAPABILITY_BACKEND",
+              "DATASET_UNIVERSE_SNAPSHOTS",
+              "METHODOLOGY_CLAIM",
+              "SELECTED_PARAMS_LINEAGE",
+              "FINAL_AUDIT_REPLAY",
+              "METRICS_SEMANTICS",
+              "EXECUTION_ASSUMPTIONS",
+              "ROBUSTNESS_PARAM_STABILITY_REGIME",
+              "KNOWN_LIMITATIONS_WAIVERS",
+              "REPRODUCIBILITY_PARITY_CHECKSUMS",
+              "PROPOSED_USE_RESTRICTIONS"
+            ]
+          },
+          "n": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12
+          },
+          "item": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "status": {
+            "enum": [
+              "COMPLETE",
+              "DEGRADED",
+              "INPUT",
+              "MISSING"
+            ]
+          },
+          "digest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Digest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "label",
+              "href"
+            ],
+            "properties": {
+              "label": {
+                "type": "string",
+                "maxLength": 96
+              },
+              "href": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^/research/"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
+        }
+      },
+      "Draft": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "draft_id",
+          "revision",
+          "source_fingerprint",
+          "known_limitations",
+          "proposed_use_restrictions",
+          "state",
+          "updated_at_utc_ms"
+        ],
+        "properties": {
+          "draft_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DraftId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "source_fingerprint": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "known_limitations": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "proposed_use_restrictions": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "enum": [
+              "VIRTUAL",
+              "PERSISTED"
+            ]
+          },
+          "updated_at_utc_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UtcMilliseconds"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "LocalSeal": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "release_candidate_id",
+          "pack_digest",
+          "sealed_at_utc_ms",
+          "delivery_state",
+          "approval_state",
+          "availability"
+        ],
+        "properties": {
+          "state": {
+            "enum": [
+              "UNSEALED",
+              "SEALED_LOCAL"
+            ]
+          },
+          "release_candidate_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReleaseCandidateId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pack_digest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Digest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sealed_at_utc_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UtcMilliseconds"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "delivery_state": {
+            "anyOf": [
+              {
+                "enum": [
+                  "NOT_DELIVERED",
+                  "PENDING",
+                  "DELIVERED",
+                  "UNKNOWN"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "approval_state": {
+            "anyOf": [
+              {
+                "enum": [
+                  "NOT_APPROVED",
+                  "PENDING",
+                  "APPROVED",
+                  "REJECTED",
+                  "UNKNOWN"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
+        }
+      },
+      "ComposeResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "read_authority",
+          "run_id",
+          "display_label",
+          "state",
+          "availability",
+          "as_of_utc_ms",
+          "source_fingerprint",
+          "run",
+          "rail",
+          "selected_params",
+          "taxonomy",
+          "gate_verdict",
+          "draft",
+          "fields",
+          "yaml",
+          "pack",
+          "pack_counts",
+          "local_seal",
+          "actions",
+          "mirror",
+          "source_absences"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.release-candidate-compose.v1"
+          },
+          "read_authority": {
+            "const": "PORTAL_PERSISTED_RESEARCH"
+          },
+          "run_id": {
+            "$ref": "#/components/schemas/RunId"
+          },
+          "display_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^R-[A-Z0-9]{1,8}-[0-9]{3,6}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "const": "DRAFT"
+          },
+          "run_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "QUEUED",
+                  "RUNNING",
+                  "FINISHING",
+                  "COMPLETED",
+                  "FAILED",
+                  "CANCELLED",
+                  "DRAFT",
+                  "RECOVERY_REQUIRED"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "report_sealed": {
+            "type": "boolean"
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          },
+          "as_of_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "source_fingerprint": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "run": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "attempt",
+              "binding"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/components/schemas/RunId"
+              },
+              "attempt": {
+                "type": "string",
+                "maxLength": 191
+              },
+              "binding": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "alpha_id",
+                      "alpha_version_id",
+                      "lifecycle_state"
+                    ],
+                    "properties": {
+                      "alpha_id": {
+                        "type": "string",
+                        "maxLength": 128
+                      },
+                      "alpha_version_id": {
+                        "type": "string",
+                        "maxLength": 191
+                      },
+                      "lifecycle_state": {
+                        "enum": [
+                          "DRAFT",
+                          "ACTIVE",
+                          "SUPERSEDED",
+                          "ABANDONED"
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "rail": {
+            "type": "array",
+            "minItems": 5,
+            "maxItems": 5,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "key",
+                "value",
+                "detail",
+                "tone"
+              ],
+              "properties": {
+                "key": {
+                  "enum": [
+                    "alpha",
+                    "alpha_version",
+                    "run",
+                    "selected_params",
+                    "release_candidate"
+                  ]
+                },
+                "value": {
+                  "type": "string",
+                  "maxLength": 1024
+                },
+                "detail": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 1024
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "tone": {
+                  "enum": [
+                    "ink",
+                    "gold",
+                    "green",
+                    "dim"
+                  ]
+                },
+                "selected_trial_ordinal": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "selected_trial_ordinal_scope": {
+                  "anyOf": [
+                    {
+                      "enum": [
+                        "RUN_GLOBAL",
+                        "STUDY_LOCAL"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "selected_trial_ordinal_reason_code": {
+                  "anyOf": [
+                    {
+                      "enum": [
+                        "SELECTION_HAS_NO_TRIAL",
+                        "SOURCE_TRIAL_NUMBER_NOT_PUBLISHED",
+                        "STUDY_LOCAL_TRIAL_MAPPING_NOT_PUBLISHED"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "description": "Only selected_params carries the complete native trial presentation: nulls plus reason when absent; ordinal plus scope when present. Display-only, never a cursor or identity. Existing selected_params.selected_trial_number remains the same ordinal alias.",
+              "allOf": [
+                {
+                  "if": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "selected_trial_ordinal"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "selected_trial_ordinal_scope"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "selected_trial_ordinal_reason_code"
+                        ]
+                      }
+                    ]
+                  },
+                  "then": {
+                    "required": [
+                      "selected_trial_ordinal",
+                      "selected_trial_ordinal_scope",
+                      "selected_trial_ordinal_reason_code"
+                    ],
+                    "properties": {
+                      "key": {
+                        "const": "selected_params"
+                      }
+                    },
+                    "anyOf": [
+                      {
+                        "properties": {
+                          "selected_trial_ordinal": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991
+                          },
+                          "selected_trial_ordinal_scope": {
+                            "enum": [
+                              "RUN_GLOBAL",
+                              "STUDY_LOCAL"
+                            ]
+                          },
+                          "selected_trial_ordinal_reason_code": {
+                            "type": "null"
+                          }
+                        }
+                      },
+                      {
+                        "properties": {
+                          "selected_trial_ordinal": {
+                            "type": "null"
+                          },
+                          "selected_trial_ordinal_scope": {
+                            "type": "null"
+                          },
+                          "selected_trial_ordinal_reason_code": {
+                            "enum": [
+                              "SELECTION_HAS_NO_TRIAL",
+                              "SOURCE_TRIAL_NUMBER_NOT_PUBLISHED",
+                              "STUDY_LOCAL_TRIAL_MAPPING_NOT_PUBLISHED"
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          "selected_params": {
+            "$ref": "#/components/schemas/SelectedParams"
+          },
+          "taxonomy": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "what",
+                "state",
+                "consequence"
+              ],
+              "properties": {
+                "what": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "state": {
+                  "enum": [
+                    "UNCHANGED",
+                    "CHANGED",
+                    "UNSET"
+                  ]
+                },
+                "consequence": {
+                  "type": "string",
+                  "maxLength": 512
+                }
+              }
+            }
+          },
+          "gate_verdict": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "title",
+              "body"
+            ],
+            "properties": {
+              "title": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "body": {
+                "type": "string",
+                "maxLength": 1024
+              }
+            }
+          },
+          "draft": {
+            "$ref": "#/components/schemas/Draft"
+          },
+          "fields": {
+            "type": "array",
+            "minItems": 17,
+            "maxItems": 17,
+            "items": {
+              "$ref": "#/components/schemas/Field"
+            }
+          },
+          "yaml": {
+            "type": "array",
+            "minItems": 17,
+            "maxItems": 17,
+            "items": {
+              "$ref": "#/components/schemas/Field"
+            }
+          },
+          "pack": {
+            "type": "array",
+            "minItems": 12,
+            "maxItems": 12,
+            "items": {
+              "$ref": "#/components/schemas/PackItem"
+            }
+          },
+          "pack_counts": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "complete",
+              "degraded",
+              "input",
+              "missing"
+            ],
+            "properties": {
+              "complete": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 12
+              },
+              "degraded": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 12
+              },
+              "input": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 12
+              },
+              "missing": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 12
+              }
+            }
+          },
+          "local_seal": {
+            "$ref": "#/components/schemas/LocalSeal"
+          },
+          "actions": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "may_edit_draft",
+              "may_seal",
+              "seal_blocked_reason",
+              "publish"
+            ],
+            "properties": {
+              "may_edit_draft": {
+                "type": "boolean"
+              },
+              "may_seal": {
+                "type": "boolean"
+              },
+              "seal_blocked_reason": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ReasonCode"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "publish": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "enabled",
+                  "blocked_reason"
+                ],
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "blocked_reason": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/ReasonCode"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "blocked_action": {
+                    "enum": [
+                      "NONE",
+                      "SEAL_CANDIDATE",
+                      "CREATE_NEW_RUN_AND_SEAL",
+                      "REVIEW_CURRENT_CANDIDATE",
+                      "WAIT"
+                    ],
+                    "description": "Server-owned guidance, not mutation authority. CREATE_NEW_RUN_AND_SEAL uses the existing new-run flow and a new candidate; it never reopens or reseals the old actor/run draft. NONE does not imply permission."
+                  }
+                }
+              }
+            }
+          },
+          "mirror": {
+            "type": "null"
+          },
+          "source_absences": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Availability"
+            }
+          },
+          "linked_final_audit": {
+            "$ref": "#/components/schemas/VerifiedPinnedAudit"
+          }
+        }
+      },
+      "DraftPatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expected_revision",
+          "expected_source_fingerprint",
+          "known_limitations",
+          "proposed_use_restrictions"
+        ],
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expected_source_fingerprint": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "known_limitations": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "proposed_use_restrictions": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "not": {
+          "properties": {
+            "known_limitations": {
+              "type": "null"
+            },
+            "proposed_use_restrictions": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "known_limitations",
+            "proposed_use_restrictions"
+          ]
+        }
+      },
+      "SealRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "draft_id",
+          "expected_draft_revision",
+          "expected_source_fingerprint"
+        ],
+        "properties": {
+          "draft_id": {
+            "$ref": "#/components/schemas/DraftId"
+          },
+          "expected_draft_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "expected_source_fingerprint": {
+            "$ref": "#/components/schemas/Digest"
+          }
+        }
+      },
+      "SealResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "release_candidate_id",
+          "run_id",
+          "pack_digest",
+          "sealed_at_utc_ms",
+          "delivery_state",
+          "approval_state"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.release-candidate-local-seal.v1"
+          },
+          "release_candidate_id": {
+            "$ref": "#/components/schemas/ReleaseCandidateId"
+          },
+          "run_id": {
+            "$ref": "#/components/schemas/RunId"
+          },
+          "pack_digest": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "sealed_at_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "delivery_state": {
+            "const": "NOT_DELIVERED"
+          },
+          "approval_state": {
+            "const": "NOT_APPROVED"
+          }
+        }
+      },
+      "PackResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "read_authority",
+          "release_candidate_id",
+          "run_id",
+          "display_label",
+          "pack_digest",
+          "sealed_at_utc_ms",
+          "frozen_core",
+          "delivery"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.release-candidate-pack.v1"
+          },
+          "read_authority": {
+            "const": "PORTAL_PERSISTED_RESEARCH"
+          },
+          "release_candidate_id": {
+            "$ref": "#/components/schemas/ReleaseCandidateId"
+          },
+          "run_id": {
+            "$ref": "#/components/schemas/RunId"
+          },
+          "display_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^R-[A-Z0-9]{1,8}-[0-9]{3,6}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pack_digest": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "sealed_at_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "frozen_core": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "fields",
+              "pack",
+              "source_fingerprint",
+              "draft"
+            ],
+            "properties": {
+              "fields": {
+                "type": "array",
+                "minItems": 17,
+                "maxItems": 17,
+                "items": {
+                  "$ref": "#/components/schemas/Field"
+                }
+              },
+              "pack": {
+                "type": "array",
+                "minItems": 12,
+                "maxItems": 12,
+                "items": {
+                  "$ref": "#/components/schemas/PackItem"
+                }
+              },
+              "source_fingerprint": {
+                "$ref": "#/components/schemas/Digest"
+              },
+              "draft": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "known_limitations",
+                  "proposed_use_restrictions"
+                ],
+                "properties": {
+                  "known_limitations": {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  "proposed_use_restrictions": {
+                    "type": "string",
+                    "maxLength": 4096
+                  }
+                }
+              },
+              "linked_final_audit": {
+                "$ref": "#/components/schemas/VerifiedPinnedAudit"
+              }
+            }
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/LocalSeal"
+          }
+        }
+      },
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 160
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 1024,
+                "description": "Diagnostic only, not UI copy; render the typed code and request_id with client-owned wording."
+              }
+            }
+          },
+          "request_id": {
+            "type": "string",
+            "maxLength": 128
+          }
+        }
+      },
+      "PinnedAuditResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "run_id",
+          "parent_run_id",
+          "target_digest",
+          "parameters_digest",
+          "engine_release_id",
+          "engine_version",
+          "snapshot_id",
+          "snapshot_content_hash",
+          "source_selection_digest",
+          "source_selection_kind",
+          "source_selection_part_digest",
+          "source_config_digest",
+          "audit_target_kind",
+          "optimizer_reinvoked",
+          "optimizer_trials",
+          "n_folds",
+          "bars"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.pinned-selection-audit-result.v1"
+          },
+          "run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "parent_run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "target_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "parameters_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "engine_release_id": {
+            "const": "er_quantbt_111"
+          },
+          "engine_version": {
+            "const": "1.1.1"
+          },
+          "snapshot_id": {
+            "type": "string",
+            "pattern": "^dss_[a-f0-9]{32}$"
+          },
+          "snapshot_content_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "source_selection_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "source_selection_kind": {
+            "const": "P05_SELECTION_PARAMETERS_JSON"
+          },
+          "source_selection_part_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "source_config_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "audit_target_kind": {
+            "const": "SINGLE_PARAMETER_SET"
+          },
+          "optimizer_reinvoked": {
+            "const": false
+          },
+          "optimizer_trials": {
+            "const": 0
+          },
+          "n_folds": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 16
+          },
+          "bars": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          }
+        }
+      },
+      "VerifiedPinnedAudit": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "child_run_id",
+          "child_attempt_id",
+          "artifact_id",
+          "artifact_revision",
+          "manifest_digest",
+          "result_digest",
+          "verified_at_utc_ms",
+          "result"
+        ],
+        "properties": {
+          "child_run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "child_attempt_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "artifact_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "artifact_revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "manifest_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "result_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "verified_at_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "result": {
+            "$ref": "#/components/schemas/PinnedAuditResult"
+          }
+        },
+        "description": "Immutable, worker-fenced receipt whose child and original target/parts were byte-verified. result_digest hashes canonical result; child_run_id=result.run_id. No raw config, params, data, artifact locator or transport secrets."
+      }
     }
   }
 }

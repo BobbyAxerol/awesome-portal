@@ -178,6 +178,7 @@ export interface components {
                 /** @description Cumulative source-observed GLOBAL study trials per monotonic elapsed second; null when not computable. Optional for pre-rate receipts. */
                 rate_trials_per_s?: string | null;
                 trials_done: components["schemas"]["UtcMilliseconds"];
+                /** @description Declared optimizer trial count. A pinned final-audit evaluation has zero; never invent a trial to satisfy progress presentation. */
                 trials_declared: number;
                 tqdm_line: string;
                 /**

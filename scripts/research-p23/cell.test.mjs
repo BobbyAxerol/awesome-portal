@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { BASE_URL, PROJECT, TEST_USERS, composeArguments, executionPreviewBuildArg, validateHome, retainedImageTag, imageReplacements } from './cell.mjs';
+import { BASE_URL, PROJECT, TEST_USERS, composeArguments, executionPreviewBuildArg, validateHome, retainedImageTag, imageReplacements, stampedComposePrefix } from './cell.mjs';
 
 test('qualification cell has its own fixed project, loopback and 20 distinct readers', () => {
   assert.equal(PROJECT, 'portal-research-p23-ol12');
@@ -30,6 +30,15 @@ test('sudo-safe test-only Execution UI build arg is explicit and bounded', () =>
   assert.throws(() => executionPreviewBuildArg('1'), /P23_EXECUTION_PREVIEW_BUILD_ARG_INVALID/);
   assert.throws(() => executionPreviewBuildArg('true --build-arg FEATURE_EXECUTION_COMMAND_RELAY=true'),
     /P23_EXECUTION_PREVIEW_BUILD_ARG_INVALID/);
+});
+test('sudo forwards only validated non-secret source stamps to the owned Compose invocation', () => {
+  const sha = 'a'.repeat(40);
+  assert.deepEqual(stampedComposePrefix(['docker'], sha, false), ['docker']);
+  assert.deepEqual(stampedComposePrefix(['sudo', '-n', 'docker'], sha, false),
+    ['sudo', '-n', 'env', `PORTAL_BUILD_COMMIT=${sha}`, 'PORTAL_BUILD_DIRTY=false', 'docker']);
+  assert.throws(() => stampedComposePrefix(['sudo', '-E', 'docker'], sha, false));
+  assert.throws(() => stampedComposePrefix(['sudo', '-n', 'docker'], 'main SECRET=x', false));
+  assert.throws(() => stampedComposePrefix(['docker'], sha, 'false'));
 });
 test('isolated activation uses private credentials, disables auto-login and adds no Execution authority or ports', () => {
   const source = readFileSync(new URL('../../deploy/research-preview/compose.research-p23-activation.yaml', import.meta.url), 'utf8');

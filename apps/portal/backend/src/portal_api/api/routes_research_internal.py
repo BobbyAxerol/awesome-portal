@@ -24,6 +24,7 @@ from portal_api.services.research_dataset_catalog import (
     build_research_dataset_catalog,
 )
 from portal_api.services.research_artifacts import ResearchArtifactError, observe_sealed_artifact_bytes
+from portal_api.domain.research_final_audit import PinnedAuditPreparation
 from portal_api.services.research_preflight_snapshot import (
     ResearchPreflightSnapshotError,
     refusal_detail,
@@ -267,6 +268,29 @@ async def observe_retained_artifact_bytes(
         )
     except ResearchArtifactError as exc:
         raise HTTPException(status_code=400, detail="invalid artifact observation contract") from exc
+
+
+@router.post("/final-audit/prepare")
+async def prepare_final_audit(request: Request, body: PinnedAuditPreparation) -> dict[str, object]:
+    """Read-only private target preparation; not a compute/admission endpoint."""
+    try:
+        principal = require_internal_principal(request.headers)
+    except InternalPrincipalError as exc:
+        raise HTTPException(status_code=401, detail="private service authentication failed") from exc
+    if principal.role != "ADMIN" or "research_final_audit" not in principal.authn_methods:
+        raise HTTPException(status_code=403, detail="private audit preparation is not authorized")
+    from portal_api.services.research_final_audit import prepare_pinned_audit_target
+    try:
+        target = prepare_pinned_audit_target(retained_artifact_root(), body)
+        return {"schema_version": "research.pinned-audit-preparation.v1", "target_digest": target.target_digest(),
+            "target": target.model_dump(mode="json")}
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        # Bounded vocabulary only; no original config, private path or arbitrary
+        # exception/engine string crosses the private diagnostic boundary.
+        code = str(exc)
+        if not code.startswith("AUDIT_") or len(code) > 100 or not all(c.isupper() or c == "_" for c in code):
+            code = "AUDIT_ORIGINAL_SOURCE_UNAVAILABLE"
+        raise HTTPException(status_code=409, detail={"reason_code": code}) from exc
 
 
 @router.post("/progress/{run_id}/cancel")

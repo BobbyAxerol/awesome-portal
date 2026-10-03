@@ -59,7 +59,7 @@ _MAX_EVIDENCE_RECEIPT_BYTES = 24 * 1024
 _MAX_CANDLE_OVERVIEW_BUCKETS = 48
 _MIN_CANDLE_OVERVIEW_BUCKETS = 8
 _ALLOWED_TASKS = frozenset({
-    "P04_DELTA_SMOKE", "P10_DELTA_WFO", "P16_DELTA_WHATIF_GRID", "P17_IMPORTED_SIGNAL_NOTIONAL"
+    "P04_DELTA_SMOKE", "P10_DELTA_WFO", "P16_DELTA_WHATIF_GRID", "P17_IMPORTED_SIGNAL_NOTIONAL", "P23_PINNED_FINAL_AUDIT"
 })
 
 _IMPORTED_FORBIDDEN_NODES = (
@@ -1602,6 +1602,29 @@ def _run_p16_delta_whatif(receipt: dict[str, Any], output_root: Path) -> dict[st
     }
 
 
+def _run_p23_pinned_final_audit(receipt: dict[str, Any], output_root: Path) -> dict[str, Any]:
+    from portal_api.domain.research_final_audit import (
+        PINNED_FINAL_AUDIT_PROFILE_ID, PINNED_FINAL_AUDIT_PROFILE_DIGEST, PinnedSelectionAuditTarget,
+    )
+    from portal_api.repositories.artifacts import ArtifactRepository
+    from portal_api.services.research_final_audit import run_pinned_final_audit
+
+    keys = {"schema_version", "task", "job_id", "run_id", "worker_attempt_id", "lease_epoch", "market_path",
+        "artifact_root", "output_root", "execution_profile_id", "execution_profile_digest", "audit_target", "audit_target_digest"}
+    if set(receipt) != keys or (receipt["execution_profile_id"], receipt["execution_profile_digest"]) != (
+        PINNED_FINAL_AUDIT_PROFILE_ID, PINNED_FINAL_AUDIT_PROFILE_DIGEST):
+        raise ValueError("audit child requires exactly its pinned profile and target inputs")
+    target = PinnedSelectionAuditTarget.model_validate(receipt["audit_target"])
+    result = run_pinned_final_audit(target, expected_target_digest=receipt["audit_target_digest"],
+        snapshot_path=Path(receipt["market_path"]), artifacts=ArtifactRepository(output_root), run_id=str(receipt["run_id"]),
+        parent_retained_root=Path(receipt["artifact_root"]))
+    return {"task": "P23_PINNED_FINAL_AUDIT", "engine_version": result["engine_version"],
+        "bars": result["bars"], "n_folds": result["n_folds"], "trial_rows": 0,
+        "execution_profile_digest": PINNED_FINAL_AUDIT_PROFILE_DIGEST,
+        "peak_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024,
+        "audit_receipt": result}
+
+
 def execute_receipt(receipt: dict[str, Any], *, receipt_dir: Path | None = None) -> dict[str, Any]:
     _assert_clean_environment()
     if receipt.get("schema_version") != "research.p06.child-receipt.v1":
@@ -1609,7 +1632,9 @@ def execute_receipt(receipt: dict[str, Any], *, receipt_dir: Path | None = None)
     task = receipt.get("task")
     if task not in _ALLOWED_TASKS:
         raise ValueError("P06 child task is not allowlisted")
-    if task == "P10_DELTA_WFO":
+    if task == "P23_PINNED_FINAL_AUDIT":
+        result = _run_p23_pinned_final_audit(receipt, _wfo_output_root(receipt, receipt_dir))
+    elif task == "P10_DELTA_WFO":
         result = _run_p10_delta_wfo(receipt, _wfo_output_root(receipt, receipt_dir))
     elif task == "P16_DELTA_WHATIF_GRID":
         result = _run_p16_delta_whatif(receipt, _wfo_output_root(receipt, receipt_dir))

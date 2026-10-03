@@ -20,6 +20,17 @@ from typing import Any
 CONTRACTS_ROOT = Path(__file__).resolve().parents[1]
 
 TRACKED = (
+    "openapi/research-final-audit.openapi.json",
+    "generated/research-final-audit.d.ts",
+    "tooling/generate-research-final-audit.mjs",
+    "fixtures/research-final-audit.ready_to_admit.valid.json",
+    "fixtures/research-final-audit.queued.valid.json",
+    "fixtures/research-final-audit.running.valid.json",
+    "fixtures/research-final-audit.awaiting_verification.valid.json",
+    "fixtures/research-final-audit.verified.valid.json",
+    "fixtures/research-final-audit.failed.valid.json",
+    "fixtures/research-final-audit.cancelled.valid.json",
+    "fixtures/research-progress.pinned-audit-overall.valid.json",
     "tooling/generate-research-publish-guidance.mjs",
     "fixtures/research-release-candidate.stale-seal.valid.json",
     "fixtures/research-release-candidate.trial-rail.valid.json",

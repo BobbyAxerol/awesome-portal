@@ -58,3 +58,5 @@ generate_and_compare openapi/research-report.openapi.json generated/research-rep
 generate_and_compare openapi/research-attempt-lineage.openapi.json generated/research-attempt-lineage.d.ts
 generate_and_compare openapi/research-compare.openapi.json generated/research-compare.d.ts
 generate_and_compare openapi/research-release-candidate.openapi.json generated/research-release-candidate.d.ts
+node tooling/generate-research-final-audit.mjs --check
+generate_and_compare openapi/research-final-audit.openapi.json generated/research-final-audit.d.ts

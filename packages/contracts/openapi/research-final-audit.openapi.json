@@ -1,0 +1,598 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Research pinned linked final audit",
+    "version": "1.0.0",
+    "description": "Qualified QuantBT 1.1.1 global Delta signal-notional audit of an original frozen selection. No optimizer/reselection, fresh defaults or data reload. Public GET creates no job; explicit ADMIN producer POST binds same-origin CSRF, workspace, immutable target and shared utility budget. Per-fold causal targets require an individual target sequence and remain typed outside this profile. Not a generic engine/CLI endpoint."
+  },
+  "paths": {
+    "/api/v1/quantbt/runs/{run_id}/final-audit": {
+      "get": {
+        "operationId": "researchLinkedFinalAuditGetV1",
+        "security": [
+          {
+            "portalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bound target and actual verified custody",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Read"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed refusal; no authority is inferred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed refusal; no authority is inferred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed refusal; no authority is inferred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed refusal; no authority is inferred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed refusal; no authority is inferred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Typed refusal; no authority is inferred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed refusal; no authority is inferred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "researchLinkedFinalAuditCreateV1",
+        "security": [
+          {
+            "portalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+            }
+          }
+        ],
+        "description": "Same-origin Origin and x-portal-csrf matching the session-bound CSRF cookie are required. Producer authority is independently enforced.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Create"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Durable explicit intent accepted; same-intent retry is idempotent",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Read"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed refusal; no authority is inferred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed refusal; no authority is inferred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed refusal; no authority is inferred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed refusal; no authority is inferred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed refusal; no authority is inferred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Typed refusal; no authority is inferred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed refusal; no authority is inferred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "portalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-portal_session"
+      }
+    },
+    "schemas": {
+      "PinnedAuditResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "run_id",
+          "parent_run_id",
+          "target_digest",
+          "parameters_digest",
+          "engine_release_id",
+          "engine_version",
+          "snapshot_id",
+          "snapshot_content_hash",
+          "source_selection_digest",
+          "source_selection_kind",
+          "source_selection_part_digest",
+          "source_config_digest",
+          "audit_target_kind",
+          "optimizer_reinvoked",
+          "optimizer_trials",
+          "n_folds",
+          "bars"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.pinned-selection-audit-result.v1"
+          },
+          "run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "parent_run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "target_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "parameters_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "engine_release_id": {
+            "const": "er_quantbt_111"
+          },
+          "engine_version": {
+            "const": "1.1.1"
+          },
+          "snapshot_id": {
+            "type": "string",
+            "pattern": "^dss_[a-f0-9]{32}$"
+          },
+          "snapshot_content_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "source_selection_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "source_selection_kind": {
+            "const": "P05_SELECTION_PARAMETERS_JSON"
+          },
+          "source_selection_part_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "source_config_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "audit_target_kind": {
+            "const": "SINGLE_PARAMETER_SET"
+          },
+          "optimizer_reinvoked": {
+            "const": false
+          },
+          "optimizer_trials": {
+            "const": 0
+          },
+          "n_folds": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 16
+          },
+          "bars": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          }
+        }
+      },
+      "VerifiedPinnedAudit": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "child_run_id",
+          "child_attempt_id",
+          "artifact_id",
+          "artifact_revision",
+          "manifest_digest",
+          "result_digest",
+          "verified_at_utc_ms",
+          "result"
+        ],
+        "properties": {
+          "child_run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "child_attempt_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "artifact_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "artifact_revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "manifest_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "result_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "verified_at_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "result": {
+            "$ref": "#/components/schemas/PinnedAuditResult"
+          }
+        },
+        "description": "Immutable, worker-fenced receipt whose child and original target/parts were byte-verified. result_digest hashes canonical result; child_run_id=result.run_id. No raw config, params, data, artifact locator or transport secrets."
+      },
+      "Read": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "parent_run_id",
+          "state",
+          "target_digest",
+          "profile_id",
+          "profile_digest",
+          "may_create",
+          "child_run_id",
+          "progress_href",
+          "verification"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.linked-final-audit.v1"
+          },
+          "parent_run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "state": {
+            "enum": [
+              "READY_TO_ADMIT",
+              "QUEUED",
+              "RUNNING",
+              "AWAITING_VERIFICATION",
+              "VERIFIED",
+              "FAILED",
+              "CANCELLED"
+            ]
+          },
+          "target_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "profile_id": {
+            "const": "p23.delta-pinned-final-audit.v1"
+          },
+          "profile_digest": {
+            "const": "457267c54edd02fcea53eceb92a81cdec9fdaefc8b9231638540b51a85b92491"
+          },
+          "may_create": {
+            "type": "boolean"
+          },
+          "child_run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "progress_href": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 512
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "verification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VerifiedPinnedAudit"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "VERIFIED"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "verification": {
+                  "$ref": "#/components/schemas/VerifiedPinnedAudit"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "verification": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "READY_TO_ADMIT"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "child_run_id": {
+                  "type": "null"
+                },
+                "progress_href": {
+                  "type": "null"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "child_run_id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "Create": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "client_intent_id",
+          "target_digest"
+        ],
+        "properties": {
+          "client_intent_id": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 160,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+          },
+          "target_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      },
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 160
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 1024,
+                "description": "Diagnostic only, not UI copy. Never contains raw target documents, paths or credentials."
+              }
+            }
+          },
+          "request_id": {
+            "type": "string",
+            "maxLength": 128
+          }
+        }
+      }
+    }
+  }
+}

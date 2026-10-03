@@ -154,6 +154,10 @@ export class P22PublicationBridgeService {
            ORDER BY artifact.artifact_revision DESC, artifact.artifact_id ASC LIMIT 1
         ) artifact ON TRUE
        WHERE pack.workspace_id = $1 AND pack.release_candidate_id = $2
+         -- The linked child verifies the parent's frozen selection. Keep
+         -- promotion lineage/selection on that parent; the evaluator did
+         -- not select a new trial or create a new promotion candidate.
+         AND (NOT (pack.frozen_core ? 'linked_final_audit') OR run.run_id = root.run_id)
          AND version.alpha_id IS NOT NULL AND version.alpha_version_id IS NOT NULL
          AND artifact.manifest_digest IS NOT NULL AND artifact.schema_version IS NOT NULL
        ORDER BY (run.run_id = root.run_id) ASC, run.updated_at DESC, run.run_id ASC LIMIT 1`,

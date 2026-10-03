@@ -4,6 +4,7 @@ import { GovernanceError } from "../src/governance/governance.service";
 import { canonicalResearchJson } from "../src/research/preflight.service";
 import { ResearchReleaseCandidatePublicationService } from "../src/research/release-candidate-publication.service";
 import type { PublicationIntent } from "../src/research/release-candidate-publication.repository";
+import { auditProof } from "./research-final-audit.fixture";
 
 const scope = { workspaceId: "ws_p22", actorUserId: "usr_p22" };
 const user = { userId: "usr_p22", username: "researcher" };
@@ -127,6 +128,25 @@ function subject(intake: "true" | "false" = "true", bridgeEnabled = false) {
 }
 
 describe("P22 actor-bound publication over existing R1", () => {
+  it("accepts only a frozen verified linked child and keeps Governance evidence on the parent selection",async()=>{
+    const x=subject("true",true);
+    const result={...auditProof.result,parent_run_id:"run_p22"};
+    const proof={...auditProof,result,result_digest:digest(result)};
+    const core={...frozen,linked_final_audit:proof,fields:frozen.fields.map(field=>field.key==="final_audit_run_id"
+      ? {...field,value:proof.child_run_id}:field)};
+    const pack={releaseCandidateId:rcId,runId:"run_p22",packDigest:digest(core),sourceFingerprint,frozenCore:core,
+      deliveryState:"NOT_DELIVERED",approvalState:"NOT_APPROVED",sealedAtUtcMs:1790330400000};
+    x.packs.readPack.mockResolvedValue(pack as never);x.packs.latestPack.mockResolvedValue(pack as never);
+    expect(await x.service.publication(scope,user as never,rcId)).toMatchObject({may_publish:true,blocked_reason:null});
+    expect(x.bridge.materialize).toHaveBeenCalled();
+    expect(x.governance.publicationEvidence.mock.calls[0]![2]).toBe("run_p22");
+    for(const invalid of [{...proof,result_digest:"0".repeat(64)}, {...proof,result:{...result,parent_run_id:"other"}}, null]){
+      const bad={...core,linked_final_audit:invalid};
+      x.packs.readPack.mockResolvedValue({...pack,packDigest:digest(bad),frozenCore:bad} as never);
+      x.packs.latestPack.mockResolvedValue({...pack,packDigest:digest(bad),frozenCore:bad} as never);
+      expect(await x.service.publication(scope,user as never,rcId)).toMatchObject({may_publish:false,blocked_reason:"P22_FINAL_AUDIT_NOT_LINKED"});
+    }
+  });
   it("P22-T01/T03/T12 sends only the strict R1 request, verifies exact artifact pin and mirrors raw source status", async () => {
     const x = subject();
     const result = await x.service.publish(scope, user as never, rcId, input, "req_p22");

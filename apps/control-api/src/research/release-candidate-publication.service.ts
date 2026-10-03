@@ -25,6 +25,7 @@ import { ResearchReleaseCandidateRepository } from "./release-candidate.reposito
 import { ResearchReleaseCandidateService } from "./release-candidate.service";
 import { P22PublicationBridgeService, sealedPackMethodologyClaimIds, type P22BridgeReceipt } from "./p22-publication-bridge.service";
 import { publishBlockedAction } from "./release-candidate-publish-action";
+import { VerifiedPinnedAuditSchema } from "./final-audit.contract";
 
 type Source = ResearchReleaseCandidatePublicationResponse["source"];
 type Relation = ResearchReleaseCandidatePublicationResponse["candidate_relation"];
@@ -311,7 +312,11 @@ export class ResearchReleaseCandidatePublicationService {
       sourceFingerprint: pack.sourceFingerprint, source: notChecked, relation };
     if (digest(frozen) !== pack.packDigest || frozen.source_fingerprint !== pack.sourceFingerprint)
       return { ...base, blocked: "P22_PACK_INTEGRITY_FAILED" };
-    if (finalAudit !== pack.runId || alphaId === "unbound" || alphaVersionId === "unbound")
+    const linkedAudit = VerifiedPinnedAuditSchema.safeParse(frozen.linked_final_audit);
+    const linkedToParent = linkedAudit.success && linkedAudit.data.result.parent_run_id === pack.runId
+      && linkedAudit.data.child_run_id === finalAudit;
+    if ((frozen.linked_final_audit !== undefined ? !linkedToParent : finalAudit !== pack.runId)
+      || alphaId === "unbound" || alphaVersionId === "unbound")
       return { ...base, blocked: "P22_FINAL_AUDIT_NOT_LINKED" };
     if (relation !== "CURRENT")
       return { ...base, blocked: relation === "SUPERSEDED" ? "P22_RELEASE_CANDIDATE_SUPERSEDED" : "P22_RELEASE_CANDIDATE_CURRENTNESS_UNKNOWN" };

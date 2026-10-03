@@ -5,8 +5,16 @@
     "version": "1.1.0",
     "description": "P19 same-origin Screen-10 Attempt Lineage. It reads a bounded Portal-persisted Research graph only. It does not submit/fork/reproduce a run, start QuantBT, read worker/artifact/source paths, expose source cursors/leases/credentials, reset governance gates, or choose a promotion from metrics, lifecycle state or recency. 1.1.0 (W6b, additive): private weak ETag/304, a newest-first bounded window with a server-signed older-page cursor, server storied/probe classification, per-attempt promotion standing, allow-listed spec line, P21 release-candidate references, retained certificate/claim/OOS Sharpe/decay facts, version outcome/supersession/exercised/untried, and count definitions reconciled with the Run Library."
   },
-  "servers": [{ "url": "/" }],
-  "security": [{ "portalSession": [] }],
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "security": [
+    {
+      "portalSession": []
+    }
+  ],
   "paths": {
     "/api/v1/research/alphas/{alphaId}/lineage": {
       "get": {
@@ -14,302 +22,2014 @@
         "summary": "Read one bounded, source-backed Alpha attempt lineage",
         "description": "The graph is returned in chronological order and bounded to 128 attempts. When a history exceeds the bound, the first page is the NEWEST `limit` attempts and coverage is explicitly PARTIAL with P19_BOUNDED_GRAPH_LIMIT_REACHED; consumers must not present a returned page as complete, and read older attempts only through coverage.older_cursor. Each returned attempt also bounds child runs and declares P19_CHILD_RUNS_BOUNDED_PER_ATTEMPT when needed. promotion_pick is PUBLISHED only from an immutable source-attested fact. A missing pick is typed NOT_PUBLISHED with P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK and must never be replaced by best/newest/ACTIVE logic in the browser. The answer carries a private weak ETag; If-None-Match with it returns 304.",
         "parameters": [
-          { "$ref": "#/components/parameters/AlphaId" },
-          { "$ref": "#/components/parameters/WorkspaceId" },
-          { "$ref": "#/components/parameters/LineageLimit" },
-          { "$ref": "#/components/parameters/LineageCursor" },
-          { "$ref": "#/components/parameters/IfNoneMatch" }
+          {
+            "$ref": "#/components/parameters/AlphaId"
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/LineageLimit"
+          },
+          {
+            "$ref": "#/components/parameters/LineageCursor"
+          },
+          {
+            "$ref": "#/components/parameters/IfNoneMatch"
+          }
         ],
         "responses": {
           "200": {
             "description": "One bounded persisted lineage snapshot.",
             "headers": {
-              "ETag": { "description": "The body's `etag`; revalidate with If-None-Match (weak comparison).", "schema": { "type": "string" } },
-              "Cache-Control": { "description": "Always `private, no-cache`.", "schema": { "type": "string" } }
+              "ETag": {
+                "description": "The body's `etag`; revalidate with If-None-Match (weak comparison).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Always `private, no-cache`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             },
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AttemptLineageResponse" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttemptLineageResponse"
+                }
+              }
+            }
           },
-          "304": { "description": "The held lineage (same lineage_revision) is still current. No body." },
-          "400": { "$ref": "#/components/responses/Problem" },
-          "401": { "$ref": "#/components/responses/Problem" },
-          "403": { "$ref": "#/components/responses/Problem" },
-          "404": { "$ref": "#/components/responses/Problem" },
-          "503": { "$ref": "#/components/responses/Problem" }
+          "304": {
+            "description": "The held lineage (same lineage_revision) is still current. No body."
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     }
   },
   "components": {
     "securitySchemes": {
-      "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" }
+      "portalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "portal_session"
+      }
     },
     "parameters": {
-      "AlphaId": { "name": "alphaId", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/AlphaId" } },
-      "WorkspaceId": { "name": "workspace_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/WorkspaceId" } },
-      "LineageLimit": { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 128, "default": 128 } },
-      "LineageCursor": { "name": "cursor", "in": "query", "required": false, "description": "Only a coverage.older_cursor this route issued, for the same workspace, Alpha and limit. Opaque; a browser never builds one.", "schema": { "type": "string", "minLength": 1, "maxLength": 4096 } },
-      "IfNoneMatch": { "name": "If-None-Match", "in": "header", "required": false, "schema": { "type": "string", "maxLength": 1024 } }
+      "AlphaId": {
+        "name": "alphaId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/AlphaId"
+        }
+      },
+      "WorkspaceId": {
+        "name": "workspace_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/WorkspaceId"
+        }
+      },
+      "LineageLimit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 128,
+          "default": 128
+        }
+      },
+      "LineageCursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "description": "Only a coverage.older_cursor this route issued, for the same workspace, Alpha and limit. Opaque; a browser never builds one.",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      },
+      "IfNoneMatch": {
+        "name": "If-None-Match",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "maxLength": 1024
+        }
+      }
     },
     "responses": {
-      "Problem": { "description": "Typed same-origin refusal. It never discloses a relation, raw config payload, source path, worker identity, lease, cursor, delegated credential or promotion policy.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+      "Problem": {
+        "description": "Typed same-origin refusal. It never discloses a relation, raw config payload, source path, worker identity, lease, cursor, delegated credential or promotion policy.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      }
     },
     "schemas": {
-      "WorkspaceId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._-]{1,128}$" },
-      "AlphaId": { "type": "string", "minLength": 3, "maxLength": 64, "pattern": "^[a-z][a-z0-9-]{2,63}$" },
-      "OpaqueId": { "type": "string", "minLength": 1, "maxLength": 191, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$" },
-      "Digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-      "UtcMilliseconds": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
-      "ReasonCode": { "type": "string", "minLength": 1, "maxLength": 160 },
+      "WorkspaceId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128,
+        "pattern": "^[A-Za-z0-9._-]{1,128}$"
+      },
+      "AlphaId": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 64,
+        "pattern": "^[a-z][a-z0-9-]{2,63}$"
+      },
+      "OpaqueId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 191,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+      },
+      "Digest": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "UtcMilliseconds": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "ReasonCode": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+      },
       "Problem": {
-        "type": "object", "additionalProperties": false, "required": ["error"],
-        "properties": { "error": { "type": "object", "additionalProperties": false, "required": ["code", "message"], "properties": { "code": { "type": "string", "maxLength": 160 }, "message": { "type": "string", "maxLength": 1024 } } }, "request_id": { "type": "string", "maxLength": 128 } }
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 160
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 1024
+              }
+            }
+          },
+          "request_id": {
+            "type": "string",
+            "maxLength": 128
+          }
+        }
       },
       "Availability": {
-        "type": "object", "additionalProperties": false, "required": ["state", "reason_code"],
-        "properties": { "state": { "enum": ["AVAILABLE", "NOT_PUBLISHED", "PARTIAL", "NOT_APPLICABLE"] }, "reason_code": { "anyOf": [{ "$ref": "#/components/schemas/ReasonCode" }, { "type": "null" }] } }
-      },
-      "ExactDecimal": { "type": "string", "maxLength": 96, "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$" },
-      "ReleaseCandidateRef": {
-        "type": "object", "additionalProperties": false,
-        "description": "W6b CG-P19-04: a run's persisted P21 relation by the Run Library rule (a Portal-local sealed pack wins over the viewer's own draft). A reference only; it grants no delivery or approval authority.",
-        "required": ["kind", "release_candidate_id", "draft_id", "run_id", "delivery_state", "approval_state", "sealed_at_utc_ms"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "reason_code"
+        ],
         "properties": {
-          "kind": { "enum": ["LOCAL_SEAL", "ACTOR_DRAFT"] },
-          "release_candidate_id": { "anyOf": [{ "type": "string", "pattern": "^rc_[0-9A-HJKMNP-TV-Z]{26}$" }, { "type": "null" }] },
-          "draft_id": { "anyOf": [{ "type": "string", "pattern": "^rcd_[0-9A-HJKMNP-TV-Z]{26}$" }, { "type": "null" }] },
-          "run_id": { "$ref": "#/components/schemas/OpaqueId" },
-          "delivery_state": { "anyOf": [{ "enum": ["NOT_DELIVERED", "PENDING", "DELIVERED", "UNKNOWN"] }, { "type": "null" }] },
-          "approval_state": { "anyOf": [{ "enum": ["NOT_APPROVED", "PENDING", "APPROVED", "REJECTED", "UNKNOWN"] }, { "type": "null" }] },
-          "sealed_at_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] }
+          "state": {
+            "enum": [
+              "AVAILABLE",
+              "NOT_PUBLISHED",
+              "PARTIAL",
+              "NOT_APPLICABLE"
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "ExactDecimal": {
+        "type": "string",
+        "maxLength": 96,
+        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+      },
+      "ReleaseCandidateRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "W6b CG-P19-04: a run's persisted P21 relation by the Run Library rule (a Portal-local sealed pack wins over the viewer's own draft). A reference only; it grants no delivery or approval authority.",
+        "required": [
+          "kind",
+          "release_candidate_id",
+          "draft_id",
+          "run_id",
+          "delivery_state",
+          "approval_state",
+          "sealed_at_utc_ms"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "LOCAL_SEAL",
+              "ACTOR_DRAFT"
+            ]
+          },
+          "release_candidate_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^rc_[0-9A-HJKMNP-TV-Z]{26}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "draft_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^rcd_[0-9A-HJKMNP-TV-Z]{26}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "run_id": {
+            "$ref": "#/components/schemas/OpaqueId"
+          },
+          "delivery_state": {
+            "anyOf": [
+              {
+                "enum": [
+                  "NOT_DELIVERED",
+                  "PENDING",
+                  "DELIVERED",
+                  "UNKNOWN"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "approval_state": {
+            "anyOf": [
+              {
+                "enum": [
+                  "NOT_APPROVED",
+                  "PENDING",
+                  "APPROVED",
+                  "REJECTED",
+                  "UNKNOWN"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sealed_at_utc_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UtcMilliseconds"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
         }
       },
       "RunMetricFact": {"type":"object","additionalProperties":false,"required":["value","source","scope","definition_id","availability"],"description":"W6b CG-P19-05: one retained per-run value with its own source and scope. A null value is a typed absence, never a zero.","properties":{"value":{"anyOf":[{"$ref":"#/components/schemas/ExactDecimal"},{"type":"null"}]},"source":{"anyOf":[{"enum":["P13_EVIDENCE_PROJECTION","RS02_RETAINED_SELECTED_TRIAL","SUMMARY_ANALYTICS_V2","ENRICHED_ANALYSIS","RS02_RETAINED_OUTER_FOLD_SELECTIONS"]},{"type":"null"}]},"scope":{"anyOf":[{"enum":["OOS","IS_PLUS_OOS","CHILD_TAPE","SELECTED_TRIAL_MEAN_ACROSS_FOLDS","OUTER_FOLD_SELECTED_OOS_MEAN"]},{"type":"null"}]},"definition_id":{"anyOf":[{"type":"string","pattern":"^research\\.[a-z0-9_.-]{3,120}$"},{"type":"null"}]},"availability":{"$ref":"#/components/schemas/Availability"},"origin":{"enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"source_locator":{"type":"string","minLength":1,"maxLength":256},"input_digest":{"type":"string","pattern":"^[0-9a-f]{64}$"}},"allOf":[{"if":{"properties":{"availability":{"properties":{"state":{"const":"AVAILABLE"}},"required":["state"]}},"required":["availability"]},"then":{"properties":{"value":{"type":"string","minLength":1}},"required":["value"]}}]},
       "RunFacts": {
-        "type": "object", "additionalProperties": false, "required": ["certificate", "claim", "oos_sharpe", "decay"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "certificate",
+          "claim",
+          "oos_sharpe",
+          "decay"
+        ],
         "description": "W6b CG-P19-05: the primary run's certificate, claim, OOS Sharpe and decay exactly as Screen 01 maps them; a Delta WFO run without a P13 projection falls back to its retained RS-02 selected trial.",
         "properties": {
-          "certificate": { "type": "object", "additionalProperties": false, "required": ["grade", "availability"], "properties": { "grade": { "anyOf": [{ "enum": ["A", "B", "C", "D"] }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
-          "claim": { "type": "object", "additionalProperties": false, "required": ["state", "text", "availability", "family", "family_origin", "family_availability"], "properties": { "state": { "anyOf": [{ "enum": ["FORECAST", "NOT_ISSUED", "ISSUED"] }, { "type": "null" }] }, "text": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 1024 }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" }, "family": { "enum": ["STRICT_OUTER_OOS", "SELECTION_ADJUSTED_OOS", "WALK_FORWARD_OOS_COMPATIBILITY", "NONE_FULL_SAMPLE_CALIBRATION", "NOT_PUBLISHED"] }, "family_origin": { "enum": ["SOURCE_ATTESTED", "PORTAL_DERIVED_FROM_SOURCE_PROTOCOL", "NOT_PUBLISHED"] }, "family_availability": { "$ref": "#/components/schemas/Availability" } } },
-          "oos_sharpe": { "$ref": "#/components/schemas/RunMetricFact" },
-          "decay": { "$ref": "#/components/schemas/RunMetricFact" }
+          "certificate": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "grade",
+              "availability"
+            ],
+            "properties": {
+              "grade": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "A",
+                      "B",
+                      "C",
+                      "D"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "availability": {
+                "$ref": "#/components/schemas/Availability"
+              }
+            }
+          },
+          "claim": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "text",
+              "availability",
+              "family",
+              "family_origin",
+              "family_availability"
+            ],
+            "properties": {
+              "state": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "FORECAST",
+                      "NOT_ISSUED",
+                      "ISSUED"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "text": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "availability": {
+                "$ref": "#/components/schemas/Availability"
+              },
+              "family": {
+                "enum": [
+                  "STRICT_OUTER_OOS",
+                  "SELECTION_ADJUSTED_OOS",
+                  "WALK_FORWARD_OOS_COMPATIBILITY",
+                  "NONE_FULL_SAMPLE_CALIBRATION",
+                  "NOT_PUBLISHED"
+                ]
+              },
+              "family_origin": {
+                "enum": [
+                  "SOURCE_ATTESTED",
+                  "PORTAL_DERIVED_FROM_SOURCE_PROTOCOL",
+                  "NOT_PUBLISHED"
+                ]
+              },
+              "family_availability": {
+                "$ref": "#/components/schemas/Availability"
+              }
+            }
+          },
+          "oos_sharpe": {
+            "$ref": "#/components/schemas/RunMetricFact"
+          },
+          "decay": {
+            "$ref": "#/components/schemas/RunMetricFact"
+          }
         }
       },
-      "PresentationReason": { "enum": ["PROMOTION_PICK", "RELEASE_CANDIDATE", "VERSION_FIRST_ATTEMPT", "GATES_RESET", "MATERIAL_CHANGES"] },
+      "PresentationReason": {
+        "enum": [
+          "PROMOTION_PICK",
+          "RELEASE_CANDIDATE",
+          "VERSION_FIRST_ATTEMPT",
+          "GATES_RESET",
+          "MATERIAL_CHANGES"
+        ]
+      },
       "ParamRange": {
-        "type": "object", "additionalProperties": false, "required": ["name", "kind", "low", "high", "values"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "kind",
+          "low",
+          "high",
+          "values"
+        ],
         "properties": {
-          "name": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.:-]{0,190}$" },
-          "kind": { "enum": ["SWEEP", "PIN"] },
-          "low": { "anyOf": [{ "type": "string", "maxLength": 96 }, { "type": "null" }] },
-          "high": { "anyOf": [{ "type": "string", "maxLength": 96 }, { "type": "null" }] },
-          "values": { "type": "array", "maxItems": 16, "items": { "type": "string", "maxLength": 96 } }
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_.:-]{0,190}$"
+          },
+          "kind": {
+            "enum": [
+              "SWEEP",
+              "PIN"
+            ]
+          },
+          "low": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "high": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "values": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "string",
+              "maxLength": 96
+            }
+          }
         }
       },
       "PromotionPick": {
-        "type": "object", "additionalProperties": false,
-        "required": ["state", "attempt_id", "run_id", "source_contract_rev", "source_digest", "source_as_of_utc_ms", "availability", "source_authority", "release_candidate", "release_candidate_availability"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "attempt_id",
+          "run_id",
+          "source_contract_rev",
+          "source_digest",
+          "source_as_of_utc_ms",
+          "availability",
+          "source_authority",
+          "release_candidate",
+          "release_candidate_availability"
+        ],
         "properties": {
-          "state": { "enum": ["PUBLISHED", "NOT_PUBLISHED"] },
-          "attempt_id": { "anyOf": [{ "$ref": "#/components/schemas/OpaqueId" }, { "type": "null" }] },
-          "run_id": { "anyOf": [{ "$ref": "#/components/schemas/OpaqueId" }, { "type": "null" }] },
-          "source_contract_rev": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 160 }, { "type": "null" }] },
-          "source_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] },
-          "source_as_of_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] },
-          "selected_trial_id": { "anyOf": [{ "$ref": "#/components/schemas/OpaqueId" }, { "type": "null" }] },
-          "selected_trial_availability": { "$ref": "#/components/schemas/Availability" },
-          "selected_params_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] },
-          "selected_params_availability": { "$ref": "#/components/schemas/Availability" },
-          "fold": { "description": "BR-S11-01: nullable source-attested selected fold. The current P22 receipt does not publish it; global trial identifiers must never be decoded into a fold.", "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] },
-          "fold_availability": { "$ref": "#/components/schemas/Availability" },
-          "approval_href": { "description": "Only the exact persisted P22 receipt, sealed RC/run binding and same-workspace R1 approval may supply this stable Portal route.", "anyOf": [{ "type": "string", "pattern": "^/governance/approvals/[A-Za-z0-9][A-Za-z0-9._:-]{0,190}/r1$" }, { "type": "null" }] },
-          "approval_availability": { "$ref": "#/components/schemas/Availability" },
-          "availability": { "$ref": "#/components/schemas/Availability" },
-          "source_authority": {
-            "type": "object", "additionalProperties": false, "required": ["owner", "state"],
-            "description": "W6b DR-03: the only authority that may publish a pick is a governed approval of a sealed release candidate (P22). NOT_CONNECTED keeps the pick NOT_PUBLISHED.",
-            "properties": { "owner": { "const": "P22_RELEASE_CANDIDATE_APPROVAL" }, "state": { "enum": ["CONNECTED", "NOT_CONNECTED"] } }
+          "state": {
+            "enum": [
+              "PUBLISHED",
+              "NOT_PUBLISHED"
+            ]
           },
-          "release_candidate": { "anyOf": [{ "$ref": "#/components/schemas/ReleaseCandidateRef" }, { "type": "null" }] },
-          "release_candidate_availability": { "$ref": "#/components/schemas/Availability" }
+          "attempt_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpaqueId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpaqueId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_contract_rev": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_digest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Digest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_as_of_utc_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UtcMilliseconds"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "selected_trial_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpaqueId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "selected_trial_availability": {
+            "$ref": "#/components/schemas/Availability"
+          },
+          "selected_params_digest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Digest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "selected_params_availability": {
+            "$ref": "#/components/schemas/Availability"
+          },
+          "fold": {
+            "description": "BR-S11-01: nullable source-attested selected fold. The current P22 receipt does not publish it; global trial identifiers must never be decoded into a fold.",
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fold_availability": {
+            "$ref": "#/components/schemas/Availability"
+          },
+          "approval_href": {
+            "description": "Only the exact persisted P22 receipt, sealed RC/run binding and same-workspace R1 approval may supply this stable Portal route.",
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^/governance/approvals/[A-Za-z0-9][A-Za-z0-9._:-]{0,190}/r1$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "approval_availability": {
+            "$ref": "#/components/schemas/Availability"
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          },
+          "source_authority": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "owner",
+              "state"
+            ],
+            "description": "W6b DR-03: the only authority that may publish a pick is a governed approval of a sealed release candidate (P22). NOT_CONNECTED keeps the pick NOT_PUBLISHED.",
+            "properties": {
+              "owner": {
+                "const": "P22_RELEASE_CANDIDATE_APPROVAL"
+              },
+              "state": {
+                "enum": [
+                  "CONNECTED",
+                  "NOT_CONNECTED"
+                ]
+              }
+            }
+          },
+          "release_candidate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReleaseCandidateRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "release_candidate_availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
         }
       },
       "AlphaVersion": {
-        "type": "object", "additionalProperties": false,
-        "required": ["alpha_version_id", "label", "code_digest", "entrypoint", "lifecycle_state", "registered_at_utc_ms", "promotion_pick", "outcome", "supersession", "exercised", "untried", "presentation"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "alpha_version_id",
+          "label",
+          "code_digest",
+          "entrypoint",
+          "lifecycle_state",
+          "registered_at_utc_ms",
+          "promotion_pick",
+          "outcome",
+          "supersession",
+          "exercised",
+          "untried",
+          "presentation"
+        ],
         "properties": {
-          "alpha_version_id": { "$ref": "#/components/schemas/OpaqueId" },
-          "label": { "type": "string", "minLength": 1, "maxLength": 160 },
-          "code_digest": { "$ref": "#/components/schemas/Digest" },
-          "entrypoint": { "type": "string", "minLength": 1, "maxLength": 512 },
-          "lifecycle_state": { "enum": ["DRAFT", "ACTIVE", "SUPERSEDED", "ABANDONED"] },
-          "registered_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" },
-          "promotion_pick": { "$ref": "#/components/schemas/PromotionPick" },
+          "alpha_version_id": {
+            "$ref": "#/components/schemas/OpaqueId"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "code_digest": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "entrypoint": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "lifecycle_state": {
+            "enum": [
+              "DRAFT",
+              "ACTIVE",
+              "SUPERSEDED",
+              "ABANDONED"
+            ]
+          },
+          "registered_at_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "promotion_pick": {
+            "$ref": "#/components/schemas/PromotionPick"
+          },
           "outcome": {
-            "type": "object", "additionalProperties": false, "required": ["text", "rule", "availability"],
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "text",
+              "rule",
+              "availability"
+            ],
             "description": "W6b CG-P19-07: one line composed by research.lineage-version-outcome.v1 from the returned attempts' certificate grades, rc relations and pick; never a ranking of runs.",
-            "properties": { "text": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 240 }, { "type": "null" }] }, "rule": { "const": "research.lineage-version-outcome.v1" }, "availability": { "$ref": "#/components/schemas/Availability" } }
+            "properties": {
+              "text": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 240
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "rule": {
+                "const": "research.lineage-version-outcome.v1"
+              },
+              "availability": {
+                "$ref": "#/components/schemas/Availability"
+              }
+            }
           },
           "supersession": {
-            "type": "object", "additionalProperties": false, "required": ["state", "superseded_by_version_id", "superseded_by_label", "reason_code"],
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "superseded_by_version_id",
+              "superseded_by_label",
+              "reason_code"
+            ],
             "description": "W6b CG-P19-07: the registered successor that names this version as its predecessor (RF-03).",
             "properties": {
-              "state": { "enum": ["RECORDED", "NOT_RECORDED", "NOT_APPLICABLE"] },
-              "superseded_by_version_id": { "anyOf": [{ "$ref": "#/components/schemas/OpaqueId" }, { "type": "null" }] },
-              "superseded_by_label": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 160 }, { "type": "null" }] },
-              "reason_code": { "anyOf": [{ "$ref": "#/components/schemas/ReasonCode" }, { "type": "null" }] }
+              "state": {
+                "enum": [
+                  "RECORDED",
+                  "NOT_RECORDED",
+                  "NOT_APPLICABLE"
+                ]
+              },
+              "superseded_by_version_id": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/OpaqueId"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "superseded_by_label": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "reason_code": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ReasonCode"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
             }
           },
           "exercised": {
-            "type": "object", "additionalProperties": false, "required": ["routes", "modes", "param_ranges", "attempts_considered", "attempts_without_manifest", "availability"],
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "routes",
+              "modes",
+              "param_ranges",
+              "attempts_considered",
+              "attempts_without_manifest",
+              "availability"
+            ],
             "description": "W6b CG-P19-06: the union of what every attempt of this version declared (not only returned attempts), from persisted requested specs and the version's declared parameter space.",
             "properties": {
-              "routes": { "type": "array", "maxItems": 16, "items": { "type": "string", "minLength": 1, "maxLength": 64 } },
-              "modes": { "type": "array", "maxItems": 32, "items": { "type": "string", "minLength": 1, "maxLength": 160 } },
-              "param_ranges": { "type": "array", "maxItems": 24, "items": { "$ref": "#/components/schemas/ParamRange" } },
-              "attempts_considered": { "type": "integer", "minimum": 0 },
-              "attempts_without_manifest": { "type": "integer", "minimum": 0 },
-              "availability": { "$ref": "#/components/schemas/Availability" }
+              "routes": {
+                "type": "array",
+                "maxItems": 16,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
+              },
+              "modes": {
+                "type": "array",
+                "maxItems": 32,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                }
+              },
+              "param_ranges": {
+                "type": "array",
+                "maxItems": 24,
+                "items": {
+                  "$ref": "#/components/schemas/ParamRange"
+                }
+              },
+              "attempts_considered": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "attempts_without_manifest": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "availability": {
+                "$ref": "#/components/schemas/Availability"
+              }
             }
           },
           "untried": {
-            "type": "object", "additionalProperties": false, "required": ["routes", "availability"],
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "routes",
+              "availability"
+            ],
             "description": "W6b CG-P19-06: Engine Atlas routes (not DEFERRED) that no attempt of this version declared.",
             "properties": {
-              "routes": { "type": "array", "maxItems": 32, "items": { "type": "object", "additionalProperties": false, "required": ["route_id", "status_word"], "properties": { "route_id": { "type": "string", "minLength": 1, "maxLength": 64 }, "status_word": { "anyOf": [{ "type": "string", "maxLength": 16 }, { "type": "null" }] } } } },
-              "availability": { "$ref": "#/components/schemas/Availability" }
+              "routes": {
+                "type": "array",
+                "maxItems": 32,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "route_id",
+                    "status_word"
+                  ],
+                  "properties": {
+                    "route_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "status_word": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 16
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              "availability": {
+                "$ref": "#/components/schemas/Availability"
+              }
             }
           },
           "presentation": {
-            "type": "object", "additionalProperties": false, "required": ["storied", "probe", "basis"],
-            "properties": { "storied": { "type": "integer", "minimum": 0 }, "probe": { "type": "integer", "minimum": 0 }, "basis": { "const": "RETURNED_ATTEMPTS" } }
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "storied",
+              "probe",
+              "basis"
+            ],
+            "properties": {
+              "storied": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "probe": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "basis": {
+                "const": "RETURNED_ATTEMPTS"
+              }
+            }
           }
         }
       },
       "SemanticChange": {
-        "type": "object", "additionalProperties": false, "required": ["path", "kind", "before", "after"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "kind",
+          "before",
+          "after"
+        ],
         "properties": {
-          "path": { "type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,127}$" },
-          "kind": { "enum": ["CONFIG", "DATA", "ENGINE", "ALPHA_VERSION"] },
-          "before": { "anyOf": [{ "type": "string", "maxLength": 512 }, { "type": "null" }] },
-          "after": { "anyOf": [{ "type": "string", "maxLength": 512 }, { "type": "null" }] }
+          "path": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.-]{0,127}$"
+          },
+          "kind": {
+            "enum": [
+              "CONFIG",
+              "DATA",
+              "ENGINE",
+              "ALPHA_VERSION"
+            ]
+          },
+          "before": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 512
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "after": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 512
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
         }
       },
       "SemanticDiff": {
-        "type": "object", "additionalProperties": false, "required": ["state", "changes", "gates_reset", "availability"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "changes",
+          "gates_reset",
+          "availability"
+        ],
         "properties": {
-          "state": { "enum": ["ROOT", "AVAILABLE", "NOT_PUBLISHED", "PARENT_OUTSIDE_RETURNED_GRAPH"] },
-          "changes": { "type": "array", "maxItems": 48, "items": { "$ref": "#/components/schemas/SemanticChange" } },
-          "gates_reset": { "type": "boolean", "description": "Disclosure/navigation fact only; no click/action writes a gate or approval." },
-          "availability": { "$ref": "#/components/schemas/Availability" }
+          "state": {
+            "enum": [
+              "ROOT",
+              "AVAILABLE",
+              "NOT_PUBLISHED",
+              "PARENT_OUTSIDE_RETURNED_GRAPH"
+            ]
+          },
+          "changes": {
+            "type": "array",
+            "maxItems": 48,
+            "items": {
+              "$ref": "#/components/schemas/SemanticChange"
+            }
+          },
+          "gates_reset": {
+            "type": "boolean",
+            "description": "Disclosure/navigation fact only; no click/action writes a gate or approval."
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
         }
       },
       "ChildRun": {
-        "type": "object", "additionalProperties": false, "required": ["run_id", "run_kind", "relationship_kind", "parent_run_id", "state", "created_at_utc_ms"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "run_id",
+          "run_kind",
+          "relationship_kind",
+          "parent_run_id",
+          "state",
+          "created_at_utc_ms"
+        ],
         "properties": {
-          "run_id": { "$ref": "#/components/schemas/OpaqueId" },
-          "run_kind": { "enum": ["PRIMARY", "AUDIT", "DIAGNOSTIC", "REPRODUCTION", "EXPORT", "VERIFY", "PROJECTION"] },
-          "relationship_kind": { "enum": ["PRIMARY", "AUDIT_OF_SELECTION", "DIAGNOSTIC_OF_RUN", "REPRODUCTION_OF_RUN", "EXPORT_OF_RUN", "VERIFY_OF_RUN", "PROJECTION_OF_RUN"] },
-          "parent_run_id": { "anyOf": [{ "$ref": "#/components/schemas/OpaqueId" }, { "type": "null" }] },
-          "state": { "enum": ["DRAFT", "QUEUED", "RUNNING", "SEALING", "READY", "FAILED", "CANCELLED", "RECOVERY_REQUIRED"] },
-          "created_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }
+          "run_id": {
+            "$ref": "#/components/schemas/OpaqueId"
+          },
+          "run_kind": {
+            "enum": [
+              "PRIMARY",
+              "AUDIT",
+              "DIAGNOSTIC",
+              "REPRODUCTION",
+              "EXPORT",
+              "VERIFY",
+              "PROJECTION"
+            ]
+          },
+          "relationship_kind": {
+            "enum": [
+              "PRIMARY",
+              "AUDIT_OF_SELECTION",
+              "DIAGNOSTIC_OF_RUN",
+              "REPRODUCTION_OF_RUN",
+              "EXPORT_OF_RUN",
+              "VERIFY_OF_RUN",
+              "PROJECTION_OF_RUN"
+            ]
+          },
+          "parent_run_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpaqueId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "enum": [
+              "DRAFT",
+              "QUEUED",
+              "RUNNING",
+              "SEALING",
+              "READY",
+              "FAILED",
+              "CANCELLED",
+              "RECOVERY_REQUIRED"
+            ]
+          },
+          "created_at_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "verified_audit": {
+            "$ref": "#/components/schemas/VerifiedPinnedAudit"
+          }
         }
       },
       "ChildRunsCoverage": {
-        "type": "object", "additionalProperties": false, "required": ["state", "reason_code"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "reason_code"
+        ],
         "properties": {
-          "state": { "enum": ["COMPLETE", "PARTIAL"] },
-          "reason_code": { "anyOf": [{ "$ref": "#/components/schemas/ReasonCode" }, { "type": "null" }] }
+          "state": {
+            "enum": [
+              "COMPLETE",
+              "PARTIAL"
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
         }
       },
       "Exposure": {
-        "type": "object", "additionalProperties": false, "required": ["state", "count", "roles", "latest_source_as_of_utc_ms", "availability"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "count",
+          "roles",
+          "latest_source_as_of_utc_ms",
+          "availability"
+        ],
         "properties": {
-          "state": { "enum": ["RECORDED", "NOT_PUBLISHED"] },
-          "count": { "type": "integer", "minimum": 0 },
-          "roles": { "type": "array", "maxItems": 7, "items": { "enum": ["QUALITY_SCAN", "TRAIN", "SELECTION_INPUT", "OUTER_OOS", "HOLDOUT", "RETROSPECTIVE", "UNKNOWN"] } },
-          "latest_source_as_of_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] },
-          "availability": { "$ref": "#/components/schemas/Availability" }
+          "state": {
+            "enum": [
+              "RECORDED",
+              "NOT_PUBLISHED"
+            ]
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "roles": {
+            "type": "array",
+            "maxItems": 7,
+            "items": {
+              "enum": [
+                "QUALITY_SCAN",
+                "TRAIN",
+                "SELECTION_INPUT",
+                "OUTER_OOS",
+                "HOLDOUT",
+                "RETROSPECTIVE",
+                "UNKNOWN"
+              ]
+            }
+          },
+          "latest_source_as_of_utc_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UtcMilliseconds"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
         }
       },
       "AttemptNode": {
-        "type": "object", "additionalProperties": false,
-        "required": ["attempt_id", "parent_attempt_id", "parent_state", "alpha_version_id", "alpha_version_label", "state", "intent_kind", "relation_to_parent", "reason", "space_signature", "created_at_utc_ms", "updated_at_utc_ms", "primary_run", "child_runs", "child_runs_coverage", "semantic_diff", "exposure", "presentation_kind", "presentation_reasons", "promotion_state", "promotion_reason_code", "spec_label", "release_candidate", "release_candidate_availability", "run_facts", "outcome"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "attempt_id",
+          "parent_attempt_id",
+          "parent_state",
+          "alpha_version_id",
+          "alpha_version_label",
+          "state",
+          "intent_kind",
+          "relation_to_parent",
+          "reason",
+          "space_signature",
+          "created_at_utc_ms",
+          "updated_at_utc_ms",
+          "primary_run",
+          "child_runs",
+          "child_runs_coverage",
+          "semantic_diff",
+          "exposure",
+          "presentation_kind",
+          "presentation_reasons",
+          "promotion_state",
+          "promotion_reason_code",
+          "spec_label",
+          "release_candidate",
+          "release_candidate_availability",
+          "run_facts",
+          "outcome"
+        ],
         "properties": {
-          "attempt_id": { "$ref": "#/components/schemas/OpaqueId" },
-          "display_label": { "description": "BR-F3-03: att_NN is PRESENTATION ONLY: chronological full-history logical-attempt rank across all Alpha versions in this workspace, excluding DIAGNOSTIC attempts, ordered by exact created_at then attempt_id. Worker retries, child runs and page-local indices never define it. The keyset prefix is counted in the same existing repeatable-read census; attempt_id remains the identity. null with a typed reason if the full prefix is unavailable.", "anyOf": [{ "type": "string", "pattern": "^att_[0-9]{2,16}$" }, { "type": "null" }] },
-          "display_label_basis": { "const": "PRESENTATION_ONLY_WORKSPACE_ALPHA_CREATED_AT_ID_V1" },
-          "display_label_availability": { "$ref": "#/components/schemas/Availability" },
-          "parent_attempt_id": { "anyOf": [{ "$ref": "#/components/schemas/OpaqueId" }, { "type": "null" }] },
-          "parent_state": { "enum": ["ROOT", "RETURNED", "OUTSIDE_RETURNED_GRAPH"] },
-          "relation_to_parent": { "anyOf": [{ "enum": ["SIBLING_OF"] }, { "type": "null" }], "description": "W5a: SIBLING_OF when this attempt was forked from a Screen-07 what-if node of its parent attempt's run; its own intent and config_hash." },
-          "alpha_version_id": { "$ref": "#/components/schemas/OpaqueId" },
-          "alpha_version_label": { "type": "string", "minLength": 1, "maxLength": 160 },
-          "state": { "enum": ["DRAFT", "PREFLIGHT_VALID", "QUEUED", "CLAIMED", "RUNNING", "COMPUTE_DONE", "SEALING", "READY", "CANCEL_REQUESTED", "CANCELLED", "FAILED", "RECOVERY_REQUIRED", "ABANDONED"] },
-          "intent_kind": { "enum": ["NEW", "CLONE_FOR_EXPERIMENT", "REPRODUCE_EXISTING", "UPGRADE_ENGINE_EXPERIMENT"] },
-          "reason": { "anyOf": [{ "type": "string", "maxLength": 512 }, { "type": "null" }] },
-          "space_signature": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] },
-          "created_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" },
-          "updated_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" },
-          "primary_run": { "type": "object", "additionalProperties": false, "required": ["run_id", "display_label", "state", "effective_spec_digest", "engine_release_id", "dataset_binding_digest", "technical_retry_count", "execution_profile_id"], "properties": { "display_label": { "description": "D1 (audit 10-3): the short label the hi-fi writes beside the attempt (R-WFO-114) - the run's execution profile kind plus its position among the logical runs of that kind in this workspace, ordered by creation. Derived by the same rule as every other read, from the Run Library row this service already joins, so two screens cannot disagree. Presentation only - run_id remains the identity. null when no label can be derived, and the card prints the short id.", "anyOf": [{ "type": "string", "pattern": "^R-[A-Z0-9]{1,8}-[0-9]{3,6}$" }, { "type": "null" }] }, "execution_profile_id": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 160 }, { "type": "null" }], "description": "W6b: the run's immutable execution profile (p04.fixed-qualification.v1 / p10.delta-signal-notional-wfo.v1)." }, "run_id": { "anyOf": [{ "$ref": "#/components/schemas/OpaqueId" }, { "type": "null" }] }, "state": { "anyOf": [{ "enum": ["DRAFT", "QUEUED", "RUNNING", "SEALING", "READY", "FAILED", "CANCELLED", "RECOVERY_REQUIRED"] }, { "type": "null" }] }, "effective_spec_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] }, "engine_release_id": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 256 }, { "type": "null" }] }, "dataset_binding_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] }, "technical_retry_count": { "type": "integer", "minimum": 0 } } },
-          "child_runs": { "type": "array", "maxItems": 32, "items": { "$ref": "#/components/schemas/ChildRun" } },
-          "child_runs_coverage": { "$ref": "#/components/schemas/ChildRunsCoverage" },
-          "semantic_diff": { "$ref": "#/components/schemas/SemanticDiff" },
-          "exposure": { "$ref": "#/components/schemas/Exposure" },
-          "presentation_kind": { "enum": ["STORIED", "PROBE"], "description": "W6b CG-P19-03: server classification by research.lineage-presentation.v1." },
-          "presentation_reasons": { "type": "array", "maxItems": 5, "items": { "$ref": "#/components/schemas/PresentationReason" } },
-          "promotion_state": { "enum": ["PICKED", "NOT_PICKED", "AWAITING_PICK", "CLOSED"], "description": "W6b CG-P19-14: from the version's published pick and lifecycle facts only; never a metric ranking." },
-          "promotion_reason_code": { "anyOf": [{ "$ref": "#/components/schemas/ReasonCode" }, { "type": "null" }] },
-          "spec_label": {
-            "type": "object", "additionalProperties": false, "required": ["text", "space", "availability"],
-            "description": "W6b CG-P19-08: `route · mode × schedule` from allow-listed requested-spec keys, and the declared parameter space after this attempt's overrides.",
+          "attempt_id": {
+            "$ref": "#/components/schemas/OpaqueId"
+          },
+          "display_label": {
+            "description": "BR-F3-03: att_NN is PRESENTATION ONLY: chronological full-history logical-attempt rank across all Alpha versions in this workspace, excluding DIAGNOSTIC attempts, ordered by exact created_at then attempt_id. Worker retries, child runs and page-local indices never define it. The keyset prefix is counted in the same existing repeatable-read census; attempt_id remains the identity. null with a typed reason if the full prefix is unavailable.",
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^att_[0-9]{2,16}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "display_label_basis": {
+            "const": "PRESENTATION_ONLY_WORKSPACE_ALPHA_CREATED_AT_ID_V1"
+          },
+          "display_label_availability": {
+            "$ref": "#/components/schemas/Availability"
+          },
+          "parent_attempt_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpaqueId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "parent_state": {
+            "enum": [
+              "ROOT",
+              "RETURNED",
+              "OUTSIDE_RETURNED_GRAPH"
+            ]
+          },
+          "relation_to_parent": {
+            "anyOf": [
+              {
+                "enum": [
+                  "SIBLING_OF"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "W5a: SIBLING_OF when this attempt was forked from a Screen-07 what-if node of its parent attempt's run; its own intent and config_hash."
+          },
+          "alpha_version_id": {
+            "$ref": "#/components/schemas/OpaqueId"
+          },
+          "alpha_version_label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "state": {
+            "enum": [
+              "DRAFT",
+              "PREFLIGHT_VALID",
+              "QUEUED",
+              "CLAIMED",
+              "RUNNING",
+              "COMPUTE_DONE",
+              "SEALING",
+              "READY",
+              "CANCEL_REQUESTED",
+              "CANCELLED",
+              "FAILED",
+              "RECOVERY_REQUIRED",
+              "ABANDONED"
+            ]
+          },
+          "intent_kind": {
+            "enum": [
+              "NEW",
+              "CLONE_FOR_EXPERIMENT",
+              "REPRODUCE_EXISTING",
+              "UPGRADE_ENGINE_EXPERIMENT"
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 512
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "space_signature": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Digest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "updated_at_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "primary_run": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "run_id",
+              "display_label",
+              "state",
+              "effective_spec_digest",
+              "engine_release_id",
+              "dataset_binding_digest",
+              "technical_retry_count",
+              "execution_profile_id"
+            ],
             "properties": {
-              "text": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 240 }, { "type": "null" }] },
-              "space": { "anyOf": [{ "type": "object", "additionalProperties": false, "required": ["parameters", "swept", "pinned"], "properties": { "parameters": { "type": "integer", "minimum": 0 }, "swept": { "type": "integer", "minimum": 0 }, "pinned": { "type": "integer", "minimum": 0 } } }, { "type": "null" }] },
-              "availability": { "$ref": "#/components/schemas/Availability" }
+              "display_label": {
+                "description": "D1 (audit 10-3): the short label the hi-fi writes beside the attempt (R-WFO-114) - the run's execution profile kind plus its position among the logical runs of that kind in this workspace, ordered by creation. Derived by the same rule as every other read, from the Run Library row this service already joins, so two screens cannot disagree. Presentation only - run_id remains the identity. null when no label can be derived, and the card prints the short id.",
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^R-[A-Z0-9]{1,8}-[0-9]{3,6}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "execution_profile_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "W6b: the run's immutable execution profile (p04.fixed-qualification.v1 / p10.delta-signal-notional-wfo.v1)."
+              },
+              "run_id": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/OpaqueId"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "state": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "DRAFT",
+                      "QUEUED",
+                      "RUNNING",
+                      "SEALING",
+                      "READY",
+                      "FAILED",
+                      "CANCELLED",
+                      "RECOVERY_REQUIRED"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "effective_spec_digest": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Digest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "engine_release_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "dataset_binding_digest": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Digest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "technical_retry_count": {
+                "type": "integer",
+                "minimum": 0
+              }
             }
           },
-          "release_candidate": { "anyOf": [{ "$ref": "#/components/schemas/ReleaseCandidateRef" }, { "type": "null" }] },
-          "release_candidate_availability": { "$ref": "#/components/schemas/Availability" },
-          "run_facts": { "$ref": "#/components/schemas/RunFacts" },
+          "child_runs": {
+            "type": "array",
+            "maxItems": 32,
+            "items": {
+              "$ref": "#/components/schemas/ChildRun"
+            }
+          },
+          "child_runs_coverage": {
+            "$ref": "#/components/schemas/ChildRunsCoverage"
+          },
+          "semantic_diff": {
+            "$ref": "#/components/schemas/SemanticDiff"
+          },
+          "exposure": {
+            "$ref": "#/components/schemas/Exposure"
+          },
+          "presentation_kind": {
+            "enum": [
+              "STORIED",
+              "PROBE"
+            ],
+            "description": "W6b CG-P19-03: server classification by research.lineage-presentation.v1."
+          },
+          "presentation_reasons": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "$ref": "#/components/schemas/PresentationReason"
+            }
+          },
+          "promotion_state": {
+            "enum": [
+              "PICKED",
+              "NOT_PICKED",
+              "AWAITING_PICK",
+              "CLOSED"
+            ],
+            "description": "W6b CG-P19-14: from the version's published pick and lifecycle facts only; never a metric ranking."
+          },
+          "promotion_reason_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spec_label": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "text",
+              "space",
+              "availability"
+            ],
+            "description": "W6b CG-P19-08: `route · mode × schedule` from allow-listed requested-spec keys, and the declared parameter space after this attempt's overrides.",
+            "properties": {
+              "text": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 240
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "space": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "parameters",
+                      "swept",
+                      "pinned"
+                    ],
+                    "properties": {
+                      "parameters": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "swept": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "pinned": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "availability": {
+                "$ref": "#/components/schemas/Availability"
+              }
+            }
+          },
+          "release_candidate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReleaseCandidateRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "release_candidate_availability": {
+            "$ref": "#/components/schemas/Availability"
+          },
+          "run_facts": {
+            "$ref": "#/components/schemas/RunFacts"
+          },
           "outcome": {
-            "type": "object", "additionalProperties": false, "required": ["text", "source", "availability"],
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "text",
+              "source",
+              "availability"
+            ],
             "description": "W6b CG-P19-07: the attempt's own recorded reason, else the source claim sentence, verbatim.",
-            "properties": { "text": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 1024 }, { "type": "null" }] }, "source": { "anyOf": [{ "enum": ["ATTEMPT_REASON", "SOURCE_CLAIM_SENTENCE"] }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } }
+            "properties": {
+              "text": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "source": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "ATTEMPT_REASON",
+                      "SOURCE_CLAIM_SENTENCE"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "availability": {
+                "$ref": "#/components/schemas/Availability"
+              }
+            }
           }
         }
       },
       "AttemptLineageResponse": {
-        "type": "object", "additionalProperties": false,
-        "required": ["schema_version", "read_authority", "alpha", "attempts", "counts", "counts_definitions", "presentation_rule", "coverage", "source_absences", "as_of_utc_ms", "lineage_revision", "etag"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "read_authority",
+          "alpha",
+          "attempts",
+          "counts",
+          "counts_definitions",
+          "presentation_rule",
+          "coverage",
+          "source_absences",
+          "as_of_utc_ms",
+          "lineage_revision",
+          "etag"
+        ],
         "properties": {
-          "schema_version": { "const": "research.attempt-lineage.v1" },
-          "read_authority": { "const": "PORTAL_PERSISTED_RESEARCH" },
-          "alpha": { "type": "object", "additionalProperties": false, "required": ["alpha_id", "name", "active_version_id", "active_version_state", "active_version_availability", "versions"], "properties": { "alpha_id": { "$ref": "#/components/schemas/AlphaId" }, "name": { "type": "string", "minLength": 1, "maxLength": 240 }, "active_version_id": { "anyOf": [{ "$ref": "#/components/schemas/OpaqueId" }, { "type": "null" }] }, "active_version_state": { "anyOf": [{ "enum": ["DRAFT", "ACTIVE", "SUPERSEDED", "ABANDONED"] }, { "type": "null" }] }, "active_version_availability": { "$ref": "#/components/schemas/Availability" }, "versions": { "type": "array", "maxItems": 64, "items": { "$ref": "#/components/schemas/AlphaVersion" } } } },
-          "attempts": { "type": "array", "maxItems": 128, "items": { "$ref": "#/components/schemas/AttemptNode" } },
-          "counts": { "type": "object", "additionalProperties": false, "required": ["total_attempts", "returned_attempts", "draft_attempts", "submitted_attempts", "failed_attempts", "abandoned_attempts", "child_runs", "technical_retries", "storied_returned", "probe_returned"], "properties": { "storied_returned": { "type": "integer", "minimum": 0 }, "probe_returned": { "type": "integer", "minimum": 0 }, "total_attempts": { "type": "integer", "minimum": 0 }, "returned_attempts": { "type": "integer", "minimum": 0 }, "draft_attempts": { "type": "integer", "minimum": 0 }, "submitted_attempts": { "type": "integer", "minimum": 0 }, "failed_attempts": { "type": "integer", "minimum": 0 }, "abandoned_attempts": { "type": "integer", "minimum": 0 }, "child_runs": { "type": "integer", "minimum": 0 }, "technical_retries": { "type": "integer", "minimum": 0 } } },
+          "schema_version": {
+            "const": "research.attempt-lineage.v1"
+          },
+          "read_authority": {
+            "const": "PORTAL_PERSISTED_RESEARCH"
+          },
+          "alpha": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "alpha_id",
+              "name",
+              "active_version_id",
+              "active_version_state",
+              "active_version_availability",
+              "versions"
+            ],
+            "properties": {
+              "alpha_id": {
+                "$ref": "#/components/schemas/AlphaId"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 240
+              },
+              "active_version_id": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/OpaqueId"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "active_version_state": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "DRAFT",
+                      "ACTIVE",
+                      "SUPERSEDED",
+                      "ABANDONED"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "active_version_availability": {
+                "$ref": "#/components/schemas/Availability"
+              },
+              "versions": {
+                "type": "array",
+                "maxItems": 64,
+                "items": {
+                  "$ref": "#/components/schemas/AlphaVersion"
+                }
+              }
+            }
+          },
+          "attempts": {
+            "type": "array",
+            "maxItems": 128,
+            "items": {
+              "$ref": "#/components/schemas/AttemptNode"
+            }
+          },
+          "counts": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "total_attempts",
+              "returned_attempts",
+              "draft_attempts",
+              "submitted_attempts",
+              "failed_attempts",
+              "abandoned_attempts",
+              "child_runs",
+              "technical_retries",
+              "storied_returned",
+              "probe_returned"
+            ],
+            "properties": {
+              "storied_returned": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "probe_returned": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total_attempts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "returned_attempts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "draft_attempts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "submitted_attempts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "failed_attempts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "abandoned_attempts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "child_runs": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "technical_retries": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
           "counts_definitions": {
-            "type": "object", "additionalProperties": false, "required": ["version", "rows"],
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "version",
+              "rows"
+            ],
             "description": "W6b CG-P19-13: what each count includes and the Run Library figure it reconciles with for the same Alpha.",
             "properties": {
-              "version": { "const": "research.lineage-counts.v1" },
-              "rows": { "type": "array", "minItems": 10, "maxItems": 10, "items": { "type": "object", "additionalProperties": false, "required": ["key", "includes", "run_library_equivalent"], "properties": { "key": { "enum": ["total_attempts", "returned_attempts", "draft_attempts", "submitted_attempts", "failed_attempts", "abandoned_attempts", "child_runs", "technical_retries", "storied_returned", "probe_returned"] }, "includes": { "type": "string", "minLength": 1, "maxLength": 320 }, "run_library_equivalent": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 240 }, { "type": "null" }] } } } }
+              "version": {
+                "const": "research.lineage-counts.v1"
+              },
+              "rows": {
+                "type": "array",
+                "minItems": 10,
+                "maxItems": 10,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "key",
+                    "includes",
+                    "run_library_equivalent"
+                  ],
+                  "properties": {
+                    "key": {
+                      "enum": [
+                        "total_attempts",
+                        "returned_attempts",
+                        "draft_attempts",
+                        "submitted_attempts",
+                        "failed_attempts",
+                        "abandoned_attempts",
+                        "child_runs",
+                        "technical_retries",
+                        "storied_returned",
+                        "probe_returned"
+                      ]
+                    },
+                    "includes": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 320
+                    },
+                    "run_library_equivalent": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 240
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
             }
           },
           "presentation_rule": {
-            "type": "object", "additionalProperties": false, "required": ["version", "storied_when", "material_change_threshold"],
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "version",
+              "storied_when",
+              "material_change_threshold"
+            ],
             "description": "W6b CG-P19-03: the storied/probe rule travels with the answer so the browser holds none.",
             "properties": {
-              "version": { "const": "research.lineage-presentation.v1" },
-              "storied_when": { "type": "array", "minItems": 5, "maxItems": 5, "items": { "$ref": "#/components/schemas/PresentationReason" } },
-              "material_change_threshold": { "const": 2 }
+              "version": {
+                "const": "research.lineage-presentation.v1"
+              },
+              "storied_when": {
+                "type": "array",
+                "minItems": 5,
+                "maxItems": 5,
+                "items": {
+                  "$ref": "#/components/schemas/PresentationReason"
+                }
+              },
+              "material_change_threshold": {
+                "const": 2
+              }
             }
           },
-          "coverage": { "type": "object", "additionalProperties": false, "required": ["state", "reason_code", "oldest_returned_created_at_utc_ms", "window", "older_cursor"], "properties": { "state": { "enum": ["COMPLETE", "PARTIAL"] }, "reason_code": { "anyOf": [{ "$ref": "#/components/schemas/ReasonCode" }, { "type": "null" }] }, "oldest_returned_created_at_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] }, "window": { "enum": ["NEWEST", "OLDER_PAGE"], "description": "W6b CG-P19-09: a bounded first page is the newest attempts; an older page was read through a cursor." }, "older_cursor": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 4096 }, { "type": "null" }], "description": "Opaque, server-signed; pass back as `cursor` to read strictly older attempts." } } },
-          "source_absences": { "type": "object", "additionalProperties": false, "required": ["promotion_pick", "historical_semantic_diff"], "properties": { "promotion_pick": { "$ref": "#/components/schemas/Availability" }, "historical_semantic_diff": { "$ref": "#/components/schemas/Availability" } } },
-          "as_of_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" },
-          "lineage_revision": { "type": "string", "pattern": "^p19r2_[0-9a-f]{64}$", "description": "W6b CG-P19-02: digest of every fact except as_of_utc_ms." },
-          "etag": { "type": "string", "pattern": "^\"p19r2_[0-9a-f]{64}\"$", "description": "The validator also sent as the ETag header." }
+          "coverage": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "reason_code",
+              "oldest_returned_created_at_utc_ms",
+              "window",
+              "older_cursor"
+            ],
+            "properties": {
+              "state": {
+                "enum": [
+                  "COMPLETE",
+                  "PARTIAL"
+                ]
+              },
+              "reason_code": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ReasonCode"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "oldest_returned_created_at_utc_ms": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/UtcMilliseconds"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "window": {
+                "enum": [
+                  "NEWEST",
+                  "OLDER_PAGE"
+                ],
+                "description": "W6b CG-P19-09: a bounded first page is the newest attempts; an older page was read through a cursor."
+              },
+              "older_cursor": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Opaque, server-signed; pass back as `cursor` to read strictly older attempts."
+              }
+            }
+          },
+          "source_absences": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "promotion_pick",
+              "historical_semantic_diff"
+            ],
+            "properties": {
+              "promotion_pick": {
+                "$ref": "#/components/schemas/Availability"
+              },
+              "historical_semantic_diff": {
+                "$ref": "#/components/schemas/Availability"
+              }
+            }
+          },
+          "as_of_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "lineage_revision": {
+            "type": "string",
+            "pattern": "^p19r2_[0-9a-f]{64}$",
+            "description": "W6b CG-P19-02: digest of every fact except as_of_utc_ms."
+          },
+          "etag": {
+            "type": "string",
+            "pattern": "^\"p19r2_[0-9a-f]{64}\"$",
+            "description": "The validator also sent as the ETag header."
+          }
         }
+      },
+      "PinnedAuditResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "run_id",
+          "parent_run_id",
+          "target_digest",
+          "parameters_digest",
+          "engine_release_id",
+          "engine_version",
+          "snapshot_id",
+          "snapshot_content_hash",
+          "source_selection_digest",
+          "source_selection_kind",
+          "source_selection_part_digest",
+          "source_config_digest",
+          "audit_target_kind",
+          "optimizer_reinvoked",
+          "optimizer_trials",
+          "n_folds",
+          "bars"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.pinned-selection-audit-result.v1"
+          },
+          "run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "parent_run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "target_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "parameters_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "engine_release_id": {
+            "const": "er_quantbt_111"
+          },
+          "engine_version": {
+            "const": "1.1.1"
+          },
+          "snapshot_id": {
+            "type": "string",
+            "pattern": "^dss_[a-f0-9]{32}$"
+          },
+          "snapshot_content_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "source_selection_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "source_selection_kind": {
+            "const": "P05_SELECTION_PARAMETERS_JSON"
+          },
+          "source_selection_part_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "source_config_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "audit_target_kind": {
+            "const": "SINGLE_PARAMETER_SET"
+          },
+          "optimizer_reinvoked": {
+            "const": false
+          },
+          "optimizer_trials": {
+            "const": 0
+          },
+          "n_folds": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 16
+          },
+          "bars": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          }
+        }
+      },
+      "VerifiedPinnedAudit": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "child_run_id",
+          "child_attempt_id",
+          "artifact_id",
+          "artifact_revision",
+          "manifest_digest",
+          "result_digest",
+          "verified_at_utc_ms",
+          "result"
+        ],
+        "properties": {
+          "child_run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "child_attempt_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "artifact_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "artifact_revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "manifest_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "result_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "verified_at_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "result": {
+            "$ref": "#/components/schemas/PinnedAuditResult"
+          }
+        },
+        "description": "Immutable, worker-fenced receipt whose child and original target/parts were byte-verified. result_digest hashes canonical result; child_run_id=result.run_id. No raw config, params, data, artifact locator or transport secrets."
       }
     }
   }

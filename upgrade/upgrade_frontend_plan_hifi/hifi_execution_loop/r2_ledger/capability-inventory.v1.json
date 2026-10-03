@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-25",
- "route_count": 190,
+ "route_count": 205,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -2044,8 +2044,38 @@
    "evidence": "B8 named fixed-OOS market/account page: session/workspace, UTC/exact decimal, bounded cursor/exact ordinal, custody and legacy absence. Generated handoff; frontend/browser acceptance remains independent.",
    "owner": "codex",
    "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/final-audit",
+   "controller": "research/final-audit.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "Pinned final-audit named read: session/workspace, private/no-store, exact immutable target and verified custody. Never creates a job; generated consumer awaits frontend integration.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/quantbt/runs/:runId/final-audit",
+   "controller": "research/final-audit.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "Pinned final-audit producer intent: existing ADMIN authority, same-origin CSRF, actor-bound idempotency, shared utility admission, exact snapshot/config/selection pins; no optimizer or reselection.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /internal/research/progress/artifacts/audit/seal",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER",
+   "unused_capability": false,
+   "evidence": "Authenticated worker-only infrastructure ingress: current lease/fence, original target and P05 bytes verified before immutable audit receipt. Browser access forbidden.",
+   "owner": "codex",
+   "test_owner": "codex"
   }
  ],
  "phase_2_round_2": "The mirror recorded gaps and conflicts that no route and no screen read. This publishes the aggregate only: entity_key, row_id and the payload digests stay in the database.",
- "code_inventory_updated_at": "2026-09-25"
+ "code_inventory_updated_at": "2026-10-03"
 }

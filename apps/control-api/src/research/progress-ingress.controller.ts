@@ -27,6 +27,8 @@ import { ResearchProgressService } from "./progress.service";
 import { ResearchWhatIfGridSealIngressSchema } from "./whatif.contract";
 import { WHATIF_PROFILE_ID } from "./whatif.profile";
 import { ResearchWhatIfRepository } from "./whatif.repository";
+import { PinnedAuditSealSchema } from "./final-audit.contract";
+import { ResearchFinalAuditService } from "./final-audit.service";
 
 @Controller("/internal/research/progress")
 export class ResearchProgressIngressController {
@@ -39,6 +41,7 @@ export class ResearchProgressIngressController {
     @Inject(ResearchWhatIfRepository) private readonly whatIf: ResearchWhatIfRepository,
     @Inject(ResearchChildAuditCompanionIngestService) private readonly childAudit?: ResearchChildAuditCompanionIngestService,
     @Inject(ResearchFixedReplayCompanionIngestService) private readonly fixedReplay?: ResearchFixedReplayCompanionIngestService,
+    @Inject(ResearchFinalAuditService) private readonly finalAudit?: ResearchFinalAuditService,
   ) {}
 
   @Post("events")
@@ -124,6 +127,19 @@ export class ResearchProgressIngressController {
       },
     );
     return { schema_version: "research.artifact-seal.v1", sealed: true, replayed: result.replayed };
+  }
+
+  @Post("artifacts/audit/seal")
+  @HttpCode(200)
+  async sealPinnedAudit(@Req() request:FastifyRequest,@Body() body:unknown){
+    this.assertWorkerPrincipal(request);
+    this.assertArtifactRetentionEnabled();
+    const parsed=PinnedAuditSealSchema.safeParse(body);
+    if(!parsed.success)throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID","Invalid pinned audit seal.",400);
+    if(!this.finalAudit)throw new ResearchProgressError("RESEARCH_PROGRESS_UNAVAILABLE","Audit receipt authority is unavailable.",503);
+    const lease=await this.progress.resolveIngress(parsed.data);
+    await this.finalAudit.seal({workspaceId:lease.workspaceId,actorUserId:lease.actorUserId},parsed.data);
+    return {schema_version:"research.pinned-audit-seal.v1",verified:true};
   }
 
   /** E17: exact immutable source bytes for one current imported-run lease. */

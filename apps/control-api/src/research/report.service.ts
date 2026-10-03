@@ -307,7 +307,7 @@ export class ResearchReportService {
   async read(scope: ResearchScope, runId: string): Promise<ResearchReportDetailResponse> {
     this.requireEnabled();
     const stored = await this.repository.read(scope, runId);
-    if (stored) return this.detail(stored);
+    if (stored) return this.detail(stored, (await this.auditRelation(scope,runId))?.verifiedAudit ?? undefined);
 
     // LW-02: an old or newly completed WFO terminal may have missed its
     // best-effort report sidecar. Repair only a SUCCEEDED, profile-bound run,
@@ -381,9 +381,10 @@ export class ResearchReportService {
     }
   }
 
-  private detail(stored: StoredResearchReport): ResearchReportDetailResponse {
+  private detail(stored: StoredResearchReport, linkedAudit?: import("./final-audit.contract").VerifiedPinnedAudit): ResearchReportDetailResponse {
     const response = {
       schema_version: "research.report-detail.v1" as const,
+      ...(linkedAudit ? { linked_final_audit: linkedAudit } : {}),
       ...(stored.enrichedAnalysis ? { enriched_analysis: stored.enrichedAnalysis } : {}),
       enriched_analysis_availability: enrichedAvailability(stored.enrichedAnalysis),
       read_authority: "PORTAL_PERSISTED_RESEARCH" as const,

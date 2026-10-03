@@ -38,6 +38,10 @@ from portal_api.domain.research_imported_alpha_profile import (
     IMPORTED_ALPHA_PROFILE_DIGEST,
     IMPORTED_ALPHA_PROFILE_ID,
 )
+from portal_api.domain.research_final_audit import (
+    PINNED_FINAL_AUDIT_PROFILE_DIGEST, PINNED_FINAL_AUDIT_PROFILE_ID,
+    PINNED_FINAL_AUDIT_TASK, PinnedSelectionAuditTarget, audit_digest,
+)
 
 
 class ResearchSupervisorError(RuntimeError):
@@ -352,6 +356,44 @@ class DeltaWfoChildReceipt:
 
 
 @dataclass(frozen=True, slots=True)
+class PinnedAuditChildReceipt:
+    """Private immutable target only; never accepts fresh search/default knobs."""
+
+    job_id: str
+    run_id: str
+    worker_attempt_id: str
+    lease_epoch: int
+    market_path: Path
+    artifact_root: Path
+    target: PinnedSelectionAuditTarget
+    expected_target_digest: str
+
+    @property
+    def task(self) -> str:
+        return PINNED_FINAL_AUDIT_TASK
+
+    @property
+    def execution_profile_id(self) -> str:
+        return PINNED_FINAL_AUDIT_PROFILE_ID
+
+    @property
+    def execution_profile_digest(self) -> str:
+        return PINNED_FINAL_AUDIT_PROFILE_DIGEST
+
+    def as_payload(self, *, output_root: Path) -> dict[str, Any]:
+        if type(self.lease_epoch) is not int or self.lease_epoch < 1:
+            raise ResearchSupervisorError("audit receipt requires a positive strict lease epoch")
+        if self.run_id == self.target.parent_run_id or self.target.target_digest() != self.expected_target_digest:
+            raise ResearchSupervisorError("audit receipt changed its frozen target or child identity")
+        return {"schema_version": "research.p06.child-receipt.v1", "task": self.task,
+            "job_id": self.job_id, "run_id": self.run_id, "worker_attempt_id": self.worker_attempt_id,
+            "lease_epoch": self.lease_epoch, "market_path": str(self.market_path),
+            "artifact_root": str(self.artifact_root), "output_root": str(output_root),
+            "execution_profile_id": self.execution_profile_id, "execution_profile_digest": self.execution_profile_digest,
+            "audit_target": self.target.model_dump(mode="json"), "audit_target_digest": self.expected_target_digest}
+
+
+@dataclass(frozen=True, slots=True)
 class DeltaWfoChildResult:
     launcher_pid: int
     child_pid: int
@@ -369,6 +411,8 @@ class DeltaWfoChildResult:
     output_root: Path
     output_files: int
     output_bytes: int
+    # Additive private proof only for the pinned evaluation task.
+    audit_receipt: dict[str, Any] | None = None
 
 
 # CG-P06-02: the child's live progress channel. A fixed sibling file of the
@@ -789,7 +833,7 @@ class IsolatedResearchSupervisor:
 
     def run_delta_wfo(
         self,
-        receipt: DeltaWfoChildReceipt,
+        receipt: DeltaWfoChildReceipt | PinnedAuditChildReceipt,
         *,
         limits: ResearchChildLimits = DELTA_WFO_CHILD_LIMITS,
         on_child_alive: Callable[[], None] | None = None,
@@ -805,6 +849,11 @@ class IsolatedResearchSupervisor:
         """
 
         limits.validate()
+        if isinstance(receipt, PinnedAuditChildReceipt) and (
+            limits.memory_bytes > 4 * 1024 ** 3 or limits.cpu_seconds > 120 or limits.wall_seconds > 240
+            or limits.scratch_bytes > 128 * 1024 ** 2 or limits.file_bytes > 16 * 1024 ** 2
+        ):
+            raise ResearchSupervisorError("pinned final audit cannot widen its admitted resource caps")
         from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE_ID
         if receipt.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID and (limits.cpu_seconds > 120 or limits.wall_seconds > 240):
             raise ResearchSupervisorError("causal inner child cannot widen its 120 CPU/240 wall-second profile caps")
@@ -856,6 +905,30 @@ class IsolatedResearchSupervisor:
                 raise ResearchSupervisorError("P06 WFO child did not run the admitted execution profile")
             output = output_holder["output"]
             files, total_bytes = self._validate_output_tree(output, run_id=receipt.run_id)
+            audit_receipt = None
+            if isinstance(receipt, PinnedAuditChildReceipt):
+                audit_receipt = payload.get("audit_receipt")
+                if (not isinstance(audit_receipt, dict)
+                    or audit_receipt.get("target_digest") != receipt.expected_target_digest
+                    or audit_receipt.get("run_id") != receipt.run_id
+                    or audit_receipt.get("parent_run_id") != receipt.target.parent_run_id
+                    or audit_receipt.get("optimizer_reinvoked") is not False
+                    or type(audit_receipt.get("optimizer_trials")) is not int or audit_receipt["optimizer_trials"] != 0
+                    or audit_receipt.get("parameters_digest") != audit_digest(receipt.target.parameters())
+                    or audit_receipt.get("source_config_digest") != receipt.target.source_config_digest
+                    or audit_receipt.get("source_selection_digest") != receipt.target.source_selection_digest
+                    or audit_receipt.get("source_selection_kind") != receipt.target.source_selection_kind
+                    or audit_receipt.get("source_selection_part_digest") != receipt.target.source_selection_part_digest
+                    or audit_receipt.get("snapshot_id") != receipt.target.snapshot_id
+                    or audit_receipt.get("snapshot_content_hash") != receipt.target.snapshot_content_hash
+                    or audit_receipt.get("n_folds") != n_folds or audit_receipt.get("bars") != bars
+                    or engine_version != receipt.target.engine_version or trial_rows != 0
+                    or not 2 <= n_folds <= 16 or not 0 < bars <= 10000):
+                    raise ResearchSupervisorError("pinned audit child did not attest its exact target and no-optimizer execution")
+                document = json.loads((output / receipt.run_id / "audit/result.v1.json").read_text(encoding="utf-8"))
+                persisted = {key: value for key, value in document.items() if key not in {"producer", "artifact_schema_version"}}
+                if persisted != audit_receipt:
+                    raise ResearchSupervisorError("pinned audit child receipt differs from its retained output")
         except BaseException:
             output = output_holder.get("output")
             if output is not None and output.exists():
@@ -876,6 +949,7 @@ class IsolatedResearchSupervisor:
             output_root=output,
             output_files=files,
             output_bytes=total_bytes,
+            audit_receipt=audit_receipt,
         )
 
     @classmethod

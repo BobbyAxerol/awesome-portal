@@ -7561,3 +7561,23 @@ collided with a foreign invocation; unconditional cleanup was unsafe. The
 test helper now uses a per-invocation name and verifies ownership before
 removal (3 focused stubbed-isolation cases). Do not kill foreign tests or
 misreport the failed hook as PASS; retry the normal hook after the correction.
+
+**Active-goal continuation — linked final audit, 2026-10-03.** P22 actual
+reader receipt landed as `b4a6d767` (9 owned files, +518/−3), normal hook PASS,
+shared Research FF; no push/deploy. Codex next implements original-byte-pinned
+Delta evaluation with zero optimizer trials underneath the existing confined
+child. Browser admission/budget/worker/retention/Report/RC and a real child
+receipt are still required; the evaluator alone is not product GO. Preserve
+per-fold targets rather than using the last causal selection. See backend
+queue §39 for exact scope, negatives and remaining full-goal gates.
+
+**Linked audit implementation checkpoint — 2026-10-03.** Authenticated named
+GET/POST, actor-bound original snapshot metadata, shared quota, confined
+zero-optimizer evaluation, P05 byte/fence ACK, immutable proof migration 094
+and additive Report/RC/Lineage contracts are implemented in Codex's owned lane.
+Focused Control 61/61, RC 22/22, disposable PG 5/5, native Python 21/21 and
+canonical 5/5 pass; the normal hook/landing and actual product admission→child
+→retention→read receipt remain required, not fixture-derived GO. Frontend
+stays untouched. [Generated-operation handoff, limits, failures and C4](./research_loop/evidence/P23/LINKED_PINNED_AUDIT_IMPLEMENTATION_2026-10-03.md).
+Preserve all latest Claude commits; remaining full P23/P24/DR/engine gates
+and no-remote-push scope are unchanged.

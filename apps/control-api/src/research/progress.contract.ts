@@ -811,7 +811,7 @@ export const ResearchProgressSnapshotSchema = z.object({
     eta_s: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).nullable(),
     rate_trials_per_s: z.string().regex(/^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/).max(24).nullable().optional(),
     trials_done: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
-    trials_declared: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+    trials_declared: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
     tqdm_line: z.string().min(1).max(512),
   }).strict(),
   budget: z.object({
