@@ -564,14 +564,14 @@ test("P7 R-WFO-027 study selector: fold_03 writes fold=3; Back restores fold_02"
   const picks = page.locator("[data-study-pick]");
   const active = async () =>
     picks.evaluateAll((els) => els.filter((e) => e.getAttribute("aria-current") === "true" || e.getAttribute("aria-pressed") === "true").map((e) => (e.textContent ?? "").trim()));
-  /* A fold move re-reads the search ledger: the selector is gone for a beat while it loads, so the active study is polled. */
-  await expect.poll(active, { message: "fold=2 activates fold_02", timeout: 15_000 }).toEqual(["fold_02"]);
-  await picks.filter({ hasText: "fold_03" }).first().click();
+  /* W4: study buttons print the short label (F2); the raw id is in the title. A fold move re-reads the search ledger: the selector is gone for a beat while it loads, so the active study is polled. */
+  await expect.poll(active, { message: "fold=2 activates fold_02", timeout: 15_000 }).toEqual(["F2"]);
+  await picks.filter({ hasText: /^F3$/ }).first().click();
   await expect.poll(() => hashOf(page).fold).toBe("3");
-  await expect.poll(active, { message: "fold_03 active after the click", timeout: 15_000 }).toEqual(["fold_03"]);
+  await expect.poll(active, { message: "fold_03 active after the click", timeout: 15_000 }).toEqual(["F3"]);
   await page.goBack();
   await expect.poll(() => hashOf(page).fold).toBe("2");
-  await expect.poll(active, { message: "Back restores fold_02", timeout: 15_000 }).toEqual(["fold_02"]);
+  await expect.poll(active, { message: "Back restores fold_02", timeout: 15_000 }).toEqual(["F2"]);
 });
 
 /* ----------------------------------------------------------------------------------------------

@@ -1,0 +1,77 @@
+{
+  "packet": "FE-W1-W5",
+  "owner": "Thanhvuong (Claude, frontend)",
+  "date": "2026-10-03",
+  "status": "W1-W5 FE landed \u00b7 gates measured \u00b7 NOT_VERIFIED at product level",
+  "branch": "claude/fe-parity",
+  "head": "c5795c71e14e225f27c323c4118eab43add89a5e",
+  "tree": "f1d1d5ec8cc7b5da3ca444536be886ce67faf619",
+  "base": "b2098a81",
+  "diff_base_head": "450 files +19352/-5529",
+  "measured_on": "2026-10-03",
+  "bundle": "index-C6w4OUAn.js",
+  "gates": {
+    "vitest_full": {
+      "passed": 5873,
+      "skipped": 1,
+      "files": 336
+    },
+    "tsc": "clean",
+    "preview_real_api_lane": {
+      "passed": 105,
+      "total": 105
+    },
+    "w5_gate": {
+      "spec": "e2e/_preview-research-w5.spec.ts",
+      "passed": 123,
+      "total": 123,
+      "axe": "0 critical/serious/moderate",
+      "matrix": "S00-S14 + S04 404 x Research Light/Operations Dark x 1440/390",
+      "real_runs": [
+        "R-WFO-023",
+        "R-WFO-027",
+        "R-P04-022"
+      ],
+      "probes": [
+        "chart contract",
+        "touch",
+        "cursor"
+      ]
+    },
+    "overflow_horizontal": {
+      "390": 0,
+      "360": 0,
+      "1280": 0,
+      "1440": 0
+    },
+    "visual_research": {
+      "cells_recorded": 28,
+      "changed_for_w5": 16
+    },
+    "visual_legacy": {
+      "cells": 101,
+      "changed_grey_tokens": 95,
+      "run_audit_export_button": 4
+    },
+    "tab_stops_real": {
+      "S06": "66/57",
+      "S07": "20/17",
+      "S08": "85/59",
+      "S09": "57/51"
+    }
+  },
+  "p22_publish": {
+    "stack": ":8095",
+    "run": "R-WFO-027",
+    "rc": "rc_06GG2K1TN6QQNJJN3RJ5AS5XC1",
+    "approval": "apr_06GG2K4A9Q3AHFVK0WV5GXNCY2",
+    "receipt_prefix": "91b7809f"
+  },
+  "not_verified": [
+    "print acceptance",
+    "full browser acceptance by Bobby",
+    "signed release",
+    "gates re-run on HEAD after a226d1d9/f0346ef8"
+  ],
+  "note": "counts are as reported from the session on 2026-10-03; logs and image hashes are not stored in this packet"
+}

@@ -1,0 +1,78 @@
+{
+  "packet": "FE-W1-W5",
+  "date": "2026-10-03",
+  "head": "c5795c71e14e225f27c323c4118eab43add89a5e",
+  "open_debt": [
+    {
+      "id": "DEBT-S06-CONTRAST",
+      "what": "S06 row 10 contrast: axe probe measured fine, no further fix; S06 page tab-stop count not re-measured beyond budget probe (66/57 recorded)",
+      "state": "OPEN_LOW"
+    },
+    {
+      "id": "DEBT-S09-MONTH-DISMISS",
+      "what": "month strip outside-tap dismiss: gap-tap dismiss landed in a226d1d9; outside-tap case not separately evidenced",
+      "state": "VERIFY"
+    },
+    {
+      "id": "DEBT-S08-ROUTE-SEQ-TESTS",
+      "what": "route-level tests for retained-lane seq: landed in a226d1d9; not re-measured on preview",
+      "state": "VERIFY"
+    },
+    {
+      "id": "DEBT-INK-MUTE-DARK",
+      "what": "dark --ink-mute outside .research-screen inherits the light value; no shell use today",
+      "state": "OPEN_LOW"
+    },
+    {
+      "id": "DEBT-MATURITY-PROTOTYPE",
+      "what": "--maturity-prototype badge colour unresolved",
+      "state": "OPEN_LOW"
+    },
+    {
+      "id": "DEBT-W4-LEFTOVERS",
+      "what": "ProvenanceStrip collapse, fold_01->F1, tile caption shortening, S12 Routes/Claims tab copy, Claim-tab cleanup; S05-S08 RunNotFound uses scoped :has() stopgap",
+      "state": "OPEN"
+    },
+    {
+      "id": "DEBT-S07-S03-360",
+      "what": "S07 causal fold rows and S03 claim chip at 360 unconfirmed: no causal fixture",
+      "state": "OPEN"
+    },
+    {
+      "id": "DEBT-LEGACY-ES",
+      "what": "ImportInbox.tsx:139 Vietnamese string in a removed legacy screen",
+      "state": "OPEN_LOW"
+    },
+    {
+      "id": "DEBT-BUNDLE-VS-HEAD",
+      "what": "gates measured on bundle index-C6w4OUAn.js; a226d1d9, f0346ef8 landed after the W5 gate and are covered by unit tests and legacy run-audit baselines only",
+      "state": "OPEN"
+    },
+    {
+      "id": "DEBT-BASELINE-MIX",
+      "what": "Research baselines mix W5 code and the grey-token change (16 cells re-recorded together); a diff cannot be attributed to one cause",
+      "state": "CAVEAT"
+    },
+    {
+      "id": "DEBT-HARNESS-WRITE",
+      "what": "harness first denied shared-preview writes (seal/publish on :8095); later done after Bobby approved in chat",
+      "state": "RESOLVED_RECORDED"
+    },
+    {
+      "id": "DEBT-STALE-SEALS",
+      "what": "R-WFO-022/023 stay SEALED_LOCAL with two readers giving different blocked reasons; left untouched",
+      "state": "OPEN_CODEX"
+    }
+  ],
+  "codex_dependencies": [
+    "§31-1 stale seal vs publish single reason and lawful path",
+    "§31-2 blocked_action (optional)",
+    "§31-3 RC rail selected_trial_ordinal (optional)",
+    "approval mirror read DENIED for the publisher (question)"
+  ],
+  "not_verified": [
+    "print acceptance",
+    "full browser acceptance by Bobby",
+    "signed release"
+  ]
+}

@@ -94,12 +94,12 @@ test.describe("trial label and links on a completed run", () => {
   test("hub report and candidate links keep fold and trial", async ({ page }, testInfo) => {
     const run = await discoverRun(page, "COMPLETED", { sealed: true });
     needRun(testInfo, run, "COMPLETED");
-    await page.goto(runUrl(run, "evidence", "#stage=claim&fold=4&trial=351"));
+    await page.goto(runUrl(run, "evidence", "#stage=claim&fold=2&trial=351"));
     await page.waitForLoadState("networkidle");
     for (const needle of ["/report", "/release-candidate"]) {
       const hrefs = await hrefsContaining(page, needle);
       expect(hrefs.length, needle).toBeGreaterThan(0);
-      for (const href of hrefs) expect(href, needle).toContain("fold=4");
+      for (const href of hrefs) expect(href, needle).toContain("fold=2");
     }
   });
 });
