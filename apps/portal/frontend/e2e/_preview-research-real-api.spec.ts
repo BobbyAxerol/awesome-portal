@@ -246,15 +246,15 @@ for (const [name, width, height] of VIEWPORTS) {
         const requested = (await (await page.request.get(`/api/v1/research/runs/${WFO_RUN}/requested-spec`)).json()) as any;
         const wf = requested.requested_spec.walk_forward;
         await expect(page.locator("[data-protocol]").first()).toContainText(`advanced walk-forward · ${wf.frequency} · ${wf.window_mode}`);
-        await expect(page.locator("[data-readiness]").first()).toContainText("READY");
-        await expect(page.locator("[data-selection]").first()).toContainText("GLOBAL");
+        await expect(page.locator("[data-readiness]").first()).toContainText(/ready/i);
+        await expect(page.locator("[data-selection]").first()).toContainText(/global/i);
       }
       if (screenId === "S06") {
         const search = await read("search");
         /* W4: the mode reads humanised; the exact enum is the visible word with underscores read as spaces. */
         await expect(page.locator("[data-run-mode]").first()).toHaveText(search.search_contract.optimization_mode.replaceAll("_", " "));
         await expect(page.locator("[data-run-schedule]").first()).toContainText(search.search_contract.optimization_schedule);
-        await expect(page.locator("[data-readiness]").first()).toContainText("READY");
+        await expect(page.locator("[data-readiness]").first()).toContainText(/ready/i);
       }
       if (screenId === "S07") {
         const freeze = await read("freeze");
@@ -856,7 +856,7 @@ for (const [name, width, height] of W6B_VIEWPORTS) {
       const selected = root.locator("[data-panel='selected']");
       await expect(selected).toHaveAttribute("data-selected-attempt", node.attempt_id);
       const row = (key: string) => selected.locator(`[data-row-key='${key}']`);
-      await expect(row("mode × schedule")).toHaveText(node.spec_label.text);
+      await expect(row("mode × schedule")).toHaveText(node.spec_label.text.replace(/_/g, " "));
       await expect(row("execution profile")).toHaveText(node.primary_run.execution_profile_id);
       await expect(row("promotion")).toHaveText(PROMOTION_WORDS[node.promotion_state]!);
       await expect(row("presentation")).toContainText(node.presentation_kind.toLowerCase());
@@ -892,7 +892,9 @@ for (const [name, width, height] of W6B_VIEWPORTS) {
       const band = root.locator(`[data-band='${version.alpha_version_id}']`);
       if (version.outcome.text) await expect(band.locator(".ln-out")).toHaveText(version.outcome.text);
       await expect(band.locator("[data-exercised-routes]")).toHaveText(version.exercised.routes.join(" · "));
-      await expect(band.locator("[data-exercised-modes]")).toHaveText(version.exercised.modes.join(" · "));
+      /* W7: server tokens print humanised (mode 1 decay, per-fold causal); the same words with `_`/`-` read as spaces. */
+      const words = (text: string) => text.toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+      await expect.poll(async () => words((await band.locator("[data-exercised-modes]").textContent()) ?? "")).toBe(words(version.exercised.modes.join(" · ")));
       const active = api.alpha.versions.find((item: any) => item.lifecycle_state === "ACTIVE");
       if (active?.untried.routes.length) {
         await expect(root.locator("[data-untried-routes]")).toContainText(active.untried.routes.map((route: any) => route.route_id).join(" · "));
