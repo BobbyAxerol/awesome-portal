@@ -228,14 +228,14 @@ describe("S13 pair table — a served common-window Sharpe gets its own labelled
     const table = document.querySelector("[data-delta-table]") as HTMLElement;
     expect(table.textContent).not.toContain("available AVAILABLE");
     expect([...table.querySelectorAll("[data-delta-row]")].map((row) => row.getAttribute("data-delta-row"))).toEqual([
-      "OOS_SHARPE", "OOS_SHARPE_COMMON", "NET_RETURN_FRACTION", "MAX_DRAWDOWN_FRACTION", "TRADE_COUNT", "WIN_RATE", "CLAIM",
+      "OOS_SHARPE_COMMON", "NET_RETURN_FRACTION", "MAX_DRAWDOWN_FRACTION", "TRADE_COUNT", "WIN_RATE", "CLAIM",
     ]);
-    const original = table.querySelector('[data-delta-row="OOS_SHARPE"]') as HTMLElement;
-    expect(original.querySelector("td")!.textContent).toBe("OOS sharpemean of folds");
-    expect(original.querySelector("td.d")!.textContent).toContain("Δ — not published");
+    /* T-D9: one "OOS sharpe" row; the per-fold mean rides its tooltip. */
+    expect(table.querySelector('[data-delta-row="OOS_SHARPE"]')).toBeNull();
     const common = table.querySelector('[data-delta-row="OOS_SHARPE_COMMON"]') as HTMLElement;
     expect(common.querySelector("td")!.textContent).toBe("OOS sharpecommon window");
-    expect(common.querySelector("td")!.getAttribute("title")).toBe(sharpe.definition_id);
+    expect(common.querySelector("td")!.getAttribute("title")).toContain(sharpe.definition_id);
+    expect(common.querySelector("td")!.getAttribute("title")).toContain("mean of folds");
     expect(common.querySelector("[data-delta-value]")!.getAttribute("data-delta-value")).toBe("8.915588458408");
     expect(common.querySelector("[data-exact]")!.getAttribute("data-exact")).toBe("-11.167622735917");
   });

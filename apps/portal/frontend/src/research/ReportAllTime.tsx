@@ -667,7 +667,7 @@ function MonthsBody({ block }: { block: EnrichedAnalysis }) {
     <div data-all-time-months data-months-motion={motion ? "on" : "off"}>
       <div {...chart.regionProps} className={`rr-at-months rr-at-wrap ${chart.regionProps.className ?? ""}`} data-months-region>
         {chart.text !== null ? (
-          <span className="rr-at-tip" data-months-tip style={{ right: 0, top: -4 }} title={chart.text}>
+          <span className="rr-at-tip" data-months-tip style={{ right: 0, top: "auto", bottom: "calc(100% + 2px)" }} title={chart.text}>
             {chart.text.split("\n").slice(0, 2).map((line) => (
               <span key={line}>{line}</span>
             ))}

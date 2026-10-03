@@ -24,6 +24,7 @@ import { PortalRoutes } from "./PortalRoutes";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { usePreferences } from "./preferences";
+import { installPrintLightTheme } from "./printTheme";
 
 export function PortalShell() {
   const location = useLocation();
@@ -47,6 +48,8 @@ export function PortalShell() {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [mobileNavOpen]);
+  /* T-D1/T-D2: print is the light palette whatever the theme. */
+  useEffect(() => installPrintLightTheme(), []);
   const openPalette = useCallback(() => setPaletteOpen(true), []);
   useCommandPaletteShortcut(openPalette);
 

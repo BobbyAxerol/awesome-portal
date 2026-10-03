@@ -41,11 +41,23 @@
     word-break: break-word;
     min-width: 0 !important;
   }
+  /* T-D3: the key column keeps a real width (the head cell is what sizes a fixed layout);
+   * run columns are narrow, so their headers read vertically instead of one letter per line. */
   .cp-difftable { font-size: 6.5pt; }
   .cp-difftable th, .cp-difftable td { padding: 2px 3px !important; }
   .cp-difftable thead th { font-size: 5pt; }
-  .cp-difftable .cp-colpick { white-space: normal; overflow-wrap: anywhere; word-break: break-all; }
-  .cp-difftable tbody th { width: 12%; }
+  .cp-difftable thead th:first-child,
+  .cp-difftable tbody th { width: 24% !important; word-break: normal; overflow-wrap: anywhere; }
+  .cp-difftable thead th:not(:first-child) {
+    writing-mode: vertical-rl;
+    word-break: normal;
+    overflow-wrap: normal;
+    white-space: nowrap;
+    vertical-align: bottom;
+    text-align: left;
+  }
+  .cp-difftable .cp-colpick { white-space: nowrap; word-break: normal; overflow-wrap: normal; }
+  .cp-difftable td { word-break: normal; overflow-wrap: normal; font-size: 5.5pt; writing-mode: vertical-rl; white-space: nowrap; text-align: left; vertical-align: top; }
   .rc-pack { overflow: visible !important; }
   .rc-pack table { min-width: 0 !important; width: 100% !important; }
   .rc-pack col.n { width: 4% !important; }

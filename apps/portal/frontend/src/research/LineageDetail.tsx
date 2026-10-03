@@ -35,7 +35,7 @@ import { phaseOfStatus, type RunPhase } from "./runTerminalState";
 import { useEntryRef } from "./chartLife";
 import { compareHref } from "./compareClient";
 import { ResearchNotice } from "./ResearchNotice";
-import { humanise } from "./humanise";
+import { humanise, humaniseTokens } from "./humanise";
 import { ResearchPanel } from "./ResearchPanel";
 import {
   LINEAGE_REASON,
@@ -628,7 +628,7 @@ function Absent({ what, state, reason }: { what?: string; state: string; reason:
   return (
     <span className="inline-flex flex-wrap items-baseline gap-x-1.5" data-absent={what ?? ""} data-absent-state={state}>
       <span className="ln-absent">
-        {what ? `${what} — ` : ""}
+        {what ? `${humaniseTokens(what)} — ` : ""}
         {state}
       </span>
       <span className="ln-reason" data-reason-code>
@@ -826,7 +826,7 @@ function ExposureLine({ exposure }: { exposure: Exposure }) {
 /** `rc_ (draft)` / `rc_01J… · NOT_APPROVED`: the run's persisted P21 relation, as the Run Library states it. */
 export function rcLabel(rc: ReleaseCandidateRef): string {
   if (rc.kind === "ACTOR_DRAFT") return "rc_ (draft)";
-  return `${rc.release_candidate_id ?? "rc_"} · ${rc.approval_state ?? "approval not published"}`;
+  return `${rc.release_candidate_id ?? "rc_"} · ${rc.approval_state ? humanise(rc.approval_state) : "approval not published"}`;
 }
 
 /** The hi-fi rc chip; a link to Screen 11 for the run that owns it. */
@@ -1001,8 +1001,8 @@ function Exercised({ version }: { version: LineageVersion }) {
         <span className="m" data-exercised-routes>
           {exercised.routes.join(" · ")}
         </span>
-        <span className="m" data-exercised-modes>
-          {exercised.modes.join(" · ")}
+        <span className="m" data-exercised-modes title={exercised.modes.join(" · ")}>
+          {humaniseTokens(exercised.modes.join(" · "))}
         </span>
         {exercised.param_ranges.length ? (
           <span className="m" data-exercised-params>
@@ -1056,8 +1056,8 @@ function VersionBand({
       data-selected={bandSelected ? "true" : "false"}
     >
       <div className="ln-bandrow">
-        <span className="ln-avchip" data-s={version.lifecycle_state} title={`registered ${iso(version.registered_at_utc_ms)}`}>
-          {version.label} · {version.lifecycle_state}
+        <span className="ln-avchip" data-s={version.lifecycle_state} title={`registered ${iso(version.registered_at_utc_ms)} · ${version.lifecycle_state}`}>
+          {version.label} · {humanise(version.lifecycle_state)}
         </span>
         <span className="ln-soft" title={version.code_digest} data-code-digest>
           {short(version.code_digest)}
@@ -1483,7 +1483,7 @@ function NodeDetail({ attempt }: { attempt: LineageAttempt }) {
           }${attempt.parent_state === "RETURNED" ? "" : " — outside the returned graph"}`}
       </span>
       <span className="ln-faint" data-run-line title={run.run_id ?? undefined}>
-        {run.run_id ? `primary run ${sid(run.run_id)} · ${run.state ?? "state not published"}` : "no primary run recorded"}
+        {run.run_id ? `primary run ${sid(run.run_id)} · ${run.state ? humanise(run.state) : "state not published"}` : "no primary run recorded"}
         {" · "}
         <span data-technical-retries>technical retries: {String(run.technical_retry_count)} (not attempts)</span>
       </span>
@@ -1873,7 +1873,7 @@ function Selected({
         </Row>
         {/* The schedule and the claim state are not on the card; the OOS / decay / cert the card carries are not repeated here. */}
         <Row k="mode × schedule">
-          {attempt.spec_label.text ?? <AvailabilityAbsent availability={attempt.spec_label.availability} />}
+          {attempt.spec_label.text !== null ? <span title={attempt.spec_label.text}>{humaniseTokens(attempt.spec_label.text)}</span> : <AvailabilityAbsent availability={attempt.spec_label.availability} />}
         </Row>
         <Row k="claim">
           {claim.state !== null ? (
@@ -1919,7 +1919,7 @@ function Selected({
           <Row k="intent">{attempt.intent_kind}</Row>
           <Row k="alpha version">{attempt.alpha_version_label}</Row>
           <Row k="primary run">{run.run_id ? <ShortId id={run.run_id} label="run" /> : <span className="ln-absent">no primary run recorded</span>}</Row>
-          <Row k="run state">{run.state ?? <span className="ln-absent">not published</span>}</Row>
+          <Row k="run state">{run.state ? <span title={run.state}>{humanise(run.state)}</span> : <span className="ln-absent">not published</span>}</Row>
           <Row k="execution profile">{run.execution_profile_id ?? <span className="ln-absent">not published</span>}</Row>
           <Row k="engine release">{run.engine_release_id ?? <span className="ln-absent">not published</span>}</Row>
           <Row k="effective spec">

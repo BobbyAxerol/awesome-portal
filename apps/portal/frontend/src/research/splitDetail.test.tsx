@@ -63,6 +63,14 @@ import { PortalApiError } from "../lib/api";
 import { researchState } from "./state";
 import { HUB_LANE_REASON, forgetRunIdentities } from "./retainedLane";
 
+
+/* These tests count the evidence reads themselves; the status gate in front of them (useEvidenceReadsAllowed) is covered by evidenceReadsGate.test.tsx. */
+vi.mock("./useRunStatus", () => ({
+  useRunStatus: () => ({ state: "unread" }),
+  setRunStatusSeed: () => undefined,
+  clearRunStatusCache: () => undefined,
+}));
+
 afterEach(cleanup);
 
 function codeOf(name: string): string {
@@ -1060,8 +1068,9 @@ describe("RF-06 S05 fidelity — spans read as the half-open intervals they are"
     // Not inside the windows track any more.
     expect(container.querySelector("[data-track] [data-window='holdout']")).toBeNull();
     expect(container.querySelector("[data-holdout-words]")?.textContent).toBe(
-      "P08_METADATA_BOUND · NOT_EVALUATED · result NOT_EXPOSED",
+      "p08 metadata bound · not evaluated · result not exposed",
     );
+    expect(container.querySelector("[data-holdout-words]")?.getAttribute("title")).toContain("P08_METADATA_BOUND");
   });
 });
 
@@ -1396,7 +1405,7 @@ describe("W3b — Split on the retained WFO lane", () => {
     expect(span?.textContent).toContain("end exclusive");
     expect(span?.getAttribute("title")).toContain("2026-07-15T00:00:00.000Z (end exclusive)");
     expect(container.querySelector("[data-readiness]")?.getAttribute("data-readiness")).toBe("READY");
-    expect(container.querySelector("[data-readiness]")?.textContent).toBe("READY");
+    expect(container.querySelector("[data-readiness]")?.textContent).toBe("ready");
     expect(container.querySelector("[data-selection]")?.getAttribute("data-selection")).toBe("GLOBAL");
     expect(requested.some((url) => url.includes(`/research/runs/${W3B_RUN}/progress`))).toBe(true);
     expect(requested.some((url) => url.includes(`/research/runs/${W3B_RUN}/requested-spec`))).toBe(true);
@@ -1410,7 +1419,7 @@ describe("W3b — Split on the retained WFO lane", () => {
       const theta = row.querySelector("[data-params-cell] [data-theta-star]");
       expect(theta?.getAttribute("data-theta-star")).toBe("0");
       // QA S05 U1: the id is the retained search's own, and says so (S03 prints the progress read's selection.trial).
-      expect(theta?.textContent).toBe("GLOBAL · source 0");
+      expect(theta?.textContent).toBe("global · source 0");
     }
   });
 
@@ -2241,7 +2250,7 @@ describe("QA S05 — retained lane screen", () => {
 
   it("U1: S05 labels the id it prints as the source's trial id", async () => {
     const { container } = await laneRoute();
-    expect(container.querySelector("[data-theta-star]")?.textContent).toMatch(/^GLOBAL · source \d/);
+    expect(container.querySelector("[data-theta-star]")?.textContent).toMatch(/^global · source \d/);
     expect(container.querySelector("[data-theta-trial]")?.parentElement?.textContent).toContain("source ");
   });
 

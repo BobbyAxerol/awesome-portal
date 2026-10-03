@@ -13,6 +13,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DENY_NOT_STARTED_OR_CANCELLED, useEvidenceReadsAllowed, withheldConflict } from "./useEvidenceReadsAllowed";
 
 import {
   REPLAY_LIMIT_MAX,
@@ -168,6 +169,7 @@ export function useReplay(
 ): ReplayController {
   const { workspaceId, arrivalFold } = options;
   const limit = Math.min(options.limit ?? REPLAY_LIMIT_MAX, REPLAY_LIMIT_MAX);
+  const reads = useEvidenceReadsAllowed(runId, DENY_NOT_STARTED_OR_CANCELLED, workspaceId);
   const [replay, setReplay] = useState<Replay | null>(null);
   const [refusal, setRefusal] = useState<ReplayRefusal | null>(null);
   const [inFlight, setInFlight] = useState(true);
@@ -246,10 +248,15 @@ export function useReplay(
   const [retainedIntent, setRetainedIntent] = useState<{ navigation: RetainedNavigation; limit?: number; arrival?: boolean } | null>(null);
 
   const ensureRetained = useCallback(() => {
-    if (retainedAsked.current) return;
+    if (retainedAsked.current || reads === "wait") return;
     retainedAsked.current = true;
+    /* A run that has not started (or was cancelled) has no retained replay: the lane read is not sent (its 409 is an expected state). */
+    if (reads !== "allow") {
+      setRetained({ state: "refused", refusal: toReplayRefusal(withheldConflict(reads), "retained") });
+      return;
+    }
     setRetainedIntent({ navigation: { kind: "first" }, arrival: true });
-  }, []);
+  }, [reads]);
 
   useEffect(() => {
     if (retainedIntent === null) return;

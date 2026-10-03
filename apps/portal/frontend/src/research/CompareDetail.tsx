@@ -57,8 +57,8 @@
  *    claim chip's title. Geometry, blocks and charts stay the hi-fi's.
  */
 
-import { Fragment, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Fragment, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 import { ResearchPanel } from "./ResearchPanel";
 import {
@@ -92,6 +92,7 @@ import {
   DELTA_DIRECTION_LABEL,
   type ConfigDiff,
   type FoldSeries,
+  compareApi,
 } from "./compareClient";
 import { LineageLink, lineageHref } from "./LineageLink";
 import { foldBars, identicalSeriesGroups, LINES_PAST_FOLDS, SINGLE_OOS_ORDINAL, SINGLE_OOS_WINDOW } from "./compareFoldBars";
@@ -100,7 +101,6 @@ import { foldShort, foldTitle, formatAxisValue, formatCorrelation, formatMetric 
 import { hubHref, rcHref as releaseCandidateHref, reportHref } from "./runLinks";
 import { phaseOfStatus, runStatusWord } from "./runTerminalState";
 import { runLabelFor } from "./runLabels";
-import { BreakableCode } from "./reportText";
 import { ResearchNotice } from "./ResearchNotice";
 import { humanise } from "./humanise";
 import type { ResearchState } from "./state";
@@ -455,6 +455,11 @@ const COMPARE_CSS = `
 .cp-cert .chip { font-family: var(--font-mono); font-size: 10px; font-weight: 700; border: 1.5px dashed var(--line-strong); color: var(--ink-faint); border-radius: 3px;
   padding: 0 6px; align-self: flex-start; white-space: nowrap; }
 .cp-coverage { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; margin-top: 6px; }
+.cp-picker { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 11.5px; }
+.cp-pick { display: inline-flex; gap: 6px; align-items: center; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+.cp-pick select { font: inherit; text-transform: none; letter-spacing: 0; max-width: 100%; background: var(--paper-raised); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; }
+.cp-claimchip:not([data-rank="none"]) { overflow-wrap: normal; word-break: normal; hyphens: none; white-space: nowrap; }
+.cp-delta th[data-side] { white-space: nowrap; }
 .cp-chip { font-family: var(--font-mono); font-size: 9.5px; border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; background: var(--paper-raised); color: var(--ink-soft); }
 .cp-chip[data-tone="partial"] { border-color: var(--accent-2); color: var(--accent-2); }
 .cp-fig { margin: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--paper-raised); box-shadow: var(--shadow-e1); padding: 16px; min-width: 0; }
@@ -549,6 +554,8 @@ const COMPARE_CSS = `
 .cp-lbl.x { top: calc(100% + 4px); transform: translateX(-50%); }
 .cp-lbl.x.first { transform: none; }
 .cp-lbl.x.last { transform: translateX(-100%); }
+/* T-D6: on a phone the day ticks overprint; keep the two ends (the full set stays in the hover readout). */
+@media (max-width: 600px) { .cp-lbl.x[data-x-label]:not(.first):not(.last) { display: none; } }
 .cp-legend { position: absolute; top: 0; right: 8px; left: 0; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 12px; font-size: 9.5px; color: var(--ink-soft); }
 .cp-legend .sw { display: inline-block; width: 14px; height: 0; margin-right: 5px; vertical-align: middle; border-top: 2px solid var(--accent); }
 .cp-legend [data-legend="right"] .sw { border-top: 2px dashed var(--accent-2); }
@@ -557,11 +564,11 @@ const COMPARE_CSS = `
 .cp-deltacard { flex: 1.2 1 400px; overflow-x: auto; }
 .cp-delta { width: 100%; border-collapse: collapse; font-size: 12px; }
 .cp-delta th { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-faint); text-align: right; border-bottom: 1px solid var(--line);
-  padding: 7px 12px; overflow-wrap: anywhere; }
+  padding: 7px 12px; overflow-wrap: break-word; word-break: normal; hyphens: none; }
 .cp-delta th:first-child { text-align: left; }
 .cp-delta th[data-side="left"] { color: var(--accent); }
 .cp-delta th[data-side="right"] { color: var(--accent-2); }
-.cp-delta td { padding: 6px 12px; border-top: 1px solid var(--line-soft); font-family: var(--font-mono); text-align: right; vertical-align: top; overflow-wrap: anywhere; }
+.cp-delta td { padding: 6px 12px; border-top: 1px solid var(--line-soft); font-family: var(--font-mono); text-align: right; vertical-align: top; overflow-wrap: break-word; word-break: normal; hyphens: none; }
 .cp-delta td:first-child { font-family: var(--font-body); color: var(--ink-soft); text-align: left; white-space: nowrap; overflow-wrap: normal; }
 .cp-delta td.d { font-weight: 600; }
 .cp-delta td[data-sign="pos"] { color: var(--good); }
@@ -580,7 +587,7 @@ const COMPARE_CSS = `
 .cp-weaker .k { font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; color: var(--accent-2); flex: none; }
 .cp-dtable { width: 100%; border-collapse: collapse; font-size: 11px; }
 .cp-dtable th { font-size: 9.5px; font-weight: 500; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-faint); text-align: left; border-bottom: 1px solid var(--line); padding: 6px 12px; }
-.cp-dtable td { padding: 5px 12px; font-family: var(--font-mono); border-top: 1px solid var(--line-soft); overflow-wrap: anywhere; }
+.cp-dtable td { padding: 5px 12px; font-family: var(--font-mono); border-top: 1px solid var(--line-soft); overflow-wrap: break-word; word-break: normal; hyphens: none; }
 .cp-scroll { overflow-x: auto; min-width: 0; }
 .cp-foot { display: flex; flex-direction: column; gap: 3px; border-top: 1px solid var(--line); padding-top: 8px; }
 .cp-foot .t { font-family: var(--font-body); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin: 0; font-weight: 400; }
@@ -796,10 +803,7 @@ function RunLine({ run, withState = false, skipLabel = false }: { run: CompareRu
 function CertAbsent({ run }: { run: CompareRun }) {
   return (
     <span className="cp-cert" data-cert-absent data-cert-state={run.certification.state} data-absent="cert" data-absent-state="not published">
-      <span className="chip">cert not published</span>
-      <span className="cp-reason" data-reason-code={run.certification.reason_code}>
-        {run.certification.reason_code !== null ? <BreakableCode code={run.certification.reason_code} /> : null}
-      </span>
+      <span className="chip" title={run.certification.reason_code ?? undefined} data-reason-code={run.certification.reason_code}>cert not published</span>
     </span>
   );
 }
@@ -1014,7 +1018,7 @@ function MiniPlot({ chart, plot }: { chart: MarketChart; plot: Plot & { line: st
 
 function samplingLine(sampling: string, emitted: number | null, source: number | null): string {
   /* CG-P20-10: a published block always carries its count; an absent one is never printed here. */
-  return `sampling ${sampling} · emitted ${emitted ?? "count not published"} of ${source === null ? "source count not published" : `${source} source observations`} · UTC`;
+  return `sampling ${humanise(sampling)} · emitted ${emitted ?? "count not published"} of ${source === null ? "source count not published" : `${source} source observations`} · UTC`;
 }
 
 /* ----------------------------------------------------------------- blocks */
@@ -1084,7 +1088,7 @@ function coverageOf(compare: Compare): string | null {
   const { result } = compare;
   if (result.mode === "pair") return result.state === "PARTIAL" ? "pair partial" : null;
   const partial = result.coverage.state !== "COMPLETE";
-  return `${result.coverage.total_attempts} attempts${partial ? ` · coverage ${result.coverage.state}${result.coverage.reason_code ? ` · ${result.coverage.reason_code}` : ""}` : ""}`;
+  return `${result.coverage.total_attempts} attempts${partial ? ` · coverage ${result.coverage.state}${result.coverage.reason_code ? ` · ${humanise(result.coverage.reason_code)}` : ""}` : ""}`;
 }
 
 /** VD-P20-08: one mono disclosure line — authority, revision, as-of, coverage and source absences. */
@@ -1300,8 +1304,8 @@ function Ladder({ result }: { result: AttemptResult }) {
           <span className="cp-chip" data-tone="partial">
             PARTIAL
           </span>
-          <span className="cp-faint">
-            {result.coverage.total_attempts} attempts in total · {result.coverage.reason_code ?? "reason not published"}
+          <span className="cp-faint" title={result.coverage.reason_code ?? undefined}>
+            {result.coverage.total_attempts} attempts in total · {humanise(result.coverage.reason_code) || "reason not published"}
           </span>
         </div>
       ) : null}
@@ -1480,6 +1484,21 @@ function FoldChart({ result }: { result: AttemptResult }) {
   const nameOf = (runId: string) => (byRunAll.get(runId) ? runName(byRunAll.get(runId)!) : sid(runId));
   const verticesOf = (runId: string): number | null => (geometry ? (geometry.lines.find((line) => line.runId === runId)?.vertices ?? null) : null);
   const axis = (text: string) => formatMetric(text, "ratio") ?? text;
+  /* T-D11: the fold chart is a chart region like the overlay: one stop, arrows walk the folds, Escape clears. */
+  const foldGroups = geometry?.groups ?? [];
+  const foldXsKey = foldGroups.map((group) => group.pct).join(",");
+  const foldXs = useMemo(() => foldGroups.map((group) => group.pct), [foldXsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const foldParts = (i: number): { runId: string; text: string }[] =>
+    legendEntries.flatMap((entry) => {
+      const fold = published.find((item) => item.run_id === entry.runId)?.folds.find((f) => f.source_ordinal === foldGroups[i]?.ordinal);
+      return fold && fold.oos_sharpe !== null ? [{ runId: entry.runId, text: `${nameOf(entry.runId)} ${axis(fold.oos_sharpe)}` }] : [];
+    });
+  const scrub = useScrub(foldXs, {
+    label: "OOS Sharpe per fold",
+    describe: (i) => `${foldShort(foldGroups[i]!.label)}: ${foldParts(i).map((part) => part.text).join(", ")}`,
+    summary: `OOS Sharpe per fold, ${foldGroups.length} folds. Arrow keys read a fold, Escape clears.`,
+  });
+  const foldAt = scrub.index === null ? null : (foldGroups[scrub.index] ?? null);
   return (
     <figure className="cp-fig" data-panel="fold-chart" aria-label="OOS Sharpe per fold" data-fold-series={published.length} data-fold-mode={geometry?.mode}>
       <figcaption>
@@ -1531,7 +1550,7 @@ function FoldChart({ result }: { result: AttemptResult }) {
             data-fold-bars
             style={{ "--cp-gutter": `calc(${Math.max(4, ...geometry.yLabels.map((label) => axis(label.text).length))}ch + 10px)` } as CSSProperties}
           >
-            <div className="cp-plot-area">
+            <div className="cp-plot-area" {...(foldGroups.length > 1 ? scrub.region : {})}>
               <svg
                 viewBox={`0 0 ${geometry.width} ${geometry.height}`}
                 preserveAspectRatio="none"
@@ -1595,6 +1614,16 @@ function FoldChart({ result }: { result: AttemptResult }) {
                   ) : null,
                 )}
               </div>
+              {foldAt && scrub.index !== null ? (
+                <ScrubLayer xPct={foldAt.pct} dots={[]} testId="fold">
+                  <div>{foldShort(foldAt.label)}</div>
+                  {foldParts(scrub.index).slice(0, 6).map((part) => (
+                    <div key={part.runId} style={{ color: tone(part.runId) }}>{part.text}</div>
+                  ))}
+                  {foldParts(scrub.index).length > 6 ? <div>+{foldParts(scrub.index).length - 6} more</div> : null}
+                </ScrubLayer>
+              ) : null}
+              {foldGroups.length > 1 ? scrub.nodes : null}
             </div>
           </div>
         </>
@@ -1846,7 +1875,7 @@ function MarketTile({ card }: { card: MarketCard }) {
       <RunLine run={run} />
       <MiniChart chart={chart} />
       {chart.state === "AVAILABLE" ? (
-        <span className="cp-faint" data-mini-meta>
+        <span className="cp-faint" data-mini-meta title={chart.sampling}>
           {samplingLine(chart.sampling, chart.emitted_point_count, chart.source_observation_count)}
         </span>
       ) : null}
@@ -1899,8 +1928,8 @@ function MarketsBody({ result }: { result: MarketResult }) {
             <span className="cp-chip" data-tone="partial">
               PARTIAL
             </span>
-            <span className="cp-faint">
-              {result.coverage.total_attempts} attempts in total · {result.coverage.reason_code ?? "reason not published"}
+            <span className="cp-faint" title={result.coverage.reason_code ?? undefined}>
+              {result.coverage.total_attempts} attempts in total · {humanise(result.coverage.reason_code) || "reason not published"}
             </span>
           </div>
         ) : null}
@@ -1911,7 +1940,67 @@ function MarketsBody({ result }: { result: MarketResult }) {
 
 /* ------------------------------------------------------------------- pair */
 
+/**
+ * T-D8: a pair with fewer than two runs names no one to compare. The Alpha's other completed runs (the
+ * attempts read this screen already makes, GET only) are offered by their display label; picking the missing
+ * run(s) writes `?mode=pair&runs=A,B`. Without a source it is one sentence and the Library.
+ */
+function PairPicker({ alphaId, named }: { alphaId: string; named: readonly string[] }) {
+  const navigate = useNavigate();
+  const [options, setOptions] = useState<{ id: string; label: string }[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [first, setFirst] = useState(named[0] ?? "");
+  useEffect(() => {
+    const abort = new AbortController();
+    compareApi
+      .get(alphaId, { mode: "attempts", signal: abort.signal })
+      .then((answer) => {
+        if (abort.signal.aborted || typeof answer !== "object" || answer === null || !("result" in answer) || answer.result.mode !== "attempts") {
+          if (!abort.signal.aborted) setFailed(true);
+          return;
+        }
+        setOptions(answer.result.attempts.filter((run) => run.run_state === "READY").map((run) => ({ id: run.run_id, label: runName(run) })));
+      })
+      .catch(() => {
+        if (!abort.signal.aborted) setFailed(true);
+      });
+    return () => abort.abort();
+  }, [alphaId]);
+  if (failed || (options !== null && options.length < 2 - Math.min(named.length, 1))) {
+    return (
+      <span data-pair-picker="none" className="cp-picker">
+        <span data-idle-reason>{PAIR_NEEDS_TWO}</span>{" "}
+        <Link to={runsHref(alphaId)} data-action="runs">
+          Library →
+        </Link>
+      </span>
+    );
+  }
+  const choose = (a: string, b: string) => {
+    if (a && b && a !== b) navigate(compareHref(alphaId, { mode: "pair", runs: [a, b] }));
+  };
+  const pool = options ?? [];
+  const select = (label: string, value: string, exclude: string, onPick: (id: string) => void) => (
+    <label className="cp-pick">
+      <span>{label}</span>
+      <select value={value} disabled={options === null} onChange={(event) => onPick(event.target.value)} data-pair-pick={label}>
+        <option value="">{options === null ? "…" : "Pick a run"}</option>
+        {pool.filter((o) => o.id !== exclude || o.id === value).map((o) => (
+          <option key={o.id} value={o.id}>{o.label}</option>
+        ))}
+      </select>
+    </label>
+  );
+  return (
+    <span data-pair-picker="ready" className="cp-picker">
+      {select("A", first, "", (id) => setFirst(id))}
+      {select("B", "", first, (id) => choose(first, id))}
+    </span>
+  );
+}
+
 function RunChips({ runs }: { runs: readonly string[] | null }) {
+  if (!runs || runs.length === 0) return null;
   return (
     <span className="cp-runchips" data-run-chips aria-label="the two runs this URL names">
       {(runs ?? []).map((runId, index) => (
@@ -2018,7 +2107,7 @@ function OverlayFigure({ result }: { result: PairComparable }) {
       <figcaption>
         <span className="cp-figtitle">{OVERLAY_TITLE}</span>
         {overlay.state === "AVAILABLE" ? (
-          <span className="cp-figmeta" data-overlay-meta>
+          <span className="cp-figmeta" data-overlay-meta title={overlay.sampling}>
             {samplingLine(overlay.sampling, overlay.emitted_point_count, overlay.source_observation_count)}
           </span>
         ) : null}
@@ -2326,6 +2415,8 @@ interface DeltaRowView {
   scope: string;
   /** The server definition id, in the label's title. */
   definition?: string;
+  /** Tooltip on the label cell: a figure the row does not print (served values only). */
+  note?: string;
   left: ReactNode;
   right: ReactNode;
   delta: ReactNode;
@@ -2395,24 +2486,30 @@ function deltaRows(result: PairComparable): DeltaRowView[] {
   /* F1: a server that publishes the common window's Sharpe (research.compare.metric.v2) serves A, B and Δ for that scope. Its Δ belongs
      to its own row — beside the fold-mean A/B above it, it would read as their difference ("Δ — available AVAILABLE" before this). */
   const sharpeCommonServed = sharpeCommon !== undefined && sharpeCommon.availability.state === "AVAILABLE" && sharpeCommon.delta !== null;
+  /* T-D9: two "OOS sharpe" rows differed only by 9px subtext. When the common window serves its own, that one row stays and the
+     per-fold mean (served A/B, no Δ) rides its tooltip; otherwise the original row stands alone. */
+  const foldMean = (metric: CompareMetric | undefined): string =>
+    metric && metric.value !== null && metric.availability.state === "AVAILABLE" ? (formatMetric(metric.value, "ratio") ?? metric.value) : "not published";
+  const sharpeRow: DeltaRowView[] = sharpeCommonServed
+    ? [{ ...commonRow(result, "OOS_SHARPE", "OOS sharpe"), id: "OOS_SHARPE_COMMON", note: `mean of folds: A ${foldMean(sharpeLeft)} · B ${foldMean(sharpeRight)}` }]
+    : [
+        {
+          id: "OOS_SHARPE",
+          label: "OOS sharpe",
+          scope: sharpeLeft?.scope ?? "original",
+          left: <MetricValue metric={sharpeLeft} what="A" />,
+          right: <MetricValue metric={sharpeRight} what="B" />,
+          /* CG-P20-06: the common window types its Sharpe NOT_APPLICABLE with the server's reason. */
+          delta: sharpeCommon ? (
+            <AvailabilityAbsent availability={sharpeCommon.availability} what="Δ" />
+          ) : (
+            <Absent what="Δ" state="not returned" reason="metric absent from common_window" />
+          ),
+          sign: null,
+        },
+      ];
   return [
-    {
-      id: "OOS_SHARPE",
-      label: "OOS sharpe",
-      scope: sharpeLeft?.scope ?? "original",
-      left: <MetricValue metric={sharpeLeft} what="A" />,
-      right: <MetricValue metric={sharpeRight} what="B" />,
-      /* CG-P20-06: the common window types its Sharpe NOT_APPLICABLE with the server's reason. */
-      delta: sharpeCommonServed ? (
-        <Absent what="Δ" state="not published" reason="none for this scope — see the common-window row" />
-      ) : sharpeCommon ? (
-        <AvailabilityAbsent availability={sharpeCommon.availability} what="Δ" />
-      ) : (
-        <Absent what="Δ" state="not returned" reason="metric absent from common_window" />
-      ),
-      sign: null,
-    },
-    ...(sharpeCommonServed ? [{ ...commonRow(result, "OOS_SHARPE", "OOS sharpe"), id: "OOS_SHARPE_COMMON" }] : []),
+    ...sharpeRow,
     commonRow(result, "NET_RETURN_FRACTION", "net return"),
     commonRow(result, "MAX_DRAWDOWN_FRACTION", "max drawdown"),
     {
@@ -2504,7 +2601,7 @@ function DeltaTable({ result }: { result: PairComparable }) {
           <tbody>
             {deltaRows(result).map((row) => (
               <tr key={row.id} data-delta-row={row.id}>
-                <td title={row.definition ?? undefined} data-definition={row.definition ?? undefined}>
+                <td title={[row.note, row.definition].filter(Boolean).join(" · ") || undefined} data-definition={row.definition ?? undefined}>
                   {row.label}
                   {row.scope ? (
                     <span className="scope" data-scope={row.scope}>
@@ -2705,11 +2802,13 @@ function PendingBody({
   state,
   runs,
   guardNote,
+  picker,
 }: {
   mode: CompareMode | null;
   state: ResearchState["state"];
   runs: readonly string[] | null;
   guardNote?: ReactNode;
+  picker?: ReactNode;
 }) {
   /* QA S13-9: after a refusal, an error or nothing requested, the notice above is the whole answer; five frames of
      "withheld - the notice above says why" repeated it. Only a pair that was never addressed keeps its one guard card. */
@@ -2719,8 +2818,8 @@ function PendingBody({
         <div className="cp-guardrow" data-panel="guard" data-panel-state={state}>
           <div className="cp-guardcard" data-verdict="pending">
             <div className="head">
-              <span className="tag">contract key</span>
-              <span className="txt">{guardNote}</span>
+              {picker ? null : <span className="tag">contract key</span>}
+              <span className="txt">{picker ?? guardNote}</span>
             </div>
           </div>
           <RunChips runs={runs} />
@@ -2836,6 +2935,8 @@ export function CompareScreen({ alphaId, mode, runs, controller, onMode, idleRea
   const result = compare?.result ?? null;
   const shownMode: CompareMode | null = result ? result.mode : mode;
   const withheld = compare === null && state.state === "denied";
+  /* T-D8: an unaddressed pair is a choice, not a notice. */
+  const pairPicker = mode === "pair" && idleReason === PAIR_NEEDS_TWO && alphaId ? <PairPicker alphaId={alphaId} named={(runs ?? []).filter(Boolean)} /> : undefined;
   const idleLink = idleReason ? (
     <Link to={runsHref(alphaId)} data-action="runs">
       Library →
@@ -2856,7 +2957,7 @@ export function CompareScreen({ alphaId, mode, runs, controller, onMode, idleRea
       <style>{COMPARE_CSS}</style>
       {withheld ? <h1 className="cp-title" data-panel="header">Compare</h1> : <Header alphaId={alphaId} compare={compare} active={mode} onMode={onMode} />}
       {withheld ? null : <Meta alphaId={alphaId} compare={compare} state={state.state} />}
-      {state.state !== "available" ? (
+      {state.state !== "available" && !pairPicker ? (
         <Notice controller={controller} idleLink={idleLink} idleReason={mode === "pair" ? null : idleReason} />
       ) : null}
       {withheld ? null /* A refusal (denied or unknown alpha): the notice carries the one exit; no tabs, no skeleton. */ : result ? (
@@ -2873,6 +2974,7 @@ export function CompareScreen({ alphaId, mode, runs, controller, onMode, idleRea
           state={state.state}
           runs={runs}
           guardNote={idleReason ? <span data-idle-reason>{idleReason}</span> : undefined}
+          picker={pairPicker}
         />
       )}
     </div>

@@ -30,8 +30,8 @@ const RULE_WORDS: Record<Row["identity_rule"], string> = {
 };
 
 const BADGE: Record<Stage4BindingValue["state"], { words: string; tone: string }> = {
-  BOUND: { words: "✓ BOUND", tone: "var(--good)" },
-  DRIFT: { words: "✕ DRIFT — BLOCKED", tone: "var(--bad)" },
+  BOUND: { words: "✓ bound", tone: "var(--good)" },
+  DRIFT: { words: "✕ drift — blocked", tone: "var(--bad)" },
   NOT_COMPARED: { words: "not compared", tone: "var(--ink-faint)" },
 };
 

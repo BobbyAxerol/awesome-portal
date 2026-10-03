@@ -32,7 +32,7 @@ import { BoundWarningNote } from "./BoundWarning";
 import { isWhatIf, WhatIfCard } from "./WhatIfCard";
 import { CopyThetaDigest, ServedStage4Binding } from "./Stage4Binding";
 import { DigestChain, hubDigestChain, retainedDigestChain, verifyChainLabel } from "./DigestChain";
-import { humanise } from "./humanise";
+import { humanise, humaniseTokens } from "./humanise";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import { CURRENT_SOURCE_LANE_COPY } from "./researchRefusal";
@@ -108,7 +108,7 @@ function Withheld({ availability, what }: { availability: FreezeAvailability; wh
       data-withheld={availability.state}
       title={availability.reason_code ?? availability.state}
     >
-      {what ? `${what} — ` : ""}
+      {what ? `${humaniseTokens(what)} — ` : ""}
       {FREEZE_WITHHELD_WORDS[availability.state]}
     </span>
   );
@@ -1221,7 +1221,7 @@ function RetainedFrozenTable({ freeze, identity }: { freeze: RetainedFreeze; ide
       ) : (
         <div className="flex flex-col gap-1 border-b px-3 py-1.5" style={{ borderColor: "var(--line-soft)" }} data-fold-selections>
           <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }}>
-            schedule {run?.schedule ?? "not published"} — the retained lane publishes one frozen selection
+            schedule {run?.schedule ? humanise(run.schedule) : "not published"} — the retained lane publishes one frozen selection
           </span>
           {folds.map((fold) => (
             <span key={fold.fold} className="flex flex-wrap items-baseline gap-2" data-fold-selection={fold.fold}>

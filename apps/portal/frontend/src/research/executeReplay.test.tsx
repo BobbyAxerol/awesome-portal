@@ -38,7 +38,7 @@ import type { SplitBandSlot } from "./SplitBand";
 
 /* W1: the stage pages read the Library status only when a lane refuses; these tests do not cover that read. */
 vi.mock("./useRunStatus", () => ({
-  useRunStatus: () => ({ state: "idle" }),
+  useRunStatus: () => ({ state: "unread" }),
   setRunStatusSeed: () => undefined,
   clearRunStatusCache: () => undefined,
 }));
@@ -923,7 +923,7 @@ describe("E2c · 8.5 — the P04 band is P14's three-window truth", () => {
     renderScreen(controllerOf(replay()), undefined, ready({ ...WINDOWS, holdout: absent }));
     const holdout = document.querySelector("[data-band='holdout']") as HTMLElement;
     expect(holdout.getAttribute("data-band-state")).toBe("NOT_PUBLISHED");
-    expect(holdout.textContent).toContain("HOLDOUT");
+    expect(holdout.textContent).toContain("holdout");
     expect(holdout.textContent).toContain("not published");
     expect(holdout.textContent).not.toContain("0");
     expect(holdout.querySelector("[data-band-reason]")!.getAttribute("data-band-reason")).toBe("P14_SOURCE_SPLIT_RECEIPT_NOT_PUBLISHED");

@@ -107,7 +107,7 @@ describe("E5 · 6.7/6.8 B1 pool freeze and the K callout", () => {
     const root = await settled();
     const label = root.querySelector("[data-freeze-label]") as HTMLElement;
     expect(label.getAttribute("data-freeze-label")).toBe("served");
-    expect(label.textContent).toBe("POOL FROZEN · K = ⌈3 × 0.1⌉ = 1");
+    expect(label.textContent).toBe("pool frozen · K = ⌈3 × 0.1⌉ = 1");
   });
 
   it("a K the server withholds is printed as its absence: no bar, no zero, no K worked out in the browser", async () => {
@@ -119,7 +119,7 @@ describe("E5 · 6.7/6.8 B1 pool freeze and the K callout", () => {
     expect(root.querySelector("[data-pool-bar='top-is']")).toBeNull();
     expect(root.querySelector("[data-k-callout]")?.getAttribute("data-k-callout")).toBe("absent");
     expect(text(root, "[data-k-callout]")).toContain("the retained pool and QuantBT's rule disagree");
-    expect(text(root, "[data-freeze-label]")).toBe("POOL FROZEN · K NOT PUBLISHED");
+    expect(text(root, "[data-freeze-label]")).toBe("pool frozen · K not published");
     expect([...root.querySelectorAll("[data-pool-count]")].map((cell) => cell.textContent)).not.toContain("0");
   });
 

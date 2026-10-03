@@ -100,7 +100,7 @@ describe("X2 · B4 — F4 binding down to Stage 4 is the server's verdict (CG-P1
     const { container } = await settled();
     const card = container.querySelector("[data-panel='stage4-binding']") as HTMLElement;
     expect(card.getAttribute("data-binding-state")).toBe("BOUND");
-    expect(card.querySelector("[data-binding-badge]")?.textContent).toBe("✓ BOUND");
+    expect(card.querySelector("[data-binding-badge]")?.textContent).toBe("✓ bound");
     expect([...card.querySelectorAll("[data-binding-row]")].map((row) => [row.getAttribute("data-binding-row"), row.getAttribute("data-binding-row-state")])).toEqual([
       ["SEALED_PARAMS", "MATCH"], ["REPLAY_PARAMS", "MATCH"], ["SEALED_BUNDLE", "MATCH"], ["RUNTIME_BUNDLE", "MATCH"],
     ]);
@@ -121,7 +121,7 @@ describe("X2 · B4 — F4 binding down to Stage 4 is the server's verdict (CG-P1
     stub({ ...FREEZE, stage4_binding: binding });
     const { container } = await settled();
     const card = container.querySelector("[data-panel='stage4-binding']") as HTMLElement;
-    expect(card.querySelector("[data-binding-badge]")?.textContent).toBe("✕ DRIFT — BLOCKED");
+    expect(card.querySelector("[data-binding-badge]")?.textContent).toBe("✕ drift — blocked");
     expect(card.querySelector("[data-binding-row='REPLAY_PARAMS']")?.textContent).toContain("differs by fold ✕");
     expect(card.querySelector("[data-binding-fold='1']")?.getAttribute("data-binding-fold-state")).toBe("MISMATCH");
     expect(card.textContent).toContain("Stage 5 must refuse this run");

@@ -210,7 +210,7 @@ describe("F1b · Claim tab", () => {
     const { container } = view({ cursor: CLAIM });
     const hook = container.querySelector("[data-soon-hook='Register for Paper Trading']") as HTMLElement;
     expect(hook.querySelector("button")?.hasAttribute("disabled")).toBe(true);
-    expect(hook.textContent).toBe("Register for Paper TradingSOON");
+    expect(hook.textContent).toBe("Register for Paper Tradingsoon");
     expect(hook.getAttribute("title")).toContain("deployment params must equal frozen params");
   });
 

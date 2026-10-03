@@ -38,6 +38,14 @@ import { EXPORT_POLL_MS } from "./useReportExport";
 import { REPLAY_REFUSAL_COPY } from "./replayClient";
 import { PortalApiError } from "../lib/api";
 
+
+/* These tests count the evidence reads themselves; the status gate in front of them (useEvidenceReadsAllowed) is covered by evidenceReadsGate.test.tsx. */
+vi.mock("./useRunStatus", () => ({
+  useRunStatus: () => ({ state: "unread" }),
+  setRunStatusSeed: () => undefined,
+  clearRunStatusCache: () => undefined,
+}));
+
 let hidden = false;
 Object.defineProperty(document, "hidden", { configurable: true, get: () => hidden });
 
@@ -1162,7 +1170,8 @@ describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
       expect(tr.querySelector("[data-fold-oos]")?.getAttribute("data-fold-oos")).toBe(row.oos_sharpe.value);
       expect(tr.querySelector("[data-fold-decay]")?.getAttribute("data-fold-decay")).toBe(row.decay.value);
       expect(tr.querySelector("[data-fold-contribution]")?.getAttribute("data-fold-contribution")).toBe(row.contribution_fraction.value);
-      expect(tr.querySelector("[data-v]")?.textContent).toBe(row.verdict);
+      expect(tr.querySelector("[data-v]")?.getAttribute("data-v")).toBe(row.verdict);
+      expect(tr.querySelector("[data-v]")?.textContent).toBe(row.verdict.toLowerCase());
     }
     const caption = panel("equity").querySelector("[data-equity-caption]")!;
     expect(caption.textContent).toContain("┆ = fold OOS start");
@@ -1210,7 +1219,7 @@ describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
 
   it("S09-U47 CG-P18-11 a scratch run says NOT_PUBLISHABLE in its identity and keeps the generic title", async () => {
     await open("research-report.wfo-scratch.valid.json");
-    expect(panel("identity").querySelector('[data-identity="binding"] dd')?.textContent).toBe("scratch — NOT_PUBLISHABLE");
+    expect(panel("identity").querySelector('[data-identity="binding"] dd')?.textContent).toBe("scratch — not publishable");
     expect(document.querySelector("[data-report-title]")?.getAttribute("data-title-source")).toBe("generic");
   });
 
@@ -1363,7 +1372,8 @@ describe("E14 — S09 headline return, identity qualifier, equity grid and evide
   it("9.7 a fixed-profile run's optimizer identity says it was declared, not executed", async () => {
     const body = await open("research-report.p04-fixed-profile.valid.json");
     const row = panel("identity").querySelector('[data-identity="optimization"]')!;
-    expect(row.querySelector("dd")?.textContent).toContain(body.frozen_core.identity.find((f: { key: string }) => f.key === "optimization").value);
+    expect(row.querySelector("dd")?.textContent).toContain(body.frozen_core.identity.find((f: { key: string }) => f.key === "optimization").value.replace(/_/g, " "));
+    expect(row.querySelector("dd [title]")?.getAttribute("title")).toBe(body.frozen_core.identity.find((f: { key: string }) => f.key === "optimization").value);
     const qualifier = row.querySelector("[data-identity-qualifier]")!;
     expect(qualifier.getAttribute("data-identity-qualifier")).toBe("DECLARED_NOT_EXECUTED");
     expect(qualifier.textContent).toContain("declared, not executed");

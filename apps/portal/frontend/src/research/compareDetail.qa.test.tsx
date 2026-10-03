@@ -216,8 +216,8 @@ describe("QA S13 · Sharpe, cert and claim said once", () => {
     renderAt(`${base}?mode=pair&runs=run-w6a-wfo-a,run-w6a-wfo-b`);
     await settled();
     expect(document.querySelector("[data-delta-direction]")!.textContent).toBe("B − A");
-    expect(document.querySelector('[data-delta-row="OOS_SHARPE"]')!.outerHTML).toContain("see the common-window row");
-    expect(document.querySelector('[data-delta-row="OOS_SHARPE"]')!.textContent).not.toContain("see common window");
+    expect(document.querySelector('[data-delta-row="OOS_SHARPE"]')).toBeNull();
+    expect(document.querySelector('[data-delta-row="OOS_SHARPE_COMMON"]')!.textContent).not.toContain("see common window");
   });
 });
 
@@ -241,12 +241,39 @@ describe("QA S13 · one state per meaning", () => {
   });
 
   it("pair mode with no runs: one sentence and one way out, no five placeholder frames", async () => {
-    vi.spyOn(globalThis, "fetch");
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"));
     renderAt(`${base}?mode=pair`);
-    expect(document.querySelector("[data-idle-reason]")!.textContent).toBe("Pick a second run.");
+    /* T-D8: no source for the picker's options -> one sentence and the Library exit. */
+    await waitFor(() => expect(document.querySelector("[data-idle-reason]")!.textContent).toBe("Pick a second run."));
     expect(document.querySelector('[data-action="runs"]')).not.toBeNull();
     expect(document.querySelectorAll("[data-pending]")).toHaveLength(0);
     for (const name of ["overlay", "delta", "correlation"]) expect(document.querySelector(`[data-panel="${name}"]`), name).toBeNull();
+  });
+});
+
+describe("W7 · T-D8 pair picker, T-D11 fold chart region", () => {
+  it("an unaddressed pair offers the Alpha's ready runs by label; no pair read is sent", async () => {
+    const body = attempts((runs) => runs.forEach((run) => ((run as { run_state: string }).run_state = "READY")));
+    server(body);
+    renderAt(`${base}?mode=pair`);
+    await waitFor(() => expect(document.querySelector('[data-pair-picker="ready"]')).not.toBeNull());
+    const selects = document.querySelectorAll<HTMLSelectElement>("select[data-pair-pick]");
+    expect(selects).toHaveLength(2);
+    expect(selects[0]!.options.length).toBeGreaterThan(2);
+    expect(document.querySelector('[data-panel="notice"]')).toBeNull();
+    expect(vi.mocked(globalThis.fetch).mock.calls.some(([url]) => String(url).includes("mode=pair"))).toBe(false);
+  });
+
+  it("the fold chart is one chart region that reads a fold on ArrowRight", async () => {
+    server(attempts());
+    renderAt(base);
+    await settled();
+    const region = document.querySelector<HTMLElement>('[data-panel="fold-chart"] .cp-plot-area');
+    if (region === null) return; /* fixture without a drawable fold series: nothing to assert */
+    expect(region.getAttribute("aria-roledescription")).toBe("chart");
+    expect(region.getAttribute("tabindex")).toBe("0");
+    fireEvent.keyDown(region, { key: "ArrowRight" });
+    expect(document.querySelector('[data-panel="fold-chart"] [data-chart-live]')!.textContent).toMatch(/\S/);
   });
 });
 

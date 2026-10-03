@@ -40,7 +40,8 @@ import {
   CLAIM_REQUIRED,
   ENGCERT_TITLE,
   MIRROR_INBOX_LINK,
-  MIRROR_NOT_READABLE,
+  MIRROR_PUBLISHED_DENIED,
+  MIRROR_PUBLISHED_DENIED_TITLE,
   MIRROR_NOTE,
   MIRROR_OUTCOMES,
   MIRROR_POOL_ABSENT,
@@ -86,10 +87,12 @@ import {
   releaseCandidatePackHref,
   yamlText,
   type RcCompose,
+  type RcField,
   type RcPack,
   type RcPublication,
   type RcSealResponse,
 } from "./releaseCandidateClient";
+import type { RcPublicationView } from "./useReleaseCandidatePublication";
 import { PUBLICATION_BACKOFF_MS, PUBLICATION_POLL_MS, nextPublicationView } from "./useReleaseCandidatePublication";
 import { PortalApiError } from "../lib/api";
 import { onSessionExpired } from "../auth/sessionExpiry";
@@ -652,7 +655,7 @@ describe("S11 composition as served (P21)", () => {
     expect(input.querySelector(".rc-status")!.getAttribute("title")).toContain(STATUS_TITLE.INPUT);
     expect(input.querySelector("[data-digest]")!.textContent).toBe("not declared");
     expect(q("[data-seal-blocked]")!.getAttribute("data-seal-blocked")).toBe("P21_REQUIRED_EVIDENCE_MISSING");
-    expect(q("[data-seal-blocked]")!.textContent).toBe("resolve MISSING rows first");
+    expect(q("[data-seal-blocked]")!.textContent).toBe("resolve the missing rows first");
     expect(q("[data-seal-blocked]")!.getAttribute("title")).toBe("P21_REQUIRED_EVIDENCE_MISSING");
   });
 
@@ -687,7 +690,8 @@ describe("S11 composition as served (P21)", () => {
     const lines = qa("[data-yaml-key]");
     expect(lines.map((line) => line.getAttribute("data-yaml-key"))).toEqual(P04.yaml.map((field) => field.key));
     expect(lines).toHaveLength(17);
-    expect(q("[data-yaml-key='final_audit_run_id']")!.textContent).toContain("null  # P21_FINAL_AUDIT_RUN_NOT_PUBLISHED");
+    expect(q("[data-yaml-key='final_audit_run_id']")!.textContent).toContain("not assigned yet");
+    expect(q("[data-yaml-key='final_audit_run_id'] .v")!.getAttribute("data-reason-code")).toBe("P21_FINAL_AUDIT_RUN_NOT_PUBLISHED");
     expect(q("[data-yaml-key='manifest_digest']")!.getAttribute("data-yaml-value")).toBe(P04.fields.find((field) => field.key === "manifest_digest")!.value);
   });
 
@@ -768,8 +772,9 @@ describe("S11 W7 retained lane (Delta WFO)", () => {
     const rail = q("[data-rail-node='selected_params']")!;
     expect(rail.querySelector("[data-rail-detail]")!.textContent).toBe("trial 1 · source 0 · run-global");
     expect(rail.getAttribute("data-tone")).toBe("ink");
-    expect(q("[data-yaml-key='release_candidate_id']")!.textContent).toContain("null  # P21_ASSIGNED_ON_LOCAL_SEAL");
-    expect(q("[data-yaml-key='release_candidate_id'] .v")!.getAttribute("data-tone")).toBe("gold");
+    expect(q("[data-yaml-key='release_candidate_id']")!.textContent).toContain("not assigned yet");
+    expect(q("[data-yaml-key='release_candidate_id'] .v")!.getAttribute("data-tone")).toBe("dim");
+    expect(q("[data-yaml-key='release_candidate_id'] .v")!.getAttribute("data-reason-code")).toBe("P21_ASSIGNED_ON_LOCAL_SEAL");
     expect(q("[data-yaml-key='manifest_digest']")!.getAttribute("data-yaml-value")).toMatch(/^b71259790d93/);
     expect(q("[data-seal-blocked]")!.textContent).toBe("complete and save the two declarations first");
     expect(q("[data-seal-blocked]")!.getAttribute("title")).toBe("P21_RESEARCHER_DECLARATIONS_REQUIRED");
@@ -1358,7 +1363,7 @@ describe("S11 publication read and R1 mirror (P22)", () => {
 
   it("S11-U42 a delivered candidate never shows the ghost: denied, not-found and unavailable R1 reads each say so", async () => {
     const cases: Array<[RcPublication["approval_read"], string]> = [
-      ["DENIED", MIRROR_NOT_READABLE],
+      ["DENIED", MIRROR_PUBLISHED_DENIED],
       ["NOT_FOUND", "the governance store has no approval by this id"],
       ["UNAVAILABLE", "the governance store did not answer this read"],
     ];
@@ -1369,10 +1374,10 @@ describe("S11 publication read and R1 mirror (P22)", () => {
       const mirror = await until("[data-panel='mirror']");
       await waitFor(() => expect(mirror.getAttribute("data-mirror-read")).toBe(read));
       expect(panel("mirror-ghost")).toBeNull();
-      expect(mirror.textContent).toContain(`approval status: ${words}`);
+      expect(mirror.textContent).toContain(read === "DENIED" ? words : `approval status: ${words}`);
       expect(mirror.querySelector("[data-mirror-facts]")!.textContent).toContain(`approval ${APPROVAL}`);
       expect(mirror.querySelector("a")).toBeNull();
-      expect(panel("published")!.querySelector("[data-evidence-digest-absent]")!.textContent).toBe(`not read (${read})`);
+      expect(panel("published")!.querySelector("[data-evidence-digest-absent]")!.textContent).toBe(`not read (${read.toLowerCase().replace(/_/g, " ")})`);
       cleanup();
       vi.restoreAllMocks();
     }
@@ -1710,7 +1715,7 @@ describe("S11 P22 closeout bindings (FG-05)", () => {
   });
 
   it("S11-U62 with no decision recorded the contract's outcome vocabulary stays, as a legend headed possible outcomes", async () => {
-    expect(MIRROR_OUTCOMES).toBe("possible outcomes: APPROVED · APPROVED_WITH_CONDITION · CHANGES_REQUESTED · DENIED · EXPIRED");
+    expect(MIRROR_OUTCOMES).toBe("possible outcomes: approved · approved with condition · changes requested · denied · expired");
     for (const decisions of [[], undefined]) {
       const read = deliveredRead({}, { status: "PENDING", decision_outcomes: decisions });
       server({ COMPOSE: [ok(deliveredCompose())], PUBLICATION: [ok(read)] });
@@ -1885,7 +1890,8 @@ describe("S11 F2 promotion_pick in the lineage rail", () => {
     expect(node.getAttribute("data-pick-state")).toBe("WRITTEN");
     expect(node.getAttribute("data-pick-status")).toBe("APPROVED_WITH_CONDITION");
     expect(node.querySelector("[data-state-chip]")!.getAttribute("data-state-chip")).toBe("APPROVED_WITH_CONDITION");
-    expect(node.querySelector("[data-pick-state-word]")!.textContent!.trim()).toBe("WRITTEN");
+    expect(node.querySelector("[data-pick-state-word]")!.textContent!.trim()).toBe("written");
+    expect(node.querySelector("[data-pick-state-word]")!.getAttribute("title")).toBe("WRITTEN");
     expect(node.querySelector("[data-pick-trial]")!.textContent).toBe("source trial_0007");
     /* F2b: the artifact and the fact digest are the node's tooltip and data, not two more lines. */
     expect(node.getAttribute("data-pick-artifact")).toBe("art_selected_params_01");
@@ -2124,6 +2130,81 @@ describe("S11 QA 2026-10-02 fixes", () => {
     expect(detail).toContain(".rc-pack tbody tr { display: grid;");
     expect(detail).toContain('data-label="source"');
     expect(detail).toContain('data-label="note"');
+  });
+});
+
+describe("S11 R: blocked_action, denied mirror, trial ordinal, null yaml rows", () => {
+  const stale = () => sealed({ enabled: false, blocked_reason: "P22_CURRENT_SOURCE_CHANGED", blocked_action: "CREATE_NEW_RUN_AND_SEAL" });
+  const staleRead = (o: Partial<RcPublication> = {}) =>
+    publication({ may_publish: false, blocked_reason: "P22_CURRENT_SOURCE_CHANGED", blocked_action: "CREATE_NEW_RUN_AND_SEAL", ...o });
+
+  it("S11-R1 stale seal reads 'Sealed from an older source.' with ONE exit: New run", async () => {
+    server({ COMPOSE: [ok(stale())], PUBLICATION: [ok(staleRead())] });
+    renderCompose();
+    await ready();
+    await waitFor(() => expect(q("[data-publish-blocked]")!.getAttribute("data-publish-blocked")).toBe("P22_CURRENT_SOURCE_CHANGED"));
+    expect(q("[data-publish-blocked]")!.textContent).toBe("Sealed from an older source.");
+    const exit = qa("[data-blocked-action]");
+    expect(exit).toHaveLength(1);
+    expect(exit[0]!.textContent).toBe("New run");
+    expect(exit[0]!.getAttribute("href")).toContain("/runs/new?from=");
+  });
+
+  it("S11-R2 the publication read's code wins over the compose code", async () => {
+    server({ COMPOSE: [ok(stale())], PUBLICATION: [ok(staleRead({ blocked_reason: "P22_RELEASE_CANDIDATE_SUPERSEDED", blocked_action: "REVIEW_CURRENT_CANDIDATE" }))] });
+    renderCompose();
+    await ready();
+    await waitFor(() => expect(q("[data-publish-blocked]")!.getAttribute("data-publish-blocked")).toBe("P22_RELEASE_CANDIDATE_SUPERSEDED"));
+    expect(q("[data-action='blocked-review']")!.getAttribute("href")).toBe("/research/quantbt/runs");
+    expect(q("[data-action='blocked-new-run']")).toBeNull();
+  });
+
+  it("S11-R3 WAIT is a muted 'checking'; NONE adds nothing; SEAL_CANDIDATE only when sealing is allowed", () => {
+    const base = { writesLocked: false, busy: false, publishing: false, claim: null };
+    const view = { state: "idle" } as unknown as RcPublicationView;
+    const c = (action: string) => sealed({ enabled: false, blocked_reason: "P22_LOCAL_SEAL_REQUIRED", blocked_action: action as never });
+    expect(publishBlock({ ...base, compose: c("WAIT"), view })!.action).toBe("WAIT");
+    expect(publishBlock({ ...base, compose: c("NONE"), view })!.action).toBe("NONE");
+  });
+
+  it("S11-R4 a published candidate with a DENIED R1 read says so briefly, the full sentence in the tooltip, the approval id stays", async () => {
+    server({ COMPOSE: [ok(deliveredCompose())], PUBLICATION: [ok(deliveredRead({ approval_read: "DENIED", approval: null }))] });
+    renderCompose();
+    await ready();
+    const node = await until("[data-mirror-published-denied]");
+    expect(node.textContent).toBe(MIRROR_PUBLISHED_DENIED);
+    expect(node.getAttribute("title")).toBe(MIRROR_PUBLISHED_DENIED_TITLE);
+    expect(MIRROR_PUBLISHED_DENIED_TITLE).toContain("Published successfully. Your publication receipt is available");
+    expect(q("[data-mirror-facts]")!.textContent).toContain(`approval ${APPROVAL}`);
+  });
+
+  it("S11-R5 the rail trial prints the served ordinal; null shows the typed absence with its reason code", async () => {
+    const withNode = (patch: Record<string, unknown>) => {
+      const body = sealed();
+      return { ...body, rail: body.rail.map((n) => (n.key === "selected_params" ? { ...n, ...patch } : n)) } as RcCompose;
+    };
+    server({ COMPOSE: [ok(withNode({ selected_trial_ordinal: 351, selected_trial_ordinal_scope: "RUN_GLOBAL", selected_trial_ordinal_reason_code: null }))], PUBLICATION: [ok(publication())] });
+    renderCompose();
+    await ready();
+    expect(q("[data-rail-node='selected_params'] [data-rail-detail]")!.textContent).toBe("trial 351");
+    cleanup();
+    vi.restoreAllMocks();
+    server({ COMPOSE: [ok(withNode({ selected_trial_ordinal: 2, selected_trial_ordinal_scope: "STUDY_LOCAL", selected_trial_ordinal_reason_code: null }))], PUBLICATION: [ok(publication())] });
+    renderCompose();
+    await ready();
+    expect(q("[data-rail-node='selected_params'] [data-rail-detail]")!.getAttribute("data-rail-trial-scope")).toBe("STUDY_LOCAL");
+    cleanup();
+    vi.restoreAllMocks();
+    server({ COMPOSE: [ok(withNode({ selected_trial_ordinal: null, selected_trial_ordinal_scope: null, selected_trial_ordinal_reason_code: "SELECTION_HAS_NO_TRIAL" }))], PUBLICATION: [ok(publication())] });
+    renderCompose();
+    await ready();
+    const absent = q("[data-rail-node='selected_params'] [data-rail-trial-absent]")!;
+    expect(absent.getAttribute("data-reason-code")).toBe("SELECTION_HAS_NO_TRIAL");
+  });
+
+  it("S11-R6 copy yaml still copies the server's `null  # CODE` text", () => {
+    const field = { key: "release_candidate_id", value: null, availability: { state: "NOT_PUBLISHED", reason_code: "P21_ASSIGNED_ON_LOCAL_SEAL" } } as unknown as RcField;
+    expect(yamlText([field])).toBe("release_candidate_id: null  # P21_ASSIGNED_ON_LOCAL_SEAL");
   });
 });
 

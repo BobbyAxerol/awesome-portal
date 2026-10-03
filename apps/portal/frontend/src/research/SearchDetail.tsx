@@ -96,7 +96,7 @@ import {
 import type { ResearchState } from "./state";
 import { trialLabel, trialTitle } from "./trialLabel";
 import { AbsenceSummary } from "./Absence";
-import { humanise } from "./humanise";
+import { humanise, humaniseTokens } from "./humanise";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -107,7 +107,7 @@ import { humanise } from "./humanise";
  */
 export const SEARCH_TITLE = "Search & Selection";
 
-export const FREEZE_LABEL = "POOL FREEZE";
+export const FREEZE_LABEL = "pool freeze";
 
 const DIAGNOSTIC_LABEL: Record<DiagnosticKey, string> = {
   scatter: "A2 · trial surface",
@@ -221,7 +221,7 @@ function Withheld({ availability, what }: { availability: SearchAvailability; wh
       data-withheld={availability.state}
       title={availability.reason_code ?? availability.state}
     >
-      {what ? `${what} — ` : ""}
+      {what ? `${humaniseTokens(what)} — ` : ""}
       {SEARCH_WITHHELD_WORDS[availability.state]}
     </span>
   );
@@ -587,7 +587,7 @@ function ParameterTable({
         >
           <span className="w-[86px] flex-none">{parameter.name}</span>
           <span className="flex-none" style={{ color: "var(--ink-soft)", width: kindWidth ?? 112 }} data-kind={parameter.name}>
-            {pinned?.has(parameter.name) ? "pinned (sibling)" : parameter.kind}
+            {pinned?.has(parameter.name) ? "pinned (sibling)" : humanise(parameter.kind)}
           </span>
           <span className="w-[96px] flex-none" style={{ color: "var(--ink-soft)" }} data-range={parameter.name}>
             {parameter.minimum} … {parameter.maximum}
@@ -1066,7 +1066,7 @@ function CandidateLedger({ search }: { search: CurrentSourceSearch }) {
   const selectedId = search.selection.selected_trial_id;
   const rows = search.candidates.rows;
   /* Uniform note / equal id: stated once, not per row. */
-  const noteOf = (candidate: RetainedCandidate) => `${candidate.facts.stage ?? "stage not published"} · ${scopeWords(candidate.facts)}`;
+  const noteOf = (candidate: RetainedCandidate) => `${candidate.facts.stage ? humanise(candidate.facts.stage) : "stage not published"} · ${scopeWords(candidate.facts)}`;
   const uniformNote = rows.length > 0 && rows.every((row) => noteOf(row) === noteOf(rows[0])) ? noteOf(rows[0]) : null;
   const sameId = rows.every((row) => row.facts.source_trial_id === row.candidate_id);
   return (
@@ -1130,7 +1130,7 @@ function RetainedPoolFreeze({ search }: { search: CurrentSourceSearch }) {
       search.candidates.source_candidate_count,
       contract.top_is_fraction !== null ? `top_is_fraction ${contract.top_is_fraction}` : contract.top_is_k !== null ? `top_is_k ${contract.top_is_k}` : "pool rule not published",
     ],
-    ["selected", search.selection.selected_trial_id === null ? null : 1, contract.candidate_selection_metric ?? "selector not published"],
+    ["selected", search.selection.selected_trial_id === null ? null : 1, humanise(contract.candidate_selection_metric) || "selector not published"],
   ];
   /* Bar length is geometry only: each count against the Stage A trial count. */
   const most = search.ledger.source_trial_count;
@@ -1795,7 +1795,7 @@ function RetainedReadinessFact({ run }: { run: RetainedRunFacts | undefined }) {
       data-readiness-basis="RETAINED_SEAL"
       title="The retained seal from the progress read: the attempt materialized READY and sealed its mandatory bundle."
     >
-      {readiness}
+      {humanise(readiness)}
     </span>
   );
 }
@@ -1866,7 +1866,7 @@ function FreezeLine({ detail, retained = null }: { detail: SearchDetailDocument;
           }
           data-freeze-label={served ? "served" : "rule"}
         >
-          {served ? served.text : `${FREEZE_LABEL} · ${froze ? "FROZEN" : retained !== null ? "RULE NOT PUBLISHED" : "NONE — NO SEARCH RAN"}`}
+          {served ? served.text : `${FREEZE_LABEL} · ${froze ? "frozen" : retained !== null ? "rule not published" : "none — no search ran"}`}
         </span>
         <span
           className="mono relative whitespace-nowrap rounded-[3px] border px-1.5 py-[3px] text-[10px] font-bold"
@@ -2587,7 +2587,7 @@ export function SearchScreen({
 
                 <section className={CARD} style={CARD_STYLE} data-panel="formula">
                   <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
-                    B2 · the formula of {runMode ?? "this mode"} — every term
+                    B2 · the formula of {runMode ? humanise(runMode) : "this mode"} — every term
                   </h3>
                   {retained ? (
                     <RetainedFormula search={retained} />

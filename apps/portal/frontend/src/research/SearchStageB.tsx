@@ -56,7 +56,7 @@ export const SERVER_PREDATES_POOL = "UI_SERVER_PREDATES_E5_POOL";
 
 function reasonWords(code: string | null | undefined): string {
   if (!code) return "not published";
-  return STAGE_B_REASON_WORDS[code] ?? reasonCodeSentence(code) ?? code;
+  return STAGE_B_REASON_WORDS[code] ?? reasonCodeSentence(code) ?? humanise(code);
 }
 
 /** A Sharpe-like ratio to two places with the screen's minus; the exact string rides in the title. */
@@ -145,10 +145,10 @@ export function freezeLineLabel(pool: Pool | undefined): { text: string; title: 
   const expression = kExpression(pool.rule);
   if (!expression && pool.rule.state === "NOT_APPLICABLE") {
     /* Causal profile: there is no run-global pool, so K does not arise — typed, not broken data. */
-    return { text: "POOL · K NOT APPLICABLE", title: `${reasonWords(pool.rule.reason_code)} (${pool.rule.reason_code ?? "no reason"})` };
+    return { text: "pool · K not applicable", title: `${reasonWords(pool.rule.reason_code)} (${pool.rule.reason_code ?? "no reason"})` };
   }
-  if (expression) return { text: `POOL FROZEN · ${expression}`, title: `top-IS pool of ${pool.top_is_k.value} from the retained candidate ledger` };
-  return { text: "POOL FROZEN · K NOT PUBLISHED", title: `${reasonWords(pool.top_is_k.reason_code)} (${pool.top_is_k.reason_code ?? "no reason"})` };
+  if (expression) return { text: `pool frozen · ${expression}`, title: `top-IS pool of ${pool.top_is_k.value} from the retained candidate ledger` };
+  return { text: "pool frozen · K not published", title: `${reasonWords(pool.top_is_k.reason_code)} (${pool.top_is_k.reason_code ?? "no reason"})` };
 }
 
 /**
@@ -217,7 +217,7 @@ export function PoolFunnel({ search }: { search: CurrentSourceSearch }) {
       )}
       <FunnelRow
         id="top-is"
-        label="top-IS pool → FROZEN"
+        label="top-IS pool → frozen"
         count={pool.top_is_k}
         of={of}
         note={
@@ -257,7 +257,7 @@ export function PoolFunnel({ search }: { search: CurrentSourceSearch }) {
       ) : (
         <span className="mono mt-1 border border-dashed px-[10px] py-[5px] text-[10px] leading-[1.6]" style={{ ...FAINT, borderColor: "var(--line)" }} data-k-callout={pool.rule.state === "NOT_APPLICABLE" ? "not-applicable" : "absent"} title={pool.rule.reason_code ?? undefined}>
           {pool.rule.state === "NOT_APPLICABLE" ? "K not applicable" : "K not shown"} — {reasonWords(pool.rule.reason_code)}
-          {pool.rule.state === "NOT_APPLICABLE" && pool.rule.reason_code ? <span className="break-all text-[9px]"> {pool.rule.reason_code}</span> : null}
+          {pool.rule.state === "NOT_APPLICABLE" && pool.rule.reason_code ? <span hidden data-reason-code={pool.rule.reason_code} /> : null}
         </span>
       )}
     </div>
@@ -511,7 +511,7 @@ function RoleCard({ search, role, kind }: { search: CurrentSourceSearch; role: R
     >
       <span className="flex items-baseline justify-between gap-2">
         <span className="mono text-[11px]" style={{ color: tone }}>
-          {selected ? "selected" : "best_trial"} {role.trial_id ?? "—"}
+          {selected ? "selected" : "best trial"} {role.trial_id ?? "—"}
         </span>
         {selected ? (
           <span
@@ -520,7 +520,7 @@ function RoleCard({ search, role, kind }: { search: CurrentSourceSearch; role: R
             data-role-scope={role.scope}
             title={role.scope === "LAST_FOLD_DEPLOYMENT" ? `final outer-fold deployment selection only${role.fold_id ? ` (${role.fold_id})` : ""} — not a run-global parameter bundle` : undefined}
           >
-            {role.scope === "LAST_FOLD_DEPLOYMENT" ? "LAST-FOLD DEPLOYMENT" : "SELECTED BY POLICY"}
+            {role.scope === "LAST_FOLD_DEPLOYMENT" ? "last-fold deployment" : "selected by policy"}
           </span>
         ) : (
           <span className="text-[9px]" style={FAINT}>

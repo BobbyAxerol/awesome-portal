@@ -31,7 +31,6 @@ import {
   COMPARE_TITLE,
   MODE_LABELS,
   MODE_TITLES,
-  PAIR_NEEDS_TWO,
   RESOLVER_NEEDS_ALPHA,
   overlayPlot,
 } from "./CompareDetail";
@@ -570,11 +569,12 @@ describe("S13 Compare — pair", () => {
     expect(panels()).toEqual([...COMPARE_PANELS.refused]);
   });
 
-  it("S13-U11 a pair without exactly two runs sends nothing and says so, frame intact", () => {
+  it("S13-U11 a pair without exactly two runs sends no pair read and offers a picker, frame intact", async () => {
     const spy = vi.spyOn(globalThis, "fetch");
     renderAt(`${base}?mode=pair&runs=run_a`);
-    expect(spy).not.toHaveBeenCalled();
-    expect(document.querySelector("[data-idle-reason]")?.textContent).toBe(PAIR_NEEDS_TWO);
+    /* T-D8: the only read is the Alpha's attempts (the picker's options); never a pair. */
+    expect(spy.mock.calls.filter(([url]) => String(url).includes("mode=pair"))).toHaveLength(0);
+    await waitFor(() => expect(document.querySelector("[data-pair-picker]")).not.toBeNull());
     /* QA S13-9: nothing was requested, so one guard card says so; the four placeholder frames are gone. */
     expect(panel("guard")).not.toBeNull();
     for (const name of ["overlay", "delta", "correlation"]) expect(panel(name), name).toBeNull();

@@ -302,7 +302,7 @@ export interface WindowBand {
   title: string;
 }
 
-const WINDOW_LABEL = { is: "IS", oos: "OOS", holdout: "HOLDOUT" } as const;
+const WINDOW_LABEL = { is: "IS", oos: "OOS", holdout: "holdout" } as const;
 
 /**
  * The served, located, half-open window bounds. A window with no bounds, a NOT_APPLICABLE one, or an

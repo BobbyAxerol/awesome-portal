@@ -309,9 +309,9 @@ describe("FE-S03-03 / CG-P11-03 — the run meta strip reads the progress read's
     view();
     const strip = $("[data-run-meta]");
     expect(strip.getAttribute("data-run-meta")).toBe("ready");
-    expect($('[data-meta="mode"]').textContent).toBe("three_window_decay · mode_1_decay · global");
+    expect($('[data-meta="mode"]').textContent).toBe("three-window · mode 1 decay · global");
     expect($('[data-meta="binding"]').textContent).toBe("delta-rsi-polynomial-alpha · BTCUSDT · 1h");
-    expect($('[data-meta="route"]').textContent).toBe("route signal_notional");
+    expect($('[data-meta="route"]').textContent).toBe("route signal notional");
     expect($('[data-meta="engine"]').textContent).toContain("engine er_quantbt_111");
     expect($('[data-meta="engine"]').textContent).toContain("sha256:909514…");
     expect(within(strip).getByText("running").getAttribute("data-status-pill")).toBe("RUNNING");
@@ -544,12 +544,13 @@ describe("FE-S03-08 — artifacts are table rows with uppercase states", () => {
   it("formats bytes and an 8-hex digest, pulses WRITING and dashes nothing", () => {
     view();
     const sealed = $('[data-artifact="trials.parquet"]');
-    expect(sealed.textContent).toContain("SEALED");
+    expect(sealed.textContent).toContain("sealed");
+    expect(sealed.getAttribute("data-artifact-state")).toBe("SEALED");
     expect(sealed.textContent).toContain("6.1 KB");
     expect(sealed.querySelector("[title*=\"2abc4bf2\"]")).toBeTruthy(); /* W4A: the digest is the tooltip */
     expect(sealed.querySelector("a")).toBeNull();
     const writing = $('[data-artifact="selection_trace.json"] [data-motion="pulse"]');
-    expect(writing.textContent).toBe("WRITING");
+    expect(writing.textContent).toBe("writing");
     expect(writing.style.textTransform).toBe("uppercase");
     expect(document.body.textContent).not.toContain("READY");
   });

@@ -9,6 +9,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DENY_NOT_STARTED_OR_CANCELLED, useEvidenceReadsAllowed, withheldLane } from "./useEvidenceReadsAllowed";
 
 import { usePollTick } from "../execution/useRevision";
 import {
@@ -77,6 +78,7 @@ export function readsRetainedLane(
 }
 
 export function useFreeze(runId: string, fold: number | null, workspaceId?: string): FreezeController {
+  const reads = useEvidenceReadsAllowed(runId, DENY_NOT_STARTED_OR_CANCELLED, workspaceId);
   const [detail, setDetail] = useState<FreezeDetail | null>(null);
   const [refusal, setRefusal] = useState<FreezeRefusal | null>(null);
   const [verify, setVerify] = useState<VerifySlot>({ state: "idle" });
@@ -135,8 +137,14 @@ export function useFreeze(runId: string, fold: number | null, workspaceId?: stri
   }, [runId, workspaceId]);
 
   const ensureRetained = useCallback(() => {
-    if (retainedAsked.current) return;
+    if (retainedAsked.current || reads === "wait") return;
     retainedAsked.current = true;
+    /* A run that has not started has no retained freeze: the lane read is not sent (its 409 is an expected state). */
+    if (reads !== "allow") {
+      const withheld = withheldLane(reads);
+      setRetained({ state: "refused", refusal: withheld.refusal, laneState: withheld.laneState });
+      return;
+    }
     /* A re-read after a verify keeps the answer on screen until the new one lands. */
     setRetained((previous) => (previous.state === "ready" ? previous : { state: "loading" }));
     freezeApi
@@ -151,7 +159,7 @@ export function useFreeze(runId: string, fold: number | null, workspaceId?: stri
       .catch((error: unknown) =>
         setRetained({ state: "refused", refusal: toFreezeRefusal(error), laneState: laneStateOfError(error) }),
       );
-  }, [runId, workspaceId]);
+  }, [reads, runId, workspaceId]);
 
   useEffect(() => {
     retainedAsked.current = false;

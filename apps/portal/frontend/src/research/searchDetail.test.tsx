@@ -43,7 +43,7 @@ import { HUB_LANE_REASON, forgetRunIdentities } from "./retainedLane";
 
 /* W1: the stage pages read the Library status only when a lane refuses; these tests do not cover that read. */
 vi.mock("./useRunStatus", () => ({
-  useRunStatus: () => ({ state: "idle" }),
+  useRunStatus: () => ({ state: "unread" }),
   setRunStatusSeed: () => undefined,
   clearRunStatusCache: () => undefined,
 }));
@@ -831,7 +831,7 @@ describe("RF-06 FE-S06-07/08 — HiFi layout", () => {
 
   it("A1 carries the served kind; the claim row, copy link and formatted as-of are present", () => {
     const { container } = view();
-    expect(container.querySelector("[data-kind='rsi_len']")?.textContent).toBe("NUMERIC");
+    expect(container.querySelector("[data-kind='rsi_len']")?.textContent).toBe("numeric");
     expect(container.querySelector("[data-claim-row]")).toBeTruthy();
     expect(container.querySelector("[data-action='copy-evidence-link']")).toBeTruthy();
     expect(container.querySelector("[data-as-of]")?.textContent).toMatch(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}Z$/);
@@ -1249,7 +1249,8 @@ describe("W3b — Search on the retained WFO lane", () => {
     const readiness = container.querySelector("[data-readiness]");
     expect(readiness?.getAttribute("data-readiness")).toBe("READY");
     expect(readiness?.getAttribute("data-readiness-basis")).toBe("RETAINED_SEAL");
-    expect(readiness?.textContent).toBe("READY");
+    expect(readiness?.textContent).toBe("ready");
+    expect(readiness?.getAttribute("data-readiness")).toBe("READY");
     const profile = container.querySelector("[data-source-profile]");
     expect(profile?.textContent).toContain("rs02.delta-signal-notional-wfo.v1");
     expect(container.querySelector("[data-selection-state]")?.getAttribute("data-selection-state")).toBe("AVAILABLE");

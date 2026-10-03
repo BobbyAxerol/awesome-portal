@@ -250,14 +250,14 @@ export function reasonOf(availability: RcAvailability): string {
 /**
  * One sentence per reason code the P21/P22 services publish, shown beside the
  * code (the code is always printed; an unknown code prints alone). Spec 11 §7
- * copy is verbatim where it exists ("resolve MISSING rows first").
+ * copy is verbatim where it exists ("resolve the missing rows first").
  */
 export const RC_REASON_SENTENCES: Readonly<Record<string, string>> = {
   /* P21 seal gate */
   P21_SCRATCH_RUN_UNBOUND: "bind alpha_version first — a scratch run cannot be sealed",
   P21_ALPHA_VERSION_NOT_ACTIVE: "the bound alpha_version is not ACTIVE",
   P21_REFERENCED_SOURCE_INTEGRITY_FAILED: "a referenced source is absent, malformed or disagrees with another copy — nothing can be sealed from it",
-  P21_REQUIRED_EVIDENCE_MISSING: "resolve MISSING rows first",
+  P21_REQUIRED_EVIDENCE_MISSING: "resolve the missing rows first",
   P21_RESEARCHER_DECLARATIONS_REQUIRED: "complete and save the two declarations first",
   P21_RESEARCHER_DECLARATION_REQUIRED: "not declared yet",
   P21_ALREADY_SEALED: "your declaration draft is already sealed — its immutable pack cannot be changed",
@@ -290,7 +290,7 @@ export const RC_REASON_SENTENCES: Readonly<Record<string, string>> = {
   P22_FINAL_AUDIT_NOT_LINKED: "the sealed pack names no final audit run bound to an Alpha version",
   P22_RELEASE_CANDIDATE_SUPERSEDED: "a newer candidate was sealed for this run",
   P22_RELEASE_CANDIDATE_CURRENTNESS_UNKNOWN: "whether this is the run's newest candidate could not be read",
-  P22_CURRENT_SOURCE_CHANGED: "the evidence changed since this pack was sealed — seal again",
+  P22_CURRENT_SOURCE_CHANGED: "Sealed from an older source.",
   P22_GOVERNANCE_SOURCE_UNAVAILABLE: "the governance run mirror did not answer",
   P22_ALPHA_MAPPING_MISMATCH: "the governance run mirror names another Alpha or run",
   P22_RUN_NOT_TERMINAL: "the governance run mirror does not show this run as completed",
@@ -310,6 +310,11 @@ export function rcReasonSentence(code: string | null | undefined): string | null
 /** One YAML line exactly as the preview prints it and `copy yaml` copies it. */
 export function yamlValue(field: RcField): string {
   return field.value ?? `null  # ${reasonOf(field.availability)}`;
+}
+
+/** The reason code of a null row (the trailing `# CODE` comment), or null for a row that has a value. */
+export function yamlAbsenceCode(field: RcField): string | null {
+  return field.value === null ? reasonOf(field.availability) : null;
 }
 
 /** `copy yaml`: the server's list, joined. Nothing is added, reordered or dropped. */

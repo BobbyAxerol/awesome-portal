@@ -9,6 +9,7 @@
  * served the card says so once. The full body lives one click away, carrying the cursor.
  */
 
+import { humanise } from "./humanise";
 import { Link } from "react-router-dom";
 
 import { Withheld } from "./EvidenceFlow";
@@ -268,7 +269,7 @@ export function AtlasSummaryCard({ hub, runId }: { hub: EvidenceHub; runId: stri
   ] as const) {
     if (fact && isAvailable(fact.availability) && fact.value !== null) {
       params.set(key, fact.value);
-      parts.push(fact.value);
+      parts.push(humanise(fact.value));
     }
   }
   params.set("run", runId);

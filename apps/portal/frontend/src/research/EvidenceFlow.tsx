@@ -23,7 +23,7 @@ import { RunExitBar } from "./RunExitBar";
 import { isEndedWithoutEvidence, phaseOfStatus, runStatusWord, runTerminalState, stageChip, type RunPhase } from "./runTerminalState";
 import { libraryHref, newRunHref, progressHref, rcHref, reportHref } from "./runLinks";
 import { trialLabel, trialTitle } from "./trialLabel";
-import { humanise } from "./humanise";
+import { humanise, humaniseTokens } from "./humanise";
 import { AtlasSummaryCard, StageSummaryCard } from "./hubStageSummary";
 
 import { usePresentation } from "../app/presentation";
@@ -210,7 +210,7 @@ export function Withheld({
       data-reason-code={availability.reason_code ?? undefined}
       title={reasonTitle(availability as Availability)}
     >
-      {what ? `${what} — ` : ""}
+      {what ? `${humaniseTokens(what)} — ` : ""}
       {WITHHELD_WORDS[availability.state]}
     </span>
   );
@@ -261,7 +261,7 @@ export function NotRead({ phase, what }: { phase: "loading" | "not-read"; what?:
       data-read-phase={phase}
       title={phase === "loading" ? "The Evidence Hub is still being read." : "The Evidence Hub was not read, so this fact is unknown."}
     >
-      {what ? `${what} — ` : ""}
+      {what ? `${humaniseTokens(what)} — ` : ""}
       {phase === "loading" ? "reading…" : "not read"}
     </span>
   );
@@ -282,7 +282,7 @@ export function FeLocalAbsent({ id, what, text = "not served for this lane" }: {
       data-fe-absence={id}
       title="Not served by the server for this lane. This is a note from the screen, not a server reason code."
     >
-      {what ? `${what} — ` : ""}
+      {what ? `${humaniseTokens(what)} — ` : ""}
       {text}
     </span>
   );
@@ -444,8 +444,8 @@ function PassportField({
 }: { name: string; children: ReactNode; bar?: boolean } & Record<string, unknown>) {
   return (
     <div className="flex min-w-0 flex-col gap-0.5" data-claim-field={name} {...rest}>
-      <span className={PASSPORT_LABEL} style={{ color: "var(--ink-faint)" }}>
-        {name}
+      <span className={PASSPORT_LABEL} style={{ color: "var(--ink-faint)" }} title={name}>
+        {humanise(name)}
       </span>
       <span
         className="mono text-[12px]"
@@ -724,10 +724,13 @@ function RunHeader({
         <>
 
           {isAvailable(identity.mode.availability) && identity.mode.value !== null ? (
-            <Pill data-mode={identity.mode.value}>
-              {identity.mode.value}
+            <Pill
+              data-mode={identity.mode.value}
+              title={`${identity.mode.value}${isAvailable(identity.schedule.availability) && identity.schedule.value !== null ? ` · ${identity.schedule.value}` : ""}`}
+            >
+              {humanise(identity.mode.value)}
               {isAvailable(identity.schedule.availability) && identity.schedule.value !== null
-                ? ` · ${identity.schedule.value}`
+                ? ` · ${humanise(identity.schedule.value)}`
                 : ""}
             </Pill>
           ) : null}
@@ -1970,7 +1973,7 @@ function SeriesPanel({
  */
 function ProvenanceRow({ hub, series, kind }: { hub: EvidenceHub; series: EvidenceSeries | null; kind: SeriesKind }) {
   const cells: [string, ReactNode][] = [
-    ["source", `evidence series ${series?.kind ?? kind}`],
+    ["source", <span key="source" title={series?.kind ?? kind}>{`evidence series ${humanise(series?.kind ?? kind)}`}</span>],
     ["segment", <FeLocalAbsent key="segment" id="series-segment-not-served" />],
     ["units", <FeLocalAbsent key="units" id="series-units-not-served" />],
     ["timezone", "UTC"],
@@ -2376,7 +2379,7 @@ function RetainedClaimFields({
           {detail ? (
             <span className="text-[10px]" style={{ color: "var(--ink-faint)" }}>
               {" "}
-              · {detail}
+              · {detail.split(" → ").map((part) => humanise(part)).join(" → ")}
             </span>
           ) : null}
         </button>
@@ -2478,7 +2481,7 @@ function RetainedVerdictTable({
         <span className="inline-flex flex-wrap items-center gap-2.5">
           <PanelLabel>per-fold verdict</PanelLabel>
           <span className="mono text-[9px]" style={{ color: "var(--ink-soft)" }} data-verdict-summary>
-            {counts.drag} DRAG · {counts.warn} WARN · {counts.pass} PASS
+            {counts.drag} drag · {counts.warn} warn · {counts.pass} pass
             {counts.not_evaluated > 0 ? ` · ${counts.not_evaluated} not evaluated` : ""}
             {meanOos !== null ? (
               <span title={`${verdicts.mean_oos_sharpe} · mean S_OOS of ${selectedWord}`} data-verdict-fact="mean_oos_sharpe">
@@ -2641,7 +2644,7 @@ function RetainedVerdictTable({
                       background: row.verdict === "DRAG" ? tone : "var(--paper-raised)",
                     }}
                   >
-                    {row.verdict === "NOT_EVALUATED" ? "not evaluated" : row.verdict}
+                    {humanise(row.verdict)}
                   </span>
                 </td>
                 <td className="whitespace-nowrap px-3 py-1.5" onClick={(event) => event.stopPropagation()}>
@@ -3424,7 +3427,7 @@ function InSampleNote({ curve }: { curve: RetainedAnalytics["in_sample_equity"] 
   return <p className="mt-2 text-[11px] leading-[1.45]" style={{ color: "var(--ink-soft)" }}
     data-series-authority="EQUITY_IS" data-absence-reason={curve.reason_code ?? undefined} title={curve.source_locator}>
     {curve.state === "AVAILABLE"
-      ? `${curve.emitted_point_count} of ${curve.source_observation_count} IS observations · ${curve.scope} · ${curve.sampling}`
+      ? `${curve.emitted_point_count} of ${curve.source_observation_count} IS observations · ${humanise(curve.scope)} · ${humanise(curve.sampling)}`
       : <Withheld availability={{ state: curve.state, reason_code: curve.reason_code }} what="IS equity" />}
   </p>;
 }
@@ -3861,7 +3864,7 @@ function SoonHook({ label, hint, children }: { label: string; hint?: string; chi
         className="mono rounded-[3px] border border-dashed px-[5px] py-px text-[9px] font-semibold"
         style={{ borderColor: "var(--ink-faint)", color: "var(--ink-faint)" }}
       >
-        SOON
+        soon
       </span>
       {children ? (
         <span className="text-[11.5px]" style={{ color: "var(--ink-soft)" }}>
@@ -3937,7 +3940,7 @@ function CertificationTable({ certificate }: { certificate: EvidenceHub["claim"]
             </span>
           ) : certificate.state === "NOT_ISSUED" ? (
             <span className="mono text-[11px] font-semibold" style={{ color: "var(--ink-soft)" }} title={certificate.reason_code ?? undefined} data-reason-code={certificate.reason_code ?? undefined}>
-              NOT_ISSUED
+              not issued
             </span>
           ) : (
             <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: certificate.reason_code }} />
@@ -4010,8 +4013,8 @@ function FactCell({ fact, label, gap = null }: { fact: CurrentSourceClaimFact | 
     return <Withheld availability={availability} what={label} />;
   }
   return (
-    <span className="mono whitespace-nowrap" title={`QuantBT ${fact.source_key}`} data-window-fact={label}>
-      {label} {String(fact.value)}
+    <span className="mono whitespace-nowrap" title={`QuantBT ${fact.source_key} · ${label} ${String(fact.value)}`} data-window-fact={label}>
+      {humanise(label)} {humanise(String(fact.value))}
     </span>
   );
 }
@@ -4238,8 +4241,8 @@ function ClaimTab({
       <section className="flex flex-col gap-2 rounded-[8px] border px-3.5 py-3" data-claim-panel={claim.state} style={PANEL_STYLE}>
         <div className="flex flex-wrap items-baseline gap-2">
           <PanelLabel>stage 5 claim</PanelLabel>
-          <span className="mono text-[10px] font-semibold" style={{ color: issuedClaim ? "var(--role-holdout)" : "var(--ink-soft)" }} data-claim-state>
-            {claim.state}
+          <span className="mono text-[10px] font-semibold" style={{ color: issuedClaim ? "var(--role-holdout)" : "var(--ink-soft)" }} data-claim-state title={claim.state}>
+            {humanise(claim.state)}
           </span>
         </div>
         {claim.text !== null ? (
@@ -4283,7 +4286,7 @@ function ClaimTab({
             </>
           ) : certificate.state === "NOT_ISSUED" ? (
             <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }} data-cert-state="NOT_ISSUED" title={certificate.reason_code ?? undefined}>
-              NOT_ISSUED
+              not issued
             </span>
           ) : (
             <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: certificate.reason_code }} />
@@ -4309,7 +4312,7 @@ function ClaimTab({
           <ul className="flex flex-col gap-1">
             {absences.map(([name, availability]) => (
               <li key={name} className="flex flex-wrap items-baseline gap-2" data-absence={name}>
-                <span className="mono text-[10px]">{name}</span>
+                <span className="mono text-[10px]" title={name}>{humanise(name)}</span>
                 <Withheld availability={availability} />
               </li>
             ))}
@@ -4344,7 +4347,7 @@ function ClaimTab({
         <SoonHook label="Send to Approval Gate">
           requires a methodology certificate · currently{" "}
           <span className="mono font-semibold">
-            {certificate.state === "ISSUED" && certificate.grade !== null ? certificate.grade : certificate.state}
+            {certificate.state === "ISSUED" && certificate.grade !== null ? certificate.grade : humanise(certificate.state)}
           </span>
         </SoonHook>
         <SoonHook

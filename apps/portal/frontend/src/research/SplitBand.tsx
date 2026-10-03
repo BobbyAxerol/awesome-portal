@@ -66,7 +66,7 @@ export interface SplitBandFacts {
 const LABEL: Record<BandKey, string> = {
   is: "IS",
   outer_oos: "OOS (plotted)",
-  holdout: "HOLDOUT",
+  holdout: "holdout",
 };
 
 /**

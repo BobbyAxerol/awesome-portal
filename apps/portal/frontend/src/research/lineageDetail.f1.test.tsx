@@ -134,7 +134,8 @@ describe("VD-F1-02 — a node speaks for its attempt; the version lifecycle is i
       expect(el.getAttribute("data-chip-scope")).toBeNull();
     }
     /* the lifecycle is said once per band, in its header */
-    expect(document.querySelector(`[data-band="${band.alpha_version_id}"] .ln-avchip`)?.textContent).toBe(`${band.label} · ACTIVE`);
+    expect(document.querySelector(`[data-band="${band.alpha_version_id}"] .ln-avchip`)?.textContent).toBe(`${band.label} · active`);
+    expect(document.querySelector(`[data-band="${band.alpha_version_id}"] .ln-avchip`)?.getAttribute("title")).toContain("ACTIVE");
     /* the band chip's accessible name is the attempt's own state */
     expect(screen.getByRole("button", { name: "attempt att_03 — READY" })).toBeTruthy();
   });

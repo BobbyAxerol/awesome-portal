@@ -328,14 +328,9 @@ function FactLine({ label, fact, name }: { label: string; fact: Fact; name: stri
       <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
         {label}
       </span>
-      <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
+      <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} title={code ? `${reasonCodeSentence(code) ?? ""} (${code})`.trim() : undefined} data-reason-code={code ?? undefined}>
         {REPLAY_GAP_WORDS[fact.state]}
       </span>
-      {code ? (
-        <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-reason-code={code} title={reasonCodeSentence(code) ?? undefined}>
-          {code}
-        </span>
-      ) : null}
     </span>
   );
 }
@@ -948,7 +943,7 @@ function FoldStrip({
               }
               onClick={() => onWindow?.(key)}
             >
-              {key.toUpperCase()}
+              {key === "holdout" ? "holdout" : key.toUpperCase()}
             </button>
           ))}
         </span>
@@ -1134,7 +1129,7 @@ function OverviewStrip({
             data-band-state={holdoutFact?.state ?? "NOT_PUBLISHED"}
           >
             <i aria-hidden="true" className="inline-block h-[8px] w-[14px]" style={{ border: "1px dashed var(--role-holdout)" }} />
-            HOLDOUT <em>{holdoutFact?.state === "NOT_APPLICABLE" ? "not applicable" : "not published"}</em>
+            holdout <em>{holdoutFact?.state === "NOT_APPLICABLE" ? "not applicable" : "not published"}</em>
             {holdoutCode ? <span data-reason-code={holdoutCode} className="sr-only">{holdoutCode}</span> : null}
           </span>
         </span>
@@ -1220,7 +1215,7 @@ function HoldoutWindowPanel({ band, activeFold, holdout, splitHref }: { band: Sp
   return (
     <div className="flex min-h-[120px] flex-col items-start justify-center gap-1.5 rounded-[6px] border border-dashed px-4 py-3" style={{ borderColor: "var(--role-holdout)" }} data-window-panel="holdout" data-window-absent data-band-state={facts?.state ?? "NOT_PUBLISHED"}>
       <span className="mono text-[10px] uppercase tracking-[.08em]" style={{ color: "var(--role-holdout)" }} title={code ? `${reasonCodeSentence(code) ?? ""} (${code})`.trim() : undefined}>
-        {facts?.state === "NOT_APPLICABLE" ? "This run has no holdout window." : "HOLDOUT — not published"}
+        {facts?.state === "NOT_APPLICABLE" ? "This run has no holdout window." : "holdout — not published"}
       </span>
       {band.state !== "ready" ? <SplitBandNote slot={band} /> : null}
       {/* The served code stays on the page for the machine and the tooltip for the reader. */}

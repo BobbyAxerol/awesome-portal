@@ -38,6 +38,7 @@ import {
 import { researchState, type ResearchState } from "./state";
 import type { ProgressRead } from "./progressClient";
 import { refusalState } from "./researchRefusal";
+import { DENY_QUEUED, useEvidenceReadsAllowed, withheldLane } from "./useEvidenceReadsAllowed";
 import { isRetainedAnswer, useRunIdentity, type RunIdentitySlot } from "./retainedLane";
 import { searchApi, NOT_MODIFIED as SEARCH_NOT_MODIFIED, type CurrentSourceSearch } from "./searchClient";
 import {
@@ -179,6 +180,7 @@ export function splitState(
 
 export function useSplit(runId: string, workspaceId?: string): SplitController {
   const key = cacheKey(runId, workspaceId);
+  const reads = useEvidenceReadsAllowed(runId, DENY_QUEUED, workspaceId);
   const [held, setHeld] = useState<{ key: string; detail: SplitDetail } | null>(() => {
     const cached = accepted.get(key);
     return cached ? { key, detail: cached } : null;
@@ -242,16 +244,22 @@ export function useSplit(runId: string, workspaceId?: string): SplitController {
   }, [key, runId, workspaceId]);
 
   const ensureFolds = useCallback(() => {
-    if (detail === null) return;
+    if (detail === null || reads === "wait") return;
     if (foldsAskedFor.current === key) return;
     foldsAskedFor.current = key;
+    /* A run that has not started has no retained split: the lane read is not sent (its 409 is an expected state). */
+    if (reads !== "allow") {
+      const withheld = withheldLane(reads);
+      setFolds({ runId, slot: { state: "refused", refusal: withheld.refusal, laneState: withheld.laneState } });
+      return;
+    }
     const known = laneAnswers.get(key);
     if (known) {
       setFolds({ runId, slot: { state: "not-applicable", answer: known } });
       return;
     }
     loadFolds();
-  }, [detail, key, loadFolds, runId]);
+  }, [detail, key, loadFolds, reads, runId]);
 
   const slot: FoldsSlot = folds.runId !== runId ? { state: "idle" } : folds.slot;
   /* QA S05: Retry after a refused lane read asks the lane again; a typed final answer is never re-asked. */

@@ -1437,7 +1437,7 @@ export function ArtifactsTable({ artifacts, denied = [], compact = false }: { ar
                 paddingLeft: 5,
               }}
             >
-              {artifact.state}
+              <span title={artifact.state}>{humanise(artifact.state)}</span>
             </span>
             <span style={{ flex: 1, minWidth: 0, color: "var(--ink-faint)", fontSize: 10 }}>{artifactNote(artifact, compact)}</span>
           </span>

@@ -129,7 +129,7 @@ describe("F1 FG 04-F — a hub that was not read is 'not read', never 'not publi
   it("Claim tab: facts the retained lane has not answered yet read 'reading…', not 'not published'", () => {
     const { container } = view({ cursor: CLAIM_CURSOR, passport: { state: "loading" }, runIdentity: { state: "loading" } });
     const table = container.querySelector("[data-window-disclosure-panel]") as HTMLElement;
-    expect(table.querySelector("[data-window-row='OOS']")?.textContent).toContain("validation_claim — reading…");
+    expect(table.querySelector("[data-window-row='OOS']")?.textContent).toContain("validation claim — reading…");
     expect(table.querySelector("[data-window-row='Holdout']")?.textContent).toContain("holdout — reading…");
     expect(table.querySelector("[data-window-row='Holdout'] [data-window-count]")?.textContent).toContain("reading…");
   });

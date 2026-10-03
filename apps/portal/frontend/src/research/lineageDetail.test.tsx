@@ -1202,7 +1202,8 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     expect(bandOrder(body.alpha.versions).map((v) => v.label)).toEqual(bands);
     const active = document.querySelector('[data-band="alphaver_093"]') as HTMLElement;
     expect([...active.querySelectorAll("[data-chip]")].map((c) => c.getAttribute("data-chip"))).toEqual(["att_03", "att_05", "att_06"]);
-    expect(active.querySelector(".ln-avchip")?.textContent).toBe("av_0_9_3 · ACTIVE");
+    expect(active.querySelector(".ln-avchip")?.textContent).toBe("av_0_9_3 · active");
+    expect(active.querySelector(".ln-avchip")?.getAttribute("data-s")).toBe("ACTIVE");
   });
 
   it("S10-U47 attempt chips wrap inside the band (no horizontal scroll) and end with the probe chip, disabled with its reason", async () => {
@@ -1307,8 +1308,8 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     }
     expect(node("att_05").querySelector(".ln-st")?.getAttribute("data-status")).toBe("FAILED");
     /* the version lifecycle is printed once, in each band's header */
-    expect(document.querySelector('[data-band="alphaver_093"] .ln-avchip')?.textContent).toBe("av_0_9_3 · ACTIVE");
-    expect(document.querySelector('[data-band="alphaver_092"] .ln-avchip')?.textContent).toBe("av_0_9_2 · SUPERSEDED");
+    expect(document.querySelector('[data-band="alphaver_093"] .ln-avchip')?.textContent).toBe("av_0_9_3 · active");
+    expect(document.querySelector('[data-band="alphaver_092"] .ln-avchip')?.textContent).toBe("av_0_9_2 · superseded");
     for (const id of ["att_01", "att_03", "att_05", "att_04", "att_06"]) expect(node(id).querySelectorAll(".ln-st")).toHaveLength(1);
     expect(document.querySelector(".ln-raw")).toBeNull();
     expect(node("att_03").querySelector(".ln-st")?.getAttribute("data-fill")).toBe("true");

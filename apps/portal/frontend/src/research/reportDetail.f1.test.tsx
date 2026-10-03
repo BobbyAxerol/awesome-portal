@@ -180,7 +180,8 @@ describe("F1 400-trial audit — 'no report sealed' is not 'you don't have acces
     /* A cancelled run never seals: no retry is offered. */
     expect(screen.queryByRole("button", { name: "read again" })).toBeNull();
     /* The poll-by-ids is one request for this one run, and only after the 404. */
-    expect(api.libraryCalls()).toHaveLength(1);
+    /* One read is the evidence gate's status read (before the report read), one the 404's own visibility lookup. */
+    expect(api.libraryCalls()).toHaveLength(2);
     expect(api.libraryCalls()[0]).toContain(`ids=${OWN}`);
     /* No certification box for a sheet that was never read (nothing to describe). */
     expect(panel("header").querySelector("[data-cert-box]")).toBeNull();
@@ -219,16 +220,16 @@ describe("F1 400-trial audit — 'no report sealed' is not 'you don't have acces
     expect(document.querySelector('[data-screen="run-report"]')?.getAttribute("data-report-state")).toBe("denied");
   });
 
-  it("a 403 never asks the library and never softens", async () => {
+  it("a 403 asks the library only for the evidence gate's status read and never softens", async () => {
     const api = server({
       report: { status: 403, body: { error: { code: "RESEARCH_REPORT_FORBIDDEN", message: "m" }, request_id: "r" } },
-      library: libraryPage([ROW]),
+      library: libraryPage([{ ...ROW, status: "COMPLETED" }]),
     });
     renderRoute(OWN);
     const line = await screen.findByText("Run not available.");
     expect(line.getAttribute("title")).toBe(REPORT_REFUSAL_COPY.report[403]);
     await act(async () => {});
-    expect(api.libraryCalls()).toHaveLength(0);
+    expect(api.libraryCalls()).toHaveLength(1);
     expect(document.body.textContent).not.toContain("No sealed report");
   });
 

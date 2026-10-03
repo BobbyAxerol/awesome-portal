@@ -71,7 +71,7 @@ import { ALL_TIME_CSS, AllTimeSupplement, nextWindow, useEntryMotion } from "./R
 import { ShortId } from "./ShortId";
 import { enrichedBlock } from "./enrichedAnalysis";
 import { kilobytes } from "./reportText";
-import { humanise } from "./humanise";
+import { humanise, humaniseTokens } from "./humanise";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -417,7 +417,7 @@ function Absent({
       aria-label={reason !== "" ? `${what ? `${what} — ` : ""}${state} (${reason})` : undefined}
       tabIndex={reason !== "" ? 0 : undefined}
     >
-      {what ? `${what} — ` : ""}
+      {what ? `${humaniseTokens(what)} — ` : ""}
       {state}
     </span>
   );
@@ -656,7 +656,7 @@ function Passport({ core }: { core: FrozenCore }) {
             <span className="k">{v2 ? humanise(v2.passport[index]!.label) : `fact ${index + 1}`}</span>
             <span className="v">
               {fact.state === "AVAILABLE" && fact.text !== null ? (
-                <span title={fact.text}>{humanise(fact.text)}</span>
+                <span title={fact.text}>{humaniseTokens(humanise(fact.text))}</span>
               ) : (
                 <Absent state={REPORT_FACT_WORDS[fact.state]} reason={factReason(fact)} />
               )}
@@ -684,7 +684,7 @@ function Identity({ core }: { core: FrozenCore }) {
             <dt className="k">{field.label}</dt>
             <dd className="v rr-long">
               {field.value !== null && field.availability.state === "AVAILABLE" ? (
-                IDENTITY_TOKEN_KEYS.has(field.key) || /^[A-Z0-9]+(?:_[A-Z0-9]+)+$/.test(field.value) ? <span title={field.value}>{humanise(field.value)}</span> : field.value
+                IDENTITY_TOKEN_KEYS.has(field.key) || /^[A-Z0-9]+(?:_[A-Z0-9]+)+$/.test(field.value) ? <span title={field.value}>{humanise(field.value)}</span> : humaniseTokens(field.value) !== field.value ? <span title={field.value}>{humaniseTokens(field.value)}</span> : field.value
               ) : (
                 <AvailabilityAbsent availability={field.availability} />
               )}
@@ -1206,7 +1206,7 @@ function FoldVerdictsV2({ folds }: { folds: FrozenCoreV2["folds"] }) {
                 <td data-fold-contribution={row.contribution_fraction.value ?? undefined}><FoldValue fact={row.contribution_fraction} unit="fraction" /></td>
                 <td>
                   <span className="rr-verdict" data-v={row.verdict} title={row.failed_criteria.length > 0 ? `failed: ${row.failed_criteria.join(", ")}` : undefined}>
-                    {row.verdict}
+                    {humanise(row.verdict)}
                   </span>
                 </td>
               </tr>
@@ -1252,7 +1252,7 @@ function FoldVerdicts({ folds, verdictRule }: { folds: ReportFolds; verdictRule:
                   </td>
                   <td>
                     <span className="rr-verdict" data-v={row.verdict}>
-                      {row.verdict}
+                      {humanise(row.verdict)}
                     </span>
                   </td>
                 </tr>

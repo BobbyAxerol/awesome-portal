@@ -52,3 +52,17 @@ export function humanise(token: string | null | undefined): string {
   }
   return out.join(" ");
 }
+
+/** Ids and registry names that are identifiers, not words: never rewritten inside a sentence. */
+const IDENTIFIER_PREFIX = /^(?:rrun|ratt|rc|att|apr|av|er|ar|study|trial)_/;
+const EMBEDDED_TOKEN = /\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b|\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b/g;
+
+/**
+ * `humanise` for a string that carries enum tokens inside a sentence
+ * (`mode_1_decay × global · numba_units_v2`): each snake_case / UPPER_SNAKE token is read as
+ * words; the rest of the text is returned as sent. Callers keep the raw string in `title`.
+ */
+export function humaniseTokens(text: string | null | undefined): string {
+  if (text === null || text === undefined) return "";
+  return String(text).replace(EMBEDDED_TOKEN, (token) => (IDENTIFIER_PREFIX.test(token) ? token : humanise(token)));
+}

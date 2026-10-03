@@ -44,6 +44,7 @@ import { Link, useLocation } from "react-router-dom";
 
 import { RouteCursorNotice } from "./CursorNotice";
 import { parseCursorProblems } from "./evidenceCursor";
+import { humanise } from "./humanise";
 
 import { ResearchPanel } from "./ResearchPanel";
 import {
@@ -60,6 +61,7 @@ import {
   reasonOf,
   releaseCandidateHref,
   releaseCandidatePackHref,
+  yamlAbsenceCode,
   yamlText,
   yamlValue,
   type DeclarationIssue,
@@ -86,7 +88,7 @@ import { runLabelFor } from "./runLabels";
 import { markRunUnknown } from "../app/researchRunCrumb";
 import { ResearchNotice } from "./ResearchNotice";
 import { RunExitBar } from "./RunExitBar";
-import { hubHref, lineageRunHref, reportHref, type LinkCursor } from "./runLinks";
+import { hubHref, libraryHref, lineageRunHref, newRunHref, reportHref, type LinkCursor } from "./runLinks";
 import { runTerminalState, type RunTerminalState } from "./runTerminalState";
 import { trialLabel, trialTitle } from "./trialLabel";
 import type { RunStatusRead } from "./useRunStatus";
@@ -220,7 +222,7 @@ export const PUBLISH_GHOST_COPY =
 /** Hi-fi mirror, draft branch, verbatim where the facts are the hi-fi's own copy. */
 export const MIRROR_LABEL = "approval inbox";
 export const MIRROR_SIDE = "read model · decisions live on the Execution side";
-export const MIRROR_GATE = "R1 · RESEARCH EVIDENCE";
+export const MIRROR_GATE = "R1 · research evidence";
 export const MIRROR_SUBJECT = "— not yet published";
 export const MIRROR_SLA = "SLA starts at publish";
 export const MIRROR_NOTE =
@@ -231,11 +233,16 @@ export const MIRROR_POOL_ABSENT = "assignee pool: not published";
  * VD-P22-08: the governance contract's decision vocabulary (`ApprovalMirror.status`
  * minus PENDING). VD-FG-05-02: a legend, shown only while no decision is recorded.
  */
-export const MIRROR_OUTCOMES = "possible outcomes: APPROVED · APPROVED_WITH_CONDITION · CHANGES_REQUESTED · DENIED · EXPIRED";
+export const MIRROR_OUTCOMES = "possible outcomes: approved · approved with condition · changes requested · denied · expired";
 export const MIRROR_PUBLISHED_NOTE =
   "The reviewer opens this row, walks the same evidence links you pinned above, and records one of the outcomes above. Conditions and waivers they attach flow back into this mirror. You cannot edit anything past this point — only supersede with a new candidate.";
 /** VD-P22-07: a Research fact beside the raw status, never in place of it. */
 export const MIRROR_SUPERSEDED = "superseded by a newer candidate — the raw approval status above is unchanged";
+export const STUDY_LOCAL_TITLE = "study-local trial number — counted inside this study only, not across studies";
+export const YAML_ABSENT = "not assigned yet";
+export const MIRROR_PUBLISHED_DENIED = "Published. You can't view the Gate R1 review with this account.";
+export const MIRROR_PUBLISHED_DENIED_TITLE =
+  "Published successfully. Your publication receipt is available, but your account does not have permission to view the Gate R1 review.";
 export const MIRROR_NOT_READABLE = "not readable with your access";
 export const MIRROR_NOT_FOUND = "the governance store has no approval by this id";
 export const MIRROR_UNAVAILABLE = "the governance store did not answer this read — the mirror is read again in 60 s";
@@ -826,7 +833,7 @@ function PromotionPickNode({ publication }: { publication: RcPublication | null 
         ) : (
           <StateChip value={pick.approval_status} />
         )}
-        <span data-pick-state-word> {pick.state}</span>
+        <span data-pick-state-word title={pick.state}> {humanise(pick.state)}</span>
       </span>
       <span className="sub" data-pick-trial>
         {pick.selected_trial_id === null ? (
@@ -866,6 +873,28 @@ function Steps({ composed, sealed, published }: { composed: boolean; sealed: boo
   );
 }
 
+/** The selected trial as the server served it: `trial N`, or the typed absence with its reason code. */
+function RailTrial({ node }: { node: RcRailNode }) {
+  const label = trialLabel({ ordinal: node.selected_trial_ordinal });
+  const scope = node.selected_trial_ordinal_scope ?? null;
+  if (label === null) {
+    const code = node.selected_trial_ordinal_reason_code ?? null;
+    return (
+      <span className="sub" data-rail-detail data-rail-trial-absent data-reason-code={code ?? undefined}>
+        <span className="rc-absent" title={code ?? "trial number not published"} tabIndex={0}>
+          trial — not published
+        </span>
+      </span>
+    );
+  }
+  return (
+    <span className="sub" data-rail-detail data-rail-trial-scope={scope ?? undefined} title={scope === "STUDY_LOCAL" ? STUDY_LOCAL_TITLE : trialTitle}>
+      {label}
+      {scope === "STUDY_LOCAL" ? " · study" : ""}
+    </span>
+  );
+}
+
 function Rail({ compose, sealedId, pick }: { compose: RcCompose; sealedId: string | null; pick?: ReactNode }) {
   const nodes = compose.rail;
   const link = useContext(LinkContext);
@@ -888,7 +917,9 @@ function Rail({ compose, sealedId, pick }: { compose: RcCompose; sealedId: strin
                 node.key === "run" ? runLabelFor(node.value) ?? shortId(node.value) : shortId(node.value)
               )}
             </span>
-            {node.detail !== null && node.key !== "release_candidate" ? (
+            {node.key === "selected_params" && node.selected_trial_ordinal !== undefined ? (
+              <RailTrial node={node} />
+            ) : node.detail !== null && node.key !== "release_candidate" ? (
               <span className="sub" data-rail-detail>
                 {shortId(node.detail)}
               </span>
@@ -1411,14 +1442,24 @@ function RecordBlock({ fields, state }: { fields: readonly RcField[] | null; sta
       </div>
       {fields ? (
         <div className="rc-yaml" data-yaml role="list" aria-label="record fields" tabIndex={0}>
-          {fields.map((field) => (
-            <div key={field.key} className="line" role="listitem" data-yaml-key={field.key} data-yaml-value={field.value ?? ""}>
-              <span className="k">{field.key}</span>
-              <span className="v" data-tone={field.tone} title={field.label}>
-                {yamlValue(field)}
-              </span>
-            </div>
-          ))}
+          {fields.map((field) => {
+            /* A null row with its `# CODE` comment is a typed absence: words here, the code in the tooltip. Copy yaml still copies the server's text. */
+            const absence = yamlAbsenceCode(field);
+            return (
+              <div key={field.key} className="line" role="listitem" data-yaml-key={field.key} data-yaml-value={field.value ?? ""}>
+                <span className="k">{field.key}</span>
+                {absence !== null ? (
+                  <span className="v" data-tone={field.tone === "red" ? "red" : "dim"} data-yaml-absent data-reason-code={absence} title={`${field.label} · ${absence}`}>
+                    {YAML_ABSENT}
+                  </span>
+                ) : (
+                  <span className="v" data-tone={field.tone} title={field.label}>
+                    {yamlValue(field)}
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
       ) : (
         <Pending state={state} />
@@ -1677,6 +1718,53 @@ function PublicationConflict({ publication }: { publication: RcPublication | nul
   );
 }
 
+export type BlockedAction = NonNullable<RcCompose["actions"]["publish"]["blocked_action"]>;
+
+/**
+ * Server-owned guidance for a blocked publish: ONE exit by `blocked_action`.
+ * Guidance, not authority — a new run never reopens or reseals the old candidate.
+ */
+function BlockedExit({ action, compose }: { action: BlockedAction | undefined; compose: RcCompose | null }) {
+  if (!compose || action === undefined || action === "NONE") return null;
+  if (action === "CREATE_NEW_RUN_AND_SEAL") {
+    return (
+      <Link to={newRunHref(compose.run.id)} className="rc-chiplink" data-action="blocked-new-run" data-blocked-action={action}>
+        New run
+      </Link>
+    );
+  }
+  if (action === "SEAL_CANDIDATE") {
+    if (!compose.actions.may_seal) return null;
+    return (
+      <button
+        type="button"
+        className="rc-chiplink"
+        data-action="blocked-go-seal"
+        data-blocked-action={action}
+        onClick={() => {
+          const seal = document.querySelector<HTMLElement>('[data-panel="seal"] [data-action="local-seal"]');
+          seal?.focus();
+        }}
+      >
+        Go to seal
+      </button>
+    );
+  }
+  if (action === "REVIEW_CURRENT_CANDIDATE") {
+    /* The payload serves no href for the current candidate; the Library lists it. */
+    return (
+      <Link to={libraryHref()} className="rc-chiplink" data-action="blocked-review" data-blocked-action={action}>
+        Library
+      </Link>
+    );
+  }
+  return (
+    <span className="rc-blocked" data-blocked-action={action} data-blocked-wait>
+      checking…
+    </span>
+  );
+}
+
 /** Why the publish button is not offered right now, first reason first. The server's reasons are authoritative. */
 export function publishBlock(input: {
   compose: RcCompose | null;
@@ -1685,14 +1773,17 @@ export function publishBlock(input: {
   busy: boolean;
   publishing: boolean;
   claim: string | null;
-}): { label: string; code: string | null } | null {
+}): { label: string; code: string | null; action?: BlockedAction } | null {
   const { compose, view } = input;
   if (!compose) return { label: "the composition has not been read", code: null };
   if (compose.run.binding === null) return { label: PUBLISH_UNBOUND_LABEL, code: "P21_SCRATCH_RUN_UNBOUND" };
   if (input.writesLocked) return { label: "writes are off — access changed", code: null };
   if (!compose.actions.publish.enabled) {
-    const code = compose.actions.publish.blocked_reason;
-    return { label: rcReasonSentence(code) ?? "the server does not offer publish for this composition", code };
+    /* The two readers must agree on the code: the publication read's wins when it was read. */
+    const read = view.state === "fresh" && view.publication.blocked_reason !== null ? view.publication : null;
+    const code = read !== null ? read.blocked_reason : compose.actions.publish.blocked_reason;
+    const action = read?.blocked_action ?? compose.actions.publish.blocked_action;
+    return { label: rcReasonSentence(code) ?? "the server does not offer publish for this composition", code, action };
   }
   if (view.state !== "fresh") {
     if (view.state === "stale") return { label: "the last publication read is stale — publish waits for a fresh read", code: view.failure.code };
@@ -1701,7 +1792,7 @@ export function publishBlock(input: {
   const publication = view.publication;
   if (!publication.may_publish || publication.blocked_reason !== null) {
     const code = publication.blocked_reason;
-    return { label: rcReasonSentence(code) ?? "the server does not offer publish for this candidate", code };
+    return { label: rcReasonSentence(code) ?? "the server does not offer publish for this candidate", code, action: publication.blocked_action };
   }
   const claims = publication.source.eligible_methodology_claim_ids;
   if (claims.length === 0) return { label: CLAIM_NONE, code: null };
@@ -1823,9 +1914,12 @@ function PublishCard({ compose, controller, publication }: {
         </button>
       )}
       {blocked !== null && !publishing ? (
-        <span id={reasonId} className="rc-blocked" data-publish-blocked={blocked.code ?? "LOCAL"} title={blocked.code ?? undefined}>
-          {blocked.label}
-        </span>
+        <>
+          <span id={reasonId} className="rc-blocked" data-publish-blocked={blocked.code ?? "LOCAL"} title={blocked.code ?? undefined}>
+            {blocked.label}
+          </span>
+          <BlockedExit action={blocked.action} compose={compose} />
+        </>
       ) : null}
       <PublicationConflict publication={publication.publication} />
       <ReadFailure view={view} retry={publication.retry} />
@@ -1945,7 +2039,7 @@ function PublishedCard({ releaseCandidateId, publication }: { releaseCandidateId
               </span>
             ) : (
               <span className="rc-absent" data-evidence-digest-absent>
-                not read ({current?.approval_read ?? "no publication read"})
+                not read ({current?.approval_read ? humanise(current.approval_read) : "no publication read"})
               </span>
             )}
           </p>
@@ -2072,9 +2166,15 @@ function MirrorCard({ publication }: { publication: RcPublicationController }) {
                 </span>
               </>
             ) : (
-              <span className="st" data-mirror-status={read === "DENIED" ? "not-readable" : (read ?? "not-read").toLowerCase()}>
-                approval status: {read === "DENIED" ? MIRROR_NOT_READABLE : read === "NOT_FOUND" ? MIRROR_NOT_FOUND : MIRROR_UNAVAILABLE}
-              </span>
+              read === "DENIED" && current.published !== null ? (
+                <span className="st" data-mirror-status="not-readable" data-mirror-published-denied title={MIRROR_PUBLISHED_DENIED_TITLE} tabIndex={0}>
+                  {MIRROR_PUBLISHED_DENIED}
+                </span>
+              ) : (
+                <span className="st" data-mirror-status={read === "DENIED" ? "not-readable" : (read ?? "not-read").toLowerCase()}>
+                  approval status: {read === "DENIED" ? MIRROR_NOT_READABLE : read === "NOT_FOUND" ? MIRROR_NOT_FOUND : MIRROR_UNAVAILABLE}
+                </span>
+              )
             )}
           </div>
           <div className="rc-mirrormeta" data-mirror-meta>
@@ -2102,7 +2202,7 @@ function MirrorCard({ publication }: { publication: RcPublicationController }) {
           ) : null}
           <span className="facts" data-mirror-facts>
             approval {approval?.approval_id ?? current.published?.approval_id ?? "not published"}
-            {approval !== null ? ` · created ${approval.created_at} · read ${approval.read_at}` : ` · approval read ${read ?? "not made"}`}
+            {approval !== null ? ` · created ${approval.created_at} · read ${approval.read_at}` : ` · approval read ${read ? humanise(read) : "not made"}`}
             {approval !== null ? mirrorExtras(approval) : ""}
             {` · publication as of ${iso(current.as_of_utc_ms)}`}
           </span>

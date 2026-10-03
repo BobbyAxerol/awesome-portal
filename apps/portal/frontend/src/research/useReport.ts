@@ -11,6 +11,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { PortalApiError } from "../lib/api";
+import { DENY_NO_REPORT, useEvidenceReadsAllowed } from "./useEvidenceReadsAllowed";
 
 import {
   NOT_MODIFIED,
@@ -66,8 +68,20 @@ export function useReport(runId: string, options: { workspaceId?: string } = {})
   const [requestCount, setRequestCount] = useState(0);
   const [generation, setGeneration] = useState(0);
   const current = useRef<ReportDetail | null>(null);
+  const reads = useEvidenceReadsAllowed(runId, DENY_NO_REPORT, workspaceId);
 
   useEffect(() => {
+    if (reads === "wait") return;
+    /* A run with no sealed report to read (queued, failed, cancelled): the read is not sent; the 404 it would
+       have answered is the same typed refusal, so the screen draws the library row's own face as before. */
+    if (reads !== "allow") {
+      held.delete(key);
+      current.current = null;
+      setReport(null);
+      setRefusal(toReportRefusal(new PortalApiError("Research report was not found.", 404, "RESEARCH_REPORT_NOT_FOUND", null), "report"));
+      setInFlight(false);
+      return;
+    }
     const controller = new AbortController();
     const copy = current.current ?? held.get(key) ?? null;
     setInFlight(true);
@@ -107,7 +121,7 @@ export function useReport(runId: string, options: { workspaceId?: string } = {})
         if (!controller.signal.aborted) setInFlight(false);
       });
     return () => controller.abort();
-  }, [generation, key, runId, workspaceId]);
+  }, [generation, key, reads, runId, workspaceId]);
 
   const keeps = refusal !== null && report !== null && !refusal.terminal;
   const state: ResearchState = refusal

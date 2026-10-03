@@ -121,14 +121,16 @@ describe("S06 · K is not applicable on a causal pool", () => {
     const pool = SEARCH.pool;
     if (!pool) throw new Error("canonical search fixture carries a pool");
     const causal = { ...pool, rule: { ...pool.rule, state: "NOT_APPLICABLE", reason_code: "SERVED_K_REASON", expression: null, k: null }, reevaluation_scope: "PER_FOLD_STUDY" } as typeof pool;
-    expect(freezeLineLabel(causal)?.text).toBe("POOL · K NOT APPLICABLE");
+    expect(freezeLineLabel(causal)?.text).toBe("pool · K not applicable");
     const { container } = render(
       <MemoryRouter>
         <PoolFunnel search={{ ...SEARCH, pool: causal }} />
       </MemoryRouter>,
     );
     expect(container.querySelector("[data-k-callout='not-applicable']")?.textContent).toContain("K not applicable");
-    expect(container.querySelector("[data-k-callout='not-applicable']")?.textContent).toContain("SERVED_K_REASON");
+    expect(container.querySelector("[data-k-callout='not-applicable']")?.textContent).not.toContain("SERVED_K_REASON");
+    expect(container.querySelector("[data-k-callout='not-applicable']")?.getAttribute("title")).toBe("SERVED_K_REASON");
+    expect(container.querySelector("[data-k-callout='not-applicable'] [data-reason-code]")?.getAttribute("data-reason-code")).toBe("SERVED_K_REASON");
     expect(container.textContent).toContain("each outer fold, its own study");
   });
 });

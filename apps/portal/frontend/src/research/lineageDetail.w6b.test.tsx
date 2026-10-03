@@ -125,7 +125,8 @@ describe("W6b S10 on contract 1.1.0 — canonical fixtures", () => {
     expect(band93.querySelector(".ln-out")?.textContent).toBe(v93!.outcome.text);
     expect(band92.querySelector("[data-superseded-by]")?.textContent).toBe(" · superseded by av_0_9_3");
     expect(band93.querySelector("[data-exercised-routes]")?.textContent).toBe(v93!.exercised.routes.join(" · "));
-    expect(band93.querySelector("[data-exercised-modes]")?.textContent).toBe("mode_1_decay × global · mode_1_decay × per_fold_causal");
+    expect(band93.querySelector("[data-exercised-modes]")?.textContent).toBe("mode 1 decay × global · mode 1 decay × per-fold causal");
+    expect(band93.querySelector("[data-exercised-modes]")?.getAttribute("title")).toBe("mode_1_decay × global · mode_1_decay × per_fold_causal");
     expect(band93.querySelector("[data-exercised-params]")?.textContent).toBe("entry_z 0.6–2.6 · fee_bps 4 (pinned) · window 12–96");
     expect(band93.querySelector("[data-exercised-count]")?.textContent).toBe("4 attempts read · 1 without a persisted spec");
     const untried = panel("root").querySelector("[data-untried-routes]") as HTMLElement;
@@ -199,7 +200,7 @@ describe("W6b S10 on contract 1.1.0 — canonical fixtures", () => {
     const selected = panel("selected");
     expect(selected.getAttribute("data-selected-attempt")).toBe("att_04");
     const row = (key: string) => selected.querySelector(`[data-row-key="${key}"]`)?.textContent;
-    expect(row("mode × schedule")).toBe("signal_notional · mode_1_decay × per_fold_causal");
+    expect(row("mode × schedule")).toBe("signal notional · mode 1 decay × per-fold causal");
     /* 10-6: the claim state in words with the source's sentence as its reason, never the raw enum. */
     expect(selected.querySelector('[data-row-key="claim"] [data-claim-words]')?.textContent).toBe("issued");
     /* The claim sentence is the card's (once); the panel repeats it only when it differs. */

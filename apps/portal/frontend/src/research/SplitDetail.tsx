@@ -38,7 +38,7 @@ import { Link } from "react-router-dom";
 import { markRunUnknown } from "../app/researchRunCrumb";
 import { RunExitBar } from "./RunExitBar";
 import { phaseOfStatus, runTerminalState } from "./runTerminalState";
-import { humanise } from "./humanise";
+import { humanise, humaniseTokens } from "./humanise";
 import { progressApi, type ProgressRead } from "./progressClient";
 import { trialLabel, trialTitle } from "./trialLabel";
 import { useRunStatus } from "./useRunStatus";
@@ -150,7 +150,7 @@ function Withheld({ availability, what, indexKey }: { availability: SplitAvailab
       data-absence-key={indexKey}
       title={availability.reason_code ?? availability.state}
     >
-      {what ? `${what} — ` : ""}
+      {what ? `${humaniseTokens(what)} — ` : ""}
       {SPLIT_WITHHELD_WORDS[availability.state]}
     </span>
   );
@@ -1115,11 +1115,11 @@ function HoldoutBlock({ detail, timeline, runId, cursor }: { detail: SplitDetail
               title={words}
               data-holdout-words
             >
-              <span data-holdout-integrity={facts.snapshot_integrity_state}>{facts.snapshot_integrity_state}</span>
+              <span data-holdout-integrity={facts.snapshot_integrity_state}>{humanise(facts.snapshot_integrity_state)}</span>
               {" · "}
-              <span data-holdout-evaluation={facts.evaluation_state}>{facts.evaluation_state}</span>
+              <span data-holdout-evaluation={facts.evaluation_state}>{humanise(facts.evaluation_state)}</span>
               {" · "}
-              <span data-holdout-result={facts.result_exposure_state}>result {facts.result_exposure_state}</span>
+              <span data-holdout-result={facts.result_exposure_state}>result {humanise(facts.result_exposure_state)}</span>
             </span>
           </span>
         ) : (
@@ -1518,7 +1518,7 @@ function StitchDigest({ stitch }: { stitch: LaneStitch }) {
   );
 }
 
-/** `GLOBAL` — QuantBT's schedule token, upper-cased as the HiFi's selection pill. */
+/** `GLOBAL` — QuantBT's schedule token, kept raw in `data-selection`; shown as a word. */
 function scheduleWord(schedule: string): string {
   return schedule.toUpperCase().replace(/[\s-]+/g, "_");
 }
@@ -1531,7 +1531,7 @@ function ThetaStar({ lane, compact = false }: { lane: LaneView; compact?: boolea
   if (selection.state === "absent" || selection.value.state !== "AVAILABLE") {
     return digest ? (
       <span className="mono" style={{ color: "var(--accent)" }} data-theta-digest={digest} title={`params digest ${digest}`}>
-        GLOBAL · <Digest value={digest} />
+        global · <Digest value={digest} />
       </span>
     ) : (
       <LaneAbsent reason={selection.state === "absent" ? selection.reason : NO_RETAINED_FIELD} what="θ*" />
@@ -1562,7 +1562,7 @@ function ThetaStar({ lane, compact = false }: { lane: LaneView; compact?: boolea
     .join("\n");
   return (
     <span className="mono" style={{ color: "var(--accent)" }} title={title} data-theta-star={value.selected_trial_id ?? ""}>
-      GLOBAL · {trialLabel({ ordinal: value.selected_trial_ordinal, sourceId: value.selected_trial_id }) ?? "source not published"}
+      global · {trialLabel({ ordinal: value.selected_trial_ordinal, sourceId: value.selected_trial_id }) ?? "source not published"}
       {compact ? null : (
         <span style={{ color: "var(--ink-faint)" }}> · {params.length} params</span>
       )}
@@ -1825,8 +1825,8 @@ export function SplitScreen({
                   protocol
                 </span>
                 {kind !== null ? (
-                  <Pill on data-protocol={kind}>
-                    {kind}
+                  <Pill on data-protocol={kind} title={kind}>
+                    {humanise(kind)}
                   </Pill>
                 ) : lane ? (
                   lane.identityLoading ? <Reading what="the run's protocol" /> : <LaneAbsent reason={NO_RETAINED_FIELD} what="protocol" />
@@ -1843,7 +1843,7 @@ export function SplitScreen({
                       data-selection={scheduleWord(lane.schedule)}
                       title={`optimization schedule ${lane.schedule}${lane.sharedDigest ? ` · every fold's selection is the one GLOBAL_STUDY θ* (params ${lane.sharedDigest})` : ""}`}
                     >
-                      <Pill on>{scheduleWord(lane.schedule)}</Pill>
+                      <Pill on>{humanise(lane.schedule)}</Pill>
                     </span>
                   ) : lane.identityLoading ? (
                     <Reading what="the schedule" />
@@ -1852,7 +1852,7 @@ export function SplitScreen({
                   )
                 ) : (
                   <span data-selection={detail.protocol.selection.state}>
-                    <Pill on={fixed}>{detail.protocol.selection.state}</Pill>
+                    <Pill on={fixed} title={detail.protocol.selection.state}>{humanise(detail.protocol.selection.state)}</Pill>
                   </span>
                 )}
               </div>
@@ -1968,7 +1968,7 @@ export function SplitScreen({
                         data-readiness={lane.readiness}
                         title="The retained lane's seal: terminal materialization READY and the mandatory bundle SEALED (P11 progress read)."
                       >
-                        {lane.readiness}
+                        {humanise(lane.readiness)}
                       </span>
                     ) : lane.identityLoading ? (
                       <Reading what="readiness" />
@@ -1986,7 +1986,7 @@ export function SplitScreen({
                         : undefined
                     }
                   >
-                    {detail.readiness}
+                    {humanise(detail.readiness)}
                   </span>
                 </Fact>
                 )}
@@ -2040,7 +2040,7 @@ export function SplitScreen({
             <section className={`${CARD} gap-[6px] p-4`} style={RAISED_STYLE} data-card="fold-construction">
               <div className="mb-[2px] flex flex-wrap items-baseline justify-between gap-2">
                 <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
-                  S1 · fold construction{kind ? ` — ${kind}` : ""}
+                  S1 · fold construction{kind ? ` — ${humanise(kind)}` : ""}
                 </span>
                 <span className="mono flex flex-wrap items-center gap-x-3 text-[10px]" style={{ color: "var(--ink-faint)" }} data-window-key>
                   {[
@@ -2078,9 +2078,7 @@ export function SplitScreen({
                         warmup window
                       </span>
                       <GuardValue fact={retainedGuards.warmup_bars} what="warmup_bars" />
-                      <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
-                        {retainedGuards.warmup_bars.reason_code}
-                      </span>
+                      <span hidden data-reason-code={retainedGuards.warmup_bars.reason_code ?? undefined} />
                     </span>
                   </div>
                 ) : null
@@ -2206,8 +2204,12 @@ export function SplitScreen({
                   {hasRange(detail.windows.holdout) ? (
                     <span
                       data-holdout-exposure={(detail.windows.holdout as { child_input_state: string }).child_input_state}
+                      title={(detail.windows.holdout as { child_input_state: string }).child_input_state}
                     >
-                      {(detail.windows.holdout as { child_input_state: string }).child_input_state}
+                      {/* The child tape is internal jargon: the word is "not exposed", the served token is the tooltip. */}
+                      {(detail.windows.holdout as { child_input_state: string }).child_input_state === "NOT_EXPOSED_TO_CHILD_TAPE"
+                        ? "not exposed"
+                        : humanise((detail.windows.holdout as { child_input_state: string }).child_input_state)}
                     </span>
                   ) : (
                     "not published"
@@ -2348,7 +2350,7 @@ function protocolSentence(detail: SplitDetailDocument, foldPlanReady: boolean): 
   if (detail.protocol.kind === "THREE_WINDOW_CURRENT") {
     /* The holdout's child-tape exposure is its own integrity row below; the note names only that it exists. */
     const holdout = hasRange(detail.windows.holdout) ? " + holdout" : "";
-    parts.push(`three_window_current · IS + outer OOS${holdout}`);
+    parts.push(`${humanise("three_window_current")} · IS + outer OOS${holdout}`);
     if (hasRange(detail.windows.outer_oos)) {
       /* X5: a fixed-profile run (P04) and an imported fixed-profile run say the same thing. */
       const evaluation = (detail.windows.outer_oos as { evaluation_state: string }).evaluation_state;
@@ -2967,7 +2969,7 @@ function FoldTable({
           title="Click a row or use the arrow keys to move the cursor — Search follows it"
           data-fold-table-foot
         >
-          {`protocol ${detail.protocol.kind ?? "not published"} · one IS/OOS pair · no fold rows published`}
+          {`protocol ${detail.protocol.kind ? humanise(detail.protocol.kind) : "not published"} · one IS/OOS pair · no fold rows published`}
         </div>
       )}
     </section>

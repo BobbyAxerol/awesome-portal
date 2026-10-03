@@ -23,6 +23,7 @@ import {
   exactUtcMillis,
   windowCaption,
 } from "./artifacts";
+import { humanise } from "./humanise";
 import { ResearchPanel, ResearchValue } from "./ResearchPanel";
 import { researchState, type ResearchState } from "./state";
 import { formatBytes, formatUtc, groupDecimalString } from "./researchFormat";
@@ -108,8 +109,8 @@ export function ArtifactPanel({
     <ResearchPanel
       title={title}
       meta={
-        <span data-artifact-state={facts.state}>
-          {facts.state}
+        <span data-artifact-state={facts.state} title={facts.state}>
+          {humanise(facts.state)}
           {metadata.manifestRevision != null ? ` · rev ${metadata.manifestRevision}` : ""}
         </span>
       }

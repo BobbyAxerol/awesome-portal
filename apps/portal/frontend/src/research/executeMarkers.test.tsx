@@ -348,7 +348,7 @@ describe("F2b · the window switch, one control with the fold chain", () => {
     expect(switchEl.getAttribute("role")).toBe("group");
     expect(switchEl.getAttribute("aria-label")).toBe("window");
     expect(switchEl.closest("[data-fold-strip]")).toBeTruthy();
-    expect([...switchEl.querySelectorAll("button")].map((b) => b.textContent)).toEqual(["IS", "OOS", "HOLDOUT"]);
+    expect([...switchEl.querySelectorAll("button")].map((b) => b.textContent)).toEqual(["IS", "OOS", "holdout"]);
     expect(switchEl.querySelector("[data-window='oos']")!.getAttribute("aria-pressed")).toBe("true");
     const depth = window.history.length;
     fireEvent.click(switchEl.querySelector("[data-window='is']")!);

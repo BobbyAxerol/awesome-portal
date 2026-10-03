@@ -13,6 +13,7 @@
 import type { CSSProperties, ReactNode } from "react";
 
 import type { ProgressRunIdentity } from "./progressClient";
+import { humanise } from "./humanise";
 import { shortDigest } from "./researchFormat";
 import { ShortId } from "./ShortId";
 
@@ -38,8 +39,10 @@ export function NotPublished({ reason, what = "not published" }: { reason?: stri
   );
 }
 
-function Part({ value }: { value: string | null | undefined }) {
-  return value === null || value === undefined ? <NotPublished reason={IDENTITY_NOT_PUBLISHED} /> : <>{value}</>;
+/** `word`: an enum token shown as a word, the raw token kept in the tooltip; otherwise an identifier, as sent. */
+function Part({ value, word = false }: { value: string | null | undefined; word?: boolean }) {
+  if (value === null || value === undefined) return <NotPublished reason={IDENTITY_NOT_PUBLISHED} />;
+  return word ? <span title={value}>{humanise(value)}</span> : <>{value}</>;
 }
 
 function Chip({ children, name, title }: { children: ReactNode; name: string; title?: string }) {
@@ -98,7 +101,7 @@ export function RunMetaStrip({ runId, identity, status, panel = false, omitRunSt
       ) : (
         <>
           <Chip name="mode">
-            <Part value={identity.protocol} /> · <Part value={identity.mode} /> · <Part value={identity.schedule} />
+            <Part value={identity.protocol} word /> · <Part value={identity.mode} word /> · <Part value={identity.schedule} word />
           </Chip>
           <Chip
             name="binding"
@@ -107,7 +110,7 @@ export function RunMetaStrip({ runId, identity, status, panel = false, omitRunSt
             {identity.alpha.alpha_id} · <Part value={identity.instrument.symbol} /> · <Part value={identity.instrument.timeframe} />
           </Chip>
           <Chip name="route">
-            route <Part value={identity.execution_route} />
+            route <Part value={identity.execution_route} word />
           </Chip>
           <span
             style={{ marginLeft: "auto" }}

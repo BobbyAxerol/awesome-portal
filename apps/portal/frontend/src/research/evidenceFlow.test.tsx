@@ -918,7 +918,9 @@ describe("RF-06 FE-S04-01 — a claim that was not issued says so", () => {
     const quote = notIssued.container.querySelector("[data-claim-quote='NOT_ISSUED']") as HTMLElement;
     expect(quote.textContent).toBe(NOT_ISSUED_SENTENCE);
     expect(quote.style.color).not.toBe("var(--role-holdout)");
-    expect(notIssued.container.querySelector("[data-claim-state]")?.textContent).toBe("NOT_ISSUED");
+    const claimState = notIssued.container.querySelector("[data-claim-state]") as HTMLElement;
+    expect(claimState.textContent).toBe("not issued");
+    expect(claimState.getAttribute("title")).toBe("NOT_ISSUED");
   });
 
   it("names a NOT_ISSUED certificate as not issued, not as not applicable", () => {
@@ -1421,7 +1423,8 @@ describe("RF-06 fidelity — summary panels", () => {
     const { container } = view({ series: new Map([["EQUITY_OOS", { state: "ready", series: equitySeries() }]]) });
     const row = container.querySelector("[data-provenance='EQUITY_OOS']");
     const cell = (label: string) => row?.querySelector(`[data-provenance-cell='${label}']`)?.textContent ?? "";
-    expect(cell("source")).toContain("EQUITY_OOS");
+    expect(cell("source")).toContain("equity OOS");
+    expect(row?.querySelector("[data-provenance-cell='source'] [title]")?.getAttribute("title")).toBe("EQUITY_OOS");
     /* F1: the three gaps are screen notes, not SERIES_*_NOT_PUBLISHED codes that look served. */
     expect(cell("segment")).toContain("not served for this lane");
     expect(cell("units")).toContain("not served for this lane");
@@ -1554,13 +1557,14 @@ describe("W3 — per-fold verdicts from the server rule (CG-P13-08)", () => {
     const { container } = view({ passport: retainedPassport });
     const table = container.querySelector("[data-retained-verdicts='AVAILABLE']") as HTMLElement;
     expect(table).toBeTruthy();
-    expect(table.querySelector("[data-verdict-summary]")?.textContent).toContain("2 DRAG · 0 WARN · 0 PASS — OOS −5.35, decay +3.91");
+    expect(table.querySelector("[data-verdict-summary]")?.textContent).toContain("2 drag · 0 warn · 0 pass — OOS −5.35, decay +3.91");
     const rows = [...table.querySelectorAll("[data-verdict-row]")];
     expect(rows.map((row) => row.getAttribute("data-verdict-row"))).toEqual(["0", "1"]);
     const cells = [...rows[0]!.querySelectorAll("td")].map((cell) => cell.textContent?.trim());
     expect(cells.slice(0, 6)).toEqual(["fold_01", "−7.80", "+7.44", "5", "−0.38%", "−0.34%"]);
     expect(cells[6]).toMatch(/^−0\.16% single bar · 2026-07-\d\d \d\d:\d\dZ$/);
-    expect(rows[0]!.querySelector("[data-verdict-chip]")?.textContent).toBe("DRAG");
+    expect(rows[0]!.querySelector("[data-verdict-chip]")?.textContent).toBe("drag");
+    expect(rows[0]!.querySelector("[data-verdict-chip]")?.getAttribute("data-verdict-chip")).toBe("DRAG");
     // The exact server string rides in the title; the bar is clamped, not negative.
     expect(rows[0]!.querySelector("[data-exact]")?.getAttribute("data-exact")).toBe("-7.799572637865059");
     expect(rows[0]!.querySelector("[data-oos-bar]")?.getAttribute("data-oos-bar")).toBe("0");
@@ -1833,7 +1837,7 @@ describe("E11 · sealed summary analytics are bound without recomputation or aut
       series: new Map([["EQUITY_OOS", { state: "ready", series: equitySeries() }]]) });
     await waitFor(() => expect(container.querySelector('[data-chart-table="equity-is"]')).toBeTruthy());
     expect(container.querySelector('[data-chart-table="equity-is"]')?.textContent).toContain("102");
-    expect(container.querySelector('[data-series-authority="EQUITY_IS"]')?.textContent).toContain("DECLARED_IS");
+    expect(container.querySelector('[data-series-authority="EQUITY_IS"]')?.textContent).toContain("declared IS");
     /* W4B: "Trade count" is one label with one number; the engine's own count is that tile's tooltip, with its scope. */
     const tile = container.querySelector("[data-metric='TRADE_COUNT'][data-summary-trade-count]") as HTMLElement;
     expect(tile.getAttribute("data-trade-scope")).toBe("CHILD_TAPE");
@@ -1942,8 +1946,10 @@ describe("S5 Claim — certification, window disclosure and the whole-run manife
       "IS", "OOS", "Holdout", "Compare",
     ]);
     expect(row("OOS").textContent).toContain(WINDOW_DISCLOSURE);
-    expect(row("OOS").querySelector("[data-window-fact='validation_claim']")?.textContent).toBe("validation_claim walk_forward_oos");
-    expect(row("OOS").querySelector("[data-window-fact='oos_used_for_selection']")?.textContent).toBe("oos_used_for_selection true");
+    expect(row("OOS").querySelector("[data-window-fact='validation_claim']")?.textContent).toBe("validation claim walk-forward OOS");
+    expect(row("OOS").querySelector("[data-window-fact='validation_claim']")?.getAttribute("title")).toContain("validation_claim walk_forward_oos");
+    expect(row("OOS").querySelector("[data-window-fact='oos_used_for_selection']")?.textContent).toBe("OOS used for selection true");
+    expect(row("OOS").querySelector("[data-window-fact='oos_used_for_selection']")?.getAttribute("title")).toContain("oos_used_for_selection true");
     const nav = W3B.hub_evidence.core.fold_navigation!;
     expect(row("OOS").querySelector("[data-window-count]")?.textContent).toBe(`${nav.observed_folds.length}/${nav.published_fold_count} folds`);
     const holdout = row("Holdout").querySelector("[data-withheld]") as HTMLElement;

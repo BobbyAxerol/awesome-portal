@@ -18,6 +18,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DENY_NOT_STARTED_OR_CANCELLED, useEvidenceReadsAllowed, withheldLane } from "./useEvidenceReadsAllowed";
 
 import { isLaneNotApplicable, laneStateOf, type LaneNotApplicable, type LaneState } from "./splitClient";
 import {
@@ -112,6 +113,7 @@ export function searchState(detail: SearchDetail | null, refusal: SearchRefusal 
 
 export function useSearch(runId: string, fold: number | null, workspaceId?: string): SearchController {
   const key = cacheKey(runId, fold, workspaceId);
+  const reads = useEvidenceReadsAllowed(runId, DENY_NOT_STARTED_OR_CANCELLED, workspaceId);
   const [held, setHeld] = useState<{ key: string; detail: SearchDetail } | null>(() => {
     const cached = accepted.get(key);
     return cached ? { key, detail: cached } : null;
@@ -147,9 +149,15 @@ export function useSearch(runId: string, fold: number | null, workspaceId?: stri
 
   const runKey = `${workspaceId ?? ""}|${runId}`;
   const ensureLedger = useCallback(() => {
-    if (detail === null) return;
+    if (detail === null || reads === "wait") return;
     if (ledgerAskedFor.current === runKey) return;
     ledgerAskedFor.current = runKey;
+    /* A run that has not started has no retained search: the lane read is not sent (its 409 is an expected state). */
+    if (reads !== "allow") {
+      const withheld = withheldLane(reads);
+      setLedger({ runId, slot: { state: "refused", refusal: withheld.refusal, laneState: withheld.laneState } });
+      return;
+    }
     const known = laneAnswers.get(runKey);
     if (known) {
       setLedger({ runId, slot: { state: "not-applicable", answer: known } });
@@ -174,7 +182,7 @@ export function useSearch(runId: string, fold: number | null, workspaceId?: stri
           slot: { state: "refused", refusal: toSearchRefusal(error), laneState: laneStateOf(error) },
         }),
       );
-  }, [detail, runId, runKey, workspaceId]);
+  }, [detail, reads, runId, runKey, workspaceId]);
 
   const slot: LedgerSlot = ledger.runId !== runId ? { state: "idle" } : ledger.slot;
 
