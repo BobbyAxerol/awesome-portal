@@ -33,12 +33,14 @@ describe("runLinks (W1 §1.4)", () => {
     expect(hubHref(RUN, { stage: "claim" })).not.toContain("fold");
   });
 
-  it("report and RC force stage=claim and carry every cursor field plus ?window=", () => {
+  it("report and RC force stage=claim and carry fold/trial/params/window only (window in the hash)", () => {
     for (const href of [reportHref(RUN, { cursor: CURSOR, window: "is" }), rcHref(RUN, { cursor: CURSOR, window: "is" })]) {
-      expect(href).toContain("?window=is#");
+      expect(href).not.toContain("?");
+      expect(href).toContain("window=is");
       expect(href).toContain("stage=claim");
       expect(href).not.toContain("stage=execute");
-      for (const part of ["fold=4", "trial=351", "params=abc", "route=signal_notional", "seq=7"]) expect(href).toContain(part);
+      for (const part of ["fold=4", "trial=351", "params=abc"]) expect(href).toContain(part);
+      for (const part of ["route=", "seq="]) expect(href).not.toContain(part);
     }
   });
 
@@ -52,8 +54,9 @@ describe("runLinks (W1 §1.4)", () => {
     expect(hubHref(RUN, { cursor: CURSOR })).toContain("fold=4");
   });
 
-  it("carried keys (study/pick/trade/mode) ride along", () => {
-    const href = reportHref(RUN, { cursor: { ...CURSOR, carried: { study: "study_2", pick: "p1" } } });
+  it("carried keys (study/pick/trade/mode) ride along on stage screens, not on the report", () => {
+    expect(reportHref(RUN, { cursor: { ...CURSOR, carried: { study: "study_2" } } })).not.toContain("study=");
+    const href = searchHref(RUN, { cursor: { ...CURSOR, carried: { study: "study_2", pick: "p1" } } });
     expect(href).toContain("study=study_2");
     expect(href).toContain("pick=p1");
   });

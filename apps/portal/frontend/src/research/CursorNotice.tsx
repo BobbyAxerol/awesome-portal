@@ -10,44 +10,50 @@
  * same notice says which and why.
  */
 
-import { cursorProblemText, type CursorProblem } from "./inspectionCursor";
+import type { CursorProblem } from "./inspectionCursor";
 import { cursorNoteText, type CursorNote } from "./evidenceCursor";
+
+/**
+ * W5 §3.7: one short line per refused value, never an explanation. The value is
+ * named when the parse kept it (`value`); the rest of the story is the screen's.
+ */
+export function problemLine(problem: CursorProblem & { value?: string }): string {
+  const named = problem.value !== undefined ? `${problem.key} “${problem.value}”` : problem.key;
+  switch (problem.code) {
+    case "CURSOR_UNSUPPORTED_KEY":
+      return `Link key ignored: ${problem.key}.`;
+    case "CURSOR_DUPLICATE_KEY":
+      return `Link key repeated, ignored: ${problem.key}.`;
+    case "CURSOR_SEQUENCE_CONFLICT":
+      return "Link seq conflict, ignored.";
+    case "CURSOR_VALUE_INVALID":
+    case "CURSOR_VALUE_UNREADABLE":
+      return `Link value ignored: ${named}.`;
+  }
+}
 
 export function CursorNotice({
   problems,
   notes = [],
 }: {
-  problems: readonly CursorProblem[];
+  problems: readonly (CursorProblem & { value?: string })[];
   notes?: readonly CursorNote[];
 }) {
   if (problems.length === 0 && notes.length === 0) return null;
   return (
     <div
       role="status"
-      className="flex flex-col gap-0.5 rounded-[6px] border px-3 py-2"
-      style={{ borderColor: "var(--line)", background: "var(--paper-sunken)" }}
+      className="flex flex-wrap items-center gap-x-3 gap-y-0.5 rounded-[6px] border px-3 py-1.5 text-[11.5px] leading-[1.55]"
+      style={{ borderColor: "var(--line)", background: "var(--paper-sunken)", color: "var(--ink-soft)" }}
       data-cursor-notice
     >
-      <span className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-        link
-      </span>
       {problems.map((problem) => (
-        <span
-          key={`${problem.code}:${problem.key}`}
-          className="text-[11.5px] leading-[1.55]"
-          style={{ color: "var(--ink-soft)" }}
-          data-cursor-problem={problem.code}
-        >
-          {cursorProblemText(problem)}
+        <span key={`${problem.code}:${problem.key}`} data-cursor-problem={problem.code}>
+          {problemLine(problem)}
         </span>
       ))}
       {notes.map((note) => (
-        <span
-          key={JSON.stringify(note)}
-          className="text-[11.5px] leading-[1.55]"
-          style={{ color: "var(--ink-soft)" }}
-          data-cursor-note={note.code}
-        >
+        <span key={JSON.stringify(note)} data-cursor-note={note.code}>
           {cursorNoteText(note)}
         </span>
       ))}
@@ -67,7 +73,7 @@ export function RouteCursorNotice({
   notes = [],
   frame,
 }: {
-  problems: readonly CursorProblem[];
+  problems: readonly (CursorProblem & { value?: string })[];
   notes?: readonly CursorNote[];
   frame?: 1440 | 1560;
 }) {

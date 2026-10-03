@@ -280,7 +280,9 @@ describe("P13-T01 — the evidence cursor is one contract, shared by 04–08", (
       schedule: "s1",
       route: "r1",
       seq: 9,
+      window: null,
     });
+    expect(parseCursor("#stage=execute&fold=4&window=is").window).toBe("is");
   });
 
   it("drops a key it cannot trust rather than guessing at it", () => {
@@ -1368,7 +1370,7 @@ describe("RF-06 fidelity — cursor bar", () => {
 });
 
 describe("RF-06 fidelity — window switcher and tiles", () => {
-  it("draws the window choices as buttons; IS, OOS and Holdout write ?window=, Compare and Rebased stay refused, each titled", () => {
+  it("draws the window choices as buttons; IS, OOS and Holdout write window= into the hash, Compare and Rebased stay refused, each titled", () => {
     const { container } = view();
     const buttons = [...container.querySelectorAll("[data-window-switcher] [data-segment]")] as HTMLButtonElement[];
     expect(buttons.map((button) => button.textContent)).toEqual(["IS", "OOS", "Holdout Live", "Compare", "Capital", "Rebased 100"]);
@@ -1610,6 +1612,32 @@ describe("W3 — per-fold verdicts from the server rule (CG-P13-08)", () => {
     expect(table.textContent).not.toMatch(/\b0\.00\b|\+0\.00%/);
     expect(table.querySelectorAll("[data-verdict-chip='NOT_EVALUATED']")).toHaveLength(2);
     expect(table.textContent).toContain("not published");
+  });
+});
+
+describe("W5 E — S04 landmarks and the PASS chip", () => {
+  it("row 9: a PASS chip has its own raised fill (it sits on the selected row's accent-soft)", () => {
+    const evidence = JSON.parse(JSON.stringify(W3.evidence)) as CurrentSourceEvidence;
+    evidence.fold_verdicts = {
+      ...evidence.fold_verdicts,
+      rows: evidence.fold_verdicts.rows.map((row) => ({ ...row, verdict: "PASS" as const, failed_criteria: [], drag_target: null })),
+    };
+    const { container } = view({ passport: { state: "ready", evidence } });
+    const chip = container.querySelector("[data-verdict-chip='PASS']") as HTMLElement;
+    expect(chip).toBeTruthy();
+    expect(chip.style.background).toBe("var(--paper-raised)");
+  });
+
+  it("row 13: the hub has exactly one h1", () => {
+    const { container } = view();
+    expect(container.querySelectorAll("h1")).toHaveLength(1);
+  });
+
+  it("row 12: the 404 face has one h1 and no <main> of its own (the shell owns the landmark)", () => {
+    const { container } = view({ hub: null, notFound: true });
+    expect(container.querySelector("[data-run-not-found]")).toBeTruthy();
+    expect(container.querySelector("main")).toBeNull();
+    expect(container.querySelectorAll("h1")).toHaveLength(1);
   });
 });
 

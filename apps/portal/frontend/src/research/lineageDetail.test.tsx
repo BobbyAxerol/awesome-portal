@@ -420,7 +420,7 @@ describe("S10 Attempt Lineage — the screen", () => {
     expect(document.body.textContent).not.toContain("rules of this screen");
     expectPendingFrame("loading");
     expect(screen.getByRole("status", { name: "Loading" })).toBeTruthy();
-    expect(document.querySelector('[data-panel="header"] h2')?.getAttribute("title")).toContain(LINEAGE_TITLE);
+    expect(document.querySelector('[data-panel="header"] h1')?.getAttribute("title")).toContain(LINEAGE_TITLE);
   });
 
   it("S10-U02 renders every block in the screen's order when the lineage is complete", async () => {
@@ -1247,7 +1247,7 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     renderRoute();
     await ready();
     /* Literals, not the module's constants, so a drift fails here. */
-    expect(panel("header").querySelector("h2")?.getAttribute("title")).toContain("Attempt lineage");
+    expect(panel("header").querySelector("h1")?.getAttribute("title")).toContain("Attempt lineage");
     expect(panel("header").querySelector("[data-subtitle]")).toBeNull();
     expect(panel("header").querySelector("[data-source-chip]")?.textContent).toBe("PORTAL_PERSISTED_RESEARCH");
     expect(panel("header").querySelector("nav")?.textContent).toBe("Library/Lineage");

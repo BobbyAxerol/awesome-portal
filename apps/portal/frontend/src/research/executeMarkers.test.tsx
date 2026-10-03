@@ -23,7 +23,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { MarkerLayer, MarkerLegend, markerAbove, markerLetter, type CandleMarker, type ChartHandles } from "./ExecuteMarkers";
 import { ExecuteRoute } from "./ExecuteRoute";
 import { overviewBands, windowMarkers, withLedger } from "./ExecuteCandleReplay";
-import { DEFAULT_WINDOW, bucketsInSpan, glyphSize, ordinalAt, pairTransitions, parseWindow, withWindow } from "./executeWindows";
+import { DEFAULT_WINDOW, bucketsInSpan, glyphSize, ordinalAt, pairTransitions, windowOf } from "./executeWindows";
 import type { CurrentSourceReplay, ReplayChildAudit, ReplayTransitions } from "./replayClient";
 import { forgetRunIdentities } from "./retainedLane";
 
@@ -71,13 +71,9 @@ const RUN = FOLD0.run_id;
 describe("F2b · window in the URL", () => {
   it("defaults to OOS, reads is / holdout, and leaves the default out of a link", () => {
     expect(DEFAULT_WINDOW).toBe("oos");
-    expect(parseWindow("")).toBe("oos");
-    expect(parseWindow("?window=is")).toBe("is");
-    expect(parseWindow("?x=1&window=holdout")).toBe("holdout");
-    expect(parseWindow("?window=bogus")).toBe("oos");
-    expect(withWindow("/r/execute#fold=1", "oos")).toBe("/r/execute#fold=1");
-    expect(withWindow("/r/execute#fold=1", "is")).toBe("/r/execute?window=is#fold=1");
-    expect(withWindow("/r/execute?a=1", "holdout")).toBe("/r/execute?a=1&window=holdout");
+    expect(windowOf({ window: null })).toBe("oos");
+    expect(windowOf({ window: "is" })).toBe("is");
+    expect(windowOf({ window: "holdout" })).toBe("holdout");
   });
 });
 
@@ -346,7 +342,7 @@ async function settled(search = "", hash = "") {
 vi.setConfig({ testTimeout: 30_000 });
 
 describe("F2b · the window switch, one control with the fold chain", () => {
-  it("sits in the fold chain's row, defaults to OOS and writes ?window= back as one history entry per change", async () => {
+  it("sits in the fold chain's row, defaults to OOS and writes #window= back as one history entry per change", async () => {
     const { container } = await settled();
     const switchEl = container.querySelector("[data-window-switch]")!;
     expect(switchEl.getAttribute("role")).toBe("group");
@@ -356,14 +352,15 @@ describe("F2b · the window switch, one control with the fold chain", () => {
     expect(switchEl.querySelector("[data-window='oos']")!.getAttribute("aria-pressed")).toBe("true");
     const depth = window.history.length;
     fireEvent.click(switchEl.querySelector("[data-window='is']")!);
-    expect(window.location.search).toBe("?window=is");
+    expect(window.location.hash).toContain("window=is");
+    expect(window.location.search).toBe("");
     /* QA S08 UX-01: a window change is one history entry, so Back steps to the previous window; clicking the same window adds none. */
     expect(window.history.length).toBe(depth + 1);
     fireEvent.click(switchEl.querySelector("[data-window='is']")!);
     expect(window.history.length).toBe(depth + 1);
     fireEvent.click(switchEl.querySelector("[data-window='oos']")!);
     await waitFor(() => expect(container.querySelector("[data-chart-status='ready']")).toBeTruthy());
-    expect(window.location.search).toBe("");
+    expect(window.location.hash).toContain("window=oos");
     /* The fold chips are untouched by the window: same row, same chip style. */
     expect(switchEl.querySelector("button")!.className).toBe(container.querySelector("[data-fold]")!.className);
   });
@@ -507,23 +504,5 @@ describe("F2b · less text, more tooltip", () => {
     const { container } = await settled();
     expect(container.querySelector("[data-action='previous-window']")!.textContent).toBe("‹ earlier bars");
     expect(container.querySelector("[data-action='next-window']")!.textContent).toBe("later bars ›");
-  });
-});
-
-describe("F2b · Back / forward and a pasted link restore the window", () => {
-  it("useExecuteWindow reads ?window= on arrival and again on popstate; setting it replaces, keeping the hash", async () => {
-    const { renderHook, act } = await import("@testing-library/react");
-    const { useExecuteWindow } = await import("./executeWindows");
-    window.history.replaceState(null, "", "/research/quantbt/runs/r/execute?window=holdout#stage=execute&fold=2");
-    const { result } = renderHook(() => useExecuteWindow());
-    expect(result.current[0]).toBe("holdout");
-    act(() => result.current[1]("is"));
-    expect(window.location.search).toBe("?window=is");
-    expect(window.location.hash).toBe("#stage=execute&fold=2");
-    window.history.replaceState(null, "", "/research/quantbt/runs/r/execute?window=oos#stage=execute&fold=2");
-    act(() => {
-      window.dispatchEvent(new PopStateEvent("popstate"));
-    });
-    expect(result.current[0]).toBe("oos");
   });
 });

@@ -119,7 +119,7 @@ describe("F1 D8 walk — the equity legend and the source absences tell one stor
     );
     expect(equity.querySelector("[data-equity-title]")?.textContent).toContain("before OOS vs stitched OOS");
     expect(equity.textContent).not.toMatch(/\bIS account\b|\bIS emitted\b|\bIS \d/);
-    expect(equity.querySelector("[data-equity-svg]")?.getAttribute("aria-label")).not.toMatch(/\bIS\b/);
+    expect(equity.querySelector("[data-chart-summary]")?.textContent).not.toMatch(/\bIS\b/);
 
     /* …and the source absences still say there is no in-sample account: the two statements agree. */
     const absence = panel("provenance").querySelector('[data-source-absence="in_sample_account"]') as HTMLElement;

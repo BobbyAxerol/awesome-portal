@@ -19,7 +19,8 @@
 
 import type { ReactNode } from "react";
 
-import { useEntryRef, useReadout } from "./chartLife";
+import { useEntryRef } from "./chartLife";
+import { useChartContract } from "./chartContract";
 import { Formula } from "./Formula";
 import { foldLabel, formatUtc, groupDecimalString } from "./researchFormat";
 import { reasonCodeSentence } from "./researchRefusal";
@@ -381,25 +382,33 @@ export function PoolPlane({ search, selected }: { search: CurrentSourceSearch; s
   const [from, to] = [low - pad, high + pad];
   const at = (value: number) => ((value - from) / (to - from)) * 100;
   const entryRef = useEntryRef<HTMLDivElement>();
-  const readout = useReadout();
+  const wordsOf = (candidate: Candidate) =>
+    `candidate ${candidate.candidate_id} · IS ${candidate.facts.metrics.mean_is_sharpe.value} · OOS ${candidate.facts.metrics.mean_oos_sharpe.value}${candidate === selected ? " · θ*" : ""}`;
+  const c = useChartContract({
+    label: "pool members by mean IS and OOS Sharpe",
+    noun: "candidate",
+    count: placed.length,
+    describe: (i) => wordsOf(placed[i]!.candidate),
+    summary: `Pool plane, ${placed.length} of ${search.candidates.rows.length} pool members placed, in published order.`,
+    xs: placed.map(({ point }) => at(point.is)),
+  });
+  const { className, style, ...region } = c.regionProps;
   return (
     <div ref={entryRef} className="flex min-w-0 flex-1 flex-col gap-[3px]" data-pool-plane={placed.length}>
       <span className="text-[9.5px]" style={FAINT} title="Pool on the S_IS × S̄_OOS plane — a point on the diagonal has zero decay">
         S_IS × S̄_OOS · diagonal = 0 decay
       </span>
       <div
-        className="relative h-[118px] overflow-hidden border"
-        style={{ borderColor: "var(--line)", background: "var(--paper)" }}
-        role="img"
-        aria-label={`${placed.length} of ${search.candidates.rows.length} pool members placed by mean IS and mean OOS Sharpe`}
+        {...region}
+        className={`relative h-[118px] overflow-hidden border ${className ?? ""}`}
+        style={{ ...style, borderColor: "var(--line)", background: "var(--paper)" }}
       >
         <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           <line x1="0" y1="100" x2="100" y2="0" stroke="var(--line)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
         </svg>
-        {placed.map(({ candidate, point }) => {
+        {placed.map(({ candidate, point }, i) => {
           const theta = candidate === selected;
           const size = theta ? 9 : 5;
-          const words = `candidate ${candidate.candidate_id} · IS ${candidate.facts.metrics.mean_is_sharpe.value} · OOS ${candidate.facts.metrics.mean_oos_sharpe.value}${theta ? " · θ*" : ""}`;
           return (
             <span
               key={candidate.candidate_id}
@@ -412,20 +421,20 @@ export function PoolPlane({ search, selected }: { search: CurrentSourceSearch; s
                 background: theta ? "var(--accent-2-soft)" : "var(--accent)",
                 opacity: theta ? 1 : 0.45,
                 border: theta ? "2px solid var(--accent-2)" : 0,
+                outline: c.index === i ? "1px solid var(--ink)" : undefined,
               }}
-              title={words}
-              tabIndex={0}
-              aria-label={words}
+              title={wordsOf(candidate)}
+              aria-hidden="true"
               data-entry="fade"
-              {...readout.bind(words)}
               data-plane-point={candidate.candidate_id}
               data-plane-theta={theta || undefined}
             />
           );
         })}
       </div>
-      <span className="mono text-[9px]" style={{ ...FAINT, minHeight: 12 }} data-plane-readout={readout.text ?? undefined} aria-live="polite">
-        {readout.text}
+      {c.nodes}
+      <span className="mono text-[9px]" style={{ ...FAINT, minHeight: 12 }} data-plane-readout={c.text ?? undefined}>
+        {c.text}
       </span>
       <span className="text-[9px]" style={FAINT} title="Below the diagonal = positive decay (IS > OOS)">
         x S_IS · y S̄_OOS · below = decay

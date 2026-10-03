@@ -1573,7 +1573,8 @@ describe("E14 — S05 boundary integrity and stitched OOS provenance", () => {
     const replay = container.querySelector("[data-fold-replay='2']") as HTMLAnchorElement;
     expect(replay.tagName).toBe("A");
     const href = replay.getAttribute("href") ?? "";
-    expect(href).toContain(`/research/quantbt/runs/${W3B_RUN}/execute?window=oos#`);
+    expect(href).toContain(`/research/quantbt/runs/${W3B_RUN}/execute#`);
+    expect(href).toContain("window=oos");
     expect(href).toContain("stage=execute");
     expect(href).toContain("fold=2");
     expect(replay.getAttribute("aria-label")).toContain("open in Execute Replay");
@@ -1581,8 +1582,8 @@ describe("E14 — S05 boundary integrity and stitched OOS provenance", () => {
     const series = container.querySelector("[data-action='stitched-series']") as HTMLAnchorElement;
     expect(series.getAttribute("href")).toContain(`/research/quantbt/runs/${W3B_RUN}/evidence#stage=summary`);
     // IS / OOS bands and the holdout label open the same screen on their own window.
-    expect(container.querySelector("[data-window-link='is']")?.getAttribute("href")).toContain("execute?window=is#");
-    expect(container.querySelector("[data-window-link='oos']")?.getAttribute("href")).toContain("execute?window=oos#");
+    expect(container.querySelector("[data-window-link='is']")?.getAttribute("href")).toMatch(/execute#.*window=is/);
+    expect(container.querySelector("[data-window-link='oos']")?.getAttribute("href")).toMatch(/execute#.*window=oos/);
     // QA S05 U13: this profile declares no holdout, so the label is plain text, not a link to a dead end.
     expect(container.querySelector("[data-window-open='holdout']")).toBeNull();
     expect(container.querySelector("[data-holdout-label='not-applicable']")?.tagName).toBe("SPAN");
@@ -1833,14 +1834,14 @@ describe("F1 · X5 — an imported run's OOS window reads like a fixed-profile o
 });
 
 describe("F2b · windows and flow", () => {
-  it("IS, outer OOS and holdout each deep-link to Execute Replay with ?window= and the fold in the hash", () => {
+  it("IS, outer OOS and holdout each deep-link to Execute Replay with window and the fold in the hash", () => {
     const { container } = view({ cursor: { ...DEFAULT_CURSOR, fold: 3, stage: "split" } });
     for (const [key, window] of [
       ["is", "is"],
       ["outer_oos", "oos"],
     ] as const) {
       const bar = container.querySelector(`a[data-window='${key}']`) as HTMLAnchorElement;
-      expect(bar.getAttribute("href"), key).toBe(`/research/quantbt/runs/R-WFO-118/execute?window=${window}#stage=execute&fold=3`);
+      expect(bar.getAttribute("href"), key).toBe(`/research/quantbt/runs/R-WFO-118/execute#stage=execute&fold=3&window=${window}`);
       const legend = container.querySelector(`[data-window-legend='${key}'] a[data-window-open='${window}']`) as HTMLAnchorElement;
       expect(legend.getAttribute("href"), key).toBe(bar.getAttribute("href"));
       expect(legend.getAttribute("aria-label")).toContain("open in Execute Replay");
@@ -1848,15 +1849,15 @@ describe("F2b · windows and flow", () => {
     // The warmup is read by nothing: an image, not a link.
     expect(container.querySelector("[data-window='warmup']")?.tagName).toBe("SPAN");
     const holdout = container.querySelector("a[data-window-open='holdout']") as HTMLAnchorElement;
-    expect(holdout.getAttribute("href")).toBe("/research/quantbt/runs/R-WFO-118/execute?window=holdout#stage=execute&fold=3");
+    expect(holdout.getAttribute("href")).toBe("/research/quantbt/runs/R-WFO-118/execute#stage=execute&fold=3&window=holdout");
     expect(holdout.getAttribute("title")).toContain("no bar is read");
   });
 
   it("the three-window table row opens the IS and the OOS window", () => {
     const { container } = view();
     const row = container.querySelector("[data-fold-table-row='three-window']") as HTMLElement;
-    expect(row.querySelector("a[data-window-open='is']")?.getAttribute("href")).toContain("execute?window=is#");
-    expect(row.querySelector("a[data-window-open='oos']")?.getAttribute("href")).toContain("execute?window=oos#");
+    expect(row.querySelector("a[data-window-open='is']")?.getAttribute("href")).toMatch(/execute#.*window=is/);
+    expect(row.querySelector("a[data-window-open='oos']")?.getAttribute("href")).toMatch(/execute#.*window=oos/);
   });
 
   it("the way out stays: the breadcrumb returns to Evidence Flow on this cursor and the next stage carries it on", () => {

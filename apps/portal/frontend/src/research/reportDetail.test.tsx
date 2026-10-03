@@ -450,8 +450,8 @@ describe("S09 Run Report — the sheet", () => {
     server();
     renderRoute();
     await screen.findByText("claim passport");
-    const svg = panel("equity").querySelector("[data-equity-svg]")!;
-    expect(svg.getAttribute("aria-label")).toContain("3 sealed points");
+    const summary = panel("equity").querySelector("[data-chart-summary]")!;
+    expect(summary.textContent).toContain("3 points");
     expect(panel("equity").textContent).toContain("3 points · all points");
     expect(panel("equity").outerHTML).toContain("P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_REPORT_ROWS");
     expect(document.querySelector("canvas")).toBeNull();
@@ -667,12 +667,12 @@ describe("S09 Run Report — audit fixes (A1/A2)", () => {
     for (const cell of panel("stages").querySelectorAll("td")) expect(cell.classList.contains("rr-long")).toBe(false);
   });
 
-  it("S09-U34 the screen adds no h1: the module header keeps the page's only one", async () => {
+  it("S09-U34 the report title is the sheet's h1 (axe page-has-heading-one)", async () => {
     await loaded();
     const root = document.querySelector('[data-screen="run-report"]')!;
-    expect(root.querySelectorAll("h1")).toHaveLength(0);
+    expect(root.querySelectorAll("h1")).toHaveLength(1);
     const title = root.querySelector("[data-report-title]")!;
-    expect(title.tagName).toBe("H2");
+    expect(title.tagName).toBe("H1");
     expect(title.textContent).toBe("QuantBT Run Report");
   });
 
@@ -1068,7 +1068,7 @@ describe("S09 Run Report — pure parts and source rules", () => {
     const module = readFileSync(join(process.cwd(), "src", "features", "quantbt", "QuantBTModule.tsx"), "utf8");
     expect(module).toContain('<Route path="runs/:runId/report" element={<ReportRoute />} />');
     const execute = readFileSync(join(process.cwd(), "src", "research", "ExecuteDetail.tsx"), "utf8");
-    expect(execute).toMatch(/to=\{reportHref\(runId, \{ cursor, window: [^}]+\}\)\}\s+className="mono text-\[10px\]"\s+style=\{\{ color: "var\(--accent\)" \}\}\s+data-next="run-report"/);
+    expect(execute).toMatch(/to=\{runScreenHref\(runId, "report", cursor\)\}\s+className="mono text-\[10px\]"\s+style=\{\{ color: "var\(--accent\)" \}\}\s+data-next="run-report"/);
     const hub = readFileSync(join(process.cwd(), "src", "research", "EvidenceFlow.tsx"), "utf8");
     expect(hub).toContain('data-action="generate-report"');
     expect(hub).toContain('data-action="release-candidate"');

@@ -18,6 +18,11 @@
  *    without a word;
  *  - `seq` and its legacy alias `event_seq` fold to one `seq`, and two
  *    different values are a conflict, not a preference.
+ *
+ * W5: `window` is NOT a codec key. It is an FE view key of the evidence cursor
+ * (`evidenceCursor.ts`): stripped from the hash before `decodeInspectionCursor`
+ * and re-added by `serializeCursor`, so `p02-cursor.v2`, the journey read and
+ * the server contract are unchanged.
  */
 
 export const CURSOR_CODEC = "p02-cursor.v2" as const;

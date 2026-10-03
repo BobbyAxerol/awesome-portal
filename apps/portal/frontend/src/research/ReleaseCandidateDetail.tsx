@@ -40,7 +40,10 @@
  */
 
 import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+
+import { RouteCursorNotice } from "./CursorNotice";
+import { parseCursorProblems } from "./evidenceCursor";
 
 import { ResearchPanel } from "./ResearchPanel";
 import {
@@ -626,7 +629,7 @@ function Header({ runId, here, chips, alpha = null, composeRun = null, attemptId
   return (
     <header className="rc-head" data-panel="header">
       <div className="l">
-        <nav className="rc-crumb" aria-label="Breadcrumb">
+        <nav className="rc-crumb" aria-label="Run path">
           {runId ? (
             <>
               <Link to={hubHref(runId, { ...link, stage: "claim" })} data-action="back-to-hub">
@@ -649,9 +652,9 @@ function Header({ runId, here, chips, alpha = null, composeRun = null, attemptId
           ) : null}
           <span className="here rc-long">{here}</span>
         </nav>
-        <h2 className="rc-title" data-subtitle>
+        <h1 className="rc-title" data-subtitle>
           {RC_TITLE}
-        </h2>
+        </h1>
       </div>
       <div className="r">
         {chips}
@@ -2256,9 +2259,9 @@ function RunFace({ runId, terminal, label, link, onRetry }: { runId: string; ter
       <style>{RC_CSS}</style>
       <header className="rc-head" data-panel="header">
         <div className="l">
-          <h2 className="rc-title" data-subtitle>
+          <h1 className="rc-title" data-subtitle>
             {RC_TITLE}
-          </h2>
+          </h1>
           {unavailable ? null : (
             <span className="rc-mono" data-crumb-run title={runId}>
               {label ?? shortId(runId)}
@@ -2568,9 +2571,19 @@ function PackIdentity({ pack, state, publication }: { pack: RcPack | null; state
   );
 }
 
+/** A hand-edited hash is named once, on arrival (W5 §3.7). */
+function ArrivalCursorNotice() {
+  const { hash } = useLocation();
+  const [problems] = useState(() => parseCursorProblems(hash));
+  return <RouteCursorNotice problems={problems} frame={1440} />;
+}
+
 export function ReleaseCandidateScreen(props: ReleaseCandidateScreenProps) {
   return props.mode === "compose" ? (
-    <ComposeScreen runId={props.runId} controller={props.controller} publication={props.publication} status={props.status} link={props.link} />
+    <>
+      <ArrivalCursorNotice />
+      <ComposeScreen runId={props.runId} controller={props.controller} publication={props.publication} status={props.status} link={props.link} />
+    </>
   ) : (
     <PackScreen releaseCandidateId={props.releaseCandidateId} controller={props.controller} publication={props.publication} />
   );

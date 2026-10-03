@@ -7,7 +7,11 @@
  * not exist and render a mismatch before this screen ever drew.
  */
 
+import { useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
+
+import { RouteCursorNotice } from "./CursorNotice";
+import { parseCursorProblems } from "./evidenceCursor";
 
 import { RunProgress } from "./RunProgress";
 import { useRunProgress } from "./useRunProgress";
@@ -23,8 +27,12 @@ export function RunProgressRoute() {
   const [search] = useSearchParams();
   const workspaceId = search.get("workspace_id") || undefined;
   const progress = useRunProgress(runId, workspaceId);
+  /* A hand-edited hash is named once, on arrival; the address is rewritten without it. */
+  const [problems] = useState(() => (typeof window === "undefined" ? [] : parseCursorProblems(window.location.hash)));
 
   return (
+    <>
+    <RouteCursorNotice problems={problems} notes={progress.foldNotes} frame={1440} />
     <RunProgress
       runId={runId}
       read={progress.read}
@@ -51,5 +59,6 @@ export function RunProgressRoute() {
       consoleRefusal={progress.consoleRefusal}
       onRetryConsole={progress.retryConsole}
     />
+    </>
   );
 }

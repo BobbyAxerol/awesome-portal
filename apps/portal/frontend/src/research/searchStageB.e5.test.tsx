@@ -167,6 +167,9 @@ describe("E5 · 6.9/6.10 B2 formula and sub-panels", () => {
     expect(plane.getAttribute("data-pool-plane")).toBe("1");
     const point = plane.querySelector("[data-plane-point='0']") as HTMLElement;
     expect(point.getAttribute("data-plane-theta")).toBe("true");
+    expect(point.getAttribute("aria-hidden")).toBe("true");
+    expect(point.getAttribute("tabindex")).toBeNull();
+    expect(plane.querySelectorAll("[tabindex='0']")).toHaveLength(1);
     expect(point.getAttribute("title")).toBe("candidate 0 · IS -1.4435308120735202 · OOS -5.354970424211971 · θ*");
   });
 });

@@ -75,7 +75,8 @@ import {
   type SearchDetail as SearchDetailDocument,
   type SearchSourceGap,
 } from "./searchClient";
-import { deepDiveHref, serializeCursor, type EvidenceCursor } from "./evidenceCursor";
+import { type EvidenceCursor } from "./evidenceCursor";
+import { runScreenHref } from "./runScreenHref";
 import { AsOf, CopyEvidenceLink, Digest, RunNotFound, SCREEN_FRAME, StageRunBar } from "./SplitDetail";
 import { LANE_STATE_COPY } from "./splitClient";
 import { useEntryRef } from "./chartLife";
@@ -1500,7 +1501,7 @@ function RetainedSearchSpace({ search, run }: { search: CurrentSourceSearch; run
               {column.head}
             </span>
           ))}
-          <span className="flex-1 pl-[14px]">θ* · {trialLabel({ sourceId: search.selection.selected_trial_id }) ?? "source not published"}</span>
+          <span className="flex-1 pl-[14px]">θ* · {trialLabel({ ordinal: search.selection.selected_trial_ordinal, sourceId: search.selection.selected_trial_id }) ?? "source not published"}</span>
         </div>
         {names.map((name) => {
           const cells = space ? declaredCells(space[name]) : null;
@@ -1868,7 +1869,7 @@ function FreezeLine({ detail, retained = null }: { detail: SearchDetailDocument;
           {served ? served.text : `${FREEZE_LABEL} · ${froze ? "FROZEN" : retained !== null ? "RULE NOT PUBLISHED" : "NONE — NO SEARCH RAN"}`}
         </span>
         <span
-          className="mono whitespace-nowrap rounded-[3px] border px-1.5 py-[3px] text-[10px] font-bold"
+          className="mono relative whitespace-nowrap rounded-[3px] border px-1.5 py-[3px] text-[10px] font-bold"
           style={{
             color: arrow.tone,
             borderColor: arrow.border,
@@ -1877,9 +1878,10 @@ function FreezeLine({ detail, retained = null }: { detail: SearchDetailDocument;
           }}
           title={arrow.title}
           data-freeze-arrow={kind}
-          data-motion={arrow.flow ? "flow" : undefined}
         >
           {arrow.glyph}
+          {/* The pulse fades a decorative ring, never the text (contrast stays at the token's). */}
+          {arrow.flow ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-[3px]" style={{ boxShadow: `0 0 0 2px ${arrow.tone}` }} data-motion="flow" /> : null}
         </span>
       </span>
       <span className={line} style={{ borderColor: "var(--accent-2)" }} />
@@ -1910,6 +1912,8 @@ export interface SearchScreenProps {
   onPick?: (trialId: string) => void;
   /** D9: lets go of the pick (the hash's `pick=`). */
   onClear?: () => void;
+  /** W5 §3.4: writes the cursor's fold; the causal study selector is bound to it (`replace` = a follow, not a move). */
+  onFold?: (fold: number, options?: { replace?: boolean }) => void;
   /**
    * Drawn inside the Evidence Hub's Search tab (HiFi 04): the hub owns the
    * page frame, the breadcrumb and the title, so this screen leaves out its
@@ -1934,8 +1938,8 @@ export function searchEvidenceLink(
   pick: string | null,
 ): string | undefined {
   if (typeof window === "undefined" || !window.location) return undefined;
-  const base = `${window.location.origin}/research/quantbt/runs/${encodeURIComponent(runId)}/search`;
-  if (lane === null) return `${base}${serializeCursor({ ...cursor, stage: "search" })}`;
+  const origin = window.location.origin;
+  if (lane === null) return `${origin}${runScreenHref(runId, "search", cursor, { stage: "search" })}`;
   const identity = run?.identity.state === "ready" ? run.identity.identity : null;
   const digests = new Set(
     (identity?.progress?.progress?.folds ?? [])
@@ -1947,8 +1951,7 @@ export function searchEvidenceLink(
   if (lane.selection.selected_trial_id !== null) carried.trial = lane.selection.selected_trial_id;
   if (pick !== null) carried.pick = pick;
   else delete carried.pick;
-  return `${base}${serializeCursor({
-    ...cursor,
+  return `${origin}${runScreenHref(runId, "search", cursor, {
     stage: "search",
     trial: null,
     schedule: lane.search_contract.optimization_schedule ?? cursor.schedule,
@@ -1989,6 +1992,7 @@ export function SearchScreen({
   pick: controlledPick,
   onPick: controlledOnPick,
   onClear: controlledOnClear,
+  onFold,
   embedded = false,
 }: SearchScreenProps) {
   const modeReadsLabel = useId();
@@ -2002,7 +2006,6 @@ export function SearchScreen({
   const profile = detail?.fixed_profile;
   const parameters = profile?.parameters ?? [];
   const fixed = detail?.source_profile.state === "FIXED_PROFILE_NO_SEARCH";
-  const runPath = `/research/quantbt/runs/${encodeURIComponent(runId)}`;
   const hubAbsences = detail ? Object.entries(detail.source_absences).filter(([name]) => !SHOWN_GAPS.has(name)) : [];
   const gapOf = (name: string): SearchSourceGap | null => detail?.source_absences[name] ?? null;
   const metric = detail?.requested_optimizer.candidate_selection_metric;
@@ -2080,7 +2083,7 @@ export function SearchScreen({
                 Run Library
               </Link>
             ) : (
-              <Link to={deepDiveHref(`${runPath}/evidence`, cursor)} style={{ color: "var(--accent)" }} data-action="back-to-hub">
+              <Link to={runScreenHref(runId, "hub", cursor)} style={{ color: "var(--accent)" }} data-action="back-to-hub">
                 Evidence Flow
               </Link>
             )}
@@ -2092,7 +2095,7 @@ export function SearchScreen({
               <>
                 <span style={{ color: "var(--ink-faint)" }}>·</span>
                 <Link
-                  to={deepDiveHref(`${runPath}/split`, { ...cursor, stage: "split" })}
+                  to={runScreenHref(runId, "split", cursor, { stage: "split" })}
                   className="mono text-[10px]"
                   style={{ color: "var(--accent)" }}
                   data-action="back-to-split"
@@ -2101,7 +2104,7 @@ export function SearchScreen({
                 </Link>
                 <span style={{ color: "var(--ink-faint)" }}>·</span>
                 <Link
-                  to={deepDiveHref(`${runPath}/freeze`, { ...cursor, stage: "freeze" })}
+                  to={runScreenHref(runId, "freeze", cursor, { stage: "freeze" })}
                   className="mono text-[10px]"
                   style={{ color: "var(--accent)" }}
                   data-action="next-stage"
@@ -2285,7 +2288,7 @@ export function SearchScreen({
                         <span title={lane.selection.availability.state}>{stateWords(lane.selection.availability.state)}</span>
                         {lane.selection.selected_trial_id !== null ? (
                           <span className="text-[9px]" style={{ color: "var(--ink-faint)" }} title={lane.selection.objective ?? undefined} data-selection-summary>
-                            {trialLabel({ sourceId: lane.selection.selected_trial_id })} · J {ratio2(lane.selection.objective) ?? "not published"} ·{" "}
+                            {trialLabel({ ordinal: lane.selection.selected_trial_ordinal, sourceId: lane.selection.selected_trial_id })} · J {ratio2(lane.selection.objective) ?? "not published"} ·{" "}
                             {OBJECTIVE_KIND_WORDS[lane.selection.objective_kind] ?? lane.selection.objective_kind}
                           </span>
                         ) : null}
@@ -2505,6 +2508,8 @@ export function SearchScreen({
                             onPick={onPick}
                             onClear={onClear}
                             prunedCount={lane.diagnostics.probe.pruned_trial_count}
+                            foldOrdinal={cursor.fold}
+                            onFold={onFold ?? (() => undefined)}
                           />
                         );
                       }
@@ -2573,7 +2578,7 @@ export function SearchScreen({
                 <section className={CARD} style={CARD_STYLE} data-panel="pool-freeze">
                   <h3 className={`${LABEL} flex items-baseline justify-between gap-2`} style={{ color: "var(--ink-faint)" }}>
                     <span>B1 · pool freeze</span>
-                    {!fixed && !notFound ? <StageLink to={deepDiveHref(`${runPath}/freeze`, { ...cursor, stage: "freeze" })} action="pool-to-freeze" title="Open S3 · Freeze — the sealed θ* and its digest chain">S3 Freeze →</StageLink> : null}
+                    {!fixed && !notFound ? <StageLink to={runScreenHref(runId, "freeze", cursor, { stage: "freeze" })} action="pool-to-freeze" title="Open S3 · Freeze — the sealed θ* and its digest chain">S3 Freeze →</StageLink> : null}
                   </h3>
                   {retained ? (retained.pool ? <PoolFunnel search={retained} /> : <RetainedPoolFreeze search={retained} />) : gapOf("candidate_pool") ? <Gap gap={gapOf("candidate_pool") as SearchSourceGap} what="candidate pool" showReason /> : null}
                   {/* Orchestration clocks under their own name — never an engine pool-freeze or first-OOS-read clock. */}
@@ -2598,7 +2603,7 @@ export function SearchScreen({
                   {retained ? (
                     <RetainedBestVsSelected
                       search={retained}
-                      freezeHref={notFound ? null : deepDiveHref(`${runPath}/freeze`, { ...cursor, stage: "freeze" })}
+                      freezeHref={notFound ? null : runScreenHref(runId, "freeze", cursor, { stage: "freeze" })}
                     />
                   ) : (
                     <>

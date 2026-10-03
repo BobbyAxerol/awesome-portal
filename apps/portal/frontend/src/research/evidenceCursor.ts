@@ -30,6 +30,7 @@ import {
   type InspectionCursor,
   type InspectionCursorKey,
 } from "./inspectionCursor";
+import { isEvidenceWindow, parseWindow, type EvidenceWindow } from "./evidenceWindow";
 
 /** The seven tabs of spec 04 — the `stage` key's closed set in `p02-cursor.v2`. */
 export const EVIDENCE_STAGES = CURSOR_STAGES;
@@ -46,10 +47,18 @@ export interface EvidenceCursor {
   route: string | null;
   seq: number | null;
   /**
+   * W5 §3.1: the evidence window, an FE view key. `null` = the reader never
+   * chose one (written only when named). It lives in the hash but outside the
+   * `p02-cursor.v2` codec: stripped before decoding, re-added when serialising,
+   * so the server contract and the journey read never see it.
+   */
+  window: EvidenceWindow | null;
+  /**
    * RF01-F5: cursor keys these screens do not interpret (`study`, `pick`,
-   * `trade`, `mode`, `playback_ordinal`) and any `trial`/`seq` that is a valid
-   * identifier but not a number here. Carried verbatim so a link that passes
+   * `trade`, `mode`, `playback_ordinal`). Carried verbatim so a link that passes
    * through Screen 04 leaves with everything it arrived with. Absent when empty.
+   * A `trial`/`seq` that is not a positive integer is NOT carried (W5 §3.7): it
+   * is reported and dropped from the address.
    */
   carried?: InspectionCursor;
 }
@@ -62,7 +71,18 @@ export const DEFAULT_CURSOR: EvidenceCursor = {
   schedule: null,
   route: null,
   seq: null,
+  window: null,
 };
+
+/** The arrival hand-off target: the θ* the run's progress read published (fold, trial, params digest). */
+export interface HandoffTarget {
+  fold: number;
+  trial: number;
+  params: string;
+}
+
+/** A codec problem, optionally with the offending value (for the one-line notice). */
+export type EvidenceCursorProblem = CursorProblem & { value?: string };
 
 /** Keys these screens read into typed fields; every other codec key is carried. */
 const INTERPRETED = new Set<InspectionCursorKey>(["stage", "fold", "trial", "params", "schedule", "route", "seq", "event_seq"]);
@@ -76,11 +96,11 @@ function positiveInt(raw: string | undefined): number | null {
 
 interface Read {
   cursor: EvidenceCursor;
-  problems: CursorProblem[];
+  problems: EvidenceCursorProblem[];
   /** RF-06 corrections the parse itself made (fold 0 → 1), for the notice. */
   notes: CursorNote[];
   /** Which interpreted keys the hash actually named (FE-X-10). */
-  named: { stage: boolean; fold: boolean };
+  named: { stage: boolean; fold: boolean; window: boolean };
 }
 
 /* -------------------------------------------------------------------------
@@ -107,24 +127,26 @@ export type CursorNote =
       value: string;
       /** The run's own published value, or null when the run published none. */
       run: string | null;
-    };
-
-export function cursorNoteText(note: CursorNote): string {
-  if (note.code === "CURSOR_FOLD_CLAMPED") {
-    switch (note.reason) {
-      case "BELOW_FIRST":
-        return `This link asked for fold ${note.from}. Folds start at ${note.to}, so fold ${note.to} is shown.`;
-      case "BEYOND_LAST":
-        return `This link asked for fold ${note.from}, beyond the last observed fold. The last observed fold, ${note.to}, is shown.`;
-      case "NOT_OBSERVED":
-        return `This link asked for fold ${note.from}, which this run did not observe. Fold ${note.to} is shown.`;
-      case "OUT_OF_RANGE":
-        return `This link asked for fold ${note.from}, outside the range this read accepts. Fold ${note.to} is shown instead.`;
     }
+  /** W5 §3.7: the published trial list lacks the trial the link named (hub / S06). */
+  | { code: "CURSOR_TRIAL_NOT_FOUND"; value: string }
+  /** W5 §3.7: `seq` is outside the loaded replay window (S08). `to` = last position. */
+  | { code: "CURSOR_SEQ_OUT_OF_RANGE"; from: number; to: number };
+
+/** One short line per note — the explanation is the screen's, not the notice's. */
+export function cursorNoteText(note: CursorNote): string {
+  switch (note.code) {
+    case "CURSOR_FOLD_CLAMPED":
+      return `Link fold ${note.from} not in this run; fold ${note.to} shown.`;
+    case "CURSOR_KEY_NOT_APPLIED":
+      return note.run === null
+        ? `Link ${note.key} “${note.value}” not applied.`
+        : `Link ${note.key} “${note.value}” not applied; run is “${note.run}”.`;
+    case "CURSOR_TRIAL_NOT_FOUND":
+      return `Link value ignored: trial “${note.value}”.`;
+    case "CURSOR_SEQ_OUT_OF_RANGE":
+      return `Link value ignored: bar ${note.from.toLocaleString("en-US")} (last ${note.to.toLocaleString("en-US")}).`;
   }
-  return note.run === null
-    ? `This link asks for ${note.key} “${note.value}”, but this run published no ${note.key} to check it against. It was not applied.`
-    : `This link asks for ${note.key} “${note.value}”; this run's ${note.key} is “${note.run}”, fixed at submit. The run's own ${note.key} is shown and the link's is not carried on.`;
 }
 
 /**
@@ -178,7 +200,19 @@ export function forgetObservedFolds(): void {
 }
 
 function readHash(hash: string): Read {
-  const { cursor: decoded, problems } = decodeInspectionCursor(hash);
+  /* `window` is an FE view key: it leaves the hash before the codec sees it. */
+  const params = new URLSearchParams(hash.replace(/^[#?]/, ""));
+  const windowValues = params.getAll("window");
+  params.delete("window");
+  const { cursor: decoded, problems: codecProblems } = decodeInspectionCursor(params);
+  const problems: EvidenceCursorProblem[] = codecProblems;
+  let window: EvidenceWindow | null = null;
+  if (windowValues.length > 1) problems.push({ code: "CURSOR_DUPLICATE_KEY", key: "window" });
+  else if (windowValues.length === 1) {
+    if (isEvidenceWindow(windowValues[0])) window = windowValues[0];
+    else problems.push({ code: "CURSOR_VALUE_INVALID", key: "window", value: windowValues[0] });
+  }
+
   const carried: InspectionCursor = {};
   for (const [key, value] of Object.entries(decoded) as Array<[InspectionCursorKey, string]>) {
     if (!INTERPRETED.has(key)) carried[key] = value;
@@ -194,12 +228,14 @@ function readHash(hash: string): Read {
   } else if (decoded.fold !== undefined && fold === null) {
     /* `fold` always has a value on these screens, so an unreadable one cannot
        be carried silently — it is replaced by the default, and said so. */
-    problems.push({ code: "CURSOR_VALUE_UNREADABLE", key: "fold" });
+    problems.push({ code: "CURSOR_VALUE_UNREADABLE", key: "fold", value: decoded.fold });
   }
+  /* W5 §3.7: a trial/seq that is an identifier but not a positive integer is
+     reported and NOT carried, so "copy link" does not re-share it. */
   const trial = positiveInt(decoded.trial);
-  if (decoded.trial !== undefined && trial === null) carried.trial = decoded.trial;
+  if (decoded.trial !== undefined && trial === null) problems.push({ code: "CURSOR_VALUE_UNREADABLE", key: "trial", value: decoded.trial });
   const seq = positiveInt(decoded.seq);
-  if (decoded.seq !== undefined && seq === null) carried.seq = decoded.seq;
+  if (decoded.seq !== undefined && seq === null) problems.push({ code: "CURSOR_VALUE_UNREADABLE", key: "seq", value: decoded.seq });
 
   const cursor: EvidenceCursor = {
     stage: decoded.stage !== undefined && isCursorStage(decoded.stage) ? decoded.stage : DEFAULT_CURSOR.stage,
@@ -209,14 +245,40 @@ function readHash(hash: string): Read {
     schedule: decoded.schedule ?? null,
     route: decoded.route ?? null,
     seq,
+    window,
   };
   if (Object.keys(carried).length > 0) cursor.carried = carried;
   return {
     cursor,
     problems,
     notes,
-    named: { stage: decoded.stage !== undefined && isCursorStage(decoded.stage), fold: fold !== null },
+    named: { stage: decoded.stage !== undefined && isCursorStage(decoded.stage), fold: fold !== null, window: window !== null },
   };
+}
+
+/**
+ * W5 §3.5: a `?window=` on an old link is read ONCE on arrival (the hash wins
+ * when it names a window too). The caller rewrites the address (`replaceState`)
+ * so the query never lives on and Back does not return to it.
+ */
+function withLegacyWindow(read: Read, search: string): Read {
+  if (!new URLSearchParams(search).has("window")) return read;
+  if (read.cursor.window !== null) return read;
+  const legacy = parseWindow(search);
+  if (legacy === null) {
+    const value = new URLSearchParams(search).get("window") ?? "";
+    return { ...read, problems: [...read.problems, { code: "CURSOR_VALUE_INVALID", key: "window", value }] };
+  }
+  return { ...read, cursor: { ...read.cursor, window: legacy }, named: { ...read.named, window: true } };
+}
+
+/** The query with `window` removed (the legacy key lives only in the hash now). */
+function withoutWindowQuery(search: string): string {
+  const params = new URLSearchParams(search);
+  if (!params.has("window")) return search;
+  params.delete("window");
+  const rest = params.toString();
+  return rest === "" ? "" : `?${rest}`;
 }
 
 /**
@@ -241,7 +303,7 @@ export function parseCursor(hash: string): EvidenceCursor {
 }
 
 /** What the codec refused in this hash — for the screen's notice, never dropped silently. */
-export function parseCursorProblems(hash: string): CursorProblem[] {
+export function parseCursorProblems(hash: string): EvidenceCursorProblem[] {
   return readHash(hash).problems;
 }
 
@@ -260,18 +322,34 @@ export function parseCursorNotes(hash: string): CursorNote[] {
  * digest is empty rather than unread. Carried keys ride along unchanged.
  */
 export function serializeCursor(cursor: EvidenceCursor): string {
-  const wire: InspectionCursor = { ...cursor.carried };
-  wire.stage = cursor.stage;
-  wire.fold = String(cursor.fold);
-  if (cursor.trial !== null) wire.trial = String(cursor.trial);
-  if (cursor.params !== null) wire.params = cursor.params;
-  if (cursor.schedule !== null) wire.schedule = cursor.schedule;
-  if (cursor.route !== null) wire.route = cursor.route;
-  if (cursor.seq !== null) wire.seq = String(cursor.seq);
-  return `#${encodeInspectionCursor(wire)}`;
+  return cursorHash(cursor, null);
 }
 
-/** The href a deep dive link carries: the target screen plus this exact cursor. */
+/** The cursor keys a link may carry (W5 §3.2 keys-by-screen table), besides `carried`. */
+export type CursorKeyName = "stage" | "fold" | "trial" | "params" | "schedule" | "route" | "seq" | "window";
+
+/**
+ * The hash for a cursor, writing only the keys in `keys` (all when null).
+ * `stage` and `fold` are written whenever they are allowed. Used by
+ * `serializeCursor` (all keys) and by `runScreenHref` (the destination's keys).
+ * `carried` rides along only when `keys` is null or includes `"carried"`.
+ */
+export function cursorHash(cursor: EvidenceCursor, keys: ReadonlySet<CursorKeyName | "carried"> | null): string {
+  const allow = (key: CursorKeyName | "carried") => keys === null || keys.has(key);
+  const wire: InspectionCursor = allow("carried") ? { ...cursor.carried } : {};
+  if (allow("stage")) wire.stage = cursor.stage;
+  if (allow("fold")) wire.fold = String(cursor.fold);
+  if (allow("trial") && cursor.trial !== null) wire.trial = String(cursor.trial);
+  if (allow("params") && cursor.params !== null) wire.params = cursor.params;
+  if (allow("schedule") && cursor.schedule !== null) wire.schedule = cursor.schedule;
+  if (allow("route") && cursor.route !== null) wire.route = cursor.route;
+  if (allow("seq") && cursor.seq !== null) wire.seq = String(cursor.seq);
+  const encoded = encodeInspectionCursor(wire);
+  const window = allow("window") && cursor.window !== null ? `window=${cursor.window}` : "";
+  return `#${[encoded, window].filter((part) => part !== "").join("&")}`;
+}
+
+/** The href a deep dive link carries: the target path plus this exact cursor (window included). */
 export function deepDiveHref(path: string, cursor: EvidenceCursor): string {
   return `${path}${serializeCursor(cursor)}`;
 }
@@ -279,7 +357,7 @@ export function deepDiveHref(path: string, cursor: EvidenceCursor): string {
 export interface EvidenceCursorController {
   cursor: EvidenceCursor;
   /** RF01-F5: what the codec refused in the arriving hash, for the screen's notice. */
-  problems: CursorProblem[];
+  problems: EvidenceCursorProblem[];
   /** RF-06: what this screen corrected or declined against the run, for the same notice. */
   notes: CursorNote[];
   /**
@@ -298,6 +376,8 @@ export interface EvidenceCursorController {
    * not forwarded into every outgoing link, and says so.
    */
   decline: (key: "mode" | "schedule", run: string | null) => void;
+  /** W5: a screen records its own note (e.g. CURSOR_TRIAL_NOT_FOUND, CURSOR_SEQ_OUT_OF_RANGE) for the same notice. */
+  addNote: (note: CursorNote) => void;
   setStage: (stage: EvidenceStage) => void;
   setFold: (fold: number) => void;
   /** `replace`: the change is a write-back (a window arriving), not a move the reader made — no history entry. */
@@ -307,6 +387,20 @@ export interface EvidenceCursorController {
    * fold, trial and params in the hash), never to fold 1. The tab the reader is on is kept.
    */
   reset: () => void;
+  /** W5 §3.3: the θ* the run's progress read published, when one was passed in; the target of `reset`. */
+  handoff: HandoffTarget | null;
+  /** True when fold, trial and params already equal the hand-off (the reset button is then inert). */
+  atHandoff: boolean;
+}
+
+export interface EvidenceCursorOptions {
+  /**
+   * W5 §3.3: the run's hand-off cursor (`useHandoffCursor`). When the arriving
+   * hash names no `fold`, the cursor is seeded from it (one `replaceState`, no
+   * push); if it arrives after first paint and the reader has not touched the
+   * cursor, it is applied once with replace. A hash that names a fold wins.
+   */
+  handoff?: HandoffTarget | null;
 }
 
 /**
@@ -317,7 +411,10 @@ export interface EvidenceCursorController {
  * `hashchange` listener keeps back meaning "leave this run", which is what a
  * reader expects from a screen whose whole state is one cursor.
  */
-export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): EvidenceCursorController {
+export function useEvidenceCursor(
+  defaults: Partial<EvidenceCursor> = {},
+  options: EvidenceCursorOptions = {},
+): EvidenceCursorController {
   /* The run the cursor belongs to — used only to remember a published observed-fold set. */
   const { runId } = useParams<{ runId: string }>();
   /* Callers pass an object literal; the seed is keyed on its values so a
@@ -325,9 +422,18 @@ export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): Evide
   const seedKey = JSON.stringify(defaults);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the serialised defaults
   const seed = useMemo(() => ({ ...DEFAULT_CURSOR, ...defaults }), [seedKey]);
-  const [initial] = useState(() => (typeof window === "undefined" ? null : seedCursor(window.location.hash, seed)));
+  const handoff = options.handoff ?? null;
+  const [initial] = useState(() => {
+    if (typeof window === "undefined") return null;
+    const read = withLegacyWindow(seedCursor(window.location.hash, seed), window.location.search);
+    /* W5 §3.3: no fold in the arriving hash and a hand-off in hand -> open on θ*, not on fold 1. */
+    if (!read.named.fold && handoff !== null) {
+      return { ...read, cursor: { ...read.cursor, fold: handoff.fold, trial: handoff.trial, params: handoff.params }, handoffApplied: true };
+    }
+    return { ...read, handoffApplied: false };
+  });
   const [cursor, setCursor] = useState<EvidenceCursor>(() => initial?.cursor ?? seed);
-  const [problems, setProblems] = useState<CursorProblem[]>(() => initial?.problems ?? []);
+  const [problems, setProblems] = useState<EvidenceCursorProblem[]>(() => initial?.problems ?? []);
   const [notes, setNotes] = useState<CursorNote[]>(() => initial?.notes ?? []);
   const addNote = useCallback((note: CursorNote) => {
     setNotes((previous) =>
@@ -340,6 +446,10 @@ export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): Evide
   /* QA S05 U15: a fold the reader picks is a history entry (Back returns to the fold before it);
      typing, scrubbing, clamps and the mount write keep replacing. */
   const pushNext = useRef(false);
+  /* W5 §3.3: set by any reader move (not a write-back), so a late hand-off never overrides a choice. */
+  const touched = useRef(false);
+  const handoffApplied = useRef(initial?.handoffApplied ?? false);
+  const arrivedWithFold = useRef(initial?.named.fold ?? false);
 
   /* Mount writes the full key set even when the reader arrived without a hash,
      so the address bar always describes what is on screen. */
@@ -347,13 +457,25 @@ export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): Evide
     const next = serializeCursor(cursor);
     const push = pushNext.current;
     pushNext.current = false;
-    if (window.location.hash !== next) {
-      const url = `${window.location.pathname}${window.location.search}${next}`;
-      if (push) window.history.pushState(null, "", url);
+    /* W5 §3.5: the legacy `?window=` was absorbed into the cursor; the rewrite drops it from the query (replace, never an entry). */
+    const search = withoutWindowQuery(window.location.search);
+    const legacy = search !== window.location.search;
+    if (window.location.hash !== next || legacy) {
+      const url = `${window.location.pathname}${search}${next}`;
+      if (push && !legacy) window.history.pushState(null, "", url);
       else window.history.replaceState(null, "", url);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs on every cursor change by design
   }, [cursor]);
+
+  /* W5 §3.3: a hand-off that arrives after first paint seeds the cursor once, if the reader has not moved it. */
+  const handoffKey = handoff === null ? null : `${handoff.fold}|${handoff.trial}|${handoff.params}`;
+  useEffect(() => {
+    if (handoff === null || handoffApplied.current || touched.current || arrivedWithFold.current) return;
+    handoffApplied.current = true;
+    setCursor((previous) => ({ ...previous, fold: handoff.fold, trial: handoff.trial, params: handoff.params }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the hand-off's values
+  }, [handoffKey]);
 
   /* A hash edited by hand, or a back into an earlier replaceState, is still a
      legitimate way to move the cursor. */
@@ -376,7 +498,16 @@ export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): Evide
   }, [runId]);
 
   const update = useCallback((patch: Partial<EvidenceCursor>, options?: { replace?: boolean }) => {
-    if (options?.replace !== true && patch.fold !== undefined && patch.fold !== latest.current.fold) pushNext.current = true;
+    if (options?.replace !== true) {
+      touched.current = true;
+      /* A fold or a window the reader picks is one history entry (Back returns to the one before it). */
+      if (
+        (patch.fold !== undefined && patch.fold !== latest.current.fold) ||
+        (patch.window !== undefined && patch.window !== latest.current.window)
+      ) {
+        pushNext.current = true;
+      }
+    }
     setCursor((previous) => {
       const next = { ...previous, ...patch };
       /* A key the reader just set is no longer the one the link carried. */
@@ -441,6 +572,7 @@ export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): Evide
     clampToObserved,
     replaceFold,
     decline,
+    addNote,
     /* Stage is one key of the cursor. Everything else survives the change —
        the invariant spec 04 §2.4 and test T03 are about. */
     setStage: useCallback(
@@ -460,11 +592,21 @@ export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): Evide
     ),
     setFold: useCallback((fold: number) => update({ fold: Math.max(1, Math.trunc(fold)) }), [update]),
     update,
+    handoff,
+    atHandoff: handoff !== null && cursor.fold === handoff.fold && cursor.trial === handoff.trial && cursor.params === handoff.params,
+    /* W5 §3.3: back to the hand-off cursor (θ*), never to fold 1 when one exists; the tab and the window the reader is on are kept. */
     reset: useCallback(
-      () => setCursor((previous) => ({ ...(initial?.cursor ?? seed), stage: previous.stage })),
-      // `initial` is read once at mount: the arrival cursor is the thing to return to.
+      () =>
+        setCursor((previous) => {
+          const base: EvidenceCursor =
+            handoff !== null
+              ? { ...DEFAULT_CURSOR, ...(initial?.cursor.carried ? { carried: initial.cursor.carried } : {}), fold: handoff.fold, trial: handoff.trial, params: handoff.params }
+              : (initial?.cursor ?? seed);
+          return { ...base, stage: previous.stage, window: previous.window };
+        }),
+      // `initial` is read once at mount: the arrival cursor is the fallback to return to.
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      [seed],
+      [seed, handoffKey],
     ),
   };
 }

@@ -433,3 +433,10 @@ summary cards show their own facts, Claim uses actual P11 artifact inventory
 (not ten fake rows). Fixed IS is already consumed; unavailable WFO IS or
 protected holdout remains typed. Remaining P23/P24/browser/visual acceptance
 is separate, and no frontend file or baseline was edited by this slice.
+
+## W5 — chart contract, cursor, a11y (2026-10-03) — code A–F
+
+Spec `evidence/P21/audit-2026-10-02-final/SPEC_W5.md`. Landed here: A (`chartContract.tsx` `useChartContract`/`ChartLive`/`ChartSummary`; S04 charts; `useScrub` wrapper), E (cursor core: `window` in the hash with one-time `?window=` rewrite, one `withWindow`, `runScreenHref`, `handoffCursor`, `reset θ*` → hand-off, one-line garbage notice, S04 hub 404 without nested `<main>`), B (S06 histogram/pool-plane as one region each, scatter tap-snap, study selector bound to `fold`, short per-dot labels, freeze-arrow pulse off the text), C (S08 chart region, transport keys scoped to the replay section, `seq` on rest, no P04 `seq=1`, `CURSOR_SEQ_OUT_OF_RANGE`), D (S09 equity/all-time/histogram/monthly via the contract, touch tap pins, `Data` details when rows > 120, S13 legend buttons, link underline, h1), F (S05 θ-lane fill-only fade, S07/S03 axe, Progress chips + garbage notice, `Run path` landmark, served `selected_trial_ordinal` through `trialLabel`).
+
+- Decisions taken (Bobby's "tự quyết"): `window` in the hash; report/RC links carry `window` (round trip), not seq/schedule/route; non-numeric `trial` in a hash is refused with a notice (reverses RF01-F5 "carry verbatim").
+- Open: S06 row 10 contrast fix unmeasured (axe probe); S08 IS-panel summary sentence; S08 309-row table → `Data` details; month strip outside-tap dismiss; route-level tests for retained-lane `seq`; RC serves no `selected_trial_ordinal` (nothing to show); tab-stop counts not re-measured; tokens (`--ink-faint`/`--ink-mute`) are a separate commit.

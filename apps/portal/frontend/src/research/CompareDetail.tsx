@@ -351,6 +351,7 @@ const COMPARE_CSS = `
 .cp-page { color: var(--ink); font-size: 13px; line-height: 1.5; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .cp-page a { color: var(--accent); text-decoration: none; }
 .cp-page a:hover { color: var(--accent-strong); text-decoration: underline; }
+.cp-page .foot a, .cp-page .cp-meta a, .cp-page p a { text-decoration: underline; text-underline-offset: 2px; }
 /* Zero-specificity reset (:where): it only beats the global button reset by
    source order and loses to every chip class below, so chips keep their mono size. */
 :where(.cp-page) button { font: inherit; }
@@ -370,7 +371,7 @@ const COMPARE_CSS = `
 .cp-segbtn { border: 0; border-right: 1px solid var(--line); background: var(--paper-raised); color: var(--ink-soft); padding: 5px 14px;
   font-family: var(--font-mono); font-size: 10.5px; cursor: pointer; }
 .cp-segbtn:last-child { border-right: 0; }
-.cp-segbtn[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
+.cp-segbtn[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); }
 .cp-meta { display: flex; flex-wrap: wrap; gap: 2px 12px; font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-faint); min-width: 0; }
 .cp-meta > span { overflow-wrap: anywhere; min-width: 0; }
 .cp-rule { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; padding: 9px 14px; border: 1px solid var(--accent-2); border-radius: 6px;
@@ -406,7 +407,7 @@ const COMPARE_CSS = `
 .cp-foldbar { fill-opacity: 1; }
 .cp-foldzero { stroke: var(--ink); stroke-width: 1; }
 .cp-foldlegend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); margin-bottom: 6px; }
-.cp-legendrun { cursor: default; border-radius: 3px; }
+.cp-legendrun { cursor: pointer; border-radius: 3px; border: 0; background: none; padding: 0; font: inherit; color: inherit; text-align: left; }
 .cp-legendrun:hover, .cp-legendrun:focus-visible { color: var(--ink); }
 .cp-foldbar, .cp-foldline { transition: opacity .15s; }
 @media (prefers-reduced-motion: reduce) { .cp-foldbar, .cp-foldline { transition: none; } }
@@ -1040,9 +1041,9 @@ function Header({
             Compare
           </span>
         </nav>
-        <h2 className="cp-title">{COMPARE_TITLE}</h2>
+        <h1 className="cp-title">{COMPARE_TITLE}</h1>
       </div>
-      {/* QA S13-2: the three modes are a tablist (roving tabindex, arrow keys, Home/End); aria-pressed stays for the existing selectors. */}
+      {/* QA S13-2: the three modes are a tablist (roving tabindex, arrow keys, Home/End); aria-selected carries the state. */}
       <span
         className="cp-seg"
         role="tablist"
@@ -1067,7 +1068,6 @@ function Header({
             className="cp-segbtn"
             data-mode-option={mode}
             aria-selected={active === mode}
-            aria-pressed={active === mode}
             tabIndex={active === mode || (active === null && mode === COMPARE_MODES[0]) ? 0 : -1}
             title={MODE_TITLES[mode]}
             onClick={() => onMode(mode)}
@@ -1496,9 +1496,12 @@ function FoldChart({ result }: { result: AttemptResult }) {
         <>
           <div className="cp-foldlegend" data-fold-legend>
             {legendEntries.map((entry) => (
-              <span
+              <button
+                type="button"
                 key={entry.runId}
                 className="cp-legendrun"
+                aria-pressed={hovered === entry.runId}
+                onClick={() => setHovered((now) => (now === entry.runId ? null : entry.runId))}
                 data-fold-legend-run={entry.runId}
                 data-fold-group-size={entry.members.length}
                 title={
@@ -1506,7 +1509,6 @@ function FoldChart({ result }: { result: AttemptResult }) {
                     ? `${entry.members.map(nameOf).join(", ")} have identical per-fold values, drawn as one line — hover to isolate`
                     : `${entry.runId} — hover to isolate`
                 }
-                tabIndex={0}
                 onMouseEnter={() => setHovered(entry.runId)}
                 onMouseLeave={() => setHovered(null)}
                 onFocus={() => setHovered(entry.runId)}
@@ -1521,7 +1523,7 @@ function FoldChart({ result }: { result: AttemptResult }) {
                 {entry.members.length > 1 ? <span data-fold-identical> +{entry.members.length - 1} identical</span> : null}
                 {/* QA S13 (N-3): a group with no per-fold value has no line to find; say so instead of a swatch that points at nothing. */}
                 {verticesOf(entry.runId) === 0 ? <span data-fold-no-line> · no value</span> : linesMode && verticesOf(entry.runId) === 1 ? <span data-fold-one-point> · one point</span> : null}
-              </span>
+              </button>
             ))}
           </div>
           <div
@@ -2854,7 +2856,7 @@ export function CompareScreen({ alphaId, mode, runs, controller, onMode, idleRea
       aria-busy={controller.inFlight}
     >
       <style>{COMPARE_CSS}</style>
-      {withheld ? <h2 className="cp-title" data-panel="header">Compare</h2> : <Header alphaId={alphaId} compare={compare} active={mode} onMode={onMode} />}
+      {withheld ? <h1 className="cp-title" data-panel="header">Compare</h1> : <Header alphaId={alphaId} compare={compare} active={mode} onMode={onMode} />}
       {withheld ? null : <Meta alphaId={alphaId} compare={compare} state={state.state} />}
       {state.state !== "available" ? (
         <Notice controller={controller} idleLink={idleLink} idleReason={mode === "pair" ? null : idleReason} />

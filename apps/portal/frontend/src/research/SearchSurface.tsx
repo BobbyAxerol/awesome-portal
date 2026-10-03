@@ -14,9 +14,11 @@
  * `pick=` to the hash (T07/T08) and never changes θ*.
  */
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 
 import { useEntryAnimation, useEntryRef, useReadout } from "./chartLife";
+import { TAP_SNAP_PX, useChartContract } from "./chartContract";
+import { foldLabel } from "./researchFormat";
 import type { CurrentSourceSearch } from "./searchClient";
 import { reasonCodeSentence } from "./researchRefusal";
 import { cleanParameters } from "./searchParamText";
@@ -225,6 +227,27 @@ export function SurfaceScatter({
     const target = [...(plot.current?.querySelectorAll("[data-surface-point]") ?? [])].find((element) => element.getAttribute("data-surface-point") === next);
     (target as HTMLElement | undefined)?.focus();
   };
+  /* Tap/click near a dot (WCAG 2.5.8): the nearest drawn point within 24 px, not a 5-9 px hit. Geometry only. */
+  const onPlotTap = (event: MouseEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest("button")) return;
+    const rect = plot.current?.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || rect.height <= 0) return;
+    const px = event.clientX - rect.left;
+    const py = event.clientY - rect.top;
+    let best: { point: Point; distance: number } | null = null;
+    for (const point of placed) {
+      const dx = (((point.positions[axes.x] as number) * 0.96 + 2) / 100) * rect.width - px;
+      const dy = ((98 - (point.positions[axes.y] as number) * 0.96) / 100) * rect.height - py;
+      const distance = Math.hypot(dx, dy);
+      if (best === null || distance < best.distance) best = { point, distance };
+    }
+    if (best === null || best.distance > TAP_SNAP_PX) return;
+    const hit = best.point;
+    const params = pointParameters(hit, parametersOf);
+    (readout.bind(pointTitle(hit, axes.x, axes.y, params.parameters)).onPointerDown as () => void)();
+    setRoving(hit.trial_id);
+    onPick(hit.trial_id);
+  };
   const sampled =
     surface.sampling === "ALL_RETAINED_TRIALS"
       ? `${surface.emitted_point_count} of ${surface.source_trial_count} trials drawn`
@@ -255,7 +278,8 @@ export function SurfaceScatter({
         style={{ borderColor: "var(--line)", background: "var(--paper)" }}
         ref={plot}
         role="group"
-        aria-label="trial surface — arrow keys move between points, Enter selects, Escape clears"
+        aria-label="trial surface"
+        onClick={onPlotTap}
         data-surface={`${axes.x}×${axes.y}`}
         data-surface-points={placed.length}
       >
@@ -271,8 +295,8 @@ export function SurfaceScatter({
             <button
               key={point.trial_id}
               type="button"
-              aria-label={title}
-              aria-pressed={pick === point.trial_id}
+              aria-label={`trial ${point.trial_id} · ${point.state === "PRUNED" ? "pruned" : `IS ${two(point.objective) ?? "not published"}`}`}
+              aria-current={pick === point.trial_id ? "true" : undefined}
               title={title}
               tabIndex={point.trial_id === tabStop ? 0 : -1}
               onKeyDown={(event) => onPlotKey(event, point.trial_id)}
@@ -314,7 +338,7 @@ export function SurfaceScatter({
           {axes.x} →
         </span>
       </div>
-      <span className="mono min-h-[13px] text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-surface-readout={readout.text ?? undefined} aria-live="polite">
+      <span className="mono min-h-[13px] text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-surface-readout={readout.text ?? undefined} role="status" aria-live="polite">
         {readout.text}
       </span>
       <div className="flex flex-wrap gap-3 text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-surface-legend>
@@ -333,9 +357,9 @@ export function SurfaceScatter({
           <span className="inline-block h-[8px] w-[8px] rounded-full" style={{ border: "1px dashed var(--ink-faint)" }} />
           pruned = duplicate
         </span>
-        <span className="flex items-center gap-1">
+        <span className="flex items-center gap-1" title="Click a point to select that trial; arrow keys move between points, Escape clears">
           <span className="inline-block h-[9px] w-[9px] rounded-full" style={{ boxShadow: "0 0 0 3px var(--viz-pick-ring)" }} />
-          Click a point to select that trial
+          picked
         </span>
       </div>
       <span className="text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-surface-caption title={`${surface.schema_version} · ${surface.objective_ramp.rule} · positions are the server's placement inside each declared range; colour = how many of the ${surface.complete_trial_count} complete IS objectives' quintile thresholds a trial lies above`}>
@@ -497,10 +521,70 @@ export function SurfaceProgression({
 
 /* --------------------------------------------------- A4 · distributions */
 
+type Distribution = Surface["distributions"]["parameters"][number];
+
+/** The server's own bin words: the bin's title, the hook's readout and the live text. */
+function binWords(distribution: Distribution, bin: Distribution["bins"][number]): string {
+  return `${distribution.name} · ${bin.lower} … ${bin.upper} · ${bin.count} trial${bin.count === 1 ? "" : "s"} · mean IS ${bin.mean_objective === null ? "—" : `${two(bin.mean_objective)} (${bin.mean_objective})`}`;
+}
+
+/** One parameter's twelve regions: one tab stop, arrows walk the bins, the bins are decorative. */
+function DistributionBars({ distribution, onText }: { distribution: Distribution; onText: (text: string | null) => void }) {
+  const tallest = Math.max(1, ...distribution.bins.map((bin) => bin.count));
+  const n = distribution.bins.length;
+  const first = distribution.bins[0];
+  const last = distribution.bins[n - 1];
+  const c = useChartContract({
+    label: `${distribution.name} distribution`,
+    noun: "region",
+    count: n,
+    describe: (i) => binWords(distribution, distribution.bins[i]!),
+    summary: `${distribution.name}: ${distribution.regions_sampled} of ${n} regions sampled, ${first?.lower ?? "—"} to ${last?.upper ?? "—"}; θ* ${distribution.theta_value}.`,
+    xs: distribution.bins.map((_, i) => ((i + 0.5) / n) * 100),
+    onIndex: (i) => onText(i === null ? null : binWords(distribution, distribution.bins[i]!)),
+  });
+  const { className, style, ...region } = c.regionProps;
+  return (
+    <>
+      <div
+        {...region}
+        className={`relative flex h-[52px] items-end gap-px border-b ${className ?? ""}`}
+        style={{ ...style, borderColor: "var(--line)" }}
+        data-distribution-region={distribution.name}
+      >
+        {distribution.bins.map((bin) => (
+          <span
+            key={bin.index}
+            className="flex-1"
+            style={{
+              height: `${Math.max(3, (bin.count / tallest) * 100).toFixed(0)}%`,
+              background: bin.shade_bucket === null ? "var(--paper-sunken)" : RAMP[bin.shade_bucket],
+              outline: c.index === bin.index ? "1px solid var(--ink)" : undefined,
+            }}
+            title={binWords(distribution, bin)}
+            aria-hidden="true"
+            data-entry="y"
+            data-entry-origin="bottom"
+            data-bin={bin.index}
+            data-bin-count={bin.count}
+          />
+        ))}
+        <span
+          className="absolute bottom-[-1px] top-0 w-[2px]"
+          style={{ left: `${distribution.theta_position_percent}%`, background: "var(--good)" }}
+          aria-hidden="true"
+          data-dist-theta={distribution.theta_position_percent}
+        />
+      </div>
+      {c.nodes}
+    </>
+  );
+}
+
 export function SurfaceDistributions({ surface }: { surface: Surface }) {
   const distributions = surface.distributions.parameters;
   const entryRef = useEntryRef<HTMLDivElement>();
-  const readout = useReadout();
+  const [readText, setReadText] = useState<string | null>(null);
   return (
     <SurfacePanel
       id="distributions"
@@ -514,57 +598,30 @@ export function SurfaceDistributions({ surface }: { surface: Surface }) {
       }
     >
       <div ref={entryRef} className="flex flex-wrap" data-distributions={distributions.length}>
-        {distributions.map((distribution) => {
-          const tallest = Math.max(1, ...distribution.bins.map((bin) => bin.count));
-          return (
-            <div key={distribution.name} className="flex w-full flex-col gap-[3px] pb-2 pr-[14px] pt-1.5 min-[520px]:w-1/2 min-[900px]:w-1/3" data-distribution={distribution.name}>
-              <div className="flex items-baseline justify-between">
-                <span className="mono text-[10.5px]">{distribution.name}</span>
-                {/* D17: full coverage is said once in the header; a parameter speaks only when it is short. */}
-                {distribution.regions_sampled < distribution.bins.length ? (
-                  <span className="text-[9px]" style={{ color: "var(--ink-faint)" }} data-regions-sampled={distribution.regions_sampled}>
-                    {distribution.regions_sampled}/{distribution.bins.length} regions sampled
-                  </span>
-                ) : (
-                  <span hidden data-regions-sampled={distribution.regions_sampled} />
-                )}
-              </div>
-              <div className="relative flex h-[52px] items-end gap-px border-b" style={{ borderColor: "var(--line)" }} role="img" aria-label={`${distribution.name}: ${distribution.regions_sampled} of ${distribution.bins.length} regions sampled; θ* ${distribution.theta_value}`}>
-                {distribution.bins.map((bin) => (
-                  <span
-                    key={bin.index}
-                    className="flex-1"
-                    style={{
-                      height: `${Math.max(3, (bin.count / tallest) * 100).toFixed(0)}%`,
-                      background: bin.shade_bucket === null ? "var(--paper-sunken)" : RAMP[bin.shade_bucket],
-                    }}
-                    title={`${bin.lower} … ${bin.upper} · ${bin.count} trial${bin.count === 1 ? "" : "s"} · mean IS ${bin.mean_objective === null ? "—" : `${two(bin.mean_objective)} (${bin.mean_objective})`}`}
-                    tabIndex={0}
-                    aria-label={`${distribution.name} ${bin.lower} … ${bin.upper}: ${bin.count} trial${bin.count === 1 ? "" : "s"}`}
-                    data-entry="y"
-                    data-entry-origin="bottom"
-                    {...readout.bind(`${distribution.name} · ${bin.lower} … ${bin.upper} · ${bin.count} trial${bin.count === 1 ? "" : "s"} · mean IS ${bin.mean_objective === null ? "—" : `${two(bin.mean_objective)} (${bin.mean_objective})`}`)}
-                    data-bin={bin.index}
-                    data-bin-count={bin.count}
-                  />
-                ))}
-                <span
-                  className="absolute bottom-[-1px] top-0 w-[2px]"
-                  style={{ left: `${distribution.theta_position_percent}%`, background: "var(--good)" }}
-                  data-dist-theta={distribution.theta_position_percent}
-                />
-              </div>
-              <div className="mono flex justify-between text-[9px]" style={{ color: "var(--ink-faint)" }}>
-                <span>{distribution.minimum}</span>
-                <span style={{ color: "var(--good)" }}>θ* {distribution.theta_value}</span>
-                <span>{distribution.maximum}</span>
-              </div>
+        {distributions.map((distribution) => (
+          <div key={distribution.name} className="flex w-full flex-col gap-[3px] pb-2 pr-[14px] pt-1.5 min-[520px]:w-1/2 min-[900px]:w-1/3" data-distribution={distribution.name}>
+            <div className="flex items-baseline justify-between">
+              <span className="mono text-[10.5px]">{distribution.name}</span>
+              {/* D17: full coverage is said once in the header; a parameter speaks only when it is short. */}
+              {distribution.regions_sampled < distribution.bins.length ? (
+                <span className="text-[9px]" style={{ color: "var(--ink-faint)" }} data-regions-sampled={distribution.regions_sampled}>
+                  {distribution.regions_sampled}/{distribution.bins.length} regions sampled
+                </span>
+              ) : (
+                <span hidden data-regions-sampled={distribution.regions_sampled} />
+              )}
             </div>
-          );
-        })}
+            <DistributionBars distribution={distribution} onText={setReadText} />
+            <div className="mono flex justify-between text-[9px]" style={{ color: "var(--ink-faint)" }}>
+              <span>{distribution.minimum}</span>
+              <span style={{ color: "var(--good)" }}>θ* {distribution.theta_value}</span>
+              <span>{distribution.maximum}</span>
+            </div>
+          </div>
+        ))}
       </div>
-      <span className="mono block min-h-[13px] pt-1 text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-distribution-readout={readout.text ?? undefined} aria-live="polite">
-        {readout.text}
+      <span className="mono block min-h-[13px] pt-1 text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-distribution-readout={readText ?? undefined}>
+        {readText}
       </span>
       <SurfaceImportance surface={surface} />
     </SurfacePanel>
@@ -703,6 +760,8 @@ export function StudySurfaces({
   onPick,
   onClear,
   prunedCount,
+  foldOrdinal,
+  onFold,
 }: {
   studies: readonly StudySurface[];
   declared: DeclaredSpace | null | undefined;
@@ -714,25 +773,31 @@ export function StudySurfaces({
   onPick: (trialId: string) => void;
   onClear?: () => void;
   prunedCount: number | null;
+  /** The cursor's 1-based fold: the one source of which study is drawn (W5 §3.4). */
+  foldOrdinal: number;
+  /** Writes the cursor's fold; `replace` for a follow (a pick in another study), not a reader's move. */
+  onFold: (fold: number, options?: { replace?: boolean }) => void;
 }) {
-  const [chosen, setChosen] = useState<string | null>(null);
+  /* The engine's fold_id is 0-based; the hash counts from 1. Non-numeric ids fall back to their position. */
+  const ordinalOf = (study: StudySurface, index: number) => (/^\d+$/.test(study.fold_id) ? Number(study.fold_id) + 1 : index + 1);
+  const active = studies.find((study, index) => ordinalOf(study, index) === foldOrdinal) ?? studies[0]!;
+  const activeOrdinal = ordinalOf(active, studies.indexOf(active));
   /* A pick inside another study moves the selector to it, so the point stays visible. */
-  const owner = pick === null ? null : (studies.find((study) => study.surface.points?.some((point) => point.trial_id === pick))?.study_id ?? null);
+  const ownerIndex = pick === null ? -1 : studies.findIndex((study) => study.surface.points?.some((point) => point.trial_id === pick));
+  const ownerOrdinal = ownerIndex < 0 ? null : ordinalOf(studies[ownerIndex]!, ownerIndex);
+  const follow = useRef({ activeOrdinal, onFold });
+  follow.current = { activeOrdinal, onFold };
   useEffect(() => {
-    if (owner !== null) setChosen(owner);
-  }, [owner]);
-  const active = studies.find((study) => study.study_id === chosen) ?? studies[0]!;
+    if (ownerOrdinal !== null && ownerOrdinal !== follow.current.activeOrdinal) follow.current.onFold(ownerOrdinal, { replace: true });
+  }, [ownerOrdinal]);
   const surface = active.surface;
   const served = surface.state === "AVAILABLE" && declared?.state === "AVAILABLE";
-  const label = `study ${active.study_id} · outer fold ${active.fold_id}`;
+  const label = foldLabel(active.fold_id);
   return (
     <div className="flex min-w-0 flex-col gap-3" data-study-surfaces={studies.length}>
       <SurfaceAbsence id="surface-run-global" title="A2 · run-global trial surface" reason={parentReason} state="NOT_APPLICABLE" />
-      <div className="flex flex-wrap items-center gap-[6px]" role="group" aria-label="outer study">
-        <span className="text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-          inner-validation study per outer fold
-        </span>
-        {studies.map((study) => {
+      <div className="flex flex-wrap items-center gap-[6px]" role="group" aria-label="outer fold">
+        {studies.map((study, index) => {
           const on = study.study_id === active.study_id;
           return (
             <button
@@ -744,12 +809,12 @@ export function StudySurfaces({
                   ? { borderColor: "var(--accent)", background: "var(--accent-soft)", color: "var(--accent)" }
                   : { borderColor: "var(--line)", background: "transparent", color: "var(--ink-soft)" }
               }
-              aria-pressed={on}
+              aria-current={on ? "true" : undefined}
               data-study-pick={study.study_id}
-              title={`${study.scope} · outer fold ${study.fold_id}`}
-              onClick={() => setChosen(study.study_id)}
+              title={`study ${study.study_id} · ${study.scope}`}
+              onClick={() => onFold(ordinalOf(study, index))}
             >
-              {study.study_id}
+              {foldLabel(study.fold_id)}
             </button>
           );
         })}

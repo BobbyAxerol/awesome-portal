@@ -5,12 +5,12 @@
  * on points are added by a typed builder (generated `SurfacePoint` schema).
  * The ledger page is deliberately empty: the tooltip must not depend on it.
  */
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { SurfaceScatter, pointParameters } from "./SearchSurface";
+import { SurfaceDistributions, SurfaceScatter, pointParameters } from "./SearchSurface";
 import type { CurrentSourceSearch } from "./searchClient";
 
 afterEach(cleanup);
@@ -59,5 +59,31 @@ describe("S06 point parameters", () => {
     const exact = Object.values(point.parameters!)[0];
     expect(exact).toBe(`${point.source_ordinal}.2400000000000004`);
     expect(Object.values(pointParameters(point, () => undefined).parameters!)[0]).not.toBe(exact);
+  });
+});
+
+describe("S06 chart contract (W5)", () => {
+  it("histogram: one focusable group per parameter, bins decorative, arrows read a region", () => {
+    const { container } = render(<SurfaceDistributions surface={SURFACE} />);
+    const groups = container.querySelectorAll("[data-distribution-region]");
+    expect(groups).toHaveLength(SURFACE.distributions.parameters.length);
+    expect(container.querySelectorAll("[data-bin][tabindex], [data-bin][aria-label]")).toHaveLength(0);
+    expect(container.querySelectorAll("[data-bin][aria-hidden='true']").length).toBeGreaterThan(0);
+    const first = groups[0] as HTMLElement;
+    expect(first.getAttribute("tabindex")).toBe("0");
+    expect(first.getAttribute("aria-label")).toMatch(/ distribution$/);
+    fireEvent.keyDown(first, { key: "ArrowRight" });
+    expect(container.querySelector("[data-distribution-readout]")?.textContent).toContain("trial");
+    expect(container.querySelector("[data-chart-live]")?.textContent).toContain("trial");
+  });
+
+  it("scatter: dots are not toggles, the picked one is aria-current, labels are short", () => {
+    const point = SURFACE.points[0]!;
+    const { container } = render(<SurfaceScatter surface={SURFACE} parametersOf={() => undefined} schedule="global" pick={point.trial_id} onPick={() => undefined} />);
+    expect(container.querySelector("[data-surface-point][aria-pressed]")).toBeNull();
+    const picked = container.querySelector(`[data-surface-point='${point.trial_id}']`) as HTMLElement;
+    expect(picked.getAttribute("aria-current")).toBe("true");
+    expect(picked.getAttribute("aria-label")).toMatch(/^trial \S+ · (IS |pruned)/);
+    expect(container.querySelectorAll("[data-surface-point][aria-current]")).toHaveLength(1);
   });
 });

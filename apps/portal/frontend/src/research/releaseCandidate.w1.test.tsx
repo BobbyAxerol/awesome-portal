@@ -170,26 +170,28 @@ describe("W1-S11 B2 the sealed verdict", () => {
 describe("W1-S11 B3 cursor-aware links", () => {
   const HASH = "#stage=search&fold=4&trial=351&params=abc";
 
-  it("carries the arriving cursor and ?window= into the hub crumb, the report and the rail; stage is the destination's", async () => {
+  it("carries the arriving cursor and window= into the hub crumb, the report and the rail; stage is the destination's", async () => {
     serve({ compose: "unsealed", library: { kind: "row", status: "COMPLETED" } });
-    renderAt(`/research/quantbt/runs/${RUN}/release-candidate?window=is${HASH}`);
+    renderAt(`/research/quantbt/runs/${RUN}/release-candidate${HASH}&window=is`);
     await waitFor(() => expect(q('[data-screen="release-candidate"]')!.getAttribute("data-run-phase")).toBe("completed"));
-    const hub = within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByRole("link", { name: "Evidence" }).getAttribute("href")!;
-    expect(hub).toContain(`/runs/${RUN}/evidence?window=is#`);
+    const hub = within(screen.getByRole("navigation", { name: "Run path" })).getByRole("link", { name: "Evidence" }).getAttribute("href")!;
+    expect(hub).toContain(`/runs/${RUN}/evidence#`);
+    expect(hub).toContain("window=is");
     for (const part of ["stage=claim", "fold=4", "trial=351", "params=abc"]) expect(hub).toContain(part);
     expect(hub).not.toContain("stage=search");
     const report = q('[data-action="run-report"]')!.getAttribute("href")!;
-    expect(report).toContain(`/runs/${RUN}/report?window=is#`);
+    expect(report).toContain(`/runs/${RUN}/report#`);
+    expect(report).toContain("window=is");
     expect(report).toContain("fold=4");
     expect(q("[data-rail-node='run']")!.getAttribute("href")).toContain("fold=4");
-    expect(q("[data-rail-node='selected_params']")!.getAttribute("href")).toContain("/freeze?window=is#stage=freeze");
+    expect(q("[data-rail-node='selected_params']")!.getAttribute("href")).toMatch(/\/freeze#stage=freeze.*window=is/);
   });
 
   it("opened with no cursor, the way back carries none (never fold=1)", async () => {
     serve({ compose: "unsealed", library: { kind: "row", status: "COMPLETED" } });
     renderAt(`/research/quantbt/runs/${RUN}/release-candidate`);
     await waitFor(() => expect(q('[data-screen="release-candidate"]')!.getAttribute("data-run-phase")).toBe("completed"));
-    const hub = within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByRole("link", { name: "Evidence" }).getAttribute("href")!;
+    const hub = within(screen.getByRole("navigation", { name: "Run path" })).getByRole("link", { name: "Evidence" }).getAttribute("href")!;
     expect(hub).toBe(`/research/quantbt/runs/${RUN}/evidence`);
     expect(q('[data-action="run-report"]')!.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/report`);
     expect(document.body.innerHTML).not.toContain("fold=1");

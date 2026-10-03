@@ -924,12 +924,12 @@ function Header({ alphaId, lineage }: { alphaId: string; lineage: Lineage | null
   return (
     <header className="ln-head" data-panel="header">
       <div className="l">
-        <nav className="ln-crumb" aria-label="Breadcrumb">
+        <nav className="ln-crumb" aria-label="Run path">
           <Link to={`${RUNS_ROOT}?group=1&alpha=${encodeURIComponent(alphaId)}`}>Library</Link>
           <span className="sep">/</span>
           <span className="here ln-long">Lineage</span>
         </nav>
-        <h2 className="ln-title" title={`${LINEAGE_TITLE} · ${alphaId}`}>{name}</h2>
+        <h1 className="ln-title" title={`${LINEAGE_TITLE} · ${alphaId}`}>{name}</h1>
       </div>
       {lineage ? (
         <span

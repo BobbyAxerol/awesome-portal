@@ -4,7 +4,8 @@
  * jsdom never initialises a canvas, so the ECharts option is the testable
  * surface: the axis type, the plotted pairs, the tooltip text and the marks.
  */
-import { describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 
 import {
   CHART_HEIGHT,
@@ -19,6 +20,7 @@ import {
   utcZ,
   withMinus,
   zeroBucketIndex,
+  DrawdownChart,
 } from "./EvidenceCharts";
 import type { EquityPoint, RollingReturnPoint } from "./evidenceClient";
 
@@ -269,5 +271,32 @@ describe("E11 / audit 04-8 — the stretch before the first OOS window is not OO
     const option = equityOption(EQUITY, BOUNDARIES) as Opt;
     expect(tooltip(option, 0, SERIES_NAME.beforeOos)).toContain("19,996.89");
     expect(tooltip(option, 1, SERIES_NAME.equity)).toContain("19,966.00");
+  });
+});
+
+describe("S04 chart contract (ChartShell)", () => {
+  afterEach(cleanup);
+
+  it("names the chart with just its label; the key help is in the sr-only summary", () => {
+    const { container } = render(<DrawdownChart series={{ values: EQUITY } as never} />);
+    const shell = container.querySelector('[data-chart="drawdown"]') as HTMLElement;
+    expect(shell.getAttribute("aria-label")).toBe("OOS drawdown");
+    expect(shell.getAttribute("aria-roledescription")).toBe("chart");
+    const summary = document.getElementById(shell.getAttribute("aria-describedby")!)!;
+    expect(summary.textContent).toMatch(/OOS drawdown, 3 points\..*Shift and arrows pan/);
+  });
+
+  it("arrows read a point: the live text is the tooltip's text; Escape clears; one live node", () => {
+    const { container } = render(<DrawdownChart series={{ values: EQUITY } as never} />);
+    const shell = container.querySelector('[data-chart="drawdown"]') as HTMLElement;
+    fireEvent.keyDown(shell, { key: "ArrowRight" });
+    const first = screen.getByRole("status").textContent;
+    expect(first).toContain("2026-07-01");
+    expect(first).not.toMatch(/<|&lt;/);
+    fireEvent.keyDown(shell, { key: "End" });
+    expect(screen.getByRole("status").textContent).toContain("2026-07-06");
+    fireEvent.keyDown(shell, { key: "Escape" });
+    expect(screen.getByRole("status").textContent).toBe("");
+    expect(container.querySelectorAll("[role=status]")).toHaveLength(1);
   });
 });

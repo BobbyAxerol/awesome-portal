@@ -12,7 +12,8 @@ import { useParams } from "react-router-dom";
 
 import { ExecuteScreen, executeLane, useTransportInput } from "./ExecuteDetail";
 import { useSplitBand } from "./SplitBand";
-import { useExecuteWindow } from "./executeWindows";
+import { windowOf, type ExecWindow } from "./executeWindows";
+import { RouteCursorNotice } from "./CursorNotice";
 import { useEvidenceCursor } from "./evidenceCursor";
 import { ReplayTransport, useTransport } from "./replayTransport";
 import { isRetainedReplay } from "./replayClient";
@@ -45,8 +46,12 @@ export function ExecuteContainer({
   hubFold?: number | null;
   onHubFold?: (fold: number) => void;
 }) {
-  const { cursor, update } = useEvidenceCursor({ stage: "execute" });
-  const [windowKey, setWindowKey] = useExecuteWindow();
+  const { cursor, update, problems, notes, addNote } = useEvidenceCursor({ stage: "execute" });
+  /* The window is the cursor's (`#window=`); a change the reader makes is one history entry, the same window none. */
+  const windowKey = windowOf(cursor);
+  const setWindowKey = (next: ExecWindow) => {
+    if (next !== windowKey) update({ window: next });
+  };
   const [arrivalSeq] = useState(cursor.seq);
   const [arrivalFold] = useState(cursor.fold);
   const controller = useReplay(runId, arrivalSeq === null ? null : arrivalSeq - 1, { arrivalFold });
@@ -112,11 +117,44 @@ export function ExecuteContainer({
   useTransportInput(transport);
 
   const snapshot = useTransport(transport);
-  const point = controller.replay?.equity_replay.items[snapshot.index];
-  const restingSeq = snapshot.playing || !point ? null : point.playback_ordinal + 1;
+  /* `seq` per lane: hub = playback_ordinal + 1; retained = the bar's source_ordinal + 1. It is written only when
+     the playhead rests and the reader moved it (or the link named one that was applied) - a mount never writes. */
+  const retainedRows = retained && isRetainedReplay(retained) ? retained.replay.rows : null;
+  const [arrivalApplied, setArrivalApplied] = useState(false);
+  const restIndex = snapshot.playing || snapshot.length === 0 ? null : snapshot.index;
+  const restSeq =
+    restIndex === null
+      ? null
+      : retainedRows
+        ? (retainedRows[restIndex] ? retainedRows[restIndex]!.source_ordinal + 1 : null)
+        : (controller.replay?.equity_replay.items[restIndex]?.playback_ordinal ?? -1) + 1 || null;
+  const restingSeq = snapshot.moved || (arrivalSeq !== null && arrivalApplied) ? restSeq : null;
   useEffect(() => {
-    if (restingSeq !== null && restingSeq !== cursor.seq) update({ seq: restingSeq });
+    if (restingSeq !== null && restingSeq !== cursor.seq) update({ seq: restingSeq }, { replace: true });
   }, [cursor.seq, restingSeq, update]);
+
+  /* Arrival with `seq`: the hub lane reads it with one at_ordinal read; on the retained lane the window is read
+     by fold, then the playhead lands on that source bar. A seq outside the loaded window is said and dropped. */
+  const hubAnswered = controller.replay !== null && retainedRows === null;
+  const applied = useRef(false);
+  useEffect(() => {
+    if (applied.current || arrivalSeq === null) return;
+    if (hubAnswered) {
+      applied.current = true;
+      setArrivalApplied(true);
+      return;
+    }
+    if (!retainedRows || retainedRows.length === 0) return;
+    applied.current = true;
+    const at = retainedRows.findIndex((row) => row.source_ordinal === arrivalSeq - 1);
+    if (at >= 0) {
+      transport.load(retainedRows.length, at);
+      setArrivalApplied(true);
+    } else {
+      addNote({ code: "CURSOR_SEQ_OUT_OF_RANGE", from: arrivalSeq, to: retainedRows[retainedRows.length - 1]!.source_ordinal + 1 });
+      update({ seq: null }, { replace: true });
+    }
+  }, [arrivalSeq, hubAnswered, retainedRows, transport, addNote, update]);
 
   /* E2c (8.5): one bounded read of the split the answering lane owns, for the
      IS / OOS / HOLDOUT band. It belongs to the container, not the screen —
@@ -132,5 +170,10 @@ export function ExecuteContainer({
   if (controller.state.state === "denied" && controller.replay === null) {
     return <StageDenied runId={runId} stage="Stage 4 · Execute Replay" screen="execute-replay" />;
   }
-  return <ExecuteScreen runId={runId} cursor={cursor} controller={controller} transport={transport} band={band} embedded={embedded} windowKey={windowKey} onWindow={setWindowKey} />;
+  return (
+    <>
+      {embedded ? null : <RouteCursorNotice problems={problems} notes={notes} />}
+      <ExecuteScreen runId={runId} cursor={cursor} controller={controller} transport={transport} band={band} embedded={embedded} windowKey={windowKey} onWindow={setWindowKey} />
+    </>
+  );
 }

@@ -15,7 +15,7 @@
  * dry. The transport still never fetches; whoever listens decides.
  */
 
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, type KeyboardEvent as ReactKeyboardEvent } from "react";
 
 export const SPEEDS = [1, 4, 16, 64] as const;
 export type Speed = (typeof SPEEDS)[number];
@@ -35,6 +35,8 @@ export interface TransportSnapshot {
   length: number;
   /** Set when the page hid itself mid-play; cleared by the next explicit action. */
   pausedHidden: boolean;
+  /** True once the reader has stepped, sought, played, paused or changed speed; a load and the arrival seek are not the reader. */
+  moved: boolean;
 }
 
 type Listener = () => void;
@@ -52,7 +54,7 @@ const browserScheduler: TransportScheduler = {
 };
 
 export class ReplayTransport {
-  private snapshot: TransportSnapshot = { playing: false, speed: DEFAULT_SPEED, index: 0, length: 0, pausedHidden: false };
+  private snapshot: TransportSnapshot = { playing: false, speed: DEFAULT_SPEED, index: 0, length: 0, pausedHidden: false, moved: false };
   private listeners = new Set<Listener>();
   private endListeners = new Set<Listener>();
   private actions = 0;
@@ -90,7 +92,8 @@ export class ReplayTransport {
       next.speed === this.snapshot.speed &&
       next.index === this.snapshot.index &&
       next.length === this.snapshot.length &&
-      next.pausedHidden === this.snapshot.pausedHidden
+      next.pausedHidden === this.snapshot.pausedHidden &&
+      next.moved === this.snapshot.moved
     ) {
       return;
     }
@@ -111,7 +114,7 @@ export class ReplayTransport {
 
   seek(index: number): void {
     this.pause();
-    this.set({ index: this.clamp(index), pausedHidden: false });
+    this.set({ index: this.clamp(index), pausedHidden: false, moved: true });
   }
 
   step(delta: number): void {
@@ -119,7 +122,7 @@ export class ReplayTransport {
   }
 
   setSpeed(speed: Speed): void {
-    this.set({ speed });
+    this.set({ speed, moved: true });
   }
 
   play(): void {
@@ -127,7 +130,7 @@ export class ReplayTransport {
     if (this.snapshot.length < 2) return;
     /* Play from the end starts over, as a player does. */
     const index = this.snapshot.index >= this.snapshot.length - 1 ? 0 : this.snapshot.index;
-    this.set({ playing: true, index, pausedHidden: false });
+    this.set({ playing: true, index, pausedHidden: false, moved: true });
     this.last = this.scheduler.now();
     this.carry = 0;
     this.loop();
@@ -136,7 +139,7 @@ export class ReplayTransport {
   pause(): void {
     this.actions += 1;
     this.stopLoop();
-    this.set({ playing: false });
+    this.set({ playing: false, moved: true });
   }
 
   toggle(): void {
@@ -191,9 +194,15 @@ export function useTransport(transport: ReplayTransport): TransportSnapshot {
 
 /**
  * Space toggles, ←/→ step one sample, Shift+←/→ jump ten (spec 08 §2.4).
- * Keys typed into a field are the field's.
+ * Keys typed into a field are the field's. Meant for the replay section's own
+ * `onKeyDown` (never `window`): elsewhere on the page the keys scroll as usual.
+ * A key the chart region already handled (`defaultPrevented`) is not done twice.
  */
-export function transportKey(transport: ReplayTransport, event: { key: string; code?: string; shiftKey: boolean; target: EventTarget | null }): boolean {
+export function transportKey(
+  transport: ReplayTransport,
+  event: { key: string; code?: string; shiftKey: boolean; target: EventTarget | null; defaultPrevented?: boolean; metaKey?: boolean; ctrlKey?: boolean; altKey?: boolean },
+): boolean {
+  if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return false;
   const target = event.target as HTMLElement | null;
   const tag = target?.tagName;
   if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target?.isContentEditable) {
@@ -211,4 +220,15 @@ export function transportKey(transport: ReplayTransport, event: { key: string; c
     return true;
   }
   return false;
+}
+
+/**
+ * The replay section's own `onKeyDown` (W5 §2.3): Space and the arrows act only
+ * while focus is inside the section; elsewhere on the page they scroll and move
+ * focus as usual (WCAG 2.1.4). A key the chart region already handled is not repeated.
+ */
+export function replayKeyDown(transport: ReplayTransport): (event: ReactKeyboardEvent<HTMLElement>) => void {
+  return (event) => {
+    if (transportKey(transport, event)) event.preventDefault();
+  };
 }

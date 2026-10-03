@@ -125,7 +125,7 @@ describe("W1-S09 B3 cursor-aware links on a sealed report", () => {
   it("carries cursor + ?window= into the hub, Execute, Release candidate and Lineage (with ?run=)", async () => {
     const body = fixture("research-report.wfo-retained.valid.json");
     serve({ status: 200, body }, "COMPLETED", body.run_id);
-    renderAt(body.run_id, "?window=is#stage=execute&fold=4&trial=351");
+    renderAt(body.run_id, "#stage=execute&fold=4&trial=351&window=is");
     await screen.findByText("Claim passport");
     const hub = q('[data-action="back-to-hub"]')!.getAttribute("href")!;
     expect(hub).toContain("stage=claim");

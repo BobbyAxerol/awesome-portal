@@ -27,7 +27,8 @@ import { baseOption, roleColorsNow } from "../charts/theme";
 import { CandleOverviewStrip, CandleReplayBody, FixedCandleChart, chartMotion, fixedPositionKeys, hasBarLedger, paddedRange, windowMarkers, type CandleMarker } from "./ExecuteCandleReplay";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { ResearchPanel } from "./ResearchPanel";
-import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
+import { type EvidenceCursor } from "./evidenceCursor";
+import { runScreenHref } from "./runScreenHref";
 import {
   CAPABILITY_LABEL,
   REPLAY_GAP_WORDS,
@@ -48,7 +49,7 @@ import {
   type ReplayPoint,
   type RouteCapabilityKey,
 } from "./replayClient";
-import { ReplayTransport, SPEEDS, transportKey, useTransport } from "./replayTransport";
+import { ReplayTransport, SPEEDS, replayKeyDown, useTransport } from "./replayTransport";
 import { reasonCodeSentence } from "./researchRefusal";
 import { humanise } from "./humanise";
 import { isHubLaneReason, retainedReadiness } from "./retainedLane";
@@ -59,8 +60,7 @@ import { iso } from "./utcMinute";
 import { formatAxisValue, formatCount, formatFractionAxis, formatMetric, shortId } from "./researchFormat";
 import { ShortId } from "./ShortId";
 import { CopyEvidenceLink, SCREEN_FRAME, StageRunBar } from "./SplitDetail";
-import { DEFAULT_WINDOW, withWindow, type ExecWindow } from "./executeWindows";
-import { reportHref } from "./runLinks";
+import { type ExecWindow } from "./executeWindows";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -1135,7 +1135,7 @@ function RetainedBody({
         state={state}
         minBodyHeight={280}
       >
-        <div className="flex flex-col gap-2" data-replay-window="RETAINED" data-retained-in-flight={String(inFlight)} data-replay-section tabIndex={0} aria-label="Replay. Space plays or pauses, the arrow keys step.">
+        <div className="flex flex-col gap-2" data-replay-window="RETAINED" data-retained-in-flight={String(inFlight)} data-replay-section tabIndex={0} onKeyDown={replayKeyDown(transport)} aria-label="Replay. Space plays or pauses, the arrow keys step.">
           {slot.recovered ? (
             <p className="mono text-[10px]" role="status" style={{ color: "var(--warn)" }} data-recovered>
               The replay position expired. It was discarded and the first window was read again once.
@@ -1344,6 +1344,7 @@ function FixedObservationPanel({
       data-panel="fixed-observation-replay"
       data-replay-section
       tabIndex={0}
+      onKeyDown={replayKeyDown(transport)}
       data-fixed-window={slot.index}
       data-fixed-in-flight={String(busy)}
       aria-busy={busy}
@@ -1469,7 +1470,6 @@ export function ExecuteScreen({
   const { replay, state } = controller;
   const replayWindow = replay?.equity_replay;
   const items = useMemo(() => replayWindow?.items ?? [], [replayWindow]);
-  const run = encodeURIComponent(runId);
   const [pinnedAt, setPinnedAt] = useState<number | null>(null);
 
   /* Which lane answers this run. The retained WFO lane, once it answered
@@ -1513,7 +1513,7 @@ export function ExecuteScreen({
       <>
       <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" style={{ color: "var(--ink-soft)" }}>
         <Link
-          to={withWindow(deepDiveHref(`/research/quantbt/runs/${run}/evidence`, { ...cursor, stage: "execute" }), windowKey)}
+          to={runScreenHref(runId, "hub", cursor, { stage: "execute" })}
           style={{ color: "var(--accent)" }}
           data-action="back-to-hub"
         >
@@ -1527,7 +1527,7 @@ export function ExecuteScreen({
         </span>
         <span style={{ color: "var(--ink-faint)" }}>·</span>
         <Link
-          to={withWindow(deepDiveHref(`/research/quantbt/runs/${run}/freeze`, { ...cursor, stage: "freeze" }), windowKey)}
+          to={runScreenHref(runId, "freeze", cursor)}
           className="mono text-[10px]"
           style={{ color: "var(--accent)" }}
           data-action="back-to-freeze"
@@ -1536,7 +1536,7 @@ export function ExecuteScreen({
         </Link>
         <span style={{ color: "var(--ink-faint)" }}>·</span>
         <Link
-          to={reportHref(runId, { cursor, window: windowKey === DEFAULT_WINDOW ? null : windowKey })}
+          to={runScreenHref(runId, "report", cursor)}
           className="mono text-[10px]"
           style={{ color: "var(--accent)" }}
           data-next="run-report"
@@ -1556,7 +1556,7 @@ export function ExecuteScreen({
         <CopyEvidenceLink />
         {/* Ways out that keep the run in hand: the windows' own screen, and the library the run came from. */}
         <Link
-          to={withWindow(deepDiveHref(`/research/quantbt/runs/${run}/split`, { ...cursor, stage: "split" }), windowKey)}
+          to={runScreenHref(runId, "split", cursor)}
           className="mono text-[10px]"
           style={{ color: "var(--accent)" }}
           data-action="to-split"
@@ -1672,7 +1672,7 @@ export function ExecuteScreen({
         }
       >
         {replay && replayWindow ? (
-          <div className="flex flex-col gap-2" data-replay-window={replayWindow.state} data-replay-section tabIndex={0} aria-label="Replay. Space plays or pauses, the arrow keys step.">
+          <div className="flex flex-col gap-2" data-replay-window={replayWindow.state} data-replay-section tabIndex={0} onKeyDown={replayKeyDown(transport)} aria-label="Replay. Space plays or pauses, the arrow keys step.">
             {controller.recovered ? (
               <p className="mono text-[10px]" role="status" style={{ color: "var(--warn)" }} data-recovered>
                 The replay position expired. It was discarded and the replay was read again once.
@@ -1891,24 +1891,13 @@ export function NotPublishedBlock({ replay }: { replay: Replay }) {
   );
 }
 
-/** Keyboard and page-visibility wiring for the transport, owned by the route. */
+/** Page-visibility wiring for the transport, owned by the route. Keys are the sections' (`replayKeyDown`). */
 export function useTransportInput(transport: ReplayTransport): void {
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
-      /* Space and the arrows belong to the replay section only; elsewhere on the page they scroll and move focus as usual. */
-      const origin = event.target instanceof Element ? event.target : null;
-      if (origin === null || origin.closest("[data-replay-section]") === null) return;
-      if (transportKey(transport, event)) event.preventDefault();
-    };
     const onVisibility = () => {
       if (document.visibilityState === "hidden") transport.hide();
     };
-    window.addEventListener("keydown", onKey);
     document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
+    return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [transport]);
 }

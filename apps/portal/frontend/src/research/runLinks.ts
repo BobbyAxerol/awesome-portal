@@ -1,19 +1,21 @@
 /**
- * W1 §1.4 — one builder per destination, cursor-aware.
+ * W1 §1.4 — one builder per destination, cursor-aware. W5 §3.1: every builder
+ * delegates to `runScreenHref`, which owns the path table and the keys each
+ * destination carries (see its header). Exported names and signatures are
+ * unchanged.
  *
  * Rule: a link carries the cursor of the screen it sits on; a link with no
  * cursor in hand carries none (never a hardcoded `fold=1`, never
- * `DEFAULT_CURSOR` for a back-link). Cursor fields carried: stage (set by the
- * destination's meaning), fold, trial, params, schedule, route, seq, carried.*
- * and `?window=` (query).
+ * `DEFAULT_CURSOR` for a back-link). `window` is a hash key of the cursor; a
+ * `window` passed beside it overrides the cursor's own (null = keep the cursor's).
  *
- * Pure; no React. Stage-fixed destinations (report/RC -> claim, execute ->
- * execute, split/search/freeze -> their own stage) overwrite a stale `stage`.
+ * Pure; no React.
  */
 
 import { QUANTBT_ROOT } from "../features/quantbt/routes";
-import { serializeCursor, type EvidenceCursor, type EvidenceStage } from "./evidenceCursor";
-import { withWindow, type EvidenceWindow } from "./evidenceWindow";
+import type { EvidenceCursor, EvidenceStage } from "./evidenceCursor";
+import type { EvidenceWindow } from "./evidenceWindow";
+import { runScreenHref, runScreenPath, type RunScreen } from "./runScreenHref";
 
 export interface LinkCursor {
   cursor?: EvidenceCursor | null;
@@ -33,32 +35,32 @@ export type RunPathTail =
   | "overview";
 
 export const runPath = (runId: string, tail: RunPathTail): string =>
-  `${QUANTBT_ROOT}/runs/${encodeURIComponent(runId)}${tail === "" ? "" : `/${tail}`}`;
+  tail === "overview" ? `${runScreenPath(runId, "")}/overview` : runScreenPath(runId, tail === "evidence" ? "hub" : tail);
 
-/** Path + (cursor hash with the destination's stage) + (?window=). No cursor in hand -> neither hash. */
-function carry(path: string, c: LinkCursor | undefined, stage: EvidenceStage | null): string {
-  const cursor = c?.cursor ?? null;
-  const base = cursor === null ? path : `${path}${serializeCursor(stage === null ? cursor : { ...cursor, stage })}`;
-  return withWindow(base, c?.window ?? null);
+function link(runId: string, screen: RunScreen, c: LinkCursor | undefined, stage?: EvidenceStage): string {
+  const over: Partial<EvidenceCursor> = {};
+  /* A stage named beside no cursor is not a cursor: the link stays bare (never `#stage=` alone). */
+  if (stage !== undefined && c?.cursor != null) over.stage = stage;
+  if (c?.window != null) over.window = c.window;
+  return runScreenHref(runId, screen, c?.cursor ?? null, Object.keys(over).length > 0 ? over : undefined);
 }
 
 /** Hub. The stage is the cursor's own unless the caller names one; never defaulted. */
-export const hubHref = (runId: string, c?: LinkCursor & { stage?: EvidenceStage }): string =>
-  carry(runPath(runId, "evidence"), c, c?.stage ?? null);
+export const hubHref = (runId: string, c?: LinkCursor & { stage?: EvidenceStage }): string => link(runId, "hub", c, c?.stage);
 
-export const reportHref = (runId: string, c?: LinkCursor): string => carry(runPath(runId, "report"), c, "claim");
+export const reportHref = (runId: string, c?: LinkCursor): string => link(runId, "report", c);
 
-export const rcHref = (runId: string, c?: LinkCursor): string => carry(runPath(runId, "release-candidate"), c, "claim");
+export const rcHref = (runId: string, c?: LinkCursor): string => link(runId, "release-candidate", c);
 
-export const progressHref = (runId: string, c?: LinkCursor): string => carry(runPath(runId, "progress"), c, null);
+export const progressHref = (runId: string, c?: LinkCursor): string => link(runId, "progress", c);
 
-export const executeHref = (runId: string, c?: LinkCursor): string => carry(runPath(runId, "execute"), c, "execute");
+export const executeHref = (runId: string, c?: LinkCursor): string => link(runId, "execute", c);
 
-export const splitHref = (runId: string, c?: LinkCursor): string => carry(runPath(runId, "split"), c, "split");
+export const splitHref = (runId: string, c?: LinkCursor): string => link(runId, "split", c);
 
-export const searchHref = (runId: string, c?: LinkCursor): string => carry(runPath(runId, "search"), c, "search");
+export const searchHref = (runId: string, c?: LinkCursor): string => link(runId, "search", c);
 
-export const freezeHref = (runId: string, c?: LinkCursor): string => carry(runPath(runId, "freeze"), c, "freeze");
+export const freezeHref = (runId: string, c?: LinkCursor): string => link(runId, "freeze", c);
 
 export const overviewHref = (runId: string): string => runPath(runId, "overview");
 

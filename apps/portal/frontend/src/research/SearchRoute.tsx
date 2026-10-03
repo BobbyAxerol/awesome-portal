@@ -24,7 +24,7 @@ import { SEARCH_FOLD_MAX, retainedSearchOf, useRetainedRunFacts, useSearch } fro
 
 export function SearchRoute({ embedded = false }: { embedded?: boolean } = {}) {
   const { runId = "" } = useParams<{ runId: string }>();
-  const { cursor, problems, notes, replaceFold, decline, clampToObserved, update } = useEvidenceCursor({ stage: "search" });
+  const { cursor, problems, notes, replaceFold, decline, clampToObserved, update, addNote } = useEvidenceCursor({ stage: "search" });
   /* X2 · F4 (T07/T08): the inspected trial lives in the hash as `pick=`, so a
      link restores it; picking never moves θ* or any other cursor key. */
   const pick = cursor.carried?.pick ?? null;
@@ -86,9 +86,10 @@ export function SearchRoute({ embedded = false }: { embedded?: boolean } = {}) {
   const pickKnown = pick === null || points.length === 0 || points.some((point) => point.trial_id === pick) || ledgerTrials.some((trial) => trial.trial_id === pick);
   useEffect(() => {
     if (pickKnown || pick === null) return;
-    say(`This link asked for trial ${pick}, which this search does not hold. No trial is selected.`);
+    addNote({ code: "CURSOR_TRIAL_NOT_FOUND", value: pick });
     onClear();
-  }, [onClear, pick, pickKnown, say]);
+  }, [addNote, onClear, pick, pickKnown]);
+  const onFold = useCallback((fold: number, options?: { replace?: boolean }) => update({ fold }, options), [update]);
 
   /* The run's mode and schedule were fixed at submit. A link that names
      others is acknowledged, not obeyed and not carried on. */
@@ -127,6 +128,7 @@ export function SearchRoute({ embedded = false }: { embedded?: boolean } = {}) {
         pick={pick}
         onPick={onPick}
         onClear={onClear}
+        onFold={onFold}
         ensureLedger={search.ensureLedger}
         onReread={search.reread}
         embedded={embedded}

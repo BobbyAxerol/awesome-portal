@@ -91,7 +91,7 @@ describe("D7 — a link the search cannot honour is said and taken out of the UR
   it("an unknown pick is dropped from the URL with a one-line notice; a known pick is kept", async () => {
     const { container } = await settled("#stage=search&fold=1&pick=9999");
     await waitFor(() => expect(window.location.hash).not.toContain("pick="));
-    expect(container.querySelector("[data-link-notice]")?.textContent).toContain("trial 9999");
+    expect(container.querySelector("[data-cursor-notice]")?.textContent).toContain("9999");
     expect(container.querySelector("[data-pick-chip]")).toBeNull();
     cleanup();
     const again = await settled("#stage=search&fold=1&pick=1");

@@ -37,7 +37,6 @@ import {
   type DeniedArtifact,
   type EffectiveStatus,
   type FoldSegment,
-  type HandoffCursor,
   type MethodologyClaim,
   type ProgressRead,
   type ProgressRefusal,
@@ -46,7 +45,10 @@ import {
   type Stage,
 } from "./progressClient";
 import { ArtifactPanel } from "./ArtifactPanel";
-import { decodeInspectionCursor, encodeInspectionCursor, type InspectionCursor } from "./inspectionCursor";
+import { decodeInspectionCursor, type InspectionCursor } from "./inspectionCursor";
+import { DEFAULT_CURSOR, type EvidenceCursor } from "./evidenceCursor";
+import { cursorForHandoff, type HandoffTarget } from "./handoffCursor";
+import { runScreenHref, type RunScreen } from "./runScreenHref";
 import { PlannedWindows } from "./PlannedWindows";
 import { ServedAttempts } from "./QueuePanel";
 import { formatBytes, formatDuration, formatMetric, formatUtc, shortDigest, shortId } from "./researchFormat";
@@ -397,27 +399,34 @@ function TransportDot({
 
 /* ------------------------------------------------------------ cursor links */
 
-type StageCursorTarget = { path: string; stage?: InspectionCursor["stage"] };
+type StageCursorTarget = { screen: RunScreen; stage?: EvidenceCursor["stage"] };
 
-/** Where a sealed stage opens its deep dive (spec 03 §2.2). */
+/** A chip opens the stage's own screen where one exists, else the hub tab (W5 §3.6). */
 function stageTarget(key: Stage["key"]): StageCursorTarget {
   switch (key) {
     case "S1":
-      return { path: "split" };
+      return { screen: "split" };
     case "S2":
-      return { path: "search" };
+      return { screen: "search" };
     case "S3":
-      return { path: "freeze" };
+      return { screen: "freeze" };
     case "S4":
-      return { path: "execute", stage: "execute" };
+      return { screen: "execute" };
     default:
-      return { path: "evidence", stage: "claim" };
+      return { screen: "hub", stage: "claim" };
   }
 }
 
-function runHref(runId: string, path: string, cursor: InspectionCursor): string {
-  const hash = encodeInspectionCursor(cursor);
-  return `${QUANTBT_ROOT}/runs/${encodeURIComponent(runId)}/${path}${hash ? `#${hash}` : ""}`;
+/** The typed cursor of what this page holds; `null` when it names no fold (a bare link). */
+function typedCursor(cursor: InspectionCursor): EvidenceCursor | null {
+  const fold = Number(cursor.fold);
+  if (!Number.isSafeInteger(fold) || fold < 1) return null;
+  const trial = Number(cursor.trial);
+  return { ...DEFAULT_CURSOR, fold, trial: Number.isSafeInteger(trial) && trial >= 1 ? trial : null, params: cursor.params ?? null };
+}
+
+function runHref(runId: string, screen: RunScreen, cursor: InspectionCursor, stage?: EvidenceCursor["stage"]): string {
+  return runScreenHref(runId, screen, typedCursor(cursor), stage ? { stage } : undefined);
 }
 
 /**
@@ -429,7 +438,7 @@ function runHref(runId: string, path: string, cursor: InspectionCursor): string 
 function evidenceCursor(
   fold: number | null,
   folds: ProgressSnapshot["folds"],
-  handoff: HandoffCursor | null,
+  handoff: HandoffTarget | null,
   claimCursor: InspectionCursor,
 ): InspectionCursor {
   const target = fold ?? handoff?.fold ?? null;
@@ -439,7 +448,7 @@ function evidenceCursor(
     return { fold: String(target), trial: String(selection.trial), params: selection.params_digest };
   }
   if (handoff !== null && handoff.fold === target) {
-    return { fold: String(target), trial: String(handoff.trial), params: handoff.params_digest };
+    return { fold: String(target), trial: String(handoff.trial), params: handoff.params };
   }
   return {
     fold: String(target),
@@ -522,8 +531,8 @@ function StagePills({
               <a
                 data-stage={stage.key}
                 data-stage-state={issued ? "ISSUED" : stage.state}
-                href={runHref(runId, target.path, { ...(target.stage ? { stage: target.stage } : {}), ...cursor })}
-                aria-label={`Stage ${stage.key.slice(1)} ${STAGE_LABEL[stage.key]} — open deep dive${cursor.fold ? ` at fold ${cursor.fold}` : ""}`}
+                href={runHref(runId, target.screen, cursor, target.stage)}
+                aria-label={`Stage ${stage.key.slice(1)} ${STAGE_LABEL[stage.key]}`}
                 style={style}
               >
                 {label}
@@ -840,7 +849,7 @@ interface FoldGanttProps {
   /** Native study/trial identity of per-fold-study trial events, by fold. */
   foldTrialIds?: Readonly<Record<number, FoldTrialIdentity>>;
   /** The run's structured hand-off cursor, once published. */
-  handoff: HandoffCursor | null;
+  handoff: HandoffTarget | null;
   /** The claim's own legacy cursor text, when it names a fold. */
   claimCursor: InspectionCursor;
 }
@@ -957,7 +966,7 @@ function PerFoldTrialChip({ trial, suffix = "" }: { trial: PerFoldTrial; suffix?
 function foldNote(
   fold: ProgressSnapshot["folds"][number],
   foldTrials: Readonly<Record<number, number>>,
-  handoff: HandoffCursor | null,
+  handoff: HandoffTarget | null,
   claimCursor: InspectionCursor,
   foldTrialIds: Readonly<Record<number, FoldTrialIdentity>> = {},
 ): ReactNode {
@@ -1001,7 +1010,7 @@ function foldNote(
     );
   }
   if (handoff !== null && handoff.fold === fold.fold) {
-    return `trial ${count(handoff.trial)} · ${paramsTag(handoff.params_digest)}`;
+    return `trial ${count(handoff.trial)} · ${paramsTag(handoff.params)}`;
   }
   if (claimCursor.fold === String(fold.fold) && (claimCursor.trial || claimCursor.params)) {
     return [claimCursor.trial ? `trial ${claimCursor.trial}` : null, claimCursor.params ?? null].filter(Boolean).join(" · ");
@@ -1572,6 +1581,7 @@ function TrialConsole({
     <div
       ref={box}
       role="log"
+      tabIndex={0}
       aria-live="polite"
       aria-label="Trial console"
       data-console-box
@@ -2469,9 +2479,9 @@ export function RunProgress(props: RunProgressProps) {
   const firstReadFailed = read === null && refusal !== null;
   const claimCursor = snapshot?.claim.cursor ? decodeInspectionCursor(snapshot.claim.cursor).cursor : {};
   const folds = snapshot?.folds ?? [];
-  const handoff = snapshot?.claim.handoff_cursor ?? null;
+  const handoff = cursorForHandoff(read);
   const cursor = evidenceCursor(foldCursor, folds, handoff, claimCursor);
-  const handoffHref = runHref(runId, "evidence", { stage: "summary", ...cursor });
+  const handoffHref = runHref(runId, "hub", cursor, "summary");
   const handoffLabel = cursor.fold && cursor.trial ? `fold ${cursor.fold} · trial ${cursor.trial}` : null;
   const cursorFold = folds.find((f) => f.fold === foldCursor) ?? null;
   const terminalStatus = status === "FAILED" || status === "CANCELLED";

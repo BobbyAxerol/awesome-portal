@@ -15,7 +15,8 @@ import { EvidenceFlow } from "./EvidenceFlow";
 import { RouteCursorNotice } from "./CursorNotice";
 import { useEvidenceCursor } from "./evidenceCursor";
 import { useEvidence } from "./useEvidence";
-import { isRetainedAnswer, useRunIdentity } from "./retainedLane";
+import type { EvidenceWindow } from "./evidenceWindow";
+import { useHandoffCursor } from "./handoffCursor";
 
 /**
  * VD-P23-04/05 (X3 2026-09-26): the hub is keyed by its run. Moving from run
@@ -28,20 +29,15 @@ export function EvidenceFlowRoute() {
 }
 
 function EvidenceFlowRun({ runId }: { runId: string }) {
-  const { cursor, setStage, setFold, update, reset, problems, notes, clampToObserved } = useEvidenceCursor();
+  /* W5 §3.3: the run's hand-off (θ*) seeds a hash-less arrival and is the target of "reset to θ*". One progress read, shared with the stage summaries. */
+  const handoffRead = useHandoffCursor(runId);
+  const runIdentity = handoffRead.identity;
+  const { cursor, setStage, setFold, update, reset, problems, notes, clampToObserved, handoff, atHandoff } = useEvidenceCursor(
+    {},
+    { handoff: handoffRead.cursor },
+  );
   const evidence = useEvidence(runId);
-  /* W3b: a retained answer brings the run's P11 identity with it (readiness, global selection). */
-  const retained = evidence.passport.state === "ready" && isRetainedAnswer(evidence.passport.evidence);
-  /* S5 Claim draws the whole-run artifact manifest from the same progress read (P11/E15), for any run. */
-  /* The stage summaries read the same progress snapshot (trial counts, the fold's selection), so the four stage tabs ask for it too. */
-  const runIdentity = useRunIdentity(runId, undefined, retained || ["claim", "split", "search", "freeze", "execute"].includes(cursor.stage));
-
-  /* "reset to θ*": the run's structured hand-off cursor when the progress read published one, else the cursor the screen was entered with. */
-  const handoff = runIdentity.state === "ready" ? (runIdentity.identity.progress?.progress?.claim.handoff_cursor ?? null) : null;
-  const resetCursor = useCallback(() => {
-    if (handoff) update({ fold: handoff.fold, trial: handoff.trial, params: handoff.params_digest });
-    else reset();
-  }, [handoff, update, reset]);
+  const onWindow = useCallback((next: EvidenceWindow) => update({ window: next }), [update]);
 
   /* RF-06 FE-S04-06: a linked fold the run never observed is moved to the
      nearest observed one, with a notice — not kept with both steppers dead and
@@ -66,7 +62,10 @@ function EvidenceFlowRun({ runId }: { runId: string }) {
         cursor={cursor}
         onStage={setStage}
         onFold={setFold}
-        onResetCursor={resetCursor}
+        onResetCursor={reset}
+        handoff={handoff}
+        atHandoff={atHandoff}
+        onWindow={onWindow}
         series={evidence.series}
         ensureSeries={evidence.ensureSeries}
         passport={evidence.passport}

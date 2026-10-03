@@ -41,6 +41,7 @@ import {
 import { researchState, type ResearchState } from "./state";
 import { refusalState } from "./researchRefusal";
 import { decodeInspectionCursor } from "./inspectionCursor";
+import type { CursorNote } from "./evidenceCursor";
 
 /** Whether a status means the run can still produce events. */
 export function isLive(status: ProgressRead["current"]["effective_status"]): boolean {
@@ -226,6 +227,8 @@ export interface RunProgressController {
   transport: Transport;
   /** The fold the reader pinned, or the latest one seen if they have not. */
   foldCursor: number | null;
+  /** Notes for a `#fold=` the run never observed (one-line notice). */
+  foldNotes: readonly CursorNote[];
   pinFold: (fold: number) => void;
 
   /** The latest `trial_completed.best_objective` this view has seen; null until one arrives. */
@@ -683,7 +686,17 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
 
   /* A reader's pick is a pin: the cursor follows the latest fold only while
      they have never chosen one (spec 03 pitfall 6). */
-  const foldCursor = pinnedFold ?? latestFold;
+  const foldList = read?.progress?.folds;
+  const pinKnown = pinnedFold !== null && (foldList === undefined || foldList.length === 0 || foldList.some((f) => f.fold === pinnedFold));
+  const foldCursor = pinKnown ? pinnedFold : (latestFold ?? pinnedFold);
+  /* A hand-edited `#fold=` the run never observed is moved to the latest fold, and the notice says so. */
+  const foldNotes = useMemo<CursorNote[]>(
+    () =>
+      pinnedFold !== null && !pinKnown && latestFold !== null
+        ? [{ code: "CURSOR_FOLD_CLAMPED", from: pinnedFold, to: latestFold, reason: "NOT_OBSERVED" }]
+        : [],
+    [pinKnown, pinnedFold, latestFold],
+  );
 
   /* Spec 03 §3.2: the cursor is written to the URL once the run is final, so
      the page can be shared — never while running, which would spam history. */
@@ -766,6 +779,7 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
     foldTrialIds: eventTrialIds,
     transport,
     foldCursor,
+    foldNotes,
     pinFold,
     bestObjective,
     liveRate,

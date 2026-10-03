@@ -62,17 +62,17 @@ describe("RF01-F5 — Screens 04–08 read the shared codec and lose nothing", (
     expect(parseCursor(serializeCursor(cursor))).toEqual(cursor);
   });
 
-  it("keeps a non-numeric trial id instead of dropping it", () => {
+  it("W5 §3.7: a non-numeric trial id is reported with its value and NOT carried (copy link must not re-share it)", () => {
     const cursor = parseCursor("#stage=search&fold=2&trial=t-0042");
     expect(cursor.trial).toBeNull();
-    expect(cursor.carried).toEqual({ trial: "t-0042" });
-    expect(serializeCursor(cursor)).toContain("trial=t-0042");
-    expect(parseCursorProblems("#stage=search&fold=2&trial=t-0042")).toEqual([]);
+    expect(cursor.carried).toBeUndefined();
+    expect(serializeCursor(cursor)).not.toContain("trial=");
+    expect(parseCursorProblems("#stage=search&fold=2&trial=t-0042")).toEqual([{ code: "CURSOR_VALUE_UNREADABLE", key: "trial", value: "t-0042" }]);
   });
 
   it("says so when the fold cannot be opened here", () => {
     expect(parseCursor("#fold=wf-3").fold).toBe(DEFAULT_CURSOR.fold);
-    expect(parseCursorProblems("#fold=wf-3")).toEqual([{ code: "CURSOR_VALUE_UNREADABLE", key: "fold" }]);
+    expect(parseCursorProblems("#fold=wf-3")).toEqual([{ code: "CURSOR_VALUE_UNREADABLE", key: "fold", value: "wf-3" }]);
     expect(parseCursorProblems("#stage=search&tab=x")).toEqual([{ code: "CURSOR_UNSUPPORTED_KEY", key: "tab" }]);
   });
 });

@@ -15,14 +15,13 @@
  *  UX-12/T-13/I-17  short reveal chips, run-cumulative labels, fold scores
  *  I-13   window fee: exact sum of served per-bar fees, typed absence if a bar has none
  */
-import { act, cleanup, fireEvent, render, renderHook, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ExecuteRoute } from "./ExecuteRoute";
-import { useExecuteWindow } from "./executeWindows";
 import { formatCount } from "./researchFormat";
 import type { CurrentSourceReplay, ReplayChildAudit, ReplayTransitions } from "./replayClient";
 import { forgetRunIdentities } from "./retainedLane";
@@ -293,40 +292,6 @@ describe("UX-05 · a progress read that failed is said once, not 'reading…' fo
     /* W4: no readiness chip while nothing was read; the route chip says so in one phrase. */
     expect(q(container, "[data-readiness]")?.textContent ?? "").toBe("");
     expect(q(container, "[data-route-id]")!.textContent).toBe("route not read");
-  });
-});
-
-describe("UX-01 / UX-19 · the window in the address", () => {
-  it("a change of window is one history entry; the same window again adds none", () => {
-    window.history.replaceState(null, "", "/x");
-    const { result } = renderHook(() => useExecuteWindow());
-    const depth = window.history.length;
-    act(() => result.current[1]("is"));
-    expect(window.location.search).toBe("?window=is");
-    expect(window.history.length).toBe(depth + 1);
-    act(() => result.current[1]("is"));
-    expect(window.history.length).toBe(depth + 1);
-    act(() => result.current[1]("oos"));
-    expect(window.location.search).toBe("");
-    expect(window.history.length).toBe(depth + 2);
-  });
-
-  it("an unreadable ?window= is dropped from the address on arrival, with no history entry", () => {
-    window.history.replaceState(null, "", "/x?window=bogus&keep=1");
-    const depth = window.history.length;
-    const { result } = renderHook(() => useExecuteWindow());
-    expect(result.current[0]).toBe("oos");
-    expect(window.location.search).toBe("?keep=1");
-    expect(window.history.length).toBe(depth);
-  });
-
-  it("Back / forward re-read the address", () => {
-    window.history.replaceState(null, "", "/x?window=is");
-    const { result } = renderHook(() => useExecuteWindow());
-    expect(result.current[0]).toBe("is");
-    window.history.replaceState(null, "", "/x");
-    act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
-    expect(result.current[0]).toBe("oos");
   });
 });
 

@@ -102,6 +102,28 @@ describe("S13 overlay life", () => {
     expect(container.querySelector("[data-scrub-tip]")).toBeNull();
   });
 
+  it("touch: a tap pins the readout past pointerleave and a tap outside dismisses it; a mouse leave clears", () => {
+    reducedMotion(true);
+    const { container } = render(<OverlayPlot {...overlayFixture(1_725_000_000_000)} />);
+    const area = container.querySelector(".cp-plot-area") as HTMLElement;
+    area.getBoundingClientRect = () => ({ left: 0, top: 0, right: 400, bottom: 100, width: 400, height: 100, x: 0, y: 0, toJSON: () => ({}) });
+    const fire = (type: string, pointerType: string, target: Element = area) => {
+      const ev = new Event(type, { bubbles: true });
+      Object.assign(ev, { clientX: 2, pointerType });
+      fireEvent(target, ev);
+    };
+    fire("pointerdown", "touch");
+    expect(container.querySelector("[data-scrub-tip]")).not.toBeNull();
+    fire("pointerout", "touch");
+    expect(container.querySelector("[data-scrub-tip]")).not.toBeNull();
+    fire("pointerdown", "touch", document.body);
+    expect(container.querySelector("[data-scrub-tip]")).toBeNull();
+    fire("pointermove", "mouse");
+    expect(container.querySelector("[data-scrub-tip]")).not.toBeNull();
+    fire("pointerout", "mouse");
+    expect(container.querySelector("[data-scrub-tip]")).toBeNull();
+  });
+
   it("legend toggles a series: the path goes, the tooltip drops its row, the other series stays", () => {
     reducedMotion(true);
     const { container } = render(<OverlayPlot {...overlayFixture(1_730_000_000_000)} />);

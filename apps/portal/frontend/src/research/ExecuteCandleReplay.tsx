@@ -23,7 +23,7 @@
  *    what it did.
  */
 
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { paletteNow } from "../charts/theme";
@@ -43,11 +43,12 @@ import {
   type TransitionRow,
   type ChildAuditRecord,
 } from "./replayClient";
-import { ReplayTransport, SPEEDS, useTransport } from "./replayTransport";
+import { ReplayTransport, SPEEDS, replayKeyDown, useTransport } from "./replayTransport";
 import { CapabilityStrip, GlyphShape, MarkerLayer, MarkerLegend, type CandleMarker, type ChartHandles } from "./ExecuteMarkers";
-import { EXEC_WINDOWS, bucketsInSpan, ordinalAt, withWindow, type ExecWindow, type OverviewBand } from "./executeWindows";
-import { DEFAULT_CURSOR, deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
-import { splitHref as runSplitHref } from "./runLinks";
+import { EXEC_WINDOWS, bucketsInSpan, ordinalAt, type ExecWindow, type OverviewBand } from "./executeWindows";
+import { type EvidenceCursor } from "./evidenceCursor";
+import { runScreenHref } from "./runScreenHref";
+import { ChartLive, ChartSummary, useChartContract } from "./chartContract";
 import type { ProgressRead } from "./progressClient";
 import { retainedReadiness } from "./retainedLane";
 import { SplitBandNote, retainedSplitBand, type SplitBandSlot } from "./SplitBand";
@@ -267,6 +268,11 @@ export function crosshairReadout(row: CurrentSourceObservation): CrosshairReadou
   };
 }
 
+/** The readout as one sentence: the same served cells the visible line shows. */
+function readoutText(r: CrosshairReadout): string {
+  return [r.at, `O ${r.open ?? "not published"}`, `H ${r.high ?? "not published"}`, `L ${r.low ?? "not published"}`, `C ${r.close ?? "not published"}`, `pos ${r.position ?? "not published"}`, `equity ${r.equity ?? "not published"}`].join(" ");
+}
+
 function ReadoutCell({ label, value }: { label: string; value: string | null }) {
   return (
     <span className="whitespace-nowrap">
@@ -432,6 +438,79 @@ const CHART_IN_CSS = `
 @media (prefers-reduced-motion: reduce) { .s08-chart-in { animation: none } }
 `;
 
+/**
+ * W5 §2.3: the chart contract around a lightweight-charts host. The playhead
+ * owns the index (arrows step the bar, Shift 10, Home/End the window's ends,
+ * PageUp/PageDown the previous/next transition); + - 0 zoom the time scale.
+ * The live node is written only when the playhead is at rest after the reader
+ * moved it, never on a playback tick.
+ */
+function useReplayRegion(o: {
+  chart: MutableRefObject<{ api: import("lightweight-charts").IChartApi } | null>;
+  transport: ReplayTransport;
+  label: string;
+  noun: string;
+  count: number;
+  total: number;
+  firstAt: string | null;
+  lastAt: string | null;
+  describe: (i: number) => string;
+  events?: { prev: () => void; next: () => void };
+  xs?: readonly number[];
+}) {
+  const snap = useTransport(o.transport);
+  const ref = useRef(o);
+  ref.current = o;
+  const range = () => {
+    const scale = ref.current.chart.current?.api.timeScale();
+    return scale ? { scale, now: scale.getVisibleLogicalRange() } : null;
+  };
+  const scaleBy = (ratio: number) => {
+    const r = range();
+    if (!r?.now) return;
+    const mid = (r.now.from + r.now.to) / 2;
+    const half = ((r.now.to - r.now.from) / 2) * ratio;
+    r.scale.setVisibleLogicalRange({ from: mid - half, to: mid + half });
+  };
+  const c = useChartContract({
+    label: o.label,
+    noun: o.noun,
+    count: o.count,
+    describe: (i) => ref.current.describe(i),
+    summary: o.count > 0 && o.firstAt && o.lastAt ? `${o.label}, ${o.total} ${o.noun}s, ${o.firstAt} to ${o.lastAt}. Arrow keys read a ${o.noun}.` : `${o.label}, no ${o.noun}s.`,
+    xs: o.xs,
+    controlledIndex: snap.index,
+    onIndex: (i) => {
+      if (i !== null) o.transport.seek(i);
+    },
+    events: o.events,
+    zoom: {
+      zoomIn: () => scaleBy(0.7),
+      zoomOut: () => scaleBy(1.4),
+      pan: () => undefined,
+      zoomed: false,
+      reset: () => ref.current.chart.current?.api.timeScale().setVisibleLogicalRange({ from: -AXIS_END_ROOM_BARS, to: ref.current.total - 1 + AXIS_END_ROOM_BARS }),
+    },
+  });
+  const [rest, setRest] = useState<string | null>(null);
+  useEffect(() => {
+    if (snap.playing || !snap.moved || snap.index >= ref.current.count) return;
+    setRest(ref.current.describe(snap.index));
+  }, [snap.playing, snap.moved, snap.index]);
+  const merge = (className?: string, style?: React.CSSProperties) => ({
+    ...c.regionProps,
+    className: `${c.regionProps.className ?? ""} ${className ?? ""}`.trim(),
+    style: { ...c.regionProps.style, ...style },
+  });
+  const nodes = (
+    <>
+      <ChartLive text={rest} />
+      <ChartSummary id={c.summaryId} text={ref.current.count > 0 && o.firstAt && o.lastAt ? `${o.label}, ${o.total} ${o.noun}s, ${o.firstAt} to ${o.lastAt}. Arrow keys read a ${o.noun}.` : `${o.label}, no ${o.noun}s.`} />
+    </>
+  );
+  return { merge, nodes };
+}
+
 function CandleChart({
   rows,
   transport,
@@ -441,9 +520,12 @@ function CandleChart({
   selected,
   onHover,
   onPick,
+  onTransition,
 }: {
   rows: readonly CurrentSourceObservation[];
   transport: ReplayTransport;
+  /** PageUp / PageDown: the previous / next transition (the transport row's own handler). */
+  onTransition?: (direction: -1 | 1) => void;
   reveal: boolean;
   /** The window's served transitions (ledger-enriched where a ledger page was read). */
   markers: readonly CandleMarker[];
@@ -665,6 +747,26 @@ function CandleChart({
   const probeRow = probe !== null && probe < cut ? rows[probe] : undefined;
   const readoutRow = probeRow ?? (index < cut ? rows[index] : undefined);
   const readout = useMemo(() => (readoutRow ? crosshairReadout(readoutRow) : null), [readoutRow]);
+  const xs = useMemo(() => {
+    if (!handles || box.width <= 0) return undefined;
+    return rows.slice(0, cut).map((row) => {
+      const x = handles.timeX(row.at_utc_ms);
+      return x === null ? -1000 : (x / box.width) * 100;
+    });
+  }, [handles, box.width, rows, cut]);
+  const region = useReplayRegion({
+    chart,
+    transport,
+    label: "Candle chart",
+    noun: "bar",
+    count: cut,
+    total: rows.length,
+    firstAt: rows[0] ? iso(rows[0].at_utc_ms) : null,
+    lastAt: rows.length > 0 ? iso(rows[rows.length - 1]!.at_utc_ms) : null,
+    describe: (i) => readoutText(crosshairReadout(rows[i]!)),
+    events: onTransition ? { prev: () => onTransition(-1), next: () => onTransition(1) } : undefined,
+    xs,
+  });
 
   return (
     <div className="relative" data-chart="replay-candles" data-chart-status={status}>
@@ -685,7 +787,10 @@ function CandleChart({
           <ReadoutCell label="equity" value={readout.equity} />
         </div>
       ) : null}
-      <div ref={host} className={status === "ready" && smokeMotionAllowed() ? "s08-chart-in" : undefined} style={{ height: 420 }} aria-hidden="true" />
+      <div {...region.merge()}>
+        <div ref={host} className={status === "ready" && smokeMotionAllowed() ? "s08-chart-in" : undefined} style={{ height: 420 }} aria-hidden="true" />
+      </div>
+      {region.nodes}
       {status !== "ready" ? (
         <span className="mono absolute left-3 top-3 text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
           {status === "loading" ? "drawing candles…" : "the chart could not be drawn here; every bar is listed for screen readers"}
@@ -2003,11 +2108,8 @@ export function CandleReplayBody({
   const provenance = replay.provenance;
   const window = rows.length > 0 ? `${rows[0]!.source_ordinal + 1}–${rows.at(-1)!.source_ordinal + 1}` : "none read";
   const segment = foldIndex >= 0 ? segments[foldIndex]! : null;
-  const runPath = `/research/quantbt/runs/${encodeURIComponent(replay.run_id)}`;
-  const splitHref =
-    cursor !== null
-      ? runSplitHref(replay.run_id, { cursor, window: windowKey === "oos" ? null : windowKey })
-      : withWindow(deepDiveHref(`${runPath}/split`, { ...DEFAULT_CURSOR, stage: "split", fold: foldIndex >= 0 ? foldIndex + 1 : 1 }), windowKey);
+  /* The arriving cursor (window included) with only the fold overridden by the fold on screen. */
+  const splitHref = runScreenHref(replay.run_id, "split", cursor, foldIndex >= 0 ? { fold: foldIndex + 1 } : undefined);
   const caps = replay.route_capabilities;
   const capabilityItems = [
     { name: "orders", label: "orders", fact: caps.orders },
@@ -2078,7 +2180,8 @@ export function CandleReplayBody({
         aria-label="stitched account replay"
         data-replay-window="RETAINED_BARS"
         data-replay-section
-        tabIndex={0}
+        tabIndex={-1}
+        onKeyDown={replayKeyDown(transport)}
         data-window-key={windowKey}
         data-retained-in-flight={String(inFlight)}
       >
@@ -2177,7 +2280,7 @@ export function CandleReplayBody({
           ) : (
           <>
             {rows.length > 0 ? (
-              <CandleChart rows={rows} transport={transport} reveal={reveal} markers={markers} hover={hover} selected={selected?.source_ordinal ?? null} onHover={setHover} onPick={pickMarker} />
+              <CandleChart rows={rows} transport={transport} onTransition={transitionStep} reveal={reveal} markers={markers} hover={hover} selected={selected?.source_ordinal ?? null} onHover={setHover} onPick={pickMarker} />
             ) : null}
             <Transport
               transport={transport}
@@ -2509,6 +2612,20 @@ export function FixedCandleChart({ rows, transport }: { rows: readonly FixedRepl
   const probeRow = probe !== null ? rows[probe] : undefined;
   const readoutRow = probeRow ?? rows[index];
   const readout = useMemo(() => (readoutRow ? fixedCrosshairReadout(readoutRow) : null), [readoutRow]);
+  const region = useReplayRegion({
+    chart,
+    transport,
+    label: "Candle chart",
+    noun: "observation",
+    count: rows.length,
+    total: rows.length,
+    firstAt: rows[0] ? iso(rows[0].at_utc_ms) : null,
+    lastAt: rows.length > 0 ? iso(rows[rows.length - 1]!.at_utc_ms) : null,
+    describe: (i) => {
+      const r = fixedCrosshairReadout(rows[i]!);
+      return [r.at, `O ${r.open ?? "not published"}`, `H ${r.high ?? "not published"}`, `L ${r.low ?? "not published"}`, `C ${r.close ?? "not published"}`, ...r.positions.map((p) => `pos ${p.key} ${p.shown}`), `equity ${r.equity ?? "not published"}`].join(" ");
+    },
+  });
 
   return (
     <div className="relative" data-chart="fixed-replay-candles" data-chart-status={status}>
@@ -2538,7 +2655,10 @@ export function FixedCandleChart({ rows, transport }: { rows: readonly FixedRepl
           <ReadoutCell label="equity" value={readout.equity} />
         </div>
       ) : null}
-      <div ref={host} className={status === "ready" && smokeMotionAllowed() ? "s08-chart-in" : undefined} style={{ height: 420 }} aria-hidden="true" />
+      <div {...region.merge()}>
+        <div ref={host} className={status === "ready" && smokeMotionAllowed() ? "s08-chart-in" : undefined} style={{ height: 420 }} aria-hidden="true" />
+      </div>
+      {region.nodes}
       {status !== "ready" ? (
         <span className="mono absolute left-3 top-3 text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
           {status === "loading" ? "drawing candles…" : "the chart could not be drawn here; every observation is listed for screen readers"}

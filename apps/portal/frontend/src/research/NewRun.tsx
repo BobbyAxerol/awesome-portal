@@ -418,7 +418,7 @@ function WizardBar({
             aria-current={isCurrent ? "step" : undefined}
             /* Roving tabindex: the tab list is one stop, arrows move inside it (U14). */
             tabIndex={isCurrent ? 0 : -1}
-            aria-label={showText ? undefined : `${step.label}${caption ? ` — ${caption}` : ""}`}
+            aria-label={`${step.label}${caption ? ` — ${caption}` : ""}`}
             title={showText ? undefined : `${step.label}${caption ? ` — ${caption}` : ""}`}
             data-step-pill={step.id}
             data-step-state={stepState}

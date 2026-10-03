@@ -66,6 +66,7 @@ import type { ReportController } from "./useReport";
 import type { ReportExportController } from "./useReportExport";
 import { iso } from "./utcMinute";
 import { FailedSheet, FinalAuditBlock } from "./ReportFailedSheet";
+import { useChartContract } from "./chartContract";
 import { ALL_TIME_CSS, AllTimeSupplement, nextWindow, useEntryMotion } from "./ReportAllTime";
 import { ShortId } from "./ShortId";
 import { enrichedBlock } from "./enrichedAnalysis";
@@ -593,10 +594,9 @@ function Header({ runId, report, phase }: { runId: string; report: ReportDetail 
       <div className="rr-head-text" data-head-text>
         <div className="rr-kicker">Quant Ecosystem Portal · Backtest Evidence Report</div>
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          {/* The module header above owns the page's one h1. */}
-          <h2 className="rr-title" data-report-title data-title-source={v2?.title.text || failed?.title.text ? "report" : "generic"}>
+          <h1 className="rr-title" data-report-title data-title-source={v2?.title.text || failed?.title.text ? "report" : "generic"}>
             {title}
-          </h2>
+          </h1>
           <span className="rr-runchip rr-long" data-run-chip>
             <ShortId id={report?.run_id ?? runId} label="run" />
           </span>
@@ -890,9 +890,27 @@ function EquityDigest({ equity }: { equity: ReportEquity }) {
   );
 }
 
+/** Above this many rows the full table is a visible "Data" disclosure; the chart carries a summary and a keyboard readout instead. */
+const SR_TABLE_MAX_ROWS = 120;
+
+function EquityTable({ allPoints }: { allPoints: ReportEquity["points"] }) {
+  return (
+    <table>
+      <caption>Sealed equity points, exact values</caption>
+      <tbody>
+        {allPoints.map((point) => (
+          <tr key={point.at_utc_ms}>
+            <th scope="row">{iso(point.at_utc_ms)}</th>
+            <td>{point.equity}</td>
+            <td>{point.drawdown_fraction}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 function EquityFigure({ equity, folds, equityIs, sourceFallback = null }: { equity: ReportEquity; folds: ReportFolds; equityIs: ReportEquity | null; sourceFallback?: number | null }) {
-  /* QA S09 (UX-8): a pointer or the arrow keys read one sealed point: its day, equity and drawdown, exactly as sealed. */
-  const [probe, setProbe] = useState<number | null>(null);
   /* The shared time window of the equity plot and the underwater strip below it; null = the whole sealed series. */
   const [win, setWin] = useState<[number, number] | null>(null);
   const motion = useEntryMotion();
@@ -918,9 +936,30 @@ function EquityFigure({ equity, folds, equityIs, sourceFallback = null }: { equi
       )
     : 4;
   const gutter = { "--rr-gutter": `calc(${gutterChars}ch + 10px)` } as CSSProperties;
-  const probePoint = probe !== null && drawn ? nearestPoint(points, probe) : null;
-  const probeSpan = points.length > 1 ? points[points.length - 1]!.at_utc_ms - points[0]!.at_utc_ms : 0;
-  const probePct = probePoint !== null && probeSpan > 0 ? ((probePoint.at_utc_ms - points[0]!.at_utc_ms) / probeSpan) * 100 : 0;
+  /* W5 S09: one chart contract reads a sealed point (keys, hover, touch tap pinned): day, equity, drawdown, exactly as sealed. */
+  const pointSpan = points.length > 1 ? points[points.length - 1]!.at_utc_ms - points[0]!.at_utc_ms : 0;
+  const pointXs = points.map((point) => (pointSpan > 0 ? ((point.at_utc_ms - points[0]!.at_utc_ms) / pointSpan) * 100 : 0));
+  const pointTitle = (point: (typeof points)[number]) => `${iso(point.at_utc_ms)} · equity ${point.equity} · drawdown ${point.drawdown_fraction}`;
+  const chart = useChartContract({
+    label: "Equity",
+    noun: "point",
+    count: drawn ? points.length : 0,
+    describe: (i) => pointTitle(points[i]!),
+    summary: points.length > 0 ? `Equity chart, ${points.length} points, ${iso(points[0]!.at_utc_ms)} to ${iso(points[points.length - 1]!.at_utc_ms)}. Arrow keys read a point.` : "Equity chart, no points.",
+    xs: pointXs,
+    zoom: {
+      zoomIn: () => zoomBy(1, probeAt()),
+      zoomOut: () => zoomBy(-1, probeAt()),
+      pan: (dir) => setWin(nextWindow(stamps, win, 0, null, dir * 0.25)),
+      reset: () => setWin(null),
+      zoomed,
+    },
+  });
+  const probePoint = chart.index !== null && drawn ? (points[chart.index] ?? null) : null;
+  function probeAt(): number | null {
+    return probePoint ? probePoint.at_utc_ms : null;
+  }
+  const probePct = chart.index !== null ? (pointXs[chart.index] ?? 0) : 0;
   return (
     <figure className="rr-equity rr-keep" data-panel="equity" data-equity-state={equity.state}>
       <figcaption>
@@ -958,39 +997,14 @@ function EquityFigure({ equity, folds, equityIs, sourceFallback = null }: { equi
               </span>
             </div>
             <div
-              className="rr-eq-area"
               data-equity-probe-area
-              tabIndex={0}
-              role="group"
-              aria-label="equity chart: move the pointer or use the arrow keys to read a point; plus and minus zoom the time window"
-              onPointerMove={(event) => {
-                const box = event.currentTarget.getBoundingClientRect();
-                if (box.width <= 0) return;
-                setProbe((event.clientX - box.left) / box.width);
-              }}
-              onPointerLeave={() => setProbe(null)}
-              onBlur={() => setProbe(null)}
-              onKeyDown={(event) => {
-                if (event.key === "+" || event.key === "=" || event.key === "-" || event.key === "_") {
-                  event.preventDefault();
-                  return zoomBy(event.key === "+" || event.key === "=" ? 1 : -1, probePoint ? probePoint.at_utc_ms : null);
-                }
-                if (event.key !== "ArrowLeft" && event.key !== "ArrowRight" && event.key !== "Escape") return;
-                event.preventDefault();
-                if (event.key === "Escape") return setProbe(null);
-                if (event.shiftKey && zoomed) return setWin(nextWindow(stamps, win, 0, null, event.key === "ArrowRight" ? 0.25 : -0.25));
-                const index = probePoint ? points.indexOf(probePoint) : event.key === "ArrowRight" ? -1 : points.length;
-                const next = points[Math.min(points.length - 1, Math.max(0, index + (event.key === "ArrowRight" ? 1 : -1)))]!;
-                const first = points[0]!.at_utc_ms;
-                const last = points[points.length - 1]!.at_utc_ms;
-                setProbe(last === first ? 0 : (next.at_utc_ms - first) / (last - first));
-              }}
+              {...chart.regionProps}
+              className={`rr-eq-area ${chart.regionProps.className ?? ""}`}
             >
               <svg
                 viewBox={`0 0 ${drawn.width} ${drawn.height}`}
                 preserveAspectRatio="none"
-                role="img"
-                aria-label={`${withIs ? "Account before the first OOS window and stitched OOS" : "Stitched OOS"} equity, ${drawn.drawn} sealed points, with drawdown below`}
+                aria-hidden="true"
                 data-equity-svg
               >
                 {/* E14 · 9.10: the hi-fi's six-rule grid (VD-P20-27: only the
@@ -1014,10 +1028,9 @@ function EquityFigure({ equity, folds, equityIs, sourceFallback = null }: { equi
                   <span
                     className="rr-eq-tip"
                     style={probePct > 55 ? { right: `${100 - probePct}%`, marginRight: 6 } : { left: `${probePct}%`, marginLeft: 6 }}
-                    role="status"
                     data-equity-tip
                     data-exact-equity={probePoint.equity}
-                    title={`${iso(probePoint.at_utc_ms)} · equity ${probePoint.equity} · drawdown ${probePoint.drawdown_fraction}`}
+                    title={pointTitle(probePoint)}
                   >
                     <span>{iso(probePoint.at_utc_ms)}</span>
                     <span>{formatMetric(probePoint.equity, "currency") ?? probePoint.equity}</span>
@@ -1028,6 +1041,7 @@ function EquityFigure({ equity, folds, equityIs, sourceFallback = null }: { equi
                   </span>
                 </>
               ) : null}
+              {chart.nodes}
               <div aria-hidden="true">
                 {drawn.yLabels.map((label) => (
                   <span key={label.text} className="rr-lbl y" style={{ top: `${label.pct}%` }} data-y-label data-exact={label.text} title={label.text}>
@@ -1109,20 +1123,16 @@ function EquityFigure({ equity, folds, equityIs, sourceFallback = null }: { equi
       </p>
       <EquityDigest equity={equity} />
       {drawable ? (
-        <div className="rr-sr sr-only" data-sr-equity-table>
-          <table>
-            <caption>Sealed equity points, exact values</caption>
-            <tbody>
-              {allPoints.map((point) => (
-                <tr key={point.at_utc_ms}>
-                  <th scope="row">{iso(point.at_utc_ms)}</th>
-                  <td>{point.equity}</td>
-                  <td>{point.drawdown_fraction}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        allPoints.length > SR_TABLE_MAX_ROWS ? (
+          <details className="rr-data" data-sr-equity-table data-equity-data>
+            <summary>Data</summary>
+            <EquityTable allPoints={allPoints} />
+          </details>
+        ) : (
+          <div className="rr-sr sr-only" data-sr-equity-table>
+            <EquityTable allPoints={allPoints} />
+          </div>
+        )
       ) : null}
     </figure>
   );
@@ -1760,9 +1770,9 @@ export function ReportScreen({ runId, cursor = null, window: evidenceWindow = nu
           <header className="rr-head" data-panel="header">
             <div className="rr-head-text">
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h2 className="rr-title" data-report-title>
+                <h1 className="rr-title" data-report-title>
                   Run report
-                </h2>
+                </h1>
                 {unavailable ? null : (
                   <span className="rr-runchip rr-long" data-run-chip>
                     <ShortId id={runId} label="run" />

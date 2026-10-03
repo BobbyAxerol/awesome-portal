@@ -387,7 +387,7 @@ describe("S13 Compare — reads and order", () => {
     expect(document.querySelector("[data-subtitle]")).toBeNull();
     expect(document.querySelectorAll("[data-ladder-run]")).toHaveLength(0);
     expect(panel("ladder")?.textContent).not.toMatch(/\d/);
-    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(COMPARE_TITLE);
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(COMPARE_TITLE);
   });
 
   it("S13-U02 sends one GET with mode=attempts and lays the server's attempt order out reversed, weak → strong as the hi-fi reads (rank 3, 3, not published)", async () => {
@@ -690,7 +690,7 @@ describe("S13 Compare — URL and switching", () => {
     expect(page().getAttribute("data-compare-state")).toBe("loading");
     release(new Response(JSON.stringify(attempts([run("run_x")])), { status: 200 }));
     await waitFor(() => expect(document.querySelector('[data-ladder-run="run_x"]')).not.toBeNull());
-    expect(document.querySelector('[data-mode-option="attempts"]')?.getAttribute("aria-pressed")).toBe("true");
+    expect(document.querySelector('[data-mode-option="attempts"]')?.getAttribute("aria-selected")).toBe("true");
     expect(MODE_LABELS.pair).toBe("Pair");
     expect(MODE_TITLES.pair).toBe("Two runs, one key");
   });
@@ -700,7 +700,7 @@ describe("S13 Compare — URL and switching", () => {
     renderAt(`${base}?runs=run_a,run_b`);
     await settled();
     expect(calls[0]!.url).toContain("mode=pair");
-    expect(document.querySelector('[data-mode-option="pair"]')?.getAttribute("aria-pressed")).toBe("true");
+    expect(document.querySelector('[data-mode-option="pair"]')?.getAttribute("aria-selected")).toBe("true");
   });
 
   it("S13-U19 the resolver redirects with alpha= and refuses to guess without it", async () => {

@@ -1,36 +1,47 @@
 /**
- * W4 · C — S06/S08 transport keys act only inside the replay section.
- * Space and the arrows scroll and move focus as usual everywhere else on the page.
+ * W4 · C / W5 · C - S06/S08 transport keys act only inside the replay section.
+ * The section's own `onKeyDown` (no window listener): Space and the arrows
+ * scroll and move focus as usual everywhere else on the page.
  */
-import { renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
-import { useTransportInput } from "./ExecuteDetail";
-import { ReplayTransport } from "./replayTransport";
+import { ReplayTransport, replayKeyDown } from "./replayTransport";
 
-afterEach(() => {
-  document.body.innerHTML = "";
-});
-
-describe("useTransportInput — scoped to [data-replay-section]", () => {
-  it("ignores Space and the arrows outside the replay section, acts on them inside", () => {
+describe("replayKeyDown - scoped to the replay section", () => {
+  it("ignores Space and the arrows outside the section, acts on them inside", () => {
     const transport = new ReplayTransport();
     const toggle = vi.spyOn(transport, "toggle");
     const step = vi.spyOn(transport, "step");
-    document.body.innerHTML = `<main><a id="outside" href="#x">x</a><section data-replay-section tabindex="0"><span id="inside">y</span></section></main>`;
-    renderHook(() => useTransportInput(transport));
-    const press = (id: string, key: string) => {
-      const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
-      document.getElementById(id)!.dispatchEvent(event);
-      return event.defaultPrevented;
-    };
-    expect(press("outside", " ")).toBe(false);
-    expect(press("outside", "ArrowRight")).toBe(false);
+    const { getByText } = render(
+      <main>
+        <a href="#x">outside</a>
+        <section aria-label="stitched account replay" tabIndex={-1} onKeyDown={replayKeyDown(transport)}>
+          <span>inside</span>
+        </section>
+      </main>,
+    );
+    expect(fireEvent.keyDown(getByText("outside"), { key: " " })).toBe(true);
+    expect(fireEvent.keyDown(getByText("outside"), { key: "ArrowRight" })).toBe(true);
     expect(toggle).not.toHaveBeenCalled();
     expect(step).not.toHaveBeenCalled();
-    expect(press("inside", " ")).toBe(true);
-    expect(press("inside", "ArrowRight")).toBe(true);
+    expect(fireEvent.keyDown(getByText("inside"), { key: " " })).toBe(false);
+    expect(fireEvent.keyDown(getByText("inside"), { key: "ArrowRight" })).toBe(false);
     expect(toggle).toHaveBeenCalledTimes(1);
     expect(step).toHaveBeenCalledTimes(1);
+  });
+
+  it("a key the chart region already handled is not done twice", () => {
+    const transport = new ReplayTransport();
+    const step = vi.spyOn(transport, "step");
+    const { getByText } = render(
+      <section onKeyDown={replayKeyDown(transport)}>
+        <div tabIndex={0} onKeyDown={(event) => event.preventDefault()}>
+          region
+        </div>
+      </section>,
+    );
+    fireEvent.keyDown(getByText("region"), { key: "ArrowRight" });
+    expect(step).not.toHaveBeenCalled();
   });
 });

@@ -12,9 +12,10 @@
  * Nothing is computed from the values: a tooltip prints the string the server
  * sent, or the typed absence text.
  */
-import { useCallback, useEffect, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
 import { smokeMotionAllowed } from "../execution/smokeMotion";
+import { nearestIndex, useChartContract } from "./chartContract";
 
 /** ECharts' own entry timing: 500-700 ms, cubicOut. */
 export const DRAW_IN_MS = 600;
@@ -53,49 +54,13 @@ export function pathVertices(path: string, box = 1000): { x: number; y: number }
     .filter((v) => Number.isFinite(v.x) && Number.isFinite(v.y));
 }
 
-/** The index whose x is nearest to `pct` (percent of the plot width). */
-export function nearestIndex(xs: readonly number[], pct: number): number {
-  let best = 0;
-  for (let i = 1; i < xs.length; i += 1) if (Math.abs(xs[i]! - pct) < Math.abs(xs[best]! - pct)) best = i;
-  return best;
-}
+export { nearestIndex };
 
+/** Nearest-point scrub over `xs` (percent of plot width): a thin wrapper over the chart contract. */
 export function useScrub(xs: readonly number[]) {
-  const [index, setIndex] = useState<number | null>(null);
-  const count = xs.length;
-  const move = useCallback(
-    (event: PointerEvent<HTMLElement>) => {
-      const rect = event.currentTarget.getBoundingClientRect();
-      if (rect.width <= 0 || count === 0) return;
-      setIndex(nearestIndex(xs, ((event.clientX - rect.left) / rect.width) * 100));
-    },
-    [xs, count],
-  );
-  const key = useCallback(
-    (event: KeyboardEvent<HTMLElement>) => {
-      if (count === 0) return;
-      const at = index ?? (event.key === "ArrowLeft" || event.key === "End" ? count : -1);
-      const next =
-        event.key === "ArrowRight" ? Math.min(count - 1, at + 1)
-        : event.key === "ArrowLeft" ? Math.max(0, at - 1)
-        : event.key === "Home" ? 0
-        : event.key === "End" ? count - 1
-        : event.key === "Escape" ? null
-        : undefined;
-      if (next === undefined) return;
-      event.preventDefault();
-      setIndex(next);
-    },
-    [index, count],
-  );
-  const handlers = {
-    onPointerMove: move,
-    onPointerDown: move,
-    onPointerLeave: () => setIndex(null),
-    onBlur: () => setIndex(null),
-    onKeyDown: key,
-  };
-  return { index: index !== null && index < count ? index : null, handlers };
+  const c = useChartContract({ label: "chart", noun: "point", count: xs.length, describe: () => "", summary: "", xs });
+  const { onPointerMove, onPointerDown, onPointerLeave, onBlur, onKeyDown } = c.regionProps;
+  return { index: c.index, handlers: { onPointerMove, onPointerDown, onPointerLeave, onBlur, onKeyDown } };
 }
 
 export interface ScrubDot {

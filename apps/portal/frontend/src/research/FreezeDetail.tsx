@@ -57,7 +57,8 @@ import {
   type IntegrityCheck,
 } from "./freezeClient";
 import { HAIRLINE_PERCENT, placeInTimeline } from "./splitClient";
-import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
+import type { EvidenceCursor } from "./evidenceCursor";
+import { runScreenHref } from "./runScreenHref";
 import { hubDelegates, readsRetainedLane, type RetainedSlot, type VerifySlot } from "./useFreeze";
 import type { ResearchState } from "./state";
 import { reasonCodeSentence } from "./researchRefusal";
@@ -969,7 +970,7 @@ function RetainedStrip({ freeze, identity }: { freeze: RetainedFreeze; identity:
             data-selected-trial={selection.selected_trial_id}
             title={trialTitle}
           >
-            {trialLabel({ sourceId: selection.selected_trial_id })}
+            {trialLabel({ ordinal: selection.selected_trial_ordinal, sourceId: selection.selected_trial_id })}
           </span>
         ) : (
           <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
@@ -1392,7 +1393,7 @@ function FoldOrderingAxes({ ordering }: { ordering: FoldOrdering }) {
         <span className="mono text-[9.5px] font-bold uppercase tracking-[.1em]" style={{ color: "var(--warn)" }}>
           {ordering.counts.folds} {ordering.counts.folds === 1 ? "fold" : "folds"}
         </span>
-        <ol className="flex max-h-[320px] flex-col gap-1 overflow-y-auto">
+        <ol className="flex max-h-[320px] flex-col gap-1 overflow-y-auto" tabIndex={0} role="region" aria-label="trial pool">
           {ordering.folds.map((fold) => (
             <li
               key={fold.fold_id}
@@ -1650,9 +1651,9 @@ export function FreezeScreen({
       data-embedded={embedded ? "hub" : undefined}
     >
       {embedded ? null : (
-      <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" style={{ color: "var(--ink-soft)" }}>
+      <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Run path" style={{ color: "var(--ink-soft)" }}>
         <Link
-          to={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/evidence`, { ...cursor, stage: "freeze" })}
+          to={runScreenHref(runId, "hub", cursor, { stage: "freeze" })}
           style={{ color: "var(--accent)" }}
           data-action="back-to-hub"
         >
@@ -1666,7 +1667,7 @@ export function FreezeScreen({
         </span>
         <span style={{ color: "var(--ink-faint)" }}>·</span>
         <Link
-          to={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/search`, { ...cursor, stage: "search" })}
+          to={runScreenHref(runId, "search", cursor)}
           className="mono text-[10px]"
           style={{ color: "var(--accent)" }}
           data-action="back-to-search"
@@ -1676,7 +1677,7 @@ export function FreezeScreen({
         <span style={{ color: "var(--ink-faint)" }}>·</span>
         {/* P17 · spec 08 §1 inbound "07 next-stage". */}
         <Link
-          to={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/execute`, { ...cursor, stage: "execute" })}
+          to={runScreenHref(runId, "execute", cursor)}
           className="mono text-[10px]"
           style={{ color: "var(--accent)" }}
           data-action="next-execute"
@@ -1690,6 +1691,7 @@ export function FreezeScreen({
             <LineageLink
               to={lineageHref(identity.identity.progress.run.alpha.alpha_id, {
                 av: identity.identity.progress.run.alpha.alpha_version_id,
+                run: runId,
               })}
               className="mono text-[10px]"
               action="open-lineage"
@@ -1897,7 +1899,7 @@ export function FreezeScreen({
                 ) : (
                   <Stage4Binding bundleDigest={freeze.selection.parameter_bundle_digest} />
                 )}
-                {embedded ? null : <ExecuteLink href={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/execute`, { ...cursor, stage: "execute" })} />}
+                {embedded ? null : <ExecuteLink href={runScreenHref(runId, "execute", cursor)} />}
               </div>
             </div>
 
@@ -1928,7 +1930,7 @@ export function FreezeScreen({
             onVerify={onVerify}
             evaluate={whatIfEvaluate}
             onEvaluate={onWhatIfEvaluate}
-            executeHref={embedded ? null : deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/execute`, { ...cursor, stage: "execute" })}
+            executeHref={embedded ? null : runScreenHref(runId, "execute", cursor)}
           />
         ) : null}
       </ResearchPanel>

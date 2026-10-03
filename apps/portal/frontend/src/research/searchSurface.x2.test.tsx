@@ -125,7 +125,8 @@ describe("X2 · B3 — A2 trial surface (T09) and the honest sampling caption", 
     expect(surface.querySelectorAll("[data-surface-point]")).toHaveLength(3);
     const theta = surface.querySelector("[data-surface-point='0']") as HTMLElement;
     expect(theta.getAttribute("data-point-role")).toBe("theta best");
-    expect(theta.getAttribute("aria-label")).toContain("trial 0 · IS −1.44 · window 34 · rvol 1.2");
+    expect(theta.getAttribute("aria-label")).toBe("trial 0 · IS −1.44");
+    expect(theta.getAttribute("title")).toContain("trial 0 · IS −1.44 · window 34 · rvol 1.2");
     const served = SURFACE.surface!.points.find((point) => point.trial_id === "0")!;
     expect(parseFloat(theta.style.left)).toBeCloseTo(served.positions.window! * 0.96 + 2, 2);
     expect([...surface.querySelectorAll("[data-surface-point]")].map((dot) => dot.getAttribute("data-point-bucket"))).toEqual(["4", "0", "2"]);

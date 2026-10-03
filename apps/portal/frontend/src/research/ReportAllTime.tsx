@@ -8,11 +8,12 @@
  * before the enrichment has no block; that is one typed line, never an empty frame. Nothing is computed.
  */
 
-import { useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
+import { useChartContract } from "./chartContract";
 
 import { smokeMotionAllowed } from "../execution/smokeMotion";
 
-import type { EnrichedAnalysis, EnrichedEpisode, EnrichedFact, EnrichedRead, IsFactRow } from "./enrichedAnalysis";
+import type { EnrichedAnalysis, EnrichedBucket, EnrichedEpisode, EnrichedFact, EnrichedRead, IsFactRow } from "./enrichedAnalysis";
 import { ENRICHED_CHIP, bucketPosition, distributionStatistics, enrichedBlock, episodeLabel, readIsFacts, regimeAbsence, windowBands } from "./enrichedAnalysis";
 import { enrichedAbsenceTitle } from "./enrichedAvailability";
 import { formatMetric, shortDigest } from "./researchFormat";
@@ -265,16 +266,18 @@ const MIN_ZOOM_POINTS = 8;
  * served string; a panel with no served series says so and draws nothing.
  */
 function Curve({ block, activeEpisode = null }: { block: EnrichedAnalysis; activeEpisode?: number | null }) {
+  /* The chart contract hook runs in the body; this guard keeps it out of the absent branch. */
+  if (block.curves.strategy_rebased_100.length < 2) return <AbsentLine state="NOT_PUBLISHED" reason={null} what="strategy curve" />;
+  return <CurveBody block={block} activeEpisode={activeEpisode} />;
+}
+
+function CurveBody({ block, activeEpisode = null }: { block: EnrichedAnalysis; activeEpisode?: number | null }) {
   const motion = useEntryMotion();
   const [win, setWin] = useState<[number, number] | null>(null);
-  const [probe, setProbe] = useState<number | null>(null);
-  const plotRef = useRef<HTMLDivElement>(null);
+  const atRef = useRef<number | null>(null);
   const strategy = block.curves.strategy_rebased_100;
   const benchmark = block.curves.benchmark_rebased_100;
   const underwater = block.curves.drawdown_fraction;
-  if (strategy.length < 2) {
-    return <AbsentLine state="NOT_PUBLISHED" reason={null} what="strategy curve" />;
-  }
   const fullStamps = [...strategy, ...benchmark, ...underwater].map((point) => point.at_utc_ms).sort((a, b) => a - b);
   const full0 = fullStamps[0]!;
   const full1 = fullStamps[fullStamps.length - 1]!;
@@ -289,7 +292,6 @@ function Curve({ block, activeEpisode = null }: { block: EnrichedAnalysis; activ
   const rangeB = visB.length > 1 ? rangeOf(visB) : null;
   const lineS = rangeS ? path(view, x0, x1, Number(rangeS.lowText), Number(rangeS.highText)) : null;
   const lineB = rangeB ? path(visB, x0, x1, Number(rangeB.lowText), Number(rangeB.highText)) : null;
-  if (lineS === null || rangeS === null) return <AbsentLine state="NOT_PUBLISHED" reason={null} what="strategy curve" />;
   /* The underwater strip: depth grows downward, scaled to the deepest served magnitude. */
   const depths = visD.map((point) => Math.abs(Number(point.value)));
   const deepest = depths.length > 1 && depths.every(Number.isFinite) ? Math.max(...depths) : null;
@@ -299,7 +301,6 @@ function Curve({ block, activeEpisode = null }: { block: EnrichedAnalysis; activ
       : null;
   const deepestText = deepest !== null ? (visD[depths.indexOf(deepest)]?.value ?? null) : null;
   const sampling = block.curves.sampling;
-  const label = `strategy${lineB !== null ? " and market benchmark on their own scales" : ""}, rebased to 100, all time, ${sampling.emitted_point_count} of ${sampling.source_observation_count} points. Arrow keys read a point, plus and minus zoom.`;
   const pct = (at: number) => (x1 === x0 ? 50 : ((at - x0) / (x1 - x0)) * 100);
   const episodes = block.drawdown_episodes.state === "AVAILABLE" ? block.drawdown_episodes.values : [];
   const bands = episodes.flatMap((episode, index) => {
@@ -309,31 +310,36 @@ function Curve({ block, activeEpisode = null }: { block: EnrichedAnalysis; activ
   });
   /* B9: the served half-open IS / OOS / HOLDOUT bounds, as role bands under the curve (frames, not payloads). */
   const windows = windowBands(block.windows);
-  const at = probe !== null && probe >= x0 && probe <= x1 ? nearestAt(view, probe) : null;
+  const canZoomIn = view.length > MIN_ZOOM_POINTS;
+  const setZoomAt = (dir: 1 | -1, centre: number | null) => setWin(nextWindow(strategy.map((point) => point.at_utc_ms), win, dir, centre, 0, MIN_ZOOM_POINTS));
+  const tipTitle = (point: { at_utc_ms: number; value: string }): string => {
+    const b = lineB !== null ? nearestAt(visB, point.at_utc_ms) : null;
+    const d = lineD !== null ? nearestAt(visD, point.at_utc_ms) : null;
+    return [`${UTC(point.at_utc_ms)} · strategy exact ${point.value}`, b ? `benchmark exact ${b.value}` : null, d ? `drawdown exact ${d.value}` : null].filter(Boolean).join("\n");
+  };
+  const chart = useChartContract({
+    label: "Strategy curve",
+    noun: "point",
+    count: view.length,
+    describe: (i) => tipTitle(view[i]!),
+    summary: `Strategy rebased to 100, ${view.length} points, ${DAY(x0)} to ${DAY(x1)}. Arrow keys read a point.`,
+    xs: view.map((point) => pct(point.at_utc_ms)),
+    zoom: {
+      zoomIn: () => setZoomAt(1, atRef.current),
+      zoomOut: () => setZoomAt(-1, atRef.current),
+      pan: (dir) => setWin(nextWindow(strategy.map((point) => point.at_utc_ms), win, 0, null, dir * 0.25)),
+      reset: () => setWin(null),
+      zoomed,
+    },
+  });
+  const at = chart.index !== null ? (view[chart.index] ?? null) : null;
+  atRef.current = at?.at_utc_ms ?? null;
+  if (lineS === null || rangeS === null) return <AbsentLine state="NOT_PUBLISHED" reason={null} what="strategy curve" />;
   const atB = at !== null && lineB !== null ? nearestAt(visB, at.at_utc_ms) : null;
   const atD = at !== null && lineD !== null ? nearestAt(visD, at.at_utc_ms) : null;
   const inEpisode = at !== null ? episodes.findIndex((episode) => at.at_utc_ms >= episode.start_utc_ms && at.at_utc_ms <= (episode.recovery_utc_ms ?? full1)) : -1;
   const atPct = at !== null ? pct(at.at_utc_ms) : 0;
-  const setZoom = (dir: 1 | -1) => setWin(nextWindow(strategy.map((point) => point.at_utc_ms), win, dir, at?.at_utc_ms ?? null, 0, MIN_ZOOM_POINTS));
-  const canZoomIn = view.length > MIN_ZOOM_POINTS;
-  const move = (event: PointerEvent<HTMLDivElement>) => {
-    const box = plotRef.current?.getBoundingClientRect();
-    if (!box || box.width <= 0) return;
-    setProbe(x0 + Math.min(1, Math.max(0, (event.clientX - box.left) / box.width)) * (x1 - x0));
-  };
-  const key = (event: KeyboardEvent<HTMLDivElement>) => {
-    const k = event.key;
-    if (k === "+" || k === "=") { event.preventDefault(); return setZoom(1); }
-    if (k === "-" || k === "_") { event.preventDefault(); return setZoom(-1); }
-    if (k === "Escape") { setProbe(null); return; }
-    if (k === "Home" || k === "End") { event.preventDefault(); return setProbe((k === "Home" ? view[0]! : view[view.length - 1]!).at_utc_ms); }
-    if (k !== "ArrowLeft" && k !== "ArrowRight") return;
-    event.preventDefault();
-    const step = k === "ArrowRight" ? 1 : -1;
-    if (event.shiftKey && zoomed) return setWin(nextWindow(strategy.map((point) => point.at_utc_ms), win, 0, null, step * 0.25));
-    const index = at ? view.indexOf(at) : step === 1 ? -1 : view.length;
-    setProbe(view[Math.min(view.length - 1, Math.max(0, index + step))]!.at_utc_ms);
-  };
+  const setZoom = (dir: 1 | -1) => setZoomAt(dir, at?.at_utc_ms ?? null);
   const tip = (side: "l" | "r"): { left?: string; right?: string; marginLeft?: number; marginRight?: number } =>
     side === "r" ? { right: `${100 - atPct}%`, marginRight: 8 } : { left: `${atPct}%`, marginLeft: 8 };
   const cross = at !== null ? <span className="rr-at-cross" style={{ left: `${atPct}%` }} aria-hidden="true" data-curve-cross /> : null;
@@ -355,16 +361,9 @@ function Curve({ block, activeEpisode = null }: { block: EnrichedAnalysis; activ
         </span>
       </div>
       <div
-        className="rr-at-wrap"
-        tabIndex={0}
-        role="group"
-        aria-label={label}
+        {...chart.regionProps}
+        className={`rr-at-wrap ${chart.regionProps.className ?? ""}`}
         data-curve-probe-area
-        onPointerMove={move}
-        onPointerDown={move}
-        onPointerLeave={() => setProbe(null)}
-        onBlur={() => setProbe(null)}
-        onKeyDown={key}
       >
         <p className="rr-at-sub" data-curve-range="strategy" title={`range of the drawn points: ${rangeS.lowText} to ${rangeS.highText}`}>
           <span style={{ color: "var(--role-oos)" }}>strategy · rebased 100</span>
@@ -372,9 +371,8 @@ function Curve({ block, activeEpisode = null }: { block: EnrichedAnalysis; activ
             {rangeS.low} – {rangeS.high}
           </span>
         </p>
-        <div className="rr-at-plot" ref={plotRef} data-curve-plot="strategy">
-          <svg className="rr-at-curve" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={label}>
-            <title>{`${label}\n${block.scope.locator}`}</title>
+        <div className="rr-at-plot" data-curve-plot="strategy">
+          <svg className="rr-at-curve" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
             {windows.map((win) => {
               const from = Math.max(win.start_ms, x0);
               const to = Math.min(win.end_ms, x1);
@@ -406,9 +404,8 @@ function Curve({ block, activeEpisode = null }: { block: EnrichedAnalysis; activ
             <span
               className="rr-at-tip"
               style={tip(atPct > 55 ? "r" : "l")}
-              role="status"
               data-curve-tip
-              title={[`${UTC(at.at_utc_ms)} · strategy exact ${at.value}`, atB ? `benchmark exact ${atB.value}` : null, atD ? `drawdown exact ${atD.value}` : null].filter(Boolean).join("\n")}
+              title={tipTitle(at)}
             >
               <span>{UTC(at.at_utc_ms)}</span>
               <span>
@@ -506,6 +503,7 @@ function Curve({ block, activeEpisode = null }: { block: EnrichedAnalysis; activ
           </span>
         </p>
       ) : null}
+      {chart.nodes}
       <span className="sr-only" hidden data-curve-summary title={`Strategy rebased to 100 ranged ${rangeS.low} to ${rangeS.high} from ${DAY(x0)} to ${DAY(x1)}.`} />
     </div>
   );
@@ -520,32 +518,33 @@ function Curve({ block, activeEpisode = null }: { block: EnrichedAnalysis; activ
  * marked only when the block serves them (B9 Fact objects + policy); a legacy block draws no mark and no claim.
  */
 function Distribution({ block }: { block: EnrichedAnalysis }) {
-  const motion = useEntryMotion();
-  const [active, setActive] = useState<number | null>(null);
-  const areaRef = useRef<HTMLDivElement>(null);
   const head = block.return_distribution;
   if (head.state !== "AVAILABLE" || head.buckets.length === 0) {
     return <AbsentLine state={head.state} reason={head.reason_code} what="return distribution" />;
   }
+  return <DistributionBody block={block} />;
+}
+
+function DistributionBody({ block }: { block: EnrichedAnalysis }) {
+  const motion = useEntryMotion();
+  const head = block.return_distribution;
   const count = head.buckets.length;
   const tallest = Math.max(...head.buckets.map((bucket) => bucket.count), 1);
   const first = head.buckets[0]!;
   const last = head.buckets[count - 1]!;
   const edge = (value: string) => formatMetric(value, "fraction") ?? value;
   const width = 100 / count;
+  const bucketTitle = (item: EnrichedBucket) => `${edge(item.lower_inclusive)} to ${edge(item.upper)} · ${item.count} ${item.count === 1 ? "day" : "days"}`;
+  const chart = useChartContract({
+    label: "Daily return distribution",
+    noun: "bucket",
+    count,
+    describe: (i) => bucketTitle(head.buckets[i]!),
+    summary: `Daily return distribution, ${count} buckets, ${head.observation_count} days, ${edge(first.lower_inclusive)} to ${edge(last.upper)}. Arrow keys read a bucket.`,
+    xs: head.buckets.map((_, i) => (i + 0.5) * width),
+  });
+  const active = chart.index;
   const bucket = active !== null ? head.buckets[active] : undefined;
-  const move = (event: PointerEvent<HTMLDivElement>) => {
-    const box = areaRef.current?.getBoundingClientRect();
-    if (!box || box.width <= 0) return;
-    setActive(Math.min(count - 1, Math.max(0, Math.floor(((event.clientX - box.left) / box.width) * count))));
-  };
-  const key = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Escape") return setActive(null);
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-    event.preventDefault();
-    const step = event.key === "ArrowRight" ? 1 : -1;
-    setActive(Math.min(count - 1, Math.max(0, (active ?? (step === 1 ? -1 : count)) + step)));
-  };
   const centre = active !== null ? (active + 0.5) * width : 0;
   /* B9: the served statistics, positioned by the served bucket edges (VaR/CVaR are loss fractions: return = −loss). */
   const stats = distributionStatistics(block);
@@ -556,19 +555,11 @@ function Distribution({ block }: { block: EnrichedAnalysis }) {
   return (
     <div data-all-time-distribution data-bucket-count={count} data-distribution-motion={motion ? "on" : "off"}>
       <div
-        className="rr-at-wrap rr-at-plot"
-        ref={areaRef}
-        tabIndex={0}
-        role="group"
-        aria-label={`daily return distribution, ${count} buckets, ${head.observation_count} days. Arrow keys read a bucket.`}
+        {...chart.regionProps}
+        className={`rr-at-wrap rr-at-plot ${chart.regionProps.className ?? ""}`}
         data-distribution-area
-        onPointerMove={move}
-        onPointerDown={move}
-        onPointerLeave={() => setActive(null)}
-        onBlur={() => setActive(null)}
-        onKeyDown={key}
       >
-        <svg className="rr-at-curve" style={{ height: 80 }} viewBox="0 0 100 60" preserveAspectRatio="none" role="img" aria-label={`daily return distribution, ${count} buckets, ${head.observation_count} days`}>
+        <svg className="rr-at-curve" style={{ height: 80 }} viewBox="0 0 100 60" preserveAspectRatio="none" aria-hidden="true">
           {head.buckets.map((item, index) => {
             const height = (item.count / tallest) * 56;
             const zeroBucket = Number(item.lower_inclusive) < 0 && Number(item.upper) >= 0;
@@ -602,7 +593,6 @@ function Distribution({ block }: { block: EnrichedAnalysis }) {
         {bucket !== undefined && active !== null ? (
           <span
             className="rr-at-tip"
-            role="status"
             data-distribution-tip
             style={centre > 55 ? { right: `${100 - centre}%`, marginRight: 6 } : { left: `${centre}%`, marginLeft: 6 }}
             title={`${bucket.lower_inclusive} to ${bucket.upper} · ${bucket.count} days`}
@@ -615,6 +605,7 @@ function Distribution({ block }: { block: EnrichedAnalysis }) {
             </span>
           </span>
         ) : null}
+        {chart.nodes}
       </div>
       <p className="rr-at-sub" style={{ marginTop: 2 }}>
         <span title={`${first.lower_inclusive} to ${last.upper}`}>
@@ -640,19 +631,48 @@ function Distribution({ block }: { block: EnrichedAnalysis }) {
 /* ------------------------------------------------------------------------ months */
 
 function Months({ block }: { block: EnrichedAnalysis }) {
-  const motion = useEntryMotion();
   const head = block.monthly_returns;
   if (head.state !== "AVAILABLE" || head.values.length === 0) {
     return <AbsentLine state={head.state} reason={head.reason_code} what="monthly returns" />;
   }
+  return <MonthsBody block={block} />;
+}
+
+function MonthsBody({ block }: { block: EnrichedAnalysis }) {
+  const motion = useEntryMotion();
+  const head = block.monthly_returns;
   /* Best and worst are picked from the served full months (never a partial one); nothing is computed. */
   const full = head.values.filter((row) => !row.partial && Number.isFinite(Number(row.return_fraction)));
   const best = full.length >= 3 ? full.reduce((a, b) => (Number(b.return_fraction) > Number(a.return_fraction) ? b : a)) : null;
   const worst = full.length >= 3 ? full.reduce((a, b) => (Number(b.return_fraction) < Number(a.return_fraction) ? b : a)) : null;
   const shownOf = (row: { return_fraction: string }) => formatMetric(row.return_fraction, "fraction") ?? row.return_fraction;
+  const monthTitle = (row: (typeof head.values)[number]): string => {
+    const extreme = row === best ? "best" : row === worst ? "worst" : undefined;
+    return [
+      `${new Date(row.month_start_utc_ms).toISOString().slice(0, 7)} · ${shownOf(row)} · exact ${row.return_fraction}${extreme ? ` · ${extreme} full month` : ""}`,
+      row.partial ? `partial month · ${row.observation_count} of ${row.expected_observation_count} observations` : `${row.observation_count} observations`,
+      `${word(row.basis)} · ${UTC(row.base_at_utc_ms)} → ${UTC(row.close_at_utc_ms)}`,
+      block.scope.locator,
+    ].join("\n");
+  };
+  /* One region for the strip; the months wrap onto rows, so a tap goes through each month's own handler. */
+  const chart = useChartContract({
+    label: "Monthly returns",
+    noun: "month",
+    count: head.values.length,
+    describe: (i) => monthTitle(head.values[i]!),
+    summary: `Monthly returns, ${head.values.length} months, ${monthWords(head.values[0]!.month_start_utc_ms)} to ${monthWords(head.values[head.values.length - 1]!.month_start_utc_ms)}. Arrow keys read a month.`,
+  });
   return (
     <div data-all-time-months data-months-motion={motion ? "on" : "off"}>
-      <div className="rr-at-months">
+      <div {...chart.regionProps} className={`rr-at-months rr-at-wrap ${chart.regionProps.className ?? ""}`} data-months-region>
+        {chart.text !== null ? (
+          <span className="rr-at-tip" data-months-tip style={{ right: 0, top: -4 }} title={chart.text}>
+            {chart.text.split("\n").slice(0, 2).map((line) => (
+              <span key={line}>{line}</span>
+            ))}
+          </span>
+        ) : null}
         {head.values.map((row, index) => {
           const negative = row.return_fraction.trim().startsWith("-");
           const colour = negative ? "var(--bad)" : "var(--good)";
@@ -660,12 +680,7 @@ function Months({ block }: { block: EnrichedAnalysis }) {
           const shown = shownOf(row);
           const extreme = row === best ? "best" : row === worst ? "worst" : undefined;
           const magnitude = Math.min(0.85, 0.15 + Math.abs(Number(row.return_fraction)) * 9);
-          const title = [
-            `${month} · ${shown} · exact ${row.return_fraction}${extreme ? ` · ${extreme} full month` : ""}`,
-            row.partial ? `partial month · ${row.observation_count} of ${row.expected_observation_count} observations` : `${row.observation_count} observations`,
-            `${word(row.basis)} · ${UTC(row.base_at_utc_ms)} → ${UTC(row.close_at_utc_ms)}`,
-            block.scope.locator,
-          ].join("\n");
+          const title = monthTitle(row);
           return (
             <span
               key={row.month_start_utc_ms}
@@ -675,9 +690,10 @@ function Months({ block }: { block: EnrichedAnalysis }) {
               data-exact={row.return_fraction}
               data-month-partial={row.partial ? "true" : undefined}
               data-month-extreme={extreme}
-              tabIndex={0}
+              aria-hidden="true"
               title={title}
-              aria-label={title.replace(/\n/g, ", ")}
+              onPointerEnter={(event) => (!event.pointerType || event.pointerType === "mouse") && chart.setIndex(index)}
+              onPointerDown={() => chart.setIndex(index)}
             >
               <span
                 className="rr-at-cell"
@@ -692,6 +708,7 @@ function Months({ block }: { block: EnrichedAnalysis }) {
             </span>
           );
         })}
+        {chart.nodes}
       </div>
       <p className="rr-at-sub" style={{ marginTop: 4 }}>
         <span>hatched = partial month</span>
@@ -763,7 +780,6 @@ function Episodes({ block, onActive }: { block: EnrichedAnalysis; onActive?: (in
                 data-episode={index + 1}
                 data-episode-open={open ? "true" : "false"}
                 title={title}
-                aria-label={title.replace(/\n/g, ", ")}
                 tabIndex={0}
                 onPointerEnter={() => onActive?.(index)}
                 onPointerLeave={() => onActive?.(null)}

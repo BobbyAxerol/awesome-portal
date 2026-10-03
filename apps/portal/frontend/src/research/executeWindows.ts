@@ -2,9 +2,9 @@
  * Screen 08 — the three windows (IS / OOS / HOLDOUT) as one control with the
  * fold chain, and the pure maths behind the transition markers.
  *
- *  - `?window=is|oos|holdout` is the window in the URL (default `oos`, which is
- *    then left out of the address). The fold stays in the hash cursor
- *    (`#fold=`), so one link carries both and S04/S05 can deep-link either.
+ *  - The window lives in the hash cursor (`#window=is|oos|holdout`, read as
+ *    `cursor.window`; null = the default `oos`), next to `#fold=`, so one link
+ *    carries both and S04/S05 can deep-link either.
  *  - Boundaries are only ever the ones the server published: the split's fold
  *    plan (train / test windows) and the overview buckets' own UTC times. A
  *    pixel position is derived from them; no boundary is invented.
@@ -13,68 +13,15 @@
  *    is no PnL here and an ambiguous sequence draws no connector.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
-
 export type ExecWindow = "is" | "oos" | "holdout";
 
 export const EXEC_WINDOWS: readonly ExecWindow[] = ["is", "oos", "holdout"];
 
 export const DEFAULT_WINDOW: ExecWindow = "oos";
 
-export function parseWindow(search: string): ExecWindow {
-  const raw = new URLSearchParams(search).get("window");
-  return raw === "is" || raw === "oos" || raw === "holdout" ? raw : DEFAULT_WINDOW;
-}
-
-/** `?window=` carried on a path (default window = no query, so existing links stay byte-identical). */
-export function withWindow(path: string, window: ExecWindow): string {
-  if (window === DEFAULT_WINDOW) return path;
-  const hash = path.indexOf("#");
-  const base = hash === -1 ? path : path.slice(0, hash);
-  const tail = hash === -1 ? "" : path.slice(hash);
-  return `${base}${base.includes("?") ? "&" : "?"}window=${window}${tail}`;
-}
-
-/**
- * The window in the URL: read on arrival, re-read on Back/forward. A change of
- * window is one history entry (QA S08 UX-01: Back steps to the previous window
- * instead of leaving the screen). An unreadable `?window=` on arrival is
- * dropped from the address (UX-19) with a replace, never an entry.
- */
-export function useExecuteWindow(): [ExecWindow, (next: ExecWindow) => void] {
-  const [current, setCurrent] = useState<ExecWindow>(() => (typeof window === "undefined" ? DEFAULT_WINDOW : parseWindow(window.location.search)));
-  useEffect(() => {
-    try {
-      const raw = new URLSearchParams(window.location.search).get("window");
-      if (raw !== null && raw !== "is" && raw !== "oos" && raw !== "holdout") {
-        const url = new URL(window.location.href);
-        url.searchParams.delete("window");
-        window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
-      }
-    } catch {
-      /* the address bar is a convenience */
-    }
-    const onPop = () => setCurrent(parseWindow(window.location.search));
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, []);
-  const latest = useRef(current);
-  latest.current = current;
-  const set = useCallback((next: ExecWindow) => {
-    /* One entry per real change; clicking the window already on show adds none. */
-    if (latest.current === next) return;
-    latest.current = next;
-    setCurrent(next);
-    try {
-      const url = new URL(window.location.href);
-      if (next === DEFAULT_WINDOW) url.searchParams.delete("window");
-      else url.searchParams.set("window", next);
-      window.history.pushState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
-    } catch {
-      /* the address bar is a convenience; the state above still moved */
-    }
-  }, []);
-  return [current, set];
+/** The window the cursor names; the reader never having chosen one reads as the default (OOS). */
+export function windowOf(cursor: { window: ExecWindow | null }): ExecWindow {
+  return cursor.window ?? DEFAULT_WINDOW;
 }
 
 /* ------------------------------------------------------------- overview bands */

@@ -58,11 +58,13 @@ import {
 } from "./evidenceClient";
 import {
   EVIDENCE_STAGES,
-  deepDiveHref,
+  serializeCursor,
   type EvidenceCursor,
   type EvidenceStage,
+  type HandoffTarget,
 } from "./evidenceCursor";
-import { NamedWindowContext, useEvidenceWindow, useNamedWindow, withWindow, type EvidenceWindow } from "./evidenceWindow";
+import { DEFAULT_WINDOW, type EvidenceWindow } from "./evidenceWindow";
+import { runScreenHref } from "./runScreenHref";
 import { CURRENT_SOURCE_LANE_COPY, reasonCodeSentence, refusalDetail } from "./researchRefusal";
 import { claimToken, formatBytes, formatMetric, shortDigest } from "./researchFormat";
 import { ARTIFACT_NO_READER, ArtifactsTable } from "./RunProgress";
@@ -1211,17 +1213,18 @@ function CursorBar({
   folds,
   onFold,
   onReset,
+  handoff = null,
+  atHandoff = false,
   laneSelection = null,
   unread = null,
   lanePending = false,
-  evidenceWindow = "oos",
-  windowNamed = null,
 }: {
   runId: string;
   cursor: EvidenceCursor;
-  /** F2b: the window the screen shows, and the one the URL names (links carry only the named one). */
-  evidenceWindow?: EvidenceWindow;
-  windowNamed?: EvidenceWindow | null;
+  /** W5 §3.3: the run's hand-off cursor (θ*) — the reset target and its tooltip. Null when the run published none. */
+  handoff?: HandoffTarget | null;
+  /** True when the cursor already is the reset target (the button is then inert). */
+  atHandoff?: boolean;
   /** F1 (FG 04-F): why there is no hub in hand — still loading, or refused. Null when it was read. */
   unread?: "loading" | "not-read" | null;
   /**
@@ -1269,17 +1272,18 @@ function CursorBar({
   const anomalous = published.length === 0 || index === -1;
 
   const copyLink = useCallback(() => {
-    const href = `${window.location.origin}${window.location.pathname}${withWindow(deepDiveHref("", cursor), windowNamed)}`;
+    const href = `${window.location.origin}${window.location.pathname}${serializeCursor(cursor)}`;
     void navigator.clipboard?.writeText(href).catch(() => undefined);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1500);
-  }, [cursor, windowNamed]);
+  }, [cursor]);
 
   const pending = unread !== null || lanePending;
   const trialServed = cursor.trial !== null || laneSelection?.trial != null;
   const paramsServed = cursor.params !== null || laneSelection?.paramsDigest != null;
   const seqServed = cursor.seq !== null;
   const compact = !pending && !trialServed && !paramsServed && !seqServed;
+  const evidenceWindow = cursor.window ?? DEFAULT_WINDOW;
   const windowWord = evidenceWindow === "oos" ? "OOS" : evidenceWindow === "is" ? "IS" : "Holdout";
   const stepStyle = (disabled: boolean) => ({
     color: disabled ? "var(--viz-legend-inactive)" : "var(--ink-soft)",
@@ -1448,17 +1452,17 @@ function CursorBar({
           </span>
         </CursorPill>
       ) : (
-        <CursorPill data-cursor-window title="the evidence window — written to ?window= in the link">
+        <CursorPill data-cursor-window title="the evidence window — part of the link">
           window <span style={{ color: "var(--ink)" }}>{windowWord}</span>
         </CursorPill>
       )}
 
       {/* F2b: the way OUT to every full stage screen. Each keeps the run, fold, trial and window. */}
       <nav className="ml-1 flex flex-wrap items-center gap-x-1.5 text-[10px]" style={{ color: "var(--ink-faint)" }} data-deep-dives aria-label="related screens">
-        <Link to={reportHref(runId, { cursor, window: windowNamed })} data-nav-stage="report" title="Run report" style={{ color: "var(--accent)" }}>
+        <Link to={reportHref(runId, { cursor })} data-nav-stage="report" title="Run report" style={{ color: "var(--accent)" }}>
           report
         </Link>
-        <Link to={rcHref(runId, { cursor, window: windowNamed })} title="Release candidate — promotion" style={{ color: "var(--accent)" }}>
+        <Link to={rcHref(runId, { cursor })} title="Release candidate — promotion" style={{ color: "var(--accent)" }}>
           promotion
         </Link>
         <Link to="/research/quantbt/runs" title="Run Library" data-nav-stage="library" style={{ color: "var(--accent)" }}>
@@ -1470,9 +1474,16 @@ function CursorBar({
         <button
           type="button"
           data-action="reset-cursor"
-          onClick={onReset}
+          onClick={atHandoff ? undefined : onReset}
+          aria-disabled={atHandoff || undefined}
+          title={handoff !== null ? `fold ${handoff.fold} · trial ${handoff.trial}` : "fold 1"}
           className="mono rounded-[6px] border px-2.5 py-px text-[10px]"
-          style={{ color: "var(--accent)", borderColor: "var(--line)", background: "var(--paper-raised)" }}
+          style={{
+            color: atHandoff ? "var(--viz-legend-inactive)" : "var(--accent)",
+            borderColor: "var(--line)",
+            background: "var(--paper-raised)",
+            cursor: atHandoff ? "default" : "pointer",
+          }}
         >
           reset to θ*
         </button>
@@ -2430,11 +2441,9 @@ function RetainedVerdictTable({
   cursor: EvidenceCursor;
   onFold: (fold: number) => void;
 }) {
-  const namedWindow = useNamedWindow();
-  const [order, setOrder] = useState<"worst" | "fold">("worst");
+    const [order, setOrder] = useState<"worst" | "fold">("worst");
   const rows = order === "worst" ? verdicts.rows : [...verdicts.rows].sort((a, b) => a.source_ordinal - b.source_ordinal);
   const { counts, rule } = verdicts;
-  const runPath = `/research/quantbt/runs/${encodeURIComponent(runId)}`;
   const meanOos = formatRatio(verdicts.mean_oos_sharpe);
   const meanDecay = signedRatio(verdicts.mean_decay);
   const dragging = verdicts.rows.filter((row) => row.verdict === "DRAG");
@@ -2629,7 +2638,7 @@ function RetainedVerdictTable({
                     style={{
                       borderColor: tone,
                       color: row.verdict === "DRAG" ? "var(--paper-raised)" : tone,
-                      background: row.verdict === "DRAG" ? tone : "transparent",
+                      background: row.verdict === "DRAG" ? tone : "var(--paper-raised)",
                     }}
                   >
                     {row.verdict === "NOT_EVALUATED" ? "not evaluated" : row.verdict}
@@ -2637,7 +2646,7 @@ function RetainedVerdictTable({
                 </td>
                 <td className="whitespace-nowrap px-3 py-1.5" onClick={(event) => event.stopPropagation()}>
                   <Link
-                    to={withWindow(deepDiveHref(`${runPath}/search`, { ...cursor, fold, stage: "search" }), namedWindow)}
+                    to={runScreenHref(runId, "search", cursor, { fold })}
                     className="mono text-[10px]"
                     style={{ color: row.drag_target === "search" ? "var(--bad)" : "var(--accent)" }}
                     data-verdict-open="search"
@@ -2646,7 +2655,7 @@ function RetainedVerdictTable({
                   </Link>{" "}
                   <span style={{ color: "var(--line)" }}>·</span>{" "}
                   <Link
-                    to={withWindow(deepDiveHref(`${runPath}/execute`, { ...cursor, fold, stage: "execute" }), namedWindow)}
+                    to={runScreenHref(runId, "execute", cursor, { fold })}
                     className="mono text-[10px]"
                     style={{ color: row.drag_target === "execute" ? "var(--bad)" : "var(--accent)" }}
                     data-verdict-open="replay"
@@ -2974,7 +2983,6 @@ function WindowAbsent({
   /** enrich_analysis: the window's own typed state and reason code. */
   availability?: Availability;
 }) {
-  const base = `/research/quantbt/runs/${encodeURIComponent(runId)}`;
   const label = active === "is" ? "IS" : "Holdout";
   return (
     <section
@@ -2991,7 +2999,7 @@ function WindowAbsent({
       ) : null}
       <span className="ml-auto inline-flex flex-wrap gap-2">
         <Link
-          to={withWindow(deepDiveHref(`${base}/split`, { ...cursor, stage: "split" }), active)}
+          to={runScreenHref(runId, "split", cursor, { window: active })}
           data-window-open="split"
           title={`Stage 1 · Split — the ${label} bands, fold ${cursor.fold}`}
           className="mono rounded-[6px] border px-3 py-1 text-[10px] uppercase tracking-[.05em]"
@@ -3000,7 +3008,7 @@ function WindowAbsent({
           S1 split →
         </Link>
         <Link
-          to={withWindow(deepDiveHref(`${base}/execute`, { ...cursor, stage: "execute" }), active)}
+          to={runScreenHref(runId, "execute", cursor, { window: active })}
           data-window-open="execute"
           title={`Stage 4 · Execute replay — the ${label} window, fold ${cursor.fold}`}
           className="mono rounded-[6px] border px-3 py-1 text-[10px] uppercase tracking-[.05em]"
@@ -4192,12 +4200,10 @@ function ClaimTab({
   runIdentity,
   passport = IDLE_PASSPORT,
   cursor = null,
-  windowNamed = null,
 }: {
   hub: EvidenceHub;
-  /** W1 B3: the cursor and window this tab sits under, carried into the report and candidate links. */
+  /** W1 B3: the cursor (window included) this tab sits under, carried into the report and candidate links. */
   cursor?: EvidenceCursor | null;
-  windowNamed?: EvidenceWindow | null;
   retainedClaim: RetainedClaimStrip | null;
   runIdentity: RunIdentitySlot;
   /** F1: the retained lane's read — what the Summary tab's per-fold table is drawn from. */
@@ -4316,7 +4322,7 @@ function ClaimTab({
           <PanelLabel>next — report and later gates</PanelLabel>
           <span className="inline-flex flex-wrap gap-2">
             <Link
-              to={reportHref(hub.run_id, { cursor, window: windowNamed })}
+              to={reportHref(hub.run_id, { cursor })}
               data-action="generate-report"
               title="Run report"
               className="mono rounded-[6px] border px-3 py-1 text-[10px] font-semibold uppercase tracking-[.05em]"
@@ -4326,7 +4332,7 @@ function ClaimTab({
             </Link>
             {/* P21 · Screen 11 composes and locally seals the candidate for this run. */}
             <Link
-              to={rcHref(hub.run_id, { cursor, window: windowNamed })}
+              to={rcHref(hub.run_id, { cursor })}
               data-action="release-candidate"
               className="mono rounded-[6px] border px-3 py-1 text-[10px] uppercase tracking-[.05em]"
               style={{ color: "var(--accent)", borderColor: "var(--accent)", background: "transparent" }}
@@ -4362,18 +4368,16 @@ function ClaimTab({
 function StageNav({
   runId,
   cursor,
-  windowNamed,
   onStage,
 }: {
   runId: string;
   cursor: EvidenceCursor;
-  windowNamed: EvidenceWindow | null;
   onStage: (stage: EvidenceStage) => void;
 }) {
   const index = EVIDENCE_STAGES.indexOf(cursor.stage);
   const prev = index > 0 ? EVIDENCE_STAGES[index - 1] : null;
   const next = cursor.stage === "atlas" ? null : index < EVIDENCE_STAGES.length - 1 ? EVIDENCE_STAGES[index + 1] : null;
-  const toStage = (stage: EvidenceStage) => withWindow(deepDiveHref("", { ...cursor, stage }), windowNamed);
+  const toStage = (stage: EvidenceStage) => serializeCursor({ ...cursor, stage });
   const word = (stage: EvidenceStage) => `${STAGE_TAB[stage].num} ${STAGE_TAB[stage].name}`;
   const go = (stage: EvidenceStage) => (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -4399,7 +4403,7 @@ function StageNav({
       ) : null}
       {cursor.stage === "claim" ? (
         <Link
-          to={reportHref(runId, { cursor, window: windowNamed })}
+          to={reportHref(runId, { cursor })}
           data-stage-next="report"
           title="Next · the run report"
           className={cls}
@@ -4414,7 +4418,8 @@ function StageNav({
 
 function RunNotFound({ runId }: { runId: string }) {
   return (
-    <main className="mx-auto flex w-full max-w-[1440px] flex-col gap-2 px-7 pb-16 pt-5" data-screen="evidence-flow" data-run={runId} data-run-not-found data-run-phase="unavailable">
+    <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-2 px-7 pb-16 pt-5" data-screen="evidence-flow" data-run={runId} data-run-not-found data-run-phase="unavailable">
+      <h1 className="sr-only">Evidence flow · run not found</h1>
       <nav className="mono text-[10.5px]" aria-label="Research breadcrumbs">
         <Link to={libraryHref()} style={{ color: "var(--accent)" }}>
           Runs
@@ -4425,7 +4430,7 @@ function RunNotFound({ runId }: { runId: string }) {
         <ShortId id={runId} label="run" />
       </nav>
       <RunExitBar runId={runId} state={runTerminalState({ status: null, read: "not-found" })} />
-    </main>
+    </div>
   );
 }
 
@@ -4666,6 +4671,11 @@ export interface EvidenceFlowProps {
   onStage: (stage: EvidenceStage) => void;
   onFold: (fold: number) => void;
   onResetCursor: () => void;
+  /** W5 §3.3: the hand-off (θ*) the reset returns to, and whether the cursor is already on it. */
+  handoff?: HandoffTarget | null;
+  atHandoff?: boolean;
+  /** W5 §3.1: writes `window` into the cursor (one history entry). */
+  onWindow?: (next: EvidenceWindow) => void;
   series: ReadonlyMap<SeriesKind, SeriesSlot>;
   ensureSeries: (kind: SeriesKind) => void;
   passport: PassportSlot;
@@ -4690,6 +4700,9 @@ export function EvidenceFlow({
   onStage,
   onFold,
   onResetCursor,
+  handoff = null,
+  atHandoff = false,
+  onWindow = NOOP,
   series,
   ensureSeries,
   passport,
@@ -4740,7 +4753,7 @@ export function EvidenceFlow({
       : EVIDENCE_STAGES;
   const shownStage: EvidenceStage = tabStages.includes(cursor.stage) ? cursor.stage : (tabStages[0] ?? cursor.stage);
   const shownCursor: EvidenceCursor = shownStage === cursor.stage ? cursor : { ...cursor, stage: shownStage };
-  const evidenceWindow = useEvidenceWindow();
+  const evidenceWindow = { named: cursor.window, window: cursor.window ?? DEFAULT_WINDOW, setWindow: onWindow };
   const [datasetOpen, setDatasetOpen] = useState(false);
   const datasetTrigger = useRef<HTMLButtonElement>(null);
   const datasetWasOpen = useRef(false);
@@ -4787,7 +4800,6 @@ export function EvidenceFlow({
   if (notFound) return <RunNotFound runId={runId} />;
 
   return (
-    <NamedWindowContext.Provider value={evidenceWindow.named}>
     <LaneReadFailedContext.Provider value={passport.state === "refused" && passport.refusal.mayRetry && passportSkip === null}>
     <div
       className="mx-auto flex w-full max-w-[1440px] flex-col gap-3.5 px-7 pb-16 pt-5"
@@ -4864,8 +4876,8 @@ export function EvidenceFlow({
           onFold={onFold}
           onReset={onResetCursor}
           laneSelection={laneSelection}
-          evidenceWindow={evidenceWindow.window}
-          windowNamed={evidenceWindow.named}
+          handoff={handoff}
+          atHandoff={atHandoff}
         />
         )}
       </div>
@@ -4893,7 +4905,7 @@ export function EvidenceFlow({
             data-panel={shownStage}
           >
             {shownStage === "claim" ? (
-              <ClaimTab hub={hub} retainedClaim={retainedClaim} runIdentity={runIdentity} passport={passport} cursor={cursor} windowNamed={evidenceWindow.named} />
+              <ClaimTab hub={hub} retainedClaim={retainedClaim} runIdentity={runIdentity} passport={passport} cursor={cursor} />
             ) : shownStage === "atlas" ? (
               <AtlasSummaryCard hub={hub} runId={runId} />
             ) : (
@@ -4946,11 +4958,10 @@ export function EvidenceFlow({
             />}
           </div>
         ) : null}
-        {hub && !statusOnly ? <StageNav runId={runId} cursor={cursor} windowNamed={evidenceWindow.named} onStage={onStage} /> : null}
+        {hub && !statusOnly ? <StageNav runId={runId} cursor={cursor} onStage={onStage} /> : null}
       </ResearchPanel>
       )}
     </div>
     </LaneReadFailedContext.Provider>
-    </NamedWindowContext.Provider>
   );
 }

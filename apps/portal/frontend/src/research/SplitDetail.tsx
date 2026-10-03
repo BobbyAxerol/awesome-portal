@@ -72,7 +72,8 @@ import {
   type SplitAvailability,
   type SplitDetail as SplitDetailDocument,
 } from "./splitClient";
-import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
+import type { EvidenceCursor } from "./evidenceCursor";
+import { runScreenHref } from "./runScreenHref";
 import { foldLabel, formatMetric, formatUtc, shortDigest } from "./researchFormat";
 import { retainedSplitOf, type FoldsSlot, type RetainedFact, type RetainedFacts } from "./useSplit";
 import type { ResearchState } from "./state";
@@ -103,17 +104,12 @@ export const HOLDOUT_RULE_NO_READ = "No panel on any screen reads a bar inside t
 /** F2b: the short word the holdout note prints; the sentence above rides in its tooltip. */
 export const HOLDOUT_NEVER_READ = "never read";
 
-/** The three windows Screen 08 can show (`?window=`, default `oos`). */
+/** The three windows Screen 08 can show (`window` in the cursor hash, default `oos`). */
 export type ExecuteWindow = "is" | "oos" | "holdout";
 
-/**
- * F2b: where a window of this screen opens Screen 08 — the window in the query
- * (`?window=is|oos|holdout`), the fold and the rest of the cursor in the hash,
- * exactly as every other deep-dive link carries them, so Back and "copy link"
- * restore the same view.
- */
-export function executeWindowHref(runPath: string, window: ExecuteWindow, cursor: EvidenceCursor, fold?: number): string {
-  return deepDiveHref(`${runPath}/execute?window=${window}`, { ...cursor, ...(fold === undefined ? {} : { fold }), stage: "execute" });
+/** F2b: where a window of this screen opens Screen 08 — the window and the rest of the cursor, all in the hash. */
+export function executeWindowHref(runId: string, window: ExecuteWindow, cursor: EvidenceCursor, fold?: number): string {
+  return runScreenHref(runId, "execute", cursor, { window, ...(fold === undefined ? {} : { fold }) });
 }
 
 /** A drawn window key → the Screen 08 window it opens; the warmup is read by nothing and opens nothing. */
@@ -529,7 +525,7 @@ function WindowAnatomy({
   timeline,
   windows,
   timelineClosed = false,
-  runPath,
+  runId,
   cursor,
 }: {
   timeline: Range;
@@ -537,7 +533,7 @@ function WindowAnatomy({
   /** W3b: an axis read from the fold plan ends on its last bar, inclusive. */
   timelineClosed?: boolean;
   /** F2b: the run's path and the cursor, so a window opens Screen 08 on itself. */
-  runPath: string;
+  runId: string;
   cursor: EvidenceCursor;
 }) {
   const trackRef = useEntryRef<HTMLDivElement>();
@@ -644,7 +640,7 @@ function WindowAnatomy({
               <Link
                 key={window.key}
                 {...common}
-                to={executeWindowHref(runPath, opens, cursor)}
+                to={executeWindowHref(runId, opens, cursor)}
                 aria-label={`${spoken}, open in Execute Replay`}
                 title={`${text}\nopen ${opens.toUpperCase()} in Execute Replay`}
                 data-window-link={opens}
@@ -686,7 +682,7 @@ function WindowAnatomy({
               <span className="mono text-[10px]">{window.label}</span>
             ) : (
               <Link
-                to={executeWindowHref(runPath, executeWindowOf(window.key) as ExecuteWindow, cursor)}
+                to={executeWindowHref(runId, executeWindowOf(window.key) as ExecuteWindow, cursor)}
                 className="mono text-[10px] underline decoration-dotted underline-offset-2"
                 style={{ color: "var(--accent)" }}
                 data-window-open={executeWindowOf(window.key) ?? undefined}
@@ -1035,7 +1031,7 @@ function FoldRows({
  * answers with the typed absence the server gives for a sealed or absent
  * holdout; the link reads no bar inside the span.
  */
-function HoldoutLabel({ runPath, cursor, applicable = true }: { runPath: string; cursor: EvidenceCursor; applicable?: boolean }) {
+function HoldoutLabel({ runId, cursor, applicable = true }: { runId: string; cursor: EvidenceCursor; applicable?: boolean }) {
   /* QA S05 U13: a profile with no holdout has no window to open — plain text, not a link to a dead end. */
   if (!applicable) {
     return (
@@ -1046,7 +1042,7 @@ function HoldoutLabel({ runPath, cursor, applicable = true }: { runPath: string;
   }
   return (
     <Link
-      to={executeWindowHref(runPath, "holdout", cursor)}
+      to={executeWindowHref(runId, "holdout", cursor)}
       className="mono w-[64px] flex-none text-left text-[11px] underline decoration-dotted underline-offset-2"
       style={{ color: "var(--accent-2)" }}
       data-window-open="holdout"
@@ -1066,7 +1062,7 @@ function HoldoutLabel({ runPath, cursor, applicable = true }: { runPath: string;
  * gold mono 9 px. The HiFi label is `SEALED · LOCKED · never read`; no seal
  * record is published, so the label is the server's own state words.
  */
-function HoldoutBlock({ detail, timeline, runPath, cursor }: { detail: SplitDetailDocument; timeline: Range | null; runPath: string; cursor: EvidenceCursor }) {
+function HoldoutBlock({ detail, timeline, runId, cursor }: { detail: SplitDetailDocument; timeline: Range | null; runId: string; cursor: EvidenceCursor }) {
   const holdout = detail.windows.holdout;
   const unlock = detail.actions.holdout_unlock;
   const bound = hasRange(holdout);
@@ -1090,7 +1086,7 @@ function HoldoutBlock({ detail, timeline, runPath, cursor }: { detail: SplitDeta
   return (
     <div className="flex flex-col gap-[6px]" data-holdout={bound ? "bound" : "absent"}>
       <div className="flex items-center gap-2 pt-1">
-        <HoldoutLabel runPath={runPath} cursor={cursor} />
+        <HoldoutLabel runId={runId} cursor={cursor} />
         {facts ? (
           <span className="relative h-[16px] min-w-0 flex-1" data-holdout-track>
             {geometry ? (
@@ -1549,16 +1545,16 @@ function ThetaStar({ lane, compact = false }: { lane: LaneView; compact?: boolea
       <span
         className="mono"
         style={{ color: "var(--accent)" }}
-        title={`last-fold deployment selection only (${value.fold_id ?? "last fold"}) · ${trialLabel({ sourceId: value.selected_trial_id }) ?? "source not published"}`}
+        title={`last-fold deployment selection only (${value.fold_id ?? "last fold"}) · ${trialLabel({ ordinal: value.selected_trial_ordinal, sourceId: value.selected_trial_id }) ?? "source not published"}`}
         data-theta-star={value.selected_trial_id ?? ""}
         data-theta-scope-kind="LAST_FOLD_DEPLOYMENT"
       >
-        last fold only · {trialLabel({ sourceId: value.selected_trial_id }) ?? "source not published"}
+        last fold only · {trialLabel({ ordinal: value.selected_trial_ordinal, sourceId: value.selected_trial_id }) ?? "source not published"}
       </span>
     );
   }
   const title = [
-    `${trialLabel({ sourceId: value.selected_trial_id }) ?? "source not published"} · ${trialTitle} · ${value.objective_kind} ${value.objective ?? "not published"}`,
+    `${trialLabel({ ordinal: value.selected_trial_ordinal, sourceId: value.selected_trial_id }) ?? "source not published"} · ${trialTitle} · ${value.objective_kind} ${value.objective ?? "not published"}`,
     digest ? `params digest ${digest}` : null,
     ...params.map(([name, v]) => `${name} = ${v}`),
   ]
@@ -1566,7 +1562,7 @@ function ThetaStar({ lane, compact = false }: { lane: LaneView; compact?: boolea
     .join("\n");
   return (
     <span className="mono" style={{ color: "var(--accent)" }} title={title} data-theta-star={value.selected_trial_id ?? ""}>
-      GLOBAL · {trialLabel({ sourceId: value.selected_trial_id }) ?? "source not published"}
+      GLOBAL · {trialLabel({ ordinal: value.selected_trial_ordinal, sourceId: value.selected_trial_id }) ?? "source not published"}
       {compact ? null : (
         <span style={{ color: "var(--ink-faint)" }}> · {params.length} params</span>
       )}
@@ -1575,13 +1571,13 @@ function ThetaStar({ lane, compact = false }: { lane: LaneView; compact?: boolea
 }
 
 /** The retained holdout fact (current-source evidence `claim.holdout`), stated once with its code. */
-function LaneHoldout({ lane, runPath, cursor }: { lane: LaneView; runPath: string; cursor: EvidenceCursor }) {
+function LaneHoldout({ lane, runId, cursor }: { lane: LaneView; runId: string; cursor: EvidenceCursor }) {
   const fact = lane.holdout;
   const applicable = !(fact.state === "ready" && fact.value.state === "NOT_APPLICABLE");
   return (
     <div className="flex flex-col gap-[6px]" data-holdout="retained">
       <div className="flex items-baseline gap-2 pt-1">
-        <HoldoutLabel runPath={runPath} cursor={cursor} applicable={applicable} />
+        <HoldoutLabel runId={runId} cursor={cursor} applicable={applicable} />
         <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 text-[11px]" style={{ color: "var(--ink-soft)" }}>
           {fact.state === "loading" ? (
             <Reading what="the retained claim" />
@@ -1706,7 +1702,6 @@ export function SplitScreen({
   const screenState = useMemo(() => splitScreenState(state, detail, folds), [state, detail, folds]);
   const nothingRead = screenState !== state;
   const timeline = lane ? (lane.span?.range ?? null) : (detail?.timeline ?? null);
-  const runPath = `/research/quantbt/runs/${encodeURIComponent(runId)}`;
 
   const drawn: DrawnWindow[] = useMemo(() => {
     if (!detail) return [];
@@ -1755,14 +1750,14 @@ export function SplitScreen({
         style={{ borderColor: "var(--line)" }}
       >
         <div className="flex min-w-0 flex-col gap-[3px]">
-          <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" style={{ color: "var(--ink-soft)" }}>
+          <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Run path" style={{ color: "var(--ink-soft)" }}>
             {notFound ? (
               <Link to="/research/quantbt/runs" style={{ color: "var(--accent)" }} data-action="run-library-crumb">
                 Run Library
               </Link>
             ) : (
               <Link
-                to={deepDiveHref(`${runPath}/evidence`, cursor)}
+                to={runScreenHref(runId, "hub", cursor)}
                 style={{ color: "var(--accent)" }}
                 data-action="back-to-hub"
               >
@@ -1779,7 +1774,7 @@ export function SplitScreen({
             {notFound || nothingRead ? null : (
               /* The next stage, carrying this cursor on its own stage — spec 05 §1 outbound, FE-X-10. */
               <Link
-                to={deepDiveHref(`${runPath}/search`, { ...cursor, stage: "search" })}
+                to={runScreenHref(runId, "search", cursor)}
                 className="mono text-[10px]"
                 style={{ color: "var(--accent)" }}
                 data-action="next-stage"
@@ -2067,7 +2062,7 @@ export function SplitScreen({
               </div>
 
               {timeline ? (
-                <WindowAnatomy timeline={timeline} windows={drawn} timelineClosed={lane?.span?.closed ?? false} runPath={runPath} cursor={cursor} />
+                <WindowAnatomy timeline={timeline} windows={drawn} timelineClosed={lane?.span?.closed ?? false} runId={runId} cursor={cursor} />
               ) : lane ? (
                 lane.identityLoading ? <Reading what="the walk-forward span" /> : <LaneAbsent reason={NO_RETAINED_FIELD} what="timeline" />
               ) : (
@@ -2117,14 +2112,14 @@ export function SplitScreen({
 
               <FoldAnatomy slot={folds} detail={detail} cursor={cursor} onFold={onFold} onNeeded={ensureFolds} />
 
-              {lane ? <LaneHoldout lane={lane} runPath={runPath} cursor={cursor} /> : <HoldoutBlock detail={detail} timeline={timeline} runPath={runPath} cursor={cursor} />}
+              {lane ? <LaneHoldout lane={lane} runId={runId} cursor={cursor} /> : <HoldoutBlock detail={detail} timeline={timeline} runId={runId} cursor={cursor} />}
             </section>
 
             {/* ----------------------------------------- S2 · θ* flow */}
             <ThetaFlow detail={detail} folds={folds} cursor={cursor} onFold={onFold} lane={lane} />
 
             {/* --------------------------------------------- fold table */}
-            <FoldTable detail={detail} folds={folds} cursor={cursor} onFold={onFold} runPath={runPath} lane={lane} />
+            <FoldTable detail={detail} folds={folds} cursor={cursor} onFold={onFold} runId={runId} lane={lane} />
 
             {/* S04/S05: the cursor fold's own causal selection — present only on the causal profile. */}
             {folds.state === "ready" && causalSelectionOf(folds.split.fold_plan.folds[cursor.fold - 1]) ? (
@@ -2257,7 +2252,7 @@ export function SplitScreen({
                       : "no outer OOS window published"}
                   {lane ? (
                     <Link
-                      to={deepDiveHref(`${runPath}/evidence`, { ...cursor, stage: "summary" })}
+                      to={runScreenHref(runId, "hub", cursor, { stage: "summary" })}
                       className="mono text-[10px]"
                       style={{ color: "var(--accent)" }}
                       data-action="stitched-series"
@@ -2449,9 +2444,9 @@ function ThetaLane({ id, track, is, oos, isLabel, isTitle, digest, active, pick,
               left: `${placeInTimeline(track, is).leftPercent}%`,
               width: `${placeInTimeline(track, is).widthPercent}%`,
               /* HiFi IS-bar fill approximated by --surface-3 (no exact token). */
-              background: "var(--surface-3)",
+              /* Fade the fill only: opacity on the bar would dim its label below contrast. */
+              background: active ? "var(--surface-3)" : "color-mix(in srgb, var(--surface-3) 60%, transparent)",
               borderColor: "var(--viz-train)",
-              opacity: active ? 1 : 0.6,
             }}
             title={`${isTitle ? `${isTitle}\n` : ""}IS ${exact(is.start_utc_ms)} → ${exact(is.end_exclusive_utc_ms)}`}
             data-theta-is
@@ -2467,8 +2462,7 @@ function ThetaLane({ id, track, is, oos, isLabel, isTitle, digest, active, pick,
             style={{
               left: `${placeInTimeline(track, oos).leftPercent}%`,
               width: `${placeInTimeline(track, oos).widthPercent}%`,
-              background: "var(--role-oos)",
-              opacity: active ? 1 : 0.65,
+              background: active ? "var(--role-oos)" : "color-mix(in srgb, var(--role-oos) 65%, transparent)",
             }}
             title={`outer OOS ${exact(oos.start_utc_ms)} → ${exact(oos.end_exclusive_utc_ms)}`}
             data-theta-oos
@@ -2651,12 +2645,12 @@ function OwnSelection({ fold }: { fold: SourceFoldRow }) {
   if (!selection) return null;
   const title = [
     `own-fold selection · ${selection.scope} · study ${selection.study_id}`,
-    trialLabel({ sourceId: selection.selected_trial_id }) ?? "source not published",
+    trialLabel({ ordinal: selection.selected_trial_ordinal, sourceId: selection.selected_trial_id }) ?? "source not published",
     ...Object.entries(selection.parameters).map(([name, v]) => `${name} = ${v}`),
   ].join("\n");
   return (
     <span className="mono" style={{ color: "var(--accent)" }} title={title} data-theta-own={selection.selected_trial_id}>
-      own · {trialLabel({ sourceId: selection.selected_trial_id })}
+      own · {trialLabel({ ordinal: selection.selected_trial_ordinal, sourceId: selection.selected_trial_id })}
     </span>
   );
 }
@@ -2687,7 +2681,7 @@ function ThetaParams({ lane }: { lane: LaneView }) {
   return (
     <div className="flex flex-col gap-[4px] pl-[72px]" data-theta-params>
       <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }} tabIndex={0} title={why} aria-label={`θ* parameters. ${why}`}>
-        θ* source <span data-theta-trial title={trialTitle}>{value.selected_trial_id ?? "not published"}</span>
+        θ* <span data-theta-trial title={trialTitle}>{trialLabel({ ordinal: value.selected_trial_ordinal, sourceId: value.selected_trial_id }) ?? "source not published"}</span>
         {objective !== null ? <span> · J {objective.replace(/^-/, "\u2212")}</span> : null}
       </span>
       <span hidden>
@@ -2819,14 +2813,14 @@ function FoldTable({
   folds,
   cursor,
   onFold,
-  runPath,
+  runId,
   lane = null,
 }: {
   detail: SplitDetailDocument;
   folds: FoldsSlot;
   cursor: EvidenceCursor;
   onFold: (fold: number) => void;
-  runPath: string;
+  runId: string;
   lane?: LaneView | null;
 }) {
   const is = hasRange(detail.windows.is) ? (detail.windows.is as Range) : null;
@@ -2891,7 +2885,7 @@ function FoldTable({
                   >
                     {foldLabel(fold.fold_id)}{" "}
                     <Link
-                      to={executeWindowHref(runPath, "oos", cursor, number)}
+                      to={executeWindowHref(runId, "oos", cursor, number)}
                       className="ml-1 text-[11px]"
                       style={{ color: "var(--accent)" }}
                       data-fold-replay={number}
@@ -2934,11 +2928,11 @@ function FoldTable({
           ) : is && oos ? (
             <tr data-fold-table-row="three-window">
               <td className={TD}>
-                <Link to={executeWindowHref(runPath, "is", cursor)} style={{ color: "var(--accent)" }} data-window-open="is" title="open the IS window in Execute Replay">
+                <Link to={executeWindowHref(runId, "is", cursor)} style={{ color: "var(--accent)" }} data-window-open="is" title="open the IS window in Execute Replay">
                   IS
                 </Link>
                 {" / "}
-                <Link to={executeWindowHref(runPath, "oos", cursor)} style={{ color: "var(--accent)" }} data-window-open="oos" title="open the OOS window in Execute Replay">
+                <Link to={executeWindowHref(runId, "oos", cursor)} style={{ color: "var(--accent)" }} data-window-open="oos" title="open the OOS window in Execute Replay">
                   OOS
                 </Link>
               </td>

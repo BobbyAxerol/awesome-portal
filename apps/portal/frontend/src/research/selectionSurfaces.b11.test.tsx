@@ -9,6 +9,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { useState } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -83,7 +84,9 @@ describe("S06 · one surface per outer study", () => {
   );
 
   it("shows the parent run-global surface as NOT APPLICABLE with the served reason and a study selector", () => {
-    const { container } = render(
+    function Harness() {
+      const [fold, setFold] = useState(1);
+      return (
       <StudySurfaces
         studies={studies}
         declared={SEARCH.declared_space}
@@ -93,17 +96,22 @@ describe("S06 · one surface per outer study", () => {
         pick={null}
         onPick={() => undefined}
         prunedCount={0}
-      />,
-    );
+        foldOrdinal={fold}
+        onFold={setFold}
+      />
+      );
+    }
+    const { container } = render(<Harness />);
     const parent = container.querySelector("[data-panel='surface-run-global']") as HTMLElement;
     expect(parent.getAttribute("data-panel-state")).toBe("NOT_APPLICABLE");
     expect(parent.textContent).toContain("not applicable");
     expect(parent.textContent).toContain("SERVED_PARENT_REASON");
     expect(container.querySelectorAll("[data-study-pick]")).toHaveLength(2);
     expect(container.querySelector("[data-panel='scatter'], [data-surface]")).toBeTruthy();
-    expect(container.textContent).toContain("study fold_0 · outer fold 0");
+    expect(container.querySelector("[data-study-pick='fold_0']")?.getAttribute("aria-current")).toBe("true");
+    expect(container.textContent).toContain("fold_01 · inner validation");
     fireEvent.click(container.querySelector("[data-study-pick='fold_1']") as HTMLElement);
-    expect(container.textContent).toContain("study fold_1 · outer fold 1");
+    expect(container.textContent).toContain("fold_02 · inner validation");
     expect(container.textContent).not.toContain("global study");
   });
 });

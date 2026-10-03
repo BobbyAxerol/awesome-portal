@@ -140,7 +140,7 @@ describe("chart chrome", () => {
     const { container } = render(<DrawdownChart series={series} group={CHART_GROUP.equity} />);
     const shell = container.querySelector('[data-chart="drawdown"]') as HTMLElement;
     expect(shell.getAttribute("tabindex")).toBe("0");
-    expect(shell.getAttribute("aria-label")).toMatch(/OOS drawdown\. Plus and minus zoom/);
+    expect(shell.getAttribute("aria-label")).toBe("OOS drawdown");
     expect(screen.queryByRole("button", { name: "Reset zoom" })).toBeNull();
     /* No canvas in jsdom: a key press is a safe no-op. */
     fireEvent.keyDown(shell, { key: "+" });

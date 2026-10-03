@@ -409,8 +409,9 @@ describe("DQ-04 — five contract stages as HiFi pills", () => {
     view({ foldCursor: 2 });
     const s1 = $('[data-stage="S1"]');
     expect(s1.tagName).toBe("A");
-    expect(s1.getAttribute("href")).toBe("/research/quantbt/runs/run_01/split#fold=2");
+    expect(s1.getAttribute("href")).toBe("/research/quantbt/runs/run_01/split#stage=split&fold=2");
     expect(s1.textContent).toBe("✓ S1 Split");
+    expect(s1.getAttribute("aria-label")).toBe("Stage 1 Split");
     expect(s1.style.borderRadius).toBe("999px");
     const s2 = $('[data-stage="S2"]');
     expect(s2.getAttribute("data-motion")).toBe("pulse");

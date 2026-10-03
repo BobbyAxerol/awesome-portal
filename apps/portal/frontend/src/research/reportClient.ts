@@ -29,7 +29,6 @@ import { reportSessionExpired } from "../auth/sessionExpiry";
 import { PortalApiError } from "../lib/api";
 import { NOT_MODIFIED, type Fresh } from "./evidenceClient";
 import { parseCursor } from "./evidenceCursor";
-import { parseWindow } from "./evidenceWindow";
 import type { LinkCursor } from "./runLinks";
 import { REPLAY_REFUSAL_COPY } from "./replayClient";
 import { rememberRunLabel } from "./runLabels";
@@ -432,6 +431,7 @@ const CURSOR_KEY = /(?:^#|&)(?:stage|fold|trial|params|schedule|route|seq)=/;
  * with no cursor key means no cursor in hand: the way back then carries none
  * (it used to invent `fold=1`). Screens 09 and 11 read it the same way.
  */
-export function linkFromLocation(hash: string, search: string): LinkCursor {
-  return { cursor: CURSOR_KEY.test(hash) ? parseCursor(hash) : null, window: parseWindow(search) };
+export function linkFromLocation(hash: string, _search = ""): LinkCursor {
+  const parsed = parseCursor(hash);
+  return { cursor: CURSOR_KEY.test(hash) ? parsed : null, window: parsed.window };
 }

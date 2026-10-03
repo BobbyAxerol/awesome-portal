@@ -299,8 +299,7 @@ describe("S04 · enrich_analysis — value path (canonical healthy fixture)", ()
   }, 20_000);
 
   it("a window the block withholds is a typed absence with the block's code", async () => {
-    window.history.replaceState(null, "", "/?window=holdout");
-    const { container } = view(clone(PROPOSED), {}, "/?window=holdout");
+    const { container } = view(clone(PROPOSED), { cursor: { ...DEFAULT_CURSOR, window: "holdout" } });
     await waitFor(() => expect(container.querySelector("[data-window-absent='holdout']")).toBeTruthy());
     const absent = container.querySelector("[data-window-absent='holdout'] [data-withheld]") as HTMLElement;
     expect(absent.getAttribute("data-withheld")).toBe("NOT_APPLICABLE");

@@ -24,12 +24,13 @@
  *    read as a boundary.
  */
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import * as echarts from "echarts/core";
 import type { ECharts } from "echarts/core";
 
 import { EChart } from "../charts/EChart";
 import { smokeMotionAllowed } from "../execution/smokeMotion";
+import { useChartContract } from "./chartContract";
 import { baseOption, roleColorsNow, paletteNow } from "../charts/theme";
 import { canvasTokens, activeTheme, withAlpha } from "../styles/tokens";
 import type {
@@ -237,16 +238,57 @@ function useChartLink(group: string | undefined, option: unknown) {
     setZoomed(start > 0.01 || end < 99.99);
   };
   const reset = () => apply(0, 100);
-  const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+  /** Zoom/pan through the one pure `zoomWindow`; a chart that is not mounted yet is a no-op. */
+  const step = (key: string) => {
     const chart = chartRef.current;
-    if (!chart || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (!chart) return;
     const { start, end } = readWindow(chart);
-    const next = zoomWindow(event.key, start, end);
-    if (next === null) return;
-    event.preventDefault();
-    apply(next[0], next[1]);
+    const next = zoomWindow(key, start, end);
+    if (next !== null) apply(next[0], next[1]);
   };
-  return { wrapper, zoomed, reset, onKeyDown };
+  /** The keyboard readout is the tooltip a hover would show: same cursor, same text. */
+  const show = (index: number | null) => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    if (index === null) {
+      chart.dispatchAction({ type: "hideTip" });
+      chart.dispatchAction({ type: "downplay", seriesIndex: 0 });
+      return;
+    }
+    chart.dispatchAction({ type: "showTip", seriesIndex: 0, dataIndex: index });
+    chart.dispatchAction({ type: "highlight", seriesIndex: 0, dataIndex: index });
+  };
+  const zoom = {
+    zoomIn: () => step("+"),
+    zoomOut: () => step("-"),
+    pan: (dir: -1 | 1) => step(dir === 1 ? "ArrowRight" : "ArrowLeft"),
+    reset,
+    zoomed,
+  };
+  return { wrapper, zoomed, reset, zoom, show };
+}
+
+/** Key help lives in the sr-only summary, not in the accessible name (fewer words on screen). */
+const CHART_KEYS_HELP = "Arrow keys read a point, Shift and arrows pan, plus and minus zoom, 0 resets.";
+
+/**
+ * The point count and per-point text of an ECharts option, taken from the option's own tooltip
+ * formatter: the keyboard readout is exactly the string a hover prints (tags stripped).
+ */
+function tooltipReadout(option: unknown): { count: number; describe: (i: number) => string } {
+  const o = option as {
+    series?: { name?: string; data?: unknown[] }[];
+    tooltip?: { formatter?: (params: unknown) => string };
+  };
+  const series = o?.series?.[0];
+  const count = Array.isArray(series?.data) ? series!.data!.length : 0;
+  const formatter = o?.tooltip?.formatter;
+  const describe = (i: number): string => {
+    if (typeof formatter !== "function") return "";
+    const html = formatter([{ dataIndex: i, seriesName: series?.name, value: (series?.data ?? [])[i], marker: "" }]);
+    return String(html ?? "").replace(/<br\s*\/?>/gi, " · ").replace(/<[^>]+>/g, "").trim();
+  };
+  return { count, describe };
 }
 
 /**
@@ -268,18 +310,27 @@ function ChartShell({
   children: ReactNode;
   attrs?: Record<string, string | undefined>;
 }) {
-  const { wrapper, zoomed, reset, onKeyDown } = useChartLink(group, option);
+  const { wrapper, zoomed, reset, zoom, show } = useChartLink(group, option);
+  const readout = tooltipReadout(option);
+  const c = useChartContract({
+    label,
+    noun: "point",
+    count: readout.count,
+    describe: readout.describe,
+    summary: readout.count > 0 ? `${label}, ${readout.count} points. ${CHART_KEYS_HELP}` : `${label}. ${CHART_KEYS_HELP}`,
+    zoom,
+    events: { prev: () => zoom.pan(-1), next: () => zoom.pan(1) },
+    onIndex: show,
+  });
+  const { className, style, ...region } = c.regionProps;
   return (
     <div
       ref={wrapper}
       data-chart={chart}
       {...attrs}
-      className="relative outline-offset-2 focus-visible:outline focus-visible:outline-1"
-      style={{ outlineColor: "var(--accent)" }}
-      role="group"
-      tabIndex={0}
-      aria-label={`${label}. Plus and minus zoom, arrow keys pan, 0 resets.`}
-      onKeyDown={onKeyDown}
+      {...region}
+      className={`relative ${className ?? ""}`}
+      style={{ ...style, outlineColor: "var(--accent)" }}
     >
       {zoomed ? (
         <button
@@ -294,6 +345,7 @@ function ChartShell({
         </button>
       ) : null}
       {children}
+      {c.nodes}
     </div>
   );
 }

@@ -380,12 +380,12 @@ function LiveWhatIf({
             <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
               9 × 9 · {sliders[1]!.parameter} ↑ · {sliders[0]!.parameter} →
             </span>
-            <div ref={heatRef} className="grid grid-cols-9 gap-[2px]" role="img" aria-label={`what-if grid, ${coverage?.label ?? "0 / 81"} cells evaluated`}>
+            <div ref={heatRef} className="grid grid-cols-[repeat(9,24px)]" role="group" aria-label={`what-if grid, ${coverage?.label ?? "0 / 81"} cells evaluated`}>
               {heat.flat().map((entry) => (
                 <button
                   key={entry.cell_id}
                   type="button"
-                  className="h-[14px] w-[14px] rounded-[2px] border"
+                  className="relative h-[14px] w-[14px] place-self-center rounded-[2px] border before:absolute before:-inset-[5px] before:content-['']"
                   data-entry="fade"
                   data-heat-cell={entry.cell_id}
                   data-heat-state={entry.state}

@@ -458,14 +458,14 @@ describe("S11 composition as served (P21)", () => {
   it("S11-U01 shows the loading frame, the header, every block and the rules before the server answers", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(() => new Promise(() => {}));
     renderCompose();
-    expect(screen.getByRole("heading", { level: 2, name: RC_TITLE })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: RC_TITLE })).toBeTruthy();
     expect(page().getAttribute("data-rc-state")).toBe("loading");
     expect(screen.getAllByRole("status", { name: "Loading" }).length).toBeGreaterThan(0);
     expect(panelOrder()).toEqual(["header", "meta", "notice", "identity", "pack", "record", "seal", "publish", "mirror-ghost"]);
     expect(sealButton().getAttribute("aria-disabled")).toBe("true");
     /* W1 (fewer words): the rules footer and the subtitle are gone; the title is only the title. */
     expect(q("[data-panel='rules']")).toBeNull();
-    expect(screen.getByRole("heading", { level: 2, name: RC_TITLE }).getAttribute("title")).toBeNull();
+    expect(screen.getByRole("heading", { level: 1, name: RC_TITLE }).getAttribute("title")).toBeNull();
   });
 
   it("S11-U02 renders the blocks in the hi-fi order RC_PANELS names", async () => {
@@ -488,7 +488,7 @@ describe("S11 composition as served (P21)", () => {
     await ready();
     /* W1: no subtitle prose and no tooltip copy of it. */
     expect(q("[data-subtitle]")!.getAttribute("title")).toBeNull();
-    const crumb = screen.getByRole("navigation", { name: "Breadcrumb" });
+    const crumb = screen.getByRole("navigation", { name: "Run path" });
     expect(crumb.textContent).toBe(`Evidence/${RUN.slice(0, 13)}/Release candidate`);
     expect(q("[data-crumb-run]")!.getAttribute("title")).toBe(RUN);
     /* W1 B3: opened with no cursor, the way back carries none (it used to say fold=1). */

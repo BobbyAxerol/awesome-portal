@@ -112,6 +112,32 @@ describe("QA S09 · text and number hygiene", () => {
     expect(counts).not.toMatch(/emitted|source observations|bucket|v2/i);
   });
 
+  it("W5 S09: equity is one chart region - Home/End read the ends, a touch tap pins the readout, the strip is one region", async () => {
+    const body = retained();
+    body.enriched_analysis = clone(healthy());
+    await open(body);
+    const region = panel("equity")!.querySelector("[data-equity-probe-area]") as HTMLElement;
+    expect(region.getAttribute("role")).toBe("group");
+    expect(region.querySelector("[tabindex]")).toBeNull();
+    region.focus();
+    fireEvent.keyDown(region, { key: "End" });
+    const last = panel("equity")!.querySelector("[data-equity-tip]")!.getAttribute("title")!;
+    fireEvent.keyDown(region, { key: "Home" });
+    expect(panel("equity")!.querySelector("[data-equity-tip]")!.getAttribute("title")).not.toBe(last);
+    fireEvent.keyDown(region, { key: "Escape" });
+    expect(panel("equity")!.querySelector("[data-equity-tip]")).toBeNull();
+    const months = document.querySelector("[data-months-region]") as HTMLElement;
+    expect(months.getAttribute("aria-label")).toBe("Monthly returns");
+    expect(months.querySelectorAll("[tabindex]").length).toBe(0);
+    expect(months.querySelector("[data-month]")!.getAttribute("aria-hidden")).toBe("true");
+    const episode = document.querySelector("[data-episode]")!;
+    expect(episode.getAttribute("aria-label")).toBeNull();
+    expect(episode.getAttribute("tabindex")).toBe("0");
+    const first = months.querySelector("[data-month]") as HTMLElement;
+    fireEvent.pointerDown(first, { pointerType: "touch" });
+    expect(months.querySelector("[data-months-tip]")).not.toBeNull();
+  });
+
   it("equity subtitle absence path: no source count anywhere prints only what was drawn, never a broken sentence", async () => {
     const body = retained();
     body.frozen_core.equity.source_observation_count = null;

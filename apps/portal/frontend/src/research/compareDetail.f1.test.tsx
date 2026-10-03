@@ -280,7 +280,7 @@ describe("S13 text trim (VD-TEXT-01) — prose out of the body, honesty kept", (
     renderAt(base);
     await settled();
     const text = page().textContent ?? "";
-    expect(page().querySelector("h2")!.textContent).toBe("Compare");
+    expect(page().querySelector("h1")!.textContent).toBe("Compare");
     expect(page().querySelector("[data-subtitle]")).toBeNull();
     expect(text).not.toMatch(/rules of this screen|rule of this mode|three different questions/i);
     expect(text).not.toContain("only keys that changed");
