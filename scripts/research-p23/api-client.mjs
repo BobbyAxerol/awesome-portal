@@ -31,8 +31,9 @@ export async function readBoundedJson(response, maximum = 2 * 1024 * 1024) {
     return JSON.parse(Buffer.concat(chunks, size).toString('utf8'));
   } finally { await reader.cancel(); }
 }
-export function makeClient(user) {
+export function makeClient(user, { connectionClose = false } = {}) {
   assert(/^p23-(owner|approver|reader-[0-9]{2})$/.test(user.username), 'TEST_IDENTITY_REQUIRED');
+  assert(typeof connectionClose === 'boolean', 'EXPLICIT_CONNECTION_POLICY_REQUIRED');
   const jar = new Map(Object.entries(user.cookies ?? {}));
   return {
     user, jar,
@@ -41,6 +42,7 @@ export function makeClient(user) {
       const response = await fetch(new URL(path, BASE_URL), {
         method, redirect: 'manual', signal: AbortSignal.timeout(45000),
         headers: { origin: BASE_URL, accept: 'application/json', 'content-type': 'application/json',
+          ...(connectionClose ? { connection: 'close' } : {}),
           'x-dev-access-email': `${user.username}@azdag.com`,
           cookie: [...jar].map(([key, value]) => `${key}=${value}`).join('; '),
           ...(method !== 'GET' ? { 'x-portal-csrf': jar.get('__Host-portal_csrf') ?? '' } : {}),

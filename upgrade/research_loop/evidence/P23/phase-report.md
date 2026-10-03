@@ -1,5 +1,15 @@
 # P23 backend report — 2026-09-25
 
+**Superseding 2026-10-03:** [independent WFO recompute](./WFO_DIRECT_ENGINE_RECOMPUTATION_2026-10-03.md)
+SCOPED_PASS on the existing clean b90a36a9 image set, no extra build/admission.
+[P24 read-preserving producer rollback](../P24/V1_ACCEPTANCE.md) SCOPED_PASS;
+old Control reader rejects new analytics fields and must stay out of the
+rollback path. QA teardown verified 0 active sessions/jobs and 21 disabled
+non-owner accounts; volumes/backups/exact runnable images retained. No public
+DTO/migration/frontend or production change. Historical OPEN recomputation
+rows below are superseded only for this qualified global Delta WFO profile;
+full P23/P24/browser/engine-two/strict byte-integrity remain OPEN.
+
 **F3 WFO real-browser subset 2026-09-30:** [scoped 12/12 parity receipt](./F3_WFO_BROWSER_PARITY_2026-09-30.md) ties the clean seven-image cell and completed WFO named BFF reads to S03–S08 DOM at desktop/mobile widths. Zero implicit jobs, off-origin calls, page errors or overflow; failed pre-wait harness attempts remain recorded. This is not canonical 54/54 F3 or full P23/P24.
 
 **V11-P23-DR WFO retained subset 2026-09-30:** [scoped read-only parity](./V11_WFO_RETAINED_PARITY_2026-09-30.md) verifies the real WFO's 10 Parquet part hashes, 1,063 sealed/DB/BFF rows, four exact decimal values and source pins. Direct WFO engine recomputation and full P23/P24 remain OPEN.

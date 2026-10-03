@@ -18,3 +18,15 @@ test('reader cancels an oversized stream before consuming its next chunk', async
 test('client refuses non-test principals before any fetch', () => {
   assert.throws(() => makeClient({ username: 'bobby' }), /TEST_IDENTITY_REQUIRED/);
 });
+test('isolated gateway transitions explicitly close sockets without changing the default', async (t) => {
+  const headers=[];
+  t.mock.method(globalThis,'fetch',async (_url,options)=>{
+    headers.push(options.headers);
+    return new Response('{}',{headers:{'content-type':'application/json'}});
+  });
+  await makeClient({username:'p23-owner'},{connectionClose:true}).call('GET','/api/auth/context');
+  await makeClient({username:'p23-owner'}).call('GET','/api/auth/context');
+  assert.equal(headers[0].connection,'close');
+  assert.equal(headers[1].connection,undefined);
+  assert.throws(()=>makeClient({username:'p23-owner'},{connectionClose:'true'}),/EXPLICIT_CONNECTION_POLICY_REQUIRED/);
+});

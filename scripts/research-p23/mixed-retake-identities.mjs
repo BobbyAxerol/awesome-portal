@@ -1,6 +1,7 @@
 /** Reactivate/revoke only the previously issued P23 readers through owner APIs. */
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_HOME, loadSessions, makeClient, readBoundedJson, savePrivate } from './api-client.mjs';
@@ -27,8 +28,11 @@ async function operation(owner, user, action, revision) {
   return {status:response.status,operation_id:body.operation_id??null,
     ...(action==='activation'?{activation:body.activation?.token}:{} )};
 }
-export async function retakeIdentities(home,enable) {
+export async function retakeIdentities(home,enable,label) {
   home=validateHome(home);const sessions=loadSessions(home);
+  if(label!==undefined) assert(/^[a-z][a-z0-9-]{0,63}$/.test(label),'BOUNDED_IDENTITY_RECEIPT_LABEL_REQUIRED');
+  const target=join(home,label?`${label}.json`:enable?'mixed-retake-identities-enable.json':'mixed-retake-identities-cleanup.json');
+  if(label) assert(!existsSync(target),'PRIOR_IDENTITY_RECEIPT_MUST_NOT_BE_OVERWRITTEN');
   const user=sessions.identities.find(x=>x.username==='p23-owner');assert(user,'EXISTING_TEST_OWNER_REQUIRED');
   const owner=makeClient(user);
   await owner.call('POST','/api/auth/login',{username:user.username,credential:user.password},[201]);
@@ -37,7 +41,6 @@ export async function retakeIdentities(home,enable) {
   const readers=sessions.identities.filter(allowedRetakeIdentity);assert.equal(readers.length,20);
   const receipt={project:PROJECT,base_url:BASE_URL,action:enable?'ENABLE_FOR_MIXED_RETAKE':'DISABLE_AND_REVOKE',
     at_utc:new Date().toISOString(),accounts:[],activation_reissues:[],passed:false};
-  const target=join(home,enable?'mixed-retake-identities-enable.json':'mixed-retake-identities-cleanup.json');
   savePrivate(target,receipt);
   for(const reader of readers) {
     const account=(await owner.call('GET',`/api/admin/accounts/${reader.id}`)).body.account;
@@ -87,6 +90,7 @@ export async function retakeIdentities(home,enable) {
 }
 if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
   assert(process.argv.includes('--enable')!==process.argv.includes('--cleanup'),'CHOOSE_ENABLE_OR_CLEANUP');
-  retakeIdentities(process.argv.find(x=>x.startsWith('--home='))?.slice(7)??DEFAULT_HOME,process.argv.includes('--enable'))
+  retakeIdentities(process.argv.find(x=>x.startsWith('--home='))?.slice(7)??DEFAULT_HOME,process.argv.includes('--enable'),
+    process.argv.find(x=>x.startsWith('--label='))?.slice(8))
     .catch(error=>{console.error('P23 retake identity refused:',error.message);process.exitCode=1;});
 }

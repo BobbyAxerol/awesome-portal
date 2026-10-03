@@ -1,5 +1,15 @@
 # P23 backend qualification packet
 
+**Current 2026-10-03:** [independent WFO engine recomputation](./WFO_DIRECT_ENGINE_RECOMPUTATION_2026-10-03.md)
+is SCOPED_PASS: 2,208 equity/time rows, six native metrics, selected params
+and four exact BFF metrics. [P24 checkpoint](../P24/V1_ACCEPTANCE.md) records
+actual producer rollback with current readers (20/20 historical GETs, no
+custody/job/migration/outside drift) and the old-reader compatibility limit.
+Clean mixed-load 499/403 ms and historical-loss accounting are already
+delivered; don't reopen them from stale rows below. Full latest-product
+candidate, second-engine, authentic F5-502/browser and full byte-integrity
+gates remain separate. QA sessions revoked and :8096 cell down, no data loss.
+
 **F5 real server revocation 2026-09-30:** [clean-source stale-cookie receipt](./F5_BROWSER_REVOCATION_HARNESS_2026-09-30.md) passes S02/S14 at 1280/660 px, 4/4, on `38f3ab5e`; jobs 194→194, all four server-side revocations return browser-visible typed 401. The two earlier debug attempts remain recorded but are not counted. Real 502 and full F5/P23/P24 remain OPEN.
 
 **F5 real-browser refusal subset 2026-09-30:** [owned-cell S02/S14 receipt](./F5_BROWSER_REFUSAL_RECEIPT_2026-09-30.md) passes 8/8 real 400/401/403 presentation cases at 1280/660 px on clean `2bfeb53e`; jobs 194→194, no off-origin request, page error or horizontal overflow. The newer revocation row above supersedes its historical revocation gap. Real 502, canonical 54/54 F3 and full F5/P23/P24 remain OPEN.

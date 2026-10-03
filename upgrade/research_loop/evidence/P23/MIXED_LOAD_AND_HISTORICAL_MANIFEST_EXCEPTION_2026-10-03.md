@@ -237,3 +237,11 @@ Still separate: full historical byte recovery (not achieved), engine-two
 T07/T13, independent WFO recomputation, frontend/browser product acceptance,
 and P24. Do not turn this scoped PASS into full P23/Research release GO.
 No origin/primus-origin push, dev/main merge or production activation.
+
+**Continuation delivered 2026-10-03:** independent WFO recomputation is now
+[SCOPED_PASS](./WFO_DIRECT_ENGINE_RECOMPUTATION_2026-10-03.md), not still pending
+for this admitted profile. [P24 acceptance packet](../P24/V1_ACCEPTANCE.md)
+adds the actual read-preserving producer rollback, old-reader incompatibility
+proof, complete 15-ID / 20-FND disposition tables and cleanup. Full-product,
+second-engine, historical byte recovery and signed release remain separate;
+no repeat of this already accepted load/restore slice was required.

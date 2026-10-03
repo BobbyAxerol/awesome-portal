@@ -1441,3 +1441,57 @@ restore volumes/backups/images retained, cache cleanup NO_ACTION_NEEDED.
 No frontend binding/schema change. Shared :8095, production and remotes are
 unchanged. Remaining engine-two/recompute/browser/P24 gates are not closed
 by this slice; do not repeat already accepted far-seek/quota/outage drills.
+
+## 37. P23 independent WFO / P24 read-preserving rehearsal — 2026-10-03
+
+Bobby's instruction to continue the §36 remaining work is implemented in
+the existing backend lane, no remote push / dev-main merge / production
+activation. Public contracts, source seals, frontend and migrations unchanged.
+
+**DELIVERED — V11-P23-DR independent global Delta WFO recomputation.**
+Published pinned QuantBT 1.1.1 runs directly on the same real P08 snapshot,
+not Portal's production runner. 2,208 equity/time rows, six native metrics,
+13/3 fold/trial cardinalities and selected params match; four exact BFF
+metrics have zero difference. Bounded oracle / exact decimal comparison;
+no new job, seal or image build. Diagnostic range-order/float-formula failures
+retained and corrected only in the oracle. [Receipt](./evidence/P23/WFO_DIRECT_ENGINE_RECOMPUTATION_2026-10-03.md).
+
+**DELIVERED — isolated producer rollback with compatible readers.**
+Python current→previous→current, intake paused; 3 typed 503 refusals,
+20/20 historical GET 200, jobs 243→243 / active 0, custody/migrations and
+outside runtime identities/restarts unchanged. Worker OFF, original config
+restored. Old Control reader `ee6d220a…` actually rejects new seal enrichment
+fields; offline check confirms this. Keep reader `edd22298…` when rolling
+the Python producer back. Do not relabel the failed full-Control downgrade
+or this same-engine service transition as engine-upgrade PASS.
+
+**DELIVERED — P24 packet / unsigned candidate / tested operating checklist.**
+[All 15 P24 IDs, all 20 FND dispositions and exact next owners](./evidence/P24/V1_ACCEPTANCE.md),
+[candidate v2 with image/private byte hashes](./evidence/P24/current-source-candidate-manifest.v2.json),
+[rollback runbook](../../deploy/runbooks/research-p24-read-preserving-rollback.md).
+Old assessment/manifest/failure evidence preserved. No invented COR decision,
+lost-byte recovery, new child fact or product/release GO.
+
+**Remaining genuine gates:** full latest FE/product candidate receipts and
+image-sensitive aggregation; actual second qualified engine T07/T13/P24-T05;
+three missing old manifest bytes (accounted for, strict integrity still false);
+non-reusable linked-audit typed-scope disposition; authentic F5-502 or owner
+exception; full scenario/FND/COR/owner acceptance and signed workflow release.
+PyPI inventory confirms latest published 1.1.1, not a newer qualified release.
+Older published versions exist but are not the second Portal-qualified image;
+no package was installed/changed to simulate an upgrade. Legacy export backend
+is already CODE_ACCEPTED; FE must bind prepare→authorized download, not
+restore the old mutating GET link.
+
+**Claude handoff:** no new generated type/data binding from this slice.
+Keep W5 and the two new baseline commits `1ca9d4ec` / `1f6d8392`. Finish
+real-browser/visual/print/current-product acceptance and delivered export
+consumer. Existing old P23 web image is not a newly built W5 frontend.
+Coordinate the final candidate once those receipts land; don't retake the
+unchanged far-seek/quota/outage/load/restore just to repeat them.
+
+**C4:** 0 active QA sessions / 0 nonterminal jobs / 21 disabled non-owner QA
+accounts, owner anchor kept. Owned :8096 containers/network removed, original
+and restored volumes/artifacts/backups/exact rollback image pins retained.
+187-GiB free disk (~30%), no swap; cache deletion NO_ACTION_NEEDED. Focused
+four Node test files and one grouped normal mandatory hook gate landing.

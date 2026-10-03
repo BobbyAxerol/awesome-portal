@@ -1,5 +1,14 @@
 # P24 — entry assessment, not full acceptance
 
+**Superseding checkpoint 2026-10-03:** [V1 acceptance matrix](./V1_ACCEPTANCE.md)
+and [candidate v2](./current-source-candidate-manifest.v2.json). Clean mixed
+load now passes (Library 499 / Progress 403 ms), exact historical-loss
+accounting/coherent restore is delivered (full byte integrity still false),
+independent WFO recomputation passes, and producer rollback retaining current
+schema readers passes. Old Control reader downgrade is incompatible with new
+seal fields. The historical table below is retained, not the current verdict
+for those completed subsets. Full P24/browser/engine-two/release stays OPEN.
+
 Status: **NOT_READY_FOR_FULL_P24**. Approval covers backend implementation,
 not skipping mandatory tests, pushing remotes or deploying production.
 
