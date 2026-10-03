@@ -136,3 +136,43 @@ The test now supplies a fresh changed DB body, matching PostgreSQL behavior;
 its six-test companion group PASS (the other 68 affected tests already PASS).
 Normal hook is the single grouped full gate; it is not bypassed or repeated
 manually before committing.
+
+## 6. Clean 128276d7 retake — affected Report and RC accepted
+
+Supersedes only the read-cost and current-clone cleanup pending statements
+above. Source `128276d70a8f0d47e69617d8dcaedf4fed05cfde` landed clean in both
+backend and shared Research after the normal hook: **267 contracts / 1,930
+Control PASS / one existing named skip**. The residual correction is five
+files, +95/-12, with no frontend/generated DTO/migration change.
+
+Only Control rebuilt: `sha256:629d9bef43e83b10ce8565722a932c5c52e3d5c5b2455dd58f6e765b853b7a46`.
+Eleven compiled module hashes match the clean source; health reports the
+same SHA and `build_dirty=false`. Other six images and source/artifact mounts
+were retained. Frontend/Python/roadmap source has zero diff from `4bc9cefe`;
+Claude FE `59d76862`/`2f4cb81a` remains intact. The one newer `d0569d49` FE
+commit changes two evidence JSON files, not frontend code. No full stack,
+engine, previous Library/Progress or already accepted negative was rerun.
+
+Actual **22:23:27.433–22:23:37.274 UTC**, same twenty QA actors:
+
+| Read | Requests | p95 | Original target | Verdict |
+| --- | ---: | ---: | ---: | --- |
+| Report | 60 | 377 ms | 500 ms | PASS |
+| RC | 60 | 487 ms | 500 ms | PASS |
+
+**120/120 GET 200**, unchanged job/proof counts, original frozen Report and
+RC fingerprint. Seven-service peak **435,445,760 bytes**, all bounded.
+Private `linked-report-read-load-companions-clean.json` SHA-256
+`f3f97668ffe3bc50a20a1438516b3d582b2cc6117288b3abb3cbaea93ca16dae`.
+Candidate identity SHA-256
+`f2409208ce77f9ad8aa972a2708ab5859797bd1572a24012445f379c83fb6735`.
+Earlier failed measurements remain failures, not rewritten or averaged away.
+
+Affected restored-proof browser returned **404**, not a new restore PASS.
+The same actor gets Report/RC **404 with personal default / 200 with explicit
+source workspace**. Backend membership enforcement is correct; S09/S11
+route containers omit workspace propagation already supported by hooks.
+No auth fallback, workspace ownership rewrite, interception or UI edit.
+Full evidence, exact Claude request and C4 are in
+[the current-candidate amendment](./CURRENT_CANDIDATE_CLOSEOUT_AMENDMENT_2026-10-03.md).
+Whole P23/P24, strict historical 83/86 and engine-two gates remain open.

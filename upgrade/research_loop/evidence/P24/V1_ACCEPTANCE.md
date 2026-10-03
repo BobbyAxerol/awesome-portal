@@ -5,6 +5,30 @@ Implemented, measured, browser-accepted and deployed are different verdicts.
 This packet closes the independent WFO and isolated version-rehearsal work,
 not the outstanding product/source/owner gates. No new phase is introduced.
 
+## Latest current-candidate amendment — 128276d7, 2026-10-03
+
+[Candidate v3](./current-source-candidate-manifest.v3.json) and
+[exact P23 hashes / failure / consumer request / cleanup](../P23/CURRENT_CANDIDATE_CLOSEOUT_AMENDMENT_2026-10-03.md)
+supersede earlier execution/read-cost/clone-cleanup pending, not the full
+15-test/20-FND denominator. Real original non-reusable child and new-proof
+restart/fresh restore are accepted; actual Report/RC twenty-user cost
+**377/487 ms PASS**. P22 reader and real JSON502/browser retain acceptance.
+Normal source hook 267 contracts / 1,930 Control PASS / one named skip.
+
+New shared-workspace restored-proof browser **FAIL 404** is preserved:
+same actor's explicit workspace GETs both 200; route containers omit scope.
+**CG-P23-WORKSPACE-01 → Claude**, no backend membership bypass or UI edit.
+The old 30-route personal-workspace restored-browser scope is still PASS;
+it does not replace this missing current cross-workspace consumer receipt.
+Existing linked-audit named operations also require product UI binding.
+
+Exact C4 now complete (21 clone / 1 restored fresh QA disabled; sessions /
+compute and owned cell/network/temporary containers 0). All immutable bytes,
+original/shared users, queued source history, volumes/backups/images retained.
+Whole P23/P24 is still not ready: strict historical **83/86**, actual qualified
+engine two, full scenario/field/action/visual/print/owner and signed-release /
+SBOM/provenance gates stay OPEN. v1/v2/historical failures remain untouched.
+
 ## Latest scoped amendment — clean 4bc9cefe, 2026-10-03
 
 **Later non-reuse/proof-recovery amendment:** original R-WFO-020 now has a

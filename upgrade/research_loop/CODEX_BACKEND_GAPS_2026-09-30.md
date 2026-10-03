@@ -1744,3 +1744,39 @@ membership/proof reads remain fresh; changed bytes with same digest still
 fail. No DTO/hash/financial/UI/budget/profile change. Focused/build/normal
 hook, clean Control-only retake and QA/cell cleanup gate delivery.
 [Actual failure hash and exact change](./evidence/P23/EXACT_JSON_READ_COST_REPAIR_2026-10-03.md#5-clean-69b5a81c-retake--actual-partial-improvement).
+
+### §39 clean 128276d7 acceptance / workspace handoff / C4 — 2026-10-03
+
+Supersedes affected-read and owned-clone cleanup pending, not full P23/P24.
+Source `128276d7`, normal hook **267 contracts / 1,930 Control PASS / one
+named skip**, five-file residual correction **+95/-12**. Only Control rebuilt;
+eleven compiled hashes, health SHA and six reused image/mount identities
+match. Same twenty QA actors, **120/120 GET 200**, Report **377 ms / RC
+487 ms**, both original 500-ms targets, **435,445,760-byte** peak. Original
+Report/RC/source fingerprint/jobs/proofs unchanged. No repeated engine,
+Library/Progress/P22/JSON502 gate, UI/contract/migration or SLO relaxation.
+
+Affected new-proof restored browser **FAIL 404**. Four real comparison GETs
+confirm the same QA member gets default-personal **404** but explicit run
+workspace **200** for Report and RC. S09/S11 route containers omit workspace
+already supported by their hooks. **CG-P23-WORKSPACE-01 → Claude:** propagate
+authorized selected scope through reads/writes/pack links/deep-link/revalidation;
+keep membership refusals and workspace cache invalidation. No role/owner
+rewrite or fallback scan. Existing generated linked-audit operations/proof
+still need product consumer receipt; no frontend file was edited.
+
+C4 complete: **21** fresh clone QA disabled; **1** fresh QA in proof-restore
+snapshot disabled; both active QA sessions/compute **0**. Owned cell/network/
+temporary PG containers **0**, source/shared worker/custody unchanged. Retain
+copied queued source history, all volumes/backups/bytes and runnable images.
+Disk free **193,546,948,608 bytes**, available RAM **12,798,124,032 bytes**,
+swap 0, cache prune `NO_ACTION_NEEDED`. Earlier stale-session/empty-JSON/
+auto-remove harness failures stay disclosed, not accepted as product proof.
+
+[Exact hashes, failure and actionable frontend handoff](./evidence/P23/CURRENT_CANDIDATE_CLOSEOUT_AMENDMENT_2026-10-03.md)
+and [seven-image candidate v3](./evidence/P24/current-source-candidate-manifest.v3.json).
+Full goal still OPEN: restored shared-workspace browser and linked-audit
+consumer; original three historical bytes or Bobby disposition (strict
+**83/86**); actual qualified engine two; full P24/owner/signed release.
+All earlier accepted backend/source/negative gates retain their exact scope.
+No push, dev/main, release dispatch, shared :8095 or production mutation.

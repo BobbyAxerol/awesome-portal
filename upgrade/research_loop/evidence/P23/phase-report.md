@@ -1,5 +1,20 @@
 # P23 backend report — 2026-09-25
 
+**Latest scoped amendment, 2026-10-03 / `128276d7`:** original non-reusable
+linked audit/P05 ACK/Report–RC–Lineage/restart/fresh restore accepted; P22
+six-GET and real JSON502/browser accepted. Actual affected Report/RC
+twenty-user cost now **377/487 ms PASS**, 120/120 GET 200; normal source hook
+267 contracts / 1,930 Control PASS / one named skip. Current restored
+shared-workspace S09/S11 browser **FAIL 404**, diagnosed as omitted workspace
+consumer option (explicit same-actor GETs 200); not a restore/source/RBAC
+failure or reason to override default membership. Exact C4 complete:
+21 clone / 1 restored fresh QA disabled, sessions/compute and owned
+containers/networks 0, business/source custody unchanged, all volumes and
+evidence retained. [Current hashes, scopes, frontend request and remaining
+P23/P24 gates](./CURRENT_CANDIDATE_CLOSEOUT_AMENDMENT_2026-10-03.md).
+This later amendment supersedes only named pending scopes below; historical
+strict 83/86, engine two, full product/owner/signed release stay OPEN.
+
 **Superseding 2026-10-03:** [independent WFO recompute](./WFO_DIRECT_ENGINE_RECOMPUTATION_2026-10-03.md)
 SCOPED_PASS on the existing clean b90a36a9 image set, no extra build/admission.
 [P24 read-preserving producer rollback](../P24/V1_ACCEPTANCE.md) SCOPED_PASS;
