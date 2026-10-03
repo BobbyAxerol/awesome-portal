@@ -499,7 +499,7 @@ function hifiTooltip() {
     trigger: "axis" as const,
     confine: true,
     padding: 10,
-    extraCssText: `border-radius:4px;box-shadow:1px 2px 10px ${withAlpha(ink, 0.2)};`,
+    extraCssText: `border-radius:4px;box-shadow:1px 2px 10px ${withAlpha(ink, 0.2)};max-width:calc(100vw - 24px);white-space:normal;`,
     textStyle: { fontSize: 11, lineHeight: 17, fontFamily: "JetBrains Mono, monospace" },
   };
 }

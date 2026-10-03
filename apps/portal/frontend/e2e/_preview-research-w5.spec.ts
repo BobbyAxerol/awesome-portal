@@ -378,7 +378,22 @@ test.describe("P3 touch: tap keeps the readout 600 ms, an outside tap hides it, 
           if (!(await readoutGone(region, live))) problems.push(`${name}: outside tap did not hide the readout`);
         }
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-        if (overflow > 0) problems.push(`${name}: page scrolls horizontally by ${overflow}px`);
+        if (overflow > 0) {
+          const culprit = await page.evaluate(() => {
+            const vw = document.documentElement.clientWidth;
+            const bad = Array.from(document.querySelectorAll<HTMLElement>("body *")).filter((e) => {
+              const r = e.getBoundingClientRect();
+              if (!(r.width > 0 && r.right > vw + 1) || getComputedStyle(e).position === "fixed") return false;
+              /* an element inside its own horizontal scroller (a tab strip) does not widen the page */
+              for (let a = e.parentElement; a && a !== document.body; a = a.parentElement) {
+                if (/(auto|scroll|hidden)/.test(getComputedStyle(a).overflowX) && a.getBoundingClientRect().right <= vw + 1) return false;
+              }
+              return true;
+            });
+            return bad.slice(0, 3).map((e) => `${e.tagName}.${String(e.className).slice(0, 40)} right=${Math.round(e.getBoundingClientRect().right)} of ${vw}`).join("; ");
+          });
+          problems.push(`${name}: page scrolls horizontally by ${overflow}px (${culprit})`);
+        }
       }
       expect(problems, problems.join("\n")).toEqual([]);
     });
