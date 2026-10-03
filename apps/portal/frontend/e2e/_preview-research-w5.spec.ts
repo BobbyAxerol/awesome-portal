@@ -289,9 +289,12 @@ test.describe("P2 chart keyboard (one tab stop; live text == readout; Home/End/E
         if (afterRight === "") problems.push(`${name}: ArrowRight wrote no live text`);
         else if (!shows(await visibleReadout(region), afterRight)) problems.push(`${name}: live text "${afterRight.slice(0, 60)}" is not the visible readout`);
 
+        /* a controlled chart (S08 playhead) writes its live node one render after the key, at rest */
         await page.keyboard.press("Home");
+        await page.waitForTimeout(250);
         const home = squash(await live.textContent());
         await page.keyboard.press("End");
+        await page.waitForTimeout(250);
         const end = squash(await live.textContent());
         if (home === "" || end === "") problems.push(`${name}: Home/End wrote no live text`);
         else if (home === end) problems.push(`${name}: Home and End read the same point`);

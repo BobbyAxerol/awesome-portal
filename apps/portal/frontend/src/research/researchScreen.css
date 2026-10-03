@@ -324,3 +324,6 @@
     max-width: 100%;
   }
 }
+
+/* The primary button reads against the screen's own accent in both themes (white on the dark theme's light accent was 2.29:1). */
+.research-screen .btn-primary { color: var(--accent-contrast); }

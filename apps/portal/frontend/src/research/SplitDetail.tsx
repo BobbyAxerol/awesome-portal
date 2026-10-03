@@ -2466,7 +2466,7 @@ function ThetaLane({ id, track, is, oos, isLabel, isTitle, digest, active, pick,
             data-theta-oos
           >
             <span aria-hidden className="absolute inset-0" style={{ background: "var(--role-oos)", opacity: active ? 1 : 0.65 }} />
-            <span className="relative mono overflow-hidden whitespace-nowrap text-[8.5px] max-[700px]:hidden" style={{ color: "var(--accent-contrast)" }}>
+            <span className="relative mono overflow-hidden whitespace-nowrap text-[8.5px] max-[700px]:hidden" style={{ color: active ? "var(--accent-contrast)" : "var(--ink)" }}>
               OOS
             </span>
           </span>
