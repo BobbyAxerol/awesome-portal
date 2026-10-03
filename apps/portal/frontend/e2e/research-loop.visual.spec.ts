@@ -131,6 +131,13 @@ const CELLS: Cell[] = [
     label: "S04 evidence hub, fixed P04 profile",
     path: s("04").path,
     root: s("04").root,
+    // The summary hub reads the requested spec for its mode x schedule line.
+    arrange: async (page) => {
+      const { extra } = w3();
+      await page.route("**/api/v1/research/runs/*/requested-spec*", (route) =>
+        route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(extra.requested_spec) }),
+      );
+    },
   },
   { slug: "s05-freeze-claim", label: "S05 freeze / claim (repo screen 07)", path: s("07").path, root: s("07").root },
   { slug: "s06-split", label: "S06 split (repo screen 05)", path: s("05").path, root: s("05").root },
