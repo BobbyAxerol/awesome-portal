@@ -60,7 +60,7 @@ test.describe("S05-S08 stage pages with no evidence", () => {
         await page.waitForLoadState("networkidle");
         const bar = page.locator("[data-stage-run-bar]");
         if ((await bar.count()) > 0) {
-          const word = { FAILED: /^Failed/, CANCELLED: /^Cancelled\./, QUEUED: /^Queued\./ }[state];
+          const word = { FAILED: /^Run failed( at S\d \S+)?\./, CANCELLED: /^Cancelled\./, QUEUED: /^Queued\./ }[state];
           await expect(bar.first()).toContainText(word);
           expect((await exits(page)).length).toBeGreaterThan(0);
         }

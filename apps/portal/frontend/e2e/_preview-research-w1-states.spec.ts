@@ -26,7 +26,7 @@ import {
 } from "./w1StateRuns";
 
 const BANNER: Record<Exclude<StateName, "COMPLETED">, RegExp> = {
-  FAILED: /^Failed/,
+  FAILED: /^(Run failed( at S\d \S+)?|Failed)\./,
   CANCELLED: /^Cancelled\./,
   QUEUED: /^Queued\./,
   RUNNING: /^Running\./,

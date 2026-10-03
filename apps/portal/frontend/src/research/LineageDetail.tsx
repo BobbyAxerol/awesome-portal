@@ -458,6 +458,7 @@ const LINEAGE_CSS = `
 .ln-bandrow { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; min-width: 0; }
 .ln-bandrow.chips { align-items: center; gap: 6px; }
 .ln-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-faint); width: 64px; flex: none; }
+summary.ln-lbl { width: auto; flex: 1 1 auto; cursor: pointer; }
 .ln-avchip { font-family: var(--font-mono); font-size: 10px; font-weight: 700; border: 1px solid var(--line-strong); border-radius: 999px; padding: 1px 9px;
   color: var(--ink-faint); background: var(--paper-raised); }
 .ln-avchip[data-s="ACTIVE"] { color: var(--good); border-color: var(--good); }

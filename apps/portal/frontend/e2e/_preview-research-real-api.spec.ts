@@ -114,7 +114,9 @@ for (const [name, width, height] of VIEWPORTS) {
       if (screenId === "S12") {
         await expect(page.locator('[data-mode="mode_1_decay"] [data-claim]')).toBeVisible();
         await page.locator('[data-mode="mode_1_decay"] [data-schedule="per_fold_decay"]').click();
-        await expect(page.locator('[data-mode="mode_1_decay"] [data-claim]')).toHaveText("selection_adjusted_outer_oos");
+        const claim = page.locator('[data-mode="mode_1_decay"] [data-claim]');
+        await expect(claim).toHaveAttribute("data-claim", "selection_adjusted_outer_oos");
+        await expect(claim).toHaveText("selection adjusted outer OOS");
         await expect(page.locator('[data-mode="mode_1_decay"] [data-formula-state="katex"]').first()).toBeVisible();
       }
 
@@ -249,7 +251,8 @@ for (const [name, width, height] of VIEWPORTS) {
       }
       if (screenId === "S06") {
         const search = await read("search");
-        await expect(page.locator("[data-run-mode]").first()).toContainText(search.search_contract.optimization_mode);
+        /* W4: the mode reads humanised; the exact enum is the visible word with underscores read as spaces. */
+        await expect(page.locator("[data-run-mode]").first()).toHaveText(search.search_contract.optimization_mode.replaceAll("_", " "));
         await expect(page.locator("[data-run-schedule]").first()).toContainText(search.search_contract.optimization_schedule);
         await expect(page.locator("[data-readiness]").first()).toContainText("READY");
       }
@@ -261,7 +264,9 @@ for (const [name, width, height] of VIEWPORTS) {
       }
       if (screenId === "S08") {
         const replay = await read("replay");
-        await expect(page.locator("[data-route-id]").first()).toContainText("signal_notional");
+        /* W4: the attribute is the exact route id; the visible word is humanised. */
+        await expect(page.locator("[data-route-id]").first()).toHaveAttribute("data-route-id", "signal_notional");
+        await expect(page.locator("[data-route-id]").first()).toContainText("signal notional");
         // A seal retained after W5b carries the replay ledger (candles + per-bar
         // account facts): the screen replays candles. An older seal keeps the
         // retained sample ledger.
@@ -396,14 +401,19 @@ for (const [name, width, height] of VIEWPORTS) {
       expect(rows).toEqual(api.pack.map((item: any) => [item.key, item.status]));
       for (const item of api.pack) {
         if ((item.status === "MISSING" || item.status === "DEGRADED") && item.availability.reason_code) {
-          await expect(root.locator(`[data-pack-row='${item.key}'] .note [data-reason-code='${item.availability.reason_code}']`)).toBeVisible();
+          /* W4: the note column is the status chip's tooltip; the served code is its data attribute and in the tooltip. */
+          const chip = root.locator(`[data-pack-row='${item.key}'] [data-status-chip][data-reason-code='${item.availability.reason_code}']`);
+          await expect(chip).toBeVisible();
+          await expect(chip).toHaveAttribute("title", new RegExp(item.availability.reason_code));
         }
         const route = sourceRouteOf(item, run, api.run.binding?.alpha_id ?? null);
         if (route) await expect(root.locator(`[data-source-link='${item.key}']`)).toHaveAttribute("href", route);
         else await expect(root.locator(`[data-pack-row='${item.key}'] [data-source-link]`)).toHaveCount(0);
       }
       const counts = api.pack_counts;
-      await expect(root.locator("[data-pack-counts]")).toHaveText(`${counts.complete} COMPLETE · ${counts.degraded} DEGRADED · ${counts.input} INPUT · ${counts.missing} MISSING`);
+      /* W4: lower-case words, INPUT reads "declared", and a zero count (e.g. no missing rows) is not printed. */
+      const countWords = ([[counts.complete, "complete"], [counts.degraded, "degraded"], [counts.input, "declared"], [counts.missing, "missing"]] as const).filter(([n]) => n > 0).map(([n, word]) => `${n} ${word}`);
+      await expect(root.locator("[data-pack-counts]")).toHaveText(countWords.join(" · "));
       /* Rail tones and links, the server's seal and publish gates, the state chip. */
       const tones = await root.locator("[data-rail-node]").evaluateAll((nodes) => nodes.map((node) => [node.getAttribute("data-rail-node"), node.getAttribute("data-tone")]));
       expect(tones).toEqual(api.rail.map((node: any) => [node.key, node.tone]));
@@ -421,11 +431,15 @@ for (const [name, width, height] of VIEWPORTS) {
         await expect(root.locator("[data-action='publish']")).toHaveAttribute("aria-disabled", "true");
         await expect(root.locator("[data-publish-blocked]")).toHaveAttribute("data-publish-blocked", api.run.binding === null ? "P21_SCRATCH_RUN_UNBOUND" : api.actions.publish.blocked_reason);
       }
-      await expect(root.locator("[data-mirror-ghost] a, [data-mirror-ghost] button, [data-mirror-ghost] [tabindex]")).toHaveCount(0);
+      /* W4: the ghost is one line whose tooltip is keyboard-reachable (tabindex); it still offers no action — no link, no button. */
+      await expect(root.locator("[data-mirror-ghost] a, [data-mirror-ghost] button")).toHaveCount(0);
       if (api.source_absences.approval_mirror?.reason_code) {
-        await expect(root.locator(`[data-mirror-foot] [data-reason-code='${api.source_absences.approval_mirror.reason_code}']`)).toBeVisible();
+        /* W4: the foot is a hidden carrier now (the visible line's tooltip says why); the code stays in the DOM. */
+        await expect(root.locator(`[data-mirror-foot] [data-reason-code='${api.source_absences.approval_mirror.reason_code}']`)).toHaveCount(1);
       }
-      await expect(root.locator("[data-state-chip]")).toHaveText(api.run.binding === null ? "NOT_PUBLISHABLE" : api.local_seal.delivery_state === "DELIVERED" ? "PUBLISHED" : api.local_seal.state === "SEALED_LOCAL" ? "SEALED" : api.state); /* QA S11 U1: a sealed candidate reads SEALED, not its draft state */
+      /* W4: the state chip reads as one humanised word (underscores as spaces, sentence case). */
+      const stateEnum = api.run.binding === null ? "NOT_PUBLISHABLE" : api.local_seal.delivery_state === "DELIVERED" ? "PUBLISHED" : api.local_seal.state === "SEALED_LOCAL" ? "SEALED" : api.state;
+      await expect(root.locator("[data-state-chip]")).toHaveText(new RegExp(`^${String(stateEnum).replace(/_/g, " ")}$`, "i")); /* QA S11 U1: a sealed candidate reads SEALED, not its draft state */
       const visible = await visibleText(page, "[data-screen='release-candidate']");
       expect(visible, "no fabricated governance state").not.toMatch(/\bPUBLISHED\b(?!_)|\bPENDING\b|\bAPPROVED\b(?!_)|Quant Reviewers|none recorded/);
       if (api.availability.state === "PARTIAL") {
@@ -448,7 +462,7 @@ for (const [name, width, height] of VIEWPORTS) {
       }
       /* W7 (after a preview rebuild): the retained lane's DEGRADED rows carry their sentence. */
       const certificate = api.pack.find((item: any) => item.availability.reason_code === "P21_METHODOLOGY_CERTIFICATE_NOT_ISSUED");
-      if (certificate) await expect(root.locator(`[data-pack-row='${certificate.key}'] .note`)).toContainText("claim retained, no issued methodology certificate");
+      if (certificate) await expect(root.locator(`[data-pack-row='${certificate.key}'] [data-status-chip]`)).toHaveAttribute("title", /claim retained, no issued methodology certificate/); /* W4: the note column is the status chip's tooltip */
       expect(await axeBlocking(page, "[data-screen='release-candidate']")).toEqual([]);
 
       await finish(page, `X1-S11-${label}-${name}`, observed, { run, api_availability: api.availability, api_counts: counts, api_publish: api.actions.publish });
@@ -519,8 +533,10 @@ for (const [name, width, height] of VIEWPORTS) {
     /* QA S11 U1: the header carries no seal chip; the sealed panel (data-sealed above) says "sealed locally" and the header state chip reads SEALED, no longer DRAFT. */
     await expect(root.locator("[data-seal-chip]")).toHaveCount(0);
     await expect(root.locator("[data-panel='sealed']")).toHaveAttribute("aria-label", "sealed locally");
-    await expect(root.locator("[data-panel='sealed'] h3.k")).toContainText("sealed locally");
-    await expect(root.locator("[data-state-chip]")).toHaveText("SEALED");
+    /* W4: the heading is the one word "Sealed"; "Portal-local and immutable" rides its tooltip. */
+    await expect(root.locator("[data-panel='sealed'] h3.k")).toHaveText("Sealed");
+    await expect(root.locator("[data-panel='sealed'] h3.k")).toHaveAttribute("title", /Portal-local and immutable/);
+    await expect(root.locator("[data-state-chip]")).toHaveText("Sealed");
     /* The publication read goes to the real preview. The seal above is a DOUBLE, so the server has no such
        candidate and answers 404 — which P22's screen reads as the one F-04 "denied" state (FG-05). */
     const publicationRead = await pageGet(page, `/api/v1/research/release-candidates/${rcId}/publication`);
@@ -586,14 +602,16 @@ for (const [name, width, height] of VIEWPORTS) {
     await page.goto(`/research/quantbt/runs/${RUN}/release-candidate`);
     const root = page.locator("[data-screen='release-candidate']");
     await expect(root.locator("[data-action='publish']")).toHaveAttribute("data-publish-enabled", "true", { timeout: 20_000 });
-    await expect(root.locator("[data-action='publish']")).toHaveText(`Publish release candidate ${rcId}`);
+    /* W4: one sentence — the button says "Publish"; the rc id is in its tooltip (and the sealed panel), not repeated. */
+    await expect(root.locator("[data-action='publish']")).toHaveText("Publish");
+    await expect(root.locator("[data-action='publish']")).toHaveAttribute("title", new RegExp(`Publish ${rcId}`));
     await page.screenshot({ path: `${OUT}/X1-S11-DOUBLE-P22-sealed-${name}.png`, fullPage: true });
     await root.locator("[data-action='publish']").click();
     await expect(root.locator("[data-confirm='publish']")).toBeVisible();
     await page.screenshot({ path: `${OUT}/X1-S11-DOUBLE-P22-confirm-${name}.png`, fullPage: true });
     await root.locator("[data-action='confirm-publish']").click();
     await expect(root.locator("[data-panel='published'] [data-published-receipt]")).toContainText("approval apr_x1_double");
-    await expect(root.locator("[data-state-chip]")).toHaveText("PUBLISHED");
+    await expect(root.locator("[data-state-chip]")).toHaveText("published");
     await expect(root.locator("[data-panel='mirror'] [data-mirror-status]")).toHaveText("PENDING");
     await expect(root.locator("[data-panel='mirror-ghost']")).toHaveCount(0);
     await expect(root.locator("[data-action='edit-declaration']")).toHaveCount(0);
@@ -619,23 +637,49 @@ for (const [name, width, height] of VIEWPORTS) {
       await page.waitForLoadState("networkidle");
       if (response.status() === 200) {
         await expect(root).toHaveAttribute("data-report-revision", api.report_revision);
-        await expect(root.locator("[data-promotion-line]")).toHaveText(api.frozen_core.promotion.line);
+        /* W4: the line reads "promotion — not published"; the served sentence is its tooltip, and the toolbar carries the RC link. */
+        await expect(root.locator("[data-promotion-line]")).toHaveText(/^promotion — /);
+        await expect(root.locator("[data-promotion-line]")).toHaveAttribute("title", api.frozen_core.promotion.line);
         /* W6a: a headline is displayed by unit (DQ-08); the exact server string rides data-headline-value. */
         for (const cell of api.frozen_core.headline) {
           if (cell.value !== null) await expect(root.locator(`[data-headline='${cell.key}'] [data-headline-value]`)).toHaveAttribute("data-headline-value", cell.value);
-          else await expect(root.locator(`[data-headline='${cell.key}'] [data-headline-withheld]`)).toContainText(cell.availability.reason_code ?? cell.availability.state);
+          else {
+            /* W4: the withheld tile reads "not published"; the served code is its data attribute and tooltip. */
+            const withheld = root.locator(`[data-headline='${cell.key}'] [data-headline-withheld] [data-absent]`);
+            await expect(withheld).toHaveAttribute("data-reason-code", cell.availability.reason_code ?? cell.availability.state);
+            await expect(withheld).toHaveAttribute("title", cell.availability.reason_code ?? cell.availability.state);
+          }
         }
         for (const field of api.frozen_core.identity) {
           /* E14 · 9.7: a served qualifier prints under the value, in the same cell. */
           const qualifier = (field as { qualifier?: { state: string; text: string; reason_code: string } | null }).qualifier ?? null;
-          if (field.value !== null) {
-            await expect(root.locator(`[data-identity='${field.key}'] dd`)).toHaveText(
-              qualifier ? `${field.value}${qualifier.text} · ${qualifier.reason_code}` : field.value,
-            );
+          /* W4: run id / alpha / optimization are said once in the header, so an unqualified one is not repeated in the sheet; the fact still has to be on the page. */
+          /* …and a PUBLISHABLE binding is the unmarked default (only a non-default binding prints). */
+          const defaultBinding = field.key === "binding" && field.value === "PUBLISHABLE";
+          const sayedElsewhere = (["run_id", "alpha", "optimization"].includes(field.key) && !qualifier) || defaultBinding;
+          if (sayedElsewhere) {
+            await expect(root.locator(`[data-identity='${field.key}']`)).toHaveCount(0);
+            if (field.value !== null && !defaultBinding) expect(await root.evaluate((node, value) => node.innerHTML.includes(value) || (node.textContent ?? "").includes(value), field.value), `report no longer shows ${field.key} ${field.value} anywhere`).toBe(true);
+          } else if (field.value !== null) {
+            /* A token value reads humanised (a mapped word such as "three-window" or underscores read as spaces) with the exact token in its tooltip; anything else prints as served. */
+            const value: string = field.value;
+            await expect
+              .poll(
+                () =>
+                  root.locator(`[data-identity='${field.key}'] dd`).evaluate(
+                    (node, wanted) => (node.textContent ?? "").toLowerCase().includes(wanted.replace(/_/g, " ").toLowerCase()) || (node.textContent ?? "").includes(wanted) || [...node.querySelectorAll("[title]")].some((el) => el.getAttribute("title") === wanted),
+                    value,
+                  ),
+                { message: `identity ${field.key} lost ${value}` },
+              )
+              .toBe(true);
           }
           if (qualifier) {
-            await expect(root.locator(`[data-identity='${field.key}'] [data-identity-qualifier]`)).toHaveAttribute("data-identity-qualifier", qualifier.state);
-          } else {
+            const chip = root.locator(`[data-identity='${field.key}'] [data-identity-qualifier]`);
+            await expect(chip).toHaveAttribute("data-identity-qualifier", qualifier.state);
+            await expect(chip).toHaveText(qualifier.text);
+            await expect(chip).toHaveAttribute("title", new RegExp(qualifier.reason_code));
+          } else if (!sayedElsewhere) {
             await expect(root.locator(`[data-identity='${field.key}'] [data-identity-qualifier]`)).toHaveCount(0);
           }
         }
@@ -643,7 +687,8 @@ for (const [name, width, height] of VIEWPORTS) {
         if (api.frozen_core.schema_version === "research.report-frozen-core.v2") {
           const core = api.frozen_core;
           if (core.title.text) await expect(root.locator("[data-report-title]")).toHaveText(core.title.text);
-          await expect(root.locator("[data-cert] [data-reason-code]")).toHaveText(core.certification.reason_code);
+          /* W4: the cert box says "not published"; the served code is its data attribute. */
+          await expect(root.locator("[data-cert] [data-reason-code]")).toHaveAttribute("data-reason-code", core.certification.reason_code);
           for (const [index, fact] of core.passport.entries()) {
             await expect(root.locator(`[data-passport-fact='${index + 1}']`)).toHaveAttribute("data-passport-key", fact.key);
           }
@@ -673,13 +718,14 @@ for (const [name, width, height] of VIEWPORTS) {
     const root = page.locator("[data-screen='attempt-lineage']");
     await expect(root).toHaveAttribute("data-lineage-state", /available|partial/, { timeout: 20_000 });
     await page.waitForLoadState("networkidle");
-    await expect(root).toContainText(`of ${api.counts.returned_attempts} attempts`);
+    /* W4: the counter reads "shown of returned"; the "N attempts" words live in the Tried summary. */
+    await expect(root.locator("[data-counter]")).toContainText(`of ${api.counts.returned_attempts}`);
     await expect(root).toContainText(api.alpha.versions.find((version: any) => version.alpha_version_id === api.alpha.active_version_id).label);
     /* Screen 11 composes from a run; without a published pick naming one, "rc & publish →" says why. */
     const picked = api.alpha.versions.some((version: any) => version.lifecycle_state === "ACTIVE" && version.promotion_pick?.state === "PUBLISHED" && version.promotion_pick.run_id);
     if (picked) await expect(root.locator("[data-action='release-candidate']")).toHaveCount(1);
     /* QA S10 U4: with no pick the header links the newest attempt's release candidate; the unrouted span and its reason remain only when no attempt has one. */
-    else if ((api.attempts ?? []).some((attempt: any) => attempt.release_candidate?.run_id)) await expect(root.locator("[data-action='release-candidate']")).toHaveAttribute("title", /newest release candidate of this alpha/);
+    else if ((api.attempts ?? []).some((attempt: any) => attempt.release_candidate?.run_id)) await expect(root.locator("[data-action='release-candidate']")).toHaveAttribute("title", /newest release candidate of this alpha/i);
     else await expect(root.locator("[data-action-unrouted='release-candidate']")).toHaveAttribute("title", /No published promotion pick names a run/);
     await finish(page, `W5c-S10-${name}`, observed, { total_attempts: api.counts.total_attempts, picked });
     expect(observed.failures, "S10 failed reads").toEqual([]);
@@ -725,8 +771,10 @@ for (const [name, width, height] of VIEWPORTS) {
       }
       if (sharedCertification && claimedRuns.length > 0) {
         await expect(root.locator("[data-ladder-cert]")).toHaveAttribute("data-cert-state", claimedRuns[0].certification.state);
-        await expect(root.locator("[data-ladder-cert]")).toContainText("cert not published");
-        await expect(root.locator("[data-ladder-cert]")).toContainText(claimedRuns[0].certification.reason_code);
+        /* W4: the caption reads "no certification grade"; the served code is its data attribute and in its tooltip. */
+        await expect(root.locator("[data-ladder-cert]")).toContainText("no certification grade");
+        await expect(root.locator("[data-ladder-cert]")).toHaveAttribute("data-reason-code", claimedRuns[0].certification.reason_code);
+        await expect(root.locator("[data-ladder-cert]")).toHaveAttribute("title", new RegExp(claimedRuns[0].certification.reason_code));
       }
       const bars = (result.fold_series ?? []).filter((item: any) => item.state === "AVAILABLE").flatMap((item: any) => item.folds.filter((fold: any) => fold.oos_sharpe !== null).map((fold: any) => [item.run_id, fold]));
       /* CG-P20-04 (compareFoldBars LINES_PAST_FOLDS = 8): bars up to eight fold positions, past that one line per attempt
@@ -814,22 +862,32 @@ for (const [name, width, height] of W6B_VIEWPORTS) {
       await expect(row("presentation")).toContainText(node.presentation_kind.toLowerCase());
       /* E7 (D8): the claim reads in words ("not issued") followed by the source sentence. */
       if (node.run_facts.claim.state) await expect(row("claim")).toContainText(node.run_facts.claim.state.toLowerCase().replace(/_/g, " "));
-      if (node.run_facts.certificate.grade) await expect(row("cert")).toHaveText(node.run_facts.certificate.grade);
-      else await expect(row("cert")).toContainText(node.run_facts.certificate.availability.reason_code);
-      for (const [key, fact] of [["OOS sharpe", node.run_facts.oos_sharpe], ["decay", node.run_facts.decay]] as const) {
-        const metric = row(key).locator("[data-metric]");
-        if (fact.value !== null) {
-          await expect(metric).toHaveAttribute("data-metric-value", fact.value);
-          /* F3: negatives print U+2212, not the ASCII hyphen. */
-          await expect(metric).toContainText(Number(fact.value).toFixed(3).replace(/^-/, "−"));
-        } else {
-          await expect(metric).toHaveAttribute("data-metric-state", fact.availability.state);
-          expect(await metric.innerText(), `${key} prints no digit for a null`).not.toMatch(/\d/);
-        }
-      }
+      /* W4: the selected panel keeps parent, mode × schedule and claim up front; the certificate is on the attempt's card chip, its absence reason in the chip's tooltip. */
+      await expect(row("parent")).toBeVisible();
+      await expect(selected.locator("[data-row-key='cert']")).toHaveCount(0);
       /* The card of this attempt; W1: the viewed attempt is always listed, with no need to open the older probes. */
       const card = root.locator(`[data-attempt='${node.attempt_id}']`);
       await expect(card).toBeVisible();
+      if (node.run_facts.certificate.grade) await expect(card.locator("[data-grade]")).toHaveAttribute("data-grade", node.run_facts.certificate.grade);
+      /* W4: an attempt with no issued grade draws no cert chip (the "cert not issued" sentence is the version band's, asserted below); no grade is invented. */
+      else await expect(card.locator("[data-grade]")).toHaveCount(0);
+      /* W4: the selected panel no longer repeats OOS / decay; they ride the attempt's own row detail (open it), exact value in the title. */
+      if ((await card.locator("[data-row]").first().getAttribute("aria-expanded")) !== "true") await card.locator("[data-row]").first().click();
+      const metrics = card.locator(`[data-metrics='${node.attempt_id}']`);
+      await expect(metrics).toBeVisible();
+      for (const [label, fact] of [["OOS", node.run_facts.oos_sharpe], ["decay", node.run_facts.decay]] as const) {
+        const metric = metrics.locator(`[data-metric='${label}']`);
+        if (fact.value !== null) {
+          /* F3: negatives print U+2212, not the ASCII hyphen. */
+          await expect(metric).toContainText(Number(fact.value).toFixed(3).replace(/^-/, "−"));
+        } else if (await metric.count()) {
+          await expect(metric).toHaveAttribute("data-metric-state", fact.availability.state);
+          expect(await metric.innerText(), `${label} prints no digit for a null`).not.toMatch(/\d/);
+        } else {
+          /* both absent: one "no OOS" token whose tooltip carries both reasons */
+          await expect(metrics.locator("[data-metrics-absent], .ln-absent").first()).toHaveAttribute("title", new RegExp(fact.availability.reason_code ?? fact.availability.state));
+        }
+      }
       const version = api.alpha.versions.find((item: any) => item.alpha_version_id === node.alpha_version_id);
       const band = root.locator(`[data-band='${version.alpha_version_id}']`);
       if (version.outcome.text) await expect(band.locator(".ln-out")).toHaveText(version.outcome.text);
@@ -837,11 +895,13 @@ for (const [name, width, height] of W6B_VIEWPORTS) {
       await expect(band.locator("[data-exercised-modes]")).toHaveText(version.exercised.modes.join(" · "));
       const active = api.alpha.versions.find((item: any) => item.lifecycle_state === "ACTIVE");
       if (active?.untried.routes.length) {
-        await expect(root.locator("[data-untried-routes]")).toHaveText(active.untried.routes.map((route: any) => route.route_id).join(" · "));
+        await expect(root.locator("[data-untried-routes]")).toContainText(active.untried.routes.map((route: any) => route.route_id).join(" · "));
       }
-      await expect(root.locator("[data-counter]")).toContainText(`of ${api.counts.returned_attempts} attempts`);
+      await expect(root.locator("[data-counter]")).toContainText(`of ${api.counts.returned_attempts}`);
       await expect(root.locator("[data-count='probe_returned'] .n")).toHaveText(String(api.counts.probe_returned));
-      await expect(root.locator("[data-promotion-standing]")).toBeVisible();
+      /* W4: the standing line is a hidden carrier; the rule and the per-state counts are its tooltip. */
+      await expect(root.locator("[data-promotion-standing]")).toHaveCount(1);
+      await expect(root.locator("[data-promotion-standing]")).toHaveAttribute("title", /\d/);
       expect(await axeBlocking(page, "[data-screen='attempt-lineage']")).toEqual([]);
       await finish(page, `W6b-S10-${label}-${name}`, observed, { attempt: node.attempt_id, etag, promotion_state: node.promotion_state });
       expect(observed.failures, "S10 failed reads").toEqual([]);
@@ -1296,11 +1356,12 @@ for (const [name, width, height] of VIEWPORTS) {
     for (const [key, fact] of Object.entries(replay.route_capabilities) as [string, any][]) {
       const code = fact.reason_code ?? fact.availability?.reason_code;
       if (!code) continue;
-      const chips = await root.locator(`[data-capability='${key}']`).evaluateAll((nodes) =>
-        nodes.map((node) => [node.getAttribute("data-capability-state"), node.querySelector("[data-reason-code]")?.textContent?.trim()]),
+      const chips = await root.locator(`[data-not-published-block] [data-capability='${key}']`).evaluateAll((nodes, wanted: string) =>
+        nodes.map((node) => [node.getAttribute("data-capability-state"), node.getAttribute("title")?.includes(wanted) ?? false]),
+        code,
       );
       expect(chips.length, `S08 draws no capability row for ${key}`).toBeGreaterThan(0);
-      for (const chip of chips) expect(chip, `S08 ${key} does not carry the served reason`).toEqual([fact.state, code]);
+      for (const chip of chips) expect(chip, `S08 ${key} does not carry the served reason (W4: the code rides the name's tooltip)`).toEqual([fact.state, true]);
     }
     expect(replay.route_capabilities.candle_windows.reason_code, "the P04 candle absence is typed").toBe("P04_SOURCE_DID_NOT_PUBLISH_REPLAY_CANDLE_WINDOWS");
     await expect(root.locator("[data-candle-row]")).toHaveCount(0);
@@ -1313,10 +1374,13 @@ for (const [name, width, height] of VIEWPORTS) {
        candle line is there in words, for every absence the server declared. */
     const absences = Object.keys(replay.source_absences);
     await expect(root.locator("[data-source-absences]")).toHaveAttribute("data-source-absences", String(absences.length));
-    await root.locator("[data-source-absences] > summary").click();
-    await expect(root.locator("[data-source-absence]")).toHaveCount(absences.length);
-    await expect(root.locator("[data-source-absence='candles']")).toBeVisible();
-    await expect(root.locator("[data-source-absence='candles']")).toContainText("candles — not published");
+    /* W4: no disclosure — the block's tooltip lists every declared absence, each with the server's reason code. */
+    const absenceNote = (await root.locator("[data-source-absences]").getAttribute("title")) ?? "";
+    expect(absenceNote, "the block's tooltip says the candle line in words").toContain("candles — not published");
+    for (const [key, gap] of Object.entries(replay.source_absences) as [string, any][]) {
+      const gapCode = gap.reason_code ?? gap.availability?.reason_code;
+      if (gapCode) expect(absenceNote, `absence ${key} lost its served reason`).toContain(gapCode);
+    }
     const openOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(openOverflow, `S08 P04 overflow at ${width} with the absences open`).toBe(0);
 
