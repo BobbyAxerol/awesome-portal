@@ -6240,6 +6240,16 @@ refine §8) ·
 <a id="rl-p22"></a>
 ### P22 — Publication và existing approval mirror
 
+**§31 backend amendment — 2026-10-03:** [scoped stale-seal/guidance/read packet](./research_loop/evidence/P22/STALE_SEAL_GUIDANCE_AND_APPROVAL_READ_2026-10-03.md).
+Both readers agree on `P22_CURRENT_SOURCE_CHANGED` for an existing stale seal;
+typed `blocked_action` describes new-run → reviewed new candidate, never
+rewriting/resealing the old actor/run draft. Rail publishes the native
+ordinal/scope/reason without changing hashes/selection identity. Publisher
+DELIVERED receipt + DENIED R1 mirror is separate authorization, not failed
+publish; exact English copy is in the packet. Focused source/contract/build
+checks pass; unchanged :8095 images do not imply new runtime/browser acceptance.
+No FE, Governance grant, migration, production or P23/P24 scope change.
+
 **Đọc chi tiết:** [Guide P22](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p22); [spec S11](./research_loop/release-v1.1/docs/screens/11_release_candidate.md) + [HTML 11](<./research_loop/release-v1.1/QuantBT 11 Release Candidate and Publish.dc.html>).
 **Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
 **Test IDs bắt buộc:** `P22-T01…T14`, `V11-P22-DR/BR/GX` và source tests applicable theo §13.3.

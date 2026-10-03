@@ -123,6 +123,7 @@ export interface components {
             attempt: string;
             binding: components["schemas"]["ComposeRunBinding"] | null;
         };
+        /** @description Only selected_params carries complete native trial presentation; display-only, never a cursor or identity. */
         ComposeRailNode: {
             /** @enum {unknown} */
             key: "alpha" | "alpha_version" | "run" | "selected_params" | "release_candidate";
@@ -130,7 +131,10 @@ export interface components {
             detail: string | null;
             /** @enum {unknown} */
             tone: "ink" | "gold" | "green" | "dim";
-        };
+            selected_trial_ordinal?: number | null;
+            selected_trial_ordinal_scope?: ("RUN_GLOBAL" | "STUDY_LOCAL") | null;
+            selected_trial_ordinal_reason_code?: ("SELECTION_HAS_NO_TRIAL" | "SOURCE_TRIAL_NUMBER_NOT_PUBLISHED" | "STUDY_LOCAL_TRIAL_MAPPING_NOT_PUBLISHED") | null;
+        } & unknown;
         SelectedParams: {
             param_set_id: string | null;
             param_set_id_availability: components["schemas"]["Availability"];
@@ -164,6 +168,11 @@ export interface components {
             publish: {
                 enabled: boolean;
                 blocked_reason: components["schemas"]["ReasonCode"] | null;
+                /**
+                 * @description Server-owned guidance, not mutation authority. CREATE_NEW_RUN_AND_SEAL uses the existing new-run flow and a new candidate; it never reopens or reseals the old actor/run draft. NONE does not imply permission.
+                 * @enum {unknown}
+                 */
+                blocked_action?: "NONE" | "SEAL_CANDIDATE" | "CREATE_NEW_RUN_AND_SEAL" | "REVIEW_CURRENT_CANDIDATE" | "WAIT";
             };
         };
         /** @description Strict P21 bounded composer including display facts that must never be inferred by a browser. */
@@ -269,14 +278,17 @@ export interface components {
                     lifecycle_state: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
                 } | null;
             };
-            rail: {
+            rail: ({
                 /** @enum {unknown} */
                 key: "alpha" | "alpha_version" | "run" | "selected_params" | "release_candidate";
                 value: string;
                 detail: string | null;
                 /** @enum {unknown} */
                 tone: "ink" | "gold" | "green" | "dim";
-            }[];
+                selected_trial_ordinal?: number | null;
+                selected_trial_ordinal_scope?: ("RUN_GLOBAL" | "STUDY_LOCAL") | null;
+                selected_trial_ordinal_reason_code?: ("SELECTION_HAS_NO_TRIAL" | "SOURCE_TRIAL_NUMBER_NOT_PUBLISHED" | "STUDY_LOCAL_TRIAL_MAPPING_NOT_PUBLISHED") | null;
+            } & unknown)[];
             selected_params: components["schemas"]["SelectedParams"];
             taxonomy: {
                 what: string;
@@ -306,6 +318,11 @@ export interface components {
                 publish: {
                     enabled: boolean;
                     blocked_reason: components["schemas"]["ReasonCode"] | null;
+                    /**
+                     * @description Server-owned guidance, not mutation authority. CREATE_NEW_RUN_AND_SEAL uses the existing new-run flow and a new candidate; it never reopens or reseals the old actor/run draft. NONE does not imply permission.
+                     * @enum {unknown}
+                     */
+                    blocked_action?: "NONE" | "SEAL_CANDIDATE" | "CREATE_NEW_RUN_AND_SEAL" | "REVIEW_CURRENT_CANDIDATE" | "WAIT";
                 };
             };
             mirror: null;

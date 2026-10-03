@@ -14,6 +14,7 @@ import {
 import { openApiValidator } from "./research-rf05-openapi";
 import { canonicalResearchJson } from "../src/research/preflight.service";
 import { ResearchReleaseCandidateService } from "../src/research/release-candidate.service";
+import { ResearchReleaseCandidatePublicationService } from "../src/research/release-candidate-publication.service";
 import type {
   ReleaseCandidateDraft,
   ReleaseCandidateSource,
@@ -196,6 +197,52 @@ describe("P21 canonical consumer fixture pack", () => {
     expect(fixture.compose.missing.pack_counts.missing).toBeGreaterThan(0);
     expect(fixture.compose.partial.actions.may_seal).toBe(false);
     expect(fixture.problems.map((problem: { status: number }) => problem.status)).toContain(422);
+  });
+});
+
+describe("§31 stale seal: one reason across the two real reader implementations", () => {
+  it.each(["R-WFO-022", "R-WFO-023"])("%s retains the seal and recommends a new run, never resealing its draft", async (label) => {
+    const original = source({ displayLabel: label });
+    const fingerprint = releaseCandidateSourceFingerprint(original);
+    const draft = persistedDraft({ sourceFingerprint: fingerprint });
+    const x = subject(original, draft);
+    const seal = await x.service.seal(scope, original.runId, {
+      draft_id: draftId, expected_draft_revision: draft.revision, expected_source_fingerprint: fingerprint,
+    });
+    const frozen = x.repository.seal.mock.calls[0]![3](original, draft, releaseCandidateId).frozenCore;
+    const pack = storedPack({ frozenCore: frozen, packDigest: seal.pack_digest, sourceFingerprint: fingerprint });
+    const before = canonicalResearchJson(pack);
+    x.repository.latestPack.mockResolvedValue(pack);
+    x.repository.readPack.mockResolvedValue(pack);
+    x.repository.draft.mockResolvedValue({ ...draft, sealed: true });
+    // Fixture reproduction of source/contract drift, not a live preview receipt.
+    x.repository.snapshot.mockResolvedValue(source({ ...original, engineReleaseId: "quantbt-next-qualified" }));
+    const composer = new ResearchReleaseCandidateService(x.repository as never,
+      { FEATURE_RESEARCH_RELEASE_CANDIDATES: "true", FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION: "true" } as never);
+    const intents = { read: vi.fn().mockResolvedValue(null), begin: vi.fn() };
+    const governance = { publicationEvidence: vi.fn(), createApproval: vi.fn(), detail: vi.fn() };
+    const publisher = new ResearchReleaseCandidatePublicationService(intents as never, x.repository as never,
+      composer, governance as never, { FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION: "true" });
+    const composed = await composer.detail(scope, original.runId);
+    const published = await publisher.publication(scope, { userId: scope.actorUserId } as never, releaseCandidateId);
+    expect(composed.local_seal).toMatchObject({ state: "SEALED_LOCAL", release_candidate_id: releaseCandidateId,
+      availability: { state: "PARTIAL", reason_code: "P21_LOCAL_SEAL_REFERENCES_PRIOR_SOURCE_FINGERPRINT" } });
+    expect(composed.actions).toMatchObject({ may_edit_draft: false, may_seal: false,
+      seal_blocked_reason: "P21_ALREADY_SEALED", publish: { enabled: false,
+        blocked_reason: "P22_CURRENT_SOURCE_CHANGED", blocked_action: "CREATE_NEW_RUN_AND_SEAL" } });
+    expect(published).toMatchObject({ may_publish: false, blocked_reason: composed.actions.publish.blocked_reason,
+      blocked_action: composed.actions.publish.blocked_action, source: { availability: "NOT_CHECKED" } });
+    expect(canonicalResearchJson(pack)).toBe(before);
+    expect(intents.begin).not.toHaveBeenCalled();
+    expect(governance.publicationEvidence).not.toHaveBeenCalled();
+    expect(governance.createApproval).not.toHaveBeenCalled();
+    openApiValidator("research-release-candidate.openapi.json", "ComposeResponseP21").assert(composed);
+    openApiValidator("research-release-candidate-publication.openapi.json", "PublicationResponse").assert(published);
+    if (process.env.P31_WRITE_FIXTURES === "1" && label === "R-WFO-022") {
+      writeFileSync(resolve(process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts"),
+        "fixtures/research-release-candidate.stale-seal.valid.json"),
+      JSON.stringify({ schema_version: "research.stale-seal.fixtures.v1", lane: "FIXTURE_ONLY", composed, published }, null, 2) + "\n");
+    }
   });
 });
 
@@ -446,7 +493,10 @@ describe("P21 Release Candidate composer and local immutable pack", () => {
       repository.publicationContext.mockResolvedValue(context);
       const service = new ResearchReleaseCandidateService(repository as never, { FEATURE_RESEARCH_RELEASE_CANDIDATES: "true", ...flags } as never);
       const result = await service.detail(scope, sourceValue.runId);
-      expect(result.actions.publish, label).toEqual(publish);
+      const expectedAction = ({ P22_LOCAL_SEAL_REQUIRED: "SEAL_CANDIDATE",
+        P22_PUBLICATION_INTAKE_DISABLED: "WAIT" } as Record<string, string>)[
+          (publish as { blocked_reason: string | null }).blocked_reason ?? ""] ?? "NONE";
+      expect(result.actions.publish, label).toEqual({ ...(publish as object), blocked_action: expectedAction });
       expect(result.source_absences.approval_mirror, label).toEqual(mirror);
       expect(repository.publicationContext, label).toHaveBeenCalledWith(scope, {
         alphaId: "alpha-p21", releaseCandidateId: pack?.releaseCandidateId ?? null,

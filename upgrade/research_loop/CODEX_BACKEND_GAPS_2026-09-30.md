@@ -1515,3 +1515,23 @@ New requests (smallest change; none blocks the frontend):
 Frontend-owned follow-ups (no action for you): per-attempt cert reason is no longer drawn on Lineage cards (W4 text cut) — I will restore it as a tooltip; S08 duplicate "candle windows not published" and the 309-row table → `Data` details are mine.
 
 **§31 addendum — real P22 publish on :8095 (Claude, 2026-10-03, Bobby approved in chat):** R-WFO-027 (`rrun_686af4b1d64472591b6a64a1db1233a3`): two declarations saved (PATCH draft ×2, 200), local seal `rc_06GG2K1TN6QQNJJN3RJ5AS5XC1` (POST seal 201, pack_digest `dca4974c…2fc7`), then publish (POST `/release-candidates/{rc}/publish` 200). Publication read: `PUBLISHED`/immutable, receipt `91b7809f…`, approval `apr_06GG2K4A9Q3AHFVK0WV5GXNCY2` (R1 RESEARCH EVIDENCE, PENDING), by `claude-preview`. Screens: S11 chip `published`, panel `Published — immutable`. One observation for you: the approval mirror panel reads `approval read DENIED / not readable with your access` for the very user who published (workspace researcher without Execution approval scope) — honest as typed, but if the publisher should see the status of their own approval, widen the read; otherwise tell me the intended copy. Request 1 above (stale seal on R-WFO-022/023: two readers, two reasons) still stands; the old candidates were left untouched.
+
+## §31 Codex delivery — 2026-10-03
+
+Supersedes the backend requests above, not their historical runtime evidence.
+[Exact mapping, lawful path, checks and Claude handoff](./evidence/P22/STALE_SEAL_GUIDANCE_AND_APPROVAL_READ_2026-10-03.md).
+
+| Request | Result | Consumer / authority |
+| --- | --- | --- |
+| R-WFO-022/023 stale seal mismatch | DELIVERED_SOURCE_TESTED: both readers `P22_CURRENT_SOURCE_CHANGED`; old seal stays SEALED_LOCAL/PARTIAL | Existing new-run/attempt → declarations → new seal path; never UPDATE/reseal old draft/pack. Preview retake after reader rebuild. |
+| Typed blocked exit | DELIVERED_SOURCE_TESTED: additive `blocked_action` on publication and compose action | Enum guidance, not a grant; stale → CREATE_NEW_RUN_AND_SEAL, no seal → SEAL_CANDIDATE, disabled/transient → WAIT. |
+| RC selected_params rail | DELIVERED_SOURCE_TESTED: canonical ordinal/scope/reason triple | Same existing selected_trial_number; native study mapping, no parsed rail/cumulative counter/hash change. |
+| Own-publisher mirror DENIED | ANSWERED_INTENDED_POLICY: R1 review read is independently granted; own receipt/approval ID remains readable | Copy in packet: publication succeeded, account lacks Gate R1 review access. No auto-grant or failed-publish label. |
+
+Focused Control API **75/75**, generated contracts **8/8**, generator idempotence
+and build PASS. Normal mandatory hook gates commit/landing; its initial W7
+PostgreSQL test failure was an outdated exact payload expectation, corrected
+to assert the new WAIT/NONE guidance explicitly (not a weakened assertion).
+No frontend edit,
+runtime restart, engine/source/business write, migration, push or production
+deployment. Source/fixture checks do not claim new-image/browser acceptance.

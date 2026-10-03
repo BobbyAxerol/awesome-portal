@@ -270,6 +270,31 @@ describe("P22 actor-bound publication over existing R1", () => {
     expect(result.approval).toBeNull();
   });
 
+  it("§31 publisher without R1 read rights retains the immutable delivery, not an invented approval status", async () => {
+    const x = subject();
+    x.governance.detail.mockRejectedValue(new GovernanceError("GOVERNANCE_READ_DENIED", "Access denied.", 403));
+    const result = await x.service.publish(scope, user as never, rcId, input, "req_p31");
+    expect(result).toMatchObject({ state: "DELIVERED", may_publish: false, blocked_action: "NONE",
+      published: { approval_id: "apr_p22", by_user_id: user.userId }, approval_read: "DENIED", approval: null });
+    const receipt = result.published;
+    expect((await x.service.publication(scope, user as never, rcId)).published).toEqual(receipt);
+    expect(x.governance.createApproval).toHaveBeenCalledTimes(1);
+    expect(x.governance.verifyPublicationPin).toHaveBeenCalledWith(user, scope.workspaceId, "apr_p22", expect.any(Object));
+  });
+
+  it("§31 an UNKNOWN intent preserves CURRENT_SOURCE_CHANGED instead of replacing it with a pin-change alias", async () => {
+    const x = subject();
+    x.governance.createApproval.mockRejectedValueOnce(new Error("uncertain outcome"));
+    await x.service.publish(scope, user as never, rcId, input, "req_first");
+    x.candidate.detail.mockResolvedValue({ source_fingerprint: "f".repeat(64),
+      local_seal: { release_candidate_id: rcId, state: "SEALED_LOCAL", availability: { state: "PARTIAL" } },
+      run: { binding: { alpha_id: "alpha_p22", alpha_version_id: "av_p22", lifecycle_state: "ACTIVE" } } });
+    expect(await x.service.publication(scope, user as never, rcId)).toMatchObject({ state: "UNKNOWN", may_publish: false,
+      blocked_reason: "P22_CURRENT_SOURCE_CHANGED", blocked_action: "CREATE_NEW_RUN_AND_SEAL" });
+    expect(x.governance.createApproval).toHaveBeenCalledTimes(1);
+    expect(x.repository.refused).not.toHaveBeenCalled();
+  });
+
   it("P22-T05/T14 keeps an ambiguous downstream failure UNKNOWN, not approved", async () => {
     const x = subject();
     x.governance.createApproval.mockRejectedValueOnce(new Error("network timeout"));

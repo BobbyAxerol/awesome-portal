@@ -24,6 +24,7 @@ import { ResearchReleaseCandidateError } from "./release-candidate.error";
 import { ResearchReleaseCandidateRepository } from "./release-candidate.repository";
 import { ResearchReleaseCandidateService } from "./release-candidate.service";
 import { P22PublicationBridgeService, sealedPackMethodologyClaimIds, type P22BridgeReceipt } from "./p22-publication-bridge.service";
+import { publishBlockedAction } from "./release-candidate-publish-action";
 
 type Source = ResearchReleaseCandidatePublicationResponse["source"];
 type Relation = ResearchReleaseCandidatePublicationResponse["candidate_relation"];
@@ -93,7 +94,8 @@ export class ResearchReleaseCandidatePublicationService {
           : intent.actorUserId !== user.userId ? "P22_PUBLICATION_OWNED_BY_ANOTHER_ACTOR"
             : intent.state === "REFUSED" ? intent.lastErrorCode ?? "P22_GOVERNANCE_REFUSED"
               : intent.state === "DELIVERED" ? "P22_ALREADY_DELIVERED"
-                : !sourceMatches ? "P22_SOURCE_PIN_CHANGED" : ready.blocked;
+                : ready.blocked === "P22_CURRENT_SOURCE_CHANGED" ? ready.blocked
+                  : !sourceMatches ? "P22_SOURCE_PIN_CHANGED" : ready.blocked;
     return this.response({
       id, ready: { ...ready, relation }, state: intent.state, mayPublish: canRetry, blocked,
       published, approvalRead: mirror.state, approval: mirror.approval, replayed: false, intent,
@@ -466,7 +468,8 @@ export class ResearchReleaseCandidatePublicationService {
       run_id: input.ready.runId, alpha_id: input.ready.alphaId, alpha_version_id: input.ready.alphaVersionId,
       pack_digest: input.ready.packDigest, source: input.ready.source, state: input.state,
       candidate_relation: input.ready.relation, may_publish: input.mayPublish,
-      blocked_reason: input.blocked, published: input.published, approval_read: input.approvalRead,
+      blocked_reason: input.blocked, blocked_action: publishBlockedAction(input.blocked),
+      published: input.published, approval_read: input.approvalRead,
       approval: input.approval, as_of_utc_ms: Date.now(), replayed: input.replayed,
       attempt_count: input.intent?.attemptCount ?? 0,
       conflicting_approval_id: input.intent?.conflictingApprovalId ?? null,

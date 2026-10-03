@@ -20,6 +20,9 @@ from typing import Any
 CONTRACTS_ROOT = Path(__file__).resolve().parents[1]
 
 TRACKED = (
+    "tooling/generate-research-publish-guidance.mjs",
+    "fixtures/research-release-candidate.stale-seal.valid.json",
+    "fixtures/research-release-candidate.trial-rail.valid.json",
     "fixtures/research-foundation.portal-admission-causal-inner.valid.json",
     "fixtures/research-dataset-coverage.observed-local-date.valid.json",
     "fixtures/research-dataset-bar-metadata.observed-local-date.valid.json",

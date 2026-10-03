@@ -413,6 +413,29 @@ describe("W7 · P21 retained lane on the real Delta WFO run", () => {
     expect(releaseCandidateSourceFingerprint(mapped)).toBe(releaseCandidateSourceFingerprint(value));
   });
 
+  it("§31 publishes the existing selected-params ordinal as typed rail facts, not parsed detail copy", async () => {
+    const value = source();
+    const before = releaseCandidateSourceFingerprint(value);
+    const composed = await subject(value, null).service.detail(scope, value.runId);
+    const node = composed.rail.find(item => item.key === "selected_params")!;
+    expect(node).toMatchObject({ selected_trial_ordinal: composed.selected_params.selected_trial_number,
+      selected_trial_ordinal_scope: "RUN_GLOBAL", selected_trial_ordinal_reason_code: null });
+    expect(composed.rail.filter(item => item.key !== "selected_params").every(item => item.selected_trial_ordinal === undefined)).toBe(true);
+    expect(releaseCandidateSourceFingerprint(value)).toBe(before);
+    composeValidator.assert(composed);
+    if (process.env.P31_WRITE_FIXTURES === "1") writeFileSync(resolve(process.env.PORTAL_CONTRACTS_DIR
+      ?? resolve(__dirname, "../../../packages/contracts"), "fixtures/research-release-candidate.trial-rail.valid.json"), JSON.stringify(composed, null, 2) + "\n");
+    const zero = structuredClone(composed);
+    zero.rail.find(item => item.key === "selected_params")!.selected_trial_ordinal = 0;
+    expect(ResearchReleaseCandidateComposeResponseSchema.safeParse(zero).success).toBe(false);
+    const wrongNode = structuredClone(composed);
+    Object.assign(wrongNode.rail[0]!, { selected_trial_ordinal: 1, selected_trial_ordinal_scope: "RUN_GLOBAL", selected_trial_ordinal_reason_code: null });
+    expect(ResearchReleaseCandidateComposeResponseSchema.safeParse(wrongNode).success).toBe(false);
+    const mixed = structuredClone(composed);
+    mixed.rail.find(item => item.key === "selected_params")!.selected_trial_ordinal_scope = null;
+    expect(ResearchReleaseCandidateComposeResponseSchema.safeParse(mixed).success).toBe(false);
+  });
+
   /** W7 · canonical Screen 11 fixtures: the real run composed by this lane (virtual draft, and declared). */
   it("writes (opt-in) and validates the published WFO compose fixtures", async () => {
     const root = resolve(process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts"), "fixtures");

@@ -168,6 +168,18 @@ describe("W7 · P21 P04 lane golden (byte-for-byte)", () => {
     for (const [name, build] of Object.entries(VARIANTS)) {
       const result = observed[name];
       const value = build();
+      // §31 changes only the live DTO guidance/presentation. Original frozen
+      // golden bytes, source fingerprint, pin set and seal digest remain exact.
+      for (const composed of [result.virtual, result.declared]) {
+        expect(composed.actions.publish.blocked_action).toBe("SEAL_CANDIDATE");
+        delete composed.actions.publish.blocked_action;
+        const node = composed.rail.find((item: { key: string }) => item.key === "selected_params");
+        expect(node).toMatchObject({ selected_trial_ordinal: null, selected_trial_ordinal_scope: null,
+          selected_trial_ordinal_reason_code: "SELECTION_HAS_NO_TRIAL" });
+        delete node.selected_trial_ordinal;
+        delete node.selected_trial_ordinal_scope;
+        delete node.selected_trial_ordinal_reason_code;
+      }
       normalizeLinks(result.virtual.pack, value);
       normalizeLinks(result.declared.pack, value);
       if (result.seal.frozenCore) {

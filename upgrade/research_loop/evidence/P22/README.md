@@ -67,3 +67,11 @@ Trading System runtime was changed.
 Rollback is feature/intake-only: retain immutable packs, intents, receipts,
 settlements, promotion facts and R1 decisions. Never delete or revoke an
 approval as a rollback shortcut. See [rollback](./rollback.md).
+
+## §31 stale-seal/publisher-read amendment — 2026-10-03
+
+The [scoped packet](./STALE_SEAL_GUIDANCE_AND_APPROVAL_READ_2026-10-03.md)
+unifies stale-seal reasons, publishes typed blocked navigation/native rail facts,
+and explains publisher receipt versus R1 review rights. Old seal/receipt bytes
+and Governance grants remain unchanged. Source gates are not a new deployed
+preview/browser receipt.

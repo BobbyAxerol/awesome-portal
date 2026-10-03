@@ -183,6 +183,11 @@ export interface components {
             reconcile_allowed?: boolean;
             claim_candidates?: string[];
             promotion_pick?: components["schemas"]["PromotionPick"] | null;
+            /**
+             * @description Server-owned guidance, not mutation authority. CREATE_NEW_RUN_AND_SEAL uses the existing new-run flow and a new candidate; it never reopens or reseals the old actor/run draft. NONE does not imply permission.
+             * @enum {unknown}
+             */
+            blocked_action?: "NONE" | "SEAL_CANDIDATE" | "CREATE_NEW_RUN_AND_SEAL" | "REVIEW_CURRENT_CANDIDATE" | "WAIT";
         };
         PromotionPick: {
             /** @enum {string} */

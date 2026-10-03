@@ -8,6 +8,8 @@
  */
 
 import { z } from "zod";
+import { PublishBlockedActionSchema, publishBlockedAction } from "./release-candidate-publish-action";
+import { SelectedTrialPresentationSchema } from "./selected-trial-presentation";
 
 export const ResearchReleaseCandidateRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 export const ResearchReleaseCandidateIdSchema = z.string().regex(/^rc_[0-9A-HJKMNP-TV-Z]{26}$/);
@@ -180,7 +182,20 @@ export const ResearchReleaseCandidateComposeResponseSchema = z.object({
     value: z.string().min(1).max(1_024),
     detail: z.string().min(1).max(1_024).nullable(),
     tone: z.enum(["ink", "gold", "green", "dim"]),
-  }).strict()).length(5),
+    ...SelectedTrialPresentationSchema.partial().shape,
+  }).strict().superRefine((value, context) => {
+    const hasPresentation = value.selected_trial_ordinal !== undefined
+      || value.selected_trial_ordinal_scope !== undefined || value.selected_trial_ordinal_reason_code !== undefined;
+    if (!hasPresentation) return; // Historical fixtures/consumers remain valid.
+    const { selected_trial_ordinal, selected_trial_ordinal_scope, selected_trial_ordinal_reason_code } = value;
+    if (value.key !== "selected_params" || !SelectedTrialPresentationSchema.safeParse({
+      selected_trial_ordinal, selected_trial_ordinal_scope, selected_trial_ordinal_reason_code,
+    }).success || (selected_trial_ordinal !== null
+      ? selected_trial_ordinal_scope === null || selected_trial_ordinal_reason_code !== null
+      : selected_trial_ordinal_scope !== null || selected_trial_ordinal_reason_code === null)) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "only the selected-params rail has a complete typed trial presentation" });
+    }
+  })).length(5),
   selected_params: z.object({
     param_set_id: z.string().min(1).max(191).nullable(),
     param_set_id_availability: AvailabilitySchema,
@@ -208,7 +223,12 @@ export const ResearchReleaseCandidateComposeResponseSchema = z.object({
     may_edit_draft: z.boolean(),
     may_seal: z.boolean(),
     seal_blocked_reason: ReasonCodeSchema.nullable(),
-    publish: z.object({ enabled: z.boolean(), blocked_reason: ReasonCodeSchema.nullable() }).strict(),
+    publish: z.object({ enabled: z.boolean(), blocked_reason: ReasonCodeSchema.nullable(),
+      blocked_action: PublishBlockedActionSchema.optional() }).strict().superRefine((value, context) => {
+      if (value.blocked_action !== undefined && value.blocked_action !== publishBlockedAction(value.blocked_reason)) {
+        context.addIssue({ code: z.ZodIssueCode.custom, message: "blocked action must follow the served reason" });
+      }
+    }),
   }).strict(),
   mirror: z.null(),
   source_absences: z.record(z.string().regex(/^[a-z][a-z0-9_]{2,63}$/), AvailabilitySchema),

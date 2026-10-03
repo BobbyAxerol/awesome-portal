@@ -31,6 +31,7 @@ import {
 } from "./release-candidate.repository";
 import { retainedLaneFacts } from "./release-candidate.retained-lane";
 import { selectedTrialPresentation } from "./selected-trial-presentation";
+import { publishBlockedAction } from "./release-candidate-publish-action";
 import { ResearchReportFrozenCoreSchema } from "./report.contract";
 
 type Availability = {
@@ -294,7 +295,7 @@ export class ResearchReleaseCandidateService {
         { key: "alpha", value: source.alpha.alphaId ?? "— unbound / scratch run", detail: source.alpha.name, tone: source.alpha.alphaId ? "ink" : "dim" },
         { key: "alpha_version", value: source.alpha.alphaVersionId ?? "— unbound / scratch run", detail: source.alpha.codeDigest ? `sha256:${source.alpha.codeDigest.slice(0, 12)}` : null, tone: source.alpha.alphaVersionId ? "ink" : "dim" },
         { key: "run", value: source.runId, detail: source.attemptId, tone: "ink" },
-        { key: "selected_params", value: values.parameterBundle ?? "— selection not published", detail: selectedDetail, tone: values.parameterBundle ? "ink" : "dim" },
+        { key: "selected_params", value: values.parameterBundle ?? "— selection not published", detail: selectedDetail, tone: values.parameterBundle ? "ink" : "dim", ...presentation },
         { key: "release_candidate", value: localSeal.release_candidate_id ?? "rc_(draft)", detail: localSeal.state === "SEALED_LOCAL" ? "sealed locally — not delivered" : "assigned on local seal", tone: localSeal.state === "SEALED_LOCAL" ? "green" : "gold" },
       ],
       selected_params: {
@@ -350,7 +351,8 @@ export class ResearchReleaseCandidateService {
         may_edit_draft: !draft.sealed,
         may_seal: sealBlockedReason === null,
         seal_blocked_reason: sealBlockedReason,
-        publish: { enabled: publication.publishBlocked === null, blocked_reason: publication.publishBlocked },
+        publish: { enabled: publication.publishBlocked === null, blocked_reason: publication.publishBlocked,
+          blocked_action: publishBlockedAction(publication.publishBlocked) },
       },
       mirror: null,
       source_absences: {
@@ -380,10 +382,10 @@ export class ResearchReleaseCandidateService {
     const current = localSeal.state === "SEALED_LOCAL" && context.current?.releaseCandidateId === localSeal.release_candidate_id
       ? context.current : null;
     const delivered = current?.state === "DELIVERED" || localSeal.delivery_state === "DELIVERED";
-    const sealed = localSeal.state === "SEALED_LOCAL" && localSeal.availability.state === "AVAILABLE";
     const intakeOpen = this.config.FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION === "true";
     const publishBlocked: string | null = delivered ? "P22_ALREADY_DELIVERED"
-      : !sealed ? "P22_LOCAL_SEAL_REQUIRED"
+      : localSeal.state !== "SEALED_LOCAL" ? "P22_LOCAL_SEAL_REQUIRED"
+        : localSeal.availability.state !== "AVAILABLE" ? "P22_CURRENT_SOURCE_CHANGED"
         : current?.state === "REFUSED" ? "P22_PUBLICATION_REFUSED"
           : current === null && !intakeOpen ? "P22_PUBLICATION_INTAKE_DISABLED"
             : null;

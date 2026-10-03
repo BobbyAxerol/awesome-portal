@@ -32,6 +32,15 @@ const base = {
 };
 
 describe("P22 strict publication contract", () => {
+  it("§31 blocked guidance is additive, bounded and cannot tell a stale seal to mutate itself", () => {
+    const stale = { ...base, may_publish: false, blocked_reason: "P22_CURRENT_SOURCE_CHANGED",
+      blocked_action: "CREATE_NEW_RUN_AND_SEAL" };
+    expect(ResearchReleaseCandidatePublicationResponseSchema.safeParse(stale).success).toBe(true);
+    expect(ResearchReleaseCandidatePublicationResponseSchema.safeParse({ ...stale, blocked_action: "SEAL_CANDIDATE" }).success).toBe(false);
+    expect(ResearchReleaseCandidatePublicationResponseSchema.safeParse({ ...stale, blocked_action: "RESEAL" }).success).toBe(false);
+    expect(ResearchReleaseCandidatePublicationResponseSchema.safeParse({ ...base, blocked_action: "NONE" }).success).toBe(true);
+    expect(ResearchReleaseCandidatePublicationResponseSchema.safeParse({ ...base, blocked_action: "WAIT" }).success).toBe(false);
+  });
   it("P22-T01/T06 fixture bundle keeps success, typed negative and mirror states explicit", () => {
     const fixturePath = process.env.PORTAL_CONTRACTS_DIR
       ? join(process.env.PORTAL_CONTRACTS_DIR, "fixtures/research-release-candidate-publication.p22-governance.fixtures.json")

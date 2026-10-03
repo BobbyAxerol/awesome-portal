@@ -3,6 +3,7 @@
 import { z } from "zod";
 
 import { ResearchReleaseCandidateIdSchema, ResearchReleaseCandidateRunIdSchema } from "./release-candidate.contract";
+import { PublishBlockedActionSchema, publishBlockedAction } from "./release-candidate-publish-action";
 
 const Digest = z.string().regex(/^[0-9a-f]{64}$/);
 const LegacySha = z.string().regex(/^sha256:[0-9a-f]{64}$/);
@@ -90,6 +91,7 @@ export const ResearchReleaseCandidatePublicationResponseSchema = z.object({
   candidate_relation: z.enum(["CURRENT", "SUPERSEDED", "UNKNOWN"]),
   may_publish: z.boolean(),
   blocked_reason: Reason.nullable(),
+  blocked_action: PublishBlockedActionSchema.optional(),
   published: z.object({
     by_user_id: z.string().min(1).max(191),
     by_username: z.string().min(1).max(191),
@@ -121,6 +123,9 @@ export const ResearchReleaseCandidatePublicationResponseSchema = z.object({
     fact_digest: Digest,
   }).strict().nullable().optional(),
 }).strict().superRefine((value, context) => {
+  if (value.blocked_action !== undefined && value.blocked_action !== publishBlockedAction(value.blocked_reason)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "blocked action must follow the served reason" });
+  }
   if ((value.state === "DELIVERED") !== (value.published !== null)) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "delivered state and immutable receipt must agree" });
   }
