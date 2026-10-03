@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ResearchProgressService } from "../src/research/progress.service";
 import { DELTA_CAUSAL_INNER_PROFILE_ID } from "../src/research/delta-causal-inner.profile";
+import { PINNED_AUDIT_PROFILE_ID } from "../src/research/final-audit.contract";
 
 const ingressScope = {
   workspaceId: "research-workspace",
@@ -148,6 +149,33 @@ describe("RS-01 terminal materialization and retry recovery", () => {
     input.event.payload.usage.cpu_seconds = 121;
     await expect(capped.service.ingest(input as never)).rejects.toMatchObject({ code: "RESEARCH_PROGRESS_INVALID" });
     expect(capped.progress.persistIngress).not.toHaveBeenCalled();
+  });
+
+  it("pinned audit completes its persisted terminal without a fabricated P04 report and retries idempotently", async () => {
+    const audit = subject({ scope: { executionProfileId: PINNED_AUDIT_PROFILE_ID }, reportRefuses: true });
+    const input = structuredClone(terminalIngress);
+    input.event.payload.usage.cpu_seconds = 119;
+    await audit.service.ingest(input as never);
+    await audit.service.ingest(input as never);
+    expect(audit.reports.materializeTerminal).not.toHaveBeenCalled();
+    expect(audit.metadata.finishDurableJob).toHaveBeenCalledTimes(2);
+    expect(audit.progress.markTerminalMaterialized).toHaveBeenCalledTimes(2);
+    expect(audit.metadata.finishDurableJob.mock.invocationCallOrder[0])
+      .toBeLessThan(audit.progress.markTerminalMaterialized.mock.invocationCallOrder[0]!);
+  });
+
+  it("pinned audit retains its own CPU bound and refuses P04 sidecars before persistence", async () => {
+    const audit = subject({ scope: { executionProfileId: PINNED_AUDIT_PROFILE_ID } });
+    const input = structuredClone(terminalIngress);
+    input.event.payload.usage.cpu_seconds = 121;
+    await expect(audit.service.ingest(input as never)).rejects.toMatchObject({ code: "RESEARCH_PROGRESS_INVALID" });
+    for (const sidecar of [{ evidence: {} }, { split: {} },
+      { event: { ...terminalIngress.event, payload: { ...terminalIngress.event.payload, evidence_digest: "a".repeat(64) } } }]) {
+      await expect(audit.service.ingest({ ...terminalIngress, ...sidecar } as never))
+        .rejects.toMatchObject({ code: "RESEARCH_PROGRESS_INVALID" });
+    }
+    expect(audit.progress.persistIngress).not.toHaveBeenCalled();
+    expect(audit.metadata.finishDurableJob).not.toHaveBeenCalled();
   });
 
   it("RF01-B3: projects retained tables without widening the vocabulary or leaking identity", async () => {

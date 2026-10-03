@@ -40,6 +40,7 @@ import {
 } from "./delta-wfo.profile";
 import { WHATIF_PROFILE, WHATIF_PROFILE_ID } from "./whatif.profile";
 import { VN_OBSERVED_FIXED_PROFILE_ID } from "./vn-observed-fixed.profile";
+import { PINNED_AUDIT_PROFILE, PINNED_AUDIT_PROFILE_ID } from "./final-audit.contract";
 import {
   RETRY_WAIT_DISPATCH_GRACE_SECONDS,
   STRANDED_TERMINAL_MIN_AGE_SECONDS,
@@ -300,7 +301,10 @@ export class ResearchProgressService {
     // refuse its terminal event forever (seen on the W1 preview with REPORTS
     // on). Its report is P18 work over current-source, not this sidecar.
     // A W5a what-if diagnostic has no report either: it seals one WHATIF_GRID
-    // relation for its parent and nothing P04-shaped.
+    // relation for its parent and nothing P04-shaped. A pinned audit likewise
+    // seals P05 proof for its parent, not a synthetic fixed/WFO report of its
+    // own. Sending that terminal callback to P18 would strand a verified child.
+    if (ingressScope.executionProfileId === PINNED_AUDIT_PROFILE_ID) return;
     if (ingressScope.executionProfileId !== DELTA_WFO_PROFILE_ID && ingressScope.executionProfileId !== DELTA_WFO_V2_PROFILE_ID
       && ingressScope.executionProfileId !== DELTA_CAUSAL_INNER_PROFILE_ID && ingressScope.executionProfileId !== WHATIF_PROFILE_ID) {
       await this.reports.materializeTerminal(ingressScope, input);
@@ -851,12 +855,13 @@ export class ResearchProgressService {
       }
     }
     const whatIf = scope.executionProfileId === WHATIF_PROFILE_ID;
+    const pinnedAudit = scope.executionProfileId === PINNED_AUDIT_PROFILE_ID;
     const causal = scope.executionProfileId === DELTA_CAUSAL_INNER_PROFILE_ID;
     const wfo = scope.executionProfileId === DELTA_WFO_PROFILE_ID || scope.executionProfileId === DELTA_WFO_V2_PROFILE_ID || causal || whatIf;
     const usage = input.event.payload.usage;
     if (usage && typeof usage === "object" && !Array.isArray(usage)) {
       const cpu = (usage as Record<string, unknown>).cpu_seconds;
-      const cap = whatIf
+      const cap = pinnedAudit ? PINNED_AUDIT_PROFILE.cpu_seconds : whatIf
         ? WHATIF_PROFILE.child_limits.cpu_seconds
         : causal ? DELTA_CAUSAL_INNER_PROFILE.child_limits.cpu_seconds
         : wfo
@@ -869,11 +874,11 @@ export class ResearchProgressService {
         throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Research progress usage exceeds the run profile's child limit.", 400);
       }
     }
-    if (wfo && (input.evidence !== undefined || input.split !== undefined
+    if ((wfo || pinnedAudit) && (input.evidence !== undefined || input.split !== undefined
       || input.event.payload.evidence_digest !== undefined || input.event.payload.split_digest !== undefined)) {
       throw new ResearchProgressError(
         "RESEARCH_PROGRESS_INVALID",
-        "A Delta WFO run publishes retained current-source evidence, not P04 terminal sidecars.",
+        "This source profile publishes retained evidence, not P04 terminal sidecars.",
         400,
       );
     }

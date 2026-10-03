@@ -14,7 +14,7 @@ const DigestSchema = z.string().regex(/^[0-9a-f]{64}$/);
 
 export const ResearchAlphaImportParseRequestSchema = z.object({
   workspace_id: WorkspaceIdSchema,
-  original_filename: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}[.]py$/),
+  original_filename: z.string().min(4).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}[.]py$/),
   source_text: z.string().min(1).max(256 * 1024),
   expected_source_digest: DigestSchema.optional(),
 }).strict();

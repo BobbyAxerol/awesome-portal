@@ -7581,3 +7581,15 @@ canonical 5/5 pass; the normal hook/landing and actual product admission→child
 stays untouched. [Generated-operation handoff, limits, failures and C4](./research_loop/evidence/P23/LINKED_PINNED_AUDIT_IMPLEMENTATION_2026-10-03.md).
 Preserve all latest Claude commits; remaining full P23/P24/DR/engine gates
 and no-remote-push scope are unchanged.
+
+**Linked audit runtime correction — 2026-10-03.** Implementation landed as
+`576a32fe`, preserving Claude FE through `a9ff796a`. Actual owned-cell audit
+admission/native/P05 ACK found a terminal routing bug: the child incorrectly
+entered the fixed Report sidecar and stayed RUNNING despite its persisted
+completion. Correct its exact profile routing/CPU cap, recover the same journal
+without another engine execution, and keep the non-reusable gate distinct:
+this parent was actually reusable. Also enforce the already published import
+filename bound of 128, preventing invalid input from masquerading as an
+upstream-502 case. Focused 25/25 plus Control compile PASS; normal hook and
+runtime recovery remain pending. No FE, shared worker, source seal, remote or
+production mutation. [Failure hashes, correction and full remaining scope](./research_loop/evidence/P23/LINKED_AUDIT_TERMINAL_RECOVERY_2026-10-03.md).

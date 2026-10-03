@@ -1646,3 +1646,17 @@ negative proof tests and production constraints were not relaxed. The owned
 P23 helper also forwards only validated non-secret source stamps through sudo,
 so its next runtime can be tied to the exact candidate. Normal hook retry
 and a genuine API child receipt remain required, not presumed PASS.
+
+### §39 runtime correction checkpoint — 2026-10-03
+
+The slice landed as `576a32fe` after the normal hook (267 contract, 1,879
+Control PASS / one skip), retaining all Claude FE through `a9ff796a`. Owned
+P23 migration 094/build/start passed. Its intended parent proved reusable,
+so the strict harness refused before admission. A separately labelled
+boundary attempt allocated one actual child and verified native/P05 proof,
+but Control stayed RUNNING: the pinned-audit terminal wrongly entered the
+fixed P18 Report sidecar. Fix that exact routing/cap and recover the durable
+journal, never write READY manually or rerun the engine. Focused 25/25 pass.
+Also align Zod with the existing 128-character filename contract; do not use
+invalid 131-character input to claim a real upstream 502. No frontend change.
+[Actual failed receipts, corrections, next gates and full remaining scope](./evidence/P23/LINKED_AUDIT_TERMINAL_RECOVERY_2026-10-03.md).
