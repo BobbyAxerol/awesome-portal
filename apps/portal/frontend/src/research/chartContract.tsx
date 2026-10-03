@@ -204,7 +204,9 @@ export function useChartContract(o: ChartContractOptions): ChartContract {
     const hit = pick(event);
     const touch = !isMouse(event);
     if (!hit) {
-      if (touch && indexRef.current !== null) setPinned(true);
+      /* No geometry to snap to (marks wrap): a tap in a gap of a pinned readout dismisses it. */
+      if (touch && pinned) clear();
+      else if (touch && indexRef.current !== null) setPinned(true);
       return;
     }
     if (!hit.within) {

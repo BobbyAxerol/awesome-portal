@@ -284,6 +284,9 @@ function ReadoutCell({ label, value }: { label: string; value: string | null }) 
 
 /* ------------------------------------------------------------------ parts */
 
+/** Rows above which a data table leaves the screen-reader-only DOM for a collapsed "Data" disclosure (SPEC_W5 2.1.5). */
+const SR_TABLE_MAX_ROWS = 120;
+
 function Exact({ value, unit }: { value: string | null | undefined; unit: "currency" | "fraction" | "count" | null }) {
   if (value === null || value === undefined) return <em>not published</em>;
   const shown = unit === null ? positionText(value) : (formatMetric(value, unit) ?? value);
@@ -776,6 +779,25 @@ function CandleChart({
     onSeek: () => setProbe(null),
   });
 
+  const candleTable = (
+      <table data-chart-table="replay-candles">
+        <caption>Retained bars in this window, exact values</caption>
+        <tbody>
+          {rows.slice(0, cut).map((row) => (
+            <tr key={row.source_ordinal} data-candle-row={row.source_ordinal}>
+              <th scope="row">{new Date(row.at_utc_ms).toISOString()}</th>
+              <td>{row.bar?.candle?.open ?? "not published"}</td>
+              <td>{row.bar?.candle?.high ?? "not published"}</td>
+              <td>{row.bar?.candle?.low ?? "not published"}</td>
+              <td>{row.bar?.candle?.close ?? "not published"}</td>
+              <td>{row.accepted_position}</td>
+              <td>{row.equity}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+  );
+
   return (
     <div className="relative" data-chart="replay-candles" data-chart-status={status}>
       <style>{CHART_IN_CSS}</style>
@@ -818,25 +840,18 @@ function CandleChart({
         width={box.width || 1}
         height={260}
       />
-      {/* A table ignores width/overflow, so the visually-hidden box is a wrapper. */}
-      <div className="sr-only">
-      <table data-chart-table="replay-candles">
-        <caption>Retained bars in this window, exact values</caption>
-        <tbody>
-          {rows.slice(0, cut).map((row) => (
-            <tr key={row.source_ordinal} data-candle-row={row.source_ordinal}>
-              <th scope="row">{new Date(row.at_utc_ms).toISOString()}</th>
-              <td>{row.bar?.candle?.open ?? "not published"}</td>
-              <td>{row.bar?.candle?.high ?? "not published"}</td>
-              <td>{row.bar?.candle?.low ?? "not published"}</td>
-              <td>{row.bar?.candle?.close ?? "not published"}</td>
-              <td>{row.accepted_position}</td>
-              <td>{row.equity}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      </div>
+      {/* More than SR_TABLE_MAX_ROWS rows: the chart summary + keyboard readout stand in, and the full table sits behind "Data". */}
+      {rows.length > SR_TABLE_MAX_ROWS ? (
+        <details className="rr-data" data-sr-candle-table data-candle-data>
+          <summary>Data</summary>
+          {candleTable}
+        </details>
+      ) : (
+        /* A table ignores width/overflow, so the visually-hidden box is a wrapper. */
+        <div className="sr-only" data-sr-candle-table>
+          {candleTable}
+        </div>
+      )}
       <ul className="sr-only" data-marker-list>
         {visibleMarkers.map((marker) => (
           <li key={marker.ordinal} data-marker={marker.ordinal} data-marker-kind={marker.kind} data-marker-side={marker.side}>
@@ -1135,6 +1150,7 @@ function OverviewStrip({
  * span or bucket times the panel is a typed absence, never an empty chart.
  */
 function IsWindowPanel({ replay, band, activeFold, onJumpOos }: { replay: CurrentSourceReplay; band: SplitBandSlot; activeFold: string | null; onJumpOos: () => void }) {
+  const summaryId = useId();
   const overview = replay.execution.candle_overview;
   const fold = band.state === "ready" && band.folds ? band.folds.fold_plan.folds.find((candidate) => candidate.fold_id === activeFold) ?? null : null;
   const start = fold?.train_start_utc_ms ?? null;
@@ -1169,7 +1185,7 @@ function IsWindowPanel({ replay, band, activeFold, onJumpOos }: { replay: Curren
         <span className="absolute right-0 top-1/2 -translate-y-1/2">{chartPrice(mid)}</span>
         <span className="absolute bottom-0 right-0">{chartPrice(low)}</span>
       </div>
-      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-[220px] min-w-0 flex-1 rounded-[6px] border" style={{ borderColor: "var(--line-soft)", background: "var(--paper-raised)" }} role="img" aria-label={`${foldLabel(fold.fold_id)} in-sample overview candles`}>
+      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-[220px] min-w-0 flex-1 rounded-[6px] border" style={{ borderColor: "var(--line-soft)", background: "var(--paper-raised)" }} role="img" aria-label={`${foldLabel(fold.fold_id)} in-sample overview candles`} aria-describedby={summaryId}>
         {inSpan.map((bucket, position) => {
           const up = Number(bucket.close) >= Number(bucket.open);
           const ink = up ? "var(--good)" : "var(--bad)";
@@ -1184,6 +1200,7 @@ function IsWindowPanel({ replay, band, activeFold, onJumpOos }: { replay: Curren
           );
         })}
       </svg>
+      <span id={summaryId} className="sr-only" data-is-summary>{`In-sample candle chart, ${inSpan.length} candles, ${formatUtc(inSpan[0]!.open_utc_ms)} to ${formatUtc(inSpan[inSpan.length - 1]!.close_utc_ms)}.`}</span>
       </div>
       <div className="mono ml-[72px] flex justify-between text-[9px]" style={{ color: "var(--ink-faint)" }} data-is-axis="time" aria-hidden="true">
         <span>{formatUtc(start)}</span>
@@ -2007,6 +2024,7 @@ export function CandleReplayBody({
   const snap = useTransport(transport);
   /* UX-13: a ledger row of another fold loads that fold's own window, then the playhead moves to the row. */
   const pendingSeek = useRef<number | null>(null);
+  const loaded = useRef<string | null>(null);
 
   useEffect(() => {
     let at = selectedOrdinal === null ? 0 : rows.findIndex((row) => row.source_ordinal === selectedOrdinal);
@@ -2017,6 +2035,12 @@ export function CandleReplayBody({
         pendingSeek.current = null;
       }
     }
+    /* The same window handed over again (a re-read, a rebuilt slot) is not a new arrival: the playhead stays where
+       the reader, or the link's `seq`, put it. */
+    const key = `${selectedOrdinal}:${rows[0]?.source_ordinal}:${rows[rows.length - 1]?.source_ordinal}:${rows.length}`;
+    const same = loaded.current === key && pendingSeek.current === null;
+    loaded.current = key;
+    if (same) return;
     transport.load(rows.length, Math.max(0, at));
   }, [rows, selectedOrdinal, transport]);
 

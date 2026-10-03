@@ -143,6 +143,9 @@
   }
 }
 
+/* The primary button reads against the screen's own accent in both themes (white on the dark theme's light accent was 2.29:1). */
+.research-screen .btn-primary { color: var(--accent-contrast); }
+
 /*
  * W3b: the evidence-cursor summary toggle exists for phones only. Above 720px it is not rendered, so
  * the 1280 / 1440 px cursor bar is exactly what it was. (The mobile rules that read it sit in the one block below.)
@@ -324,6 +327,3 @@
     max-width: 100%;
   }
 }
-
-/* The primary button reads against the screen's own accent in both themes (white on the dark theme's light accent was 2.29:1). */
-.research-screen .btn-primary { color: var(--accent-contrast); }

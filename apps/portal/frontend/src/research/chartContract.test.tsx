@@ -262,6 +262,23 @@ describe("pointProps and locate", () => {
     fire("pointerdown", 0, "touch", screen.getByTestId("outside"));
     expect(screen.getByTestId("idx").textContent).toBe("null");
   });
+  it("a second tap on the same mark, or a tap in a gap of the region, dismisses a pin; Escape and blur behave", () => {
+    render(<Months />);
+    fire("pointerdown", 0, "touch", screen.getByTestId("m1"));
+    fire("pointerdown", 0, "touch", screen.getByTestId("m1"));
+    expect(screen.getByTestId("idx").textContent).toBe("null");
+    fire("pointerdown", 0, "touch", screen.getByTestId("m2"));
+    fire("pointerdown", 0, "touch", screen.getByTestId("m0"));
+    expect(screen.getByTestId("idx").textContent).toBe("0");
+    fire("pointerdown", 0, "touch", region());
+    expect(screen.getByTestId("idx").textContent).toBe("null");
+    fire("pointerdown", 0, "touch", screen.getByTestId("m2"));
+    fireEvent.blur(region());
+    fire("pointerleave", 0, "touch");
+    expect(screen.getByTestId("idx").textContent).toBe("2");
+    key("Escape");
+    expect(screen.getByTestId("idx").textContent).toBe("null");
+  });
   it("a mouse enter reads without announcing", () => {
     render(<Months />);
     fire("pointerover", 0, "mouse", screen.getByTestId("m2"));
