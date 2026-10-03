@@ -12,7 +12,7 @@
  *  - progress/SSE behaviour and artifact/export routes are unchanged.
  */
 import { useQuery } from "@tanstack/react-query";
-import { Copy, Download, FolderOpen, Plus, ShieldAlert } from "lucide-react";
+import { Copy, FolderOpen, Plus, ShieldAlert } from "lucide-react";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import {
   Link,
@@ -31,6 +31,7 @@ import { Badge, Chip, StateView } from "../../components/ui";
 import { api, canOpenRunResults, isTerminal, type RunSummary } from "../../lib/api";
 import { fmtShortHash } from "../../lib/format";
 import { QuantBTSubnav } from "./QuantBTSubnav";
+import { RunExportAction } from "./RunExportAction";
 import { RunPassport } from "./RunPassport";
 import { QUANTBT_ROOT, isQuantBTTab, runPath, runTabPath } from "./routes";
 import { PortalApiError } from "../../lib/api";
@@ -336,10 +337,7 @@ export function QuantBTModule() {
             {copied ? "Copied ✓" : "Copy id"}
             <span className="mono text-ink-faint">{fmtShortHash(activeRunId)}</span>
           </button>
-          <a className="btn-ghost no-print" href={`/api/runs/${activeRunId}/export`}>
-            <Download size={12} />
-            Export
-          </a>
+          <RunExportAction runId={activeRunId} className="btn-ghost" />
         </>
       ) : null}
       {/* Research Loop entry points (RF-02 preview): Imports opens S14 and New

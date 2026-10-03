@@ -1,10 +1,10 @@
 /** Audit: manifest, config snapshot, data quality, sign-off reconciliation, downloads (§18). */
 import { useQuery } from "@tanstack/react-query";
-import { Download } from "lucide-react";
 
 import { Badge, Collapsible, DefinitionList, StateView } from "../../components/ui";
 import { api } from "../../lib/api";
 import { PlanningLinkPanel } from "../quantbt/PlanningLinkPanel";
+import { RunExportAction } from "../quantbt/RunExportAction";
 import { fmtShortHash, fmtTimestamp } from "../../lib/format";
 
 export function AuditView({ runId }: { runId: string }) {
@@ -77,10 +77,7 @@ export function AuditView({ runId }: { runId: string }) {
           </tbody>
         </table>
         <div className="mt-4 flex items-center gap-3">
-          <a className="btn-primary no-print" href={`/api/runs/${runId}/export`}>
-            <Download size={13} />
-            Download export bundle (JSON · CSV · Parquet)
-          </a>
+          <RunExportAction runId={runId} className="btn-primary" label="Download export bundle" iconSize={13} />
         </div>
       </div>
 
