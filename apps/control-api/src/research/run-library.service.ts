@@ -1,6 +1,7 @@
 /** P12 server-side mapping from persisted Research rows to Screen-01 DTOs. */
 
 import { createHash } from "node:crypto";
+import { freezeReadValue, immutableReadJsonParser } from "./immutable-read-json";
 import { verifiedEnriched } from "./enriched-analysis.contract";
 import { Inject, Injectable } from "@nestjs/common";
 
@@ -405,6 +406,9 @@ function filtersFor(query: ResearchRunLibraryQuery): NormalizedFilter[] {
 @Injectable()
 export class ResearchRunLibraryService {
   private readonly cursors: KeysetCursorCodec;
+  private readonly pageCardMemo = new WeakMap<RunLibraryRow, {
+    times: string; item: ResearchRunLibraryItem;
+  }>();
 
   constructor(
     private readonly repository: ResearchRunLibraryRepository,
@@ -440,7 +444,7 @@ export class ResearchRunLibraryService {
         const mapped = retainedCardFacts(fact);
         return mapped ? [[fact.run_id, mapped] as const] : [];
       }));
-    const items = page.rows.map((row) => this.mapRow(row, retained.get(row.run_id)));
+    const items = page.rows.map((row) => this.mapPageRow(row, retained.get(row.run_id)));
     const first = page.rows[0];
     const last = page.rows[page.rows.length - 1];
     const response = {
@@ -794,6 +798,23 @@ export class ResearchRunLibraryService {
     return facts;
   }
 
+  private mapPageRow(row: RunLibraryRow, retained?: RetainedCardFacts): ResearchRunLibraryItem {
+    // Repository checks EVERY actor's membership and draft in the fresh
+    // transaction before returning a shared immutable row. Only projection
+    // validation is reused, never authority, SQL, facets or freshness. Weak
+    // keys expire with the in-flight snapshot. Mutable/independent rows use
+    // normal validation, including the P19 public mapRow entry point.
+    if (!Object.isFrozen(row)) return this.mapRow(row, retained);
+    // Object.freeze(Date) cannot prevent setTime: guard all date inputs too.
+    const times = [row.created_at, row.updated_at, row.progress_received_at]
+      .map(value => value?.getTime() ?? null).join(":");
+    const prior = this.pageCardMemo.get(row);
+    if (prior?.times === times) return prior.item;
+    const item = freezeReadValue(this.mapRow(row, retained));
+    this.pageCardMemo.set(row, { times, item });
+    return item;
+  }
+
   mapRow(row: RunLibraryRow, retained?: RetainedCardFacts): ResearchRunLibraryItem {
     let enriched;
     try { enriched = verifiedEnriched(row.enriched_analysis, row.enriched_digest, row.run_id); }
@@ -892,16 +913,15 @@ export class ResearchRunLibraryService {
   }
 
   private requestedSpec(value: RunLibraryRow["requested_spec"]): ResearchRequestedSpec | null {
-    const raw = asObject(value);
-    const parsed = raw ? ResearchRequestedSpecSchema.safeParse(raw) : null;
-    return parsed?.success ? parsed.data : null;
+    return this.parseRequestedSpec(value);
   }
 
   private progress(value: RunLibraryRow["progress_snapshot"]): ResearchProgressSnapshot | null {
-    const raw = asObject(value);
-    const parsed = raw ? ResearchProgressSnapshotSchema.safeParse(raw) : null;
-    return parsed?.success ? parsed.data : null;
+    return this.parseProgress(value);
   }
+
+  private readonly parseRequestedSpec = immutableReadJsonParser(ResearchRequestedSpecSchema);
+  private readonly parseProgress = immutableReadJsonParser(ResearchProgressSnapshotSchema);
 
   private binding(row: RunLibraryRow): ResearchRunLibraryItem["binding"] {
     if (!row.alpha_id || !row.alpha_name || !row.alpha_version_id || !row.alpha_version_label || !row.alpha_code_digest) {

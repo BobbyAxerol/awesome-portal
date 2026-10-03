@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { ResearchProgressRepository } from "../src/research/progress.repository";
+import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE } from "../src/research/contracts";
 
 function subject(row: Record<string, unknown>) {
   const queries: string[] = [];
@@ -42,6 +43,24 @@ function runRow(overrides: Record<string, unknown> = {}) {
 
 describe("ResearchProgressRepository terminal materialisation requirement", () => {
   const scope = { workspaceId: "research-workspace", actorUserId: "research-owner" };
+
+  it("sets all five exact transaction-local budgets/scopes in one round trip before reads", async () => {
+    const { repository, client } = subject(runRow());
+    await repository.readRun(scope, "run_terminal_truth");
+    const calls = client.query.mock.calls as unknown as Array<[string, unknown[]?]>;
+    expect(calls[0]?.[0]).toBe("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+    expect(calls[1]?.[0]).toBe(`SET LOCAL ROLE ${RESEARCH_DB_RUNTIME_ROLE}`);
+    const settings = calls.filter(([sql]) => sql.includes("set_config("));
+    expect(settings).toHaveLength(1);
+    expect(settings[0]?.[0].match(/set_config\(/g)).toHaveLength(5);
+    expect(settings[0]?.[0].match(/, true\)/g)).toHaveLength(5);
+    expect(settings[0]?.[1]).toEqual([
+      `${RESEARCH_DB_BUDGET.statementTimeoutMs}ms`, `${RESEARCH_DB_BUDGET.lockTimeoutMs}ms`,
+      `${RESEARCH_DB_BUDGET.idleTransactionTimeoutMs}ms`, scope.workspaceId, scope.actorUserId,
+    ]);
+    expect(calls[2]).toEqual(settings[0]);
+    expect(calls[3]?.[0]).toContain("SELECT producer.run_id");
+  });
 
   it("marks a control cancellation before source as NOT_REQUIRED, not permanently PENDING", async () => {
     const { repository, queries } = subject(runRow());

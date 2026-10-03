@@ -1391,3 +1391,31 @@ exactly; it is not relaxed to a partial match. A public cursor outside the
 existing integer bound is withheld, with a focused negative. Final W5/W7
 29/29 and Control build pass; corrected-image receipt and normal hook retry
 gate landing. Source journals/immutable custody and frontend remain untouched.
+
+## 36. P23 mixed-load and historical test-store integrity — Bobby approved, 2026-10-03
+
+IN_PROGRESS, backend lane only. Optimize Library/Progress below the existing
+500-ms mixed-load target, preserving actor/workspace RLS, fresh reads, finite
+admission and exact public DTOs. Retake the affected twenty-principal workload
+in owned :8096; do not repeat already accepted far-seek/utility/outage drills
+unless a changed dependency requires it. No frontend or shared :8095 changes.
+
+Handle exactly the three previously recorded lost disposable test manifests
+as a bounded, source-checked historical exception ledger. Preserve every DB
+row, original expected digest, archived failure and existing artifact byte.
+Default strict integrity must still fail on missing bytes; a scoped exception
+assessment must not claim full-store integrity or hide a new/referenced loss.
+Require unchanged missing identity/digest population, zero governance/
+retention pins, and verification of all extant manifests/parts plus coherent
+restore parity. No reseal, deletion, synthetic recovery or production change.
+
+Grouped focused tests, one normal mandatory commit hook, exact runtime/image
+receipt and C4 teardown gate this slice. P23 engine-two/independent WFO/browser
+and P24 remain distinct; no remote push is authorized.
+
+Actual dependency refinement: all three have zero retention/RC/publication/
+promotion/selection/exposure/audit links, BUT each has one retained DB seal
+and one frozen Report. Exact historical exception accounting must preserve
+and disclose both copies, reject changed dependency counts, and never equate
+the DB copies with the missing original artifact bytes. Full integrity stays
+false while those bytes remain missing; no false "unreferenced loss" claim.

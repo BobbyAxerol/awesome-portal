@@ -20,6 +20,7 @@ import {
 } from "../src/research/run-library.service";
 import { testConfig } from "./harness";
 import { SEALED_PERFORMANCE_DEFINITIONS } from "../src/research/source-aware-metric-resolver";
+import { freezeReadValue } from "../src/research/immutable-read-json";
 
 /**
  * RF-05 / P12 service units over rows shaped from the isolated QuantBT 1.1.1
@@ -169,6 +170,38 @@ const QUERY = {
 };
 
 describe("RF-05 P12 Run Library service mapping", () => {
+  it("validates one immutable shared card once, but every list still reads its actor-scoped page", async () => {
+    const shared = freezeReadValue(row());
+    const repository = { list: vi.fn().mockResolvedValue(page([shared])) };
+    const service = new ResearchRunLibraryService(repository as never, config);
+    const mapping = vi.spyOn(service, "mapRow");
+    const responses = await Promise.all(Array.from({ length: 20 }, (_, i) =>
+      service.list({ ...scope, actorUserId: `reader_${i}` }, QUERY)));
+    expect(repository.list).toHaveBeenCalledTimes(20);
+    expect(mapping).toHaveBeenCalledTimes(1);
+    expect(responses.every(response => response.items[0] === responses[0]!.items[0])).toBe(true);
+    expect(Object.isFrozen(responses[0]!.items[0])).toBe(true);
+    expect(() => { responses[0]!.items[0]!.status = "FAILED"; }).toThrow();
+    const next = freezeReadValue(row({ rc_draft_id: "rcd_second_actor" }));
+    repository.list.mockResolvedValue(page([next]));
+    await service.list(scope, QUERY);
+    expect(mapping).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not reuse a shared card across mutable dates or independent snapshots", async () => {
+    const shared = freezeReadValue(row());
+    const repository = { list: vi.fn().mockResolvedValue(page([shared])) };
+    const service = new ResearchRunLibraryService(repository as never, config);
+    const mapping = vi.spyOn(service, "mapRow");
+    await service.list(scope, QUERY);
+    shared.updated_at.setTime(shared.updated_at.getTime() + 1000);
+    await service.list(scope, QUERY);
+    expect(mapping).toHaveBeenCalledTimes(2);
+    repository.list.mockResolvedValue(page([row()]));
+    await service.list(scope, QUERY);
+    await service.list(scope, QUERY);
+    expect(mapping).toHaveBeenCalledTimes(4);
+  });
   it("B8: cancelled actual child progress stays readable without AVAILABLE/null placeholders", () => {
     // Cancellation belongs to durable lifecycle; the retained child snapshot
     // is the last genuine RUNNING observation, not an invented CANCELLED hook.

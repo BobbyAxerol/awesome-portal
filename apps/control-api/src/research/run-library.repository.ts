@@ -20,6 +20,7 @@ import type { ResearchRunLibraryQuery } from "./run-library.contract";
 import { ResearchRunLibraryError } from "./run-library.error";
 import { runDisplayOrdinalSql } from "./run-display-label";
 import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
+import { freezeReadValue } from "./immutable-read-json";
 
 type JsonRecord = Record<string, unknown>;
 type JsonColumn = JsonRecord | string | null;
@@ -373,6 +374,7 @@ export class ResearchRunLibraryRepository {
         });
         return;
       }
+      const sharedRows = shared.page.rows.map((row) => freezeReadValue(row));
       for (const entry of entries) {
         if (!shared.members.has(entry.scope.actorUserId)) {
           entry.reject(new ResearchRunLibraryError("RESEARCH_RUN_LIBRARY_FORBIDDEN", "Access denied.", 403));
@@ -380,10 +382,12 @@ export class ResearchRunLibraryRepository {
         }
         entry.resolve({
           ...shared.page,
-          rows: shared.page.rows.map((row) => ({
-            ...row,
-            rc_draft_id: shared.drafts.get(`${entry.scope.actorUserId}\0${row.run_id}`) ?? null,
-          })),
+          rows: sharedRows.map((row) => {
+            const draftId = shared.drafts.get(`${entry.scope.actorUserId}\0${row.run_id}`) ?? null;
+            // Share only byte-identical, actor-independent cards. Private
+            // drafts always get their own immutable row/projection identity.
+            return draftId === row.rc_draft_id ? row : freezeReadValue({ ...row, rc_draft_id: draftId });
+          }),
         });
       }
     } catch (error) {

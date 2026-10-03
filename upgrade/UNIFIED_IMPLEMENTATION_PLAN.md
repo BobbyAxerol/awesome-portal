@@ -7436,3 +7436,24 @@ fields (1,830 pass, one fail, one existing DR skip). The test asserts them
 exactly, not via a weakened partial match. Public causal ordinal range is
 also checked against its existing schema; W5/W7 focused 29/29 and build pass.
 Corrected-image read receipt and normal hook retry gate the same landing.
+
+#### P23 mixed-load + historical-manifest exception — Bobby approved, 2026-10-03
+
+IN_PROGRESS, Codex backend only: reduce Library/Progress to the existing
+500-ms mixed-load target, preserving actor/workspace RLS, finite admission,
+exact DTOs and source freshness. A real dirty diagnostic still failed; SQL
+stage profiling found repeated synchronous card projection as the Library
+bottleneck. Same-object immutable projection reuse and coalesced Progress
+transaction settings are implemented; clean-candidate acceptance is pending.
+
+The exact three old disposable-test manifest losses are handled through a
+bounded historical exception ledger, never fake recovery. Each still has
+one retained DB seal and one frozen Report, not zero dependencies; retention/
+RC/publication/promotion/selection/exposure/audit pins are zero. Preserve
+those copies, expected digests and all original failures. Exact-set accounting
+must not change default strict integrity or make full-store integrity PASS.
+
+[Scope, actual diagnostic, fixed IDs/digests, tests and C4 requirements](./research_loop/evidence/P23/MIXED_LOAD_AND_HISTORICAL_MANIFEST_EXCEPTION_2026-10-03.md).
+Retake only affected mixed-load/DR gates in owned :8096; shared :8095,
+frontend, production and remotes stay unchanged. Other P23/P24 gates remain
+separate. No source seal/DB history/artifact deletion or remote push.

@@ -1083,11 +1083,18 @@ export class ResearchProgressRepository {
       } catch {
         throw new ResearchProgressError("RESEARCH_PROGRESS_UNAVAILABLE", "Research progress authority is not configured.", 503);
       }
-      await client.query("SELECT set_config('statement_timeout', $1, true)", [`${RESEARCH_DB_BUDGET.statementTimeoutMs}ms`]);
-      await client.query("SELECT set_config('lock_timeout', $1, true)", [`${RESEARCH_DB_BUDGET.lockTimeoutMs}ms`]);
-      await client.query("SELECT set_config('idle_in_transaction_session_timeout', $1, true)", [`${RESEARCH_DB_BUDGET.idleTransactionTimeoutMs}ms`]);
-      await client.query("SELECT set_config('research.workspace_id', $1, true)", [workspaceId]);
-      await client.query("SELECT set_config('research.actor_user_id', $1, true)", [actorUserId]);
+      // All settings are still transaction-local and precede every authority
+      // read/write. One round trip avoids multiplying pool occupancy during
+      // twenty-principal Progress polling; no scope or timeout is relaxed.
+      await client.query(
+        `SELECT set_config('statement_timeout', $1, true),
+                set_config('lock_timeout', $2, true),
+                set_config('idle_in_transaction_session_timeout', $3, true),
+                set_config('research.workspace_id', $4, true),
+                set_config('research.actor_user_id', $5, true)`,
+        [`${RESEARCH_DB_BUDGET.statementTimeoutMs}ms`, `${RESEARCH_DB_BUDGET.lockTimeoutMs}ms`,
+          `${RESEARCH_DB_BUDGET.idleTransactionTimeoutMs}ms`, workspaceId, actorUserId],
+      );
       const result = await work(client);
       await client.query("COMMIT");
       began = false;

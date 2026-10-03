@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { DEFAULT_HOME, operatorClient, privateJson, savePrivate } from './api-client.mjs';
 import { BASE_URL, PROJECT, composeArguments, validateHome } from './cell.mjs';
 import { docker } from './runtime-tools.mjs';
+import { assessHistoricalManifestExceptions } from './historical-manifest-exceptions.mjs';
 
 const ROOT = resolve(new URL('../..', import.meta.url).pathname);
 const SERVICES = ['portal-postgres', 'portal-nats', 'portal-api', 'control-api',
@@ -134,11 +135,23 @@ async function databaseSnapshot() {
       FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
       WHERE n.nspname IN ('public','research') AND p.prokind IN ('f','p')) s`);
   const artifacts = pgJson(`SELECT coalesce(json_agg(s ORDER BY artifact_id),'[]') FROM
-    (SELECT artifact_id,artifact_revision,manifest_digest FROM research.artifacts WHERE state='SEALED') s`);
+    (SELECT workspace_id,run_id,artifact_id,artifact_revision,manifest_digest FROM research.artifacts WHERE state='SEALED') s`);
   const parts = pgJson(`SELECT coalesce(json_agg(s ORDER BY artifact_id,table_kind,part_ordinal),'[]') FROM
     (SELECT p.* FROM research.artifact_parts p JOIN research.artifacts a USING(workspace_id,artifact_id)
       WHERE a.state='SEALED') s`);
-  return { data, roles, memberships, structure, constraints, policies, sequences, functions, artifacts, parts };
+  const artifact_links = pgJson(`SELECT coalesce(json_agg(s ORDER BY artifact_id),'[]') FROM
+    (SELECT a.artifact_id,
+      (SELECT count(*)::int FROM research.artifact_references r WHERE r.workspace_id=a.workspace_id AND r.artifact_id=a.artifact_id) AS retention_refs,
+      (SELECT count(*)::int FROM research.current_source_seals_v1 r WHERE r.workspace_id=a.workspace_id AND r.run_id=a.run_id) AS retained_seals,
+      (SELECT count(*)::int FROM research.run_report_manifests_v1 r WHERE r.workspace_id=a.workspace_id AND r.run_id=a.run_id) AS report_manifests,
+      (SELECT count(*)::int FROM research.release_candidate_packs_v1 r WHERE r.workspace_id=a.workspace_id AND r.run_id=a.run_id) AS rc_packs,
+      (SELECT count(*)::int FROM research.release_candidate_publications_v1 r WHERE r.workspace_id=a.workspace_id AND r.run_id=a.run_id) AS rc_publications,
+      (SELECT count(*)::int FROM research.p22_promotion_pick_receipts_v1 r WHERE r.workspace_id=a.workspace_id AND (r.run_id=a.run_id OR r.artifact_id=a.artifact_id)) AS promotion_picks,
+      (SELECT count(*)::int FROM research.selection_records r WHERE r.workspace_id=a.workspace_id AND r.run_id=a.run_id) AS selections,
+      (SELECT count(*)::int FROM research.exposure_facts r WHERE r.workspace_id=a.workspace_id AND r.run_id=a.run_id) AS exposures,
+      (SELECT count(*)::int FROM research.child_audit_companion_seals_v1 r WHERE r.workspace_id=a.workspace_id AND r.run_id=a.run_id) AS audit_children
+    FROM research.artifacts a WHERE a.state='SEALED') s`);
+  return { data, roles, memberships, structure, constraints, policies, sequences, functions, artifacts, parts, artifact_links };
 }
 const VERIFY_ARTIFACTS = String.raw`
 import hashlib,json,os,sys
@@ -212,8 +225,10 @@ function fileDigest(path) {
   return {sha256:hash.digest('hex'),bytes};
 }
 
-export async function restoreReceipt(home=DEFAULT_HOME,label='coherent-b2e8b868',recordMissingManifests=false) {
+export async function restoreReceipt(home=DEFAULT_HOME,label='coherent-b2e8b868',recordMissingManifests=false,historicalExceptions=false) {
   assert.equal(typeof recordMissingManifests,'boolean','EXPLICIT_MISSING_MANIFEST_MODE_REQUIRED');
+  assert.equal(typeof historicalExceptions,'boolean','EXPLICIT_HISTORICAL_EXCEPTION_MODE_REQUIRED');
+  assert(!historicalExceptions || recordMissingManifests,'HISTORICAL_EXCEPTION_REQUIRES_EXPLICIT_PARTIAL_CAPTURE');
   home=validateHome(home);const fresh=restoreVolumes(label);
   const target=join(home,`restore-${label}.json`);
   assert(!existsSync(target),'INSPECT_PRIOR_RESTORE_DO_NOT_OVERWRITE');
@@ -293,6 +308,9 @@ export async function restoreReceipt(home=DEFAULT_HOME,label='coherent-b2e8b868'
     receipt.after=await databaseSnapshot();assertRestoreParity(receipt.before,receipt.after);
     receipt.artifacts_after=artifactSnapshot(identity.images['portal-api'].image_id,fresh.artifacts,receipt.after,recordMissingManifests);
     receipt.artifact_assessment=assessRestoredArtifacts(receipt.artifacts_before,receipt.artifacts_after);
+    if(historicalExceptions) {
+      receipt.historical_exception_assessment=assessHistoricalManifestExceptions(PROJECT,receipt.artifact_assessment,receipt.after);
+    }
     savePrivate(target,receipt);
     // No migration/bootstrap/reseal. No worker. Reads must work from restored state.
     for(const service of ['portal-nats','portal-api','control-api','roadmap-task-board-api','portal-web']) {
@@ -324,6 +342,7 @@ export async function restoreReceipt(home=DEFAULT_HOME,label='coherent-b2e8b868'
   receipt.completed_at_utc=new Date().toISOString();savePrivate(target,receipt);
   console.log(JSON.stringify({passed:receipt.passed,coherent_restore_passed:true,
     artifact_assessment:receipt.artifact_assessment,tables:receipt.before.data.length,sealed_artifacts:receipt.before.artifacts.length,
+    historical_exception_assessment:receipt.historical_exception_assessment,
     artifact_parts:receipt.before.parts.length,files:receipt.artifacts_after.file_count,
     restored_worker_off:true,original_stack_restored:true,publication_pin_scope:'Only actual nonempty source relations, not inferred from empty tables.'}));
   return receipt;
@@ -331,7 +350,7 @@ export async function restoreReceipt(home=DEFAULT_HOME,label='coherent-b2e8b868'
 if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
   restoreReceipt(process.argv.find(a=>a.startsWith('--home='))?.slice(7)??DEFAULT_HOME,
     process.argv.find(a=>a.startsWith('--label='))?.slice(8)??'coherent-b2e8b868',
-    process.argv.includes('--record-partial-missing-manifests'))
+    process.argv.includes('--record-partial-missing-manifests'),process.argv.includes('--account-exact-historical-test-loss'))
     .then(receipt=>{if(!receipt?.passed)process.exitCode=1;})
     .catch(error=>{console.error('P23 coherent restore refused:',error.message);process.exitCode=1;});
 }
