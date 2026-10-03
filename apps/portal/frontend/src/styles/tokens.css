@@ -114,7 +114,7 @@
 
   /* --- Registry maturity semantics (static metadata, NOT runtime health) --- */
   --maturity-available: #1c2532;
-  --maturity-prototype: #9a6a1f;
+  --maturity-prototype: #8a5f1a;
   --maturity-commissioned: #77839a;
   --maturity-blocked: #b43a3a;
   --maturity-deprecated: #939db0;
@@ -320,6 +320,7 @@
   --ink: #e3e9f1;
   --ink-soft: #aab6c5;
   --ink-faint: #8a98ac;
+  --ink-mute: #98a6ba;
   --line: #2b3747;
   --line-soft: #212c3a;
   --accent: #7fb3c4;

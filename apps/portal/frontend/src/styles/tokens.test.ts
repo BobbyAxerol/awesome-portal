@@ -530,5 +530,10 @@ describe("W5 shared grey ramp (research + operations)", () => {
     expect(light.get("--ink-faint")).toBe("#5f6b80");
     expect(light.get("--ink-mute")).toBe("#566278");
     expect(dark.get("--ink-faint")).toBe("#8a98ac");
+    /* The operations dark root defines its own --ink-mute (it used to inherit the light #566278), and the
+       PROTOTYPE maturity text reads at >= 4.5:1 on paper (#9a6a1f was 4.47). */
+    expect(dark.get("--ink-mute")).toBe("#98a6ba");
+    expect(light.get("--maturity-prototype")).toBe("#8a5f1a");
+    expect(ratio(light.get("--maturity-prototype")!, light.get("--paper")!)).toBeGreaterThanOrEqual(4.5);
   });
 });
