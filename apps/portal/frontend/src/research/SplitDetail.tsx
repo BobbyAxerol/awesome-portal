@@ -2887,7 +2887,7 @@ function FoldTable({
                     className={TD}
                     style={{ boxShadow: `inset 2px 0 0 ${current ? "var(--accent)" : "transparent"}` }}
                   >
-                    {foldLabel(fold.fold_id)}{" "}
+                    <span title={foldTitle(fold.fold_id)}>{foldShort(fold.fold_id)}</span>{" "}
                     <Link
                       to={executeWindowHref(runId, "oos", cursor, number)}
                       className="ml-1 text-[11px]"

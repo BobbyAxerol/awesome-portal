@@ -1406,6 +1406,7 @@ export function ArtifactsTable({ artifacts, denied = [], compact = false }: { ar
             }}
           >
             <span
+              data-artifact-path
               title={artifact.name}
               style={{
                 width: 170,
@@ -1423,6 +1424,7 @@ export function ArtifactsTable({ artifacts, denied = [], compact = false }: { ar
               <bdi>{artifact.name}</bdi>
             </span>
             <span
+              data-artifact-state-cell
               data-motion={motion?.["data-motion"]}
               style={{
                 ...motion?.style,
@@ -1439,7 +1441,7 @@ export function ArtifactsTable({ artifacts, denied = [], compact = false }: { ar
             >
               <span title={artifact.state}>{humanise(artifact.state)}</span>
             </span>
-            <span style={{ flex: 1, minWidth: 0, color: "var(--ink-faint)", fontSize: 10 }}>{artifactNote(artifact, compact)}</span>
+            <span data-artifact-note style={{ flex: 1, minWidth: 0, color: "var(--ink-faint)", fontSize: 10 }}>{artifactNote(artifact, compact)}</span>
           </span>
         );
       })}

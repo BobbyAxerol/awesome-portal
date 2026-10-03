@@ -326,4 +326,84 @@
     min-width: 0;
     max-width: 100%;
   }
+  /* QA 360 (S03/S05/S07): the chips and table cells keep their words whole; wide tables scroll in their own card. */
+  .research-screen [data-claims] > span {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .research-screen [data-artifact] {
+    flex-wrap: wrap;
+    row-gap: 1px;
+  }
+  .research-screen [data-artifact-path] {
+    flex: 1 1 100% !important;
+    width: auto !important;
+    direction: ltr !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    overflow-wrap: anywhere;
+  }
+  .research-screen [data-artifact-state-cell] {
+    flex: none;
+    width: auto !important;
+  }
+  .research-screen [data-artifact-note] {
+    flex: 0 0 auto !important;
+    white-space: nowrap;
+  }
+  .research-screen [data-card="fold-table"] :is(th, td) {
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+  .research-screen [data-card="fold-table"] {
+    background:
+      linear-gradient(to right, var(--paper-raised) 30%, transparent) left / 24px 100% no-repeat local,
+      linear-gradient(to left, var(--paper-raised) 30%, transparent) right / 24px 100% no-repeat local,
+      linear-gradient(to right, var(--line), transparent) left / 8px 100% no-repeat scroll,
+      linear-gradient(to left, var(--line), transparent) right / 8px 100% no-repeat scroll;
+  }
+  /* S07 frozen-parameter headers: words stay whole (the wrap is between words) at a smaller size. */
+  .research-screen [data-frozen-table] th {
+    overflow-wrap: normal;
+    word-break: normal;
+    font-size: 8px;
+    letter-spacing: 0;
+    padding-right: 3px;
+  }
+  /* S07 "each fold's own selection": one stacked block per fold instead of a clipped 6-column table. */
+  .research-screen [data-fold-selection-table] {
+    min-width: 0 !important;
+    display: block;
+  }
+  .research-screen [data-fold-selection-table] thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .research-screen [data-fold-selection-table] tbody {
+    display: block;
+  }
+  .research-screen [data-fold-selection-table] tr {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1px 10px;
+    padding: 5px 0;
+  }
+  .research-screen [data-fold-selection-table] td {
+    display: block;
+    padding: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .research-screen [data-fold-selection-table] td:nth-child(2) {
+    flex: 1 1 60%;
+  }
+  .research-screen [data-fold-selection-table] td:nth-child(n + 3) {
+    flex: 0 1 auto;
+  }
 }

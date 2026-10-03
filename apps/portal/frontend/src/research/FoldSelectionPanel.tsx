@@ -8,7 +8,7 @@
  * server's reason code; Portal orchestration clocks (OrchestrationClocks.tsx)
  * are a different thing and are never used to fill them.
  */
-import { foldLabel, shortDigest } from "./researchFormat";
+import { foldShort, shortDigest } from "./researchFormat";
 import type { FoldOrdering, FoldOrderingRow } from "./freezeClient";
 
 const VERDICT_WORDS: Record<FoldOrderingRow["verdict"], string> = {
@@ -40,7 +40,7 @@ export function FoldSelectionPanel({ ordering }: { ordering: FoldOrdering | null
         </span>
       </div>
       <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="per-fold selection table; scrolls sideways when narrow">
-        <table className="w-full min-w-[640px] border-collapse text-[11px]">
+        <table className="w-full min-w-[640px] border-collapse text-[11px]" data-fold-selection-table>
           <thead>
             <tr>
               {["fold", "verdict (data time)", "selected candidate", "params digest", "study · trial", "inner folds"].map((head) => (
@@ -55,8 +55,8 @@ export function FoldSelectionPanel({ ordering }: { ordering: FoldOrdering | null
               const own = fold.selected_candidate;
               return (
                 <tr key={fold.fold_id} data-selection-fold={fold.fold_id} data-verdict={fold.verdict} style={{ borderTop: "1px solid var(--line-soft)" }}>
-                  <td className="mono px-2 py-1" title={`source fold id ${fold.fold_id}`}>
-                    {foldLabel(fold.fold_id)}
+                  <td className="mono whitespace-nowrap px-2 py-1" title={`source fold id ${fold.fold_id}`} data-fold-label>
+                    {foldShort(fold.fold_id)}
                   </td>
                   <td className="px-2 py-1" title={fold.reason_code ?? fold.verdict}>
                     <span className="mono text-[10px]" data-fold-verdict={fold.verdict}>
