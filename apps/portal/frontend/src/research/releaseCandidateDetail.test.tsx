@@ -766,7 +766,7 @@ describe("S11 W7 retained lane (Delta WFO)", () => {
     expect(claim.querySelector(".note")!.getAttribute("data-note")).toContain("not_causal_multi_fold_global_calibration");
     expect(q("[data-pack-row='ROBUSTNESS_PARAM_STABILITY_REGIME']")!.getAttribute("data-status")).toBe("DEGRADED");
     const rail = q("[data-rail-node='selected_params']")!;
-    expect(rail.querySelector("[data-rail-detail]")!.textContent).toBe("retained trial 0 · global");
+    expect(rail.querySelector("[data-rail-detail]")!.textContent).toBe("trial 1 · source 0 · run-global");
     expect(rail.getAttribute("data-tone")).toBe("ink");
     expect(q("[data-yaml-key='release_candidate_id']")!.textContent).toContain("null  # P21_ASSIGNED_ON_LOCAL_SEAL");
     expect(q("[data-yaml-key='release_candidate_id'] .v")!.getAttribute("data-tone")).toBe("gold");
