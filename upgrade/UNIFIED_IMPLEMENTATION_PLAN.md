@@ -7291,3 +7291,39 @@ C4 complete: only owned :8096 stopped/removed without volumes; VN flags false,
 source/DB/artifacts/receipts/backups/rollback images retained. Root 207.5 GB
 free, NO_ACTION_NEEDED beyond exact teardown. One grouped mandatory commit
 hook; no frontend edit/build, shared runtime restart, push or production.
+
+#### Claude W1/W2 request slice before P23 — 2026-10-03
+
+**IN_PROGRESS**, baseline `b2098a81`, Codex `codex/be-gaps` only before
+landing on the shared Research branch. This is not a new campaign or a
+P23/P24 acceptance claim. Keep all accepted six-group receipts and Claude
+W1/W2/W3 frontend commits; no remote push or dev/main/production change.
+
+[Backend queue §32](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#32-codex--claude-w1w2-backend-requests-before-p23-2026-10-03)
+owns the exact scope: G-25 canonical Library label search (migration 091),
+G-26 immutable Journey v5 (migration 092), fresh-WFO RC canonical Report
+revision, and source-backed optional W1 status/failure/ordinal display facts.
+Three disjoint agents handle Library, Foundation and RC; root integrates
+contracts, preserved private source/seal identities, actual named read proof
+on owned :8096, C4 cleanup and one grouped mandatory hook. No frontend
+recomposition, re-record or QuantBT rerun is needed for read-only fixes.
+
+Exit requires source/Zod/OpenAPI/generated agreement, historical/negative/
+workspace/ETag tests and actual API proof where applicable. Claude consumes
+the generated handoff and takes browser receipts afterward; source absence
+does not become zero. Only then resume the already-listed genuine P23 gates.
+
+**Delivery addendum — SCOPED_BACKEND_REQUESTS_ACCEPTED.** G-25/G-26,
+W2-RC-01 and optional W1 B-1…B-5 now have generated contracts, focused
+regressions and actual owned :8096 read evidence. The final candidate returned
+15 valid named GETs, expected foreign-workspace 404 and ETag 304; immutable
+Report/RC/retained digest unchanged, QA session logged out. Disposable P12
+17/17 includes historical and concurrent-label consistency with bounded
+write-side migration 093. RC 52/52 and root selection/Hub focus 74/74 pass.
+[Delivered fields, exact image/hash, tests, C4 and Claude handoff](./research_loop/evidence/P21/W1_W2_BACKEND_REQUEST_CLOSEOUT_2026-10-03.md).
+This addendum supersedes the checkpoint, not earlier accepted W1/W2/W3 UI.
+One normal grouped hook gates commit/landing; no frontend code/baseline or
+shared-preview/production change. C4 done without deleting volumes/data;
+0 jobs/QA sessions, test identities disabled, owned cell removed. Claude
+consumes the generated fields and takes browser receipt; P23/P24 retain their
+separate genuine gates. No remote push is authorized by this delivery.

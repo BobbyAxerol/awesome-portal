@@ -15,7 +15,8 @@ import { ResearchFoundationError } from "../../apps/control-api/src/research/fou
 import { ResearchFoundationService } from "../../apps/control-api/src/research/foundation.service";
 import {
   RESEARCH_JOURNEY_DESCRIPTOR_SHA256,
-} from "../../apps/control-api/src/research/journey.descriptor.v4";
+} from "../../apps/control-api/src/research/journey.descriptor.v5";
+import { RESEARCH_JOURNEY_DESCRIPTOR_SHA256 as JOURNEY_V4_SHA256 } from "../../apps/control-api/src/research/journey.descriptor.v4";
 import { ResearchMetadataRepository } from "../../apps/control-api/src/research/repository";
 import { migrateTestDatabase, truncateAll } from "../../apps/control-api/test/harness";
 import { Pool } from "../../apps/control-api/node_modules/pg";
@@ -78,7 +79,9 @@ describe("Research Loop P09 · Journey/Atlas same-origin foundation", () => {
     await migrateTestDatabase(databaseUrl);
     pool = new Pool({ connectionString: databaseUrl });
     repository = new ResearchMetadataRepository(pool);
-    service = new ResearchFoundationService(repository, atlasClient);
+    service = new ResearchFoundationService(repository, atlasClient, loadConfig({
+      NODE_ENV: "test", PORTAL_ENV: "local", AUTH_MODE: "dev", DATABASE_URL: databaseUrl,
+    }));
   });
 
   beforeEach(async () => {
@@ -108,7 +111,7 @@ describe("Research Loop P09 · Journey/Atlas same-origin foundation", () => {
     });
     expect(response).toMatchObject({
       schema_version: "research.journey-response.v1",
-      descriptor: { revision: 4, content_sha256: RESEARCH_JOURNEY_DESCRIPTOR_SHA256 },
+      descriptor: { revision: 5, content_sha256: RESEARCH_JOURNEY_DESCRIPTOR_SHA256 },
       inspection: {
         canonical_query: "?run_id=run-p09&study=study-p09&trial=trial-p09&pick=pick-p09&seq=42",
         pick_effect: "INSPECTION_ONLY", ambiguity_state: "NOT_APPLICABLE",
@@ -132,7 +135,8 @@ describe("Research Loop P09 · Journey/Atlas same-origin foundation", () => {
       { revision: "1", content_sha256: expect.any(String) },
       { revision: "2", content_sha256: expect.any(String) },
       { revision: "3", content_sha256: expect.any(String) },
-      { revision: "4", content_sha256: RESEARCH_JOURNEY_DESCRIPTOR_SHA256 },
+      { revision: "4", content_sha256: JOURNEY_V4_SHA256 },
+      { revision: "5", content_sha256: RESEARCH_JOURNEY_DESCRIPTOR_SHA256 },
     ]);
     expect(response.inspection.cursor).not.toHaveProperty("event_seq");
     expect(response.inspection.codec).toBe("p02-cursor.v2");

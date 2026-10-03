@@ -51,6 +51,7 @@ describe("P21 published Research Release Candidate contract", () => {
       "PORTAL_PERSISTED_RESEARCH",
       "PublishedComparison", "CertificationAxes", "published_comparison", "certification_axes",
       "SelectedParams", "param_set_id_availability", "selected_trial_number_availability",
+      "run_status", "report_sealed", "FINISHING", "RECOVERY_REQUIRED",
     ]) expect(generated).toContain(needle);
   });
 

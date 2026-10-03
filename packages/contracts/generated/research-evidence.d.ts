@@ -1063,7 +1063,18 @@ export interface components {
             phase: "IN_PROGRESS" | "TERMINAL" | "ATTENTION_REQUIRED" | "LEGACY" | "NOT_PUBLISHED";
             terminal_outcome: ("COMPLETED" | "FAILED" | "CANCELLED") | null;
             availability: components["schemas"]["Availability"];
-        };
+            /** @description Same persisted-snapshot rule as Progress, only for FAILED lifecycle. Null means no exact stopped-stage fact; the browser never infers a failure from RUNNING alone. */
+            failed_at?: {
+                /** @enum {unknown} */
+                stage: "S1" | "S2" | "S3" | "S4" | "S5";
+                fold: number | null;
+                /**
+                 * @description SOURCE_RUNNING_STAGE: the last snapshot had this stage RUNNING. FIRST_UNFINISHED_STAGE: no stage was running; this is the first stage that never completed, so the run stopped before it started.
+                 * @enum {unknown}
+                 */
+                basis: "SOURCE_RUNNING_STAGE" | "FIRST_UNFINISHED_STAGE";
+            } | null;
+        } & unknown;
         /** @description RF-05 CG-P13-11. RUN_INPUT_BOUND: the revision hashes this run id and its requested-spec, effective-spec, dataset-binding and manifest digests with the evidence, so two runs never share it. SOURCE_CONTENT_ONLY: an immutable pre-RF-05 revision naming only evidence bytes; runs with identical output may share it, so match run_id as well. */
         RevisionBinding: {
             value: ("RUN_INPUT_BOUND" | "SOURCE_CONTENT_ONLY") | null;

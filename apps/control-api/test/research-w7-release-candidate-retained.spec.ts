@@ -31,6 +31,8 @@ import {
   type ReleaseCandidateSource,
 } from "../src/research/release-candidate.repository";
 import { retainedLaneFacts } from "../src/research/release-candidate.retained-lane";
+import { currentSourceReadRevision, currentSourceSealDigest } from "../src/research/current-source.service";
+import { DELTA_CAUSAL_INNER_PROFILE } from "../src/research/delta-causal-inner.profile";
 import { ResearchReleaseCandidateService } from "../src/research/release-candidate.service";
 import { openApiValidator } from "./research-rf05-openapi";
 
@@ -154,8 +156,11 @@ describe("W7 · P21 retained lane on the real Delta WFO run", () => {
   it("the W5b seal rows with this run's digests reproduce the revisions the preview served", () => {
     const facts = retainedLaneFacts(lane());
     expect(facts.evidenceRevision).toBe(preview.evidence.revision);
-    expect(facts.splitRevision).toBe(preview.split.revision);
-    expect(facts.searchRevision).toBe(preview.search.revision);
+    const seal = lane().seal!;
+    expect(`rs02_split_${currentSourceSealDigest(seal as never)}`).toBe(preview.split.revision);
+    expect(`rs02_search_${currentSourceSealDigest(seal as never)}`).toBe(preview.search.revision);
+    expect(facts.splitRevision).toBe(currentSourceReadRevision("split", seal as never));
+    expect(facts.searchRevision).toBe(currentSourceReadRevision("search", seal as never));
     expect(preview.report.frozen_core.source_revisions.evidence_revision).toBe(preview.evidence.revision);
     // The child audit read here is the one Screen 07 served: 2/2 folds MATCH the frozen θ*.
     expect(facts.ordering!.frozen_candidate).toEqual(preview.freeze.fold_ordering.frozen_candidate);
@@ -213,7 +218,7 @@ describe("W7 · P21 retained lane on the real Delta WFO run", () => {
     // Truthful: no methodology certificate is claimed; the claim ceiling is quoted.
     expect(composed.certification_axes.methodology_claim).toEqual({ value: null, availability: { state: "NOT_PUBLISHED", reason_code: "P21_METHODOLOGY_CERTIFICATION_NOT_PUBLISHED" } });
     expect(composed.pack[3]!.note).toMatch(/walk_forward_oos.*NOT_ISSUED/);
-    expect(composed.rail[3]).toMatchObject({ value: preview.progress.claim.handoff_cursor.params_digest, detail: "retained trial 0 · global", tone: "ink" });
+    expect(composed.rail[3]).toMatchObject({ value: preview.progress.claim.handoff_cursor.params_digest, detail: "trial 1 · source 0 · run-global", tone: "ink" });
     expect(composed.selected_params).toEqual({
       param_set_id: null, param_set_id_availability: { state: "NOT_PUBLISHED", reason_code: "P21_PARAM_SET_ID_NOT_PUBLISHED" },
       selected_trial_number: 1, selected_trial_number_availability: { state: "AVAILABLE", reason_code: null },
@@ -247,8 +252,8 @@ describe("W7 · P21 retained lane on the real Delta WFO run", () => {
       ["ALPHA_VERSION", value.alpha.alphaVersionId, value.alpha.codeDigest],
       ["REPORT", preview.report.report_revision, value.report.frozenCoreDigest],
       ["EVIDENCE", preview.evidence.revision, sealDigest],
-      ["SPLIT", preview.split.revision, sealDigest],
-      ["SELECTION", preview.search.revision, preview.progress.claim.handoff_cursor.params_digest],
+      ["SPLIT", retainedLaneFacts(value.wfo!).splitRevision, sealDigest],
+      ["SELECTION", retainedLaneFacts(value.wfo!).searchRevision, preview.progress.claim.handoff_cursor.params_digest],
       ["CURRENT_SOURCE", "artifact-revision-1", provenance.retained_import_digest],
       ["ARTIFACT", "rart_w7_preview_research_bundle", provenance.source_manifest_digest],
     ]);
@@ -318,6 +323,93 @@ describe("W7 · P21 retained lane on the real Delta WFO run", () => {
     const base = releaseCandidateSourceFingerprint(source());
     expect(releaseCandidateSourceFingerprint(source({}, { observedImportDigest: "e".repeat(64) }))).not.toBe(base);
     expect(releaseCandidateSourceFingerprint(source({}, { partDigests: [] }))).not.toBe(base);
+  });
+
+  it.each(["enrichment", "analytics", "distributions", "analytics-and-distributions"])(
+    "uses the verified %s Evidence representation without rewriting the frozen report", async (kind) => {
+      const fixture = (name: string) => JSON.parse(readFileSync(join(
+        process.env.PORTAL_CONTRACTS_DIR ?? join(__dirname, "../../../packages/contracts"), "fixtures", name,
+      ), "utf8"));
+      const seal = structuredClone(lane().seal!);
+      if (kind === "enrichment") {
+        seal.enrichedAnalysis = { ...fixture("research-enriched-analysis.healthy.valid.json"), run_id: preview.run_id };
+      }
+      if (kind.includes("analytics")) {
+        const analytics = fixture("research-retained-analytics-v2.fixed.valid.json");
+        seal.analyticsSidecar = { digest: sha(analytics), sourceRowsDigest: "a".repeat(64), analytics };
+      }
+      if (kind.includes("distributions")) {
+        const distributions = fixture("research-all-time-distributions.valid.json");
+        seal.distributionsSidecar = { digest: sha(distributions), distributions };
+      }
+      const currentLane = lane({ seal });
+      const evidenceRevision = retainedLaneFacts(currentLane).evidenceRevision!;
+      expect(evidenceRevision).toBe(currentSourceReadRevision("evidence", seal as never));
+      expect(evidenceRevision).not.toBe(preview.evidence.revision);
+      const core = structuredClone(preview.report.frozen_core);
+      core.source_revisions.evidence_revision = evidenceRevision;
+      const coreDigest = sha(core);
+      const value = source({ lifecycleStatus: "COMPLETED", report: { ...source().report,
+        reportRevision: `p18r1_${coreDigest}`, frozenCore: core } }, { seal });
+      const beforeBytes = JSON.stringify(value.report);
+      const composed = await subject(value, draft(value)).service.detail(scope, value.runId);
+      expect(rows(composed).METRICS_SEMANTICS).toEqual(["COMPLETE", null]);
+      expect(composed).toMatchObject({ run_status: "COMPLETED", report_sealed: true });
+      expect(JSON.stringify(value.report)).toBe(beforeBytes);
+      expect(composed.fields.find((item) => item.key === "evidence_revision")?.value).toBe(evidenceRevision);
+      const oldLane = source({ report: value.report });
+      const stale = await subject(oldLane, draft(oldLane)).service.detail(scope, oldLane.runId);
+      expect(stale.report_sealed).toBe(true); // Actual seal, but not current Evidence.
+      expect(rows(stale).METRICS_SEMANTICS).toEqual(["MISSING", "P21_RETAINED_REPORT_NOT_SEALED"]);
+    },
+  );
+
+  it("rejects stale, forged, unsealed and other-run report cores without repairing an immutable seal", async () => {
+    const healthy = source();
+    const sealedReport = (core: Json) => ({ ...healthy.report, frozenCore: core, reportRevision: `p18r1_${sha(core)}` });
+    const otherRun = structuredClone(preview.report.frozen_core);
+    otherRun.identity.find((item: Json) => item.key === "run_id").value = "rrun_" + "f".repeat(32);
+    const oldEvidence = structuredClone(preview.report.frozen_core);
+    oldEvidence.source_revisions.evidence_revision = "rs02_evidence_" + "0".repeat(64);
+    const cases: Array<[string, ReleaseCandidateSource, boolean]> = [
+      ["unsealed", source({ report: { ...healthy.report, sealedAtUtcMs: null } }), false],
+      ["forged seal hash", { ...healthy, report: { ...healthy.report, frozenCoreDigest: "0".repeat(64) } }, false],
+      ["revision mismatch", source({ report: { ...healthy.report, reportRevision: `p18r1_${"0".repeat(64)}` } }), false],
+      ["other run", source({ report: sealedReport(otherRun) }), false],
+      ["old Evidence", source({ report: sealedReport(oldEvidence) }), true],
+    ];
+    for (const [label, value, sealed] of cases) {
+      const reportBytes = JSON.stringify(value.report);
+      const composed = await subject(value, draft(value)).service.detail(scope, value.runId);
+      expect(composed.report_sealed, label).toBe(sealed);
+      expect(rows(composed).METRICS_SEMANTICS, label).toEqual(["MISSING", "P21_RETAINED_REPORT_NOT_SEALED"]);
+      expect(composed.actions.may_seal, label).toBe(false);
+      expect(JSON.stringify(value.report), label).toBe(reportBytes);
+    }
+  });
+
+  it.each(["QUEUED", "RUNNING", "FINISHING", "FAILED", "CANCELLED", null, "READY"])(
+    "does not infer COMPLETED from a sealed Report for source lifecycle %s", async (lifecycleStatus) => {
+      const value = source({ lifecycleStatus });
+      const composed = await subject(value, null).service.detail(scope, value.runId);
+      expect(composed.report_sealed).toBe(true);
+      expect(composed.run_status).toBe(lifecycleStatus === "READY" ? null : lifecycleStatus);
+    },
+  );
+
+  it("uses exact native causal trial mapping for display, never parsing opaque IDs or changing source authority", () => {
+    const value = source({}, { seal: { ...lane().seal!, profileId: DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id } });
+    const { service } = subject(value, null);
+    const detail = (service as unknown as { retainedSelectedDetail(s: ReleaseCandidateSource, id: string): string }).retainedSelectedDetail.bind(service);
+    const selected = "study_oos-fold-b.trial_0";
+    expect(detail(value, selected)).toBe(`retained source ${selected} · display trial not published`);
+    const mapped = { ...value, selectedTrialNativeFacts: { trial_id: selected, study_id: "oos-fold-b", source_trial_id: "0" } };
+    expect(detail(mapped, selected)).toBe(`trial 1 · source ${selected} · study-local`);
+    // The qualified evaluation ID is not the native Optuna trial number.
+    expect(detail({ ...mapped, selectedTrialNativeFacts: { ...mapped.selectedTrialNativeFacts, source_trial_id: "7" } }, selected))
+      .toBe(`trial 8 · source ${selected} · study-local`);
+    expect(detail(mapped, "study_other.trial_0")).toContain("display trial not published");
+    expect(releaseCandidateSourceFingerprint(mapped)).toBe(releaseCandidateSourceFingerprint(value));
   });
 
   /** W7 · canonical Screen 11 fixtures: the real run composed by this lane (virtual draft, and declared). */

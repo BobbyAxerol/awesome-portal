@@ -2250,3 +2250,17 @@ actor-scoped; referenced provenance is retained. The evidence packet at
 Python parser/HMAC tests, build and Compose-render receipts. Screen 14 still
 requires its owned frontend/browser acceptance before P07 may be promoted
 beyond `BACKEND_COMPLETE_FE_HANDOFF_PENDING`.
+
+### 14.1.12 Research W1/W2 request closeout (2026-10-03)
+
+Scoped backend/API delivery: indexed canonical Run Library labels (091/093),
+immutable Journey v5 (092), verified enriched Report revision for RC, compose
+lifecycle/sealed truth, Hub failed_at and source-bound selection ordinals.
+Private retained source/seal identities and all existing frontend remain
+unchanged. Actual owned-cell 15 valid GETs + expected 404/304, unchanged
+custody, P12 17/17 and RC 52/52; C4 removes only owned containers/network.
+Generated consumer mapping and exact evidence live in the
+[canonical Research packet](./research_loop/evidence/P21/W1_W2_BACKEND_REQUEST_CLOSEOUT_2026-10-03.md).
+This supplements older snapshots; it does not claim P23/P24, FE/browser,
+remote publication or production activation. One normal grouped hook gates
+landing on `docs/research-loop-plan`; no frontend or shared :8095 changes.

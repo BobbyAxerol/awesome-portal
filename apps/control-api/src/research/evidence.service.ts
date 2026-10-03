@@ -1,6 +1,7 @@
 /** P13 Evidence Flow Hub projection builder and same-origin reader. */
 
 import { Inject, Injectable, Optional } from "@nestjs/common";
+import { failedAt } from "./run-state";
 import { enrichedAvailability } from "./enriched-analysis.contract";
 import { z } from "zod";
 import { ResearchRetainedAnalyticsSchema, type ResearchRetainedAnalytics } from "./retained-analytics.contract";
@@ -789,7 +790,9 @@ export class ResearchEvidenceService {
       },
       metrics,
       oos_performance: this.oosPerformance(projection, fallback),
-      lifecycle: this.lifecycle(row),
+      lifecycle: { ...this.lifecycle(row),
+        failed_at: displayStatus(row.jobState ?? null, row.runState ?? null) === "FAILED"
+          && progress?.run_id === row.runId ? failedAt(progress) : null },
       revision_binding: projection
         ? { value: projection.run_binding ? "RUN_INPUT_BOUND" : "SOURCE_CONTENT_ONLY", availability: availability("AVAILABLE", null) }
         : { value: null, availability: fallback },

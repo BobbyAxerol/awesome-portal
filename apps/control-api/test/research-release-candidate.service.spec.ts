@@ -311,6 +311,9 @@ describe("P21 Release Candidate composer and local immutable pack", () => {
       });
       expect(result.local_seal).toMatchObject({ state: "SEALED_LOCAL", release_candidate_id: releaseCandidateId });
       expect(result.local_seal.availability.state).toBe(current === original ? "AVAILABLE" : "PARTIAL");
+      expect(result.gate_verdict.title).toBe("local evidence pack already sealed");
+      expect(result.gate_verdict.body).toContain(current === original ? "immutable local pack is retained" : "original source fingerprint");
+      expect(result.gate_verdict.body).not.toContain("local seal blocked");
       expect(result.draft).toMatchObject({ known_limitations: frozenDraft.knownLimitations,
         proposed_use_restrictions: frozenDraft.proposedUseRestrictions });
     }

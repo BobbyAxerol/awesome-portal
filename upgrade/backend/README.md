@@ -1986,3 +1986,12 @@ SPA HTML fallback. This closes the blank-page failure caused by a browser
 holding a previous release entry document. The scoped Nginx regression test and
 loopback-TLS header probe are required before promotion; no API, data, command,
 Cloudflare Access or database behavior changes.
+
+**2026-10-03 Research W1/W2 backend request closeout:** generated Library
+label search, Journey v5, RC canonical enriched Report revision, compose
+lifecycle/sealed fact, Hub failed_at and source-bound trial ordinals are
+delivered with actual isolated named reads and unchanged immutable custody.
+P12 17/17 covers historical/concurrent bounded index consistency. No
+frontend/shared preview/production/remote change; C4 complete without volumes.
+See [the canonical Research packet](../research_loop/evidence/P21/W1_W2_BACKEND_REQUEST_CLOSEOUT_2026-10-03.md)
+for exact hashes/tests and Claude binding. P23/P24 are separate gates.

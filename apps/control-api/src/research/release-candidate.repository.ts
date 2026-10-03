@@ -14,7 +14,7 @@ import type { Pool, PoolClient } from "pg";
 
 import { newUlid } from "../id";
 import { CONTROL_API_POOL } from "../tokens";
-import { canonicalResearchJson } from "./preflight.service";
+import { canonicalResearchJson, sha256ResearchJson } from "./preflight.service";
 import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from "./contracts";
 import {
   currentSourceImportDigest,
@@ -25,6 +25,11 @@ import { isDeltaWfoProfile } from "./delta-wfo.profile";
 import { ResearchReleaseCandidateError } from "./release-candidate.error";
 import { runDisplayLabel, runDisplayOrdinal, runDisplayOrdinalSql } from "./run-display-label";
 import type { ReleaseCandidateRetainedLane } from "./release-candidate.retained-lane";
+import { readEnriched } from "./enriched-analysis.read";
+import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
+import { ResearchAllTimeDistributionsSchema } from "./all-time-distributions.contract";
+import { CurrentSourceSummarySchema, CurrentSourceTrialPayloadSchema } from "./current-source.payload";
+import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
 
 export type { ReleaseCandidateRetainedLane } from "./release-candidate.retained-lane";
 
@@ -42,6 +47,10 @@ export interface ReleaseCandidateSource {
   displayLabel?: string | null;
   attemptId: string;
   runState: string;
+  /** Same producer-worker head/checkpoint lifecycle; never inferred from a report's presence. */
+  lifecycleStatus?: string | null;
+  /** Display-only native mapping; never an identity or source-fingerprint input. */
+  selectedTrialNativeFacts?: { trial_id: string; source_trial_id: string | null; study_id: string | null };
   runKind: string;
   relationshipKind: string;
   targetSelectionId: string | null;
@@ -159,6 +168,7 @@ export interface ReleaseCandidatePin {
 }
 
 interface SourceRow {
+  run_lifecycle_status?: string | null;
   run_id: string;
   attempt_id: string;
   run_state: string;
@@ -586,6 +596,9 @@ export class ResearchReleaseCandidateRepository {
              evidence.projection_digest AS evidence_projection_digest, evidence.readiness AS evidence_readiness,
              evidence.projection AS evidence_projection,
              progress.snapshot AS progress_snapshot,
+             research.run_lifecycle_status_v1(job.state, run.state, producer.run_id IS NOT NULL,
+               progress.snapshot->>'status', head.event_type IN ('run_completed','run_failed'),
+               checkpoint.source_sequence IS NOT NULL) AS run_lifecycle_status,
              split.projection_revision AS split_revision, split.source_split_digest,
              split.projection_digest AS split_projection_digest, split.readiness AS split_readiness,
              split.projection AS split_projection,
@@ -614,6 +627,8 @@ export class ResearchReleaseCandidateRepository {
           ON alpha.workspace_id = version.workspace_id AND alpha.alpha_id = version.alpha_id
         LEFT JOIN research.run_producers producer
           ON producer.workspace_id = run.workspace_id AND producer.run_id = run.run_id
+        LEFT JOIN research.jobs job
+          ON job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
         LEFT JOIN research.selection_records selection
           ON selection.workspace_id = run.workspace_id AND selection.selection_id = run.target_selection_id
         LEFT JOIN LATERAL (
@@ -629,11 +644,19 @@ export class ResearchReleaseCandidateRepository {
            ORDER BY evidence.received_at DESC, evidence.projection_revision DESC LIMIT 1
         ) evidence ON TRUE
         LEFT JOIN LATERAL (
-          SELECT snapshot
+          SELECT snapshot, worker_attempt_id, source_latest_sequence
             FROM research.run_progress_snapshots progress
            WHERE progress.workspace_id = run.workspace_id AND progress.run_id = run.run_id
+             AND progress.worker_attempt_id = producer.worker_attempt_id
            ORDER BY progress.received_at DESC LIMIT 1
         ) progress ON TRUE
+        LEFT JOIN research.run_progress_events head
+          ON head.workspace_id = run.workspace_id AND head.run_id = run.run_id
+         AND head.worker_attempt_id = progress.worker_attempt_id
+         AND head.source_sequence = progress.source_latest_sequence
+        LEFT JOIN research.run_terminal_materializations_v1 checkpoint
+          ON checkpoint.workspace_id = head.workspace_id AND checkpoint.run_id = head.run_id
+         AND checkpoint.worker_attempt_id = head.worker_attempt_id AND checkpoint.source_sequence = head.source_sequence
         LEFT JOIN LATERAL (
           SELECT projection_revision, source_split_digest, projection_digest, readiness, projection
             FROM research.run_split_projections_v1 split
@@ -667,11 +690,14 @@ export class ResearchReleaseCandidateRepository {
         WHERE workspace_id = $1 AND run_id = $2
         ORDER BY artifact_revision ASC, artifact_id ASC`, [workspaceId, runId],
     );
+    const wfo = await this.retainedLane(client, workspaceId, runId, row);
+    const selectedTrialNativeFacts = await this.selectedTrialNativeFacts(client, workspaceId, runId, wfo);
     return {
       runId: row.run_id,
       displayLabel: await this.readDisplayLabel(client, workspaceId, row.run_id),
       attemptId: row.attempt_id,
       runState: row.run_state,
+      lifecycleStatus: row.run_lifecycle_status ?? null,
       runKind: row.run_kind,
       relationshipKind: row.relationship_kind,
       targetSelectionId: row.target_selection_id,
@@ -720,7 +746,8 @@ export class ResearchReleaseCandidateRepository {
         state: artifact.state, artifactRevision: safeInteger(artifact.artifact_revision, "artifact revision"),
       })),
       asOfUtcMs: safeInteger(row.as_of_utc_ms, "snapshot timestamp"),
-      wfo: await this.retainedLane(client, workspaceId, runId, row),
+      wfo,
+      ...(selectedTrialNativeFacts ? { selectedTrialNativeFacts } : {}),
     };
   }
 
@@ -763,21 +790,25 @@ export class ResearchReleaseCandidateRepository {
         ORDER BY table_kind ASC, part_ordinal ASC
         LIMIT ${MAXIMUM_RETAINED_PARTS}`, [workspaceId, row.current_sealed_artifact_id],
     );
+    const seal = {
+      artifactRevision: revision,
+      sourceAdapterId: row.current_source_adapter_id ?? "",
+      profileId: row.current_profile_id ?? "",
+      manifestDigest: row.current_manifest_digest ?? "",
+      sourceTransformDigest: row.current_source_transform_digest ?? "",
+      retainedImportDigest: row.retained_import_digest ?? "",
+      requestedSpecDigest: row.current_requested_spec_digest ?? "",
+      effectiveSpecDigest: row.current_effective_spec_digest ?? "",
+      datasetBindingDigest: row.current_dataset_binding_digest ?? "",
+      tableRows: this.tableRows(row.current_table_rows),
+      totalRows: safeInteger(row.current_total_rows, "current-source row count"),
+      summary: jsonRecord(row.current_summary, "current-source summary"),
+    };
     return {
       ...base,
       seal: {
-        artifactRevision: revision,
-        sourceAdapterId: row.current_source_adapter_id ?? "",
-        profileId: row.current_profile_id ?? "",
-        manifestDigest: row.current_manifest_digest ?? "",
-        sourceTransformDigest: row.current_source_transform_digest ?? "",
-        retainedImportDigest: row.retained_import_digest ?? "",
-        requestedSpecDigest: row.current_requested_spec_digest ?? "",
-        effectiveSpecDigest: row.current_effective_spec_digest ?? "",
-        datasetBindingDigest: row.current_dataset_binding_digest ?? "",
-        tableRows: this.tableRows(row.current_table_rows),
-        totalRows: safeInteger(row.current_total_rows, "current-source row count"),
-        summary: jsonRecord(row.current_summary, "current-source summary"),
+        ...seal,
+        ...await this.retainedCompanions(client, workspaceId, runId, seal),
       },
       sealedArtifactId: row.current_sealed_artifact_id,
       partDigests: parts.rows.map((part) => part.part_digest),
@@ -788,6 +819,75 @@ export class ResearchReleaseCandidateRepository {
         payload: jsonRecord(fold.payload, "retained fold row"),
       })),
     };
+  }
+
+  /** Read and verify the same immutable companions canonical Evidence revision uses. */
+  private async retainedCompanions(
+    client: PoolClient, workspaceId: string, runId: string, seal: NonNullable<ReleaseCandidateRetainedLane["seal"]>,
+  ): Promise<Pick<NonNullable<ReleaseCandidateRetainedLane["seal"]>, "enrichedAnalysis" | "analyticsSidecar" | "distributionsSidecar">> {
+    const unavailable = () => new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE",
+      "Retained Report companion binding is incompatible.", 503);
+    const enrichedAnalysis = await readEnriched(client, workspaceId, runId, unavailable);
+    const result = await client.query<Record<string, unknown>>(
+      `SELECT analytics.retained_import_digest AS analytics_import_digest,
+              analytics.source_rows_digest AS analytics_source_rows_digest,
+              analytics.analytics_digest, analytics.analytics,
+              distributions.retained_import_digest AS distributions_import_digest,
+              distributions.source_rows_digest AS distributions_source_rows_digest,
+              distributions.distributions_digest, distributions.distributions
+         FROM research.current_source_seals_v1 seal
+         LEFT JOIN research.current_source_analytics_sidecars_v2 analytics
+           ON analytics.workspace_id = seal.workspace_id AND analytics.run_id = seal.run_id
+          AND analytics.artifact_revision = seal.artifact_revision
+         LEFT JOIN research.current_source_distributions_v1 distributions
+           ON distributions.workspace_id = seal.workspace_id AND distributions.run_id = seal.run_id
+          AND distributions.artifact_revision = seal.artifact_revision
+        WHERE seal.workspace_id = $1 AND seal.run_id = $2 AND seal.artifact_revision = $3
+          AND seal.retained_import_digest = $4`,
+      [workspaceId, runId, seal.artifactRevision, seal.retainedImportDigest],
+    );
+    const row = result.rows[0];
+    const companions: Awaited<ReturnType<ResearchReleaseCandidateRepository["retainedCompanions"]>> = {
+      ...(enrichedAnalysis ? { enrichedAnalysis } : {}),
+    };
+    const isDigest = (value: unknown): value is string => typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
+    if (row?.analytics != null) {
+      const analytics = ResearchRetainedAnalyticsV2Schema.safeParse(row.analytics);
+      if (!analytics.success || sha256ResearchJson(analytics.data) !== row.analytics_digest
+        || !isDigest(row.analytics_source_rows_digest) || row.analytics_import_digest !== seal.retainedImportDigest
+        || (seal.summary as Record<string, unknown> | null)?.summary_analytics_v2 !== undefined) throw unavailable();
+      companions.analyticsSidecar = { digest: row.analytics_digest as string,
+        sourceRowsDigest: row.analytics_source_rows_digest, analytics: analytics.data };
+    }
+    if (row?.distributions != null) {
+      const distributions = ResearchAllTimeDistributionsSchema.safeParse(row.distributions);
+      if (!distributions.success || sha256ResearchJson(distributions.data) !== row.distributions_digest
+        || !isDigest(row.distributions_source_rows_digest) || row.distributions_import_digest !== seal.retainedImportDigest
+        || (companions.analyticsSidecar && row.distributions_source_rows_digest !== companions.analyticsSidecar.sourceRowsDigest)
+        || distributions.data.oos_observation_count > seal.tableRows.OBSERVATION) throw unavailable();
+      companions.distributionsSidecar = { digest: row.distributions_digest as string, distributions: distributions.data };
+    }
+    return companions;
+  }
+
+  private async selectedTrialNativeFacts(
+    client: PoolClient, workspaceId: string, runId: string, lane: ReleaseCandidateRetainedLane | null,
+  ): Promise<ReleaseCandidateSource["selectedTrialNativeFacts"]> {
+    const seal = lane?.seal;
+    if (!seal || seal.profileId !== DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id) return undefined;
+    const summary = CurrentSourceSummarySchema.safeParse(seal.summary);
+    const trialId = summary.success ? summary.data.selection.trial_id : null;
+    if (trialId === null) return undefined;
+    const result = await client.query<{ payload: unknown }>(
+      `SELECT payload FROM research.current_source_rows_v1
+        WHERE workspace_id = $1 AND run_id = $2 AND artifact_revision = $3
+          AND table_kind = 'TRIAL' AND source_id = $4 LIMIT 1`,
+      [workspaceId, runId, seal.artifactRevision, trialId],
+    );
+    const trial = CurrentSourceTrialPayloadSchema.safeParse(result.rows[0]?.payload);
+    if (!trial.success || trial.data.trial_id !== trialId || !trial.data.trial_facts) return undefined;
+    return { trial_id: trial.data.trial_id, source_trial_id: trial.data.trial_facts.source_trial_id,
+      study_id: trial.data.trial_facts.study_id };
   }
 
   private tableRows(value: JsonColumn): Record<CurrentSourceTableKind, number> {

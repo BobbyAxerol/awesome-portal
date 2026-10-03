@@ -96,6 +96,7 @@ export interface components {
             mine_target_key: components["schemas"]["Identifier"];
             adds: string;
         };
+        /** @description Immutable, content-hash-pinned Journey revision. Revision 5 keeps the v1 response shape and all availability/scope facts, updates presentation copy, and directs redirected cards to accepted canonical product target keys. Revisions 3 and 4 retain their original content and hashes. Target keys are metadata, never URLs or permission grants. */
         JourneyDescriptor: {
             /** @constant */
             schema_version: "research.journey.v1";

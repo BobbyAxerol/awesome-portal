@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { replaceComponent } from "./generate-research-progress-truth.mjs";
 import { amendVnObservedFixedOpenApi } from "./generate-research-vn-observed-fixed.mjs";
+import { amendW1Presentation } from "./generate-research-w1-presentation.mjs";
 
 const ref = name => ({ $ref: `#/components/schemas/${name}` });
 const obj = properties => ({ type: "object", additionalProperties: false, required: Object.keys(properties), properties });
@@ -151,7 +152,8 @@ function amend(original, file) {
     if (s[name]) next = replaceComponent(next, name, value, next.indexOf('"schemas": {'));
     else next = next.replace('"schemas": {\n', `"schemas": {\n      "${name}": ${JSON.stringify(value)},\n`);
   }
-  return amendVnObservedFixedOpenApi(next, file);
+  next = amendVnObservedFixedOpenApi(next, file);
+  return file === "research-current-source" ? amendW1Presentation(next, file) : next;
 }
 export function amendCausalInnerOpenApi(original, file) { return amend(original, file); }
 

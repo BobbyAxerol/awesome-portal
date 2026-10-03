@@ -184,6 +184,15 @@ describe("W7 · P21 P04 lane golden (byte-for-byte)", () => {
     for (const result of Object.values(observed) as Array<{ virtual: { display_label?: string | null }; declared: { display_label?: string | null } }>) {
       expect(result.virtual.display_label).toBeNull();
       expect(result.declared.display_label).toBeNull();
+      // These partial historical P04 stand-ins publish no verifiable report
+      // seal or worker lifecycle. Only the precise additive read facts are
+      // stripped; the original core/fingerprint/pin golden stays untouched.
+      for (const compose of [result.virtual, result.declared] as Array<Record<string, unknown>>) {
+        expect(compose.run_status).toBeNull();
+        expect(compose.report_sealed).toBe(false);
+        delete compose.run_status;
+        delete compose.report_sealed;
+      }
       delete result.virtual.display_label;
       delete (result.virtual as { selected_params?: unknown }).selected_params;
       delete result.declared.display_label;

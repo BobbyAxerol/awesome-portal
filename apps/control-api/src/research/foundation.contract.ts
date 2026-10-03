@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ResearchJourneyDescriptorV4 } from "./journey.descriptor.v4";
+import type { ResearchJourneyDescriptorV5 } from "./journey.descriptor.v5";
 
 const Identifier = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/);
 const WorkspaceId = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/).optional();
@@ -60,7 +60,7 @@ export interface ResearchInspectionCursor {
 
 export interface ResearchJourneyResponse {
   schema_version: "research.journey-response.v1";
-  descriptor: ResearchJourneyDescriptorV4 & { content_sha256: string };
+  descriptor: ResearchJourneyDescriptorV5 & { content_sha256: string };
   inspection: ResearchInspectionCursor;
   etag: string;
 }

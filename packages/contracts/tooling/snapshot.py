@@ -111,6 +111,8 @@ TRACKED = (
     "fixtures/problem.valid.json",
     "fixtures/research-foundation.journey-v3.valid.json",
     "fixtures/research-foundation.journey-v4.valid.json",
+    "fixtures/research-foundation.journey-v5.valid.json",
+    "fixtures/research-w1.selected-trial-presentation.fixture.json",
     "fixtures/research-foundation.historical-identity.valid.json",
     "fixtures/research-foundation.atlas-current.valid.json",
     "fixtures/research-preflight.response.valid.json",

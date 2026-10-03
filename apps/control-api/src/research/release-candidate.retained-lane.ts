@@ -29,8 +29,8 @@ import {
   CurrentSourceSummarySchema,
   type CurrentSourceFacts,
 } from "./current-source.payload";
-import type { CurrentSourceTableKind } from "./current-source.repository";
-import { currentSourceSealDigest } from "./current-source.service";
+import type { CurrentSourceSealRow, CurrentSourceTableKind } from "./current-source.repository";
+import { currentSourceReadRevision, currentSourceSealDigest } from "./current-source.service";
 import {
   DELTA_WFO_PROFILE,
   isDeltaWfoProfile,
@@ -60,6 +60,10 @@ export interface ReleaseCandidateRetainedSeal {
   tableRows: Record<CurrentSourceTableKind, number>;
   totalRows: number;
   summary: unknown;
+  /** Verified immutable companions from the same authorized seal snapshot. */
+  enrichedAnalysis?: CurrentSourceSealRow["enrichedAnalysis"];
+  analyticsSidecar?: CurrentSourceSealRow["analyticsSidecar"];
+  distributionsSidecar?: CurrentSourceSealRow["distributionsSidecar"];
 }
 
 /** The retained-lane facts of one run; `null` on a ReleaseCandidateSource means the P04 lane. */
@@ -117,7 +121,8 @@ export function retainedLaneFacts(lane: ReleaseCandidateRetainedLane): RetainedL
     tableRows: seal.tableRows,
     summary: seal.summary as Record<string, unknown>,
   }) : null;
-  const revision = (kind: string) => (sealDigest ? `rs02_${kind}_${sealDigest}` : null);
+  const revision = (kind: string) => seal && sealDigest
+    ? currentSourceReadRevision(kind, { ...seal, summary: seal.summary as Record<string, unknown> }) : null;
   const selection = parsed && parsed.selection.trial_id !== null && Object.keys(parsed.selection.parameters).length > 0
     ? { trialId: parsed.selection.trial_id, parameters: parsed.selection.parameters }
     : null;

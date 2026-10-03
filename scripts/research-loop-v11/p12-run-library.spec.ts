@@ -18,6 +18,8 @@ import {
 import { ResearchRunLibraryError } from "../../apps/control-api/src/research/run-library.error";
 import { ResearchRunLibraryRepository } from "../../apps/control-api/src/research/run-library.repository";
 import { ResearchRunLibraryService } from "../../apps/control-api/src/research/run-library.service";
+import { runDisplayLabel, runDisplayOrdinalSql } from "../../apps/control-api/src/research/run-display-label";
+import { ResearchPreflightPrivateResponseSchema } from "../../apps/control-api/src/research/preflight.contract";
 import { migrateTestDatabase, truncateAll, testConfig } from "../../apps/control-api/test/harness";
 
 const DATABASE_URL = process.env.TEST_DATABASE_URL ?? "postgres://portal:portal@127.0.0.1:5432/portal_control_test";
@@ -66,8 +68,16 @@ const RETAINED = JSON.parse(readFileSync(join(__dirname, "../../apps/control-api
   summary: Record<string, unknown>;
   rows: Record<Exclude<CurrentSourceTableKind, "OBSERVATION">, CurrentSourceRowInput[]>;
 };
+// P12's persisted preflight must carry the current full structural contract,
+// not the obsolete schema-version-only placeholder. Reuse the canonical P08
+// fixture and validate it at the fixture boundary without relaxing the reader.
+const PREFLIGHT_TOPOLOGY = ResearchPreflightPrivateResponseSchema.shape.topology.parse(
+  JSON.parse(readFileSync(join(__dirname, "../../packages/contracts/fixtures/research-preflight.response.valid.json"), "utf8")).topology,
+);
 
 function requestedSpec() {
+  const fold = PREFLIGHT_TOPOLOGY.folds[0]!;
+  const holdout = PREFLIGHT_TOPOLOGY.sealed_holdout!;
   return {
     schema_version: "research.requested-spec.v1",
     alpha_binding: { alpha_id: ALPHA_ID, alpha_version_id: ALPHA_VERSION_ID },
@@ -78,9 +88,9 @@ function requestedSpec() {
     data: { dataset_id: "crypto-binance-1m", symbol: "BTCUSDT", timeframe: "1h" },
     protocol: "three_window_decay",
     windows: {
-      is: { start: "2025-01-01T00:00:00Z", end_exclusive: "2025-01-04T00:00:00Z" },
-      oos: { start: "2025-01-04T00:00:00Z", end_exclusive: "2025-01-06T00:00:00Z" },
-      holdout: { start: "2025-01-06T00:00:00Z", end_exclusive: "2025-01-08T00:00:00Z" },
+      is: { start: fold.train.start_utc, end_exclusive: fold.train.end_exclusive_utc },
+      oos: { start: fold.outer_oos.start_utc, end_exclusive: fold.outer_oos.end_exclusive_utc },
+      holdout: { start: holdout.start_utc, end_exclusive: holdout.end_exclusive_utc },
     },
     optimization_mode: "mode_1_decay",
     optimization_schedule: "global",
@@ -195,14 +205,14 @@ async function seedIdentity(pool: Pool): Promise<void> {
       JSON.stringify(spec),
       JSON.stringify({ schema_version: "research.effective-spec.v1" }),
       JSON.stringify({ schema_version: "research.dataset-binding.v1" }),
-      JSON.stringify({ schema_version: "research.topology.v1" }),
+      JSON.stringify(PREFLIGHT_TOPOLOGY),
       JSON.stringify({ schema_version: "research.resource-estimate.v1" }),
       JSON.stringify({ snapshot_id: "dss_0123456789abcdef0123456789abcdef", snapshot_content_hash: DIGEST_B, source_manifest_digest: DIGEST_C }),
     ],
   );
 }
 
-async function insertDurable(pool: Pool, input: {
+async function insertDurable(pool: Pick<Pool, "query">, input: {
   runId: string;
   attemptId: string;
   jobId: string;
@@ -215,7 +225,12 @@ async function insertDurable(pool: Pool, input: {
   retryOrdinal?: number;
   withProgress?: boolean;
   claim?: Record<string, unknown>;
-}): Promise<void> {
+  executionProfileId?: string;
+  executionProfileDigest?: string | null;
+  executionAdapterId?: string;
+  adapterContractDigest?: string;
+  deferProducer?: boolean;
+}): Promise<{ text: string; values: unknown[] }> {
   const runKind = input.runKind ?? "PRIMARY";
   const relationshipKind = input.relationshipKind ?? "PRIMARY";
   const parentRunId = input.parentRunId ?? null;
@@ -267,21 +282,24 @@ async function insertDurable(pool: Pool, input: {
       WHERE workspace_id = $1 AND job_id = $2`,
     [scope.workspaceId, input.jobId, latestWorkerId, retryOrdinal],
   );
-  await pool.query(
-    `INSERT INTO research.run_producers (
+  const producerInsert = {
+    text: `INSERT INTO research.run_producers (
        workspace_id, run_id, attempt_id, job_id, actor_user_id, client_intent_id, intent_kind,
        preflight_token, alpha_id, alpha_version_id, execution_adapter_id, adapter_contract_digest,
        requested_spec_digest, effective_spec_digest, dataset_binding_digest, manifest_digest, snapshot_id,
        snapshot_content_hash, work_digest, legacy_request, dispatch_state, worker_attempt_id, lease_epoch,
-       portal_receipt, created_at, updated_at
+       portal_receipt, created_at, updated_at, execution_profile_id, execution_profile_digest
      ) VALUES ($1, $2, $3, $4, $5, $6, 'NEW', $7, $8, $9, $10, $11, $12, $13, $14, $15,
        'dss_0123456789abcdef0123456789abcdef', $16, $17, $18::jsonb, 'PENDING', NULL, NULL, NULL,
-       $19::timestamptz, $19::timestamptz)`,
-    [scope.workspaceId, input.runId, input.attemptId, input.jobId, scope.actorUserId, `producer-${input.runId}`,
-      PREFLIGHT_TOKEN, ALPHA_ID, ALPHA_VERSION_ID, ADAPTER_ID, DIGEST_B, DIGEST_A, DIGEST_B, DIGEST_C,
+       $19::timestamptz, $19::timestamptz, $20, $21)`,
+    values: [scope.workspaceId, input.runId, input.attemptId, input.jobId, scope.actorUserId, `producer-${input.runId}`,
+      PREFLIGHT_TOKEN, ALPHA_ID, ALPHA_VERSION_ID, input.executionAdapterId ?? ADAPTER_ID,
+      input.adapterContractDigest ?? DIGEST_B, DIGEST_A, DIGEST_B, DIGEST_C,
       DIGEST_D, DIGEST_B, DIGEST_D,
-      JSON.stringify({ protocol: "three_window_decay", strategy_id: ALPHA_ID }), input.createdAt],
-  );
+      JSON.stringify({ protocol: "three_window_decay", strategy_id: ALPHA_ID }), input.createdAt,
+      input.executionProfileId ?? "p04.fixed-qualification.v1", input.executionProfileDigest ?? null],
+  };
+  if (!input.deferProducer) await pool.query(producerInsert);
   if (input.withProgress && latestWorkerId) {
     const status = input.state === "READY" ? "COMPLETED" : "RUNNING";
     await pool.query(
@@ -312,6 +330,7 @@ async function insertDurable(pool: Pool, input: {
       );
     }
   }
+  return producerInsert;
 }
 
 async function seedLibrary(pool: Pool): Promise<void> {
@@ -896,22 +915,42 @@ describe("Research Loop P12 · Run Library persisted reader", () => {
     expect(item.sparkline.availability).toEqual({ state: "AVAILABLE", reason_code: null });
 
     const sparkline = await service.sparkline(scope, runId);
+    // This storage fixture combines captured W3 fold facts with the captured
+    // preview tape. Only observations inside the sealed source's inclusive
+    // outer-OOS bar bounds belong to the card (not IS/holdout points). Derive
+    // the oracle from those immutable source facts, never from the response.
+    const foldWindows = RETAINED.rows.FOLD.map((row) => ({
+      start: Number(row.payload.test_start_utc_ms),
+      end: Number(row.payload.test_end_utc_ms),
+    }));
+    expect(foldWindows.every((window) => Number.isSafeInteger(window.start)
+      && Number.isSafeInteger(window.end) && window.start <= window.end)).toBe(true);
+    const oosPoints = LIVE.equity_oos.payload.filter((point) => foldWindows.some((window) =>
+      point.at_utc_ms >= window.start && point.at_utc_ms <= window.end));
+    // The scoped fixture fits below the 24-point display cap, so FULL must
+    // preserve every eligible timestamp/value, in source order and verbatim.
+    expect(oosPoints.length).toBeGreaterThan(1);
+    expect(oosPoints.length).toBeLessThanOrEqual(24);
+    expect(oosPoints.length).toBeLessThan(LIVE.equity_oos.payload.length);
     expect(sparkline.availability).toEqual({ state: "AVAILABLE", reason_code: null });
-    expect(sparkline.values).toHaveLength(24);
-    expect(sparkline.values[0]).toBe(LIVE.equity_oos.payload[0]!.equity);
-    expect(sparkline.values.at(-1)).toBe(LIVE.equity_oos.payload.at(-1)!.equity);
+    expect(sparkline.values).toEqual(oosPoints.map((point) => point.equity));
+    expect(sparkline.points).toEqual(oosPoints.map((point) => ({ at_utc_ms: point.at_utc_ms, equity: point.equity })));
     expect(sparkline.source_revision).toBe("rs02r1");
     expect(sparkline.source).toMatchObject({
       lane: "PORTAL_RETAINED_CURRENT_SOURCE",
-      series_kind: "EQUITY",
+      series_kind: "EQUITY_OOS",
       projection_revision: "rs02r1",
       series_digest: null,
-      source_observation_count: LIVE.equity_oos.payload.length,
-      display_sampling: "EXTREMA_BUCKET_24_V1",
+      source_observation_count: oosPoints.length,
+      persisted_point_count: oosPoints.length,
+      source_sampling: "FULL",
+      display_sampling: "FULL",
+      first_at_utc_ms: oosPoints[0]!.at_utc_ms,
+      last_at_utc_ms: oosPoints.at(-1)!.at_utc_ms,
     });
     expect(item.stats.every((metric) => metric.scope === "OOS")).toBe(true);
     expect(item.stats[2]!.definition_id).toBe("research.current-source.v1.sum-of-published-fold-oos-trade-counts");
-    const equities = LIVE.equity_oos.payload.map((point) => point.equity);
+    const equities = oosPoints.map((point) => point.equity);
     expect(sparkline.values.every((value) => equities.includes(value))).toBe(true);
     const ordered = [...equities].sort((a, b) => Number(a) - Number(b));
     expect(sparkline.values).toContain(ordered[0]);
@@ -1022,6 +1061,264 @@ describe("Research Loop P12 · Run Library persisted reader", () => {
     expect(await ids("legacy_p12_alpha")).toEqual(["legacy_p12_alpha_named"]);
     // Instrument is durable-only (legacy dataset ids declare no symbol/timeframe).
     expect(await ids("BTCUSDT")).toEqual(["run_p12_z", "run_p12_a", "run_p12_child"]);
+  });
+
+  it("G-25: migration makes historical labels searchable and future trigger writes preserve paging and isolation", async () => {
+    await seedLibrary(pool);
+    // Recreate the exact pre-091 composition, including same-timestamp runs
+    // inserted out of order. No business row is modified by the upgrade.
+    const v2 = readFileSync(join(__dirname, "../../apps/control-api/migrations/1723680000060_research-run-library-search-v2.sql"), "utf8");
+    await pool.query(v2.slice(v2.indexOf("CREATE OR REPLACE FUNCTION research.refresh_run_library_durable_search_document"),
+      v2.indexOf("CREATE OR REPLACE FUNCTION research.refresh_run_library_legacy_search_document")));
+    await pool.query("SELECT research.refresh_run_library_durable_search_document(workspace_id, run_id) FROM research.runs");
+    expect((await service.list(scope, { ...ALL, q: "R-P04-002" })).page.filtered_rows).toBe(0);
+    const businessBefore = await pool.query("SELECT run_id, created_at, updated_at, state FROM research.runs ORDER BY run_id");
+    await pool.query(readFileSync(join(__dirname, "../../apps/control-api/migrations/1723680000091_research-run-library-display-label-search.sql"), "utf8"));
+    expect((await pool.query("SELECT run_id, created_at, updated_at, state FROM research.runs ORDER BY run_id")).rows).toEqual(businessBefore.rows);
+    const historical = await service.list(scope, { ...ALL, q: "r-p04-002" });
+    expect(historical.items.map(item => [item.run_id, item.display_label])).toEqual([["run_p12_z", "R-P04-002"]]);
+    expect(historical.page.filtered_rows).toBe(1);
+    await insertDurable(pool, { runId: "run_p12_future", attemptId: "attempt_p12_future", jobId: "job_p12_future",
+      createdAt: "2026-09-22T10:00:00.000Z", state: "RUNNING" });
+    const newest = await service.list(scope, { ...ALL, q: "R-P04-003" });
+    expect(newest.items.map(item => [item.run_id, item.display_label])).toEqual([["run_p12_future", "R-P04-003"]]);
+    // Real foreign row with a matching safe token: a missing workspace
+    // predicate would now leak it, not merely fail against an absent row.
+    await pool.query(`INSERT INTO public.run_read_models
+      (run_id, workspace_id, owner_user_id, status, protocol, strategy_id, dataset_id)
+      VALUES ('foreign-R-P04-003', $1, 'p12-outsider', 'COMPLETED', 'three_window_decay', 'foreign', 'foreign')`, [otherWorkspace]);
+    expect((await service.list(scope, { ...ALL, q: "R-P04-003" })).items.map(item => item.run_id)).toEqual(["run_p12_future"]);
+    const foreignScope = { workspaceId: otherWorkspace, actorUserId: "p12-outsider" };
+    expect((await service.list(foreignScope, { ...ALL, workspace_id: otherWorkspace, q: "R-P04-003" })).items.map(item => item.run_id))
+      .toEqual(["foreign-R-P04-003"]);
+    await expect(service.list({ ...foreignScope, actorUserId: scope.actorUserId }, { ...ALL, workspace_id: otherWorkspace, q: "R-P04-003" }))
+      .rejects.toMatchObject({ code: "RESEARCH_RUN_LIBRARY_FORBIDDEN" });
+    const documentsBeforeReads = await pool.query("SELECT * FROM research.run_library_search_documents ORDER BY workspace_id, source_kind, run_id");
+    const first = await service.list(scope, { ...ALL, q: "R-P04-", limit: 2 });
+    expect(first.items.map(item => item.run_id)).toEqual(["run_p12_future", "run_p12_z"]);
+    expect(first.page.filtered_rows).toBe(3);
+    const second = await service.list(scope, { ...ALL, q: "R-P04-", limit: 2, cursor: first.page.next_cursor });
+    expect(second.items.map(item => item.run_id)).toEqual(["run_p12_a"]);
+    expect(second.page.filtered_rows).toBe(3);
+    const previous = await service.list(scope, { ...ALL, q: "R-P04-", limit: 2, before: second.page.prev_cursor });
+    expect(previous.items.map(item => item.run_id)).toEqual(first.items.map(item => item.run_id));
+    expect((await service.list(scope, { ...ALL, q: "R-P04-00_" })).page.filtered_rows).toBe(0);
+    expect((await service.list(scope, { ...ALL, q: "R-P04-%" })).page.filtered_rows).toBe(0);
+    expect((await pool.query("SELECT * FROM research.run_library_search_documents ORDER BY workspace_id, source_kind, run_id")).rows)
+      .toEqual(documentsBeforeReads.rows);
+    await pool.query("SET enable_seqscan = off");
+    try {
+      const scopedPlan = await pool.query(`EXPLAIN SELECT run_id FROM research.run_library_search_documents
+        WHERE workspace_id = $1 AND search_document ILIKE '%R-P04-003%'`, [scope.workspaceId]);
+      expect(scopedPlan.rows.map(row => row["QUERY PLAN"]).join("\n")).not.toContain("Seq Scan");
+      // With tiny fixtures the planner prefers the selective workspace PK.
+      // Independently prove that label tokens also retain the GIN search path.
+      const plan = await pool.query(`EXPLAIN SELECT run_id FROM research.run_library_search_documents
+        WHERE search_document ILIKE '%R-P04-003%'`);
+      expect(plan.rows.map(row => row["QUERY PLAN"]).join("\n")).toContain("research_run_library_search_documents_trgm_idx");
+    } finally { await pool.query("RESET enable_seqscan"); }
+  });
+
+  it("G-25: stored labels equal the canonical reader's PRIMARY workspace/profile-family ordinal", async () => {
+    await seedIdentity(pool);
+    const profiles: Array<[string, string | null]> = [
+      ["p10.delta-signal-notional-wfo.v1", "b86c66fa68c41e76c6106bd06a48b5ba1281bc4b168a915ec2fa7e34ec2a6cca"],
+      ["p10.delta-signal-notional-wfo.v2", "d65291f776dce1fef162da9eb6505ba63fc6e3ae0f55679fe12dece3858c7fa0"],
+      ["p10.delta-signal-notional-causal-inner.v1", "60a041b373808405f8896aee0a3421d41cc2199d516dadc9f40e1187e2fefdd1"],
+      ["p10.vn-stock-daily-observed-fixed.v1", "acb6566ebae23bcf77c77974136c9d083a95f0967260b1332530f600f5abe00e"],
+      ["p04.fixed-qualification.v1", null],
+      ["p17.imported-signal-notional.v1", "f1ed5dbccdd90ca7dd35be2755f3b3b5f7e9a29b1641beb08bd0136783c0f298"],
+    ];
+    for (const [index, [executionProfileId, executionProfileDigest]] of profiles.entries()) {
+      await insertDurable(pool, { runId: `run_label_${index}`, attemptId: `attempt_label_${index}`, jobId: `job_label_${index}`,
+        createdAt: `2026-09-23T10:00:0${index}.000Z`, state: "RUNNING", executionProfileId, executionProfileDigest,
+        ...(executionProfileId === "p17.imported-signal-notional.v1" ? {
+          executionAdapterId: executionProfileId,
+          adapterContractDigest: "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        } : {}) });
+    }
+    await insertDurable(pool, { runId: "run_label_child", attemptId: "attempt_label_child", jobId: "job_label_child",
+      createdAt: "2026-09-23T10:00:06.000Z", state: "FAILED", runKind: "AUDIT", relationshipKind: "AUDIT_OF_SELECTION",
+      parentRunId: "run_label_0", parentAttemptId: "attempt_label_0",
+      executionProfileId: profiles[0][0], executionProfileDigest: profiles[0][1] });
+    const canonical = await pool.query<{ run_id: string; profile: string; ordinal: string | null; label: string | null; search_document: string }>(
+      `SELECT durable.run_id, producer.execution_profile_id AS profile,
+         ${runDisplayOrdinalSql("durable", "producer")} AS ordinal,
+         research.run_library_display_label(durable.workspace_id, durable.run_id) AS label, document.search_document
+       FROM research.runs durable JOIN research.run_producers producer
+         ON producer.workspace_id = durable.workspace_id AND producer.run_id = durable.run_id
+       JOIN research.run_library_search_documents document
+         ON document.workspace_id = durable.workspace_id AND document.run_id = durable.run_id
+        AND document.source_kind = 'RESEARCH_DURABLE'
+       WHERE durable.workspace_id = $1 ORDER BY durable.run_id`, [scope.workspaceId]);
+    for (const row of canonical.rows) {
+      const expected = runDisplayLabel(row.profile, row.ordinal === null ? null : Number(row.ordinal));
+      expect(row.label).toBe(expected);
+      if (expected) expect(row.search_document.startsWith(`${expected} `)).toBe(true);
+      else expect(row.search_document).not.toMatch(/R-(?:WFO|P04|VN)-\d/);
+    }
+    expect((await service.list(scope, { ...ALL, q: "R-WFO-" })).items.map(item => item.display_label))
+      .toEqual(["R-WFO-003", "R-WFO-002", "R-WFO-001"]);
+    expect((await service.list(scope, { ...ALL, q: "R-VN-001" })).items.map(item => item.run_id)).toEqual(["run_label_3"]);
+    expect((await service.list(scope, { ...ALL, q: "R-P04-001" })).items.map(item => item.run_id)).toEqual(["run_label_4"]);
+  });
+
+  it("G-25: delayed historical producers and lower tie-break inserts refresh only newer family documents", async () => {
+    await seedIdentity(pool);
+    const deferred = await insertDurable(pool, { runId: "run_label_a", attemptId: "attempt_label_a", jobId: "job_label_a",
+      createdAt: "2026-09-21T09:00:00.000Z", state: "RUNNING", deferProducer: true });
+    await insertDurable(pool, { runId: "run_label_z", attemptId: "attempt_label_z", jobId: "job_label_z",
+      createdAt: "2026-09-21T10:00:00.000Z", state: "RUNNING" });
+    await insertDurable(pool, { runId: "run_label_next", attemptId: "attempt_label_next", jobId: "job_label_next",
+      createdAt: "2026-09-21T11:00:00.000Z", state: "RUNNING" });
+    await insertDurable(pool, { runId: "run_label_vn", attemptId: "attempt_label_vn", jobId: "job_label_vn",
+      createdAt: "2026-09-21T12:00:00.000Z", state: "RUNNING",
+      executionProfileId: "p10.vn-stock-daily-observed-fixed.v1",
+      executionProfileDigest: "acb6566ebae23bcf77c77974136c9d083a95f0967260b1332530f600f5abe00e" });
+    await pool.query(`INSERT INTO public.run_read_models
+      (run_id, workspace_id, owner_user_id, status, protocol, strategy_id, dataset_id)
+      VALUES ('foreign-label-probe', $1, 'p12-outsider', 'COMPLETED', 'three_window_decay', 'foreign', 'foreign')`, [otherWorkspace]);
+    const unrelatedDocuments = async () => (await pool.query(
+      `SELECT * FROM research.run_library_search_documents
+        WHERE workspace_id = $1 OR run_id = 'run_label_vn' ORDER BY workspace_id, run_id`, [otherWorkspace])).rows;
+    const unrelatedBefore = await unrelatedDocuments();
+    const businessBefore = (await pool.query("SELECT run_id, created_at, updated_at, state FROM research.runs ORDER BY run_id")).rows;
+    expect((await service.list(scope, { ...ALL, q: "R-P04-001" })).items.map(item => item.run_id)).toEqual(["run_label_z"]);
+    // Existing PRIMARY without a producer is legitimate stored metadata;
+    // its later producer INSERT changes the canonical ordinal of its peers.
+    await pool.query(deferred);
+    expect((await service.list(scope, { ...ALL, q: "R-P04-001" })).items.map(item => item.run_id)).toEqual(["run_label_a"]);
+    expect((await service.list(scope, { ...ALL, q: "R-P04-002" })).items.map(item => item.run_id)).toEqual(["run_label_z"]);
+    expect((await service.list(scope, { ...ALL, q: "R-P04-003" })).items.map(item => item.run_id)).toEqual(["run_label_next"]);
+    expect((await pool.query("SELECT run_id, created_at, updated_at, state FROM research.runs ORDER BY run_id")).rows).toEqual(businessBefore);
+    expect(await unrelatedDocuments()).toEqual(unrelatedBefore);
+
+    // Same created_at, lexically earlier run_id is another legitimate
+    // insertion order; it must not leave the previously indexed Z at 002.
+    await insertDurable(pool, { runId: "run_label_y", attemptId: "attempt_label_y", jobId: "job_label_y",
+      createdAt: "2026-09-21T10:00:00.000Z", state: "RUNNING" });
+    expect((await service.list(scope, { ...ALL, q: "R-P04-002" })).items.map(item => item.run_id)).toEqual(["run_label_y"]);
+    expect((await service.list(scope, { ...ALL, q: "R-P04-003" })).items.map(item => item.run_id)).toEqual(["run_label_z"]);
+    expect((await service.list(scope, { ...ALL, q: "R-P04-004" })).items.map(item => item.run_id)).toEqual(["run_label_next"]);
+    expect(await unrelatedDocuments()).toEqual(unrelatedBefore);
+    const documentsBeforeReads = (await pool.query("SELECT * FROM research.run_library_search_documents ORDER BY workspace_id, run_id")).rows;
+    const items = (await service.list(scope, { ...ALL, q: "R-P04-" })).items;
+    expect(items.map(item => item.display_label)).toEqual(["R-P04-004", "R-P04-003", "R-P04-002", "R-P04-001"]);
+    expect((await pool.query("SELECT * FROM research.run_library_search_documents ORDER BY workspace_id, run_id")).rows).toEqual(documentsBeforeReads);
+  });
+
+  it("G-25: concurrent transaction-start ordering reconciles after the family lock waits for the newer commit", async () => {
+    await seedIdentity(pool);
+    const older = await pool.connect();
+    const newer = await pool.connect();
+    let delayedInsert: Promise<unknown> | undefined;
+    try {
+      await older.query("BEGIN");
+      const olderTimestamp = (await older.query<{ at: string; pid: number }>(
+        "SELECT transaction_timestamp()::text AS at, pg_backend_pid() AS pid")).rows[0];
+      const deferred = await insertDurable(older, { runId: "run_concurrent_old", attemptId: "attempt_concurrent_old", jobId: "job_concurrent_old",
+        createdAt: olderTimestamp.at, state: "RUNNING", deferProducer: true });
+      await newer.query("BEGIN");
+      const newerTimestamp = (await newer.query<{ at: string }>("SELECT transaction_timestamp()::text AS at")).rows[0].at;
+      expect(Date.parse(newerTimestamp)).toBeGreaterThanOrEqual(Date.parse(olderTimestamp.at));
+      await insertDurable(newer, { runId: "run_concurrent_new", attemptId: "attempt_concurrent_new", jobId: "job_concurrent_new",
+        createdAt: newerTimestamp, state: "RUNNING" });
+      expect((await newer.query("SELECT search_document FROM research.run_library_search_documents WHERE run_id = 'run_concurrent_new'")).rows[0].search_document)
+        .toMatch(/^R-P04-001 /);
+      delayedInsert = older.query(deferred);
+      // Observe the actual lock wait instead of assuming a Promise race is
+      // concurrent. This is an isolated PG metadata probe, not a timing SLO.
+      let blocked = false;
+      for (let probe = 0; probe < 100; probe += 1) {
+        blocked = (await pool.query<{ blocked: boolean }>(
+          "SELECT EXISTS (SELECT 1 FROM pg_locks WHERE pid = $1 AND locktype = 'advisory' AND NOT granted) AS blocked",
+          [olderTimestamp.pid])).rows[0].blocked;
+        if (blocked) break;
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+      expect(blocked).toBe(true);
+      await newer.query("COMMIT");
+      await delayedInsert;
+      await older.query("COMMIT");
+      expect((await service.list(scope, { ...ALL, q: "R-P04-001" })).items.map(item => [item.run_id, item.display_label]))
+        .toEqual([["run_concurrent_old", "R-P04-001"]]);
+      expect((await service.list(scope, { ...ALL, q: "R-P04-002" })).items.map(item => [item.run_id, item.display_label]))
+        .toEqual([["run_concurrent_new", "R-P04-002"]]);
+    } finally {
+      // Release the holder first so a failed assertion cannot leave a waiter
+      // hanging. Both paths release the transaction-owned advisory lock.
+      await newer.query("ROLLBACK").catch(() => undefined);
+      await delayedInsert?.catch(() => undefined);
+      await older.query("ROLLBACK").catch(() => undefined);
+      newer.release();
+      older.release();
+    }
+  });
+
+  it("G-25: extraordinary historical append fails atomically beyond the named 256-document fanout bound", async () => {
+    await seedIdentity(pool);
+    const atBound = await insertDurable(pool, { runId: "run_bound_first", attemptId: "attempt_bound_first", jobId: "job_bound_first",
+      createdAt: "2026-09-20T10:00:00.000Z", state: "RUNNING", deferProducer: true });
+    const beyondBound = await insertDurable(pool, { runId: "run_bound_earlier", attemptId: "attempt_bound_earlier", jobId: "job_bound_earlier",
+      createdAt: "2026-09-19T10:00:00.000Z", state: "RUNNING", deferProducer: true });
+    await insertDurable(pool, { runId: "run_bound_template", attemptId: "attempt_bound_template", jobId: "job_bound_template",
+      createdAt: "2026-09-21T10:00:00.000Z", state: "RUNNING" });
+    // Clone only fixture metadata in ascending order, as ordinary creation
+    // does. No child/QuantBT work or business-source rows are involved.
+    await pool.query(`INSERT INTO research.attempts
+      (workspace_id, attempt_id, alpha_version_id, client_intent_id, request_payload_digest, intent_kind, state, created_by_user_id)
+      SELECT $1, 'attempt_bound_' || n, $2, 'intent-bound-' || n, $3, 'NEW', 'RUNNING', $4
+        FROM generate_series(1,255) n`, [scope.workspaceId, ALPHA_VERSION_ID, DIGEST_A, scope.actorUserId]);
+    await pool.query(`INSERT INTO research.runs
+      (workspace_id, run_id, attempt_id, run_kind, relationship_kind, logical_run_key, request_spec_digest,
+       effective_spec_digest, engine_release_id, dataset_binding_digest, state, submitted_by_user_id, created_at)
+      SELECT $1, 'run_bound_' || n, 'attempt_bound_' || n, 'PRIMARY', 'PRIMARY', 'primary',
+        $2, $3, 'er_quantbt_111', $4, 'RUNNING', $5, '2026-09-21T10:00:00Z'::timestamptz + n * interval '1 second'
+        FROM generate_series(1,255) n`, [scope.workspaceId, DIGEST_A, DIGEST_B, DIGEST_C, scope.actorUserId]);
+    await pool.query(`INSERT INTO research.jobs
+      (workspace_id, job_id, run_id, command_id, job_kind, queue_class, cost_estimate, resource_class,
+       state, logical_work_key, work_digest, requested_by_user_id)
+      SELECT $1, 'job_bound_' || n, 'run_bound_' || n, 'command-bound-' || n, 'PRIMARY', 'INTERACTIVE',
+        '{"memory_bytes":1}'::jsonb, 'small', 'RUNNING', 'primary', $2, $3
+        FROM generate_series(1,255) n`, [scope.workspaceId, DIGEST_D, scope.actorUserId]);
+    for (let ordinal = 1; ordinal <= 255; ordinal += 1) {
+      await pool.query(`INSERT INTO research.run_producers
+        SELECT (jsonb_populate_record(NULL::research.run_producers, to_jsonb(template) || jsonb_build_object(
+          'run_id', 'run_bound_' || $2::text, 'attempt_id', 'attempt_bound_' || $2::text,
+          'job_id', 'job_bound_' || $2::text, 'client_intent_id', 'producer-bound-' || $2::text,
+          'created_at', '2026-09-21T10:00:00Z'::timestamptz + $2::integer * interval '1 second',
+          'updated_at', '2026-09-21T10:00:00Z'::timestamptz + $2::integer * interval '1 second'
+        ))).* FROM research.run_producers template WHERE workspace_id = $1 AND run_id = 'run_bound_template'`,
+      [scope.workspaceId, ordinal]);
+    }
+    // Exactly 256 newer documents is accepted and consistently renumbered.
+    await pool.query(atBound);
+    const labelled = (await service.list(scope, { ...ALL, q: "R-P04-", limit: 50 }));
+    expect(labelled.page.filtered_rows).toBe(257);
+    expect((await service.list(scope, { ...ALL, q: "R-P04-001" })).items.map(item => item.run_id)).toEqual(["run_bound_first"]);
+    expect((await service.list(scope, { ...ALL, q: "R-P04-257" })).items.map(item => item.run_id)).toEqual(["run_bound_255"]);
+    const documentsBefore = (await pool.query("SELECT * FROM research.run_library_search_documents ORDER BY workspace_id, run_id")).rows;
+    const sourceBefore = (await pool.query("SELECT run_id, created_at, updated_at, state FROM research.runs ORDER BY run_id")).rows;
+    await expect(pool.query(beyondBound)).rejects.toMatchObject({ code: "23514", message: expect.stringContaining("256-document refresh bound") });
+    expect((await pool.query("SELECT * FROM research.run_library_search_documents ORDER BY workspace_id, run_id")).rows).toEqual(documentsBefore);
+    expect((await pool.query("SELECT run_id, created_at, updated_at, state FROM research.runs ORDER BY run_id")).rows).toEqual(sourceBefore);
+    expect((await pool.query("SELECT 1 FROM research.run_producers WHERE run_id = 'run_bound_earlier'")).rowCount).toBe(0);
+  });
+
+  it("G-25: labelled UTF-8 documents keep the 4096-byte bound without granting generic projection access", async () => {
+    await seedLibrary(pool);
+    for (const text of ["R-P04-022 " + "a".repeat(5000), "R-P04-022 " + "Ỗ".repeat(3000), "R-VN-001 " + "🙂".repeat(3000)]) {
+      const bounded = (await pool.query<{ document: string }>("SELECT research.run_library_bound_search_document($1) AS document", [text])).rows[0].document;
+      expect(bounded).toMatch(/^R-/);
+      expect(Buffer.byteLength(bounded)).toBeLessThanOrEqual(4096);
+      expect(bounded).not.toContain("\ufffd");
+    }
+    await pool.query("BEGIN");
+    try {
+      await pool.query("SET LOCAL ROLE portal_research_runtime");
+      await expect(pool.query("SELECT research.run_library_display_label($1, $2)", [scope.workspaceId, "run_p12_z"]))
+        .rejects.toMatchObject({ code: "42501" });
+    } finally { await pool.query("ROLLBACK"); }
   });
 
   it("CG-P12-06: rc comes only from persisted P21 relations; otherwise a typed absence", async () => {

@@ -61,6 +61,7 @@ async function seed(database: Pool) {
     retainedImportDigest: importDigest, tableRows, summary: w5b.summary,
   });
   const core = JSON.parse(JSON.stringify(preview.report.frozen_core));
+  core.identity.find((item: Json) => item.key === "run_id").value = RUN;
   core.source_revisions.evidence_revision = "rs02_evidence_" + sealDigest;
   const coreDigest = sha(core);
   try {
@@ -84,9 +85,9 @@ async function seed(database: Pool) {
     await client.query(`INSERT INTO research.run_producers
       (workspace_id, run_id, attempt_id, job_id, actor_user_id, client_intent_id, intent_kind, preflight_token, alpha_id, alpha_version_id,
        execution_adapter_id, adapter_contract_digest, requested_spec_digest, effective_spec_digest, dataset_binding_digest, manifest_digest,
-       snapshot_id, snapshot_content_hash, work_digest, legacy_request, execution_profile_id, execution_profile_digest)
+       snapshot_id, snapshot_content_hash, work_digest, legacy_request, execution_profile_id, execution_profile_digest, worker_attempt_id, lease_epoch)
       VALUES ($1, $2, 'att_w7', 'job_w7', $3, 'intent-w7', 'NEW', 'rpft_w7', $4, $5, 'p04.delta-rsi.v1', $6, $7, $8, $9, $10,
-              $11, $12, $13, $14::jsonb, $15, $16)`,
+              $11, $12, $13, $14::jsonb, $15, $16, 'rwa_w7', 1)`,
     [W, RUN, U, ALPHA, VERSION, hex("adapter"), provenance.requested_spec_digest, provenance.effective_spec_digest,
       provenance.dataset_binding_digest, preview.p16_provenance.manifest_digest, "dss_" + "a".repeat(32), hex("snapshot"), hex("work"),
       JSON.stringify({}), DELTA_WFO_PROFILE_ID, DELTA_WFO_PROFILE_DIGEST]);
@@ -167,6 +168,9 @@ describe("W7 · P21 retained lane on disposable PostgreSQL", () => {
 
       const service = new ResearchReleaseCandidateService(repository, { FEATURE_RESEARCH_RELEASE_CANDIDATES: "true" } as never);
       const composed = await service.detail(scope, RUN);
+      // A report alone cannot complete a producer: this seed deliberately
+      // has no terminal head/checkpoint, so lifecycle stays FINISHING.
+      expect(composed).toMatchObject({ run_status: "FINISHING", report_sealed: true });
       expect(composed.availability).toEqual({ state: "AVAILABLE", reason_code: null });
       expect(composed.pack_counts).toEqual({ complete: 8, degraded: 2, input: 2, missing: 0 });
       expect(Object.fromEntries(composed.fields.map((item) => [item.key, item.value]))).toMatchObject({
@@ -213,6 +217,9 @@ describe("W7 · P21 retained lane on disposable PostgreSQL", () => {
 
       const pins = await database.query(
         "SELECT pin_kind, source_ref, source_digest FROM research.release_candidate_retention_pins_v1 WHERE workspace_id = $1 ORDER BY pin_kind, source_ref", [W]);
+      // The immutable seal/import and frozen Report stay pinned unchanged;
+      // Search/Split read refs additionally identify the W1 display revision.
+      const presentedReadDigest = sha({ seal_digest: seeded.sealDigest, presentation_revision: "W1_SELECTED_TRIAL_ORDINAL_V1" });
       expect(pins.rows).toEqual([
         { pin_kind: "ALPHA_VERSION", source_ref: VERSION, source_digest: hex("alpha-code") },
         { pin_kind: "ARTIFACT", source_ref: ARTIFACT, source_digest: provenance.source_manifest_digest },
@@ -220,8 +227,8 @@ describe("W7 · P21 retained lane on disposable PostgreSQL", () => {
         { pin_kind: "EVIDENCE", source_ref: "rs02_evidence_" + seeded.sealDigest, source_digest: seeded.sealDigest },
         { pin_kind: "REPORT", source_ref: "p18r1_" + seeded.coreDigest, source_digest: seeded.coreDigest },
         { pin_kind: "RUN", source_ref: RUN, source_digest: provenance.effective_spec_digest },
-        { pin_kind: "SELECTION", source_ref: "rs02_search_" + seeded.sealDigest, source_digest: preview.progress.claim.handoff_cursor.params_digest },
-        { pin_kind: "SPLIT", source_ref: "rs02_split_" + seeded.sealDigest, source_digest: seeded.sealDigest },
+        { pin_kind: "SELECTION", source_ref: "rs02_search_" + presentedReadDigest, source_digest: preview.progress.claim.handoff_cursor.params_digest },
+        { pin_kind: "SPLIT", source_ref: "rs02_split_" + presentedReadDigest, source_digest: seeded.sealDigest },
       ]);
       const candidate = await database.query("SELECT selection_id, final_audit_run_id FROM research.release_candidates WHERE workspace_id = $1", [W]);
       expect(candidate.rows).toEqual([{ selection_id: null, final_audit_run_id: RUN }]);

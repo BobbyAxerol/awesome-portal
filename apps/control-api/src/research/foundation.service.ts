@@ -23,7 +23,7 @@ import {
   RESEARCH_JOURNEY_DESCRIPTOR_REVISION,
   RESEARCH_JOURNEY_DESCRIPTOR_SHA256,
   RESEARCH_JOURNEY_SCHEMA_VERSION,
-} from "./journey.descriptor.v4";
+} from "./journey.descriptor.v5";
 import { ResearchMetadataRepository } from "./repository";
 import { researchPortalAdmission } from "./portal-admission";
 

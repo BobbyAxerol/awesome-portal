@@ -149,12 +149,20 @@ const CertificationAxesSchema = z.object({
   }).strict(),
 }).strict();
 
+export const ResearchReleaseCandidateRunStatusSchema = z.enum([
+  "QUEUED", "RUNNING", "FINISHING", "COMPLETED", "FAILED", "CANCELLED", "DRAFT", "RECOVERY_REQUIRED",
+]);
+
 export const ResearchReleaseCandidateComposeResponseSchema = z.object({
   schema_version: z.literal("research.release-candidate-compose.v1"),
   read_authority: z.literal("PORTAL_PERSISTED_RESEARCH"),
   run_id: ResearchReleaseCandidateRunIdSchema,
   display_label: z.string().regex(/^R-[A-Z0-9]{1,8}-[0-9]{3,6}$/).nullable(),
   state: z.literal("DRAFT"),
+  /** Independent source lifecycle; a local/report seal is not completion proof. */
+  run_status: ResearchReleaseCandidateRunStatusSchema.nullable().optional(),
+  /** Verified immutable Report exists; not a waiver of the lane revision gate. */
+  report_sealed: z.boolean().optional(),
   availability: AvailabilitySchema,
   as_of_utc_ms: UtcMsSchema,
   source_fingerprint: DigestSchema,

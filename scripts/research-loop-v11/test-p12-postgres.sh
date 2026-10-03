@@ -40,8 +40,12 @@ port="$("${DOCKER[@]}" port "$container" 5432/tcp | sed -n 's/.*:\([0-9][0-9]*\)
 [[ "$port" =~ ^[0-9]+$ ]] || { echo "P12 could not determine disposable PostgreSQL port." >&2; exit 1; }
 
 cd "$root/apps/control-api"
+test_args=()
+if [[ -n "${P12_TEST_NAME_PATTERN:-}" ]]; then
+  test_args+=(--testNamePattern "$P12_TEST_NAME_PATTERN")
+fi
 TEST_DATABASE_URL="postgres://portal:portal@127.0.0.1:${port}/portal_control_test" \
   ./node_modules/.bin/vitest run --config ../../scripts/research-loop-v11/vitest.p12.config.mts \
-  ../../scripts/research-loop-v11/p12-run-library.spec.ts
+  ../../scripts/research-loop-v11/p12-run-library.spec.ts "${test_args[@]}"
 
 echo "P12 isolated PostgreSQL Run Library proof: PASS"

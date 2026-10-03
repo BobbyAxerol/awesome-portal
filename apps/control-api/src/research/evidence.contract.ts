@@ -342,10 +342,19 @@ const LifecycleSchema = z.object({
   display_status: z.enum(["COMPLETED", "RUNNING", "FAILED", "QUEUED", "DRAFT", "CANCELLED", "RECOVERY_REQUIRED"]).nullable(),
   phase: z.enum(["IN_PROGRESS", "TERMINAL", "ATTENTION_REQUIRED", "LEGACY", "NOT_PUBLISHED"]),
   terminal_outcome: z.enum(["COMPLETED", "FAILED", "CANCELLED"]).nullable(),
+  /** Same persisted-snapshot derivation as Progress; null is not a failure-stage claim. */
+  failed_at: z.object({
+    stage: z.enum(["S1", "S2", "S3", "S4", "S5"]),
+    fold: z.number().int().positive().nullable(),
+    basis: z.enum(["SOURCE_RUNNING_STAGE", "FIRST_UNFINISHED_STAGE"]),
+  }).strict().nullable().optional(),
   availability: ResearchEvidenceAvailabilitySchema,
 }).strict().superRefine((value, context) => {
   if ((value.phase === "TERMINAL") !== (value.terminal_outcome !== null)) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "terminal outcome must accompany exactly the TERMINAL phase" });
+  }
+  if (value.failed_at && value.terminal_outcome !== "FAILED") {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "failure stage requires FAILED lifecycle authority" });
   }
 });
 

@@ -1,6 +1,7 @@
 /** RS-02 retained-current-source named BFF projection service. */
 
 import { Buffer } from "node:buffer";
+import { selectedTrialPresentation } from "./selected-trial-presentation";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { enrichedAvailability } from "./enriched-analysis.contract";
 import { z } from "zod";
@@ -135,7 +136,10 @@ export function currentSourceSealDigest(seal: Pick<CurrentSourceSealRow,
   });
 }
 
-function revision(kind: string, seal: CurrentSourceSealRow): string {
+/** Canonical retained representation revision; reused by RC in its own scoped snapshot. */
+export function currentSourceReadRevision(kind: string, seal: Pick<CurrentSourceSealRow,
+  "artifactRevision" | "manifestDigest" | "sourceTransformDigest" | "retainedImportDigest" | "tableRows" | "summary"
+  | "enrichedAnalysis" | "analyticsSidecar" | "distributionsSidecar">): string {
   if (seal.enrichedAnalysis && ["evidence", "evidence-monthly_returns", "evidence-return_distribution"].includes(kind)) {
     return `rs02_${kind}_${sha256ResearchJson({ seal_digest: currentSourceSealDigest(seal),
       enrichment: sha256ResearchJson(seal.enrichedAnalysis) })}`;
@@ -149,8 +153,14 @@ function revision(kind: string, seal: CurrentSourceSealRow): string {
     return `rs02_evidence_${sha256ResearchJson({ seal_digest: currentSourceSealDigest(seal),
       analytics_sidecar_digest: seal.analyticsSidecar.digest })}`;
   }
+  if (["split", "search", "freeze"].includes(kind)) {
+    return `rs02_${kind}_${sha256ResearchJson({ seal_digest: currentSourceSealDigest(seal),
+      presentation_revision: "W1_SELECTED_TRIAL_ORDINAL_V1" })}`;
+  }
   return `rs02_${kind}_${currentSourceSealDigest(seal)}`;
 }
+
+const revision = currentSourceReadRevision;
 
 function isCausalSeal(seal: CurrentSourceSealRow): boolean {
   return seal.profileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id
@@ -515,12 +525,20 @@ export class ResearchCurrentSourceService {
     if (page.totalRows !== seal.tableRows.FOLD || page.hasMore || page.hasPrevious) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained fold plan exceeds its admitted bound.", 503);
     }
+    const nativeTrials = isCausalSeal(seal)
+      ? await this.boundedRows(scope, runId, seal, "TRIAL", MAXIMUM_TRIAL_ROWS, signal) : [];
+    const nativeByTrial = new Map(nativeTrials.map(asTrial).map(trial => [trial.trial_id,
+      trial.trial_facts ? { trial_id: trial.trial_id, ...trial.trial_facts } : undefined]));
     const folds = page.rows.map((row) => {
       // W6a: the W5b child-audit block is served by its own bounded read
       // (replay/child-audit); a W5b-retained fold row must not leak it
       // into the strict split DTO (which then answered 503).
       const { fold_facts: foldFacts, child_audit: _childAudit, ...fold } = asFold(row);
-      return { source_ordinal: row.sourceOrdinal, ...fold, anatomy: foldAnatomy(foldFacts), score: foldScore(foldFacts) };
+      const native = fold.causal_selection ? nativeByTrial.get(fold.causal_selection.selected_trial_id) : undefined;
+      return { source_ordinal: row.sourceOrdinal, ...fold,
+        ...(fold.causal_selection ? { causal_selection: { ...fold.causal_selection,
+          ...selectedTrialPresentation(fold.causal_selection.selected_trial_id, seal.profileId, native) } } : {}),
+        anatomy: foldAnatomy(foldFacts), score: foldScore(foldFacts) };
     });
     // E14 · 5.11/5.12: boundary integrity and stitched OOS provenance, both
     // read from the W5b replay ledger this same seal holds.
@@ -682,6 +700,9 @@ export class ResearchCurrentSourceService {
       selection: {
         state: "AVAILABLE" as const,
         selected_trial_id: summary.selection.trial_id,
+        ...selectedTrialPresentation(summary.selection.trial_id, seal.profileId,
+          allTrials.map(asTrial).filter(trial => trial.trial_id === summary.selection.trial_id)
+            .map(trial => trial.trial_facts ? { trial_id: trial.trial_id, ...trial.trial_facts } : undefined)[0]),
         objective: summary.selection.objective,
         parameters: summary.selection.parameters,
         availability: available(),
@@ -779,6 +800,10 @@ export class ResearchCurrentSourceService {
       }
       space = { ...space, selection_scope: "LAST_FOLD_DEPLOYMENT", fold_id: deployment.fold_id, study_id: deployment.causal_selection.study_id };
     }
+    const selectedNativeTrial = isCausalSeal(seal)
+      ? (await this.boundedRows(scope, runId, seal, "TRIAL", MAXIMUM_TRIAL_ROWS, signal))
+        .map(asTrial).filter(trial => trial.trial_id === summary.selection.trial_id)
+        .map(trial => trial.trial_facts ? { trial_id: trial.trial_id, ...trial.trial_facts } : undefined)[0] : undefined;
     const ordering = foldOrdering(
       foldRows.map(({ row }) => {
         const fold = asFold(row);
@@ -832,6 +857,7 @@ export class ResearchCurrentSourceService {
       byte_verification: byteVerification,
       frozen_selection: {
         selected_trial_id: summary.selection.trial_id,
+        ...selectedTrialPresentation(summary.selection.trial_id, seal.profileId, selectedNativeTrial),
         objective: summary.selection.objective,
         parameters: summary.selection.parameters,
         availability: available(),

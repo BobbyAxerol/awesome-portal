@@ -355,7 +355,8 @@ describe("RF-05 CG-P13-10/12 · status vocabulary and typed terminal flag", () =
       expect(hub.readiness).toBe("NOT_READY");
       expect(hub.lifecycle).toEqual({
         vocabulary: "research.run-status-vocabulary.v1", durable_status: item.runState, display_status: item.display,
-        phase: item.phase, terminal_outcome: item.outcome, availability: { state: "AVAILABLE", reason_code: null },
+        phase: item.phase, terminal_outcome: item.outcome, failed_at: null,
+        availability: { state: "AVAILABLE", reason_code: null },
       });
       expect(hub.core.run_identity?.status.value).toBe(item.runState);
     });

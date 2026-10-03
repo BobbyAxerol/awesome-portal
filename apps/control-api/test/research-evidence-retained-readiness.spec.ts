@@ -10,6 +10,7 @@ import { ResearchEvidenceHubResponseSchema } from "../src/research/evidence.cont
 import { p13EvidenceSourceFixture } from "./research-evidence.fixture";
 import { sha256ResearchJson } from "../src/research/preflight.service";
 import { openApiValidator } from "./research-rf05-openapi";
+import { failedAt } from "../src/research/run-state";
 
 const scope = { workspaceId: "retained-workspace", actorUserId: "retained-user" };
 const runId = "rrun_" + "a".repeat(32);
@@ -44,6 +45,24 @@ function subject(row: EvidenceHubRow) {
 }
 
 describe("B8 S04 Hub readiness follows actual retained lane authority", () => {
+  it("W1 B-2 publishes Progress's exact failure basis only under FAILED lifecycle", async () => {
+    const row = hubRow();
+    row.runState = "FAILED"; row.jobState = "FAILED";
+    const snapshot = ResearchProgressSnapshotSchema.parse(row.progressSnapshot);
+    snapshot.stages[3]!.state = "RUNNING";
+    snapshot.stages[3]!.completed_at_utc_ms = null;
+    row.progressSnapshot = snapshot;
+    const hub = await subject(row).service.hub(scope, runId);
+    expect(hub.lifecycle!.failed_at).toEqual(failedAt(snapshot));
+    expect(hub.lifecycle!.failed_at).toMatchObject({ stage: "S4", basis: "SOURCE_RUNNING_STAGE" });
+    openApiValidator("research-evidence.openapi.json", "EvidenceHub").assert(hub);
+    row.runState = "RUNNING"; row.jobState = "RUNNING";
+    expect((await subject(row).service.hub(scope, runId)).lifecycle!.failed_at).toBeNull();
+    row.runState = "FAILED"; row.jobState = "FAILED"; row.progressSnapshot = null;
+    expect((await subject(row).service.hub(scope, runId)).lifecycle!.failed_at).toBeNull();
+    row.progressSnapshot = { ...snapshot, run_id: "foreign_run" };
+    expect((await subject(row).service.hub(scope, runId)).lifecycle!.failed_at).toBeNull();
+  });
   it.each([
     ["rs02.quantbt-advanced-wfo.v1", "rs02.delta-wfo-global.v1", false],
     ["rs02.quantbt-advanced-wfo.v1", "rs02.delta-wfo-global.v1", true],

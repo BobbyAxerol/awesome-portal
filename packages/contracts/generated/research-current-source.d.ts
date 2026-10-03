@@ -160,6 +160,61 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Source-owned selection for this outer fold only. Objective uses nested inner validation, not outer OOS. Candidate metrics have a separate post-selection outer scope. Retained IDs are study-qualified; local source trial IDs remain in trial facts. Runtime validates exact inner count, unique IDs and train-before-test ranges inside outer IS; no engine wall clock is inferred. W1 ordinal: display only, source number + 1. Qualified studies require a retained native study/trial mapping and STUDY_LOCAL scope; never a run-global trial. Null carries an explicit reason. Not a digest or selection identity. */
+        DisplayCausalSelection: {
+            /** @constant */
+            schema_version: "research.current-source-causal-selection.v1";
+            /** @constant */
+            scope: "OUTER_FOLD_SELECTION";
+            study_id: string;
+            fold_seed: number;
+            selected_trial_id: string;
+            parameters: {
+                [key: string]: string;
+            };
+            objective: string | null;
+            /** @constant */
+            objective_kind: "INNER_VALIDATION_DECAY_J";
+            candidate_is_metric: string | null;
+            candidate_oos_metric: string | null;
+            candidate_decay: string | null;
+            /** @constant */
+            candidate_metrics_scope: "OUTER_FOLD_POST_SELECTION";
+            /** @constant */
+            candidate_is_scope: "INNER_VALIDATION_IS_MEAN";
+            /** @constant */
+            candidate_oos_scope: "OUTER_FOLD_OOS";
+            /** @constant */
+            candidate_decay_scope: "INNER_IS_MEAN_MINUS_OUTER_OOS";
+            candidate_count: number;
+            /** @constant */
+            study_trial_rows: 3;
+            /** @constant */
+            outer_oos_used_for_selection: false;
+            /** @constant */
+            causality_claim: "strict_nested_fold_local_retraining";
+            inner_fold_count: number;
+            inner_validation: {
+                /** @enum {unknown} */
+                inner_split_frequency: "weekly" | "monthly" | "quarterly";
+                /** @enum {unknown} */
+                inner_window_mode: "expanding" | "rolling";
+                inner_train_window: string;
+                inner_min_folds: number;
+            };
+            inner_folds: {
+                inner_fold_id: string;
+                train_start_utc_ms: number;
+                train_end_utc_ms: number;
+                test_start_utc_ms: number;
+                test_end_utc_ms: number;
+                /** @constant */
+                outer_oos_used_for_selection: false;
+            }[];
+            selected_trial_ordinal?: number | null;
+            selected_trial_ordinal_scope?: ("RUN_GLOBAL" | "STUDY_LOCAL") | null;
+            selected_trial_ordinal_reason_code?: ("SELECTION_HAS_NO_TRIAL" | "SOURCE_TRIAL_NUMBER_NOT_PUBLISHED" | "STUDY_LOCAL_TRIAL_MAPPING_NOT_PUBLISHED") | null;
+        };
         SearchStudySurface: {
             /** @constant */
             scope: "INNER_VALIDATION_OUTER_STUDY";
@@ -1092,7 +1147,7 @@ export interface components {
                 decay: components["schemas"]["Decimal"] | null;
                 oos_trades: components["schemas"]["Decimal"] | null;
             };
-            causal_selection?: components["schemas"]["CausalSelection"];
+            causal_selection?: components["schemas"]["DisplayCausalSelection"];
         };
         Trial: {
             source_ordinal: number;
@@ -1119,6 +1174,7 @@ export interface components {
             facts: components["schemas"]["TrialFacts"];
             max_drawdown?: components["schemas"]["CandidateDrawdown"];
         };
+        /** @description W1 ordinal: display only, source number + 1. Qualified studies require a retained native study/trial mapping and STUDY_LOCAL scope; never a run-global trial. Null carries an explicit reason. Not a digest or selection identity. */
         Selection: {
             /** @constant */
             state: "AVAILABLE";
@@ -1143,6 +1199,9 @@ export interface components {
              */
             scope?: "LAST_FOLD_DEPLOYMENT";
             fold_id?: string;
+            selected_trial_ordinal?: number | null;
+            selected_trial_ordinal_scope?: ("RUN_GLOBAL" | "STUDY_LOCAL") | null;
+            selected_trial_ordinal_reason_code?: ("SELECTION_HAS_NO_TRIAL" | "SOURCE_TRIAL_NUMBER_NOT_PUBLISHED" | "STUDY_LOCAL_TRIAL_MAPPING_NOT_PUBLISHED") | null;
         };
         Evidence: components["schemas"]["Common"] & {
             enriched_analysis_availability?: components["schemas"]["EnrichedAnalysisAvailability"];
@@ -1872,7 +1931,7 @@ export interface components {
                 adapter_contract_digest: string | null;
             };
         };
-        /** @description The sealed θ* as Screen 07 reads it (not the Screen 06 selection roles). */
+        /** @description The sealed θ* as Screen 07 reads it (not the Screen 06 selection roles). W1 ordinal: display only, source number + 1. Qualified studies require a retained native study/trial mapping and STUDY_LOCAL scope; never a run-global trial. Null carries an explicit reason. Not a digest or selection identity. */
         FrozenSelection: {
             selected_trial_id: string | null;
             objective: components["schemas"]["Decimal"] | null;
@@ -1886,6 +1945,9 @@ export interface components {
              */
             scope?: "LAST_FOLD_DEPLOYMENT";
             fold_id?: string;
+            selected_trial_ordinal?: number | null;
+            selected_trial_ordinal_scope?: ("RUN_GLOBAL" | "STUDY_LOCAL") | null;
+            selected_trial_ordinal_reason_code?: ("SELECTION_HAS_NO_TRIAL" | "SOURCE_TRIAL_NUMBER_NOT_PUBLISHED" | "STUDY_LOCAL_TRIAL_MAPPING_NOT_PUBLISHED") | null;
         };
         Freeze: components["schemas"]["Common"] & {
             /** @constant */

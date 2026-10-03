@@ -4,6 +4,8 @@
   "run_id": "rrun_e1fa9e5cae3bcef8f8e38311905a17d5",
   "display_label": null,
   "state": "DRAFT",
+  "run_status": null,
+  "report_sealed": true,
   "availability": {
     "state": "AVAILABLE",
     "reason_code": null
@@ -41,7 +43,7 @@
     {
       "key": "selected_params",
       "value": "6c8364189d72bfc2d13602152569674f81e92ebb70180fc29d1a8047f69bc9bb",
-      "detail": "retained trial 0 · global",
+      "detail": "trial 1 · source 0 · run-global",
       "tone": "ink"
     },
     {

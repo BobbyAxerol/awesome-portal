@@ -368,6 +368,19 @@ Lõi dùng chung: `runTerminalState`/`runStatusWord` (một hàm humanise), `use
 **S02:** WFO nâng cao thiếu trường bắt buộc → bước `error`, Review liệt kê từng trường, Preflight tắt; ký hiệu ngoài danh mục không hợp lệ; draft tự lưu qua mọi lần rời trong app + **một history entry mỗi bước** (Back lùi một bước, `?step=review` với draft rỗng rơi về bước chưa xong đầu tiên, "Start over" xoá draft); Back/Next, tự chọn version khi chỉ có một, bước Strategy/Optimization ghim thì bỏ qua; Review liệt kê **mọi** lỗi kèm link bước, thông báo cửa sổ cụ thể (overlap IS/OOS); 403 → một trạng thái `Read-only session.` (mã ở tooltip); rail chỉ ở Review; 28 dòng `RELEASE_DEFAULT · LOCKED` gộp một dòng; ẩn alpha `s14-*`; số khoảng trống `null` (chỉ số quan sát) in `not measured · observed dates only`. **Màn cũ**: `/new → /runs/new`, `/imports → /alpha-import`, `/runs/legacy → /runs` (query/hash giữ); Command Center/Journey trỏ màn mới, bỏ chữ "shipped"; landing một header, title một mẫu; card Journey full-width ≤720px. **Library**: chip `Continue draft · step N`, thẻ ngắn (NOT ISSUED chi tiết ở tooltip, bỏ `rc — not published`, chip alpha/mode chỉ khi khác bộ lọc), tile "final 30D". **S14**: stepper có mũi tên/Home/End, một thông báo từ chối (`Request refused.` + Reload), `.py files only.`, "last input wins" giữa file và paste, mục tiêu chạm ≥40px.
 **Chưa làm / cần Codex:** Library **tìm theo nhãn `R-…`** (bảng `run_library_search_documents` chưa có `display_label`); descriptor Journey v5 bỏ chữ "shipped" khỏi mô tả thẻ (FE đang ẩn). `ImportInbox.tsx:139` "Trong inbox" (tiếng Việt, màn cũ đã gỡ). Chưa kiểm trình duyệt 390/360 và baseline S00/S01/S02/S14 (recorder sau deploy).
 
+### Codex W1/W2 backend handoff — 2026-10-03
+
+G-25/G-26 and optional W1 B-1…B-5 have source/generated implementation and
+focused/actual isolated read proof; final grouped commit/cleanup is tracked
+in [the request closeout packet](./evidence/P21/W1_W2_BACKEND_REQUEST_CLOSEOUT_2026-10-03.md).
+Use the delivered Library `q=R-…`, Journey v5, Hub.lifecycle.failed_at,
+RC.run_status/report_sealed/sealed-aware verdict and selection display
+ordinals. Preserve RUN_GLOBAL versus STUDY_LOCAL; evaluation ID may differ
+from original Optuna ID, so no browser `+1` or string parsing. Original
+source/seal/Report custody and typed stale/absence controls remain intact.
+Claude owns consumer/browser receipt, not another backend repair request
+for these same fields. No frontend code or baseline changed in this slice.
+
 ### W3 — mobile (2026-10-02) · plan: `FRONTEND_FIX_PLAN_W1_W5_2026-10-02.md` §4
 Thanh trên 132–156px → **56px một hàng** (menu, badge môi trường, một crumb ellipsis, tìm kiếm, **Display**); Theme/Density/Planned modules/Default Workspace/Users & Access vào menu Display (mở bằng Enter/Space, Tab/mũi tên, Esc đóng và trả focus; Skip link vẫn là Tab đầu tiên; panel chỉ mount khi mở); **chip SOON/PROTOTYPE của sidebar bỏ ở mọi độ rộng** (giữ làm mờ, trạng thái ở `aria-label`). S04 thẻ cursor mặc định **thu gọn 39px** (`fold 3 · trial N · window OOS`), mở ra không sticky; dải tab hub không còn ô Promotion, scroll-snap, tab Freeze bấm được, tab 44px. Mục tiêu chạm: CTA chính ≥44px, điều khiển còn lại ≥24px (stepper fold 13×14 → 24×24; số phần tử <24px trên S00–S14 giảm về 0 trừ 1 ở S06). Hết tràn ngang đã đo. **Laptop giữ nguyên** (đo PIL: nội dung bên phải rail byte-identical hoặc ≤56 px nhiễu), **trừ rail sidebar mất chip** nên mọi baseline laptop có rail đổi. **Chưa xác nhận:** S07 causal fold rows và chip claim S03 ở 360 (fixture không có), cần run causal thật.
 

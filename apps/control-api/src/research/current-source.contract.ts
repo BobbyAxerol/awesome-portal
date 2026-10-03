@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { SelectedTrialPresentationSchema } from "./selected-trial-presentation";
 import { ResearchEnrichedAnalysisSchema, ResearchEnrichedAvailabilitySchema } from "./enriched-analysis.contract";
 import { ResearchMonthlyPointSchema } from "./all-time-distributions.contract";
 import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
@@ -39,6 +40,14 @@ const UtcMsSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const ReasonCodeSchema = z.string().regex(/^[A-Z][A-Z0-9_]{2,159}$/);
 const OpaqueCursorSchema = z.string().regex(/^kc1\.[A-Za-z0-9_-]{1,32}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/).max(4096);
 const SourceIdentifierSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/);
+// Public presentation metadata is never part of the immutable importer row.
+const DisplayCausalSelectionSchema = CurrentSourceCausalSelectionSchema.innerType()
+  .extend(SelectedTrialPresentationSchema.partial().shape).superRefine((value, context) => {
+    const { selected_trial_ordinal: _ordinal, selected_trial_ordinal_scope: _scope,
+      selected_trial_ordinal_reason_code: _reason, ...source } = value;
+    const checked = CurrentSourceCausalSelectionSchema.safeParse(source);
+    if (!checked.success) for (const issue of checked.error.issues) context.addIssue(issue);
+  });
 /**
  * Read-side ceiling on retained TRIAL rows. The RS-02 seal still admits at
  * most 64 (current-source.repository.ts); only the research-preview long WFO
@@ -587,7 +596,7 @@ const FoldAnatomySchema = z.object({
 }).strict();
 
 const FoldSchema = z.object({
-  causal_selection: CurrentSourceCausalSelectionSchema.optional(),
+  causal_selection: DisplayCausalSelectionSchema.optional(),
   source_ordinal: z.number().int().nonnegative().max(255),
   fold_id: SourceIdentifierSchema,
   train_start_utc_ms: UtcMsSchema.nullable(),
@@ -800,6 +809,7 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
     fold_id: SourceIdentifierSchema.optional(),
     state: z.literal("AVAILABLE"),
     selected_trial_id: SourceIdentifierSchema.nullable(),
+    ...SelectedTrialPresentationSchema.partial().shape,
     objective: DecimalSchema.nullable(),
     parameters: ParameterMapSchema,
     availability: ResearchCurrentSourceAvailabilitySchema,
@@ -914,6 +924,7 @@ export const ResearchCurrentSourceFreezeResponseSchema = CommonSchema.extend({
     scope: z.literal("LAST_FOLD_DEPLOYMENT").optional(),
     fold_id: SourceIdentifierSchema.optional(),
     selected_trial_id: SourceIdentifierSchema.nullable(),
+    ...SelectedTrialPresentationSchema.partial().shape,
     objective: DecimalSchema.nullable(),
     parameters: ParameterMapSchema,
     availability: ResearchCurrentSourceAvailabilitySchema,

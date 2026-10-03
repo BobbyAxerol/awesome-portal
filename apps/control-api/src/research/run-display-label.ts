@@ -5,7 +5,8 @@
  * title, the Screen-10/11/13 cards and the shell topbar. The wire identity is
  * a 37-character `rrun_<32 hex>`, which breaks every one of those headers, so
  * the server publishes a short label beside it. `run_id` remains the identity:
- * nothing may be looked up, filtered or routed by the label.
+ * nothing may be looked up or routed by the label. Library's display-safe
+ * `q` search may match it, but always returns the tenant-scoped run_id.
  *
  * Two rules decide the shape:
  *
@@ -15,12 +16,11 @@
  *  - **It needs no stored column.** The ordinal is a count of the logical runs
  *    of the same kind that this workspace created no later than this one,
  *    ordered by `created_at` with `run_id` as the tiebreak. `research.runs` is
- *    append-only and `created_at` is written once by the producer insert, so a
- *    run's ordinal is fixed at the moment it is accepted: later runs take
- *    later numbers and never renumber the ones already issued. Deleting a run,
- *    or back-dating one, would shift every ordinal after it — neither happens
- *    on this schema (there is no delete path, and `created_at` is covered by
- *    the run-producer immutability trigger).
+ *    normally append-only, but transaction-start timestamps can commit out
+ *    of order, and historical unbound runs can acquire a producer later. A
+ *    display ordinal follows the canonical tuple, not insertion/commit order.
+ *    Migration 093 keeps newer search documents aligned on that bounded
+ *    write-side event. Labels remain presentation metadata, never identities.
  *
  * The kind is the run's execution profile, not its optimization mode: the
  * profile is a stored, CHECK-constrained column on `research.run_producers`

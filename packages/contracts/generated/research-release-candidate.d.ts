@@ -172,6 +172,8 @@ export interface components {
             display_label: string | null;
             /** @constant */
             state: "DRAFT";
+            run_status?: ("QUEUED" | "RUNNING" | "FINISHING" | "COMPLETED" | "FAILED" | "CANCELLED" | "DRAFT" | "RECOVERY_REQUIRED") | null;
+            report_sealed?: boolean;
             availability: components["schemas"]["Availability"];
             as_of_utc_ms: components["schemas"]["UtcMilliseconds"];
             source_fingerprint: components["schemas"]["Digest"];
@@ -248,6 +250,8 @@ export interface components {
             display_label: string | null;
             /** @constant */
             state: "DRAFT";
+            run_status?: ("QUEUED" | "RUNNING" | "FINISHING" | "COMPLETED" | "FAILED" | "CANCELLED" | "DRAFT" | "RECOVERY_REQUIRED") | null;
+            report_sealed?: boolean;
             availability: components["schemas"]["Availability"];
             as_of_utc_ms: components["schemas"]["UtcMilliseconds"];
             source_fingerprint: components["schemas"]["Digest"];

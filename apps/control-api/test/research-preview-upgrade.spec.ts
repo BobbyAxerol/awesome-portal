@@ -84,9 +84,12 @@ describe("P23 Research preview forward upgrade without ledger/data/auth rewrite"
     const applied = await database.query<{ name: string }>(`SELECT name FROM pgmigrations ORDER BY name`);
     expect(applied.rows.map(row => row.name)).toEqual(migrationNames.map(name => name.slice(0, -4)));
     const journey = await database.query(`SELECT revision, content_sha256 FROM research.journey_descriptor_registry ORDER BY revision`);
-    expect(journey.rows.map((row) => Number(row.revision))).toEqual([1, 2, 3, 4]);
+    expect(journey.rows.map((row) => Number(row.revision))).toEqual([1, 2, 3, 4, 5]);
     expect(journey.rows[3].content_sha256).toBe(
       "376acce59fa25435aebcf3ce225117d169415b6a1164617e5da11e68a82d5ab8",
+    );
+    expect(journey.rows[4].content_sha256).toBe(
+      "7e408074d63ee35cf3074de84a70d98d5481472df31d38c8a6c3ab91da01c9be",
     );
     const shape = await database.query(`SELECT
       EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='research.run_evidence_projections_v1'::regclass

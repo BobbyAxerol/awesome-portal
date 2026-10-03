@@ -12,6 +12,7 @@ import {
   ResearchReleaseCandidateComposeResponseSchema,
   ResearchReleaseCandidatePackResponseSchema,
   ResearchReleaseCandidateSealResponseSchema,
+  ResearchReleaseCandidateRunStatusSchema,
   type ResearchReleaseCandidateComposeResponse,
   type ResearchReleaseCandidateDraftPatch,
   type ResearchReleaseCandidatePackResponse,
@@ -29,6 +30,8 @@ import {
   type ReleaseCandidateStoredPack,
 } from "./release-candidate.repository";
 import { retainedLaneFacts } from "./release-candidate.retained-lane";
+import { selectedTrialPresentation } from "./selected-trial-presentation";
+import { ResearchReportFrozenCoreSchema } from "./report.contract";
 
 type Availability = {
   state: "AVAILABLE" | "NOT_PUBLISHED" | "PARTIAL" | "NOT_APPLICABLE";
@@ -270,6 +273,9 @@ export class ResearchReleaseCandidateService {
       run_id: source.runId,
       display_label: source.displayLabel ?? null,
       state: "DRAFT" as const,
+      run_status: ResearchReleaseCandidateRunStatusSchema.safeParse(source.lifecycleStatus).success
+        ? source.lifecycleStatus : null,
+      report_sealed: this.reportSealed(source),
       availability: sourceIntegrity ? AVAILABLE : partial("P21_REFERENCED_SOURCE_INTEGRITY_FAILED"),
       as_of_utc_ms: source.asOfUtcMs,
       source_fingerprint: sourceFingerprint,
@@ -309,7 +315,12 @@ export class ResearchReleaseCandidateService {
           availability: absent("P21_ENGINE_EXECUTION_CERTIFICATION_NOT_PUBLISHED"),
         },
       },
-      gate_verdict: publication.verdict ?? {
+      gate_verdict: localSeal.state === "SEALED_LOCAL" ? {
+        title: "local evidence pack already sealed",
+        body: localSeal.availability.state === "AVAILABLE"
+          ? "The immutable local pack is retained. Publication, delivery and approval remain separate downstream facts."
+          : "The immutable local pack retains its original source fingerprint. Current source changes do not rewrite it or authorize resealing its draft.",
+      } : publication.verdict ?? {
         title: sealBlockedReason ? "local seal blocked — review evidence" : "local seal ready — downstream publish remains P22",
         body: "P21 creates only a Portal-local immutable evidence pack. It neither computes, approves, delivers, nor starts Paper.",
       },
@@ -624,7 +635,7 @@ export class ResearchReleaseCandidateService {
       values,
       pack: this.retainedPackItems(source, draft, values),
       sourceIntegrity: this.retainedIntegrity(source, values),
-      selectedDetail: values.facts.selection ? `retained trial ${values.facts.selection.trialId} · global` : null,
+      selectedDetail: this.retainedSelectedDetail(source, values.facts.selection?.trialId ?? null),
       selectedTrialId: values.facts.selection?.trialId ?? null,
     };
   }
@@ -660,7 +671,7 @@ export class ResearchReleaseCandidateService {
     const childAuditMatches = childAudit !== null && childAudit.counts.folds > 0
       && childAudit.counts.oos_child_match === childAudit.counts.folds;
     const finalAudit = source.runState === "READY" && facts.replayRetained && childAuditMatches && facts.parameterDigest !== null;
-    const reportFromLane = retainedReport && source.report.reportRevision !== null
+    const reportFromLane = retainedReport && this.reportSealed(source)
       && stringAt(reportCore, ["source_revisions", "evidence_revision"]) === facts.evidenceRevision;
     const fields = base.fields.map((item): Field => {
       switch (item.key) {
@@ -786,6 +797,26 @@ export class ResearchReleaseCandidateService {
       { pinKind: "SPLIT", sourceRef: facts.splitRevision as string, sourceDigest: facts.sealDigest },
       { pinKind: "SELECTION", sourceRef: facts.searchRevision as string, sourceDigest: facts.parameterDigest },
     ];
+  }
+
+  /** A verified seal is a source fact, separate from "matches the current Evidence revision". */
+  private reportSealed(source: ReleaseCandidateSource): boolean {
+    const { reportRevision, frozenCoreDigest, frozenCore, sealedAtUtcMs } = source.report;
+    const core = record(frozenCore);
+    const parsed = ResearchReportFrozenCoreSchema.safeParse(core);
+    return reportRevision !== null && frozenCoreDigest !== null && digest(frozenCoreDigest) !== null
+      && reportRevision === `p18r1_${frozenCoreDigest}`
+      && sealedAtUtcMs !== null && Number.isSafeInteger(sealedAtUtcMs) && sealedAtUtcMs >= 0
+      && core !== null && digestOf(core) === frozenCoreDigest && parsed.success
+      && parsed.data.identity.find((item) => item.key === "run_id")?.value === source.runId;
+  }
+
+  private retainedSelectedDetail(source: ReleaseCandidateSource, trialId: string | null): string | null {
+    if (trialId === null) return null;
+    const presentation = selectedTrialPresentation(trialId, source.wfo?.seal?.profileId ?? "", source.selectedTrialNativeFacts);
+    if (presentation.selected_trial_ordinal === null) return `retained source ${trialId} · display trial not published`;
+    const scope = presentation.selected_trial_ordinal_scope === "STUDY_LOCAL" ? "study-local" : "run-global";
+    return `trial ${presentation.selected_trial_ordinal} · source ${trialId} · ${scope}`;
   }
 
   private requireEnabled(): void {
