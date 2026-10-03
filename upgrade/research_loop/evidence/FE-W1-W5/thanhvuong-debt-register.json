@@ -1,7 +1,7 @@
 {
   "packet": "FE-W1-W5",
   "date": "2026-10-03 (W6-W7 update)",
-  "head": "a9ff796a31c05654785b8fa2be2400a7285c8189",
+  "head": "2f4cb81a7600eeeb8efa2bf61dee743ea1ddbb52",
   "open_debt": [
     {
       "id": "DEBT-S06-CONTRAST",
@@ -36,7 +36,7 @@
     {
       "id": "DEBT-S07-S03-360",
       "what": "S07 causal fold rows and S03 claim chip at 360 unconfirmed: no causal fixture",
-      "state": "OPEN"
+      "state": "CLOSED · real causal run R-WFO-027 exists on the preview; 360/390 layout defects fixed in e9b170ad; no baseline change (visual spec uses fixtures)"
     },
     {
       "id": "DEBT-LEGACY-ES",

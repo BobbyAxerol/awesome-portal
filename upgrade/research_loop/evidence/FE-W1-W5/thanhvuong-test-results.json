@@ -4,12 +4,12 @@
   "date": "2026-10-03",
   "status": "W1-W7 FE landed on claude/fe-parity · gates measured 2026-10-03 · NOT_VERIFIED at product level (Bobby by-eye review + signed release pending)",
   "branch": "claude/fe-parity",
-  "head": "a9ff796a31c05654785b8fa2be2400a7285c8189",
+  "head": "2f4cb81a7600eeeb8efa2bf61dee743ea1ddbb52",
   "tree": "d49144200ff3cbd0cec07604c6d5b364e48cef32",
   "base": "b2098a81",
   "diff_base_head": "450 files +19352/-5529",
   "measured_on": "2026-10-03",
-  "bundle": "index-DOdkCJHY.js",
+  "bundle": "index-C41KmM2A.js",
   "gates": {
     "vitest_full": {
       "passed": 5892,
@@ -63,8 +63,8 @@
     "lane_plus_gate_combined": {
       "passed": 228,
       "total": 228,
-      "bundle": "index-DOdkCJHY.js",
-      "after": "typed absence instead of dashes, one RunNotFound face, S04 exact table beside the region"
+      "bundle": "index-C41KmM2A.js",
+      "note": "S06 mobile real-read cell failed once under load and passed 3/3 alone"
     }
   },
   "p22_publish": {
@@ -86,6 +86,7 @@
     "console_noise_queued_cancelled": "0 errors after useEvidenceReadsAllowed (was 1 per stage route)",
     "raw_enum_tokens_S04_S11": "398 occurrences/79 distinct -> 141/23 (rest: names, ids, acronyms kept by decision)",
     "visual": "Research spec 28 cells recorded; legacy spec 101 cells; print cells now light palette",
-    "codex_payloads_on_preview": "d5d09875 verified: R-WFO-022/023 P22_CURRENT_SOURCE_CHANGED + CREATE_NEW_RUN_AND_SEAL on both readers; R-WFO-027 DELIVERED/NONE/approval_read DENIED; rail selected_params ordinal 351 RUN_GLOBAL / 2 STUDY_LOCAL"
+    "codex_payloads_on_preview": "d5d09875 verified: R-WFO-022/023 P22_CURRENT_SOURCE_CHANGED + CREATE_NEW_RUN_AND_SEAL on both readers; R-WFO-027 DELIVERED/NONE/approval_read DENIED; rail selected_params ordinal 351 RUN_GLOBAL / 2 STUDY_LOCAL",
+    "causal_360": "Real causal run R-WFO-027 (per_fold_causal) checked at 360/390: no overflow, 0 console errors; 4 mobile layout defects found and fixed (claim chips, artifact rows, S07 per-fold selection, S05 fold table headers); evidence /home/bobby/portal-research-qa-2026-10-03/causal360/"
   }
 }
