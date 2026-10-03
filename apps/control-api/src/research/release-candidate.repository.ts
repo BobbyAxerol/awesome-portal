@@ -23,7 +23,8 @@ import { isDeltaWfoProfile } from "./delta-wfo.profile";
 import { ResearchReleaseCandidateError } from "./release-candidate.error";
 import { runDisplayLabel, runDisplayOrdinal, runDisplayOrdinalSql } from "./run-display-label";
 import type { ReleaseCandidateRetainedLane } from "./release-candidate.retained-lane";
-import { readEnriched } from "./enriched-analysis.read";
+import { enrichedJoin } from "./enriched-analysis.read";
+import { verifiedEnriched } from "./enriched-analysis.contract";
 import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
 import { ResearchAllTimeDistributionsSchema } from "./all-time-distributions.contract";
 import { CurrentSourceSummarySchema, CurrentSourceTrialPayloadSchema } from "./current-source.payload";
@@ -879,15 +880,19 @@ export class ResearchReleaseCandidateRepository {
   ): Promise<Pick<NonNullable<ReleaseCandidateRetainedLane["seal"]>, "enrichedAnalysis" | "analyticsSidecar" | "distributionsSidecar">> {
     const unavailable = () => new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE",
       "Retained Report companion binding is incompatible.", 503);
-    const enrichedAnalysis = await readEnriched(client, workspaceId, runId, unavailable);
+    // One fresh, seal-bound RLS query for all companions. Avoid a separate
+    // enrichment round trip and repeated cloning before the pure calculation
+    // memo; the exact current enrichment body/digest remains part of its key.
     const result = await client.query<Record<string, unknown>>(
-      `SELECT analytics.retained_import_digest AS analytics_import_digest,
+      `SELECT enrichment.enriched, enrichment.enriched_digest,
+              analytics.retained_import_digest AS analytics_import_digest,
               analytics.source_rows_digest AS analytics_source_rows_digest,
               analytics.analytics_digest, analytics.analytics,
               distributions.retained_import_digest AS distributions_import_digest,
               distributions.source_rows_digest AS distributions_source_rows_digest,
               distributions.distributions_digest, distributions.distributions
          FROM research.current_source_seals_v1 seal
+         ${enrichedJoin("seal.workspace_id", "seal.run_id")}
          LEFT JOIN research.current_source_analytics_sidecars_v2 analytics
            ON analytics.workspace_id = seal.workspace_id AND analytics.run_id = seal.run_id
           AND analytics.artifact_revision = seal.artifact_revision
@@ -902,7 +907,14 @@ export class ResearchReleaseCandidateRepository {
     return this.companionCalculations.calculate({ runId, artifactRevision: seal.artifactRevision,
       retainedImportDigest: seal.retainedImportDigest, observations: seal.tableRows.OBSERVATION,
       inlineAnalyticsPresent: (seal.summary as Record<string, unknown> | null)?.summary_analytics_v2 !== undefined,
-      row: row ?? null, enrichedAnalysis: enrichedAnalysis ?? null }, () => {
+      row: row ?? null }, () => {
+      let enrichedAnalysis;
+      try {
+        const enrichedDigest = row?.enriched_digest;
+        if (enrichedDigest != null && typeof enrichedDigest !== "string") throw unavailable();
+        enrichedAnalysis = verifiedEnriched(row?.enriched, enrichedDigest, runId);
+      }
+      catch { throw unavailable(); }
       const companions: Awaited<ReturnType<ResearchReleaseCandidateRepository["retainedCompanions"]>> = {
         ...(enrichedAnalysis ? { enrichedAnalysis } : {}),
       };

@@ -26,10 +26,8 @@ function subject(rows: { enriched?: unknown; enriched_digest?: string; companion
   const client = { query: vi.fn(async (sql: string, values: unknown[]) => {
     // Different workspaces/runs have no fallback or ambient companion.
     if (values[0] !== workspace || values[1] !== runId) return { rows: [], rowCount: 0 };
-    const row = sql.includes("FROM (SELECT $1::text AS workspace_id")
-      ? { enriched: rows.enriched, enriched_digest: rows.enriched_digest }
-      : rows.companions;
-    return { rows: row ? [row] : [], rowCount: row ? 1 : 0 };
+    return { rows: [{ ...rows.companions, enriched: rows.enriched ?? null,
+      enriched_digest: rows.enriched_digest ?? null }], rowCount: 1 };
   }) };
   const repository = new ResearchReleaseCandidateRepository({} as never) as unknown as {
     retainedCompanions(client: PoolClient, workspace: string, run: string, seal: ReleaseCandidateRetainedSeal): Promise<Partial<ReleaseCandidateRetainedSeal>>;
@@ -51,14 +49,13 @@ describe("P21 Report companions share CurrentSource immutable verification and s
     expect(await read()).toEqual({ enrichedAnalysis: enriched,
       analyticsSidecar: { digest: sha256ResearchJson(analytics), sourceRowsDigest: digest, analytics },
       distributionsSidecar: { digest: sha256ResearchJson(distributions), distributions } });
-    expect(client.query).toHaveBeenCalledTimes(2);
-    const [enrichmentSql, enrichmentArgs] = client.query.mock.calls[0]!;
-    expect(enrichmentArgs).toEqual([workspace, runId]);
+    expect(client.query).toHaveBeenCalledTimes(1);
+    const [enrichmentSql] = client.query.mock.calls[0]!;
     expect(enrichmentSql).toContain("enrichment.source_kind='WFO_RETAINED'");
     expect(enrichmentSql).toContain("seal.artifact_revision::text=enrichment.source_revision");
     expect(enrichmentSql).toContain("seal.retained_import_digest=enrichment.source_digest");
     expect(enrichmentSql).toContain("SELECT max(s.artifact_revision)");
-    const [sql, args] = client.query.mock.calls[1]!;
+    const [sql, args] = client.query.mock.calls[0]!;
     expect(args).toEqual([workspace, runId, 2, digest]);
     for (const pair of ["analytics", "distributions"]) {
       expect(sql).toContain(`${pair}.workspace_id = seal.workspace_id AND ${pair}.run_id = seal.run_id`);
@@ -101,6 +98,17 @@ describe("P21 Report companions share CurrentSource immutable verification and s
 
   it("preserves old immutable sources with no published companions", async () => {
     expect(await subject().read()).toEqual({});
+  });
+
+  it("checks fresh body bytes after a hit, even when an advertised enrichment digest is unchanged", async () => {
+    const enriched = { ...fixture("research-enriched-analysis.healthy.valid.json"), run_id: runId };
+    const rows = { enriched, enriched_digest: sha256ResearchJson(enriched) };
+    const { read, client } = subject(rows);
+    const first = await read();
+    expect(await read()).toEqual(first);
+    rows.enriched = { ...enriched, input_digest: "b".repeat(64) }; // A fresh changed DB row, not mutation of a frozen proof.
+    await expect(read()).rejects.toMatchObject({ code: "RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE", status: 503 });
+    expect(client.query).toHaveBeenCalledTimes(3); // Never cache the source query.
   });
 
   it("reads causal native trial mapping only from the exact selected row at the caller's seal revision", async () => {

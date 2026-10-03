@@ -1727,3 +1727,20 @@ restored browser are already accepted in their scopes. Product FE still
 needs the published named linked-audit operation/proof mapping. Historical
 83/86, second qualified engine and P24 whole-product/release remain OPEN.
 No new phase, remote push, FE edit or shared/production runtime mutation.
+
+### §39 exact-JSON clean runtime retake — 69b5a81c
+
+Normal hook **267 contracts / 1,929 Control PASS / one named skip**, clean
+shared/backend landing and Control-only image/eleven-module byte parity PASS.
+Actual 120/120 affected GETs: Report **382 ms PASS**, RC **510 ms FAIL**;
+both retain their original 500-ms SLO. Seven-service peak 438,124,544 bytes;
+current job/proof count, original frozen Report and source fingerprint exact.
+Do not claim RC accepted or rerun unchanged cases for a favourable sample.
+
+Residual correction: combine enrichment and retained sidecars in the same
+fresh seal-bound RLS query and perform their exact-current-body verification
+inside the existing bounded pure memo. Latest source/worker/revision and
+membership/proof reads remain fresh; changed bytes with same digest still
+fail. No DTO/hash/financial/UI/budget/profile change. Focused/build/normal
+hook, clean Control-only retake and QA/cell cleanup gate delivery.
+[Actual failure hash and exact change](./evidence/P23/EXACT_JSON_READ_COST_REPAIR_2026-10-03.md#5-clean-69b5a81c-retake--actual-partial-improvement).

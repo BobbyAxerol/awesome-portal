@@ -102,3 +102,37 @@ or Bobby disposition (**83/86 strict integrity remains false**); genuinely
 qualified second engine T07/T13/P24-T05; whole P24 scenarios/field/actions,
 owner acceptance and signed-release rehearsal. No frontend edits, shared
 :8095 worker changes, dev/main merge, push or production deployment.
+
+## 5. Clean 69b5a81c retake — actual partial improvement
+
+Normal hook completed: **267 contract tests / 1,929 Control PASS / one existing
+named skip**. Shared and backend landed clean `69b5a81c`; only Control rebuilt
+as `sha256:9d759894bde71d109e005387e12f2c34a1fa51f3e8175c69dd281247504a3471`.
+Eleven compiled module hashes match; other six owned services, mounts and
+shared :8095 identities are unchanged. No engine rerun or source rewrite.
+
+Actual same-20-actor affected retake: **120/120 GET 200**, Report p95 **382 ms**
+(PASS), RC **510 ms** (FAIL), unchanged **500-ms** targets. Exact linked proof,
+original Report revision / RC fingerprint and job/proof counts unchanged.
+Peak seven-service memory **438,124,544 bytes**, all bounded.
+Private `linked-report-read-load-math-clean.json` SHA-256
+`aadcb2a8d9c97ad2cbf9456cf497bf80ac74363b4eb1922e6facf4bd92b14fe8`.
+This is neither full P23 PASS nor permission to repeat until a good sample.
+
+Small remaining correction: RC reads enrichment and analytics/distribution
+companions in **one fresh seal-bound RLS query** rather than two. Existing
+`enrichedJoin` retains latest source/revision/worker/run/workspace binding.
+Schema/digest verification moves inside the existing exact-current-row pure
+calculation memo; changed body/digest/run/seal facts still reverify and fail
+closed. No cached source/grant or weakened authority, DTO/API/hash/financial,
+budget/UI/migration change. Test explicitly proves a fresh query on every read
+and changed current enrichment bytes fail despite the same claimed digest.
+Grouped focused tests/build and normal hook gate the correction; one clean
+Control-only rebuild/affected retake and exact C4 cleanup remain pending.
+
+Build PASS; five focused files initially **73 PASS / 1 FAIL** because the new
+negative test tried to mutate an already privately verified frozen body.
+The test now supplies a fresh changed DB body, matching PostgreSQL behavior;
+its six-test companion group PASS (the other 68 affected tests already PASS).
+Normal hook is the single grouped full gate; it is not bypassed or repeated
+manually before committing.

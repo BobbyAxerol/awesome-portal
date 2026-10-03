@@ -7657,3 +7657,15 @@ handoff](./research_loop/evidence/P23/EXACT_JSON_READ_COST_REPAIR_2026-10-03.md)
 No FE/push/dev-main/shared :8095/production action. Three lost original
 manifests, engine-two qualification and full P24/owner/release stay OPEN;
 do not recreate already accepted linked-child/P22/JSON502/restore work.
+
+#### Exact-current 69b5a81c runtime retake — affected RC still open
+
+Normal hook 267 contracts / 1,929 Control PASS / one named skip; clean shared
+landing, Control-only build and eleven compiled hashes accepted. Actual
+20-reader/120-GET retake preserves proof/core/fingerprint/jobs: Report **382 ms
+PASS**, RC **510 ms FAIL**, unchanged target 500 ms, 438,124,544-byte peak.
+Existing earlier failures stay recorded. Minimal residual query/verification
+correction and its clean affected retake/C4 are in the
+[same receipt](./research_loop/evidence/P23/EXACT_JSON_READ_COST_REPAIR_2026-10-03.md#5-clean-69b5a81c-retake--actual-partial-improvement).
+No API/UI/financial/authority/SLO/budget change, remote push or production
+action. Full P23/P24, strict historical 83/86 and engine two remain OPEN.
