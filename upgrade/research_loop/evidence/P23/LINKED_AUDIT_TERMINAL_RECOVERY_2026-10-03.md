@@ -1,6 +1,11 @@
 # P23 — linked-audit terminal routing and real-candidate checkpoint
 
-2026-10-03 · Codex · **CORRECTION_TESTED / RUNTIME_RECOVERY_PENDING**.
+2026-10-03 · Codex · **RUNTIME_RECOVERY_ACCEPTED / NON_REUSE_CASE_PENDING**.
+
+Current delivery supersedes the historical pending steps below: exact child
+recovered READY/SUCCEEDED without rerun on `4bc9cefe`; real JSON-502 and
+30 restored-browser routes accepted. [Complete scoped receipt and remaining
+goal](./CURRENT_CANDIDATE_AUDIT_502_RESTORE_BROWSER_2026-10-03.md).
 
 ## Candidate and actual result
 

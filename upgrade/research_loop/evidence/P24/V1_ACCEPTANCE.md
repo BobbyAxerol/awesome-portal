@@ -5,6 +5,30 @@ Implemented, measured, browser-accepted and deployed are different verdicts.
 This packet closes the independent WFO and isolated version-rehearsal work,
 not the outstanding product/source/owner gates. No new phase is introduced.
 
+## Latest scoped amendment — clean 4bc9cefe, 2026-10-03
+
+The [current-candidate receipt](../P23/CURRENT_CANDIDATE_AUDIT_502_RESTORE_BROWSER_2026-10-03.md)
+supersedes only older pending scopes below, never their full denominators.
+P22 six-GET runtime is accepted separately. Linked admission/P05 ACK/
+Report–RC–Lineage is real on a reusable parent; historical non-reusable
+R-WFO-020 is located, not executed. P24-T04/FND-08 remain partial for that
+case and unsupported per-fold targets.
+
+P24-T07 includes restored-DB browser: 30/30 renders, 28 named GET 200,
+worker absent, migration 094 forward, current image/index/bundle parity.
+Full integrity still 83/86; three original test manifests remain lost.
+New audit proof postdates this restored snapshot; its restore is not proved.
+Full scenario/field/action acceptance remains.
+
+F5 genuine JSON 502 and S14 presentation at 1280/660 are **ACCEPTED**;
+do not request an unreachable-502 exception or repeat the real negative.
+Earlier failed harness receipts remain failures. Latest Claude UI retained,
+not overwritten; these reads do not replace its visual/interaction/a11y
+denominator or authorise production release.
+
+Still OPEN: non-reusable original child proof, lost-byte recovery/disposition,
+second qualified engine T07/T13/P24-T05, full P24 scenarios/owner/release.
+
 ## Delivered in this continuation
 
 1. [Independent WFO engine → seal → BFF](../P23/WFO_DIRECT_ENGINE_RECOMPUTATION_2026-10-03.md):

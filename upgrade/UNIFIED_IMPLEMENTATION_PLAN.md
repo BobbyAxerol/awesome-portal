@@ -7593,3 +7593,28 @@ filename bound of 128, preventing invalid input from masquerading as an
 upstream-502 case. Focused 25/25 plus Control compile PASS; normal hook and
 runtime recovery remain pending. No FE, shared worker, source seal, remote or
 production mutation. [Failure hashes, correction and full remaining scope](./research_loop/evidence/P23/LINKED_AUDIT_TERMINAL_RECOVERY_2026-10-03.md).
+
+#### Current candidate audit/502/restored-browser delivery — 2026-10-03
+
+**SCOPED_RUNTIME_ACCEPTED; full P23/P24 OPEN.** Shared/backend `4bc9cefe`
+preserves Claude `59d76862` / `2f4cb81a`; 7-file correction +144/-5,
+267 contracts and 1,883 Control PASS / one named skip through normal hooks.
+Real existing child READY with verified P05 ACK, zero optimizer, idempotent
+replay and additive Report/RC/Lineage proof; parent custody unchanged.
+That parent is reusable, not the requested historical non-reuse case.
+R-WFO-020 is located with nine genuinely absent generation facts and intact
+selection; its bounded owned-clone run is next.
+
+Real upstream failure produces JSON 502; S14 at 1280/660 renders it without
+new jobs/imports. Coherent restored DB plus forward migration 094 passes
+30/30 renders and 28 named GETs; current image/index/bundle hashes equal.
+No mock, all-action/HiFi assertion, strict-83/86 integrity waiver or new
+audit-proof restore claim.
+[Receipts, failures, candidate pins and full remainder](./research_loop/evidence/P23/CURRENT_CANDIDATE_AUDIT_502_RESTORE_BROWSER_2026-10-03.md).
+
+P22/load/502/restored-read acceptance is reused, not reopened from old rows.
+Still required: non-reusable original proof, three original lost manifests
+or explicit disposition, genuine second engine, P24 whole-product/release.
+No FE/push/dev-main/production action. C4: zero active QA sessions/nonterminal
+jobs, 21 disabled non-owner accounts; cell down without -v, data/backups/
+rollback images kept, 181 GiB free, cache prune NO_ACTION_NEEDED.

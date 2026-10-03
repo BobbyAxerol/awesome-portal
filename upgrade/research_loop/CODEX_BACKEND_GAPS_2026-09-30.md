@@ -1660,3 +1660,31 @@ journal, never write READY manually or rerun the engine. Focused 25/25 pass.
 Also align Zod with the existing 128-character filename contract; do not use
 invalid 131-character input to claim a real upstream 502. No frontend change.
 [Actual failed receipts, corrections, next gates and full remaining scope](./evidence/P23/LINKED_AUDIT_TERMINAL_RECOVERY_2026-10-03.md).
+
+### §39 current-candidate runtime delivery — 2026-10-03
+
+Supersedes the pending runtime/502/restored-browser statements above, within
+the exact scopes below. Clean candidate `4bc9cefe` includes Claude
+`59d76862` / `2f4cb81a`; normal hook: 267 contracts, 1,883 Control PASS /
+one named skip. No frontend edit, remote push or production activation.
+
+- **AUDIT_BOUNDARY_ACCEPTED:** existing real child recovered through normal
+  Progress reconciliation, READY/SUCCEEDED, verified P05 ACK, zero optimizer,
+  same-intent replay and actual Report/RC/Lineage proof. Parent custody/frozen
+  Report unchanged. Reusable parent does not close the original non-reuse gate.
+- **F5_REAL_502_ACCEPTED:** genuine private upstream connection refusal maps
+  to JSON 502; S14 browser at 1280/660, no mock, jobs/imports unchanged.
+- **RESTORED_BROWSER_ACCEPTED:** existing coherent restore, migration 094
+  forward, no worker; 30/30 renders and 28 named GET 200, exact current
+  image/index/bundle byte parity. Not all actions/HiFi/P24 or restoration
+  of a new audit proof created after the older backup.
+- **NON_REUSE_CASE_LOCATED:** original R-WFO-020 has nine missing generation
+  facts, selected trial 393 and intact original selection. Next run in an
+  owned clone; never alter source facts or dispatch shared :8095.
+
+[Exact times, receipt hashes, pins, failures and frontend handoff](./evidence/P23/CURRENT_CANDIDATE_AUDIT_502_RESTORE_BROWSER_2026-10-03.md).
+Owned :8096 down without -v; zero active QA sessions/nonterminal jobs,
+21 non-owner QA accounts disabled. Images/volumes/backups kept; 181 GiB free,
+no swap, cache prune NO_ACTION_NEEDED. Full goal OPEN: non-reusable original
+proof, three original lost bytes or explicit disposition, second qualified
+engine, whole-product P24 and signed-release aggregation.
