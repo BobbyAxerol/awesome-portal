@@ -462,3 +462,73 @@ describe("contrast of pairs the stylesheet itself declares", () => {
     });
   }
 });
+
+/* -------------------------------------------------------------------------
+ * W5 §1.2 (D-B1) — the shared grey ramp on the two Research themes
+ *
+ * `--ink-faint` is the shell's micro-label ink (nav group labels, kbd, the
+ * workspace line). It was 2.4–2.7:1 on light and 3.6–4.2:1 on dark. The floor
+ * is 4.5:1 on every surface the shell and the Research screens put it on, and
+ * the ramp stays ordered (ink > soft > mute > faint in contrast on paper).
+ * Dark `--ink-mute` is declared only inside `.research-screen`, so the dark
+ * ramp reads it from there.
+ * ---------------------------------------------------------------------- */
+
+describe("W5 shared grey ramp (research + operations)", () => {
+  const ch = (v: number) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const lum = (hex: string) => {
+    const h = hex.replace("#", "");
+    const [r, g, b] = [0, 2, 4].map((i) => Number.parseInt(h.slice(i, i + 2), 16));
+    return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
+  };
+  const ratio = (a: string, b: string) => {
+    const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+  const css = readFileSync(join(SRC, "styles/tokens.css"), "utf8");
+  const surfaces: Record<ThemeName, string[]> = {
+    research: ["--paper", "--paper-raised", "--paper-sunken", "--accent-soft", "--line-soft"],
+    operations: ["--paper", "--paper-raised", "--paper-sunken", "--surface-2", "--accent-soft"],
+  };
+
+  for (const theme of ["research", "operations"] as const) {
+    const shell = resolveTheme(css, theme);
+    const screen = new Map(shell);
+    if (theme === "operations") {
+      for (const [k, v] of declarationsIn(css, ':root[data-theme="operations"] .research-screen {')) screen.set(k, v);
+    }
+
+    it(`${theme}: --ink-faint (shell) is >= 4.5:1 on every surface it meets`, () => {
+      const failures: string[] = [];
+      for (const surface of surfaces[theme]) {
+        const bg = shell.get(surface);
+        const fg = shell.get("--ink-faint");
+        if (!bg || !fg) {
+          failures.push(`${surface} or --ink-faint is not declared`);
+          continue;
+        }
+        const r = ratio(fg, bg);
+        if (r < 4.5) failures.push(`--ink-faint ${fg} on ${surface} ${bg} is ${r.toFixed(2)}:1`);
+      }
+      expect(failures, failures.join("; ")).toEqual([]);
+    });
+
+    it(`${theme}: ink > soft > mute > faint on paper`, () => {
+      const paper = shell.get("--paper")!;
+      const ramp = [shell.get("--ink")!, shell.get("--ink-soft")!, screen.get("--ink-mute")!, shell.get("--ink-faint")!].map((c) => ratio(c, paper));
+      expect(ramp, `${theme} grey ramp is out of order`).toEqual([...ramp].sort((a, b) => b - a));
+      expect(ramp[2], "--ink-mute floor").toBeGreaterThanOrEqual(4.5);
+    });
+  }
+
+  it("pins the approved values", () => {
+    const light = resolveTheme(css, "research");
+    const dark = resolveTheme(css, "operations");
+    expect(light.get("--ink-faint")).toBe("#5f6b80");
+    expect(light.get("--ink-mute")).toBe("#566278");
+    expect(dark.get("--ink-faint")).toBe("#8a98ac");
+  });
+});

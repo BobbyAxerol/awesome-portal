@@ -23,10 +23,10 @@
   --paper-sunken: #f4f2ec;
   --ink: #1c2532;
   --ink-soft: #4e5a6e;
-  --ink-faint: #939db0;
+  --ink-faint: #5f6b80;
   /* One step below `--ink-soft`, still readable: the tone for a row the reader
      may act on but is not being asked to. */
-  --ink-mute: #68738a;
+  --ink-mute: #566278;
   --line: #e3e0d7;
   /* A border meant to be read as a boundary rather than a hairline. */
   --line-strong: #c6c2b6;
@@ -319,7 +319,7 @@
   --surface-3: #16202c;
   --ink: #e3e9f1;
   --ink-soft: #aab6c5;
-  --ink-faint: #738095;
+  --ink-faint: #8a98ac;
   --line: #2b3747;
   --line-soft: #212c3a;
   --accent: #7fb3c4;

@@ -3,12 +3,8 @@
  *
  * `analyze` runs axe on one screen root and returns EVERY finding, at every
  * impact level, node by node, with the colour pair axe measured. Nothing is
- * filtered here except one thing, and it is marked rather than dropped:
- *
- *   D-B1 — the shared `--ink-faint` (#939db0) colour-contrast finding. It is a
- *   separately approved, shared design-token change, so a node whose measured
- *   foreground is exactly that colour carries `accepted: "D-B1"`. It stays in
- *   the receipt; it just does not fail the cell. No other finding is accepted.
+ * filtered: W5 landed the shared `--ink-faint` token (D-B1), so no finding is
+ * accepted any more.
  *
  * `recordRow` writes one row per (screen, width) into a JSON receipt as soon as
  * the row is known. Playwright starts a fresh worker after a failed test, so
@@ -21,9 +17,6 @@ import { dirname, join } from "node:path";
 
 import type { Page } from "@playwright/test";
 
-/** The colour D-B1 is about. */
-export const INK_FAINT = "#939db0";
-
 export interface AxeNodeFinding {
   target: string[];
   html: string;
@@ -31,8 +24,8 @@ export interface AxeNodeFinding {
   foreground: string | null;
   background: string | null;
   contrast: number | null;
-  /** `"D-B1"` for the one accepted finding; `null` for everything else. */
-  accepted: "D-B1" | null;
+  /** Always `null`: no finding is accepted (the D-B1 exception was removed with the W5 token change). */
+  accepted: null;
 }
 
 export interface AxeRuleFinding {
@@ -68,17 +61,14 @@ export async function analyze(page: Page, include: string): Promise<AxeResult> {
     nodes: rule.nodes.map((node) => {
       const data = (node.any[0]?.data ?? {}) as ColourData;
       const foreground = data.fgColor ?? null;
-      const accepted = rule.id === "color-contrast" && foreground === INK_FAINT ? ("D-B1" as const) : null;
       return {
         target: node.target.map(String),
-        /* The accepted finding is one known thing repeated a thousand times: its nodes keep the target and the
-           colour pair, not the markup, so a receipt stays a few hundred KB. Every other node keeps everything. */
-        html: accepted ? "" : node.html.length > 240 ? `${node.html.slice(0, 240)}…` : node.html,
-        summary: accepted ? "" : (node.failureSummary ?? "").replace(/\s+/g, " ").trim().slice(0, 400),
+        html: node.html.length > 240 ? `${node.html.slice(0, 240)}…` : node.html,
+        summary: (node.failureSummary ?? "").replace(/\s+/g, " ").trim().slice(0, 400),
         foreground,
         background: data.bgColor ?? null,
         contrast: data.contrastRatio ?? null,
-        accepted,
+        accepted: null,
       };
     }),
   }));
@@ -90,11 +80,10 @@ export async function analyze(page: Page, include: string): Promise<AxeResult> {
   };
 }
 
-/** Nodes that fail a cell: every node except the one accepted D-B1 finding. */
+/** Nodes that fail a cell: every node (kept for callers; nothing is accepted any more). */
 export function unaccepted(result: AxeResult): { rule: string; impact: string | null; target: string[]; foreground: string | null; background: string | null; summary: string }[] {
   return result.violations.flatMap((rule) =>
     rule.nodes
-      .filter((node) => node.accepted === null)
       .map((node) => ({ rule: rule.rule, impact: rule.impact, target: node.target, foreground: node.foreground, background: node.background, summary: node.summary })),
   );
 }
