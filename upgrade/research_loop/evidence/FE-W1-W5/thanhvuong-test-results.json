@@ -4,18 +4,18 @@
   "date": "2026-10-03",
   "status": "W1-W7 FE landed on claude/fe-parity · gates measured 2026-10-03 · NOT_VERIFIED at product level (Bobby by-eye review + signed release pending)",
   "branch": "claude/fe-parity",
-  "head": "d2028d133e5d1dd715b9d104df4131bc3a479284",
+  "head": "a9ff796a31c05654785b8fa2be2400a7285c8189",
   "tree": "d49144200ff3cbd0cec07604c6d5b364e48cef32",
   "base": "b2098a81",
   "diff_base_head": "450 files +19352/-5529",
   "measured_on": "2026-10-03",
-  "bundle": "index-DKkYLzA8.js",
+  "bundle": "index-DOdkCJHY.js",
   "gates": {
     "vitest_full": {
-      "passed": 5891,
+      "passed": 5892,
       "skipped": 1,
       "files": 338,
-      "note": "one load flake (searchF2 QA D7) fails under full-suite load and passes alone 13/13"
+      "note": "load-flaky searchF2 D7 and foundation P09-T04 made deterministic (green twice in a row)"
     },
     "tsc": "clean",
     "preview_real_api_lane": {
@@ -63,8 +63,8 @@
     "lane_plus_gate_combined": {
       "passed": 228,
       "total": 228,
-      "bundle": "index-DKkYLzA8.js",
-      "after": "Codex d5d09875 consumed, W6 QA fixes, W7 contract/enum/gating changes"
+      "bundle": "index-DOdkCJHY.js",
+      "after": "typed absence instead of dashes, one RunNotFound face, S04 exact table beside the region"
     }
   },
   "p22_publish": {

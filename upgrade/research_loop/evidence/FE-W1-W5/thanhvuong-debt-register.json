@@ -1,7 +1,7 @@
 {
   "packet": "FE-W1-W5",
   "date": "2026-10-03 (W6-W7 update)",
-  "head": "d2028d133e5d1dd715b9d104df4131bc3a479284",
+  "head": "a9ff796a31c05654785b8fa2be2400a7285c8189",
   "open_debt": [
     {
       "id": "DEBT-S06-CONTRAST",
@@ -102,6 +102,11 @@
       "id": "DEBT-PRINT-REALDEVICE",
       "what": "real browser print dialog and mobile-device print not run (page.pdf + media emulation only)",
       "state": "OPEN_LOW"
+    },
+    {
+      "id": "DEBT-W8-LEFTOVERS",
+      "what": "null dashes on S06/S07/S09, :has() stopgap, Vietnamese inbox label, S04 exact table, two flaky tests",
+      "state": "CLOSED · a9ff796a; gate 228/228"
     }
   ],
   "codex_dependencies": [
