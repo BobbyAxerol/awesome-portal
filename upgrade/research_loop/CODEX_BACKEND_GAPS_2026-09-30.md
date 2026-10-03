@@ -1535,3 +1535,48 @@ to assert the new WAIT/NONE guidance explicitly (not a weakened assertion).
 No frontend edit,
 runtime restart, engine/source/business write, migration, push or production
 deployment. Source/fixture checks do not claim new-image/browser acceptance.
+
+## §38 — Active goal continuation / P22 reader runtime — 2026-10-03
+
+Codex resumes the approved five-part goal, not a reduced closeout. Previous
+report-only turn made no implementation progress. Current shared/backend
+baseline is clean `2cf6b904`, including Claude's five latest commits.
+
+Next executable slice: stamp/build **only Control API**, preserve the current
+worker/Python/web images and all volumes, and collect named GET receipts for
+R-WFO-022/023/027. Check both stale-candidate readers, typed blocked action,
+native RC ordinal/scope/reason and the own-publisher R1-read policy. Never
+reseal, republish, change grants or rewrite the old candidates. A preview
+session created for the receipt must be logged out; private responses and
+image/custody hashes remain outside Git. No broad `preview.sh build/up`,
+production change, remote push or unrelated load/engine retest.
+
+The observed running Control image has no source stamp (`build_commit=unknown`)
+and must not be called a source-pinned receipt yet. One pre-existing queued
+job is not cancelled or claimed as this slice's job. Final audit child,
+candidate-consistent P23/typed-502/restored-browser evidence, original missing
+bytes and a genuine second qualified engine remain in the active goal.
+
+**§38 delivery — GET_READER_RUNTIME_ACCEPTED.** The source-pinned Control
+reader now serves both stale runs with `P22_CURRENT_SOURCE_CHANGED` /
+`CREATE_NEW_RUN_AND_SEAL`; R-WFO-027 keeps DELIVERED, typed ordinal 2 / STUDY_LOCAL
+and its intentional R1 read DENIED. Six actual schema-parsed GETs pass;
+seven candidate custody-table hashes and jobs 65→65 are unchanged. All six
+unrelated preview container identities are unchanged; the exact receipt
+session was revoked. First helper-field failure retained, not counted PASS.
+[Exact runtime/compiled-byte proof, hashes and Claude handoff](./evidence/P22/READER_RUNTIME_RECEIPT_2026-10-03.md).
+
+One operational bug fixed: sudo Docker fallback discarded the two source
+stamps; `preview.sh` now forwards only those non-secret variables, keeping
+all original guards. Focused 4+3 checks, build/syntax and grouped normal hook.
+No new frontend/generated contract/migration/source seal/approval grant.
+P22 reader runtime is no longer pending; the other four goal components and
+whole-product P24/release remain open, not replaced by this smaller PASS.
+
+Commit-hook concurrency correction: its first attempt encountered another
+`contracts-test-node`. The old fixed-name unconditional EXIT removal could
+target that other invocation. Use a unique per-invocation name and exact
+owner label in `scripts/contracts-test.sh`; 3 focused isolation checks pass.
+Foreign test outcome is not claimed; no kill/prune workaround. The normal
+hook is retried with the corrected harness. This is verification/resource
+hygiene, not a new Research contract or product phase.

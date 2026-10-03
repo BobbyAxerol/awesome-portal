@@ -7528,3 +7528,36 @@ restore volumes/backups/rollback images kept. ~30% disk free, swap 0,
 NO_ACTION_NEEDED for cache deletion. Grouped focused tests + one normal hook,
 no repeated load/restore/unrelated rebuild. No origin/primus-origin push,
 dev/main merge, shared :8095 change or production/signed-workflow dispatch.
+
+#### Goal continuation — pinned P22 reader receipt, 2026-10-03
+
+Baseline `2cf6b904` contains backend `d5d09875` and the latest Claude W1–W5
+source/baseline commits. Codex owns the approved **Control API-only** preview
+rebuild and GET proof of R-WFO-022/023/027; all worker/web/Python/volume and
+Governance rights remain unchanged. Source tested is not runtime accepted.
+Old candidates are neither resealed nor republished. See [queue §38](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#38--active-goal-continuation--p22-reader-runtime--2026-10-03).
+
+This slice does not close linked `AUDIT_OF_SELECTION`, whole P23/P24,
+three lost historical manifest bytes, second-engine qualification or signed
+release. Reuse unaffected receipts; record exact service images, responses,
+temporary-session cleanup and custody invariants before claiming runtime PASS.
+
+**Delivery: P22 §31 GET reader runtime accepted on clean `2cf6b904`.** Six
+actual schema-parsed GETs prove stale-reason/action agreement and native RC
+ordinal/scope, retaining R-WFO-027's publication and independent R1 read
+denial. Jobs 65→65, seven custody-table hashes unchanged; only Control API
+container replaced and existing nginx upstream DNS reloaded. Exact temporary
+session revoked, old candidates untouched. Source-stamp loss via sudo was
+fixed without generic environment preservation or flag/permission changes.
+[Runtime receipt / first failed-helper probe / private hashes / C4](./research_loop/evidence/P22/READER_RUNTIME_RECEIPT_2026-10-03.md).
+
+This closes only the goal's P22 reader rebuild/GET obligation. Keep linked
+audit, same-candidate P23, historical-byte recovery/disposition, second-engine
+proof and P24 acceptance/release in the queue. No stale "reader not deployed"
+claim, no whole-product GO, no frontend or remote/production action.
+
+Mandatory-hook concurrency finding: a fixed contracts-test container name
+collided with a foreign invocation; unconditional cleanup was unsafe. The
+test helper now uses a per-invocation name and verifies ownership before
+removal (3 focused stubbed-isolation cases). Do not kill foreign tests or
+misreport the failed hook as PASS; retry the normal hook after the correction.

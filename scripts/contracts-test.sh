@@ -4,9 +4,11 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONTRACTS_DIR="${ROOT_DIR}/packages/contracts"
-NODE_CONTAINER="contracts-test-node"
 NODE_IMAGE="node@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32"
 DEPS_DIR="$(mktemp -d)"
+# Different worktrees/agents may verify concurrently. A fixed name collided
+# and its unconditional cleanup could remove another invocation's container.
+NODE_CONTAINER="contracts-test-node-${DEPS_DIR##*/}"
 WORKSPACE_DIR="${DEPS_DIR}/workspace"
 RUN_UID="${HOST_UID:-$(id -u)}"
 RUN_GID="${HOST_GID:-$(id -g)}"
@@ -41,7 +43,12 @@ if "${DOCKER[@]}" info --format '{{json .SecurityOptions}}' | grep -Fq 'name=roo
 fi
 
 cleanup() {
-  "${DOCKER[@]}" rm -f "${NODE_CONTAINER}" >/dev/null 2>&1 || true
+  local owner
+  owner="$("${DOCKER[@]}" inspect -f '{{index .Config.Labels "io.primus.contract-test.owner"}}' \
+    "${NODE_CONTAINER}" 2>/dev/null || true)"
+  if [[ "$owner" == "$DEPS_DIR" ]]; then
+    "${DOCKER[@]}" rm -f "${NODE_CONTAINER}" >/dev/null 2>&1 || true
+  fi
   rm -rf -- "${DEPS_DIR}"
 }
 trap cleanup EXIT
@@ -97,6 +104,7 @@ mv "${DEPS_DIR}/node_modules" "${WORKSPACE_DIR}/node_modules"
 ln -s ../../node_modules "${WORKSPACE_DIR}/packages/contracts/node_modules"
 
 "${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}" --network none --read-only \
+  --label "io.primus.contract-test.owner=${DEPS_DIR}" \
   -u "${CONTAINER_USER}" \
   -v "${WORKSPACE_DIR}:/repo" \
   --tmpfs /tmp:rw,exec,mode=1777,size=256m \

@@ -39,7 +39,14 @@ compose() {
     echo "preview: port $port belongs to another stack; refusing" >&2; exit 1;;
   esac
   [[ "$port" =~ ^[0-9]{4,5}$ ]] || { echo "preview: PORTAL_HTTP_PORT is not a port" >&2; exit 1; }
-  "${DOCKER[@]}" compose -p "$PROJECT" --project-directory "$ROOT" --env-file "$ENV_FILE" \
+  # sudo strips caller environment. Forward only these non-secret source
+  # stamps, including cmd_build's temporary assignment, not the whole env.
+  local compose_docker=("${DOCKER[@]}")
+  if [[ "${DOCKER[0]}" == sudo ]]; then
+    compose_docker=(sudo -n env "PORTAL_BUILD_COMMIT=${PORTAL_BUILD_COMMIT:-unknown}" \
+      "PORTAL_BUILD_DIRTY=${PORTAL_BUILD_DIRTY:-false}" docker)
+  fi
+  "${compose_docker[@]}" compose -p "$PROJECT" --project-directory "$ROOT" --env-file "$ENV_FILE" \
     -f "$ROOT/compose.yaml" \
     -f "$ROOT/deploy/compose.research-progress.yaml" \
     -f "$ROOT/deploy/research-preview/compose.research-preview.yaml" "$@"
