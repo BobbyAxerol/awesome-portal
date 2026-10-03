@@ -1,0 +1,70 @@
+/* Research screens, print only. Hides controls, lets wide tables fit the page.
+ * Kept apart from researchScreen.css, whose phone block must stay last. */
+@media print {
+  /* Chrome and controls */
+  .research-screen nav[aria-label="Run path"],
+  .research-screen nav[aria-label="Screen path"],
+  .research-screen nav[aria-label="Breadcrumb"],
+  .rc-crumb, .ln-crumb, .cp-crumb, .ai-crumb,
+  .cp-seg, .cp-toggle, .cp-colpick-hint,
+  .ln-links, .ln-compare, .ln-page a[data-action], .cp-page a[data-action], .rc-page a[data-action],
+  [data-trajectory-links], [data-panel="foot"] a,
+  .rc-linkbtn, .rc-copy, .rc-sealbtn,
+  .ln-fchip, .ln-toggle, .ln-btnlink, .ln-chip,
+  [data-filter-bar], [data-compare-check], [data-action="open-compare"], [data-action="clear"],
+  [data-action="first-page"], [data-action="previous"], [data-action="next"],
+  [data-action="retry"], [data-action="back-to-journey"],
+  .research-screen [role="tablist"] {
+    display: none !important;
+  }
+  /* S01 header actions: the links are the first anchors of the library header. */
+  .research-screen header a[href$="/runs/new"],
+  .research-screen header a[href*="/lineage"],
+  .research-screen header a[href$="/journey"] {
+    display: none !important;
+  }
+
+  /* Wide tables fit the page instead of scrolling */
+  .research-screen .cp-scroll, .rc-pack,
+  .research-screen [class$="-scroll"] {
+    overflow: visible !important;
+    max-width: 100% !important;
+  }
+  .research-screen table {
+    table-layout: fixed;
+    width: 100% !important;
+    max-width: 100%;
+  }
+  .research-screen th,
+  .research-screen td {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    min-width: 0 !important;
+  }
+  .cp-difftable { font-size: 6.5pt; }
+  .cp-difftable th, .cp-difftable td { padding: 2px 3px !important; }
+  .cp-difftable thead th { font-size: 5pt; }
+  .cp-difftable .cp-colpick { white-space: normal; overflow-wrap: anywhere; word-break: break-all; }
+  .cp-difftable tbody th { width: 12%; }
+  .rc-pack { overflow: visible !important; }
+  .rc-pack table { min-width: 0 !important; width: 100% !important; }
+  .rc-pack col.n { width: 4% !important; }
+  .rc-pack col.item { width: 22% !important; }
+  .rc-pack col.status { width: 9% !important; }
+  .rc-pack col.digest { width: 15% !important; }
+  .rc-pack col.source { width: 20% !important; }
+  .rc-pack .digest { max-width: none !important; }
+  .rc-page table td, .rc-page table th { white-space: normal !important; }
+
+  /* S13: cards in a compact grid, connectors dropped */
+  .cp-ladder,
+  .cp-ladder[data-ladder-layout] {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px !important;
+  }
+  .cp-lstep { display: block; margin: 0 !important; padding: 0 !important; break-inside: avoid; }
+  .cp-arrow { display: none !important; }
+  .cp-lcard { break-inside: avoid; padding: 6px 8px !important; }
+  .cp-bignum { font-size: 14px; }
+}

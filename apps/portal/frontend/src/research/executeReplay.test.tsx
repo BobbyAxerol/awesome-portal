@@ -476,7 +476,7 @@ describe("S08-E16R1 — the retained OHLC overview on the P04 hub lane", () => {
     expect(document.querySelector('[data-candle-overview]')!.getAttribute("data-candle-overview")).toBe("AVAILABLE");
     const capability = document.querySelector('[data-capability="candle_windows"]')!;
     expect(capability.getAttribute("data-capability-state")).toBe("NOT_PUBLISHED");
-    expect(capability.textContent).toContain("P04_SOURCE_DID_NOT_PUBLISH_REPLAY_CANDLE_WINDOWS");
+    expect(capability.getAttribute("title")).toContain("P04_SOURCE_DID_NOT_PUBLISH_REPLAY_CANDLE_WINDOWS");
   });
 
   it("a run sealed before the producer retained an overview says so, with its own reason code and no zero", () => {

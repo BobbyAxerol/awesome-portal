@@ -22,7 +22,7 @@ import type { ReactNode } from "react";
 import { useEntryRef } from "./chartLife";
 import { TAP_SNAP_PX, useChartContract } from "./chartContract";
 import { Formula } from "./Formula";
-import { foldLabel, formatUtc, groupDecimalString } from "./researchFormat";
+import { foldShort, foldTitle, formatUtc, groupDecimalString } from "./researchFormat";
 import { reasonCodeSentence } from "./researchRefusal";
 import type { CurrentSourceSearch } from "./searchClient";
 import { humanise } from "./humanise";
@@ -315,16 +315,16 @@ export function FoldDecayBars({ pool }: { pool: Pool | undefined }) {
             const tone = known && value < 0 ? "var(--good)" : "var(--accent-2)";
             return (
               <span key={row.fold_id} className="mono flex items-center gap-1.5 text-[9.5px]" data-fold-decay-row={row.fold_id}>
-                <span className="w-[52px] flex-none" style={{ color: "var(--ink-soft)" }}>
-                  {foldLabel(row.fold_id)}
+                <span className="w-[52px] flex-none" style={{ color: "var(--ink-soft)" }} title={foldTitle(row.fold_id)}>
+                  {foldShort(row.fold_id)}
                 </span>
                 <span
                   className="relative h-[10px] min-w-0 flex-1"
                   style={{ background: "var(--paper-sunken)" }}
                   role="img"
                   tabIndex={0}
-                  aria-label={`${foldLabel(row.fold_id)} decay ${row.decay ?? "not published"}: IS ${row.is_sharpe ?? "not published"}, OOS ${row.oos_sharpe ?? "not published"}`}
-                  title={`${foldLabel(row.fold_id)} · d ${row.decay ?? "not published"} · IS ${row.is_sharpe ?? "not published"} · OOS ${row.oos_sharpe ?? "not published"}`}
+                  aria-label={`${foldShort(row.fold_id)} decay ${row.decay ?? "not published"}: IS ${row.is_sharpe ?? "not published"}, OOS ${row.oos_sharpe ?? "not published"}`}
+                  title={`${foldTitle(row.fold_id)} · d ${row.decay ?? "not published"} · IS ${row.is_sharpe ?? "not published"} · OOS ${row.oos_sharpe ?? "not published"}`}
                 >
                   <span className="absolute bottom-0 left-1/2 top-0 w-px" style={{ background: "var(--line)" }} />
                   {known && share > 0 ? (

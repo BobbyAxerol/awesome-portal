@@ -37,54 +37,28 @@ const DIGEST_LABEL: [keyof ProvenanceFacts, string][] = [
 
 export function ProvenanceStrip({ provenance }: { provenance: ProvenanceFacts }) {
   const digests = DIGEST_LABEL.filter(([key]) => provenance[key] !== undefined);
+  /* One short line (source · revision · engine); every digest and the input scope ride in the tooltip. */
+  const line = [
+    provenance.source_adapter_id,
+    provenance.p14_split_revision ? `split ${provenance.p14_split_revision}` : null,
+    provenance.engine_version ? `engine ${provenance.engine_version}` : null,
+  ].filter(Boolean);
+  const tip = [
+    provenance.input_scope !== undefined
+      ? `input scope ${provenance.input_scope === null ? "not published" : provenance.input_scope.toLowerCase().replace(/_/g, " ")}`
+      : null,
+    ...digests.map(([key, label]) => `${label} ${provenance[key] === null ? "not published" : provenance[key]}`),
+    provenance.p14_split_revision === null ? "split revision not published" : null,
+  ].filter(Boolean);
 
   return (
-    <details
-      className="rounded-[6px] border px-3 py-1.5"
+    <p
+      className="mono text-[9.5px]"
       data-provenance
-      style={{ borderColor: "var(--line-soft)", background: "var(--paper-sunken)" }}
+      style={{ color: "var(--ink-faint)" }}
+      title={tip.length > 0 ? tip.join("\n") : undefined}
     >
-      <summary className="mono cursor-pointer text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-        provenance
-        {provenance.source_adapter_id ? ` · ${provenance.source_adapter_id}` : ""}
-        {provenance.engine_version ? ` · engine ${provenance.engine_version}` : ""}
-      </summary>
-
-      <div className="mt-1.5 flex flex-col gap-1">
-        {provenance.input_scope !== undefined ? (
-          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-input-scope>
-            input scope{" "}
-            {provenance.input_scope === null ? (
-              <em>not published</em>
-            ) : (
-              provenance.input_scope.toLowerCase().replace(/_/g, " ")
-            )}
-          </span>
-        ) : null}
-
-        {/*
-          * The requested and the effective spec are two facts, and a reader
-          * who cannot see both cannot tell whether the run they are reading is
-          * the run that was asked for.
-          */}
-        {digests.map(([key, label]) => (
-          <span
-            key={key}
-            className="mono text-[9.5px]"
-            style={{ color: "var(--ink-faint)" }}
-            data-provenance-digest={key}
-          >
-            {label} {provenance[key] === null ? <em>not published</em> : provenance[key]}
-          </span>
-        ))}
-
-        {provenance.p14_split_revision !== undefined ? (
-          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-split-revision-row>
-            split revision{" "}
-            {provenance.p14_split_revision === null ? <em>not published</em> : provenance.p14_split_revision}
-          </span>
-        ) : null}
-      </div>
-    </details>
+      {line.length > 0 ? line.join(" · ") : <em>provenance not published</em>}
+    </p>
   );
 }

@@ -7,7 +7,7 @@
  * frontend does not infer which environment it is talking to (v0.5 §12.1).
  */
 import { Menu, PanelLeftClose, PanelLeftOpen, Search, SlidersHorizontal, Users } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type Ref } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import { isOwnerAccess, useSession } from "../auth/session";
@@ -26,11 +26,13 @@ export function TopBar({
   environment,
   onOpenPalette,
   onToggleMobileNav,
+  navToggleRef,
 }: {
   breadcrumbs: Breadcrumb[];
   environment: PortalEnvironment | null;
   onOpenPalette: () => void;
   onToggleMobileNav: () => void;
+  navToggleRef?: Ref<HTMLButtonElement>;
 }) {
   const preferences = usePreferences();
   const { mode: presentationMode, entityLabel, chrome } = usePresentation();
@@ -55,6 +57,7 @@ export function TopBar({
       <button
         type="button"
         className="portal-icon-btn lg:hidden"
+        ref={navToggleRef}
         aria-label="Open navigation"
         onClick={onToggleMobileNav}
       >

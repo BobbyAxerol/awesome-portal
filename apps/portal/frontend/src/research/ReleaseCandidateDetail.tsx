@@ -2380,14 +2380,14 @@ function ComposeScreen({ runId, controller, publication, status = NO_STATUS, lin
             >
               as of {iso(compose.as_of_utc_ms)}
             </span>
-            <span
+            {delivered ? null : <span
               data-draft-meta
               data-draft-revision={compose.draft.revision}
               data-draft-state={compose.draft.state}
               title={compose.draft.state === "VIRTUAL" ? undefined : `revision ${compose.draft.revision}${compose.draft.updated_at_utc_ms !== null ? ` · saved ${iso(compose.draft.updated_at_utc_ms)}` : ""}`}
             >
               {compose.draft.state === "VIRTUAL" ? "Draft not saved yet" : "Draft saved"}
-            </span>
+            </span>}
           </>
         ) : (
           <span>{state.state}</span>

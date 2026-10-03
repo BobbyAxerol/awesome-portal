@@ -27,9 +27,9 @@ describe("S06 study selector · cursor", () => {
     const { container } = draw(2);
     const on = [...container.querySelectorAll("[data-study-pick]")].filter((b) => b.getAttribute("aria-current") === "true");
     expect(on.map((b) => b.getAttribute("data-study-pick"))).toEqual(["study_1"]);
-    expect(on[0]!.textContent).toBe("fold_02");
+    expect(on[0]!.textContent).toBe("F2");
     expect(container.querySelector("[data-study-pick][aria-pressed]")).toBeNull();
-    expect(container.textContent).toContain("fold_02 · inner validation");
+    expect(container.textContent).toContain("F2 · inner validation");
     expect(container.textContent).not.toContain("outer fold 1");
   });
 

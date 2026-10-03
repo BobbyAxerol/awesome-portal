@@ -154,7 +154,7 @@ describe("UX-02 · a failed fold read never draws in-sample bars under OOS", () 
     fireEvent.click(q(container, "[data-page-refusal] [data-action='retry-window']")!);
     await ready(container);
     expect(q(container, "[data-window-panel='oos-pending']")).toBeNull();
-    expect(q(container, "[data-band-fold]")?.textContent).toBe("fold_01");
+    expect(q(container, "[data-band-fold]")?.textContent).toBe("F1");
   });
 
   it("while the fold window is being read it says so, and the in-sample bars are not drawn meanwhile", async () => {

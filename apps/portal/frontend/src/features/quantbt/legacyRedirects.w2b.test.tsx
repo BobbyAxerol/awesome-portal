@@ -64,6 +64,13 @@ describe("W2B · retired QuantBT screens redirect, keeping query and hash", () =
     await waitFor(() => expect(where()).toBe(to), { timeout: 10_000 });
   });
 
+  it("D7 · an unknown address shows a short not-found screen with one Library exit, and stays put", async () => {
+    mountAt("/research/quantbt/does-not-exist-xyz");
+    await waitFor(() => expect(document.querySelector("[data-research-not-found]")).not.toBeNull(), { timeout: 10_000 });
+    expect(where()).toBe("/research/quantbt/does-not-exist-xyz");
+    expect(document.querySelectorAll("[data-research-not-found] a")).toHaveLength(1);
+  });
+
   it("the landing screen draws no module header (its own title is the only one)", async () => {
     mountAt("/research/quantbt");
     await waitFor(() => expect(where()).toBe("/research/quantbt"));

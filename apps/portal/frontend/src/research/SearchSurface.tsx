@@ -18,7 +18,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEve
 
 import { useEntryAnimation, useEntryRef, useReadout } from "./chartLife";
 import { TAP_SNAP_PX, useChartContract } from "./chartContract";
-import { foldLabel } from "./researchFormat";
+import { foldShort, foldTitle } from "./researchFormat";
 import type { CurrentSourceSearch } from "./searchClient";
 import { reasonCodeSentence } from "./researchRefusal";
 import { cleanParameters } from "./searchParamText";
@@ -792,7 +792,7 @@ export function StudySurfaces({
   }, [ownerOrdinal]);
   const surface = active.surface;
   const served = surface.state === "AVAILABLE" && declared?.state === "AVAILABLE";
-  const label = foldLabel(active.fold_id);
+  const label = foldShort(active.fold_id);
   return (
     <div className="flex min-w-0 flex-col gap-3" data-study-surfaces={studies.length}>
       <SurfaceAbsence id="surface-run-global" title="A2 · run-global trial surface" reason={parentReason} state="NOT_APPLICABLE" />
@@ -811,10 +811,10 @@ export function StudySurfaces({
               }
               aria-current={on ? "true" : undefined}
               data-study-pick={study.study_id}
-              title={`study ${study.study_id} · ${study.scope}`}
+              title={`study ${study.study_id} · ${study.scope} · ${foldTitle(study.fold_id)}`}
               onClick={() => onFold(ordinalOf(study, index))}
             >
-              {foldLabel(study.fold_id)}
+              {foldShort(study.fold_id)}
             </button>
           );
         })}

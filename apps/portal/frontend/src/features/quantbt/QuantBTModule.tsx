@@ -36,7 +36,9 @@ import { RunPassport } from "./RunPassport";
 import { QUANTBT_ROOT, isQuantBTTab, runPath, runTabPath } from "./routes";
 import { PortalApiError } from "../../lib/api";
 import "../../research/researchScreen.css";
+import { ResearchNotFound } from "../../research/ResearchNotFound";
 import "../../research/researchScreenTouch.css";
+import "../../research/researchPrint.css";
 import { useResearchDocumentTitle } from "../../research/documentTitle";
 
 /*
@@ -239,7 +241,7 @@ function LegacyTabRedirect() {
   const { tab = "" } = useParams();
   const [params] = useSearchParams();
   const runId = params.get("run");
-  if (!isQuantBTTab(tab)) return <Navigate to={QUANTBT_ROOT} replace />;
+  if (!isQuantBTTab(tab)) return <ResearchNotFound />;
   if (runId) return <Navigate to={runTabPath(runId, tab)} replace />;
   return <ResolveDefaultRun tab={tab} />;
 }
@@ -444,7 +446,7 @@ export function QuantBTModule() {
         {/* The module opens on S01; the latest legacy run is one click away in it. */}
         {/* HiFi index.html opens the Journey Map: the QuantBT entry point is Screen 00, not the Run Library. */}
         <Route index element={<JourneyMapRoute />} />
-        <Route path="*" element={<Navigate to={QUANTBT_ROOT} replace />} />
+        <Route path="*" element={<ResearchNotFound />} />
       </Routes>
       </div>
       </Suspense>

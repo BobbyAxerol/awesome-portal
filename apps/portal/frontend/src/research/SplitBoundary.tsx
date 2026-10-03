@@ -20,6 +20,7 @@
 import type { Fold, SealedHoldout, Topology, UtcRange } from "./preflightClient";
 import { ResearchPanel } from "./ResearchPanel";
 import { foldWindow, rangeLabel } from "./PreflightPanel";
+import { foldShort, foldTitle } from "./researchFormat";
 import type { ResearchState } from "./state";
 
 /** Spec 05 §2.7, scoped to what P08 actually supplies. */
@@ -96,8 +97,8 @@ function AnatomyRow({
       data-anatomy-fold={fold.fold_id}
       data-fold-state={fold.state}
     >
-      <span className="mono flex-none text-[9.5px]" style={{ width: 74, color: "var(--ink-soft)" }}>
-        {fold.fold_id}
+      <span className="mono flex-none text-[9.5px]" style={{ width: 74, color: "var(--ink-soft)" }} title={foldTitle(fold.fold_id)}>
+        {foldShort(fold.fold_id)}
       </span>
       <span
         className="relative h-[14px] flex-1 rounded-[2px]"

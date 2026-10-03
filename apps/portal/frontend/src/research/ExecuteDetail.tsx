@@ -1696,7 +1696,6 @@ export function ExecuteScreen({
                   ? ` · window ${items[0]!.playback_ordinal + 1}–${items.at(-1)!.playback_ordinal + 1}`
                   : ""}
               </span>
-              <CapabilityGap replay={replay} capability="candle_windows" />
             </div>
             {replayWindow.sampling ? (
               <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-sampling-note>

@@ -494,7 +494,7 @@ describe("D7 · ON, on the canonical two-fold run: one read at the boundary, non
     expect(m.server.windows().at(-1)).toContain("limit=168");
     expect(m.server.peak()).toBe(1);
     /* And it kept playing, on fold 2's first bar. */
-    expect(m.ui.foldOnScreen()).toBe("fold_02");
+    expect(m.ui.foldOnScreen()).toBe("F2");
     expect(m.ui.playing()).toBe(true);
     expect(m.transport.getSnapshot().index).toBe(0);
     expect(m.ui.statusText()).toContain("Entered fold_02");
@@ -528,7 +528,7 @@ describe("D7 · ON, on the canonical two-fold run: one read at the boundary, non
     expect(m.server.log.slice(mark).map((entry) => entry.kind)).toEqual(["window"]);
     /* And the card does not pretend to be reading: it says when it will. */
     expect(m.container.querySelector("[data-child-audit='waiting']")?.textContent).toBe(
-      "fold_02's child audit loads when playback rests.",
+      "F2's child audit loads when playback rests.",
     );
     expect(m.container.querySelector("[data-child-audit='loading']")).toBeNull();
     await playAcrossOnce(m, "end");
@@ -563,7 +563,7 @@ describe("D7 · ON, on the canonical two-fold run: one read at the boundary, non
       await playAcrossOnce(m, "crossed");
       expect(m.server.windows()).toHaveLength(baseline + boundary + 1);
       expect(m.server.windows().at(-1)).toContain(`at=${encodeURIComponent(syntheticFoldCursor(fold))}`);
-      expect(m.ui.foldOnScreen()).toBe(`fold_0${fold + 1}`);
+      expect(m.ui.foldOnScreen()).toBe(`F${fold + 1}`);
       expect(m.container.querySelector("[data-across-status]")?.getAttribute("data-across-reads")).toBe(String(boundary + 1));
       /* the next run-to-end below is a fresh natural end, not this one lingering */
       expect(m.ui.playing()).toBe(true);
@@ -589,13 +589,13 @@ describe("D7 · ON, on the canonical two-fold run: one read at the boundary, non
     expect(m.server.windows()).toHaveLength(baseline + 1);
     expect(m.server.windows().at(-1)).toContain(`cursor=${encodeURIComponent(FOLD0.replay.page.next_cursor!)}`);
     expect(m.container.querySelectorAll("[data-candle-row]")).toHaveLength(68);
-    expect(m.ui.foldOnScreen()).toBe("fold_01");
+    expect(m.ui.foldOnScreen()).toBe("F1");
     expect(m.ui.statusText()).toContain("Read the next window of fold_01");
     /* Boundary 2 is the fold's last bar: fold 2's first window. */
     await playAcrossOnce(m, "crossed");
     expect(m.server.windows()).toHaveLength(baseline + 2);
     expect(m.server.windows().at(-1)).toContain(at(SEGMENTS[1]!));
-    expect(m.ui.foldOnScreen()).toBe("fold_02");
+    expect(m.ui.foldOnScreen()).toBe("F2");
     expect(m.ui.statusText()).toContain("2 windows read by play across folds");
     expect(m.server.peak()).toBe(1);
   });
@@ -656,7 +656,7 @@ describe("D7 · no request while paused or stopped, and none after turning it of
     await m.ui.settle();
     expect(m.ui.playing()).toBe(false);
     expect(m.server.windows()).toHaveLength(baseline + 1);
-    expect(m.ui.foldOnScreen()).toBe("fold_02");
+    expect(m.ui.foldOnScreen()).toBe("F2");
     /* Once playback rests it is the screen's own arrival read for the fold on screen, sent once. */
     expect(m.server.audits()).toEqual(["0", "1"]);
   });
@@ -673,7 +673,7 @@ describe("D7 · no request while paused or stopped, and none after turning it of
     fireEvent.click(m.ui.switch());
     expect(m.ui.status()).toBe("off");
     await act(async () => { m.server.release(1); });
-    await waitFor(() => expect(m.ui.foldOnScreen()).toBe("fold_02"));
+    await waitFor(() => expect(m.ui.foldOnScreen()).toBe("F2"));
     await m.ui.settle();
     expect(m.ui.playing()).toBe(false);
     expect(m.ui.statusText()).toContain("was turned off while this window was loading");
@@ -735,7 +735,7 @@ describe("D7 · never more than one window read in flight", () => {
     expect(m.server.windows()).toHaveLength(baseline + 1);
     expect(m.server.peak()).toBe(1);
     await act(async () => { m.server.release(1); });
-    await waitFor(() => expect(m.ui.foldOnScreen()).toBe("fold_02"));
+    await waitFor(() => expect(m.ui.foldOnScreen()).toBe("F2"));
     await m.ui.settle();
     expect(m.server.windows()).toHaveLength(baseline + 1);
     expect(m.server.peak()).toBe(1);
@@ -768,7 +768,7 @@ describe("D7 · a refusal or an unusable window stops playback and says why", ()
     fireEvent.click(m.ui.switch());
     fireEvent.click(m.ui.play());
     await playAcrossOnce(m, "crossed"); // fold 2 is fine
-    expect(m.ui.foldOnScreen()).toBe("fold_02");
+    expect(m.ui.foldOnScreen()).toBe("F2");
     await playAcrossOnce(m, "refused"); // fold 3 is refused
     expect(m.server.windows()).toHaveLength(baseline + 2);
     expect(m.ui.statusText()).toContain("Play across folds stopped at the end of fold_02: the read of fold_03 was refused.");
@@ -777,7 +777,7 @@ describe("D7 · a refusal or an unusable window stops playback and says why", ()
     expect(m.container.querySelector("[data-across-status]")?.getAttribute("style")).toContain("var(--warn)");
     expect(m.ui.playing()).toBe(false);
     /* The window on screen is still fold 2's, on its last bar; the reason is said once. */
-    expect(m.ui.foldOnScreen()).toBe("fold_02");
+    expect(m.ui.foldOnScreen()).toBe("F2");
     expect(m.transport.getSnapshot().index).toBe(167);
     expect(m.container.querySelectorAll("[data-page-refusal]")).toHaveLength(0);
     expect((m.container.textContent!.match(new RegExp(REPLAY_REFUSAL_COPY[503].replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? []).length).toBe(1);
@@ -815,7 +815,7 @@ describe("D7 · a refusal or an unusable window stops playback and says why", ()
     await waitFor(() => expect(m.ui.status()).toBe("refused"));
     expect(m.ui.statusText()).toContain(SEQUENCE_GAP_WORDS);
     expect(m.ui.playing()).toBe(false);
-    expect(m.ui.foldOnScreen()).toBe("fold_01");
+    expect(m.ui.foldOnScreen()).toBe("F1");
   });
 
   it("an expired position costs the existing bounded recovery (one more read, the first window) and then stops rather than play it", async () => {
@@ -995,6 +995,6 @@ describe("D7 · on the product route with the real clock", () => {
     expect(server.windows().at(-1)).toContain(at(SEGMENTS[1]!));
     expect(server.peak()).toBe(1);
     await waitFor(() => expect(window.location.hash).toContain("fold=2"));
-    expect(container.querySelector("[data-band-fold]")?.textContent).toBe("fold_02");
+    expect(container.querySelector("[data-band-fold]")?.textContent).toBe("F2");
   }, 40_000);
 });

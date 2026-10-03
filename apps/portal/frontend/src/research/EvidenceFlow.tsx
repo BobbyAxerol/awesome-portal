@@ -66,7 +66,7 @@ import {
 import { DEFAULT_WINDOW, type EvidenceWindow } from "./evidenceWindow";
 import { runScreenHref } from "./runScreenHref";
 import { CURRENT_SOURCE_LANE_COPY, reasonCodeSentence, refusalDetail } from "./researchRefusal";
-import { claimToken, formatBytes, formatMetric, shortDigest } from "./researchFormat";
+import { claimToken, foldShort, formatBytes, formatMetric, shortDigest } from "./researchFormat";
 import { ARTIFACT_NO_READER, ArtifactsTable } from "./RunProgress";
 import type { PassportSlot, RetainedSeriesSlot, SeriesSlot } from "./useEvidence";
 import { isRetainedAnswer, retainedReadiness, type RunIdentitySlot } from "./retainedLane";
@@ -1356,10 +1356,10 @@ function CursorBar({
           value={index === -1 ? "" : String(cursor.fold)}
           onChange={(event) => onFold(Number(event.target.value))}
         >
-          {index === -1 ? <option value="">{foldId(cursor.fold)}</option> : null}
+          {index === -1 ? <option value="" title={foldId(cursor.fold)}>{foldShort(foldId(cursor.fold))}</option> : null}
           {published.map((fold) => (
-            <option key={fold} value={String(fold)}>
-              {foldId(fold)}
+            <option key={fold} value={String(fold)} title={foldId(fold)}>
+              {foldShort(foldId(fold))}
             </option>
           ))}
         </select>

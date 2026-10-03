@@ -372,7 +372,7 @@ describe("F2b · the window switch, one control with the fold chain", () => {
     expect(panel.querySelector("svg")).toBeTruthy();
     expect(panel.getAttribute("data-is-buckets")).toBeTruthy();
     expect(Number(panel.getAttribute("data-is-buckets"))).toBeGreaterThan(0);
-    expect(panel.querySelector("[data-is-caption]")!.textContent).toMatch(/^overview · fold_01 IS · \d+ candles \(\d+ bars each\)$/);
+    expect(panel.querySelector("[data-is-caption]")!.textContent).toMatch(/^overview · F1 IS · \d+ candles \(\d+ bars each\)$/);
     /* UX-09: the IS overview has a price axis (served high / mid / low) and a time axis (served train span), like the replay chart. */
     expect(panel.querySelector("[data-is-axis='price']")!.textContent).toMatch(/\d,\d{3}\.\d{2}/);
     expect(panel.querySelector("[data-is-axis='time']")!.textContent).toContain("2026-06-01");

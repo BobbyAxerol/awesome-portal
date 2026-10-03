@@ -94,12 +94,24 @@ afterEach(() => {
 describe("skip link", () => {
   it("is the first focusable element and moves focus to the content region", async () => {
     const { container } = mount();
-    const link = await screen.findByRole("link", { name: "Skip to content" });
+    const link = await screen.findByRole("link", { name: "Skip to main content" });
     const focusable = container.querySelectorAll<HTMLElement>("a[href], button, input, [tabindex='0']");
     expect(focusable[0]).toBe(link);
     expect(link.getAttribute("href")).toBe("#portal-content");
     fireEvent.click(link);
     expect(document.activeElement).toBe(container.querySelector("main#portal-content"));
+  });
+});
+
+describe("navigation drawer", () => {
+  it("closes on Escape and returns focus to its toggle", async () => {
+    mount();
+    const toggle = await screen.findByRole("button", { name: "Open navigation" });
+    fireEvent.click(toggle);
+    expect(screen.getByRole("dialog", { name: "Navigation" })).toBeTruthy();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Navigation" })).toBeNull();
+    expect(document.activeElement).toBe(toggle);
   });
 });
 

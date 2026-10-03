@@ -90,7 +90,9 @@ describe("F3 S13 — HiFi parity", () => {
     await settled();
     const groups = [...document.querySelectorAll("[data-fold-group]")];
     expect(groups.length).toBeGreaterThan(0);
-    expect(groups[0]!.textContent).toBe("fold_01");
+    expect(groups[0]!.textContent).toBe("F1");
+    expect(groups[0]!.getAttribute("title")).toBe("fold_id 0");
+    expect(groups[0]!.getAttribute("data-fold-group")).toBe("0");
     const ticks = [...document.querySelectorAll('[data-panel="fold-chart"] .cp-lbl.y')].map((el) => el.textContent);
     expect(ticks).not.toContain("0");
   });

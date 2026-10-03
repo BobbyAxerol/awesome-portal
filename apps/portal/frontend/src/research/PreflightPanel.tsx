@@ -31,7 +31,7 @@ import type {
   Warmup,
 } from "./preflightClient";
 import { ResearchPanel } from "./ResearchPanel";
-import { formatUtc } from "./researchFormat";
+import { foldShort, foldTitle, formatUtc } from "./researchFormat";
 import type { ResearchState } from "./state";
 import { iso } from "./utcMinute";
 
@@ -224,8 +224,8 @@ export function FoldRow({
       data-fold={fold.fold_id}
       data-fold-state={fold.state}
     >
-      <span className="mono flex-none text-[9.5px]" style={{ width: 74, color: "var(--ink-soft)" }}>
-        {fold.fold_id}
+      <span className="mono flex-none text-[9.5px]" style={{ width: 74, color: "var(--ink-soft)" }} title={foldTitle(fold.fold_id)}>
+        {foldShort(fold.fold_id)}
       </span>
       <span
         className="relative h-[10px] flex-1 rounded-[2px]"

@@ -109,9 +109,9 @@ describe("S06 · one surface per outer study", () => {
     expect(container.querySelectorAll("[data-study-pick]")).toHaveLength(2);
     expect(container.querySelector("[data-panel='scatter'], [data-surface]")).toBeTruthy();
     expect(container.querySelector("[data-study-pick='fold_0']")?.getAttribute("aria-current")).toBe("true");
-    expect(container.textContent).toContain("fold_01 · inner validation");
+    expect(container.textContent).toContain("F1 · inner validation");
     fireEvent.click(container.querySelector("[data-study-pick='fold_1']") as HTMLElement);
-    expect(container.textContent).toContain("fold_02 · inner validation");
+    expect(container.textContent).toContain("F2 · inner validation");
     expect(container.textContent).not.toContain("global study");
   });
 });

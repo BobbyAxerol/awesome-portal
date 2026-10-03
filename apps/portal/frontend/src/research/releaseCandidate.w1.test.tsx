@@ -103,7 +103,7 @@ describe("W1-S11 status faces", () => {
     noComposer();
     expect(document.body.textContent).not.toContain("denied — nothing from this block");
     expect(document.querySelector(`a[href*="${RUN}"]`)).toBeNull();
-    expect(document.body.textContent).not.toContain(RUN);
+    expect(q("[data-run-exit-bar] .mono")!.textContent).toBe(RUN); // D8: echoed as text, never a link
   });
 
   it("W1-S11-COMPLETED an unsealed completed run keeps the composer; the face waits for the status, not for a banner", async () => {

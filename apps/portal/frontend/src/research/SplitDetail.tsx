@@ -74,7 +74,7 @@ import {
 } from "./splitClient";
 import type { EvidenceCursor } from "./evidenceCursor";
 import { runScreenHref } from "./runScreenHref";
-import { foldLabel, formatMetric, formatUtc, shortDigest } from "./researchFormat";
+import { foldLabel, foldShort, foldTitle, formatMetric, formatUtc, shortDigest } from "./researchFormat";
 import { retainedSplitOf, type FoldsSlot, type RetainedFact, type RetainedFacts } from "./useSplit";
 import type { ResearchState } from "./state";
 import { protocolLabel, retainedReadiness, walkForwardOf } from "./retainedLane";
@@ -856,7 +856,7 @@ function foldCount(fold: SourceFoldRow, which: "train_bars" | "test_bars"): stri
 
 /** The hover/focus text of a fold row: id, train and test windows, counts — nothing computed. */
 export function foldReadout(fold: SourceFoldRow, train: Range | null, test: Range | null): string {
-  return `${foldLabel(fold.fold_id)} · ${exactSpan(train, "train")} · ${foldCount(fold, "train_bars")} · ${exactSpan(test, "test")} · ${foldCount(fold, "test_bars")}`;
+  return `${foldShort(fold.fold_id)} · ${exactSpan(train, "train")} · ${foldCount(fold, "train_bars")} · ${exactSpan(test, "test")} · ${foldCount(fold, "test_bars")}`;
 }
 
 /**
@@ -955,8 +955,8 @@ function FoldRows({
                 borderLeftColor: current ? "var(--accent)" : "transparent",
               }}
             >
-              <span className="mono w-[64px] flex-none text-left text-[11px]" style={{ color: "var(--ink-soft)" }}>
-                {foldLabel(fold.fold_id)}
+              <span className="mono w-[64px] flex-none text-left text-[11px]" style={{ color: "var(--ink-soft)" }} title={foldTitle(fold.fold_id)}>
+                {foldShort(fold.fold_id)}
               </span>
               <span className="relative h-[16px] flex-1 rounded-[3px]" style={{ background: "var(--paper-sunken)" }}>
                 {bounds && train ? (

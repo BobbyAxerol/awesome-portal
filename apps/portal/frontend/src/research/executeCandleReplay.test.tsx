@@ -283,7 +283,7 @@ describe("P17-T12/T14 · fold arrival, fold switch and capital convention", () =
     const { container, fetchMock } = await settled();
     const boundary = container.querySelector("[data-fold-boundary]");
     expect(boundary?.getAttribute("data-fold-boundary")).toBe("CONTINUOUS_ACROSS_FOLDS");
-    expect(boundary?.getAttribute("title")).toContain("fold_02 starts at fold_01's end equity");
+    expect(boundary?.getAttribute("title")).toContain("F2 starts at F1's end equity");
     expect(container.querySelector("[data-fold-capital]")?.textContent).toContain("carried across folds");
     expect(container.querySelector("[data-fold-capital]")?.textContent).not.toContain("carry_position");
     const before = fetchMock.mock.calls.length;
@@ -475,7 +475,7 @@ describe("E2c · 8.5 — the band above the chart is the fold's published window
     /* The band waits for a lane to answer, so this run never reads the P04 hub split. */
     const hubSplitReads = urls(fetchMock).filter((url) => new URL(url, "http://x").pathname.endsWith("/runs/" + RUN + "/split"));
     expect(hubSplitReads).toEqual([]);
-    expect(container.querySelector("[data-band-fold]")!.textContent).toBe("fold_01");
+    expect(container.querySelector("[data-band-fold]")!.textContent).toBe("F1");
     fireEvent.click(container.querySelector("[aria-label='next fold']")!);
     await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(4));
     /* The fold plan already holds every fold: changing fold reads no split. */
@@ -663,13 +663,13 @@ describe("F3 · S08 — fold_NN everywhere, 4× default, room at both ends of th
   it("names the fold as fold_01 in the chip title, the playhead readout and the child-audit card", async () => {
     const { container } = await settled();
     for (const chip of container.querySelectorAll("[data-fold]")) expect(chip.getAttribute("title")).not.toMatch(/\bfold \d/);
-    expect(container.querySelector("[data-fold='0']")?.getAttribute("title")).toMatch(/^fold_01: /);
-    expect(container.querySelector("[data-playhead-readout] [data-readout-fold]")?.textContent).toBe("fold_01");
+    expect(container.querySelector("[data-fold='0']")?.getAttribute("title")).toMatch(/^F1: /);
+    expect(container.querySelector("[data-playhead-readout] [data-readout-fold]")?.textContent).toBe("F1");
     await waitFor(() => expect(container.querySelector("[data-child-audit='0']")).toBeTruthy());
-    expect(container.querySelector("[data-panel='child-audit'] summary")?.textContent).toContain("fold_01 · ");
+    expect(container.querySelector("[data-panel='child-audit'] summary")?.textContent).toContain("F1 · ");
     expect(container.querySelector("[data-panel='child-audit'] summary")?.getAttribute("title")).toContain("shaded row is the strategy instance");
     expect(container.querySelector("[data-child-audit-details]")?.hasAttribute("open")).toBe(false);
-    expect(container.querySelector("[aria-label='child audit records of fold_01']")).toBeTruthy();
+    expect(container.querySelector("[aria-label='child audit records of F1']")).toBeTruthy();
     expect(container.textContent).not.toMatch(/\bfold \d/);
   });
 

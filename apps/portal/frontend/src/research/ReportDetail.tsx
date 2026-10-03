@@ -551,8 +551,9 @@ function NoPrintBar({
           </Link>
         </>
       ) : null}
-      <span style={{ color: "var(--ink-faint)" }}>/</span>
-      <span aria-current="page">Report</span>
+      <span style={{ whiteSpace: "nowrap" }}>
+        <span style={{ color: "var(--ink-faint)" }}>/</span> <span aria-current="page">Report</span>
+      </span>
       <span className="flex flex-wrap items-center gap-1.5">
         {report !== null ? (
           <button type="button" className="rr-btn" data-action="print" title={NOPRINT_NOTE} onClick={() => window.print()}>

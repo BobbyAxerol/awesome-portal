@@ -234,14 +234,14 @@ function supportFunctions(doc: AtlasDocument): string[] {
 }
 
 /** The HiFi's card frame for the routes and claims tabs: a title row, a mono source line, the body and a foot. */
-function TabCard({ title, source, foot, children, name }: { title: string; source: ReactNode; foot?: ReactNode; children: ReactNode; name: string }) {
+function TabCard({ title, source, sourceTitle, foot, children, name }: { title: string; source: ReactNode; sourceTitle?: string; foot?: ReactNode; children: ReactNode; name: string }) {
   return (
     <section className="rounded-[6px] border" style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }} data-tab-card={name} aria-label={title}>
       <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 border-b px-3 py-2" style={{ borderColor: "var(--line)" }}>
         <h2 className="m-0 text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-soft)" }}>
           {title}
         </h2>
-        <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-tab-card-source>
+        <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-tab-card-source title={sourceTitle}>
           {source}
         </span>
       </div>
@@ -277,7 +277,8 @@ function RoutesTab({
     <TabCard
       name="routes"
       title="execution routes"
-      source={functions.length ? functions.map((name) => `${name}()`).join(" · ") : "no support matrix published by this manifest"}
+      source={functions.length ? "support matrix" : "no support matrix published"}
+      sourceTitle={functions.length ? functions.map((name) => `${name}()`).join(" · ") : "no support matrix published by this manifest"}
     >
       <div ref={tableRef}>
         <div
@@ -417,12 +418,8 @@ function ClaimsTab({ doc }: { doc: AtlasDocument }) {
     <TabCard
       name="claims"
       title="claims by contract"
-      source="engine cert ⊥ methodology claim (mode × schedule)"
-      foot={
-        <>
-          <span className="mono">certificate = min(engine cert, methodology cap, artifact completeness)</span>
-        </>
-      }
+      source="engine cert · claim"
+      sourceTitle="engine cert ⊥ methodology claim (mode × schedule) · certificate = min(engine cert, methodology cap, artifact completeness)"
     >
       <div
         className="mono hidden flex-wrap border-b px-3 py-[5px] text-[9.5px] uppercase tracking-[.06em] min-[900px]:flex"
@@ -458,19 +455,19 @@ function ClaimsTab({ doc }: { doc: AtlasDocument }) {
               data-claim-qualifier={claim.qualifier.result_metadata_derivation}
               title={
                 claim.qualifier.result_metadata_derivation === "ENGINE_DERIVES_SAME_LEVEL"
-                  ? "certify_result_metadata derives the same level as the catalog."
+                  ? `certify_result_metadata = ${claimToken(claim.qualifier.result_metadata_status ?? "not published")} · derives the same level as the catalog.`
                   : claim.qualifier.result_metadata_derivation === "ENGINE_DERIVES_OTHER_LEVEL"
-                    ? `certify_result_metadata derives L${claim.qualifier.result_metadata_level}; the catalog level is the Portal record.`
+                    ? `certify_result_metadata ≠ L${claim.qualifier.result_metadata_level} ${claimToken(claim.qualifier.result_metadata_status ?? "not published")} · derives L${claim.qualifier.result_metadata_level}; the catalog level is the Portal record.`
                     : "certify_result_metadata has no branch for this contract; the catalog level is the Portal record."
               }
             >
               {claim.qualifier.level_description} ·{" "}
               {/* E1: the engine's certification token is printed as a token (`CLOSE_TARGET_CERTIFIED`), never as prose. */}
               {claim.qualifier.result_metadata_derivation === "ENGINE_DERIVES_SAME_LEVEL"
-                ? `certify_result_metadata = ${claimToken(claim.qualifier.result_metadata_status ?? "not published")}`
+                ? claimToken(claim.qualifier.result_metadata_status ?? "not published")
                 : claim.qualifier.result_metadata_derivation === "ENGINE_DERIVES_OTHER_LEVEL"
-                  ? `certify_result_metadata ≠ L${claim.qualifier.result_metadata_level} ${claimToken(claim.qualifier.result_metadata_status ?? "not published")}`
-                  : "certify_result_metadata — no branch"}
+                  ? `≠ L${claim.qualifier.result_metadata_level} ${claimToken(claim.qualifier.result_metadata_status ?? "not published")}`
+                  : "no engine branch"}
             </span>
           ) : null}
         </div>

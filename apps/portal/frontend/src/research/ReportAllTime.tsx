@@ -437,7 +437,7 @@ function CurveBody({ block, activeEpisode = null }: { block: EnrichedAnalysis; a
         {lineB !== null && rangeB !== null ? (
           <>
             <p className="rr-at-sub" data-curve-range="benchmark" title={`range of the drawn points: ${rangeB.lowText} to ${rangeB.highText}`}>
-              <span>market benchmark (portal) · own scale</span>
+              <span title="market benchmark (portal) · drawn on its own scale">benchmark · own scale</span>
               <span>
                 {rangeB.low} – {rangeB.high}
               </span>

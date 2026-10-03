@@ -383,9 +383,7 @@ describe("P04 — Engine Atlas composition", () => {
   it("renders never-claims text and the min-formula footer", () => {
     renderAtlas(atlasDoc(), "claims");
     expect(screen.getByText("never claims intrabar SL/TP fills")).toBeTruthy();
-    expect(
-      screen.getByText("certificate = min(engine cert, methodology cap, artifact completeness)"),
-    ).toBeTruthy();
+    expect(document.querySelector("[data-tab-card-source]")?.getAttribute("title")).toContain("certificate = min(engine cert, methodology cap, artifact completeness)");
   });
 
   it("renders the suspect line verbatim on a mode card", () => {

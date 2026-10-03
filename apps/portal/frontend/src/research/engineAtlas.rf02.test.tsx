@@ -208,7 +208,8 @@ describe("Q4 / D-4 and the release facts panel", () => {
     expect(document.querySelector('[data-contract="event_lifecycle"] [data-claim-qualifier]')?.getAttribute("data-claim-qualifier")).toBe("ENGINE_DERIVES_OTHER_LEVEL");
     // F2b: the sentence is a tooltip; the row keeps the function name and the token.
     const qualifier = document.querySelector('[data-contract="event_lifecycle"] [data-claim-qualifier]') as HTMLElement;
-    expect(qualifier.textContent).toMatch(/certify_result_metadata ≠ L\d /);
+    expect(qualifier.textContent).toMatch(/≠ L\d /);
+    expect(qualifier.getAttribute("title")).toMatch(/certify_result_metadata ≠ L\d /);
     expect(qualifier.getAttribute("title")).toContain("the catalog level is the Portal record");
   });
 
@@ -327,7 +328,7 @@ describe("E7 / D9 — the HiFi's density (Unified 13.4.1)", () => {
     const card = document.querySelector('[data-tab-card="routes"]') as HTMLElement;
     expect(card.querySelector("h2")?.textContent).toBe("execution routes");
     expect(card.textContent).not.toMatch(/not a defect|not aspiration/);
-    expect(card.querySelector("[data-tab-card-source]")?.textContent).toContain("arbitrage_support_matrix()");
+    expect(card.querySelector("[data-tab-card-source]")?.getAttribute("title")).toContain("arbitrage_support_matrix()");
     for (const route of DOC.routes) {
       const detail = document.querySelector(`[data-route-detail="${route.route_id}"]`) as HTMLElement;
       expect(detail.hidden, route.route_id).toBe(route.route_id !== "arbitrage");
@@ -351,7 +352,7 @@ describe("E7 / D9 — the HiFi's density (Unified 13.4.1)", () => {
     expect(document.querySelector('[data-tab-card="claims"] h2')?.textContent).toBe("claims by contract");
     const claim = DOC.claims.find((item) => item.qualifier)!;
     expect(document.querySelector(`[data-contract="${claim.contract_id}"]`)?.textContent).toContain(`${claim.engine_certification} · ${claim.qualifier!.level_name}`);
-    expect(document.querySelector('[data-tab-card="claims"]')?.textContent).toContain("certificate = min(engine cert, methodology cap, artifact completeness)");
+    expect(document.querySelector('[data-tab-card="claims"] [data-tab-card-source]')?.getAttribute("title")).toContain("certificate = min(engine cert, methodology cap, artifact completeness)");
   });
 });
 

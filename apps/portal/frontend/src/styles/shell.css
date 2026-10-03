@@ -2765,6 +2765,10 @@
 .portal-skip-link { position: absolute; left: var(--space-3); top: var(--space-2); z-index: 1000; padding: var(--space-2) var(--space-3); background: var(--paper-raised); color: var(--ink); border: 2px solid var(--accent); border-radius: 4px; transform: translateY(-200%); }
 .portal-skip-link:focus { transform: none; }
 .portal-content:focus { outline: none; }
+/* D11: one rail toggle per width. The tailwind `lg:hidden` / `hidden` utilities lose to
+   `.portal-icon-btn { display: inline-flex }`, so both toggles showed at >=1024px. */
+@media (min-width: 1024px) { .portal-topbar > .portal-icon-btn.lg\:hidden { display: none; } }
+@media (max-width: 1023px) { .portal-topbar > .portal-icon-btn.hidden { display: none; } }
 
 /* --- Mobile shell (W3A, <=720px) ----------------------------------------
  * One 56px row: menu button, one crumb (ellipsised), environment badge,

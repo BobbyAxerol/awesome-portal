@@ -24,7 +24,7 @@ function mount() {
     <MemoryRouter initialEntries={["/"]}>
       <PreferencesProvider>
         <PortalPresentationProvider registry={null}>
-          <a href="#portal-content" className="portal-skip-link">Skip to content</a>
+          <a href="#portal-content" className="portal-skip-link">Skip to main content</a>
           <TopBar
             breadcrumbs={[{ label: "Research", route: "/research" }, { label: "Library", route: null }]}
             environment={null}
@@ -84,7 +84,7 @@ describe("Display menu", () => {
   it("keeps the skip link first in tab order", () => {
     const { container } = mount();
     const focusable = Array.from(container.querySelectorAll<HTMLElement>("a[href], button, select, input"));
-    expect(focusable[0]?.textContent).toBe("Skip to content");
+    expect(focusable[0]?.textContent).toBe("Skip to main content");
   });
 
   it("marks exactly one crumb as current", () => {

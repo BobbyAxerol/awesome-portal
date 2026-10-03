@@ -9,7 +9,7 @@
  * the registry. A registry failure is therefore a terminal bootstrap state
  * with its request id, not an empty sidebar.
  */
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 
 import { StateView } from "../components/ui";
@@ -35,6 +35,18 @@ export function PortalShell() {
 
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const navToggleRef = useRef<HTMLButtonElement>(null);
+  /* D1: Esc closes the navigation drawer and hands focus back to its toggle. */
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setMobileNavOpen(false);
+      navToggleRef.current?.focus();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [mobileNavOpen]);
   const openPalette = useCallback(() => setPaletteOpen(true), []);
   useCommandPaletteShortcut(openPalette);
 
@@ -107,13 +119,14 @@ export function PortalShell() {
             }
           }}
         >
-          Skip to content
+          Skip to main content
         </a>
         <TopBar
           breadcrumbs={breadcrumbs}
           environment={environment}
           onOpenPalette={openPalette}
           onToggleMobileNav={() => setMobileNavOpen((open) => !open)}
+          navToggleRef={navToggleRef}
         />
 
         <div className="portal-body">

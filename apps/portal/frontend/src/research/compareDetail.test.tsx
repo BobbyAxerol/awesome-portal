@@ -490,8 +490,9 @@ describe("S13 Compare — markets", () => {
     /* D10: a card is a market; it says which run stands for it and how many ran there. */
     const btc = document.querySelector('[data-market-run="run_btc"]') as HTMLElement;
     expect(btc.querySelector("[data-market-key]")?.textContent).toBe("BTCUSDT · 4h");
-    expect(btc.querySelector("[data-market-selection-words]")?.textContent).toBe("1 of 3 runs on this market");
-    expect(eth.querySelector("[data-market-selection-words]")?.textContent).toBe("only run on this market");
+    expect(btc.querySelector("[data-market-selection-words]")?.textContent).toBe("1 of 3");
+    expect(btc.querySelector("[data-market-selection-words]")?.getAttribute("title")).toContain("1 of 3 runs on this market");
+    expect(eth.querySelector("[data-market-selection-words]")?.textContent).toBe("only run");
     expect(panels()).toEqual([...COMPARE_PANELS.markets]);
   });
 });
@@ -1157,7 +1158,8 @@ describe("E7 / D10 — Screen 13 on the HiFi (Unified 13.4.1)", () => {
     renderAt(`/research/quantbt/alphas/${WFO_ALPHA}/compare`);
     await settled();
     const groups = Array.from(document.querySelectorAll("[data-fold-group]")).map((el) => el.textContent);
-    expect(groups[0]).toBe("fold_01");
+    expect(groups[0]).toBe("F1");
+    expect(document.querySelector("[data-fold-group]")?.getAttribute("data-fold-group")).toBe("0");
     const swatches = Array.from(document.querySelectorAll("[data-fold-legend] .sw")).map((el) => (el as HTMLElement).style.background);
     expect(new Set(swatches).size).toBe(swatches.length);
     /* 13-5: the attempts without per-fold rows are a count and a closed disclosure. */

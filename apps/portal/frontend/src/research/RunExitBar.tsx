@@ -46,6 +46,29 @@ export function RunExitBar({ runId, state, cursor = null, onRetry, hide = [], cl
   if (state.banner === null && state.exits.length === 0) return null;
   const unread = state.phase === "unread";
   const exits = state.exits.filter((exit) => !hide.includes(exit));
+  if (state.phase === "unavailable") {
+    /* D8: one centred, body-size state: the sentence, the id in mono, one exit as a button. */
+    return (
+      <div
+        data-run-exit-bar=""
+        role="status"
+        className={className}
+        style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "48px 16px", textAlign: "center", fontSize: "var(--text-body, 14px)" }}
+      >
+        {state.banner !== null && (
+          <span data-run-phase={state.phase} title={state.tip ?? undefined} aria-label={state.tip !== null ? `${state.banner} ${state.tip}` : undefined} style={{ color: "var(--ink)", fontWeight: 600 }}>
+            {state.banner}
+          </span>
+        )}
+        <span className="mono" data-run-id={runId} style={{ color: "var(--ink-soft)", overflowWrap: "anywhere" }}>{runId}</span>
+        {exits.map((exit) => (
+          <Link key={exit} to={exitHref(exit, runId, { cursor })} data-exit={exit} title={TITLE[exit]} className="btn-ghost" style={{ display: "inline-flex", alignItems: "center", minHeight: 36, padding: "0 16px" }}>
+            {LABEL[exit]}
+          </Link>
+        ))}
+      </div>
+    );
+  }
   return (
     <div
       data-run-exit-bar=""

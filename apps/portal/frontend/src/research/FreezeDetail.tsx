@@ -62,7 +62,7 @@ import { runScreenHref } from "./runScreenHref";
 import { hubDelegates, readsRetainedLane, type RetainedSlot, type VerifySlot } from "./useFreeze";
 import type { ResearchState } from "./state";
 import { reasonCodeSentence } from "./researchRefusal";
-import { claimToken, foldLabel, formatMetric, formatUtc, shortDigest, shortId } from "./researchFormat";
+import { claimToken, foldShort, formatMetric, formatUtc, shortDigest, shortId } from "./researchFormat";
 import type { FoldOrdering, FoldOrderingRow } from "./freezeClient";
 import { FoldSelectionPanel } from "./FoldSelectionPanel";
 import { OrchestrationClocks } from "./OrchestrationClocks";
@@ -1225,7 +1225,7 @@ function RetainedFrozenTable({ freeze, identity }: { freeze: RetainedFreeze; ide
           </span>
           {folds.map((fold) => (
             <span key={fold.fold} className="flex flex-wrap items-baseline gap-2" data-fold-selection={fold.fold}>
-              <span className="mono text-[10px]">{foldLabel(fold.fold - 1)}</span>
+              <span className="mono text-[10px]">{foldShort(fold.fold - 1)}</span>
               {fold.selection?.state === "AVAILABLE" ? (
                 <>
                   <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
@@ -1404,7 +1404,7 @@ function FoldOrderingAxes({ ordering }: { ordering: FoldOrdering }) {
               data-fold-verdict={fold.verdict}
               data-oos-child={fold.oos_generation_child.state}
             >
-              <span className="mono w-[52px] flex-none text-[10px]" style={{ color: "var(--ink-soft)" }}title={`QuantBT fold_id ${fold.fold_id}`}>{foldLabel(fold.fold_id)}</span>
+              <span className="mono w-[52px] flex-none text-[10px]" style={{ color: "var(--ink-soft)" }}title={`QuantBT fold_id ${fold.fold_id}`}>{foldShort(fold.fold_id)}</span>
               <DataTimeBar fold={fold} span={span} />
               <span
                 className="mono text-[9.5px]"

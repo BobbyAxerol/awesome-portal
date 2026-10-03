@@ -96,7 +96,7 @@ import {
 import { LineageLink, lineageHref } from "./LineageLink";
 import { foldBars, identicalSeriesGroups, LINES_PAST_FOLDS, SINGLE_OOS_ORDINAL, SINGLE_OOS_WINDOW } from "./compareFoldBars";
 import { equitySvg, type AxisLabel } from "./reportEquity";
-import { foldLabel, formatAxisValue, formatCorrelation, formatMetric as sharedFormatMetric, shortId } from "./researchFormat";
+import { foldShort, foldTitle, formatAxisValue, formatCorrelation, formatMetric as sharedFormatMetric, shortId } from "./researchFormat";
 import { hubHref, rcHref as releaseCandidateHref, reportHref } from "./runLinks";
 import { phaseOfStatus, runStatusWord } from "./runTerminalState";
 import { runLabelFor } from "./runLabels";
@@ -1589,8 +1589,8 @@ function FoldChart({ result }: { result: AttemptResult }) {
                   /* QA S13-5: every fold is labelled up to twelve; past that every fourth, as before. */
                   geometry.mode === "bars" || geometry.groups.length <= 12 || index === 0 || index === geometry.groups.length - 1 || index % 4 === 0 ? (
                     /* 13-06: the hi-fi's fold_01 style from the served fold_id; the raw id stays in the data attribute. */
-                    <span key={group.ordinal} className="cp-lbl x" style={{ left: `${group.pct}%` }} data-fold-group={group.label} data-fold-position={index + 1}>
-                      {foldLabel(group.label)}
+                    <span key={group.ordinal} className="cp-lbl x" style={{ left: `${group.pct}%` }} data-fold-group={group.label} data-fold-position={index + 1} title={foldTitle(group.label)}>
+                      {foldShort(group.label)}
                     </span>
                   ) : null,
                 )}
@@ -1830,8 +1830,8 @@ function MarketTile({ card }: { card: MarketCard }) {
         <RunState state={run.run_state} />
       </div>
       {grouped ? (
-        <span className="cp-faint" data-market-selection-words title={MARKET_SELECTION_WORDS[card.selection]}>
-          {card.runs_in_market > 1 ? `1 of ${card.runs_in_market} runs on this market` : "only run on this market"}
+        <span className="cp-faint" data-market-selection-words title={`${MARKET_SELECTION_WORDS[card.selection]} · ${card.runs_in_market > 1 ? `1 of ${card.runs_in_market} runs on this market` : "only run on this market"}`}>
+          {card.runs_in_market > 1 ? `1 of ${card.runs_in_market}` : "only run"}
         </span>
       ) : null}
       <span className="cp-faint" data-market-route>

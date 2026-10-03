@@ -30,7 +30,7 @@ import { paletteNow } from "../charts/theme";
 import { smokeMotionAllowed } from "../execution/smokeMotion";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { reasonCodeSentence } from "./researchRefusal";
-import { foldLabel, formatCount, formatMetric, formatUtc, typographicMinus } from "./researchFormat";
+import { foldShort, formatCount, formatMetric, formatUtc, typographicMinus } from "./researchFormat";
 import { formatValue } from "./formatValue";
 import { humanise } from "./humanise";
 import type { CurrentSourceSplit } from "./splitClient";
@@ -969,7 +969,7 @@ function FoldStrip({
                   data-fold-boundary={capital.equity_continuity}
                   title={
                     capital.equity_continuity === "CONTINUOUS_ACROSS_FOLDS"
-                      ? `${policyWords.code ?? "policy"} — one stitched account: ${foldLabel(segment.fold_id)} starts at ${foldLabel(capital.segments[position - 1]!.fold_id)}'s end equity and carries its position`
+                      ? `${policyWords.code ?? "policy"} — one stitched account: ${foldShort(segment.fold_id)} starts at ${foldShort(capital.segments[position - 1]!.fold_id)}'s end equity and carries its position`
                       : capital.equity_continuity === "RESET_PER_FOLD"
                         ? `${policyWords.code ?? "policy"} — each fold is its own account; the folds are not compounded`
                         : "the source did not publish how capital crosses this boundary"
@@ -998,12 +998,12 @@ function FoldStrip({
                     ? ` · IS Sharpe ${score.is_sharpe ?? "not published"} · OOS Sharpe ${score.oos_sharpe ?? "not published"} · decay ${score.decay ?? "not published"} · OOS trades ${score.oos_trades ?? "not published"}`
                     : "";
                   return reveal && position >= activeAt
-                    ? `${foldLabel(segment.fold_id)}: ${segment.bars} bars`
-                    : `${foldLabel(segment.fold_id)}: ${segment.bars} bars, ${segment.transitions} transitions, equity ${segment.start_equity} → ${segment.end_equity} · ${paramsText}${scoreText} · fold return not published`;
+                    ? `${foldShort(segment.fold_id)}: ${segment.bars} bars`
+                    : `${foldShort(segment.fold_id)}: ${segment.bars} bars, ${segment.transitions} transitions, equity ${segment.start_equity} → ${segment.end_equity} · ${paramsText}${scoreText} · fold return not published`;
                 })()}
               >
                 {/* F1 FG 08-06: the server publishes each fold's start and end equity, not a return — the chip shows the served end equity and never divides. */}
-                {foldLabel(segment.fold_id)} · {segment.bars} bars ·{" "}
+                {foldShort(segment.fold_id)} · {segment.bars} bars ·{" "}
                 {reveal && position >= activeAt ? (
                   <em data-reveal-hidden title={REVEAL_HIDDEN}>{REVEAL_HIDDEN_SHORT}</em>
                 ) : (
@@ -1055,7 +1055,7 @@ export function overviewBands(replay: CurrentSourceReplay, split: CurrentSourceS
       to: segment.last_ordinal,
       active: segment.fold_id === activeFold,
       foldId: segment.fold_id,
-      title: `${foldLabel(segment.fold_id)} · OOS${window} · ${segment.bars} bars`,
+      title: `${foldShort(segment.fold_id)} · OOS${window} · ${segment.bars} bars`,
     };
   });
   const train = activeFold === null ? null : plan.get(activeFold);
@@ -1069,7 +1069,7 @@ export function overviewBands(replay: CurrentSourceReplay, split: CurrentSourceS
         to,
         active: true,
         foldId: train.fold_id,
-        title: `${foldLabel(train.fold_id)} · IS (train) · ${formatUtc(train.train_start_utc_ms)} → ${formatUtc(train.train_end_utc_ms)} · bars not published`,
+        title: `${foldShort(train.fold_id)} · IS (train) · ${formatUtc(train.train_start_utc_ms)} → ${formatUtc(train.train_end_utc_ms)} · bars not published`,
       });
     }
   }
@@ -1185,7 +1185,7 @@ function IsWindowPanel({ replay, band, activeFold, onJumpOos }: { replay: Curren
         <span className="absolute right-0 top-1/2 -translate-y-1/2">{chartPrice(mid)}</span>
         <span className="absolute bottom-0 right-0">{chartPrice(low)}</span>
       </div>
-      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-[220px] min-w-0 flex-1 rounded-[6px] border" style={{ borderColor: "var(--line-soft)", background: "var(--paper-raised)" }} role="img" aria-label={`${foldLabel(fold.fold_id)} in-sample overview candles`} aria-describedby={summaryId}>
+      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-[220px] min-w-0 flex-1 rounded-[6px] border" style={{ borderColor: "var(--line-soft)", background: "var(--paper-raised)" }} role="img" aria-label={`${foldShort(fold.fold_id)} in-sample overview candles`} aria-describedby={summaryId}>
         {inSpan.map((bucket, position) => {
           const up = Number(bucket.close) >= Number(bucket.open);
           const ink = up ? "var(--good)" : "var(--bad)";
@@ -1207,7 +1207,7 @@ function IsWindowPanel({ replay, band, activeFold, onJumpOos }: { replay: Curren
         <span>{formatUtc(end)}</span>
       </div>
       <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-is-caption title={`Each candle's high and low are the true extremes of its bars; there is no per-bar replay in the IS window. Range ${chartPrice(low)} – ${chartPrice(high)}.`}>
-        overview · {foldLabel(fold.fold_id)} IS · {formatCount(inSpan.length)} candles ({formatCount(overview!.bucket_bars)} bars each)
+        overview · {foldShort(fold.fold_id)} IS · {formatCount(inSpan.length)} candles ({formatCount(overview!.bucket_bars)} bars each)
       </span>
     </div>
   );
@@ -1568,7 +1568,7 @@ function PlayheadState({ transport, rows }: {
       title="Model state replayed from the retained bars, not a broker account."
     >
       <span className={cell}><b>{iso(row.at_utc_ms)}</b></span>
-      <span className={cell} data-readout-fold><b>{bar?.fold_id != null ? foldLabel(bar.fold_id) : "in-sample (no fold)"}</b></span>
+      <span className={cell} data-readout-fold><b>{bar?.fold_id != null ? foldShort(bar.fold_id) : "in-sample (no fold)"}</b></span>
       <span className={cell} data-readout-position>position <b><Exact value={row.accepted_position} unit={null} /></b></span>
       <span className={cell}>equity <b><Exact value={row.equity} unit="currency" /></b></span>
       <span className={cell} title="Run fees so far: cumulative over the whole run up to this bar, not only this fold.">fees so far <b><Exact value={bar?.checkpoint.cumulative_fee} unit="currency" /></b></span>
@@ -1774,10 +1774,10 @@ function ChildAuditCard({
         <p className="text-[11px]" style={{ color: "var(--ink-soft)" }}>In-sample bars — child audit is per OOS fold.</p>
       ) : waiting && !loaded ? (
         <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-child-audit="waiting">
-          {foldLabel(fold)}'s child audit loads when playback rests.
+          {foldShort(fold)}'s child audit loads when playback rests.
         </p>
       ) : !slot || slot.state === "idle" || slot.state === "loading" || slot.fold !== fold ? (
-        <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-child-audit="loading">reading {foldLabel(fold)}'s child audit…</p>
+        <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-child-audit="loading">reading {foldShort(fold)}'s child audit…</p>
       ) : slot.state === "refused" ? (
         <p className="flex flex-wrap items-center gap-2 text-[11px]" style={{ color: "var(--ink-soft)" }} data-child-audit="refused">
           {slot.message}
@@ -1792,10 +1792,10 @@ function ChildAuditCard({
           {/* Collapsed by default: 64 rows of the same seed/isolation are an appendix, the count is the fact. */}
           <details data-child-audit-details>
           <summary className="mono cursor-pointer text-[10px]" style={{ color: "var(--ink-soft)" }} title="The shaded row is the strategy instance that generated this fold's out-of-sample bars. Legacy witness, not the full lifecycle.">
-            {foldLabel(slot.fold)} · {formatCount(slot.audit.records.length)} records{isolationUniform !== null ? ` · ${isolationUniform}` : ""}
+            {foldShort(slot.fold)} · {formatCount(slot.audit.records.length)} records{isolationUniform !== null ? ` · ${isolationUniform}` : ""}
           </summary>
           {/* Keyboard users can scroll this table sideways at narrow widths (axe scrollable-region-focusable). */}
-          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={`child audit records of ${foldLabel(slot.fold)}`}>
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={`child audit records of ${foldShort(slot.fold)}`}>
             <table className="w-full min-w-[520px] border-collapse">
               <thead>
                 <tr className="mono text-left text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
@@ -2257,7 +2257,7 @@ export function CandleReplayBody({
           */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-y py-1.5" style={{ borderColor: "var(--line-soft)" }}>
           <span className="mono flex-none text-[9.5px] uppercase tracking-[.1em]" style={{ color: "var(--ink-faint)" }} data-band-fold>
-            {segment ? foldLabel(segment.fold_id) : noFoldWindow ? "fold window" : "in-sample bars (no fold)"}
+            {segment ? foldShort(segment.fold_id) : noFoldWindow ? "fold window" : "in-sample bars (no fold)"}
           </span>
           {segment ? (
             <span className="mono flex-none text-[9.5px]" style={{ color: "var(--ink-faint)" }}>

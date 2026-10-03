@@ -168,6 +168,22 @@ export function foldLabel(foldId: string | number): string {
 }
 
 /**
+ * The humanised short fold label for visible text: `0`/`fold_01` -> `F1`. Put the
+ * served id in the `title` (`foldTitle`); data attributes keep the raw id.
+ */
+export function foldShort(foldId: string | number): string {
+  const text = String(foldId);
+  const m = /^fold_0*(\d+)$/.exec(text);
+  if (m) return `F${m[1]}`;
+  return /^\d+$/.test(text) ? `F${Number(text) + 1}` : text;
+}
+
+/** Tooltip for a short fold label: the full server id. */
+export function foldTitle(foldId: string | number): string {
+  return `fold_id ${String(foldId)}`;
+}
+
+/**
  * A served integer count, thousands-grouped (`10,000`). `null` for an absent
  * count so the caller renders its own typed absence, never `0` or `—`.
  */

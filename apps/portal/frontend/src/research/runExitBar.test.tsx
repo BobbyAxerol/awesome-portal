@@ -43,6 +43,13 @@ describe("RunExitBar (W1 §1.3)", () => {
     expect(exits(bar({ status: "QUEUED", hide: ["progress"] }).container)).toEqual(["library"]);
   });
 
+  it("D8 · unavailable echoes the run id in mono with one Library button", () => {
+    const { container } = bar({ status: null, read: "not-found" });
+    expect(container.querySelector(".mono")!.textContent).toBe(RUN);
+    expect(container.querySelectorAll("a")).toHaveLength(1);
+    expect(container.querySelector("a")!.className).toContain("btn-ghost");
+  });
+
   it("refused read: one banner, only Library, role status", () => {
     const { container } = bar({ status: null, read: "not-found" });
     expect(container.textContent).toContain("Run not available.");

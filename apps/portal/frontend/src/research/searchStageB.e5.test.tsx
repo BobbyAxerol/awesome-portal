@@ -147,7 +147,7 @@ describe("E5 · 6.9/6.10 B2 formula and sub-panels", () => {
     const root = await settled();
     const rows = [...root.querySelectorAll("[data-fold-decay-row]")];
     expect(rows.map((row) => row.getAttribute("data-fold-decay-row"))).toEqual(["0", "1"]);
-    expect(rows.map((row) => row.textContent)).toEqual(["fold_01+7.44", "fold_02+0.38"]);
+    expect(rows.map((row) => row.textContent)).toEqual(["F1+7.44", "F2+0.38"]);
     expect(rows.map((row) => row.querySelector("[data-decay-sign]")?.getAttribute("data-decay-sign"))).toEqual(["positive", "positive"]);
     expect((rows[0]!.querySelector("[data-decay-sign]") as HTMLElement).style.width).toBe("48%");
   });
