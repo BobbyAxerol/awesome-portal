@@ -928,7 +928,8 @@ describe("RF-06 FE-S05-04 — pending ≠ empty, 404 ≠ empty, first-read 409 �
     stub(() => [404, { error: { code: "RESEARCH_SPLIT_NOT_FOUND", message: "Research run was not found." } }]);
     const { container } = mountRoute("");
     await waitFor(() => expect(container.querySelector("[data-run-not-found]")).toBeTruthy());
-    expect(container.querySelector("[data-state]")?.getAttribute("data-state")).toBe("denied");
+    expect(container.querySelector("[data-run-not-found] [data-exit]")).toBeTruthy();
+    expect(container.querySelector("[data-research-notice]")).toBeNull();
     expect(container.querySelector("[data-exit='library']")?.getAttribute("href")).toBe("/research/quantbt/runs");
     expect(container.querySelector("[data-action='next-stage']")).toBeNull();
     expect(container.querySelector("[data-action='back-to-hub']")).toBeNull();

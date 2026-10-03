@@ -364,7 +364,7 @@ export function SurfaceScatter({
       </div>
       <span className="text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-surface-caption title={`${surface.schema_version} · ${surface.objective_ramp.rule} · positions are the server's placement inside each declared range; colour = how many of the ${surface.complete_trial_count} complete IS objectives' quintile thresholds a trial lies above`}>
         {sampled}
-        {unplaced > 0 ? ` · ${unplaced} not placeable on ${axes.x} × ${axes.y}` : ""} · colour = IS quintile ({two(surface.objective_ramp.minimum) ?? "—"} … {two(surface.objective_ramp.maximum) ?? "—"})
+        {unplaced > 0 ? ` · ${unplaced} not placeable on ${axes.x} × ${axes.y}` : ""} · colour = IS quintile ({two(surface.objective_ramp.minimum) ?? "not published"} … {two(surface.objective_ramp.maximum) ?? "not published"})
       </span>
     </SurfacePanel>
   );
@@ -525,7 +525,7 @@ type Distribution = Surface["distributions"]["parameters"][number];
 
 /** The server's own bin words: the bin's title, the hook's readout and the live text. */
 function binWords(distribution: Distribution, bin: Distribution["bins"][number]): string {
-  return `${distribution.name} · ${bin.lower} … ${bin.upper} · ${bin.count} trial${bin.count === 1 ? "" : "s"} · mean IS ${bin.mean_objective === null ? "—" : `${two(bin.mean_objective)} (${bin.mean_objective})`}`;
+  return `${distribution.name} · ${bin.lower} … ${bin.upper} · ${bin.count} trial${bin.count === 1 ? "" : "s"} · mean IS ${bin.mean_objective === null ? "not published" : `${two(bin.mean_objective)} (${bin.mean_objective})`}`;
 }
 
 /** One parameter's twelve regions: one tab stop, arrows walk the bins, the bins are decorative. */
@@ -539,7 +539,7 @@ function DistributionBars({ distribution, onText }: { distribution: Distribution
     noun: "region",
     count: n,
     describe: (i) => binWords(distribution, distribution.bins[i]!),
-    summary: `${distribution.name}: ${distribution.regions_sampled} of ${n} regions sampled, ${first?.lower ?? "—"} to ${last?.upper ?? "—"}; θ* ${distribution.theta_value}.`,
+    summary: `${distribution.name}: ${distribution.regions_sampled} of ${n} regions sampled, ${first?.lower ?? "not published"} to ${last?.upper ?? "not published"}; θ* ${distribution.theta_value}.`,
     xs: distribution.bins.map((_, i) => ((i + 0.5) / n) * 100),
     onIndex: (i) => onText(i === null ? null : binWords(distribution, distribution.bins[i]!)),
   });
@@ -653,7 +653,7 @@ function SurfaceImportance({ surface }: { surface: Surface }) {
                 {row.name}
               </span>
               <span className="w-[48px] flex-none text-right" style={{ color: strong ? "var(--accent)" : "var(--ink-faint)" }} title={row.reason_code ?? undefined}>
-                {row.rho === null ? "n/a" : `${rho! >= 0 ? "+" : "−"}${Math.abs(rho!).toFixed(2)}`}
+                {row.rho === null ? "not published" : `${rho! >= 0 ? "+" : "−"}${Math.abs(rho!).toFixed(2)}`}
               </span>
               <span className="relative h-[8px] flex-1 border" style={{ borderColor: "var(--line-soft)", background: "var(--paper-sunken)" }}>
                 {rho !== null ? (

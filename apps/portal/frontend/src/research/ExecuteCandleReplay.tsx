@@ -285,7 +285,7 @@ function ReadoutCell({ label, value }: { label: string; value: string | null }) 
 /* ------------------------------------------------------------------ parts */
 
 /** Rows above which a data table leaves the screen-reader-only DOM for a collapsed "Data" disclosure (SPEC_W5 2.1.5). */
-const SR_TABLE_MAX_ROWS = 120;
+export const SR_TABLE_MAX_ROWS = 120;
 
 function Exact({ value, unit }: { value: string | null | undefined; unit: "currency" | "fraction" | "count" | null }) {
   if (value === null || value === undefined) return <em>not published</em>;

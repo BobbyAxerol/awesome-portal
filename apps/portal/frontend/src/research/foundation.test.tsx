@@ -585,11 +585,8 @@ describe("P09-T04 — the Atlas renders from the manifest response", () => {
     stub(() => [200, atlas(), 'W/"atlas-1"']);
     renderAt("/research/quantbt/atlas", <EngineAtlasRoute />);
 
-    await waitFor(() => expect(document.querySelector("[data-screen='engine-atlas']")).toBeTruthy());
+    await waitFor(() => expect(document.querySelector("[data-selected-release]")?.getAttribute("data-selected-kind")).toBe("CURRENT"), { timeout: 5000 });
     expect(screen.getAllByRole("tab")).toHaveLength(3);
-    expect(document.querySelector("[data-selected-release]")?.getAttribute("data-selected-kind")).toBe(
-      "CURRENT",
-    );
   });
 
   it("CG-FG-S12-01: a historical selection shows the identity and facts the server served", async () => {

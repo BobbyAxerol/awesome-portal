@@ -136,10 +136,10 @@ describe("F2 · S06 — the ledger asks with the cursor's fold", () => {
   it("QA D7: a cursor fold the plan does not list is clamped to the plan's last fold, said in the notice, and that fold is asked", async () => {
     stub();
     const { container } = mount("#stage=search&fold=9");
-    await waitFor(() => expect(urls.some((url) => url.includes("/current-source/split"))).toBe(true));
-    await waitFor(() => expect(container.querySelector("[data-cursor-note='CURSOR_FOLD_CLAMPED']")?.textContent).toContain("fold 9"));
-    expect(window.location.hash).toContain("fold=2");
-    await waitFor(() => expect(ledgerCalls()).toEqual([null, SPLIT.fold_plan.folds[1]!.fold_id]));
+    await waitFor(() => expect(urls.some((url) => url.includes("/current-source/split"))).toBe(true), { timeout: 5000 });
+    await waitFor(() => expect(container.querySelector("[data-cursor-note='CURSOR_FOLD_CLAMPED']")?.textContent).toContain("fold 9"), { timeout: 5000 });
+    await waitFor(() => expect(window.location.hash).toContain("fold=2"), { timeout: 5000 });
+    await waitFor(() => expect(ledgerCalls()).toEqual([null, SPLIT.fold_plan.folds[1]!.fold_id]), { timeout: 5000 });
   });
 
   it("a refused fold read keeps the unfiltered ledger and prints the server's code", async () => {

@@ -24,6 +24,7 @@
  * run published that fact.
  */
 
+import { Absence } from "./Absence";
 import {
   createContext,
   useContext,
@@ -415,8 +416,6 @@ export function RunNotFound({ runId }: { runId: string }) {
   useEffect(() => markRunUnknown(runId), [runId]);
   return (
     <section data-run-not-found={runId} data-run-phase="unavailable">
-      {/* One notice per region: while this banner stands, a panel's own "denied" notice for the same cause is not printed again. */}
-      <style>{`[data-screen]:has([data-run-not-found]) [data-research-notice][data-research-state="denied"]{display:none}`}</style>
       <RunExitBar runId={runId} state={runTerminalState({ status: null, read: "not-found" })} />
     </section>
   );
@@ -1800,7 +1799,9 @@ export function SplitScreen({
       </header>
       )}
 
-      {notFound ? <RunNotFound runId={runId} /> : <StageRunBar runId={runId} active={(folds.state === "refused" && folds.laneState != null) || (screenState.state === "partial" && folds.state !== "loading" && folds.state !== "idle")} />}
+      {notFound ? <RunNotFound runId={runId} /> : (
+      <>
+      <StageRunBar runId={runId} active={(folds.state === "refused" && folds.laneState != null) || (screenState.state === "partial" && folds.state !== "loading" && folds.state !== "idle")} />
 
       <ResearchPanel
         title="split"
@@ -2300,6 +2301,8 @@ export function SplitScreen({
           </NotApplicableWords.Provider>
         ) : null}
       </ResearchPanel>
+      </>
+      )}
     </div>
   );
 }
@@ -2559,7 +2562,7 @@ function ThetaFlow({
             ) : lane.identityLoading ? (
               <Reading what="the schedule" />
             ) : (
-              <span data-theta-scope={lane.schedule ?? ""}>{humanise(lane.schedule) || "—"}</span>
+              <span data-theta-scope={lane.schedule ?? ""}>{humanise(lane.schedule) || <Absence reason={null} />}</span>
             )
           ) : (
             <Absent fact={detail.protocol.theta_per_fold} what="θ* per fold" showReason indexKey="theta_per_fold" />

@@ -186,7 +186,7 @@ export function FinalAuditBlock({ audit }: { audit: FinalAudit }) {
               const same = !ownTargets && audit.folds.every((fold) => fold.state === "MATCH" && fold.candidate_id === first.candidate_id);
               if (same && first.candidate_id) return `${audit.folds.length} folds on candidate ${first.candidate_id.slice(0, 8)}`;
               return audit.folds
-                .map((fold) => `${foldLabel(fold.fold_id)}: ${fold.candidate_id ? fold.candidate_id.slice(0, 8) : "—"} ${fold.state === "MATCH" ? (ownTargets ? "= own selection" : "= θ*") : fold.state.toLowerCase().replace(/_/g, " ")}`)
+                .map((fold) => `${foldLabel(fold.fold_id)}: ${fold.candidate_id ? fold.candidate_id.slice(0, 8) : "not published"} ${fold.state === "MATCH" ? (ownTargets ? "= own selection" : "= θ*") : fold.state.toLowerCase().replace(/_/g, " ")}`)
                 .join(" · ");
             })()}
           </span>

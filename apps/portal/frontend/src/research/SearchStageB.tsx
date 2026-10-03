@@ -23,6 +23,7 @@ import { useEntryRef } from "./chartLife";
 import { TAP_SNAP_PX, useChartContract } from "./chartContract";
 import { Formula } from "./Formula";
 import { foldShort, foldTitle, formatUtc, groupDecimalString } from "./researchFormat";
+import { Absence } from "./Absence";
 import { reasonCodeSentence } from "./researchRefusal";
 import type { CurrentSourceSearch } from "./searchClient";
 import { humanise } from "./humanise";
@@ -511,7 +512,7 @@ function RoleCard({ search, role, kind }: { search: CurrentSourceSearch; role: R
     >
       <span className="flex items-baseline justify-between gap-2">
         <span className="mono text-[11px]" style={{ color: tone }}>
-          {selected ? "selected" : "best trial"} {role.trial_id ?? "—"}
+          {selected ? "selected" : "best trial"} {role.trial_id ?? <Absence reason={null} />}
         </span>
         {selected ? (
           <span

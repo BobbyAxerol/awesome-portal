@@ -136,7 +136,7 @@ export function ImportInbox() {
         <>
           <dl className="program-summary" data-testid="import-summary">
             <div>
-              <dt>Trong inbox</dt>
+              <dt>In inbox</dt>
               <dd className="mono">{counts.total}</dd>
             </div>
             {(["QUARANTINED", "DIGEST_MISMATCH"] as const).map((state) => (

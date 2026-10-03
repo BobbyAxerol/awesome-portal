@@ -95,7 +95,7 @@ import {
 } from "./SearchSurface";
 import type { ResearchState } from "./state";
 import { trialLabel, trialTitle } from "./trialLabel";
-import { AbsenceSummary } from "./Absence";
+import { Absence, AbsenceSummary } from "./Absence";
 import { humanise, humaniseTokens } from "./humanise";
 
 /* --------------------------------------------------------------- verbatim */
@@ -1102,7 +1102,7 @@ function CandidateLedger({ search }: { search: CurrentSourceSearch }) {
             title={sameId ? `from trial ${candidate.facts.source_trial_id ?? "not published"}` : undefined}
           >
             <span className="w-[86px] flex-none">{candidate.candidate_id}</span>
-            {sameId ? null : <span className="w-[76px] flex-none">{candidate.facts.source_trial_id ?? "—"}</span>}
+            {sameId ? null : <span className="w-[76px] flex-none">{candidate.facts.source_trial_id ?? <Absence reason={null} />}</span>}
             <span className="w-[76px] flex-none text-right"><MetricCell metric={candidate.facts.metrics.mean_is_sharpe} compact /></span>
             <span className="w-[86px] flex-none text-right"><MetricCell metric={candidate.facts.metrics.mean_oos_sharpe} compact /></span>
             <span className="w-[76px] flex-none text-right"><MetricCell metric={candidate.facts.metrics.mean_decay} compact /></span>
@@ -1233,7 +1233,7 @@ function RetainedBestVsSelected({ search, freezeHref }: { search: CurrentSourceS
     <div className="flex flex-1 flex-col gap-1 rounded-[6px] border px-3 py-2.5" style={{ borderColor: key === "selected" ? "var(--accent-2)" : "var(--line)", background: key === "selected" ? "var(--paper)" : "transparent" }} data-role-card={key}>
       <span className="flex items-baseline justify-between">
         <span className="mono text-[11px]" style={{ color: tone }}>
-          {title} {role.trial_id ?? "—"}
+          {title} {role.trial_id ?? <Absence reason={null} />}
         </span>
         <span className="mono text-[8.5px] font-bold tracking-[.08em]" style={{ color: tone }}>
           {tag}
@@ -1637,7 +1637,7 @@ function RetainedSampledValues({ search }: { search: CurrentSourceSearch }) {
           <div key={name} className="mono flex items-baseline border-b py-[2px] text-[10.5px]" style={{ borderColor: "var(--paper-sunken)" }} data-sampled={name}>
             <span className="w-[86px] flex-none">{name}</span>
             <span className="flex-1" style={{ color: "var(--ink-soft)" }}>
-              {trials.map((trial) => trial.parameters[name] ?? "—").join(" · ")}
+              {trials.map((trial) => trial.parameters[name] ?? "not published").join(" · ")}
             </span>
             <span className="w-[56px] flex-none text-right" style={{ color: "var(--good)" }}>
               {theta[name] ?? ""}
@@ -2127,7 +2127,9 @@ export function SearchScreen({
       </header>
       )}
 
-      {notFound ? <RunNotFound runId={runId} /> : <StageRunBar runId={runId} active={(ledger.state === "refused" && ledger.laneState != null) || (shownState.state === "partial" && ledger.state !== "loading" && ledger.state !== "idle")} />}
+      {notFound ? <RunNotFound runId={runId} /> : (
+      <>
+      <StageRunBar runId={runId} active={(ledger.state === "refused" && ledger.laneState != null) || (shownState.state === "partial" && ledger.state !== "loading" && ledger.state !== "idle")} />
 
       <ResearchPanel
         title="search & selection"
@@ -2687,6 +2689,8 @@ export function SearchScreen({
           </div>
         ) : null}
       </ResearchPanel>
+      </>
+      )}
 
     </div>
   );

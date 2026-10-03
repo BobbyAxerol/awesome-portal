@@ -373,7 +373,7 @@ export function QuantBTModule() {
       >
         {onRunRoute || onTaskRoute || onReferenceRoute ? null : (
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Chip>{strategies.data?.[0]?.strategy_id ?? "—"}</Chip>
+            <Chip>{strategies.data?.[0]?.strategy_id ?? "none listed"}</Chip>
             {activeRunId ? <Chip>current {fmtShortHash(activeRunId)}</Chip> : null}
             <RunStatusBadge status={activeRun.data?.status ?? null} />
           </div>

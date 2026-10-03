@@ -1214,7 +1214,7 @@ describe("RF-06 FE-S04-12 — the chart library is not in the route chunk", () =
     const placeholder = container.querySelector("[data-chart-loading]") as HTMLElement;
     expect(placeholder.style.height).toBe("380px");
     await waitFor(() => expect(container.querySelector("[data-chart='equity']")).toBeTruthy(), { timeout: 15_000 });
-    expect(container.querySelector("[data-chart-table='equity']")?.textContent).toContain("128400.00");
+    expect(container.querySelector("[data-chart-table='equity']")?.textContent).toContain("128,400.00");
   }, 20_000);
 });
 

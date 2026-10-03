@@ -43,6 +43,8 @@ import type {
   RollingReturnPoint,
   RollingSharpePoint,
 } from "./evidenceClient";
+import { SR_TABLE_MAX_ROWS } from "./ExecuteCandleReplay";
+import { formatValue } from "./formatValue";
 import { formatFractionAxis, formatMetric } from "./researchFormat";
 import { isDailyDistribution, safeCount } from "./allTimeSeries";
 import { bucketPosition, deepestSpan, distributionStatistics, type DistributionMarker, type DrawdownSpan, type EnrichedAnalysis, type WindowBand } from "./enrichedAnalysis";
@@ -537,6 +539,13 @@ const currency = (value: string) => withMinus(formatMetric(value, "currency"));
  * wants the server's own string. A table ignores `width:1px`, so the clipping
  * box is the wrapper (RF-02 real-API lane: long decimals pushed the page).
  */
+type ExactCell = string | { shown: string; exact: string };
+
+/** A time cell: UTC minute on screen, the served instant (ISO ms) in the tooltip. */
+const timeCell = (ms: number): ExactCell => ({ shown: formatValue.utc(ms), exact: new Date(ms).toISOString() });
+/** A number cell: grouped and rounded on screen, the served exact string in the tooltip. */
+const numberCell = (value: string, unit?: string): ExactCell => ({ shown: formatValue.number(value, unit ? { unit } : undefined), exact: value });
+
 function ExactTable({
   id,
   caption,
@@ -546,33 +555,42 @@ function ExactTable({
   id: string;
   caption: string;
   head: string[];
-  rows: { key: string; cells: string[] }[];
+  rows: { key: string; cells: ExactCell[] }[];
 }) {
-  return (
-    <div className="sr-only">
-      <table data-chart-table={id}>
-        <caption>{caption}</caption>
-        <thead>
-          <tr>
-            {head.map((cell) => (
-              <th key={cell} scope="col">
-                {cell}
-              </th>
+  const show = (cell: ExactCell) => (typeof cell === "string" ? cell : cell.shown);
+  const exact = (cell: ExactCell) => (typeof cell === "string" ? undefined : cell.exact);
+  const table = (
+    <table data-chart-table={id}>
+      <caption>{caption}</caption>
+      <thead>
+        <tr>
+          {head.map((cell) => (
+            <th key={cell} scope="col">
+              {cell}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={row.key}>
+            <th scope="row" title={exact(row.cells[0]!)} data-exact={exact(row.cells[0]!)}>{show(row.cells[0]!)}</th>
+            {row.cells.slice(1).map((cell, index) => (
+              <td key={index} title={exact(cell)} data-exact={exact(cell)}>{show(cell)}</td>
             ))}
           </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.key}>
-              <th scope="row">{row.cells[0]}</th>
-              {row.cells.slice(1).map((cell, index) => (
-                <td key={index}>{cell}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+        ))}
+      </tbody>
+    </table>
+  );
+  /* More than SR_TABLE_MAX_ROWS rows: the chart summary + keyboard readout stand in, and the table sits behind "Data" (same as S08/S09). */
+  return rows.length > SR_TABLE_MAX_ROWS ? (
+    <details className="rr-data" data-chart-data={id}>
+      <summary>Data</summary>
+      {table}
+    </details>
+  ) : (
+    <div className="sr-only">{table}</div>
   );
 }
 
@@ -1157,13 +1175,13 @@ export function EquityChart({
         head={["time (UTC)", "equity", "drawdown fraction"]}
         rows={points.map((point) => ({
           key: String(point.at_utc_ms),
-          cells: [new Date(point.at_utc_ms).toISOString(), point.equity, point.drawdown_fraction],
+          cells: [timeCell(point.at_utc_ms), numberCell(point.equity), numberCell(point.drawdown_fraction, "fraction")],
         }))}
       />
       {inSample.length > 0 ? <ExactTable
         id="equity-is" caption="Declared IS equity, exact source values"
         head={["time (UTC)", "equity"]}
-        rows={inSample.map((point) => ({ key: String(point.at_utc_ms), cells: [new Date(point.at_utc_ms).toISOString(), point.equity] }))}
+        rows={inSample.map((point) => ({ key: String(point.at_utc_ms), cells: [timeCell(point.at_utc_ms), numberCell(point.equity)] }))}
       /> : null}
     </ChartShell>
   );
@@ -1226,7 +1244,7 @@ export function RollingChart({ series, group }: { series: EvidenceSeries; group?
         head={["time (UTC)", "return fraction"]}
         rows={points.map((point) => ({
           key: String(point.at_utc_ms),
-          cells: [new Date(point.at_utc_ms).toISOString(), point.return_fraction],
+          cells: [timeCell(point.at_utc_ms), numberCell(point.return_fraction, "fraction")],
         }))}
       />
     </ChartShell>
@@ -1248,7 +1266,7 @@ export function RollingSharpeChart({ series, points: supplied, group }: { series
         head={["time (UTC)", "sharpe"]}
         rows={points.map((point) => ({
           key: String(point.at_utc_ms),
-          cells: [new Date(point.at_utc_ms).toISOString(), point.sharpe],
+          cells: [timeCell(point.at_utc_ms), numberCell(point.sharpe, "ratio")],
         }))}
       />
     </ChartShell>
@@ -1282,8 +1300,8 @@ export function StrategyBenchmarkChart({
         caption="Strategy and benchmark rebased to 100, exact values"
         head={["series", "time (UTC)", "value"]}
         rows={[
-          ...strategy.map((point) => ({ key: `s${point.at_utc_ms}`, cells: [SERIES_NAME_V2.strategy, new Date(point.at_utc_ms).toISOString(), point.value] })),
-          ...benchmark.map((point) => ({ key: `b${point.at_utc_ms}`, cells: [SERIES_NAME_V2.benchmark, new Date(point.at_utc_ms).toISOString(), point.value] })),
+          ...strategy.map((point) => ({ key: `s${point.at_utc_ms}`, cells: [SERIES_NAME_V2.strategy, timeCell(point.at_utc_ms), numberCell(point.value)] })),
+          ...benchmark.map((point) => ({ key: `b${point.at_utc_ms}`, cells: [SERIES_NAME_V2.benchmark, timeCell(point.at_utc_ms), numberCell(point.value)] })),
         ]}
       />
     </ChartShell>

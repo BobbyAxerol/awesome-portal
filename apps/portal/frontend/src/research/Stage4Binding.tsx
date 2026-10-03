@@ -135,7 +135,7 @@ export function ServedStage4Binding({ binding, authority }: { binding: Stage4Bin
                         data-binding-fold={fold.fold_id}
                         data-binding-fold-state={fold.state}
                       >
-                        {foldShort(fold.fold_id)} {fold.value ? fold.value.slice(0, 8) : "—"} {foldMark.glyph}
+                        {foldShort(fold.fold_id)} {fold.value ? fold.value.slice(0, 8) : "not published"} {foldMark.glyph}
                       </span>
                     );
                   })}
