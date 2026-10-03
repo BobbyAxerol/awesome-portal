@@ -7457,3 +7457,26 @@ must not change default strict integrity or make full-store integrity PASS.
 Retake only affected mixed-load/DR gates in owned :8096; shared :8095,
 frontend, production and remotes stay unchanged. Other P23/P24 gates remain
 separate. No source seal/DB history/artifact deletion or remote push.
+
+**Final scoped delivery — MIXED_LOAD_PASS / HISTORICAL_EXCEPTION_ACCOUNTED,
+not full P23/P24 GO.** Code candidate `b90a36a9` retains Claude's `23ef532e`
+and `a163af4b`. Real clean retake: Library **538 → 499 ms**, Progress
+**568 → 403 ms**, targets unchanged 500 ms; all 120 GET 200, one real WFO
+completed, one heavy/four queued intents, 738,488,320-byte measured peak.
+Library is only 1 ms below target, not an extended capacity/soak claim.
+
+Coherent restore: 151 tables, 886 part records, 3,521 files, **83 verified /
+86 sealed artifacts**. Three exact old test manifest losses are transparently
+accounted for; no newly fabricated bytes, reseal, deleted history or changed
+digest. One retained DB seal + one Report per missing run remains disclosed.
+Restore parity and exact exception accounting PASS; **full-store byte
+integrity stays false and strict CLI exit 1**. This does not silently exempt
+missing bytes from the full integrity gate.
+
+Focused tests/build and normal code hook passed; C4 finished with 21 QA
+non-owner accounts disabled, 0 active QA sessions/nonterminal jobs and 0 owned
+containers/networks. All original/restore data and backups/images retained;
+~30% disk free, no swap, NO_ACTION_NEEDED for cache deletion. No frontend/API
+change, :8095/production/remote action or unrelated retest. Full historical
+byte recovery, engine-two/recompute/browser and P24 remain separate.
+[Final receipt and hashes](./research_loop/evidence/P23/MIXED_LOAD_AND_HISTORICAL_MANIFEST_EXCEPTION_2026-10-03.md#5-clean-candidate-and-exact-immutable-image-set).

@@ -1419,3 +1419,25 @@ and one frozen Report. Exact historical exception accounting must preserve
 and disclose both copies, reject changed dependency counts, and never equate
 the DB copies with the missing original artifact bytes. Full integrity stays
 false while those bytes remain missing; no false "unreferenced loss" claim.
+
+**Delivery addendum — MIXED_LOAD_PASS / HISTORICAL_EXCEPTION_ACCOUNTED.**
+Code `b90a36a9` (+568/−20, 15 owned files) preserves both newly landed Claude
+commits. Real clean :8096 retake: Library **499 ms**, Progress **403 ms**,
+120/120 GET 200, one completed 92-day WFO, one heavy/four queued intents,
+738,488,320-byte measured peak, no implicit viewer jobs. Library has only
+1 ms headroom; no weakened target or generous capacity claim.
+
+Same-candidate restore proves 151-table/auth/schema/reference parity and
+83/86 manifest verifications, 886 part records, 3,521 files. The exact three
+old missing manifests have been accounted for, with one DB seal/Report each;
+none was reconstructed, resealed, deleted or assigned a new digest. Coherent
+restore/exception accounting PASS; **strict full integrity remains false /
+exit 1**. Full byte recovery is not achieved or silently waived.
+
+Focused tests/build + ordinary hook passed. C4: 21 non-owner test accounts
+disabled, 0 active QA sessions/jobs/owned containers/networks; original and
+restore volumes/backups/images retained, cache cleanup NO_ACTION_NEEDED.
+[Exact candidate, images, metrics, failures, private hashes and cleanup](./evidence/P23/MIXED_LOAD_AND_HISTORICAL_MANIFEST_EXCEPTION_2026-10-03.md).
+No frontend binding/schema change. Shared :8095, production and remotes are
+unchanged. Remaining engine-two/recompute/browser/P24 gates are not closed
+by this slice; do not repeat already accepted far-seek/quota/outage drills.
