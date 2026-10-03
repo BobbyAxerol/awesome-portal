@@ -142,8 +142,8 @@ describe("B6 S04 - the P04 hub lane draws from the Hub's top-level block", () =>
     expect(container.querySelector("[data-underwater-strip]")).toBeTruthy();
 
     const episodes = container.querySelector("[data-drawdown-episodes='ready']") as HTMLElement;
-    expect(episodes.querySelectorAll("tbody tr")).toHaveLength(block.drawdown_episodes.values.length);
-    expect(episodes.querySelector("[data-episodes-count]")?.textContent).toBe("top 10 / 11 · all recovered");
+    expect(episodes.querySelectorAll("tbody tr")).toHaveLength(Math.min(3, block.drawdown_episodes.values.length));
+    expect(episodes.querySelector("[data-episodes-count]")?.textContent).toBe("top 3 / 11 · all recovered");
 
     const behaviour = container.querySelector("[data-behavior-scope='all-time']") as HTMLElement;
     expect((behaviour.querySelector("[data-behavior-tile='sortino'] [data-exact]") as HTMLElement).getAttribute("data-exact")).toBe(block.facts.metrics.sortino.value);
@@ -279,8 +279,10 @@ describe("B6 S09 - the supplemental all-time section", () => {
 
     const section = panel();
     expect(section.getAttribute("data-all-time")).toBe("ready");
-    expect(section.querySelector("h2")?.textContent).toContain("supplemental");
-    expect(section.querySelector("[data-enriched-chip]")?.textContent).toBe("enrich_analysis · all time");
+    expect(section.querySelector("h2")?.textContent).toContain("All-time");
+    /* W4: the raw function name is no visible chip text; it leads the chip's tooltip. */
+    expect(section.querySelector("[data-enriched-chip]")?.textContent).toBe("ⓘ");
+    expect(section.querySelector("[data-enriched-chip]")?.getAttribute("title")).toContain("enrich_analysis · all time");
     expect(section.querySelector("[data-enriched-chip]")?.getAttribute("title")).toContain("not part of the frozen core");
     expect(section.querySelector("[data-enriched-chip]")?.getAttribute("title")).toContain(block.scope.locator);
     expect(section.querySelector("[data-coverage-chip]")).toBeNull();
@@ -337,7 +339,7 @@ describe("B6 S09 - the supplemental all-time section", () => {
     /* Sharpe is NOT_PUBLISHED in the block: its cell is a typed absence with the served reason, never 0 */
     const sharpe = panel().querySelector("[data-all-time-fact='Sharpe']") as HTMLElement;
     expect(sharpe.getAttribute("data-fact-state")).toBe("NOT_PUBLISHED");
-    expect(sharpe.querySelector("[data-reason-code]")?.textContent).toBe(block.facts.metrics.sharpe.reason_code);
+    expect(sharpe.querySelector("[data-reason-code]")?.getAttribute("data-reason-code")).toBe(block.facts.metrics.sharpe.reason_code);
     expect(sharpe.textContent).not.toMatch(/\b0(\.0+)?\b/);
     expect(panel().querySelectorAll("[data-month]")).toHaveLength(1);
   });
@@ -401,7 +403,7 @@ describe("B6 S09 - the supplemental all-time section", () => {
     await screen.findByText("Claim passport");
     const line = panel().querySelector("[data-enriched-refused]") as HTMLElement;
     expect(line.getAttribute("data-enriched-refused")).toBe(marker);
-    expect(line.textContent).toContain("refused");
+    expect(line.textContent).toContain("not drawn");
     expect(panel().querySelector("svg")).toBeNull();
     expect(panel().querySelector("[data-all-time-facts]")).toBeNull();
     expect(panel().querySelector("[data-month]")).toBeNull();
@@ -415,8 +417,8 @@ describe("B6 S09 - the supplemental all-time section", () => {
     serve({ ...body, enriched_analysis: block } as Body);
     renderReport(body.run_id);
     await screen.findByText("Claim passport");
-    expect(panel().querySelector("[data-absent='drawdown episodes'] [data-reason-code]")?.textContent).toBe("AN29_NO_EPISODES_PUBLISHED");
-    expect(panel().querySelector("[data-absent='monthly returns'] [data-reason-code]")?.textContent).toBe("AN29_NO_MONTH");
+    expect(panel().querySelector("[data-absent='drawdown episodes'][data-reason-code]")?.getAttribute("data-reason-code")).toBe("AN29_NO_EPISODES_PUBLISHED");
+    expect(panel().querySelector("[data-absent='monthly returns'][data-reason-code]")?.getAttribute("data-reason-code")).toBe("AN29_NO_MONTH");
     expect(panel().querySelector("[data-month]")).toBeNull();
     expect(panel().querySelector("table")).toBeNull();
   });

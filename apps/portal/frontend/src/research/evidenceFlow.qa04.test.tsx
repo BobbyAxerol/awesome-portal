@@ -79,7 +79,8 @@ describe("S04 · words on the hub", () => {
   it("the Summary tab names its window; the counts ride in the tooltip", () => {
     const { container } = view({ state: "idle" });
     const tab = container.querySelector("[data-tab='summary']") as HTMLElement;
-    expect(tab.querySelector("[data-tab-sub]")?.textContent).toBe("OOS");
+    /* W4B: the tab prints no sub-label of its own; the window is the cursor chip's. */
+    expect(tab.querySelector("[data-tab-sub]")).toBeNull();
     expect(tab.getAttribute("title")).toMatch(/\d+ of \d+ metrics · \d+ series/);
   });
 

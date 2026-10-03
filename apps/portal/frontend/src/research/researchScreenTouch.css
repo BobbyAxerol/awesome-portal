@@ -54,6 +54,8 @@
       a[data-action="back-to-execute"],
       a[data-action="release-candidate"],
       a[data-action="attempt-lineage"],
+      a[data-action="page-prev"],
+      a[data-action="page-next"],
       .ln-btnlink:not(.soft)
     ) {
     display: inline-flex;

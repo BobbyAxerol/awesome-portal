@@ -178,7 +178,7 @@ describe("QA S10 text", () => {
     await open();
     /* W1 B4: the 7-attempt fixture folds nothing, so no probe chip; the toggle is the one place older probes live. */
     expect(q("[data-probe-chip]")).toBeNull();
-    expect(q('[data-action="toggle-probes"]')?.textContent).toBe("older probes (0)");
+    expect(q('[data-action="toggle-probes"]')?.textContent).toBe("Show probes (0)");
   });
 
   it("an empty filter says so in four words and offers one button that clears it", async () => {

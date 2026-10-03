@@ -208,7 +208,7 @@ describe("X2 · B3 — A3/A4/A5/A6 and B4 from the server", () => {
   it("B4 prints the top-decile share at θ* per parameter, one dot per parameter for a global study", async () => {
     const { container } = await settled();
     expect(container.querySelectorAll("[data-journey]")).toHaveLength(8);
-    expect(container.querySelector("[data-journey='rsi_l'] [data-frequency]")?.textContent).toBe("100% top-decile");
+    expect(container.querySelector("[data-journey='rsi_l'] [data-frequency]")?.textContent).toBe("100%");
     expect(container.querySelector("[data-journey-caption]")?.textContent).toContain("global θ* · top-decile share (1 of 3)");
     expect(container.querySelector("[data-journey-caption]")?.getAttribute("title")).toContain("no per-fold journey");
     expect(container.querySelector("[data-journey-caption]")?.textContent).toContain("top-decile share");
@@ -236,6 +236,6 @@ describe("X2 · F4 — T16 copy evidence link", () => {
     expect(hash.get("trial")).toBe("0");
     expect(hash.get("pick")).toBe("1");
     expect(hash.get("params")).toMatch(/^[0-9a-f]{64}$/);
-    expect(button.textContent).toBe("✓ evidence link copied");
+    expect(button.textContent).toBe("✓ link copied");
   });
 });

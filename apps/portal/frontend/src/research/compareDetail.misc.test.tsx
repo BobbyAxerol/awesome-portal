@@ -69,7 +69,7 @@ describe("S13 single OOS window", () => {
     mount(fixture());
     await settled();
     expect(chart().querySelector('[data-fold-bar^="run-w6a-p04:"]')).toBeNull();
-    expect(chart().querySelector("[data-fold-absent-runs]")?.textContent).toContain("P20_P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_OOS_SHARPE");
+    expect(chart().querySelector("[data-fold-absent-runs]")?.outerHTML).toContain("P20_P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_OOS_SHARPE");
   });
 
   it("when only P04 attempts are compared the figure is that one bar, captioned as such", async () => {
@@ -80,7 +80,7 @@ describe("S13 single OOS window", () => {
     mount(body);
     await settled();
     expect(chart().querySelectorAll("[data-fold-bar]")).toHaveLength(1);
-    expect(chart().querySelector("[data-fold-meta]")?.textContent).toBe(`1 attempt · ${SINGLE_OOS_WINDOW}`);
+    expect(chart().querySelector("[data-fold-meta]")?.textContent).toBe(SINGLE_OOS_WINDOW);
     expect(chart().querySelector("[data-fold-chart-absent]")).toBeNull();
   });
 });

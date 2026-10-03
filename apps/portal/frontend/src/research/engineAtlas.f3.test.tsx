@@ -42,7 +42,7 @@ describe("F3 12-15 - a failed read keeps its request id and offers a re-read", (
     });
     fireEvent.click(screen.getByRole("button", { name: "Read again" }));
     expect(onRetry).toHaveBeenCalledTimes(1);
-    expect(document.querySelector("[data-request-id]")?.textContent).toBe("request req_503");
+    expect(document.querySelector("[data-refusal-request]")?.getAttribute("data-refusal-request")).toBe("req_503");
   });
 
   it("403: the request id is kept and there is no re-read", () => {
@@ -53,7 +53,7 @@ describe("F3 12-15 - a failed read keeps its request id and offers a re-read", (
       onRetry: vi.fn(),
     });
     expect(screen.queryByRole("button", { name: "Read again" })).toBeNull();
-    expect(document.querySelector("[data-request-id]")?.textContent).toBe("request req_403");
+    expect(document.querySelector("[data-refusal-request]")?.getAttribute("data-refusal-request")).toBe("req_403");
   });
 
   it("no request id is printed when the read succeeded", () => {
@@ -82,7 +82,7 @@ describe("F3 12-15 - a failed read keeps its request id and offers a re-read", (
         <EngineAtlasRoute />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(document.querySelector("[data-request-id]")?.textContent).toBe("request req_route"));
+    await waitFor(() => expect(document.querySelector("[data-refusal-request]")?.getAttribute("data-refusal-request")).toBe("req_route"));
     const before = calls;
     fireEvent.click(screen.getByRole("button", { name: "Read again" }));
     await waitFor(() => expect(calls).toBeGreaterThan(before));

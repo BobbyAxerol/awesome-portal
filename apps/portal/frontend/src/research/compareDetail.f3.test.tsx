@@ -66,8 +66,10 @@ describe("F3 S13 — HiFi parity", () => {
     expect(foot.textContent).toMatch(/^common window · matched/);
     const meta = document.querySelector("[data-correlation-meta]")!;
     expect(meta.textContent).not.toMatch(/INNER_JOIN|NO_FORWARD_FILL/);
-    expect(meta.textContent).toContain("overlapping window only");
-    expect(meta.querySelector("[title]")?.getAttribute("title")).toBe("INNER_JOIN_EXACT_TIMESTAMP_NO_FORWARD_FILL");
+    /* W4: "overlapping window only" is said once, in the tooltip; the line prints n alone. */
+    expect(meta.textContent).not.toContain("overlapping window only");
+    expect(meta.getAttribute("title")).toContain("overlapping window only");
+    expect(meta.getAttribute("title")).toContain("INNER_JOIN_EXACT_TIMESTAMP_NO_FORWARD_FILL");
   });
 
   it("13-04 / 13-01: the crumb is Compare (the alpha is a tooltip) and the release-candidate link reads RC, not rc_", async () => {
@@ -78,7 +80,7 @@ describe("F3 S13 — HiFi parity", () => {
     expect(crumb.textContent).toBe("Compare");
     expect(crumb.getAttribute("title")).toBeTruthy();
     const rc = document.querySelector("[data-rc-link]")!;
-    expect(rc.textContent).toBe("RC");
+    expect(rc.textContent).toBe("◈");
     expect(rc.getAttribute("aria-label")).toMatch(/^Release candidate of /);
   });
 
@@ -107,7 +109,7 @@ describe("F3 S13 — HiFi parity", () => {
     await settled();
     const chip = document.querySelector("[data-config-diff-columns]")!;
     expect(chip.getAttribute("data-config-diff-columns")).toBe(String(document.querySelectorAll(".cp-difftable thead th").length - 1));
-    expect(chip.textContent).toMatch(/\d+ attempts/);
+    expect(chip.textContent).toMatch(/\d+ ⇄/);
     cleanup();
     server(fixture("research-compare.attempts.valid.json"));
     renderAt(`${base}?mode=attempts`);

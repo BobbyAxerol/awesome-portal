@@ -76,9 +76,9 @@ describe("the revision-4 descriptor, drawn", () => {
     expect(card.getAttribute("data-card-unreachable")).toBeNull();
     expect(card.getAttribute("href")).toBe("/research/quantbt/runs?to=alpha_version_legacy&group=1");
     expect(card.textContent).not.toContain(PICK_ALPHA_BADGE);
-    expect(card.textContent).toContain("pick an alpha →");
+    expect(card.getAttribute("aria-label")).toContain("pick an alpha");
     expect(card.textContent).not.toContain(PICK_RUN_BADGE);
-    expect(card.textContent).not.toContain("pick a run");
+    expect(card.getAttribute("aria-label")).not.toContain("pick a run");
   });
 
   it("Compare (served requires_run: true): a run picker, not a bare link", () => {
@@ -89,7 +89,7 @@ describe("the revision-4 descriptor, drawn", () => {
     expect(card.getAttribute("data-card-picks-run")).toBe("compare_runs");
     expect(card.getAttribute("href")).toBe("/research/quantbt/runs?to=compare_runs");
     expect(card.textContent).not.toContain(PICK_RUN_BADGE);
-    expect(card.textContent).toContain("pick a run →");
+    expect(card.getAttribute("aria-label")).toContain("pick a run");
   });
 
   it("every AVAILABLE card behaves by its served scope", () => {

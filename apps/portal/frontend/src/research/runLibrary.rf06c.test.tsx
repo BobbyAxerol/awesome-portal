@@ -420,9 +420,10 @@ describe("claim — state and sentence (CG-P12-09)", () => {
   it("prints the NOT_ISSUED state; the server's sentence is its tooltip", () => {
     view([item()]);
     const claim = card(item().run_id).querySelector("[data-claim]") as HTMLElement;
-    expect(claim.textContent).toBe("NOT ISSUED");
-    expect(claim.querySelector("[data-claim-state]")?.getAttribute("title")).toBe(NOT_ISSUED_SENTENCE);
-    expect(claim.querySelector("[data-claim-state]")?.getAttribute("data-claim-state")).toBe("NOT_ISSUED");
+    /* W4A: no claim line on the card; the sentence stays as data. */
+    expect(claim.textContent).toBe("");
+    expect(claim.getAttribute("data-claim-text")).toBe(NOT_ISSUED_SENTENCE);
+    expect(claim.getAttribute("data-claim-kind")).toBe("not-issued");
   });
 
   it("marks an issued and a forecast claim by their state", () => {
@@ -500,7 +501,7 @@ describe("rc chip — the persisted P21 relation, disabled until Screen 11 (CG-P
     ]);
     const chip = document.querySelector("[data-rc]") as HTMLElement;
     /* VD-FG-05-07: the in-flight lookup is on the face, not only in the title. */
-    expect(chip.textContent).toBe("rc_2026_08_c · APPROVED · reading…");
+    expect(chip.textContent).toBe("rc_2026_08_c · approved · reading…");
     expect(chip.getAttribute("data-rc-publication")).toBe("loading");
     expect(chip.getAttribute("data-rc-tone-source")).toBe("raw");
     /* W5c/X1: Screen 11 exists (P21); a sealed pack's chip opens that pack's own read-only route. */
@@ -520,7 +521,7 @@ describe("rc chip — the persisted P21 relation, disabled until Screen 11 (CG-P
       }),
     ]);
     const chip = document.querySelector("[data-rc]") as HTMLElement;
-    expect(chip.textContent).toBe("rc_ (draft) · DRAFT");
+    expect(chip.textContent).toBe("rc_ (draft) · draft");
     expect(chip.style.color).toBe("var(--accent-2)");
     expect(chip.getAttribute("title")).toMatch(/^release candidate being composed from this run/);
     expect(chip.getAttribute("href")).toMatch(/\/release-candidate$/);
@@ -784,7 +785,7 @@ describe("rc chip — the P22 alpha-version publication lookup (FG-05)", () => {
     view([sealedRow()]);
     const found = await settledChip("CURRENT");
     /* VD-FG-05-06 (option B): an expired approval is never painted --good. */
-    expect(found.textContent).toBe(`${SEALED_RC} · APPROVED_WITH_CONDITION · effective EXPIRED`);
+    expect(found.textContent).toBe(`${SEALED_RC} · approved with condition · effective expired`);
     expect(found.style.color).toBe("var(--ink-faint)");
     expect(found.getAttribute("data-rc-tone-source")).toBe("effective");
     expect(found.getAttribute("data-rc-state")).toBe("APPROVED_WITH_CONDITION");
@@ -801,7 +802,7 @@ describe("rc chip — the P22 alpha-version publication lookup (FG-05)", () => {
     lookup(() => [200, lookupFound(lookupRecord(SEALED_RC, AV_ID, {}, { status: "APPROVED", effective_status: "EXPIRED" }))]);
     view([sealedRow()]);
     const found = await settledChip("CURRENT");
-    expect(found.textContent).toBe(`${SEALED_RC} · APPROVED · effective EXPIRED`);
+    expect(found.textContent).toBe(`${SEALED_RC} · approved · effective expired`);
     expect(found.style.color).toBe("var(--ink-faint)");
     expect(found.style.color).not.toBe("var(--good)");
     expect(found.getAttribute("data-rc-tone-source")).toBe("effective");
@@ -813,7 +814,7 @@ describe("rc chip — the P22 alpha-version publication lookup (FG-05)", () => {
     lookup(() => [200, lookupFound(lookupRecord(SEALED_RC, AV_ID, {}, { status: "APPROVED", effective_status: "APPROVED" }))]);
     view([sealedRow()]);
     const found = await settledChip("CURRENT");
-    expect(found.textContent).toBe(`${SEALED_RC} · APPROVED`);
+    expect(found.textContent).toBe(`${SEALED_RC} · approved`);
     expect(found.style.color).toBe("var(--good)");
     expect(found.getAttribute("data-rc-tone-source")).toBe("raw");
     expect(found.getAttribute("data-rc-effective-status")).toBe("APPROVED");
@@ -823,7 +824,7 @@ describe("rc chip — the P22 alpha-version publication lookup (FG-05)", () => {
     lookup(() => [200, lookupFound(lookupRecord(SEALED_RC, AV_ID, {}, { status: "APPROVED" }))]);
     view([sealedRow()]);
     const found = await settledChip("CURRENT");
-    expect(found.textContent).toBe(`${SEALED_RC} · APPROVED`);
+    expect(found.textContent).toBe(`${SEALED_RC} · approved`);
     expect(found.style.color).toBe("var(--good)");
     expect(found.getAttribute("data-rc-tone-source")).toBe("raw");
     expect(found.getAttribute("data-rc-effective-status")).toBeNull();
@@ -844,7 +845,7 @@ describe("rc chip — the P22 alpha-version publication lookup (FG-05)", () => {
     lookup(() => [200, lookupFound(lookupRecord(SEALED_RC, AV_ID, { candidate_relation: "SUPERSEDED" }, { status: "APPROVED" }))]);
     view([sealedRow()]);
     const found = await settledChip("SUPERSEDED");
-    expect(found.textContent).toBe(`${SEALED_RC} · APPROVED · SUPERSEDED`);
+    expect(found.textContent).toBe(`${SEALED_RC} · approved · superseded`);
     expect(found.getAttribute("data-rc-state")).toBe("SUPERSEDED");
     expect(found.style.color).toBe("var(--ink-faint)");
   });
@@ -853,7 +854,7 @@ describe("rc chip — the P22 alpha-version publication lookup (FG-05)", () => {
     lookup(() => [200, lookupAbsent(AV_ID)]);
     view([sealedRow()]);
     const absent = await settledChip("NOT_PUBLISHED");
-    expect(absent.textContent).toBe(`${SEALED_RC} · APPROVED`);
+    expect(absent.textContent).toBe(`${SEALED_RC} · approved`);
     expect(absent.getAttribute("data-rc-publication-reason")).toBe("P22_ALPHA_VERSION_PUBLICATION_NOT_PUBLISHED");
     expect(absent.getAttribute("data-rc-approval-status")).toBeNull();
     expect(absent.getAttribute("title")).toContain("no delivered publication for this version");
@@ -864,7 +865,7 @@ describe("rc chip — the P22 alpha-version publication lookup (FG-05)", () => {
     lookup(() => [200, lookupFound(lookupRecord("rc_2026_09_a", AV_ID))]);
     view([sealedRow()]);
     const other = await settledChip("OTHER_CANDIDATE");
-    expect(other.textContent).toBe(`${SEALED_RC} · APPROVED`);
+    expect(other.textContent).toBe(`${SEALED_RC} · approved`);
     expect(other.getAttribute("data-rc")).toBe(SEALED_RC);
     expect(other.getAttribute("title")).toContain("this version's latest delivered publication is rc_2026_09_a");
   });
@@ -900,10 +901,10 @@ describe("rc chip — the P22 alpha-version publication lookup (FG-05)", () => {
       cleanup();
       vi.unstubAllGlobals();
     }
-    expect(faces.pending).toBe(`${SEALED_RC} · APPROVED · reading…`);
-    expect(faces[403]).toBe(`${SEALED_RC} · APPROVED · publication not readable`);
+    expect(faces.pending).toBe(`${SEALED_RC} · approved · reading…`);
+    expect(faces[403]).toBe(`${SEALED_RC} · approved · publication not readable`);
     expect(faces[404]).toBe(faces[403]);
-    expect(faces[503]).toBe(`${SEALED_RC} · APPROVED · publication unavailable`);
+    expect(faces[503]).toBe(`${SEALED_RC} · approved · publication unavailable`);
     expect(faces.pending).not.toBe(faces[403]);
     expect(faces[503]).not.toBe(faces[403]);
   });

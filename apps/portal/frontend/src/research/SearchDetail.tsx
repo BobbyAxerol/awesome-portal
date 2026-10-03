@@ -40,7 +40,7 @@ import {
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import type { DeclaredParameter } from "./alphaImportClient";
 import { reasonCodeSentence } from "./researchRefusal";
-import { claimToken, formatUtc, groupDecimalString, shortDigest } from "./researchFormat";
+import { claimToken, formatUtc, groupDecimalString } from "./researchFormat";
 import { InfoMark } from "../components/InfoMark";
 import { ShortId } from "./ShortId";
 import { ImportedAlphaLine } from "./ImportedAlphaLine";
@@ -94,6 +94,8 @@ import {
 } from "./SearchSurface";
 import type { ResearchState } from "./state";
 import { trialLabel, trialTitle } from "./trialLabel";
+import { AbsenceSummary } from "./Absence";
+import { humanise } from "./humanise";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -248,7 +250,7 @@ function Gap({
         {SEARCH_GAP_WORDS[gap.state]}
       </span>
       {showReason ? (
-        <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }}>
+        <span hidden>
           {gapReason(gap)}
         </span>
       ) : null}
@@ -301,6 +303,17 @@ function Chip({
   );
 }
 
+/** Claim-row labels in words, not field names; the field name rides in the tooltip. */
+const CLAIM_LABEL: Record<string, string> = {
+  optimization_mode: "mode",
+  validation_claim: "validation",
+  chronological_claim: "chronology",
+  oos_used_for_selection: "OOS used",
+  scoring_backend: "scoring",
+  candidate_selection_metric: "selector",
+  "source profile": "profile",
+};
+
 function Claim({
   k,
   children,
@@ -308,9 +321,9 @@ function Claim({
   ...rest
 }: { k: string; children: ReactNode; accent?: boolean } & Record<string, unknown>) {
   return (
-    <span className="flex min-w-0 flex-col gap-[2px]" {...rest}>
+    <span className="flex min-w-0 flex-col gap-[2px]" data-claim-key={k} title={k.includes("_") ? k : undefined} {...rest}>
       <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-        {k}
+        {CLAIM_LABEL[k] ?? humanise(k)}
       </span>
       <span
         className={`mono text-[11.5px] ${accent ? "border-l-2 pl-1.5" : ""}`}
@@ -347,11 +360,8 @@ function ClaimAbsence({ state, reason, what }: { state: string; reason: string |
 function RetainedToken({ value, what }: { value: string; what: string }) {
   return (
     <span className="flex items-baseline gap-1.5" data-claim-fact={what} data-claim-state="RETAINED_SOURCE">
-      <span data-claim-value={value} title={value}>
-        {claimToken(value)}
-      </span>
-      <span className="text-[9px]" style={{ color: "var(--good)" }} title="published by QuantBT for this run, read from the retained lane">
-        QUANTBT
+      <span data-claim-value={value} title={`${value} · published by QuantBT for this run`}>
+        {humanise(value)}
       </span>
     </span>
   );
@@ -672,11 +682,16 @@ function LedgerPanel({
     <section className="flex min-w-0 flex-col overflow-x-auto rounded-[6px] border" style={CARD_STYLE} data-ledger={slot.state}>
       <div className="flex flex-wrap items-baseline justify-between gap-2 border-b px-3 py-2" style={{ borderColor: "var(--line)" }} data-ledger-title>
         <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
-          trial ledger — Optuna trials
+          trials
         </h3>
         {slot.state === "ready" ? (
-          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-ledger-total>
-            {slot.search.ledger.trials.length} of {slot.search.ledger.source_trial_count} retained trials
+          <span
+            className="mono text-[9.5px]"
+            style={{ color: "var(--ink-faint)" }}
+            data-ledger-total
+            title="Optuna trials the source retained for this run"
+          >
+            {slot.search.ledger.trials.length} of {slot.search.ledger.source_trial_count}
           </span>
         ) : null}
       </div>
@@ -696,7 +711,7 @@ function LedgerPanel({
                     title={`${ledgerGap.reason_code ?? ""} · ${slot.answer.lane.reason_code} · adapter ${slot.answer.lane.run_adapter_contract_digest}`}
                     data-ledger-lane="not-applicable"
                   >
-                    {ledgerGap.state === "NOT_APPLICABLE" ? "No trial ledger — fixed profile ran no search." : `Trial ledger — ${SEARCH_GAP_WORDS[ledgerGap.state as SearchSourceGap["state"]] ?? ledgerGap.state}.`}
+                    {ledgerGap.state === "NOT_APPLICABLE" ? "No trial ledger." : `Trial ledger — ${SEARCH_GAP_WORDS[ledgerGap.state as SearchSourceGap["state"]] ?? ledgerGap.state}.`}
                   </span>
                   <span hidden data-ledger-gap-state={ledgerGap.state} />
                 </p>
@@ -768,14 +783,14 @@ export function trialStateTone(state: string): string {
   }
 }
 
-function LedgerHead() {
+function LedgerHead({ columns = LEDGER_COLUMNS }: { columns?: readonly (typeof LEDGER_COLUMNS)[number][] }) {
   return (
     <div
-      className="flex min-w-[760px] border-b px-3 py-[5px] text-[9.5px] uppercase tracking-[.06em]"
+      className="flex min-w-[560px] border-b px-3 py-[5px] text-[9.5px] uppercase tracking-[.06em]"
       style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }}
       data-ledger-head
     >
-      {LEDGER_COLUMNS.map((column) => (
+      {columns.map((column) => (
         <span key={column.head} className={columnClass(column)} style={columnStyle(column)} data-align={column.right ? "right" : "left"}>
           {column.head}
         </span>
@@ -836,6 +851,16 @@ function LedgerRows({
     rows[next]?.focus();
   };
 
+  /* Uniform columns are a property of the table: one caption line, not one cell per row. */
+  const uniform = ledgerUniformity(trials);
+  const first = trials[0];
+  const paramNames = first ? Object.keys(first.parameters) : [];
+  const visibleColumns = LEDGER_COLUMNS.filter((column) => {
+    if (column.head === "seed" || column.head === "digest") return false;
+    if (column.head === "state") return uniform.state === null;
+    if (column.head === "S_OOS") return uniform.oos === null;
+    return true;
+  }).map((column) => (column.head === "note" ? { ...column, head: paramNames.length > 0 ? paramNames.join(" · ") : "parameters" } : column));
   return (
     <div>
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 px-3 py-1">
@@ -846,6 +871,21 @@ function LedgerRows({
           <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-ledger-scope>
             {search.search_contract.optuna_trials_scope ?? "scope not published"} study
             {foldNote ? ` · ${foldNote}` : ""}
+          </span>
+        ) : null}
+        {trials.length > 0 ? (
+          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-ledger-caption>
+            <AbsenceSummary column="seed" reason={null} count={trials.length} total={trials.length} />
+            {uniform.state !== null ? ` · all ${humanise(uniform.state)}` : ""}
+            {uniform.oos !== null ? (
+              <>
+                {" · "}
+                <span title={uniform.oos.code ?? undefined} data-ledger-oos-caption>
+                  OOS · {uniform.oos.code === "QUANTBT_IS_SEARCH_STAGE_DOES_NOT_EVALUATE_OOS" ? "not evaluated at search (Stage B)" : "not published"}
+                </span>
+              </>
+            ) : null}
+            {uniform.oosMissing > 0 && uniform.oos === null ? ` · OOS ${uniform.oosMissing} of ${trials.length} not published` : ""}
           </span>
         ) : null}
         {selectedId !== null ? (
@@ -863,17 +903,18 @@ function LedgerRows({
           </span>
         )}
       </div>
-      <LedgerHead />
+      <LedgerHead columns={visibleColumns} />
       <div onKeyDown={onRowKey} data-ledger-rows>
       {trials.map((trial) => {
         const selected = trial.trial_id === selectedId;
         /* Optional: a pre-W3 responder sends the row without its facts. */
         const facts = (trial as Partial<RetainedTrial>).facts;
+        const values = Object.values(trial.parameters).map((value) => cleanParamText(value));
         return (
           <button
             key={trial.trial_id}
             type="button"
-            className="mono flex w-full min-w-[760px] items-baseline border-0 border-b border-solid px-3 py-1 text-left text-[10.5px]"
+            className="mono flex w-full min-w-[560px] items-baseline border-0 border-b border-solid px-3 py-1 text-left text-[10.5px]"
             style={{
               borderBottomColor: "var(--paper-sunken)",
               color: "var(--ink)",
@@ -884,56 +925,44 @@ function LedgerRows({
             onClick={() => onPick(trial.trial_id)}
             data-trial={trial.trial_id}
             data-trial-selected={selected}
+            data-trial-state={trial.state}
+            data-trial-digest={trial.params_digest ?? ""}
+            title={
+              (trial.params_digest ? `params digest ${trial.params_digest}` : "this trial row carries no params digest") +
+              (facts && facts.state === "AVAILABLE"
+                ? ` · ${facts.stage ?? "stage not published"} · ${scopeWords(facts)} · objective = ${OBJECTIVE_KIND_WORDS[facts.objective_kind]}`
+                : "")
+            }
           >
             <span className={columnClass(LEDGER_COLUMNS[0])} style={columnStyle(LEDGER_COLUMNS[0])}>
               {trial.trial_id}
             </span>
-            <span className={columnClass(LEDGER_COLUMNS[1])} style={columnStyle(LEDGER_COLUMNS[1])}>
-              <NotPublished title="seed is not published per trial" />
-            </span>
-            <span
-              className={`${columnClass(LEDGER_COLUMNS[2])} text-[9px]`}
-              style={{ ...columnStyle(LEDGER_COLUMNS[2]), color: trialStateTone(trial.state) }}
-              data-trial-state={trial.state}
-            >
-              {trial.state}
-            </span>
+            {uniform.state === null ? (
+              <span
+                className={`${columnClass(LEDGER_COLUMNS[2])} text-[9px]`}
+                style={{ ...columnStyle(LEDGER_COLUMNS[2]), color: trialStateTone(trial.state) }}
+              >
+                {humanise(trial.state)}
+              </span>
+            ) : null}
             <span className={columnClass(LEDGER_COLUMNS[3])} style={columnStyle(LEDGER_COLUMNS[3])} data-trial-is>
               {facts ? (
-                <MetricCell metric={facts.metrics.mean_is_sharpe} />
+                <MetricCell metric={facts.metrics.mean_is_sharpe} compact />
               ) : (
                 trial.objective ?? <NotPublished title="the retained trial publishes no objective" />
               )}
             </span>
-            <span className={columnClass(LEDGER_COLUMNS[4])} style={columnStyle(LEDGER_COLUMNS[4])} data-trial-oos>
-              {facts ? (
-                <MetricCell metric={facts.metrics.mean_oos_sharpe} />
-              ) : (
-                <NotPublished title="the retained ledger publishes no OOS value per trial (CG-P15-03)" />
-              )}
-            </span>
-            <span className={columnClass(LEDGER_COLUMNS[5])} style={columnStyle(LEDGER_COLUMNS[5])} data-trial-digest={trial.params_digest ?? ""}>
-              {trial.params_digest ? (
-                <span title={trial.params_digest}>{shortDigest(trial.params_digest)}</span>
-              ) : (
-                <NotPublished title="this trial row carries no params_digest" />
-              )}
-            </span>
-            <span
-              className={`${columnClass(LEDGER_COLUMNS[6])} text-[9.5px]`}
-              style={{ color: "var(--ink-faint)" }}
-              data-trial-note
-              title={
-                facts && facts.state === "AVAILABLE"
-                  ? `${facts.stage ?? "stage not published"} · ${scopeWords(facts)} · objective = ${OBJECTIVE_KIND_WORDS[facts.objective_kind]}`
-                  : undefined
-              }
-            >
-              {Object.keys(trial.parameters).length > 0
-                ? Object.entries(trial.parameters)
-                    .map(([name, value]) => `${name}=${cleanParamText(value)}`)
-                    .join(" · ")
-                : "parameters not published"}
+            {uniform.oos === null ? (
+              <span className={columnClass(LEDGER_COLUMNS[4])} style={columnStyle(LEDGER_COLUMNS[4])} data-trial-oos>
+                {facts ? (
+                  <MetricCell metric={facts.metrics.mean_oos_sharpe} compact />
+                ) : (
+                  <NotPublished title="the retained ledger publishes no OOS value per trial (CG-P15-03)" />
+                )}
+              </span>
+            ) : null}
+            <span className={`${columnClass(LEDGER_COLUMNS[6])} text-[9.5px]`} style={{ color: "var(--ink-faint)" }} data-trial-note>
+              {values.length > 0 ? values.join(" · ") : "parameters not published"}
             </span>
           </button>
         );
@@ -942,8 +971,8 @@ function LedgerRows({
       {more && (more.hasMore || more.error) ? (
         <div className="flex flex-wrap items-center gap-3 px-3 py-2" data-ledger-more>
           {more.hasMore ? (
-            <button type="button" className="btn-ghost mono text-[10px]" disabled={more.loading} title={more.loading ? "Reading the next page of trials" : undefined} onClick={more.onMore} data-action="ledger-more">
-              {more.loading ? "loading more trials…" : `show more trials (${trials.length} of ${search.ledger.source_trial_count})`}
+            <button type="button" className="btn-ghost mono text-[10px]" disabled={more.loading} title={more.loading ? "Reading the next page of trials" : `Show more trials (${trials.length} of ${search.ledger.source_trial_count} loaded)`} aria-label={`Show more trials, ${trials.length} of ${search.ledger.source_trial_count} loaded`} onClick={more.onMore} data-action="ledger-more">
+              {more.loading ? "loading…" : "more"}
             </button>
           ) : null}
           {more.error ? (
@@ -980,8 +1009,33 @@ const OBJECTIVE_KIND_WORDS: Record<string, string> = {
   NOT_PUBLISHED: "objective kind not published",
 };
 
-function MetricCell({ metric }: { metric: TrialFacts["metrics"]["mean_is_sharpe"] }) {
+/**
+ * Which ledger columns carry one value for every loaded row. `state` is the shared
+ * state word (else null); `oos` is the shared absence (its server code) when no row
+ * has an OOS value and every row says the same thing (else null).
+ */
+function ledgerUniformity(trials: readonly RetainedTrial[]): { state: string | null; oos: { code: string | null } | null; oosMissing: number } {
+  if (trials.length === 0) return { state: null, oos: null, oosMissing: 0 };
+  const state = trials.every((trial) => trial.state === trials[0].state) ? trials[0].state : null;
+  const oosMetrics = trials.map((trial) => (trial as Partial<RetainedTrial>).facts?.metrics.mean_oos_sharpe ?? null);
+  const absent = oosMetrics.map((metric) => metric === null || ratio2(metric.value) === null);
+  const oosMissing = absent.filter(Boolean).length;
+  const codes = new Set(oosMetrics.map((metric) => metric?.reason_code ?? null));
+  const oos = oosMissing === trials.length && codes.size === 1 ? { code: [...codes][0] } : null;
+  return { state, oos, oosMissing };
+}
+
+function MetricCell({ metric, compact = false }: { metric: TrialFacts["metrics"]["mean_is_sharpe"]; compact?: boolean }) {
   const shown = ratio2(metric.value);
+  if (shown === null && compact) {
+    const sentence = metric.reason_code === "QUANTBT_IS_SEARCH_STAGE_DOES_NOT_EVALUATE_OOS" ? "not evaluated at the IS stage" : "not published";
+    const title = `${sentence}${metric.reason_code ? ` · ${metric.reason_code}` : ""}`;
+    return (
+      <span style={{ color: "var(--ink-faint)" }} title={title} aria-label={title} data-metric-absent={metric.reason_code ?? ""}>
+        ·
+      </span>
+    );
+  }
   if (shown === null) {
     return (
       <span className="italic" style={{ color: "var(--ink-faint)" }} title={metric.reason_code ?? undefined} data-metric-absent={metric.reason_code ?? ""}>
@@ -1009,46 +1063,54 @@ function scopeWords(facts: TrialFacts): string {
  */
 function CandidateLedger({ search }: { search: CurrentSourceSearch }) {
   const selectedId = search.selection.selected_trial_id;
+  const rows = search.candidates.rows;
+  /* Uniform note / equal id: stated once, not per row. */
+  const noteOf = (candidate: RetainedCandidate) => `${candidate.facts.stage ?? "stage not published"} · ${scopeWords(candidate.facts)}`;
+  const uniformNote = rows.length > 0 && rows.every((row) => noteOf(row) === noteOf(rows[0])) ? noteOf(rows[0]) : null;
+  const sameId = rows.every((row) => row.facts.source_trial_id === row.candidate_id);
   return (
-    <div className="border-t" style={{ borderColor: "var(--line)" }} data-candidate-ledger={search.candidates.rows.length}>
+    <div className="border-t" style={{ borderColor: "var(--line)" }} data-candidate-ledger={rows.length}>
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-3 py-2">
         <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
-          candidate replays — Stage B
+          candidates · Stage B
         </h3>
-        <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-          {search.candidates.rows.length} of {search.candidates.source_candidate_count} candidates
-        </span>
+        {uniformNote !== null ? (
+          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-candidate-note-caption>
+            {uniformNote}
+          </span>
+        ) : null}
       </div>
-      <div className="flex min-w-[760px] border-b px-3 py-[5px] text-[9.5px] uppercase tracking-[.06em]" style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }}>
+      <div className="flex min-w-[560px] border-b px-3 py-[5px] text-[9.5px] uppercase tracking-[.06em]" style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }}>
         <span className="w-[86px] flex-none">candidate</span>
-        <span className="w-[76px] flex-none">from trial</span>
+        {sameId ? null : <span className="w-[76px] flex-none">from trial</span>}
         <span className="w-[76px] flex-none text-right">S_IS</span>
         <span className="w-[86px] flex-none text-right">S̄_OOS</span>
         <span className="w-[76px] flex-none text-right">decay</span>
         <span className="w-[86px] flex-none text-right">J</span>
-        <span className="flex-1 pl-[14px]">note</span>
+        <span className="flex-1 pl-[14px]">{uniformNote !== null ? "" : "note"}</span>
       </div>
-      {search.candidates.rows.map((candidate: RetainedCandidate) => {
+      {rows.map((candidate: RetainedCandidate) => {
         const selected = candidate.facts.source_trial_id === selectedId && candidate.objective === search.selection.objective;
         return (
           <div
             key={candidate.candidate_id}
-            className="mono flex min-w-[760px] items-baseline border-b px-3 py-1 text-[10.5px]"
+            className="mono flex min-w-[560px] items-baseline border-b px-3 py-1 text-[10.5px]"
             style={{ borderColor: "var(--paper-sunken)", background: selected ? "var(--accent-2-soft)" : "transparent" }}
             data-candidate={candidate.candidate_id}
             data-candidate-selected={selected}
+            title={sameId ? `from trial ${candidate.facts.source_trial_id ?? "not published"}` : undefined}
           >
             <span className="w-[86px] flex-none">{candidate.candidate_id}</span>
-            <span className="w-[76px] flex-none">{candidate.facts.source_trial_id ?? "—"}</span>
-            <span className="w-[76px] flex-none text-right"><MetricCell metric={candidate.facts.metrics.mean_is_sharpe} /></span>
-            <span className="w-[86px] flex-none text-right"><MetricCell metric={candidate.facts.metrics.mean_oos_sharpe} /></span>
-            <span className="w-[76px] flex-none text-right"><MetricCell metric={candidate.facts.metrics.mean_decay} /></span>
+            {sameId ? null : <span className="w-[76px] flex-none">{candidate.facts.source_trial_id ?? "—"}</span>}
+            <span className="w-[76px] flex-none text-right"><MetricCell metric={candidate.facts.metrics.mean_is_sharpe} compact /></span>
+            <span className="w-[86px] flex-none text-right"><MetricCell metric={candidate.facts.metrics.mean_oos_sharpe} compact /></span>
+            <span className="w-[76px] flex-none text-right"><MetricCell metric={candidate.facts.metrics.mean_decay} compact /></span>
             <span className="w-[86px] flex-none text-right" title={candidate.objective ?? undefined}>
               {ratio2(candidate.objective) ?? <NotPublished title="the retained candidate publishes no objective" />}
             </span>
             <span className="flex-1 pl-[14px] text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-              {candidate.facts.stage ?? "stage not published"} · {scopeWords(candidate.facts)}
-              {selected ? " · selected by policy" : ""}
+              {uniformNote !== null ? "" : noteOf(candidate)}
+              {selected ? `${uniformNote !== null ? "" : " · "}selected by policy` : ""}
             </span>
           </div>
         );
@@ -1655,6 +1717,8 @@ function RetainedModeReads({ search, runId, view }: { search: CurrentSourceSearc
   ];
   const mode = contract.optimization_mode;
   const schedule = contract.optimization_schedule;
+  /* Internals the engine publishes (selection inputs, retention, release, decay terms): tooltip, not text. */
+  const tokenSummary = [...atlasTokens, ...tokens].map(([key, value]) => `${humanise(key)} ${value ?? "not published"}`).join(" · ");
   return (
     <>
       <FoldStrip view={view} />
@@ -1665,13 +1729,15 @@ function RetainedModeReads({ search, runId, view }: { search: CurrentSourceSearc
             className="mono text-[10.5px]"
             style={{ color: "var(--accent)" }}
             data-action="open-atlas-mode"
+            title={`${humanise(mode)} · ${humanise(schedule)} in the Engine Atlas`}
           >
-            {mode} · {schedule} in the Engine Atlas →
+            Engine Atlas →
           </Link>
         ) : null}
-        <span className="flex flex-wrap gap-x-3 gap-y-1" data-mode-reads-tokens title="this run's search contract and probe, and the Atlas's descriptor for this mode × schedule, as published">
+        <span className="flex flex-wrap gap-x-3 gap-y-1" data-mode-reads-tokens tabIndex={0} title={tokenSummary} aria-label={`Mode parameters. ${tokenSummary}`}>
+          <InfoMark />
           {[...atlasTokens, ...tokens].map(([key, value, why]) => (
-            <span key={key} className="mono text-[10.5px]" data-mode-read={key}>
+            <span key={key} hidden className="mono text-[10.5px]" data-mode-read={key}>
               <span style={{ color: "var(--ink-faint)" }}>{key}</span>{" "}
               {value ?? (
                 <span className="italic" style={{ color: "var(--ink-faint)" }} title={why ?? RETAINED_NO_FIELD}>
@@ -1682,8 +1748,15 @@ function RetainedModeReads({ search, runId, view }: { search: CurrentSourceSearc
           ))}
         </span>
         {view.kind === "strip" && view.oos.condition !== null ? (
-          <span className="min-w-[260px] flex-1 text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-oos-use-condition>
-            <span className="mono">oos_use {view.oos.use}</span> — {view.oos.condition}
+          <span
+            className="mono text-[10.5px]"
+            style={{ color: "var(--ink-faint)" }}
+            data-oos-use-condition
+            tabIndex={0}
+            title={`oos_use ${view.oos.use} — ${view.oos.condition}`}
+            aria-label={`OOS use ${humanise(view.oos.use)}. ${view.oos.condition}`}
+          >
+            OOS use {humanise(view.oos.use)}
           </span>
         ) : null}
       </div>
@@ -2051,7 +2124,7 @@ export function SearchScreen({
       </header>
       )}
 
-      {notFound ? <RunNotFound runId={runId} /> : <StageRunBar runId={runId} active={ledger.state === "refused" && ledger.laneState != null} />}
+      {notFound ? <RunNotFound runId={runId} /> : <StageRunBar runId={runId} active={(ledger.state === "refused" && ledger.laneState != null) || (shownState.state === "partial" && ledger.state !== "loading" && ledger.state !== "idle")} />}
 
       <ResearchPanel
         title="search & selection"
@@ -2074,14 +2147,14 @@ export function SearchScreen({
             <section className="rounded-[6px] border" style={RAISED_STYLE} data-source-strip={detail.source_profile.state}>
               <div className="flex flex-wrap items-center gap-2 border-b px-[14px] py-[9px]" style={{ borderColor: "var(--line-soft)" }}>
                 <span className={LABEL} style={{ color: "var(--ink-faint)" }} title={SELECTOR_LAYERS_HELP} data-selector-layers>
-                  optimization_mode{" "}
+                  mode{" "}
                   <InfoMark />
                 </span>
                 {/* One run is one mode: the run's own, read-only — never a switcher. */}
                 <span data-requested-optimizer={lane ? "RETAINED_SOURCE" : detail.requested_optimizer.state} className="flex flex-wrap items-center gap-2">
                   {runMode !== null ? (
-                    <Pill on data-run-mode>
-                      {runMode}
+                    <Pill on data-run-mode title={lane ? "QuantBT's search contract for this run, read from the retained current-source lane" : undefined}>
+                      {humanise(runMode)}
                     </Pill>
                   ) : (
                     <span className="mono text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} data-run-mode>
@@ -2104,7 +2177,7 @@ export function SearchScreen({
                           : undefined
                       }
                     >
-                      {runSchedule}
+                      {humanise(runSchedule)}
                     </Pill>
                   ) : (
                     <span className="mono text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} data-run-schedule>
@@ -2112,17 +2185,10 @@ export function SearchScreen({
                     </span>
                   )}
                   {lane ? (
-                    <span
-                      className="mono text-[10.5px]"
-                      style={{ color: "var(--good)" }}
-                      title="QuantBT's search contract for this run, read from the retained current-source lane"
-                      data-run-mode-source="retained"
-                    >
-                      executed · retained search contract
-                    </span>
+                    <span hidden data-run-mode-source="retained" />
                   ) : (
                     <span className="mono text-[10.5px] italic" style={{ color: "var(--accent-2)" }}>
-                      {detail.requested_optimizer.state.toLowerCase().replace(/_/g, " ")}
+                      {humanise(detail.requested_optimizer.state)}
                     </span>
                   )}
                 </span>
@@ -2287,18 +2353,13 @@ export function SearchScreen({
                         className="mono text-[10.5px]"
                         style={{ color: "var(--accent)" }}
                         data-action="open-atlas-mode"
-                        title={`${detail.claim_row.mode_reference.operation_id} · ${detail.claim_row.mode_reference.relation}`}
+                        title={`${humanise(detail.claim_row.mode_reference.mode)} · ${humanise(detail.claim_row.mode_reference.schedule)} · ${detail.claim_row.mode_reference.operation_id} · ${detail.claim_row.mode_reference.relation}`}
                       >
-                        {detail.claim_row.mode_reference.mode} · {detail.claim_row.mode_reference.schedule} in the Engine Atlas →
+                        Engine Atlas →
                       </Link>
-                      <Chip data-mode-relation={detail.claim_row.mode_reference.relation} tone="var(--ink-faint)">
-                        release metadata · not run evidence
+                      <Chip data-mode-relation={detail.claim_row.mode_reference.relation} tone="var(--ink-faint)" title="Atlas release metadata, not run evidence" tabIndex={0}>
+                        release metadata
                       </Chip>
-                      {detail.claim_row.basis === "DECLARED_NOT_EXECUTED" ? (
-                        <span className="min-w-[160px] flex-1 text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-                          declared, not executed by the source
-                        </span>
-                      ) : null}
                     </div>
                   </>
                 ) : (
@@ -2368,12 +2429,9 @@ export function SearchScreen({
             >
               <div className="flex min-w-0 flex-col gap-3" data-stage="A">
                 <div className="flex flex-wrap items-baseline gap-2.5">
-                  <h2 className="mono text-[11px] font-bold uppercase tracking-[.08em]" style={{ color: "var(--ink-faint)" }}>
+                  <h2 className="mono text-[11px] font-bold uppercase tracking-[.08em]" style={{ color: "var(--ink-faint)" }} title={fixed ? undefined : "what the sampler searched, on IS"}>
                     Stage A · search
                   </h2>
-                  <span className="text-[11px]" style={{ color: "var(--ink-faint)" }}>
-                    {fixed ? "no sampler ran — fixed profile" : "what the sampler searched, on IS"}
-                  </span>
                 </div>
 
                 {lane ? <RetainedSearchSpace search={lane} run={retainedRun} /> : null}
@@ -2507,12 +2565,9 @@ export function SearchScreen({
               {fixedOnly ? null : (
               <div className="flex min-w-0 flex-col gap-3" data-stage="B">
                 <div className="flex flex-wrap items-baseline gap-2.5">
-                  <h2 className="mono text-[11px] font-bold uppercase tracking-[.08em]" style={{ color: "var(--accent-2)" }}>
+                  <h2 className="mono text-[11px] font-bold uppercase tracking-[.08em]" style={{ color: "var(--accent-2)" }} title={fixed ? undefined : "selects on the frozen pool"}>
                     Stage B · selection
                   </h2>
-                  <span className="text-[11px]" style={{ color: "var(--ink-faint)" }}>
-                    {fixed ? "no pool frozen — fixed profile" : "selects on the frozen pool"}
-                  </span>
                 </div>
 
                 <section className={CARD} style={CARD_STYLE} data-panel="pool-freeze">
@@ -2569,7 +2624,7 @@ export function SearchScreen({
                   <EmptyPanel id="parameter_frequency" title={DIAGNOSTIC_LABEL.parameter_frequency} gap={detail.diagnostics.parameter_frequency} />
                 )}
 
-                {lane ? (
+                {lane && foldNote === null && runSchedule === "global" && foldLedger.state !== "refused" ? null : lane ? (
                   <section className={CARD} style={CARD_STYLE} data-panel="inspection" data-inspection-state="RETAINED_FOLD_FILTER">
                     <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
                       fold inspection

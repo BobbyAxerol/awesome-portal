@@ -123,8 +123,8 @@ describe("F1 D8 walk — the equity legend and the source absences tell one stor
 
     /* …and the source absences still say there is no in-sample account: the two statements agree. */
     const absence = panel("provenance").querySelector('[data-source-absence="in_sample_account"]') as HTMLElement;
-    expect(absence.textContent).toContain("in sample account — not published");
-    expect(absence.textContent).toContain("QUANTBT_ADVANCED_WFO_RETAINED_NO_IN_SAMPLE_ACCOUNT");
+    expect(absence.textContent).toContain("in sample account");
+    expect(absence.outerHTML).toContain("QUANTBT_ADVANCED_WFO_RETAINED_NO_IN_SAMPLE_ACCOUNT");
   });
 
   it("a report that publishes no equity_is keeps the 'IS account — <reason>' absence, which its source absence agrees with", async () => {
@@ -135,7 +135,7 @@ describe("F1 D8 walk — the equity legend and the source absences tell one stor
     await screen.findByText("claim passport");
     const legend = panel("equity").querySelector('[data-legend="is"]') as HTMLElement;
     expect(legend.getAttribute("data-legend-state")).toBe("absent");
-    expect(legend.textContent).toContain(body.frozen_core.equity_is.availability.reason_code);
+    expect(legend.outerHTML).toContain(body.frozen_core.equity_is.availability.reason_code);
     expect(legend.textContent).not.toBe(EQUITY_LEGEND_BEFORE_OOS);
     expect(EQUITY_LEGEND_IS).toContain("not published");
   });
@@ -150,9 +150,11 @@ describe("F1 D2 walk — the printed evidence link is the whole address", () => 
     const link = panel("provenance").querySelector("[data-evidence-link] a") as HTMLAnchorElement;
     const href = link.getAttribute("href")!;
     expect(href).toBe(`${window.location.origin}/research/quantbt/runs/${encodeURIComponent(body.run_id)}/report?report_revision=${encodeURIComponent(body.report_revision)}`);
-    expect(link.textContent).toBe(href);
-    expect(link.textContent!.length).toBeGreaterThan(100);
-    expect(link.textContent).not.toMatch(/\/runs\/[a-z]+_[0-9a-f]{8}\/report/);
+    /* W4: no 120-character URL is printed; the link is a words-only label and the full address is its title and href. */
+    expect(link.getAttribute("title")).toBe(href);
+    expect(link.textContent).toBe("Link to this report");
+    expect(href.length).toBeGreaterThan(100);
+    expect(href).not.toMatch(/\/runs\/[a-z]+_[0-9a-f]{8}\/report/);
     expect(reportEvidenceLinkLabel(body.run_id, body as unknown as ReportDetail)).toBe(href);
   });
 });

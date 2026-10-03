@@ -30,6 +30,7 @@ import {
   COMPARE_PANELS,
   COMPARE_TITLE,
   MODE_LABELS,
+  MODE_TITLES,
   PAIR_NEEDS_TWO,
   RESOLVER_NEEDS_ALPHA,
   overlayPlot,
@@ -37,7 +38,6 @@ import {
 import { CompareResolverRoute, CompareRoute } from "./CompareRoute";
 import {
   CLAIM_RANK_MAP,
-  COMPARE_NEUTRAL_REFUSAL,
   COMPARE_REFUSAL_COPY,
   COMPARE_REFUSAL_MESSAGE,
   MARKETS_CAPTION,
@@ -406,7 +406,7 @@ describe("S13 Compare — reads and order", () => {
     const arrows = Array.from(document.querySelectorAll("[data-ladder-arrow]"));
     /* F1 / VD-F1-03: both ladder cards carry rank 3 — an equal-claim step prints nothing (every card one claim: no connector at all). */
     expect(arrows).toHaveLength(0);
-    expect(document.querySelector("[data-ladder-one-claim]")?.textContent).toBe("2 attempts · one claim: WALK_FORWARD_OOS_COMPATIBILITY");
+    expect(document.querySelector("[data-ladder-one-claim]")?.textContent).toBe("2 attempts · one claim: Walk-forward");
     const folded = document.querySelector("[data-unclaimed]") as HTMLElement;
     expect(folded.getAttribute("data-unclaimed")).toBe("1");
     expect(folded.querySelector("[data-unclaimed-run]")).toBeNull();
@@ -444,18 +444,18 @@ describe("S13 Compare — reads and order", () => {
     await settled();
     const card = document.querySelector('[data-ladder-run="run_a"]') as HTMLElement;
     expect(card.querySelector("[data-oos-sharpe]")).toBeNull();
-    expect(card.querySelector("[data-oos-sharpe-absent]")?.textContent).toContain("P20_SOURCE_DID_NOT_PUBLISH_OOS_SHARPE");
-    expect(card.querySelector("[data-cert-absent]")?.textContent).toContain("P20_NO_SOURCE_PUBLISHES_A_CERTIFICATION_GRADE");
+    expect(card.querySelector("[data-oos-sharpe-absent]")?.outerHTML).toContain("P20_SOURCE_DID_NOT_PUBLISH_OOS_SHARPE");
+    expect(card.querySelector("[data-cert-absent]")?.outerHTML).toContain("P20_NO_SOURCE_PUBLISHES_A_CERTIFICATION_GRADE");
     expect(card.querySelector("[data-claim-origin]")?.getAttribute("data-claim-origin")).toBe("PORTAL_DERIVED_FROM_SOURCE_PROTOCOL");
-    expect(panel("fold-chart")?.querySelector("[data-fold-chart-absent]")?.textContent).toContain("P20_P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_OOS_SHARPE");
+    expect(panel("fold-chart")?.querySelector("[data-fold-chart-absent]")?.outerHTML).toContain("P20_P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_OOS_SHARPE");
     expect(document.querySelector("[data-ladder-header]")?.textContent).toBe(LADDER_TITLE);
-    expect(document.querySelector("[data-trajectory-text]")?.textContent).toBe(TRAJECTORY.text);
+    expect(document.querySelector("[data-panel='trajectory']")?.getAttribute("title")).toContain(TRAJECTORY.text);
     /* One claimed attempt: no step, so the heading's title carries the base rule only, no "strengthens at every step" sentence (F1). The rule is a tooltip, not a callout (VD-F1-03). */
     expect(panel("ladder")?.querySelector(".cp-ladderhead")?.getAttribute("title")).toBe(ATTEMPTS_RULE_BASE);
     expect(panel("rule")).toBeNull();
     expect(panel("rules")).toBeNull();
     expect(page().textContent).not.toContain(ATTEMPTS_RULE_BASE);
-    expect(panel("diff")?.textContent).toContain("P20_CONFIG_DIFF_NEEDS_TWO_ATTEMPTS");
+    expect(panel("diff")?.outerHTML).toContain("P20_CONFIG_DIFF_NEEDS_TWO_ATTEMPTS");
   });
 
   it("S13-U05 PARTIAL coverage says so, with the total and the reason, and the screen is partial", async () => {
@@ -467,7 +467,7 @@ describe("S13 Compare — reads and order", () => {
     expect(page().getAttribute("data-compare-state")).toBe("partial");
     const partial = document.querySelector("[data-coverage-partial]") as HTMLElement;
     expect(partial.textContent).toContain("40 attempts in total");
-    expect(partial.textContent).toContain("P20_BOUNDED_ATTEMPT_LIMIT_REACHED");
+    expect(partial.outerHTML).toContain("P20_BOUNDED_ATTEMPT_LIMIT_REACHED");
   });
 });
 
@@ -485,7 +485,7 @@ describe("S13 Compare — markets", () => {
     expect(document.querySelector("[data-delta-table]")).toBeNull();
     expect(document.querySelector('[data-mini-chart="AVAILABLE"] svg path.cp-mini-line')).not.toBeNull();
     const eth = document.querySelector('[data-market-run="run_eth"]') as HTMLElement;
-    expect(eth.querySelector('[data-mini-chart="NOT_PUBLISHED"]')?.textContent).toContain("P20_P13_EQUITY_SERIES_NOT_AVAILABLE");
+    expect(eth.querySelector('[data-mini-chart="NOT_PUBLISHED"]')?.outerHTML).toContain("P20_P13_EQUITY_SERIES_NOT_AVAILABLE");
     expect(eth.querySelector('[data-state="QUEUED"]')).not.toBeNull();
     /* D10: a card is a market; it says which run stands for it and how many ran there. */
     const btc = document.querySelector('[data-market-run="run_btc"]') as HTMLElement;
@@ -514,10 +514,10 @@ describe("S13 Compare — pair", () => {
     expect(document.querySelector("[data-rho]")?.textContent).toBe("ρ = 0.41");
     expect(document.querySelector("[data-rho]")?.getAttribute("data-exact")).toBe("0.412345");
     expect(document.querySelector("[data-rho-caption]")?.textContent).toBe("raw returns · overlapping window only");
-    expect(document.querySelector("[data-correlation-source]")?.textContent).toContain("PORTAL_DERIVED");
-    expect(document.querySelector("[data-correlation-meta] [title]")?.getAttribute("title")).toBe("INNER_JOIN_EXACT_TIMESTAMP_NO_FORWARD_FILL");
+    expect(document.querySelector("[data-correlation-source]")?.outerHTML).toContain("PORTAL_DERIVED");
+    expect(document.querySelector("[data-correlation-meta]")?.getAttribute("title")).toContain("INNER_JOIN_EXACT_TIMESTAMP_NO_FORWARD_FILL");
     expect(document.querySelector("[data-promotes-under]")?.textContent).toBe(
-      "WALK_FORWARD_OOS_COMPATIBILITY",
+      "Walk-forward",
     );
     expect(document.querySelector('[data-difference="random_seed"]')?.textContent).toContain("11");
     expect(panels()).toEqual([...COMPARE_PANELS.pair]);
@@ -530,7 +530,7 @@ describe("S13 Compare — pair", () => {
     const delta = document.querySelector('[data-delta-row="TRADE_COUNT"] td.d') as HTMLElement;
     expect(delta.getAttribute("data-sign")).toBeNull();
     expect(delta.textContent).toContain("not applicable");
-    expect(delta.textContent).toContain("P20_COMMON_WINDOW_DOES_NOT_DEFINE_TRADE_COUNT");
+    expect(delta.outerHTML).toContain("P20_COMMON_WINDOW_DOES_NOT_DEFINE_TRADE_COUNT");
   });
 
   it("S13-U09 PARTIAL pair names its gap; correlation zero-variance is a named absence, not 0", async () => {
@@ -559,7 +559,7 @@ describe("S13 Compare — pair", () => {
     expect(page().getAttribute("data-pair-state")).toBe("REFUSED");
     /* QA S13: one short sentence built from the two keys; the server's message stays in the attribute and the box's title. */
     expect(document.querySelector("[data-refusal-message]")?.getAttribute("data-server-message")).toBe(COMPARE_REFUSAL_MESSAGE);
-    expect(document.querySelector("[data-refusal-message]")?.textContent).toMatch(/^These runs differ in symbol \(.* vs .*\), timeframe/);
+    expect(document.querySelector("[data-refusal-message]")?.textContent).toMatch(/^Can't overlay: symbol differs \(.* vs .*\), timeframe differs/);
     expect(document.querySelector("[data-refusal-message]")?.textContent).not.toMatch(/lie|button/);
     for (const selector of ["[data-pair-overlay]", "[data-delta-table]", "[data-correlation]", "[data-weaker-claim]", "svg", "[data-rho]", "[data-difference]"]) {
       expect(document.querySelectorAll(selector), selector).toHaveLength(0);
@@ -606,7 +606,7 @@ describe("S13 Compare — refusals and validators", () => {
     renderAt(base);
     await settled();
     expect(page().getAttribute("data-compare-state")).toBe("unavailable");
-    expect(screen.getByText(COMPARE_REFUSAL_COPY[503])).toBeTruthy();
+    expect(screen.getByTitle(new RegExp(COMPARE_REFUSAL_COPY[503].slice(0, 30)))).toBeTruthy();
     fireEvent.click(document.querySelector('[data-action="retry"]') as HTMLElement);
     await waitFor(() => expect(document.querySelector('[data-ladder-run="run_a"]')).not.toBeNull());
     expect(calls).toHaveLength(2);
@@ -641,9 +641,9 @@ describe("S13 Compare — refusals and validators", () => {
     renderAt(`${base}?mode=pair&runs=run_a,run_b`);
     await settled();
     expect(page().getAttribute("data-compare-state")).toBe("denied");
-    expect(screen.getByText(COMPARE_NEUTRAL_REFUSAL)).toBeTruthy();
+    expect(screen.getByText("Not available to you.")).toBeTruthy();
     expect(document.body.textContent).not.toContain("alice@example");
-    expect(document.querySelector("[data-request-id]")?.textContent).toBe("request req_p20");
+    expect(document.querySelector("[data-refusal-request]")?.getAttribute("data-refusal-request")).toBe("req_p20");
     expect(document.querySelector("[data-pair-overlay]")).toBeNull();
     /* QA S13-9: after a refusal the notice is the whole answer; no placeholder frame repeats "withheld". */
     for (const name of ["guard", "overlay", "delta", "correlation"]) expect(panel(name), name).toBeNull();
@@ -655,7 +655,7 @@ describe("S13 Compare — refusals and validators", () => {
     server([problem(400, "RESEARCH_COMPARE_INVALID")]);
     renderAt(`${base}?mode=bogus`);
     await settled();
-    expect(screen.getByText(COMPARE_REFUSAL_COPY[400])).toBeTruthy();
+    expect(screen.getByTitle(new RegExp(COMPARE_REFUSAL_COPY[400].slice(0, 30)))).toBeTruthy();
     expect(document.querySelector('[data-action="retry"]')).toBeNull();
     expect(document.querySelectorAll('[aria-pressed="true"]')).toHaveLength(0);
     cleanup();
@@ -663,7 +663,7 @@ describe("S13 Compare — refusals and validators", () => {
     server([problem(401, "RESEARCH_COMPARE_UNAUTHENTICATED")]);
     renderAt(base);
     await settled();
-    expect(screen.getByText(COMPARE_REFUSAL_COPY[401])).toBeTruthy();
+    expect(screen.getByTitle(new RegExp(COMPARE_REFUSAL_COPY[401].slice(0, 30)))).toBeTruthy();
     expect(COMPARE_REFUSAL_COPY[403]).toBe(COMPARE_REFUSAL_COPY[404]);
   });
 });
@@ -691,7 +691,8 @@ describe("S13 Compare — URL and switching", () => {
     release(new Response(JSON.stringify(attempts([run("run_x")])), { status: 200 }));
     await waitFor(() => expect(document.querySelector('[data-ladder-run="run_x"]')).not.toBeNull());
     expect(document.querySelector('[data-mode-option="attempts"]')?.getAttribute("aria-pressed")).toBe("true");
-    expect(MODE_LABELS.pair).toBe("two runs, one key");
+    expect(MODE_LABELS.pair).toBe("Pair");
+    expect(MODE_TITLES.pair).toBe("Two runs, one key");
   });
 
   it("S13-U18 without a mode, two runs mean pair and nothing means attempts", async () => {
@@ -783,7 +784,7 @@ describe("S13 Compare — audit fixes", () => {
     renderAt(`${base}?mode=pair&runs=run_a,run_b`);
     await settled();
     const foot = document.querySelector('[data-common-window="NOT_PUBLISHED"]') as HTMLElement;
-    expect(foot.textContent).toContain("P20_NO_COMMON_RAW_RETURN_WINDOW");
+    expect(foot.outerHTML).toContain("P20_NO_COMMON_RAW_RETURN_WINDOW");
     expect(foot.textContent).not.toContain("matched");
     const meta = document.querySelector("[data-correlation-meta]") as HTMLElement;
     expect(meta.textContent).not.toMatch(/n\s+0/);
@@ -875,7 +876,7 @@ describe("S13 Compare — W6a fields on the canonical fixtures", () => {
       expect(card.querySelector("[data-run-line]")?.getAttribute("title")).toContain(runStatusWord(run.run_state));
       expect(card.querySelectorAll(".cp-st")).toHaveLength(0);
       /* QA S13: one absence shared by every card is said once above the ladder. */
-      expect((card.querySelector("[data-cert-absent]") ?? document.querySelector("[data-ladder-cert]"))?.textContent).toContain(run.certification.reason_code);
+      expect((card.querySelector("[data-cert-absent]") ?? document.querySelector("[data-ladder-cert]"))?.outerHTML).toContain(run.certification.reason_code);
       expect(card.querySelector(`[data-life="${run.alpha_version_lifecycle.value}"]`)).not.toBeNull();
     }
   });
@@ -892,7 +893,7 @@ describe("S13 Compare — W6a fields on the canonical fixtures", () => {
     const first = published[0]!;
     const bar = document.querySelector(`[data-fold-bar="${first.run_id}:${first.folds[0]!.fold_id}"]`)!;
     expect(bar.getAttribute("data-exact")).toBe(first.folds[0]!.oos_sharpe);
-    expect(document.querySelector("[data-fold-absent-runs]")?.textContent).toContain("P20_P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_OOS_SHARPE");
+    expect(document.querySelector("[data-fold-absent-runs]")?.outerHTML).toContain("P20_P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_OOS_SHARPE");
   });
 
   it("S13-U29 CG-P20-05 the config diff lists every changed key with each attempt's value", async () => {
@@ -929,8 +930,8 @@ describe("S13 Compare — W6a fields on the canonical fixtures", () => {
     /* The Sharpe reason is the fixture's own (it moved with 8bd781ed): read, never hard-coded. */
     const sharpe = body.result.mode === "pair" ? body.result.pair?.common_window.metrics.find((metric) => metric.key === "OOS_SHARPE") : undefined;
     expect(sharpe?.availability.reason_code).toBeTruthy();
-    expect(document.querySelector('[data-delta-row="OOS_SHARPE"] td.d')?.textContent).toContain(sharpe!.availability.reason_code!);
-    expect(document.querySelector('[data-delta-row="WIN_RATE"] td.d')?.textContent).toContain("P20_SOURCE_PUBLISHES_NO_AUDITED_ROUND_TRIPS_FOR_WIN_RATE");
+    expect(document.querySelector('[data-delta-row="OOS_SHARPE"] td.d')?.outerHTML).toContain(sharpe!.availability.reason_code!);
+    expect(document.querySelector('[data-delta-row="WIN_RATE"]')?.outerHTML).toContain("P20_SOURCE_PUBLISHES_NO_AUDITED_ROUND_TRIPS_FOR_WIN_RATE");
     if (body.result.mode !== "pair" || body.result.pair === null) throw new Error("fixture guard");
     const net = body.result.pair.common_window.metrics.find((metric) => metric.key === "NET_RETURN_FRACTION")!;
     expect(document.querySelector('[data-delta-row="NET_RETURN_FRACTION"] [data-delta-value]')?.getAttribute("data-delta-value")).toBe(net.delta);
@@ -1056,7 +1057,7 @@ describe("S13 Compare — X3 decisions and debt", () => {
     const heads = Array.from(document.querySelectorAll(".cp-difftable thead th")).map((el) => el.textContent);
     expect(heads).toEqual(["key", ...[...body.result.attempts].reverse().map((item) => item.display_label ?? item.run_id)]);
     const active = body.result.attempts.find((item) => item.alpha_version_lifecycle.value === "ACTIVE")!;
-    expect(document.querySelector("[data-config-diff-legend]")?.textContent).toBe(`differs from ${active.display_label ?? active.run_id} · baseline picked by this screen`);
+    expect(document.querySelector("[data-config-diff-legend]")?.textContent).toBe(`vs ${active.display_label ?? active.run_id}`);
     for (const path of body.result.config_diff.paths) {
       const reference = path.values.find((entry) => entry.run_id === active.run_id)?.value ?? null;
       for (const entry of path.values) {
@@ -1163,7 +1164,7 @@ describe("E7 / D10 — Screen 13 on the HiFi (Unified 13.4.1)", () => {
     const absent = document.querySelector("[data-fold-absent-runs]") as HTMLDetailsElement;
     expect(absent.tagName).toBe("DETAILS");
     expect(absent.open).toBe(false);
-    expect(absent.querySelector("summary")?.textContent).toBe("1 attempt has no per-fold rows");
+    expect(absent.querySelector("summary")?.textContent).toBe("1 without fold rows");
   });
 });
 
@@ -1367,7 +1368,7 @@ describe("S13 Compare — per-run chart annotations (B9)", () => {
     server([{ status: 200, body: compareFixture("research-compare.pair-ok.valid.json") }]);
     renderAt(url);
     await settled();
-    const text = document.querySelector("[data-run-annotations]")!.textContent!;
+    const text = document.querySelector("[data-run-annotations]")!.outerHTML;
     expect(text).toContain("SEALED_ENRICHMENT_NOT_COMPUTED");
     expect(document.querySelector("[data-annotation-span]")).toBeNull();
     expect(document.querySelector("[data-annotation-ring]")).toBeNull();
@@ -1400,7 +1401,7 @@ describe("S13 Compare — per-run chart annotations (B9)", () => {
     await settled();
     expect(document.querySelector("[data-annotation-ring]")).toBeNull();
     expect(document.querySelectorAll("[data-annotation-months-absent]")).toHaveLength(2);
-    expect(document.querySelector("[data-annotation-months-absent]")!.textContent).toContain("B9_MONTH_TRANSPORT_DOES_NOT_COVER_FULL_POPULATION");
+    expect(document.querySelector("[data-annotation-months-absent]")!.outerHTML).toContain("B9_MONTH_TRANSPORT_DOES_NOT_COVER_FULL_POPULATION");
     expect(document.querySelector("[data-annotation-span]")).not.toBeNull();
   });
 });

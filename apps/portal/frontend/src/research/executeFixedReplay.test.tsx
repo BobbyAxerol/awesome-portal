@@ -327,7 +327,8 @@ describe("S08 fixed · the screen", () => {
     mount();
     await waitFor(() => expect(document.querySelector("[data-fixed-absence]")).not.toBeNull());
     expect(document.querySelector("[data-fixed-absence]")?.getAttribute("data-fixed-absence")).toBe("FIXED_REPLAY_ROW_LIMIT_EXCEEDED");
-    expect(document.body.textContent).toContain("FIXED_REPLAY_ROW_LIMIT_EXCEEDED");
+    /* W4: the code is the chip's tooltip, not visible text. */
+    expect(document.querySelector("[data-fixed-absence]")?.getAttribute("title")).toContain("FIXED_REPLAY_ROW_LIMIT_EXCEEDED");
     expect(document.body.textContent).toMatch(/equity samples only/);
     expect(panel()).toBeNull();
   });

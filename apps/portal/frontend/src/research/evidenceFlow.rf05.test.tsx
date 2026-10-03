@@ -1321,9 +1321,10 @@ describe("RF-06 wave C — the verdict header states only what is published", ()
   it("keeps the per-fold verdict shell (CG-P13-08) and the claims strip shells (CG-P13-07)", () => {
     const { container } = view();
     expect(container.querySelector("[data-gap='per-fold-verdict']")).toBeTruthy();
-    for (const field of ["validation_claim", "chronological_claim", "oos_used_for_selection"]) {
-      expect(container.querySelector(`[data-claim-field='${field}'] [data-withheld='NOT_PUBLISHED']`), field).toBeTruthy();
-    }
+    /* W4B: the claim fields the Hub does not carry are one count, named in its tooltip. */
+    const absent = container.querySelector("[data-claim-absent][data-withheld='NOT_PUBLISHED']") as HTMLElement;
+    expect(absent).toBeTruthy();
+    for (const field of ["validation claim", "chronological claim", "OOS used for selection"]) expect(absent.getAttribute("title"), field).toContain(field);
   });
 });
 

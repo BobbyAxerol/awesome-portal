@@ -35,8 +35,11 @@ import {
   type ReactNode,
 } from "react";
 import { Link } from "react-router-dom";
+import { markRunUnknown } from "../app/researchRunCrumb";
 import { RunExitBar } from "./RunExitBar";
-import { runTerminalState } from "./runTerminalState";
+import { phaseOfStatus, runTerminalState } from "./runTerminalState";
+import { humanise } from "./humanise";
+import { progressApi, type ProgressRead } from "./progressClient";
 import { trialLabel, trialTitle } from "./trialLabel";
 import { useRunStatus } from "./useRunStatus";
 
@@ -76,7 +79,7 @@ import type { ResearchState } from "./state";
 import { protocolLabel, retainedReadiness, walkForwardOf } from "./retainedLane";
 import { reasonCodeSentence, refusalState, type ResearchStateWithDiagnostics } from "./researchRefusal";
 import { LineageLink, lineageHref } from "./LineageLink";
-import type { ProgressRead } from "./progressClient";
+
 import type { CurrentSourceSearch } from "./searchClient";
 import type { CurrentSourceClaimFact } from "./evidenceClient";
 import { ShortId } from "./ShortId";
@@ -90,7 +93,7 @@ import { CausalSelectionPanel, causalSelectionOf, planIsCausal } from "./CausalS
  * (Bobby, 2026-10-01): a screen with charts and numbers keeps no prose that
  * restates what the screen is.
  */
-export const SPLIT_TITLE = "Split — how time was divided";
+export const SPLIT_TITLE = "Split";
 
 export const INNER_CAPTION =
   "inner folds exist so selection can rank WITHOUT touching the outer test — per_fold_causal reads outer OOS exactly once, after freeze.";
@@ -139,7 +142,7 @@ const RAISED_STYLE = { ...CARD_STYLE, boxShadow: "var(--shadow-e1)" } as const;
 export const SCREEN_FRAME = "mx-auto flex w-full min-w-0 flex-col gap-[14px] px-6 pb-14 pt-4";
 
 /** HiFi copy button: `✓ evidence link copied` for 1600 ms. */
-export const COPY_DONE_LABEL = "✓ evidence link copied";
+export const COPY_DONE_LABEL = "✓ link copied";
 export const COPY_RESET_MS = 1600;
 
 function Withheld({ availability, what, indexKey }: { availability: SplitAvailability; what?: string; indexKey?: string }) {
@@ -188,7 +191,7 @@ function Absent({
         {ABSENT_WORDS[fact.state]}
       </span>
       {showReason ? (
-        <span className="mono text-[9px] break-all" style={{ color: "var(--ink-faint)" }} data-absent-reason={what}>
+        <span hidden data-absent-reason={what}>
           {reasonOf(fact)}
         </span>
       ) : null}
@@ -220,7 +223,7 @@ function NotApplicable({ fact, what, indexKey, showReason = false }: { fact: Abs
       {showReason ? " " : null}
       {showReason ? (
         /* F3 X-08: the server's own code beside the n/a, not only in the tooltip. */
-        <span className="break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-absent-reason={what}>
+        <span hidden data-absent-reason={what}>
           {reason}
         </span>
       ) : null}
@@ -238,27 +241,6 @@ function Pill({ children, on = false, ...rest }: { children: ReactNode; on?: boo
           ? { color: "var(--accent)", borderColor: "var(--accent)", background: "var(--accent-soft)" }
           : { color: "var(--ink-soft)", borderColor: "var(--line)", background: "var(--paper-raised)" }
       }
-      {...rest}
-    >
-      {children}
-    </span>
-  );
-}
-
-function Chip({
-  children,
-  tone = "var(--ink-soft)",
-  border = "var(--line)",
-  ...rest
-}: {
-  children: ReactNode;
-  tone?: string;
-  border?: string;
-} & Record<string, unknown>) {
-  return (
-    <span
-      className="mono rounded-[3px] border px-[5px] text-[10px] leading-[16px]"
-      style={{ color: tone, borderColor: border, background: "var(--paper-raised)" }}
       {...rest}
     >
       {children}
@@ -308,7 +290,7 @@ function GuardValue({ fact, unit, what, showReason = false }: { fact: GuardFact;
         {showReason && fact.reason_code ? " " : null}
         {showReason && fact.reason_code ? (
           /* F3 X-08: the server's own code beside the n/a, not only in the tooltip. */
-          <span className="break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-guard-reason={what}>
+          <span hidden data-guard-reason={what}>
             {fact.reason_code}
           </span>
         ) : null}
@@ -381,11 +363,11 @@ export function AsOf({ at, source, basis }: { at: number; source: string; basis?
     <span
       className="mono text-[10px]"
       style={{ color: "var(--ink-faint)" }}
-      title={`${basisLine}${exact(at)} (${at} ms UTC) · ${formatUtc(at)}`}
+      title={`source ${source}\n${basisLine}${exact(at)} (${at} ms UTC) · ${formatUtc(at)}`}
       data-as-of
       data-as-of-basis={basis}
     >
-      source {source} · as-of {asOfUtc(at)}
+      as of {asOfUtc(at)}
     </span>
   );
 }
@@ -409,7 +391,8 @@ export function CopyEvidenceLink({ href }: { href?: string } = {}) {
       style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
       data-action="copy-evidence-link"
       data-copy-href={href}
-      title="Copies the link to this exact view"
+      title="Copy the evidence link to this exact view"
+      aria-label="Copy evidence link"
       aria-live="polite"
       onClick={() => {
         /* X2 (T16): a screen may hand the exact link it means; else this address. */
@@ -425,15 +408,19 @@ export function CopyEvidenceLink({ href }: { href?: string } = {}) {
         );
       }}
     >
-      {copied === "done" ? COPY_DONE_LABEL : copied === "failed" ? "copy unavailable" : "copy evidence link"}
+      {copied === "done" ? COPY_DONE_LABEL : copied === "failed" ? "copy unavailable" : "copy link"}
     </button>
   );
 }
 
 /** FE-X-11: a run id that does not exist gets a way back, not an empty frame. One line; the F-04 sentence is its tooltip. */
 export function RunNotFound({ runId }: { runId: string }) {
+  /* The shell's crumb names an unknown run as plain text, not a link to its hub. */
+  useEffect(() => markRunUnknown(runId), [runId]);
   return (
     <section data-run-not-found={runId} data-run-phase="unavailable">
+      {/* One notice per region: while this banner stands, a panel's own "denied" notice for the same cause is not printed again. */}
+      <style>{`[data-screen]:has([data-run-not-found]) [data-research-notice][data-research-state="denied"]{display:none}`}</style>
       <RunExitBar runId={runId} state={runTerminalState({ status: null, read: "not-found" })} />
     </section>
   );
@@ -445,16 +432,40 @@ export function RunNotFound({ runId }: { runId: string }) {
  * Library read is made only then (`active`), so a screen that has data asks
  * for nothing. The lane's own typed absence stays where it is.
  */
+const FAILED_STAGE_NAME: Record<string, string> = { S1: "Split", S2: "Search", S3: "Freeze", S4: "Execute", S5: "Claim" };
+
+/** Where a failed run stopped, as the progress read served it (`current.failed_at.stage`); null until read or when unserved. */
+function useFailedStage(runId: string, enabled: boolean): string | null {
+  const [stage, setStage] = useState<string | null>(null);
+  useEffect(() => {
+    if (!enabled) return;
+    const controller = new AbortController();
+    progressApi
+      .read(runId, undefined, controller.signal)
+      .then((read) => {
+        const key = read?.current?.failed_at?.stage;
+        if (!controller.signal.aborted && typeof key === "string") setStage(FAILED_STAGE_NAME[key] ? `${key} ${FAILED_STAGE_NAME[key]}` : key);
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [runId, enabled]);
+  return stage;
+}
+
 export function StageRunBar({ runId, active }: { runId: string; active: boolean }) {
   const listed = useRunStatus(runId, active);
+  const failed = listed.state === "listed" && phaseOfStatus(listed.status) === "failed";
+  const failedStage = useFailedStage(runId, failed);
   if (!active || listed.state === "idle" || listed.state === "reading") return null;
-  const state = runTerminalState(
+  const base = runTerminalState(
     listed.state === "listed"
-      ? { status: listed.status, read: "ok" }
+      ? { status: listed.status, read: "ok", failedStage }
       : listed.state === "not-listed"
         ? { status: null, read: "not-found" }
         : { status: null, read: "unread" },
   );
+  /* The one failure banner on S05-S08: "Run failed at S4 Execute." */
+  const state = failedStage !== null && base.banner !== null ? { ...base, banner: base.banner.replace(/^Failed/, "Run failed") } : base;
   return (
     <div data-stage-run-bar={state.phase}>
       <RunExitBar runId={runId} state={state} />
@@ -782,7 +793,7 @@ function FoldLane({ slot }: { slot: FoldsSlot }) {
         title={`${laneNotApplicableSentence(slot.answer)}\n${slot.answer.lane.reason_code} · adapter ${slot.answer.lane.run_adapter_contract_digest}`}
       >
         retained fold lane — not applicable{" "}
-        <span className="mono text-[9px] break-all">{slot.answer.lane.reason_code}</span>
+        <span hidden>{slot.answer.lane.reason_code}</span>
       </span>
     );
   }
@@ -795,7 +806,7 @@ function FoldLane({ slot }: { slot: FoldsSlot }) {
         title={`${splitTerminalAbsenceSentence(slot.answer)}\n${slot.answer.lane.reason_code}`}
       >
         retained fold lane — {slot.answer.lane.effective_status.toLowerCase()} before a split was retained{" "}
-        <span className="mono text-[9px] break-all">{slot.answer.lane.reason_code}</span>
+        <span hidden>{slot.answer.lane.reason_code}</span>
       </span>
     );
   }
@@ -1312,7 +1323,7 @@ function LaneAbsent({ reason, what, word = "not published" }: { reason: string; 
       <span className="mono text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} title={reasonCodeSentence(reason) ?? reason}>
         {word}
       </span>
-      <span className="mono text-[9px] break-all" style={{ color: "var(--ink-faint)" }}>
+      <span hidden>
         {reason}
       </span>
     </span>
@@ -1443,7 +1454,7 @@ function disjointRowOf(
         <span className="inline-flex flex-wrap items-baseline gap-x-1.5" title={basis} data-train-test-basis={verdict.basis}>
           <span style={{ color: "var(--bad)" }}>windows overlap</span>
           {verdict.reason_code ? (
-            <span className="mono text-[9px] break-all" data-train-test-reason={verdict.reason_code}>
+            <span hidden data-train-test-reason={verdict.reason_code}>
               {verdict.reason_code}
             </span>
           ) : null}
@@ -1794,7 +1805,7 @@ export function SplitScreen({
       </header>
       )}
 
-      {notFound ? <RunNotFound runId={runId} /> : <StageRunBar runId={runId} active={folds.state === "refused" && folds.laneState != null} />}
+      {notFound ? <RunNotFound runId={runId} /> : <StageRunBar runId={runId} active={(folds.state === "refused" && folds.laneState != null) || (screenState.state === "partial" && folds.state !== "loading" && folds.state !== "idle")} />}
 
       <ResearchPanel
         title="split"
@@ -2139,7 +2150,7 @@ export function SplitScreen({
                       title={(lane ? lane.split.revision : detail.revision) ?? undefined}
                       data-integrity-revision
                     >
-                      split rev {shortDigest(lane ? lane.split.revision : detail.revision, 12)}…
+                      rev {shortDigest(lane ? lane.split.revision : detail.revision, 8)}
                     </span>
                   ) : null}
                 </div>
@@ -2148,7 +2159,7 @@ export function SplitScreen({
                     <IntegrityRow mark="none" label="holdout never read">
                       {lane.holdout.state === "ready" && lane.holdout.value.state === "NOT_APPLICABLE" ? (
                         <span data-holdout-exposure="NOT_APPLICABLE" title={lane.holdout.value.reason_code ?? undefined}>
-                          n/a · no holdout segment
+                          no holdout
                         </span>
                       ) : lane.holdout.state === "loading" ? (
                         <Reading what="the retained claim" />
@@ -2252,7 +2263,7 @@ export function SplitScreen({
                       data-action="stitched-series"
                       title="The stitched OOS series is drawn on the Evidence Flow Summary tab."
                     >
-                      series on Evidence Flow →
+                      series →
                     </Link>
                   ) : null}
                 </p>
@@ -2273,40 +2284,6 @@ export function SplitScreen({
                 )}
               </section>
 
-              <section className={`${CARD} gap-[6px] p-[14px]`} style={CARD_STYLE} data-card="feeds-forward">
-                <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
-                  what this stage feeds forward
-                </span>
-                {/* Screen 08 (Execute / Replay) exists: the next stage, on this cursor. */}
-                <Link
-                  to={deepDiveHref(`${runPath}/execute`, { ...cursor, stage: "execute" })}
-                  className="mono self-start text-[10px]"
-                  style={{ color: "var(--accent)" }}
-                  data-next-execute
-                  data-action="next-execute"
-                >
-                  next: S4 Execute →
-                </Link>
-                {lane ? (
-                  lane.certificateReason ? (
-                    <span
-                      className="mono text-[10.5px]"
-                      style={{ color: "var(--ink-faint)" }}
-                      data-cert-cap
-                      data-cert-reason={lane.certificateReason}
-                      title={`${reasonCodeSentence(lane.certificateReason) ?? lane.certificateReason}\n${lane.certificateReason}`}
-                    >
-                      methodology certificate — not published
-                    </span>
-                  ) : lane.identityLoading ? (
-                    <Reading what="the methodology certificate" />
-                  ) : null
-                ) : (
-                  <span className="mono text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-cert-cap>
-                    this stage's cert cap — not published
-                  </span>
-                )}
-              </section>
             </div>
 
             {/* Absences the frames above do not own — each once, from absence_index (the hub's; not on a retained run). */}
@@ -2458,8 +2435,6 @@ interface LaneProps {
  * was published, and no read publishes one yet — so none is drawn.
  */
 function ThetaLane({ id, track, is, oos, isLabel, isTitle, digest, active, pick, rest, oosSharpe }: LaneProps) {
-  const sharpe = oosSharpe?.value != null ? formatMetric(oosSharpe.value, "ratio") : null;
-  const trades = oosSharpe?.trades != null ? formatMetric(oosSharpe.trades, "count") : null;
   const lit = active && pick !== undefined;
   const body = (
     <>
@@ -2506,35 +2481,9 @@ function ThetaLane({ id, track, is, oos, isLabel, isTitle, digest, active, pick,
       </span>
       <span className="mono flex w-[196px] flex-none flex-col text-right text-[9.5px]">
         {digest}
-        <span style={{ color: "var(--accent)" }}>
-          trade OOS → S{" "}
-          {sharpe !== null ? (
-            <>
-              <span title={`QuantBT per-fold OOS Sharpe ${oosSharpe?.value}`} data-theta-oos-sharpe={oosSharpe?.value ?? ""}>
-                {sharpe.replace(/^-/, "−")}
-              </span>
-              {/* QA S05 U10: a Sharpe is read beside the number of trades behind it. */}
-              {trades !== null ? (
-                <span style={{ color: "var(--ink-faint)" }} data-theta-oos-trades={oosSharpe?.trades ?? ""} title={`QuantBT per-fold OOS trades ${oosSharpe?.trades}`}>
-                  {" · "}
-                  {trades} {oosSharpe?.trades === "1" ? "trade" : "trades"}
-                </span>
-              ) : (
-                <span className="italic" style={{ color: "var(--ink-faint)" }} data-theta-oos-trades="not-published" title={oosSharpe?.reason ?? "the retained fold plan publishes no OOS trade count for this fold"}>
-                  {" · "}trades not published
-                </span>
-              )}
-            </>
-          ) : oosSharpe ? (
-            <span className="italic" style={{ color: "var(--ink-faint)" }} title={oosSharpe.reason ?? "the retained fold plan publishes no OOS Sharpe for this fold"}>
-              not published
-            </span>
-          ) : (
-            <span className="italic" style={{ color: "var(--ink-faint)" }} title="the split read publishes no OOS Sharpe — see Evidence Flow">
-              not in read
-            </span>
-          )}
-        </span>
+        {oosSharpe?.value != null ? (
+          <span hidden data-theta-oos-sharpe={oosSharpe.value} data-theta-oos-trades={oosSharpe.trades ?? "not-published"} />
+        ) : null}
       </span>
     </>
   );
@@ -2600,23 +2549,22 @@ function ThetaFlow({
     <section className={`${CARD} gap-2 p-4`} style={RAISED_STYLE} data-card="theta-flow">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
-          S2 · θ* flow
+          θ* per fold
         </span>
         <span className="mono flex items-baseline gap-1.5 text-[10px]" style={{ color: "var(--ink-faint)" }} data-theta-meta>
-          θ* per fold:{" "}
           {plan && planIsCausal(plan) ? (
             <span style={{ color: "var(--accent)" }} data-theta-scope="PER_FOLD" title="fold_plan: each fold carries its own causal_selection (OUTER_FOLD_SELECTION)">
-              PER FOLD (own)
+              own per fold
             </span>
           ) : lane ? (
             lane.schedule === "global" ? (
               <span style={{ color: "var(--accent)" }} data-theta-scope="GLOBAL" title="progress read: every fold's selection scope is GLOBAL_STUDY">
-                GLOBAL (shared)
+                global
               </span>
             ) : lane.identityLoading ? (
               <Reading what="the schedule" />
             ) : (
-              <span data-theta-scope={lane.schedule ?? ""}>{lane.schedule ?? "—"}</span>
+              <span data-theta-scope={lane.schedule ?? ""}>{humanise(lane.schedule) || "—"}</span>
             )
           ) : (
             <Absent fact={detail.protocol.theta_per_fold} what="θ* per fold" showReason indexKey="theta_per_fold" />
@@ -2727,29 +2675,26 @@ function ThetaParams({ lane }: { lane: LaneView }) {
   }
   const value = selection.value;
   const objective = formatMetric(value.objective, "ratio");
+  const params = Object.entries(value.parameters ?? {}).map(([name, v]) => `${name} ${v}`);
+  const why = [
+    value.scope === "LAST_FOLD_DEPLOYMENT" ? `last-fold deployment${value.fold_id ? ` (${foldLabel(value.fold_id)})` : ""}` : null,
+    objective !== null ? `${humanise(value.objective_kind)} ${value.objective}` : null,
+    lane.sharedDigest ? `params ${lane.sharedDigest}` : null,
+    ...params,
+  ]
+    .filter(Boolean)
+    .join(" \u00b7 ");
   return (
     <div className="flex flex-col gap-[4px] pl-[72px]" data-theta-params>
-      <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }}>
-        {value.scope === "LAST_FOLD_DEPLOYMENT"
-          ? `θ* · last-fold deployment${value.fold_id ? ` (${foldLabel(value.fold_id)})` : ""} · source `
-          : "θ* · source "}
-        <span data-theta-trial title={trialTitle}>{value.selected_trial_id ?? "not published"}</span>
-        {objective !== null ? (
-          <span title={`${value.objective_kind} ${value.objective}`}>
-            {" "}· {value.objective_kind} {objective.replace(/^-/, "−")}
-          </span>
-        ) : null}
-        {lane.sharedDigest ? (
-          <span style={{ color: "var(--ink-faint)" }}>
-            {" "}· params <Digest value={lane.sharedDigest} />
-          </span>
-        ) : null}
+      <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }} tabIndex={0} title={why} aria-label={`θ* parameters. ${why}`}>
+        θ* source <span data-theta-trial title={trialTitle}>{value.selected_trial_id ?? "not published"}</span>
+        {objective !== null ? <span> · J {objective.replace(/^-/, "\u2212")}</span> : null}
       </span>
-      <span className="flex flex-wrap gap-[6px]">
+      <span hidden>
         {Object.entries(value.parameters ?? {}).map(([name, v]) => (
-          <Chip key={name} data-theta-param={name}>
+          <span key={name} data-theta-param={name}>
             {name} {v}
-          </Chip>
+          </span>
         ))}
       </span>
     </div>

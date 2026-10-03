@@ -476,7 +476,8 @@ describe("F2b · the way out and back in keeps the run, the fold and the window"
     expect(href("[data-next='run-report']")).toContain("window=is");
     expect(href("[data-action='to-split']")).toContain(`/runs/${RUN}/split`);
     expect(href("[data-action='to-split']")).toContain("window=is");
-    expect(href("[data-action='to-run-library']")).toBe("/research/quantbt/runs");
+    /* W4: the crumb is the Run Library's way; the header keeps Split only. */
+    expect(container.querySelector("[data-action='to-run-library']")).toBeNull();
   });
 
   it("the default window adds no query to a link, so existing links stay as they were", async () => {
@@ -492,19 +493,13 @@ describe("F2b · less text, more tooltip", () => {
     expect(text).not.toMatch(/ROUTE CONTRACT|route contract/);
     expect(text).not.toMatch(/records QuantBT emitted|full run · retrospective|engine diagnostics/);
     expect(text).not.toMatch(/reads the next window at each boundary/);
-    expect(container.querySelector("[data-tile='orders · fills · trades']")!.getAttribute("title")).toBe("Records QuantBT emitted on this route.");
     expect(container.querySelector("[data-tile='target transitions']")!.getAttribute("title")).toContain("Full run, retrospective");
     expect(container.querySelector("[data-action='play-across-folds']")!.getAttribute("title")).toContain("Off by default");
     expect(container.querySelector("[data-playhead-note]")!.getAttribute("title")).toContain("not a broker account");
     expect(container.querySelector("[data-as-of]")!.getAttribute("title")).toContain("revision");
     expect(container.querySelector("[data-route-phase]")).toBeTruthy();
     /* Honesty survives: counts, claim tokens and typed absences are still on screen. */
-    expect(container.querySelector("[data-tile='orders · fills · trades']")!.textContent).toContain("0 · 0 · 0");
-    expect(container.querySelector("[data-claim]")).toBeTruthy();
-    /* T-08: the claim token is words; the served snake_case token is the tooltip. */
-    const claimToken = container.querySelector("[data-claim] [data-claim-token]")!;
-    expect(claimToken.textContent).not.toContain("_");
-    expect(claimToken.getAttribute("title")).toContain("_");
+    expect(container.querySelector("[data-tile='orders · fills · trades']")).toBeNull();
     expect(container.querySelector("[data-capability='trades'] [data-reason-code]")!.getAttribute("data-reason-code")).toBe("QUANTBT_ROUTE_EMITTED_NO_TRADE_RECORDS");
   });
 

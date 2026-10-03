@@ -92,15 +92,16 @@ describe("W1-S10 B4 default view", () => {
     expect(ids()).toContain("att_p10");
     expect(ids()).not.toContain("att_p09");
     expect(ids()).toHaveLength(8);
-    expect(counter()).toBe("showing 8 of 17 attempts");
-    expect(toggle().textContent).toBe("older probes (9)");
+    expect(counter()).toBe("8 of 17");
+    expect(toggle().textContent).toBe("Show probes (9)");
     expect(toggle().getAttribute("aria-pressed")).toBe("false");
   });
 
   it("the toggle and the band chip count the same probes", async () => {
     serve(scaled(10));
     await open();
-    expect(q("[data-probe-chip]")?.textContent).toBe("+9 older");
+    /* W4: the filters row carries the one probes toggle; the band has no second chip. */
+    expect(q("[data-probe-chip]")).toBeNull();
     expect(toggle().textContent).toContain("(9)");
   });
 
@@ -138,7 +139,7 @@ describe("W1-S10 B4 ?run= opens the viewed attempt", () => {
     await open("?run=run-p03");
     expect(selectedId()).toBe("att_p03");
     expect(ids()).toContain("att_p03");
-    expect(toggle().textContent).toBe("older probes (8)");
+    expect(toggle().textContent).toBe("Show probes (8)");
     expect(q("[data-unknown-run]")).toBeNull();
   });
 

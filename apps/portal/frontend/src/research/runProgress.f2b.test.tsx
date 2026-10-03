@@ -53,13 +53,15 @@ const words = (text: string | null | undefined) => (text ?? "").trim().split(/\s
 describe("S03 flow — the way on and the way back", () => {
   it("the header offers Evidence Flow next, on this run, and the breadcrumb still leads to the Run Library", () => {
     view({ foldCursor: 1 });
-    const next = $("[data-action='next-evidence']") as HTMLAnchorElement;
+    const next = $("[data-action='page-next']") as HTMLAnchorElement;
     expect(next.tagName).toBe("A");
-    expect(next.textContent).toBe("next: Evidence Flow →");
+    expect(next.textContent).toBe("Evidence Flow →");
     expect(next.getAttribute("href")).toContain(`/research/quantbt/runs/${encodeURIComponent(RUN_ID)}/evidence#`);
     expect(next.getAttribute("href")).toContain("stage=summary");
     expect(next.getAttribute("href")).toContain("fold=1");
-    expect(document.querySelector("nav[aria-label='Research breadcrumbs'] a[href='/research/quantbt/runs']")?.textContent).toBe("Runs");
+    /* W4A: no breadcrumb; the way back is the header's prev link. */
+    expect(document.querySelector("nav[aria-label='Research breadcrumbs']")).toBeNull();
+    expect(document.querySelector("a[data-action='page-prev']")?.textContent).toBe("← Library");
   });
 
   it("the evidence cursor's fold opens Evidence Flow on that fold once the fold is done", () => {
@@ -79,17 +81,12 @@ describe("S03 flow — the way on and the way back", () => {
     expect($("[data-action='open-fold-evidence']")).toBeNull();
   });
 
-  it("the stage links keep the run and the cursor, and say so in a tooltip", () => {
+  it("W4A: the stage pills are the only stage links; there is no second row of S1-S5 links", () => {
     const snap = structuredClone(BASE.progress!);
     snap.readiness = { ...snap.readiness, mandatory: "SEALED" };
     view({ snapshot: snap, foldCursor: 1 });
-    const links = [...document.querySelectorAll("[data-done-link]")] as HTMLAnchorElement[];
-    expect(links).toHaveLength(5);
-    for (const link of links) {
-      expect(link.getAttribute("href")).toContain("fold=1");
-      expect(link.getAttribute("href")).toContain(`/runs/${encodeURIComponent(RUN_ID)}/`);
-      expect(link.getAttribute("title")).toMatch(/^Open Stage \d /);
-    }
+    expect(document.querySelectorAll("[data-done-link]")).toHaveLength(0);
+    expect($("[data-done-banner]")).toBeNull();
   });
 });
 
@@ -104,14 +101,12 @@ describe("S03 less text — a sentence a tooltip can carry is a tooltip", () => 
     expect(badge.parentElement?.textContent).not.toContain("computed from mode");
   });
 
-  it("the done banner no longer says 'open the evidence at:'", () => {
+  it("W4A: a sealed run prints no completion banner at all", () => {
     const snap = structuredClone(BASE.progress!);
     snap.readiness = { ...snap.readiness, mandatory: "SEALED" };
     view({ snapshot: snap });
-    const banner = $("[data-done-banner]")!;
-    expect(banner.textContent).not.toContain("open the evidence at");
-    // QA S03: the not-issued fact is the passport header's; the banner does not repeat it.
-    expect(banner.textContent).not.toContain("no claim issued");
+    expect(document.body.textContent).not.toContain("RUN COMPLETE");
+    expect(document.body.textContent).not.toContain("open the evidence at");
   });
 
   it("the seal reads as a status dot as well as words", () => {
@@ -119,7 +114,9 @@ describe("S03 less text — a sentence a tooltip can carry is a tooltip", () => 
     const dot = $("[data-readiness-dot]");
     expect(dot?.getAttribute("data-readiness-dot")).toBe("open");
     expect(dot?.getAttribute("aria-hidden")).toBe("true");
-    expect($("[data-readiness]")?.textContent).toContain(`mandatory ${BASE.progress?.readiness.mandatory}`);
+    /* W4A: one humanised word; the mandatory/optional pair is the tooltip. */
+    expect($("[data-readiness]")?.textContent).toBe("pending");
+    expect($("[data-readiness] span[title]")?.getAttribute("title")).toContain("mandatory pending");
   });
 
   it("a sealed run's dot is the good colour", () => {

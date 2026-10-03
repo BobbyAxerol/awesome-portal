@@ -1,14 +1,16 @@
 /**
- * VD-FG-01-01 (Bobby, 2026-10-01) — a refusal shows its reason-code chip and
- * request id; the server's sentence is a tooltip with an accessible name and is
- * never printed. The typed state and the code stay on screen.
+ * W4 (fewer words) over VD-FG-01-01 — a refusal prints ONE short sentence. The reason
+ * code, the request id and the server's sentence are the tooltip and the accessible
+ * name of that sentence; none of them is printed text. A 403 and a 404 stay neutral:
+ * the server's sentence is never offered, even as a tooltip.
  */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { PortalApiError } from "../lib/api";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
-import { REFUSAL_COPY, refusalDiagnostics, refusalState, toResearchRefusal } from "./researchRefusal";
+import { NOTICE_SENTENCE } from "./ResearchNotice";
+import { refusalDiagnostics, refusalState, toResearchRefusal } from "./researchRefusal";
 
 afterEach(cleanup);
 
@@ -17,25 +19,21 @@ const refuse = (status: number, code: string | null, message = SENTENCE, request
   toResearchRefusal(new PortalApiError(message, status, code, requestId));
 
 describe("RefusalNote", () => {
-  it("prints the fixed sentence, the code chip and the request id; the server sentence is the title", () => {
+  it("prints the short sentence; code, request id and the server sentence are the tooltip", () => {
     const { container } = render(
       <p>
         <RefusalNote refusal={refuse(404, "NOT_ADMITTED")} />
       </p>,
     );
-    const text = container.textContent ?? "";
-    expect(text).toContain(REFUSAL_COPY.denied);
-    expect(container.querySelector("[data-refusal-code]")?.textContent).toBe("NOT_ADMITTED");
-    expect(container.querySelector("[data-refusal-request]")?.textContent).toBe("request_id rq-77");
-    expect(text).not.toContain("zq server sentence");
+    expect(container.textContent).toBe(NOTICE_SENTENCE.denied);
     const note = container.querySelector("[data-refusal-detail]")!;
-    expect(note.getAttribute("title")).toBe(SENTENCE);
-    expect(note.getAttribute("aria-label")).toContain(SENTENCE);
-    expect(note.getAttribute("aria-label")).toContain("NOT_ADMITTED");
-    expect(screen.getByRole("note", { name: /NOT_ADMITTED — zq server sentence/ })).toBe(note);
+    expect(note.getAttribute("data-refusal-code")).toBe("NOT_ADMITTED");
+    expect(note.getAttribute("data-refusal-request")).toBe("rq-77");
+    expect(note.getAttribute("title")).toContain("NOT_ADMITTED");
+    expect(note.getAttribute("title")).toContain("request rq-77");
   });
 
-  it("typed absence: no code, no sentence, no request id prints no chip and invents none", () => {
+  it("typed absence: no code, no sentence, no request id prints no tooltip and invents none", () => {
     const refusal = { ...refuse(500, null, "", null), detail: null };
     expect(refusalDiagnostics(refusal)).toBeNull();
     const { container } = render(
@@ -43,20 +41,21 @@ describe("RefusalNote", () => {
         <RefusalNote refusal={refusal} />
       </p>,
     );
-    expect(container.textContent).toBe(REFUSAL_COPY.unavailable);
-    expect(container.querySelector("[data-refusal-detail]")).toBeNull();
+    expect(container.textContent).toBe(NOTICE_SENTENCE.unavailable);
+    expect(container.querySelector("[data-refusal-detail]")?.getAttribute("title")).toBeNull();
     expect(container.querySelector("[data-refusal-code]")).toBeNull();
   });
 
-  it("a refusal without a code still shows its request id and keeps the sentence as the tooltip only", () => {
+  it("a refusal without a code still carries its request id and the sentence in the tooltip only", () => {
     const { container } = render(
       <p>
         <RefusalNote refusal={refuse(500, null)} />
       </p>,
     );
+    const note = container.querySelector("[data-refusal-detail]")!;
     expect(container.querySelector("[data-refusal-code]")).toBeNull();
-    expect(container.querySelector("[data-refusal-request]")?.textContent).toBe("request_id rq-77");
-    expect(container.querySelector("[data-refusal-detail]")?.getAttribute("title")).toBe(SENTENCE);
+    expect(note.getAttribute("data-refusal-request")).toBe("rq-77");
+    expect(note.getAttribute("title")).toContain(SENTENCE);
     expect(container.textContent).not.toContain("zq server sentence");
   });
 });
@@ -77,32 +76,37 @@ describe("F-04 neutral denial", () => {
       </p>,
     );
     const note = container.querySelector("[data-refusal-detail]")!;
-    expect(note.getAttribute("title")).toBeNull();
-    expect(note.getAttribute("aria-label")).toBeNull();
+    expect(note.getAttribute("title")).not.toContain("ws_quant_desk");
+    expect(note.getAttribute("title")).toContain("request rq-77");
     expect(container.innerHTML).not.toContain("ws_quant_desk");
-    expect(container.querySelector("[data-refusal-request]")?.textContent).toBe("request_id rq-77");
+    expect(container.textContent).toBe(NOTICE_SENTENCE.denied);
   });
 });
 
 describe("ResearchPanel notice for a refusal state", () => {
-  it("shows state word, fixed reason, code chip and request id, never the server sentence", () => {
+  it("shows ONE short sentence; code and request id are attributes and the tooltip, never printed", () => {
     const state = refusalState(refuse(503, "RESEARCH_SPLIT_UNAVAILABLE"), false);
     const { container } = render(<ResearchPanel title="p" state={state} />);
-    const notice = container.querySelector("[data-research-state]")!;
-    expect(notice.textContent).toContain("unavailable");
-    expect(notice.textContent).toContain(REFUSAL_COPY.unavailable);
-    expect(notice.querySelector("[data-refusal-code]")?.textContent).toBe("RESEARCH_SPLIT_UNAVAILABLE");
-    expect(notice.textContent).toContain("request_id rq-77");
+    const notice = container.querySelector("[data-research-notice]")!;
+    expect(notice.getAttribute("data-research-state")).toBe("unavailable");
+    expect(notice.textContent).toContain(NOTICE_SENTENCE.unavailable);
+    expect(notice.getAttribute("data-refusal-code")).toBe("RESEARCH_SPLIT_UNAVAILABLE");
+    expect(notice.getAttribute("data-refusal-request")).toBe("rq-77");
+    expect(notice.textContent).not.toContain("RESEARCH_SPLIT_UNAVAILABLE");
+    expect(notice.textContent).not.toContain("rq-77");
     expect(notice.textContent).not.toContain("zq server sentence");
     expect(notice.querySelector("details")).toBeNull();
-    expect(notice.querySelector("[data-refusal-detail]")?.getAttribute("title")).toBe(SENTENCE);
+    const tip = screen.getByTitle(/RESEARCH_SPLIT_UNAVAILABLE/);
+    expect(tip.getAttribute("title")).toContain("request rq-77");
+    expect(tip.getAttribute("title")).toContain(SENTENCE);
+    expect(tip.getAttribute("tabindex")).toBe("0");
   });
 
-  it("typed absence: a refusal with nothing to say renders no diagnostics row", () => {
+  it("typed absence: a refusal with nothing to say carries no tooltip row", () => {
     const state = refusalState({ ...refuse(503, null, "", null), detail: null }, false);
     expect(state.diagnostics).toBeNull();
     const { container } = render(<ResearchPanel title="p" state={state} />);
-    expect(container.querySelector("[data-refusal-detail]")).toBeNull();
+    expect(container.querySelector("[data-refusal-code]")).toBeNull();
     expect(container.querySelector("[data-research-detail]")).toBeNull();
   });
 });

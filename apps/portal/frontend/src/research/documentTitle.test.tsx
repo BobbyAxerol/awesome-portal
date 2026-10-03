@@ -11,28 +11,28 @@ afterEach(() => {
   forgetRunLabels();
 });
 
-describe("F3 — one browser tab title per Research Loop screen (HiFi <title>)", () => {
+describe("F3 — one browser tab title per Research Loop screen (`<Screen> · <Run label>`)", () => {
   it.each([
-    [`${ROOT}/journey`, "QuantBT — Journey Map"],
-    [ROOT, "QuantBT — Journey Map"],
-    [`${ROOT}/`, "QuantBT — Journey Map"],
-    [`${ROOT}/runs`, "QuantBT — Run Library"],
-    [`${ROOT}/runs/new`, "QuantBT — New Run"],
-    [`${ROOT}/atlas`, "QuantBT — Engine Atlas"],
-    [`${ROOT}/alpha-import`, "QuantBT — Alpha Import"],
-    [`${ROOT}/alphas/delta-rsi-polynomial-alpha/lineage`, "QuantBT — Attempt Lineage"],
-    [`${ROOT}/alphas/delta-rsi-polynomial-alpha/compare`, "QuantBT — Compare"],
-    [`${ROOT}/release-candidates/rc_1`, "QuantBT — Release Candidate & Publish"],
+    [`${ROOT}/journey`, "Journey"],
+    [ROOT, "Journey"],
+    [`${ROOT}/`, "Journey"],
+    [`${ROOT}/runs`, "Library"],
+    [`${ROOT}/runs/new`, "New run"],
+    [`${ROOT}/atlas`, "Atlas"],
+    [`${ROOT}/alpha-import`, "Import alpha"],
+    [`${ROOT}/alphas/delta-rsi-polynomial-alpha/lineage`, "Lineage · delta-rsi-polynomial-alpha"],
+    [`${ROOT}/alphas/delta-rsi-polynomial-alpha/compare`, "Compare · delta-rsi-polynomial-alpha"],
+    [`${ROOT}/release-candidates/rc_1`, "Release candidate"],
   ])("%s", (path, title) => {
     expect(researchDocumentTitle(path, null)).toBe(title);
   });
 
   it("per-run screens carry the run label, the HiFi stage names and no run id when unlabelled", () => {
-    expect(researchDocumentTitle(`${ROOT}/runs/rrun_1/evidence`, "R-WFO-118")).toBe("QuantBT Evidence Flow — R-WFO-118");
-    expect(researchDocumentTitle(`${ROOT}/runs/rrun_1/report`, "R-WFO-118")).toBe("Backtest Evidence Report — R-WFO-118");
-    expect(researchDocumentTitle(`${ROOT}/runs/rrun_1/split`, "R-WFO-118")).toBe("QuantBT Stage 1 — Split & Windows — R-WFO-118");
-    expect(researchDocumentTitle(`${ROOT}/runs/rrun_1/search`, null)).toBe("QuantBT Stage 2 — Search & Selection");
-    expect(researchDocumentTitle(`${ROOT}/runs/rrun_1/progress`, null)).toBe("QuantBT — Run Progress");
+    expect(researchDocumentTitle(`${ROOT}/runs/rrun_1/evidence`, "R-WFO-118")).toBe("Evidence · R-WFO-118");
+    expect(researchDocumentTitle(`${ROOT}/runs/rrun_1/report`, "R-WFO-118")).toBe("Report · R-WFO-118");
+    expect(researchDocumentTitle(`${ROOT}/runs/rrun_1/split`, "R-WFO-118")).toBe("Split · R-WFO-118");
+    expect(researchDocumentTitle(`${ROOT}/runs/rrun_1/search`, null)).toBe("Search");
+    expect(researchDocumentTitle(`${ROOT}/runs/rrun_1/progress`, null)).toBe("Progress");
   });
 
   it("a path that is not a Research Loop screen keeps the shell's title", () => {
@@ -49,7 +49,7 @@ describe("F3 — one browser tab title per Research Loop screen (HiFi <title>)",
       return null;
     }
     const view = render(<Probe path={`${ROOT}/runs`} />);
-    expect(document.title).toBe("QuantBT — Run Library");
+    expect(document.title).toBe("Library");
     view.unmount();
     expect(document.title).toBe("Shell");
   });

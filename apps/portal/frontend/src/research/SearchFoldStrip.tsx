@@ -49,6 +49,7 @@ import {
   type SourceFold,
 } from "./splitClient";
 import { isRetainedAnswer } from "./retainedLane";
+import { humanise } from "./humanise";
 import { retainedSearchOf, type LedgerSlot } from "./useSearch";
 
 /* ------------------------------------------------------------------ types */
@@ -133,8 +134,8 @@ export const OOS_READING_WORDS: Record<OosReading, string> = {
  */
 export const OOS_READING_NOTE: Record<OosReading, string> = {
   SELECTION_INPUT: "OOS enters selection — claim is selection-adjusted",
-  RETROSPECTIVE: "retrospective — not a deployment claim",
-  WITHHELD_UNTIL_S4: "OOS withheld — read once, at Stage 4",
+  RETROSPECTIVE: "OOS is retrospective under this schedule",
+  WITHHELD_UNTIL_S4: "OOS withheld until S4",
   REPORT_ONLY: "OOS is report only — no part in selection",
   NOT_APPLICABLE: "OOS use not applicable for this mode × schedule",
 };
@@ -336,7 +337,7 @@ function testCellStyle(state: OosReading | null, published: boolean): { style: R
 function FoldGlyph({ fold, oos }: { fold: StripFold; oos: ModeReadsStrip["oos"] }) {
   const test = testCellStyle(oos.state, fold.test.published);
   return (
-    <span className="flex flex-col items-center gap-[2px]" data-strip-fold={fold.foldId} title={foldReadsWords(fold, oos)}>
+    <span className="flex flex-col items-center gap-[2px]" data-strip-fold={fold.foldId} role="img" aria-label={foldReadsWords(fold, oos)} title={foldReadsWords(fold, oos)}>
       <span className="flex gap-px">
         <span
           className={TRAIN_CELL}
@@ -406,7 +407,7 @@ export function FoldStrip({ view }: { view: ModeReadsView }) {
       data-strip-release={view.release.id}
       data-strip-oos={view.oos.state ?? "NOT_STATED"}
     >
-      <span className="contents" aria-hidden="true" data-fold-glyphs>
+      <span className="contents" data-fold-glyphs>
         {shown.map((fold) => (
           <FoldGlyph key={fold.foldId} fold={fold} oos={view.oos} />
         ))}
@@ -416,7 +417,7 @@ export function FoldStrip({ view }: { view: ModeReadsView }) {
           className="mono text-[10px]"
           style={{ color: "var(--ink-faint)" }}
           data-fold-strip-more={hidden}
-          title={`${shown.length} of ${view.folds.length} folds are drawn; the text alternative lists all of them`}
+          title={`${shown.length} of ${view.folds.length} folds are drawn; the Split screen lists all of them`}
         >
           +{groupDecimalString(String(hidden))} more folds
         </span>
@@ -424,17 +425,12 @@ export function FoldStrip({ view }: { view: ModeReadsView }) {
       <span className="min-w-[260px] flex-1 text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-fold-strip-note>
         {note}
       </span>
+      {/* One line: every fold's windows are in each glyph's tooltip and in the Split fold table. */}
       <ul className="sr-only" data-fold-strip-text>
         <li>
-          {view.mode} under the {view.schedule} schedule: OOS is{" "}
-          {view.oos.state === null ? "not stated by the engine" : OOS_READING_WORDS[view.oos.state]}. {view.folds.length} folds in the
-          fold plan{hidden > 0 ? `, ${shown.length} drawn` : ""}.
+          {humanise(view.mode)} · {humanise(view.schedule)}: OOS is {view.oos.state === null ? "not stated" : OOS_READING_WORDS[view.oos.state]}.{" "}
+          {view.folds.length} folds{hidden > 0 ? `, ${shown.length} drawn` : ""}.
         </li>
-        {view.folds.map((fold) => (
-          <li key={fold.foldId} data-fold-strip-line={fold.foldId}>
-            {foldReadsWords(fold, view.oos)}
-          </li>
-        ))}
       </ul>
     </span>
   );

@@ -97,8 +97,9 @@ describe("S03 claim passport reads progress.claims[]", () => {
     view({ read });
     const chips = [...document.querySelectorAll("[data-claim-kind]")];
     expect(chips.map((chip) => chip.getAttribute("data-claim-kind"))).toEqual(["VALIDATION", "CHRONOLOGY", "CAUSALITY", "OOS_SELECTION"]);
-    expect(chips[0].textContent).toContain("walk_forward_oos");
-    expect(chips[3].textContent).toContain("USED");
+    expect(chips[0].textContent).toContain("walk-forward OOS");
+    expect(chips[0].textContent).not.toContain("walk_forward");
+    expect(chips[3].textContent).toContain("used");
     expect($("[data-claim-badge]")?.textContent).toBe("claim passport — 4 facts sealed");
     expect($("[data-claim-badge]")?.textContent).not.toContain("not issued");
   });
@@ -113,7 +114,7 @@ describe("S03 claim passport reads progress.claims[]", () => {
     const holdout = $('[data-claim-kind="HOLDOUT_STATE"]')!;
     expect(holdout.textContent).toContain("not published");
     expect(holdout.getAttribute("title")).toContain("SOURCE_DID_NOT_PUBLISH_HOLDOUT_STATE");
-    expect($('[data-claim-kind="EXECUTION_CONTRACT"]')!.textContent).toContain("not applicable");
+    expect($('[data-claim-kind="EXECUTION_CONTRACT"]')!.textContent).toContain("n/a here");
     expect($("[data-claim-badge]")?.textContent).toBe("claim passport — forecast");
   });
 
@@ -135,7 +136,7 @@ describe("S03 claim passport reads progress.claims[]", () => {
 describe("S03 failed run", () => {
   it("says where it stopped and prints the server's sentence once, with no percent and no ETA", () => {
     view({ read: failedRead() });
-    expect($("[data-progress-text]")?.textContent).toBe("400 / 400 trials · failed at S4 Execute");
+    expect($("[data-progress-text]")?.textContent).toBe("400 / 400 trials · at S4");
     expect($("[data-progress-text]")?.textContent).not.toContain("%");
     expect($("[data-eta]")).toBeNull();
     const failure = $("[data-failure]")!;
@@ -149,13 +150,13 @@ describe("S03 failed run", () => {
   it("the heading says the run failed, and no Evidence Flow is offered when nothing was sealed", () => {
     view({ read: failedRead() });
     expect($("h1")?.textContent).toMatch(/^Run failed/);
-    expect($("[data-action='next-evidence']")).toBeNull();
+    expect($("[data-action='page-next']")).toBeNull();
   });
 
   it("a completed run still prints the percent and offers the next stage", () => {
     view();
     expect($("[data-progress-text]")?.textContent).toMatch(/trials · \d+%$/);
-    expect($("[data-action='next-evidence']")).toBeTruthy();
+    expect($("[data-action='page-next']")).toBeTruthy();
   });
 });
 
@@ -172,7 +173,7 @@ describe("S03 refused first read", () => {
     expect($("[data-research-panel='claim']")).toBeNull();
     expect($("[data-console-box]")).toBeNull();
     expect($("h1")?.textContent).toBe("Run progress");
-    expect($("[data-action='next-evidence']")).toBeNull();
+    expect($("[data-action='page-next']")).toBeNull();
   });
 
   it("a denied read has no Retry (retrying cannot change the answer)", () => {
@@ -443,11 +444,28 @@ describe("S03_S05 second wave", () => {
     const refusal = { state: "unavailable", status: 503, notFound: false, mayRetry: true, message: "m", code: null, detail: null, requestId: null, closesStream: false } as never;
     view({ read: null, snapshot: null, refusal, state: { state: "unavailable", reason: "The Research service did not answer. Try again.", mayRetry: true, retainsContent: false }, onRetry: vi.fn() });
     expect(document.body.textContent).not.toContain("reading run identity");
-    expect(document.querySelectorAll("[data-breadcrumb-run]").length).toBe(1);
+    /* W4A: no in-page breadcrumb; the title is the one place the run is named. */
+    expect(document.querySelectorAll("[data-breadcrumb-run]").length).toBe(0);
+    expect(document.querySelectorAll("h1").length).toBe(1);
   });
 
   it("NEW-3 control: while nothing has answered, the strip still says it is reading", () => {
     view({ read: null, snapshot: null, state: researchState({ kind: "in-flight", hasAcceptedResponse: false }) });
     expect(document.body.textContent).toContain("reading run identity");
+  });
+});
+
+/* ------------------------------------------------------------------ W4A */
+
+describe("W4A S03 - the claim passport prints no raw enum", () => {
+  it("humanises the claim chips and the seal", () => {
+    const read = { ...BASE, claims: FOUR } as ProgressRead;
+    view({ read });
+    const text = $("[data-claims]")!.textContent!;
+    expect(text).toContain("not causal · multi-fold · global calibration");
+    expect(text).toContain("retrospective global calibration");
+    expect(text).not.toMatch(/[a-z]_[a-z]/);
+    expect($("[data-readiness]")!.textContent).not.toMatch(/[A-Z]{4,}/);
+    expect(document.querySelector("[data-passport-field='handoff']")).toBeNull();
   });
 });

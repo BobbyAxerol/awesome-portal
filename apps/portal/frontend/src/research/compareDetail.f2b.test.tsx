@@ -72,11 +72,12 @@ describe("F2b S13 — every run opens its report, its evidence and its release c
     server(body);
     renderAt(`${base}?mode=pair&runs=run_a,run_b`);
     await settled();
-    const guard = document.querySelector('[data-verdict="match"] .txt')!;
-    expect(guard.textContent).toBe(GUARD_MATCH);
-    expect(guard.getAttribute("title")).toBe(GUARD_MATCH_TITLE);
+    const guard = document.querySelector('[data-verdict="match"] [data-guard-match]')!;
+    expect(guard.textContent).toBe("Same key");
+    expect(guard.getAttribute("title")).toContain(GUARD_MATCH_TITLE);
+    expect(guard.getAttribute("title")).toContain(GUARD_MATCH);
     const weaker = document.querySelector("[data-promotes-under]")!;
-    expect(weaker.getAttribute("title")).toMatch(/^the pair promotes under its weaker claim: /);
+    expect(weaker.getAttribute("title")).toMatch(/the pair promotes under its weaker claim: /);
     expect(weaker.textContent).not.toContain("promotes");
   });
 

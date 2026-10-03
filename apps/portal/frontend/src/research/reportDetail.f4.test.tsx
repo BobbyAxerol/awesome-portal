@@ -79,7 +79,7 @@ describe("F4 S09 - equity digest", () => {
     expect(line.getAttribute("data-digest-state")).toBe("NOT_PUBLISHED");
     expect(line.querySelector("[data-digest-value]")).toBeNull();
     expect(line.textContent).toContain("series digest");
-    expect(line.querySelector("[data-reason-code]")!.textContent).toBe("P05_SEAL_PREDATES_SOURCE_SERIES_BYTE_DIGEST");
+    expect(line.querySelector("[data-reason-code]")!.getAttribute("data-reason-code")).toBe("P05_SEAL_PREDATES_SOURCE_SERIES_BYTE_DIGEST");
   });
 
   it("an old core without the fields is left exactly as it was: no digest line, same metrics rows", async () => {

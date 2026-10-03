@@ -197,7 +197,8 @@ describe("D5 — the ledger pages with the served cursor", () => {
     const { container } = await settled();
     expect(container.querySelectorAll("[data-trial]")).toHaveLength(3);
     const more = container.querySelector("[data-action='ledger-more']") as HTMLButtonElement;
-    expect(more.textContent).toContain("3 of 4");
+    expect(more.textContent).toBe("more");
+    expect(more.getAttribute("title")).toContain("3 of 4");
     fireEvent.click(more);
     await waitFor(() => expect(container.querySelectorAll("[data-trial]")).toHaveLength(4));
     expect(currentSourceCalls.some((search) => search.includes("cursor=cursor-2"))).toBe(true);
@@ -212,7 +213,7 @@ describe("D5 — the ledger pages with the served cursor", () => {
     fireEvent.click(container.querySelector("[data-action='ledger-more']") as Element);
     await waitFor(() => expect(container.querySelector("[data-trial='3']")).toBeTruthy());
     const note = container.querySelector("[data-trial='3'] [data-trial-note]")?.textContent ?? "";
-    expect(note).toContain("rvol=2.4");
+    expect(note).toMatch(/(^| · )2\.4( · |$)/);
     expect(note).not.toContain("2.4000000000000004");
   });
 

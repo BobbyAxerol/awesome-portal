@@ -14,7 +14,7 @@ export function StageDenied({ runId, stage, screen }: { runId: string; stage: st
     <div className={SCREEN_FRAME} data-screen={screen} data-run={runId} data-stage-denied>
       <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" style={{ color: "var(--ink-soft)" }}>
         <Link to="/research/quantbt/runs" style={{ color: "var(--accent)" }} data-action="run-library-crumb">
-          Run Library
+          Library
         </Link>
         <span style={{ color: "var(--ink-faint)" }}>/</span>
         <ShortId id={runId} label="run" />

@@ -179,8 +179,8 @@ describe("B7 S09 - the Report's served reason in the supplemental section", () =
     expect(panel().getAttribute("data-all-time")).toBe("absent");
     const absent = panel().querySelector("[data-absent-state='NOT_PUBLISHED']") as HTMLElement;
     expect(absent.textContent).toContain("not published");
-    expect(absent.textContent).toContain(code);
-    expect(panel().querySelector("[data-reason-code]")?.textContent).toBe(code);
+    expect(absent.outerHTML).toContain(code);
+    expect(panel().querySelector("[data-reason-code]")?.getAttribute("data-reason-code")).toBe(code);
     expect(absent.getAttribute("title")).toContain(`server reason: ${code}`);
     expect(absent.getAttribute("aria-label")).toContain(code);
     expect(panel().querySelector("svg")).toBeNull();
@@ -192,7 +192,7 @@ describe("B7 S09 - the Report's served reason in the supplemental section", () =
     serve({ ...body, enriched_analysis: guard.enriched_analysis, enriched_analysis_availability: SERVED_ABSENT } as unknown as Body);
     renderReport(body.run_id);
     await screen.findByText("Claim passport");
-    expect(panel().querySelector("[data-reason-code]")?.textContent).toBe("SEALED_ENRICHMENT_NOT_COMPUTED");
+    expect(panel().querySelector("[data-reason-code]")?.getAttribute("data-reason-code")).toBe("SEALED_ENRICHMENT_NOT_COMPUTED");
   });
 
   it("field not served: the code-less line stays, nothing invented", async () => {

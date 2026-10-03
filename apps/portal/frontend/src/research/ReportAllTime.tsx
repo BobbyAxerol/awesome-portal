@@ -134,13 +134,16 @@ export const ALL_TIME_CSS = `
 
 function AbsentLine({ state, reason, what, title }: { state: string; reason: string | null; what: string; title?: string }) {
   return (
-    <span className="inline-flex flex-wrap items-baseline gap-x-1.5" data-absent={what} data-absent-state={state} title={title} aria-label={title !== undefined ? `${what} not published, server reason ${reason}` : undefined}>
-      <span className="rr-absent">{what !== "" ? `${what} — ` : ""}not published</span>
-      {reason !== null ? (
-        <span className="rr-reason" data-reason-code>
-          {reason}
-        </span>
-      ) : null}
+    <span
+      className="rr-absent"
+      data-absent={what}
+      data-absent-state={state}
+      data-reason-code={reason ?? undefined}
+      title={[title, reason].filter(Boolean).join(" · ") || undefined}
+      aria-label={reason !== null ? `${what} not published, server reason ${reason}` : undefined}
+      tabIndex={reason !== null ? 0 : undefined}
+    >
+      {what !== "" ? `${what} — ` : ""}not published
     </span>
   );
 }
@@ -492,22 +495,18 @@ function Curve({ block, activeEpisode = null }: { block: EnrichedAnalysis; activ
                 {win.label} {DAY(win.start_ms)} → {DAY(win.end_ms)}
               </span>
             ))}
-            {" "}
-            <span>(end exclusive)</span>
           </span>
         </p>
       ) : null}
       {bands.length > 0 ? (
         <p className="rr-at-sub" data-curve-bands title="Shaded spans are the served drawdown episodes, start to recovery.">
           <span>
-            shaded = drawdown episodes ({bands.length}
-            {block.drawdown_episodes.state === "AVAILABLE" && block.drawdown_episodes.values.length < block.drawdown_episodes.total ? ` of ${formatMetric(block.drawdown_episodes.total, "count")}, deepest served` : ""})
+            shaded: {bands.length}
+            {block.drawdown_episodes.state === "AVAILABLE" && block.drawdown_episodes.values.length < block.drawdown_episodes.total ? ` of ${formatMetric(block.drawdown_episodes.total, "count")}` : ""}
           </span>
         </p>
       ) : null}
-      <p className="sr-only" data-curve-summary>
-        {`Strategy rebased to 100 ranged ${rangeS.low} to ${rangeS.high} from ${DAY(x0)} to ${DAY(x1)}.`}
-      </p>
+      <span className="sr-only" hidden data-curve-summary title={`Strategy rebased to 100 ranged ${rangeS.low} to ${rangeS.high} from ${DAY(x0)} to ${DAY(x1)}.`} />
     </div>
   );
 }
@@ -789,7 +788,7 @@ function Episodes({ block, onActive }: { block: EnrichedAnalysis; onActive?: (in
       </table>
       {regime !== null ? (
         <p className="rr-at-sub" style={{ marginTop: 2 }} data-episode-regime="NOT_PUBLISHED" data-reason-code={regime.reason_code} title={regime.source_locator}>
-          <span>market regime — not published · {regime.reason_code}</span>
+          <span>market regime — not published</span>
         </p>
       ) : null}
     </div>
@@ -809,7 +808,7 @@ function Sub({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-const TITLE = "All-time analytics — supplemental";
+const TITLE = "All-time";
 
 export function AllTimeSupplement({ read, absentCode = null }: { read: EnrichedRead; absentCode?: string | null }) {
   /* The hovered / focused episode row lights its shaded band on the curve. */
@@ -844,7 +843,7 @@ export function AllTimeSupplement({ read, absentCode = null }: { read: EnrichedR
               </span>
             ) : null}
             <span className="rr-at-chip" data-enriched-chip title={chipTitle} aria-label={chipTitle?.replace(/\n/g, ", ")}>
-              {ENRICHED_CHIP}
+              ⓘ
             </span>
           </span>
         ) : null}
@@ -853,9 +852,9 @@ export function AllTimeSupplement({ read, absentCode = null }: { read: EnrichedR
         {block !== null ? (
           <div className="rr-at">
             <dl className="rr-at-facts" data-all-time-facts data-is-facts={isRead.kind} data-is-reason={isRead.kind === "absent" ? isRead.reason_code ?? undefined : undefined}>
-              <SummaryCell label="return" heading="Return · all-time OOS · portal" value={block.library_summary.return_fraction} block={block} unit="fraction" />
+              <SummaryCell label="return" heading="Return" value={block.library_summary.return_fraction} block={block} unit="fraction" />
               {/* QA S09 (UX-3): three Sharpe figures exist for one run; this one is the all-time OOS Sharpe, and says so. */}
-              <FactCell label="Sharpe" heading="Sharpe · all-time OOS" fact={block.facts.metrics.sharpe} unit="ratio" />
+              <FactCell label="Sharpe" heading="Sharpe" fact={block.facts.metrics.sharpe} unit="ratio" />
               <FactCell label="CAGR" fact={block.facts.metrics.cagr_fraction} unit="fraction" />
               <FactCell label="volatility" fact={block.facts.metrics.volatility_fraction} unit="fraction" />
               <SummaryCell label="max DD" value={block.library_summary.max_drawdown_fraction} block={block} unit="fraction" />
@@ -878,7 +877,7 @@ export function AllTimeSupplement({ read, absentCode = null }: { read: EnrichedR
           </div>
         ) : read.kind === "refused" ? (
           <p className="rr-absent" data-enriched-refused={read.reason} title={read.detail}>
-            all-time analytics — refused, {REFUSAL_WORDS[read.reason] ?? "not drawn"}
+            all-time — not drawn ({REFUSAL_WORDS[read.reason] ?? "refused"})
           </p>
         ) : (
           /* B7: the served `enriched_analysis_availability.reason_code`; null (field not served) keeps the code-less line. */

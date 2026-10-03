@@ -48,15 +48,15 @@ describe("spec 12 T01 — three verbatim tabs and the full hash", () => {
     view("modes");
     expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["WFO modes", "Execution routes", "Claims by contract"]);
     const crumb = document.querySelector("[data-breadcrumb]") as HTMLElement;
-    // F2b: no run means no Evidence Flow to return to, so the way out is the Journey Map.
-    expect(crumb.textContent).toBe("Journey Map/Engine Atlas");
-    expect(within(crumb).getByRole("link", { name: "Journey Map" }).getAttribute("href")).toBe("/research/quantbt/journey");
+    // F2b: no run means no Evidence Flow to return to, so the way out is the Journey (one spelling everywhere).
+    expect(crumb.textContent).toBe("Journey/Atlas");
+    expect(within(crumb).getByRole("link", { name: "Journey" }).getAttribute("href")).toBe("/research/quantbt/journey");
     const exits = document.querySelector("[data-atlas-exits]") as HTMLElement;
-    expect(within(exits).getByRole("link", { name: /Run Library/ }).getAttribute("href")).toBe("/research/quantbt/runs");
-    expect(within(exits).getByRole("link", { name: /New Run/ }).getAttribute("href")).toBe("/research/quantbt/runs/new?step=route");
+    expect(within(exits).getByRole("link", { name: /Library/ }).getAttribute("href")).toBe("/research/quantbt/runs");
+    expect(within(exits).getByRole("link", { name: /New run/ }).getAttribute("href")).toBe("/research/quantbt/runs/new?step=route");
     cleanup();
     view("modes", { run: "R-WFO-118" });
-    expect(within(document.querySelector("[data-breadcrumb]") as HTMLElement).getByRole("link", { name: "Evidence Flow" }).getAttribute("href")).toBe(
+    expect(within(document.querySelector("[data-breadcrumb]") as HTMLElement).getByRole("link", { name: "Evidence" }).getAttribute("href")).toBe(
       "/research/quantbt/runs/R-WFO-118/evidence",
     );
     expect(document.querySelector("[data-header-search]")?.getAttribute("href")).toBe(
@@ -69,9 +69,11 @@ describe("spec 12 §2 — the claim comes from mode × schedule", () => {
   it("changes the claim when a schedule chip is clicked, and reports it to the hash", () => {
     const onLocationChange = view("modes");
     const card = document.querySelector('[data-mode="mode_1_decay"]') as HTMLElement;
-    expect(card.querySelector("[data-claim]")?.textContent).toBe("not_causal_multi_fold_global_calibration");
-    fireEvent.click(within(card).getByRole("button", { name: /per_fold_decay/ }));
-    expect(card.querySelector("[data-claim]")?.textContent).toBe("selection_adjusted_outer_oos");
+    /* W4: the claim is humanised once on screen; the engine's token is the data attribute. */
+    expect(card.querySelector("[data-claim]")?.getAttribute("data-claim")).toBe("not_causal_multi_fold_global_calibration");
+    expect(card.querySelector("[data-claim]")?.textContent).toBe("not causal · multi-fold · global calibration");
+    fireEvent.click(within(card).getByRole("button", { name: /per-fold decay/ }));
+    expect(card.querySelector("[data-claim]")?.getAttribute("data-claim")).toBe("selection_adjusted_outer_oos");
     expect(card.querySelector('[data-oos-use="USED"]')).toBeTruthy();
     expect(onLocationChange).toHaveBeenCalledWith({ mode: "mode_1_decay", schedule: "per_fold_decay" });
   });
@@ -87,24 +89,16 @@ describe("spec 12 §2 — the claim comes from mode × schedule", () => {
   it("shows a cert cap and avoid-when the source does not publish as not published, with the reason", () => {
     view("modes");
     const card = document.querySelector('[data-mode="mode_4_is_only_robust"]') as HTMLElement;
-    fireEvent.click(within(card).getByRole("button", { name: /per_fold_causal/ }));
-    expect(card.querySelector("[data-claim]")?.textContent).toBe("strict_outer_oos_after_frozen_selection");
+    fireEvent.click(within(card).getByRole("button", { name: /per-fold causal/ }));
+    expect(card.querySelector("[data-claim]")?.getAttribute("data-claim")).toBe("strict_outer_oos_after_frozen_selection");
     /* W1: every mode publishes the same absent cert cap, so it is one chip for the tab, with the reason in its tooltip; no card repeats it. */
     expect(card.querySelector('[data-not-published="cert_cap"]')).toBeNull();
     expect(card.querySelector("[data-cert-cap]")).toBeNull();
-    expect(document.querySelectorAll("[data-cert-cap]")).toHaveLength(1);
+    expect(document.querySelectorAll("[data-cert-cap]")).toHaveLength(0);
     expect(document.querySelector("[data-cert-cap-shared]")?.getAttribute("title")).toMatch(/certifies an execution route/);
-    /* RF-04 + VD-TEXT-01: the five modes share one avoid-when reason, so the
-       typed absence is said once under the table — "avoid when — not
-       published" — with the server's sentence in its tooltip, not in the flow. */
-    const table = document.querySelector("[data-mode-table]") as HTMLElement;
-    expect(within(table).queryAllByText(/publishes no avoid-when guidance/)).toHaveLength(0);
-    const shared = table.querySelector("[data-avoid-when-shared]") as HTMLElement;
-    /* QA S12: the footer line is gone (an empty promise); the typed absence rides the table heading's tooltip. */
-    expect(table.querySelectorAll("p")).toHaveLength(0);
-    expect(shared.textContent).toBe("when to reach for which mode");
-    expect(shared.getAttribute("title")).toMatch(/publishes no avoid-when guidance/);
-    expect(table.querySelectorAll('[data-mode-row="mode_1_decay"] td')).toHaveLength(2);
+    /* W4: the "when to reach for which mode" table (and its shared avoid-when heading) is gone; the typed absence stays in the data, not in the flow. */
+    expect(document.querySelector("[data-mode-table]")).toBeNull();
+    expect(document.body.textContent).not.toContain("publishes no avoid-when guidance");
     // No cap is invented from the HiFi's sample letters.
     expect(card.textContent).not.toMatch(/≤ C|\bcap B\b/);
   });
@@ -152,7 +146,7 @@ describe("spec 12 T03 — deep links carry mode and schedule", () => {
   it("opens Search & Selection for the run it came from, with the pair", () => {
     view("modes", { run: "R-WFO-118" });
     const card = document.querySelector('[data-mode="mode_1_decay"]') as HTMLElement;
-    fireEvent.click(within(card).getByRole("button", { name: /per_fold_decay/ }));
+    fireEvent.click(within(card).getByRole("button", { name: /per-fold decay/ }));
     expect(card.querySelector('[data-open-search="mode_1_decay"]')?.getAttribute("href")).toBe(
       "/research/quantbt/runs/R-WFO-118/search#stage=search&mode=mode_1_decay&schedule=per_fold_decay",
     );
@@ -175,10 +169,9 @@ describe("Q4 / D-4 and the release facts panel", () => {
     expect(rule.textContent).toContain("claim = mode × schedule, never the mode alone");
     expect(rule.textContent).not.toContain("Click the schedule chips");
     expect(rule.getAttribute("title")).toContain("Click the schedule chips below and watch the claim change.");
-    // Rule Two keeps its box (HiFi geometry) but says it in one line; the sentence is the tooltip.
-    const two = document.querySelector("[data-rule-two]") as HTMLElement;
-    expect(two.textContent).toContain("Execution route is chosen separately");
-    expect(two.getAttribute("title")).toMatch(/Two selector layers, never mixed/);
+    // W4: Rule Two is no box; its sentence is the tooltip of the Execution routes tab.
+    expect(document.querySelector("[data-rule-two]")).toBeNull();
+    expect(document.querySelector('[data-tab="routes"]')?.getAttribute("title")).toMatch(/Two selector layers, never mixed/);
   });
 
   it("names only mode × schedule pairs the release admits (DQ-10, HiFi copy restored in W4)", () => {
@@ -377,7 +370,8 @@ describe("RF-04 — S12 density against the HiFi, and what is honestly bigger", 
     const short = document.querySelector('[data-mode="mode_1_decay"] [data-objective-term-table]') as HTMLElement;
     expect([...short.children].every((row) => row.getAttribute("data-term-layout") === "gutter")).toBe(true);
     const long = document.querySelector('[data-mode="mode_4_is_only_robust"] [data-objective-term-table]') as HTMLElement;
-    expect([...long.children].every((row) => row.getAttribute("data-term-layout") === "stacked")).toBe(true);
+    /* W4: a term another mode already defined shows its symbol only; the rest keep the measured layout. */
+    expect([...long.children].filter((row) => row.getAttribute("data-term-layout") !== "symbol-only").every((row) => row.getAttribute("data-term-layout") === "stacked")).toBe(true);
   });
 
   it("names the cap it applies and serves every term the manifest published", () => {
@@ -392,18 +386,17 @@ describe("RF-04 — S12 density against the HiFi, and what is honestly bigger", 
       /* Never a silent slice: shown + hidden is everything the engine served. */
       expect(shown.length + hidden.length, mode.mode_id).toBe(published.length);
       /* And the summary says what it caps, in the open — or that nothing is capped. */
-      expect(card.querySelector("[data-objective-more] summary")?.textContent, mode.mode_id).toContain(
-        hidden.length > 0 ? `${shown.length} of ${published.length} terms` : `all ${published.length} terms shown`,
-      );
+      expect(card.querySelector("[data-objective-more] summary")?.textContent, mode.mode_id).toContain(`Terms (${published.length})`);
     }
   });
 
-  it("says when_to_use once — in the table the HiFi keeps it in, not also in the card", () => {
+  it("says when_to_use once — on its card; the duplicate bottom table is gone", () => {
     view("modes");
+    expect(document.querySelector("[data-mode-table]")).toBeNull();
     for (const mode of DOC.modes) {
       if (!mode.when_to_use) continue;
       expect(screen.getAllByText(mode.when_to_use), mode.mode_id).toHaveLength(1);
-      expect((document.querySelector(`[data-mode-row="${mode.mode_id}"]`) as HTMLElement).textContent).toContain(mode.when_to_use);
+      expect((document.querySelector(`[data-mode="${mode.mode_id}"] [data-when-to-use]`) as HTMLElement).textContent).toBe(mode.when_to_use);
     }
   });
 
@@ -411,7 +404,7 @@ describe("RF-04 — S12 density against the HiFi, and what is honestly bigger", 
     view("modes");
     const card = document.querySelector('[data-mode="mode_1_decay"]') as HTMLElement;
     const label = card.querySelector('[data-mode-column="objective"] > span:first-child') as HTMLElement;
-    expect(label.textContent).toContain("objective — Stage 2 opens every term");
+    expect(label.textContent).toContain("Objective");
     expect(label.querySelector("[data-governing-stage]")?.getAttribute("data-governing-stage")).toBe("oos_candidate_selection");
     expect(label.textContent).toContain("maximize");
     /* The lead block is the formula alone. */

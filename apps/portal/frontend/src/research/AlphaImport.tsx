@@ -766,7 +766,7 @@ function RegistryChip({
             lineage →
           </LineageLink>
           {entry.run_admission?.may_create_run ? (
-            <LineageLink to={newRunHref(entry.alpha_id, entry.alpha_version_id)} action="registry-new-run" title="Screen 02 with this version preselected — preflight still decides admission">
+            <LineageLink to={newRunHref(entry.alpha_id, entry.alpha_version_id)} action="registry-new-run" title="New run with this version preselected — preflight still decides admission">
               run →
             </LineageLink>
           ) : null}
@@ -1126,13 +1126,13 @@ export function AlphaImport(props: AlphaImportProps) {
           <nav className="ai-crumb" aria-label="Breadcrumb">
             {contextAlpha ? (
               <>
-                <LineageLink to={lineageHref(contextAlpha)} action="back-to-lineage" title={`Attempt Lineage of ${contextAlpha}`}>
-                  ← lineage
+                <LineageLink to={lineageHref(contextAlpha)} action="back-to-lineage" title={`Lineage of ${contextAlpha}`}>
+                  ← Lineage
                 </LineageLink>
                 <span className="sep" aria-hidden="true">/</span>
               </>
             ) : null}
-            <LineageLink to="/research/quantbt/journey" title="Journey Map">Journey</LineageLink>
+            <LineageLink to="/research/quantbt/journey" title="Journey">Journey</LineageLink>
             {/* Screen 02. Once the server admits a run for the registered version the link is
                 version-bound (its `run_admission`); otherwise it carries only the alpha in
                 hand, never a guessed version. */}
@@ -1140,9 +1140,9 @@ export function AlphaImport(props: AlphaImportProps) {
               className="next"
               action="next-new-run"
               to={run.kind === "admitted" ? run.href : nextAlpha ? newRunPrefillHref(nextAlpha) : "/research/quantbt/runs/new"}
-              title={run.kind === "admitted" ? "Screen 02 with this version preselected" : nextAlpha ? `Screen 02 for ${nextAlpha}` : "Screen 02"}
+              title={run.kind === "admitted" ? "New run with this version preselected" : nextAlpha ? `New run for ${nextAlpha}` : "New run"}
             >
-              New Run →
+              New run →
             </LineageLink>
           </nav>
           <div className="ai-titlerow">
@@ -1572,9 +1572,9 @@ export function AlphaImport(props: AlphaImportProps) {
               <LineageLink
                 to={nextAlpha ? `/research/quantbt/runs?group=1&alpha=${encodeURIComponent(nextAlpha)}` : "/research/quantbt/runs"}
                 action="open-run-library"
-                title={nextAlpha ? `Run Library, filtered to ${nextAlpha}` : "Run Library"}
+                title={nextAlpha ? `Library, filtered to ${nextAlpha}` : "Library"}
               >
-                run library
+                Library
               </LineageLink>
             </div>
             {run.kind === "refused" ? (

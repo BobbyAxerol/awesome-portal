@@ -679,8 +679,8 @@ describe("P16-T05 — retained custody is narrow, and says so", () => {
     });
     // VD-FG-01-01: the code chip is on screen; the server's sentence is its tooltip, not text.
     const note = container.querySelector("[data-retained-refusal]");
-    expect(note?.querySelector("[data-refusal-code]")?.textContent).toBe("NOT_ADMITTED");
-    expect(note?.querySelector("[data-refusal-detail]")?.getAttribute("title")).toBe("Not an admitted profile.");
+    expect(note?.querySelector("[data-refusal-code]")?.getAttribute("data-refusal-code")).toBe("NOT_ADMITTED");
+    expect(note?.querySelector("[data-refusal-detail]")?.getAttribute("title")).toContain("Not an admitted profile.");
     expect(note?.textContent).not.toContain("Not an admitted profile.");
     expect(container.querySelector("[data-integrity]")).toBeTruthy();
   });
@@ -1072,7 +1072,8 @@ describe("W3b — Freeze on the retained WFO lane", () => {
     const { container } = await settled();
     const readiness = container.querySelector("[data-freeze-strip] [data-readiness]");
     expect(readiness?.getAttribute("data-readiness")).toBe("READY");
-    expect(readiness?.textContent).toBe("readiness ready");
+    /* W4: readiness is shown only when it is NOT ready. */
+    expect(readiness?.textContent).toBe("");
     expect(W3B_F.hub_freeze.availability.reason_code).toBe("P16_DELTA_WFO_PROFILE_USES_RETAINED_CURRENT_SOURCE_FREEZE");
     expect(container.textContent).not.toMatch(HUB_LANE_REASON);
     expect(container.innerHTML).not.toMatch(HUB_LANE_REASON);
@@ -1148,9 +1149,10 @@ describe("W5a · P16-T02 — the causal boundary per fold, on two axes", () => {
   it("names the engine's own claim, never a PASS", () => {
     const { container } = delegatedView(foldOrderingFixture());
     const panel = container.querySelector("[data-panel='ordering']") as HTMLElement;
-    expect(panel.querySelector("[data-ordering-badge]")?.textContent).toBe("⚠ NOT CAUSAL · GLOBAL SELECTION");
-    expect(panel.querySelector("[data-source-claim]")?.textContent).toBe("not causal multi fold global calibration");
-    expect(panel.querySelector("[data-source-claim]")?.getAttribute("title")).toContain("NOT_CAUSAL_MULTI_FOLD_GLOBAL_CALIBRATION");
+    expect(panel.querySelector("[data-ordering-badge]")?.textContent).toBe("Not causal · global selection");
+    /* W4: the claim wording is the badge's tooltip (said once, not four times). */
+    expect(panel.querySelector("[data-ordering-badge]")?.getAttribute("title")).toContain("not causal · multi-fold · global calibration");
+    expect(panel.querySelector("[data-ordering-badge]")?.getAttribute("title")).toContain("NOT_CAUSAL_MULTI_FOLD_GLOBAL_CALIBRATION");
     expect(panel.querySelector("[data-ordering-reason]")?.textContent).toContain("after every fold's OOS was read");
     expect(panel.querySelector("[data-two-clocks]")).toBeNull();
     expect(panel.textContent).not.toMatch(/\bPASS\b|causal ✓/);
@@ -1160,7 +1162,7 @@ describe("W5a · P16-T02 — the causal boundary per fold, on two axes", () => {
     const second = foldOrderingFixture().folds[1]!;
     const { container } = delegatedView(foldOrderingFixture({ second: { data_time: { ...second.data_time, boundary: "IS_OVERLAPS_OOS" } } }));
     const words = [...container.querySelectorAll("[data-fold-row] [data-boundary-words]")].map((node) => node.textContent);
-    expect(words).toEqual(["IS ends before OOS", "IS overlaps OOS"]);
+    expect(words).toEqual(["✓ ordered", "IS overlaps OOS"]);
   });
 
   it("an older server without the block keeps the typed wall-clock absence", () => {
@@ -1181,7 +1183,7 @@ describe("W5a · P16-T11 — the OOS generation child is the frozen θ*", () => 
       row.getAttribute("data-oos-child"), row.querySelector("[data-child-words]")?.textContent,
     ]);
     expect(children).toEqual([
-      ["MATCH", "OOS child = frozen θ* · candidate 2671e27b827a"],
+      ["MATCH", "θ* bound · candidate 2671e27b827a"],
       ["MISMATCH", "OOS child ≠ frozen θ* · candidate baf7c707c243"],
     ]);
   });
@@ -1344,6 +1346,8 @@ describe("F3 · S07 — one timestamp format, and a back link that names the sta
 
   it("the OOS child candidate id is 12 hex", () => {
     const { container } = delegatedView(foldOrderingFixture());
-    expect(container.querySelector("[data-child-words]")?.textContent).toMatch(/· candidate 2671e27b827a$/);
+    /* W4: identical on every fold, so the candidate id is printed once, not per fold. */
+    expect(container.querySelector("[data-candidate-once]")?.textContent).toMatch(/θ\* candidate 2671e27b827a$/);
+    expect(container.querySelector("[data-child-words]")?.textContent).toBe("θ* bound");
   });
 });

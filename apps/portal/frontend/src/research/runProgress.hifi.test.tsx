@@ -392,21 +392,11 @@ describe("FE-S03-05 — hand-off with the cursor", () => {
     );
   });
 
-  it("shows the done banner with S1–S5 links only when sealed", () => {
-    view();
-    expect(document.querySelector("[data-done-banner]")).toBeNull();
-    cleanup();
+  it("W4A: no completion banner; the stage pills carry the S1–S5 links", () => {
     view({ read: completed(), foldCursor: 1, transport: "closed" });
-    const links = Array.from(document.querySelectorAll("[data-done-link]")).map((a) => a.getAttribute("href"));
-    expect(links).toEqual([
-      "/research/quantbt/runs/run_01/split#fold=1",
-      "/research/quantbt/runs/run_01/search#fold=1",
-      "/research/quantbt/runs/run_01/freeze#fold=1",
-      "/research/quantbt/runs/run_01/execute#stage=execute&fold=1",
-      "/research/quantbt/runs/run_01/evidence#stage=claim&fold=1",
-    ]);
-    // A run without an issued claim does not say claims were issued (DQ-15).
-    expect($("[data-done-banner]").textContent).toContain("ARTIFACTS SEALED");
+    expect(document.querySelector("[data-done-banner]")).toBeNull();
+    expect(document.querySelectorAll("[data-done-link]")).toHaveLength(0);
+    expect(document.body.textContent).not.toContain("RUN COMPLETE");
   });
 });
 
@@ -554,7 +544,8 @@ describe("FE-S03-08 — artifacts are table rows with uppercase states", () => {
     view();
     const sealed = $('[data-artifact="trials.parquet"]');
     expect(sealed.textContent).toContain("SEALED");
-    expect(sealed.textContent).toContain("6.1 KB · sha256:2abc4bf2…");
+    expect(sealed.textContent).toContain("6.1 KB");
+    expect(sealed.querySelector("[title*=\"2abc4bf2\"]")).toBeTruthy(); /* W4A: the digest is the tooltip */
     expect(sealed.querySelector("a")).toBeNull();
     const writing = $('[data-artifact="selection_trace.json"] [data-motion="pulse"]');
     expect(writing.textContent).toBe("WRITING");
@@ -781,5 +772,42 @@ describe("spec 03 §3.2 — #fold= is written once the run is final and restored
     await waitFor(() => expect(result.current.read).not.toBeNull());
     act(() => result.current.pinFold(1));
     expect(window.location.hash).toBe("");
+  });
+});
+
+/* ---------------------------------------------------------------- W4A */
+
+const w4Line = (sequence: number) => ({ sequence, occurred_at_utc_ms: 1790226088660, tone: "INFO" as const, text: `line ${sequence}`, fold: null, trial: sequence });
+
+describe("W4A S03 - a finished run's console is a record, not a stream", () => {
+  const many = Array.from({ length: 400 }, (_, i) => w4Line(i + 1));
+
+  it("prints the last 10 lines and 'show all (400)'; the button prints the rest and folds back", () => {
+    view({ read: completed(), lines: many, transport: "closed" });
+    expect(document.querySelectorAll("[data-console-line]")).toHaveLength(10);
+    expect($("[data-console-line='400']")).toBeTruthy();
+    expect($("[data-console-line='390']")).toBeNull();
+    const button = $("[data-action='console-show-all']")!;
+    expect(button.textContent).toBe("show all (400)");
+    fireEvent.click(button);
+    expect(document.querySelectorAll("[data-console-line]")).toHaveLength(400);
+    expect($("[data-action='console-show-all']")!.textContent).toBe("show last 10");
+    fireEvent.click($("[data-action='console-show-all']")!);
+    expect(document.querySelectorAll("[data-console-line]")).toHaveLength(10);
+  });
+
+  it("a short log has no toggle", () => {
+    view({ read: completed(), lines: many.slice(0, 10), transport: "closed" });
+    expect($("[data-action='console-show-all']")).toBeNull();
+    expect(document.querySelectorAll("[data-console-line]")).toHaveLength(10);
+  });
+});
+
+
+describe("W4A S03 - a live run keeps every line", () => {
+  it("prints all the lines it holds and offers no toggle", () => {
+    view({ lines: Array.from({ length: 40 }, (_, i) => w4Line(i + 1)), transport: "stream" });
+    expect(document.querySelector("[data-action='console-show-all']")).toBeNull();
+    expect(document.querySelectorAll("[data-console-line]")).toHaveLength(40);
   });
 });

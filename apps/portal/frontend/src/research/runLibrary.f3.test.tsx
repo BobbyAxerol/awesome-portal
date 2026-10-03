@@ -47,9 +47,12 @@ describe("F3 01-6 - the claim note keeps the right column", () => {
         />
       </MemoryRouter>,
     );
+    /* W4A: only a claim worth quoting (issued, forecast, withheld shell) is a blockquote; the rest are data-only markers. */
     const quotes = Array.from(document.querySelectorAll<HTMLElement>("blockquote[data-claim]"));
-    expect(quotes.length).toBe(items.length);
+    expect(quotes.length).toBeGreaterThan(0);
     for (const q of quotes) expect(q.style.marginLeft).toBe("auto");
-    expect(document.querySelector('blockquote[data-claim-kind="failed"]')).toBeTruthy();
+    expect(document.querySelectorAll("[data-claim]").length).toBe(items.length);
+    expect(document.querySelector('[data-claim-kind="failed"]')).toBeTruthy();
+    expect(document.querySelector('[data-claim-kind="failed"]')?.textContent).toBe("");
   });
 });

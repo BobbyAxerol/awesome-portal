@@ -370,3 +370,12 @@ Lõi dùng chung: `runTerminalState`/`runStatusWord` (một hàm humanise), `use
 
 ### W3 — mobile (2026-10-02) · plan: `FRONTEND_FIX_PLAN_W1_W5_2026-10-02.md` §4
 Thanh trên 132–156px → **56px một hàng** (menu, badge môi trường, một crumb ellipsis, tìm kiếm, **Display**); Theme/Density/Planned modules/Default Workspace/Users & Access vào menu Display (mở bằng Enter/Space, Tab/mũi tên, Esc đóng và trả focus; Skip link vẫn là Tab đầu tiên; panel chỉ mount khi mở); **chip SOON/PROTOTYPE của sidebar bỏ ở mọi độ rộng** (giữ làm mờ, trạng thái ở `aria-label`). S04 thẻ cursor mặc định **thu gọn 39px** (`fold 3 · trial N · window OOS`), mở ra không sticky; dải tab hub không còn ô Promotion, scroll-snap, tab Freeze bấm được, tab 44px. Mục tiêu chạm: CTA chính ≥44px, điều khiển còn lại ≥24px (stepper fold 13×14 → 24×24; số phần tử <24px trên S00–S14 giảm về 0 trừ 1 ở S06). Hết tràn ngang đã đo. **Laptop giữ nguyên** (đo PIL: nội dung bên phải rail byte-identical hoặc ≤56 px nhiễu), **trừ rail sidebar mất chip** nên mọi baseline laptop có rail đổi. **Chưa xác nhận:** S07 causal fold rows và chip claim S03 ở 360 (fixture không có), cần run causal thật.
+
+## W4 — fewer words (2026-10-03)
+
+Four groups merged on `bfbf5ca4`: A (primitives `Absence`/`humanise`/`formatValue`/`PageHeader`, S00–S03), B (hub = summary: `hubStageSummary.tsx`, per-stage atlas panels removed), C (S05–S08), D (S09–S14, one `ResearchNotice`, titles, unknown-run crumb). Detail: `evidence/P21/qa-2026-10-02/w4/W4{A,B,C,D}.md`.
+
+- Words (`main.innerText`, 1280px): S09 R-WFO-023 1330→938 visible; S10 599→188; S11 656→246; S12 1024→352; S13 526→389; S05 685→557; S06 4145→2681; S08 3027→2010; S03 console 400→10 lines + `show all (N)`.
+- Rule held: explanation in tooltips, one humanised status word, a fact once per screen, uniform absence columns collapse to one caption.
+- Open (not done): ProvenanceStrip collapse, `fold_01→F1`, tile caption shortening, S12 Routes/Claims tab copy, Claim-tab cleanup; S05–S08 render `RunNotFound` plus a scoped `:has()` stopgap instead of only `RunNotFound`.
+- Baselines: all of S00–S14 change; recorded after deploy via the bounded recorder.

@@ -19,7 +19,8 @@
  *    export panel are `no-print`, and printing sends no request.
  */
 
-import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { markRunUnknown } from "../app/researchRunCrumb";
 import { Link } from "react-router-dom";
 
 import { ResearchPanel } from "./ResearchPanel";
@@ -68,7 +69,8 @@ import { FailedSheet, FinalAuditBlock } from "./ReportFailedSheet";
 import { ALL_TIME_CSS, AllTimeSupplement, nextWindow, useEntryMotion } from "./ReportAllTime";
 import { ShortId } from "./ShortId";
 import { enrichedBlock } from "./enrichedAnalysis";
-import { BreakableCode, humanToken, kilobytes } from "./reportText";
+import { kilobytes } from "./reportText";
+import { humanise } from "./humanise";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -403,17 +405,19 @@ function Absent({
   reason: string;
   what?: string;
 }) {
+  /* `<what> — <state>`; the server's reason code is the tooltip and the accessible name, never printed. */
   return (
-    <span className="inline-flex flex-wrap items-baseline gap-x-1.5" data-absent={what ?? ""} data-absent-state={state}>
-      <span className="rr-absent">
-        {what ? `${what} — ` : ""}
-        {state}
-      </span>
-      {reason !== "" ? (
-        <span className="rr-reason" data-reason-code>
-          {reason}
-        </span>
-      ) : null}
+    <span
+      className="rr-absent"
+      data-absent={what ?? ""}
+      data-absent-state={state}
+      data-reason-code={reason !== "" ? reason : undefined}
+      title={reason !== "" ? reason : undefined}
+      aria-label={reason !== "" ? `${what ? `${what} — ` : ""}${state} (${reason})` : undefined}
+      tabIndex={reason !== "" ? 0 : undefined}
+    >
+      {what ? `${what} — ` : ""}
+      {state}
     </span>
   );
 }
@@ -530,7 +534,7 @@ function NoPrintBar({
           <span style={{ color: "var(--ink-faint)" }}>·</span>
           {/* P21: Screen 11 composes and locally seals the candidate for this run. */}
           <Link to={rcHref(runId, link)} data-action="release-candidate" title="Next: release candidate for this run">
-            Release candidate →
+            Release →
           </Link>
         </>
       ) : null}
@@ -542,12 +546,12 @@ function NoPrintBar({
             data-action="attempt-lineage"
             title={`Attempt lineage of ${scope.alphaId}`}
           >
-            Attempt lineage
+            Lineage
           </Link>
         </>
       ) : null}
       <span style={{ color: "var(--ink-faint)" }}>/</span>
-      <span aria-current="page">Run Report</span>
+      <span aria-current="page">Report</span>
       <span className="flex flex-wrap items-center gap-1.5">
         {report !== null ? (
           <button type="button" className="rr-btn" data-action="print" title={NOPRINT_NOTE} onClick={() => window.print()}>
@@ -571,17 +575,9 @@ function NoPrintBar({
             </button>
           );
         })}
+        {/* A format the server does not offer is not drawn as a dead button; its reason rides one hidden marker. */}
         {(hasClaim ? report?.exports.unavailable_formats : undefined)?.map((unavailable) => (
-          <button
-            key={unavailable.format}
-            type="button"
-            className="rr-btn"
-            disabled
-            data-export-unavailable={unavailable.format}
-            title={unavailable.reason_code}
-          >
-            Export {EXPORT_FORMAT_LABEL[unavailable.format]}
-          </button>
+          <span key={unavailable.format} className="sr-only" hidden data-export-unavailable={unavailable.format} title={`${EXPORT_FORMAT_LABEL[unavailable.format]}: ${unavailable.reason_code}`} />
         ))}
       </span>
     </nav>
@@ -607,8 +603,9 @@ function Header({ runId, report, phase }: { runId: string; report: ReportDetail 
         </div>
         {report ? (
           <div className="rr-meta rr-long" data-meta>
-            sealed {iso(report.sealed_at_utc_ms)} · report revision {report.report_revision} ·{" "}
-            {report.presentation_revision} · source profile {report.frozen_core.report_source}
+            <span title={`report revision ${report.report_revision} · ${report.presentation_revision} · source profile ${report.frozen_core.report_source}`} data-report-revision-chip>
+              sealed {iso(report.sealed_at_utc_ms)} · rev {shortDigest(report.report_revision.replace(/^p18r1_/, ""), 8)}
+            </span>
           </div>
         ) : null}
       </div>
@@ -623,12 +620,15 @@ function Header({ runId, report, phase }: { runId: string; report: ReportDetail 
         </div>
       ) : (
         <div className="rr-cert" data-cert data-cert-box data-cert-state={v2 ? v2.certification.state : "NOT_A_FIELD"}>
-          <div className="k">certification</div>
-          <div className="rr-absent" style={{ fontSize: 12 }} title={v2 ? CERTIFICATION_NOT_GRADED : CERTIFICATION_ABSENT}>
-            not published
-          </div>
-          <div className="rr-reason" data-reason-code>
-            {v2 ? <BreakableCode code={v2.certification.reason_code} /> : failed ? "no claim — the run did not complete" : "not a field of the report contract"}
+          <div className="k">certificate</div>
+          <div
+            className="rr-absent"
+            style={{ fontSize: 12 }}
+            tabIndex={0}
+            data-reason-code={v2 ? v2.certification.reason_code : undefined}
+            title={[v2 ? CERTIFICATION_NOT_GRADED : CERTIFICATION_ABSENT, v2 ? v2.certification.reason_code : failed ? "no claim — the run did not complete" : "not a field of the report contract"].join(" · ")}
+          >
+            {failed ? "no claim" : "not published"}
           </div>
         </div>
       )}
@@ -652,10 +652,10 @@ function Passport({ core }: { core: FrozenCore }) {
             data-fact-state={fact.state}
           >
             {/* CG-P18-01: a v2 fact carries its key and label; a v1 fact only its position. */}
-            <span className="k">{v2 ? humanToken(v2.passport[index]!.label) : `fact ${index + 1}`}</span>
+            <span className="k">{v2 ? humanise(v2.passport[index]!.label) : `fact ${index + 1}`}</span>
             <span className="v">
               {fact.state === "AVAILABLE" && fact.text !== null ? (
-                <span title={fact.text}>{humanToken(fact.text)}</span>
+                <span title={fact.text}>{humanise(fact.text)}</span>
               ) : (
                 <Absent state={REPORT_FACT_WORDS[fact.state]} reason={factReason(fact)} />
               )}
@@ -668,17 +668,22 @@ function Passport({ core }: { core: FrozenCore }) {
   );
 }
 
+/** The run chip names the run, the Strategy row names the alpha, and the passport names the mode × schedule: none is listed twice (a row that carries a qualifier, such as a declared-not-executed optimizer, is the one place that says it, and stays). */
+const IDENTITY_SAID_ELSEWHERE: ReadonlySet<string> = new Set(["run_id", "alpha", "optimization"]);
+/** Identity values that are raw tokens (`signal_notional`, `native_vectorized`): read as words, the token in the tooltip. */
+const IDENTITY_TOKEN_KEYS: ReadonlySet<string> = new Set(["route", "runtime"]);
+
 function Identity({ core }: { core: FrozenCore }) {
   return (
     <section className="rr-sub" data-panel="identity" aria-label="identity">
       <h3 className="rr-t2">Identity</h3>
       <dl className="rr-id">
-        {core.identity.map((field) => (
+        {core.identity.filter((field) => !(IDENTITY_SAID_ELSEWHERE.has(field.key) && !field.qualifier) && !(field.key === "binding" && field.value === "PUBLISHABLE")).map((field) => (
           <div key={field.key} className="contents" data-identity={field.key}>
             <dt className="k">{field.label}</dt>
             <dd className="v rr-long">
               {field.value !== null && field.availability.state === "AVAILABLE" ? (
-                field.value
+                IDENTITY_TOKEN_KEYS.has(field.key) || /^[A-Z0-9]+(?:_[A-Z0-9]+)+$/.test(field.value) ? <span title={field.value}>{humanise(field.value)}</span> : field.value
               ) : (
                 <AvailabilityAbsent availability={field.availability} />
               )}
@@ -689,9 +694,9 @@ function Identity({ core }: { core: FrozenCore }) {
                   className="rr-reason"
                   style={{ display: "block", textTransform: "none", letterSpacing: 0 }}
                   data-identity-qualifier={field.qualifier.state}
-                  title={reasonCodeSentence(field.qualifier.reason_code) ?? field.qualifier.reason_code}
+                  title={[reasonCodeSentence(field.qualifier.reason_code), field.qualifier.reason_code].filter(Boolean).join(" · ")}
                 >
-                  {field.qualifier.text} · {field.qualifier.reason_code}
+                  {field.qualifier.text}
                 </span>
               ) : null}
             </dd>
@@ -713,18 +718,11 @@ function HeadlineRow({ core }: { core: FrozenCore }) {
         <div key={cell.key} className="cell" data-headline={cell.key}>
           <div className="k">{cell.label}</div>
           {cell.value !== null ? (
-            <div className="v" data-headline-value={cell.value} data-sign={SIGNED_HEADLINE.has(cell.key) ? (cell.value.trim().startsWith("-") ? "neg" : /^[+]?0*(\.0*)?$/.test(cell.value.trim()) ? undefined : "pos") : undefined}>
+            <div className="v" title={v2 && v2.headline[index]!.scope !== "NOT_PUBLISHED" ? `${words(v2.headline[index]!.scope)} · sealed report` : undefined} data-headline-value={cell.value} data-sign={SIGNED_HEADLINE.has(cell.key) ? (cell.value.trim().startsWith("-") ? "neg" : /^[+]?0*(\.0*)?$/.test(cell.value.trim()) ? undefined : "pos") : undefined}>
               <Num value={cell.value} unit={HEADLINE_UNIT[cell.key]} what={cell.key} />
+              {/* The scope and the source (the sealed run report core) are the tile's tooltip, not two more lines per tile. */}
               {v2 && v2.headline[index]!.scope !== "NOT_PUBLISHED" ? (
-                <span className="rr-reason" style={{ display: "block", fontWeight: 400 }} data-headline-scope>
-                  {words(v2.headline[index]!.scope)}
-                </span>
-              ) : null}
-              {/* QA S09 (UX-1): the tile names its source beside its scope, so two net returns on one sheet are told apart. */}
-              {v2 && v2.headline[index]!.scope !== "NOT_PUBLISHED" ? (
-                <span className="rr-reason" style={{ display: "block", fontWeight: 400 }} data-headline-source title="from the sealed run report core">
-                  sealed report
-                </span>
+                <span className="sr-only" hidden data-headline-scope title={`${words(v2.headline[index]!.scope)} · from the sealed run report core`} />
               ) : null}
             </div>
           ) : (
@@ -734,9 +732,7 @@ function HeadlineRow({ core }: { core: FrozenCore }) {
           )}
         </div>
       ))}
-      <p className="foot" data-headline-footnote>
-        {core.headline_footnote}
-      </p>
+      <span className="sr-only" hidden data-headline-footnote title={core.headline_footnote} />
     </section>
   );
 }
@@ -750,16 +746,13 @@ function Metrics({ core }: { core: FrozenCore }) {
             <tr>
               <th scope="col">metric</th>
               <th scope="col">value</th>
-              <th scope="col">unit</th>
-              <th scope="col">scope</th>
-              <th scope="col">origin</th>
             </tr>
           </thead>
           <tbody>
             {core.metrics.map((metric) => (
               <tr key={metric.key} data-metric={metric.key}>
                 {/* QA S09 (UX-14): the definition id is a tooltip, not a column of raw ids at the weight of the data. */}
-                <th scope="row" className="rr-mono" title={`definition ${metric.definition_id}`} data-metric-definition={metric.definition_id} style={{ fontSize: 10, textTransform: "none", letterSpacing: 0, color: "var(--ink)", borderBottom: "1px solid var(--line-soft)" }}>
+                <th scope="row" className="rr-mono" title={`${words(metric.unit)} · ${words(metric.scope)} · ${words(metric.origin)} · definition ${metric.definition_id}`} data-metric-unit={metric.unit} data-metric-scope={metric.scope} data-metric-origin={metric.origin} data-metric-definition={metric.definition_id} style={{ fontSize: 10, textTransform: "none", letterSpacing: 0, color: "var(--ink)", borderBottom: "1px solid var(--line-soft)" }}>
                   {metric.label}
                 </th>
                 <td data-metric-value={metric.value ?? undefined}>
@@ -769,9 +762,6 @@ function Metrics({ core }: { core: FrozenCore }) {
                     <AvailabilityAbsent availability={metric.availability} />
                   )}
                 </td>
-                <td>{words(metric.unit)}</td>
-                <td>{words(metric.scope)}</td>
-                <td>{words(metric.origin)}</td>
               </tr>
             ))}
           </tbody>
@@ -960,7 +950,7 @@ function EquityFigure({ equity, folds, equityIs, sourceFallback = null }: { equi
             <div className="rr-eq-legend" aria-hidden="true" data-equity-legend>
               <span data-legend="is" data-legend-state={withIs ? "published" : "absent"}>
                 <span className="sw" />
-                {withIs ? equityIsLegend(equityIs!) : equityIs ? `IS account — ${factReason(equityIs)}` : EQUITY_LEGEND_IS}
+                {withIs ? equityIsLegend(equityIs!) : equityIs ? <span title={factReason(equityIs)} tabIndex={0}>IS account — not published</span> : EQUITY_LEGEND_IS}
               </span>
               <span data-legend="oos">
                 <span className="sw" />
@@ -1102,9 +1092,7 @@ function EquityFigure({ equity, folds, equityIs, sourceFallback = null }: { equi
           <p className="rr-note mt-1" data-series-unavailable>
             {SERIES_UNAVAILABLE}
           </p>
-          <span className="rr-reason" data-reason-code>
-            {equity.availability.reason_code ?? equity.availability.state}
-          </span>
+          <span className="sr-only" hidden data-reason-code={equity.availability.reason_code ?? equity.availability.state} />
         </div>
       )}
       <p className="rr-caption mt-1" data-equity-caption>
@@ -1115,7 +1103,7 @@ function EquityFigure({ equity, folds, equityIs, sourceFallback = null }: { equi
                 <span title={`${folds.params_handoff.scope === "PER_FOLD_SELECTION_APPLIES_TO_OWN_OOS" ? "each fold's own selection applies to its own OOS" : "params handoff at each boundary"}: ${folds.params_handoff.text}`}>┆ = fold OOS start</span>
               )
             : "┆ = fold start"
-          : `fold boundaries — ${REPORT_WITHHELD_WORDS[folds.availability.state]} · ${folds.reason_code ?? factReason(folds)}`}
+          : <span title={folds.reason_code ?? factReason(folds)}>{`fold boundaries — ${REPORT_WITHHELD_WORDS[folds.availability.state]}`}</span>}
         {geometry && geometry.dropped > 0 ? ` · ${geometry.dropped} points did not parse and were not drawn` : ""}
         {zoomed ? ` · zoomed ${iso(points[0]!.at_utc_ms).slice(0, 10)} to ${iso(points[points.length - 1]!.at_utc_ms).slice(0, 10)}` : ""}
       </p>
@@ -1158,7 +1146,7 @@ function FoldVerdictsV2({ folds }: { folds: FrozenCoreV2["folds"] }) {
   /* QA S09 (inventory 16): a single-window run has no fold rows; the block says so in one line, with no empty table. */
   if (!published) {
     return (
-      <Block panel="folds" title="per-fold verdict" aside={<span className="rr-reason">{folds.state.toLowerCase()}</span>}>
+      <Block panel="folds" title="per-fold verdict" >
         <p data-folds-absent data-folds-state={folds.state}>
           <Absent
             what="per-fold rows"
@@ -1173,7 +1161,7 @@ function FoldVerdictsV2({ folds }: { folds: FrozenCoreV2["folds"] }) {
     );
   }
   return (
-    <Block panel="folds" title="per-fold verdict" aside={<span className="rr-reason">{folds.state.toLowerCase()}</span>}>
+    <Block panel="folds" title="per-fold verdict" >
       <div className="rr-scroll" tabIndex={0} role="region" aria-label="per-fold verdict table — scrolls sideways">
         <table className="rr-table" data-folds-state={folds.state} data-fold-columns={columns}>
           <thead>
@@ -1233,7 +1221,7 @@ function FoldVerdicts({ folds, verdictRule }: { folds: ReportFolds; verdictRule:
   if ("params_handoff" in folds) return <FoldVerdictsV2 folds={folds} />;
   const published = folds.state === "AVAILABLE";
   return (
-    <Block panel="folds" title="per-fold verdict" aside={<span className="rr-reason">{folds.state.toLowerCase()}</span>}>
+    <Block panel="folds" title="per-fold verdict" >
       <div className="rr-scroll" tabIndex={0} role="region" aria-label="per-fold verdict table — scrolls sideways">
         <table className="rr-table" data-folds-state={folds.state}>
           <thead>
@@ -1296,22 +1284,12 @@ function StageChain({ core }: { core: FrozenCore }) {
             const check = v2 ? v2.stages[index]!.check : null;
             return (
               <tr key={stage.key} data-stage={stage.key} data-stage-state={stage.state} data-stage-check={check?.result}>
-                <td className="key">
+                <td
+                  className="key"
+                  title={check && check.text !== null ? `${check.text}${check.source_key ? ` · ${check.source_key}` : ""}` : `${words(stage.state)} · started ${stageWhen(stage.started_at_utc_ms)} · completed ${stageWhen(stage.completed_at_utc_ms)}`}
+                  tabIndex={0}
+                >
                   {stage.key} · {STAGE_LABEL[stage.key]}
-                </td>
-                <td className="desc">
-                  {check && check.text !== null ? (
-                    <>
-                      {check.text}
-                      {check.source_key ? <span className="rr-reason"> · {check.source_key}</span> : null}
-                    </>
-                  ) : (
-                    <>
-                      {words(stage.state)} · started {stageWhen(stage.started_at_utc_ms)} · completed{" "}
-                      {stageWhen(stage.completed_at_utc_ms)}
-                      {/* QA S09 (UX-19): the absent check's code is one tooltip, not four identical lines. */}
-                    </>
-                  )}
                 </td>
                 <td
                   className="st"
@@ -1334,7 +1312,7 @@ function StageChain({ core }: { core: FrozenCore }) {
 function Artifacts({ core }: { core: FrozenCore }) {
   return (
     <section className="rr-sub" data-panel="artifacts" aria-label="Key artifacts & digests">
-      <h3 className="rr-t2">Key artifacts</h3>
+      <h3 className="rr-t2" title="Key artifacts and digests">Artifacts</h3>
       <div className="rr-artgrid">
         {core.artifacts.map((artifact) => (
           <div key={artifact.key} className="contents" data-artifact={artifact.key} data-artifact-state={artifact.state}>
@@ -1354,21 +1332,15 @@ function Artifacts({ core }: { core: FrozenCore }) {
                   </span>
                 ) : (
                   /* QA S09: "sealed - P18_MULTI_PART_TABLE_HAS_NO_SINGLE_PART_DIGEST" is "sealed, several parts"; the code is the tooltip. */
-                  <span title={factReason(artifact)} data-reason-code={factReason(artifact)}>
-                    {factReason(artifact) === "P18_MULTI_PART_TABLE_HAS_NO_SINGLE_PART_DIGEST" ? (
-                      `${ARTIFACT_STATE_WORDS.SEALED} — several parts`
-                    ) : (
-                      <>
-                        {ARTIFACT_STATE_WORDS.SEALED} — <BreakableCode code={factReason(artifact)} />
-                      </>
-                    )}
+                  <span title={factReason(artifact)} data-reason-code={factReason(artifact)} tabIndex={0}>
+                    {factReason(artifact) === "P18_MULTI_PART_TABLE_HAS_NO_SINGLE_PART_DIGEST" ? `${ARTIFACT_STATE_WORDS.SEALED} — several parts` : ARTIFACT_STATE_WORDS.SEALED}
                   </span>
                 )
               ) : (
-                <>
+                <span data-reason-code={factReason(artifact)} title={factReason(artifact)} tabIndex={0}>
                   {artifact.digest ? `${artifact.digest} · ` : ""}
-                  {ARTIFACT_STATE_WORDS[artifact.state]} — <span data-reason-code>{/* QA S09 (N-1): breaks at an underscore, not mid-word. */}<BreakableCode code={factReason(artifact)} /></span>
-                </>
+                  {ARTIFACT_STATE_WORDS[artifact.state]}
+                </span>
               )}
             </span>
           </div>
@@ -1382,27 +1354,21 @@ function Artifacts({ core }: { core: FrozenCore }) {
         {coreV2(core)
           ? (() => {
               const code = (core.artifacts[0] as { download?: { reason_code: string } }).download?.reason_code ?? "not published";
-              return /PRIVATE_ARTIFACT_BYTES/.test(code) ? "download — not offered for private artifacts" : `download — not available · ${code}`;
+              return /PRIVATE_ARTIFACT_BYTES/.test(code) ? "private — no download" : "no download";
             })()
-          : "download — not available"}
+          : "no download"}
       </p>
     </section>
   );
 }
 
-function Promotion({ core, runId, link }: { core: FrozenCore; runId: string; link: LinkCursor }) {
+function Promotion({ core }: { core: FrozenCore; runId?: string; link?: LinkCursor }) {
   return (
     <section data-panel="promotion" aria-label="promotion state">
-      <h2 className="rr-t2">Promotion state</h2>
-      <p className="rr-note" data-promotion-line>
-        {core.promotion.line}
-      </p>
-      <AvailabilityAbsent what="promotion" availability={core.promotion.availability} />
-      {/* Spec 11 §1 inbound "09 promotion line"; the printed sheet keeps only the line. */}
-      <p className="rr-note no-print">
-        <Link to={rcHref(runId, link)} data-action="promotion-release-candidate" title="Compose the release candidate for this run">
-          Release candidate →
-        </Link>
+      <h2 className="rr-t2">Promotion</h2>
+      {/* The server's sentence is the tooltip; the toolbar already links the release candidate. */}
+      <p className="rr-note" data-promotion-line title={core.promotion.line}>
+        <AvailabilityAbsent what="promotion" availability={core.promotion.availability} />
       </p>
     </section>
   );
@@ -1468,7 +1434,7 @@ function Provenance({ core, runId, report }: { core: FrozenCore; runId: string; 
     <section className="rr-prov" data-panel="provenance" aria-label="provenance of this report">
       {/* QA S09: the server's sentence re-lists the five revisions the table below already carries; it rides the heading's tooltip. */}
       <h2 className="rr-t2" title={provenance.line} data-provenance-line={provenance.line}>
-        Provenance of this report
+        Provenance
       </h2>
       <div className="rr-provgrid">
         <Identity core={core} />
@@ -1480,7 +1446,7 @@ function Provenance({ core, runId, report }: { core: FrozenCore; runId: string; 
         <dd className="v rr-long" data-evidence-link>
           {evidenceLink !== null && report !== null ? (
             <a href={evidenceLink} title={evidenceLink} style={{ color: "var(--accent)" }} data-evidence-href={evidenceLink}>
-              {reportEvidenceLinkLabel(runId, report)}
+              Link to this report
             </a>
           ) : (
             <span className="rr-absent" data-evidence-link-absent>
@@ -1488,12 +1454,7 @@ function Provenance({ core, runId, report }: { core: FrozenCore; runId: string; 
             </span>
           )}
         </dd>
-        <dt className="k">metric registry</dt>
-        <dd className="v rr-long">{provenance.metric_registry_version}</dd>
-        <dt className="k">read model</dt>
-        <dd className="v rr-long">{provenance.read_model_revision}</dd>
-        <dt className="k">verdict rule</dt>
-        <dd className="v rr-long">{provenance.verdict_rule_revision}</dd>
+        <span className="sr-only" hidden data-provenance-versions title={`metric registry ${provenance.metric_registry_version} · read model ${provenance.read_model_revision} · verdict rule ${provenance.verdict_rule_revision}`} />
         {/* QA S09: the signature equals the dataset binding digest listed below; one row says it once. */}
         {provenance.data_signature !== null && provenance.data_signature === core.source_digests.dataset_binding_digest ? null : (
           <>
@@ -1517,14 +1478,15 @@ function Provenance({ core, runId, report }: { core: FrozenCore; runId: string; 
           </div>
         ))}
       </dl>
-      <div className="flex flex-col gap-0.5" data-source-absences={absences.length}>
-        <span className="rr-caption" style={{ textTransform: "uppercase", letterSpacing: ".07em" }}>
-          source absences · {absences.length}
+      <div className="flex flex-wrap gap-x-2" data-source-absences={absences.length}>
+        <span className="rr-caption" title="Not published by this source">
+          Not published ({absences.length}):
         </span>
-        {absences.map(([key, fact]) => (
-          <span key={key} className="rr-reason" data-source-absence={key}>
+        {absences.map(([key, fact], index) => (
+          <span key={key} className="rr-reason" data-source-absence={key} data-reason-code={factReason(fact)} title={`${REPORT_FACT_WORDS[fact.state]} · ${factReason(fact)}`} tabIndex={0}>
             {/* QA S09 (UX-17): the sheet draws a portal benchmark; this absence is the source's, and says so. */}
-            {key === "benchmark" ? "source benchmark" : words(key)} — {REPORT_FACT_WORDS[fact.state]} · {factReason(fact)}
+            {key === "benchmark" ? "source benchmark" : words(key)}
+            {index < absences.length - 1 ? " ·" : ""}
           </span>
         ))}
       </div>
@@ -1552,9 +1514,7 @@ function Exports({ report, exporter }: { report: ReportDetail; exporter: ReportE
       title="exports"
       className="no-print"
       aside={
-        <span className="rr-reason" style={{ textTransform: "none", letterSpacing: 0 }}>
-          <span title={`${exports.maximum_bytes} bytes`}>max {kilobytes(exports.maximum_bytes)} per file</span>
-        </span>
+        <span className="sr-only" hidden title={`max ${kilobytes(exports.maximum_bytes)} per file (${exports.maximum_bytes} bytes)`} />
       }
     >
       {EXPORT_FORMATS.map((format: ExportFormat) => {
@@ -1566,7 +1526,7 @@ function Exports({ report, exporter }: { report: ReportDetail; exporter: ReportE
             <span className="rr-mono rr-long text-[10.5px]" data-export-line data-motion={slot.creating || exportPending(slot.job) ? "pulse" : undefined}>
               {EXPORT_FORMAT_LABEL[format]} ·{" "}
               {!offered
-                ? "not offered for this report"
+                ? "not offered"
                 : slot.creating
                   ? "requesting…"
                   : slot.job
@@ -1637,11 +1597,9 @@ function Warnings({ core }: { core: FrozenCore }) {
       ) : (
         core.warnings.map((warning) => (
           <div key={warning.definition_id} className="flex flex-col" data-warning={warning.definition_id} data-warning-state={warning.state}>
-            <span className="rr-mono text-[10px]" style={{ color: warning.state === "ACTIVE" ? "var(--warn)" : "var(--ink-faint)" }}>
-              {words(warning.state)} · {warning.definition_id}
-              {warning.reason_code ? ` · ${warning.reason_code}` : ""}
+            <span className="rr-note" title={`${words(warning.state)} · ${warning.definition_id}${warning.reason_code ? ` · ${warning.reason_code}` : ""}`} tabIndex={0} style={{ color: warning.state === "ACTIVE" ? "var(--warn)" : "var(--ink-faint)" }}>
+              {warning.copy}
             </span>
-            <span className="rr-note">{warning.copy}</span>
           </div>
         ))
       )}
@@ -1667,11 +1625,12 @@ function ReportNotice({
 }) {
   return (
     <div className="no-print flex flex-col gap-1.5" data-report-notice={state.state}>
-      <ResearchPanel title="run report" state={state} minBodyHeight={minBodyHeight} />
+      {/* A partial report is one word; the list of what is not published is its tooltip (each block already marks its own absence). */}
+      <ResearchPanel title="run report" state={state.state === "partial" ? { ...state, reason: "Partial.", detail: state.reason } : state} minBodyHeight={minBodyHeight} />
       {state.mayRetry && !controller.inFlight ? (
         <span>
           <button type="button" className="rr-btn" data-action="retry" onClick={controller.retry}>
-            read again
+            Read again
           </button>
         </span>
       ) : null}
@@ -1786,6 +1745,11 @@ export function ReportScreen({ runId, cursor = null, window: evidenceWindow = nu
   /* X2 · spec 09 T06: a failed run's sheet has no claim blocks; it is drawn by its own component. */
   const failed = report ? coreFailed(report.frozen_core) : null;
   const core = report && !failed ? (report.frozen_core as FrozenCore) : null;
+  const unknownRun = face.kind === "exit" && face.terminal.phase === "unavailable";
+  /* The shell's crumb names an unknown run as plain text, not a link to its hub. */
+  useEffect(() => {
+    if (unknownRun) markRunUnknown(runId);
+  }, [unknownRun, runId]);
 
   if (face.kind === "exit") {
     const unavailable = face.terminal.phase === "unavailable";

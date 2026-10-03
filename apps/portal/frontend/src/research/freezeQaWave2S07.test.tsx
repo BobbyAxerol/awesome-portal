@@ -130,8 +130,8 @@ describe("D15 — one name, J, with the unit label", () => {
 describe("D24 — words are the text, the server's code is the hover", () => {
   it("the engine's claim reads in words and its token is the title; no QUANTBT_/NOT_CAUSAL_ token is visible", async () => {
     const { container } = await settled();
-    const claim = container.querySelector("[data-source-claim]") as HTMLElement;
-    expect(claim.textContent).toBe("not causal multi fold global calibration");
+    const claim = container.querySelector("[data-ordering-badge]") as HTMLElement;
+    expect(claim.getAttribute("title")).toContain("not causal · multi-fold · global calibration");
     expect(claim.getAttribute("title")).toContain("NOT_CAUSAL_MULTI_FOLD_GLOBAL_CALIBRATION");
     const visible = (container.querySelector("[data-screen='freeze-detail']") as HTMLElement).textContent!;
     expect(visible).not.toMatch(/QUANTBT_[A-Z_]{8,}/);

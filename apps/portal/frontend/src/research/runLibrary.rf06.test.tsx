@@ -389,21 +389,26 @@ describe("FE-S01-08 — the claim face uses the server's reason", () => {
     view({ response: page([item({ claim: { state: "NOT_ISSUED", text: sentence, availability: AVAILABLE } })]) });
     const claim = document.querySelector("[data-claim]") as HTMLElement;
     // Pre-RF-05 code: the sentence was printed as if it were an issued claim.
-    expect(claim.textContent).toBe("NOT ISSUED");
-    expect(claim.querySelector("[data-claim-state]")?.getAttribute("title")).toBe(sentence);
+    /* W4A: the card prints no claim line; the sentence stays as data and the ledger carries the count. */
+    expect(claim.textContent).toBe("");
+    expect(claim.getAttribute("data-claim-text")).toBe(sentence);
     expect(claim.getAttribute("data-claim-kind")).toBe("not-issued");
   });
 
   it("says 'claim not issued' when the state is published without its sentence", () => {
     view({ response: page([item({ claim: { state: "NOT_ISSUED", text: null, availability: { state: "NOT_PUBLISHED", reason_code: "SOURCE_CLAIM_TEXT_EMPTY" } } })]) });
     const claim = document.querySelector("[data-claim]") as HTMLElement;
-    expect(claim.textContent).toBe(CLAIM_NOT_ISSUED);
-    expect(claim.querySelector("[title]")?.getAttribute("title")).toBe("The source published a claim state without a sentence.");
+    expect(claim.textContent).toBe("");
+    expect(claim.getAttribute("data-claim-kind")).toBe("not-issued");
+    expect(claim.getAttribute("data-reason-code")).toBe("SOURCE_CLAIM_TEXT_EMPTY");
+    expect(CLAIM_NOT_ISSUED).toBe("claim not issued");
   });
 
   it("gives a cancelled run its own line, not a pending promise", () => {
     view({ response: page([item({ status: "CANCELLED", claim: { state: null, text: null, availability: { state: "NOT_PUBLISHED", reason_code: "P11_PROGRESS_SNAPSHOT_NOT_PUBLISHED" } } })]) });
-    expect(document.querySelector("[data-claim]")?.textContent).toBe(CLAIM_CANCELLED);
+    expect(document.querySelector("[data-claim]")?.getAttribute("data-claim-kind")).toBe("cancelled");
+    expect(document.querySelector("[data-claim]")?.textContent).toBe("");
+    expect(CLAIM_CANCELLED).toContain("cancelled");
   });
 });
 
@@ -488,8 +493,8 @@ describe("FE-S01-13 — header, frame, certificate, footer", () => {
   it("links the journey map and bound Alpha group to built Attempt Lineage", () => {
     view({ filters: { ...EMPTY, group: true } });
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(TITLE);
-    /* QA UX-9: one name for the screen - title and crumb agree. */
-    expect(document.querySelector("[aria-current='page']")?.textContent).toBe(TITLE);
+    /* W4A: no in-page breadcrumb; the top bar shows the path. */
+    expect(document.querySelector("nav[aria-label='Breadcrumb']")).toBeNull();
     expect(screen.getByText("journey map ↗").getAttribute("href")).toBe("/research/quantbt/journey");
     /* F2b: one bound alpha on the list → the hint is a real link to its lineage. */
     const hint = document.querySelector("[data-lineage-hint]") as HTMLAnchorElement;

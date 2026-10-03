@@ -20,9 +20,9 @@
 
 import type { ReactNode } from "react";
 
+import { NOTICE_SENTENCE, ResearchNotice } from "./ResearchNotice";
 import {
   refusalDiagnostics,
-  type RefusalDiagnostics,
   type ResearchRefusal,
   type ResearchStateWithDiagnostics,
 } from "./researchRefusal";
@@ -51,18 +51,6 @@ export interface ResearchPanelProps {
   variant?: "framed" | "plain";
 }
 
-const STATE_GLYPH: Record<string, string> = {
-  loading: "·",
-  empty: "∅",
-  partial: "◐",
-  stale: "◷",
-  denied: "⊘",
-  unavailable: "⚠",
-  "failed-retryable": "↻",
-  terminal: "■",
-  commissioned: "◇",
-};
-
 /**
  * Whether the body still shows its real content. `available`, `stale` and
  * `partial` do; the rest do not, because their content is either absent or
@@ -77,51 +65,19 @@ export const STATE_WORD: Record<string, string> = { "failed-retryable": "not acc
 
 function StateNotice({ state }: { state: ResearchStateWithDiagnostics }) {
   const isWithheld = !showsContent(state);
+  /* A refusal state has ONE short fixed sentence; partial / commissioned keep
+     their typed reason (that is the content). The long sentence is the tooltip. */
+  /* `empty` is also a typed "nothing yet" the screens word themselves (e.g. a step waiting on the one before): its reason is the content. */
+  /* Only a state that came from a real refusal (it carries `diagnostics`, even null) gets the fixed short sentence; a state a screen worded itself keeps its own reason (that is its content). */
+  const refusalState = state.state in NOTICE_SENTENCE && state.state !== "empty" && "diagnostics" in state;
   return (
-    <div
-      className="flex items-start gap-2 rounded-[6px] border px-3 py-2"
-      style={{
-        borderColor: "var(--line)",
-        background: isWithheld ? "var(--paper-sunken)" : "var(--paper-raised)",
-      }}
-      data-research-state={state.state}
-      // A withheld panel is an alert; a demoted-but-present one is status.
-      role={isWithheld ? "alert" : "status"}
-    >
-      <span
-        aria-hidden="true"
-        className="mono text-[11px] leading-5"
-        style={{ color: "var(--ink-faint)" }}
-      >
-        {STATE_GLYPH[state.state] ?? "·"}
-      </span>
-      <span className="flex flex-col gap-0.5">
-        <span
-          className="mono text-[10px] uppercase tracking-[.07em]"
-          style={{ color: "var(--ink-faint)" }}
-          title={STATE_WORD[state.state] ? state.state : undefined}
-        >
-          {STATE_WORD[state.state] ?? state.state}
-        </span>
-        {state.reason ? (
-          <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-            {state.reason}
-          </span>
-        ) : null}
-        {state.diagnostics ? (
-          <RefusalChips diagnostics={state.diagnostics} />
-        ) : state.detail ? (
-          <details data-research-detail>
-            <summary className="mono cursor-pointer text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-              details
-            </summary>
-            <span className="mono break-all text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>
-              {state.detail}
-            </span>
-          </details>
-        ) : null}
-      </span>
-    </div>
+    <ResearchNotice
+      state={state.state}
+      sentence={refusalState ? (state.reason && state.reason.trim().split(/\s+/).length <= 6 ? state.reason : null) : (state.reason || null)}
+      diagnostics={state.diagnostics ?? null}
+      detail={refusalState ? [state.reason, state.diagnostics ? null : state.detail].filter(Boolean).join(" · ") || null : state.diagnostics ? null : state.detail}
+      withheld={isWithheld}
+    />
   );
 }
 
@@ -244,35 +200,6 @@ export function ResearchValue({
 }
 
 /**
- * The reason-code chip and the request id. The server's sentence is the
- * tooltip and the accessible name, never printed (VD-FG-01-01).
- */
-function RefusalChips({ diagnostics }: { diagnostics: RefusalDiagnostics }) {
-  const { code, requestId, sentence } = diagnostics;
-  return (
-    <span
-      className="mono inline-flex flex-wrap items-baseline gap-x-2 text-[9.5px]"
-      style={{ color: "var(--ink-faint)" }}
-      data-refusal-detail
-      role={sentence ? "note" : undefined}
-      title={sentence ?? undefined}
-      aria-label={sentence ? [code, sentence, requestId ? `request_id ${requestId}` : null].filter(Boolean).join(" — ") : undefined}
-    >
-      {code ? (
-        <span
-          className="rounded-[3px] border px-1 uppercase tracking-[.04em]"
-          style={{ borderColor: "var(--line)", background: "var(--paper-sunken)" }}
-          data-refusal-code={code}
-        >
-          {code}
-        </span>
-      ) : null}
-      {requestId ? <span data-refusal-request>request_id {requestId}</span> : null}
-    </span>
-  );
-}
-
-/**
  * A refusal inside a sub-panel (a slot that failed while the screen stands).
  *
  * The fixed sentence reads as the answer; the code and request id follow as
@@ -281,14 +208,10 @@ function RefusalChips({ diagnostics }: { diagnostics: RefusalDiagnostics }) {
  */
 export function RefusalNote({ refusal }: { refusal: ResearchRefusal }) {
   const diagnostics = refusalDiagnostics(refusal);
+  const tip = diagnostics ? [diagnostics.code, diagnostics.requestId ? `request ${diagnostics.requestId}` : null, diagnostics.sentence].filter(Boolean).join(" · ") : "";
   return (
-    <>
-      {refusal.message}
-      {diagnostics ? (
-        <span className="ml-1">
-          <RefusalChips diagnostics={diagnostics} />
-        </span>
-      ) : null}
-    </>
+    <span data-refusal-detail="" data-refusal-code={diagnostics?.code ?? undefined} data-refusal-request={diagnostics?.requestId ?? undefined} title={tip || undefined} tabIndex={tip ? 0 : undefined}>
+      {NOTICE_SENTENCE[refusal.state] ?? refusal.message}
+    </span>
   );
 }

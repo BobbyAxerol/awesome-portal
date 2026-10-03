@@ -16,7 +16,6 @@
  * route paints strip, header and tabs before ECharts is fetched (spec 04 §11).
  */
 
-import { HubAtlasBody } from "./hubStageAtlas";
 import { Component, createContext, lazy, Suspense, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { LineageLink, lineageHref } from "./LineageLink";
 import { Link } from "react-router-dom";
@@ -24,6 +23,8 @@ import { RunExitBar } from "./RunExitBar";
 import { isEndedWithoutEvidence, phaseOfStatus, runStatusWord, runTerminalState, stageChip, type RunPhase } from "./runTerminalState";
 import { libraryHref, newRunHref, progressHref, rcHref, reportHref } from "./runLinks";
 import { trialLabel, trialTitle } from "./trialLabel";
+import { humanise } from "./humanise";
+import { AtlasSummaryCard, StageSummaryCard } from "./hubStageSummary";
 
 import { usePresentation } from "../app/presentation";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
@@ -71,10 +72,6 @@ import type { ResearchState } from "./state";
 import { InfoMark } from "../components/InfoMark";
 import { smokeMotionAllowed } from "../execution/smokeMotion";
 import { ShortId } from "./ShortId";
-import { HubSplitBody } from "./hubStageSplit";
-import { HubSearchBody } from "./hubStageSearch";
-import { HubFreezeBody } from "./hubStageFreeze";
-import { HubExecuteBody } from "./hubStageExecute";
 import { AnalyticsAbsentLine, BehaviorV2, StrategyBenchmarkFigure, v2Absence, v2Of } from "./analyticsV2";
 import { deepestSpan, enrichedBlock, readIsFacts, windowBands, type EnrichedAnalysis } from "./enrichedAnalysis";
 import { EnrichedAbsenceLine } from "./enrichedAvailability";
@@ -149,41 +146,6 @@ export const STAGE_CRUMB: Record<EvidenceStage, string> = {
 
 const STAGE_KEY = { split: "S1", search: "S2", freeze: "S3", execute: "S4" } as const;
 type PreviewStage = keyof typeof STAGE_KEY;
-
-/**
- * Where each stage tab's deep dive lives, and whether that screen exists yet.
- * Screen 08 is P17 and not built: its link stays refused with that reason.
- */
-const DEEP_DIVE: Record<PreviewStage, { screen: string; path: string | null; phase?: string }> = {
-  split: { screen: "05 Split", path: "split" },
-  search: { screen: "06 Search", path: "search" },
-  freeze: { screen: "07 Freeze", path: "freeze" },
-  execute: { screen: "08 Execute", path: "execute" },
-};
-
-/**
- * The HiFi per-tab heading and the panels it draws (DQ-02: HiFi copy). Panel
- * titles only name what the panel would show; none asserts a fact this run
- * did not publish (DQ-15), so numbers and file names from the demo are gone.
- */
-const STAGE_PREVIEW: Record<PreviewStage, { title: string; panels: string[] }> = {
-  split: {
-    title: "Stage 1 · Split — fold construction",
-    panels: ["fold timeline", "fold table", "inner validation — containment", "stitched OOS provenance"],
-  },
-  search: {
-    title: "Stage 2 · Search — why these params",
-    panels: ["search configuration", "candidate funnel", "selection decision", "lineage — one unbroken chain"],
-  },
-  freeze: {
-    title: "Stage 3 · Freeze",
-    panels: ["three timestamps — ordering is the claim", "digest chain — drift detection"],
-  },
-  execute: {
-    title: "Stage 4 · Execute — candle replay",
-    panels: ["candle replay", "event ledger", "event inspector", "why these params?"],
-  },
-};
 
 /** Statuses of a run that will never seal evidence without a new attempt. */
 const ENDED_UNSEALED = new Set(["CANCELLED", "FAILED", "RECOVERY_REQUIRED"]);
@@ -368,29 +330,6 @@ function PanelLabel({ children }: { children: ReactNode }) {
   );
 }
 
-/** A panel the source does not fill, kept at full size with its reason. */
-function SourceGap({
-  title,
-  reason,
-  children,
-  id,
-}: {
-  title: string;
-  reason: ReactNode;
-  children?: ReactNode;
-  id: string;
-}) {
-  return (
-    <section className="flex flex-col gap-1.5 rounded-[8px] border p-4" data-gap={id} style={PANEL_STYLE}>
-      <PanelLabel>{title}</PanelLabel>
-      <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-        {reason}
-      </p>
-      {children}
-    </section>
-  );
-}
-
 /** The HiFi identity pill: mono 11px on white, fully rounded. */
 function Pill({
   children,
@@ -480,9 +419,9 @@ function endedWithoutEvidence(hub: EvidenceHub): boolean {
 /* --------------------------------------------------------- claims passport */
 
 /**
- * The spec's claim fields the Hub does not carry. Each keeps its cell in the
- * passport (spec 04 §22: "do not hide the chip"), so a reader sees which fact
- * is absent rather than a shorter card that looks complete.
+ * The spec's claim fields the Hub does not carry. They are named once, as a
+ * count with the list in its tooltip (spec 04 §22: "do not hide the chip" is
+ * kept by the count, which a reader can focus).
  */
 const UNPUBLISHED_CLAIM_FIELDS = [
   "validation_claim",
@@ -519,24 +458,6 @@ function PassportField({
   );
 }
 
-function AbsentClaimField({ name, bar, unread: unreadProp = null }: { name: string; bar?: boolean; unread?: "loading" | "not-read" | null }) {
-  const laneReadFailed = useContext(LaneReadFailedContext);
-  const unread = unreadProp ?? (laneReadFailed ? "not-read" : null);
-  /* F1 (FG 04-F): with no hub in hand the field is unknown, not unpublished. */
-  if (unread !== null) {
-    return (
-      <PassportField name={name} bar={bar} data-withheld="NOT_READ" title={`${name} — the Evidence Hub was not read`}>
-        <NotRead phase={unread} />
-      </PassportField>
-    );
-  }
-  return (
-    <PassportField name={name} bar={bar} data-withheld="NOT_PUBLISHED" title={`${name} — not published by the Evidence Hub for this run`}>
-      <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} />
-    </PassportField>
-  );
-}
-
 /**
  * The claims passport — the HiFi's white card of label/value cells with the
  * engine note at its right (DQ-02: the HiFi wins on look; spec 04 §2.1 drew a
@@ -569,6 +490,14 @@ function ClaimPassport({
   const engine = hub?.core.engine_version ?? null;
   /* F1 (FG 04-F): no hub means loading or refused — "not read", never "not published". */
   const unread: "loading" | "not-read" | null = hub === null ? (state.state === "loading" ? "loading" : "not-read") : null;
+  /* A failed read of the sealed lane makes the lane's claim fields unknown, not unpublished. */
+  const laneReadFailed = useContext(LaneReadFailedContext);
+  const absentUnread = unread ?? (laneReadFailed ? "not-read" : null);
+  const contractServed = contract !== null && isAvailable(contract.availability) && contract.value !== null;
+  /* The claim fields this lane never publishes, named once instead of one "not published" cell each. */
+  const absentFields: string[] = retained
+    ? []
+    : [...UNPUBLISHED_CLAIM_FIELDS, "runtime authority", ...(contractServed ? [] : ["execution contract"])].map((name) => humanise(name));
 
   return (
     <div
@@ -596,20 +525,14 @@ function ClaimPassport({
           ) : claim.state === "NOT_ISSUED" ? (
             <button
               type="button"
-              className="mono max-w-[560px] text-left text-[12px]"
+              className="mono text-left text-[12px]"
               style={{ color: "var(--ink)" }}
               data-claim-not-issued
-              aria-label="claim not issued — jump to source"
+              aria-label={`claim not issued${claim.text !== null ? `. ${claim.text}` : ""} — jump to source`}
               title={claim.text ?? undefined}
               onClick={() => onJump("claim")}
             >
-              NOT_ISSUED
-              {claim.text !== null ? (
-                <span className="text-[10.5px] italic" style={{ color: "var(--ink-soft)" }} data-claim-sentence>
-                  {" "}
-                  — {claim.text}
-                </span>
-              ) : null}
+              {humanise(claim.state)}
             </button>
           ) : claim.state === "FORECAST" && claim.text !== null ? (
             <span className="italic" data-claim-forecast style={{ color: "var(--accent-2)" }}>
@@ -630,10 +553,6 @@ function ClaimPassport({
 
         {retained ? <RetainedClaimFields claim={retained} onJump={onJump} /> : null}
 
-        {retained ? null : UNPUBLISHED_CLAIM_FIELDS.map((name, index) => (
-          <AbsentClaimField key={name} name={name} bar={index === 0} unread={unread} />
-        ))}
-
         {retained ? null : contract !== null && isAvailable(contract.availability) && contract.value !== null ? (
           <PassportField name="execution_contract">
             <button
@@ -647,17 +566,7 @@ function ClaimPassport({
               {contract.value}
             </button>
           </PassportField>
-        ) : (
-          <PassportField name="execution_contract">
-            {unread !== null ? (
-              <NotRead phase={unread} />
-            ) : (
-              <Withheld availability={contract?.availability ?? { state: "NOT_PUBLISHED", reason_code: null }} />
-            )}
-          </PassportField>
-        )}
-
-        {retained ? null : <AbsentClaimField name="runtime authority" unread={unread} />}
+        ) : null}
 
         <PassportField name="certification">
           {issued && certificate ? (
@@ -682,7 +591,7 @@ function ClaimPassport({
             </button>
           ) : certificate?.state === "NOT_ISSUED" ? (
             <span data-certificate-state="NOT_ISSUED" title={certificate.reason_code ?? undefined}>
-              NOT_ISSUED
+              {humanise(certificate.state)}
             </span>
           ) : certificate === null && unread !== null ? (
             <span data-certificate-state="NOT_READ">
@@ -694,47 +603,52 @@ function ClaimPassport({
             </span>
           )}
         </PassportField>
-      </div>
 
-      <div
-        className="flex flex-col justify-center gap-1 border-t px-3.5 py-2.5 md:max-w-[230px] md:border-l md:border-t-0"
-        style={{ borderColor: "var(--line-soft)" }}
-        data-passport-note
-      >
-        <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-          issued by <span className="mono">{engine !== null ? `quantbt-engine ${engine}` : "the engine"}</span>
-        </span>
-        {hub ? (
-          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-            {laneReadiness !== null ? (
-              <span data-registry="research.current-source-evidence.v1">research.current-source-evidence.v1</span>
-            ) : (
-              <span data-registry={hub.metric_registry_version}>{hub.metric_registry_version}</span>
-            )}
-            {hub.oos_performance && laneReadiness === null ? (
-              <>
-                {" · "}
-                <span
-                  data-registry={hub.oos_performance.registry_version}
-                  title={hub.oos_performance.report_locator ?? reasonTitle(hub.oos_performance.availability)}
-                >
-                  {hub.oos_performance.registry_version}
-                </span>
-              </>
-            ) : null}
-            {" · "}
-            {laneReadiness !== null ? (
-              <span data-readiness={laneReadiness} data-readiness-lane="retained" title="the retained seal, from the run's progress read">
-                retained seal <b className="font-semibold" style={{ color: "var(--ink-soft)" }}>{laneReadiness}</b>
-              </span>
-            ) : (
-              <span data-readiness={hub.readiness}>
-                readiness <b className="font-semibold" style={{ color: "var(--ink-soft)" }}>{hub.readiness}</b>
-              </span>
-            )}
+        {/* Fewer words: the claim fields the source did not publish are one count; the names ride in the tooltip. */}
+        {absentFields.length > 0 ? (
+          <span
+            className="mono self-end text-[10.5px]"
+            style={{ color: "var(--ink-faint)" }}
+            data-claim-absent={absentFields.length}
+            data-withheld={absentUnread !== null ? "NOT_READ" : "NOT_PUBLISHED"}
+            tabIndex={0}
+            title={`${absentFields.join(", ")} — ${absentUnread !== null ? "the Evidence Hub was not read" : "not published by the Evidence Hub for this run"}`}
+            aria-label={`${absentFields.length} claim fields ${absentUnread !== null ? "not read" : "not published"}: ${absentFields.join(", ")}`}
+          >
+            {absentFields.length} {absentUnread !== null ? (absentUnread === "loading" ? "reading…" : "not read") : "not published"}
           </span>
         ) : null}
       </div>
+
+      {/* The engine, registry and readiness are one tooltip on one word (fewer words). */}
+      {hub ? (
+        <div
+          className="flex items-center border-t px-3.5 py-2.5 md:border-l md:border-t-0"
+          style={{ borderColor: "var(--line-soft)" }}
+          data-passport-note
+        >
+          <span
+            className="mono text-[10.5px]"
+            style={{ color: "var(--ink-faint)" }}
+            tabIndex={0}
+            data-readiness={laneReadiness ?? hub.readiness}
+            data-readiness-lane={laneReadiness !== null ? "retained" : undefined}
+            data-registry={laneReadiness !== null ? "research.current-source-evidence.v1" : hub.metric_registry_version}
+            data-engine-note={engine ?? undefined}
+            title={[
+              `issued by ${engine !== null ? `quantbt-engine ${engine}` : "the engine"}`,
+              laneReadiness !== null ? "research.current-source-evidence.v1" : hub.metric_registry_version,
+              laneReadiness === null && hub.oos_performance ? hub.oos_performance.registry_version : null,
+              laneReadiness !== null ? "retained seal, from the run's progress read" : "readiness of the evidence projection",
+            ]
+              .filter((part) => part !== null)
+              .join(" · ")}
+            aria-label={`${laneReadiness !== null ? "retained seal" : "readiness"} ${humanise(laneReadiness ?? hub.readiness)}`}
+          >
+            {humanise(laneReadiness ?? hub.readiness)}
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -773,12 +687,13 @@ function RunHeader({
       data-run-header={runId}
       style={{ borderColor: "var(--line-soft)", background: "var(--paper-sunken)", color: "var(--ink-faint)" }}
     >
-      <span>
+      <h1 className="m-0 text-[11px] font-normal">
+        <span className="sr-only">Evidence flow · </span>
         run{" "}
         <span style={{ color: "var(--ink)" }} data-run-id>
           <ShortId id={hub?.run_id ?? runId} label="run" />
         </span>
-      </span>
+      </h1>
 
       {/*
         * `run_identity` is additive and optional while the responder rolls
@@ -860,23 +775,32 @@ function RunHeader({
         </button>
       ) : null}
 
-      {identity && isAvailable(identity.route.id.availability) && identity.route.id.value !== null ? (
-        <Pill data-route={identity.route.id.value}>route {identity.route.id.value}</Pill>
-      ) : null}
-
       {core ? (
-        <span className="ml-auto flex flex-wrap items-center gap-x-1.5">
-          {core.engine_version !== null ? (
-            <span data-engine={core.engine_version}>engine quantbt-engine {core.engine_version}</span>
-          ) : (
-            <Withheld availability={hub!.availability} what="engine" />
-          )}
-          {core.source_adapter_id !== null ? <span data-adapter={core.source_adapter_id}>· {core.source_adapter_id}</span> : null}
+        <span
+          className="ml-auto flex flex-wrap items-center gap-x-1.5"
+          data-run-meta
+          data-engine={core.engine_version ?? undefined}
+          data-adapter={core.source_adapter_id ?? undefined}
+          data-route={identity && isAvailable(identity.route.id.availability) ? (identity.route.id.value ?? undefined) : undefined}
+          tabIndex={0}
+          title={[
+            core.engine_version !== null ? `engine quantbt-engine ${core.engine_version}` : null,
+            core.source_adapter_id,
+            identity && isAvailable(identity.route.id.availability) && identity.route.id.value !== null ? `route ${identity.route.id.value}` : null,
+            identity && isAvailable(identity.created_at_utc_ms.availability) && identity.created_at_utc_ms.value !== null
+              ? new Date(identity.created_at_utc_ms.value).toISOString()
+              : null,
+          ]
+            .filter((part) => part !== null)
+            .join(" · ")}
+        >
           {identity && isAvailable(identity.created_at_utc_ms.availability) && identity.created_at_utc_ms.value !== null ? (
-            <span data-created title={new Date(identity.created_at_utc_ms.value).toISOString()}>
-              · created {utcZ(identity.created_at_utc_ms.value)}
-            </span>
-          ) : null}
+            <span data-created>created {utcZ(identity.created_at_utc_ms.value)}</span>
+          ) : core.engine_version === null ? (
+            <Withheld availability={hub!.availability} what="engine" />
+          ) : (
+            <span>engine {core.engine_version}</span>
+          )}
         </span>
       ) : null}
     </header>
@@ -1122,31 +1046,15 @@ function summaryCounts(hub: EvidenceHub | null, summary: string | null): string 
   return `${shown} of ${all.length} metrics · ${hub.series.length} series`;
 }
 
-function tabSub(stage: EvidenceStage, cursor: EvidenceCursor, hub: EvidenceHub | null): string {
-  /* No hub in hand (loading or refused): a word, never a bare dash (P23 matrix). */
-  if (hub === null) return "not read";
-  /* QA S04: the counts ride in the tab's tooltip (`summaryCounts`); the line says which window the tab reads. */
-  if (stage === "summary") return "OOS";
+/** One word per stage tab (fewer words): the stage's state. Summary, Atlas and an unissued claim print nothing. */
+function tabSub(stage: EvidenceStage, hub: EvidenceHub | null): string {
+  if (hub === null || stage === "summary" || stage === "atlas") return "";
   if (stage === "claim") {
     const certificate = hub.claim.methodology_certificate;
-    return certificate.state === "ISSUED" && certificate.grade !== null ? `cert ${certificate.grade}` : `claim ${hub.claim.state}`;
+    return certificate.state === "ISSUED" && certificate.grade !== null ? `cert ${certificate.grade}` : "";
   }
-  if (stage === "atlas") return "modes × routes";
   const row = hub.stages.find((entry) => entry.key === STAGE_KEY[stage]);
-  const state = row ? stageChip(row.state, hubPhase(hub)).word : "not published";
-  /* B1: a failed / cancelled / not-run stage is one word; no fold or route suffix. */
-  if (state === "failed" || state === "cancelled" || state === "not run" || state === "stopped") return state;
-  if (stage === "execute") {
-    const route = hub.core.run_identity?.route.id;
-    return route && isAvailable(route.availability) && route.value !== null ? `${state} · ${route.value}` : state;
-  }
-  if (stage === "split") {
-    /* HiFi "5 folds · holdout sealed": the fold count is the one served fact; the seal is not on the Hub, so it is not printed. */
-    const navigation = hub.core.fold_navigation;
-    const count = navigation && isAvailable(navigation.availability) ? navigation.published_fold_count : null;
-    if (count !== null && count !== undefined) return `${state} · ${count} ${count === 1 ? "fold" : "folds"}`;
-  }
-  return `${state} · fold ${cursor.fold}`;
+  return row ? stageChip(row.state, hubPhase(hub)).word : "";
 }
 
 const DOT_TONE = {
@@ -1180,11 +1088,14 @@ function StageTabs({
   onStage,
   rowRef,
   summary = null,
+  stages = EVIDENCE_STAGES,
 }: {
   cursor: EvidenceCursor;
   hub: EvidenceHub | null;
   onStage: (stage: EvidenceStage) => void;
   rowRef?: React.Ref<HTMLDivElement>;
+  /** W4B: a run with nothing sealed shows only the stages that ran. */
+  stages?: readonly EvidenceStage[];
   /** W3b: the Summary tab's count on a retained run (tiles and series of the lane). */
   summary?: string | null;
 }) {
@@ -1200,8 +1111,8 @@ function StageTabs({
   }, [cursor.stage]);
 
   const onKeyDown = (event: React.KeyboardEvent) => {
-    const index = EVIDENCE_STAGES.indexOf(cursor.stage);
-    const last = EVIDENCE_STAGES.length - 1;
+    const index = stages.indexOf(cursor.stage);
+    const last = stages.length - 1;
     const next =
       event.key === "ArrowRight"
         ? Math.min(index + 1, last)
@@ -1214,7 +1125,7 @@ function StageTabs({
               : null;
     if (next === null) return;
     event.preventDefault();
-    const stage = EVIDENCE_STAGES[next];
+    const stage = stages[next];
     onStage(stage);
     refs.current[stage]?.focus();
   };
@@ -1222,9 +1133,10 @@ function StageTabs({
   return (
     <div ref={rowRef} className="flex items-stretch overflow-x-auto" data-stage-tabs>
       <div role="tablist" aria-label="Evidence stages" className="flex items-stretch" onKeyDown={onKeyDown}>
-        {EVIDENCE_STAGES.map((stage) => {
+        {stages.map((stage) => {
           const selected = cursor.stage === stage;
           const { num, name } = STAGE_TAB[stage];
+          const sub = tabSub(stage, hub);
           return (
             <button
               key={stage}
@@ -1254,36 +1166,16 @@ function StageTabs({
                 </span>
                 <span className="text-[12px] font-medium uppercase tracking-[.05em]">{name}</span>
               </span>
-              <span className="mono flex items-center gap-1 whitespace-nowrap text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-tab-sub>
-                {/* F2b: the stage's state as a dot, so the row reads at a glance; the word stays beside it. */}
-                <StageDot stage={stage} hub={hub} />
-                {tabSub(stage, cursor, hub)}
-              </span>
+              {sub !== "" ? (
+                <span className="mono flex items-center gap-1 whitespace-nowrap text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-tab-sub>
+                  {/* F2b: the stage's state as a dot, so the row reads at a glance; the word stays beside it. */}
+                  <StageDot stage={stage} hub={hub} />
+                  {sub}
+                </span>
+              ) : null}
             </button>
           );
         })}
-      </div>
-      {/* The HiFi's next room: not a stage of this run, and not built. */}
-      <div
-        className="flex flex-none flex-col justify-center gap-0.5 border-l border-dashed px-3.5 py-2"
-        style={{ borderColor: "var(--viz-legend-inactive)" }}
-        aria-hidden="true"
-        data-promotion-soon
-      >
-        <span className="flex items-baseline gap-1.5">
-          <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>
-            →
-          </span>
-          <span className="text-[12px] font-medium uppercase tracking-[.05em]" style={{ color: "var(--ink-faint)", fontStyle: "italic" }}>
-            Promotion
-          </span>
-          <span className="mono rounded-[3px] border border-dashed px-1 text-[9px] font-semibold" style={{ color: "var(--ink-faint)", borderColor: "var(--ink-faint)" }}>
-            SOON
-          </span>
-        </span>
-        <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-          Approval Gate · Paper
-        </span>
       </div>
     </div>
   );
@@ -1316,7 +1208,6 @@ function CursorGap({ id, unread, lanePending }: { id: string; unread: "loading" 
 function CursorBar({
   runId,
   cursor,
-  hub,
   folds,
   onFold,
   onReset,
@@ -1328,7 +1219,6 @@ function CursorBar({
 }: {
   runId: string;
   cursor: EvidenceCursor;
-  hub: EvidenceHub | null;
   /** F2b: the window the screen shows, and the one the URL names (links carry only the named one). */
   evidenceWindow?: EvidenceWindow;
   windowNamed?: EvidenceWindow | null;
@@ -1385,8 +1275,12 @@ function CursorBar({
     window.setTimeout(() => setCopied(false), 1500);
   }, [cursor, windowNamed]);
 
-  const schedule = hub?.core.run_identity?.schedule;
-  const base = `/research/quantbt/runs/${encodeURIComponent(runId)}`;
+  const pending = unread !== null || lanePending;
+  const trialServed = cursor.trial !== null || laneSelection?.trial != null;
+  const paramsServed = cursor.params !== null || laneSelection?.paramsDigest != null;
+  const seqServed = cursor.seq !== null;
+  const compact = !pending && !trialServed && !paramsServed && !seqServed;
+  const windowWord = evidenceWindow === "oos" ? "OOS" : evidenceWindow === "is" ? "IS" : "Holdout";
   const stepStyle = (disabled: boolean) => ({
     color: disabled ? "var(--viz-legend-inactive)" : "var(--ink-soft)",
     cursor: disabled ? "default" : "pointer",
@@ -1501,86 +1395,66 @@ function CursorBar({
         )}
       </span>
 
-      <CursorPill data-cursor-trial>
-        {cursor.trial === null && laneSelection?.trial == null ? <>trial </> : null}
-        {cursor.trial !== null ? (
-          <span style={{ color: "var(--ink)" }} title={trialTitle}>
-            {trialLabel({ ordinal: cursor.trial })}
-          </span>
-        ) : laneSelection?.trial != null ? (
-          <span style={{ color: "var(--ink)" }} data-cursor-lane="global" title={`Global selection every fold froze. ${trialTitle}`}>
-            {trialLabel({ ordinal: laneSelection.trial, sourceId: laneSelection.sourceId })} · global
-          </span>
-        ) : (
-          <CursorGap id="hub-lane-has-no-trial-cursor" unread={unread} lanePending={lanePending} />
-        )}
-      </CursorPill>
+      {/* Fewer words: a key the lane does not serve is not a chip. While a read is outstanding the unserved chip says "reading". */}
+      {trialServed ? (
+        <CursorPill data-cursor-trial>
+          {cursor.trial !== null ? (
+            <span style={{ color: "var(--ink)" }} title={trialTitle}>
+              {trialLabel({ ordinal: cursor.trial })}
+            </span>
+          ) : (
+            <span style={{ color: "var(--ink)" }} data-cursor-lane="global" title={`Global selection every fold froze. ${trialTitle}`}>
+              {trialLabel({ ordinal: laneSelection?.trial, sourceId: laneSelection?.sourceId })} · global
+            </span>
+          )}
+        </CursorPill>
+      ) : pending ? (
+        <CursorPill data-cursor-trial>
+          trial <CursorGap id="hub-lane-has-no-trial-cursor" unread={unread} lanePending={lanePending} />
+        </CursorPill>
+      ) : null}
+      {paramsServed ? (
+        <CursorPill data-cursor-params>
+          params{" "}
+          {cursor.params !== null ? (
+            <span style={{ color: "var(--ink)" }}>{cursor.params}</span>
+          ) : (
+            <span style={{ color: "var(--ink)" }} data-cursor-lane="global" title={laneSelection?.paramsDigest ?? undefined}>
+              {shortDigest(laneSelection?.paramsDigest)}
+            </span>
+          )}
+        </CursorPill>
+      ) : pending ? (
+        <CursorPill data-cursor-params>
+          params <CursorGap id="hub-lane-has-no-params-digest" unread={unread} lanePending={lanePending} />
+        </CursorPill>
+      ) : null}
+      {seqServed ? (
+        <CursorPill data-cursor-seq>
+          seq <span style={{ color: "var(--ink)" }}>{cursor.seq}</span>
+        </CursorPill>
+      ) : null}
 
-      <CursorPill data-cursor-params>
-        params{" "}
-        {cursor.params !== null ? (
-          <span style={{ color: "var(--ink)" }}>{cursor.params}</span>
-        ) : laneSelection?.paramsDigest != null ? (
-          <span style={{ color: "var(--ink)" }} data-cursor-lane="global" title={laneSelection.paramsDigest}>
-            {shortDigest(laneSelection.paramsDigest)}
+      {/* The window the URL names (`?window=`), else the Hub's own, OOS. When trial, params and seq are all unserved
+          the whole cursor is this one muted line, and the three keys ride in its tooltip. */}
+      {compact ? (
+        <CursorPill
+          data-cursor-window
+          data-cursor-compact
+          title="trial, params and seq are not served for this lane. The evidence window is written to ?window= in the link."
+        >
+          <span style={{ color: "var(--ink-faint)" }}>
+            cursor: fold {cursor.fold} · window {windowWord}
           </span>
-        ) : (
-          <CursorGap id="hub-lane-has-no-params-digest" unread={unread} lanePending={lanePending} />
-        )}
-      </CursorPill>
-
-      <CursorPill data-cursor-seq>
-        seq{" "}
-        {cursor.seq !== null ? (
-          <span style={{ color: "var(--ink)" }}>{cursor.seq}</span>
-        ) : laneSelection !== null ? (
-          <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-cursor-seq-none title="no event is selected; the retained replay is on S4">
-            none selected
-          </span>
-        ) : (
-          <CursorGap id="hub-lane-has-no-event-seq" unread={unread} lanePending={lanePending} />
-        )}
-      </CursorPill>
-
-      <CursorPill data-cursor-schedule>
-        schedule{" "}
-        {schedule && isAvailable(schedule.availability) && schedule.value !== null ? (
-          <span style={{ color: "var(--ink)" }}>{schedule.value}</span>
-        ) : unread !== null ? (
-          <NotRead phase={unread} />
-        ) : (
-          <Withheld availability={schedule?.availability ?? { state: "NOT_PUBLISHED", reason_code: null }} />
-        )}
-      </CursorPill>
-
-      {/* The window the URL names (`?window=`), else the Hub's own, OOS. */}
-      <CursorPill data-cursor-window title="the evidence window — written to ?window= in the link">
-        window <span style={{ color: "var(--ink)" }}>{evidenceWindow === "oos" ? "OOS" : evidenceWindow === "is" ? "IS" : "Holdout"}</span>
-      </CursorPill>
+        </CursorPill>
+      ) : (
+        <CursorPill data-cursor-window title="the evidence window — written to ?window= in the link">
+          window <span style={{ color: "var(--ink)" }}>{windowWord}</span>
+        </CursorPill>
+      )}
 
       {/* F2b: the way OUT to every full stage screen. Each keeps the run, fold, trial and window. */}
-      <nav className="ml-1 flex flex-wrap items-center gap-x-1.5 text-[10px]" style={{ color: "var(--ink-faint)" }} data-deep-dives aria-label="full stage screens">
-        <span aria-hidden="true" title="open the full stage screen, with this cursor">
-          ↗
-        </span>
-        {(
-          [
-            ["split", "S1 split", "Stage 1 · Split"],
-            ["search", "S2 search", "Stage 2 · Search"],
-            ["freeze", "S3 freeze", "Stage 3 · Freeze"],
-            ["execute", "S4 replay", "Stage 4 · Execute replay"],
-          ] as const
-        ).map(([stage, label, title]) => (
-          <Link
-            key={stage}
-            to={withWindow(deepDiveHref(`${base}/${stage}`, { ...cursor, stage }), windowNamed)}
-            title={`${title} — full screen, fold ${cursor.fold}${windowNamed ? `, ${windowNamed} window` : ""}`}
-            data-nav-stage={stage}
-            style={{ color: "var(--accent)" }}
-          >
-            {label}
-          </Link>
-        ))}
+      <nav className="ml-1 flex flex-wrap items-center gap-x-1.5 text-[10px]" style={{ color: "var(--ink-faint)" }} data-deep-dives aria-label="related screens">
         <Link to={reportHref(runId, { cursor, window: windowNamed })} data-nav-stage="report" title="Run report" style={{ color: "var(--accent)" }}>
           report
         </Link>
@@ -1589,9 +1463,6 @@ function CursorBar({
         </Link>
         <Link to="/research/quantbt/runs" title="Run Library" data-nav-stage="library" style={{ color: "var(--accent)" }}>
           runs
-        </Link>
-        <Link to="/research/quantbt/journey" title="Journey map" style={{ color: "var(--accent)" }}>
-          journey ↗
         </Link>
       </nav>
 
@@ -1663,13 +1534,16 @@ export function tileValue(metric: Metric): string | null {
  * exact server string is the tile's title, its data attribute, and what the
  * clipboard receives when the value is copied.
  */
-function MetricTile({ metric }: { metric: Metric }) {
+function MetricTile({ metric, note }: { metric: Metric; note?: TileNote }) {
   const shown = isAvailable(metric.availability) && metric.value !== null;
   const display = shown ? tileValue(metric) : null;
   return (
     <div
       className="flex min-h-[90px] min-w-0 flex-col gap-[3px] rounded-[6px] border px-3 py-2"
       data-metric={metric.key}
+      {...note?.attrs}
+      title={note?.text}
+      aria-label={note !== undefined ? `${metric.label}. ${note.text}` : undefined}
       style={{ borderColor: "var(--line-soft)", background: "var(--paper-raised)" }}
     >
       <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
@@ -2389,10 +2263,8 @@ function PassportPanel({
 function RetainedPassport({ evidence }: { evidence: CurrentSourceEvidence }) {
   const { passport, provenance } = evidence;
   const rows: [string, string, string][] = [
+    /* Fewer words: final equity, account return and max drawdown are the hero tiles above; they are not printed twice. */
     ["initial equity", passport.initial_equity, "currency"],
-    ["final equity", passport.final_equity, "currency"],
-    ["account return", passport.net_return_fraction, "fraction"],
-    ["max drawdown", passport.max_drawdown_fraction, "fraction"],
     ["retained positions", String(passport.retained_position_count), "count"],
     ["observations", String(passport.artifact_table_rows.observations), "count"],
     ["folds", String(passport.artifact_table_rows.folds), "count"],
@@ -3428,7 +3300,9 @@ export function retainedTiles(evidence: CurrentSourceEvidence): RetainedTileFact
   });
 }
 
-function RetainedTile({ tile }: { tile: RetainedTileFact }) {
+type TileNote = { text: string; attrs: Record<string, string> };
+
+function RetainedTile({ tile, note }: { tile: RetainedTileFact; /** Another number for the same label, with its scope: a tooltip, never a second figure on screen. */ note?: TileNote }) {
   const raw = tile.value === null ? null : tile.unit === "ratio" ? formatRatio(tile.value) : formatMetric(tile.value, tile.unit);
   const shown = raw === null ? null : raw.replace(/^-/, "−");
   const negative = tile.value !== null && tile.value.trim().startsWith("-");
@@ -3443,6 +3317,9 @@ function RetainedTile({ tile }: { tile: RetainedTileFact }) {
       className="flex min-h-[90px] min-w-0 flex-col gap-[3px] rounded-[6px] border px-3 py-2"
       data-metric={tile.key}
       data-metric-lane="retained"
+      {...note?.attrs}
+      title={note?.text}
+      aria-label={note !== undefined ? `${tile.label}. ${note.text}` : undefined}
       style={{ borderColor: "var(--line-soft)", background: "var(--paper-raised)" }}
     >
       <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
@@ -3735,6 +3612,16 @@ function SummaryTab({
   const deepest = enriched !== null && enriched.drawdown_episodes.state === "AVAILABLE" ? deepestSpan(enriched.drawdown_episodes.values) : null;
   const bands = windowBands(windowsShown);
   const isRead = enriched !== null ? readIsFacts(enriched) : null;
+  /* W4B: "Trade count" is one label with one number. The engine's own count (a different scope, and not an audited
+     fill count) is a tooltip on that tile, never a second figure beside it. */
+  const engineTrades = summary?.total_trade_count ?? null;
+  const engineTradesNote: TileNote | undefined =
+    engineTrades !== null && engineTrades.state === "AVAILABLE" && engineTrades.value !== null
+      ? {
+          text: `Engine trades ${formatMetric(engineTrades.value, "count") ?? engineTrades.value} — ${engineTrades.scope} · ${engineTrades.source_locator}. Not an audited fill count or the per-fold OOS trade total.`,
+          attrs: { "data-summary-trade-count": "", "data-trade-scope": engineTrades.scope, "data-engine-trades": engineTrades.value },
+        }
+      : undefined;
   const performance = hub.oos_performance ?? null;
   /* D-AN-01: all-time analytics. With a v2 block (or on a retained run, where the rest is one absence
      line) the headline is the HiFi's five hero tiles; the other numbers are in the Behavior block. */
@@ -3744,7 +3631,7 @@ function SummaryTab({
   /* One grid, HiFi row first. A registry-v3 key appears only when the Hub
      sends the block (an older responder does not); a v2 key only when sent. */
   const tiles = retained
-    ? retainedTiles(retained).map((tile) => <RetainedTile key={tile.key} tile={tile} />)
+    ? retainedTiles(retained).map((tile) => <RetainedTile key={tile.key} tile={tile} note={tile.key === "TRADE_COUNT" ? engineTradesNote : undefined} />)
     : tileKeys.flatMap((key): ReactNode[] => {
         /* D-AN-01: the hero Sharpe is the all-time one. When the Hub publishes it (enrich_analysis, else its v2
            block) the tile shows it; the Hub's own per-registry metric may be NOT_PUBLISHED while the same
@@ -3757,7 +3644,7 @@ function SummaryTab({
           }
         }
         const hubMetric = hub.metrics.find((metric) => metric.key === key);
-        if (hubMetric) return [<MetricTile key={key} metric={hubMetric} />];
+        if (hubMetric) return [<MetricTile key={key} metric={hubMetric} note={key === "TRADE_COUNT" ? engineTradesNote : undefined} />];
         const v3 = performance?.metrics.find((metric) => metric.key === key);
         return v3 && performance ? [<PerformanceTile key={key} metric={v3} block={performance} />] : [];
       });
@@ -3939,127 +3826,12 @@ function SummaryTab({
 
       <div className="flex flex-wrap items-start gap-3.5" data-monthly-row>
         {/* enrich_analysis: the episodes card stacks under the monthly strip, filling the column the short strip leaves. */}
-        {enriched !== null ? <div className="flex min-w-0 flex-[1.3_1_460px] flex-col gap-3.5" data-monthly-column>{monthlyPanel}<DrawdownEpisodes block={enriched} /></div> : monthlyPanel}
+        {enriched !== null ? <div className="flex min-w-0 flex-[1.3_1_460px] flex-col gap-3.5" data-monthly-column>{monthlyPanel}<DrawdownEpisodes block={enriched} limit={3} /></div> : monthlyPanel}
         {v2 ? <BehaviorV2 v2={v2} chip={enriched !== null ? `portal-derived · ${enriched.scope.window}` : undefined} /> : <BehaviorCard retained={retained} summary={summary} absent={retained ? v2Absence(retained) : null} />}
       </div>
 
-      {summary ? (
-        <p className="text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-sampling-note>
-          <span
-            data-summary-trade-count
-            data-trade-scope={summary.total_trade_count.scope}
-            title={`${summary.total_trade_count.scope} · ${summary.total_trade_count.source_locator} · not an audited fill count or the per-fold OOS trade total`}
-          >
-            Engine trades:{" "}
-            {summary.total_trade_count.state === "AVAILABLE" && summary.total_trade_count.value !== null
-              ? <span data-exact={summary.total_trade_count.value}>{formatMetric(summary.total_trade_count.value, "count")}</span>
-              : <Withheld availability={{ state: summary.total_trade_count.state, reason_code: summary.total_trade_count.reason_code }} />}
-          </span>
-        </p>
-      ) : null}
-
       <PassportPanel slot={passport} onNeeded={ensurePassport} skip={passportSkip} />
       </div>
-    </section>
-  );
-}
-
-function StagePreviewTab({
-  stage,
-  cursor,
-  hub,
-  runId,
-  body,
-  windowNamed = null,
-}: {
-  stage: PreviewStage;
-  cursor: EvidenceCursor;
-  hub: EvidenceHub;
-  runId: string;
-  /** F2b: the window the URL names, carried into the full screen's link. */
-  windowNamed?: EvidenceWindow | null;
-  /** The stage's own body (the deep dive's blocks, embedded), drawn in place of the preview shells. */
-  body?: ReactNode;
-}) {
-  const dive = DEEP_DIVE[stage];
-  const preview = STAGE_PREVIEW[stage];
-  const key = STAGE_KEY[stage];
-  const row = hub.stages.find((entry) => entry.key === key);
-
-  return (
-    <section data-screen-label={STAGE_CRUMB[stage]} className="flex flex-col gap-3.5">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        {dive.path !== null ? (
-          <TabHeading
-            title={preview.title}
-            to={withWindow(deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/${dive.path}`, cursor), windowNamed)}
-            tip={`Open the full ${dive.screen} screen — fold ${cursor.fold}${windowNamed ? `, ${windowNamed} window` : ""}`}
-            dive={stage}
-          />
-        ) : (
-          <>
-            <TabHeading title={preview.title} />
-            <span
-              data-deep-dive={stage}
-              title={`Screen ${dive.screen} has no published route yet (${dive.phase}), so this link would go nowhere.`}
-              className="mono rounded-[6px] border px-3 py-1 text-[10px] uppercase tracking-[.05em]"
-              style={{ color: "var(--ink-faint)", borderColor: "var(--line)", opacity: 0.55, cursor: "not-allowed" }}
-            >
-              open deep dive → {dive.screen}
-            </span>
-          </>
-        )}
-      </div>
-
-      {body ?? (
-      <>
-      <section
-        className="flex flex-wrap items-baseline gap-3 rounded-[8px] border px-3.5 py-2.5"
-        data-stage-row={key}
-        style={PANEL_STYLE}
-      >
-        <span className="mono text-[11px] font-bold">{key}</span>
-        {row ? (
-          <>
-            <span className="mono text-[10.5px] font-semibold" data-stage-state={stageChip(row.state, hubPhase(hub)).word}>
-              {stageChip(row.state, hubPhase(hub)).word}
-            </span>
-            <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>
-              started {row.started_at_utc_ms === null ? "not published" : utcZ(row.started_at_utc_ms)}
-            </span>
-            <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>
-              completed {row.completed_at_utc_ms === null ? "not published" : utcZ(row.completed_at_utc_ms)}
-            </span>
-          </>
-        ) : (
-          <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what="stage" />
-        )}
-      </section>
-
-      {/* DQ-14: the HiFi's panels keep their places, each with the reason it is empty. */}
-      <div className="grid gap-3.5 md:grid-cols-2" data-stage-shells={stage}>
-        {preview.panels.map((title) => (
-          <SourceGap
-            key={title}
-            id={`stage-${stage}-${title.split(" ")[0]}`}
-            title={title}
-            reason={
-              <>
-                <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} />{" "}
-                · {dive.path !== null ? `see ${dive.screen}` : `${dive.screen} not built (${dive.phase})`}
-              </>
-            }
-          />
-        ))}
-      </div>
-
-      {/* The cursor this tab would hand on, shown so the reader can see it is
-          carried rather than reset. */}
-      <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-carried-cursor>
-        carries {deepDiveHref("", cursor)}
-      </span>
-      </>
-      )}
     </section>
   );
 }
@@ -4578,39 +4350,6 @@ function ClaimTab({
   );
 }
 
-function AtlasTab({ runId, hub }: { runId: string; hub: EvidenceHub }) {
-  const identity = hub.core.run_identity;
-  /* The Atlas hash carries this run's mode, schedule and route (spec 12 §1),
-     so it opens on the cell this run occupies, and the run so it can link back. */
-  const params = new URLSearchParams({ tab: "modes" });
-  for (const [key, fact] of [
-    ["mode", identity?.mode],
-    ["schedule", identity?.schedule],
-    ["route", identity?.route.id],
-  ] as const) {
-    if (fact && isAvailable(fact.availability) && fact.value !== null) params.set(key, fact.value);
-  }
-  params.set("run", runId);
-  return (
-    <section data-screen-label="Atlas" className="flex flex-col gap-3.5">
-      <TabHeading title="Atlas — how to read modes and routes" />
-      {/* V2 (2026-09-30): the matrix itself, from the same read Screen 12 renders (HiFi 04 Atlas tab). */}
-      <Link
-        to={`/research/quantbt/atlas#${params.toString()}`}
-        className="mono self-end rounded-[6px] border px-3 py-1 text-[10px] uppercase"
-        style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
-        data-action="open-atlas"
-      >
-        full atlas → 12
-      </Link>
-      <HubAtlasBody
-        runId={runId}
-        identity={{ mode: params.get("mode"), schedule: params.get("schedule"), route: params.get("route") }}
-      />
-    </section>
-  );
-}
-
 /* ------------------------------------------------------------ run states */
 
 /** FE-S04-05: a 404 is its own page with a way back, not an empty hub. */
@@ -4986,6 +4725,21 @@ export function EvidenceFlow({
   const laneSummary = laneEvidence
     ? `${retainedTiles(laneEvidence).filter((tile) => tile.value !== null).length} of ${TILE_ORDER.length} metrics · ${laneEvidence.series.length} series`
     : null;
+  const progressRead = runIdentity.state === "ready" ? runIdentity.identity.progress : null;
+  /* W4B: a run with nothing sealed is ONE status panel (the notice, with its exits), and a tab only for a stage that
+     started. Summary, Claim and Atlas have nothing real to show for it, so they are not tabs. */
+  const phase = view ? hubPhase(view) : null;
+  const statusOnly =
+    view !== null && laneEvidence === null && view.readiness === "NOT_READY" && phase !== null && ["queued", "running", "failed", "cancelled", "attention"].includes(phase);
+  const tabStages: readonly EvidenceStage[] =
+    statusOnly && view !== null
+      ? (["split", "search", "freeze", "execute"] as const).filter((stage) => {
+          const state = view.stages.find((row) => row.key === STAGE_KEY[stage])?.state;
+          return state === "DONE" || state === "RUNNING";
+        })
+      : EVIDENCE_STAGES;
+  const shownStage: EvidenceStage = tabStages.includes(cursor.stage) ? cursor.stage : (tabStages[0] ?? cursor.stage);
+  const shownCursor: EvidenceCursor = shownStage === cursor.stage ? cursor : { ...cursor, stage: shownStage };
   const evidenceWindow = useEvidenceWindow();
   const [datasetOpen, setDatasetOpen] = useState(false);
   const datasetTrigger = useRef<HTMLButtonElement>(null);
@@ -5050,13 +4804,15 @@ export function EvidenceFlow({
       />
       {view && datasetOpen ? <DatasetPanel hub={view} id={datasetPanelId} onClose={closeDataset} /> : null}
 
-      <ClaimPassport
-        hub={view}
-        state={state}
-        onJump={onStage}
-        retained={retainedClaim}
-        laneReadiness={laneEvidence ? (laneSeal ?? "not read") : null}
-      />
+      {statusOnly ? null : (
+        <ClaimPassport
+          hub={view}
+          state={state}
+          onJump={onStage}
+          retained={retainedClaim}
+          laneReadiness={laneEvidence ? (laneSeal ?? "not read") : null}
+        />
+      )}
 
       {/* QA S04-U4: a failed read of the sealed evidence is an error with a retry, never "not published". */}
       {passport.state === "refused" && passportSkip === null ? (
@@ -5082,6 +4838,7 @@ export function EvidenceFlow({
       {view && !(laneEvidence && laneSeal === "READY") && !(passport.state === "refused" && passportSkip === null) ? <SealNotice runId={runId} hub={view} /> : null}
 
       {/* Tabs and cursor: one card, sticky (HiFi). */}
+      {tabStages.length === 0 ? null : (
       <div
         className="sticky z-[25] rounded-[6px] border"
         data-stage-card
@@ -5092,11 +4849,11 @@ export function EvidenceFlow({
           boxShadow: "var(--shadow-e2)",
         }}
       >
-        <StageTabs cursor={cursor} hub={view} onStage={onStage} rowRef={tabRow} summary={laneSummary} />
+        <StageTabs cursor={shownCursor} hub={view} onStage={onStage} rowRef={tabRow} summary={laneSummary} stages={tabStages} />
+        {statusOnly ? null : (
         <CursorBar
           runId={runId}
           cursor={cursor}
-          hub={hub}
           unread={hub === null ? (state.state === "loading" ? "loading" : "not-read") : null}
           lanePending={
             hub !== null &&
@@ -5110,10 +4867,13 @@ export function EvidenceFlow({
           evidenceWindow={evidenceWindow.window}
           windowNamed={evidenceWindow.named}
         />
+        )}
       </div>
+      )}
 
+      {tabStages.length === 0 ? null : (
       <ResearchPanel
-        title={STAGE_CRUMB[cursor.stage]}
+        title={STAGE_CRUMB[shownStage]}
         variant="plain"
         state={state}
         minBodyHeight={260}
@@ -5125,42 +4885,32 @@ export function EvidenceFlow({
           ) : undefined
         }
       >
-        {hub && cursor.stage !== "summary" ? (
+        {hub && shownStage !== "summary" ? (
           <div
             role="tabpanel"
-            id={`ef-panel-${cursor.stage}`}
-            aria-labelledby={`ef-tab-${cursor.stage}`}
-            data-panel={cursor.stage}
+            id={`ef-panel-${shownStage}`}
+            aria-labelledby={`ef-tab-${shownStage}`}
+            data-panel={shownStage}
           >
-            {cursor.stage === "claim" ? (
+            {shownStage === "claim" ? (
               <ClaimTab hub={hub} retainedClaim={retainedClaim} runIdentity={runIdentity} passport={passport} cursor={cursor} windowNamed={evidenceWindow.named} />
-            ) : cursor.stage === "atlas" ? (
-              <AtlasTab runId={runId} hub={hub} />
-            ) : cursor.stage === "split" ? (
-              /* V2 (2026-09-30): HiFi 04 draws each stage's body inside its tab — the deep dive's own body, embedded. */
-              <StagePreviewTab
-                stage="split"
-                windowNamed={evidenceWindow.named}
-                cursor={cursor}
-                hub={hub}
-                runId={runId}
-                body={<HubSplitBody runId={runId} cursor={cursor} onFold={onFold} />}
-              />
-            ) : cursor.stage === "search" ? (
-              <StagePreviewTab stage="search" windowNamed={evidenceWindow.named} cursor={cursor} hub={hub} runId={runId} body={<HubSearchBody />} />
-            ) : cursor.stage === "freeze" ? (
-              <StagePreviewTab stage="freeze" windowNamed={evidenceWindow.named} cursor={cursor} hub={hub} runId={runId} body={<HubFreezeBody />} />
-            ) : cursor.stage === "execute" ? (
-              <StagePreviewTab
-                stage="execute"
-                windowNamed={evidenceWindow.named}
-                cursor={cursor}
-                hub={hub}
-                runId={runId}
-                body={<HubExecuteBody runId={runId} fold={cursor.fold} onFold={onFold} />}
-              />
+            ) : shownStage === "atlas" ? (
+              <AtlasSummaryCard hub={hub} runId={runId} />
             ) : (
-              <StagePreviewTab stage={cursor.stage} cursor={cursor} hub={hub} runId={runId} />
+              /* W4B (Bobby 2026-10-02): the tab is the summary; the deep dive is one click away with the cursor. */
+              <StageSummaryCard
+                stage={shownStage}
+                hub={hub}
+                runId={runId}
+                cursor={cursor}
+                windowNamed={evidenceWindow.named}
+                chip={(() => {
+                  const row = hub.stages.find((entry) => entry.key === STAGE_KEY[shownStage]);
+                  return row ? stageChip(row.state, hubPhase(hub)) : null;
+                })()}
+                progress={progressRead}
+                laneSelection={laneSelection}
+              />
             )}
           </div>
         ) : null}
@@ -5169,14 +4919,14 @@ export function EvidenceFlow({
           * Once opened it stays mounted and is only hidden, so coming back to
           * it does not rebuild four charts (FE-S04-12: 107 ms → one repaint).
           */}
-        {hub && summaryKept ? (
+        {hub && summaryKept && !statusOnly ? (
           <div
             role="tabpanel"
             id="ef-panel-summary"
             aria-labelledby="ef-tab-summary"
-            data-panel={cursor.stage === "summary" ? "summary" : undefined}
+            data-panel={shownStage === "summary" ? "summary" : undefined}
             data-panel-kept="summary"
-            hidden={cursor.stage !== "summary"}
+            hidden={shownStage !== "summary"}
           >
             {endedWithoutEvidence(hub) ? null : <SummaryTab
               hub={hub}
@@ -5196,8 +4946,9 @@ export function EvidenceFlow({
             />}
           </div>
         ) : null}
-        {hub ? <StageNav runId={runId} cursor={cursor} windowNamed={evidenceWindow.named} onStage={onStage} /> : null}
+        {hub && !statusOnly ? <StageNav runId={runId} cursor={cursor} windowNamed={evidenceWindow.named} onStage={onStage} /> : null}
       </ResearchPanel>
+      )}
     </div>
     </LaneReadFailedContext.Provider>
     </NamedWindowContext.Provider>

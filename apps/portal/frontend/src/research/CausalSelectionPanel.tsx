@@ -61,7 +61,7 @@ function DeclaredMinimum({ fact }: { fact: MinFolds }) {
   return (
     <span className="mono italic" style={MUTED} data-inner-min-folds-state={state} title={reason ?? "guards.inner_min_folds not in this read"}>
       {state === "NOT_APPLICABLE" ? "not applicable" : "not published"}
-      {reason ? <span className="not-italic break-all text-[9px]"> {reason}</span> : null}
+      {reason ? <span hidden> {reason}</span> : null}
     </span>
   );
 }

@@ -163,7 +163,7 @@ export function AnalyticsAbsentLine({ availability }: { availability: Availabili
 
 /**
  * EChart 3 — "Strategy vs benchmark — OOS". The chart arrives as a node (the lazy chart lives
- * with the screen); the cells under it are the all-time Beta / Corr / Sharpe / Sortino plus the
+ * with the screen); the cells under it are the all-time Beta / Corr plus the
  * benchmark's own return.
  */
 export function StrategyBenchmarkFigure({
@@ -183,8 +183,7 @@ export function StrategyBenchmarkFigure({
   const cells: [string, string, RetainedAnalyticsV2Fact, V2Unit][] = [
     ["beta", "Beta", m.beta, "ratio"],
     ["corr", "Corr", m.correlation, "ratio"],
-    ["sharpe", "Sharpe", m.sharpe, "ratio"],
-    ["sortino", "Sortino", m.sortino, "ratio"],
+    /* Fewer words: Sharpe is the hero tile and Sortino is in Behavior; neither is printed a third time here. */
     ["benchmark", "Benchmark return", m.benchmark_return_fraction, "signed"],
   ];
   return (
@@ -214,7 +213,7 @@ export function StrategyBenchmarkFigure({
         </p>
       ) : null}
       {underwater ?? null}
-      <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-5" data-strategy-cells>
+      <div className="mt-3 grid grid-cols-3 gap-1.5" data-strategy-cells>
         {cells.map(([id, label, fact, unit]) => (
           <Cell key={id} id={id} label={label}>
             <FactValue fact={fact} unit={unit} label={label} />

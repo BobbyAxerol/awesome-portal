@@ -23,35 +23,26 @@ const FIELDS: { at: "s3_completed_utc_ms" | "s4_started_utc_ms" | "s4_completed_
 
 export function OrchestrationClocks({ events }: { events: P11StageEvents | null | undefined }) {
   if (!events) return null;
+  /* One muted line; every time (or its server reason) and the disclaimer ride in the tooltip. */
+  const rows = FIELDS.map((f) => {
+    const ms = events[f.at];
+    const text = formatUtc(ms);
+    const code = events.reason_codes[f.reason];
+    return { f, ms, text, code };
+  });
+  const summary = `${rows
+    .map(({ f, text, code }) => `${f.label}: ${text ?? `not published${code ? ` (${code})` : ""}`}`)
+    .join(" · ")} · Portal orchestration times — not an engine pool freeze or first out-of-sample read.`;
   return (
     <div className="flex flex-col gap-0.5" data-orchestration-clocks={events.semantics} data-panel="orchestration-clocks">
-      {FIELDS.map((f) => {
-        const ms = events[f.at];
-        const text = formatUtc(ms);
-        const code = events.reason_codes[f.reason];
-        return (
-          <span key={f.at} className="mono flex flex-wrap items-baseline gap-x-2 text-[10.5px]" data-orchestration-clock={f.at}>
-            <span className="w-[198px] flex-none text-[10.5px] [font-family:var(--font-body)]" style={{ color: "var(--ink-soft)" }}>
-              {f.label}
-            </span>
-            {text !== null ? (
-              <span data-at={ms}>{text}</span>
-            ) : (
-              <>
-                <span className="italic" style={{ color: "var(--ink-faint)" }}>not published</span>
-                {code ? (
-                  <span className="text-[9px]" style={{ color: "var(--ink-faint)" }} data-reason={code}>
-                    {code}
-                  </span>
-                ) : null}
-              </>
-            )}
-          </span>
-        );
-      })}
-      <span className="text-[9.5px] italic" style={{ color: "var(--ink-faint)" }} data-orchestration-note>
-        Portal orchestration times — not an engine pool freeze or first out-of-sample read.
+      <span className="mono text-[10.5px]" style={{ color: "var(--ink-faint)" }} tabIndex={0} title={summary} aria-label={summary} data-orchestration-note>
+        orchestration times
       </span>
+      {rows.map(({ f, ms, text, code }) => (
+        <span key={f.at} hidden data-orchestration-clock={f.at}>
+          {f.label} {text !== null ? <span data-at={ms}>{text}</span> : <span data-reason={code ?? ""}>not published</span>}
+        </span>
+      ))}
     </div>
   );
 }

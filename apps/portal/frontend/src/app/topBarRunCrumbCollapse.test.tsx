@@ -72,8 +72,8 @@ describe("G14 option A — run crumb collapses by segment", () => {
     const nav = screen.getByRole("navigation", { name: "Breadcrumb" });
     expect(nav.className).toContain("portal-breadcrumbs--run");
     const tail = nav.querySelector(".portal-crumb-tail") as HTMLElement;
-    expect(tail.textContent).toBe("Release Candidate & Publish");
-    expect(tail.getAttribute("title")).toBe("Release Candidate & Publish");
+    expect(tail.textContent).toBe("Release candidate");
+    expect(tail.getAttribute("title")).toBe("Release candidate");
     const css = readFileSync(join(__dirname, "../styles/shell.css"), "utf8").replace(/\s+/g, " ");
     expect(css).toContain("@media (min-width: 1024px) { .portal-breadcrumbs--run { flex: 1 1 0; }");
   });

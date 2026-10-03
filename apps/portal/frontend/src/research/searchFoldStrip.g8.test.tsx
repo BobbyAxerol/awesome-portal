@@ -204,7 +204,7 @@ describe("G8 · the strip on the retained WFO run", () => {
     }
     expect(text(root, "[data-fold-strip-note]")).toBe(OOS_READING_NOTE.RETROSPECTIVE);
     /* VD-TEXT-01: one short line, not the HiFi's sentence. */
-    expect(text(root, "[data-fold-strip-note]")).toBe("retrospective — not a deployment claim");
+    expect(text(root, "[data-fold-strip-note]")).toBe("OOS is retrospective under this schedule");
     expect(text(root, "[data-fold-strip-note]")).not.toContain("Refit after reading the full span");
   });
 
@@ -223,7 +223,7 @@ describe("G8 · the strip on the retained WFO run", () => {
     expect(title).toContain(`train ${formatUtc(first.train_start_utc_ms)} to ${formatUtc(first.train_end_utc_ms)}, 720 bars`);
     expect(title).toContain(`test ${formatUtc(first.test_start_utc_ms)} to ${formatUtc(first.test_end_utc_ms)}, 168 bars — retrospective`);
     expect(title).not.toMatch(/1970|NaN|undefined|null/);
-    expect(text(root, "[data-fold-strip-line='0']")).toBe(title);
+    expect(root.querySelector("[data-strip-fold='0']")?.getAttribute("aria-label")).toBe(title);
   });
 
   it("the row is a labelled group with a text alternative: one summary line, then one line per fold", async () => {
@@ -232,13 +232,13 @@ describe("G8 · the strip on the retained WFO run", () => {
     expect(row.getAttribute("role")).toBe("group");
     const name = document.getElementById(row.getAttribute("aria-labelledby") ?? "");
     expect(name?.textContent).toBe("what this mode reads");
-    /* The glyphs are decoration for the text that follows them. */
-    expect(row.querySelector("[data-fold-glyphs]")?.getAttribute("aria-hidden")).toBe("true");
+    /* W4: one summary line; each fold's windows are its glyph's accessible name (no nine-sentence list). */
     const alt = [...row.querySelectorAll("[data-fold-strip-text] li")].map((item) => item.textContent);
-    expect(alt).toHaveLength(1 + SPLIT.fold_plan.folds.length);
-    expect(alt[0]).toBe("mode_1_decay under the global schedule: OOS is retrospective. 2 folds in the fold plan.");
-    expect(alt[1]).toMatch(/^fold_01: train 2026-06-01 00:00 UTC to 2026-06-30 23:00 UTC, 720 bars; test 2026-07-01 00:00 UTC to 2026-07-07 23:00 UTC, 168 bars — retrospective$/);
-    expect(alt[2]).toMatch(/^fold_02: /);
+    expect(alt).toHaveLength(1);
+    expect(alt[0]).toBe("mode 1 decay · global: OOS is retrospective. 2 folds.");
+    const glyphs = [...row.querySelectorAll("[data-strip-fold]")].map((g) => g.getAttribute("aria-label"));
+    expect(glyphs[0]).toMatch(/^fold_01: train 2026-06-01 00:00 UTC to 2026-06-30 23:00 UTC, 720 bars; test 2026-07-01 00:00 UTC to 2026-07-07 23:00 UTC, 168 bars — retrospective$/);
+    expect(glyphs[1]).toMatch(/^fold_02: /);
     expect(row.querySelector("[data-fold-strip-text]")?.className).toContain("sr-only");
     /* Nothing in the strip takes focus: it is a picture with a caption. */
     expect(row.querySelectorAll("[data-fold-glyphs] a, [data-fold-glyphs] button, [data-fold-glyphs] [tabindex]")).toHaveLength(0);
@@ -252,7 +252,8 @@ describe("G8 · the strip on the retained WFO run", () => {
     expect(text(root, "[data-mode-read='retention']")).toBe(`retention ${reads.retention}`);
     expect(text(root, "[data-mode-read='atlas_release']")).toBe("atlas_release er_quantbt_111");
     const condition = facts.schedules.find((fact) => fact.schedule === "global")!.oos_use_condition!;
-    expect(text(root, "[data-oos-use-condition]")).toBe(`oos_use USED — ${condition}`);
+    expect(text(root, "[data-oos-use-condition]")).toBe("OOS use used");
+    expect(root.querySelector("[data-oos-use-condition]")?.getAttribute("title")).toBe(`oos_use USED — ${condition}`);
     /* The contract tokens the claim row above already prints are not repeated. */
     for (const key of ["validation_claim", "chronological_claim", "oos_used_for_selection", "candidate_selection_metric"]) {
       expect(root.querySelector(`[data-mode-reads] [data-mode-read='${key}']`)).toBeNull();
@@ -480,8 +481,9 @@ describe("G8 · what cannot be drawn is a typed absence with its reason", () => 
     expect(first!.getAttribute("data-window")).toBe("published");
     expect(second!.getAttribute("data-window")).toBe("not-published");
     expect(second!.style.border).toContain("dashed");
-    expect(text(root, "[data-fold-strip-line='1']")).toContain("test window not published");
-    expect(text(root, "[data-fold-strip-line='1']")).not.toMatch(/168 bars — retrospective$/);
+    const label = root.querySelector("[data-strip-fold='1']")?.getAttribute("aria-label") ?? "";
+    expect(label).toContain("test window not published");
+    expect(label).not.toMatch(/168 bars — retrospective$/);
   });
 
   it("loading, not read and absent are three different things", async () => {
@@ -534,17 +536,16 @@ describe("G8 · scale: many folds wrap, a very large plan is capped and says how
     expect(root.querySelectorAll("[data-strip-fold]")).toHaveLength(32);
     expect(root.querySelector("[data-strip-fold='31']")?.textContent).toBe("fold_32");
     expect(root.querySelector("[data-fold-strip-more]")).toBeNull();
-    expect(root.querySelectorAll("[data-fold-strip-text] li")).toHaveLength(33);
+    expect(root.querySelectorAll("[data-fold-strip-text] li")).toHaveLength(1);
   });
 
   it(`${FOLD_STRIP_CAP + 12} folds: ${FOLD_STRIP_CAP} glyphs, "+12 more folds", and the text alternative still lists all of them`, async () => {
     const root = await settledWfo({ split: [200, plan(FOLD_STRIP_CAP + 12)] });
     expect(root.querySelectorAll("[data-strip-fold]")).toHaveLength(FOLD_STRIP_CAP);
     expect(text(root, "[data-fold-strip-more]")).toBe("+12 more folds");
-    expect(root.querySelector("[data-fold-strip-more]")?.getAttribute("title")).toBe(`${FOLD_STRIP_CAP} of ${FOLD_STRIP_CAP + 12} folds are drawn; the text alternative lists all of them`);
-    expect(root.querySelectorAll("[data-fold-strip-text] li")).toHaveLength(FOLD_STRIP_CAP + 12 + 1);
-    expect(text(root, "[data-fold-strip-text] li")).toContain(`${FOLD_STRIP_CAP + 12} folds in the fold plan, ${FOLD_STRIP_CAP} drawn`);
-    expect(root.querySelector(`[data-fold-strip-line='${FOLD_STRIP_CAP + 11}']`)).toBeTruthy();
+    expect(root.querySelector("[data-fold-strip-more]")?.getAttribute("title")).toBe(`${FOLD_STRIP_CAP} of ${FOLD_STRIP_CAP + 12} folds are drawn; the Split screen lists all of them`);
+    expect(root.querySelectorAll("[data-fold-strip-text] li")).toHaveLength(1);
+    expect(text(root, "[data-fold-strip-text] li")).toContain(`${FOLD_STRIP_CAP + 12} folds, ${FOLD_STRIP_CAP} drawn`);
   });
 });
 
@@ -561,7 +562,7 @@ describe("G8 · a run that ran no search (the P04 fixed profile) has no per-fold
     expect(text(row, "[data-absence-word]")).toBe("not applicable");
     expect(text(row, "[data-fold-strip-note]")).toBe("no fold strip — fixed profile, no optimizer study");
     expect(row.querySelectorAll("[data-strip-fold], [data-strip-cell]")).toHaveLength(0);
-    expect(row.querySelector("[data-mode-relation='DECLARED_MODE_RELEASE_METADATA_NOT_RUN_EVIDENCE']")?.textContent).toBe("release metadata · not run evidence");
+    expect(row.querySelector("[data-mode-relation='DECLARED_MODE_RELEASE_METADATA_NOT_RUN_EVIDENCE']")?.textContent).toBe("release metadata");
     expect(row.querySelector("[data-action='open-atlas-mode']")?.getAttribute("href")).toContain("mode=mode_1_decay&schedule=global");
     /* The fold plan and the Atlas are asked only when the retained lane holds the run. */
     expect(calls.filter((path) => path.endsWith("/current-source/split") || path === "/api/v1/research/quantbt/atlas")).toEqual([]);

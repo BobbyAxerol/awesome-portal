@@ -395,7 +395,13 @@ const panel = (name: string) => q(`[data-panel="${name}"]`);
 const panelOrder = () => qa("[data-screen='release-candidate'] [data-panel]").map((el) => el.getAttribute("data-panel"));
 const sealButton = () => q("[data-action='local-seal']")!;
 const publishButton = () => q("[data-action='publish']");
-const describedBy = (el: Element) => document.getElementById(el.getAttribute("aria-describedby") ?? "")?.textContent ?? null;
+/* W4: the reason code rides the sentence's tooltip, not its text; the helper reads both, as a reader of the tooltip does. */
+const describedBy = (el: Element) => {
+  const node = document.getElementById(el.getAttribute("aria-describedby") ?? "");
+  if (!node) return null;
+  const code = node.getAttribute("title");
+  return code ? `${node.textContent} · ${code}` : node.textContent;
+};
 
 /** What a reader sees on the screen: its text without the injected stylesheet. */
 function screenText(): string {
@@ -483,17 +489,18 @@ describe("S11 composition as served (P21)", () => {
     /* W1: no subtitle prose and no tooltip copy of it. */
     expect(q("[data-subtitle]")!.getAttribute("title")).toBeNull();
     const crumb = screen.getByRole("navigation", { name: "Breadcrumb" });
-    expect(crumb.textContent).toBe(`Evidence Flow/${RUN.slice(0, 13)}/Release Candidate & Publish`);
+    expect(crumb.textContent).toBe(`Evidence/${RUN.slice(0, 13)}/Release candidate`);
     expect(q("[data-crumb-run]")!.getAttribute("title")).toBe(RUN);
     /* W1 B3: opened with no cursor, the way back carries none (it used to say fold=1). */
-    expect(within(crumb).getByRole("link", { name: "Evidence Flow" }).getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/evidence`);
+    expect(within(crumb).getByRole("link", { name: "Evidence" }).getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/evidence`);
     expect(panel("seal")!.querySelector("h3")!.getAttribute("title")).toBe(SEAL_SENTENCE);
     expect(within(panel("publish")!).getByTitle(SOD_NOTE)).toBeTruthy();
     expect(panel("seal")!.textContent).not.toContain(SOD_NOTE);
-    expect(panel("mirror-ghost")!.querySelector("h3")!.getAttribute("title")).toBe(MIRROR_NOTE);
+    expect(panel("mirror-ghost")!.querySelector("[title]")!.getAttribute("title")).toBe(MIRROR_NOTE);
     expect(panel("pack")!.querySelector("th[title]")!.getAttribute("title")).toBe(PACK_FOOT_TITLE);
-    expect(sealButton().textContent).toBe(SEAL_LABEL);
-    expect(q("[data-state-chip]")!.textContent).toBe("DRAFT");
+    expect(sealButton().textContent).toBe("Seal");
+    expect(sealButton().getAttribute("title")).toContain(SEAL_LABEL);
+    expect(q("[data-state-chip]")!.getAttribute("data-state-chip")).toBe("DRAFT");
     expect(q("[data-action='run-report']")!.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/report`);
   });
 
@@ -515,11 +522,13 @@ describe("S11 composition as served (P21)", () => {
     renderCompose();
     await ready();
     const meta = panel("meta")!.textContent ?? "";
-    expect(meta).toContain("portal-persisted research record");
+    /* W4: authority and source are the as-of line's tooltip; the draft line is two words. */
+    expect(q("[data-as-of]")!.getAttribute("title")).toContain("portal-persisted research record");
     expect(q("[data-read-authority]")!.getAttribute("data-read-authority")).toBe("PORTAL_PERSISTED_RESEARCH");
-    expect(meta).toContain(`source ${P04.source_fingerprint.replace(/^sha256:/, "").slice(0, 8)}`);
-    expect(q("[data-source-fingerprint]")!.getAttribute("title")).toBe(P04.source_fingerprint);
-    expect(meta).toContain("draft saved · revision 1 · saved 2026-");
+    expect(q("[data-as-of]")!.getAttribute("title")).toContain(`source ${P04.source_fingerprint.replace(/^sha256:/, "").slice(0, 8)}`);
+    expect(q("[data-source-fingerprint]")!.getAttribute("data-source-fingerprint")).toBe(P04.source_fingerprint);
+    expect(meta).toContain("Draft saved");
+    expect(q("[data-draft-meta]")!.getAttribute("title")).toContain("revision 1 · saved 2026-");
   });
 
   it("S11-U05 keeps the rail in server order and tones; alpha links to Screen 10, run to Screen 04; a dim node never links", async () => {
@@ -538,7 +547,7 @@ describe("S11 composition as served (P21)", () => {
     expect(q("[data-rail-node='selected_params']")!.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/freeze`);
     /* F2b: the header's way out to lineage and the report, with the run and version kept. */
     expect(q("[data-action='open-lineage']")!.getAttribute("href")).toBe(lineage);
-    expect(q("[data-action='open-lineage']")!.getAttribute("title")).toContain("Screen 10");
+    expect(q("[data-action='open-lineage']")!.getAttribute("title")).toContain("lineage");
     expect(q("[data-action='run-report']")!.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/report`);
     expect(q("[data-rail-node='run']")!.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/evidence`);
     expect(q("[data-rail-node='release_candidate']")!.tagName).toBe("DIV");
@@ -555,7 +564,7 @@ describe("S11 composition as served (P21)", () => {
     renderCompose();
     await ready();
     const chip = q("[data-state-chip]")!;
-    expect(chip.textContent).toBe(NOT_PUBLISHABLE_BADGE);
+    expect(chip.getAttribute("data-state-chip")).toBe(NOT_PUBLISHABLE_BADGE);
     expect(chip.getAttribute("data-s")).toBe("NOT_PUBLISHABLE");
     const banner = panel("banner")!;
     expect(banner.textContent).toContain("Scratch run — no alpha_version bound. Bind one at New Run and re-run.");
@@ -578,12 +587,13 @@ describe("S11 composition as served (P21)", () => {
     server({ COMPOSE: [ok(W7_VIRTUAL)] });
     renderCompose(W7_VIRTUAL.run_id);
     await ready();
-    expect(qa("[data-taxonomy-row]").map((row) => row.getAttribute("data-taxonomy-state"))).toEqual(["UNSET", "UNSET", "UNSET", "UNSET"]);
+    /* W4: no predecessor is ONE line, not four UNSET rows. */
+    expect(qa("[data-taxonomy-row]")).toHaveLength(0);
+    expect(q("[data-taxonomy-none]")).not.toBeNull();
     const caption = q("[data-taxonomy-caption]")!;
-    expect(caption.textContent).toContain("last published rc — not published");
-    expect(caption.querySelector("[data-reason-code='P22_NO_PUBLISHED_PREDECESSOR']")!.textContent).toBe(
-      "no earlier candidate of this Alpha was published · P22_NO_PUBLISHED_PREDECESSOR",
-    );
+    expect(caption.textContent).toContain("earlier candidate — not published");
+    expect(caption.querySelector("[data-reason-code='P22_NO_PUBLISHED_PREDECESSOR']")).not.toBeNull();
+    expect(caption.querySelector("[title]")!.getAttribute("title")).toContain("P22_NO_PUBLISHED_PREDECESSOR");
     cleanup();
     const compared = clone(W7_DECLARED);
     compared.published_comparison = { last_release_candidate_id: OTHER_RC, availability: { state: "AVAILABLE", reason_code: null } };
@@ -624,7 +634,7 @@ describe("S11 composition as served (P21)", () => {
     await ready();
     expect(qa("[data-pack-row]").map((row) => row.getAttribute("data-pack-row"))).toEqual(P04.pack.map((item) => item.key));
     expect(qa("[data-pack-row]").map((row) => row.getAttribute("data-status"))).toEqual(P04.pack.map((item) => item.status));
-    expect(q("[data-pack-counts]")!.textContent).toBe("5 COMPLETE · 2 DEGRADED · 2 INPUT · 3 MISSING");
+    expect(q("[data-pack-counts]")!.textContent).toBe("5 complete · 2 degraded · 2 declared · 3 missing");
   });
 
   it("S11-U10 keeps DEGRADED, MISSING and INPUT distinct: titles, sentence + code, never a digit in a withheld cell", async () => {
@@ -632,21 +642,18 @@ describe("S11 composition as served (P21)", () => {
     renderCompose();
     await ready();
     const degraded = q("[data-pack-row='ROBUSTNESS_PARAM_STABILITY_REGIME']")!;
-    expect(degraded.querySelector(".rc-status")!.getAttribute("title")).toBe(STATUS_TITLE.DEGRADED);
-    expect(degraded.querySelector("[data-reason-code='P21_SOURCE_DEGRADED_EVIDENCE']")!.textContent).toBe(
-      "partial evidence — travels as DEGRADED · P21_SOURCE_DEGRADED_EVIDENCE",
-    );
+    expect(degraded.querySelector(".rc-status")!.getAttribute("title")).toContain(STATUS_TITLE.DEGRADED);
+    expect(degraded.querySelector("[data-reason-code='P21_SOURCE_DEGRADED_EVIDENCE']")!.getAttribute("title")).toContain("P21_SOURCE_DEGRADED_EVIDENCE");
     const missing = q("[data-pack-row='METHODOLOGY_CLAIM']")!;
-    expect(missing.querySelector(".rc-status")!.getAttribute("title")).toBe("P21_METHODOLOGY_CLAIM_NOT_PUBLISHED");
-    /* An unknown code prints alone, never a guessed sentence. */
-    expect(missing.querySelector(".note [data-reason-code='P21_METHODOLOGY_CLAIM_NOT_PUBLISHED']")!.textContent).toBe("P21_METHODOLOGY_CLAIM_NOT_PUBLISHED");
+    expect(missing.querySelector(".rc-status")!.getAttribute("title")).toContain("P21_METHODOLOGY_CLAIM_NOT_PUBLISHED");
     expect(missing.querySelector("[data-digest]")!.getAttribute("data-digest")).toBe("");
-    expect(missing.querySelector("[data-digest]")!.textContent).toBe("not publishedP21_METHODOLOGY_CLAIM_NOT_PUBLISHED");
+    expect(missing.querySelector("[data-digest]")!.textContent).toBe("not published"); /* the code is its tooltip, once */
     const input = q("[data-pack-row='KNOWN_LIMITATIONS_WAIVERS']")!;
-    expect(input.querySelector(".rc-status")!.getAttribute("title")).toBe(STATUS_TITLE.INPUT);
-    expect(input.querySelector("[data-digest]")!.textContent).toBe("— not declared");
+    expect(input.querySelector(".rc-status")!.getAttribute("title")).toContain(STATUS_TITLE.INPUT);
+    expect(input.querySelector("[data-digest]")!.textContent).toBe("not declared");
     expect(q("[data-seal-blocked]")!.getAttribute("data-seal-blocked")).toBe("P21_REQUIRED_EVIDENCE_MISSING");
-    expect(q("[data-seal-blocked]")!.textContent).toBe("resolve MISSING rows first · P21_REQUIRED_EVIDENCE_MISSING");
+    expect(q("[data-seal-blocked]")!.textContent).toBe("resolve MISSING rows first");
+    expect(q("[data-seal-blocked]")!.getAttribute("title")).toBe("P21_REQUIRED_EVIDENCE_MISSING");
   });
 
   it("S11-U11 links each row to the screen this build serves by contract key, only when the server named a source", async () => {
@@ -712,9 +719,11 @@ describe("S11 composition as served (P21)", () => {
     const notice = q("[data-rc-notice]")!;
     expect(notice.getAttribute("data-rc-notice")).toBe("partial");
     expect(page().getAttribute("data-rc-state")).toBe("partial");
-    expect(notice.textContent).toContain("a referenced source is absent, malformed or disagrees with another copy");
-    expect(notice.textContent).toContain("P21_REFERENCED_SOURCE_INTEGRITY_FAILED");
-    expect(q("[data-pack-counts]")!.textContent).toBe("3 COMPLETE · 0 DEGRADED · 2 INPUT · 7 MISSING");
+    /* W4: "Partial composition." is the sentence; the long reason and the code are its tooltip. */
+    expect(notice.textContent).toContain("Partial composition.");
+    expect(notice.outerHTML).toContain("a referenced source is absent, malformed or disagrees with another copy");
+    expect(notice.outerHTML).toContain("P21_REFERENCED_SOURCE_INTEGRITY_FAILED");
+    expect(q("[data-pack-counts]")!.textContent).toBe("3 complete · 2 declared · 7 missing");
     expect(q("[data-seal-blocked]")!.getAttribute("data-seal-blocked")).toBe("P21_REFERENCED_SOURCE_INTEGRITY_FAILED");
   });
 
@@ -744,17 +753,17 @@ describe("S11 W7 retained lane (Delta WFO)", () => {
     server({ COMPOSE: [ok(W7_VIRTUAL)] });
     renderCompose(W7_VIRTUAL.run_id);
     await ready();
-    expect(q("[data-pack-counts]")!.textContent).toBe("8 COMPLETE · 2 DEGRADED · 2 INPUT · 0 MISSING");
+    expect(q("[data-pack-counts]")!.textContent).toBe("8 complete · 2 degraded · 2 declared");
     expect(qa("[data-pack-row]").map((row) => row.getAttribute("data-status"))).toEqual(W7_VIRTUAL.pack.map((item) => item.status));
     expect(page().getAttribute("data-rc-state")).toBe("available");
     expect(q("[data-rc-notice]")).toBeNull();
     const claim = q("[data-pack-row='METHODOLOGY_CLAIM']")!;
     expect(claim.getAttribute("data-status")).toBe("DEGRADED");
-    expect(claim.querySelector("[data-reason-code='P21_METHODOLOGY_CERTIFICATE_NOT_ISSUED']")!.textContent).toBe(
-      "claim retained, no issued methodology certificate — travels as DEGRADED · P21_METHODOLOGY_CERTIFICATE_NOT_ISSUED",
+    expect(claim.querySelector("[data-reason-code='P21_METHODOLOGY_CERTIFICATE_NOT_ISSUED']")!.getAttribute("title")).toContain(
+      "claim retained, no issued methodology certificate — travels as DEGRADED",
     );
     /* The claim-ceiling token wraps in its note cell instead of being clipped. */
-    expect(claim.querySelector(".note")!.textContent).toContain("not_causal_multi_fold_global_calibration");
+    expect(claim.querySelector(".note")!.getAttribute("data-note")).toContain("not_causal_multi_fold_global_calibration");
     expect(q("[data-pack-row='ROBUSTNESS_PARAM_STABILITY_REGIME']")!.getAttribute("data-status")).toBe("DEGRADED");
     const rail = q("[data-rail-node='selected_params']")!;
     expect(rail.querySelector("[data-rail-detail]")!.textContent).toBe("retained trial 0 · global");
@@ -762,7 +771,8 @@ describe("S11 W7 retained lane (Delta WFO)", () => {
     expect(q("[data-yaml-key='release_candidate_id']")!.textContent).toContain("null  # P21_ASSIGNED_ON_LOCAL_SEAL");
     expect(q("[data-yaml-key='release_candidate_id'] .v")!.getAttribute("data-tone")).toBe("gold");
     expect(q("[data-yaml-key='manifest_digest']")!.getAttribute("data-yaml-value")).toMatch(/^b71259790d93/);
-    expect(q("[data-seal-blocked]")!.textContent).toBe("complete and save the two declarations first · P21_RESEARCHER_DECLARATIONS_REQUIRED");
+    expect(q("[data-seal-blocked]")!.textContent).toBe("complete and save the two declarations first");
+    expect(q("[data-seal-blocked]")!.getAttribute("title")).toBe("P21_RESEARCHER_DECLARATIONS_REQUIRED");
     expect(q("[data-cert='methodology_claim']")!.getAttribute("data-reason-code")).toBe("P21_METHODOLOGY_CERTIFICATION_NOT_PUBLISHED");
   });
 
@@ -874,7 +884,7 @@ describe("S11 declarations (draft CAS)", () => {
       edit("KNOWN_LIMITATIONS_WAIVERS", "x");
       fireEvent.click(q("[data-action='save-declaration']")!);
       const notice = await until("[data-write-notice='patch'][data-outcome='denied']");
-      seen.push(notice.firstElementChild!.textContent!);
+      seen.push(notice.firstElementChild!.textContent!.replace(/^\W+/, ""));
       expect(sealButton().getAttribute("aria-disabled")).toBe("true");
       expect(describedBy(sealButton())).toContain("writes are off — access changed");
       await flush();
@@ -914,7 +924,7 @@ describe("S11 declarations (draft CAS)", () => {
     fireEvent.click(q("[data-action='save-declaration']")!);
     gate.release();
     const notice = await until("[data-write-notice='patch'][data-outcome='terminal']");
-    expect(notice.textContent).toContain("RESEARCH_RELEASE_CANDIDATE_INVALID");
+    expect(notice.outerHTML).toContain("RESEARCH_RELEASE_CANDIDATE_INVALID");
     expect(api.of("PATCH")).toHaveLength(1);
     expect(q<HTMLTextAreaElement>("[data-declaration-input='KNOWN_LIMITATIONS_WAIVERS']")!.value).toBe("kept");
   });
@@ -958,10 +968,10 @@ describe("S11 local seal", () => {
     expect(q("[data-sealed-facts]")!.textContent).not.toContain(PACK_DIGEST);
     expect(q("[data-sealed-facts]")!.getAttribute("title")).toBe(`pack digest ${PACK_DIGEST}`);
     /* QA S11 U1: the sealed header says SEALED, not DRAFT; nothing says PUBLISHED. */
-    expect(q("[data-state-chip]")!.textContent).toBe("SEALED");
+    expect(q("[data-state-chip]")!.getAttribute("data-state-chip")).toBe("SEALED");
     expect(q("[data-seal-chip]")).toBeNull();
     expect(q("[data-panel='seal']")).toBeNull();
-    expect(q("[data-lifecycle]")!.textContent).toBe("not delivered · not approved");
+    expect(q("[data-lifecycle]")!.getAttribute("title")).toBe("not delivered · not approved");
     expect(within(q("[data-panel='sealed']")!).getByRole("link", { name: RC_ID }).getAttribute("href")).toBe(releaseCandidatePackHref(RC_ID));
     expect(q("[data-seal-replayed]")).toBeNull();
     /* The seal opens the P22 read of the new candidate — and only that read. */
@@ -990,7 +1000,7 @@ describe("S11 local seal", () => {
     fireEvent.click(sealButton());
     fireEvent.click(screen.getByRole("button", { name: "Confirm local seal" }));
     const terminal = await until("[data-write-notice='seal'][data-outcome='terminal']");
-    expect(terminal.textContent).toContain("RESEARCH_RELEASE_CANDIDATE_NOT_PUBLISHABLE");
+    expect(terminal.outerHTML).toContain("RESEARCH_RELEASE_CANDIDATE_NOT_PUBLISHABLE");
     fireEvent.click(sealButton());
     fireEvent.click(screen.getByRole("button", { name: "Confirm local seal" }));
     const conflict = await until("[data-write-notice='seal'][data-outcome='conflict']");
@@ -1030,14 +1040,14 @@ describe("S11 composition read refused", () => {
     const notice = await until("[data-rc-notice]");
     expect(notice.getAttribute("data-rc-notice")).toBe(state);
     expect(qa("[data-pack-row]")).toHaveLength(0);
-    expect(q("[data-error-code]")!.textContent).toBe(code);
+    expect(q("[data-refusal-code]")!.getAttribute("data-refusal-code")).toBe(code);
     expect(screenText()).not.toContain("SECRET-SERVER-PROSE");
-    if (status === 403 || status === 404) expect(notice.textContent).toContain(RC_NEUTRAL_REFUSAL);
+    if (status === 403 || status === 404) expect(notice.textContent).toContain("Not available to you.");
     if (status !== 503) expect(q("[data-action='run-library']")!.getAttribute("href")).toBe("/research/quantbt/runs");
     await flush();
     expect(api.of("COMPOSE")).toHaveLength(1);
     if (status === 503) {
-      fireEvent.click(screen.getByRole("button", { name: "read again" }));
+      fireEvent.click(screen.getByRole("button", { name: "Read again" }));
       await waitFor(() => expect(api.of("COMPOSE")).toHaveLength(2));
     }
   });
@@ -1051,11 +1061,12 @@ describe("S11 publish (P22, two routes)", () => {
     renderCompose();
     await ready();
     await waitFor(() => expect(publishButton()!.getAttribute("data-publish-enabled")).toBe("true"));
-    expect(publishButton()!.textContent).toBe(`Publish release candidate ${RC_ID}`);
+    expect(publishButton()!.textContent).toBe("Publish");
+    expect(publishButton()!.getAttribute("title")).toContain(`Publish ${RC_ID}`);
     expect(publishButton()!.getAttribute("aria-describedby")).toBeNull();
-    expect(q("[data-publish-sentence]")!.textContent).toBe(RC_ID);
+    expect(q("[data-publish-sentence]")!.getAttribute("data-publish-rc")).toBe(RC_ID);
     expect(panel("publish")!.querySelector("h3")!.getAttribute("title")).toBe(`${PUBLISH_SENTENCE[0]}${RC_ID}${PUBLISH_SENTENCE[1]}`);
-    expect(q("[data-sod]")!.getAttribute("title")).toBe(SOD_NOTE);
+    expect(q("[data-sod]")!.getAttribute("title")).toContain(SOD_NOTE);
     expect(api.of("PUBLICATION")[0]!.headers["x-portal-csrf"]).toBeUndefined();
     expect(api.of("PUBLISH")).toHaveLength(0);
     expect(api.calls.filter((call) => call.url.includes("/mirror") || call.url.includes("reconcile"))).toHaveLength(0);
@@ -1100,7 +1111,7 @@ describe("S11 publish (P22, two routes)", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Confirm publish" }));
     expect(publishButton()!.textContent).toBe(PUBLISHING_LABEL);
     expect(publishButton()!.getAttribute("aria-busy")).toBe("true");
-    expect(q("[data-state-chip]")!.textContent).toBe("SEALED");
+    expect(q("[data-state-chip]")!.getAttribute("data-state-chip")).toBe("SEALED");
     fireEvent.click(publishButton()!);
     gate.release();
     await until("[data-panel='published']");
@@ -1111,7 +1122,7 @@ describe("S11 publish (P22, two routes)", () => {
     /* No summary, no request key: the server writes both from the sealed pack. */
     expect(post!.body).toEqual({ schema_version: "research.release-candidate-publish-request.v1", expected_pack_digest: PACK_DIGEST, methodology_claim_id: CLAIM });
     await waitFor(() => expect(api.of("COMPOSE")).toHaveLength(2));
-    expect(q("[data-state-chip]")!.textContent).toBe("PUBLISHED");
+    expect(q("[data-state-chip]")!.getAttribute("data-state-chip")).toBe("PUBLISHED");
     expect(q("[data-state-chip]")!.getAttribute("data-s")).toBe("PUBLISHED");
     expect(q("[data-seal-chip]")).toBeNull();
     const card = panel("published")!;
@@ -1130,7 +1141,7 @@ describe("S11 publish (P22, two routes)", () => {
     expect(mirror.querySelector("[data-mirror-effective-status]")!.textContent).toBe("effective status not published");
     expect(mirror.querySelector("[data-mirror-sla]")!.textContent).toBe("SLA due 2026-09-27T09:12:00.000Z · expires 2026-12-25T09:12:00.000Z");
     expect(mirror.querySelector("[data-mirror-meta]")!.textContent).toBe(
-      `${MIRROR_POOL_ABSENT} · P22_GOVERNANCE_ASSIGNEE_POOL_NOT_PUBLISHED·conditions: none·${MIRROR_OUTCOMES}`,
+      `${MIRROR_POOL_ABSENT} · ⓘ·conditions: none·${MIRROR_OUTCOMES}`,
     );
     expect(mirror.querySelector("[data-mirror-pool]")!.getAttribute("data-mirror-pool")).toBe("NOT_PUBLISHED");
     expect(mirror.querySelector("[data-mirror-decisions]")!.textContent).toBe("decisions recorded: not published");
@@ -1170,9 +1181,9 @@ describe("S11 publish (P22, two routes)", () => {
     renderCompose();
     await ready();
     const card = await until("[data-panel='publish-unknown']");
-    expect(card.textContent).toContain(UNKNOWN_SHORT);
-    expect(card.querySelector("[data-unknown-copy]")!.getAttribute("title")).toBe(UNKNOWN_COPY);
-    expect(q("[data-state-chip]")!.textContent).toBe("SEALED");
+    expect(card.querySelector("[data-unknown-copy]")!.getAttribute("title")).toContain(UNKNOWN_SHORT);
+    expect(card.querySelector("[data-unknown-copy]")!.getAttribute("title")).toContain(UNKNOWN_COPY);
+    expect(q("[data-state-chip]")!.getAttribute("data-state-chip")).toBe("SEALED");
     expect(panel("publish")).toBeNull();
     expect(panel("mirror-ghost")).not.toBeNull();
     fireEvent.click(q("[data-action='publish-retry']")!);
@@ -1217,7 +1228,7 @@ describe("S11 publish (P22, two routes)", () => {
       fireEvent.click(publishButton()!);
       fireEvent.click(screen.getByRole("button", { name: "Confirm publish" }));
       const notice = await until("[data-write-notice='publish'][data-outcome='denied']");
-      seen.push(notice.firstElementChild!.textContent!);
+      seen.push(notice.firstElementChild!.textContent!.replace(/^\W+/, ""));
       expect(publishButton()!.getAttribute("aria-disabled")).toBe("true");
       expect(q("[data-action='local-seal']")).toBeNull();
       /* FG-05: the shell's Frame 01D answers a 401; the card builds no sign-in link of its own. */
@@ -1245,7 +1256,7 @@ describe("S11 publish (P22, two routes)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Confirm publish" }));
     const notice = await until("[data-write-notice='publish'][data-outcome='unavailable']");
     expect(notice.textContent).toContain(RC_PUBLISH_UNAVAILABLE_COPY);
-    expect(q("[data-state-chip]")!.textContent).toBe("SEALED");
+    expect(q("[data-state-chip]")!.getAttribute("data-state-chip")).toBe("SEALED");
     await flush();
     expect(api.of("PUBLISH")).toHaveLength(1);
     fireEvent.click(publishButton()!);
@@ -1267,7 +1278,7 @@ describe("S11 publication read and R1 mirror (P22)", () => {
     await ready();
     const read = await until("[data-publication-read='unavailable']");
     expect(read.textContent).toContain("the publication read did not answer — it is tried again on its own");
-    expect(read.textContent).toContain("RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE");
+    expect(read.outerHTML).toContain("RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE");
     expect(screenText()).not.toContain(RC_DENIED_COPY);
     expect(publishButton()!.getAttribute("aria-disabled")).toBe("true");
     expect(page().getAttribute("data-publication-polling")).toBe("true");
@@ -1295,7 +1306,7 @@ describe("S11 publication read and R1 mirror (P22)", () => {
     await ready();
     const read = await until(`[data-publication-read='${state}']`);
     expect(read.textContent).toContain(words);
-    expect(read.textContent).toContain(`CODE_${status}`);
+    expect(read.outerHTML).toContain(`CODE_${status}`);
     expect(publishButton()!.getAttribute("aria-disabled")).toBe("true");
     expect(within(read).queryByRole("link", { name: "sign in again" })).toBeNull();
     await act(() => vi.advanceTimersByTimeAsync(PUBLICATION_BACKOFF_MS[4] * 2));
@@ -1312,7 +1323,7 @@ describe("S11 publication read and R1 mirror (P22)", () => {
       renderCompose();
       await ready();
       const read = await until("[data-publication-read='denied']");
-      seen.push(read.firstElementChild!.textContent!);
+      seen.push(read.firstElementChild!.textContent!.replace(/^\W+/, ""));
       expect(screenText()).not.toContain(SERVER_PROSE);
       cleanup();
       vi.restoreAllMocks();
@@ -1371,7 +1382,7 @@ describe("S11 publication read and R1 mirror (P22)", () => {
     await ready();
     await until("[data-panel='mirror'] [data-publication-read='unavailable']");
     expect(panel("mirror-ghost")).toBeNull();
-    expect(q("[data-state-chip]")!.textContent).toBe("PUBLISHED");
+    expect(q("[data-state-chip]")!.getAttribute("data-state-chip")).toBe("PUBLISHED");
   });
 
   it("S11-U43 a superseded candidate is its own line; the raw status and conditions are the server's", async () => {
@@ -1394,8 +1405,10 @@ describe("S11 publication read and R1 mirror (P22)", () => {
     await ready();
     await waitFor(() => expect(publishButton()!.getAttribute("data-publish-enabled")).toBe("true"));
     expect(screenText()).not.toMatch(/Quant Reviewers|none recorded|quorum|decisions none|time left/);
-    expect(q("[data-panel='mirror-ghost'] [data-mirror-meta]")!.textContent).toBe(`${MIRROR_POOL_ABSENT}·conditions: not published·${MIRROR_OUTCOMES}`);
-    expect(panel("mirror-ghost")!.querySelectorAll("a, button, input, textarea, select, [tabindex]")).toHaveLength(0);
+    /* W4: the ghost is ONE line; no pool / conditions / outcomes meta. */
+    expect(q("[data-panel='mirror-ghost'] [data-mirror-meta]")).toBeNull();
+    /* W4: the ghost is one line whose tooltip is keyboard-reachable; it holds no control. */
+    expect(panel("mirror-ghost")!.querySelectorAll("a, button, input, textarea, select")).toHaveLength(0);
     fireEvent.click(publishButton()!);
     fireEvent.click(screen.getByRole("button", { name: "Confirm publish" }));
     await waitFor(() => expect(api.of("PUBLISH")).toHaveLength(1));
@@ -1451,7 +1464,7 @@ describe("S11 sealed pack route", () => {
     /* 11-26: the state word is the server's; no `P22_NOT_PUBLISHED` is made from it. */
     await waitFor(() => expect(ghost.querySelector("[data-publication-state='NOT_PUBLISHED']")).not.toBeNull());
     expect(ghost.querySelector("[data-reason-code]")).toBeNull();
-    expect(q("[data-pack-counts-absent]")!.textContent).toBe("counts are not part of the frozen pack");
+    expect(q("[data-pack-counts-absent]")!.textContent).toBe("no counts in the frozen pack");
   });
 
   it.each(["NOT_PUBLISHED", "PENDING", "UNKNOWN", "REFUSED"] as const)(
@@ -1532,7 +1545,7 @@ describe("S11 sealed pack route", () => {
     renderAt(releaseCandidatePackHref(RC_ID));
     await ready();
     await until("[data-panel='published'] [data-published-receipt]");
-    expect(q("[data-state-chip]")!.textContent).toBe("PUBLISHED");
+    expect(q("[data-state-chip]")!.getAttribute("data-state-chip")).toBe("PUBLISHED");
     expect(panel("mirror-ghost")).toBeNull();
     expect(panel("publish-ghost")).toBeNull();
     expect(panel("mirror")!.querySelector("[data-mirror-status]")!.textContent).toBe("PENDING");
@@ -1557,7 +1570,7 @@ describe("S11 sealed pack route", () => {
       renderAt(releaseCandidatePackHref(RC_ID));
       const notice = await until("[data-rc-notice]");
       seen.push(notice.getAttribute("data-rc-notice")!);
-      expect(notice.textContent).toContain(RC_NEUTRAL_REFUSAL);
+      expect(notice.textContent).toContain("Not available to you.");
       await flush();
       expect(api.of("PUBLICATION")).toHaveLength(0);
       cleanup();
@@ -1690,7 +1703,8 @@ describe("S11 P22 closeout bindings (FG-05)", () => {
     expect(decisions.textContent).toBe("decisions recorded: usr_reviewer_1 APPROVE_WITH_CONDITION");
     const meta = q("[data-panel='mirror'] [data-mirror-meta]")!;
     expect(meta.querySelector("[data-mirror-outcomes]")).toBeNull();
-    expect(meta.textContent).toBe(`${MIRROR_POOL_ABSENT} · P22_GOVERNANCE_ASSIGNEE_POOL_NOT_PUBLISHED·conditions: none`);
+    expect(meta.textContent).toBe(`${MIRROR_POOL_ABSENT} · ⓘ·conditions: none`);
+    expect(meta.querySelector("[data-reason-code]")!.getAttribute("title")).toContain("P22_GOVERNANCE_ASSIGNEE_POOL_NOT_PUBLISHED");
     expect(screenText()).not.toContain(MIRROR_OUTCOMES);
     expect(screenText()).not.toMatch(/(decision|possible) outcomes:/);
   });
@@ -1751,7 +1765,7 @@ describe("S11 P22 closeout bindings (FG-05)", () => {
     expect(conflict.getAttribute("data-downstream-code")).toBe("P22_DOWNSTREAM_OUTCOME_UNKNOWN");
     expect(within(conflict).getByRole("link", { name: "apr_01K5CONFLICT" }).getAttribute("href")).toBe("/governance/approvals/apr_01K5CONFLICT/r1");
     expect(conflict.textContent).toBe(
-      `conflicting approval apr_01K5CONFLICT · downstream code ${rcReasonSentence("P22_DOWNSTREAM_OUTCOME_UNKNOWN")} · P22_DOWNSTREAM_OUTCOME_UNKNOWN`,
+      `conflicting approval apr_01K5CONFLICT · downstream code ⓘ`,
     );
     expect(card.querySelector("[data-publication-intent]")!.textContent).toBe(
       `recorded by researcher@bobby · attempt_count 2 · recorded 2026-09-26T09:10:00.000Z · updated ${new Date(PUBLISHED_AT).toISOString()}`,
@@ -1870,7 +1884,7 @@ describe("S11 F2 promotion_pick in the lineage rail", () => {
     const node = await until("[data-rail-node='promotion_pick'][data-pick-state]");
     expect(node.getAttribute("data-pick-state")).toBe("WRITTEN");
     expect(node.getAttribute("data-pick-status")).toBe("APPROVED_WITH_CONDITION");
-    expect(node.querySelector("[data-state-chip]")!.textContent).toBe("APPROVED_WITH_CONDITION");
+    expect(node.querySelector("[data-state-chip]")!.getAttribute("data-state-chip")).toBe("APPROVED_WITH_CONDITION");
     expect(node.querySelector("[data-pick-state-word]")!.textContent!.trim()).toBe("WRITTEN");
     expect(node.querySelector("[data-pick-trial]")!.textContent).toBe("source trial_0007");
     /* F2b: the artifact and the fact digest are the node's tooltip and data, not two more lines. */
@@ -1881,7 +1895,7 @@ describe("S11 F2 promotion_pick in the lineage rail", () => {
     /* the trial opens Screen 06 with the trial selected (hash pick=), on the pick's own run */
     const trial = node.querySelector("[data-pick-trial] a")!;
     expect(trial.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/search#stage=search&pick=trial_0007`);
-    expect(trial.getAttribute("title")).toContain("Screen 06");
+    expect(trial.getAttribute("title")).toContain("picked trial");
     /* the approval chip opens the mirror's own href, because the mirror served this approval */
     expect(node.querySelector("[data-action='open-pick-approval']")!.getAttribute("href")).toBe(`/governance/approvals/${APPROVAL}/r1`);
   });
@@ -1895,7 +1909,7 @@ describe("S11 F2 promotion_pick in the lineage rail", () => {
     await ready();
     const node = await until("[data-rail-node='promotion_pick'][data-pick-state]");
     expect(node.getAttribute("data-pick-state")).toBe("PENDING_APPROVAL");
-    expect(node.querySelector("[data-state-chip]")!.textContent).toBe("PENDING");
+    expect(node.querySelector("[data-state-chip]")!.getAttribute("data-state-chip")).toBe("PENDING");
   });
 
   it("F2-S11-03 a pick whose trial and artifact are null says each is not published, never 0 or a dash", async () => {
@@ -1914,7 +1928,8 @@ describe("S11 F2 promotion_pick in the lineage rail", () => {
     await ready();
     const node = await until("[data-rail-node='promotion_pick']");
     expect(node.getAttribute("data-pick-absent")).toBe("true");
-    expect(node.textContent).toBe("promotion pickpromotion pick — not published");
+    expect(node.textContent).toBe("picknone yet");
+    expect(node.querySelector("[title]")!.getAttribute("title")).toBe("promotion pick — not published");
     expect(node.querySelector("[data-state-chip]")).toBeNull();
   });
 
@@ -1931,7 +1946,7 @@ describe("S11 F2 promotion_pick in the lineage rail", () => {
     renderCompose();
     await ready();
     const absent = await until("[data-rail] [data-rail-node='promotion_pick'][data-pick-absent]");
-    expect(absent.textContent).toContain("promotion pick — not published");
+    expect(absent.querySelector("[title]")!.getAttribute("title")).toContain("promotion pick — not published");
   });
 });
 
@@ -1955,18 +1970,18 @@ describe("S11 F2b flow links, tooltips and the pack strip", () => {
     await ready();
     expect(panel("seal")).toBeNull();
     expect(panel("sealed")!.querySelector("h3")!.getAttribute("title")).toBe(SEALED_SENTENCE);
-    expect(panel("mirror-ghost")!.querySelector("h3")!.getAttribute("title")).toBe(MIRROR_NOTE);
+    expect(panel("mirror-ghost")!.querySelector("[title]")!.getAttribute("title")).toBe(MIRROR_NOTE);
     expect(screen.queryByText(MIRROR_NOTE)).toBeNull();
     expect(screen.queryByText(SEAL_SENTENCE)).toBeNull();
     expect(q("[data-pack-counts]")!.getAttribute("title")).toBe(PACK_FOOT_TITLE);
     /* the typed legend of outcomes stays on the page */
-    expect(q("[data-mirror-outcomes='legend']")!.textContent).toBe(MIRROR_OUTCOMES);
+    expect(q("[data-mirror-outcomes='legend']")).toBeNull();
     cleanup();
     server({ COMPOSE: [ok(sealable())] });
     renderCompose();
     await ready();
     expect(panel("seal")!.querySelector("h3")!.getAttribute("title")).toBe(SEAL_SENTENCE);
-    expect(sealButton().getAttribute("title")).toBe(SEAL_SENTENCE);
+    expect(sealButton().getAttribute("title")).toContain(SEAL_SENTENCE);
   });
 
   it("F2b-S11-03 the pack strip has one cell per served row, in served order and status, and hover lights the row", async () => {
@@ -2021,14 +2036,14 @@ describe("S11 QA 2026-10-02 fixes", () => {
     server({ COMPOSE: [ok(sealable())] });
     renderCompose();
     await ready();
-    expect(q("[data-state-chip]")!.textContent).toBe("DRAFT");
+    expect(q("[data-state-chip]")!.getAttribute("data-state-chip")).toBe("DRAFT");
     expect(q("[data-action='local-seal']")).not.toBeNull();
     expect(qa("[data-action='edit-declaration']").length).toBeGreaterThan(0);
     cleanup();
     server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(publication())] });
     renderCompose();
     await ready();
-    expect(q("[data-state-chip]")!.textContent).toBe("SEALED");
+    expect(q("[data-state-chip]")!.getAttribute("data-state-chip")).toBe("SEALED");
     expect(screenText()).not.toMatch(/\bDRAFT\b/);
     expect(q("[data-action='local-seal']")).toBeNull();
     expect(screen.queryByText(SEAL_CONFIRM)).toBeNull();
@@ -2054,7 +2069,7 @@ describe("S11 QA 2026-10-02 fixes", () => {
     await ready();
     const before = q("[data-yaml-key='release_candidate_id']")!;
     expect(before.getAttribute("data-yaml-value")).toBe("");
-    expect(before.textContent).toContain("P21_ASSIGNED_ON_LOCAL_SEAL");
+    expect(before.outerHTML).toContain("P21_ASSIGNED_ON_LOCAL_SEAL");
     cleanup();
     server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(publication())] });
     renderCompose();
@@ -2095,7 +2110,7 @@ describe("S11 QA 2026-10-02 fixes", () => {
     fireEvent.click(sealButton());
     fireEvent.click(screen.getByRole("button", { name: "Confirm local seal" }));
     const notice = await until("[data-write-notice='seal'][data-post-seal-refusal]");
-    expect(notice.textContent).toContain("P21_ALREADY_SEALED");
+    expect(notice.outerHTML).toContain("P21_ALREADY_SEALED");
     expect(notice.textContent).not.toContain(RC_CONFLICT_COPY);
     const retry = await until("[data-action='retry-seal-original']");
     fireEvent.click(retry);

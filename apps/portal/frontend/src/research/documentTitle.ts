@@ -10,27 +10,30 @@ import { useEffect } from "react";
 import { runLabelOrShortId, useRunLabel } from "./runLabels";
 
 const RUN_SCREENS: Readonly<Record<string, string>> = {
-  progress: "QuantBT — Run Progress",
-  evidence: "QuantBT Evidence Flow",
-  split: "QuantBT Stage 1 — Split & Windows",
-  search: "QuantBT Stage 2 — Search & Selection",
-  freeze: "QuantBT Stage 3 — Freeze",
-  execute: "QuantBT Stage 4 — Execute Replay",
-  report: "Backtest Evidence Report",
-  "release-candidate": "QuantBT — Release Candidate & Publish",
+  progress: "Progress",
+  evidence: "Evidence",
+  split: "Split",
+  search: "Search",
+  freeze: "Freeze",
+  execute: "Execute",
+  report: "Report",
+  "release-candidate": "Release candidate",
 };
 
-/** Screens whose HiFi title is only the screen name (no run in it). */
+/** Screens named by the screen alone. ONE pattern everywhere: `<Screen> · <Run label>`; no product prefix. */
 const PLAIN: ReadonlyArray<readonly [RegExp, string]> = [
-  [/\/research\/quantbt(?:\/(?:journey\/?)?)?$/, "QuantBT — Journey Map"],
-  [/\/research\/quantbt\/runs\/?$/, "QuantBT — Run Library"],
-  [/\/research\/quantbt\/runs\/new\/?$/, "QuantBT — New Run"],
-  [/\/research\/quantbt\/atlas\/?$/, "QuantBT — Engine Atlas"],
-  [/\/research\/quantbt\/alpha-import\/?$/, "QuantBT — Alpha Import"],
-  [/\/research\/quantbt\/compare\/?$/, "QuantBT — Compare"],
-  [/\/research\/quantbt\/alphas\/[^/]+\/lineage\/?$/, "QuantBT — Attempt Lineage"],
-  [/\/research\/quantbt\/alphas\/[^/]+\/compare\/?$/, "QuantBT — Compare"],
-  [/\/research\/quantbt\/release-candidates\/[^/]+\/?$/, "QuantBT — Release Candidate & Publish"],
+  [/\/research\/quantbt(?:\/(?:journey\/?)?)?$/, "Journey"],
+  [/\/research\/quantbt\/runs\/?$/, "Library"],
+  [/\/research\/quantbt\/runs\/new\/?$/, "New run"],
+  [/\/research\/quantbt\/atlas\/?$/, "Atlas"],
+  [/\/research\/quantbt\/alpha-import\/?$/, "Import alpha"],
+  [/\/research\/quantbt\/compare\/?$/, "Compare"],
+];
+
+/** Alpha-scoped screens: the alpha id from the address is the label. */
+const ALPHA_SCREENS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/\/research\/quantbt\/alphas\/([^/]+)\/lineage\/?$/, "Lineage"],
+  [/\/research\/quantbt\/alphas\/([^/]+)\/compare\/?$/, "Compare"],
 ];
 
 /** The run a Research Loop per-run path names, or `null`. */
@@ -42,10 +45,16 @@ export function runIdFromPath(pathname: string): string | null {
 /** `null` for a path that is not a Research Loop screen (the shell keeps its own title). */
 export function researchDocumentTitle(pathname: string, runLabel: string | null): string | null {
   for (const [pattern, title] of PLAIN) if (pattern.test(pathname)) return title;
+  for (const [pattern, title] of ALPHA_SCREENS) {
+    const alpha = pattern.exec(pathname);
+    if (alpha) return `${title} · ${decodeURIComponent(alpha[1])}`;
+  }
+  const rc = /\/research\/quantbt\/release-candidates\/([^/]+)\/?$/.exec(pathname);
+  if (rc) return "Release candidate";
   const match = /\/research\/quantbt\/runs\/[^/]+\/([^/]+)\/?$/.exec(pathname);
   const base = match ? RUN_SCREENS[match[1]] : undefined;
   if (!base) return null;
-  return runLabel ? `${base} — ${runLabel}` : base;
+  return runLabel ? `${base} · ${runLabel}` : base;
 }
 
 /** Sets `document.title` for the mounted Research Loop screen and restores the previous one on leave. */

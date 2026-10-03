@@ -24,6 +24,7 @@ import { Formula } from "./Formula";
 import { foldLabel, formatUtc, groupDecimalString } from "./researchFormat";
 import { reasonCodeSentence } from "./researchRefusal";
 import type { CurrentSourceSearch } from "./searchClient";
+import { humanise } from "./humanise";
 
 type Pool = NonNullable<CurrentSourceSearch["pool"]>;
 type PoolCount = Pool["trials_evaluated"];
@@ -171,11 +172,7 @@ export function FrozenAt({ pool }: { pool: Pool }) {
       ) : (
         <>
           <Absent code={pool.frozen_at_reason_code} data-frozen-at="absent" />
-          {pool.frozen_at_reason_code ? (
-            <span className="min-w-0 text-[9px] [overflow-wrap:anywhere]" style={FAINT} data-frozen-at-reason>
-              {pool.frozen_at_reason_code}
-            </span>
-          ) : null}
+          {pool.frozen_at_reason_code ? <span hidden data-frozen-at-reason>{pool.frozen_at_reason_code}</span> : null}
         </>
       )}
     </span>
@@ -208,20 +205,23 @@ export function PoolFunnel({ search }: { search: CurrentSourceSearch }) {
           )
         }
       />
+      {pool.feasible.state === "NOT_APPLICABLE" ? null : (
       <FunnelRow
         id="feasible"
         label="feasible (constraint ≤ 0)"
         count={pool.feasible}
         of={of}
-        note={<span title={pool.feasible.reason_code ?? undefined}>{pool.feasible.state === "NOT_APPLICABLE" ? `n/a — ${reasonWords(pool.feasible.reason_code)}` : reasonWords(pool.feasible.reason_code)}</span>}
+        note={<span title={pool.feasible.reason_code ?? undefined}>{reasonWords(pool.feasible.reason_code)}</span>}
       />
+      )}
       <FunnelRow
         id="top-is"
         label="top-IS pool → FROZEN"
         count={pool.top_is_k}
         of={of}
         note={
-          expression ?? (
+          /* The K expression is printed once, in the callout below. */
+          expression !== null ? null : (
             <span title={pool.top_is_k.reason_code ?? undefined}>
               {pool.rule.state === "NOT_APPLICABLE" ? "K not applicable " : "K "}
               {reasonWords(pool.top_is_k.reason_code)}
@@ -241,7 +241,7 @@ export function PoolFunnel({ search }: { search: CurrentSourceSearch }) {
           </>
         }
       />
-      <FunnelRow id="selected" label="selected by policy" count={pool.selected} of={of} note={contract.candidate_selection_metric ?? "selector not published"} />
+      <FunnelRow id="selected" label="selected by policy" count={pool.selected} of={of} note={humanise(contract.candidate_selection_metric) || "selector not published"} />
       <FrozenAt pool={pool} />
       {expression ? (
         <span
@@ -252,7 +252,6 @@ export function PoolFunnel({ search }: { search: CurrentSourceSearch }) {
           title={`QuantBT _candidate_count · K = ⌈n_trials × top_is_fraction⌉ · n = completed, unpruned IS trials · rule ${pool.rule.expression}${optunaBlind ? " · the pool closes before any OOS value is computed" : ""}`}
         >
           {expression}
-          {optunaBlind ? " · pool closes before OOS" : ""}
         </span>
       ) : (
         <span className="mono mt-1 border border-dashed px-[10px] py-[5px] text-[10px] leading-[1.6]" style={{ ...FAINT, borderColor: "var(--line)" }} data-k-callout={pool.rule.state === "NOT_APPLICABLE" ? "not-applicable" : "absent"} title={pool.rule.reason_code ?? undefined}>

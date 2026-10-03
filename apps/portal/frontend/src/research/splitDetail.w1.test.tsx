@@ -12,7 +12,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { RunNotFound, StageRunBar } from "./SplitDetail";
 import { StageDenied } from "./StageDenied";
 import { runLibraryApi } from "./runLibraryClient";
-import { libraryPage, libraryRow, type RunStatusWireFixture } from "./runStates.fixture";
+import { libraryPage, libraryRow, progressFor, type RunStatusWireFixture } from "./runStates.fixture";
+import { progressApi } from "./progressClient";
 
 afterEach(() => {
   cleanup();
@@ -59,6 +60,16 @@ describe("W1-stages — StageRunBar", () => {
       expect(container.querySelector("[data-run-exit-bar] span[data-run-phase]")?.getAttribute("title")).toBeTruthy();
     });
   }
+
+  it("W4: a FAILED run says it once, with the stage the progress read served: Run failed at S4 Execute.", async () => {
+    answer([libraryRow("FAILED", { runId: RUN })]);
+    vi.spyOn(progressApi, "read").mockResolvedValue(progressFor("FAILED", { failedStage: "S4" }));
+    const { container } = bar(true);
+    await waitFor(() =>
+      expect(container.querySelector("[data-run-exit-bar] span[data-run-phase]")?.textContent).toBe("Run failed at S4 Execute."),
+    );
+    expect(container.querySelectorAll("[data-run-exit-bar]")).toHaveLength(1);
+  });
 
   it("COMPLETED: nothing is added (the lane's own typed absence stays the only message)", async () => {
     const list = answer([libraryRow("COMPLETED", { runId: RUN })]);

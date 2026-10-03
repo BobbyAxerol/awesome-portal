@@ -270,7 +270,8 @@ describe("P09-T01 — the journey map renders the descriptor the server pinned",
 
     // The screen supplies no navigation chrome and no second shell: the
     // Portal's own `PortalShell` is the only one on the page.
-    expect(document.querySelectorAll("nav")).toHaveLength(0);
+    /* W4A: the one page header's prev/next nav is not navigation chrome; there is no breadcrumb. */
+    expect(document.querySelectorAll("nav:not([aria-label='Previous and next'])")).toHaveLength(0);
     expect(document.querySelectorAll(".portal-shell")).toHaveLength(0);
     expect(document.querySelectorAll("aside")).toHaveLength(0);
     // Exactly one page title, so the route does not read as two screens.
@@ -435,8 +436,10 @@ describe("E12 — the map opens every screen this build serves (audit 00-3, D2)"
     expect(card.getAttribute("data-card-picks-run")).toBe("execute_replay");
     /* The dead end is gone: no card says SELECT RUN with nowhere to select. */
     expect(card.getAttribute("data-card-unreachable")).toBeNull();
-    expect(card.textContent).toContain("pick a run");
-    /* QA: the badge no longer says it a second time. */
+    /* W4A: the instruction is the tooltip and the accessible name, not text on 13 cards. */
+    expect(card.getAttribute("title")).toContain("pick a run");
+    expect(card.getAttribute("aria-label")).toContain("pick a run");
+    expect(card.textContent).not.toContain("pick a run");
     expect(card.textContent).not.toContain("PICK A RUN");
   });
 
@@ -460,8 +463,9 @@ describe("E12 — the map opens every screen this build serves (audit 00-3, D2)"
 
     const card = document.querySelector('[data-card="c_e12"]') as HTMLElement;
     expect(card.getAttribute("data-card-unreachable")).toBeNull();
-    expect(card.textContent).toContain("pick an alpha");
-    expect(card.textContent).not.toContain("pick a run");
+    expect(card.getAttribute("title")).toContain("pick an alpha");
+    expect(card.getAttribute("aria-label")).toContain("pick an alpha");
+    expect(card.getAttribute("aria-label")).not.toContain("pick a run");
     expect(card.textContent).not.toContain(PICK_ALPHA_BADGE);
     expect(card.getAttribute("data-card-picks-alpha")).toBe("alpha_version_legacy");
     expect(card.getAttribute("data-card-picks-run")).toBeNull();
@@ -541,9 +545,11 @@ describe("P09-T03 — a journey deep link inspects and never dispatches", () => 
   it("F2b: the way out and back in keeps the run — crumb to Library and Evidence Flow, Atlas card remembers the run", async () => {
     stub(() => [200, journey(), 'W/"journey-1"']);
     renderAt("/research/quantbt/journey?run_id=rrun_abc123", <JourneyMapRoute />);
-    await waitFor(() => expect(document.querySelector("[data-breadcrumb]")).toBeTruthy());
-    expect(document.querySelector("[data-crumb-library]")?.getAttribute("href")).toBe("/research/quantbt/runs");
-    expect(document.querySelector("[data-crumb-evidence]")?.getAttribute("href")).toBe("/research/quantbt/runs/rrun_abc123/evidence");
+    await waitFor(() => expect(document.querySelector("[data-page-header]")).toBeTruthy());
+    /* W4A: no crumb; the header's prev/next links carry the way out and back in. */
+    expect(document.querySelector("[data-breadcrumb]")).toBeNull();
+    expect(document.querySelector("[data-action='page-prev']")?.getAttribute("href")).toBe("/research/quantbt/runs");
+    expect(document.querySelector("[data-action='page-next']")?.getAttribute("href")).toBe("/research/quantbt/runs/rrun_abc123/evidence");
     await waitFor(() => expect(document.querySelector('[data-card-route^="/research/quantbt/atlas"]')).toBeTruthy());
     expect(document.querySelector('[data-card-route^="/research/quantbt/atlas"]')?.getAttribute("data-card-route")).toBe(
       "/research/quantbt/atlas#tab=modes&run=rrun_abc123",
@@ -556,8 +562,8 @@ describe("P09-T03 — a journey deep link inspects and never dispatches", () => 
   it("F2b: without a run the crumb has no Evidence Flow link and the Atlas card has no hash", async () => {
     stub(() => [200, journey(), 'W/"journey-1"']);
     renderAt("/research/quantbt/journey", <JourneyMapRoute />);
-    await waitFor(() => expect(document.querySelector("[data-breadcrumb]")).toBeTruthy());
-    expect(document.querySelector("[data-crumb-evidence]")).toBeNull();
+    await waitFor(() => expect(document.querySelector("[data-page-header]")).toBeTruthy());
+    expect(document.querySelector("[data-action='page-next']")).toBeNull();
     await waitFor(() => expect(document.querySelector('[data-card-route^="/research/quantbt/atlas"]')).toBeTruthy());
     expect(document.querySelector('[data-card-route^="/research/quantbt/atlas"]')?.getAttribute("data-card-route")).toBe("/research/quantbt/atlas");
   });

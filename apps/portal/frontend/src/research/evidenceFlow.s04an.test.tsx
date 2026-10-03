@@ -84,7 +84,7 @@ describe("S04 · D-AN-01 — value path (published v2 block)", () => {
     expect(container.querySelector("[data-metric='OOS_SORTINO']")).toBeNull();
   });
 
-  it("replaces the rolling panel with 'Strategy vs benchmark — OOS' and its four cells", async () => {
+  it("replaces the rolling panel with 'Strategy vs benchmark — OOS' and its three cells (Sharpe and Sortino are not repeated here)", async () => {
     const ensureSeries = vi.fn();
     const ensureRetainedKind = vi.fn();
     const { container } = view({ passport: withV2(V2), ensureSeries, ensureRetainedKind });
@@ -95,8 +95,10 @@ describe("S04 · D-AN-01 — value path (published v2 block)", () => {
     const exact = (id: string) => figure.querySelector(`[data-behavior-tile='${id}'] [data-exact]`)?.getAttribute("data-exact");
     expect(exact("beta")).toBe(V2.metrics.beta.value);
     expect(exact("corr")).toBe(V2.metrics.correlation.value);
-    expect(exact("sharpe")).toBe(V2.metrics.sharpe.value);
-    expect(exact("sortino")).toBe(V2.metrics.sortino.value);
+    expect(figure.querySelector("[data-behavior-tile='sharpe']")).toBeNull();
+    expect(figure.querySelector("[data-behavior-tile='sortino']")).toBeNull();
+    /* Sortino is in Behavior, once. */
+    expect(container.querySelectorAll("[data-behavior-tile='sortino']")).toHaveLength(1);
     expect(figure.querySelector("[data-behavior-tile='beta']")?.textContent).toContain("−0.01");
     expect(figure.querySelector("[data-behavior-tile='benchmark']")?.textContent).toContain("−10.13%");
     expect([...ensureSeries.mock.calls, ...ensureRetainedKind.mock.calls].some(([kind]) => String(kind).startsWith("ROLLING_"))).toBe(false);

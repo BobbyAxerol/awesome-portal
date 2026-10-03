@@ -369,7 +369,7 @@ describe("S09 Run Report — the sheet", () => {
     expect(sheet.contains(panel("warnings"))).toBe(true);
     expect(panel("warnings").closest(".no-print")).toBeNull();
     expect(panel("warnings").querySelectorAll("[data-warning]")).toHaveLength(2);
-    expect(panel("warnings").textContent).toContain("P04_FIXED_PROFILE");
+    expect(panel("warnings").outerHTML).toContain("P04_FIXED_PROFILE");
     const order = [...document.querySelectorAll("[data-panel]")].map((el) => el.getAttribute("data-panel"));
     expect(order.indexOf("warnings")).toBe(order.indexOf("stages") + 1);
     expect(order.indexOf("warnings")).toBeLessThan(order.indexOf("promotion"));
@@ -399,7 +399,7 @@ describe("S09 Run Report — the sheet", () => {
     expect(panel("provenance").querySelector("[data-data-signature]")).toBeNull();
     expect(panel("provenance").querySelector('[data-source-digest="dataset_binding_digest"]')?.textContent).toContain("e".repeat(64));
     expect(panel("provenance").querySelector('[data-source-digest="manifest_digest"]')?.textContent).toContain("f".repeat(64));
-    expect(panel("header").textContent).toContain(REV);
+    expect(panel("header").querySelector("[data-report-revision-chip]")!.getAttribute("title")).toContain(REV);
     expect(panel("header").textContent).toContain("2024-09-22 10:13Z");
   });
 
@@ -416,11 +416,11 @@ describe("S09 Run Report — the sheet", () => {
       const cell = panel("headline").querySelector(`[data-headline="${key}"]`)!;
       expect(cell.querySelector("[data-headline-withheld]")).toBeTruthy();
       expect(cell.querySelector("[data-headline-value]")).toBeNull();
-      expect(cell.textContent).toContain(reason);
+      expect(cell.outerHTML).toContain(reason);
       expect(cell.textContent).toContain("not published");
       expect(cell.textContent).not.toMatch(/(^|[^0-9A-Z_])(0|N\/A|—|-)($|[^0-9A-Z_])/);
     }
-    expect(panel("headline").querySelector("[data-headline-footnote]")?.textContent).toContain("are not inferred");
+    expect(panel("headline").querySelector("[data-headline-footnote]")?.getAttribute("title")).toContain("are not inferred");
   });
 
   it("S09-U05 names each unpublished passport fact, artifact and promotion with its reason", async () => {
@@ -430,15 +430,15 @@ describe("S09 Run Report — the sheet", () => {
     const facts = panel("passport").querySelectorAll("[data-passport-fact]");
     expect(facts).toHaveLength(6);
     expect(facts[0]!.textContent).toContain("p04.delta-rsi.v1");
-    expect(facts[3]!.textContent).toContain("P18_SPLIT_PROTOCOL_NOT_PUBLISHED");
-    expect(facts[5]!.textContent).toContain("P18_INTEGRITY_NOT_PUBLISHED");
+    expect(facts[3]!.outerHTML).toContain("P18_SPLIT_PROTOCOL_NOT_PUBLISHED");
+    expect(facts[5]!.outerHTML).toContain("P18_INTEGRITY_NOT_PUBLISHED");
     expect(panel("artifacts").querySelectorAll('[data-artifact-state="NOT_PUBLISHED"]')).toHaveLength(7);
-    expect(panel("artifacts").querySelector('[data-artifact="SELECTION_TRACE"]')?.textContent).toContain(
+    expect(panel("artifacts").querySelector('[data-artifact="SELECTION_TRACE"]')?.outerHTML).toContain(
       "P04_FIXED_PROFILE_HAS_NO_SELECTION_TRACE",
     );
-    expect(panel("promotion").textContent).toContain("P04_SOURCE_DID_NOT_PUBLISH_PROMOTION_APPROVAL");
-    expect(panel("annotation").textContent).toContain("P18_APPROVAL_ANNOTATION_NOT_PUBLISHED");
-    expect(panel("provenance").querySelector('[data-source-absence="replay_execution_state"]')?.textContent).toContain(
+    expect(panel("promotion").outerHTML).toContain("P04_SOURCE_DID_NOT_PUBLISH_PROMOTION_APPROVAL");
+    expect(panel("annotation").outerHTML).toContain("P18_APPROVAL_ANNOTATION_NOT_PUBLISHED");
+    expect(panel("provenance").querySelector('[data-source-absence="replay_execution_state"]')?.outerHTML).toContain(
       "P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_STATE_SNAPSHOTS",
     );
     expect(panel("identity").querySelector('[data-identity="symbol"]')?.textContent).toBe("SymbolBTCUSDT");
@@ -453,7 +453,7 @@ describe("S09 Run Report — the sheet", () => {
     const svg = panel("equity").querySelector("[data-equity-svg]")!;
     expect(svg.getAttribute("aria-label")).toContain("3 sealed points");
     expect(panel("equity").textContent).toContain("3 points · all points");
-    expect(panel("equity").textContent).toContain("P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_REPORT_ROWS");
+    expect(panel("equity").outerHTML).toContain("P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_REPORT_ROWS");
     expect(document.querySelector("canvas")).toBeNull();
   });
 
@@ -481,12 +481,14 @@ describe("S09 Run Report — the sheet", () => {
     await screen.findByText(SERIES_UNAVAILABLE);
     expect(document.querySelector('[data-screen="run-report"]')?.getAttribute("data-report-state")).toBe("partial");
     expect(panel("equity").querySelector("[data-equity-svg]")).toBeNull();
-    expect(panel("equity").textContent).toContain("P13_EQUITY_SERIES_NOT_AVAILABLE");
-    expect(panel("folds").querySelector("[data-folds-absent]")?.textContent).toContain(
+    expect(panel("equity").outerHTML).toContain("P13_EQUITY_SERIES_NOT_AVAILABLE");
+    expect(panel("folds").querySelector("[data-folds-absent]")?.outerHTML).toContain(
       "P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_REPORT_ROWS",
     );
-    expect(document.querySelector('[data-report-notice="partial"]')?.textContent).toContain("equity series");
-    expect(document.querySelector('[data-report-notice="partial"]')?.textContent).toContain("Partial — not published");
+    /* W4: "Partial." is the word; the list of what is not published is its tooltip. */
+    expect(document.querySelector('[data-report-notice="partial"]')?.textContent).toContain("Partial.");
+    expect(document.querySelector('[data-report-notice="partial"]')?.outerHTML).toContain("equity series");
+    expect(document.querySelector('[data-report-notice="partial"]')?.outerHTML).toContain("Partial — not published");
     expect(document.querySelector('[data-report-notice="partial"]')?.textContent).not.toContain("each is named below");
   });
 
@@ -525,9 +527,9 @@ describe("S09 Run Report — the sheet", () => {
     const release = document.querySelector('[data-action="release-candidate"]')!;
     expect(release.tagName).toBe("A");
     expect(release.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/release-candidate`);
-    const promotion = document.querySelector('[data-action="promotion-release-candidate"]')!;
-    expect(promotion.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/release-candidate`);
-    expect(promotion.closest(".no-print")).not.toBeNull();
+    /* W4: one release-candidate link on the sheet (the toolbar); the promotion block repeats none. */
+    expect(document.querySelector('[data-action="promotion-release-candidate"]')).toBeNull();
+    expect(release.closest(".no-print")).not.toBeNull();
     expect(document.querySelector("[data-action-unrouted]")).toBeNull();
   });
 
@@ -537,13 +539,13 @@ describe("S09 Run Report — the sheet", () => {
     await screen.findByText("claim passport");
     expect((screen.getByRole("button", { name: "Export JSON" }) as HTMLButtonElement).disabled).toBe(false);
     expect((screen.getByRole("button", { name: "Export CSV" }) as HTMLButtonElement).disabled).toBe(false);
-    const parquet = screen.getByRole("button", { name: "Export Parquet" }) as HTMLButtonElement;
-    expect(parquet.disabled).toBe(true);
-    expect(parquet.title).toBe("P18_SOURCE_DID_NOT_PUBLISH_REPORT_ROWSET_FOR_PARQUET");
-    expect(document.querySelector('[data-export-unavailable="ARCHIVE"]')?.getAttribute("title")).toBe(
+    /* W4: a format the server does not offer is no dead button; its reason is one hidden marker. */
+    expect(screen.queryByRole("button", { name: "Export Parquet" })).toBeNull();
+    expect(document.querySelector('[data-export-unavailable="PARQUET"]')!.getAttribute("title")).toContain("P18_SOURCE_DID_NOT_PUBLISH_REPORT_ROWSET_FOR_PARQUET");
+    expect(document.querySelector('[data-export-unavailable="ARCHIVE"]')?.getAttribute("title")).toContain(
       "P18_SOURCE_ARTIFACT_ARCHIVE_NOT_EXPOSED_TO_REPORT",
     );
-    expect(panel("exports").textContent).toContain("max 512 KB per file");
+    expect(panel("exports").querySelector("[title]")!.getAttribute("title")).toContain("max 512 KB per file");
   });
 });
 
@@ -613,9 +615,10 @@ describe("S09 Run Report — layout rules", () => {
 
   it("S09-U31 export format labels are written consistently", async () => {
     await sheetCss();
-    for (const name of ["Export JSON", "Export CSV", "Export Parquet", "Export Archive"]) {
+    for (const name of ["Export JSON", "Export CSV"]) {
       expect(screen.getByRole("button", { name }), name).toBeTruthy();
     }
+    for (const name of ["Export Parquet", "Export Archive"]) expect(screen.queryByRole("button", { name }), name).toBeNull();
     expect(panel("exports").querySelector('[data-export-unavailable-reason="ARCHIVE"]')?.textContent).toContain("Archive — not available");
     expect(panel("exports").querySelector('[data-export="REPORT_JSON"] [data-export-line]')?.classList.contains("rr-long")).toBe(true);
   });
@@ -788,10 +791,11 @@ describe("S09 Run Report — hi-fi sheet geometry", () => {
     expect(panel("stages").querySelector("h2")?.textContent).toBe(CHAIN_TITLE);
     const s1 = panel("stages").querySelector('[data-stage="S1"]')!;
     const cells = [...s1.querySelectorAll("td")];
-    expect(cells.map((cell) => cell.className)).toEqual(["key", "desc", "st"]);
+    /* W4: the stage's sentence / timestamps are the key cell's tooltip; two cells, key and state. */
+    expect(cells.map((cell) => cell.className)).toEqual(["key", "st"]);
     expect(cells[0]!.textContent).toBe("S1 · Split");
-    expect(cells[1]!.textContent).toBe("done · started 2024-09-22 10:13Z · completed 2024-09-22 10:13Z");
-    expect(cells[2]!.textContent).toBe("DONE");
+    expect(cells[0]!.getAttribute("title")).toBe("done · started 2024-09-22 10:13Z · completed 2024-09-22 10:13Z");
+    expect(cells[1]!.textContent).toBe("DONE");
     expect(panel("stages").querySelector("thead")).toBeNull();
     const grid = panel("artifacts").querySelector(".rr-artgrid")!;
     expect(grid.querySelectorAll("[data-artifact]")).toHaveLength(7);
@@ -806,8 +810,8 @@ describe("S09 Run Report — hi-fi sheet geometry", () => {
     const card = panel("promotion").parentElement!;
     expect(card.classList.contains("rr-pp")).toBe(true);
     expect(card.lastElementChild).toBe(panel("provenance"));
-    expect(panel("promotion").querySelector("h2")?.textContent).toBe("Promotion state");
-    expect(panel("provenance").querySelector("h2")?.textContent).toBe("Provenance of this report");
+    expect(panel("promotion").querySelector("h2")?.textContent).toBe("Promotion");
+    expect(panel("provenance").querySelector("h2")?.textContent).toBe("Provenance");
     expect(rule(css, '.rr-pp > [data-panel="provenance"]')).toContain("border-top: 1px solid var(--line-soft); padding-top: 9px");
     const spans = [...panel("footer").children].map((el) => el.textContent);
     expect(spans[0]).toBe("Quant Ecosystem Portal · Research · confidential");
@@ -842,7 +846,7 @@ describe("S09 Run Report — reading", () => {
     renderRoute();
     await screen.findByText("The server said the report is unchanged, but no copy is held here. Read it again.");
     expect(panel("passport")).toBeNull();
-    expect(screen.getByRole("button", { name: "read again" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Read again" })).toBeTruthy();
   });
 
   it.each([
@@ -875,7 +879,7 @@ describe("S09 Run Report — reading", () => {
     expect(copy.toLowerCase()).not.toContain("owner");
     expect(panel("passport")).toBeNull();
     expect(screen.queryByRole("button", { name: "Export JSON" })).toBeNull();
-    expect(Boolean(screen.queryByRole("button", { name: "read again" }))).toBe(status === 503);
+    expect(Boolean(screen.queryByRole("button", { name: "Read again" }))).toBe(status === 503);
   });
 
   it("S09-U15 403 uses the audited F-04 sentence, 409 maps to stale and keeps the job", () => {
@@ -896,7 +900,7 @@ describe("S09 Run Report — reading", () => {
     renderRoute();
     await screen.findByText(REPORT_REFUSAL_COPY.report[503]);
     expect(api.detailCalls()).toHaveLength(1);
-    fireEvent.click(screen.getByRole("button", { name: "read again" }));
+    fireEvent.click(screen.getByRole("button", { name: "Read again" }));
     await screen.findByText("claim passport");
     expect(api.detailCalls()).toHaveLength(2);
   });
@@ -950,7 +954,7 @@ describe("S09 Run Report — export", () => {
     await flush(EXPORT_POLL_MS);
     const row = panel("exports").querySelector('[data-export="REPORT_CSV"]')!;
     expect(row.getAttribute("data-export-state")).toBe("FAILED");
-    expect(row.textContent).toContain("P18_EXPORT_MAXIMUM_BYTES_EXCEEDED");
+    expect(row.outerHTML).toContain("P18_EXPORT_MAXIMUM_BYTES_EXCEEDED");
     expect(row.querySelector("[data-download-href]")).toBeNull();
     await flush(EXPORT_POLL_MS * 5);
     expect(api.statusCalls()).toHaveLength(1);
@@ -1096,7 +1100,7 @@ describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
     expect(title.textContent).toBe(body.frozen_core.title.text);
     expect(title.getAttribute("data-title-source")).toBe("report");
     expect(panel("header").querySelector("[data-cert]")?.getAttribute("data-cert-state")).toBe("NOT_PUBLISHED");
-    expect(panel("header").querySelector("[data-cert] [data-reason-code]")?.textContent).toBe(body.frozen_core.certification.reason_code);
+    expect(panel("header").querySelector("[data-cert] [data-reason-code]")?.getAttribute("data-reason-code")).toBe(body.frozen_core.certification.reason_code);
   });
 
   it("VD-TEXT-01 · the sheet keeps its facts and absences but none of the explanatory prose", async () => {
@@ -1122,7 +1126,7 @@ describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
     expect(panel("equity").querySelector("[data-equity-caption]")?.textContent).toContain("┆ = fold OOS start");
     /* QA S09: the chain's own "certification cap - not published" line is gone (the header box says it once). */
     expect(panel("stages").textContent).not.toContain("certification cap");
-    expect(panel("artifacts").textContent).toContain("download — not offered");
+    expect(panel("artifacts").textContent).toContain("no download");
     expect(panel("folds").querySelector("[data-verdict-rule]")?.textContent).toMatch(/rule \S+/);
     expect(panel("annotation").getAttribute("aria-label")).toBe("approval annotation · not printed");
     expect(panel("annotation").textContent).toContain("annotation");
@@ -1135,7 +1139,7 @@ describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
     expect(facts.map((fact) => fact.getAttribute("data-passport-key"))).toEqual(body.frozen_core.passport.map((fact: { key: string }) => fact.key));
     /* QA S09: enum tokens read as words; the exact token stays in the tooltip. */
     expect(facts[0]!.querySelector(".k")?.textContent).toBe("validation claim");
-    expect(facts[0]!.querySelector(".v")?.textContent).toBe("walk forward oos");
+    expect(facts[0]!.querySelector(".v")?.textContent).toBe("walk-forward OOS");
     expect(facts[0]!.querySelector(".v [title]")?.getAttribute("title")).toBe("walk_forward_oos");
     expect(facts[3]!.getAttribute("data-fact-state")).toBe("NOT_APPLICABLE");
     expect(panel("passport").textContent).not.toContain("numbered rather than named");
@@ -1170,8 +1174,8 @@ describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
     for (const stage of body.frozen_core.stages as Array<{ key: string; check: { result: string; text: string | null; source_key: string | null } }>) {
       const row = panel("stages").querySelector(`[data-stage="${stage.key}"]`)!;
       expect(row.getAttribute("data-stage-check")).toBe(stage.check.result);
-      if (stage.check.text) expect(row.querySelector(".desc")?.textContent).toContain(stage.check.text);
-      if (stage.check.source_key) expect(row.querySelector(".desc")?.textContent).toContain(stage.check.source_key);
+      if (stage.check.text) expect(row.querySelector(".key")?.getAttribute("title")).toContain(stage.check.text);
+      if (stage.check.source_key) expect(row.querySelector(".key")?.getAttribute("title")).toContain(stage.check.source_key);
     }
     expect(panel("stages").querySelector('[data-stage="S3"] .st')?.textContent).toBe("pass");
   });
@@ -1201,7 +1205,7 @@ describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
     expect(panel("artifacts").querySelectorAll("a")).toHaveLength(0);
     /* QA S09: the private-bytes code is the note's tooltip; the line says it in words. */
     expect(panel("artifacts").querySelector("[data-download-note]")?.getAttribute("title")).toContain(fold.download.reason_code);
-    expect(panel("artifacts").querySelector("[data-download-note]")?.textContent).toBe("download — not offered for private artifacts");
+    expect(panel("artifacts").querySelector("[data-download-note]")?.textContent).toBe("private — no download");
   });
 
   it("S09-U47 CG-P18-11 a scratch run says NOT_PUBLISHABLE in its identity and keeps the generic title", async () => {
@@ -1214,8 +1218,8 @@ describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
     await open("research-report.p04-fixed-profile.valid.json");
     expect(panel("passport").querySelector("h2")?.textContent).toBe("claim passport");
     expect(panel("passport").querySelector('[data-passport-key="split_protocol"] .k')?.textContent).toBe("Split protocol");
-    expect(panel("folds").querySelector("[data-folds-absent]")?.textContent).toContain("P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_REPORT_ROWS");
-    expect(panel("equity").querySelector('[data-legend="is"]')?.textContent).toContain("P04_SOURCE_DID_NOT_PUBLISH_IS_EQUITY_SERIES");
+    expect(panel("folds").querySelector("[data-folds-absent]")?.outerHTML).toContain("P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_REPORT_ROWS");
+    expect(panel("equity").querySelector('[data-legend="is"]')?.outerHTML).toContain("P04_SOURCE_DID_NOT_PUBLISH_IS_EQUITY_SERIES");
   });
 });
 
@@ -1233,13 +1237,13 @@ describe("S09 X2 — failed run, 32 folds, final audit", () => {
     const outcome = panel("failed-outcome");
     expect(outcome.getAttribute("data-outcome")).toBe("FAILED");
     expect(outcome.getAttribute("role")).toBe("status");
-    expect(outcome.querySelector("[data-failure-code]")?.textContent).toBe("QUANTBT_CHILD_EXITED");
+    expect(outcome.querySelector("[data-failure-code]")?.getAttribute("data-failure-code")).toBe("QUANTBT_CHILD_EXITED");
     expect([...panel("stages").querySelectorAll("[data-stage]")].map((row) => row.getAttribute("data-stage-check"))).toEqual([
       "NOT_PUBLISHED", "FAIL", "NOT_APPLICABLE", "NOT_APPLICABLE", "NOT_APPLICABLE",
     ]);
     expect(panel("artifacts").querySelector('[data-artifact="search/trials.parquet"]')?.getAttribute("data-artifact-state")).toBe("ABORTED");
     expect(panel("artifacts").textContent).toContain("ABORTED");
-    expect(panel("equity").querySelector("[data-series-unavailable]")?.textContent).toBe("series unavailable — numbers unaffected");
+    expect(panel("equity").getAttribute("title")).toContain("series unavailable — numbers unaffected");
     // No claim block is drawn for a run without a claim.
     expect(panel("headline")).toBeNull();
     expect(panel("passport")).toBeNull();
@@ -1268,7 +1272,7 @@ describe("S09 X2 — failed run, 32 folds, final audit", () => {
     expect(audit.getAttribute("data-final-audit")).toBe("REUSED_ORIGINAL");
     expect(audit.querySelector("[data-optimizer-reinvoked]")?.getAttribute("data-optimizer-reinvoked")).toBe("false");
     /* QA S09: identical entries are one sentence. */
-    expect(audit.querySelector("[data-final-audit-folds]")?.textContent).toBe("all 2 folds ran the frozen candidate 2671e27b");
+    expect(audit.querySelector("[data-final-audit-folds]")?.textContent).toContain("2 folds on candidate 2671e27b");
     (body.frozen_core as any).final_audit.folds[1].state = "MISMATCH";
     cleanup();
     forgetHeldReports();
@@ -1276,8 +1280,8 @@ describe("S09 X2 — failed run, 32 folds, final audit", () => {
     renderRoute(body.run_id);
     await screen.findAllByText(/per-fold verdict/i);
     await act(async () => {});
-    expect(panel("final-audit")!.querySelector("[data-final-audit-folds]")?.textContent).toBe("fold_01: 2671e27b = θ* · fold_02: 2671e27b mismatch");
-    expect(audit.querySelector("[data-final-audit-refs]")?.textContent).toContain("frozen_candidate");
+    expect(panel("final-audit")!.querySelector("[data-final-audit-folds]")?.textContent).toBe(" · fold_01: 2671e27b = θ* · fold_02: 2671e27b mismatch");
+    expect(audit.querySelector("[data-final-audit-refs]")?.getAttribute("title")).toContain("frozen_candidate");
   });
 
   it("B11 S09 a per-fold selection report: own-params column, score basis, own-OOS handoff and per-fold audit target (typed mutation of the canonical fixture)", async () => {
@@ -1310,8 +1314,8 @@ describe("S09 X2 — failed run, 32 folds, final audit", () => {
     server({ detail: [{ status: 200, body }] });
     renderRoute(body.run_id);
     await screen.findAllByText(/per-fold verdict/i);
-    expect(document.querySelector('[data-export-unavailable="PARQUET"]')?.getAttribute("title")).toBe("P18_CONTROL_API_HAS_NO_PINNED_PARQUET_WRITER");
-    expect(document.querySelector('[data-export-unavailable="ARCHIVE"]')?.getAttribute("title")).toBe("P18_ARCHIVE_WOULD_EXPOSE_PRIVATE_P05_BYTES_AND_RAW_MARKET_ROWS");
+    expect(document.querySelector('[data-export-unavailable="PARQUET"]')?.getAttribute("title")).toContain("P18_CONTROL_API_HAS_NO_PINNED_PARQUET_WRITER");
+    expect(document.querySelector('[data-export-unavailable="ARCHIVE"]')?.getAttribute("title")).toContain("P18_ARCHIVE_WOULD_EXPOSE_PRIVATE_P05_BYTES_AND_RAW_MARKET_ROWS");
   });
 });
 
@@ -1344,15 +1348,15 @@ describe("E14 — S09 headline return, identity qualifier, equity grid and evide
     expect(value.textContent).toContain("−0.37%");
     /* The value is the whole account path, so the tile says so rather than
        letting the reader take it for an OOS-only return. */
-    expect(tile.querySelector("[data-headline-scope]")?.textContent).toBe("is plus oos");
-    expect(panel("headline").querySelector("[data-headline-footnote]")?.textContent).toContain("they are not OOS-only");
+    expect(tile.querySelector("[data-headline-scope]")?.getAttribute("title")).toContain("is plus oos");
+    expect(panel("headline").querySelector("[data-headline-footnote]")?.getAttribute("title")).toContain("they are not OOS-only");
   });
 
   it("9.8 a P04 sheet shows the same tile under the scope its hub published", async () => {
     const body = await open("research-report.p04-fixed-profile.valid.json");
     const tile = panel("headline").querySelector('[data-headline="NET_RETURN"]')!;
     expect(tile.querySelector("[data-headline-value]")?.getAttribute("data-headline-value")).toBe(body.frozen_core.headline[0].value);
-    expect(tile.querySelector("[data-headline-scope]")?.textContent).toBe("oos");
+    expect(tile.querySelector("[data-headline-scope]")?.getAttribute("title")).toContain("oos");
     expect(tile.querySelector("[data-headline-value]")?.getAttribute("data-sign")).toBe("pos");
   });
 
@@ -1363,14 +1367,15 @@ describe("E14 — S09 headline return, identity qualifier, equity grid and evide
     const qualifier = row.querySelector("[data-identity-qualifier]")!;
     expect(qualifier.getAttribute("data-identity-qualifier")).toBe("DECLARED_NOT_EXECUTED");
     expect(qualifier.textContent).toContain("declared, not executed");
-    expect(qualifier.textContent).toContain("P04_FIXED_PROFILE_RUN_DID_NOT_EXECUTE_THE_DECLARED_OPTIMIZER");
+    expect(qualifier.outerHTML).toContain("P04_FIXED_PROFILE_RUN_DID_NOT_EXECUTE_THE_DECLARED_OPTIMIZER");
     expect(qualifier.getAttribute("title")).toContain("no search was executed");
   });
 
   it("9.7 a run whose search really ran carries no qualifier on any identity row", async () => {
     await open("research-report.wfo-retained.valid.json");
     expect(panel("identity").querySelectorAll("[data-identity-qualifier]")).toHaveLength(0);
-    expect(panel("identity").querySelector('[data-identity="optimization"] dd')?.textContent).toBe("mode_1_decay × global");
+    /* W4: the optimization row repeats the passport's mode × schedule and carries no qualifier here, so it is not listed. */
+    expect(panel("identity").querySelector('[data-identity="optimization"]')).toBeNull();
   });
 
   it("9.10 the equity axis draws the hi-fi's six grid rules at equal steps, and still labels only server values", async () => {
@@ -1488,11 +1493,12 @@ describe("E14 — S09 headline return, identity qualifier, equity grid and evide
     );
     /* F1 / D2 walk: the printed address IS the address — a shortened one 404s when typed. */
     expect(link.getAttribute("title")).toBe(link.getAttribute("data-evidence-href"));
-    expect(link.textContent).toBe(reportEvidenceLinkLabel(body.run_id, body as unknown as ReportDetail));
-    expect(link.textContent).toBe(link.getAttribute("href"));
-    expect(link.textContent).toBe(link.getAttribute("data-evidence-href"));
-    expect(link.textContent).toContain(`/runs/${body.run_id}/report?report_revision=${body.report_revision}`);
-    expect(link.textContent).not.toContain("portal://");
+    /* W4: the address is the title and href; the printed text is a words-only label. */
+    expect(link.getAttribute("title")).toBe(reportEvidenceLinkLabel(body.run_id, body as unknown as ReportDetail));
+    expect(link.getAttribute("href")).toBe(link.getAttribute("data-evidence-href"));
+    expect(link.textContent).toBe("Link to this report");
+    expect(link.getAttribute("title")).toContain(`/runs/${body.run_id}/report?report_revision=${body.report_revision}`);
+    expect(link.getAttribute("title")).not.toContain("portal://");
     /* It wraps like the sheet's digests do, instead of being cut: the cell breaks anywhere. */
     expect((link.closest("dd") as HTMLElement).className).toContain("rr-long");
   });

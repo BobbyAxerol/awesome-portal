@@ -32,6 +32,7 @@ import { BoundWarningNote } from "./BoundWarning";
 import { isWhatIf, WhatIfCard } from "./WhatIfCard";
 import { CopyThetaDigest, ServedStage4Binding } from "./Stage4Binding";
 import { DigestChain, hubDigestChain, retainedDigestChain, verifyChainLabel } from "./DigestChain";
+import { humanise } from "./humanise";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import { CURRENT_SOURCE_LANE_COPY } from "./researchRefusal";
@@ -62,7 +63,6 @@ import type { ResearchState } from "./state";
 import { reasonCodeSentence } from "./researchRefusal";
 import { claimToken, foldLabel, formatMetric, formatUtc, shortDigest, shortId } from "./researchFormat";
 import type { FoldOrdering, FoldOrderingRow } from "./freezeClient";
-import { ChildAuditCompanionPanel } from "./ChildAuditCompanionPanel";
 import { FoldSelectionPanel } from "./FoldSelectionPanel";
 import { OrchestrationClocks } from "./OrchestrationClocks";
 import {
@@ -202,7 +202,7 @@ function IntegrityPanel({
           {integrity.state.toLowerCase()}
         </Chip>
         <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
-          {integrity.verification_scope.toLowerCase().replace(/_/g, " ")}
+          {humanise(integrity.verification_scope)}
         </span>
 
         <button
@@ -277,7 +277,7 @@ function VerifyLive({ verify }: { verify: VerifySlot }) {
           <div className="flex flex-col gap-0.5" data-verify-result={verify.verification.result}>
             <p className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>
               re-read {iso(verify.verification.verified_at_utc_ms)} ·{" "}
-              {verify.verification.result.toLowerCase().replace(/_/g, " ")} · freeze revision{" "}
+              {humanise(verify.verification.result)} · freeze revision{" "}
               {verify.verification.freeze_revision ?? "not published"}
             </p>
             {/*
@@ -288,7 +288,7 @@ function VerifyLive({ verify }: { verify: VerifySlot }) {
               style={{ color: "var(--ink-faint)" }}
               data-verify-scope={verify.verification.verification_scope}
             >
-              this verification covers {verify.verification.verification_scope.toLowerCase().replace(/_/g, " ")}
+              this verification covers {humanise(verify.verification.verification_scope)}
             </p>
           </div>
         ) : verify.state === "refused" ? (
@@ -482,13 +482,13 @@ function WindowRow({ window, label }: { window: FreezeWindow | null; label: stri
           {window.bars} bars
         </span>
       ) : null}
-      <Chip data-window-role={window.data_role}>{window.data_role.toLowerCase().replace(/_/g, " ")}</Chip>
+      <Chip data-window-role={window.data_role}>{humanise(window.data_role)}</Chip>
       <Chip data-window-input={window.child_input_state}>
-        {window.child_input_state.toLowerCase().replace(/_/g, " ")}
+        {humanise(window.child_input_state)}
       </Chip>
       {window.evaluation_state !== null ? (
         <Chip data-window-evaluation={window.evaluation_state}>
-          {window.evaluation_state.toLowerCase().replace(/_/g, " ")}
+          {humanise(window.evaluation_state)}
         </Chip>
       ) : null}
     </span>
@@ -805,7 +805,7 @@ function RetainedRows({ freeze }: { freeze: CurrentSourceFreeze }) {
           {integrity.state.toLowerCase()}
         </Chip>
         <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-retained-scope-code>
-          {integrity.verification_scope.toLowerCase().replace(/_/g, " ")}
+          {humanise(integrity.verification_scope)}
         </span>
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-retained-rows>
           {integrity.retained_row_count} retained rows
@@ -831,9 +831,9 @@ function RetainedRows({ freeze }: { freeze: CurrentSourceFreeze }) {
         * manifest rows, counts and a batch receipt — and not an artifact-byte,
         * causal-order, selection or broker pass. The sentence travels with it.
         */}
-      <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-retained-scope title={RETAINED_SCOPE_TITLE}>
+      <span hidden data-retained-scope title={RETAINED_SCOPE_TITLE}>
         match = manifest, row counts, batch receipt only
-      </p>
+      </span>
     </div>
   );
 }
@@ -889,7 +889,7 @@ function objectiveTwoPlaces(value: string): string {
 
 /** D24: a QuantBT claim token in words (underscores out); the token itself is the title where it is drawn. */
 function claimWords(value: string): string {
-  return claimToken(value).toLowerCase().replace(/_/g, " ");
+  return humanise(value);
 }
 
 /** A digest as 8 hex with the full value one hover away. */
@@ -925,9 +925,9 @@ function TypedAbsence({
           {what}
         </span>
         <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
-          {state.toLowerCase().replace(/_/g, " ")}
+          {humanise(state)}
         </span>
-        {/* D24: the sentence is the text; the server's code is the hover. */}
+        {/* D24: ONE short sentence is the text; the server's code is the hover. */}
         {code ? (
           <span className="text-[10px]" style={{ color: "var(--ink-faint)" }} title={code} data-absence-code={code}>
             {sentence ?? ""}
@@ -961,21 +961,15 @@ function RetainedStrip({ freeze, identity }: { freeze: RetainedFreeze; identity:
       data-read-authority={freeze.read_authority}
       style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
     >
-      <Chip tone="var(--accent)" border="var(--accent)" title={freeze.read_authority}>
-        retained current source
-      </Chip>
-      <span className="flex flex-wrap items-baseline gap-1.5" data-selection-state={selection.availability.state}>
-        <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-          selection
-        </span>
-        <span className="mono text-[10px]">{selection.availability.state.toLowerCase().replace(/_/g, " ")}</span>
+      <span className="flex flex-wrap items-baseline gap-1.5" data-selection-state={selection.availability.state} title={`retained current source · ${freeze.read_authority} · selection ${humanise(selection.availability.state)}`}>
+        {selection.availability.state === "AVAILABLE" ? null : <span className="mono text-[10px]">selection {humanise(selection.availability.state)}</span>}
         {selection.selected_trial_id !== null ? (
           <span
             className="mono text-[10px]"
             data-selected-trial={selection.selected_trial_id}
             title={trialTitle}
           >
-            · {trialLabel({ sourceId: selection.selected_trial_id })}
+            {trialLabel({ sourceId: selection.selected_trial_id })}
           </span>
         ) : (
           <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
@@ -983,9 +977,8 @@ function RetainedStrip({ freeze, identity }: { freeze: RetainedFreeze; identity:
           </span>
         )}
         {selection.objective !== null ? (
-          <span className="mono text-[10px]" data-selected-objective={selection.objective} title={selection.objective}>
+          <span className="mono text-[10px]" data-selected-objective={selection.objective} title={objectiveWord !== null ? `${selection.objective} · ${objectiveWord}` : selection.objective}>
             · J {objectiveTwoPlaces(selection.objective)}
-            {objectiveWord !== null ? ` · ${objectiveWord}` : ""}
           </span>
         ) : (
           <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
@@ -994,15 +987,18 @@ function RetainedStrip({ freeze, identity }: { freeze: RetainedFreeze; identity:
         )}
       </span>
       {/* Readiness is the run's seal on the retained lane, not the hub's NOT_READY for a lane it never holds. */}
-      <Chip
-        data-readiness={readiness ?? (readiness === null ? "NOT_PUBLISHED" : "READING")}
-        tone={readiness === "READY" ? "var(--good)" : "var(--ink-soft)"}
-        border={readiness === "READY" ? "var(--good)" : "var(--line)"}
-        title="the attempt resolved from its source, materialized READY and sealed its mandatory bundle (P11 progress read)"
-      >
-        readiness{" "}
-        {readiness === undefined ? "reading…" : readiness === null ? "not published" : readiness.toLowerCase().replace(/_/g, " ")}
-      </Chip>
+      {readiness === "READY" ? (
+        <span hidden data-readiness="READY" title="the attempt resolved from its source, materialized READY and sealed its mandatory bundle (P11 progress read)" />
+      ) : (
+        <Chip
+          data-readiness={readiness ?? (readiness === null ? "NOT_PUBLISHED" : "READING")}
+          tone="var(--ink-soft)"
+          border="var(--line)"
+          title="the attempt resolved from its source, materialized READY and sealed its mandatory bundle (P11 progress read)"
+        >
+          {readiness === undefined ? "reading readiness…" : readiness === null ? "readiness not published" : humanise(readiness)}
+        </Chip>
+      )}
       <span className="mono ml-auto text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-as-of>
         as of {formatUtc(freeze.as_of_utc_ms) ?? "not published"}
       </span>
@@ -1052,11 +1048,17 @@ function RetainedIntegrity({
         <h2 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
           digest chain · retained custody
         </h2>
-        <Chip data-retained-state={integrity.state} tone={tone} border={tone}>
-          {integrity.state.toLowerCase()}
+        <Chip
+          data-retained-state={integrity.state}
+          tone={tone}
+          border={tone}
+          tabIndex={0}
+          title={`match = manifest, row counts, batch receipt only · ${humanise(integrity.verification_scope)}`}
+        >
+          {humanise(integrity.state)}
         </Chip>
-        <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-retained-scope-code>
-          {integrity.verification_scope.toLowerCase().replace(/_/g, " ")}
+        <span hidden data-retained-scope-code>
+          {humanise(integrity.verification_scope)}
         </span>
         {/* Spec 07 §2.3: "verify now" — disabled while verifying, never optimistic. */}
         <button
@@ -1086,9 +1088,7 @@ function RetainedIntegrity({
             <span className="flex flex-wrap items-baseline justify-between gap-2">
               <span className="mono text-[10px]">{pair.label}</span>
               {/* The server's verdict over the receipt; this screen compares nothing itself. */}
-              <Chip data-integrity-row-state={integrity.state} tone={tone} border={tone}>
-                {integrity.state.toLowerCase()}
-              </Chip>
+              <span hidden data-integrity-row-state={integrity.state} />
             </span>
             <span className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
               <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
@@ -1128,9 +1128,9 @@ function RetainedIntegrity({
       )}
       <VerifyLive verify={verify} />
 
-      <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-retained-scope title={RETAINED_SCOPE_TITLE}>
+      <span hidden data-retained-scope title={RETAINED_SCOPE_TITLE}>
         match = manifest, row counts, batch receipt only
-      </p>
+      </span>
     </section>
   );
 }
@@ -1323,13 +1323,13 @@ const FOLD_VERDICT_WORDS: Record<FoldOrderingRow["verdict"], string> = {
 };
 
 const BOUNDARY_WORDS: Record<FoldOrderingRow["data_time"]["boundary"], string> = {
-  IS_ENDS_BEFORE_OOS: "IS ends before OOS",
+  IS_ENDS_BEFORE_OOS: "✓ ordered",
   IS_OVERLAPS_OOS: "IS overlaps OOS",
   NOT_PUBLISHED: "window not published",
 };
 
 const CHILD_WORDS: Record<FoldOrderingRow["oos_generation_child"]["state"], string> = {
-  MATCH: "OOS child = frozen θ*",
+  MATCH: "θ* bound",
   MISMATCH: "OOS child ≠ frozen θ*",
   NOT_RETAINED: "child audit not retained",
   NOT_PUBLISHED: "no OOS generation child",
@@ -1365,33 +1365,32 @@ function FoldOrderingAxes({ ordering }: { ordering: FoldOrdering }) {
   ]).filter((value): value is number => typeof value === "number");
   const span = times.length > 1 ? { lo: Math.min(...times), hi: Math.max(...times) } : null;
   const global = ordering.selection_scope === "GLOBAL";
-  const badge = global ? "⚠ NOT CAUSAL · GLOBAL SELECTION" : ordering.selection_scope === "PER_FOLD" ? "PER-FOLD · NOT EVALUATED" : "ORDERING NOT PUBLISHED";
+  const badge = global ? "Not causal · global selection" : ordering.selection_scope === "PER_FOLD" ? "Per fold · not evaluated" : "Ordering not published";
+  /* One value for every fold is said once, not once per fold. */
+  const sameVerdict = ordering.folds.length > 0 && ordering.folds.every((fold) => fold.verdict === ordering.folds[0]!.verdict);
+  const candidateIds = [...new Set(ordering.folds.map((fold) => fold.oos_generation_child.candidate_id).filter((id): id is string => typeof id === "string"))];
+  const oneCandidate = candidateIds.length === 1 && ordering.folds.every((fold) => fold.oos_generation_child.candidate_id === candidateIds[0]);
+  const claimTitle = [
+    ordering.source_claims.chronological_claim ? `chronology ${claimWords(ordering.source_claims.chronological_claim)} (${claimToken(ordering.source_claims.chronological_claim)})` : null,
+    ordering.source_claims.causality_claim ? `causality ${claimWords(ordering.source_claims.causality_claim)} (${claimToken(ordering.source_claims.causality_claim)})` : null,
+    ordering.source_claims.oos_used_for_selection === true ? "OOS used for selection" : null,
+  ].filter(Boolean).join(" · ");
   return (
     <div className="flex flex-col gap-2" data-fold-ordering={ordering.selection_scope} data-axes={ordering.axes.join(" ")}>
       <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1" data-ordering-verdict>
-        <span className="mono rounded-[3px] border px-2 py-[1px] text-[10px] font-bold" style={{ borderColor: "var(--warn)", color: "var(--warn)" }} data-ordering-badge>
+        <span className="mono rounded-[3px] border px-2 py-[1px] text-[10px] font-bold" style={{ borderColor: "var(--warn)", color: "var(--warn)" }} data-ordering-badge title={claimTitle || undefined} tabIndex={claimTitle ? 0 : undefined}>
           {badge}
         </span>
-        {ordering.source_claims.chronological_claim ? (
-          <span className="mono text-[10px]" data-source-claim title={`QuantBT walk_forward.chronological_validation_claim · ${claimToken(ordering.source_claims.chronological_claim)}`}>
-            {claimWords(ordering.source_claims.chronological_claim)}
+        {oneCandidate ? (
+          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-candidate-once title={`QuantBT candidate ${candidateIds[0]}`}>
+            θ* candidate {shortDigest(candidateIds[0]!, 12)}
           </span>
         ) : null}
-        {ordering.source_claims.causality_claim ? (
-          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} title="QuantBT walk_forward.causality_claim">
-            {claimWords(ordering.source_claims.causality_claim)}
-          </span>
-        ) : null}
-        {ordering.source_claims.oos_used_for_selection === true ? (
-          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>oos_used_for_selection = true</span>
-        ) : null}
-      </span>
-      <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-        F1 · two axes
+        <span hidden data-source-claim title={claimTitle}>{claimTitle}</span>
       </span>
       <div className="flex flex-col gap-1" data-axis="DATA_TIME">
         <span className="mono text-[9.5px] font-bold uppercase tracking-[.1em]" style={{ color: "var(--warn)" }}>
-          data time · {ordering.counts.folds} {ordering.counts.folds === 1 ? "fold" : "folds"}
+          {ordering.counts.folds} {ordering.counts.folds === 1 ? "fold" : "folds"}
         </span>
         <ol className="flex max-h-[320px] flex-col gap-1 overflow-y-auto">
           {ordering.folds.map((fold) => (
@@ -1415,9 +1414,13 @@ function FoldOrderingAxes({ ordering }: { ordering: FoldOrdering }) {
               >
                 {BOUNDARY_WORDS[fold.data_time.boundary]}
               </span>
-              <span className="mono text-[9.5px]" style={{ color: "var(--warn)" }} title={fold.reason_code ?? undefined} data-verdict-words>
-                {FOLD_VERDICT_WORDS[fold.verdict]}
-              </span>
+              {sameVerdict ? (
+                <span hidden title={fold.reason_code ?? undefined} data-verdict-words>{FOLD_VERDICT_WORDS[fold.verdict]}</span>
+              ) : (
+                <span className="mono text-[9.5px]" style={{ color: "var(--warn)" }} title={fold.reason_code ?? undefined} data-verdict-words>
+                  {FOLD_VERDICT_WORDS[fold.verdict]}
+                </span>
+              )}
               <span
                 className="mono text-[9.5px]"
                 data-child-words
@@ -1428,8 +1431,8 @@ function FoldOrderingAxes({ ordering }: { ordering: FoldOrdering }) {
                   ?? (fold.oos_generation_child.candidate_id ? `QuantBT candidate ${fold.oos_generation_child.candidate_id} · child #${fold.oos_generation_child.audit_ordinal}` : undefined)}
               >
                 {CHILD_WORDS[fold.oos_generation_child.state]}
-                {/* D3: this is the engine's candidate id, not a params digest — it is labelled as what it is. */}
-                {fold.oos_generation_child.candidate_id ? ` · candidate ${shortDigest(fold.oos_generation_child.candidate_id, 12)}` : ""}
+                {/* D3: the engine's candidate id, not a params digest. Printed once when every fold shares it. */}
+                {!oneCandidate && fold.oos_generation_child.candidate_id ? ` · candidate ${shortDigest(fold.oos_generation_child.candidate_id, 12)}` : ""}
               </span>
             </li>
           ))}
@@ -1455,7 +1458,6 @@ function RetainedOrdering({ identity, ordering }: { identity: RunIdentity | null
   const label = protocolLabel(window, identity?.progress?.run?.protocol ?? null);
   const folds: FoldEntry[] = identity?.progress?.progress?.folds ?? [];
   const segmentGap = folds.find((fold) => fold.fold_timeline?.state === "NOT_PUBLISHED")?.fold_timeline ?? null;
-  const declared = identity?.progress?.run?.declared_folds ?? null;
   return (
     <section
       className="flex flex-col gap-2 rounded-[8px] border px-4 py-3"
@@ -1468,7 +1470,7 @@ function RetainedOrdering({ identity, ordering }: { identity: RunIdentity | null
       </h2>
       <div className="flex flex-col gap-1" data-data-time="REQUESTED_WINDOW">
         <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-          data time · requested walk-forward window
+          requested window
         </span>
         {identity === null ? (
           <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
@@ -1477,14 +1479,9 @@ function RetainedOrdering({ identity, ordering }: { identity: RunIdentity | null
         ) : window.start !== null && window.endExclusive !== null ? (
           <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5" data-requested-window>
             <span className="mono text-[10px]">
-              {window.start} → {window.endExclusive}
+              {window.start.slice(0, 10)} → {window.endExclusive.slice(0, 10)}
             </span>
             {label ? <Chip>{label}</Chip> : null}
-            {declared?.state === "DECLARED" && declared.count !== null ? (
-              <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-                {declared.count} declared folds
-              </span>
-            ) : null}
           </span>
         ) : (
           <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
@@ -1533,8 +1530,6 @@ function RetainedFreezeBody({
   evaluate,
   onEvaluate,
   executeHref,
-  runId,
-  workspaceId,
 }: {
   runId: string;
   workspaceId?: string;
@@ -1551,8 +1546,18 @@ function RetainedFreezeBody({
     <div className="flex flex-col gap-3" data-lane="retained">
       <RetainedOrdering identity={known} ordering={(freeze as { fold_ordering?: FoldOrdering }).fold_ordering ?? null} />
       <FoldSelectionPanel ordering={(freeze as { fold_ordering?: FoldOrdering }).fold_ordering ?? null} />
-      {/* The full source lifecycle audit (read on request) rides with the fold ordering that names each fold's child. */}
-      {(freeze as { fold_ordering?: FoldOrdering }).fold_ordering ? <ChildAuditCompanionPanel runId={runId} workspaceId={workspaceId} /> : null}
+      {/* One owner for the child audit: S4 Execute. This screen links to it. */}
+      {(freeze as { fold_ordering?: FoldOrdering }).fold_ordering && executeHref !== null ? (
+        <Link
+          to={executeHref}
+          className="mono self-start text-[10px]"
+          style={{ color: "var(--accent)" }}
+          data-action="child-audit-to-execute"
+          title="The child audit, with its lifecycle rows, is read in S4 · Execute"
+        >
+          child audit → S4
+        </Link>
+      ) : null}
       <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         {/* D13: the what-if sits under the frozen θ* in the left column, so the two columns end together instead of leaving the left one empty. */}
         <div className="flex min-w-0 flex-col gap-3" data-column="left">
@@ -1696,7 +1701,7 @@ export function FreezeScreen({
       </nav>
       )}
 
-      <StageRunBar runId={runId} active={retained.state === "refused" && retained.laneState != null} />
+      <StageRunBar runId={runId} active={(retained.state === "refused" && retained.laneState != null) || (state.state === "partial" && retained.state !== "loading" && retained.state !== "idle")} />
 
       {bytes && bytesBlock(bytes) ? <BlockedBanner bytes={bytes} /> : null}
 
@@ -1732,13 +1737,13 @@ export function FreezeScreen({
           style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
         >
           <Chip data-source-profile={freeze.source_profile.state} tone="var(--accent)" border="var(--accent)">
-            {freeze.source_profile.state.toLowerCase().replace(/_/g, " ")}
+            {humanise(freeze.source_profile.state)}
           </Chip>
           <span className="flex items-baseline gap-1.5" data-selection-state={freeze.selection.state}>
             <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
               selection
             </span>
-            <span className="mono text-[10px]">{freeze.selection.state.toLowerCase().replace(/_/g, " ")}</span>
+            <span className="mono text-[10px]">{humanise(freeze.selection.state)}</span>
           </span>
           {/* The contract's readiness, which this screen never showed. */}
           <Chip data-readiness={detail.readiness}>readiness {detail.readiness.toLowerCase()}</Chip>
@@ -1805,7 +1810,7 @@ export function FreezeScreen({
                   * passed one. No verdict chip is drawn for it at all.
                   */}
                 <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} title={freeze.ordering.reason_code}>
-                  {freeze.ordering.state.toLowerCase().replace(/_/g, " ")}
+                  {humanise(freeze.ordering.state)}
                 </span>
               </div>
               <Gap gap={freeze.ordering.wall_clock} what="wall clock ordering" />
@@ -1813,7 +1818,7 @@ export function FreezeScreen({
                 <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
                   data time{" "}
                   {freeze.ordering.data_time.chronology_kind !== null
-                    ? `· ${freeze.ordering.data_time.chronology_kind.toLowerCase().replace(/_/g, " ")}`
+                    ? `· ${humanise(freeze.ordering.data_time.chronology_kind)}`
                     : ""}
                 </span>
                 <DataTimeAxis

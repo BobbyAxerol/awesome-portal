@@ -103,14 +103,14 @@ describe("W6b S10 on contract 1.1.0 — canonical fixtures", () => {
     const storied = HEALTHY.attempts.filter((row) => row.presentation_kind === "STORIED").map((row) => row.attempt_id);
     expect(storied).toEqual(["att_01", "att_03", "att_04"]);
     expect([...document.querySelectorAll("[data-attempt]")].map((el) => el.getAttribute("data-attempt"))).toEqual(all);
-    expect(counter()).toBe(`showing ${all.length} of ${HEALTHY.counts.returned_attempts} attempts`);
+    expect(counter()).toBe(`${all.length} of ${HEALTHY.counts.returned_attempts}`);
     const toggle = panel("filters").querySelector('[data-action="toggle-probes"]') as HTMLButtonElement;
     expect(toggle.disabled).toBe(true);
-    expect(toggle.textContent).toBe("older probes (0)");
+    expect(toggle.textContent).toBe("Show probes (0)");
     for (const id of ["att_02", "att_05", "att_06", "att_07"]) expect(node(id)?.querySelector(".ln-row"), id).toBeTruthy(); // compact row
     for (const id of storied) expect(node(id)?.querySelector(".ln-card"), id).toBeTruthy(); // full card
     const band = document.querySelector('[data-band-label="av_0_9_3"]') as HTMLElement;
-    expect([...band.querySelectorAll("[data-chip]")].map((chip) => chip.textContent)).toEqual(["att_03", "att_04 ●", "att_05", "att_06"]);
+    expect([...band.querySelectorAll("[data-chip]")].map((chip) => chip.textContent)).toEqual(["run-att_03", "run-att_04 ●", "run-att_05", "att_06"]);
     expect(band.querySelector("[data-probe-chip]")).toBeNull();
   });
 
@@ -129,7 +129,7 @@ describe("W6b S10 on contract 1.1.0 — canonical fixtures", () => {
     expect(band93.querySelector("[data-exercised-params]")?.textContent).toBe("entry_z 0.6–2.6 · fee_bps 4 (pinned) · window 12–96");
     expect(band93.querySelector("[data-exercised-count]")?.textContent).toBe("4 attempts read · 1 without a persisted spec");
     const untried = panel("root").querySelector("[data-untried-routes]") as HTMLElement;
-    expect(untried.textContent).toBe(v93!.untried.routes.map((route) => route.route_id).join(" · "));
+    expect(untried.textContent!.replace(/^Untried · \d+ routes?/, "")).toBe(v93!.untried.routes.map((route) => route.route_id).join(" · "));
     expect(panel("root").querySelector('[data-action="declare-at-new-run"]')?.getAttribute("href")).toBe(
       `/research/quantbt/runs/new?alpha=${encodeURIComponent(ALPHA)}&av=${encodeURIComponent(v93!.alpha_version_id)}`,
     );
@@ -147,7 +147,7 @@ describe("W6b S10 on contract 1.1.0 — canonical fixtures", () => {
     expect(panel("root").querySelector('[data-action="release-candidate"]')?.getAttribute("href")).toBe("/research/quantbt/runs/run-att_04/release-candidate");
     /* On the card: the picked marker and the rc chip. */
     const card = node("att_04")!;
-    expect(card.querySelector("[data-picked]")?.textContent).toBe("PROMOTION PICK");
+    expect(card.querySelector("[data-picked]")?.textContent).toBe("Pick");
     expect(card.querySelector('[data-rc="ACTOR_DRAFT"]')?.textContent).toBe("rc_ (draft)");
   });
 
@@ -166,13 +166,14 @@ describe("W6b S10 on contract 1.1.0 — canonical fixtures", () => {
     expect(decay.getAttribute("data-metric-state")).toBe("NOT_PUBLISHED");
     expect(decay.textContent).toBe("decay not published");
     expect(decay.textContent).not.toMatch(/\d/);
-    expect(card.querySelector(".ln-spec")?.textContent).toBe(`${att04.spec_label.text}  ·  3p · 1 swept · 2 pinned`);
+    expect(card.querySelector(".ln-cardhead")?.getAttribute("title")).toContain(`${att04.spec_label.text}  ·  3p · 1 swept · 2 pinned`);
     expect(card.querySelector('[data-outcome-line="SOURCE_CLAIM_SENTENCE"]')?.textContent).toBe(att04.outcome.text);
     /* A Delta WFO run without a P13 projection shows its retained selected trial, labelled as such. */
     const wfo = node("att_03")!.querySelector('[data-metric="OOS"]') as HTMLElement;
     expect(wfo.getAttribute("data-metric-value")).toBe("1.19");
-    expect(wfo.textContent).toBe("OOS 1.190 (selected trial, mean of folds)");
-    expect(node("att_03")!.querySelector("[data-cert-absent]")?.textContent).toBe("cert not published");
+    expect(wfo.textContent).toBe("OOS 1.190");
+    expect(wfo.getAttribute("title")).toContain("selected trial, mean of folds");
+    expect(node("att_03")!.querySelector("[data-cert-absent]")).toBeNull();
   });
 
   it("B11 S13 a causal run's OUTER_FOLD_SELECTED_OOS_MEAN scope is labelled as the outer-fold basis (typed mutation of the canonical fixture)", async () => {
@@ -185,7 +186,8 @@ describe("W6b S10 on contract 1.1.0 — canonical fixtures", () => {
     await ready();
     const oos = node("att_03")!.querySelector('[data-metric="OOS"]') as HTMLElement;
     expect(oos.getAttribute("data-metric-value")).toBe(fact.value);
-    expect(oos.textContent).toBe("OOS 1.190 (outer folds, each fold's own selection, mean OOS)");
+    expect(oos.textContent).toBe("OOS 1.190");
+    expect(oos.getAttribute("title")).toContain("outer folds, each fold's own selection, mean OOS");
     expect(oos.textContent).not.toContain("selected trial");
     expect(oos.getAttribute("title")).toContain("RS02_RETAINED_OUTER_FOLD_SELECTIONS");
   });
@@ -200,10 +202,13 @@ describe("W6b S10 on contract 1.1.0 — canonical fixtures", () => {
     expect(row("mode × schedule")).toBe("signal_notional · mode_1_decay × per_fold_causal");
     /* 10-6: the claim state in words with the source's sentence as its reason, never the raw enum. */
     expect(selected.querySelector('[data-row-key="claim"] [data-claim-words]')?.textContent).toBe("issued");
-    expect(selected.querySelector('[data-row-key="claim"] [data-claim-reason]')?.textContent).toBe(attempt("att_04").run_facts.claim.text);
+    /* The claim sentence is the card's (once); the panel repeats it only when it differs. */
+    expect(selected.querySelector('[data-row-key="claim"] [data-claim-reason]')).toBeNull();
+    expect(node("att_04")!.querySelector('[data-outcome-line="SOURCE_CLAIM_SENTENCE"]')?.textContent).toBe(attempt("att_04").run_facts.claim.text);
     expect(row("claim")).not.toContain("ISSUED");
-    expect(row("OOS sharpe")).toBe(" 0.744");
-    expect(row("cert")).toBe("B");
+    /* OOS / cert are the card's, not rows of the panel. */
+    expect(row("OOS sharpe")).toBeUndefined();
+    expect(node("att_04")!.querySelector(".ln-cert")?.textContent).toBe("cert B");
     expect(row("promotion")).toBe("promotion pick");
     expect(row("release candidate")).toBe("rc_ (draft)");
     expect(row("presentation")).toBe("storied — promotion pick, has a release candidate, changes two or more declared keys");
@@ -216,13 +221,13 @@ describe("W6b S10 on contract 1.1.0 — canonical fixtures", () => {
     ]);
     /* VD-F1-02: the pill is the attempt state, so there is no second "state" row. */
     expect([...selected.querySelectorAll('[data-selected-rows="headline"] > dt')].map((dt) => dt.textContent)).toEqual([
-      "parent", "mode × schedule", "claim", "OOS sharpe", "decay", "cert",
+      "parent", "mode × schedule", "claim",
     ]);
     /* The hi-fi's verdict line sits on the published promotion pick. */
     expect(selected.querySelector('[data-tree-aim="picked"]')?.textContent).toBe(TREE_AIM);
     /* The source sentence is the claim's reason; the verdict line does not print it a second time. */
     expect(selected.querySelector("[data-verdict]")?.textContent).toBe("");
-    expect(selected.textContent?.split(attempt("att_04").outcome.text ?? "").length).toBe(2);
+    expect(selected.textContent?.split(attempt("att_04").outcome.text ?? "").length).toBe(1); /* the sentence is the card's, once */
     const href = (action: string) => selected.querySelector(`[data-action="${action}"]`)?.getAttribute("href");
     expect(href("open-evidence")).toBe("/research/quantbt/runs/run-att_04/evidence");
     expect(href("run-report")).toBe("/research/quantbt/runs/run-att_04/report");
@@ -247,10 +252,10 @@ describe("W6b S10 on contract 1.1.0 — canonical fixtures", () => {
     server([{ status: 200, body: HEALTHY }]);
     renderRoute();
     await ready();
-    const standing = panel("promotion-rule").querySelector("[data-promotion-standing]")?.textContent;
-    expect(standing).toBe("promotion pick 1 · not the pick 4 · promotion closed 2");
-    const count = panel("counts").querySelector('[data-count="submitted_attempts"]') as HTMLElement;
-    const definition = HEALTHY.counts_definitions.rows.find((row) => row.key === "submitted_attempts")!;
+    const standing = panel("promotion-rule").getAttribute("title");
+    expect(standing).toContain("promotion pick 1 · not the pick 4 · promotion closed 2");
+    const count = panel("counts").querySelector('[data-count="total_attempts"]') as HTMLElement;
+    const definition = HEALTHY.counts_definitions.rows.find((row) => row.key === "total_attempts")!;
     expect(count.getAttribute("title")).toBe(`${definition.includes} — Run Library: ${definition.run_library_equivalent}`);
     expect(panel("counts").querySelector('[data-count="probe_returned"] .n')?.textContent).toBe(String(HEALTHY.counts.probe_returned));
     expect(panel("counts").querySelector('[data-action="reconcile-run-library"]')?.getAttribute("href")).toBe(

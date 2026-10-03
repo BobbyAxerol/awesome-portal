@@ -134,7 +134,7 @@ describe("W1-S09 B3 cursor-aware links on a sealed report", () => {
     expect(q('[data-action="back-to-execute"]')!.getAttribute("href")).toContain("stage=execute");
     expect(q('[data-action="release-candidate"]')!.getAttribute("href")).toContain("fold=4");
     expect(q('[data-action="release-candidate"]')!.getAttribute("href")).toContain("window=is");
-    expect(q('[data-action="promotion-release-candidate"]')!.getAttribute("href")).toContain("trial=351");
+    expect(q('[data-action="release-candidate"]')!.getAttribute("href")).toContain("trial=351");
     expect(q('[data-action="attempt-lineage"]')!.getAttribute("href")).toContain(`run=${body.run_id}`);
   });
 

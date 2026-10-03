@@ -75,8 +75,8 @@ describe("W3b Evidence Flow hub — mobile hooks", () => {
     const { container } = view();
     const list = container.querySelector("[role='tablist']") as HTMLElement;
     expect(within(list).queryByText(/promotion/i)).toBeNull();
-    expect(container.querySelector("[data-stage-tabs] [data-promotion-soon]")).toBeTruthy();
-    expect(list.querySelector("[data-promotion-soon]")).toBeNull();
+    /* W4B: the hard-coded "Promotion SOON" cell is gone from the strip altogether. */
+    expect(container.querySelector("[data-promotion-soon]")).toBeNull();
     expect(list.querySelectorAll("[role='tab']").length).toBe(7);
   });
 });

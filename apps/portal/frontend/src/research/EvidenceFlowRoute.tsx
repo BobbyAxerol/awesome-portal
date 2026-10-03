@@ -8,7 +8,7 @@
  * that is not mine to move; the swap is one line if Bobby wants it.
  */
 
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useParams } from "react-router-dom";
 
 import { EvidenceFlow } from "./EvidenceFlow";
@@ -28,12 +28,20 @@ export function EvidenceFlowRoute() {
 }
 
 function EvidenceFlowRun({ runId }: { runId: string }) {
-  const { cursor, setStage, setFold, reset, problems, notes, clampToObserved } = useEvidenceCursor();
+  const { cursor, setStage, setFold, update, reset, problems, notes, clampToObserved } = useEvidenceCursor();
   const evidence = useEvidence(runId);
   /* W3b: a retained answer brings the run's P11 identity with it (readiness, global selection). */
   const retained = evidence.passport.state === "ready" && isRetainedAnswer(evidence.passport.evidence);
   /* S5 Claim draws the whole-run artifact manifest from the same progress read (P11/E15), for any run. */
-  const runIdentity = useRunIdentity(runId, undefined, retained || cursor.stage === "claim");
+  /* The stage summaries read the same progress snapshot (trial counts, the fold's selection), so the four stage tabs ask for it too. */
+  const runIdentity = useRunIdentity(runId, undefined, retained || ["claim", "split", "search", "freeze", "execute"].includes(cursor.stage));
+
+  /* "reset to θ*": the run's structured hand-off cursor when the progress read published one, else the cursor the screen was entered with. */
+  const handoff = runIdentity.state === "ready" ? (runIdentity.identity.progress?.progress?.claim.handoff_cursor ?? null) : null;
+  const resetCursor = useCallback(() => {
+    if (handoff) update({ fold: handoff.fold, trial: handoff.trial, params: handoff.params_digest });
+    else reset();
+  }, [handoff, update, reset]);
 
   /* RF-06 FE-S04-06: a linked fold the run never observed is moved to the
      nearest observed one, with a notice — not kept with both steppers dead and
@@ -58,7 +66,7 @@ function EvidenceFlowRun({ runId }: { runId: string }) {
         cursor={cursor}
         onStage={setStage}
         onFold={setFold}
-        onResetCursor={reset}
+        onResetCursor={resetCursor}
         series={evidence.series}
         ensureSeries={evidence.ensureSeries}
         passport={evidence.passport}

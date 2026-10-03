@@ -69,12 +69,12 @@ describe("CG-FG-S10-01 — the promotion pick never prints the approval digest a
     const line = pick.querySelector(".v")!.textContent!;
     expect(line).toContain("trial — not published");
     expect(line).toContain("param set — not published");
-    expect(line).toContain("P19_P22_PICK_RECEIPT_NOT_AVAILABLE");
+    expect(pick.outerHTML).toContain("P19_P22_PICK_RECEIPT_NOT_AVAILABLE");
     /* the lie: 8 hex of the approval's source digest in the param-set slot */
     expect(line).not.toContain(SOURCE_DIGEST.slice(0, 8));
     expect(pick.textContent).not.toContain(SOURCE_DIGEST.slice(0, 8));
     expect(pick.querySelector('[data-pick-fact="trial"]')?.getAttribute("data-absent-state")).toBe("not published");
-    expect(pick.querySelector('[data-pick-fact="param set"] [data-reason-code]')?.textContent).toBe("P19_P22_PICK_RECEIPT_NOT_AVAILABLE");
+    expect(pick.querySelector('[data-pick-fact="param set"][data-reason-code]')?.getAttribute("data-reason-code")).toBe("P19_P22_PICK_RECEIPT_NOT_AVAILABLE");
     /* the digest stays reachable, labelled for what it is */
     expect(pick.querySelector("[data-pick-source]")?.getAttribute("title")).toBe(`approval source digest ${SOURCE_DIGEST}`);
   });
@@ -125,7 +125,7 @@ describe("VD-F1-02 — a node speaks for its attempt; the version lifecycle is i
     const band = HEALTHY.alpha.versions.find((v) => v.alpha_version_id === failed.alpha_version_id)!;
     expect(band.lifecycle_state).toBe("ACTIVE");
     const chip = node(failed.attempt_id)!.querySelector(".ln-st")!;
-    expect(chip.textContent).toBe("FAILED");
+    expect(chip.textContent).toBe("failed");
     expect(chip.getAttribute("data-status")).toBe("FAILED");
     expect(node("att_03")!.querySelector(".ln-st")!.textContent).toBe("READY");
     expect(node("att_01")!.querySelector(".ln-st")!.textContent).toBe("READY");
@@ -146,8 +146,8 @@ describe("VD-F1-02 — a node speaks for its attempt; the version lifecycle is i
     server(body);
     renderRoute();
     await ready();
-    expect(node("att_04")!.querySelector(".ln-st")!.textContent).toBe("CANCELLED");
-    expect(node("att_01")!.querySelector(".ln-st")!.textContent).toBe("RECOVERY REQUIRED");
+    expect(node("att_04")!.querySelector(".ln-st")!.textContent).toBe("cancelled");
+    expect(node("att_01")!.querySelector(".ln-st")!.textContent).toBe("recovery required");
     expect(node("att_01")!.querySelector(".ln-st")!.getAttribute("data-status")).toBe("RECOVERY_REQUIRED");
   });
 
@@ -157,14 +157,14 @@ describe("VD-F1-02 — a node speaks for its attempt; the version lifecycle is i
     await ready();
     showProbes();
     const chips = [...document.querySelectorAll("[data-filter]")] as HTMLElement[];
-    expect(chips.map((c) => c.textContent)).toEqual(["version active", "draft", "version superseded", "version abandoned"]);
+    expect(chips.map((c) => c.textContent)).toEqual(["Active", "Draft", "Superseded", "Abandoned"]);
     expect(chips.map((c) => c.getAttribute("title"))).toEqual([
       "attempts of an ACTIVE alpha version",
       "draft attempts, and attempts of a DRAFT alpha version",
       "attempts of a SUPERSEDED alpha version",
       "attempts of an ABANDONED alpha version",
     ]);
-    expect(counter()).toBe("showing 7 of 7 attempts");
+    expect(counter()).toBe("7 of 7");
     const shown = () => [...document.querySelectorAll("[data-tree-scroll] [data-attempt]")].map((r) => r.getAttribute("data-attempt"));
     const versionOf = (id: string) => HEALTHY.alpha.versions.find((v) => v.alpha_version_id === id)!.lifecycle_state;
     fireEvent.click(chips[0]!);
@@ -186,7 +186,7 @@ describe("VD-F1-02 — a node speaks for its attempt; the version lifecycle is i
     for (const id of ["att_03", "att_07"]) {
       fireEvent.click(node(id)!.querySelector("[data-row]") as HTMLElement);
       const panel = document.querySelector('[data-panel="selected"]') as HTMLElement;
-      expect(panel.querySelector(".ln-st")?.textContent).toBe(HEALTHY.attempts.find((row) => row.attempt_id === id)!.state.replace(/_/g, " "));
+      expect(panel.querySelector(".ln-st")?.textContent?.toLowerCase()).toBe(HEALTHY.attempts.find((row) => row.attempt_id === id)!.state.replace(/_/g, " ").toLowerCase());
       expect(panel.querySelector("[data-attempt-state]")).toBeNull();
     }
   });

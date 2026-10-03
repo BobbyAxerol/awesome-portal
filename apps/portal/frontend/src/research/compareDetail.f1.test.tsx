@@ -96,7 +96,7 @@ describe("S13 equal claim — the connector and the rule say only what the ranks
     expect(ladder.getAttribute("data-ladder-layout")).toBe("one-claim");
     expect(ladder.querySelectorAll("[data-ladder-run]")).toHaveLength(body.result.attempts.length);
     expect(document.querySelector("[data-ladder-one-claim]")?.textContent).toBe(
-      `${body.result.attempts.length} attempts · one claim: WALK_FORWARD_OOS_COMPATIBILITY`,
+      `${body.result.attempts.length} attempts · one claim: Walk-forward`,
     );
     expect(document.querySelector('[data-panel="ladder"]')!.textContent).not.toMatch(/claim ↑|same claim/);
     /* the rule keeps what is always true and drops the "every step" promise; it is a title, not a callout */
@@ -251,7 +251,7 @@ describe("S13 config diff — a baseline this screen picked says so", () => {
     const legend = document.querySelector("[data-config-diff-legend]") as HTMLElement;
     const active = body.result.attempts.find((item) => item.alpha_version_lifecycle.value === "ACTIVE")!;
     /* QA S13 (UX-4): the legend names the baseline by the run's label, not its attempt id. */
-    expect(legend.textContent).toBe(`differs from ${active.display_label ?? active.run_id} · baseline picked by this screen`);
+    expect(legend.textContent).toBe(`vs ${active.display_label ?? active.run_id}`);
     expect(legend.getAttribute("data-baseline-chosen")).toBe("screen");
     expect(legend.getAttribute("title")).toContain("The server publishes no baseline attempt");
     const head = document.querySelector(`.cp-difftable thead th[data-active="true"]`) as HTMLElement;
@@ -291,12 +291,12 @@ describe("S13 text trim (VD-TEXT-01) — prose out of the body, honesty kept", (
     expect(page().querySelector('[data-panel="diff"] .foot')!.getAttribute("title")).toContain("PORTAL_PERSISTED_RESEARCH");
     /* the trajectory keeps its two links as links, the sentence is their title */
     const links = page().querySelector("[data-trajectory-links]") as HTMLElement;
-    expect(links.textContent).toMatch(/^Attempt Lineage → · release candidate →$/);
+    expect(links.textContent).toMatch(/^Lineage → · Release →$/);
     expect(links.getAttribute("title")).toContain("only ever reads the ACTIVE node");
     /* typed absences stay: cert and claim chip are printed, never dropped with the gloss */
     /* QA S13: the same absence on every card is said once above the ladder; the claim of a one-claim ladder is in its header. */
-    expect((page().querySelector("[data-cert-absent]") ?? page().querySelector("[data-ladder-cert]"))!.textContent).toContain("cert not published");
-    expect((page().querySelector(".cp-claimchip") ?? page().querySelector("[data-ladder-one-claim]"))!.textContent).toMatch(/WALK/);
+    expect((page().querySelector("[data-cert-absent]") ?? page().querySelector("[data-ladder-cert]"))!.textContent).toContain("no certification grade");
+    expect((page().querySelector(".cp-claimchip") ?? page().querySelector("[data-ladder-one-claim]"))!.textContent).toMatch(/Walk-forward/);
   });
 
   it("F1b-S13-05 without an ACTIVE attempt the release-candidate link says so instead of vanishing", async () => {
@@ -306,7 +306,7 @@ describe("S13 text trim (VD-TEXT-01) — prose out of the body, honesty kept", (
     server(body);
     renderAt(base);
     await settled();
-    expect(page().querySelector("[data-trajectory-rc-absent]")!.textContent).toBe("release candidate — no ACTIVE attempt");
+    expect(page().querySelector("[data-trajectory-rc-absent]")!.textContent).toBe("Release — no active attempt");
     expect(page().querySelector('[data-action="trajectory-rc"]')).toBeNull();
   });
 });

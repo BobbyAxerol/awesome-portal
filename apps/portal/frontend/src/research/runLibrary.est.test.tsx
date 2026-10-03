@@ -52,7 +52,7 @@ describe("EST_S01 enriched_analysis_availability", () => {
     const { container } = mount(served({ state: fixture.state, reason_code: fixture.reason_code }));
     const node = container.querySelector("[data-all-time-absent]")!;
     expect(node.getAttribute("data-all-time-absent")).toBe("SEALED_ENRICHMENT_NOT_COMPUTED");
-    expect(node.textContent).toBe("all time — not published");
+    expect(node.textContent).toBe("no series"); /* W4A shared phrase */
     expect(node.getAttribute("title")).toContain("SEALED_ENRICHMENT_NOT_COMPUTED");
   });
   it("shows the other served code as is (unsealed source)", () => {

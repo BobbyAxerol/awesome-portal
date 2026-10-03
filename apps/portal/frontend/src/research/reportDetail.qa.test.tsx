@@ -96,8 +96,9 @@ describe("QA S09 · text and number hygiene", () => {
     const body = retained();
     await open(body);
     const reason = panel("header")!.querySelector("[data-cert] [data-reason-code]")!;
-    expect(reason.textContent).toBe(body.frozen_core.certification.reason_code);
-    expect(reason.querySelectorAll("wbr").length).toBeGreaterThan(2);
+    /* W4: the code is the tooltip and the data attribute; a long token is never printed (so it never breaks mid-word). */
+    expect(reason.getAttribute("data-reason-code")).toBe(body.frozen_core.certification.reason_code);
+    expect(reason.getAttribute("title")).toContain(body.frozen_core.certification.reason_code);
   });
 
   it("equity subtitle value path: the OOS source count comes from enriched_analysis.curves.sampling when the segment has none", async () => {
@@ -136,7 +137,7 @@ describe("QA S09 · text and number hygiene", () => {
   it("the metrics table has no definition column; the definition id is the metric name's tooltip", async () => {
     const body = retained();
     await open(body);
-    expect([...panel("metrics")!.querySelectorAll("th[scope='col']")].map((th) => th.textContent)).toEqual(["metric", "value", "unit", "scope", "origin"]);
+    expect([...panel("metrics")!.querySelectorAll("th[scope='col']")].map((th) => th.textContent)).toEqual(["metric", "value"]);
     const first = body.frozen_core.metrics[0];
     expect(panel("metrics")!.querySelector(`[data-metric="${first.key}"] th`)?.getAttribute("title")).toContain(first.definition_id);
   });
@@ -173,7 +174,7 @@ describe("QA S09 · text and number hygiene", () => {
     const body = fixture("research-report.p04-fixed-profile.valid.json");
     await open(body);
     expect(panel("folds")!.querySelector("table")).toBeNull();
-    expect(panel("folds")!.querySelector("[data-folds-absent]")!.textContent).toContain(body.frozen_core.folds.reason_code ?? body.frozen_core.folds.availability.reason_code);
+    expect(panel("folds")!.querySelector("[data-folds-absent]")!.outerHTML).toContain(body.frozen_core.folds.reason_code ?? body.frozen_core.folds.availability.reason_code);
   });
 
   it("the passport reads enum tokens as words and keeps the exact token in the tooltip", async () => {
@@ -186,7 +187,7 @@ describe("QA S09 · text and number hygiene", () => {
 
   it("exports say '512 KB' and 'no export yet'", async () => {
     await open(retained());
-    expect(panel("exports")!.textContent).toContain("max 512 KB per file");
+    expect(panel("exports")!.querySelector("[title]")!.getAttribute("title")).toContain("max 512 KB per file");
     expect(panel("exports")!.textContent).toContain("no export yet");
     expect(panel("exports")!.textContent).not.toContain("not requested");
   });
@@ -284,7 +285,7 @@ describe("QA S09 · chart reading", () => {
     const section = panel("all-time")!;
     expect(section.querySelector("[data-all-time-distribution]")).toBeNull();
     expect(section.textContent).toContain("return distribution — not published");
-    expect(section.textContent).toContain("P13_NO_DAILY_RETURNS");
+    expect(section.outerHTML).toContain("P13_NO_DAILY_RETURNS");
   });
 
   it("monthly returns name the month in words and drawdown durations are days and hours", async () => {
@@ -307,7 +308,7 @@ describe("QA S09 · chart reading", () => {
     const body = retained();
     body.enriched_analysis = clone(healthy());
     await open(body);
-    expect(panel("all-time")!.querySelector("[data-all-time-fact='Sharpe'] dt")!.textContent).toBe("Sharpe · all-time OOS");
+    expect(panel("all-time")!.querySelector("[data-all-time-fact='Sharpe'] dt")!.textContent).toBe("Sharpe");
   });
 });
 
@@ -317,7 +318,7 @@ describe("QA S09 · states and flow", () => {
     renderRoute("rrun_0123456789abcdef0123456789abcdef");
     await screen.findByText(/answered with a conflict/);
     expect(document.querySelector("[data-report-notice]")!.getAttribute("data-report-notice")).toBe("stale");
-    expect(screen.getByRole("button", { name: "read again" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Read again" })).not.toBeNull();
     expect(document.body.textContent).not.toContain("could not be read");
     expect(document.body.textContent).not.toContain("server prose");
   });
@@ -404,8 +405,9 @@ describe("QA S09 wave 2 · remaining partials", () => {
     const body = retained();
     await open(body);
     const code = panel("artifacts")!.querySelector("[data-reason-code]")!;
-    expect(code.querySelector("wbr")).not.toBeNull();
-    expect(code.textContent).toMatch(/^[A-Z0-9_]+$/);
+    /* W4: the code is a tooltip, not a word-per-line printed token. */
+    expect(code.getAttribute("data-reason-code")).toMatch(/^[A-Z0-9_]+$/);
+    expect(code.textContent).not.toMatch(/[A-Z0-9]+_[A-Z0-9]+/);
   });
 
   it("UX-1: the headline tile names its source beside its scope; a tile without a scope names none", async () => {
@@ -413,7 +415,7 @@ describe("QA S09 wave 2 · remaining partials", () => {
     await open(body);
     const tile = panel("headline")!.querySelector('[data-headline="NET_RETURN"]')!;
     expect(tile.querySelector("[data-headline-scope]")).not.toBeNull();
-    expect(tile.querySelector("[data-headline-source]")!.textContent).toBe("sealed report");
+    expect(tile.querySelector("[data-headline-value]")!.getAttribute("title")).toContain("sealed report");
     cleanup();
     forgetHeldReports();
     const none = retained();
@@ -427,6 +429,6 @@ describe("QA S09 wave 2 · remaining partials", () => {
     const body = retained();
     body.enriched_analysis = clone(healthy());
     await open(body);
-    expect(panel("all-time")!.querySelector("[data-all-time-fact='return'] dt")!.textContent).toBe("Return · all-time OOS · portal");
+    expect(panel("all-time")!.querySelector("[data-all-time-fact='return'] dt")!.textContent).toBe("Return");
   });
 });

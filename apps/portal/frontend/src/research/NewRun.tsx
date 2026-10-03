@@ -116,6 +116,7 @@ import type { PreflightResponse } from "./preflightClient";
 import type { ResearchState } from "./state";
 import { ShortId } from "./ShortId";
 import { claimToken, formatUtc, shortDigest, shortId } from "./researchFormat";
+import { humanise } from "./humanise";
 import { useRunLabel } from "./runLabels";
 
 /* --------------------------------------------------------------- verbatim */
@@ -334,7 +335,8 @@ export function stepCaption({
      Review never gets a tick; its caption is the preflight's own state. */
   if (step === "review") return { state: current ? "current" : visited ? "visited" : "not-visited", caption: reviewCaption };
   if (passive) return { state: current ? "current" : "valid", caption: "pinned" };
-  if (!visited) return { state: "not-visited", caption: "not visited" };
+  /* W4A: an unvisited step says nothing; only an error, the current step and a valid mark carry a word. */
+  if (!visited) return { state: "not-visited", caption: "" };
   if (unfinished) return { state: current ? "current" : "incomplete", caption: "in progress" };
   if (step === "context" && !contextChosen) return { state: current ? "current" : "incomplete", caption: "no version chosen" };
   if (step === "context" && contextBlocked) return { state: current ? "current" : "incomplete", caption: "cannot create runs" };
@@ -416,8 +418,8 @@ function WizardBar({
             aria-current={isCurrent ? "step" : undefined}
             /* Roving tabindex: the tab list is one stop, arrows move inside it (U14). */
             tabIndex={isCurrent ? 0 : -1}
-            aria-label={showText ? undefined : `${step.label} — ${caption}`}
-            title={showText ? undefined : `${step.label} — ${caption}`}
+            aria-label={showText ? undefined : `${step.label}${caption ? ` — ${caption}` : ""}`}
+            title={showText ? undefined : `${step.label}${caption ? ` — ${caption}` : ""}`}
             data-step-pill={step.id}
             data-step-state={stepState}
             onClick={() => onPick(step.id)}
@@ -442,13 +444,15 @@ function WizardBar({
             {showText ? (
               <span className="flex flex-col items-start">
                 <span className="text-[11px] font-medium">{step.label}</span>
-                <span
-                  className="text-[9px]"
-                  data-step-caption
-                  style={{ color: hasError ? "var(--bad)" : "var(--ink-faint)" }}
-                >
-                  {caption}
-                </span>
+                {caption ? (
+                  <span
+                    className="text-[9px]"
+                    data-step-caption
+                    style={{ color: hasError ? "var(--bad)" : "var(--ink-faint)" }}
+                  >
+                    {caption}
+                  </span>
+                ) : null}
               </span>
             ) : null}
           </button>
@@ -2078,7 +2082,7 @@ function OptimizerDefaults({ release }: { release: AtlasRelease }) {
   /* When every row carries the same source and lock state, that is said once, not once per row. */
   const kinds = new Set(fields.map((field) => `${field.value_source} · ${field.override_state}`));
   const uniform = kinds.size === 1 ? [...kinds][0]! : null;
-  const words = (value: string) => value.toLowerCase().replace(/_/g, " ");
+  const words = (value: string) => value.split(" · ").map((part) => humanise(part)).join(" · ");
   const sharedDetail = fields.find((field) => (detailCount.get(field.detail) ?? 0) >= 3)?.detail;
   return (
     <details className="rounded-[5px] border px-2.5 py-1.5" style={{ borderColor: "var(--line)" }} data-optimizer-defaults>
@@ -2785,11 +2789,7 @@ function ClaimForecast({
           <span className="mono ml-auto text-[9.5px]" style={{ color: "var(--ink-faint)" }} title={digest} data-payload-digest={digest}>
             payload sha256:{shortDigest(digest)}
           </span>
-        ) : (
-          <span className="mono ml-auto text-[9.5px] italic" style={{ color: "var(--ink-faint)" }} data-payload-digest="pending">
-            payload sha256 · after preflight
-          </span>
-        )}
+        ) : null}
       </header>
       {scheduleFact && mode?.valid_schedules.includes(draft.optimizationSchedule) ? (
         <>
@@ -2797,7 +2797,7 @@ function ClaimForecast({
           {/* The schedule is set when a mode is picked (its default) and can be changed in the Walk-forward step. */}
           <ForecastLine label="source">{draft.optimizationSchedule === mode.default_schedule ? "mode default" : "chosen"}</ForecastLine>
           <ForecastLine label="claim (forecast)">
-            <span style={{ color: "var(--role-holdout)" }}>{claimToken(scheduleFact.chronological_validation_claim)}</span>
+            <span style={{ color: "var(--role-holdout)" }}>{humanise(String(claimToken(scheduleFact.chronological_validation_claim)))}</span>
           </ForecastLine>
           {scheduleFact.oos_use_state ? (
             /* The Atlas words NOT_APPLICABLE "no held-out window — train = test"; beside three declared windows that
@@ -3366,11 +3366,8 @@ export function NewRun(props: NewRunProps) {
         >
           {cloneSource.state.state === "available" ? (
             <>
-              <span className="mono text-[9px] font-bold uppercase tracking-[.07em]" style={{ color: "var(--accent)" }}>copied from</span>
+              <span className="mono text-[9px] font-bold uppercase tracking-[.07em]" style={{ color: "var(--accent)" }} title="A new run with a NEW intent: change anything, then run a fresh preflight. The original run is untouched.">copied from</span>
               <Link className="mono" data-link="clone-source" title="Open the source run" to={`/research/quantbt/runs/${encodeURIComponent(cloneSource.runId)}/progress`}><RunRef runId={cloneSource.runId} /></Link>
-              <span style={{ color: "var(--ink-soft)" }} title="A new run with a NEW intent: change anything, then run a fresh preflight. The original run is untouched.">
-                new intent · fresh preflight
-              </span>
               {draft.alphaId ? (
                 <LineageLink to={lineageHref(draft.alphaId, { av: draft.alphaVersionId || null })} className="mono" action="open-lineage">
                   attempt lineage →
@@ -3614,7 +3611,7 @@ export function NewRun(props: NewRunProps) {
                     style={{ color: "var(--ink-soft)" }}
                     data-preflight-preview-summary
                   >
-                    {preflightRefusal ? "preflight checks · 6 panels · refused" : "preflight checks · 6 panels · not read"}
+                    {preflightRefusal ? "preflight refused" : "preflight not run"}
                   </summary>
                   <div className="flex flex-col gap-2.5 pt-2">
                     <PreflightPanel preflight={preflight} state={previewState} />
@@ -3636,14 +3633,7 @@ export function NewRun(props: NewRunProps) {
                 >
                   Create run
                 </button>
-                {!canSubmit ? (
-                  /* While something blocks preflight, the list above is the one reason. */
-                  blocking.length > 0 ? null : (
-                    <span className="text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-disabled-reason="create-run">
-                      Run preflight first.
-                    </span>
-                  )
-                ) : !mayCreateRun ? (
+                {!canSubmit ? /* W4A: the disabled button's tooltip and the folded "preflight not run" line say it; no third copy. */ null : !mayCreateRun ? (
                   <span className="text-[10.5px]" style={{ color: "var(--role-holdout)" }} data-admission-note>
                     {preflight?.run_admission?.message ? (
                       <>

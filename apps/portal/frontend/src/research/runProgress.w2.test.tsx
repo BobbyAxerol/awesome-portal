@@ -165,7 +165,8 @@ describe("CG-P11-03 — fold selection, hand-off cursor, declared folds", () => 
     expect($("[data-eta]").textContent).toBe("eta search done");
     cleanup();
     view(completed());
-    expect($("[data-eta]").textContent).toBe("eta none — run final");
+    /* W4A: a final run has no ETA to explain. */
+    expect(document.querySelector("[data-eta]")).toBeNull();
   });
 
   it("prints each fold's published selection and hands off its exact cursor", () => {
@@ -180,7 +181,8 @@ describe("CG-P11-03 — fold selection, hand-off cursor, declared folds", () => 
       `/research/quantbt/runs/run_w2/evidence#stage=summary&fold=2&trial=1&params=${DIGEST}`,
     );
     expect(open.getAttribute("aria-label")).toBe("open evidence flow at fold 2 · trial 1");
-    expect($("[data-handoff-cursor]").textContent).toBe("fold 2 · trial 1 · prm_3a91c2");
+    /* W4A: the hand-off cursor is the open-evidence button's label, not a second field. */
+    expect(document.querySelector("[data-handoff-cursor]")).toBeNull();
   });
 
   it("fills the Stage log from the selection, labels a global objective and a fixed profile", () => {
@@ -221,7 +223,8 @@ describe("CG-P11-03 — fold selection, hand-off cursor, declared folds", () => 
     }));
     const row = $('[data-artifact-state="DENIED"]');
     expect(row.textContent).toContain("denied");
-    expect(row.textContent).toContain(`336 bars · ${DENIED_HOLDOUT_NOTE}`);
+    expect(row.textContent).toContain("336 bars · holdout sealed");
+    expect(row.querySelector(`[title="${DENIED_HOLDOUT_NOTE}"]`)).toBeTruthy();
     expect(row.getAttribute("title")).toContain("P08_SEALED_HOLDOUT_UNLOCK_NOT_INSTALLED");
     expect(row.querySelector("a")).toBeNull();
   });
@@ -425,5 +428,27 @@ describe("E10 (audit 01-5/03-4) — a FAILED run shows where it stopped and why,
     view(read());
     expect(document.querySelector('[data-stage-state="FAILED"]')).toBeNull();
     expect(document.querySelector("[data-failure]")).toBeNull();
+  });
+});
+
+describe("W4A S03 - a global study's identical selection prints once", () => {
+  const fold = (n: number) => ({ fold: n, state: "DONE" as const, started_at_utc_ms: n, completed_at_utc_ms: n + 1, selection: globalSelection });
+
+  it("three folds with one global selection: one shared line, empty per-row notes", () => {
+    const done = completed();
+    done.progress!.folds = [fold(1), fold(2), fold(3)];
+    view(done, 2);
+    const shared = $("[data-shared-selection]");
+    expect(shared.textContent).toContain("global best J₁ −9.806");
+    expect(shared.textContent).toContain("all folds");
+    for (const n of [1, 2, 3]) expect($(`[data-fold-note="${n}"]`).textContent).toBe("");
+  });
+
+  it("a fold that differs keeps its own note", () => {
+    const done = completed();
+    done.progress!.folds = [fold(1), fold(2), { ...fold(3), selection: { ...globalSelection, trial: 7 } }];
+    view(done, 2);
+    expect(document.querySelector("[data-shared-selection]")).toBeNull();
+    expect($('[data-fold-note="3"]').textContent).toContain("trial 7");
   });
 });

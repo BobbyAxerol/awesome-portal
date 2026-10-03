@@ -636,8 +636,8 @@ describe("P14-T05 — folds come from the one operation that publishes them", ()
     });
     // VD-FG-01-01: the code chip is on screen; the server's sentence is its tooltip, not text.
     const note = container.querySelector("[data-fold-refusal]");
-    expect(note?.querySelector("[data-refusal-code]")?.textContent).toBe("NOT_ADMITTED");
-    expect(note?.querySelector("[data-refusal-detail]")?.getAttribute("title")).toBe("Not an admitted profile.");
+    expect(note?.querySelector("[data-refusal-code]")?.getAttribute("data-refusal-code")).toBe("NOT_ADMITTED");
+    expect(note?.querySelector("[data-refusal-detail]")?.getAttribute("title")).toContain("Not an admitted profile.");
     expect(note?.textContent).not.toContain("Not an admitted profile.");
     // The windows above it are untouched.
     expect(container.querySelector("[data-window-anatomy]")).toBeTruthy();
@@ -971,20 +971,18 @@ describe("RF-06 FE-S05-03 — copy asserts only what the run published", () => {
 describe("RF-06 FE-S05-05…08 — the HiFi frames stay, as shells", () => {
   it("keeps fold construction, θ* flow, fold table and the three cards", () => {
     const { container } = view();
-    for (const card of ["fold-construction", "theta-flow", "fold-table", "boundary-integrity", "stitched-oos", "feeds-forward"]) {
+    for (const card of ["fold-construction", "theta-flow", "fold-table", "boundary-integrity", "stitched-oos"]) {
       expect(container.querySelector(`[data-card='${card}']`), card).toBeTruthy();
     }
-    // W3b: Screen 08 exists — the next stage is a real link on this cursor.
-    const next = container.querySelector("[data-next-execute]");
-    expect(next?.tagName).toBe("A");
-    expect(next?.getAttribute("href")).toContain("/research/quantbt/runs/R-WFO-118/execute");
-    expect(next?.textContent).not.toMatch(/not built|P17/);
+    // W4: the page-foot feeds-forward card is gone; the header's next-stage link is the one forward link.
+    expect(container.querySelector("[data-next-execute]")).toBeNull();
+    expect(container.querySelector("[data-action='next-stage']")?.getAttribute("href")).toContain("/research/quantbt/runs/R-WFO-118/search");
   });
 
   it("prints as-of in UTC minutes and digests shortened, the exact value in the title", () => {
     const { container } = view();
     const asOf = container.querySelector("[data-as-of]");
-    expect(asOf?.textContent).toMatch(/as-of \d{4}-\d{2}-\d{2} \d{2}:\d{2}Z$/);
+    expect(asOf?.textContent).toMatch(/^as of \d{4}-\d{2}-\d{2} \d{2}:\d{2}Z$/);
     expect(asOf?.textContent).not.toMatch(/\.\d{3}Z/);
     const bundle = container.querySelector("[data-bundle-digest]");
     expect(bundle?.getAttribute("title")).toBe("sha256:bundle01");
@@ -1119,7 +1117,7 @@ describe("RF-06 S05 fidelity — copy link and marks", () => {
       act(() => vi.advanceTimersByTime(COPY_RESET_MS - 100));
       expect(button.textContent).toBe(COPY_DONE_LABEL);
       act(() => vi.advanceTimersByTime(200));
-      expect(button.textContent).toBe("copy evidence link");
+      expect(button.textContent).toBe("copy link");
     } finally {
       vi.useRealTimers();
     }
@@ -1194,7 +1192,8 @@ describe("RF-06 wave C — S05 consumes the RF-05 split fields", () => {
   it("CG-P14-04: as-of is the durable fact's time in the HiFi Z form, its basis named in the title", () => {
     const { container } = view();
     const asOf = container.querySelector("[data-as-of]");
-    expect(asOf?.textContent).toBe("source split read · as-of 2026-06-19 00:00Z");
+    expect(asOf?.textContent).toBe("as of 2026-06-19 00:00Z");
+    expect(asOf?.getAttribute("title")).toContain("source split read");
     expect(asOf?.getAttribute("data-as-of-basis")).toBe("P14_PROJECTION_RECEIVED_AT");
     expect(asOf?.getAttribute("title")).toContain("as-of basis P14_PROJECTION_RECEIVED_AT — when the P14 projection for this run was received");
   });
@@ -1435,10 +1434,10 @@ describe("W3b — Split on the retained WFO lane", () => {
 
   it("links on to S4 Execute for this run", async () => {
     const { container } = await settledRoute();
-    const next = container.querySelector("[data-next-execute]");
-    expect(next?.tagName).toBe("A");
-    expect(next?.textContent).toContain("next: S4 Execute");
-    expect(next?.getAttribute("href")).toMatch(new RegExp(`^/research/quantbt/runs/${W3B_RUN}/execute(#|$)`));
+    /* W4: the page-foot "feeds forward" card is gone (the header carries the next stage); no duplicate S4 link. */
+    expect(container.querySelector("[data-next-execute]")).toBeNull();
+    expect(container.querySelector("[data-card='feeds-forward']")).toBeNull();
+    expect(container.querySelector("[data-action='next-stage']")?.getAttribute("href")).toMatch(new RegExp(`^/research/quantbt/runs/${W3B_RUN}/search(#|$)`));
   });
 
   it("a P04 run (the retained lane answers not-applicable) keeps the hub's answer and its P14 reason", async () => {
@@ -1607,7 +1606,7 @@ describe("E14 — S05 boundary integrity and stitched OOS provenance", () => {
     const text = container.textContent ?? "";
     expect(text).not.toMatch(/Shared params \(global schedule\): one study|Stage 2 ran one global study|never constructs a fold/);
     expect(container.querySelector("[data-theta-note]")).toBeNull();
-    expect((container.querySelector("[data-theta-meta]") as HTMLElement).textContent).toContain("GLOBAL (shared)");
+    expect((container.querySelector("[data-theta-meta]") as HTMLElement).textContent).toContain("global");
     expect((container.querySelector("[data-card='boundary-integrity']") as HTMLElement).textContent).toContain("boundary integrity");
     expect(text).not.toContain("not recomputed");
   });
@@ -1864,7 +1863,7 @@ describe("F2b · windows and flow", () => {
     const { container } = view({ cursor: { ...DEFAULT_CURSOR, fold: 2, stage: "split" } });
     expect(container.querySelector("[data-action='back-to-hub']")?.getAttribute("href")).toBe("/research/quantbt/runs/R-WFO-118/evidence#stage=split&fold=2");
     expect(container.querySelector("[data-action='next-stage']")?.getAttribute("href")).toBe("/research/quantbt/runs/R-WFO-118/search#stage=search&fold=2");
-    expect(container.querySelector("[data-action='next-execute']")?.getAttribute("href")).toBe("/research/quantbt/runs/R-WFO-118/execute#stage=execute&fold=2");
+    expect(container.querySelector("[data-action='next-execute']")).toBeNull();
   });
 
   it("the prose that restated the strip is a tooltip, and the colour key is swatches", () => {
@@ -2164,8 +2163,10 @@ describe("QA S05 — retained lane screen", () => {
     expect(cells.length).toBeGreaterThan(0);
     expect(cells[0].getAttribute("data-trades-cell")).toBe(W3_ALL.split.fold_plan.folds[0].score.oos_trades);
     expect(container.querySelectorAll("[data-card='fold-table'] th")[10].textContent).toBe("OOS trades");
+    /* W4: the fold table is the one place per-fold S / trades are printed; the theta lane keeps only a hidden data hook. */
     const lane = container.querySelector("[data-theta-lane='1']")!;
-    expect(lane.querySelector("[data-theta-oos-trades]")?.textContent).toContain(`${W3_ALL.split.fold_plan.folds[0].score.oos_trades} trades`);
+    expect(lane.textContent).not.toMatch(/trade OOS → S/);
+    expect(lane.querySelector("[data-theta-oos-trades]")?.getAttribute("data-theta-oos-trades")).toBe(W3_ALL.split.fold_plan.folds[0].score.oos_trades);
   });
 
   it("U10 typed-absence path: an unserved trade count says 'not published', never 0 or a blank", async () => {

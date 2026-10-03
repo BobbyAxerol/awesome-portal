@@ -1517,6 +1517,8 @@ describe("Full-depth time-series history store (owner directive 2026-09-03)", ()
   });
 
   it("persists every lineage-accepted drained row exactly once, at full depth", async () => {
+    // Relative to now: a fixed date ages out of the snapshot's hot window and breaks this test.
+    const recentTs = new Date(Date.now() - 86_400_000).toISOString();
     const source = {
       relationForProjection: async (
         _workspace: string, environment: string, _screen: string,
@@ -1532,8 +1534,8 @@ describe("Full-depth time-series history store (owner directive 2026-09-03)", ()
         if (relation === "account_equity_snapshots") {
           response.source.data.items = [
             typedRow(101, "2026-06-30T00:00:00.000Z", "acc_a"),
-            typedRow(102, "2026-09-03T00:00:00.000Z", "acc_a"),
-            typedRow(103, "2026-09-03T01:00:00.000Z", "acc_ghost"),
+            typedRow(102, recentTs, "acc_a"),
+            typedRow(103, recentTs, "acc_ghost"),
           ];
         }
         return response;
@@ -1549,7 +1551,7 @@ describe("Full-depth time-series history store (owner directive 2026-09-03)", ()
     expect(coverage).toEqual({
       rowCount: 2,
       oldestTs: "2026-06-30T00:00:00.000Z",
-      newestTs: "2026-09-03T00:00:00.000Z",
+      newestTs: recentTs,
     });
     const page = await repository.timeSeriesHistory(workspaceId, "paper", profileId, equityKey, { limit: 10 });
     expect(page.hasMore).toBe(false);

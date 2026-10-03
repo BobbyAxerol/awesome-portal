@@ -50,6 +50,7 @@ import {
 } from "./replayClient";
 import { ReplayTransport, SPEEDS, transportKey, useTransport } from "./replayTransport";
 import { reasonCodeSentence } from "./researchRefusal";
+import { humanise } from "./humanise";
 import { isHubLaneReason, retainedReadiness } from "./retainedLane";
 import { SplitBand, SplitBandNote, hubSplitBand, type SplitBandSlot } from "./SplitBand";
 import type { ResearchState } from "./state";
@@ -59,7 +60,6 @@ import { formatAxisValue, formatCount, formatFractionAxis, formatMetric, shortId
 import { ShortId } from "./ShortId";
 import { CopyEvidenceLink, SCREEN_FRAME, StageRunBar } from "./SplitDetail";
 import { DEFAULT_WINDOW, withWindow, type ExecWindow } from "./executeWindows";
-import { QUANTBT_ROOT } from "../features/quantbt/routes";
 import { reportHref } from "./runLinks";
 
 /* --------------------------------------------------------------- verbatim */
@@ -91,9 +91,7 @@ export const PAUSED_HIDDEN = "paused (tab hidden)";
 
 /* ------------------------------------------------------------------ parts */
 
-function words(value: string): string {
-  return value.toLowerCase().replace(/_/g, " ");
-}
+const words = humanise;
 
 function Chip({
   children,
@@ -155,7 +153,7 @@ function CapabilityGap({ replay, capability }: { replay: Replay; capability: Rou
       <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} title={gapReason(fact)}>
         {REPLAY_GAP_WORDS[fact.state]}
       </span>
-      <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-reason-code>
+      <span hidden data-reason-code>
         {fact.reason_code ?? fact.availability.reason_code ?? words(fact.availability.state)}
       </span>
     </span>
@@ -262,36 +260,6 @@ function HubCandleOverview({ replay }: { replay: Replay }) {
         label="out-of-sample window price range, as retained OHLC buckets"
       />
     </div>
-  );
-}
-
-/** A hi-fi panel the source does not fill, kept at its place with its reasons. */
-function AbsentPanel({
-  id,
-  title,
-  replay,
-  capabilities,
-  note,
-}: {
-  id: string;
-  title: string;
-  replay: Replay;
-  capabilities: readonly RouteCapabilityKey[];
-  note?: string;
-}) {
-  return (
-    <Card title={title} data-absent-panel={id}>
-      {note ? (
-        <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-          {note}
-        </p>
-      ) : null}
-      <div className="flex flex-col gap-1">
-        {capabilities.map((capability) => (
-          <CapabilityGap key={capability} replay={replay} capability={capability} />
-        ))}
-      </div>
-    </Card>
   );
 }
 
@@ -743,12 +711,7 @@ function RetainedGap({ replay, capability }: { replay: CurrentSourceReplay; capa
             in the replay above — research samples, not broker positions
           </span>
         ) : (
-          <span
-            className="mono break-all text-[9px]"
-            style={{ color: "var(--ink-faint)" }}
-            data-reason-code={code ?? ""}
-            title={reasonCodeSentence(code) ?? undefined}
-          >
+          <span hidden data-reason-code={code ?? ""} title={reasonCodeSentence(code) ?? undefined}>
             {code ?? words(fact.availability.state)}
           </span>
         )}
@@ -1095,9 +1058,9 @@ function RetainedAbsences({ replay }: { replay: CurrentSourceReplay }) {
               style={{ color: "var(--ink-faint)" }}
               data-retained-capability={key}
               data-capability-state={fact.state}
+              title={code && !isHubLaneReason(code) ? code : undefined}
             >
               {RETAINED_CAPABILITY_LABEL[key]} — {REPLAY_GAP_WORDS[fact.state]}
-              {code && !isHubLaneReason(code) ? ` · ${code}` : ""}
             </span>
           );
         })}
@@ -1172,7 +1135,7 @@ function RetainedBody({
         state={state}
         minBodyHeight={280}
       >
-        <div className="flex flex-col gap-2" data-replay-window="RETAINED" data-retained-in-flight={String(inFlight)}>
+        <div className="flex flex-col gap-2" data-replay-window="RETAINED" data-retained-in-flight={String(inFlight)} data-replay-section tabIndex={0} aria-label="Replay. Space plays or pauses, the arrow keys step.">
           {slot.recovered ? (
             <p className="mono text-[10px]" role="status" style={{ color: "var(--warn)" }} data-recovered>
               The replay position expired. It was discarded and the first window was read again once.
@@ -1379,6 +1342,8 @@ function FixedObservationPanel({
     <Card
       title="OOS observation replay — market and account"
       data-panel="fixed-observation-replay"
+      data-replay-section
+      tabIndex={0}
       data-fixed-window={slot.index}
       data-fixed-in-flight={String(busy)}
       aria-busy={busy}
@@ -1580,7 +1545,7 @@ export function ExecuteScreen({
         </Link>
       </nav>
 
-      <StageRunBar runId={runId} active={controller.retained.state === "refused" && controller.retained.refusal.status === 409} />
+      <StageRunBar runId={runId} active={(controller.retained.state === "refused" && controller.retained.refusal.status === 409) || (replay != null && replay.route.state === "NOT_PUBLISHED")} />
 
       <div className="flex flex-col gap-[3px]">
         <h1 className="text-[22px] font-light tracking-[-0.01em] [line-height:normal]" style={{ fontFamily: "var(--font-display)" }}>
@@ -1598,15 +1563,6 @@ export function ExecuteScreen({
           title="Split — the IS / OOS / holdout windows of this run"
         >
           Split ↗
-        </Link>
-        <Link
-          to={`${QUANTBT_ROOT}/runs`}
-          className="mono text-[10px]"
-          style={{ color: "var(--accent)" }}
-          data-action="to-run-library"
-          title="Run Library"
-        >
-          Run Library ↗
         </Link>
       </div>
       </>
@@ -1685,10 +1641,10 @@ export function ExecuteScreen({
                 contract {replay.route.replay_contract}
               </span>
             ) : null}
-            <Chip data-readiness={replay.readiness}>readiness {replay.readiness.toLowerCase()}</Chip>
+            <Chip data-readiness={replay.readiness}>{humanise(replay.readiness)}</Chip>
             {freshAbsence ? (
-              <Chip data-fixed-absence={freshAbsence.code} title={freshAbsence.sentence ?? undefined}>
-                observations not published ({freshAbsence.code})
+              <Chip data-fixed-absence={freshAbsence.code} title={`${freshAbsence.sentence ?? ""} ${freshAbsence.code}`.trim()}>
+                observations not published
               </Chip>
             ) : null}
             <CapabilityGap replay={replay} capability="fold_capital" />
@@ -1716,7 +1672,7 @@ export function ExecuteScreen({
         }
       >
         {replay && replayWindow ? (
-          <div className="flex flex-col gap-2" data-replay-window={replayWindow.state}>
+          <div className="flex flex-col gap-2" data-replay-window={replayWindow.state} data-replay-section tabIndex={0} aria-label="Replay. Space plays or pauses, the arrow keys step.">
             {controller.recovered ? (
               <p className="mono text-[10px]" role="status" style={{ color: "var(--warn)" }} data-recovered>
                 The replay position expired. It was discarded and the replay was read again once.
@@ -1850,62 +1806,13 @@ export function ExecuteScreen({
 
       {replay ? (
         <>
-          <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-            <div className="flex min-w-0 flex-col gap-3">
-              <Card
-                title="event ledger"
-                data-panel="event-ledger"
-                aside={<CapabilityGap replay={replay} capability="execution_events" />}
-              >
-                {items.length > 0 ? <SampleLedger transport={transport} items={items} /> : null}
-              </Card>
-              <AbsentPanel
-                id="trade-anatomy"
-                title="trade anatomy — entry → exit"
-                replay={replay}
-                capabilities={["orders", "fills", "positions", "child_audit_provenance"]}
-                note="No orders or fills published — no chain drawn."
-              />
-            </div>
-            <div className="flex min-w-0 flex-col gap-3">
-              <AbsentPanel
-                id="trade-blotter"
-                title="trade blotter"
-                replay={replay}
-                capabilities={["trades"]}
-                note="No trade ledger published."
-              />
-              <AbsentPanel
-                id="mae-mfe"
-                title="MAE × MFE"
-                replay={replay}
-                capabilities={["mae_mfe"]}
-                note="Needs trade records (not published)."
-              />
-              <AbsentPanel
-                id="pnl-distribution"
-                title="trade PnL distribution"
-                replay={replay}
-                capabilities={["trades"]}
-                note="Needs trade records (not published)."
-              />
-              <AbsentPanel
-                id="cost-timeline"
-                title="cost timeline"
-                replay={replay}
-                capabilities={["funding"]}
-                note="No funding or cost series published."
-              />
-              <AbsentPanel
-                id="route-panel"
-                title="route-aware facts"
-                replay={replay}
-                capabilities={["sl_tp_ambiguity", "oco_tree", "multi_leg"]}
-                              />
-            </div>
-          </div>
-
-          <SourceAbsences replay={replay} />
+          {items.length > 0 ? (
+            <Card title="event ledger" data-panel="event-ledger">
+              <SampleLedger transport={transport} items={items} />
+            </Card>
+          ) : null}
+          {/* ONE block for everything this source did not publish; every name carries its reason in its tooltip. */}
+          <NotPublishedBlock replay={replay} />
           <RetainedReplayPanel slot={controller.retained} onRead={controller.ensureRetained} />
         </>
       ) : null}
@@ -1952,28 +1859,35 @@ function StateAtCursor({ replay, pinnedAt }: { replay: Replay; pinnedAt: number 
   );
 }
 
-function SourceAbsences({ replay }: { replay: Replay }) {
-  const entries = Object.entries(replay.source_absences);
+/** ONE block: what the source did not publish. The names are the route's capabilities; each reason (sentence + code) is that name's tooltip. */
+export function NotPublishedBlock({ replay }: { replay: Replay }) {
+  const missing = ROUTE_CAPABILITY_KEYS.filter((key) => replay.route_capabilities[key].state !== "AVAILABLE");
+  const sources = Object.entries(replay.source_absences);
+  if (missing.length === 0 && sources.length === 0) return null;
+  const sourceNote = sources.map(([key, gap]) => `${humanise(key)} — ${REPLAY_GAP_WORDS[gap.state]} · ${gapReason(gap)}`).join("\n");
   return (
-    <details
-      className="rounded-[8px] border px-4 py-2"
+    <section
+      className="flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-[8px] border px-4 py-2"
       style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
-      data-source-absences={entries.length}
+      data-not-published-block={missing.length}
+      data-source-absences={sources.length}
+      title={sourceNote === "" ? undefined : sourceNote}
+      aria-label={`Not published by this source: ${missing.map((key) => CAPABILITY_LABEL[key]).join(", ")}`}
     >
-      <summary className="mono cursor-pointer text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-        every capability the route declared · {ROUTE_CAPABILITY_KEYS.length} route facts · {entries.length} source absences
-      </summary>
-      <div className="mt-2 flex flex-col gap-1">
-        {ROUTE_CAPABILITY_KEYS.map((key) => (
-          <CapabilityGap key={key} replay={replay} capability={key} />
-        ))}
-        {entries.map(([key, gap]) => (
-          <span key={key} className="mono break-all text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-source-absence={key}>
-            {words(key)} — {REPLAY_GAP_WORDS[gap.state]} · {gapReason(gap)}
+      <h2 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        Not published by this source
+      </h2>
+      {missing.map((key, index) => {
+        const fact = replay.route_capabilities[key];
+        const why = `${REPLAY_GAP_WORDS[fact.state]} · ${gapReason(fact)}`;
+        return (
+          <span key={key} className="mono text-[10.5px]" style={{ color: "var(--ink-soft)" }} data-capability={key} data-capability-state={fact.state} tabIndex={0} title={why} aria-label={`${CAPABILITY_LABEL[key]}: ${why}`}>
+            {index > 0 ? "· " : ""}
+            {CAPABILITY_LABEL[key]}
           </span>
-        ))}
-      </div>
-    </details>
+        );
+      })}
+    </section>
   );
 }
 
@@ -1982,6 +1896,9 @@ export function useTransportInput(transport: ReplayTransport): void {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+      /* Space and the arrows belong to the replay section only; elsewhere on the page they scroll and move focus as usual. */
+      const origin = event.target instanceof Element ? event.target : null;
+      if (origin === null || origin.closest("[data-replay-section]") === null) return;
       if (transportKey(transport, event)) event.preventDefault();
     };
     const onVisibility = () => {

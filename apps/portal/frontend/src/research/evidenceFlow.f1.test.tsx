@@ -81,38 +81,30 @@ describe("F1 FG 04-F — a hub that was not read is 'not read', never 'not publi
     const { container } = view({ hub: null, state: LOADING });
     const strip = container.querySelector("[data-claim-passport]") as HTMLElement;
     expect(strip).toBeTruthy();
-    for (const name of [
-      "validation_claim",
-      "chronological_claim",
-      "oos_used_for_selection",
-      "holdout_state",
-      "causality_claim",
-      "execution_contract",
-      "runtime authority",
-    ]) {
-      const cell = strip.querySelector(`[data-claim-field='${name}']`) as HTMLElement;
-      expect(cell, name).toBeTruthy();
-      expect(cell.textContent, name).toContain("reading…");
-      expect(cell.textContent, name).not.toContain("not published");
-      expect(cell.querySelector("[data-withheld='NOT_READ']"), name).toBeTruthy();
+    /* W4B: the absent claim fields are ONE count; the names ride in its tooltip. */
+    const absent = strip.querySelector("[data-claim-absent]") as HTMLElement;
+    expect(absent).toBeTruthy();
+    expect(absent.getAttribute("data-withheld")).toBe("NOT_READ");
+    expect(absent.textContent).toContain("reading…");
+    for (const name of ["validation claim", "chronological claim", "OOS used for selection", "holdout state", "causality claim", "execution contract", "runtime authority"]) {
+      expect(absent.getAttribute("title"), name).toContain(name);
     }
     expect(strip.querySelector("[data-certificate-state='NOT_READ']")?.textContent).toContain("reading…");
     expect(strip.textContent).not.toContain("not published");
     const bar = container.querySelector("[data-cursor-bar]") as HTMLElement;
     expect(bar.querySelector("[data-fold-bound]")?.textContent).toContain("reading…");
-    expect(bar.querySelector("[data-cursor-schedule]")?.textContent).toContain("reading…");
+    expect(bar.querySelector("[data-cursor-trial]")?.textContent).toContain("reading…");
     expect(bar.textContent).not.toContain("not published");
   });
 
   it("refused: the same cells say 'not read' and carry no server reason code", () => {
     const { container } = view({ hub: null, state: REFUSED });
     const strip = container.querySelector("[data-claim-passport]") as HTMLElement;
-    for (const name of ["validation_claim", "holdout_state", "execution_contract", "runtime authority"]) {
-      const cell = strip.querySelector(`[data-claim-field='${name}']`) as HTMLElement;
-      expect(cell.textContent, name).toContain("not read");
-      expect(cell.textContent, name).not.toContain("not published");
-      expect(cell.querySelector("[data-reason-code]"), name).toBeNull();
-    }
+    const absent = strip.querySelector("[data-claim-absent]") as HTMLElement;
+    expect(absent.textContent).toContain("not read");
+    expect(absent.textContent).not.toContain("not published");
+    expect(absent.getAttribute("title")).toContain("holdout state");
+    expect(absent.hasAttribute("data-reason-code")).toBe(false);
     expect(strip.querySelector("[data-certificate-state='NOT_READ']")?.textContent).toContain("not read");
     expect(container.querySelector("[data-cursor-bar] [data-fold-bound]")?.textContent).toContain("not read");
     expect(container.querySelector("[data-cursor-bar]")?.textContent).not.toContain("not published");
@@ -120,10 +112,12 @@ describe("F1 FG 04-F — a hub that was not read is 'not read', never 'not publi
 
   it("a hub that WAS read and is silent still says 'not published', and its tooltip says no code was served", () => {
     const { container } = view();
-    const cell = container.querySelector("[data-claim-field='validation_claim']") as HTMLElement;
+    const cell = container.querySelector("[data-claim-absent]") as HTMLElement;
     expect(cell.textContent).toContain("not published");
     expect(cell.textContent).not.toContain("not read");
-    expect(cell.querySelector("[data-withheld='NOT_PUBLISHED']")?.getAttribute("title")).toContain("the server sent no reason code");
+    expect(cell.getAttribute("data-withheld")).toBe("NOT_PUBLISHED");
+    expect(cell.getAttribute("title")).toContain("validation claim");
+    expect(cell.getAttribute("title")).toContain("not published by the Evidence Hub");
   });
 
   it("a served reason code is still printed as the server's (not swallowed by the new states)", () => {
@@ -174,18 +168,18 @@ describe("F1 2_wiring S04 — the Net return tile is net_oos_return, or it is ca
     expect(tile.textContent).not.toMatch(/(^|\s)0\.00%/);
   });
 
-  it("the retained passport row is 'account return' too (same value, same name)", () => {
+  it("the retained passport does not repeat the tile (W4B: one place for account return)", () => {
     const { container } = view({ cursor: { ...DEFAULT_CURSOR, stage: "summary" }, passport: retained(), runIdentity: IDENTITY });
-    const row = container.querySelector("[data-passport-row='account return']");
-    expect(row).toBeTruthy();
+    expect(container.querySelector("[data-passport-row='account return']")).toBeNull();
     expect(container.querySelector("[data-passport-row='net return']")).toBeNull();
+    expect(container.querySelector("[data-metric='NET_RETURN_FRACTION']")).toBeTruthy();
   });
 });
 
 describe("F1 2_wiring S04 codes — no screen-coined token looks like a server reason code", () => {
   it("while the retained lane's own reads are outstanding the cursor pills say 'reading…', not 'not served'", () => {
     const { container } = view({ passport: { state: "loading" } });
-    for (const pill of ["trial", "params", "seq"]) {
+    for (const pill of ["trial", "params"]) {
       expect(container.querySelector(`[data-cursor-${pill}]`)?.textContent, pill).toContain("reading…");
       expect(container.querySelector(`[data-cursor-${pill}] [data-fe-absence]`), pill).toBeNull();
     }
@@ -198,13 +192,17 @@ describe("F1 2_wiring S04 codes — no screen-coined token looks like a server r
     expect(container.innerHTML).not.toMatch(FORBIDDEN);
     const notes = [...container.querySelectorAll("[data-fe-absence]")] as HTMLElement[];
     expect(notes.length).toBeGreaterThan(0);
+    expect(container.querySelector("[data-cursor-bar] [data-fe-absence]")).toBeNull();
     for (const note of notes) {
       expect(note.textContent).toContain("not served for this lane");
       expect(note.hasAttribute("data-reason-code")).toBe(false);
       expect(note.getAttribute("title")).toContain("not a server reason code");
     }
-    expect(container.querySelector("[data-cursor-trial] [data-fe-absence]")?.getAttribute("data-fe-absence")).toBe("hub-lane-has-no-trial-cursor");
-    expect(container.querySelector("[data-cursor-params] [data-fe-absence]")?.getAttribute("data-fe-absence")).toBe("hub-lane-has-no-params-digest");
+    /* W4B: the unserved trial / params / seq chips are one muted line, not three "not served" chips. */
+    expect(container.querySelector("[data-cursor-trial]")).toBeNull();
+    expect(container.querySelector("[data-cursor-params]")).toBeNull();
+    expect(container.querySelector("[data-cursor-seq]")).toBeNull();
+    expect(container.querySelector("[data-cursor-compact]")?.textContent).toBe("cursor: fold 1 · window OOS");
     expect(container.querySelector("[data-behavior-tile='skew'] [data-fe-absence]")?.getAttribute("data-fe-absence")).toBe(
       "hub-lane-has-no-behavior-analytic",
     );

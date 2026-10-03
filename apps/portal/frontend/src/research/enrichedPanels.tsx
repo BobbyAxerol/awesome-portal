@@ -205,7 +205,7 @@ function EpisodeRow({ block, episode, rank }: { block: EnrichedAnalysis; episode
  * A block with no episodes is one line of typed absence, never an empty frame. `total` is the
  * server's count of all episodes; the card says "top n / total" when it shows fewer.
  */
-export function DrawdownEpisodes({ block }: { block: EnrichedAnalysis }) {
+export function DrawdownEpisodes({ block, limit }: { block: EnrichedAnalysis; /** The hub shows the deepest few; other screens (S09) show every served episode. */ limit?: number }) {
   const head = block.drawdown_episodes;
   if (head.state !== "AVAILABLE" || head.values.length === 0) {
     return (
@@ -217,7 +217,9 @@ export function DrawdownEpisodes({ block }: { block: EnrichedAnalysis }) {
       </p>
     );
   }
-  const shown = head.values.length;
+  /* Fewer words (hub): the deepest `limit` episodes; the rest are counted. */
+  const episodes = limit === undefined ? head.values : head.values.slice(0, limit);
+  const shown = episodes.length;
   const regime = regimeAbsence(block);
   return (
     <section
@@ -252,14 +254,14 @@ export function DrawdownEpisodes({ block }: { block: EnrichedAnalysis }) {
           </tr>
         </thead>
         <tbody>
-          {head.values.map((episode, index) => (
+          {episodes.map((episode, index) => (
             <EpisodeRow key={`${episode.start_utc_ms}-${index}`} block={block} episode={episode} rank={index + 1} />
           ))}
         </tbody>
       </table>
       {regime !== null ? (
-        <p className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-episode-regime="NOT_PUBLISHED" data-reason-code={regime.reason_code} title={regime.source_locator}>
-          market regime — not published · {regime.reason_code}
+        <p className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-episode-regime="NOT_PUBLISHED" data-reason-code={regime.reason_code} title={`${regime.reason_code} · ${regime.source_locator}`}>
+          market regime — not published
         </p>
       ) : null}
     </section>

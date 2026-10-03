@@ -148,18 +148,21 @@ export function ChildAuditCompanionPanel({ runId, workspaceId }: { runId: string
   const busy = slot.state === "loading";
   const ordinalSet = filter.ordinal.trim() !== "";
   return (
-    <section
+    <details
       className="flex flex-col gap-2 rounded-[8px] border px-4 py-3"
       data-panel="child-audit-companion"
       data-custody={page?.custody ?? "UNREAD"}
       style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
     >
-      <h2 className="mono text-[10px] uppercase tracking-[.07em]" style={FAINT}>
-        child audit · source lifecycle observations
-      </h2>
-      <p className="text-[10.5px]" style={{ color: "var(--ink-soft)" }} data-child-audit-scope>
-        Observations of the source lifecycle — not a generation clock.
-      </p>
+      {/* One owner for the child audit: this screen. The scope sentence is the summary's tooltip. */}
+      <summary
+        className="mono cursor-pointer text-[10px] uppercase tracking-[.07em]"
+        style={FAINT}
+        title="Observations of the source lifecycle — not a generation clock."
+        data-child-audit-scope
+      >
+        child audit · lifecycle rows
+      </summary>
 
       <div className="flex flex-wrap items-end gap-2" data-child-audit-filters>
         <label className="flex flex-col gap-0.5 text-[9px] uppercase tracking-[.07em]" style={FAINT}>
@@ -217,7 +220,7 @@ export function ChildAuditCompanionPanel({ runId, workspaceId }: { runId: string
           </select>
         </label>
         <button type="button" className="btn-ghost mono text-[10px]" onClick={read} disabled={busy} title={busy ? "reading the audit" : "read the first page of the full source lifecycle"} data-action="read-child-audit-companion">
-          {slot.state === "idle" ? "read lifecycle rows" : "read again"}
+          {slot.state === "idle" ? "read rows" : "read again"}
         </button>
       </div>
 
@@ -230,30 +233,26 @@ export function ChildAuditCompanionPanel({ runId, workspaceId }: { runId: string
       {slot.state === "refused" ? (
         <p className="flex flex-wrap items-center gap-2 text-[11px]" style={{ color: "var(--warn)" }} data-child-audit-companion="refused" data-reason={slot.refusal.code ?? ""}>
           <span>{slot.refusal.message}</span>
-          {slot.refusal.code ? <span className="mono text-[9px]" style={FAINT}>{slot.refusal.code}</span> : null}
+          {slot.refusal.code ? <span hidden>{slot.refusal.code}</span> : null}
         </p>
       ) : null}
 
       {page !== null ? (
         <div className="flex flex-col gap-2" data-child-audit-companion={page.custody}>
           <div className="flex flex-wrap items-baseline gap-2">
-            <span className="mono rounded-[3px] border px-[5px] text-[10px] leading-[16px]" style={{ borderColor: "var(--line)" }} data-custody-label>
+            <span className="mono rounded-[3px] border px-[5px] text-[10px] leading-[16px]" style={{ borderColor: "var(--line)" }} data-custody-label title={page.availability.reason_code ?? undefined}>
               {CHILD_AUDIT_CUSTODY_WORDS[page.custody]}
             </span>
-            {page.availability.reason_code ? (
-              <span className="mono text-[9px]" style={FAINT} data-reason={page.availability.reason_code}>
-                {page.availability.reason_code}
-              </span>
-            ) : null}
+            {page.availability.reason_code ? <span hidden data-reason={page.availability.reason_code}>{page.availability.reason_code}</span> : null}
           </div>
           {page.custody === "LEGACY_SAMPLE" ? (
-            <p className="text-[10.5px]" style={{ color: "var(--ink-soft)" }} data-child-audit-legacy>
-              Only a bounded legacy witness was kept for this run. It is not the full lifecycle and not an authoritative generation record, so no rows are shown from it.
+            <p className="text-[10.5px]" style={{ color: "var(--ink-soft)" }} data-child-audit-legacy title="Only a bounded legacy witness was kept for this run. It is not the full lifecycle and not an authoritative generation record, so no rows are shown from it.">
+              Legacy witness only — no rows.
             </p>
           ) : null}
           {page.custody === "NOT_RETAINED" ? (
             <p className="text-[10.5px]" style={{ color: "var(--ink-soft)" }} data-child-audit-not-retained>
-              No source lifecycle audit was retained for this run.
+              No lifecycle audit retained.
             </p>
           ) : null}
           <div className="flex flex-wrap gap-x-5 gap-y-1.5" data-child-audit-counts>
@@ -294,6 +293,6 @@ export function ChildAuditCompanionPanel({ runId, workspaceId }: { runId: string
           ) : null}
         </div>
       ) : null}
-    </section>
+    </details>
   );
 }

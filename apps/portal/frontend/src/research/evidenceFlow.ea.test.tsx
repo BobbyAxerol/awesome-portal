@@ -226,12 +226,12 @@ describe("S04 · enrich_analysis — value path (canonical healthy fixture)", ()
     expect(decay.getAttribute("data-reason-code")).toBe("PORTAL_ANALYTICS_IS_OR_OOS_SHARPE_UNAVAILABLE");
   }, 20_000);
 
-  it("Drawdown episodes: top 10 of 11 with start, depth, duration, recovery; all recovered", async () => {
+  it("Drawdown episodes: top 3 of 11 with start, depth, duration, recovery; all recovered", async () => {
     const { container } = view(clone(PROPOSED));
     await settle(container);
     const card = container.querySelector("[data-drawdown-episodes='ready']") as HTMLElement;
     const rows = [...card.querySelectorAll("tbody tr")] as HTMLElement[];
-    expect(rows).toHaveLength(10);
+    expect(rows).toHaveLength(3);
     expect(rows[0]!.getAttribute("data-episode-open")).toBe("false");
     expect(rows[0]!.textContent).toContain("2026-07-14");
     expect(rows[0]!.textContent).toContain("2026-07-16");
@@ -241,7 +241,7 @@ describe("S04 · enrich_analysis — value path (canonical healthy fixture)", ()
     expect(rows[0]!.getAttribute("title")).toContain(PROPOSED.scope.locator);
     expect(rows[0]!.getAttribute("aria-label")).toContain("trough");
     /* total, open and longest_open exactly as the block discloses them */
-    expect(card.querySelector("[data-episodes-count]")?.textContent).toBe("top 10 / 11 · all recovered");
+    expect(card.querySelector("[data-episodes-count]")?.textContent).toBe("top 3 / 11 · all recovered");
     expect(card.querySelector("[data-open-episode]")?.getAttribute("data-open-episode")).toBe("false");
     expect(card.querySelector("[data-open-episode]")?.getAttribute("data-longest-open")).toBe("false");
     /* typographic minus only */
@@ -261,7 +261,7 @@ describe("S04 · enrich_analysis — value path (canonical healthy fixture)", ()
     expect(rows[0]!.textContent).toContain("open");
     expect(rows[0]!.getAttribute("title")).toContain("recovery open at the end of the scope");
     expect(rows[1]!.getAttribute("data-episode-open")).toBe("false");
-    expect(card.querySelector("[data-episodes-count]")?.textContent).toBe("top 10 / 11 · open · longest");
+    expect(card.querySelector("[data-episodes-count]")?.textContent).toBe("top 3 / 11 · open · longest");
     expect(card.querySelector("[data-open-episode]")?.getAttribute("data-longest-open")).toBe("true");
     expect(container.querySelector("[data-behavior-tile='drawdown duration']")?.textContent).toContain("open");
   }, 20_000);
@@ -271,7 +271,7 @@ describe("S04 · enrich_analysis — value path (canonical healthy fixture)", ()
     block.drawdown_episodes.total = 37;
     const { container } = view(block);
     await settle(container);
-    expect(container.querySelector("[data-episodes-count]")?.textContent).toBe("top 10 / 37 · all recovered");
+    expect(container.querySelector("[data-episodes-count]")?.textContent).toBe("top 3 / 37 · all recovered");
   }, 20_000);
 
   it("a block whose episodes are NOT_PUBLISHED shows one typed line, not an empty frame", async () => {

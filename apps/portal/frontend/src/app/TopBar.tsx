@@ -16,7 +16,7 @@ import type { PortalEnvironment } from "../portal/contracts";
 import type { Breadcrumb } from "../portal/navigation";
 import { useRunLabel } from "../research/runLabels";
 import { useRunLabelRead } from "../research/useRunLabelRead";
-import { researchRunCrumb } from "./researchRunCrumb";
+import { researchRunCrumb, useRunUnknown } from "./researchRunCrumb";
 import { ADMIN_USERS_ROUTE } from "./PortalRoutes";
 import { usePreferences, type PreferencesContextValue } from "./preferences";
 import { usePresentation } from "./presentation";
@@ -47,6 +47,7 @@ export function TopBar({
   useRunLabel(runCrumb?.runId);
   /* G3: Stages 1–4 make no read that carries the label, so the shell asks the Run Library for it. */
   useRunLabelRead(runCrumb?.needsLabelRead ? runCrumb.runId : null);
+  const runUnknown = useRunUnknown(runCrumb?.runId);
   const crumbTail = entityLabel ?? runCrumb?.screen ?? null;
 
   return (
@@ -101,7 +102,11 @@ export function TopBar({
         {runCrumb ? (
           <span className="portal-crumb portal-crumb--current">
             <span aria-hidden="true" className="portal-crumb-sep">/</span>
-            <Link to={runCrumb.route} title={runCrumb.runId} className="mono">{runCrumb.label}</Link>
+            {runUnknown ? (
+              <span title={runCrumb.runId} className="mono" data-run-unknown="">{runCrumb.label}</span>
+            ) : (
+              <Link to={runCrumb.route} title={runCrumb.runId} className="mono">{runCrumb.label}</Link>
+            )}
           </span>
         ) : null}
         {crumbTail ? (

@@ -63,7 +63,7 @@ describe("F2b S09 — the bar is the way out and back in", () => {
       `/research/quantbt/alphas/delta-rsi-polynomial-alpha/lineage?av=av_delta_rsi_polynomial_alpha_1_0_0&run=${run}`,
     );
     expect(lineage.getAttribute("title")).toContain("delta-rsi-polynomial-alpha");
-    expect(bar().querySelector('[aria-current="page"]')?.textContent).toBe("Run Report");
+    expect(bar().querySelector('[aria-current="page"]')?.textContent).toBe("Report");
   });
 
   it("carries the evidence cursor (fold) from the arriving hash into the hub and Execute links", async () => {
@@ -80,7 +80,7 @@ describe("F2b S09 — the bar is the way out and back in", () => {
     expect(bar().querySelector('[data-action="back-to-execute"]')?.getAttribute("href")).toContain("stage=execute");
     /* Screen 11 is reached with the same cursor, so its way back is the hub the reader left. */
     expect(bar().querySelector('[data-action="release-candidate"]')?.getAttribute("href")).toContain("fold=2");
-    expect(document.querySelector('[data-action="promotion-release-candidate"]')?.getAttribute("href")).toContain("trial=351");
+    expect(bar().querySelector('[data-action="release-candidate"]')?.getAttribute("href")).toContain("trial=351");
   });
 
   it("draws no lineage link when the report's alpha fact is absent or not an identifier", () => {
@@ -102,9 +102,11 @@ describe("F2b S09 — the bar is the way out and back in", () => {
     renderRoute(body.run_id);
     await screen.findByText("Claim passport");
     expect(bar().classList.contains("no-print")).toBe(true);
-    const promotion = document.querySelector('[data-action="promotion-release-candidate"]')!;
-    expect(promotion.textContent).toBe("Release candidate →");
-    expect(promotion.getAttribute("title")).toBe("Compose the release candidate for this run");
+    /* W4: the toolbar is the one release-candidate link; the promotion block repeats none. */
+    expect(document.querySelector('[data-action="promotion-release-candidate"]')).toBeNull();
+    const toolbarRelease = bar().querySelector('[data-action="release-candidate"]')!;
+    expect(toolbarRelease.textContent).toBe("Release →");
+    expect(toolbarRelease.getAttribute("title")).toBe("Next: release candidate for this run");
     expect(document.querySelector('[data-panel="footer"] span[title]')?.getAttribute("title")).toBe("Page prints on letter or A4");
   });
 

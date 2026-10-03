@@ -15,6 +15,7 @@
  * named none.
  */
 
+import { useSyncExternalStore } from "react";
 import { matchPath } from "react-router-dom";
 
 import { shortId } from "../research/researchFormat";
@@ -39,7 +40,7 @@ export const RUN_SCREEN_CRUMBS: Readonly<Record<string, string>> = {
   freeze: "Stage 3 · Freeze",
   execute: "Stage 4 · Execute",
   report: "Run Report",
-  "release-candidate": "Release Candidate & Publish",
+  "release-candidate": "Release candidate",
 };
 
 /**
@@ -91,4 +92,41 @@ export function researchRunCrumb(pathname: string): ResearchRunCrumb | null {
     screen: RUN_SCREEN_CRUMBS[rest] ?? null,
     needsLabelRead: RUN_LABEL_READ_SEGMENTS.has(rest),
   };
+}
+
+/* ------------------------------------------------- unknown run (W4D)
+ * A run the workspace does not list (404 = 403, F-04) is plain text in the
+ * crumb: a link would only lead to the same "not available" hub. A screen that
+ * learned the run is not available says so here; the TopBar subscribes. */
+const unknownRuns = new Set<string>();
+const unknownListeners = new Set<() => void>();
+
+export function markRunUnknown(runId: string | null | undefined): void {
+  if (typeof runId !== "string" || runId.length === 0 || unknownRuns.has(runId)) return;
+  unknownRuns.add(runId);
+  unknownListeners.forEach((listener) => listener());
+}
+
+export function isRunUnknown(runId: string | null | undefined): boolean {
+  return typeof runId === "string" && unknownRuns.has(runId);
+}
+
+/** Test seam. */
+export function forgetUnknownRuns(): void {
+  if (unknownRuns.size === 0) return;
+  unknownRuns.clear();
+  unknownListeners.forEach((listener) => listener());
+}
+
+export function useRunUnknown(runId: string | null | undefined): boolean {
+  return useSyncExternalStore(
+    (listener) => {
+      unknownListeners.add(listener);
+      return () => {
+        unknownListeners.delete(listener);
+      };
+    },
+    () => isRunUnknown(runId),
+    () => false,
+  );
 }

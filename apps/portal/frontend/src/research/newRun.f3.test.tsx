@@ -361,7 +361,7 @@ describe("02-7 — live captions", () => {
   it("stepCaption: valid · needs attention · not visited, and Review carries the preflight's state", () => {
     expect(stepCaption(base)).toEqual({ state: "valid", caption: "valid" });
     expect(stepCaption({ ...base, hasError: true })).toEqual({ state: "error", caption: "needs attention" });
-    expect(stepCaption({ ...base, visited: false })).toEqual({ state: "not-visited", caption: "not visited" });
+    expect(stepCaption({ ...base, visited: false })).toEqual({ state: "not-visited", caption: "" });
     expect(stepCaption({ ...base, current: true })).toEqual({ state: "current", caption: "valid" });
     expect(stepCaption({ ...base, step: "review", current: true })).toEqual({ state: "current", caption: "preflight pending" });
     expect(stepCaption({ ...base, step: "review" }).state).toBe("visited");
@@ -378,7 +378,7 @@ describe("02-7 — live captions", () => {
   it("the bar prints them: a visited passing step says valid, a visited failing one needs attention, an unvisited one is not visited", () => {
     mount({ draft: draft({ symbol: "" }), registry: ADMITTED });
     expect(caption("context")).toBe("valid");
-    expect(caption("data")).toBe("not visited");
+    expect(document.querySelector('[data-step-pill="data"] [data-step-caption]')).toBeNull();
     go("data");
     /* On the step, nothing typed yet: not "needs attention" and never "valid". */
     expect(caption("data")).toBe("in progress");
@@ -422,8 +422,8 @@ describe("02-7 — live captions", () => {
     expect(document.querySelectorAll("[data-step-caption]")).toHaveLength(1);
     expect(pill("context").textContent).toContain("Context");
     expect(pill("route").textContent).toBe("3");
-    expect(pill("route").getAttribute("aria-label")).toBe("Route — not visited");
-    expect(pill("route").getAttribute("title")).toBe("Route — not visited");
+    expect(pill("route").getAttribute("aria-label")).toBe("Route");
+    expect(pill("route").getAttribute("title")).toBe("Route");
     expect(screen.getByRole("tab", { name: /Market data/ })).toBeTruthy();
     go("route");
     expect(pill("route").textContent).toContain("Route");
@@ -434,7 +434,9 @@ describe("02-7 — live captions", () => {
     narrow(WIZARD_FULL_WIDTH + 200);
     mount();
     expect(document.querySelector("[role=tablist]")?.getAttribute("data-wizard-compact")).toBeNull();
-    expect(document.querySelectorAll("[data-step-caption]")).toHaveLength(8);
+    /* W4A: only a step with something to say carries a caption; the unvisited ones carry none. */
+    expect(document.querySelectorAll("[data-step-caption]").length).toBeLessThan(8);
+    expect(document.querySelectorAll("[data-step-caption]").length).toBeGreaterThan(0);
   });
 });
 
@@ -535,8 +537,9 @@ describe("02-9 — the gold claim-forecast card", () => {
   it("before a preflight the payload digest is pending, not a made-up hash", () => {
     mount();
     go("review");
-    expect(document.querySelector("[data-payload-digest]")?.getAttribute("data-payload-digest")).toBe("pending");
-    expect(document.querySelector("[data-claim-forecast]")?.textContent).toContain("payload sha256 · after preflight");
+    /* W4A: no placeholder text for a digest that does not exist yet. */
+    expect(document.querySelector("[data-payload-digest]")).toBeNull();
+    expect(document.querySelector("[data-claim-forecast]")?.textContent).not.toContain("payload sha256");
   });
 
   it("with a preflight it prints the server's requested_spec_digest, shortened, the whole value in the title", () => {

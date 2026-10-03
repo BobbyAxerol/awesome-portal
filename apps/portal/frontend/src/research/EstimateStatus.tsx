@@ -83,9 +83,8 @@ export function EstimateStatusLine({ status, onRetry }: { status: EstimateStatus
     return (
       <span className="flex flex-wrap items-baseline gap-x-2" data-estimate-status={status.failure}>
         <span className="text-[9.5px]" style={{ color: "var(--bad)" }} title={title || undefined} aria-label={title ? `${ESTIMATE_ERROR_COPY[status.failure]} · ${title}` : undefined} tabIndex={title ? 0 : undefined}>
+          {/* W4A: status and code are the tooltip, not part of the line. */}
           {ESTIMATE_ERROR_COPY[status.failure]}
-          {status.status !== null ? ` · ${status.status}` : ""}
-          {status.code ? ` · ${status.code}` : ""}
         </span>
         {onRetry ? (
           <button type="button" className="text-[9.5px] font-semibold underline" style={{ color: "var(--accent)" }} onClick={onRetry} data-estimate-retry>

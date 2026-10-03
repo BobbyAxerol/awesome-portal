@@ -89,10 +89,11 @@ describe("F1b · Summary tab", () => {
     for (const phrase of GONE) expect(text, phrase).not.toContain(phrase);
   });
 
-  it("claim strip note is 'issued by <engine>' and nothing else", () => {
+  it("claim strip note is one readiness word; the engine and registry ride in its tooltip (W4B)", () => {
     const { container } = view();
     const note = container.querySelector("[data-passport-note] > span") as HTMLElement;
-    expect(note.textContent).toMatch(/^issued by quantbt-engine \S+$/);
+    expect(note.textContent).toMatch(/^(complete|ready|partial|not ready)$/);
+    expect(note.getAttribute("title")).toMatch(/^issued by quantbt-engine \S+/);
   });
 
   it("the window disclosure is the scope label; the rule sits in its tooltip", () => {
@@ -171,12 +172,12 @@ describe("F1b · stage tab headings", () => {
   };
 
   it.each([
-    ["split", "Stage 1 · Split — fold construction"],
-    ["search", "Stage 2 · Search — why these params"],
+    ["split", "Stage 1 · Split"],
+    ["search", "Stage 2 · Search"],
     ["freeze", "Stage 3 · Freeze"],
-    ["execute", "Stage 4 · Execute — candle replay"],
+    ["execute", "Stage 4 · Execute"],
     ["claim", "Stage 5 · Claim"],
-    ["atlas", "Atlas — how to read modes and routes"],
+    ["atlas", "Atlas"],
   ] as const)("%s: the heading is the title alone (no subtitle line)", async (stage, title) => {
     const node = await heading(stage);
     expect(node.textContent).toBe(title);

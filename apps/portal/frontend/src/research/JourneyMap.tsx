@@ -30,7 +30,7 @@ import type {
   JourneyPhase,
 } from "./foundationClient";
 import { ResearchPanel } from "./ResearchPanel";
-import { shortId } from "./researchFormat";
+import { PageHeader } from "./PageHeader";
 import { journeyCardScope, needsAlphaToOpen, needsRunToOpen, opensWithRunId, pickRunHref, resolveJourneyCardRoute } from "./screenRoutes";
 import type { ResearchState } from "./state";
 import { CursorNotice } from "./CursorNotice";
@@ -125,13 +125,18 @@ export const PICK_RUN_BADGE = "PICK A RUN";
 /** CG-S00-AV-01: the badge on a card whose served scope is an Alpha, not a run. */
 export const PICK_ALPHA_BADGE = "PICK AN ALPHA";
 
+/** W4A: the served title without its legacy ordinal (`12 · Alpha imports` reads `Alpha imports`). */
+function cardName(card: JourneyCard): string {
+  return card.title.replace(/^\d{1,2}\s*·\s*/, "");
+}
+
 function CardBody({ card, blocked }: { card: JourneyCard; blocked: string | null }) {
   const tone = TAG_STYLE[card.target_kind];
   return (
     <>
       <span className="flex items-start gap-2">
         <span className="flex-1 text-[12px] font-semibold" style={{ color: "var(--ink)" }}>
-          {card.title}
+          {cardName(card)}
         </span>
         {(blocked ?? TAG_LABEL[card.target_kind]) ? (
           <span
@@ -190,7 +195,8 @@ function JourneyCardLink({ card, runId }: { card: JourneyCard; runId: string | n
         data-card-availability={card.availability}
         data-card-picks-run={picksRun ? card.target_key : undefined}
         data-card-picks-alpha={picksAlpha ? card.target_key : undefined}
-        title={cardTitle(card)}
+        title={[cardTitle(card), picksAlpha ? "Opens the Run Library to pick an alpha" : "Opens the Run Library to pick a run"].filter(Boolean).join(" · ")}
+        aria-label={`${card.title}: ${picksAlpha ? "pick an alpha" : "pick a run"}`}
         className={CARD_CLASS}
         style={{
           border: `${card.target_kind === "RESEARCH_SCREEN" ? 1.5 : 1}px solid ${tone.border}`,
@@ -201,9 +207,6 @@ function JourneyCardLink({ card, runId }: { card: JourneyCard; runId: string | n
         data-card-route={pickRunHref(card.target_key, scope)}
       >
         <CardBody card={card} blocked={null} />
-        <span className="mono text-[8.5px] font-bold" style={{ color: "var(--accent)" }}>
-          {picksAlpha ? "pick an alpha →" : "pick a run →"}
-        </span>
       </Link>
     );
   }
@@ -381,48 +384,21 @@ export function JourneyMap({ descriptor, inspection, state, linkProblems = [], r
       data-screen="journey-map"
       className="mx-auto flex w-full min-w-0 max-w-[1280px] flex-col gap-3 pb-8"
     >
-      <header className="flex flex-col gap-1.5">
-        <div className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" role="group" data-breadcrumb>
-          <Link to={libraryHref()} style={{ color: "var(--accent)" }} data-crumb-library>
-            Run Library
-          </Link>
-          <span style={{ color: "var(--ink-faint)" }}>/</span>
-          {runId ? (
-            <>
-              <Link
-                to={hubHref(runId)}
-                className="mono"
-                style={{ color: "var(--accent)" }}
-                data-crumb-evidence
-                title={`Evidence Flow of ${runId}`}
-              >
-                {shortId(runId)}
-              </Link>
-              <span style={{ color: "var(--ink-faint)" }}>/</span>
-            </>
-          ) : null}
-          <span style={{ color: "var(--ink)" }} aria-current="page">Journey Map</span>
-        </div>
-        <div
-          className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2.5 border-b pb-2.5"
-          style={{ borderColor: "var(--line)" }}
-          data-journey-head
-        >
-          <div className="flex min-w-0 flex-col gap-[3px]">
-            <h1
-              className="text-[27px] font-normal leading-[1.2] tracking-[-.01em]"
-              style={{ fontFamily: "Newsreader, Georgia, serif" }}
-              data-descriptor-revision={descriptor?.revision}
-            >
-              Journey Map
-            </h1>
-          </div>
+      {/* W4A: one header, no crumb — the top bar shows the path. */}
+      <PageHeader
+        title={<span data-descriptor-revision={descriptor?.revision}>Journey Map</span>}
+        prev={{ label: "Run Library", href: libraryHref() }}
+        next={runId ? { label: "Evidence Flow", href: hubHref(runId) } : undefined}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1" data-journey-head>
           <TagLegend />
+          {runId === null && descriptor ? (
+            <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} data-pick-hint>
+              Cards open after you choose a run.
+            </span>
+          ) : null}
         </div>
-        {/* `ResearchPanel` prints `meta` only in its framed variant, and this screen is
-            plain, so the descriptor revision never reached the reader: the map said which
-            screens exist without saying which published answer it was reading. */}
-      </header>
+      </PageHeader>
 
       <ResearchPanel
         title="journey"

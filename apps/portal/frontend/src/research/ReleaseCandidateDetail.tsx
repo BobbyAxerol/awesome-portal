@@ -80,6 +80,8 @@ import type { RcPublicationController, RcPublicationView, RcReadFailure } from "
 import { iso } from "./utcMinute";
 import { shortDigest, shortId } from "./researchFormat";
 import { runLabelFor } from "./runLabels";
+import { markRunUnknown } from "../app/researchRunCrumb";
+import { ResearchNotice } from "./ResearchNotice";
 import { RunExitBar } from "./RunExitBar";
 import { hubHref, lineageRunHref, reportHref, type LinkCursor } from "./runLinks";
 import { runTerminalState, type RunTerminalState } from "./runTerminalState";
@@ -92,9 +94,9 @@ export { releaseCandidateHref, releaseCandidatePackHref };
 /* --------------------------------------------------------------- verbatim */
 
 /** Hi-fi title, verbatim. */
-export const RC_TITLE = "Release Candidate — compose, pin, publish";
+export const RC_TITLE = "Release candidate";
 /** Hi-fi breadcrumb tail, verbatim. */
-export const RC_CRUMB = "Release Candidate & Publish";
+export const RC_CRUMB = "Release candidate";
 
 /** Hi-fi scratch banner, verbatim (split around the two inline elements). */
 export const NOT_PUBLISHABLE_BADGE = "NOT_PUBLISHABLE";
@@ -103,25 +105,25 @@ export const NOT_PUBLISHABLE_COPY = ["Scratch run — no ", "alpha_version", " b
 export const NOT_PUBLISHABLE_TITLE =
   "This run was submitted without an alpha_version binding — a scratch research run. It stays fully usable as evidence for you, but no release candidate can be composed from it. Bind a version at New Run and re-run to publish.";
 
-export const IDENTITY_LABEL = "1 · identity & lineage";
+export const IDENTITY_LABEL = "identity";
 /** F2b: the hi-fi tail of the heading, now its tooltip. */
 export const IDENTITY_TITLE = "the unit that travels";
 export const IDENTITY_SPEC = "spec v0.7 §3.1";
 export const IDENTITY_SPEC_TITLE = "binding goes through rc_, never alpha↔run directly";
-export const TAXONOMY_CAPTION = "change taxonomy vs last published rc — ";
+export const TAXONOMY_CAPTION = "changes vs last published · ";
 export const VERDICT_LABEL = "gate verdict";
 export const VERDICT_TITLE = "verdict at compose time";
 
 /** Rail node labels by contract key (VD-P21-06: `run` reads "run / attempt"). */
 export const RAIL_LABEL: Record<RcRailNode["key"], string> = {
   alpha: "alpha",
-  alpha_version: "alpha_version",
-  run: "run / attempt",
-  selected_params: "selected params",
-  release_candidate: "release candidate",
+  alpha_version: "version",
+  run: "run",
+  selected_params: "params",
+  release_candidate: "candidate",
 };
 
-export const PACK_HEADER = "2 · evidence pack · gate R1";
+export const PACK_HEADER = "evidence pack";
 export const PACK_TITLE = "12 items of gate R1, each linked to the screen that proves it";
 export const PACK_FOOT_TITLE =
   "DEGRADED travels as DEGRADED — the reviewer sees it. MISSING blocks publish. The two INPUT rows are the researcher's own signed declarations.";
@@ -139,21 +141,21 @@ export const STATUS_TITLE: Record<Exclude<RcPackItem["status"], "MISSING">, stri
   INPUT: "researcher declaration — part of the signed pack",
 };
 
-export const RECORD_HEADER = "3 · record preview · spec v0.7 §3.2";
+export const RECORD_HEADER = "record";
 export const RECORD_TITLE = "exactly what is written, byte for byte";
 
 /** Handoff wording (VD-P21-02): the seal button never says Publish. */
 export const SEAL_LABEL = "Local seal evidence pack";
 export const SEAL_SENTENCE =
   "Sealing freezes this exact combination as a Portal-local immutable evidence pack. It creates no publication, no approval, no delivery, and does not start Paper.";
-export const SEAL_CONFIRM = "Seal now? Frozen as composed.";
+export const SEAL_CONFIRM = "Seal now? Freezes this pack.";
 export const SEAL_CONFIRM_TITLE = "The pack below is frozen as it is composed; a later change to code, params or evidence composes a new candidate.";
 export const SEAL_CONFIRM_BUTTON = "Confirm local seal";
-export const SEAL_RETRY_LABEL = "retry original seal request";
+export const SEAL_RETRY_LABEL = "Try again";
 export const SEAL_DIRTY = "Save the declarations first.";
 export const SEALED_SENTENCE =
   "This evidence pack is Portal-local and immutable. A further change to code, params or methodology composes a new candidate.";
-export const SEALED_REPLAY = "replay — same pack returned";
+export const SEALED_REPLAY = "Same pack returned (replay).";
 export const SEALED_REPLAY_TITLE = "The server returned this same pack for the same draft and evidence — a replay, not a second candidate.";
 /** E1: the read authority in words; the token stays in `data-read-authority`. */
 const READ_AUTHORITY_WORDS: Record<string, string> = {
@@ -164,7 +166,7 @@ export const DRAFT_NOT_PERSISTED = "Save the declarations first.";
 /* ------------------------------------------------------------- P22 publish */
 
 /** Hi-fi publish card label, verbatim. */
-export const PUBLISH_LABEL = "publish";
+export const PUBLISH_LABEL = "Publish";
 /** Hi-fi publish sentence, verbatim, split around the mono rc id. */
 export const PUBLISH_SENTENCE = [
   "Publishing freezes this exact combination as ",
@@ -172,7 +174,8 @@ export const PUBLISH_SENTENCE = [
 ] as const;
 /** Hi-fi button label, verbatim. */
 export function publishButtonLabel(releaseCandidateId: string): string {
-  return `Publish release candidate ${releaseCandidateId}`;
+  void releaseCandidateId; /* the id rides the tooltip; the button says the verb */
+  return "Publish";
 }
 /** Spec 11 §13, verbatim: the disabled label of a scratch run. */
 export const PUBLISH_UNBOUND_LABEL = "publish blocked — bind alpha_version first";
@@ -184,7 +187,7 @@ export const PUBLISHING_LABEL = "publishing…";
 export const SOD_SHORT = "separation of duties applies · R1 expiry +90d (default)";
 export const SOD_NOTE =
   "Separation of duties: the publisher cannot be the sole R1 approver where policy requires it. R1 approval default expiry: approved_at + 90d (policy default — confirm).";
-export const PUBLISH_CONFIRM = "Publish now? One R1 approval request is created.";
+export const PUBLISH_CONFIRM = "Publish now? Creates one approval request.";
 export const PUBLISH_CONFIRM_TITLE =
   "Publish now? One R1 approval request is created in the governance store for this exact pack. It cannot be edited afterwards — only superseded by a new candidate.";
 export const PUBLISH_CONFIRM_BUTTON = "Confirm publish";
@@ -199,20 +202,20 @@ export const PUBLISHED_SENTENCE =
   "Any further change to code, params, or methodology creates a NEW candidate and supersedes this one — this record itself never mutates.";
 
 /** VD-P22-05: a recorded attempt the governance store did not confirm — no hi-fi cell. */
-export const UNKNOWN_LABEL = "publication outcome unknown";
+export const UNKNOWN_LABEL = "Publish not confirmed";
 export const UNKNOWN_SHORT = "Not confirmed by the governance store — neither published nor refused.";
 export const UNKNOWN_COPY =
   "The governance store did not confirm the last attempt. It is neither published nor refused. Only the researcher who recorded it may send the same request again; nothing is re-submitted with a different payload.";
-export const RETRY_LABEL = "publish again — same request";
+export const RETRY_LABEL = "Try again";
 
 /** The pack route: publication is operated on the run's composition. */
-export const PUBLISH_GHOST_LABEL = "publish — on the run's composition";
-export const PUBLISH_GHOST_SHORT = "Publish on the run's composition.";
+export const PUBLISH_GHOST_LABEL = "Publish";
+export const PUBLISH_GHOST_SHORT = "Publish on the run.";
 export const PUBLISH_GHOST_COPY =
   "A sealed pack is read-only. Publishing is operated on the run's composition; this route prints the publication and its mirror once they exist.";
 
 /** Hi-fi mirror, draft branch, verbatim where the facts are the hi-fi's own copy. */
-export const MIRROR_LABEL = "what the approval inbox sees";
+export const MIRROR_LABEL = "approval inbox";
 export const MIRROR_SIDE = "read model · decisions live on the Execution side";
 export const MIRROR_GATE = "R1 · RESEARCH EVIDENCE";
 export const MIRROR_SUBJECT = "— not yet published";
@@ -529,23 +532,26 @@ const LinkContext = createContext<LinkCursor>({});
 function Reason({ code, what }: { code: string | null | undefined; what?: string }) {
   if (!code) return null;
   const sentence = rcReasonSentence(code);
+  const tip = [sentence, code].filter(Boolean).join(" · ");
+  /* The reason is a tooltip on a focusable mark, never printed text. */
   return (
-    <span className="rc-reason" data-reason-code={code} data-reason-for={what}>
-      {sentence ? `${sentence} · ` : ""}
-      {code}
+    <span className="rc-reason" data-reason-code={code} data-reason-for={what} title={tip} aria-label={tip} role="note" tabIndex={0}>
+      ⓘ
     </span>
   );
 }
 
-/** A value the server did not send: the state word and the reason, never a digit. */
+/** A value the server did not send: `<what> — <state word>`; the reason is the tooltip. */
 function Absent({ what, availability }: { what?: string; availability: RcAvailability }) {
+  const code = reasonOf(availability);
+  const sentence = rcReasonSentence(code);
+  const tip = [sentence, code].filter(Boolean).join(" · ");
   return (
-    <span className="inline-flex flex-wrap items-baseline gap-x-1.5" data-absent={what ?? ""} data-absent-state={availability.state}>
-      <span className="rc-absent">
+    <span data-absent={what ?? ""} data-absent-state={availability.state} data-reason-code={code}>
+      <span className="rc-absent" title={tip} aria-label={`${what ? `${what} — ` : ""}${RC_WITHHELD_WORDS[availability.state]} (${tip})`} tabIndex={0}>
         {what ? `${what} — ` : ""}
         {RC_WITHHELD_WORDS[availability.state]}
       </span>
-      <Reason code={reasonOf(availability)} />
     </span>
   );
 }
@@ -568,11 +574,8 @@ function Skeleton({ widths = [72, 96, 60] }: { widths?: number[] }) {
 /** What a block shows when there is no composition to show: a skeleton, or its state word. */
 function Pending({ state }: { state: ResearchState }) {
   if (state.state === "loading") return <Skeleton />;
-  return (
-    <p className="rc-pending" data-block-withheld={state.state}>
-      {state.state} — nothing from this block is shown
-    </p>
-  );
+  /* The page-level notice says why; a withheld block prints nothing (no ghost card). */
+  return <span className="sr-only" hidden data-block-withheld={state.state} />;
 }
 
 /** Inline confirmation (spec 11 §5.6: no optimistic write). Focus moves to the confirm button. */
@@ -627,7 +630,7 @@ function Header({ runId, here, chips, alpha = null, composeRun = null, attemptId
           {runId ? (
             <>
               <Link to={hubHref(runId, { ...link, stage: "claim" })} data-action="back-to-hub">
-                Evidence Flow
+                Evidence
               </Link>
               <span className="sep">/</span>
               <span className="rc-mono" data-crumb-run title={runId}>
@@ -653,8 +656,8 @@ function Header({ runId, here, chips, alpha = null, composeRun = null, attemptId
       <div className="r">
         {chips}
         {runId ? (
-          <Link to={reportHref(runId, link)} className="rc-linkbtn" data-action="run-report" title="Screen 09 — the run report this candidate is built from">
-            run report
+          <Link to={reportHref(runId, link)} className="rc-linkbtn" data-action="run-report" title="The run report this candidate is built from">
+            Report
           </Link>
         ) : null}
         {alpha !== null ? (
@@ -662,9 +665,9 @@ function Header({ runId, here, chips, alpha = null, composeRun = null, attemptId
             to={lineageRunHref(alpha.alphaId, { av: alpha.alphaVersionId, run: runId, attempt: attemptId })}
             className="rc-linkbtn"
             data-action="open-lineage"
-            title="Screen 10 — this alpha's attempt lineage, on this version"
+            title="This alpha's attempt lineage, on this version"
           >
-            lineage
+            Lineage
           </Link>
         ) : null}
       </div>
@@ -693,8 +696,8 @@ export function digestText(value: string): string {
 
 function StateChip({ value }: { value: string }) {
   return (
-    <span className="rc-state" data-s={value} data-state-chip={value} title={value === "SEALED" ? "an immutable Portal-local pack exists" : undefined}>
-      {value}
+    <span className="rc-state" data-s={value} data-state-chip={value} title={value === "SEALED" ? "Sealed locally: an immutable Portal-local pack exists. Not delivered, not approved." : undefined} tabIndex={value === "SEALED" ? 0 : undefined}>
+      {value === "SEALED" ? "Sealed" : stateWords(value)}
     </span>
   );
 }
@@ -708,23 +711,8 @@ function SealChips({ seal, delivered, showChip = true }: { seal: RcLocalSeal; de
           sealed locally
         </span>
       )}
-      <span className="rc-lifecycle" data-lifecycle title={`${seal.delivery_state ?? "delivery not published"} · ${seal.approval_state ?? "approval not published"}`}>
-        {seal.delivery_state !== null ? stateWords(seal.delivery_state) : "delivery not published"} · {seal.approval_state !== null ? stateWords(seal.approval_state) : "approval not published"}
-      </span>
+      <span className="sr-only" hidden data-lifecycle title={`${seal.delivery_state !== null ? stateWords(seal.delivery_state) : "delivery not published"} · ${seal.approval_state !== null ? stateWords(seal.approval_state) : "approval not published"}`} />
     </>
-  );
-}
-
-/**
- * The server's code lives behind a disclosure, never in the sentence: on
- * screen a 403 and a 404 must read the same (audit F-04, X3 2026-09-26).
- */
-function CodeDetail({ code, className }: { code: string; className: string }) {
-  return (
-    <details className={className}>
-      <summary>details</summary>
-      <span data-error-code>{code}</span>
-    </details>
   );
 }
 
@@ -735,29 +723,32 @@ function Notice({ state, requestId, code, onRetry, inFlight }: {
   onRetry: () => void;
   inFlight: boolean;
 }) {
+  /* ONE notice, one action: Read again for a repeatable read, Library for a denied / terminal one. */
+  const action =
+    state.mayRetry && !inFlight ? (
+      <button type="button" className="rc-btn" data-action="retry" onClick={onRetry}>
+        Read again
+      </button>
+    ) : state.state === "denied" || state.state === "terminal" ? (
+      <Link to={RUNS_ROOT} data-action="run-library">
+        Library
+      </Link>
+    ) : null;
   return (
     <div className="flex flex-col gap-1.5" data-panel="notice" data-rc-notice={state.state}>
-      <ResearchPanel title="release candidate" state={state} minBodyHeight={0} />
-      {code ? <CodeDetail code={code} className="rc-reason" /> : null}
-      {requestId ? (
-        <span className="rc-reason" data-request-id>
-          request {requestId}
-        </span>
-      ) : null}
-      {state.mayRetry && !inFlight ? (
-        <span>
-          <button type="button" className="rc-btn" data-action="retry" onClick={onRetry}>
-            read again
-          </button>
-        </span>
-      ) : null}
-      {state.state === "denied" || state.state === "terminal" ? (
-        <span className="rc-reason">
-          <Link to={RUNS_ROOT} data-action="run-library">
-            ← Run Library
-          </Link>
-        </span>
-      ) : null}
+      {state.state === "loading" || state.state === "available" ? (
+        <ResearchPanel title="release candidate" state={state} minBodyHeight={0} />
+      ) : (
+        <ResearchNotice
+          state={state.state}
+          code={code}
+          requestId={requestId}
+          detail={[state.reason, state.detail].filter(Boolean).join(" · ") || null}
+          withheld={state.state !== "partial" && state.state !== "stale"}
+          sentence={state.state === "partial" ? "Partial composition." : state.state === "commissioned" || state.state === "empty" ? state.reason : null}
+          action={action}
+        />
+      )}
     </div>
   );
 }
@@ -796,9 +787,9 @@ function PromotionPickNode({ publication }: { publication: RcPublication | null 
   if (pick === null) {
     return (
       <div className="rc-node" data-rail-node="promotion_pick" data-tone="dim" data-pick-absent="true">
-        <span className="k">promotion pick</span>
+        <span className="k">pick</span>
         <span className="v">
-          <span className="rc-absent">promotion pick — not published</span>
+          <span className="rc-absent" title="promotion pick — not published" tabIndex={0}>none yet</span>
         </span>
       </div>
     );
@@ -823,7 +814,7 @@ function PromotionPickNode({ publication }: { publication: RcPublication | null 
       data-pick-artifact={pick.artifact_id ?? undefined}
       title={title}
     >
-      <span className="k">promotion pick</span>
+      <span className="k">pick</span>
       <span className="v" data-pick-chip>
         {approvalHref !== null ? (
           <Link to={approvalHref} data-action="open-pick-approval" title={`approval ${pick.approval_id} — where the decision lives`} className="rc-chiplink">
@@ -838,7 +829,7 @@ function PromotionPickNode({ publication }: { publication: RcPublication | null 
         {pick.selected_trial_id === null ? (
           <span className="rc-absent">trial — not published</span>
         ) : trialHref !== null ? (
-          <Link to={trialHref} data-action="open-pick-trial" title={`Screen 06 — the picked trial, selected in the trial ledger. ${trialTitle}`}>
+          <Link to={trialHref} data-action="open-pick-trial" title={`The picked trial, selected in the trial ledger. ${trialTitle}`}>
             {trialLabel({ sourceId: pick.selected_trial_id })}
           </Link>
         ) : (
@@ -894,7 +885,7 @@ function Rail({ compose, sealedId, pick }: { compose: RcCompose; sealedId: strin
                 node.key === "run" ? runLabelFor(node.value) ?? shortId(node.value) : shortId(node.value)
               )}
             </span>
-            {node.detail !== null ? (
+            {node.detail !== null && node.key !== "release_candidate" ? (
               <span className="sub" data-rail-detail>
                 {shortId(node.detail)}
               </span>
@@ -926,17 +917,23 @@ function Rail({ compose, sealedId, pick }: { compose: RcCompose; sealedId: strin
 }
 
 function Taxonomy({ rows, comparison }: { rows: readonly RcTaxonomyRow[]; comparison: RcCompose["published_comparison"] }) {
+  /* No predecessor: one line (the four UNSET rows said the same thing); the table only when there is something to compare. */
+  if (comparison.last_release_candidate_id === null) {
+    return (
+      <div className="rc-tax" data-panel-part="taxonomy" data-taxonomy-none>
+        <p className="rc-k" data-taxonomy-caption data-last-rc="">
+          <Absent what="earlier candidate" availability={comparison.availability} />
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="rc-tax" data-panel-part="taxonomy">
-      <p className="rc-k" data-taxonomy-caption data-last-rc={comparison.last_release_candidate_id ?? ""}>
+      <p className="rc-k" data-taxonomy-caption data-last-rc={comparison.last_release_candidate_id}>
         {TAXONOMY_CAPTION}
-        {comparison.last_release_candidate_id !== null ? (
-          <Link className="rc-mono" to={releaseCandidatePackHref(comparison.last_release_candidate_id)} data-action="open-last-rc">
-            {comparison.last_release_candidate_id}
-          </Link>
-        ) : (
-          <Absent what="last published rc" availability={comparison.availability} />
-        )}
+        <Link className="rc-mono" to={releaseCandidatePackHref(comparison.last_release_candidate_id)} data-action="open-last-rc">
+          {comparison.last_release_candidate_id}
+        </Link>
       </p>
       <table>
         <thead>
@@ -947,7 +944,7 @@ function Taxonomy({ rows, comparison }: { rows: readonly RcTaxonomyRow[]; compar
             <th scope="col" className="state">
               state
             </th>
-            <th scope="col">consequence (§3.4)</th>
+            <th scope="col">consequence</th>
           </tr>
         </thead>
         <tbody>
@@ -955,7 +952,7 @@ function Taxonomy({ rows, comparison }: { rows: readonly RcTaxonomyRow[]; compar
             <tr key={`${row.what}-${index}`} data-taxonomy-row={row.what} data-taxonomy-state={row.state}>
               <td className="what">{row.what}</td>
               <td className="state" data-s={row.state}>
-                {row.state}
+                {stateWords(row.state)}
               </td>
               <td>{row.consequence}</td>
             </tr>
@@ -970,8 +967,7 @@ function IdentityBlock({ compose, state, publication }: { compose: RcCompose | n
   return (
     <section className="rc-card rc-ident" data-panel="identity" aria-label="identity and lineage">
       <div className="rc-cardhead">
-        <h3 className="rc-k" title={IDENTITY_TITLE}>{IDENTITY_LABEL}</h3>
-        <span className="rc-spec" title={IDENTITY_SPEC_TITLE}>{IDENTITY_SPEC}</span>
+        <h3 className="rc-k" title={`${IDENTITY_TITLE} · ${IDENTITY_SPEC} · ${IDENTITY_SPEC_TITLE}`}>{IDENTITY_LABEL}</h3>
       </div>
       {compose ? (
         <>
@@ -1185,24 +1181,32 @@ function PackRow({ item, route, declared, editor, highlighted = false, onHover }
           {item.item}
         </th>
         <td>
-          <span className="rc-status" data-s={item.status} title={statusTitle(item)} data-status-chip>
-            {item.status}
+          <span
+            className="rc-status"
+            data-s={item.status}
+            title={[
+              statusTitle(item),
+              item.note,
+              item.status === "MISSING" || item.status === "DEGRADED" ? rcReasonSentence(reasonOf(item.availability)) : null,
+              item.status === "MISSING" || item.status === "DEGRADED" ? reasonOf(item.availability) : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            aria-label={`${stateWords(item.status)}. ${item.note}`}
+            tabIndex={0}
+            data-status-chip
+            data-reason-code={item.status === "MISSING" || item.status === "DEGRADED" ? reasonOf(item.availability) : undefined}
+          >
+            {stateWords(item.status)}
           </span>
         </td>
         <td className="digest" data-label="digest" data-digest={item.digest ?? ""} title={item.digest ?? undefined}>
-          {item.digest !== null ? digestText(item.digest) : decl !== null ? <span className="rc-absent">— not declared</span> : <Absent availability={item.availability} />}
+          {item.digest !== null ? digestText(item.digest) : decl !== null ? <span className="rc-absent">not declared</span> : <Absent availability={item.availability} />}
         </td>
         <td className="source" data-label="source">
           <SourceCell item={item} route={route} />
         </td>
-        <td className="note" data-label="note">
-          {item.note}
-          {item.status === "MISSING" || item.status === "DEGRADED" ? (
-            <>
-              {" "}
-              <Reason code={item.availability.reason_code} what={item.key} />
-            </>
-          ) : null}
+        <td className="note" data-label="note" data-note={item.note}>
           {decl !== null ? (
             <>
               <span className="rc-declared" data-declared={item.key}>
@@ -1282,11 +1286,19 @@ function PackBlock({ items, runId, alphaId, counts, axes, declarations, editor, 
           {items ? <CertChips axes={axes} /> : null}
           {counts ? (
             <span className="rc-count" data-pack-counts title={PACK_FOOT_TITLE}>
-              {counts.complete} COMPLETE · {counts.degraded} DEGRADED · {counts.input} INPUT · {counts.missing} MISSING
+              {[
+                [counts.complete, "complete"],
+                [counts.degraded, "degraded"],
+                [counts.input, "declared"],
+                [counts.missing, "missing"],
+              ]
+                .filter(([count]) => (count as number) > 0)
+                .map(([count, word]) => `${count} ${word}`)
+                .join(" · ")}
             </span>
           ) : items ? (
             <span className="rc-count" data-pack-counts-absent>
-              counts are not part of the frozen pack
+              no counts in the frozen pack
             </span>
           ) : null}
         </div>
@@ -1307,9 +1319,9 @@ function PackBlock({ items, runId, alphaId, counts, axes, declarations, editor, 
                 <th scope="col">#</th>
                 <th scope="col">item</th>
                 <th scope="col" title={PACK_FOOT_TITLE}>status</th>
-                <th scope="col">digest / value</th>
+                <th scope="col">digest</th>
                 <th scope="col">source</th>
-                <th scope="col">note</th>
+                <th scope="col">declared</th>
               </tr>
             </thead>
             <tbody>
@@ -1389,7 +1401,7 @@ function RecordBlock({ fields, state }: { fields: readonly RcField[] | null; sta
   return (
     <section className="rc-card rc-record" data-panel="record" aria-label="record preview">
       <div className="h">
-        <h3 className="rc-k" title={RECORD_TITLE}>{RECORD_HEADER}</h3>
+        <h3 className="rc-k" title={`${RECORD_TITLE} · spec v0.7 §3.2`}>{RECORD_HEADER}</h3>
         <button type="button" className="rc-copy" data-action="copy-yaml" aria-disabled={fields === null || undefined} aria-live="polite" onClick={onCopy}>
           {copy === "copied" ? "✓ copied" : copy === "failed" ? "copy unavailable" : "copy yaml"}
         </button>
@@ -1416,15 +1428,8 @@ function RecordBlock({ fields, state }: { fields: readonly RcField[] | null; sta
 
 function RefusalNotice({ refusal, op }: { refusal: RcWriteRefusal; op: string }) {
   return (
-    <div className="rc-notice" data-write-notice={op} data-outcome={refusal.outcome} role="alert">
-      <span>{refusal.message}</span>
-      {refusal.code ? <CodeDetail code={refusal.code} className="code" /> : null}
-      {refusal.requestId ? (
-        <span className="code" data-request-id>
-          request {refusal.requestId}
-        </span>
-      ) : null}
-      {/* FG-05: a 401 already raised the shell's Frame 01D sign-in; no second sign-in link here. */}
+    <div data-write-notice={op} data-outcome={refusal.outcome}>
+      <ResearchNotice state="terminal" sentence={refusal.message} code={refusal.code} requestId={refusal.requestId} />
     </div>
   );
 }
@@ -1441,14 +1446,8 @@ function WriteNotice({ slot, op, compose }: { slot: RcWriteSlot; op: RcWriteOp; 
     const sealedCode = compose?.actions.seal_blocked_reason;
     if (slot.refusal.outcome === "conflict" && sealedCode === ALREADY_SEALED_CODE) {
       return (
-        <div className="rc-notice" data-write-notice={op} data-outcome="conflict" data-post-seal-refusal role="alert">
-          <span>{rcReasonSentence(sealedCode)}</span>
-          <CodeDetail code={sealedCode} className="code" />
-          {slot.refusal.requestId ? (
-            <span className="code" data-request-id>
-              request {slot.refusal.requestId}
-            </span>
-          ) : null}
+        <div data-write-notice={op} data-outcome="conflict" data-post-seal-refusal>
+          <ResearchNotice state="terminal" sentence={rcReasonSentence(sealedCode)} code={sealedCode} requestId={slot.refusal.requestId} />
         </div>
       );
     }
@@ -1457,15 +1456,15 @@ function WriteNotice({ slot, op, compose }: { slot: RcWriteSlot; op: RcWriteOp; 
   if (op === "patch" && slot.state === "saved") {
     return (
       <div className="rc-notice" data-write-notice="patch" data-outcome="saved" role="status">
-        declaration saved — the composition above is the server's answer to it
+        Saved
       </div>
     );
   }
   if (op === "seal" && slot.state === "sealed") {
     return (
       <div className="rc-notice" data-write-notice="seal" data-outcome="sealed" role="status">
-        <span>sealed locally</span>
-        <span className="code" data-seal-response-id>
+        <span>Sealed</span>
+        <span className="sr-only" hidden data-seal-response-id>
           {slot.seal.release_candidate_id}
         </span>
       </div>
@@ -1500,7 +1499,7 @@ function SealCard({ compose, controller, dirty, publishing }: {
 
   return (
     <section className="rc-seal" data-panel="seal" aria-label="local seal">
-      <h3 className="k" title={SEAL_SENTENCE}>local seal</h3>
+      <h3 className="k" title={SEAL_SENTENCE}>Seal</h3>
       {confirming && blocked === null && compose ? (
         <Confirm
           label="confirm local seal"
@@ -1519,7 +1518,7 @@ function SealCard({ compose, controller, dirty, publishing }: {
         <button
           type="button"
           className="rc-sealbtn"
-          title={SEAL_SENTENCE}
+          title={`${SEAL_LABEL}. ${SEAL_SENTENCE}`}
           data-action="local-seal"
           data-seal-enabled={blocked === null ? "true" : "false"}
           aria-disabled={blocked !== null || undefined}
@@ -1529,13 +1528,12 @@ function SealCard({ compose, controller, dirty, publishing }: {
             if (blocked === null) setConfirming(true);
           }}
         >
-          {sealing ? "sealing…" : SEAL_LABEL}
+          {sealing ? "sealing…" : "Seal"}
         </button>
       )}
       {blocked !== null ? (
-        <span id={reasonId} className="rc-blocked" data-seal-blocked={blocked.code ?? "LOCAL"}>
+        <span id={reasonId} className="rc-blocked" data-seal-blocked={blocked.code ?? "LOCAL"} title={blocked.code ?? undefined}>
           {blocked.label}
-          {blocked.code ? ` · ${blocked.code}` : ""}
         </span>
       ) : null}
       <WriteNotice slot={controller.write} op="seal" compose={compose} />
@@ -1574,7 +1572,7 @@ function SealedCard({ seal, replayed }: {
 }) {
   return (
     <section className="rc-sealed" data-panel="sealed" data-sealed={seal.release_candidate_id ?? ""} aria-label="sealed locally">
-      <h3 className="k" title={SEALED_SENTENCE}>sealed locally — immutable</h3>
+      <h3 className="k" title={SEALED_SENTENCE}>Sealed</h3>
       <span className="id" data-sealed-id>
         {seal.release_candidate_id !== null ? (
           <Link to={releaseCandidatePackHref(seal.release_candidate_id)} data-action="open-pack">
@@ -1585,9 +1583,9 @@ function SealedCard({ seal, replayed }: {
         )}
       </span>
       <p className="rc-mono" data-sealed-facts title={seal.pack_digest !== null ? `pack digest ${seal.pack_digest}` : undefined}>
-        sealed_at {seal.sealed_at_utc_ms !== null ? iso(seal.sealed_at_utc_ms) : "not published"} · pack digest {seal.pack_digest !== null ? digestText(seal.pack_digest) : "not published"}
+        {seal.sealed_at_utc_ms !== null ? iso(seal.sealed_at_utc_ms) : "not published"} · {seal.pack_digest !== null ? digestText(seal.pack_digest) : "not published"}
       </p>
-      <p className="rc-mono" data-sealed-lifecycle>
+      <p className="sr-only" hidden data-sealed-lifecycle>
         <span data-delivery-state={seal.delivery_state ?? ""} title={seal.delivery_state ?? undefined}>{seal.delivery_state !== null ? stateWords(seal.delivery_state) : "delivery not published"}</span> ·{" "}
         <span data-approval-state={seal.approval_state ?? ""} title={seal.approval_state ?? undefined}>{seal.approval_state !== null ? stateWords(seal.approval_state) : "approval not published"}</span>
       </p>
@@ -1621,19 +1619,18 @@ function ReadFailure({ view, retry }: { view: RcPublicationView; retry?: () => v
       data-publication-read={view.state}
       role={transient ? "status" : "alert"}
     >
-      <span>{words}</span>
-      {failure.code || failure.status ? (
-        <CodeDetail code={failure.code ?? `HTTP ${failure.status}`} className="code" />
-      ) : null}
-      {failure.requestId ? (
-        <span className="code" data-request-id>
-          request {failure.requestId}
-        </span>
-      ) : null}
+      <span
+        title={[failure.code ?? (failure.status ? `HTTP ${failure.status}` : null), failure.requestId ? `request ${failure.requestId}` : null].filter(Boolean).join(" · ") || undefined}
+        tabIndex={0}
+        data-refusal-code={failure.code ?? undefined}
+        data-refusal-request={failure.requestId ?? undefined}
+      >
+        {words}
+      </span>
       {retry && view.state !== "session" && view.state !== "denied" ? (
         <span>
           <button type="button" className="rc-btn" data-action="retry-publication" onClick={retry}>
-            read again
+            Read again
           </button>
         </span>
       ) : null}
@@ -1770,17 +1767,8 @@ function PublishCard({ compose, controller, publication }: {
       <h3 className="k" title={`${before}${releaseCandidateId ?? "rc_(draft)"}${after}`}>
         {PUBLISH_LABEL}
       </h3>
-      <p data-publish-sentence>
-        {releaseCandidateId !== null ? (
-          <span className="rc-mono" data-publish-rc>
-            {releaseCandidateId}
-          </span>
-        ) : (
-          <span className="rc-mono" data-publish-rc-absent>
-            rc_(draft)
-          </span>
-        )}
-      </p>
+      {/* The candidate's id is in the identity rail; here it is the button's tooltip. */}
+      <span className="sr-only" hidden data-publish-sentence data-publish-rc={releaseCandidateId ?? undefined} />
       {view.state === "fresh" && claims.length > 1 && view.publication.may_publish ? (
         <fieldset className="rc-claims" data-claim-choice>
           <legend>{CLAIM_LEGEND}</legend>
@@ -1819,6 +1807,7 @@ function PublishCard({ compose, controller, publication }: {
           type="button"
           className="rc-sealbtn"
           data-action="publish"
+          title={`${releaseCandidateId !== null ? `Publish ${releaseCandidateId}. ` : ""}${SOD_NOTE}`}
           data-publish-enabled={blocked === null ? "true" : "false"}
           aria-disabled={blocked !== null || undefined}
           aria-describedby={blocked !== null && !publishing ? reasonId : undefined}
@@ -1831,17 +1820,14 @@ function PublishCard({ compose, controller, publication }: {
         </button>
       )}
       {blocked !== null && !publishing ? (
-        <span id={reasonId} className="rc-blocked" data-publish-blocked={blocked.code ?? "LOCAL"}>
+        <span id={reasonId} className="rc-blocked" data-publish-blocked={blocked.code ?? "LOCAL"} title={blocked.code ?? undefined}>
           {blocked.label}
-          {blocked.code ? ` · ${blocked.code}` : ""}
         </span>
       ) : null}
       <PublicationConflict publication={publication.publication} />
       <ReadFailure view={view} retry={publication.retry} />
       <PublishWriteNotice publication={publication} />
-      <p className="sod" title={SOD_NOTE} tabIndex={0} data-sod>
-        {SOD_SHORT}
-      </p>
+      <span className="sr-only" hidden data-sod title={`${SOD_SHORT}. ${SOD_NOTE}`} />
     </section>
   );
 }
@@ -1871,10 +1857,8 @@ function UnknownOutcomeCard({ publication, controller }: { publication: RcPublic
             : null;
   return (
     <section className="rc-unknown" data-panel="publish-unknown" aria-label={UNKNOWN_LABEL} data-publication-state={current.state}>
-      <h3 className="k">{UNKNOWN_LABEL}</h3>
-      <p title={UNKNOWN_COPY} data-unknown-copy>
-        {UNKNOWN_SHORT}
-      </p>
+      <h3 className="k" title={`${UNKNOWN_SHORT} ${UNKNOWN_COPY}`} tabIndex={0}>{UNKNOWN_LABEL}</h3>
+      <span className="sr-only" hidden data-unknown-copy title={`${UNKNOWN_SHORT} ${UNKNOWN_COPY}`} />
       <p className="rc-pubfacts" data-publication-facts={current.state}>
         publication {current.state} · {current.release_candidate_id} · as of {iso(current.as_of_utc_ms)}
       </p>
@@ -1914,9 +1898,8 @@ function UnknownOutcomeCard({ publication, controller }: { publication: RcPublic
         {publishing ? PUBLISHING_LABEL : RETRY_LABEL}
       </button>
       {blocked !== null && !publishing ? (
-        <span id={reasonId} className="rc-blocked" data-publish-blocked={blocked.code ?? "LOCAL"}>
+        <span id={reasonId} className="rc-blocked" data-publish-blocked={blocked.code ?? "LOCAL"} title={blocked.code ?? undefined}>
           {blocked.label}
-          {blocked.code ? ` · ${blocked.code}` : ""}
         </span>
       ) : null}
       <ReadFailure view={publication.view} retry={publication.retry} />
@@ -1980,32 +1963,13 @@ function PublishedCard({ releaseCandidateId, publication }: { releaseCandidateId
 
 /** Read-model ghost before publication: nothing inside it is interactive (spec 11 §16.3). */
 function MirrorGhost({ foot }: { foot: ReactNode }) {
+  /* One line, not a ghost card: nothing is published yet, and the foot's reason is the tooltip. */
   return (
     <section className="rc-ghost" data-panel="mirror-ghost" data-mirror-ghost aria-label="approval inbox mirror, not published">
-      <div className="rc-cardhead">
-        <h3 className="k" title={MIRROR_NOTE}>{MIRROR_LABEL}</h3>
-        <span className="rc-spec">{MIRROR_SIDE}</span>
-      </div>
-      <div className="rc-mirrorrow">
-        <span className="gate">{MIRROR_GATE}</span>
-        <span className="subj">{MIRROR_SUBJECT}</span>
-        <span className="st" data-mirror-status="not-published">
-          status not published
-        </span>
-        <span className="sla">{MIRROR_SLA}</span>
-      </div>
-      <div className="rc-mirrormeta" data-mirror-meta>
-        <span className="rc-mseg">
-          <span>{MIRROR_POOL_ABSENT}</span>
-          <span>·</span>
-        </span>
-        <span className="rc-mseg">
-          <span>conditions: not published</span>
-          <span>·</span>
-        </span>
-        <span data-mirror-outcomes="legend">{MIRROR_OUTCOMES}</span>
-      </div>
-      <span className="rc-reason" data-mirror-foot>
+      <p className="rc-reason" data-mirror-status="not-published" title={MIRROR_NOTE} tabIndex={0}>
+        Not published — the approval row appears after publish.
+      </p>
+      <span className="sr-only" hidden data-mirror-foot>
         {foot}
       </span>
     </section>
@@ -2283,6 +2247,10 @@ const HELD: ResearchState = researchState({ kind: "in-flight", hasAcceptedRespon
 
 function RunFace({ runId, terminal, label, link, onRetry }: { runId: string; terminal: RunTerminalState; label: string | null; link: LinkCursor; onRetry: () => void }) {
   const unavailable = terminal.phase === "unavailable";
+  /* The shell's crumb names an unknown run as plain text, not a link to its hub. */
+  useEffect(() => {
+    if (unavailable) markRunUnknown(runId);
+  }, [unavailable, runId]);
   return (
     <div className="rc-page" data-screen="release-candidate" data-rc-mode="compose" data-run={runId} data-rc-state={unavailable ? "denied" : "empty"} data-run-phase={terminal.phase}>
       <style>{RC_CSS}</style>
@@ -2401,12 +2369,21 @@ function ComposeScreen({ runId, controller, publication, status = NO_STATUS, lin
       <div className="rc-meta" data-panel="meta">
         {compose ? (
           <>
-            <span data-read-authority={compose.read_authority}>{READ_AUTHORITY_WORDS[compose.read_authority] ?? compose.read_authority}</span>
-            <span data-as-of>as of {iso(compose.as_of_utc_ms)}</span>
-            <span data-source-fingerprint title={compose.source_fingerprint}>source {shortDigest(compose.source_fingerprint)}</span>
-            <span data-draft-meta data-draft-revision={compose.draft.revision} data-draft-state={compose.draft.state}>
-              {compose.draft.state === "VIRTUAL" ? "draft not saved yet" : `draft saved · revision ${compose.draft.revision}`}
-              {compose.draft.updated_at_utc_ms !== null ? ` · saved ${iso(compose.draft.updated_at_utc_ms)}` : ""}
+            <span
+              data-as-of
+              data-read-authority={compose.read_authority}
+              data-source-fingerprint={compose.source_fingerprint}
+              title={`${READ_AUTHORITY_WORDS[compose.read_authority] ?? compose.read_authority} · source ${shortDigest(compose.source_fingerprint)}`}
+            >
+              as of {iso(compose.as_of_utc_ms)}
+            </span>
+            <span
+              data-draft-meta
+              data-draft-revision={compose.draft.revision}
+              data-draft-state={compose.draft.state}
+              title={compose.draft.state === "VIRTUAL" ? undefined : `revision ${compose.draft.revision}${compose.draft.updated_at_utc_ms !== null ? ` · saved ${iso(compose.draft.updated_at_utc_ms)}` : ""}`}
+            >
+              {compose.draft.state === "VIRTUAL" ? "Draft not saved yet" : "Draft saved"}
             </span>
           </>
         ) : (
@@ -2485,10 +2462,9 @@ function PackScreen({ releaseCandidateId, controller, publication }: { releaseCa
       <div className="rc-meta" data-panel="meta">
         {pack ? (
           <>
-            <span data-read-authority={pack.read_authority}>{READ_AUTHORITY_WORDS[pack.read_authority] ?? pack.read_authority}</span>
-            <span data-sealed-at>sealed {iso(pack.sealed_at_utc_ms)}</span>
-            <span data-pack-digest title={pack.pack_digest}>pack {shortDigest(pack.pack_digest)}</span>
-            <span data-source-fingerprint title={pack.frozen_core.source_fingerprint}>source {shortDigest(pack.frozen_core.source_fingerprint)}</span>
+            <span data-sealed-at data-read-authority={pack.read_authority} title={`${READ_AUTHORITY_WORDS[pack.read_authority] ?? pack.read_authority} · pack ${shortDigest(pack.pack_digest)} · source ${shortDigest(pack.frozen_core.source_fingerprint)}`}>
+              sealed {iso(pack.sealed_at_utc_ms)}
+            </span>
           </>
         ) : (
           <span>{state.state}</span>
@@ -2550,8 +2526,7 @@ function PackIdentity({ pack, state, publication }: { pack: RcPack | null; state
   return (
     <section className="rc-card rc-ident" data-panel="identity" aria-label="identity and lineage">
       <div className="rc-cardhead">
-        <h3 className="rc-k" title={IDENTITY_TITLE}>{IDENTITY_LABEL}</h3>
-        <span className="rc-spec" title={IDENTITY_SPEC_TITLE}>{IDENTITY_SPEC}</span>
+        <h3 className="rc-k" title={`${IDENTITY_TITLE} · ${IDENTITY_SPEC} · ${IDENTITY_SPEC_TITLE}`}>{IDENTITY_LABEL}</h3>
       </div>
       {pack ? (
         <>

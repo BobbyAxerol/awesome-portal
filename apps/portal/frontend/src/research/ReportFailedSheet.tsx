@@ -11,6 +11,7 @@
  */
 
 import type { FinalAudit, FrozenCoreFailed } from "./reportClient";
+import { humanise } from "./humanise";
 import { STAGE_CHECK_WORDS, STAGE_LABEL } from "./reportClient";
 import { foldLabel, shortDigest, shortId } from "./researchFormat";
 import { runLabelFor, runLabelOrShortId } from "./runLabels";
@@ -32,8 +33,8 @@ const ARTIFACT_WORDS: Record<FrozenCoreFailed["artifacts"][number]["state"], str
 
 function Absent({ code }: { code: string | null }) {
   return (
-    <span className="rr-absent" title={code ?? undefined}>
-      not published{code ? <span className="rr-reason"> · {code}</span> : null}
+    <span className="rr-absent" title={code ?? undefined} data-reason-code={code ?? undefined} tabIndex={code ? 0 : undefined}>
+      not published
     </span>
   );
 }
@@ -56,13 +57,12 @@ export function FailedSheet({ core, seriesUnavailable }: { core: FrozenCoreFaile
         </h2>
         <div className="b">
         <p className="rr-note" style={{ color: "var(--ink)" }}>
-          <span className="rr-long" data-failure-code>
-            {outcome.failure_code}
+          <span className="rr-long" data-failure-code={outcome.failure_code} title={outcome.failure_code} tabIndex={0}>
+            {outcome.failure_message ?? humanise(outcome.failure_code)}
           </span>
-          {outcome.failure_message ? <span data-failure-message> — {outcome.failure_message}</span> : null}
         </p>
-        <p className="rr-caption" style={{ color: "var(--ink-soft)" }}>
-          {outcome.state === "CANCELLED" ? "cancelled" : "failed"} {iso(outcome.failed_at_utc_ms)} · no metric, equity path or fold verdict is reported
+        <p className="rr-caption" style={{ color: "var(--ink-soft)" }} title={`${core.equity.availability.reason_code ?? ""} · no metric, equity path or fold verdict is reported`}>
+          {outcome.state === "CANCELLED" ? "cancelled" : "failed"} {iso(outcome.failed_at_utc_ms)}
         </p>
         </div>
       </section>
@@ -70,7 +70,7 @@ export function FailedSheet({ core, seriesUnavailable }: { core: FrozenCoreFaile
       <section className="rr-idcard rr-keep" data-panel="identity" aria-label="identity">
         <h2 className="rr-t2">Identity</h2>
         <dl className="rr-id">
-          {core.identity.map((field) => (
+          {core.identity.filter((field) => !["run_id", "alpha", "optimization"].includes(field.key) && !(field.key === "binding" && field.value === "PUBLISHABLE")).map((field) => (
             <div key={field.key} className="contents" data-identity={field.key}>
               <dt className="k">{field.label}</dt>
               <dd className="v rr-long">
@@ -86,19 +86,12 @@ export function FailedSheet({ core, seriesUnavailable }: { core: FrozenCoreFaile
         </dl>
       </section>
 
-      <section className="rr-block" data-panel="equity" data-equity-state="NOT_PUBLISHED" aria-label="equity">
-        <h2 className="t">Equity</h2>
-        <div className="b">
-          <p className="rr-note" data-series-unavailable>
-            {seriesUnavailable}
-          </p>
-          <span className="rr-reason">{core.equity.availability.reason_code}</span>
-        </div>
-      </section>
+      {/* The outcome above already says no equity path is reported; the unavailable-series code is its tooltip. */}
+      <span className="sr-only" hidden data-panel="equity" data-equity-state="NOT_PUBLISHED" data-series-unavailable title={`${seriesUnavailable} · ${core.equity.availability.reason_code ?? ""}`} />
 
       <div className="rr-chainrow">
         <section className="rr-block rr-flush" data-panel="stages" aria-label="stage checks">
-          <h2 className="t">Stage checks — to the failure</h2>
+          <h2 className="t">Stage checks</h2>
           <table className="rr-table rr-chain">
             <tbody>
               {core.stages.map((stage) => (
@@ -109,16 +102,15 @@ export function FailedSheet({ core, seriesUnavailable }: { core: FrozenCoreFaile
                   data-stage-check={stage.check.result}
                   style={stage.check.result === "FAIL" ? { color: "var(--bad)" } : undefined}
                 >
-                  <td className="key">
+                  <td
+                    className="key"
+                    tabIndex={0}
+                    title={stage.check.text ?? (reasonCodeSentence(stage.check.availability.reason_code ?? "") || stage.check.availability.reason_code || undefined)}
+                  >
                     {stage.key} · {STAGE_LABEL[stage.key]}
                   </td>
-                  <td className="desc">
-                    {stage.check.text ?? (
-                      <span className="rr-reason">
-                        {reasonCodeSentence(stage.check.availability.reason_code ?? "") || stage.check.availability.reason_code}
-                      </span>
-                    )}
-                  </td>
+                  {/* Only the stage that failed says why in text; the others' "no check was sealed" is each row's tooltip. */}
+                  <td className="desc">{stage.check.result === "FAIL" ? stage.check.text : null}</td>
                   <td className="st" data-s={stage.check.result}>
                     {STAGE_CHECK_WORDS[stage.check.result]}
                   </td>
@@ -128,9 +120,9 @@ export function FailedSheet({ core, seriesUnavailable }: { core: FrozenCoreFaile
           </table>
         </section>
         <section className="rr-block rr-flush" data-panel="artifacts" aria-label="artifacts">
-          <h2 className="t">Artifacts at the end of the run</h2>
+          <h2 className="t">Artifacts</h2>
           <div className="rr-artgrid">
-            {core.artifacts.length === 0 ? <span className="rr-absent">the run wrote no artifact</span> : null}
+            {core.artifacts.length === 0 ? <span className="rr-absent">none written</span> : null}
             {core.artifacts.map((artifact) => (
               <div key={artifact.name} className="contents" data-artifact={artifact.name} data-artifact-state={artifact.state}>
                 <span className="k rr-long">{artifact.name}</span>
@@ -146,17 +138,12 @@ export function FailedSheet({ core, seriesUnavailable }: { core: FrozenCoreFaile
 
       <div className="rr-pp rr-keep" data-promotion-provenance>
         <section data-panel="promotion" aria-label="promotion state">
-          <h2 className="rr-t2">Promotion state</h2>
-          <p className="rr-note" data-promotion-line>
-            {core.promotion.line}
+          <h2 className="rr-t2">Promotion</h2>
+          <p className="rr-note" data-promotion-line title={core.promotion.line} tabIndex={0}>
+            promotion — not published
           </p>
         </section>
-        <section data-panel="provenance" aria-label="provenance of this report">
-          <h2 className="rr-t2">Provenance of this report</h2>
-          <p className="rr-note rr-long" data-provenance-line>
-            {core.provenance.line}
-          </p>
-        </section>
+        <span className="sr-only" hidden data-panel="provenance" data-provenance-line={core.provenance.line} title={core.provenance.line} />
       </div>
     </>
   );
@@ -174,7 +161,7 @@ export function FinalAuditBlock({ audit }: { audit: FinalAudit }) {
     <section className="rr-block rr-keep" data-panel="final-audit" data-final-audit={audit.kind} aria-label="final audit">
       <h2 className="t">Final audit</h2>
       <div className="b">
-      <p className="rr-note" data-final-audit-kind>
+      <p className="rr-note" data-final-audit-kind title={audit.reason_code ?? undefined}>
         {AUDIT_WORDS[audit.kind]}
         {audit.final_audit_run_id ? (
           <span className="rr-long" title={audit.final_audit_run_id}>
@@ -182,34 +169,31 @@ export function FinalAuditBlock({ audit }: { audit: FinalAudit }) {
             {runLabelOrShortId(audit.final_audit_run_id)}
           </span>
         ) : null}
-        {audit.kind === "NOT_PUBLISHED" && audit.reason_code ? <span className="rr-reason"> · {audit.reason_code}</span> : null}
-      </p>
-      {audit.kind !== "NOT_PUBLISHED" ? (
-        <p className="rr-note" data-optimizer-reinvoked={String(audit.optimizer_reinvoked)} data-audit-target={audit.audit_target_kind ?? undefined}>
-          <strong title={[audit.optimizer_basis, audit.audit_target_kind ? `target ${audit.audit_target_kind}` : null].filter(Boolean).join(" · ") || undefined}>
+        {audit.kind !== "NOT_PUBLISHED" ? (
+          <span data-optimizer-reinvoked={String(audit.optimizer_reinvoked)} data-audit-target={audit.audit_target_kind ?? undefined} title={[audit.optimizer_basis, audit.audit_target_kind ? `target ${audit.audit_target_kind}` : null].filter(Boolean).join(" · ") || undefined}>
+            {" · "}
             {audit.optimizer_reinvoked === null ? "optimizer re-run not determined" : audit.optimizer_reinvoked ? "optimizer re-run" : "optimizer not re-run"}
-          </strong>
-        </p>
-      ) : null}
-      {audit.folds.length > 0 ? (
-        <p className="rr-caption" data-final-audit-folds>
-          {(() => {
-            /* QA S09: nine identical "child #n abc = theta*" entries are one sentence. */
-            const first = audit.folds[0]!;
-            /* B11 S09: PER_FOLD_PARAMETER_SELECTIONS audits each fold against its own selection, not one theta*. */
-            const ownTargets = audit.audit_target_kind === "PER_FOLD_PARAMETER_SELECTIONS";
-            const same = !ownTargets && audit.folds.every((fold) => fold.state === "MATCH" && fold.candidate_id === first.candidate_id);
-            if (same && first.candidate_id) return `all ${audit.folds.length} folds ran the frozen candidate ${first.candidate_id.slice(0, 8)}`;
-            return audit.folds
-              .map((fold) => `${foldLabel(fold.fold_id)}: ${fold.candidate_id ? fold.candidate_id.slice(0, 8) : "—"} ${fold.state === "MATCH" ? (ownTargets ? "= own selection" : "= θ*") : fold.state.toLowerCase().replace(/_/g, " ")}`)
-              .join(" · ");
-          })()}
-        </p>
-      ) : null}
+          </span>
+        ) : null}
+        {audit.folds.length > 0 ? (
+          <span data-final-audit-folds>
+            {" · "}
+            {(() => {
+              /* QA S09: nine identical "child #n abc = theta*" entries are one sentence. */
+              const first = audit.folds[0]!;
+              /* B11 S09: PER_FOLD_PARAMETER_SELECTIONS audits each fold against its own selection, not one theta*. */
+              const ownTargets = audit.audit_target_kind === "PER_FOLD_PARAMETER_SELECTIONS";
+              const same = !ownTargets && audit.folds.every((fold) => fold.state === "MATCH" && fold.candidate_id === first.candidate_id);
+              if (same && first.candidate_id) return `${audit.folds.length} folds on candidate ${first.candidate_id.slice(0, 8)}`;
+              return audit.folds
+                .map((fold) => `${foldLabel(fold.fold_id)}: ${fold.candidate_id ? fold.candidate_id.slice(0, 8) : "—"} ${fold.state === "MATCH" ? (ownTargets ? "= own selection" : "= θ*") : fold.state.toLowerCase().replace(/_/g, " ")}`)
+                .join(" · ");
+            })()}
+          </span>
+        ) : null}
+      </p>
       {audit.source_refs.length > 0 ? (
-        <p className="rr-caption rr-long" data-final-audit-refs>
-          {audit.source_refs.map((ref) => `${ref.key} ${ref.ref}`).join(" · ")}
-        </p>
+        <span className="sr-only" hidden data-final-audit-refs title={audit.source_refs.map((ref) => `${ref.key} ${ref.ref}`).join(" · ")} />
       ) : null}
       </div>
     </section>

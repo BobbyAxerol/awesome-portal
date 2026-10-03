@@ -234,7 +234,6 @@ describe("UX-08 · HOLDOUT for a run that has none", () => {
     await ready(container);
     await waitFor(() => expect(q(container, "[data-fold-strip]")).toBeTruthy());
     await waitFor(() => expect(q(container, "[data-fold-params]")).toBeTruthy());
-    await waitFor(() => expect(q(container, "[data-claim]")?.textContent).not.toContain("reading"));
     expect((q(container, "[data-window='holdout']") as HTMLButtonElement).disabled).toBe(false);
   });
 });
@@ -290,9 +289,10 @@ describe("UX-05 · a progress read that failed is said once, not 'reading…' fo
   it("readiness chip and route chip use the same words", async () => {
     const { container } = mount({ progress: () => fail(500) });
     await ready(container);
-    await waitFor(() => expect(q(container, "[data-readiness]")?.textContent).not.toContain("reading"), { timeout: 10_000 });
-    expect(q(container, "[data-readiness]")!.textContent).toBe("readiness — the progress read did not answer");
-    expect(q(container, "[data-route-id]")!.textContent).toBe("route — the progress read did not answer");
+    await waitFor(() => expect(q(container, "[data-route-id]")?.textContent).not.toContain("reading"), { timeout: 10_000 });
+    /* W4: no readiness chip while nothing was read; the route chip says so in one phrase. */
+    expect(q(container, "[data-readiness]")?.textContent ?? "").toBe("");
+    expect(q(container, "[data-route-id]")!.textContent).toBe("route not read");
   });
 });
 
@@ -349,8 +349,9 @@ describe("UX-12 / T-13 / I-17 · reveal chips, cumulative labels, fold scores", 
     const { container } = mount();
     await ready(container);
     const readout = q(container, "[data-playhead-readout]")!;
-    expect(readout.textContent).toContain("run fees so far");
-    expect(readout.textContent).toContain("run transitions so far");
+    expect(readout.textContent).toContain("fees so far");
+    expect(readout.textContent).toContain("transitions so far");
+    expect(readout.textContent).not.toContain("full-run fees");
     expect(readout.textContent).not.toContain("to here");
     expect(readout.textContent).not.toContain("model state");
     expect(readout.getAttribute("title")).toContain("not a broker account");
@@ -370,15 +371,14 @@ describe("UX-12 / T-13 / I-17 · reveal chips, cumulative labels, fold scores", 
   });
 });
 
-describe("I-13 · the window fee", () => {
-  it("is 'not published' (typed absence) when one bar of the window carries no fee — never a partial sum, never 0", async () => {
+describe("I-13 · the window fee (W4: the browser sums nothing)", () => {
+  it("prints no window fee even when every bar serves one, and never a partial sum when one is missing", async () => {
     const body = clone(FOLD0);
     body.replay.rows[3]!.bar!.fee = null as unknown as string;
     const { container } = mount({ replay: () => json(body) });
     await ready(container);
-    const line = q(container, "[data-cost-window]")!;
-    expect(line.querySelector("[data-window-fee='NOT_PUBLISHED']")?.textContent).toBe("not published");
-    expect(line.querySelector("[data-window-fee='NOT_PUBLISHED']")?.getAttribute("title")).toContain("no fee");
+    expect(q(container, "[data-cost-window]")).toBeNull();
+    expect(q(container, "[data-window-fee]")).toBeNull();
   });
 });
 
@@ -388,24 +388,15 @@ describe("S08 second wave · R-2 a window that did not load is not 'zero fees'",
     for (const row of body.replay.rows) if (row.bar) row.bar.fold_id = null;
     return body;
   };
-  it("cost timeline says 'not loaded' (never '0 charged bars · fee 0.00') and the anatomy child row resolves", async () => {
+  it("cost timeline prints no '0 charged bars · fee 0.00' and the anatomy child row resolves", async () => {
     const { container } = mount({ replay: (url) => (url.searchParams.get("at") ? fail(500) : json(inSample())) });
     await waitFor(() => expect(q(container, "[data-window-panel='oos-pending'][data-window-state='failed']")).toBeTruthy(), { timeout: 10_000 });
-    const line = q(container, "[data-cost-window]")!;
-    expect(line.querySelector("[data-window-charged='NOT_LOADED']")?.textContent).toBe("not loaded");
-    expect(line.querySelector("[data-window-fee='NOT_PUBLISHED']")?.textContent).toBe("not loaded");
-    expect(line.textContent).not.toMatch(/\d+ charged bars?|0\.00/);
+    expect(q(container, "[data-cost-window]")).toBeNull();
+    expect(q(container, "[data-panel='cost-timeline']")?.textContent ?? "").not.toMatch(/\d+ charged bars?|0\.00/);
     await ledgerReady(container);
     const anyRow = container.querySelector("[data-transition-row]") as HTMLElement | null;
     if (anyRow) fireEvent.click(anyRow);
     await waitFor(() => expect(q(container, "[data-link='child']")?.textContent).toMatch(/not read — no fold window loaded/));
-  });
-
-  it("value path: a loaded window keeps its count", async () => {
-    const { container } = mount();
-    await ready(container);
-    expect(q(container, "[data-cost-window]")!.textContent).toMatch(/\d+ charged bars?/);
-    expect(q(container, "[data-window-charged='NOT_LOADED']")).toBeNull();
   });
 });
 

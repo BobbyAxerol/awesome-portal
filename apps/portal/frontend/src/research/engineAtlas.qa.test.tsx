@@ -49,20 +49,25 @@ describe("S12 - less text, honest words", () => {
   it("no 'Read from ...' subtitle repeats the release chip; no 'cert cap not published' on a cap that does not exist", () => {
     view({ selectedReleaseId: DOC.current_release.release_id, selectedReleaseKind: "CURRENT" });
     expect(document.body.textContent).not.toContain("Read from");
-    expect(document.querySelector("[data-cert-cap]")?.textContent).toBe("no cert cap");
+    /* W4: the shared absence is silent text; its reason is the tooltip of the tab. */
+    expect(document.querySelector("[data-cert-cap]")).toBeNull();
+    expect(document.querySelector("[data-cert-cap-shared]")?.getAttribute("title")).toMatch(/the same for every mode/);
+    expect(document.body.textContent).not.toContain("no cert cap");
     expect(document.body.textContent).not.toContain("cert cap not published");
   });
 
   it("rule two is a sentence a reader can use", () => {
     view();
-    expect(document.querySelector("[data-rule-two]")?.textContent).toContain("Execution route is chosen separately");
-    expect(document.querySelector("[data-rule-two]")?.textContent).not.toContain("optimization_mode");
+    /* W4: rule two is the tooltip of the Execution routes tab, not a second box. */
+    expect(document.querySelector("[data-rule-two]")).toBeNull();
+    expect(document.querySelector('[data-tab="routes"]')?.getAttribute("title")).toMatch(/Two selector layers, never mixed/);
   });
 
   it("the empty 'avoid when - not published' footer is gone; the typed absence is the heading's tooltip", () => {
     view();
-    expect(document.body.textContent).not.toContain("avoid when — not published");
-    expect(document.querySelector("[data-avoid-when-shared]")?.getAttribute("title")).toMatch(/avoid when/);
+    /* W4: the "when to reach for which mode" table is gone (each card carries its own use-when line). */
+    expect(document.body.textContent).not.toContain("avoid when");
+    expect(document.querySelector("[data-mode-table]")).toBeNull();
   });
 
   it("unavailable schedules are exposed as disabled to assistive technology", () => {

@@ -61,7 +61,8 @@ import { RunExitBar } from "./RunExitBar";
 import { libraryHref } from "./runLinks";
 import { runStatusWord, runTerminalState } from "./runTerminalState";
 import { trialLabel, trialTitle } from "./trialLabel";
-import { ShortId } from "./ShortId";
+import { humanise } from "./humanise";
+import { PageHeader } from "./PageHeader";
 import { reasonCodeSentence, REFUSAL_COPY } from "./researchRefusal";
 
 /* --------------------------------------------------------------- verbatim */
@@ -372,6 +373,7 @@ function TransportDot({
     <span
       data-transport={transport}
       data-transport-state={face.state}
+      title={label}
       style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: MONO, fontSize: 10, color: "var(--ink-soft)" }}
     >
       <span
@@ -387,7 +389,8 @@ function TransportDot({
           flex: "none",
         }}
       />
-      {label}
+      {/* W4A: a stream that is over is a grey dot; the words ride in its tooltip. */}
+      {face.state === "terminal" || face.state === "never-opened" ? <span className="sr-only">{label}</span> : label}
     </span>
   );
 }
@@ -643,9 +646,7 @@ function ProgressCard({
   const eta =
     failed ? null : overall.eta_s !== null ? (
       formatDuration(overall.eta_s)
-    ) : !live ? (
-      <Absent what="none — run final" />
-    ) : searchDone ? (
+    ) : !live ? null : searchDone ? (
       <Absent what="search done" />
     ) : (
       <Absent />
@@ -719,7 +720,7 @@ function ProgressCard({
           {failed ? (
             <span data-failed-at={failedAt?.stage ?? "unknown"} style={{ color: "var(--bad)" }}>
               {" · "}
-              {failedAt ? `failed at ${failedAt.stage} ${STAGE_LABEL[failedAt.stage]}` : "failed"}
+              {failedAt ? `at ${failedAt.stage}` : "failed"}
             </span>
           ) : (
             ` · ${Math.round(pct)}%`
@@ -755,7 +756,7 @@ function ProgressCard({
         <span data-elapsed data-elapsed-basis={overall.elapsed_basis} title={overall.elapsed_basis !== undefined ? ELAPSED_BASIS_HINT : undefined}>
           elapsed <span style={{ color: "var(--ink)" }}>{formatDuration(overall.elapsed_s) ?? <Absent />}</span>
         </span>
-        {failed ? null : (
+        {failed || eta === null ? null : (
           <span data-eta>
             {/* The server owns the ETA. A null one is absent, never computed. */}
             eta <span style={{ color: "var(--ink)" }}>{eta}</span>
@@ -770,9 +771,11 @@ function ProgressCard({
           )}
         </span>
         {/* The server builds this string; the page does not reformat it. */}
-        <span data-tqdm style={{ color: "var(--ink-faint)" }}>
-          {overall.tqdm_line}
-        </span>
+        {live ? (
+          <span data-tqdm style={{ color: "var(--ink-faint)" }}>
+            {overall.tqdm_line}
+          </span>
+        ) : null}
       </div>
 
       <div
@@ -1006,8 +1009,31 @@ function foldNote(
   return <NotPublished reason={FOLD_SELECTION_NOT_PUBLISHED} what="selection not published" />;
 }
 
+/**
+ * W4A: a global study selects one trial for every fold, so nine identical
+ * `global best J₁ … · trial 351 · prm_…` notes say one thing nine times. When
+ * every finished fold carries the same served global selection it is printed
+ * once above the rows; a fold that differs keeps its own note.
+ */
+function sharedGlobalSelection(
+  folds: ProgressSnapshot["folds"],
+  foldTrialIds: Readonly<Record<number, FoldTrialIdentity>>,
+): ProgressSnapshot["folds"][number] | null {
+  const done = folds.filter((f) => f.state === "DONE");
+  if (done.length < 3 || done.length !== folds.length) return null;
+  const key = (f: ProgressSnapshot["folds"][number]) => {
+    const sel = f.selection ?? NOT_PUBLISHED_SELECTION;
+    if (sel.state !== "AVAILABLE" || sel.scope !== "GLOBAL_STUDY" || sel.trial === null || sel.params_digest === null) return null;
+    if (perFoldTrial(f, foldTrialIds) !== null) return null;
+    return [sel.objective, sel.objective_kind, sel.trial, sel.source_trial_id, sel.params_digest].join("|");
+  };
+  const first = key(done[0]);
+  return first !== null && done.every((f) => key(f) === first) ? done[0] : null;
+}
+
 function FoldGantt({ folds, cursor, onPick, foldTrials, foldTrialIds, handoff, claimCursor }: FoldGanttProps) {
   const container = useRef<HTMLDivElement>(null);
+  const shared = folds.length === 0 ? null : sharedGlobalSelection(folds, foldTrialIds ?? {});
   if (folds.length === 0) {
     return (
       <p style={{ fontSize: 11, color: "var(--ink-soft)", margin: 0 }} data-no-folds>
@@ -1176,11 +1202,16 @@ function FoldGantt({ folds, cursor, onPick, foldTrials, foldTrialIds, handoff, c
                 color: "var(--ink-faint)",
               }}
             >
-              {foldNote(fold, foldTrials, handoff, claimCursor, foldTrialIds)}
+              {shared !== null ? null : foldNote(fold, foldTrials, handoff, claimCursor, foldTrialIds)}
             </span>
           </button>
         );
       })}
+      {shared !== null ? (
+        <p data-shared-selection style={{ fontFamily: MONO, fontSize: 10, color: "var(--ink-faint)", margin: "2px 0 0", textAlign: "right" }}>
+          {foldNote(shared, foldTrials, handoff, claimCursor, foldTrialIds)} · all folds
+        </p>
+      ) : null}
       {folds.some((f) => (f.fold_timeline ?? NOT_PUBLISHED_TIMELINE).state === "PARTIAL") ? (
         <p style={{ fontSize: 9.5, color: "var(--role-holdout)", margin: 0 }} data-timeline-partial title="Published segments only; gaps are not filled.">
           partial folds
@@ -1286,14 +1317,15 @@ const ARTIFACT_TONE: Record<Artifact["state"] | "DENIED", string> = {
   DENIED: "var(--bad)",
 };
 
-function artifactNote(artifact: Artifact): ReactNode {
+function artifactNote(artifact: Artifact, compact = false): ReactNode {
   if (artifact.state === "SEALED") {
     const bytes = artifact.size === null ? null : formatBytes(Number(artifact.size));
     const digest = shortDigest(artifact.digest);
     return (
       <span title={[artifact.size ? `${artifact.size} bytes` : null, artifact.digest].filter(Boolean).join(" · ")}>
         {bytes ?? artifact.size ?? <Absent what="size not reported" />}
-        {digest ? <> · sha256:{digest}…</> : null}
+        {/* W4A: Run Progress (compact) keeps the digest in the tooltip; the Evidence Flow manifest still prints it. */}
+        {digest && !compact ? <> · sha256:{digest}…</> : null}
       </span>
     );
   }
@@ -1303,7 +1335,7 @@ function artifactNote(artifact: Artifact): ReactNode {
 }
 
 /** A withheld artifact: named, counted, never linked (CG-P11-03). */
-function DeniedRow({ artifact }: { artifact: DeniedArtifact }) {
+function DeniedRow({ artifact, compact = false }: { artifact: DeniedArtifact; compact?: boolean }) {
   const rows = artifact.rows === null ? null : formatMetric(artifact.rows, "count");
   const range =
     artifact.range === null ? null : `${formatUtc(artifact.range.start_utc_ms)} → ${formatUtc(artifact.range.end_exclusive_utc_ms)}`;
@@ -1330,15 +1362,15 @@ function DeniedRow({ artifact }: { artifact: DeniedArtifact }) {
       >
         denied
       </span>
-      <span style={{ flex: 1, minWidth: 0, color: "var(--ink-faint)", fontSize: 10 }}>
+      <span style={{ flex: 1, minWidth: 0, color: "var(--ink-faint)", fontSize: 10 }} title={compact ? DENIED_HOLDOUT_NOTE : undefined}>
         {rows !== null ? `${rows} bars · ` : null}
-        {DENIED_HOLDOUT_NOTE}
+        {compact ? "holdout sealed" : DENIED_HOLDOUT_NOTE}
       </span>
     </span>
   );
 }
 
-export function ArtifactsTable({ artifacts, denied = [] }: { artifacts: readonly Artifact[]; denied?: readonly DeniedArtifact[] }) {
+export function ArtifactsTable({ artifacts, denied = [], compact = false }: { artifacts: readonly Artifact[]; denied?: readonly DeniedArtifact[]; compact?: boolean }) {
   return (
     <div data-artifacts style={{ display: "flex", flexDirection: "column" }}>
       {artifacts.length === 0 && denied.length === 0 ? (
@@ -1398,12 +1430,12 @@ export function ArtifactsTable({ artifacts, denied = [] }: { artifacts: readonly
             >
               {artifact.state}
             </span>
-            <span style={{ flex: 1, minWidth: 0, color: "var(--ink-faint)", fontSize: 10 }}>{artifactNote(artifact)}</span>
+            <span style={{ flex: 1, minWidth: 0, color: "var(--ink-faint)", fontSize: 10 }}>{artifactNote(artifact, compact)}</span>
           </span>
         );
       })}
       {denied.map((artifact) => (
-        <DeniedRow key={artifact.name} artifact={artifact} />
+        <DeniedRow key={artifact.name} artifact={artifact} compact={compact} />
       ))}
     </div>
   );
@@ -1465,6 +1497,8 @@ function RetainedTables({ retained }: { retained: readonly RetainedArtifact[] | 
 
 /** How far above the bottom a reader must scroll before auto-scroll lets go. */
 export const FOLLOW_SLACK_PX = 40;
+/** W4A: lines a finished run's console prints before "show all (N)". */
+export const CONSOLE_TAIL = 10;
 
 type ConsoleFilter = "all" | "fold" | "errors";
 
@@ -1500,8 +1534,14 @@ function TrialConsole({
     if (filter === "fold" && foldFilter !== null && line.fold !== foldFilter) return false;
     return true;
   };
-  const visible = lines.filter(keep);
-  const history = olderLines.filter(keep);
+  const allVisible = lines.filter(keep);
+  const allHistory = olderLines.filter(keep);
+  /* W4A: a finished run's log is a record, not a stream — print its last lines and offer the rest. */
+  const [showAll, setShowAll] = useState(false);
+  const total = allVisible.length + allHistory.length;
+  const collapsed = !live && !connecting && !showAll && total > CONSOLE_TAIL;
+  const visible = collapsed ? allVisible.slice(-CONSOLE_TAIL) : allVisible;
+  const history = collapsed ? allHistory.slice(Math.max(0, allHistory.length - Math.max(0, CONSOLE_TAIL - allVisible.length))) : allHistory;
 
   /* Auto-scroll sets `scrollTop` directly — `scrollIntoView` moves the page,
      not just the box (spec 03 pitfall 4). */
@@ -1558,6 +1598,29 @@ function TrialConsole({
         color: "var(--console-fg)",
       }}
     >
+      {!live && !connecting && total > CONSOLE_TAIL ? (
+        <button
+          type="button"
+          data-action="console-show-all"
+          aria-expanded={!collapsed}
+          onClick={() => setShowAll(!showAll)}
+          title={collapsed ? `Showing the last ${CONSOLE_TAIL} of ${total} lines.` : `Showing all ${total} lines.`}
+          style={{
+            display: "block",
+            border: "1px solid var(--console-faint)",
+            borderRadius: 999,
+            background: "transparent",
+            color: "var(--console-accent)",
+            fontFamily: MONO,
+            fontSize: 10,
+            padding: "1px 10px",
+            marginBottom: 6,
+            cursor: "pointer",
+          }}
+        >
+          {collapsed ? `show all (${total})` : `show last ${CONSOLE_TAIL}`}
+        </button>
+      ) : null}
       {history.length > 0 ? (
         <div data-console-history>
           {history.map((line) => (
@@ -1567,7 +1630,7 @@ function TrialConsole({
           ))}
         </div>
       ) : null}
-      {dropped ? (
+      {dropped && !collapsed ? (
         <div style={{ color: "var(--console-faint)" }} data-older-dropped>
           {OLDER_DROPPED}
         </div>
@@ -1739,7 +1802,7 @@ export function MethodologyClaims({ claims }: { claims: readonly MethodologyClai
           >
             <span style={{ color: "var(--ink-faint)" }}>{label}</span>{" "}
             <span style={{ color: issued ? "var(--ink)" : "var(--ink-faint)" }}>
-              {text ?? (claim.state === "NOT_APPLICABLE" ? "not applicable" : "not published")}
+              {text !== null ? humanise(text) : claim.state === "NOT_APPLICABLE" ? "n/a here" : "not published"}
             </span>
           </span>
         );
@@ -1773,7 +1836,6 @@ function ClaimPassport({
   handoffLabel: string | null;
   engineVersion: string | null;
 }) {
-  const handoff = claim.handoff_cursor ?? null;
   const issued = claim.state === "ISSUED";
   const forecast = claim.state === "FORECAST";
   const certificate = claim.methodology_certificate ?? NOT_PUBLISHED_CERTIFICATE;
@@ -1914,16 +1976,11 @@ function ClaimPassport({
                 background: sealed ? "var(--good)" : "var(--viz-legend-inactive)",
               }}
             />
-            mandatory {readiness.mandatory} · optional {readiness.optional}
+            <span title={`mandatory ${humanise(readiness.mandatory)} · optional ${humanise(readiness.optional)}`}>
+              {sealed ? "sealed" : humanise(readiness.mandatory)}
+            </span>
           </span>
         </Field>
-        {handoff !== null ? (
-          <Field label="hand-off cursor" name="handoff">
-            <span style={valueStyle(issued ? "issued" : "neutral")} data-handoff-cursor title={handoff.params_digest}>
-              fold {count(handoff.fold)} · {trialLabel({ ordinal: count(handoff.trial) })} · {paramsTag(handoff.params_digest)}
-            </span>
-          </Field>
-        ) : null}
         {issued && claim.cursor !== null ? (
           <Field label="claim cursor" name="cursor">
             <span style={valueStyle("issued")} data-claim-cursor>
@@ -1933,84 +1990,15 @@ function ClaimPassport({
         ) : null}
         {failure !== null ? (
           <Field label="failure" name="failure">
-            <span role="alert" style={valueStyle("bad")} data-failure={failure.code}>
-              {/* QA S03 U2: where it stopped, then the server's own sentence; the code stays behind details. */}
+            <span role="alert" style={valueStyle("bad")} data-failure={failure.code} title={`${failure.code}${failure.message ? ` — ${failure.message}` : ""}`}>
+              {/* W4A: where it stopped, then the server's own sentence once; the code is the tooltip. */}
               {failedAt ? `failed at ${failedAt.stage} ${STAGE_LABEL[failedAt.stage]} — ` : ""}
-              {failureSentence}{" "}
-              <details style={{ display: "inline" }}>
-                <summary style={{ cursor: "pointer", fontSize: 10 }}>details</summary>
-                <span className="mono" style={{ fontSize: 10.5 }}>
-                  {failure.code} — {failure.message}
-                </span>
-              </details>
+              {failureSentence}
             </span>
           </Field>
         ) : null}
       </div>
     </section>
-  );
-}
-
-/* ------------------------------------------------------------ done banner */
-
-function DoneBanner({
-  runId,
-  issued,
-  cursor,
-}: {
-  runId: string;
-  issued: boolean;
-  cursor: InspectionCursor;
-}) {
-  const links: [Stage["key"], string][] = [
-    ["S1", "S1 split"],
-    ["S2", "S2 search"],
-    ["S3", "S3 freeze"],
-    ["S4", "S4 replay"],
-    ["S5", "S5 claim"],
-  ];
-  return (
-    <div
-      data-done-banner
-      style={{
-        border: "1px solid var(--good)",
-        borderRadius: 8,
-        background: "var(--good-bg)",
-        padding: "12px 16px",
-        display: "flex",
-        flexWrap: "wrap",
-        alignItems: "center",
-        gap: 10,
-      }}
-    >
-      <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, color: "var(--good)" }}>
-        {issued ? "✓ RUN COMPLETE — CLAIMS ISSUED" : "✓ RUN COMPLETE — ARTIFACTS SEALED"}
-      </span>
-      <span style={{ flex: 1, minWidth: 0 }} data-done-claim={issued ? "issued" : "none"} />
-      <span style={{ display: "inline-flex", gap: 6, flexWrap: "wrap" }}>
-        {links.map(([key, label]) => {
-          const target = stageTarget(key);
-          return (
-            <a
-              key={key}
-              data-done-link={key}
-              title={`Open Stage ${key.slice(1)} ${STAGE_LABEL[key]}${cursor.fold ? ` at fold ${cursor.fold}` : ""}`}
-              href={runHref(runId, target.path, { ...(target.stage ? { stage: target.stage } : {}), ...cursor })}
-              style={{
-                border: "1px solid var(--accent)",
-                borderRadius: 6,
-                padding: "3px 10px",
-                fontFamily: MONO,
-                fontSize: 10,
-                color: "var(--accent)",
-              }}
-            >
-              {label}
-            </a>
-          );
-        })}
-      </span>
-    </div>
   );
 }
 
@@ -2230,82 +2218,32 @@ const ROOT: CSSProperties = {
 };
 
 function Header({
-  runId,
   title,
   right,
   next,
   children,
 }: {
-  runId: string;
   title: string;
   right?: ReactNode;
   /** F2b: where this run goes next — Evidence Flow, on the cursor this page already holds. */
   next?: { href: string; label: string; title: string };
   children?: ReactNode;
 }) {
+  /* W4A: one h1, `← Library · Evidence Flow →`, no crumb — the top bar already shows the path. */
   return (
-    <header
-      style={{
-        display: "flex",
-        flexWrap: "wrap",
-        justifyContent: "space-between",
-        alignItems: "flex-end",
-        gap: "10px 16px",
-        borderBottom: "1px solid var(--line)",
-        paddingBottom: 10,
-      }}
+    <PageHeader
+      title={title}
+      prev={{ label: "Library", href: libraryHref() }}
+      next={next ? { label: "Evidence Flow", href: next.href } : undefined}
+      copy
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0, flex: "1 1 360px" }}>
-        <nav
-          aria-label="Research breadcrumbs"
-          style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, fontSize: 12, color: "var(--ink-soft)" }}
-        >
-          <a href={`${QUANTBT_ROOT}/runs`} style={{ color: "var(--accent)" }}>
-            Runs
-          </a>
-          <span aria-hidden="true" style={{ color: "var(--ink-faint)" }}>
-            /
-          </span>
-          <span style={{ fontFamily: MONO, wordBreak: "break-all" }} data-breadcrumb-run>
-            <ShortId id={runId} label="run" />
-          </span>
-          <span aria-hidden="true" style={{ color: "var(--ink-faint)" }}>
-            /
-          </span>
-          <span style={{ color: "var(--ink)" }}>Progress</span>
-          {next ? (
-            <>
-              <span aria-hidden="true" style={{ color: "var(--ink-faint)" }}>
-                ·
-              </span>
-              <a
-                data-action="next-evidence"
-                href={next.href}
-                title={next.title}
-                style={{ fontFamily: MONO, fontSize: 10, color: "var(--accent)" }}
-              >
-                {next.label}
-              </a>
-            </>
-          ) : null}
-        </nav>
-        <h1
-          style={{
-            fontFamily: DISPLAY,
-            fontSize: 22,
-            fontWeight: 300,
-            letterSpacing: "-.01em",
-            lineHeight: "normal",
-            margin: 0,
-            overflowWrap: "anywhere",
-          }}
-        >
-          {title}
-        </h1>
-        {children}
-      </div>
-      {right ? <div style={{ flex: "none", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>{right}</div> : null}
-    </header>
+      {right || children ? (
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px 14px" }}>
+          {right}
+          {children}
+        </div>
+      ) : null}
+    </PageHeader>
   );
 }
 
@@ -2476,7 +2414,7 @@ export function RunProgress(props: RunProgressProps) {
   if (refusal?.notFound || (read === null && state.state === "empty")) {
     return (
       <div data-screen="run-progress" data-run-not-found style={ROOT}>
-        <Header runId={runId} title="Run not available" />
+        <Header title="Run not available" />
         <section style={{ ...CARD, gap: 8 }}>
           <RunExitBar runId={runId} state={runTerminalState({ status: null, read: "not-found" })} />
         </section>
@@ -2491,7 +2429,6 @@ export function RunProgress(props: RunProgressProps) {
     return (
       <div data-screen="run-progress" data-no-source={read.availability} style={ROOT}>
         <Header
-          runId={runId}
           title={`${queued ? "Run queued" : "Run cancelled"} — ${runLabel ?? shortId(runId)}`}
           right={face.state === "never-opened" ? undefined : <TransportDot transport={transport} live={live} face={face} />}
         />
@@ -2597,7 +2534,6 @@ export function RunProgress(props: RunProgressProps) {
   return (
     <div data-screen="run-progress" style={ROOT}>
       <Header
-        runId={runId}
         title={title}
         right={<TransportDot transport={transport} live={live} face={face} />}
         next={
@@ -2628,7 +2564,7 @@ export function RunProgress(props: RunProgressProps) {
       </Header>
 
       {/* QA S03 NEW-3: a refused first read has no identity to wait for; the short id is in the breadcrumb once. */}
-      {firstReadFailed ? null : <RunMetaStrip runId={runId} identity={identity} status={statusSlot} panel />}
+      {firstReadFailed ? null : <RunMetaStrip runId={runId} identity={identity} status={statusSlot} panel omitRunStatus />}
       {read && (read.queue || (read.attempts?.length ?? 0) > 0) ? (
         <ServedAttempts queue={read.queue} attempts={read.attempts} />
       ) : null}
@@ -2756,7 +2692,7 @@ export function RunProgress(props: RunProgressProps) {
         >
           {content && snapshot ? (
             <>
-              <ArtifactsTable artifacts={snapshot.artifacts} denied={read?.denied_artifacts ?? []} />
+              <ArtifactsTable artifacts={snapshot.artifacts} denied={read?.denied_artifacts ?? []} compact />
               {read ? <RetainedTables retained={read.retained_artifacts} /> : null}
             </>
           ) : (
@@ -2872,7 +2808,6 @@ export function RunProgress(props: RunProgressProps) {
         />
       )}
 
-      {sealed && snapshot ? <DoneBanner runId={runId} issued={snapshot.claim.state === "ISSUED"} cursor={cursor} /> : null}
       </>
       )}
 

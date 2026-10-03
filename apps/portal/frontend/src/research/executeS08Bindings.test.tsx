@@ -135,11 +135,11 @@ describe("F2 S08 · tiles: a null count is a typed absence", () => {
     const code = (fact: { reason_code?: string | null; availability: { reason_code: string | null } }) => fact.reason_code ?? fact.availability.reason_code;
     expect(codes).toEqual([code(body.route_capabilities.orders), code(body.route_capabilities.trades)].filter((c) => c));
     expect(tile(container, "target transitions").textContent).toContain("not published");
-    expect(tile(container, "rejected orders").textContent).toContain("not published");
-    for (const key of ["orders · fills · trades", "target transitions", "rejected orders"]) {
+    /* W4: a blank "rejected orders" tile is not drawn. */
+    expect(container.querySelector("[data-tile='rejected orders']")).toBeNull();
+    for (const key of ["orders · fills · trades", "target transitions"]) {
       expect(tile(container, key).textContent).not.toMatch(/—|\bN\/A\b/);
     }
-    expect(tile(container, "rejected orders").querySelector("[data-tile-absent]")).toBeTruthy();
   });
 });
 
@@ -232,28 +232,16 @@ describe("F2 S08 · each fold's params digest from the progress selection", () =
     const { container } = await settled({ progress });
     await waitFor(() => expect(container.querySelector("[data-fold-params='absent']")).toBeTruthy());
     const text = container.querySelector("[data-fold-params='absent']")!.textContent!;
-    expect(text).toContain("params — not published");
+    expect(text).toContain("params not published");
     expect(container.querySelector("[data-fold-params='absent'] [data-reason-code]")?.getAttribute("data-reason-code")).toBe("SOURCE_DID_NOT_PUBLISH_FOLD_SELECTION");
     expect(container.querySelector("[data-fold='0']")?.getAttribute("title")).toContain("params not published SOURCE_DID_NOT_PUBLISH_FOLD_SELECTION");
   });
 });
 
 describe("F2 S08 · claim strip tokens", () => {
-  it("a claim the source did not publish says so with the served reason code, never a dash", async () => {
-    const evidence = clone(W3.evidence);
-    const strip = evidence.claim;
-    expect(strip).toBeTruthy();
-    strip.validation_claim = { ...strip.validation_claim, value: null, state: "NOT_PUBLISHED", reason_code: "SOURCE_DID_NOT_PUBLISH_VALIDATION_CLAIM" };
-    strip.causality_claim = { ...strip.causality_claim, value: null, state: "NOT_PUBLISHED", reason_code: null, availability: { state: "NOT_PUBLISHED", reason_code: "SOURCE_DID_NOT_PUBLISH_CAUSALITY_CLAIM" } };
-    const { container } = await settled({ evidence });
-    await waitFor(() => expect(container.querySelector("[data-claim] [data-reason-code]")).toBeTruthy());
-    const claim = container.querySelector("[data-claim]")!;
-    expect(claim.textContent).toContain("not published");
-    expect(claim.querySelector("[data-reason-code]")?.getAttribute("data-reason-code")).toBe("SOURCE_DID_NOT_PUBLISH_VALIDATION_CLAIM");
-    const causality = claim.nextElementSibling as HTMLElement;
-    expect(causality.textContent).toContain("not published");
-    expect(causality.querySelector("[data-reason-code]")?.getAttribute("data-reason-code")).toBe("SOURCE_DID_NOT_PUBLISH_CAUSALITY_CLAIM");
-    expect(claim.textContent).not.toContain("—");
+  it("W4: claim and causality are not repeated on S08 (S06 and S09 own them)", async () => {
+    const { container } = await settled({});
+    expect(container.querySelector("[data-claim]")).toBeNull();
   });
 });
 

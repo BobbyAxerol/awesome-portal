@@ -213,7 +213,8 @@ describe("B9 window bands (half-open, located)", () => {
     const rects = container.querySelectorAll("rect.rr-at-win");
     expect(rects.length).toBe(2);
     expect(Array.from(rects).map((r) => r.getAttribute("data-window"))).toEqual(["is", "oos"]);
-    expect(container.querySelector("[data-curve-windows]")?.textContent).toContain("end exclusive");
+    /* W4: "(end exclusive)" is no printed text; the windows legend carries the window titles. */
+    expect(container.querySelector("[data-curve-windows]")?.textContent).not.toContain("end exclusive");
 
     const strategy = block.curves.strategy_rebased_100;
     const option = strategyBenchmarkOption(strategy, block.curves.benchmark_rebased_100, { bands: windowBands(block.windows) }) as { series: { markArea?: { data: unknown[] } }[] };

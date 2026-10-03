@@ -45,7 +45,6 @@ import {
   counterText,
   lineageStatus,
   matchesLineageFilter,
-  PROMOTION_RULE_TITLE,
   type LineageFilter,
   railWidth,
   treeOrder,
@@ -53,7 +52,6 @@ import {
 } from "./LineageDetail";
 import { LineageRoute } from "./LineageRoute";
 import {
-  LINEAGE_NEUTRAL_REFUSAL,
   LINEAGE_REFUSAL_COPY,
   lineageGaps,
   lineagePath,
@@ -422,7 +420,7 @@ describe("S10 Attempt Lineage — the screen", () => {
     expect(document.body.textContent).not.toContain("rules of this screen");
     expectPendingFrame("loading");
     expect(screen.getByRole("status", { name: "Loading" })).toBeTruthy();
-    expect(screen.getByText(LINEAGE_TITLE)).toBeTruthy();
+    expect(document.querySelector('[data-panel="header"] h2')?.getAttribute("title")).toContain(LINEAGE_TITLE);
   });
 
   it("S10-U02 renders every block in the screen's order when the lineage is complete", async () => {
@@ -457,8 +455,8 @@ describe("S10 Attempt Lineage — the screen", () => {
     expect(bands.map((b) => b.getAttribute("data-state"))).toEqual(["ACTIVE", "SUPERSEDED"]);
     expect(within(bands[0] as HTMLElement).getByText("alphas.momentum_btc:Alpha")).toBeTruthy();
     expect(bands[0].querySelector("[data-code-digest]")?.getAttribute("title")).toBe(hex("b"));
-    expect(within(bands[0] as HTMLElement).getByText("import new version →")).toBeTruthy();
-    expect(within(bands[1] as HTMLElement).queryByText("import new version →")).toBeNull();
+    expect(within(bands[0] as HTMLElement).getByText("Import version")).toBeTruthy();
+    expect(within(bands[1] as HTMLElement).queryByText("Import version")).toBeNull();
   });
 
   it("S10-U05 lists each band's attempt chips in server order as buttons labelled 'attempt {id} — {STATUS}'", async () => {
@@ -636,7 +634,7 @@ describe("S10 Attempt Lineage — the screen", () => {
     expect(node("att_03").querySelector("[data-technical-retries]")?.textContent).toBe("technical retries: 3 (not attempts)");
     expect(document.querySelectorAll("[data-tree-scroll] [data-attempt]")).toHaveLength(6);
     expect(document.querySelectorAll("[data-chip]")).toHaveLength(6);
-    expect(counter()).toBe("showing 6 of 6 attempts");
+    expect(counter()).toBe("6 of 6");
   });
 
   it("S10-U16 renders a published promotion pick with its source, linking only to returned identities", async () => {
@@ -650,7 +648,7 @@ describe("S10 Attempt Lineage — the screen", () => {
     expect(pick.querySelector("[data-pick-source]")?.textContent).toContain("as of 2026-07-25");
     /* Hi-fi line "att · run · … → rc_": W5c — the pick's run opens Screen 11 (P21). */
     /* CG-FG-S10-01: the approval's source digest (hex 9…) is no longer printed in the param-set slot; this body serves no trial / param set, so both slots are typed absences. */
-    expect(pick.querySelector(".v")?.textContent).toBe("att_03 · run_att_03 · trial — not published · param set — not published → rc_");
+    expect(pick.querySelector(".v")?.textContent).toBe("att_03 · run_att_03 · trial — not published · param set — not published → Release");
     expect(pick.querySelector(".v")?.textContent).not.toContain(hex("9").slice(0, 8));
     const rc = pick.querySelector("[data-pick-rc]") as HTMLElement;
     expect(rc.tagName).toBe("A");
@@ -671,16 +669,16 @@ describe("S10 Attempt Lineage — the screen", () => {
     const gaps = document.querySelectorAll('[data-pick-state="NOT_PUBLISHED"]');
     expect(gaps).toHaveLength(1);
     expect(gaps[0].getAttribute("data-pick-version")).toBe("alphaver_093");
-    expect(gaps[0].textContent).toContain("PROMOTION PICK");
+    expect(gaps[0].textContent).toContain("Promotion pick");
     expect(gaps[0].textContent).toContain(PICK_ABSENT);
-    expect(gaps[0].textContent).toContain("P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK");
+    expect(gaps[0].outerHTML).toContain("P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK");
     expect(panel("root").lastElementChild).toBe(gaps[0]);
     expect(document.querySelector("[data-pick-attempt]")).toBeNull();
     expect(screenState()).toBe("partial");
     /* D8 (10-8): the pick card says it; no screen-level PARTIAL notice repeats it above the tree. */
     expect(document.querySelector('[data-panel="notice"]')).toBeNull();
     /* D8 (10-5): with no published pick the hi-fi's verdict line stands in the rule, on no attempt. */
-    expect(panel("promotion-rule").querySelector('[data-tree-aim="rule"]')?.textContent).toBe(TREE_AIM);
+    expect(panel("promotion-rule").getAttribute("title")).toContain(TREE_AIM);
     expect(document.querySelector('[data-tree-aim="picked"]')).toBeNull();
   });
 
@@ -711,7 +709,7 @@ describe("S10 Attempt Lineage — the screen", () => {
     const bound = document.querySelector("[data-bounded]") as HTMLElement;
     expect(bound.textContent).toContain("3 of 200 attempts were returned");
     expect(bound.textContent).toContain("P19_BOUNDED_GRAPH_LIMIT_REACHED");
-    expect(counter()).toBe("showing 3 of 3 attempts · 200 on record");
+    expect(counter()).toBe("3 of 3 · 200 on record");
     expect(document.querySelector('[data-coverage-line="PARTIAL"]')?.textContent).toContain("oldest returned 2026-07-25 17:20Z");
   });
 
@@ -721,10 +719,10 @@ describe("S10 Attempt Lineage — the screen", () => {
     await ready();
     const chips = [...document.querySelectorAll("[data-filter]")] as HTMLButtonElement[];
     expect(chips.map((c) => [c.getAttribute("data-filter"), c.textContent, c.getAttribute("aria-pressed")])).toEqual([
-      ["ACTIVE", "version active", "false"],
-      ["DRAFT", "draft", "false"],
-      ["SUPERSEDED", "version superseded", "false"],
-      ["ABANDONED", "version abandoned", "false"],
+      ["ACTIVE", "Active", "false"],
+      ["DRAFT", "Draft", "false"],
+      ["SUPERSEDED", "Superseded", "false"],
+      ["ABANDONED", "Abandoned", "false"],
     ]);
     /* Filter buckets (VD-F1-02, see matchesLineageFilter): version filters match the band lifecycle — att_01/02/04 in SUPERSEDED av_0_9_2 ·
        att_03, att_05 and att_06 in ACTIVE av_0_9_3 — and att_06, a DRAFT attempt, also matches "draft". */
@@ -753,8 +751,8 @@ describe("S10 Attempt Lineage — the screen", () => {
     }
     /* VD-F1-02: the "version active" filter matches the band lifecycle, so the FAILED attempt stays in it, and its node chip says FAILED (its own state). */
     for (const status of ["DRAFT", "SUPERSEDED", "ABANDONED"]) fireEvent.click(chip(status));
-    expect(counter()).toBe("showing 3 of 6 attempts");
-    expect(node("att_05").querySelector(".ln-st")?.textContent).toBe("FAILED");
+    expect(counter()).toBe("3 of 6");
+    expect(node("att_05").querySelector(".ln-st")?.textContent).toBe("failed");
   });
 
   it("S10-U21 a band chip selects its attempt, widens a filter that hid it, and opens it in the tree", async () => {
@@ -769,7 +767,7 @@ describe("S10 Attempt Lineage — the screen", () => {
     expect(node("att_04")).toBeTruthy();
     expect(node("att_04").getAttribute("data-selected")).toBe("true");
     expect(node("att_04").querySelector("[data-row]")?.getAttribute("aria-expanded")).toBe("true");
-    expect(counter()).toBe("showing 6 of 6 attempts");
+    expect(counter()).toBe("6 of 6");
     expect(chip.getAttribute("aria-current")).toBe("true");
     expect(document.activeElement).toBe(chip);
   });
@@ -784,8 +782,8 @@ describe("S10 Attempt Lineage — the screen", () => {
     expect(selected.querySelector('[data-row-key="parent"]')?.textContent).toBe("att_02 →");
     expect(selected.querySelector('[data-row-key="engine release"]')?.textContent).toBe("quantbt-1.1.1");
     expect(selected.querySelector('[data-row-key="technical retries"]')?.textContent).toBe("3 (not attempts)");
-    expect(within(selected).getByText("open evidence →").getAttribute("href")).toBe("/research/quantbt/runs/run_att_03/evidence");
-    expect(within(selected).getByText("run report").getAttribute("href")).toBe("/research/quantbt/runs/run_att_03/report");
+    expect(within(selected).getByText("Evidence").getAttribute("href")).toBe("/research/quantbt/runs/run_att_03/evidence");
+    expect(within(selected).getByText("Report").getAttribute("href")).toBe("/research/quantbt/runs/run_att_03/report");
     const diff = panel("diff");
     expect([...diff.querySelectorAll("[data-diff-row]")].map((r) => r.getAttribute("data-diff-row"))).toEqual([
       "alpha_version",
@@ -837,25 +835,19 @@ describe("S10 Attempt Lineage — the screen", () => {
     renderRoute();
     await ready();
     expect(document.querySelector('[data-panel="rules"]')).toBeNull();
-    expect(panel("promotion-rule").querySelector("p")?.textContent).toBe(PROMOTION_RULE);
-    expect(panel("promotion-rule").querySelector("p")?.getAttribute("title")).toBe(PROMOTION_RULE_TITLE);
+    /* W4: the rule and the standing tally are one tooltip; nothing is printed. */
+    expect(panel("promotion-rule").textContent).toBe("");
+    expect(panel("promotion-rule").getAttribute("title")).toContain(PROMOTION_RULE);
     const counts = [...panel("counts").querySelectorAll("[data-count]")].map((c) => [c.getAttribute("data-count"), c.querySelector(".n")?.textContent ?? null]);
     /* A pre-1.1 server has no storied/probe split: those two say so, never 0. */
     expect(counts).toEqual([
       ["total_attempts", "6"],
-      ["returned_attempts", "6"],
-      ["draft_attempts", "1"],
-      ["submitted_attempts", "5"],
       ["failed_attempts", "1"],
-      ["abandoned_attempts", "1"],
-      ["child_runs", "1"],
-      ["technical_retries", "3"],
-      ["storied_returned", null],
       ["probe_returned", null],
     ]);
     expect(panel("counts").querySelector('[data-count="probe_returned"]')?.textContent).toContain("not published");
     expect(panel("header").querySelector("[data-subtitle]")).toBeNull();
-    expect(panel("counts").querySelector("[data-read-authority]")?.textContent).toContain("PORTAL_PERSISTED_RESEARCH");
+    expect(panel("counts").querySelector("[data-read-authority]")?.getAttribute("data-read-authority")).toContain("PORTAL_PERSISTED_RESEARCH");
     expect(panel("header").querySelector("[data-source-chip]")?.getAttribute("title")).toContain("PORTAL_PERSISTED_RESEARCH");
   });
 
@@ -878,12 +870,11 @@ describe("S10 Attempt Lineage — the screen", () => {
     expect(root.querySelector('[data-action="runs"]')?.getAttribute("href")).toBe(`/research/quantbt/runs?group=1&alpha=${ALPHA}`);
     /* F2b: the way into Screen 02 keeps the alpha (and the active version when there is one). */
     expect(root.querySelector('[data-action="declare-at-new-run"]')?.getAttribute("href")).toMatch(/^\/research\/quantbt\/runs\/new\?alpha=/);
-    for (const key of ["OOS sharpe", "decay", "cert"]) {
-      expect(panel("selected").querySelector(`[data-row-key="${key}"]`)?.textContent, key).toMatch(/not published/);
-      expect(panel("selected").querySelector(`[data-row-key="${key}"]`)?.textContent, key).not.toMatch(/\b0\b/);
-    }
+    /* W4: OOS / decay / cert are the card's, not repeated in the panel; with no number served the card says so once. */
+    expect(document.querySelector("[data-metrics-absent]")?.textContent).toBe("no OOS");
+    expect(document.querySelector("[data-metrics-absent]")?.textContent).not.toMatch(/\b0\b/);
     expect(panel("selected").querySelector("[data-verdict] [data-absent=verdict]")).toBeTruthy();
-    expect(node("att_01").querySelector("[data-cert-absent]")?.textContent).toBe("cert not published");
+    expect(node("att_01").querySelector("[data-cert-absent]")).toBeNull(); /* said once, in the version line */
   });
 
   it("S10-U28 an alpha with no attempt is empty, keeps its bands, and still reconciles the counter", async () => {
@@ -896,7 +887,7 @@ describe("S10 Attempt Lineage — the screen", () => {
     expect(document.querySelectorAll("[data-band]")).toHaveLength(2);
     expect(document.querySelectorAll("[data-band-empty]")).toHaveLength(2);
     expect(document.querySelector("[data-tree-empty]")?.textContent).toBe("No attempt is recorded for this alpha yet.");
-    expect(counter()).toBe("showing 0 of 0 attempts");
+    expect(counter()).toBe("0 of 0");
     expect(panel("selected").textContent).toContain("No attempt selected");
   });
 });
@@ -905,7 +896,7 @@ describe("S10 Attempt Lineage — refusals", () => {
   it("S10-U29 a 400 is terminal: fixed copy, no retry, no content", async () => {
     server([problem(400, "RESEARCH_LINEAGE_INVALID")]);
     renderRoute();
-    await screen.findByText(LINEAGE_REFUSAL_COPY[400]);
+    await screen.findByTitle(new RegExp(LINEAGE_REFUSAL_COPY[400].slice(0, 30)));
     expect(screenState()).toBe("terminal");
     expectRefusalOnly();
     expect(document.querySelector('[data-action="retry"]')).toBeNull();
@@ -914,7 +905,7 @@ describe("S10 Attempt Lineage — refusals", () => {
   it("S10-U30 a 401 is denied and is not retried", async () => {
     const { calls } = server([{ status: 401, body: { error: { code: "UNAUTHORIZED", message: "Invalid session." } } }]);
     renderRoute();
-    await screen.findByText(LINEAGE_REFUSAL_COPY[401]);
+    await screen.findByTitle(new RegExp(LINEAGE_REFUSAL_COPY[401].slice(0, 30)));
     expect(screenState()).toBe("denied");
     expectRefusalOnly();
     expect(document.querySelector('[data-action="retry"]')).toBeNull();
@@ -929,10 +920,10 @@ describe("S10 Attempt Lineage — refusals", () => {
     ] as const) {
       server([problem(status, code)]);
       renderRoute();
-      await screen.findByText(LINEAGE_NEUTRAL_REFUSAL);
+      await screen.findByText("Not available to you.");
       expect(document.body.textContent).not.toContain("alice@example");
       expect(document.body.textContent).not.toContain("alpha_momentum_btc");
-      expect(document.querySelector("[data-request-id]")?.textContent).toBe("request req_p19");
+      expect(document.querySelector("[data-refusal-request]")?.getAttribute("data-refusal-request")).toBe("req_p19");
       const badge = panel("notice").querySelector("[data-research-state]") as HTMLElement;
       seen.push([
         String(screenState()),
@@ -952,7 +943,7 @@ describe("S10 Attempt Lineage — refusals", () => {
   it("S10-U32 a 503 is unavailable and one explicit retry reads again", async () => {
     const { calls } = server([problem(503, "RESEARCH_LINEAGE_UNAVAILABLE"), { status: 200, body: lineage() }]);
     renderRoute();
-    await screen.findByText(LINEAGE_REFUSAL_COPY[503]);
+    await screen.findByTitle(new RegExp(LINEAGE_REFUSAL_COPY[503].slice(0, 30)));
     expect(screenState()).toBe("unavailable");
     expectPendingFrame("unavailable");
     fireEvent.click(document.querySelector('[data-action="retry"]') as HTMLElement);
@@ -992,7 +983,7 @@ describe("S10 Attempt Lineage — scale and pure parts", () => {
     expect(rendered().length).toBeGreaterThan(0);
     expect(rendered().length).toBeLessThan(40);
     expect(rendered()).not.toContain("att_080");
-    expect(counter()).toBe("showing 120 of 120 attempts");
+    expect(counter()).toBe("120 of 120");
     expect(document.querySelectorAll("[data-chip]")).toHaveLength(120);
     scroller.scrollTop = 80 * ROW_HEIGHT;
     fireEvent.scroll(scroller);
@@ -1186,13 +1177,13 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     server([{ status: 200, body: lineage({ attempts }) }]);
     renderRoute();
     await ready();
-    expect(counter()).toBe("showing 7 of 7 attempts");
+    expect(counter()).toBe("7 of 7");
     expect(node("att_07").getAttribute("data-status")).toBe("READY");
     expect(node("att_07").querySelector(".ln-st")?.textContent).toBe("READY");
     for (const status of LINEAGE_STATUSES) {
       fireEvent.click(document.querySelector(`[data-filter="${status}"]`) as HTMLElement);
     }
-    expect(counter()).toBe("showing 6 of 7 attempts");
+    expect(counter()).toBe("6 of 7");
     expect(node("att_07")).toBeNull();
   });
 
@@ -1256,13 +1247,11 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     renderRoute();
     await ready();
     /* Literals, not the module's constants, so a drift fails here. */
-    expect(panel("header").querySelector("h2")?.textContent).toBe("Attempt lineage");
+    expect(panel("header").querySelector("h2")?.getAttribute("title")).toContain("Attempt lineage");
     expect(panel("header").querySelector("[data-subtitle]")).toBeNull();
     expect(panel("header").querySelector("[data-source-chip]")?.textContent).toBe("PORTAL_PERSISTED_RESEARCH");
-    expect(panel("header").querySelector("nav")?.textContent).toBe("Runs/Attempt Lineage — alpha_momentum_btc");
-    expect(panel("promotion-rule").querySelector("p")?.textContent).toBe("Only the ACTIVE attempt promotes.");
-    expect(panel("promotion-rule").querySelector("p")?.getAttribute("title")).toContain("multiple-testing information");
-    expect(panel("promotion-rule").querySelector("p .ln-mono")?.textContent).toBe("ACTIVE");
+    expect(panel("header").querySelector("nav")?.textContent).toBe("Library/Lineage");
+    expect(panel("promotion-rule").getAttribute("title")).toContain("Only the ACTIVE attempt promotes.");
     expect(document.querySelector('[data-panel="rules"]')).toBeNull();
     expect(document.body.textContent).not.toMatch(/rules of this screen|Attempts are immutable|Immutable nodes|never reconstructed/);
     expect(LINEAGE_TITLE).toBe("Attempt lineage");
@@ -1274,11 +1263,11 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     /* D8 (10-1): the crumb names the alpha only — no market or timeframe the lineage does not carry. */
     expect(panel("header").querySelector("nav")?.textContent).not.toMatch(/USDT|· \d+[mhd]\b/);
     const root = panel("root");
-    expect(root.querySelector(".ln-k")?.textContent).toBe("root · alpha");
-    expect([...root.querySelectorAll(".ln-links > *")].map((l) => l.textContent)).toEqual(["runs →", "new run →", "rc & publish →"]);
-    expect(within(root).getByText("declare at New Run →").getAttribute("href")).toMatch(/^\/research\/quantbt\/runs\/new\?alpha=/);
-    expect(panel("selected").querySelector("h3")?.textContent).toContain("selected attempt — att_");
-    expect(panel("diff").querySelector("h3")?.textContent).toBe("diff vs parent — config keys only");
+    expect(root.querySelector(".ln-k")).toBeNull(); /* W4: no "root · alpha" tag; the header names the alpha */
+    expect([...root.querySelectorAll(".ln-links > *")].map((l) => l.textContent)).toEqual(["Runs", "New run", "Release"]);
+    expect(within(root).getByText("Declare in New run →").getAttribute("href")).toMatch(/^\/research\/quantbt\/runs\/new\?alpha=/);
+    expect(panel("selected").querySelector("h3")?.textContent).toContain("run_att_");
+    expect(panel("diff").querySelector("h3")?.textContent).toBe("Diff vs parent");
   });
 
   it("S10-U50 against a pre-1.1 server the probe toggle keeps the hi-fi's place and shape but is disabled with its reason and no invented count", async () => {
@@ -1290,7 +1279,7 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     expect(kids).toEqual(["ACTIVE", "DRAFT", "SUPERSEDED", "ABANDONED", "toggle-probes", "counter"]);
     const toggle = filters.querySelector('[data-action="toggle-probes"]') as HTMLButtonElement;
     expect(toggle.disabled).toBe(true);
-    expect(toggle.textContent).toBe("older probes");
+    expect(toggle.textContent).toBe("Probes");
     expect(toggle.textContent).not.toMatch(/\d/);
     expect(toggle.getAttribute("title")).toBe("probe classification not published by this server (P19_SERVER_PREDATES_LINEAGE_CONTRACT_1_1)");
     expect(toggle.getAttribute("aria-label")).toContain(PROBES_REASON);
@@ -1308,7 +1297,7 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     await ready();
     /* D8 (S10-RAW-STATE-CHIP) + VD-F1-02: one pill per attempt; it is the attempt's state and nothing else. */
     expect([...["att_01", "att_03", "att_05", "att_04", "att_06"].map((id) => node(id).querySelector(".ln-st")?.textContent)]).toEqual([
-      "READY", "READY", "FAILED", "ABANDONED", "DRAFT",
+      "READY", "READY", "failed", "abandoned", "draft",
     ]);
     for (const id of ["att_01", "att_03", "att_05", "att_04", "att_06"]) {
       const pill = node(id).querySelector(".ln-st") as HTMLElement;
@@ -1338,8 +1327,8 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     await ready();
     const pick = panel("root").lastElementChild as HTMLElement;
     expect(pick.getAttribute("data-pick-state")).toBe("NOT_PUBLISHED");
-    expect(pick.textContent).toContain("P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK");
-    expect(within(panel("root")).getByText("P19_ALPHA_HAS_NO_ACTIVE_VERSION")).toBeTruthy();
+    expect(pick.outerHTML).toContain("P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK");
+    expect(panel("root").outerHTML).toContain("P19_ALPHA_HAS_NO_ACTIVE_VERSION");
     /* Both superseded versions still show their own published picks in their rows. */
     expect(document.querySelectorAll("[data-band-pick]")).toHaveLength(2);
   });
@@ -1354,18 +1343,20 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     await ready();
     const card = node(LONG_ATT);
     const button = card.querySelector("[data-row]") as HTMLElement;
-    expect(button.textContent).toBe("ratt_8c9c9991");
+    expect(button.textContent).toBe("rrun_8c9c9991");
     expect(button.getAttribute("title")).toBe(LONG_ATT);
     const run = card.querySelector(`[data-run-link="${LONG_RUN}"]`) as HTMLElement;
-    expect(run.textContent).toBe("rrun_8c9c9991");
-    expect(run.getAttribute("title")).toBe(LONG_RUN);
+    expect(run.textContent).toBe("↗");
+    expect(run.getAttribute("title")).toContain(LONG_RUN);
+    expect(run.getAttribute("aria-label")).toContain("rrun_8c9c9991");
     const chip = document.querySelector(`[data-chip="${LONG_ATT}"]`) as HTMLElement;
-    expect(chip.textContent).toBe("ratt_8c9c9991");
+    expect(chip.textContent).toBe("rrun_8c9c9991");
     expect(chip.getAttribute("title")).toContain(LONG_ATT);
     /* The selected heading keeps the id's case (the heading is uppercase) and copies the full value. */
     const selectedId = panel("selected").querySelector("h3 [data-full-id]") as HTMLElement;
-    expect(selectedId.textContent).toBe("ratt_8c9c9991");
-    expect(selectedId.getAttribute("data-full-id")).toBe(LONG_ATT);
+    /* W4: the heading names the attempt by its run (the label), the attempt id is the tooltip. */
+    expect(selectedId.textContent).toBe("rrun_8c9c9991");
+    expect(selectedId.getAttribute("data-full-id")).toBe(LONG_RUN);
     expect(selectedId.className).toContain("ln-selid");
     /* No full 32-hex tail is printed as visible text anywhere on the screen. */
     expect(document.querySelector('[data-screen="attempt-lineage"]')?.textContent).not.toContain("8c9c9991bdd0cfe72100da64ebee1150");

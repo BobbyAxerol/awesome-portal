@@ -167,10 +167,11 @@ describe("F2 · S06 — Trial.params_digest in the ledger rows", () => {
     const { container } = mount("#stage=search&fold=1");
     await waitFor(() => expect(container.querySelectorAll("[data-trial-digest]").length).toBe(SURFACE.ledger.trials.length));
     const first = SURFACE.ledger.trials[0]!;
-    const cell = container.querySelector(`[data-trial='${first.trial_id}'] [data-trial-digest]`) as HTMLElement;
+    /* W4: the digest is the row's tooltip, not a column of 100 hashes. */
+    const cell = container.querySelector(`[data-trial='${first.trial_id}']`) as HTMLElement;
     expect(cell.getAttribute("data-trial-digest")).toBe(first.params_digest);
-    expect(cell.textContent).toBe(first.params_digest!.slice(0, 8));
-    expect(cell.querySelector("span")?.getAttribute("title")).toBe(first.params_digest);
+    expect(cell.getAttribute("title")).toContain(first.params_digest!);
+    expect(cell.textContent).not.toContain(first.params_digest!.slice(0, 8));
   });
 
   it("a row without a digest says 'not published' — not an empty cell, not a made-up digest", async () => {
@@ -179,9 +180,9 @@ describe("F2 · S06 — Trial.params_digest in the ledger rows", () => {
     stub({ search: () => [200, body] });
     const { container } = mount("#stage=search&fold=1");
     await waitFor(() => expect(container.querySelectorAll("[data-trial-digest]").length).toBe(body.ledger.trials.length));
-    const cell = container.querySelector(`[data-trial='${body.ledger.trials[0]!.trial_id}'] [data-trial-digest]`) as HTMLElement;
+    const cell = container.querySelector(`[data-trial='${body.ledger.trials[0]!.trial_id}']`) as HTMLElement;
     expect(cell.getAttribute("data-trial-digest")).toBe("");
-    expect(cell.textContent).toBe("not published");
+    expect(cell.getAttribute("title")).toContain("no params digest");
   });
 });
 

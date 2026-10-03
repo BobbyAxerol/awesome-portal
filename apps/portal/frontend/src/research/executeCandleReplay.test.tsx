@@ -18,7 +18,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CandleOverviewStrip, REVEAL_HIDDEN, chartMotion, chartPrice, crosshairReadout, exactPercent, foldCapitalPolicyWords, foldCapitalTile, paddedRange, sumDecimalStrings, windowMarkers } from "./ExecuteCandleReplay";
+import { CandleOverviewStrip, REVEAL_HIDDEN, chartMotion, chartPrice, crosshairReadout, exactPercent, foldCapitalPolicyWords, foldCapitalTile, paddedRange, windowMarkers } from "./ExecuteCandleReplay";
 import { drawdownTooltip, equityTooltip, positionTooltip } from "./ExecuteDetail";
 import { formatMetric } from "./researchFormat";
 import { iso } from "./utcMinute";
@@ -187,7 +187,8 @@ describe("P17-T01 · candles + markers, and the route's own absences", () => {
     /* UX-07 / T-01: the "… · 0 orders · 0 fills · 0 trades" line is gone; the chips below carry the absences. */
     expect(container.querySelector("[data-route-note]")).toBeNull();
     expect(container.textContent).not.toContain("close-only accounting");
-    expect(container.querySelector("[data-replay-contract]")?.textContent).toContain("close_target_v2");
+    expect(container.querySelector("[data-replay-contract]")?.textContent).toContain("close target v2");
+    expect(container.querySelector("[data-replay-contract]")?.getAttribute("title")).toContain("close_target_v2");
     const reason = (name: string) => container.querySelector(`[data-capability='${name}'] [data-reason-code]`)?.getAttribute("data-reason-code");
     expect(reason("trades")).toBe("QUANTBT_ROUTE_EMITTED_NO_TRADE_RECORDS");
     expect(reason("orders")).toBe("QUANTBT_ROUTE_EMITTED_NO_ORDER_RECORDS");
@@ -195,15 +196,12 @@ describe("P17-T01 · candles + markers, and the route's own absences", () => {
     expect(reason("sl_tp")).toBe("QUANTBT_INTRABAR_EXIT_MODEL_NONE");
     expect(reason("funding")).toBe("QUANTBT_RUN_CONFIG_USE_FUNDING_FALSE");
     expect(container.textContent).not.toMatch(/\bfill @|fill_id|order_id/);
-    expect(container.querySelector("[data-tile='orders · fills · trades']")?.textContent).toContain("0 · 0 · 0");
+    /* W4: the meaningless "0 · 0 · 0" tile is gone; the single absence line says it. */
+    expect(container.querySelector("[data-tile='orders · fills · trades']")).toBeNull();
   });
 
   it("VD-TEXT-01 · the route fact is one line, the explanatory prose is gone, the absences keep their reason codes", async () => {
     const { container } = await settled();
-    /* T-02: the tile says these are records the source published, so 0 cannot read as "no trade happened". */
-    const tile = container.querySelector("[data-tile='orders · fills · trades']") as HTMLElement;
-    expect(tile.textContent).toContain("published records");
-    expect(tile.textContent).toContain("0 · 0 · 0");
     expect(container.textContent).not.toMatch(/0 orders · 0 fills · 0 trades/);
     expect(container.querySelector("[data-subtitle]")).toBeNull();
     expect(container.querySelector("[data-rules]")).toBeNull();
@@ -214,8 +212,10 @@ describe("P17-T01 · candles + markers, and the route's own absences", () => {
     // The long ledger rule rides in a tooltip on the (still accessible) title.
     expect(container.querySelector("[data-panel='event-ledger'] h2")?.getAttribute("title")).toBe("One row per position change.");
     expect(container.querySelector("[data-transition-count]")?.getAttribute("title")).toBeTruthy();
-    expect(container.querySelector("[data-absent-panel='trade-blotter'] [data-reason-code]")?.getAttribute("data-reason-code")).toBe("QUANTBT_ROUTE_EMITTED_NO_TRADE_RECORDS");
-    expect(container.querySelector("[data-absent-panel='mae-mfe'] [data-reason-code]")?.getAttribute("data-reason-code")).toBe("QUANTBT_ROUTE_EMITTED_NO_TRADE_RECORDS");
+    /* W4: blotter and MAE x MFE are structurally empty on this route: ONE line, the reason code in its tooltip. */
+    const blotter = container.querySelector("[data-absent-panel='trade-blotter']") as HTMLElement;
+    expect(blotter.textContent).toBe("No trade records on this route");
+    expect(blotter.querySelector("[title]")?.getAttribute("title")).toContain("QUANTBT_ROUTE_EMITTED_NO_TRADE_RECORDS");
   });
 
   it("the ledger lists the source's transitions with original bar numbers and the account's fee", async () => {
@@ -323,7 +323,7 @@ describe("P17-T07/T13 · transport and causal reveal are local and presentation-
     expect(container.querySelector("[data-tile='target transitions']")?.textContent).toContain(REVEAL_HIDDEN);
     expect([...container.querySelectorAll("[data-marker]")].map((node) => node.getAttribute("data-marker"))).toEqual(["727"]);
     expect(container.querySelectorAll("[data-candle-row]")).toHaveLength(8);
-    expect(container.querySelector("[data-readout-full-run]")?.textContent).toContain(REVEAL_HIDDEN);
+    expect(container.querySelector("[data-readout-full-run]")).toBeNull();
     expect(container.querySelector("[data-cost-total]")?.getAttribute("data-cost-total")).toBe("hidden");
     expect(container.querySelector("[data-as-of]")?.textContent).toBe(revision);
     expect(fetchMock.mock.calls.length).toBe(before);
@@ -349,7 +349,8 @@ describe("P17-T06/T08 · bounded DOM, no certificate", () => {
     const { container } = await settled();
     expect(container.querySelector("[data-certificate]")).toBeNull();
     expect(container.textContent).not.toMatch(/certificate|cert L\d/i);
-    expect(container.querySelector("[data-accounting-certified]")?.textContent).toBe("accounting certified by QuantBT");
+    /* W4: the flag is the contract line's tooltip, quoted as the engine's (not a badge). */
+    expect(container.querySelector("[data-replay-contract]")?.getAttribute("title")).toContain("accounting certified by QuantBT");
   });
 });
 
@@ -600,23 +601,10 @@ describe("F1 · FG 08-06 / 08-07 — the browser derives no return and sums no f
     expect(chips[0]!.querySelector("[data-exact]")?.getAttribute("title")).toBe(segments[0]!.end_equity);
   });
 
-  it("sumDecimalStrings adds served decimal strings exactly on the digits, and refuses a partial sum", () => {
-    expect(sumDecimalStrings(["0.1", "0.2"])).toBe("0.3");
-    expect(sumDecimalStrings(["1.07", "0", "2"])).toBe("3.07");
-    expect(sumDecimalStrings(["-1.5", "0.5"])).toBe("-1");
-    expect(sumDecimalStrings(["0", "0"])).toBe("0");
-    expect(sumDecimalStrings(["1.5", null])).toBeNull();
-    expect(sumDecimalStrings(["1.5", "1e-5"])).toBeNull();
-    expect(sumDecimalStrings([])).toBe("0");
-  });
-
-  it("I-13 · the cost timeline states the window's fee as the exact sum of the served per-bar fees (QA S08: it was 'not published' while every bar served one)", async () => {
+  it("W4 · the browser sums no fee: no window fee is printed, only the served full-run total", async () => {
     const { container } = await settled();
-    const windowLine = container.querySelector("[data-cost-window]") as HTMLElement;
-    const expected = sumDecimalStrings(FOLD0.replay.rows.map((row) => row.bar?.fee));
-    expect(expected).not.toBeNull();
-    expect(windowLine.querySelector("[data-window-fee]")?.getAttribute("data-window-fee")).toBe(expected);
-    expect(windowLine.querySelector("[data-window-fee='NOT_PUBLISHED']")).toBeNull();
+    expect(container.querySelector("[data-cost-window]")).toBeNull();
+    expect(container.querySelector("[data-window-fee]")).toBeNull();
     const total = container.querySelector("[data-cost-total='shown']") as HTMLElement;
     expect(total.querySelector("[data-exact]")?.getAttribute("title")).toBe(FOLD0.execution.totals.fee);
   });
@@ -678,7 +666,9 @@ describe("F3 · S08 — fold_NN everywhere, 4× default, room at both ends of th
     expect(container.querySelector("[data-fold='0']")?.getAttribute("title")).toMatch(/^fold_01: /);
     expect(container.querySelector("[data-playhead-readout] [data-readout-fold]")?.textContent).toBe("fold_01");
     await waitFor(() => expect(container.querySelector("[data-child-audit='0']")).toBeTruthy());
-    expect(container.querySelector("[data-panel='child-audit']")?.textContent).toContain("fold_01 · shaded = OOS generation");
+    expect(container.querySelector("[data-panel='child-audit'] summary")?.textContent).toContain("fold_01 · ");
+    expect(container.querySelector("[data-panel='child-audit'] summary")?.getAttribute("title")).toContain("shaded row is the strategy instance");
+    expect(container.querySelector("[data-child-audit-details]")?.hasAttribute("open")).toBe(false);
     expect(container.querySelector("[aria-label='child audit records of fold_01']")).toBeTruthy();
     expect(container.textContent).not.toMatch(/\bfold \d/);
   });

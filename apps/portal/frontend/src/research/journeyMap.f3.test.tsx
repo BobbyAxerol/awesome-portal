@@ -32,10 +32,8 @@ describe("S00 header (00-1a…d)", () => {
   it("carries the title and no kicker (fewer words); the descriptor revision is a data attribute", () => {
     draw();
     expect(document.querySelector("[data-journey-kicker]")).toBeNull();
-    expect(document.querySelector("h1")?.getAttribute("data-descriptor-revision")).toBe(String(V4.descriptor.revision));
+    expect(document.querySelector("h1 [data-descriptor-revision]")?.getAttribute("data-descriptor-revision")).toBe(String(V4.descriptor.revision));
     expect(document.querySelector("h1")?.textContent).toBe("Journey Map");
-    expect(document.querySelector("h1")?.className).toContain("text-[27px]");
-    expect(document.querySelector("h1")?.className).toContain("font-normal");
   });
 
   it("puts a one-swatch legend on the right of the title (no 'shipped hi-fi': those screens redirect)", () => {
@@ -44,9 +42,9 @@ describe("S00 header (00-1a…d)", () => {
     const legend = head.querySelector("[data-legend]") as HTMLElement;
     expect(legend).toBeTruthy();
     expect(Array.from(legend.querySelectorAll("[data-legend-tag]")).map((n) => n.textContent)).toEqual(["redesigned"]);
-    // legend follows the title block inside the same header row
-    expect(head.firstElementChild?.querySelector("h1")).toBeTruthy();
-    expect(head.lastElementChild).toBe(legend);
+    /* W4A: the legend sits under the one page-header h1 */
+    expect(head.closest("[data-page-header]")?.querySelector("h1")).toBeTruthy();
+    expect(head.firstElementChild).toBe(legend);
   });
 });
 

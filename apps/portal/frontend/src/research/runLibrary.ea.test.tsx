@@ -157,7 +157,7 @@ describe("EA S01 - refusal of a non-ALL_TIME basis", () => {
     expect(readAllTime(item).kind).toBe("refused");
     const box = draw(item);
     const refused = box.querySelector<HTMLElement>("[data-all-time-refused]")!;
-    expect(refused.textContent).toBe("not published");
+    expect(refused.textContent).toBe("no series"); /* W4A shared phrase */
     expect(refused.getAttribute("title")).toMatch(/^Not drawn:/);
     expect(box.querySelector("svg")).toBeNull();
     expect(box.querySelector("[data-all-time-trio]")).toBeNull();

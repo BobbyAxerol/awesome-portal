@@ -158,7 +158,7 @@ export function SurfaceAbsence({
           {reasonCodeSentence(reason)}
         </span>
       ) : null}
-      <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-gap-reason={id}>
+      <span hidden data-gap-reason={id}>
         {reason}
       </span>
     </section>
@@ -637,7 +637,7 @@ export function ThetaJourney({ surface, declared, schedule }: { surface: Surface
       title="B4 · θ* journey — stability across folds"
       aside={
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} title={surface.parameter_frequency.rule}>
-          server · top-decile share at θ*
+          top-decile share at θ*
         </span>
       }
     >
@@ -663,7 +663,7 @@ export function ThetaJourney({ surface, declared, schedule }: { surface: Surface
               title={row ? `${row.matching} of ${surface.parameter_frequency.pool_count} top-decile trials carry θ*'s value` : undefined}
               data-frequency={row?.share_percent ?? ""}
             >
-              {row ? `${Math.round(row.share_percent)}% top-decile` : "not published"}
+              {row ? `${Math.round(row.share_percent)}%` : "not published"}
             </span>
           </span>
         );

@@ -36,7 +36,9 @@ describe("S00 - one instruction per card, shorter title, no dangling arrows", ()
   it("a picker card says 'pick a run' once; its kind is a tooltip, not a printed tag", () => {
     draw();
     const card = document.querySelector('[data-card-picks-run="split"]') as HTMLElement;
-    expect(card.textContent?.match(/pick a run/gi)).toHaveLength(1);
+    /* W4A: the instruction is the tooltip and the accessible name; the card face is the title. */
+    expect(card.textContent).not.toMatch(/pick a run/i);
+    expect(card.getAttribute("aria-label")).toMatch(/pick a run/);
     expect(card.textContent).not.toContain("PICK A RUN");
     expect(card.textContent).not.toMatch(/redesign/i);
     expect(card.getAttribute("title")).toContain("Redesigned Research screen");

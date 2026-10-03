@@ -445,8 +445,8 @@ describe("a 403 is the session, said once", () => {
 
 describe("failures are distinct and retryable", () => {
   it.each([
-    ["client-error", "estimate — request refused · 400 · SOMETHING", { kind: "error", failure: "client-error", status: 400, code: "SOMETHING", requestId: "r" }],
-    ["server-error", "estimate — server unavailable · 503", { kind: "error", failure: "server-error", status: 503, code: null, requestId: null }],
+    ["client-error", "estimate — request refused", { kind: "error", failure: "client-error", status: 400, code: "SOMETHING", requestId: "r" }],
+    ["server-error", "estimate — server unavailable", { kind: "error", failure: "server-error", status: 503, code: null, requestId: null }],
     ["network", "estimate — no answer", { kind: "error", failure: "network", status: null, code: null, requestId: null }],
   ] as const)("%s says its own words and Retry asks again; it never reads as not published", (state, words, status) => {
     const retry = vi.fn();

@@ -52,10 +52,14 @@ function mount(items: RunLibraryItem[], filters: Partial<LibraryFilters> = {}) {
 }
 
 describe("W2B · a fact the list already states once is not repeated on every card", () => {
-  it("with no filter, every card keeps its alpha and mode chips", () => {
+  it("with no filter, a binding or mode every card shares is said once beside the counter (W4A)", () => {
     mount(current);
-    expect(document.querySelectorAll("[data-run] [data-binding]").length).toBe(current.length);
-    expect(document.querySelectorAll("[data-run] [data-mode]").length).toBe(current.length);
+    const sameBinding = new Set(current.map((item) => item.binding!.alpha_version_id)).size === 1;
+    const sameMode = new Set(current.map((item) => item.mode.display)).size === 1;
+    expect(document.querySelectorAll("[data-run] [data-binding]").length).toBe(sameBinding ? 0 : current.length);
+    expect(document.querySelectorAll("[data-common-binding]").length).toBe(sameBinding ? 1 : 0);
+    expect(document.querySelectorAll("[data-run] [data-mode]").length).toBe(sameMode ? 0 : current.length);
+    expect(document.querySelectorAll("[data-common-mode]").length).toBe(sameMode ? 1 : 0);
   });
 
   it("one alpha in the filter: the cards drop the alpha chip; one mode: the mode chip", () => {

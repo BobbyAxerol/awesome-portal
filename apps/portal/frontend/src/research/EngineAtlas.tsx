@@ -44,6 +44,7 @@ import {
   routeDisplay,
 } from "./atlas";
 import { ResearchPanel } from "./ResearchPanel";
+import { humanise } from "./humanise";
 import { claimToken, groupDecimalString, shortId } from "./researchFormat";
 import type { ResearchState } from "./state";
 
@@ -536,10 +537,9 @@ function ScheduleClaim({ fact, certCapShared = false }: { fact: AtlasScheduleFac
   return (
     <div className="flex flex-col gap-1.5" data-schedule-claim={fact.schedule}>
       <span className="mono flex flex-col gap-0.5 text-[10.5px]">
-        <span className="border-l-2 pl-1.5" style={{ borderColor: tone.border, color: tone.color }} data-claim={fact.chronological_validation_claim}>
-          {fact.chronological_validation_claim}
+        <span className="border-l-2 pl-1.5" style={{ borderColor: tone.border, color: tone.color }} data-claim={fact.chronological_validation_claim} title={`${fact.chronological_validation_claim} · validation ${fact.validation_claim}`}>
+          {humanise(fact.chronological_validation_claim)}
         </span>
-        <span style={{ color: "var(--ink-soft)" }}>validation {fact.validation_claim}</span>
       </span>
       {fact.oos_use_state ? (
         <span
@@ -558,7 +558,7 @@ function ScheduleClaim({ fact, certCapShared = false }: { fact: AtlasScheduleFac
       ) : null}
       <details className="text-[10.5px]" data-claim-facts={fact.schedule}>
         <summary className="mono cursor-pointer text-[9.5px]" style={{ color: "var(--accent)" }}>
-          causality, OOS use, params
+          Details
         </summary>
         <dl className="mt-1 grid grid-cols-[auto_minmax(0,1fr)] gap-x-2.5 gap-y-0.5">
           <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-soft)" }}>causality</dt>
@@ -630,8 +630,16 @@ export function symbolGutterCh(terms: readonly { symbol: string }[]): number | n
 type AtlasObjectiveTerm = NonNullable<AtlasObjectiveFact["terms"]>[number];
 
 /** One term row: the engine's symbol in the measured gutter, or stacked above its meaning. */
-function TermRow({ term, gutter }: { term: AtlasObjectiveTerm; gutter: number | null }) {
-  const title = term.source.map((item) => `${item.path}:${item.lines} sha256 ${item.sha256}`).join("\n");
+function TermRow({ term, gutter, defined = true }: { term: AtlasObjectiveTerm; gutter: number | null; defined?: boolean }) {
+  const title = `${defined ? "" : `${term.meaning}\n`}${term.source.map((item) => `${item.path}:${item.lines} sha256 ${item.sha256}`).join("\n")}`;
+  /* A term is defined once on the page: the first mode that has it prints the meaning, the others the symbol (meaning in the tooltip). */
+  if (!defined) {
+    return (
+      <span className="mono border-b py-[2px] text-[10px]" style={{ borderColor: "var(--line-soft)", color: "var(--ink)", overflowWrap: "anywhere" }} data-objective-term={term.symbol} data-term-layout="symbol-only" title={title}>
+        {term.symbol}
+      </span>
+    );
+  }
   if (gutter === null) {
     return (
       <span
@@ -673,7 +681,11 @@ function TermRow({ term, gutter }: { term: AtlasObjectiveTerm; gutter: number | 
   );
 }
 
-function ObjectiveBlock({ facts }: { facts: AtlasModeFacts }) {
+function ObjectiveBlock({ facts, definedElsewhere, modeId }: { facts: AtlasModeFacts; definedElsewhere?: ReadonlyMap<string, string>; modeId?: string }) {
+  const isDefined = (symbol: string): boolean => {
+    const first = definedElsewhere?.get(symbol);
+    return first === undefined || first === modeId;
+  };
   if (!isPublished<AtlasObjectiveFact>(facts.objective)) {
     return <NotPublished fact={facts.objective} label="objective" />;
   }
@@ -687,17 +699,7 @@ function ObjectiveBlock({ facts }: { facts: AtlasModeFacts }) {
   const gutter = symbolGutterCh(shownTerms);
   /* RF-04: the disclosure summary names the cap it applies — "4 of 7 terms",
      never a silent slice — and every other thing it holds, on one line. */
-  const opens = [
-    terms.length === 0
-      ? null
-      : moreTerms.length > 0
-        ? `${shownTerms.length} of ${terms.length} terms`
-        : `all ${terms.length} ${terms.length === 1 ? "term" : "terms"} shown`,
-    rest.length > 0 ? `${rest.length} more ${rest.length === 1 ? "stage" : "stages"}` : null,
-    objective.weights && objective.weights.length > 0 ? "weights" : null,
-    "selection metric",
-    "sources",
-  ].filter((part): part is string => part !== null);
+  const opens = [terms.length === 0 ? null : `Terms (${terms.length})`].filter((part): part is string => part !== null);
   return (
     <div className="flex flex-col gap-1" data-objective>
       {lead ? (
@@ -705,36 +707,36 @@ function ObjectiveBlock({ facts }: { facts: AtlasModeFacts }) {
           <Formula formula={lead.formula} />
         </div>
       ) : null}
-      {shownTerms.length > 0 ? (
-        <div className="flex flex-col" data-objective-term-table>
-          {shownTerms.map((term) => (
-            <TermRow key={term.symbol} term={term} gutter={gutter} />
-          ))}
-        </div>
-      ) : null}
-      {objective.coefficients.length > 0 ? (
-        <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }} data-objective-terms>
-          {objective.coefficients.map((coefficient, index) => (
-            <span key={coefficient.name} title={coefficient.note ?? "release default"}>
-              {index > 0 ? " · " : ""}
-              {coefficient.name}
-              {" "}
-              {coefficient.release_default ?? "unset"}
-            </span>
-          ))}
-        </span>
-      ) : null}
       <details className="text-[10px]" data-objective-more>
         <summary className="mono cursor-pointer text-[9.5px]" style={{ color: "var(--accent)" }} data-objective-cap={moreTerms.length > 0 ? `${shownTerms.length}/${terms.length}` : undefined}>
-          {opens.join(" · ")}
+          {opens.join(" · ") || "Details"}
         </summary>
         <div className="mt-1 flex flex-col gap-1.5">
+          {shownTerms.length > 0 ? (
+            <div className="flex flex-col" data-objective-term-table>
+              {shownTerms.map((term) => (
+                <TermRow key={term.symbol} term={term} gutter={gutter} defined={isDefined(term.symbol)} />
+              ))}
+            </div>
+          ) : null}
           {moreTerms.length > 0 ? (
             <div className="flex flex-col" data-objective-term-table-more>
               {moreTerms.map((term) => (
-                <TermRow key={term.symbol} term={term} gutter={symbolGutterCh(moreTerms)} />
+                <TermRow key={term.symbol} term={term} gutter={symbolGutterCh(moreTerms)} defined={isDefined(term.symbol)} />
               ))}
             </div>
+          ) : null}
+          {objective.coefficients.length > 0 ? (
+            <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }} data-objective-terms>
+              {objective.coefficients.map((coefficient, index) => (
+                <span key={coefficient.name} title={coefficient.note ?? "release default"}>
+                  {index > 0 ? " · " : ""}
+                  {coefficient.name}
+                  {"\u00a0"}
+                  {coefficient.release_default ?? "unset"}
+                </span>
+              ))}
+            </span>
           ) : null}
           {rest.map((stage) => (
             <div key={stage.stage} className="flex flex-col gap-0.5 overflow-x-auto" data-objective-stage={stage.stage}>
@@ -864,9 +866,11 @@ export interface ModeCardProps {
   certCapShared?: boolean;
   /** 12-3: the run's own mode × schedule when it is known; `undefined` when the caller did not read it. */
   runCell?: AtlasRunCell;
+  /** Term symbols already defined by an earlier mode: defined once, the later cards show the symbol and keep the meaning in the tooltip. */
+  definedElsewhere?: ReadonlyMap<string, string>;
 }
 
-export function ModeCard({ mode, schedule, onSchedule, runId, runCell, certCapShared = false }: ModeCardProps) {
+export function ModeCard({ mode, schedule, onSchedule, runId, runCell, certCapShared = false, definedElsewhere }: ModeCardProps) {
   const facts = mode.facts ?? null;
   const fact = facts?.schedules.find((item) => item.schedule === schedule) ?? null;
   const known = runCell?.state === "known" ? runCell : null;
@@ -888,7 +892,7 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell, certCapSh
       }}
     >
       <header className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 border-b pb-2" style={{ borderColor: "var(--line-soft)" }}>
-        <span className="mono text-[13px] font-bold">{mode.mode_id}</span>
+        <span className="mono text-[13px] font-bold" title={certCapShared ? "No certification cap is published for any mode" : undefined}>{mode.mode_id}</span>
         <span className="text-[12px]" style={{ color: "var(--ink-soft)" }}>
           {mode.display_name}
         </span>
@@ -917,7 +921,7 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell, certCapSh
             title={`Declare a run in ${mode.mode_id} × ${schedule}`}
             aria-label={`Declare a run in ${mode.mode_id}`}
           >
-            declare →
+            Declare
           </Link>
           {opensSearch && runId ? (
             <Link
@@ -927,7 +931,7 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell, certCapSh
               data-open-search={mode.mode_id}
               title="Open this run's Search & Selection with this mode and schedule"
             >
-              search &amp; selection →
+              Search
             </Link>
           ) : (
             <Link
@@ -937,7 +941,7 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell, certCapSh
               data-find-runs={mode.mode_id}
               title={known ? "Not this run's mode — find runs that ran it" : "Find runs that ran this mode"}
             >
-              runs in mode →
+              Runs
             </Link>
           )}
         </span>
@@ -950,66 +954,47 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell, certCapSh
       <div className="flex flex-wrap gap-x-[18px] gap-y-3 pt-2.5">
         <div className="flex min-w-[min(236px,100%)] flex-1 flex-col gap-1.5" data-mode-column="reads">
           <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-soft)" }}>
-            what it reads
+            Reads
           </span>
           {facts && isPublished<AtlasReadsFact>(facts.reads) ? (
-            <span className="flex flex-wrap gap-1" data-reads>
+            <span className="flex flex-wrap gap-1" data-reads title={`reads ${facts.reads.selection_inputs.join(", ")} · retains ${facts.reads.retention}`}>
               <ReadsGlyphs inputs={facts.reads.selection_inputs} />
-              {facts.reads.selection_inputs.map((input) => (
-                <span key={input} className="mono rounded-[3px] border px-[5px] text-[9.5px] leading-[16px]" style={{ borderColor: "var(--line)", color: "var(--ink)" }}>
-                  {input}
-                </span>
-              ))}
-              {/* The engine's retention names run to 51 characters and have no
-                  break opportunity; without this they crossed the column rule. */}
-              <span className="mono text-[9.5px] leading-[18px]" style={{ color: "var(--ink-soft)", overflowWrap: "anywhere" }}>
-                retains {facts.reads.retention}
-              </span>
             </span>
           ) : facts ? (
             <NotPublished fact={facts.reads as AtlasNotPublishedFact} label="reads" />
           ) : (
             <span className="text-[10.5px]" style={{ color: "var(--ink-soft)" }} title="This manifest publishes no reads for this mode.">reads — not published</span>
           )}
-          <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+          <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} title={mode.rules.join(" ")}>
             {mode.objective_summary}
           </span>
-          {/* RF-04: `when_to_use` is the "when to reach for which mode" table's
-              column, as it is in the HiFi. Printing it here too said the same
-              sentence twice on one screen. */}
-          {mode.rules.map((rule, index) => (
-            <span key={index} className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-              {rule}
-            </span>
-          ))}
+          {/* The bottom "when to reach" table said this again; the one line lives on its card. */}
+          <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-when-to-use>
+            {mode.when_to_use}
+          </span>
         </div>
 
         <div className="flex min-w-[min(384px,100%)] flex-[2] flex-col gap-1 min-[900px]:border-l min-[900px]:pl-[18px]" style={{ borderColor: "var(--line-soft)" }} data-mode-column="objective">
           {/* RF-04: the governing stage rides the label row rather than taking
               a line of its own above the formula (12-2 keeps the fact). */}
           <span className="flex flex-wrap items-baseline gap-x-2 text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-soft)" }}>
-            objective — Stage 2 opens every term
+            Objective
             {governing ? (
-              <span className="mono ml-auto text-[9px] normal-case tracking-normal" data-governing-stage={governing.stage}>
-                {governing.stage} · {governingDirection}
+              <span className="mono ml-auto text-[9px] normal-case tracking-normal" data-governing-stage={governing.stage} title={governing.stage}>
+                {humanise(governing.stage)} · {governingDirection}
               </span>
             ) : null}
           </span>
-          {facts ? <ObjectiveBlock facts={facts} /> : null}
+          {facts ? <ObjectiveBlock facts={facts} definedElsewhere={definedElsewhere} modeId={mode.mode_id} /> : null}
           {/* The failure signature, from the manifest, never paraphrased. */}
-          <span className="text-[10px] leading-[1.5]" style={{ color: "var(--bad)" }}>
+          <span className="text-[10px] leading-[1.5]" style={{ color: "var(--bad)" }} title={mode.artifact_fields.join(" · ") || undefined}>
             <span className="text-[8.5px] font-bold uppercase tracking-[.05em]">suspect</span> · <span data-suspect>{mode.suspect}</span>
           </span>
-          {mode.artifact_fields.length > 0 ? (
-            <span className="mono text-[9px]" style={{ color: "var(--ink-soft)" }}>
-              {mode.artifact_fields.join(" · ")}
-            </span>
-          ) : null}
         </div>
 
         <div className="flex min-w-[min(236px,100%)] flex-1 flex-col gap-1.5 min-[900px]:border-l min-[900px]:pl-[18px]" style={{ borderColor: "var(--line-soft)" }} data-mode-column="claim">
           <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-soft)" }}>
-            schedule → claim
+            Claim
           </span>
           <span className="flex flex-wrap gap-1" role="group" aria-label={`${mode.mode_id} schedules`}>
             {ENGINE_SCHEDULES.map((candidate) => {
@@ -1021,6 +1006,7 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell, certCapSh
                   type="button"
                   aria-pressed={selected}
                   data-schedule={candidate}
+                  title={candidate}
                   onClick={() => onSchedule(candidate)}
                   className="mono rounded-[3px] border px-[8px] text-[9.5px] leading-[18px]"
                   style={{
@@ -1029,7 +1015,7 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell, certCapSh
                     color: selected ? "var(--accent)" : "var(--ink-soft)",
                   }}
                 >
-                  {candidate}
+                  {humanise(candidate)}
                   {candidate === mode.default_schedule ? " · default" : ""}
                   {thisRun && known?.schedule === candidate ? " · this run" : ""}
                 </button>
@@ -1096,51 +1082,6 @@ export function sharedCertCap(modes: readonly AtlasMode[]): AtlasNotPublishedFac
   return caps.every((cap) => cap.state === "NOT_PUBLISHED" && cap.reason === first.reason) ? first : null;
 }
 
-function ModeTable({ modes }: { modes: readonly AtlasMode[] }) {
-  const shared = sharedAvoidWhen(modes);
-  return (
-    <div className="overflow-x-auto rounded-[6px] border" style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }} data-mode-table>
-      <div className="border-b px-3 py-2" style={{ borderColor: "var(--line)" }}>
-        {/* QA S12: the shared "avoid when — not published" line is no visible promise; its typed absence rides here. */}
-        <span
-          className="text-[10px] font-medium uppercase tracking-[.07em]"
-          style={{ color: "var(--ink-soft)" }}
-          {...(shared ? { "data-avoid-when-shared": true, "data-avoid-when-reason": shared.reason, title: `avoid when — not published: ${shared.reason}` } : {})}
-        >
-          when to reach for which mode
-        </span>
-      </div>
-      <table className="w-full border-collapse text-[12px]">
-        {/* The HiFi's table carries no visible head; the columns stay named for a reader who cannot see the shape. */}
-        <thead className="sr-only">
-          <tr>
-            <th scope="col">mode</th>
-            <th scope="col">use when</th>
-            {shared ? null : <th scope="col">avoid when</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {modes.map((mode) => (
-            <tr key={mode.mode_id} className="border-t" style={{ borderColor: "var(--line-soft)" }} data-mode-row={mode.mode_id}>
-              <td className="mono px-3 py-[7px] align-top" style={{ width: 190 }}>{mode.mode_id}</td>
-              <td className="px-3 py-[7px] align-top" style={{ color: "var(--ink-soft)" }}>{mode.when_to_use}</td>
-              {shared ? null : (
-                <td className="px-3 py-[7px] align-top">
-                  {mode.facts ? (
-                    <NotPublished fact={mode.facts.avoid_when} label={`avoid_when:${mode.mode_id}`} />
-                  ) : (
-                    <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }}>not published</span>
-                  )}
-                </td>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 /** Rule one's worked example, as a tooltip: a manifest that names only some pairs names only those (DQ-10). */
 export function ruleOneExample(doc: AtlasDocument): string {
   return doc.modes.find((mode) => mode.mode_id === "mode_1_decay")?.valid_schedules.includes("per_fold_causal")
@@ -1167,19 +1108,17 @@ function ModesTab({
 }) {
   const known = runCell?.state === "known" ? runCell : null;
   const certCap = sharedCertCap(doc.modes);
+  /* A term (objective symbol) is defined once on the page: by the first mode that has it. */
+  const definedElsewhere = useMemo(() => {
+    const first = new Map<string, string>();
+    for (const mode of doc.modes) {
+      const objective = mode.facts && isPublished<AtlasObjectiveFact>(mode.facts.objective) ? mode.facts.objective : null;
+      for (const term of objective?.terms ?? []) if (!first.has(term.symbol)) first.set(term.symbol, mode.mode_id);
+    }
+    return first;
+  }, [doc]);
   return (
-    <div className="flex flex-col gap-3.5">
-      {certCap ? (
-        <span
-          className="mono self-start rounded-[3px] border border-dashed px-1.5 text-[9.5px] font-bold"
-          style={{ borderColor: "var(--line-strong)", color: "var(--ink-soft)" }}
-          title={`${certCap.reason} — the same for every mode`}
-          data-cert-cap="not-published"
-          data-cert-cap-shared
-        >
-          no cert cap
-        </span>
-      ) : null}
+    <div className="flex flex-col gap-3.5" data-cert-cap-shared={certCap ? "" : undefined} title={certCap ? `${certCap.reason} — the same for every mode` : undefined}>
       <div className="flex flex-wrap gap-3.5">
         {/* Q4 / D-4: gold, as the HiFi has it — a claim warning, not an accent. */}
         <div
@@ -1195,20 +1134,6 @@ function ModesTab({
           </span>
           <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink)" }}>
             claim = <span className="mono">mode × schedule</span>, never the mode alone
-          </span>
-        </div>
-        <div
-          className="flex min-w-[min(360px,100%)] flex-1 items-start gap-3 rounded-[6px] border px-3.5 py-2.5"
-          style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
-          data-rule-two
-          title={RULE_TWO_TITLE}
-        >
-          <span className="mono flex-none text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: "var(--ink-soft)" }}>
-            rule two
-          </span>
-          {/* 12-4: the HiFi's CandidateSelector list is not published by QuantBT 1.1.1's manifest; the sentence names no layer it cannot cite. */}
-          <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-            Execution route is chosen separately
           </span>
         </div>
       </div>
@@ -1236,11 +1161,10 @@ function ModesTab({
             runId={runId}
             runCell={runCell}
             certCapShared={certCap !== null}
+            definedElsewhere={definedElsewhere}
           />
         );
       })}
-
-      <ModeTable modes={doc.modes} />
     </div>
   );
 }
@@ -1536,7 +1460,7 @@ export function EngineAtlas({
             Current release
           </Link>
           <Link to="/research/quantbt/runs" style={{ color: "var(--accent)" }} data-exit-library>
-            Run Library
+            Library
           </Link>
         </span>
       </div>
@@ -1558,17 +1482,17 @@ export function EngineAtlas({
           <nav className="flex items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" data-breadcrumb>
             {location.run ? (
               <Link to={`/research/quantbt/runs/${encodeURIComponent(location.run)}/evidence`} style={{ color: "var(--accent)" }}>
-                Evidence Flow
+                Evidence
               </Link>
             ) : (
               /* Without a run there is no Evidence Flow to return to; the way
                  out is the Journey Map the Atlas is a reference page of. */
               <Link to="/research/quantbt/journey" style={{ color: "var(--accent)" }} data-crumb-journey>
-                Journey Map
+                Journey
               </Link>
             )}
             <span style={{ color: "var(--ink-faint)" }}>/</span>
-            <span style={{ color: "var(--ink)" }} aria-current="page">Engine Atlas</span>
+            <span style={{ color: "var(--ink)" }} aria-current="page">Atlas</span>
           </nav>
           <h1
             className="text-[22px] font-light tracking-[-.01em]"
@@ -1578,10 +1502,10 @@ export function EngineAtlas({
           </h1>
           <span className="mt-0.5 flex flex-wrap items-center gap-x-3" data-atlas-exits>
               <Link to="/research/quantbt/runs" className="mono text-[10px]" style={{ color: "var(--accent)" }} data-exit-library title="Run Library">
-                Run Library →
+                Library
               </Link>
               <Link to="/research/quantbt/runs/new?step=route" className="mono text-[10px]" style={{ color: "var(--accent)" }} data-exit-new-run title="Declare a run: New Run at the Route step">
-                New Run →
+                New run
               </Link>
             </span>
         </div>
@@ -1597,6 +1521,7 @@ export function EngineAtlas({
                 className="mono rounded-[3px] border px-[5px] text-[9px] font-bold leading-[15px]"
                 data-selected-release={selectedReleaseId}
                 data-selected-kind={selectedReleaseKind ?? undefined}
+                title={selectedReleaseId}
                 style={{
                   color:
                     selectedReleaseKind === "HISTORICAL"
@@ -1608,7 +1533,7 @@ export function EngineAtlas({
                       : "var(--line-strong)",
                 }}
               >
-                {selectedReleaseKind ?? "SELECTED"} · {selectedReleaseId}
+                {selectedReleaseKind === "HISTORICAL" ? "Historical" : selectedReleaseKind === "CURRENT" ? "Current" : "Selected"}
               </span>
             ) : null}
             {release ? (
@@ -1630,12 +1555,13 @@ export function EngineAtlas({
                   className="mono text-[9.5px] underline"
                   style={{ color: "var(--accent)" }}
                   data-historical-link={releaseId}
+                  title={label}
                 >
-                  {label}
+                  {doc?.historical_releases[index]?.version ?? label} · history
                 </Link>
               ) : (
                 <span key={label} className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-                  {label}
+                  {doc?.historical_releases[index]?.version ?? label} · history
                 </span>
               );
             })}
@@ -1695,6 +1621,7 @@ export function EngineAtlas({
               aria-selected={selected}
               tabIndex={selected ? 0 : -1}
               data-tab={candidate}
+              title={candidate === "routes" ? RULE_TWO_TITLE : undefined}
               onClick={() => onTabChange(candidate)}
               onKeyDown={(event) => {
                 const next = event.key === "ArrowRight" ? (index + 1) % ATLAS_TABS.length
@@ -1728,7 +1655,8 @@ export function EngineAtlas({
         variant="plain"
         title={`atlas · ${tab}`}
         meta={doc ? `manifest revision ${doc.manifest_revision}` : undefined}
-        state={state}
+        /* The failed read's request id is the notice's tooltip, never printed text. */
+        state={requestId && !doc && state.state !== "available" ? { ...state, diagnostics: { code: null, requestId, sentence: null } } : state}
         minBodyHeight={160}
         recovery={
           onRetry ? (
@@ -1757,12 +1685,6 @@ export function EngineAtlas({
           </div>
         ) : null}
       </ResearchPanel>
-      {/* F3 12-15: a refusal keeps its request id (403/404 included), so it can be quoted. */}
-      {requestId && !doc && state.state !== "available" ? (
-        <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} data-request-id>
-          request {requestId}
-        </span>
-      ) : null}
     </div>
   );
 }

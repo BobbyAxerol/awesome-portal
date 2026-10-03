@@ -82,16 +82,14 @@ describe("E5 · 6.7/6.8 B1 pool freeze and the K callout", () => {
     const pool = root.querySelector("[data-panel='pool-freeze']") as HTMLElement;
     expect(pool.querySelector("[data-retained-pool]")?.getAttribute("data-pool-schema")).toBe("research.current-source-search-pool.v1");
     expect(text(pool, "[data-pool-count='trials']")).toBe("3");
-    expect(text(pool, "[data-pool-count='feasible']")).toBe("n/a");
-    expect(pool.querySelector("[data-pool-row='feasible']")?.getAttribute("data-pool-state")).toBe("NOT_APPLICABLE");
-    expect(pool.querySelector("[data-pool-bar='feasible']")).toBeNull();
-    expect(text(pool, "[data-pool-row='feasible']")).toContain("n/a — no constraints declared");
+    /* W4: a feasibility row that is n/a (nothing declared) is not drawn; the K expression is printed once, in the callout. */
+    expect(pool.querySelector("[data-pool-row='feasible']")).toBeNull();
     expect(text(pool, "[data-pool-count='top-is']")).toBe("1");
-    expect(text(pool, "[data-pool-row='top-is']")).toContain("K = ⌈3 × 0.1⌉ = 1");
+    expect(text(pool, "[data-pool-row='top-is']")).not.toContain("K = ");
     expect(text(pool, "[data-pool-count='reevaluated']")).toBe("1");
     expect(text(pool, "[data-pool-row='reevaluated']")).toContain("every outer fold · OOS ranks");
     expect(text(pool, "[data-pool-count='selected']")).toBe("1");
-    expect(text(pool, "[data-pool-row='selected']")).toContain("robust_decay");
+    expect(text(pool, "[data-pool-row='selected']")).toContain("robust decay");
     expect(text(pool, "[data-pool-row='trials']")).toContain("3 scored, not pruned");
   });
 
@@ -99,7 +97,8 @@ describe("E5 · 6.7/6.8 B1 pool freeze and the K callout", () => {
     const root = await settled();
     const callout = root.querySelector("[data-k-callout]") as HTMLElement;
     expect(callout.getAttribute("data-k-callout")).toBe("CEIL_N_TIMES_TOP_IS_FRACTION");
-    expect(callout.textContent).toBe("K = ⌈3 × 0.1⌉ = 1 · pool closes before OOS");
+    expect(callout.textContent).toBe("K = ⌈3 × 0.1⌉ = 1");
+    expect(callout.getAttribute("title")).toContain("pool closes before any OOS value");
     expect(callout.getAttribute("title")).toContain("K = ⌈n_trials × top_is_fraction⌉");
     expect(callout.textContent).not.toContain("selection-adjusted");
   });
@@ -207,12 +206,12 @@ describe("E5 · 6.11 B3 best ≠ selected — four rows per card", () => {
 });
 
 describe("E5 · display rules on S06 (E1 helpers)", () => {
-  it("claim tokens print as QuantBT's token in capitals (claimToken); the exact value rides in the attribute", async () => {
+  it("claim tokens print humanised (W4), with QuantBT's token in the title; the exact value rides in the attribute", async () => {
     const root = await settled();
     const oos = root.querySelector("[data-claim-fact='oos used for selection'] [data-claim-value]") as HTMLElement;
-    expect(oos.textContent).toBe("YES");
+    expect(oos.textContent).toBe("yes");
     const metric = root.querySelector("[data-claim-fact='candidate selection metric'] [data-claim-value]") as HTMLElement;
-    expect(metric.textContent).toBe("ROBUST_DECAY");
+    expect(metric.textContent).toBe("robust decay");
     expect(metric.getAttribute("data-claim-value")).toBe("robust_decay");
   });
 

@@ -52,7 +52,8 @@ describe("W1-S12 shared cert cap", () => {
   it("the fixture's five modes publish one reason, so one chip serves the tab", () => {
     expect(sharedCertCap(DOC.modes)).not.toBeNull();
     view(DOC, researchState({ kind: "ok", rowCount: 1 }));
-    expect(document.querySelectorAll("[data-cert-cap]")).toHaveLength(1);
+    expect(document.querySelectorAll("[data-cert-cap]")).toHaveLength(0);
+    expect(document.querySelectorAll("[data-cert-cap-shared]")).toHaveLength(1);
     expect(document.querySelectorAll('[data-not-published="cert_cap"]')).toHaveLength(0);
   });
 

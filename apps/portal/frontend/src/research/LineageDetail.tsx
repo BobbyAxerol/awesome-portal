@@ -34,6 +34,8 @@ import { freezeHref, hubHref, newRunHref, progressHref, rcHref as releaseCandida
 import { phaseOfStatus, type RunPhase } from "./runTerminalState";
 import { useEntryRef } from "./chartLife";
 import { compareHref } from "./compareClient";
+import { ResearchNotice } from "./ResearchNotice";
+import { humanise } from "./humanise";
 import { ResearchPanel } from "./ResearchPanel";
 import {
   LINEAGE_REASON,
@@ -137,7 +139,7 @@ export const PROMOTION_RULE = "Only the ACTIVE attempt promotes.";
 export const PROMOTION_RULE_TITLE =
   "The full attempt count — probes included — is disclosed to the approver: multiple-testing information, not shame.";
 
-export const PICK_ABSENT = "no promotion pick published";
+export const PICK_ABSENT = "none yet";
 
 export const NOT_IN_CONTRACT = "not a field of the lineage contract";
 
@@ -268,10 +270,10 @@ export const LINEAGE_STATUSES: readonly LineageFilter[] = ["ACTIVE", "DRAFT", "S
 
 /** What each filter chip filters, in words (visible text + title). */
 export const FILTER_WORDS: Record<LineageFilter, { text: string; title: string }> = {
-  ACTIVE: { text: "version active", title: "attempts of an ACTIVE alpha version" },
-  DRAFT: { text: "draft", title: "draft attempts, and attempts of a DRAFT alpha version" },
-  SUPERSEDED: { text: "version superseded", title: "attempts of a SUPERSEDED alpha version" },
-  ABANDONED: { text: "version abandoned", title: "attempts of an ABANDONED alpha version" },
+  ACTIVE: { text: "Active", title: "attempts of an ACTIVE alpha version" },
+  DRAFT: { text: "Draft", title: "draft attempts, and attempts of a DRAFT alpha version" },
+  SUPERSEDED: { text: "Superseded", title: "attempts of a SUPERSEDED alpha version" },
+  ABANDONED: { text: "Abandoned", title: "attempts of an ABANDONED alpha version" },
 };
 
 /** A node's chip: its own attempt state, as the lineage recorded it. */
@@ -294,7 +296,7 @@ export function matchesLineageFilter(
 
 /** Hi-fi counter; when the graph is bounded the server's total follows. */
 export function counterText(shown: number, returned: number, total: number): string {
-  const base = `showing ${shown} of ${returned} attempts`;
+  const base = `${shown} of ${returned}`;
   return total === returned ? base : `${base} · ${total} on record`;
 }
 
@@ -643,10 +645,12 @@ function AvailabilityAbsent({ availability, what }: { availability: LineageAvail
  * The hi-fi's one status pill per attempt. VD-F1-02: it is the attempt's OWN
  * state and nothing else; the version lifecycle lives in the band header only.
  */
-function StatusChips({ status, fill = false }: { status: LineageStatus; fill?: boolean }) {
+function StatusChips({ status, fill = false, quietReady = false }: { status: LineageStatus; fill?: boolean; quietReady?: boolean }) {
+  /* The normal completed state is silent on a card (the dot carries it); every other state is one humanised word. */
+  if (quietReady && status.key === "READY") return <span className="ln-st" hidden data-status={status.key} data-fill={fill ? "true" : undefined}>{status.label}</span>;
   return (
     <span className="ln-st" data-status={status.key} data-fill={fill ? "true" : undefined}>
-      {status.label}
+      {humanise(status.key)}
     </span>
   );
 }
@@ -828,7 +832,7 @@ export function rcLabel(rc: ReleaseCandidateRef): string {
 function RcChip({ rc }: { rc: ReleaseCandidateRef }) {
   const title =
     rc.kind === "ACTOR_DRAFT"
-      ? "your release-candidate draft for this run (Screen 11)"
+      ? "your release-candidate draft for this run"
       : `sealed locally${rc.sealed_at_utc_ms !== null ? ` ${iso(rc.sealed_at_utc_ms)}` : ""} · delivery ${rc.delivery_state ?? "not published"} · approval ${rc.approval_state ?? "not published"}`;
   return (
     <Link to={releaseCandidateHref(rc.run_id)} className="ln-rc" data-rc={rc.kind} data-approval={rc.approval_state ?? undefined} title={title}>
@@ -872,19 +876,29 @@ function MetricValue({ label, fact }: { label: string; fact: RunMetricFact }) {
         ? " (outer folds, each fold's own selection, mean OOS)"
         : "";
   return (
-    <span data-metric={label} data-metric-value={fact.value} title={`${fact.value} · ${fact.definition_id ?? "definition not published"} · ${fact.source ?? ""}`}>
-      {label} <span className="v">{shown}</span>
-      {basis}
+    <span data-metric={label} data-metric-value={fact.value} title={`${fact.value}${basis} · ${fact.definition_id ?? "definition not published"} · ${fact.source ?? ""}`}>
+      {label} <span className="v" title={basis.trim().replace(/^\(|\)$/g, "") || undefined}>{shown}</span>
     </span>
   );
 }
 
 /** Spec §2.3 row 4: the mini metrics, server values only. */
 function MetricsLine({ attempt }: { attempt: LineageAttempt }) {
+  const { oos_sharpe: oos, decay } = attempt.run_facts;
+  /* Both absent (a failed or fixed-profile attempt): ONE token, the two reasons in its tooltip. */
+  if (oos.value === null && decay.value === null) {
+    return (
+      <span className="ln-metrics" data-metrics={attempt.attempt_id} data-metrics-absent>
+        <span className="ln-absent" title={`OOS: ${absenceReason(oos.availability)} · decay: ${absenceReason(decay.availability)}`} tabIndex={0}>
+          no OOS
+        </span>
+      </span>
+    );
+  }
   return (
     <span className="ln-metrics" data-metrics={attempt.attempt_id}>
-      <MetricValue label="OOS" fact={attempt.run_facts.oos_sharpe} />
-      <MetricValue label="decay" fact={attempt.run_facts.decay} />
+      <MetricValue label="OOS" fact={oos} />
+      <MetricValue label="decay" fact={decay} />
     </span>
   );
 }
@@ -910,15 +924,16 @@ function Header({ alphaId, lineage }: { alphaId: string; lineage: Lineage | null
     <header className="ln-head" data-panel="header">
       <div className="l">
         <nav className="ln-crumb" aria-label="Breadcrumb">
-          <Link to={`${RUNS_ROOT}?group=1&alpha=${encodeURIComponent(alphaId)}`}>Runs</Link>
+          <Link to={`${RUNS_ROOT}?group=1&alpha=${encodeURIComponent(alphaId)}`}>Library</Link>
           <span className="sep">/</span>
-          <span className="here ln-long">Attempt Lineage — {name}</span>
+          <span className="here ln-long">Lineage</span>
         </nav>
-        <h2 className="ln-title">{LINEAGE_TITLE}</h2>
+        <h2 className="ln-title" title={`${LINEAGE_TITLE} · ${alphaId}`}>{name}</h2>
       </div>
       {lineage ? (
         <span
-          className="ln-src"
+          className="sr-only"
+          hidden
           data-source-chip
           data-read-authority-chip={lineage.read_authority ?? undefined}
           title={`read authority: ${lineage.read_authority} · ${lineage.schema_version}`}
@@ -958,21 +973,24 @@ function VersionOutcome({ version }: { version: LineageVersion }) {
   );
 }
 
-/** Hi-fi `exercised` row: route, modes, ranges — every attempt of the version, server-aggregated. */
+/** Hi-fi `exercised` row: one summary line (`Tried · 2 modes · 8 params · 49 attempts`); the routes, modes and ranges open under it. */
 function Exercised({ version }: { version: LineageVersion }) {
   const exercised = version.exercised;
   if (exercised.availability.state === "NOT_PUBLISHED" && exercised.routes.length === 0) {
     return (
       <div className="ln-bandrow" data-exercised={exercised.availability.state}>
-        <span className="ln-lbl">exercised</span>
-        <AvailabilityAbsent what="exercised" availability={exercised.availability} />
+        <AvailabilityAbsent what="tried" availability={exercised.availability} />
       </div>
     );
   }
+  const counted = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
   return (
     <div className="ln-bandrow" data-exercised={exercised.availability.state}>
-      <span className="ln-lbl">exercised</span>
-      <span className="ln-exer">
+      <details className="ln-exer">
+        <summary className="ln-lbl" title="attempts whose persisted requested spec were read">
+          Tried · {counted(exercised.modes.length, "mode")}
+          {exercised.param_ranges.length ? ` · ${counted(exercised.param_ranges.length, "param")}` : ""} · {counted(exercised.attempts_considered, "attempt")}
+        </summary>
         <span className="m" data-exercised-routes>
           {exercised.routes.join(" · ")}
         </span>
@@ -984,12 +1002,12 @@ function Exercised({ version }: { version: LineageVersion }) {
             {exercised.param_ranges.map(rangeText).join(" · ")}
           </span>
         ) : null}
-        <span className="ln-faint" data-exercised-count title="attempts whose persisted requested spec was read">
+        <span className="ln-faint" data-exercised-count>
           {String(exercised.attempts_considered)} attempts read
           {exercised.attempts_without_manifest > 0 ? ` · ${String(exercised.attempts_without_manifest)} without a persisted spec` : ""}
         </span>
         {exercised.availability.state === "PARTIAL" ? <span className="ln-reason">{absenceReason(exercised.availability)}</span> : null}
-      </span>
+      </details>
     </div>
   );
 }
@@ -1003,8 +1021,6 @@ function VersionBand({
   bandSelected,
   onChip,
   presentationKnown,
-  showProbes,
-  onToggleProbes,
   olderProbeIds,
 }: {
   alphaId: string;
@@ -1047,8 +1063,8 @@ function VersionBand({
         ) : null}
         <VersionOutcome version={version} />
         {version.lifecycle_state === "ACTIVE" ? (
-          <Link to={alphaImportHref(alphaId)} className="ln-faint" data-action="import-new-version" title="Screen 14 — register a new immutable version of this alpha">
-            import new version →
+          <Link to={alphaImportHref(alphaId)} className="ln-faint" data-action="import-new-version" title="Register a new immutable version of this alpha">
+            Import version
           </Link>
         ) : null}
       </div>
@@ -1077,7 +1093,7 @@ function VersionBand({
                   aria-current={selectedId === attempt.attempt_id ? "true" : undefined}
                   onClick={() => onChip(attempt.attempt_id)}
                 >
-                  {sid(attempt.attempt_id)}
+                  {attempt.primary_run.run_id ? sid(attempt.primary_run.run_id) : sid(attempt.attempt_id)}
                   {rc ? " ●" : ""}
                 </button>
               );
@@ -1087,18 +1103,7 @@ function VersionBand({
             <button type="button" className="ln-chip probe" data-probe-chip disabled title={PROBES_REASON} aria-label={`probes of ${version.label} — ${PROBES_REASON}`}>
               + probes
             </button>
-          ) : probes > 0 ? (
-            <button
-              type="button"
-              className="ln-chip probe"
-              data-probe-chip={probes}
-              aria-pressed={showProbes}
-              title="older probes"
-              onClick={onToggleProbes}
-            >
-              +{String(probes)} older
-            </button>
-          ) : null}
+          ) : null /* the filters row carries the one probes toggle */}
         </div>
       </div>
       <Exercised version={version} />
@@ -1106,33 +1111,33 @@ function VersionBand({
   );
 }
 
-/** Hi-fi `untried` row: Engine Atlas routes the active version never declared, then the way to declare one. */
+/** Hi-fi `untried` row: one summary line, the Atlas routes the active version never declared under it, then the way to declare one. */
 function Untried({ alphaId, version }: { alphaId: string; version: LineageVersion | null }) {
   const untried = version?.untried ?? null;
   return (
     <div className="ln-untried" data-untried={untried?.availability.state ?? "NONE"}>
-      <span className="ln-lbl">untried</span>
       {untried === null ? (
-        <span className="ln-faint">no active version to compare against</span>
+        <span className="ln-faint">no active version</span>
       ) : untried.routes.length > 0 ? (
-        <span className="ln-untried-list" data-untried-routes>
+        <details className="ln-untried-list" data-untried-routes>
+          <summary className="ln-lbl">Untried · {untried.routes.length} {untried.routes.length === 1 ? "route" : "routes"}</summary>
           {untried.routes.map((route, index) => (
             <span key={route.route_id} title={route.status_word ? `Engine Atlas: ${route.status_word}` : undefined} data-untried-route={route.route_id}>
               {index > 0 ? " · " : ""}
               {route.route_id}
             </span>
           ))}
-        </span>
+        </details>
       ) : untried.availability.state === "AVAILABLE" ? (
-        <span className="ln-faint">every Atlas route has been declared</span>
+        <span className="ln-faint" title="every Atlas route has been declared">All routes tried</span>
       ) : (
         <AvailabilityAbsent what="untried" availability={untried.availability} />
       )}
-      {untried && untried.availability.state === "PARTIAL" ? <span className="ln-reason">{absenceReason(untried.availability)}</span> : null}
+      {untried && untried.availability.state === "PARTIAL" ? <span className="ln-reason" title={absenceReason(untried.availability)}>ⓘ</span> : null}
       <span className="ln-faint">
         {" — "}
-        <Link to={newRunPrefillHref(alphaId, version?.alpha_version_id ?? null)} data-action="declare-at-new-run" title="Screen 02 with this alpha and version preselected">
-          declare at New Run →
+        <Link to={newRunPrefillHref(alphaId, version?.alpha_version_id ?? null)} data-action="declare-at-new-run" title="New run with this alpha and version preselected">
+          Declare in New run →
         </Link>
       </span>
     </div>
@@ -1167,15 +1172,10 @@ function PickFact({
   const state = availability && availability.state !== "AVAILABLE" ? LINEAGE_WITHHELD_WORDS[availability.state] : "not published";
   const reason = availability?.reason_code ?? null;
   return (
-    <span className="inline-flex flex-wrap items-baseline gap-x-1.5" data-pick-fact={what} data-absent={what} data-absent-state={state}>
-      <span className="ln-absent">
+    <span className="inline-flex flex-wrap items-baseline gap-x-1.5" data-pick-fact={what} data-absent={what} data-absent-state={state} data-reason-code={reason ?? undefined}>
+      <span className="ln-absent" title={reason ?? undefined}>
         {what} — {state}
       </span>
-      {reason ? (
-        <span className="ln-reason" data-reason-code>
-          {reason}
-        </span>
-      ) : null}
     </span>
   );
 }
@@ -1194,7 +1194,7 @@ function PickRow({
     const attemptId = pick.attempt_id;
     return (
       <div className="ln-pick" data-pick-state="PUBLISHED" data-pick-attempt={attemptId} data-pick-version={version?.alpha_version_id}>
-        <span className="t">PROMOTION PICK</span>
+        <span className="t">Promotion pick</span>
         <span className="v ln-long">
           {returnedIds.has(attemptId) ? (
             <button type="button" className="ln-chip" data-action="pick-attempt" title={attemptId} onClick={() => onSelect(attemptId)}>
@@ -1224,8 +1224,8 @@ function PickRow({
             </span>
           ) : pick.run_id ? (
             /* P21: the pick's run composes its release candidate on Screen 11. */
-            <Link to={releaseCandidateHref(pick.run_id)} title={`compose or read this run's release candidate (Screen 11) — ${absenceReason(pick.release_candidate_availability)}`} data-pick-rc="NONE">
-              {pick.release_candidate_availability.reason_code === "P21_NO_PERSISTED_RELEASE_CANDIDATE" ? "rc_ not composed" : "rc_"}
+            <Link to={releaseCandidateHref(pick.run_id)} title={`Release candidate of this run — ${absenceReason(pick.release_candidate_availability)}`} data-pick-rc="NONE">
+              Release
             </Link>
           ) : null}
         </span>
@@ -1238,13 +1238,16 @@ function PickRow({
   }
   return (
     <div className="ln-pick" data-pick-state="NOT_PUBLISHED" data-pick-version={version?.alpha_version_id}>
-      <span className="t">PROMOTION PICK</span>
-      {/* VD-TEXT-01: who may publish a pick is the tooltip, not a second line. */}
-      <span className="v" data-pick-authority={pick?.source_authority.state ?? "NOT_CONNECTED"} title={PICK_AUTHORITY}>
+      <span className="t" title={`${PROMOTION_RULE} ${PROMOTION_RULE_TITLE}`}>Promotion pick</span>
+      {/* VD-TEXT-01: who may publish a pick, and why none is shown, are the tooltip, not further lines. */}
+      <span
+        className="v"
+        data-pick-authority={pick?.source_authority.state ?? "NOT_CONNECTED"}
+        data-reason-code={pick?.availability.reason_code ?? LINEAGE_REASON.promotionPickAbsent}
+        title={`${PICK_AUTHORITY} · ${pick?.availability.reason_code ?? LINEAGE_REASON.promotionPickAbsent}`}
+        tabIndex={0}
+      >
         {PICK_ABSENT}
-      </span>
-      <span className="ln-reason" data-reason-code>
-        {pick?.availability.reason_code ?? LINEAGE_REASON.promotionPickAbsent}
       </span>
     </div>
   );
@@ -1290,9 +1293,7 @@ function RootCard({
   return (
     <section className="ln-card0" data-panel="root" aria-label="alpha root and version ledger">
       <div className="h">
-        <span className="ln-k">root · alpha</span>
-        <span className="ln-alpha ln-long">{alpha.name}</span>
-        <span className="ln-alphaid">{alpha.alpha_id}</span>
+        <span className="ln-alphaid" title={alpha.name}>{alpha.alpha_id}</span>
         {alpha.active_version_state === null || alpha.active_version_id === null ? (
           <span data-active-version>
             <AvailabilityAbsent what="active version" availability={alpha.active_version_availability} />
@@ -1300,29 +1301,29 @@ function RootCard({
         ) : null}
         <span className="ln-links">
           <Link to={`${RUNS_ROOT}?group=1&alpha=${encodeURIComponent(alpha.alpha_id)}`} data-action="runs" title="Run Library, grouped, filtered to this alpha">
-            runs →
+            Runs
           </Link>
-          <Link to={newRunPrefillHref(alpha.alpha_id, active[0]?.alpha_version_id ?? null)} data-action="new-run" title="Screen 02 with this alpha and its active version preselected">
-            new run →
+          <Link to={newRunPrefillHref(alpha.alpha_id, active[0]?.alpha_version_id ?? null)} data-action="new-run" title="New run with this alpha and its active version preselected">
+            New run
           </Link>
           {rcRun ? (
             <Link
               to={releaseCandidateHref(rcRun)}
               data-action="release-candidate"
-              title={pickRun ? "Screen 11 for the active version's promotion pick run" : "Screen 11 for the newest release candidate of this alpha"}
+              title={pickRun ? "Release candidate of the pick" : "Newest release candidate of this alpha"}
             >
-              rc &amp; publish →
+              Release
             </Link>
           ) : (
-            <span className="ln-unrouted" title={RC_NO_RUN} aria-label={`rc & publish — ${RC_NO_RUN}`} data-action-unrouted="release-candidate">
-              rc &amp; publish →
+            <span className="ln-unrouted" title={RC_NO_RUN} aria-label={`Release — ${RC_NO_RUN}`} data-action-unrouted="release-candidate">
+              Release
             </span>
           )}
         </span>
         {/* P20: Screen 13 reads inside this Alpha; kept beside, not inside, the hi-fi's three links. */}
         <span className="ln-compare">
           <Link to={compareHref(alpha.alpha_id)} data-action="open-compare">
-            compare →
+            Compare
           </Link>
         </span>
       </div>
@@ -1389,7 +1390,7 @@ function ProbesToggle({
         title={known ? undefined : PROBES_REASON}
         aria-label={known ? "older probes" : `older probes — ${PROBES_REASON}`}
       >
-        older probes
+        Probes
       </button>
     );
   }
@@ -1408,7 +1409,7 @@ function ProbesToggle({
       }
       onClick={onToggle}
     >
-      older probes ({String(count)})
+      {pressed ? "Hide" : "Show"} probes ({String(count)})
     </button>
   );
 }
@@ -1549,7 +1550,7 @@ function AttemptCard({ node, status, selected, expanded, onToggle }: NodeProps) 
     >
       <Rail depth={depth} status={status} />
       <div className="ln-card">
-        <span className="ln-cardhead">
+        <span className="ln-cardhead" title={`${attempt.attempt_id} · ${attempt.alpha_version_label} · cfg ${run.effective_spec_digest ? short(run.effective_spec_digest) : "not published"} · ${specLine(attempt)}`}>
           <button
             type="button"
             className="ln-cardbtn"
@@ -1559,32 +1560,26 @@ function AttemptCard({ node, status, selected, expanded, onToggle }: NodeProps) 
             title={attempt.attempt_id}
             onClick={() => onToggle(attempt.attempt_id)}
           >
-            {sid(attempt.attempt_id)}
+            {run.run_id ? sid(run.run_id) : sid(attempt.attempt_id)}
           </button>
           {run.run_id ? (
-            <span className="ln-mono" style={{ fontSize: "12.5px", fontWeight: 700 }}>
-              {"· "}
-              <Link to={evidenceHref(run.run_id)} data-run-link={run.run_id} title={run.run_id}>
-                {sid(run.run_id)}
-              </Link>
-            </span>
+            <Link to={evidenceHref(run.run_id)} data-run-link={run.run_id} title={`${run.run_id} — open in Evidence`} aria-label={`Open ${sid(run.run_id)} in Evidence`}>
+              ↗
+            </Link>
           ) : (
             <span className="ln-absent" data-run-absent>
-              no primary run recorded
+              no run
             </span>
           )}
-          <StatusChips status={status} fill />
+          <StatusChips status={status} fill quietReady />
           <span className="ln-faint" style={{ fontSize: "10px" }}>
             {iso(attempt.created_at_utc_ms)}
           </span>
-          <CertChip attempt={attempt} />
-          <span className="ln-av" title="alpha version">
-            {attempt.alpha_version_label}
-          </span>
+          {attempt.run_facts.certificate.grade !== null ? <CertChip attempt={attempt} /> : null}
           {attempt.release_candidate ? <RcChip rc={attempt.release_candidate} /> : null}
           {attempt.promotion_state === "PICKED" ? (
             <span className="ln-picked" data-picked title={PICK_AUTHORITY}>
-              PROMOTION PICK
+              Pick
             </span>
           ) : null}
           {attempt.parent_state === "OUTSIDE_RETURNED_GRAPH" ? (
@@ -1592,14 +1587,8 @@ function AttemptCard({ node, status, selected, expanded, onToggle }: NodeProps) 
               parent outside returned graph
             </span>
           ) : null}
-          <span className="ln-cfg" title={run.effective_spec_digest ?? undefined}>
-            cfg {run.effective_spec_digest ? short(run.effective_spec_digest) : "not published"}
-          </span>
         </span>
         <span className="ln-specline">
-          <span className="ln-spec" title={attempt.space_signature ?? undefined}>
-            {specLine(attempt)}
-          </span>
           <span className="ln-difftrack">
             <GatesChip diff={attempt.semantic_diff} />
             <DiffChips diff={attempt.semantic_diff} />
@@ -1636,15 +1625,12 @@ function AttemptRow({ node, status, selected, expanded, onToggle }: NodeProps) {
             data-row={attempt.attempt_id}
             aria-expanded={expanded}
             aria-label={`${chipLabel(attempt.attempt_id, status)} — select and ${expanded ? "hide" : "show"} run detail`}
-            title={`${attempt.attempt_id} · ${run.run_id ?? "no primary run recorded"}`}
+            title={`${attempt.attempt_id} · ${run.run_id ?? "no primary run recorded"} · ${attempt.alpha_version_label} · ${specLine(attempt)}`}
             onClick={() => onToggle(attempt.attempt_id)}
           >
-            <span className="ln-rowid">
-              {sid(attempt.attempt_id)} · {run.run_id ? sid(run.run_id) : "no run"}
-            </span>
-            <StatusChips status={status} />
-            <span className="ln-rowspec">{specLine(attempt)}</span>
-            <CertChip attempt={attempt} />
+            <span className="ln-rowid">{run.run_id ? sid(run.run_id) : sid(attempt.attempt_id)}</span>
+            <StatusChips status={status} quietReady />
+            {attempt.run_facts.certificate.grade !== null ? <CertChip attempt={attempt} /> : null}
             <span className="ln-rowwhen">{iso(attempt.created_at_utc_ms)}</span>
           </button>
           {attempt.release_candidate ? <RcChip rc={attempt.release_candidate} /> : null}
@@ -1849,11 +1835,11 @@ function Selected({
       data-selected-attempt={attempt.attempt_id}
     >
       <h3 className="t">
-        <span>
-          selected attempt — <ShortId id={attempt.attempt_id} className="ln-selid" label="attempt" />
+        <span title={attempt.attempt_id}>
+          <ShortId id={attempt.primary_run.run_id ?? attempt.attempt_id} className="ln-selid" label={attempt.primary_run.run_id ? "run" : "attempt"} />
         </span>
         <span className="inline-flex gap-1">
-          <StatusChips status={lineageStatus(attempt.state)} />
+          <StatusChips status={lineageStatus(attempt.state)} quietReady />
         </span>
       </h3>
       {/* D8 (10-5): the hi-fi's few rows stay open; the technical rows sit under one disclosure. */}
@@ -1876,6 +1862,7 @@ function Selected({
             <span className="ln-absent">parent not published</span>
           )}
         </Row>
+        {/* The schedule and the claim state are not on the card; the OOS / decay / cert the card carries are not repeated here. */}
         <Row k="mode × schedule">
           {attempt.spec_label.text ?? <AvailabilityAbsent availability={attempt.spec_label.availability} />}
         </Row>
@@ -1883,7 +1870,7 @@ function Selected({
           {claim.state !== null ? (
             <span className="ln-claim" data-claim-state={claim.state}>
               <span data-claim-words>{CLAIM_STATE_WORDS[claim.state]}</span>
-              {claim.text ? (
+              {claim.text && claim.text !== attempt.outcome.text ? (
                 <span className="ln-claimwhy" data-claim-reason>
                   {labelRunIds(claim.text)}
                 </span>
@@ -1892,15 +1879,6 @@ function Selected({
           ) : (
             <AvailabilityAbsent availability={claim.availability} />
           )}
-        </Row>
-        <Row k="OOS sharpe">
-          <MetricValue label="" fact={facts.oos_sharpe} />
-        </Row>
-        <Row k="decay">
-          <MetricValue label="" fact={facts.decay} />
-        </Row>
-        <Row k="cert">
-          {facts.certificate.grade !== null ? `${facts.certificate.grade}` : <AvailabilityAbsent availability={facts.certificate.availability} />}
         </Row>
         {version?.lifecycle_state === "SUPERSEDED" ? (
           <Row k="why superseded">
@@ -1913,7 +1891,7 @@ function Selected({
         ) : null}
       </dl>
       <details className="ln-tech" data-selected-rows="technical">
-        <summary>run and record details</summary>
+        <summary>Details</summary>
         <dl className="ln-rows">
           <Row k="promotion">
             <span data-promotion-state={attempt.promotion_state ?? "NOT_PUBLISHED"} title={attempt.promotion_reason_code ?? undefined}>
@@ -1963,15 +1941,14 @@ function Selected({
           <AvailabilityAbsent what="verdict" availability={attempt.outcome.availability} />
         )}
       </span>
-      <ExposureLine exposure={attempt.exposure} />
       {run.run_id ? (
         <span className="ln-btnlinks" data-run-actions={run.run_id}>
           <Link className="ln-btnlink" to={evidenceHref(run.run_id)} data-action="open-evidence" title={`Evidence Flow of ${run.run_id}`}>
-            open evidence →
+            Evidence
           </Link>
           {phase === "completed" && runHasReport(attempt) ? (
             <Link className="ln-btnlink soft" to={reportHref(run.run_id)} data-action="run-report" title={`Run report of ${run.run_id}`}>
-              run report
+              Report
             </Link>
           ) : null}
           {parentRunId ? (
@@ -1981,29 +1958,29 @@ function Selected({
               data-action="compare-with-parent"
               title="Compare this run with its parent's run"
             >
-              compare with parent →
+              Compare with parent
             </Link>
           ) : (
-            <Link className="ln-btnlink soft" to={compareHref(alphaId)} data-action="open-compare-alpha" title="Screen 13 inside this alpha — pick the runs there">
-              compare →
+            <Link className="ln-btnlink soft" to={compareHref(alphaId)} data-action="open-compare-alpha" title="Compare inside this alpha — pick the runs there">
+              Compare
             </Link>
           )}
           {phase === "completed" ? (
             <>
-              <Link className="ln-btnlink soft" to={freezeHref(run.run_id)} data-action="open-freeze" title="Freeze (Screen 04) of this run">
-                freeze
+              <Link className="ln-btnlink soft" to={freezeHref(run.run_id)} data-action="open-freeze" title="Freeze of this run">
+                Freeze
               </Link>
-              <Link className="ln-btnlink soft" to={releaseCandidateHref(run.run_id)} data-action="open-release-candidate" title="Screen 11 for this run">
-                release candidate
+              <Link className="ln-btnlink soft" to={releaseCandidateHref(run.run_id)} data-action="open-release-candidate" title="Release candidate of this run">
+                Release
               </Link>
             </>
           ) : (
             <Link className="ln-btnlink soft" to={progressHref(run.run_id)} data-action="open-progress" title="Where this run is, or where it stopped">
-              progress
+              Progress
             </Link>
           )}
-          <Link className="ln-btnlink soft" to={newRunHref(run.run_id)} data-action="clone-at-new-run" title="copy this run's declaration into a new draft on Screen 02 (a new attempt, never an edit)">
-            clone →
+          <Link className="ln-btnlink soft" to={newRunHref(run.run_id)} data-action="clone-at-new-run" title="Copy this run's declaration into a new draft (a new attempt, never an edit)">
+            Clone
           </Link>
         </span>
       ) : null}
@@ -2013,11 +1990,14 @@ function Selected({
 
 function DiffPanel({ attempt }: { attempt: LineageAttempt | null }) {
   const diff = attempt?.semantic_diff ?? null;
+  /* A root attempt has no parent: no box for "No parent to diff." */
+  if (diff !== null && diff.state === "ROOT") return null;
+  if (diff === null) return null;
   const gates = diff ? gatesChange(diff) : null;
   const regular = diff ? diff.changes.filter((change) => change.kind !== "ALPHA_VERSION") : [];
   return (
     <section className="ln-block" data-panel="diff" aria-label="diff vs parent" data-diff-state={diff?.state ?? "NONE"} style={{ gap: 5 }}>
-      <h3 className="t">diff vs parent — config keys only</h3>
+      <h3 className="t" title="config keys only">Diff vs parent</h3>
       {diff === null ? (
         <p className="ln-dnote" title="Select an attempt to read its diff against its parent.">No attempt selected.</p>
       ) : diff.state === "ROOT" ? (
@@ -2071,44 +2051,25 @@ function DiffPanel({ attempt }: { attempt: LineageAttempt | null }) {
  * ACTIVE attempt" is the one a published pick names — never inferred here.
  */
 function PromotionRule({ lineage }: { lineage?: Lineage | null }) {
-  const [head, tail] = PROMOTION_RULE.split("ACTIVE");
+  /* The rule and the standing tally are tooltips (the Promotion pick label carries the rule); nothing is printed. */
   const standing = lineage
     ? (["PICKED", "AWAITING_PICK", "NOT_PICKED", "CLOSED"] as const)
         .map((state) => [state, lineage.attempts.filter((attempt) => attempt.promotion_state === state).length] as const)
         .filter(([, count]) => count > 0)
     : [];
   return (
-    <section className="ln-rule" data-panel="promotion-rule" aria-label="promotion rule">
-      <h3 className="t">promotion rule</h3>
-      <p title={PROMOTION_RULE_TITLE}>
-        {head}
-        <span className="ln-mono">ACTIVE</span>
-        {tail}
-      </p>
-      {!lineage || !lineage.attempts.some((attempt) => attempt.promotion_state === "PICKED") ? (
-        /* D8: the hi-fi's verdict line for the picked node; with no published pick it names the rule's aim, not an attempt. */
-        <p className="ln-aim" data-tree-aim="rule">
-          {TREE_AIM}
-        </p>
-      ) : null}
-      {lineage ? (
-        <p
-          className="ln-mono"
-          data-promotion-standing
-          style={{ fontSize: "10px" }}
-          title={lineage.attempts.some((attempt) => attempt.promotion_state === "PICKED") ? undefined : PICK_AUTHORITY}
-        >
-          {standing.length
-            ? standing.map(([state, count]) => `${PROMOTION_WORDS[state]} ${String(count)}`).join(" · ")
-            : "promotion standing not published"}
-        </p>
-      ) : null}
-    </section>
+    <span
+      className="sr-only"
+      hidden
+      data-panel="promotion-rule"
+      data-promotion-standing
+      title={`${PROMOTION_RULE} ${TREE_AIM} ${standing.map(([state, count]) => `${PROMOTION_WORDS[state]} ${String(count)}`).join(" · ")}`}
+    />
   );
 }
 
 const COUNT_LABELS: [keyof Lineage["counts"], string][] = [
-  ["total_attempts", "total attempts"],
+  ["total_attempts", "total"],
   ["returned_attempts", "returned"],
   ["draft_attempts", "draft"],
   ["submitted_attempts", "submitted"],
@@ -2116,8 +2077,8 @@ const COUNT_LABELS: [keyof Lineage["counts"], string][] = [
   ["abandoned_attempts", "abandoned"],
   ["child_runs", "child runs"],
   ["technical_retries", "technical retries (not attempts)"],
-  ["storied_returned", "storied (returned)"],
-  ["probe_returned", "probes (returned)"],
+  ["storied_returned", "storied"],
+  ["probe_returned", "probes"],
 ];
 
 /**
@@ -2139,19 +2100,21 @@ function StoryBar({ storied, probes }: { storied: unknown; probes: unknown }) {
 
 function Counts({ lineage }: { lineage: Lineage }) {
   const { counts, coverage } = lineage;
-  /* CG-P19-13: the server's definition of each count, and its Run Library twin. */
+  /* CG-P19-13: the server's definition of each count, and its Run Library twin, ride the tooltips. */
   const definitions = new Map((lineage.counts_definitions?.rows ?? []).map((row) => [row.key, row]));
+  const SHOWN: ReadonlySet<keyof Lineage["counts"]> = new Set(["total_attempts", "failed_attempts", "probe_returned"]);
+  const rest = COUNT_LABELS.filter(([key]) => !SHOWN.has(key));
   return (
     <section className="ln-block" data-panel="counts" aria-label="attempt counts and coverage">
       <h3 className="t">
         <span>counts</span>
-        <span className="ln-faint" data-read-authority>
-          {lineage.read_authority} · as of {iso(lineage.as_of_utc_ms)}
+        <span className="ln-faint" data-read-authority={lineage.read_authority} title={`${lineage.read_authority} · ${lineage.counts_definitions?.version ?? "count definitions not published"}`}>
+          as of {iso(lineage.as_of_utc_ms)}
         </span>
       </h3>
       <StoryBar storied={counts.storied_returned} probes={counts.probe_returned} />
-      <div className="ln-counts">
-        {COUNT_LABELS.map(([key, label]) => {
+      <div className="ln-counts" title={rest.map(([key, label]) => `${label} ${typeof counts[key] === "number" ? String(counts[key]) : "not published"}`).join(" · ")}>
+        {COUNT_LABELS.filter(([key]) => SHOWN.has(key)).map(([key, label]) => {
           const value = counts[key];
           const definition = definitions.get(key);
           return (
@@ -2167,38 +2130,49 @@ function Counts({ lineage }: { lineage: Lineage }) {
           );
         })}
       </div>
-      <span className="ln-faint" data-coverage-line={coverage.state}>
-        coverage {coverage.state}
-        {coverage.reason_code ? ` · ${coverage.reason_code}` : ""}
-        {coverage.oldest_returned_created_at_utc_ms !== null ? ` · oldest returned ${iso(coverage.oldest_returned_created_at_utc_ms)}` : ""}
-      </span>
-      <span className="ln-faint" data-counts-definitions={lineage.counts_definitions?.version ?? "NOT_PUBLISHED"}>
-        {lineage.counts_definitions ? `${lineage.counts_definitions.version} · ` : "count definitions not published · "}
-        <Link to={`${RUNS_ROOT}?group=1&alpha=${encodeURIComponent(lineage.alpha.alpha_id)}`} data-action="reconcile-run-library">
-          reconcile in the Run Library →
-        </Link>
-      </span>
+      {coverage.state !== "COMPLETE" ? (
+        <span className="ln-faint" data-coverage-line={coverage.state}>
+          coverage {humanise(coverage.state)}
+          {coverage.oldest_returned_created_at_utc_ms !== null ? ` · oldest returned ${iso(coverage.oldest_returned_created_at_utc_ms)}` : ""}
+        </span>
+      ) : (
+        <span className="sr-only" hidden data-coverage-line={coverage.state} />
+      )}
+      <Link to={`${RUNS_ROOT}?group=1&alpha=${encodeURIComponent(lineage.alpha.alpha_id)}`} data-action="reconcile-run-library" className="ln-faint">
+        Library →
+      </Link>
     </section>
   );
 }
 
 function Notice({ controller }: { controller: LineageController }) {
   const { state } = controller;
+  /* ONE notice, one action: Read again for a repeatable read, Library for a denied one; loading keeps the panel skeleton. */
+  const action =
+    state.mayRetry && !controller.inFlight ? (
+      <button type="button" className="ln-btn" data-action="retry" onClick={controller.retry}>
+        Read again
+      </button>
+    ) : state.state === "denied" || state.state === "terminal" ? (
+      <Link to={RUNS_ROOT} data-action="open-run-library">
+        Library
+      </Link>
+    ) : null;
   return (
     <div className="flex flex-col gap-1.5" data-panel="notice" data-lineage-notice={state.state}>
-      <ResearchPanel title="attempt lineage" state={state} minBodyHeight={controller.lineage ? 0 : 120} />
-      {controller.refusal?.requestId ? (
-        <span className="ln-reason" data-request-id>
-          request {controller.refusal.requestId}
-        </span>
-      ) : null}
-      {state.mayRetry && !controller.inFlight ? (
-        <span>
-          <button type="button" className="ln-btn" data-action="retry" onClick={controller.retry}>
-            read again
-          </button>
-        </span>
-      ) : null}
+      {state.state === "loading" || state.state === "available" ? (
+        <ResearchPanel title="attempt lineage" state={state} minBodyHeight={controller.lineage ? 0 : 120} />
+      ) : (
+        <ResearchNotice
+          state={state.state}
+          code={controller.refusal?.code ?? null}
+          requestId={controller.refusal?.requestId ?? null}
+          detail={state.reason}
+          withheld={state.state !== "partial" && state.state !== "stale"}
+          sentence={state.state === "partial" || state.state === "commissioned" || state.state === "empty" ? state.reason : null}
+          action={action}
+        />
+      )}
     </div>
   );
 }
@@ -2268,7 +2242,7 @@ function PendingFrame({ state }: { state: ResearchState["state"] }) {
             <Pending what="selected attempt" state={state} />
           </section>
           <section className="ln-block" data-panel="diff" data-panel-state={state} aria-label="diff vs parent">
-            <h3 className="t">diff vs parent — config keys only</h3>
+            <h3 className="t" title="config keys only">Diff vs parent</h3>
             <Pending what="diff vs parent" state={state} />
           </section>
           <PromotionRule />
@@ -2679,11 +2653,6 @@ export function LineageScreen({
         /* A refusal: the notice and the way out, nothing else (no skeleton, no ghost tabs). */
         <>
           <Notice controller={controller} />
-          <p className="ln-bound" data-action-row="exit">
-            <Link to={RUNS_ROOT} data-action="open-run-library">
-              Open Run Library
-            </Link>
-          </p>
         </>
       )}
     </div>

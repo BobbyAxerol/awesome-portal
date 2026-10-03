@@ -114,7 +114,7 @@ describe("child audit companion", () => {
       .mockImplementationOnce(() => reply({ ...full([row(2)], null), counts: { ...full([], null).counts, returned: 1 } }));
     render(<ChildAuditCompanionPanel runId="run-1" />);
     expect(fetchMock).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "read lifecycle rows" }));
+    fireEvent.click(screen.getByRole("button", { name: "read rows" }));
     await waitFor(() => expect(document.querySelectorAll("tr[data-audit-ordinal]").length).toBe(2));
     expect(document.querySelector("[data-custody-label]")?.textContent).toBe("full source lifecycle · retained");
     expect(document.querySelector('[data-count="full_source_retained"]')?.textContent).toContain("130");
@@ -130,7 +130,7 @@ describe("child audit companion", () => {
   it("never draws a legacy witness as full rows and labels it", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(() => reply(legacy()));
     render(<ChildAuditCompanionPanel runId="run-1" />);
-    fireEvent.click(screen.getByRole("button", { name: "read lifecycle rows" }));
+    fireEvent.click(screen.getByRole("button", { name: "read rows" }));
     await waitFor(() => expect(document.querySelector("[data-child-audit-legacy]")).not.toBeNull());
     expect(document.querySelector("[data-custody-label]")?.textContent).toBe("legacy sample only · not full rows");
     expect(document.querySelectorAll("tr[data-audit-ordinal]").length).toBe(0);

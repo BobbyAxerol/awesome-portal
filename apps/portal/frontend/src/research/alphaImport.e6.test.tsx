@@ -124,7 +124,7 @@ describe("14-1/14-2 — header: crumb, title, state chip, meta line", () => {
     expect(IMPORT_TITLE).toBe("Import alpha");
 
     const crumb = screen.getByRole("navigation", { name: "Breadcrumb" });
-    expect(crumb.textContent).toBe("JourneyNew Run →");
+    expect(crumb.textContent).toBe("JourneyNew run →");
     expect(within(crumb).getByText("Journey").getAttribute("href")).toBe("/research/quantbt/journey");
 
     // QA S14: the endpoint path is not for users — no meta line at all, and no permission claim.
@@ -371,7 +371,7 @@ describe("step 3 — registration rows, where it goes next, and OL-01", () => {
       `/research/quantbt/alphas/${encodeURIComponent(REGISTRATION.alpha_id)}/lineage?av=${encodeURIComponent(REGISTRATION.alpha_version_id)}`,
     );
     expect(lineage.getAttribute("title")).toContain(REGISTRATION.version_label);
-    expect(within(links).getByText("run library").getAttribute("href")).toBe(
+    expect(within(links).getByText("Library").getAttribute("href")).toBe(
       `/research/quantbt/runs?group=1&alpha=${encodeURIComponent(REGISTRATION.alpha_id)}`,
     );
   });

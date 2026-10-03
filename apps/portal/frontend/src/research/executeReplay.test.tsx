@@ -527,23 +527,23 @@ describe("S08-U04 — every hi-fi panel keeps its place with a published reason"
   it("names all thirteen route capabilities with their reason codes", () => {
     renderScreen(controllerOf(replay()));
     for (const key of ROUTE_CAPABILITY_KEYS) {
-      const facts = document.querySelectorAll(`[data-capability="${key}"]`);
-      expect(facts.length, key).toBeGreaterThan(0);
-      expect(facts[0]!.textContent).toContain(REASON[key]);
+      /* W4: ONE "Not published by this source" block; each name's reason code is its tooltip. */
+      const facts = document.querySelectorAll(`[data-not-published-block] [data-capability="${key}"]`);
+      expect(facts.length, key).toBe(1);
+      expect(facts[0]!.getAttribute("title")).toContain(REASON[key]);
     }
-    expect(document.querySelector('[data-source-absence="cross_stream_order"]')!.textContent).toContain("not asserted");
+    expect(document.querySelectorAll("[data-not-published-block]")).toHaveLength(1);
+    expect(document.querySelector("[data-not-published-block]")!.getAttribute("title")).toContain("not asserted");
+    expect(document.querySelector("[data-not-published-block]")!.getAttribute("title")).toContain("cross stream order");
   });
 
-  it("keeps the anatomy, blotter, MAE×MFE, PnL distribution, cost and route panels — each without rows", () => {
+  it("W4: the five empty cards and the 7-sentence disclosure are one block", () => {
     renderScreen(controllerOf(replay()));
-    const ids = ["trade-anatomy", "trade-blotter", "mae-mfe", "pnl-distribution", "cost-timeline", "route-panel"];
-    expect([...document.querySelectorAll("[data-absent-panel]")].map((el) => el.getAttribute("data-absent-panel"))).toEqual(ids);
-    expect(document.querySelector('[data-absent-panel="pnl-distribution"] canvas, [data-absent-panel="pnl-distribution"] svg rect')).toBeNull();
-    for (const id of ids) {
-      const panel = document.querySelector(`[data-absent-panel="${id}"]`);
-      expect(panel, id).toBeTruthy();
-      expect(panel!.querySelector("table,tr")).toBeNull();
-    }
+    expect(document.querySelectorAll("[data-absent-panel]")).toHaveLength(0);
+    expect(document.querySelector("[data-source-absences] summary")).toBeNull();
+    const block = document.querySelector("[data-not-published-block]") as HTMLElement;
+    expect(block.querySelector("h2")?.textContent).toBe("Not published by this source");
+    expect(block.querySelector("table,tr")).toBeNull();
   });
 
   it("draws samples in the ledger and calls them samples, not events", () => {
@@ -577,8 +577,8 @@ describe("S08-U05 — route states other than retrospective equity", () => {
     expect(document.querySelector("[data-route-note]")!.textContent).toContain(words);
     expect(document.querySelector('[data-chart="replay-equity"]')).toBeNull();
     expect(document.querySelector("[data-transport]")).toBeNull();
-    expect(document.querySelectorAll("[data-absent-panel]").length).toBe(6);
-    expect(document.querySelector('[data-capability="orders"]')!.getAttribute("data-capability-state")).toBe("NOT_PUBLISHED");
+    expect(document.querySelectorAll("[data-absent-panel]").length).toBe(0);
+    expect(document.querySelector('[data-not-published-block] [data-capability="orders"]')!.getAttribute("data-capability-state")).toBe("NOT_PUBLISHED");
   });
 });
 
@@ -1089,10 +1089,9 @@ describe("QA S08 · filler sentences are gone from the hub lane", () => {
     expect(text).not.toContain("around the playhead");
     expect(text).not.toContain("SL/TP, OCO and multi-leg: not published.");
     expect(text).not.toContain("Needs trades and their price paths");
-    expect(document.querySelector("[data-absent-panel='mae-mfe']")?.textContent).toContain("Needs trade records (not published).");
-    expect(document.querySelector("[data-absent-panel='pnl-distribution']")?.textContent).toContain("Needs trade records (not published).");
-    /* The typed absence itself stays: the route-aware panel still names each capability with its code. */
-    expect(document.querySelector("[data-absent-panel='route-panel'] [data-reason-code]")).toBeTruthy();
+    /* W4: the empty MAE x MFE / PnL / route cards are gone (the PnL card is dropped on every lane); the block names each capability. */
+    expect(document.querySelector("[data-absent-panel='pnl-distribution']")).toBeNull();
+    expect(document.querySelector("[data-not-published-block] [data-capability='trades']")!.getAttribute("title")).toBeTruthy();
   });
 
   it("T-18: the receipt-budget overview absence reads as one short sentence; the served code stays", () => {

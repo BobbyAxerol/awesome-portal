@@ -94,15 +94,13 @@ export function FoldSelectionPanel({ ordering }: { ordering: FoldOrdering | null
           </tbody>
         </table>
       </div>
-      <span className="mono flex flex-wrap items-baseline gap-x-2 text-[10px]" style={MUTED} data-engine-clock="absent">
+      <span className="mono flex flex-wrap items-baseline gap-x-2 text-[10px]" style={MUTED} data-engine-clock="absent" title="The verdict reads retained data-time ranges and each fold's own selection — it is not an engine freeze or read-clock guarantee.">
         engine wall clock: not published
-        <span className="break-all text-[9px]" data-reason={wall.reason_code}>
+        <span hidden data-reason={wall.reason_code}>
           {wall.reason_code}
         </span>
       </span>
-      <span className="text-[9.5px] italic" style={MUTED}>
-        The verdict reads retained data-time ranges and each fold's own selection — it is not an engine freeze or read-clock guarantee.
-      </span>
+
     </section>
   );
 }

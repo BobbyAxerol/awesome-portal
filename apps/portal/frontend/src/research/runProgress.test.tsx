@@ -462,7 +462,7 @@ describe("P11-T02 — a sealed artifact is readiness, not authorization", () => 
     const sealed = document.querySelector('[data-artifact="trials.parquet"]') as HTMLElement;
     expect(sealed.getAttribute("data-artifact-state")).toBe("SEALED");
     expect(sealed.textContent).toContain("1.2 MB");
-    expect(sealed.textContent).toContain("sha256:aa91b3");
+    expect(sealed.querySelector("[title*=\"sha256:aa91b3\"]")).toBeTruthy(); /* W4A: digest in the tooltip, not the row */
     // `reader_href` is null by contract; no route may be invented for it.
     expect(sealed.querySelectorAll("a")).toHaveLength(0);
     // QA S03: said once, as the card title's tooltip.
@@ -554,7 +554,7 @@ describe("P11-T03 — the claim is a forecast until the source seals it", () => 
     const solid = document.querySelector("[data-claim]") as HTMLElement;
     expect(solid.getAttribute("data-claim")).toBe("ISSUED");
     expect(solid.style.border).toContain("solid");
-    expect(document.querySelector("[data-readiness]")?.textContent).toContain("mandatory SEALED");
+    expect(document.querySelector("[data-readiness]")?.textContent).toBe("sealed");
   });
 
   it("does not call a run complete without the source's seal", () => {

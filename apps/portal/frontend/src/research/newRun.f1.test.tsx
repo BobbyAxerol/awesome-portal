@@ -114,7 +114,8 @@ describe("FG 02-8b — the stepper does not call an unvisited step valid", () =>
     }
     /* A bound run's strategy is the alpha's own: nothing is left to choose, so the pill reads "pinned" and never blocks. */
     expect(pill("strategy").textContent).toContain("pinned");
-    expect(pill("data").textContent).toContain("not visited");
+    /* W4A: an unvisited step prints no caption; its state is the data attribute. */
+    expect(pill("data").querySelector("[data-step-caption]")).toBeNull();
   });
 
   it("an unvisited step that would fail is not-visited, never valid, until the reader gets there", () => {
@@ -162,7 +163,8 @@ describe("FG 02-8b — the stepper does not call an unvisited step valid", () =>
   it("a step nobody opened stays not visited even when it has a problem; the preflight guard still sees every problem", () => {
     mount({ draft: draft({ symbol: "" }) });
     expect(pill("data").getAttribute("data-step-state")).toBe("not-visited");
-    expect(pill("data").textContent).toContain("not visited");
+    /* W4A: an unvisited step prints no caption; its state is the data attribute. */
+    expect(pill("data").querySelector("[data-step-caption]")).toBeNull();
     expect(blockingProblems(draft({ symbol: "" }), LIMITS).map((problem) => problem.message)).toContain("A symbol is required.");
   });
 

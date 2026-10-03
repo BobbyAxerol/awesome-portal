@@ -58,9 +58,11 @@ export interface RunMetaStripProps {
   status: ReactNode;
   /** Marks the strip as a composition panel on the full screen. */
   panel?: boolean;
+  /** W4A: the page title already names the run; the strip keeps only the status chip and the identity chips. */
+  omitRunStatus?: boolean;
 }
 
-export function RunMetaStrip({ runId, identity, status, panel = false }: RunMetaStripProps) {
+export function RunMetaStrip({ runId, identity, status, panel = false, omitRunStatus = false }: RunMetaStripProps) {
   const state = identity === undefined ? "loading" : identity === null ? "not-published" : "ready";
   return (
     <div
@@ -81,9 +83,11 @@ export function RunMetaStrip({ runId, identity, status, panel = false }: RunMeta
         minWidth: 0,
       }}
     >
-      <span>
-        run <span style={{ color: "var(--ink)" }}><ShortId id={runId} label="run" /></span>
-      </span>
+      {omitRunStatus ? null : (
+        <span>
+          run <span style={{ color: "var(--ink)" }}><ShortId id={runId} label="run" /></span>
+        </span>
+      )}
       {status}
       {identity === undefined ? (
         <span data-meta-loading>reading run identity…</span>

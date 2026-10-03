@@ -302,6 +302,10 @@ export interface EvidenceCursorController {
   setFold: (fold: number) => void;
   /** `replace`: the change is a write-back (a window arriving), not a move the reader made — no history entry. */
   update: (patch: Partial<EvidenceCursor>, options?: { replace?: boolean }) => void;
+  /**
+   * "Reset to θ*": back to the cursor this screen was entered with (the Progress hand-off carries
+   * fold, trial and params in the hash), never to fold 1. The tab the reader is on is kept.
+   */
   reset: () => void;
 }
 
@@ -456,6 +460,11 @@ export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): Evide
     ),
     setFold: useCallback((fold: number) => update({ fold: Math.max(1, Math.trunc(fold)) }), [update]),
     update,
-    reset: useCallback(() => setCursor(seed), [seed]),
+    reset: useCallback(
+      () => setCursor((previous) => ({ ...(initial?.cursor ?? seed), stage: previous.stage })),
+      // `initial` is read once at mount: the arrival cursor is the thing to return to.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [seed],
+    ),
   };
 }

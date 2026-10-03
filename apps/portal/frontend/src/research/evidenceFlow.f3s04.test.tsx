@@ -55,16 +55,16 @@ describe("F3 · S04", () => {
     expect(ensure).not.toHaveBeenCalledWith("ROLLING_RETURNS_20");
   });
 
-  it("04-H: the Split tab subtitle carries the served fold count", () => {
+  it("04-H (W4B): the Split tab subtitle is the stage's state alone; the fold count is the summary card's", () => {
     const { container } = view(W3B.hub_evidence);
-    expect(container.querySelector("[data-tab='split'] [data-tab-sub]")?.textContent).toBe("done · 2 folds");
+    expect(container.querySelector("[data-tab='split'] [data-tab-sub]")?.textContent).toBe("done");
   });
 
-  it("04-H: with no fold count served the subtitle keeps the cursor fold, and invents no seal", () => {
+  it("04-H (W4B): with no fold count served the subtitle is still the state alone, and invents no seal", () => {
     const hub = { ...W3B.hub_evidence, core: { ...W3B.hub_evidence.core, fold_navigation: undefined } } as unknown as EvidenceHub;
     const { container } = view(hub);
     const sub = container.querySelector("[data-tab='split'] [data-tab-sub]")?.textContent ?? "";
-    expect(sub).toBe("done · fold 1");
+    expect(sub).toBe("done");
     expect(sub).not.toMatch(/holdout|sealed/i);
   });
 

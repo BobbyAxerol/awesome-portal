@@ -614,15 +614,11 @@ describe("P13-T05 — seven tabs over one cursor", () => {
   });
 
   it("carries the cursor into a deep dive it cannot yet open", async () => {
-    stub(() => [404, { error: { code: "RESEARCH_RUN_NOT_FOUND" } }]);
     const { container } = view({ cursor: { ...DEFAULT_CURSOR, stage: "search", fold: 4 } });
-    // The embedded Screen 06 body asks its read; let it settle inside the test.
-    await waitFor(() => expect(requested.length).toBeGreaterThan(0));
-    await waitFor(() => expect(container.querySelector("[data-panel='search']")?.textContent).not.toMatch(/reading…/));
-    // P15 opened Screen 06, so this is a link that carries the cursor. The
-    // Search tab now draws Screen 06's body, so the preview's "carries …"
-    // line is gone; the link's hash is where the cursor is carried.
+    // W4B: the Search tab is a summary card (no embedded Screen 06 read); its primary button
+    // is the link that carries the cursor in its hash.
     const dive = container.querySelector("[data-deep-dive='search']");
+    expect(dive?.textContent).toBe("Open S6 Search →");
     expect(dive?.tagName).toBe("A");
     expect(dive?.getAttribute("href")).toContain("/runs/R-WFO-118/search#");
     expect(dive?.getAttribute("href")).toContain("fold=4");
@@ -645,7 +641,7 @@ describe("P13-T06 — the retained-source passport is a panel, not the route", (
     });
     // VD-FG-01-01: the code chip is on screen; the server's sentence is its tooltip, not text.
     const panel = container.querySelector("[data-passport-refusal]");
-    expect(panel?.querySelector("[data-refusal-code]")?.textContent).toBe("RESEARCH_CURRENT_SOURCE_NOT_ADMITTED");
+    expect(panel?.querySelector("[data-refusal-code]")?.getAttribute("data-refusal-code")).toBe("RESEARCH_CURRENT_SOURCE_NOT_ADMITTED");
     expect(panel?.querySelector("[data-refusal-detail]")?.getAttribute("title")).toContain("admitted Advanced-WFO");
     expect(panel?.textContent).not.toContain("admitted Advanced-WFO");
     // The rest of the screen is untouched: the hub is still a hub.
@@ -903,8 +899,11 @@ describe("RF-06 FE-S04-01 — a claim that was not issued says so", () => {
     const { container } = view({ hub: notIssuedHub() });
     const strip = container.querySelector("[data-claim-passport]");
     expect(strip?.textContent).not.toContain("claim — available");
-    expect(strip?.querySelector("[data-claim-not-issued]")?.textContent).toContain("NOT_ISSUED");
-    expect(strip?.textContent).toContain(NOT_ISSUED_SENTENCE);
+    expect(strip?.querySelector("[data-claim-not-issued]")?.textContent).toBe("not issued");
+    /* W4B: the sentence rides in the tooltip and the accessible name, not inline. */
+    expect(strip?.querySelector("[data-claim-not-issued]")?.getAttribute("title")).toBe(NOT_ISSUED_SENTENCE);
+    expect(strip?.querySelector("[data-claim-not-issued]")?.getAttribute("aria-label")).toContain(NOT_ISSUED_SENTENCE);
+    expect(strip?.textContent).not.toContain(NOT_ISSUED_SENTENCE);
     expect(strip?.querySelector("[data-claim-text]")).toBeNull();
   });
 
@@ -930,7 +929,7 @@ describe("RF-06 FE-S04-01 — a claim that was not issued says so", () => {
       }),
     });
     const strip = container.querySelector("[data-claim-passport]");
-    expect(strip?.querySelector("[data-certificate-state='NOT_ISSUED']")?.textContent).toContain("NOT_ISSUED");
+    expect(strip?.querySelector("[data-certificate-state='NOT_ISSUED']")?.textContent).toBe("not issued");
     expect(strip?.textContent).not.toContain("not applicable");
   });
 });
@@ -1183,7 +1182,9 @@ describe("RF-06 FE-S04-11 — durable strings are rendered exactly", () => {
   it("prints status, readiness, input scope, metric scope and stage state as sent", () => {
     const { container } = view();
     expect(container.querySelector("[data-run-status]")?.textContent).toBe("completed");
-    expect(container.querySelector("[data-readiness]")?.textContent).toContain("COMPLETE");
+    /* W4B: one humanised word; the token is the attribute, the registry and engine are the tooltip. */
+    expect(container.querySelector("[data-readiness]")?.textContent).toBe("complete");
+    expect(container.querySelector("[data-readiness]")?.getAttribute("data-readiness")).toBe("COMPLETE");
     fireEvent.click(container.querySelector("[data-action='dataset-panel']") as Element);
     expect(container.querySelector("[data-header-value='input scope']")?.textContent).toBe(
       "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY",
@@ -1192,8 +1193,8 @@ describe("RF-06 FE-S04-11 — durable strings are rendered exactly", () => {
     const foot = container.querySelector("[data-metric='FINAL_EQUITY'] [data-metric-scope]");
     expect(foot?.textContent).toBe("oos · currency · engine-direct");
     expect(foot?.getAttribute("title")).toContain("OOS · CURRENCY · ENGINE_DIRECT");
-    // The split tab now draws Screen 05's body (hubStageSplit); the stage's state rides on its tab.
-    expect(container.querySelector("[data-tab='split'] [data-tab-sub]")?.textContent).toBe("done · 4 folds");
+    // The stage's state rides on its tab, alone; the fold count is the summary card's.
+    expect(container.querySelector("[data-tab='split'] [data-tab-sub]")?.textContent).toBe("done");
   });
 });
 
@@ -1250,36 +1251,40 @@ describe("RF-06 FE-S04-12 — Summary keeps its charts across a tab switch", () 
 });
 
 describe("RF-06 FE-S04-13 — the HiFi layout", () => {
-  it("has no extra page title and names the tab in the HiFi grammar", () => {
+  it("has one h1 (the run) and names the tab in the HiFi grammar", () => {
     const { container } = view();
-    expect(container.querySelector("h1")).toBeNull();
+    expect(container.querySelectorAll("h1")).toHaveLength(1);
+    expect(container.querySelector("h1")?.textContent).toMatch(/^Evidence flow · run /);
     const summary = container.querySelector("[data-tab='summary']");
     expect(summary?.textContent).toContain("Summary");
-    /* QA S04: the sub-line names the window; the counts ride in the tab's tooltip. */
-    expect(summary?.querySelector("[data-tab-sub]")?.textContent).toBe("OOS");
+    /* W4B: no sub-line on Summary; the counts ride in the tab's tooltip. */
+    expect(summary?.querySelector("[data-tab-sub]")).toBeNull();
     expect(summary?.getAttribute("title")).toBe("4 of 5 metrics · 4 series");
   });
 
-  it("keeps an absent claim field in the passport with its label and reason", () => {
+  it("names the absent claim fields once: a count, with every name and the reason in its tooltip", () => {
     const { container } = view();
-    for (const name of ["validation_claim", "chronological_claim", "oos_used_for_selection", "holdout_state", "causality_claim", "runtime authority"]) {
-      const field = container.querySelector(`[data-claim-field='${name}']`);
-      expect(field?.textContent, name).toContain(name);
-      expect(field?.textContent, name).toContain("not published");
+    const absent = container.querySelector("[data-claim-absent]") as HTMLElement;
+    expect(absent.textContent).toMatch(/^\d+ not published$/);
+    expect(absent.getAttribute("tabindex")).toBe("0");
+    for (const name of ["validation claim", "chronological claim", "OOS used for selection", "holdout state", "causality claim", "runtime authority"]) {
+      expect(absent.getAttribute("title"), name).toContain(name);
     }
+    expect(container.querySelector("[data-claim-field='validation_claim']")).toBeNull();
   });
 
-  it("gives each stage tab its HiFi heading and honest panel shells", async () => {
-    stub(() => [404, { error: { code: "NOT_FOUND" } }]);
+  it("gives each stage tab one summary card (W4B): the heading, a status chip, and the way to the full screen", () => {
     const { container } = view({ cursor: { ...DEFAULT_CURSOR, stage: "freeze" } });
-    /* The embedded Screen 07 body reads on mount; let that read settle. */
-    await waitFor(() => expect(requested.length).toBeGreaterThan(0));
-    await act(async () => undefined);
-    /* F1b VD-TEXT-01: the heading is the stage name; the "hinge between…" tail and the subtitle are gone. */
+    /* F1b VD-TEXT-01: the heading is the stage name; no tail, no subtitle. */
     expect(container.querySelector("[data-tab-heading]")?.textContent).toBe("Stage 3 · Freeze");
-    /* HiFi 04 isFreeze: the tab draws Screen 07's body (hubStageFreeze), not shells. */
+    /* The deep dive is NOT embedded: no placeholder shells and no mounted Screen 07 body, and no read of its own. */
     expect(container.querySelector("[data-stage-shells='freeze']")).toBeNull();
-    expect(container.querySelector("[data-panel='freeze'] [data-hub-stage-body='freeze']")).toBeTruthy();
+    expect(container.querySelector("[data-hub-stage-body]")).toBeNull();
+    expect(requested).toHaveLength(0);
+    const card = container.querySelector("[data-panel='freeze'] [data-hub-stage-summary='freeze']") as HTMLElement;
+    expect(card).toBeTruthy();
+    expect(card.querySelector("[data-stage-state]")?.getAttribute("data-stage-state")).toMatch(/^(done|running|pending)$/);
+    expect(card.querySelector("a[data-deep-dive='freeze']")?.textContent).toBe("Open S7 Freeze →");
   });
 
   it("links the built report and the P21 release candidate composer", () => {
@@ -1349,12 +1354,13 @@ describe("RF-06 fidelity — cursor bar", () => {
         refusal: toEvidenceRefusal(new PortalApiError("not admitted", 404, "RESEARCH_CURRENT_SOURCE_NOT_ADMITTED", null)),
       },
     });
-    expect(container.querySelector("[data-cursor-seq]")?.textContent).toContain("not served for this lane");
-    expect(container.querySelector("[data-cursor-seq] [data-fe-absence]")?.getAttribute("data-fe-absence")).toBe("hub-lane-has-no-event-seq");
-    expect(container.querySelector("[data-cursor-seq] [data-reason-code]")).toBeNull();
+    /* W4B: trial, params and seq not served -> ONE muted line (the keys ride in its tooltip); no schedule chip (the header says it). */
+    expect(container.querySelector("[data-cursor-seq]")).toBeNull();
+    expect(container.querySelector("[data-cursor-bar] [data-fe-absence]")).toBeNull();
     expect(container.querySelector("[data-cursor-bar]")?.innerHTML).not.toMatch(/P13_PUBLISHES_NO/);
-    expect(container.querySelector("[data-cursor-schedule]")?.textContent).toContain("per_fold_causal");
-    expect(container.querySelector("[data-cursor-window]")?.textContent).toBe("window OOS");
+    expect(container.querySelector("[data-cursor-schedule]")).toBeNull();
+    expect(container.querySelector("[data-cursor-compact]")?.textContent).toBe("cursor: fold 1 · window OOS");
+    expect(container.querySelector("[data-cursor-compact]")?.getAttribute("title")).toContain("trial, params and seq are not served");
     cleanup();
     const withSeq = view({ cursor: { ...DEFAULT_CURSOR, seq: 92200 } });
     expect(withSeq.container.querySelector("[data-cursor-seq]")?.textContent).toContain("92200");
@@ -1535,7 +1541,7 @@ describe("W3 — a sealed retained WFO run fills the claim strip (CG-P13-07)", (
         },
       },
     });
-    expect(container.querySelector("[data-claim-field='validation_claim']")?.getAttribute("data-withheld")).toBe("NOT_PUBLISHED");
+    expect(container.querySelector("[data-claim-absent]")?.getAttribute("data-withheld")).toBe("NOT_PUBLISHED");
     expect(container.querySelector("[data-retained-verdicts]")).toBeNull();
     expect(container.querySelector("[data-gap='per-fold-verdict']")).toBeTruthy();
   });
@@ -1800,12 +1806,13 @@ describe("E11 · sealed summary analytics are bound without recomputation or aut
     await waitFor(() => expect(container.querySelector('[data-chart-table="equity-is"]')).toBeTruthy());
     expect(container.querySelector('[data-chart-table="equity-is"]')?.textContent).toContain("102");
     expect(container.querySelector('[data-series-authority="EQUITY_IS"]')?.textContent).toContain("DECLARED_IS");
-    expect(container.querySelector('[data-summary-trade-count]')?.getAttribute("data-trade-scope")).toBe("CHILD_TAPE");
-    expect(container.querySelector('[data-summary-trade-count] [data-exact]')?.getAttribute("data-exact")).toBe("4");
-    /* F1b: the caveat moved into the tooltip; the line is the label, scope and number. */
-    expect(container.querySelector('[data-summary-trade-count]')?.textContent).toBe("Engine trades: 4");
-    expect(container.querySelector("[data-summary-trade-count]")?.getAttribute("title")).toContain("CHILD_TAPE");
-    expect(container.querySelector('[data-summary-trade-count]')?.getAttribute("title")).toContain("not an audited fill count");
+    /* W4B: "Trade count" is one label with one number; the engine's own count is that tile's tooltip, with its scope. */
+    const tile = container.querySelector("[data-metric='TRADE_COUNT'][data-summary-trade-count]") as HTMLElement;
+    expect(tile.getAttribute("data-trade-scope")).toBe("CHILD_TAPE");
+    expect(tile.getAttribute("data-engine-trades")).toBe("4");
+    expect(container.textContent).not.toContain("Engine trades:");
+    expect(tile.getAttribute("title")).toContain("CHILD_TAPE");
+    expect(tile.getAttribute("title")).toContain("Not an audited fill count");
   });
 
   it("renders source behaviour values in the existing eight cells and missing facts with their own reasons", () => {

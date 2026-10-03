@@ -363,7 +363,9 @@ describe("P12-T04 — an unavailable fact keeps its place and states its reason"
         item({ status: "RUNNING", claim: { state: null, text: null, availability: { state: "PENDING_SOURCE_CALLBACK", reason_code: null } } }),
       ]),
     });
-    expect(screen.getByText(CLAIM_PENDING)).toBeTruthy();
+    /* W4A: a running run shows its status pill, not a promise about Stage 5. */
+    expect(document.querySelector('[data-claim-kind="pending"]')).toBeTruthy();
+    expect(screen.queryByText(CLAIM_PENDING)).toBeNull();
   });
 
   it("labels derived stage tooltips as derived", () => {

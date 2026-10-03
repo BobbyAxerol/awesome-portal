@@ -31,6 +31,8 @@ import { smokeMotionAllowed } from "../execution/smokeMotion";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { reasonCodeSentence } from "./researchRefusal";
 import { foldLabel, formatCount, formatMetric, formatUtc, typographicMinus } from "./researchFormat";
+import { formatValue } from "./formatValue";
+import { humanise } from "./humanise";
 import type { CurrentSourceSplit } from "./splitClient";
 import {
   REPLAY_GAP_WORDS,
@@ -71,6 +73,13 @@ export const REVEAL_HIDDEN = "hidden by causal reveal";
 export const REVEAL_HIDDEN_SHORT = "hidden";
 
 /** A served count, grouped; an unpublished one says so (never `0`, never a dash). */
+/** A capability fact's reason as a tooltip: the sentence where one exists, the code always. */
+function factTitle(fact: { reason_code?: string | null; availability: { reason_code: string | null } }): string {
+  const code = factCode(fact);
+  const sentence = reasonCodeSentence(code);
+  return [sentence, code].filter(Boolean).join(" — ") || "not published";
+}
+
 function countCell(value: number | null): string {
   return formatCount(value) ?? "not published";
 }
@@ -135,32 +144,6 @@ export function foldParams(progress: ProgressRead | null, foldId: string | null,
   return { state: "absent", code: selection.reason_code };
 }
 
-type ClaimFactLike = {
-  value: string | boolean | null;
-  reason_code: string | null;
-  availability: { reason_code: string | null };
-};
-
-/** A claim token as served; unread is "reading…", a null value is "not published" with its served reason code. */
-function claimToken(slotState: string | undefined, fact: ClaimFactLike | undefined): ReactNode {
-  if (slotState !== "ready") return "reading…";
-  if (fact === undefined) return "not published";
-  /* QA S08 T-08: snake_case is the server's token; the words read, the token is the tooltip. */
-  if (fact.value !== null) return typeof fact.value === "string" ? <span title={fact.value} data-claim-token={fact.value}>{words(fact.value)}</span> : String(fact.value);
-  const code = fact.reason_code ?? fact.availability.reason_code;
-  return (
-    <>
-      not published
-      {code ? (
-        <>
-          {" "}
-          <span className="font-normal" data-reason-code={code} title={reasonCodeSentence(code) ?? undefined}>{code}</span>
-        </>
-      ) : null}
-    </>
-  );
-}
-
 function FoldParamsText({ params }: { params: FoldParams }) {
   if (params.state === "value") {
     return (
@@ -171,24 +154,17 @@ function FoldParamsText({ params }: { params: FoldParams }) {
     );
   }
   if (params.state === "unread") {
-    return <span data-fold-params="unread">{params.answered ? "params — the progress read did not answer" : "params — reading…"}</span>;
+    return <span data-fold-params="unread">{params.answered ? "params not read" : "params…"}</span>;
   }
   return (
-    <span data-fold-params="absent">
-      params — not published
-      {params.code ? (
-        <>
-          {" "}
-          <span data-reason-code={params.code} title={reasonCodeSentence(params.code) ?? undefined}>{params.code}</span>
-        </>
-      ) : null}
+    <span data-fold-params="absent" title={params.code ? `${reasonCodeSentence(params.code) ?? ""} ${params.code}`.trim() : undefined}>
+      params not published
+      {params.code ? <span hidden data-reason-code={params.code}>{params.code}</span> : null}
     </span>
   );
 }
 
-function words(value: string): string {
-  return value.toLowerCase().replace(/_/g, " ");
-}
+const words = humanise;
 
 /**
  * D11 · the words for QuantBT's `FoldAccountPolicyV1` (the only two values the
@@ -227,35 +203,6 @@ export function exactPercent(value: string): string | null {
   const whole = `${match[1]}${fraction.slice(0, 2)}`.replace(/^0+(?=\d)/, "");
   const rest = fraction.slice(2).replace(/0+$/, "");
   return `${whole}${rest ? `.${rest}` : ""}%`;
-}
-
-/**
- * QA S08 I-13 / T-09: the sum of served per-bar decimal strings, done on the
- * digits (BigInt at the widest scale) so it is exact, never a float. `null`
- * when any value is absent or not a plain decimal: a partial sum is a smaller
- * number wearing the window's name.
- */
-export function sumDecimalStrings(values: ReadonlyArray<string | null | undefined>): string | null {
-  const parsed: Array<{ negative: boolean; whole: string; fraction: string }> = [];
-  let scale = 0;
-  for (const value of values) {
-    if (value === null || value === undefined) return null;
-    const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(value);
-    if (!match) return null;
-    const fraction = match[3] ?? "";
-    scale = Math.max(scale, fraction.length);
-    parsed.push({ negative: match[1] === "-", whole: match[2]!, fraction });
-  }
-  let total = 0n;
-  for (const part of parsed) {
-    const magnitude = BigInt(`${part.whole}${part.fraction.padEnd(scale, "0")}`);
-    total += part.negative ? -magnitude : magnitude;
-  }
-  const negative = total < 0n;
-  const digits = (negative ? -total : total).toString().padStart(scale + 1, "0");
-  const whole = scale === 0 ? digits : digits.slice(0, -scale);
-  const fraction = scale === 0 ? "" : digits.slice(-scale).replace(/0+$/, "");
-  return `${negative ? "-" : ""}${whole}${fraction ? `.${fraction}` : ""}`;
 }
 
 /** Bars of empty room each side of the bars, so the first and last time labels stays inside the plot. */
@@ -298,6 +245,13 @@ const px = (value: string | null | undefined): string | null => {
   return Number.isFinite(n) ? chartPrice(n) : null;
 };
 
+/** A served model position, shown to at most four places (the exact string rides in the title); never a raw 17-digit float. */
+export function positionText(value: string | number): string {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return String(value);
+  return formatValue.number(n, { dp: 4 }).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+}
+
 /** What the crosshair says about one served bar: its own OHLC, accepted position and equity — nothing derived. */
 export function crosshairReadout(row: CurrentSourceObservation): CrosshairReadout {
   const candle = row.bar?.candle ?? null;
@@ -308,7 +262,7 @@ export function crosshairReadout(row: CurrentSourceObservation): CrosshairReadou
     high: px(candle?.high),
     low: px(candle?.low),
     close: px(candle?.close),
-    position: row.accepted_position === null || row.accepted_position === undefined ? null : typographicMinus(String(row.accepted_position)),
+    position: row.accepted_position === null || row.accepted_position === undefined ? null : positionText(row.accepted_position),
     equity: formatMetric(row.equity, "currency"),
   };
 }
@@ -326,7 +280,7 @@ function ReadoutCell({ label, value }: { label: string; value: string | null }) 
 
 function Exact({ value, unit }: { value: string | null | undefined; unit: "currency" | "fraction" | "count" | null }) {
   if (value === null || value === undefined) return <em>not published</em>;
-  const shown = formatMetric(value, unit) ?? value;
+  const shown = unit === null ? positionText(value) : (formatMetric(value, unit) ?? value);
   return (
     <span title={value} data-exact={value}>
       {typographicMinus(shown)}
@@ -1464,7 +1418,7 @@ function AcrossNotice({ across }: { across: PlayAcross }) {
 }
 
 /** The playhead's own bar and checkpoint — the state a sequential replay reaches here. */
-function PlayheadState({ transport, rows, reveal, totals }: {
+function PlayheadState({ transport, rows }: {
   transport: ReplayTransport;
   rows: readonly CurrentSourceObservation[];
   reveal: boolean;
@@ -1483,16 +1437,12 @@ function PlayheadState({ transport, rows, reveal, totals }: {
       data-playhead-note
       title="Model state replayed from the retained bars, not a broker account."
     >
-      <span className={cell}>t <b>{iso(row.at_utc_ms)}</b></span>
+      <span className={cell}><b>{iso(row.at_utc_ms)}</b></span>
       <span className={cell} data-readout-fold><b>{bar?.fold_id != null ? foldLabel(bar.fold_id) : "in-sample (no fold)"}</b></span>
       <span className={cell} data-readout-position>position <b><Exact value={row.accepted_position} unit={null} /></b></span>
       <span className={cell}>equity <b><Exact value={row.equity} unit="currency" /></b></span>
-      <span className={cell} title="Cumulative over the whole run up to this bar, not only this fold.">run fees so far <b><Exact value={bar?.checkpoint.cumulative_fee} unit="currency" /></b></span>
-      <span className={cell} data-readout-transitions title="Cumulative over the whole run up to this bar, not only this fold.">run transitions so far <b>{bar ? bar.checkpoint.transition_count : "not published"}</b></span>
-      <span className={cell} data-readout-full-run={reveal ? "hidden" : "shown"}>
-        full-run fees{" "}
-        {reveal ? <em data-reveal-hidden>{REVEAL_HIDDEN}</em> : <b><Exact value={totals.fee} unit="currency" /></b>}
-      </span>
+      <span className={cell} title="Run fees so far: cumulative over the whole run up to this bar, not only this fold.">fees so far <b><Exact value={bar?.checkpoint.cumulative_fee} unit="currency" /></b></span>
+      <span className={cell} data-readout-transitions title="Run transitions so far: cumulative over the whole run up to this bar, not only this fold.">transitions so far <b>{bar ? bar.checkpoint.transition_count : "not published"}</b></span>
     </div>
   );
 }
@@ -1663,6 +1613,13 @@ function ChildAuditCard({
 }) {
   const summary = replay.execution.child_audit;
   const fact = replay.route_capabilities.child_audit;
+  const isolationOf = (record: { policy: string | null; certified_isolation: boolean | null }) =>
+    `${humanise(record.policy) || "not published"}${record.certified_isolation === true ? " · certified" : record.certified_isolation === false ? " · not certified" : ""}`;
+  /* One isolation word for every record is said once, in the summary, not once per row. */
+  const isolationUniform =
+    slot && slot.state === "ready" && slot.audit.records.length > 0 && slot.audit.records.every((record) => isolationOf(record) === isolationOf(slot.audit.records[0]!))
+      ? isolationOf(slot.audit.records[0]!)
+      : null;
   const loaded = slot && slot.state !== "idle" && slot.state !== "loading" && slot.fold === fold;
   return (
     <Card
@@ -1674,6 +1631,8 @@ function ChildAuditCard({
           <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--warn)" }} data-capability="child_audit" data-capability-state="READ_FAILED">
             child audit · could not be read
           </span>
+        ) : fact.state === "AVAILABLE" ? (
+          <span hidden data-capability="child_audit" data-capability-state="AVAILABLE" />
         ) : (
           <FactLine label="child audit" fact={fact} name="child_audit" />
         )
@@ -1700,9 +1659,11 @@ function ChildAuditCard({
         </p>
       ) : (
         <div className="flex flex-col gap-1" data-child-audit={slot.fold}>
-          <p className="mono text-[10px]" style={{ color: "var(--ink-soft)" }} title="The shaded row is the strategy instance that generated this fold's out-of-sample bars.">
-            {foldLabel(slot.fold)} · shaded = OOS generation · legacy witness, not the full lifecycle
-          </p>
+          {/* Collapsed by default: 64 rows of the same seed/isolation are an appendix, the count is the fact. */}
+          <details data-child-audit-details>
+          <summary className="mono cursor-pointer text-[10px]" style={{ color: "var(--ink-soft)" }} title="The shaded row is the strategy instance that generated this fold's out-of-sample bars. Legacy witness, not the full lifecycle.">
+            {foldLabel(slot.fold)} · {formatCount(slot.audit.records.length)} records{isolationUniform !== null ? ` · ${isolationUniform}` : ""}
+          </summary>
           {/* Keyboard users can scroll this table sideways at narrow widths (axe scrollable-region-focusable). */}
           <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={`child audit records of ${foldLabel(slot.fold)}`}>
             <table className="w-full min-w-[520px] border-collapse">
@@ -1712,7 +1673,7 @@ function ChildAuditCard({
                   <th className="py-1 pr-3 font-normal">context</th>
                   <th className="py-1 pr-3 font-normal">candidate</th>
                   <th className="py-1 pr-3 font-normal">seed</th>
-                  <th className="py-1 pr-3 font-normal">isolation</th>
+                  {isolationUniform === null ? <th className="py-1 pr-3 font-normal">isolation</th> : null}
                   <th className="py-1 font-normal">window (UTC)</th>
                 </tr>
               </thead>
@@ -1731,10 +1692,7 @@ function ChildAuditCard({
                       <td className="py-[3px] pr-3" style={{ fontWeight: generation ? 600 : undefined }}>{record.context ?? "not published"}</td>
                       <td className="py-[3px] pr-3" title={record.candidate_id ?? undefined}>{short(record.candidate_id, 8)}</td>
                       <td className="py-[3px] pr-3">{record.seed ?? "not published"}</td>
-                      <td className="py-[3px] pr-3">
-                        {record.policy ?? "not published"}
-                        {record.certified_isolation === true ? " · certified" : record.certified_isolation === false ? " · not certified" : ""}
-                      </td>
+                      {isolationUniform === null ? <td className="py-[3px] pr-3">{isolationOf(record)}</td> : null}
                       <td className="whitespace-nowrap py-[3px]">
                         {record.test_start_utc_ms !== null ? iso(record.test_start_utc_ms) : "not published"} → {record.test_end_utc_ms !== null ? iso(record.test_end_utc_ms) : "not published"}
                       </td>
@@ -1744,6 +1702,7 @@ function ChildAuditCard({
               </tbody>
             </table>
           </div>
+          </details>
           {/* T-06: the reader's fact is the count; policy, run total, drops and fingerprint ride in the tooltip. */}
           <span
             className="mono text-[9.5px]"
@@ -1840,7 +1799,7 @@ function Anatomy({ replay, selected, childAudit, windowLoaded = true }: { replay
 }
 
 /** Per-bar fee in the loaded window, and the full run's totals (labelled retrospective). */
-function CostTimeline({ rows, replay, reveal, transport, windowLoaded = true }: {
+function CostTimeline({ rows, replay, reveal, transport }: {
   windowLoaded?: boolean;
   rows: readonly CurrentSourceObservation[];
   replay: CurrentSourceReplay;
@@ -1849,28 +1808,11 @@ function CostTimeline({ rows, replay, reveal, transport, windowLoaded = true }: 
 }) {
   const { index } = useTransport(transport);
   const cut = reveal ? index + 1 : rows.length;
-  const inWindow = rows.slice(0, cut);
-  const charged = inWindow.filter((row) => row.bar?.fee && Number(row.bar.fee) !== 0);
-  /* The server publishes `fee` on every bar; the window's fee is those served strings added on the digits. */
-  const windowFee = !windowLoaded || inWindow.length === 0 ? null : sumDecimalStrings(inWindow.map((row) => row.bar?.fee));
   const totals = replay.execution.totals;
   const funding = replay.route_capabilities.funding;
   return (
     <Card title="cost timeline" data-panel="cost-timeline" aside={<FactLine label="fees" fact={replay.route_capabilities.fees} name="fees" />}>
       <div className="flex flex-wrap gap-x-5 gap-y-1 text-[11px]">
-        <span className="mono" data-cost-window>
-          this window{reveal ? " to the cursor" : ""}:{" "}
-          {windowLoaded ? <>{charged.length} charged {charged.length === 1 ? "bar" : "bars"}</> : <em data-window-charged="NOT_LOADED">not loaded</em>} · fee{" "}
-          {windowFee === null ? (
-            <em data-window-fee="NOT_PUBLISHED" title={windowLoaded ? "At least one bar in this window carries no fee, so no window sum is stated." : "The fold window did not load, so no window sum is stated."}>
-              {windowLoaded ? "not published" : "not loaded"}
-            </em>
-          ) : (
-            <span data-window-fee={windowFee} title={`${windowFee} — the served per-bar fees of this window, added exactly`}>
-              <Exact value={windowFee} unit="currency" />
-            </span>
-          )}
-        </span>
         <span className="mono" data-cost-total={reveal ? "hidden" : "shown"}>
           full run (retrospective): {reveal ? <em>{REVEAL_HIDDEN}</em> : (
             <>fee <Exact value={totals.fee} unit="currency" /> · notional <Exact value={totals.turnover} unit="currency" /></>
@@ -2106,32 +2048,27 @@ export function CandleReplayBody({
       >
         <div className="flex flex-wrap items-center gap-2">
           <span className="mono rounded-[3px] border px-[5px] text-[10px] leading-[16px]" style={{ color: "var(--accent)", borderColor: "var(--accent)" }} data-route-id={progress?.run?.execution_route ?? ""}>
-            {progress?.run?.execution_route ?? (identity?.state === "ready" ? "route — the progress read did not answer" : "route — reading…")}
+            {humanise(progress?.run?.execution_route) || (identity?.state === "ready" ? "route not read" : "reading route…")}
           </span>
           <span
             className="mono text-[10px]"
             data-replay-contract={route.engine_id ?? ""}
-            title={`${routePhases.join(" · ")}${route.accounting_certified === true ? " · accounting certified by QuantBT" : ""}`}
+            title={`contract ${route.engine_id ?? "not published"} · ${routePhases.join(" · ")}${route.accounting_certified === true ? " · accounting certified by QuantBT" : ""}`}
           >
-            → contract {route.engine_id ?? "not published"}
+            {humanise(route.engine_id) || "contract not published"}
           </span>
           {routePhases.map((phase) => (
             <span key={phase} className="mono rounded-[3px] border px-[5px] text-[9.5px] leading-[16px]" style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }} data-route-phase>
               {phase}
             </span>
           ))}
-          {route.accounting_certified === true ? (
-            <span className="mono rounded-[3px] border px-[5px] text-[9.5px] leading-[16px]" style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }} data-accounting-certified>
-              accounting certified by QuantBT
+          {readiness === null || readiness === "READY" ? (
+            <span hidden data-readiness={readiness ?? ""} />
+          ) : (
+            <span className="mono rounded-[3px] border px-[5px] text-[10px] leading-[16px]" style={{ borderColor: "var(--line)" }} data-readiness={readiness}>
+              {words(readiness)}
             </span>
-          ) : null}
-          <span className="mono rounded-[3px] border px-[5px] text-[10px] leading-[16px]" style={{ borderColor: "var(--line)" }} data-readiness={readiness ?? ""}>
-            {readiness ? `readiness ${words(readiness)}` : identity?.state === "ready" ? "readiness — the progress read did not answer" : "readiness — reading…"}
-          </span>
-          <span className="mono ml-auto flex flex-wrap gap-3 text-[10px]" style={{ color: "var(--ink-soft)" }}>
-            <span data-claim>claim <b style={{ color: "var(--warn)" }}>{claimToken(claim?.state, claimStrip?.validation_claim)}</b></span>
-            <span>causality <b>{claimToken(claim?.state, claimStrip?.causality_claim)}</b></span>
-          </span>
+          )}
         </div>
       </Card>
 
@@ -2140,6 +2077,8 @@ export function CandleReplayBody({
         style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
         aria-label="stitched account replay"
         data-replay-window="RETAINED_BARS"
+        data-replay-section
+        tabIndex={0}
         data-window-key={windowKey}
         data-retained-in-flight={String(inFlight)}
       >
@@ -2270,18 +2209,23 @@ export function CandleReplayBody({
 
       <div className="flex flex-wrap gap-2" data-verdict-tiles>
         {[
-          {
-            k: "orders · fills · trades",
-            label: "published records",
-            v: `${countCell(counts.orders_published)} · ${countCell(counts.fills_published)} · ${countCell(counts.trades_published)}`,
-            tip: "Records QuantBT emitted on this route.",
-            absent: counts.orders_published === null || counts.fills_published === null || counts.trades_published === null,
-            codes: [
-              counts.orders_published === null ? factCode(replay.route_capabilities.orders) : null,
-              counts.fills_published === null ? factCode(replay.route_capabilities.fills) : null,
-              counts.trades_published === null ? factCode(replay.route_capabilities.trades) : null,
-            ],
-          },
+          /* W4: the records tile is drawn only when the source published a real count; "0 · 0 · 0" is said once by the absence line. */
+          ...((counts.orders_published ?? 0) + (counts.fills_published ?? 0) + (counts.trades_published ?? 0) > 0
+            ? [
+                {
+                  k: "orders · fills · trades",
+                  label: "published records",
+                  v: `${countCell(counts.orders_published)} · ${countCell(counts.fills_published)} · ${countCell(counts.trades_published)}`,
+                  tip: "Records QuantBT emitted on this route.",
+                  absent: counts.orders_published === null || counts.fills_published === null || counts.trades_published === null,
+                  codes: [
+                    counts.orders_published === null ? factCode(replay.route_capabilities.orders) : null,
+                    counts.fills_published === null ? factCode(replay.route_capabilities.fills) : null,
+                    counts.trades_published === null ? factCode(replay.route_capabilities.trades) : null,
+                  ],
+                },
+              ]
+            : []),
           {
             k: "target transitions",
             v: reveal ? REVEAL_HIDDEN : countCell(counts.transitions),
@@ -2292,7 +2236,7 @@ export function CandleReplayBody({
             codes: [!reveal && counts.transitions === null ? factCode(replay.route_capabilities.execution_events) : null],
           },
           { k: "fees paid", v: reveal ? REVEAL_HIDDEN : (formatMetric(execution.totals.fee, "currency") ?? "not published"), sub: "full run", tip: "Full run, retrospective: the whole run's fee, not up to the cursor.", hidden: reveal },
-          { k: "rejected orders", v: countCell(counts.rejected_orders), tip: "Engine diagnostics.", absent: counts.rejected_orders === null },
+          ...(counts.rejected_orders === null ? [] : [{ k: "rejected orders", v: countCell(counts.rejected_orders), tip: "Engine diagnostics.", absent: false }]),
           { k: "fold capital", v: foldCapitalTile(execution.fold_capital.policy).value, sub: foldCapitalTile(execution.fold_capital.policy).sub ?? undefined, vTitle: foldCapitalPolicyWords(execution.fold_capital.policy).code, tip: words(execution.fold_capital.equity_continuity) },
         ].map((tile: { k: string; label?: string; v: string; sub?: string; tip?: string; hidden?: boolean; absent?: boolean; codes?: Array<string | null>; vTitle?: string | null }) => (
           <div
@@ -2305,7 +2249,7 @@ export function CandleReplayBody({
             <span className="text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>{tile.label ?? tile.k}</span>
             <span className="mono text-[17px] font-semibold" style={{ fontStyle: tile.hidden || tile.absent ? "italic" : undefined, fontSize: tile.hidden || tile.absent ? 12 : undefined }} title={tile.vTitle ?? undefined} data-tile-code={tile.vTitle ?? undefined} data-tile-absent={tile.absent ? "" : undefined}>{tile.v}</span>
             {(tile.codes ?? []).filter((code): code is string => code !== null).map((code) => (
-              <span key={code} className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-reason-code={code} title={reasonCodeSentence(code) ?? undefined}>{code}</span>
+              <span key={code} hidden data-reason-code={code} title={reasonCodeSentence(code) ?? undefined}>{code}</span>
             ))}
             {tile.sub ? <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>{tile.sub}</span> : null}
           </div>
@@ -2340,16 +2284,22 @@ export function CandleReplayBody({
           {runId ? <ChildAuditCompanionPanel runId={runId} /> : null}
         </div>
         <div className="flex min-w-0 flex-col gap-3">
-          <Card
-            title="trade blotter"
-            hint={counts.trades_published === null ? "Trade record count not published." : `${counts.trades_published} trade records on this route.`}
-            data-absent-panel="trade-blotter"
-          >
-            <FactLine label={counts.trades_published === null ? "trades · count" : `trades · ${counts.trades_published}`} fact={replay.route_capabilities.trades} name="trades" />
-          </Card>
-          <Card title="MAE × MFE" hint="Needs trade records (not published)." data-absent-panel="mae-mfe">
-            <FactLine label="MAE × MFE" fact={replay.route_capabilities.mae_mfe} name="mae_mfe" />
-          </Card>
+          {replay.route_capabilities.trades.state !== "AVAILABLE" ? (
+            /* Structurally empty on a close-target route: one line, each absence's reason in its tooltip. */
+            <section
+              className="flex flex-wrap items-baseline gap-x-2 rounded-[8px] border px-4 py-2 text-[10.5px]"
+              style={{ borderColor: "var(--line)", background: "var(--paper-raised)", color: "var(--ink-soft)" }}
+              data-absent-panel="trade-blotter"
+              aria-label="Trade records"
+            >
+              <span className="mono" tabIndex={0} title={factTitle(replay.route_capabilities.trades)}>No trade records on this route</span>
+              <span hidden data-absent-panel="mae-mfe" />
+            </section>
+          ) : (
+            <Card title="trade blotter" data-absent-panel="trade-blotter">
+              <FactLine label={`trades · ${counts.trades_published}`} fact={replay.route_capabilities.trades} name="trades" />
+            </Card>
+          )}
           <CostTimeline rows={rows} replay={replay} reveal={reveal} transport={transport} windowLoaded={!noFoldWindow} />
         </div>
       </div>

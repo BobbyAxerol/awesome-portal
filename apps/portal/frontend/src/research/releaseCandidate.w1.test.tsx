@@ -154,7 +154,7 @@ describe("W1-S11 B2 the sealed verdict", () => {
     expect(q("[data-verdict-title]")).toBeNull();
     expect(q('[data-panel-part="verdict"]')).toBeNull();
     expect(document.body.textContent).not.toMatch(/local seal blocked/i);
-    expect(q("[data-state-chip]")!.textContent).toBe("SEALED");
+    expect(q("[data-state-chip]")!.getAttribute("data-state-chip")).toBe("SEALED");
   });
 
   it("an unsealed draft keeps the verdict: the title is visible, the body is the tooltip, the label says when it was composed", async () => {
@@ -174,7 +174,7 @@ describe("W1-S11 B3 cursor-aware links", () => {
     serve({ compose: "unsealed", library: { kind: "row", status: "COMPLETED" } });
     renderAt(`/research/quantbt/runs/${RUN}/release-candidate?window=is${HASH}`);
     await waitFor(() => expect(q('[data-screen="release-candidate"]')!.getAttribute("data-run-phase")).toBe("completed"));
-    const hub = within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByRole("link", { name: "Evidence Flow" }).getAttribute("href")!;
+    const hub = within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByRole("link", { name: "Evidence" }).getAttribute("href")!;
     expect(hub).toContain(`/runs/${RUN}/evidence?window=is#`);
     for (const part of ["stage=claim", "fold=4", "trial=351", "params=abc"]) expect(hub).toContain(part);
     expect(hub).not.toContain("stage=search");
@@ -189,7 +189,7 @@ describe("W1-S11 B3 cursor-aware links", () => {
     serve({ compose: "unsealed", library: { kind: "row", status: "COMPLETED" } });
     renderAt(`/research/quantbt/runs/${RUN}/release-candidate`);
     await waitFor(() => expect(q('[data-screen="release-candidate"]')!.getAttribute("data-run-phase")).toBe("completed"));
-    const hub = within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByRole("link", { name: "Evidence Flow" }).getAttribute("href")!;
+    const hub = within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByRole("link", { name: "Evidence" }).getAttribute("href")!;
     expect(hub).toBe(`/research/quantbt/runs/${RUN}/evidence`);
     expect(q('[data-action="run-report"]')!.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/report`);
     expect(document.body.innerHTML).not.toContain("fold=1");

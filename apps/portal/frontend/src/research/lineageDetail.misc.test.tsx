@@ -57,7 +57,7 @@ describe("S10 traced children", () => {
     expect(ids()).toContain("att_02"); // PROBE + CLONE_FOR_EXPERIMENT
     /* W1 B4: the fixture has 7 attempts, all among the newest 8, so even the plain probe is listed. */
     expect(ids()).toContain("att_07"); // PROBE + NEW, recent
-    expect(toggle().textContent).toBe("older probes (0)");
+    expect(toggle().textContent).toBe("Show probes (0)");
   });
 
   it("a probe-class reproduction is on screen too, and with no hideable probe the toggle is inert", async () => {
@@ -66,6 +66,6 @@ describe("S10 traced children", () => {
     await mount(body);
     expect(ids()).toContain("att_07");
     expect(toggle().disabled).toBe(true);
-    expect(toggle().textContent).toBe("older probes (0)");
+    expect(toggle().textContent).toBe("Show probes (0)");
   });
 });

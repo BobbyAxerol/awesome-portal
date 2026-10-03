@@ -18,6 +18,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { NewRun, UNKNOWN_OUTCOME_NOTE } from "./NewRun";
+import { humanise } from "./humanise";
 import type { PreflightResponse } from "./preflightClient";
 import { constraintsFrom, emptyDraft, parametersFor } from "./NewRunRoute";
 import {
@@ -631,7 +632,7 @@ describe("RF-04 FE-S02-06 — timeframe choices come only from the bound declara
     view({ atlas: manifest.atlas, draft: draft({ optimizationMode: manifest.atlas.modes[0]!.mode_id, optimizationSchedule: selected.schedule }) });
     goToStep("review");
     expect(document.querySelector("[data-window-timeline]")?.textContent).toContain("2022-01-01T00:00");
-    expect(document.querySelector("[data-claim-forecast]")?.textContent).toContain(selected.chronological_validation_claim.toUpperCase());
+    expect(document.querySelector("[data-claim-forecast]")?.textContent).toContain(humanise(selected.chronological_validation_claim.toUpperCase()));
     /* S02-01: the ceiling line carries the server's own reason for the absence,
        not a sentence written in the form. */
     expect(document.querySelector("[data-claim-forecast]")?.textContent).toContain("cert ceiling");
@@ -754,9 +755,9 @@ describe("P10-T06 — may_create_run is display state, not a gate", () => {
     goToStep("review");
     const button = document.querySelector('[data-action="create-run"]') as HTMLButtonElement;
     expect(button.disabled).toBe(true);
-    expect(document.querySelector('[data-disabled-reason="create-run"]')?.textContent).toBe(
-      "Run preflight first.",
-    );
+    /* W4A: the reason is the button's tooltip; no third inline copy. */
+    expect(button.getAttribute("title")).toBe("Run preflight first.");
+    expect(document.querySelector('[data-disabled-reason="create-run"]')).toBeNull();
   });
 });
 
@@ -1307,7 +1308,7 @@ describe("FG-08 — Screen 02 never renders the server's refusal prose", () => {
     const preview = document.querySelector("[data-preflight-preview]") as HTMLDetailsElement;
     /* One banner says it; the six panels stay folded rather than printing the same sentence six times (U19). */
     expect(preview.open).toBe(false);
-    expect(document.querySelector("[data-preflight-preview-summary]")!.textContent).toBe("preflight checks · 6 panels · refused");
+    expect(document.querySelector("[data-preflight-preview-summary]")!.textContent).toBe("preflight refused");
   });
 
   it("keeps the server prose out of the page for a 400 that lists field paths", async () => {
@@ -1334,7 +1335,7 @@ describe("FG-08 — Screen 02 never renders the server's refusal prose", () => {
     const preview = document.querySelector("[data-preflight-preview]") as HTMLDetailsElement;
     expect(preview.open).toBe(false);
     expect(document.querySelector("[data-preflight-preview-summary]")!.textContent).toBe(
-      "preflight checks · 6 panels · not read",
+      "preflight not run",
     );
   });
 });

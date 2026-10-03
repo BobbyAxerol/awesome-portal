@@ -101,6 +101,8 @@ import { hubHref, rcHref as releaseCandidateHref, reportHref } from "./runLinks"
 import { phaseOfStatus, runStatusWord } from "./runTerminalState";
 import { runLabelFor } from "./runLabels";
 import { BreakableCode } from "./reportText";
+import { ResearchNotice } from "./ResearchNotice";
+import { humanise } from "./humanise";
 import type { ResearchState } from "./state";
 import type { CompareController } from "./useCompare";
 import { iso } from "./utcMinute";
@@ -146,6 +148,19 @@ export function scopeWords(scope: string): string {
   return SCOPE_WORDS[scope] ?? scope;
 }
 
+/** ONE humaniser for the claim family: `STRICT_OUTER_OOS` -> `Strict OOS`; the enum rides the tooltip. */
+export const CLAIM_WORDS: Record<CompareClaim["family"], string> = {
+  STRICT_OUTER_OOS: "Strict OOS",
+  SELECTION_ADJUSTED_OOS: "Selection-adjusted",
+  WALK_FORWARD_OOS_COMPATIBILITY: "Walk-forward",
+  NONE_FULL_SAMPLE_CALIBRATION: "Full sample",
+  NOT_PUBLISHED: "No claim",
+};
+
+export function claimWords(family: CompareClaim["family"]): string {
+  return CLAIM_WORDS[family] ?? humanise(family);
+}
+
 /** D10: an attempt with a published claim family stands on the ladder; one without folds into a compact row. */
 export function hasClaim(run: CompareRun): boolean {
   return run.claim.family !== "NOT_PUBLISHED";
@@ -160,9 +175,16 @@ export const COMPARE_TITLE = "Compare";
 
 /** Hi-fi segment labels; the third says "runs" (VD-P20-01). */
 export const MODE_LABELS: Record<CompareMode, string> = {
-  attempts: "attempts of one alpha",
-  markets: "one alpha × markets",
-  pair: "two runs, one key",
+  attempts: "Attempts",
+  markets: "Markets",
+  pair: "Pair",
+};
+
+/** The three questions, in full, as the tab tooltips. */
+export const MODE_TITLES: Record<CompareMode, string> = {
+  attempts: "Attempts of one alpha",
+  markets: "One alpha across markets",
+  pair: "Two runs, one key",
 };
 
 /**
@@ -254,7 +276,7 @@ export const MARKETS_RULE_TAIL =
   "Read shapes and claims side by side, never subtract across keys. This is the robustness question: does the idea survive a different market at all?";
 
 /** Hi-fi figure caption, verbatim (VD-P20-04 keeps the frame). */
-export const FOLD_CHART_TITLE = "OOS Sharpe per fold, per attempt";
+export const FOLD_CHART_TITLE = "OOS Sharpe per fold";
 
 /** Hi-fi config-diff header, verbatim (VD-P20-05 keeps the frame). */
 export const DIFF_TITLE = "config diff";
@@ -277,7 +299,7 @@ export const REFUSED_NO_CHART = "Different key — an overlay would look meaning
 export const REFUSED_MARKETS_HINT = "One alpha across markets: use the markets tab.";
 
 /** Hi-fi overlay caption with "alphas" → "runs" and the demo claim removed (VD-P20-01). */
-export const OVERLAY_TITLE = "Two runs, one key — overlay from retained points";
+export const OVERLAY_TITLE = "Overlay";
 
 /** Hi-fi delta header; "engine-published" → "server-published" (VD-P20-13). */
 export const DELTA_TITLE = "metric deltas";
@@ -295,7 +317,7 @@ export const NO_DIFFERENCES = "no intentional specification difference published
 
 /** A pair needs exactly two run ids before anything can be asked (VD-P20-12). */
 export const PAIR_NEEDS_TWO =
-  "pair mode reads exactly two runs of this alpha — pick two in the run library and open compare from there.";
+  "Pick a second run.";
 
 /** The route spec 13 names cannot address one Alpha without `alpha=` (VD-P20-09). */
 export const RESOLVER_NEEDS_ALPHA = "compare reads inside one Alpha — open it from a run bound to an Alpha";
@@ -624,14 +646,17 @@ const runHasOutputs = (run: Pick<CompareRun, "run_state">): boolean => phaseOfSt
 /** A value the comparison did not publish: the state word and the reason, never a digit. */
 function Absent({ what, state, reason }: { what?: string; state: string; reason: string }) {
   return (
-    <span className="inline-flex flex-wrap items-baseline gap-x-1.5" data-absent={what ?? ""} data-absent-state={state}>
-      <span className="cp-absent">
-        {what ? `${what} — ` : ""}
-        {state}
-      </span>
-      <span className="cp-reason" data-reason-code>
-        <BreakableCode code={reason} />
-      </span>
+    /* A typed absence is `<what> — <state>`; the server's reason code is the tooltip and the accessible name, never printed. */
+    <span
+      className="cp-absent"
+      data-absent={what ?? ""}
+      data-absent-state={state}
+      data-reason-code={reason}
+      title={reason}
+      aria-label={`${what ? `${what} — ` : ""}${state} (${reason})`}
+    >
+      {what ? `${what} — ` : ""}
+      {state}
     </span>
   );
 }
@@ -683,7 +708,7 @@ function ClaimChip({ claim }: { claim: CompareClaim }) {
   }
   const detail = `${entry.tier}${claim.rank !== null ? ` · rank ${claim.rank}` : ""} · origin ${claim.origin}`;
   /* VD-TEXT-01: the screen's one-sentence gloss (once on every card before) rides the chip's title with the server's claim text. */
-  const title = `${CLAIM_SENTENCE[claim.family]} (${detail})${claim.text ? ` · server: ${claim.text}` : ""}`;
+  const title = `${claim.family} · ${CLAIM_SENTENCE[claim.family]} (${detail})${claim.text ? ` · server: ${claim.text}` : ""}`;
   return (
     <span className="flex flex-col" data-claim={claim.family}>
       <span
@@ -695,7 +720,7 @@ function ClaimChip({ claim }: { claim: CompareClaim }) {
         style={style}
         title={title}
       >
-        {claim.family.split("_").map((part, index) => (index === 0 ? part : <Fragment key={index}>_<wbr />{part}</Fragment>))}
+        {claimWords(claim.family)}
       </span>
     </span>
   );
@@ -736,13 +761,13 @@ function RunLine({ run, withState = false, skipLabel = false }: { run: CompareRu
       ) : null}
       {outputs ? (
         <>
-          <Link to={reportHref(run.run_id)} data-report-link={run.run_id} title="Run report of this run (Screen 9)" aria-label={`Run report of ${label}`}>
-            report
+          <Link to={reportHref(run.run_id)} data-report-link={run.run_id} title="Run report" aria-label={`Run report of ${label}`}>
+            ▤
           </Link>
-          {" · "}
+          {" "}
           {/* Spec 13 §1 outbound 11: this run's release candidate (P21). */}
-          <Link to={releaseCandidateHref(run.run_id)} data-rc-link={run.run_id} title="compose or read this run's release candidate (Screen 11)" aria-label={`Release candidate of ${label}`}>
-            RC
+          <Link to={releaseCandidateHref(run.run_id)} data-rc-link={run.run_id} title="Release candidate of this run" aria-label={`Release candidate of ${label}`}>
+            ◈
           </Link>
         </>
       ) : null}
@@ -1009,7 +1034,7 @@ function Header({
     <header className="cp-head" data-panel="header">
       <div className="l">
         <nav className="cp-crumb" aria-label="Breadcrumb">
-          <Link to={runsHref(alphaId)}>Runs</Link>
+          <Link to={runsHref(alphaId)}>Library</Link>
           <span className="sep">/</span>
           <span className="here cp-long" title={compare ? compare.alpha.name : undefined}>
             Compare
@@ -1044,6 +1069,7 @@ function Header({
             aria-selected={active === mode}
             aria-pressed={active === mode}
             tabIndex={active === mode || (active === null && mode === COMPARE_MODES[0]) ? 0 : -1}
+            title={MODE_TITLES[mode]}
             onClick={() => onMode(mode)}
           >
             {MODE_LABELS[mode]}
@@ -1054,10 +1080,12 @@ function Header({
   );
 }
 
-function coverageOf(compare: Compare): string {
+/** Coverage prints only when it is not the normal answer: the attempt count always, the state only when not COMPLETE; a pair only when not AVAILABLE. */
+function coverageOf(compare: Compare): string | null {
   const { result } = compare;
-  if (result.mode === "pair") return `pair ${result.state}`;
-  return `coverage ${result.coverage.state} · ${result.coverage.total_attempts} attempts${result.coverage.reason_code ? ` · ${result.coverage.reason_code}` : ""}`;
+  if (result.mode === "pair") return result.state === "PARTIAL" ? "pair partial" : null;
+  const partial = result.coverage.state !== "COMPLETE";
+  return `${result.coverage.total_attempts} attempts${partial ? ` · coverage ${result.coverage.state}${result.coverage.reason_code ? ` · ${result.coverage.reason_code}` : ""}` : ""}`;
 }
 
 /** VD-P20-08: one mono disclosure line — authority, revision, as-of, coverage and source absences. */
@@ -1076,25 +1104,26 @@ function Meta({ alphaId, compare, state }: { alphaId: string | null; compare: Co
   return (
     <div className="cp-meta" data-panel="meta">
       <span data-alpha-id>{compare.alpha.alpha_id}</span>
-      <span data-read-authority>{compare.read_authority}</span>
-      <span data-revision={compare.revision} title={compare.revision}>revision {shortId(compare.revision)}</span>
-      <span data-as-of>as of {iso(compare.as_of_utc_ms)}</span>
-      <span data-coverage>{coverageOf(compare)}</span>
+      <span data-as-of data-read-authority={compare.read_authority} data-revision={compare.revision} title={`${compare.read_authority} · revision ${compare.revision}`}>as of {iso(compare.as_of_utc_ms)}</span>
+      {coverageOf(compare) ? <span data-coverage>{coverageOf(compare)}</span> : null}
       {pairMode ? (
         <>
-          <span data-source-absence="structured_claim_family">
-            claim family {COMPARE_WITHHELD_WORDS[absences.structured_claim_family.state]}
-            {absences.structured_claim_family.reason_code ? ` · ${absences.structured_claim_family.reason_code}` : ""}
-          </span>
-          <span data-source-absence="full_resolution_outer_oos_returns">
-            full-resolution outer-OOS returns {COMPARE_WITHHELD_WORDS[absences.full_resolution_outer_oos_returns.state]}
-            {absences.full_resolution_outer_oos_returns.reason_code ? ` · ${absences.full_resolution_outer_oos_returns.reason_code}` : ""}
-          </span>
+          {/* Everything available is silent; only an absence prints, its code in the tooltip. */}
+          {absences.structured_claim_family.state !== "AVAILABLE" && compare.result.mode === "pair" && compare.result.state !== "REFUSED" ? (
+            <span data-source-absence="structured_claim_family" title={absences.structured_claim_family.reason_code ?? undefined}>
+              claim family {COMPARE_WITHHELD_WORDS[absences.structured_claim_family.state]}
+            </span>
+          ) : null}
+          {absences.full_resolution_outer_oos_returns.state !== "AVAILABLE" && compare.result.mode === "pair" && compare.result.state !== "REFUSED" ? (
+            <span data-source-absence="full_resolution_outer_oos_returns" title={absences.full_resolution_outer_oos_returns.reason_code ?? undefined}>
+              full-resolution outer-OOS returns {COMPARE_WITHHELD_WORDS[absences.full_resolution_outer_oos_returns.state]}
+            </span>
+          ) : null}
         </>
       ) : null}
       {alphaId ? (
         <LineageLink to={lineageHref(alphaId)} action="open-lineage">
-          attempt lineage →
+          Lineage →
         </LineageLink>
       ) : null}
     </div>
@@ -1112,39 +1141,48 @@ function Notice({
   idleReason?: string | null;
 }) {
   const { state } = controller;
+  /* ONE notice, one action: Read again for a repeatable read, Library for a denied one; loading keeps the panel skeleton. */
+  const action =
+    state.mayRetry && !controller.inFlight ? (
+      <button type="button" className="cp-btn" data-action="retry" onClick={controller.retry}>
+        Read again
+      </button>
+    ) : state.state === "denied" || state.state === "terminal" ? (
+      <Link to={RUNS_ROOT} data-action="open-run-library">
+        Library
+      </Link>
+    ) : null;
   return (
     <div className="flex flex-col gap-1.5" data-panel="notice" data-compare-notice={state.state}>
-      <ResearchPanel title="compare" state={state} minBodyHeight={controller.compare ? 0 : 96} />
+      {state.state === "loading" || state.state === "available" ? (
+        <ResearchPanel title="compare" state={state} minBodyHeight={controller.compare ? 0 : 96} />
+      ) : (
+        <ResearchNotice
+          state={state.state}
+          code={controller.refusal?.code ?? null}
+          requestId={controller.refusal?.requestId ?? null}
+          detail={state.reason}
+          withheld={state.state !== "partial" && state.state !== "stale"}
+          sentence={state.state === "partial" || state.state === "commissioned" || state.state === "empty" ? state.reason : null}
+          action={action}
+        />
+      )}
       {idleReason ? (
         <span className="cp-note" data-idle-reason>
           {idleReason}
         </span>
       ) : null}
       {idleLink ? <span data-idle-link>{idleLink}</span> : null}
-      {controller.refusal?.requestId ? (
-        <span className="cp-reason" data-request-id>
-          request {controller.refusal.requestId}
-        </span>
-      ) : null}
-      {state.mayRetry && !controller.inFlight ? (
-        <span>
-          <button type="button" className="cp-btn" data-action="retry" onClick={controller.retry}>
-            read again
-          </button>
-        </span>
-      ) : null}
     </div>
   );
 }
 
+/** The mode's rule is the tab's meaning (its tooltip); no coloured bar restates it. */
 function Rule({ tone, title, children }: { tone: "gold" | "bad"; title?: string; children: ReactNode }) {
   return (
-    <div className="cp-rule" data-panel="rule" data-tone={tone} title={title}>
-      <span className="tag">rule of this mode</span>
-      <span className="txt" data-rule-text>
-        {children}
-      </span>
-    </div>
+    <span className="sr-only" data-panel="rule" data-tone={tone} title={title} hidden>
+      <span data-rule-text>{children}</span>
+    </span>
   );
 }
 
@@ -1187,7 +1225,7 @@ function LadderCard({ run, showLifecycle, showClaim = true, showCert = true }: {
           const sharpe = metricOf(run, "OOS_SHARPE");
           return sharpe && sharpe.value !== null && sharpe.availability.state === "AVAILABLE" ? (
             <span className="cp-faint" data-sharpe-scope>
-              {scopeWords(sharpe.scope) === "OOS" ? "OOS Sharpe" : `OOS Sharpe · ${scopeWords(sharpe.scope)}`}
+              OOS Sharpe
             </span>
           ) : null;
         })()}
@@ -1225,11 +1263,11 @@ function Ladder({ result }: { result: AttemptResult }) {
               data-claim={oneClaim}
               title={`${CLAIM_SENTENCE[oneClaim]} (${CLAIM_RANK_MAP[oneClaim].tier})`}
             >
-              {claimed.length} attempts · one claim: {oneClaim}
+              {claimed.length} attempts · one claim: {claimWords(oneClaim)}
             </span>
           ) : (
             <>
-              {claimed.length} with a claim · {result.attempts.length} returned
+              {claimed.length} with a claim
               {orderNote ? <span data-ladder-order-note>{` · ${orderNote}`}</span> : null}
             </>
           )}
@@ -1237,8 +1275,8 @@ function Ladder({ result }: { result: AttemptResult }) {
       </h3>
       {cert !== null ? (
         /* QA S13: one certification line for the whole ladder instead of one per card. */
-        <span className="cp-faint" data-ladder-cert data-cert-state={cert.state} title="No source publishes a certification grade for these attempts">
-          cert not published{cert.reason_code !== null ? <> · <BreakableCode code={cert.reason_code} /></> : null}
+        <span className="cp-faint" data-ladder-cert data-cert-state={cert.state} data-reason-code={cert.reason_code ?? undefined} title={`No source publishes a certification grade for these attempts${cert.reason_code !== null ? ` · ${cert.reason_code}` : ""}`}>
+          no certification grade
         </span>
       ) : null}
       {result.attempts.length === 0 ? (
@@ -1284,10 +1322,10 @@ function Unclaimed({ runs }: { runs: readonly CompareRun[] }) {
   return (
     <div className="cp-unclaimed" data-unclaimed={runs.length}>
       <button type="button" className="cp-toggle" aria-pressed={open} aria-expanded={open} data-action="toggle-unclaimed" onClick={() => setOpen((value) => !value)}>
-        {open ? "hide" : "show"} {runs.length} {runs.length === 1 ? "attempt" : "attempts"} without a claim
+        {open ? "hide" : "show"} {runs.length} without a claim
       </button>
       <span className="cp-faint" data-unclaimed-states>
-        {states.join(" · ")} — off the ladder
+        {states.join(" · ")}
       </span>
       {open ? (
         <ul className="cp-crows" aria-label="attempts without a claim">
@@ -1449,7 +1487,6 @@ function FoldChart({ result }: { result: AttemptResult }) {
         <span className="cp-figtitle">{FOLD_CHART_TITLE}</span>
         {geometry ? (
           <span className="cp-figmeta" data-fold-meta title="Retained per-fold QuantBT metric">
-            {published.length} {published.length === 1 ? "attempt" : "attempts"} ·{" "}
             {foldWords(geometry.groups)}
             {truncated.length > 0 ? ` · first 32 folds of ${truncated.map((item) => item.source_fold_count ?? "?").join(", ")}` : ""}
           </span>
@@ -1573,7 +1610,7 @@ function FoldChart({ result }: { result: AttemptResult }) {
         /* 13-5: a count and a disclosure, not a dump of 25 raw ids. */
         <details className="cp-faint" data-fold-absent-runs={absent.length}>
           <summary>
-            {absent.length} {absent.length === 1 ? "attempt has" : "attempts have"} no per-fold rows
+            {absent.length} without fold rows
           </summary>
           <ul className="cp-absentlist">
             {absent.map((item) => (
@@ -1610,21 +1647,21 @@ function DiffCard({ alphaId, diff, result }: { alphaId: string | null; diff: Con
         <span
           className="cp-faint"
           data-config-diff-legend
-          data-baseline-chosen={active ? "screen" : "none"}
+          data-baseline-chosen={picked !== null ? "you" : active ? "screen" : "none"}
           title={
             active
-              ? `The server publishes no baseline attempt. This screen compares every column with the first attempt of an ACTIVE alpha version on the ladder (${active.attempt_id}); click a column heading to compare with another. It is a reading aid, not a server fact.`
+              ? `Baseline picked ${picked !== null ? "by you" : "by this screen"}. The server publishes no baseline attempt. This screen compares every column with the first attempt of an ACTIVE alpha version on the ladder (${active.attempt_id}); click a column heading to compare with another. It is a reading aid, not a server fact.`
               : "The server publishes no baseline attempt and no returned attempt belongs to an ACTIVE alpha version, so nothing is compared."
           }
         >
           {diff.availability.state !== "AVAILABLE"
             ? COMPARE_WITHHELD_WORDS[diff.availability.state]
             : active
-              ? `differs from ${runName(active)} · ${picked !== null ? "baseline picked by you" : "baseline picked by this screen"}`
+              ? `vs ${runName(active)}`
               : `${diff.paths.length} ${diff.paths.length === 1 ? "key" : "keys"} · no baseline — the server names none`}
           {diff.availability.state === "AVAILABLE" && diff.paths.length > 0 && runs.length > 4 ? (
             <span data-config-diff-columns={runs.length} title="The columns are every ladder attempt; the table scrolls sideways">
-              {" "}· {runs.length} attempts ⇄
+              {" "}· {runs.length} ⇄
             </span>
           ) : null}
         </span>
@@ -1699,10 +1736,10 @@ function DiffCard({ alphaId, diff, result }: { alphaId: string | null; diff: Con
         ) : null}
         {alphaId ? (
           <LineageLink to={lineageHref(alphaId)} action="open-lineage">
-            Attempt Lineage →
+            Lineage →
           </LineageLink>
         ) : (
-          "Attempt Lineage"
+          "Lineage"
         )}
       </div>
     </section>
@@ -1713,36 +1750,31 @@ function TrajectoryCard({ result, alphaId }: { result: AttemptResult; alphaId: s
   const { trajectory } = result;
   const active = ladderOrder(result).filter((run) => run.alpha_version_lifecycle.value === "ACTIVE").at(-1) ?? null;
   return (
-    <section className="cp-card cp-trajcard" data-panel="trajectory" aria-label={TRAJECTORY_TITLE}>
-      {/* QA S13: the server's sentence is a slogan ("claims rank before numbers - inspection never selects...") and the template id a caption;
-          both ride the heading's tooltip, and the sentence stays one read away for assistive tech. */}
-      <h3 className="t" title={[trajectory.template_id, trajectory.availability.state === "AVAILABLE" ? trajectory.text : null].filter(Boolean).join(" · ")}>
-        <span>{TRAJECTORY_TITLE}</span>
-      </h3>
-      {trajectory.availability.state === "AVAILABLE" ? (
-        <p data-trajectory-text className="sr-only">
-          {trajectory.text}
-        </p>
-      ) : (
-        <AvailabilityAbsent availability={trajectory.availability} what="trajectory" />
-      )}
+    <section
+      className="cp-card cp-trajcard"
+      data-panel="trajectory"
+      aria-label={TRAJECTORY_TITLE}
+      title={[trajectory.template_id, trajectory.availability.state === "AVAILABLE" ? trajectory.text : null].filter(Boolean).join(" · ") || undefined}
+    >
+      {/* The server's slogan and template id are the card's tooltip; no heading restates the ladder rule. */}
+      {trajectory.availability.state === "AVAILABLE" ? null : <AvailabilityAbsent availability={trajectory.availability} what="trajectory" />}
       {/* 13-7 / VD-TEXT-01: the hi-fi's two in-text links as two short links; the sentence is their title. */}
       <p data-trajectory-links title="the tree records every attempt, and the release candidate only ever reads the ACTIVE node">
         {alphaId ? (
           <LineageLink to={lineageHref(alphaId)} action="trajectory-tree">
-            Attempt Lineage →
+            Lineage →
           </LineageLink>
         ) : (
-          "Attempt Lineage"
+          "Lineage"
         )}
         {" · "}
         {active ? (
           <Link to={releaseCandidateHref(active.run_id)} data-action="trajectory-rc" title={active.run_id}>
-            release candidate →
+            Release →
           </Link>
         ) : (
           <span className="cp-absent" data-trajectory-rc-absent>
-            release candidate — no ACTIVE attempt
+            Release — no active attempt
           </span>
         )}
       </p>
@@ -1899,12 +1931,12 @@ function RefusedGuard({ result, runs }: { result: PairRefused; runs: readonly st
     <div className="cp-guardrow" data-panel="guard">
       <div className="cp-guardcard" data-verdict="mismatch">
         <div className="head">
-          <span className="tag">contract key mismatch</span>
-          <span className="txt">
-            {refusal.code === "P20_CONTRACT_KEY_MISMATCH" ? GUARD_MISMATCH : "The server refused this pair. The screen refuses to draw."}{" "}
-            <span className="cp-reason" data-refusal-code>
-              {refusal.code}
-            </span>
+          <span
+            className="tag"
+            data-refusal-code={refusal.code}
+            title={`${refusal.code === "P20_CONTRACT_KEY_MISMATCH" ? GUARD_MISMATCH : "The server refused this pair. The screen refuses to draw."} ${refusal.code}`}
+          >
+            Different key
           </span>
         </div>
         <span className="cp-guard">
@@ -1927,23 +1959,20 @@ function RefusedGuard({ result, runs }: { result: PairRefused; runs: readonly st
  */
 export function refusalSentence(left: CompareKey, right: CompareKey): string {
   const differing = KEY_PARTS.filter((part) => left[part] !== right[part]);
-  if (differing.length === 0) return "These runs cannot be overlaid.";
-  const parts = differing.map((part) => `${part} (${left[part] ?? "not published"} vs ${right[part] ?? "not published"})`);
-  return `These runs differ in ${parts.join(", ")}, so they cannot be overlaid.`;
+  if (differing.length === 0) return "Can't overlay these runs.";
+  const parts = differing.map((part) => `${part} differs (${humanise(left[part]) || "not published"} vs ${humanise(right[part]) || "not published"})`);
+  return `Can't overlay: ${parts.join(", ")}.`;
 }
 
 function RefusalCard({ result }: { result: PairRefused }) {
   const { refusal } = result;
   return (
     <div className="cp-refusal" data-panel="refusal" role="note" aria-label="comparison refused" title={refusal.message}>
-      <span className="tag">{REFUSED_TAG}</span>
-      <span className="msg" data-refusal-message data-server-message={refusal.message}>
+      <span className="msg" data-refusal-message data-server-message={refusal.message} title={`${REFUSED_NO_CHART} ${REFUSED_MARKETS_HINT}`}>
         {refusalSentence(refusal.left_key, refusal.right_key)}
       </span>
-      {/* QA S13 (UX-4, S13-8): one sentence; the run names are the chips beside the guard, never `rrun_` ids in prose. */}
-      <span className="hint">{REFUSED_MARKETS_HINT}</span>
       <Link to={RUNS_ROOT} data-action="open-run-library">
-        Run Library
+        Library
       </Link>
     </div>
   );
@@ -1955,8 +1984,9 @@ function ComparableGuard({ result, runs }: { result: PairComparable; runs: reado
     <div className="cp-guardrow" data-panel="guard">
       <div className="cp-guardcard" data-verdict="match">
         <div className="head">
-          <span className="tag">contract key match</span>
-          <span className="txt" title={GUARD_MATCH_TITLE}>{GUARD_MATCH}</span>
+          <span className="tag" title={`${GUARD_MATCH_TITLE} (${GUARD_MATCH})`} data-guard-match>
+            Same key
+          </span>
         </div>
         <KeyParts keyFact={pair.key} side="both" />
         {result.state === "PARTIAL" ? (
@@ -1976,7 +2006,7 @@ function ComparableGuard({ result, runs }: { result: PairComparable; runs: reado
 }
 
 function legendText(run: CompareRun | undefined): string {
-  return run ? `${runName(run)} · ${run.alpha_version_label} (${run.claim.family})` : "run not returned";
+  return run ? `${runName(run)} · ${claimWords(run.claim.family)}` : "run not returned";
 }
 
 function OverlayFigure({ result }: { result: PairComparable }) {
@@ -2300,6 +2330,8 @@ interface DeltaRowView {
   right: ReactNode;
   delta: ReactNode;
   sign: "pos" | "neg" | null;
+  /** One absence for the whole A/B/Δ row (the same reason three times is said once). */
+  span?: ReactNode;
 }
 
 /** The scope of every figure that comes from `pair.common_window` (the foot of the table prints the window). */
@@ -2402,18 +2434,20 @@ function deltaRows(result: PairComparable): DeltaRowView[] {
           label: "win rate",
           scope: COMMON_WINDOW_SCOPE,
           definition: winCommon.definition_id,
-          left: <AvailabilityAbsent availability={winCommon.availability} what="A" />,
-          right: <AvailabilityAbsent availability={winCommon.availability} what="B" />,
-          delta: <AvailabilityAbsent availability={winCommon.availability} what="Δ" />,
+          left: null,
+          right: null,
+          delta: null,
+          span: <AvailabilityAbsent availability={winCommon.availability} what="win rate" />,
           sign: null,
         }
       : {
           id: "WIN_RATE",
           label: "win rate",
           scope: "not in contract",
-          left: <NotInContract what="A" gap={CONTRACT_GAPS.winRate} />,
-          right: <NotInContract what="B" gap={CONTRACT_GAPS.winRate} />,
-          delta: <NotInContract what="Δ" gap={CONTRACT_GAPS.winRate} />,
+          left: null,
+          right: null,
+          delta: null,
+          span: <NotInContract what="win rate" gap={CONTRACT_GAPS.winRate} />,
           sign: null,
         },
     {
@@ -2431,7 +2465,7 @@ function deltaRows(result: PairComparable): DeltaRowView[] {
               equal
             </span>
           ) : (
-            <span data-claim-delta="weaker">weaker {weaker.family}</span>
+            <span data-claim-delta="weaker" title={weaker.family}>weaker {claimWords(weaker.family)}</span>
           )
         ) : (
           <AvailabilityAbsent availability={weaker.availability} what="weaker" />
@@ -2478,11 +2512,17 @@ function DeltaTable({ result }: { result: PairComparable }) {
                     </span>
                   ) : null}
                 </td>
-                <td>{row.left}</td>
-                <td>{row.right}</td>
-                <td className="d" data-sign={row.sign ?? undefined}>
-                  {row.delta}
-                </td>
+                {row.span !== undefined ? (
+                  <td colSpan={3}>{row.span}</td>
+                ) : (
+                  <>
+                    <td>{row.left}</td>
+                    <td>{row.right}</td>
+                    <td className="d" data-sign={row.sign ?? undefined}>
+                      {row.delta}
+                    </td>
+                  </>
+                )}
               </tr>
             ))}
           </tbody>
@@ -2529,11 +2569,8 @@ function CorrelationCard({ correlation }: { correlation: Correlation }) {
       : "window not published";
   return (
     <section className="cp-corr" data-panel="correlation" data-correlation={correlation.state} aria-label="correlation">
-      <h3 className="t" title={`${CORRELATION_HELP} — ${CORRELATION_NOTE}`}>
+      <h3 className="t" title={`${CORRELATION_HELP} — ${CORRELATION_NOTE} ${correlation.source_label} · ${correlation.formula_id} · ${correlation.formula_version}`} data-correlation-source={correlation.source_label}>
         <span className="k">{CORRELATION_TITLE}</span>
-        <span className="cp-faint" data-correlation-source>
-          {correlation.source_label} · {correlation.formula_id} · {correlation.formula_version}
-        </span>
       </h3>
       {derived ? (
         <span className="cp-rhorow">
@@ -2542,7 +2579,7 @@ function CorrelationCard({ correlation }: { correlation: Correlation }) {
             ρ = {formatCorrelation(correlation.value) ?? correlation.value}
           </span>
           {/* VD-P20-26 (decided 2026-09-26): the hi-fi's sub-caption beside ρ, in the contract's words. */}
-          <span className="cp-rhosub" data-rho-caption>
+          <span className="sr-only" hidden data-rho-caption>
             {rhoCaption(correlation)}
           </span>
         </span>
@@ -2551,15 +2588,12 @@ function CorrelationCard({ correlation }: { correlation: Correlation }) {
           {correlationAbsent(reasonOf(correlation.availability))}
         </span>
       )}
-      <span className="cp-faint" data-correlation-meta>
+      <span className="cp-faint" data-correlation-meta title={`${rhoCaption(correlation)}${derived ? ` · ${window}` : ""} · ${correlation.missing_policy}`}>
         {derived ? (
           <>
-            n <span className="num">{correlation.n ?? "not published"}</span> · <span className="num">{window}</span> ·{" "}
-            <span title={correlation.missing_policy}>{MISSING_POLICY_WORDS[correlation.missing_policy] ?? correlation.missing_policy}</span>
+            n <span className="num">{correlation.n ?? "not published"}</span>
           </>
-        ) : (
-          <span title={correlation.missing_policy}>{MISSING_POLICY_WORDS[correlation.missing_policy] ?? correlation.missing_policy}</span>
-        )}
+        ) : null}
       </span>
     </section>
   );
@@ -2572,7 +2606,7 @@ function WeakerClaim({ result }: { result: PairComparable }) {
     <div className="cp-weaker" data-panel="weaker" data-weaker-claim={weaker.availability.state}>
       <span className="k">weaker claim</span>
       {shown ? (
-        <span data-promotes-under title={promotesUnder(weaker.family)}>{weaker.family}</span>
+        <span data-promotes-under title={`${weaker.family} · ${promotesUnder(weaker.family)}`}>{claimWords(weaker.family)}</span>
       ) : (
         <AvailabilityAbsent availability={weaker.availability} what="weaker claim" />
       )}
@@ -2586,7 +2620,7 @@ function Differences({ result }: { result: PairComparable }) {
     <section className="cp-tcard" data-panel="differences" aria-label={DIFFERENCES_TITLE}>
       <h3 className="t">
         <span>{DIFFERENCES_TITLE}</span>
-        <span className="cp-faint">server order · A → B</span>
+        <span className="sr-only" hidden title="server order · A → B" />
       </h3>
       {differences.length === 0 ? (
         <div className="body cp-faint" data-no-differences>
@@ -2653,10 +2687,9 @@ export const PENDING_REASON = {
 function Pending({ what, state }: { what: string; state: ResearchState["state"] }) {
   return (
     <span className="inline-flex flex-wrap items-baseline gap-x-1.5" data-pending={what} data-pending-state={state}>
-      <span className="cp-absent">
+      <span className="cp-absent" title={state === "loading" ? PENDING_REASON.loading : PENDING_REASON.refused}>
         {what} — {state}
       </span>
-      <span className="cp-reason">{state === "loading" ? PENDING_REASON.loading : PENDING_REASON.refused}</span>
     </span>
   );
 }
@@ -2805,7 +2838,7 @@ export function CompareScreen({ alphaId, mode, runs, controller, onMode, idleRea
   const withheld = compare === null && state.state === "denied";
   const idleLink = idleReason ? (
     <Link to={runsHref(alphaId)} data-action="runs">
-      open the run library →
+      Library →
     </Link>
   ) : undefined;
 
@@ -2826,14 +2859,7 @@ export function CompareScreen({ alphaId, mode, runs, controller, onMode, idleRea
       {state.state !== "available" ? (
         <Notice controller={controller} idleLink={idleLink} idleReason={mode === "pair" ? null : idleReason} />
       ) : null}
-      {withheld ? (
-        /* A refusal (denied or unknown alpha): the notice and the way out, no mode tabs, no skeleton. */
-        <p data-action-row="exit">
-          <Link to={RUNS_ROOT} data-action="open-run-library">
-            Open Run Library
-          </Link>
-        </p>
-      ) : result ? (
+      {withheld ? null /* A refusal (denied or unknown alpha): the notice carries the one exit; no tabs, no skeleton. */ : result ? (
         result.mode === "attempts" ? (
           <AttemptsBody result={result} alphaId={alphaId} />
         ) : result.mode === "markets" ? (

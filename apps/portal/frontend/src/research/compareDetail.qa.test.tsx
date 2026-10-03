@@ -103,16 +103,16 @@ describe("QA S13 · labels, not ids", () => {
     renderAt(`${base}?mode=pair&runs=rrun_3d5633d2adb712722fe4ba108102aa5d,rrun_ece579ebadb712722fe4ba108102aa5d`);
     await settled();
     const message = document.querySelector("[data-refusal-message]")!;
-    expect(message.textContent).toBe("These runs differ in symbol (BTCUSDT vs ETHUSDT), so they cannot be overlaid.");
+    expect(message.textContent).toBe("Can't overlay: symbol differs (btcusdt vs ethusdt).");
     /* wave 2: one sentence plus one short pointer, and no `rrun_` id as prose in the card. */
     const card = document.querySelector("[data-panel='refusal']")!;
     expect(card.querySelector("[data-refusal-keys]")).toBeNull();
     expect(card.textContent).not.toMatch(/rrun_/);
-    expect(card.querySelector(".hint")!.textContent).toBe("One alpha across markets: use the markets tab.");
+    expect(card.querySelector("[data-refusal-message]")!.getAttribute("title")).toContain("One alpha across markets: use the markets tab.");
     expect(message.getAttribute("data-server-message")).toBe(body.result.refusal.message);
     expect(document.querySelector("[data-panel='refusal']")!.getAttribute("title")).toBe(body.result.refusal.message);
     expect(document.querySelector("[data-panel='refusal']")!.textContent).not.toMatch(/button|lie/);
-    expect(refusalSentence(body.result.refusal.left_key, body.result.refusal.left_key)).toBe("These runs cannot be overlaid.");
+    expect(refusalSentence(body.result.refusal.left_key, body.result.refusal.left_key)).toBe("Can't overlay these runs.");
   });
 
   it("the markets rule is one short sentence; the server's caption rides the title", async () => {
@@ -135,7 +135,7 @@ describe("QA S13 · Sharpe, cert and claim said once", () => {
     const scopes = [...document.querySelectorAll("[data-ladder-run] [data-sharpe-scope]")];
     expect(scopes.length).toBeGreaterThan(0);
     for (const scope of scopes) expect(scope.textContent).toMatch(/^OOS Sharpe/);
-    expect(scopes[0]!.textContent).toContain("mean of folds");
+    expect(document.querySelector("[data-oos-sharpe]")!.getAttribute("title")).toContain("mean of folds");
   });
 
   it("a card whose Sharpe is not published has no scope line (absence path)", async () => {
@@ -150,7 +150,7 @@ describe("QA S13 · Sharpe, cert and claim said once", () => {
     await settled();
     const card = document.querySelector('[data-ladder-run="run-w6a-wfo-a"]')!;
     expect(card.querySelector("[data-sharpe-scope]")).toBeNull();
-    expect(card.querySelector("[data-oos-sharpe-absent]")!.textContent).toContain("P20_P13_OOS_SHARPE_NOT_AVAILABLE");
+    expect(card.querySelector("[data-oos-sharpe-absent]")!.outerHTML).toContain("P20_P13_OOS_SHARPE_NOT_AVAILABLE");
   });
 
   it("the same certification absence on every card is one line above the ladder; a differing one stays on its card", async () => {
@@ -158,7 +158,7 @@ describe("QA S13 · Sharpe, cert and claim said once", () => {
     renderAt(base);
     await settled();
     expect(document.querySelectorAll("[data-ladder-cert]")).toHaveLength(1);
-    expect(document.querySelector("[data-ladder-cert]")!.textContent).toContain("P20_NO_SOURCE_PUBLISHES_A_CERTIFICATION_GRADE");
+    expect(document.querySelector("[data-ladder-cert]")!.outerHTML).toContain("P20_NO_SOURCE_PUBLISHES_A_CERTIFICATION_GRADE");
     expect(document.querySelectorAll("[data-ladder-run] [data-cert-absent]")).toHaveLength(0);
     cleanup();
     server(
@@ -191,7 +191,8 @@ describe("QA S13 · Sharpe, cert and claim said once", () => {
     server(fixture("research-compare.pair-ok.valid.json"));
     renderAt(`${base}?mode=pair&runs=run-w6a-wfo-a,run-w6a-wfo-b`);
     await settled();
-    expect(page().querySelector('[data-source-absence="full_resolution_outer_oos_returns"]')).not.toBeNull();
+    /* W4: everything available is silent; this fixture publishes both pair sources, so no absence line prints. */
+    expect(page().querySelector('[data-source-absence="full_resolution_outer_oos_returns"]')).toBeNull();
   });
 
   it("the trajectory card prints no template id and the delta heads name the direction in three characters", async () => {
@@ -201,9 +202,10 @@ describe("QA S13 · Sharpe, cert and claim said once", () => {
     await settled();
     if (body.result.mode !== "attempts") throw new Error("guard");
     expect(document.querySelector("[data-panel='trajectory']")!.textContent).not.toContain(body.result.trajectory.template_id);
-    expect(document.querySelector("[data-panel='trajectory'] h3")!.getAttribute("title")).toContain(body.result.trajectory.template_id);
-    expect(document.querySelector("[data-panel='trajectory'] h3")!.getAttribute("title")).toContain(body.result.trajectory.text!);
-    expect(document.querySelector("[data-trajectory-text]")!.className).toContain("sr-only");
+    /* W4: no heading and no sr-only gloss; the template id and the sentence are the card's tooltip. */
+    expect(document.querySelector("[data-panel='trajectory']")!.getAttribute("title")).toContain(body.result.trajectory.template_id);
+    expect(document.querySelector("[data-panel='trajectory']")!.getAttribute("title")).toContain(body.result.trajectory.text!);
+    expect(document.querySelector("[data-trajectory-text]")).toBeNull();
     cleanup();
     const pair = fixture("research-compare.pair-ok.valid.json");
     if (pair.result.mode !== "pair" || pair.result.state === "REFUSED") throw new Error("guard");
@@ -214,7 +216,7 @@ describe("QA S13 · Sharpe, cert and claim said once", () => {
     renderAt(`${base}?mode=pair&runs=run-w6a-wfo-a,run-w6a-wfo-b`);
     await settled();
     expect(document.querySelector("[data-delta-direction]")!.textContent).toBe("B − A");
-    expect(document.querySelector('[data-delta-row="OOS_SHARPE"]')!.textContent).toContain("see the common-window row");
+    expect(document.querySelector('[data-delta-row="OOS_SHARPE"]')!.outerHTML).toContain("see the common-window row");
     expect(document.querySelector('[data-delta-row="OOS_SHARPE"]')!.textContent).not.toContain("see common window");
   });
 });
@@ -226,7 +228,7 @@ describe("QA S13 · one state per meaning", () => {
     await settled();
     expect(page().getAttribute("data-compare-state")).toBe("unavailable");
     expect(document.querySelector('[data-action="retry"]')).not.toBeNull();
-    expect(document.querySelector("[data-request-id]")!.textContent).toContain("req-503");
+    expect(document.querySelector("[data-refusal-request]")!.getAttribute("data-refusal-request")).toBe("req-503");
     expect(document.querySelectorAll("[data-pending]")).toHaveLength(0);
     for (const name of ["overlay", "delta", "correlation", "guard"]) expect(document.querySelector(`[data-panel="${name}"]`), name).toBeNull();
   });
@@ -241,7 +243,7 @@ describe("QA S13 · one state per meaning", () => {
   it("pair mode with no runs: one sentence and one way out, no five placeholder frames", async () => {
     vi.spyOn(globalThis, "fetch");
     renderAt(`${base}?mode=pair`);
-    expect(document.querySelector("[data-idle-reason]")!.textContent).toMatch(/pair mode reads exactly two runs/);
+    expect(document.querySelector("[data-idle-reason]")!.textContent).toBe("Pick a second run.");
     expect(document.querySelector('[data-action="runs"]')).not.toBeNull();
     expect(document.querySelectorAll("[data-pending]")).toHaveLength(0);
     for (const name of ["overlay", "delta", "correlation"]) expect(document.querySelector(`[data-panel="${name}"]`), name).toBeNull();
@@ -275,20 +277,20 @@ describe("QA S13 · config diff baseline picker", () => {
     server(attempts());
     renderAt(base);
     await settled();
-    const legend = () => document.querySelector("[data-config-diff-legend]")!.textContent!;
+    const legend = () => document.querySelector("[data-config-diff-legend]")!.textContent! + " " + document.querySelector("[data-config-diff-legend]")!.getAttribute("title")! + " chosen:" + document.querySelector("[data-config-diff-legend]")!.getAttribute("data-baseline-chosen");
     const cells = (path: string, runId: string) => document.querySelector(`[data-config-diff-path="${path}"] [data-config-value="${runId}"]`) as HTMLElement;
     const defaultBaseline = document.querySelector('.cp-difftable thead th[data-active="true"]')!.querySelector("button")!.getAttribute("data-baseline-run")!;
     const other = [...document.querySelectorAll("[data-action='pick-baseline']")].map((button) => button.getAttribute("data-baseline-run")!).find((id) => id !== defaultBaseline)!;
-    expect(legend()).toContain("baseline picked by this screen");
+    expect(legend()).toContain("Baseline picked by this screen");
     fireEvent.click(document.querySelector(`[data-baseline-run="${other}"]`)!);
-    expect(legend()).toContain("baseline picked by you");
+    expect(legend()).toContain("Baseline picked by you");
     expect(legend()).toContain(other);
     expect(document.querySelector('.cp-difftable thead th[data-active="true"] button')!.getAttribute("data-baseline-run")).toBe(other);
     /* the cells compare with the picked column now: the picked column never tints itself */
     expect(cells("random_seed", other).getAttribute("data-differs")).toBeNull();
     expect(cells("random_seed", defaultBaseline).getAttribute("data-differs")).toBe("true");
     fireEvent.click(document.querySelector(`[data-baseline-run="${other}"]`)!);
-    expect(legend()).toContain("baseline picked by this screen");
+    expect(legend()).toContain("Baseline picked by this screen");
     expect(document.querySelector('.cp-difftable thead th[data-active="true"] button')!.getAttribute("data-baseline-run")).toBe(defaultBaseline);
   });
 });

@@ -63,6 +63,7 @@ import { hubHref, progressHref, rcHref as releaseCandidateHref } from "./runLink
 import { runStatusWord } from "./runTerminalState";
 import { formatDuration, formatMetric, formatUtc, shortDigest, shortId, typographicMinus } from "./researchFormat";
 import { ResearchPanel } from "./ResearchPanel";
+import { humanise } from "./humanise";
 import { datasetKey, ScrubLayer, tipMinus, useDrawIn, useScrub } from "./compareChartLife";
 import { needsAlphaToOpen, resolveJourneyCardRoute } from "./screenRoutes";
 import { readLibraryDraftSummary } from "./libraryDraftChip";
@@ -411,8 +412,7 @@ function EvidenceTrail({ stages, runId, linkable }: { stages: readonly StageCell
   const byKey = new Map(stages.map((stage) => [stage.key, stage]));
   return (
     <span className="flex flex-none flex-col" style={{ gap: 3 }} data-trail>
-      <span style={LABEL_9}>evidence trail</span>
-      <span className="flex" style={{ gap: 3 }}>
+      <span className="flex" style={{ gap: 3 }} role="group" aria-label="evidence trail">
         {STAGE_KEYS.map((key) => {
           const stage = byKey.get(key);
           const tone = stage ? STAGE_TONE[stage.state] : STAGE_TONE.pend;
@@ -529,6 +529,8 @@ function last30dCells(item: Pick<RunLibraryItem, "status" | "last_30d">): Last30
   if (item.status !== "COMPLETED") return null;
   const block = item.last_30d;
   if (!block || !isAvailable(block.availability) || !block.data) return "absent";
+  /* W4A: a partial window is the whole sealed series, so its return and Sharpe are the all-time figures printed beside it. */
+  if (block.data.partial_window) return null;
   return [
     { key: "last30d_return", label: "final 30D return", fact: block.data.return_fraction, kind: "return" },
     { key: "last30d_sharpe", label: "final 30D sharpe", fact: block.data.sharpe, kind: "sharpe" },
@@ -982,14 +984,13 @@ export function SparkBars({
 function AllTimeRefused({ runId, why }: { runId: string; why: string }) {
   return (
     <span className="flex flex-none flex-col" style={{ gap: 3 }} data-all-time={runId}>
-      <span style={LABEL_9}>all time</span>
       <span
         className="flex items-center"
         style={{ ...SPARK_BOX, ...ALL_TIME_ABSENT }}
         data-all-time-refused
         title={`Not drawn: ${why}.`}
       >
-        not published
+        no series
       </span>
     </span>
   );
@@ -1113,7 +1114,7 @@ function Sparkline({
           data-reason-code={enrichmentAbsence.reason_code}
           title={`All-time analysis not published. ${enrichmentAbsence.reason_code}`}
         >
-          all time — not published
+          no series
         </span>
       ) : null}
       {(thirty || series) && heights ? (
@@ -1435,6 +1436,18 @@ function ClaimQuote({ item }: { item: RunLibraryItem }) {
     body = <Withheld availability={availability} what="claim" />;
     kind = "withheld";
   }
+  /* W4A: a card with no claim to quote prints nothing; the ledger line above the list carries the counts. */
+  if (kind === "not-issued" || kind === "pending" || kind === "failed" || kind === "cancelled") {
+    return (
+      <span
+        hidden
+        data-claim={item.run_id}
+        data-claim-kind={kind}
+        data-claim-text={item.claim.text ?? undefined}
+        data-reason-code={availability.reason_code ?? undefined}
+      />
+    );
+  }
   return (
     <blockquote
       data-claim={item.run_id}
@@ -1593,7 +1606,7 @@ function lookupNote(
 export function rcChipFace(rc: ReleaseCandidateRef, lookup?: AlphaVersionPublicationView): RcChipFace {
   if (rc.kind === "ACTOR_DRAFT") {
     return {
-      text: "rc_ (draft) · DRAFT",
+      text: "rc_ (draft) · draft",
       state: "DRAFT",
       toneState: "DRAFT",
       toneSource: "raw",
@@ -1618,7 +1631,7 @@ export function rcChipFace(rc: ReleaseCandidateRef, lookup?: AlphaVersionPublica
     const shownEffective = effective !== null && effective !== status.raw ? effective : null;
     const state = superseded ? "SUPERSEDED" : (status.raw ?? "UNKNOWN");
     return {
-      text: `${shortId} · ${status.words}${shownEffective !== null ? ` · effective ${shownEffective}` : ""}${superseded ? " · SUPERSEDED" : ""}`,
+      text: `${shortId} · ${humanise(status.words)}${shownEffective !== null ? ` · effective ${humanise(shownEffective)}` : ""}${superseded ? " · superseded" : ""}`,
       state,
       toneState: shownEffective !== null && !superseded ? shownEffective : state,
       toneSource: shownEffective !== null && !superseded ? "effective" : "raw",
@@ -1635,7 +1648,7 @@ export function rcChipFace(rc: ReleaseCandidateRef, lookup?: AlphaVersionPublica
   const state = rc.approval_state ?? "UNKNOWN";
   const { note, publication, reasonCode, face } = lookupNote(lookup, id);
   return {
-    text: `${shortId} · ${rc.approval_state ?? "approval not published"}${face}`,
+    text: `${shortId} · ${rc.approval_state !== null ? humanise(rc.approval_state) : "approval not published"}${face}`,
     state,
     toneState: state,
     toneSource: "raw",
@@ -2683,6 +2696,12 @@ export function RunLibrary(props: RunLibraryProps) {
   /* One instrument on the whole page: said once beside the counter, not on every card. */
   const instruments = new Set(items.map((item) => (isAvailable(item.instrument.availability) ? item.instrument.display : null)));
   const commonInstrument = items.length > 1 && instruments.size === 1 ? ([...instruments][0] ?? null) : null;
+  /* W4A: the same for the alpha version and the mode · schedule — said once beside the counter, not on every card. */
+  const bindings = new Set(items.map((item) => item.binding?.alpha_version_id ?? null));
+  const commonBinding =
+    items.length > 1 && bindings.size === 1 && items[0]?.binding ? `${items[0].binding.alpha_name} · ${items[0].binding.av}` : null;
+  const modes = new Set(items.map((item) => (isAvailable(item.mode.availability) ? item.mode.display : null)));
+  const commonMode = items.length > 1 && modes.size === 1 ? ([...modes][0] ?? null) : null;
 
   const ledger = response?.claim_ledger;
   /* One bound alpha on the list: the lineage link needs no grouping first. */
@@ -2732,15 +2751,6 @@ export function RunLibrary(props: RunLibraryProps) {
         style={{ gap: "10px 16px", borderBottom: "1px solid var(--line)", paddingBottom: 10 }}
       >
         <div className="flex flex-col" style={{ gap: 3 }}>
-          <nav aria-label="Breadcrumb" className="flex items-center" style={{ gap: 6, fontSize: 12, color: "var(--ink-soft)" }}>
-            <span>QuantBT Research</span>
-            <span aria-hidden="true" style={{ color: "var(--ink-faint)" }}>
-              /
-            </span>
-            <span aria-current="page" style={{ color: "var(--ink)" }}>
-              Run Library
-            </span>
-          </nav>
           <h1 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 300, letterSpacing: "-.01em", lineHeight: 1 }}>
             {TITLE}
           </h1>
@@ -2807,7 +2817,7 @@ export function RunLibrary(props: RunLibraryProps) {
               textDecoration: "none",
             }}
           >
-            + new run · preflight first
+            + new run
           </Link>
         </span>
       </header>
@@ -2960,6 +2970,16 @@ export function RunLibrary(props: RunLibraryProps) {
           group by alpha
         </button>
 
+        {commonBinding ? (
+          <span style={{ fontFamily: MONO, fontSize: 9.5, color: "var(--ink-faint)" }} data-common-binding title="Every run on this page">
+            {commonBinding}
+          </span>
+        ) : null}
+        {commonMode ? (
+          <span style={{ fontFamily: MONO, fontSize: 9.5, color: "var(--ink-faint)" }} data-common-mode title="Every run on this page">
+            {commonMode}
+          </span>
+        ) : null}
         {commonInstrument ? (
           <span style={{ fontFamily: MONO, fontSize: 9.5, color: "var(--ink-faint)" }} data-common-instrument title="Every run on this page">
             {commonInstrument}
@@ -3075,8 +3095,8 @@ export function RunLibrary(props: RunLibraryProps) {
                     onVisible={onVisible}
                     pickTarget={filters.to}
                     hide={{
-                      alpha: filters.group || (filters.alpha.length === 1 && filters.alpha[0] === item.binding?.alpha_id),
-                      mode: filters.mode.length === 1 && filters.mode[0] === item.mode.key,
+                      alpha: filters.group || commonBinding !== null || (filters.alpha.length === 1 && filters.alpha[0] === item.binding?.alpha_id),
+                      mode: commonMode !== null || (filters.mode.length === 1 && filters.mode[0] === item.mode.key),
                       instrument: commonInstrument !== null,
                     }}
                   />

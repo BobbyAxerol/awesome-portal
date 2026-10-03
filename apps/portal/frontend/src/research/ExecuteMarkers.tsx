@@ -166,13 +166,12 @@ export function CapabilityStrip({ items }: { items: ReadonlyArray<{ name: string
             data-capability-state={fact.state}
             data-capability-lane="retained"
             tabIndex={0}
+            role="note"
+            aria-label={tip}
           >
             <span aria-hidden="true" className="inline-block h-[7px] w-[7px] rounded-full" style={{ background: dot.fill, border: `1.5px solid ${dot.border}` }} data-capability-dot />
             {label}
-            <span className="sr-only">
-              {" "}{REPLAY_GAP_WORDS[fact.state]}{" "}
-              {code ? <span data-reason-code={code}>{code}</span> : null}
-            </span>
+            {code ? <span hidden data-reason-code={code}>{code}</span> : null}
           </span>
         );
       })}

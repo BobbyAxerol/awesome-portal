@@ -242,9 +242,9 @@ describe("P03 — every state keeps the panel", () => {
         state={{ state: "unavailable", reason: "The Research service did not answer. Try again.", detail: "RESEARCH_SPLIT_UNAVAILABLE · upstream 502", mayRetry: true, retainsContent: false }}
       />,
     );
-    const details = document.querySelector("[data-research-detail]");
-    expect(details?.tagName).toBe("DETAILS");
-    expect(details?.textContent).toContain("upstream 502");
+    /* W4: no `details` disclosure; the diagnostics are the notice's tooltip. */
+    expect(document.querySelector("[data-research-detail]")).toBeNull();
+    expect(document.querySelector("[data-research-notice] [title]")?.getAttribute("title")).toContain("upstream 502");
   });
 
   it("offers an action only where one could succeed", () => {
@@ -400,7 +400,7 @@ describe("P04 — Engine Atlas composition", () => {
   it("separates the current release from retained history", () => {
     renderAtlas(atlasDoc(), "modes");
     expect(screen.getByText("quantbt-engine 1.1.1")).toBeTruthy();
-    expect(screen.getByText(/1\.0\.8 — retained history/)).toBeTruthy();
+    expect(screen.getByText(/1\.0\.8 · history/)).toBeTruthy();
   });
 
   it("shows a safe state when the installed version is unverified", () => {

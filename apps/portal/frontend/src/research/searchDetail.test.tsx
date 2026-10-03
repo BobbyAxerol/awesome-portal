@@ -384,7 +384,7 @@ describe("P15-T01 — the source is described as what it is", () => {
     const { container } = view();
     const requested = container.querySelector("[data-requested-optimizer]");
     expect(requested?.getAttribute("data-requested-optimizer")).toBe("DECLARED_NOT_EXECUTED");
-    expect(requested?.textContent).toContain("mode_1_decay");
+    expect(requested?.textContent).toContain("mode 1 decay");
     expect(requested?.textContent).toContain("declared not executed");
   });
 
@@ -524,8 +524,8 @@ describe("P15-T05 — the ledger comes from the one operation that retains it", 
     });
     const refusal = container.querySelector("[data-ledger-refusal]");
     // VD-FG-01-01: the code chip is on screen; the server's sentence is its tooltip, not text.
-    expect(refusal?.querySelector("[data-refusal-code]")?.textContent).toBe("NOT_ADMITTED");
-    expect(refusal?.querySelector("[data-refusal-detail]")?.getAttribute("title")).toBe("Not an admitted profile.");
+    expect(refusal?.querySelector("[data-refusal-code]")?.getAttribute("data-refusal-code")).toBe("NOT_ADMITTED");
+    expect(refusal?.querySelector("[data-refusal-detail]")?.getAttribute("title")).toContain("Not an admitted profile.");
     expect(refusal?.textContent).not.toContain("Not an admitted profile.");
     expect(refusal?.querySelector("[data-ledger-gap-state='NOT_APPLICABLE']")).toBeTruthy();
     expect(refusal?.textContent).toContain("P04_RAN_NO_TRIALS");
@@ -758,7 +758,7 @@ describe("RF-06 wave C — the retained ledger lane answers for itself (replaces
     const { container } = view({ ledger: { state: "not-applicable", answer: laneAnswer() } });
     const shell = container.querySelector("[data-ledger-shell]");
     /* H18: one sentence in words; the read's typed reason and the lane's own answer ride in its tooltip. */
-    expect(shell?.textContent).toBe("No trial ledger — fixed profile ran no search.");
+    expect(shell?.textContent).toBe("No trial ledger.");
     const lane = shell?.querySelector("[data-ledger-lane='not-applicable']");
     expect(lane?.getAttribute("title")).toContain("P04_RAN_NO_TRIALS");
     expect(lane?.getAttribute("title")).toContain("RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION");
@@ -882,12 +882,12 @@ describe("RF-06 S06 fidelity — mode card and claim row", () => {
     const { container } = view();
     const keys = [...container.querySelectorAll("[data-claim-row] > span > span:first-child")].map((k) => k.textContent);
     expect(keys.slice(0, 6)).toEqual([
-      "validation_claim",
-      "chronological_claim",
-      "oos_used_for_selection",
+      "validation",
+      "chronology",
+      "OOS used",
       "OOS column state",
-      "scoring_backend",
-      "candidate_selection_metric",
+      "scoring",
+      "selector",
     ]);
     // CG-P15-05 answered: no claim field is a "not published" shell any more.
     expect(container.querySelectorAll("[data-claim-shell]")).toHaveLength(0);
@@ -895,7 +895,7 @@ describe("RF-06 S06 fidelity — mode card and claim row", () => {
     /* VD-TEXT-01: the right-hand aside became the tooltip of the optimization_mode label. */
     const layers = container.querySelector("[data-selector-layers]") as HTMLElement;
     expect(layers.getAttribute("title")).toBe(SELECTOR_LAYERS_HELP);
-    expect(layers.textContent).toContain("optimization_mode");
+    expect(layers.textContent).toContain("mode");
     /* H02: no internal class names in the tooltip. */
     expect(SELECTOR_LAYERS_HELP).toBe("Mode is fixed per run.");
     expect(SELECTOR_LAYERS_HELP).not.toContain("CandidateSelector");
@@ -930,7 +930,7 @@ describe("RF-06 S06 fidelity — A1 and the ledger", () => {
     expect(trialStateTone("COMPLETE")).toBe("var(--good)");
     const { container } = view({ ledger: { state: "ready", search: retainedSearch() } });
     const heads = [...container.querySelectorAll("[data-ledger-head] > span")].map((h) => h.getAttribute("data-align"));
-    expect(heads).toEqual(["left", "left", "left", "right", "right", "left", "left"]);
+    expect(heads).toEqual(["left", "left", "right", "left"]);
     const row = container.querySelector("[data-trial='trial_042']") as HTMLElement;
     expect(row.tagName).toBe("BUTTON");
     fireEvent.click(row);
@@ -1080,9 +1080,10 @@ describe("RF-06 wave C — S06 consumes claim_row and as_of_basis", () => {
     expect(link?.getAttribute("href")).toBe(
       "/research/quantbt/atlas#tab=modes&mode=mode_1_decay&schedule=per_fold_causal&run=R-WFO-118",
     );
-    expect(link?.textContent).toContain("mode_1_decay · per_fold_causal");
+    expect(link?.textContent).toContain("Engine Atlas");
+    expect(link?.getAttribute("title")).toContain("mode 1 decay · per-fold causal");
     expect(row?.querySelector("[data-mode-relation='DECLARED_MODE_RELEASE_METADATA_NOT_RUN_EVIDENCE']")?.textContent).toBe(
-      "release metadata · not run evidence",
+      "release metadata",
     );
     expect(row?.textContent).not.toContain("not published");
     expect(atlasModeHref({ mode: "a b", schedule: "global", operation_id: "researchEngineAtlasGetV1", relation: "DECLARED_MODE_RELEASE_METADATA_NOT_RUN_EVIDENCE" }, "r1")).toBe(
@@ -1112,7 +1113,8 @@ describe("RF-06 wave C — S06 consumes claim_row and as_of_basis", () => {
   it("CG-P14-04: as-of in the HiFi Z form, its basis named in the title", () => {
     const { container } = view();
     const asOf = container.querySelector("[data-as-of]");
-    expect(asOf?.textContent).toMatch(/^source search read · as-of \d{4}-\d{2}-\d{2} \d{2}:\d{2}Z$/);
+    expect(asOf?.textContent).toMatch(/^as of \d{4}-\d{2}-\d{2} \d{2}:\d{2}Z$/);
+    expect(asOf?.getAttribute("title")).toContain("source search read");
     expect(asOf?.getAttribute("data-as-of-basis")).toBe("P14_PROJECTION_RECEIVED_AT");
     expect(asOf?.getAttribute("title")).toContain("as-of basis P14_PROJECTION_RECEIVED_AT");
   });
@@ -1130,14 +1132,19 @@ describe("W3 — the retained ledger labels what each number measures", () => {
     const { container } = view({ ledger: { state: "ready", search: W3_SEARCH } });
     const row = container.querySelector("[data-trial='0']") as HTMLElement;
     expect(row.querySelector("[data-trial-is]")?.textContent).toBe("−1.44");
-    expect(row.querySelector("[data-trial-oos]")?.textContent).toBe("not evaluated · IS stage");
-    expect(row.querySelector("[data-trial-state]")?.textContent).toBe("COMPLETE");
+    /* W4: a uniform column is ONE caption line, not a cell per row. */
+    expect(row.querySelector("[data-trial-oos]")).toBeNull();
+    expect(container.querySelector("[data-ledger-oos-caption]")?.textContent).toBe("OOS · not evaluated at search (Stage B)");
+    expect(row.getAttribute("data-trial-state")).toBe("COMPLETE");
+    expect(container.querySelector("[data-ledger-caption]")?.textContent).toContain("all complete");
+    expect(container.querySelector("[data-ledger-caption] [data-absence-summary='seed']")?.textContent).toBe("seed · not published");
     const noteCell = row.querySelector("[data-trial-note]") as HTMLElement;
     const note = noteCell.textContent ?? "";
-    /* H17: the prefix every row repeats rides in the tooltip; the cell is the parameters. */
-    expect(noteCell.getAttribute("title")).toContain("is_search · all outer folds · objective = IS mean Sharpe");
+    /* H17: the prefix every row repeats rides in the row tooltip (with the digest); the cell is parameter values only. */
+    expect(row.getAttribute("title")).toContain("is_search · all outer folds · objective = IS mean Sharpe");
     expect(note).not.toContain("is_search");
-    expect(note).toContain("window=34");
+    expect(note).toMatch(/(^| · )34( · |$)/);
+    expect(note).not.toContain("window=");
     expect(note).not.toContain("parameters not published");
     expect(container.querySelector("[data-ledger-scope]")?.textContent).toBe("global study");
   });
@@ -1168,7 +1175,7 @@ describe("W3 — the retained ledger labels what each number measures", () => {
     expect(container.querySelector("[data-panel='prune_reasons']")?.getAttribute("data-panel-state")).toBe("NOT_APPLICABLE");
     const validation = container.querySelector("[data-claim-fact='validation claim']");
     expect(validation?.getAttribute("data-claim-state")).toBe("RETAINED_SOURCE");
-    expect(validation?.textContent).toContain("WALK_FORWARD_OOS");
+    expect(validation?.textContent).toContain("walk-forward OOS");
     expect(validation?.querySelector("[data-claim-value]")?.getAttribute("data-claim-value")).toBe("walk_forward_oos");
   });
 
@@ -1232,7 +1239,7 @@ describe("W3b — Search on the retained WFO lane", () => {
 
   it("shows the executed mode and schedule from the retained search contract", async () => {
     const { container } = await settled();
-    expect(container.querySelector("[data-run-mode]")?.textContent).toBe("mode_1_decay");
+    expect(container.querySelector("[data-run-mode]")?.textContent).toBe("mode 1 decay");
     expect(container.querySelector("[data-run-schedule]")?.textContent).toBe("global");
     expect(container.querySelector("[data-run-mode-source]")?.getAttribute("data-run-mode-source")).toBe("retained");
   });

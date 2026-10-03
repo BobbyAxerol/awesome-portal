@@ -72,7 +72,8 @@ describe("QA2 S10 root is said once", () => {
     const panel = q('[data-panel="selected"]')?.textContent ?? "";
     expect(panel).toContain("— root");
     expect(document.body.textContent).not.toContain("Root attempt — nothing to diff against");
-    expect(q('[data-panel="diff"]')?.textContent).toContain("No parent to diff.");
+    /* W4: a root has no parent, so there is no diff box at all. */
+    expect(q('[data-panel="diff"]')).toBeNull();
   });
 });
 

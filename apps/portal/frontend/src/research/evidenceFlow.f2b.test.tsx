@@ -94,14 +94,14 @@ describe("F2b — the heading is the link to the full stage screen", () => {
       entry: `/research/quantbt/runs/${RUN}/evidence?window=holdout`,
       cursor: { ...DEFAULT_CURSOR, stage, fold: 2 },
     });
-    const link = container.querySelector(`[data-tab-heading] a[data-deep-dive='${stage}']`) as HTMLAnchorElement;
+    /* W4B: the tab is a summary card; its primary button is the way to the full screen. */
+    const link = container.querySelector(`[data-hub-stage-summary='${stage}'] a[data-deep-dive='${stage}']`) as HTMLAnchorElement;
     expect(link, stage).toBeTruthy();
-    expect(link.closest("h2")).toBeTruthy();
+    expect(link.textContent).toMatch(/^Open S\d+ \w+ →$/);
     const href = link.getAttribute("href") ?? "";
     expect(href).toContain(`/runs/${RUN}/${path}?window=holdout#`);
     expect(href).toContain("fold=2");
-    expect(link.getAttribute("title")).toMatch(/fold 2, holdout window/);
-    expect(link.getAttribute("aria-label")).toContain("Open the full");
+    expect(link.getAttribute("title")).toMatch(/holdout window/);
   });
 
   it("without a named window the link is unchanged (no defaulted key)", async () => {
@@ -209,19 +209,15 @@ describe("F2b — previous / next along the stages", () => {
 });
 
 describe("F2b — the way out of the cursor bar", () => {
-  it("S1–S4, report and the run library are links, S1–S4 with the cursor and the window", () => {
+  it("report and the run library are links (W4B: S1–S4 are the tab strip's and the summary cards', not repeated here)", () => {
     const { container } = view({
       entry: `/research/quantbt/runs/${RUN}/evidence?window=is`,
       cursor: { ...DEFAULT_CURSOR, fold: 2 },
     });
     const nav = container.querySelector("[data-deep-dives]") as HTMLElement;
     expect(nav.tagName).toBe("NAV");
-    expect(nav.getAttribute("aria-label")).toBe("full stage screens");
-    for (const stage of ["split", "search", "freeze", "execute"]) {
-      const link = nav.querySelector(`[data-nav-stage='${stage}']`) as HTMLAnchorElement;
-      expect(link.getAttribute("href"), stage).toContain(`/runs/${RUN}/${stage}?window=is#stage=${stage}&fold=2`);
-      expect(link.getAttribute("title"), stage).toContain("fold 2, is window");
-    }
+    expect(nav.getAttribute("aria-label")).toBe("related screens");
+    for (const stage of ["split", "search", "freeze", "execute"]) expect(nav.querySelector(`[data-nav-stage='${stage}']`), stage).toBeNull();
     expect(nav.querySelector("[data-nav-stage='report']")?.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/report?window=is#stage=claim&fold=2`);
     expect(nav.querySelector("[data-nav-stage='library']")?.getAttribute("href")).toBe("/research/quantbt/runs");
     expect(nav.textContent).not.toMatch(/deep dives:/);
