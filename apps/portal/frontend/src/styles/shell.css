@@ -237,6 +237,15 @@
   color: var(--ink);
   font-weight: 500;
 }
+/* axe color-contrast: Sidebar.tsx fades SOON / BLOCKED / LEGACY rows with an inline
+   `opacity` (0.58 / 0.38 / 0.55) on the whole row, text included (2.5:1 measured).
+   Recede through ink instead: full opacity, `--ink-faint` (AA on both themes). */
+.portal-navitem[data-maturity="COMMISSIONED"]:not(.portal-navitem-active),
+.portal-navitem[data-maturity="BLOCKED"]:not(.portal-navitem-active),
+.portal-navitem[data-maturity="DEPRECATED"]:not(.portal-navitem-active) {
+  opacity: 1 !important;
+  color: var(--ink-faint);
+}
 .portal-navitem-label {
   flex: 1;
   min-width: 0;
