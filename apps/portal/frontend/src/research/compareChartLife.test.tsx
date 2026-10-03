@@ -88,7 +88,10 @@ describe("S13 overlay life", () => {
     const { container } = render(<OverlayPlot {...overlayFixture(1_720_000_000_000)} />);
     const area = container.querySelector('.cp-plot-area[data-scrubbable="true"]') as HTMLElement;
     expect(area.getAttribute("tabindex")).toBe("0");
-    expect(area.getAttribute("aria-label")).toMatch(/arrows/i);
+    /* the contract region: named, a chart, its key help in the sr-only summary */
+    expect(area.getAttribute("aria-roledescription")).toBe("chart");
+    expect(area.getAttribute("aria-label")).toBe("Two-run equity overlay");
+    expect(document.getElementById(area.getAttribute("aria-describedby")!)?.textContent).toMatch(/arrow keys/i);
     expect(container.querySelector("[data-scrub-tip]")).toBeNull();
     fireEvent.keyDown(area, { key: "End" });
     expect(container.querySelector("[data-scrub-date]")?.textContent).toMatch(/Z$/);

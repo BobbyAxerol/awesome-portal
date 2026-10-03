@@ -1636,7 +1636,7 @@ function ReportNotice({
   return (
     <div className="no-print flex flex-col gap-1.5" data-report-notice={state.state}>
       {/* A partial report is one word; the list of what is not published is its tooltip (each block already marks its own absence). */}
-      <ResearchPanel title="run report" state={state.state === "partial" ? { ...state, reason: "Partial.", detail: state.reason } : state} minBodyHeight={minBodyHeight} />
+      <ResearchPanel title="run report" headingLevel={2} state={state.state === "partial" ? { ...state, reason: "Partial.", detail: state.reason } : state} minBodyHeight={minBodyHeight} />
       {state.mayRetry && !controller.inFlight ? (
         <span>
           <button type="button" className="rr-btn" data-action="retry" onClick={controller.retry}>

@@ -1123,7 +1123,7 @@ export function AlphaImport(props: AlphaImportProps) {
       {/* ------------------------------------------------------------ header */}
       <header className="ai-head" data-panel="header">
         <div className="l">
-          <nav className="ai-crumb" aria-label="Breadcrumb">
+          <nav className="ai-crumb" aria-label="Screen path">
             {contextAlpha ? (
               <>
                 <LineageLink to={lineageHref(contextAlpha)} action="back-to-lineage" title={`Lineage of ${contextAlpha}`}>

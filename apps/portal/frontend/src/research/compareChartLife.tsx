@@ -56,11 +56,23 @@ export function pathVertices(path: string, box = 1000): { x: number; y: number }
 
 export { nearestIndex };
 
-/** Nearest-point scrub over `xs` (percent of plot width): a thin wrapper over the chart contract. */
-export function useScrub(xs: readonly number[]) {
-  const c = useChartContract({ label: "chart", noun: "point", count: xs.length, describe: () => "", summary: "", xs });
+/** What a scrub region says about itself: its name, one point's own served words, a one-line summary. */
+export interface ScrubWords {
+  label: string;
+  describe(i: number): string;
+  summary: string;
+}
+
+/**
+ * Nearest-point scrub over `xs` (percent of plot width): a thin wrapper over the chart contract.
+ * `handlers` are the pointer/key handlers alone (old callers); `region` is the whole contract region
+ * (role, name, tab stop, touch-action) and `nodes` the sr-only live + summary, both for a caller that passes `words`.
+ */
+export function useScrub(xs: readonly number[], words?: ScrubWords) {
+  const c = useChartContract({ label: words?.label ?? "chart", noun: "point", count: xs.length, describe: words?.describe ?? (() => ""), summary: words?.summary ?? "", xs });
   const { onPointerMove, onPointerDown, onPointerLeave, onBlur, onKeyDown } = c.regionProps;
-  return { index: c.index, handlers: { onPointerMove, onPointerDown, onPointerLeave, onBlur, onKeyDown } };
+  const { className: _ring, ...region } = c.regionProps;
+  return { index: c.index, handlers: { onPointerMove, onPointerDown, onPointerLeave, onBlur, onKeyDown }, region, nodes: c.nodes };
 }
 
 export interface ScrubDot {

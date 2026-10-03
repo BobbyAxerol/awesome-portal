@@ -236,6 +236,52 @@ describe("compareChartLife.useScrub wrapper", () => {
   });
 });
 
+describe("pointProps and locate", () => {
+  function Months({ rows = 3 }: { rows?: number }) {
+    const c = useChartContract({ label: "Months", noun: "month", count: rows, describe: (i) => `m${i}`, summary: "Months." });
+    return (
+      <div>
+        <div data-testid="region" {...c.regionProps}>
+          {Array.from({ length: rows }, (_, i) => (
+            <span key={i} data-testid={`m${i}`} {...c.pointProps(i)} />
+          ))}
+          {c.nodes}
+        </div>
+        <span data-testid="idx">{String(c.index)}</span>
+        <button data-testid="outside">outside</button>
+      </div>
+    );
+  }
+  it("a touch press on a mark reads, announces and pins it; the region does not read the press twice", () => {
+    render(<Months />);
+    fire("pointerdown", 0, "touch", screen.getByTestId("m1"));
+    expect(screen.getByTestId("idx").textContent).toBe("1");
+    expect(live()).toBe("m1");
+    fire("pointerout", 0, "touch", screen.getByTestId("m1"));
+    expect(screen.getByTestId("idx").textContent).toBe("1");
+    fire("pointerdown", 0, "touch", screen.getByTestId("outside"));
+    expect(screen.getByTestId("idx").textContent).toBe("null");
+  });
+  it("a mouse enter reads without announcing", () => {
+    render(<Months />);
+    fire("pointerover", 0, "mouse", screen.getByTestId("m2"));
+    expect(screen.getByTestId("idx").textContent).toBe("2");
+    expect(live()).toBe("");
+  });
+  it("locate maps a press to a point (null clears) and leaves hover to the chart when hover is false", () => {
+    const at = vi.fn((x: number) => (x < 50 ? 2 : null));
+    render(<Harness locate={at} hover={false} />);
+    sizeRegion();
+    fire("pointermove", 10, "mouse");
+    expect(screen.getByTestId("idx").textContent).toBe("null");
+    fire("pointerdown", 10, "touch");
+    expect(screen.getByTestId("idx").textContent).toBe("2");
+    expect(live()).toBe("p2 · 3.00");
+    fire("pointerdown", 200, "touch");
+    expect(screen.getByTestId("idx").textContent).toBe("null");
+  });
+});
+
 describe("nodes", () => {
   it("ChartLive is a polite status; ChartSummary carries its id", () => {
     render(<><ChartLive text="x" /><ChartSummary id="s1" text="sum" /></>);

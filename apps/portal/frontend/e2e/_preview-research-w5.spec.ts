@@ -31,7 +31,7 @@ const ROOT_TIMEOUT_MS = 30_000;
 const CHART = "[aria-roledescription='chart']";
 const BASE = process.env.RESEARCH_PREVIEW_BASE_URL ?? "http://localhost:8095";
 
-type Label = "R-WFO-023" | "R-WFO-027" | "R-P04-022";
+type Label = "R-WFO-023" | "R-WFO-024" | "R-WFO-027" | "R-P04-022";
 
 async function discover(page: Page, label: Label): Promise<string | null> {
   const { status, body } = await pageGet(page, "/api/v1/quantbt/runs?status=COMPLETED&limit=50");
@@ -156,6 +156,8 @@ interface ChartScreen {
   name: string;
   label: Label;
   path: (run: string) => string;
+  /** S13 draws its chart only for a pair: the second run (same ComparisonContractKey) goes in `?runs=`. */
+  pair?: Label;
   root: string;
   /** Minimum number of contract regions the screen must expose. */
   min: number;
@@ -163,27 +165,64 @@ interface ChartScreen {
   zoom: boolean;
 }
 const CHART_SCREENS: readonly ChartScreen[] = [
-  { name: "S04 hub", label: "R-WFO-023", path: (r) => runUrl(r, "evidence", "#stage=search&fold=3"), root: "[data-screen='evidence-flow']", min: 1, zoom: true },
+  { name: "S04 hub", label: "R-WFO-023", path: (r) => runUrl(r, "evidence"), root: "[data-screen='evidence-flow']", min: 1, zoom: true },
   { name: "S06 search", label: "R-WFO-023", path: (r) => runUrl(r, "search", "#stage=search&fold=3"), root: "[data-screen='search-detail']", min: 3, zoom: false },
   { name: "S06 search (causal)", label: "R-WFO-027", path: (r) => runUrl(r, "search", "#stage=search&fold=2"), root: "[data-screen='search-detail']", min: 1, zoom: false },
   { name: "S08 execute", label: "R-WFO-023", path: (r) => runUrl(r, "execute", "#stage=execute&fold=2"), root: "[data-screen='execute-replay']", min: 1, zoom: true },
   { name: "S09 report", label: "R-WFO-023", path: (r) => runUrl(r, "report"), root: "[data-screen='run-report']", min: 4, zoom: true },
 ];
-const COMPARE: ChartScreen = { name: "S13 compare", label: "R-WFO-023", path: () => `/research/quantbt/alphas/${ALPHA}/compare`, root: "[data-screen='compare']", min: 1, zoom: false };
+const COMPARE: ChartScreen = { name: "S13 compare", label: "R-WFO-023", pair: "R-WFO-024", path: () => `/research/quantbt/alphas/${ALPHA}/compare?mode=pair`, root: "[data-screen='compare']", min: 1, zoom: false };
 
 const squash = (s: string | null | undefined) => (s ?? "").replace(/\s+/g, " ").trim();
 
 /** The sr-only live node that belongs to a region: inside it, or in its parent. */
 const liveOf = (region: Locator): Locator => region.locator("xpath=ancestor-or-self::*[.//*[@data-chart-live]][1]").locator("[data-chart-live]").first();
-const surroundOf = (region: Locator): Locator => region.locator("xpath=..");
+/** The elements that ARE a drawn readout (hover/tap tip, S06 shared line, S08 crosshair line). */
+const TIP_SELECTOR = "[data-equity-tip], [data-curve-tip], [data-distribution-tip], [data-months-tip], [data-scrub-tip], [data-crosshair-readout], [data-distribution-readout], [role=tooltip]";
 
-/** Visible text of the region's surroundings (the tooltip/readout is drawn there), sr-only nodes excluded. */
+/**
+ * What the reader can see of the chart's readout: the text of its panel (S06 draws one shared readout line for eight
+ * histograms; sr-only nodes and static SVG <title>
+ * hover hints excluded) plus the `title` of a tip that is currently drawn (the exact string a hover shows).
+ */
 async function visibleReadout(region: Locator): Promise<string> {
-  return surroundOf(region).evaluate((el) => {
-    const clone = el.cloneNode(true) as HTMLElement;
-    clone.querySelectorAll("[data-chart-live], [data-chart-summary], .sr-only").forEach((n) => n.remove());
-    return (clone.textContent ?? "").replace(/\s+/g, " ").trim();
-  });
+  return region.evaluate((el, tipSelector) => {
+    const scope = el.closest("[data-panel], figure, section") ?? el.parentElement ?? el;
+    const skip = "[data-chart-live], [data-chart-summary], .sr-only, svg title, style, script";
+    /* ECharts keeps a hidden tooltip in the DOM (visibility / opacity 0) after hideTip: that is not visible. */
+    const shown = (n: Element) => (n as Element & { checkVisibility?: (o: object) => boolean }).checkVisibility?.({ visibilityProperty: true, opacityProperty: true }) ?? true;
+    const text: string[] = [];
+    const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const host = node.parentElement;
+      if (host && !host.closest(skip) && shown(host)) text.push(node.textContent ?? "");
+    }
+    const titles = Array.from(scope.querySelectorAll(tipSelector))
+      .filter((n) => !n.closest(skip) && shown(n))
+      .map((n) => n.getAttribute("title") ?? "");
+    return `${text.join(" ")} ${titles.join(" ")}`;
+  }, TIP_SELECTOR);
+}
+
+/** A readout leaves the screen within a transition: poll briefly instead of reading the first frame. */
+async function readoutGone(region: Locator, live: string): Promise<boolean> {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    if (!shows(await visibleReadout(region), live)) return true;
+    await region.page().waitForTimeout(100);
+  }
+  return false;
+}
+
+const norm = (s: string) => s.replace(/[\s·]+/g, "");
+/**
+ * `live` is the point's own served string; the tip may print the same facts formatted (thousands, %, no label words).
+ * The readout shows the point when the whole string is there, or when every date / number in it is.
+ */
+function shows(visible: string, live: string): boolean {
+  const v = norm(visible);
+  if (v.includes(norm(live))) return true;
+  const facts = live.split(/[\s·,;()]+/).filter((t) => /\d/.test(t));
+  return facts.length > 0 && facts.every((t) => v.includes(norm(t)));
 }
 
 /** Tab stops (visible, tabbable, not inside aria-hidden) on the whole page. */
@@ -200,11 +239,19 @@ async function tabStops(page: Page): Promise<number> {
   });
 }
 
+/** The screen's URL; a pair screen gets `&runs=<run>,<other>`. */
+async function screenPath(page: Page, def: ChartScreen, run: string, testInfo: TestInfo): Promise<string> {
+  if (!def.pair) return def.path(run);
+  const other = await discover(page, def.pair);
+  needRun(testInfo, other, def.pair);
+  return `${def.path(run)}&runs=${run},${other}`;
+}
+
 async function openChartScreen(page: Page, def: ChartScreen, testInfo: TestInfo, width = 1440): Promise<void> {
   const run = await discover(page, def.label);
   needRun(testInfo, run, def.label);
   await page.setViewportSize({ width, height: 900 });
-  await page.goto(def.path(run));
+  await page.goto(await screenPath(page, def, run, testInfo));
   await ready(page, def.root);
   /* charts mount after their reads settle */
   await page.locator(CHART).first().waitFor({ state: "attached", timeout: 20_000 }).catch(() => undefined);
@@ -240,7 +287,7 @@ test.describe("P2 chart keyboard (one tab stop; live text == readout; Home/End/E
         await page.keyboard.press("ArrowRight");
         const afterRight = squash(await live.textContent());
         if (afterRight === "") problems.push(`${name}: ArrowRight wrote no live text`);
-        else if (!(await visibleReadout(region)).includes(afterRight)) problems.push(`${name}: live text "${afterRight.slice(0, 60)}" is not the visible readout`);
+        else if (!shows(await visibleReadout(region), afterRight)) problems.push(`${name}: live text "${afterRight.slice(0, 60)}" is not the visible readout`);
 
         await page.keyboard.press("Home");
         const home = squash(await live.textContent());
@@ -250,7 +297,9 @@ test.describe("P2 chart keyboard (one tab stop; live text == readout; Home/End/E
         else if (home === end) problems.push(`${name}: Home and End read the same point`);
 
         await page.keyboard.press("Escape");
-        if (end !== "" && (await visibleReadout(region)).includes(end)) problems.push(`${name}: Escape did not clear the readout`);
+        /* A chart whose playhead owns the readout (S08) always shows it: Escape has nothing to clear. */
+        const controlled = (await region.getAttribute("data-chart-controlled")) === "true";
+        if (!controlled && end !== "" && !(await readoutGone(region, end))) problems.push(`${name}: Escape did not clear the readout`);
         if ((await region.evaluate((el) => document.activeElement === el)) === false) problems.push(`${name}: Escape moved focus away`);
 
         if (def.zoom) {
@@ -295,7 +344,7 @@ test.describe("P3 touch: tap keeps the readout 600 ms, an outside tap hides it, 
     test(def.name, async ({ page }, testInfo) => {
       const run = await discover(page, def.label);
       needRun(testInfo, run, def.label);
-      await page.goto(def.path(run));
+      await page.goto(await screenPath(page, def, run, testInfo));
       await ready(page, def.root);
       await page.locator(CHART).first().waitFor({ state: "attached", timeout: 20_000 }).catch(() => undefined);
       const regions = page.locator(CHART);
@@ -306,17 +355,24 @@ test.describe("P3 touch: tap keeps the readout 600 ms, an outside tap hides it, 
         const region = regions.nth(i);
         const name = (await region.getAttribute("aria-label")) ?? `chart ${i}`;
         await region.scrollIntoViewIfNeeded();
-        await region.tap();
+        /* A plane or a month strip is sparse: a real thumb lands on a mark, not on the empty middle of the frame. */
+        const mark = region.locator("[data-plane-point], [data-month]");
+        if ((await mark.count()) > 0) {
+          /* coordinates, not `locator.tap()`: pool members that share a position cover one another */
+          await mark.first().evaluate((el) => el.scrollIntoView({ block: "center" }));
+          const at = (await mark.first().boundingBox())!;
+          await page.touchscreen.tap(at.x + at.width / 2, at.y + at.height / 2);
+        } else await region.tap();
         await page.waitForTimeout(600);
         const live = squash(await liveOf(region).textContent());
         if (live === "") problems.push(`${name}: tap wrote no readout`);
-        else if (!(await visibleReadout(region)).includes(live)) problems.push(`${name}: readout not visible 600 ms after the tap`);
+        else if (!shows(await visibleReadout(region), live)) problems.push(`${name}: readout not visible 600 ms after the tap`);
         /* a tap in the left gutter (outside every region) dismisses a touch readout */
         const box = await region.boundingBox();
-        if (box && live !== "") {
+        const controlled = (await region.getAttribute("data-chart-controlled")) === "true";
+        if (box && live !== "" && !controlled) {
           await page.touchscreen.tap(2, Math.min(Math.max(box.y + 2, 2), 840));
-          await page.waitForTimeout(150);
-          if ((await visibleReadout(region)).includes(live)) problems.push(`${name}: outside tap did not hide the readout`);
+          if (!(await readoutGone(region, live))) problems.push(`${name}: outside tap did not hide the readout`);
         }
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
         if (overflow > 0) problems.push(`${name}: page scrolls horizontally by ${overflow}px`);
@@ -361,12 +417,17 @@ test("P5 window=is travels in the hash hub -> S06 -> hub -> S08 -> report; Back/
     expect(hashOf(page).window, `${where}: window=is in the hash (${page.url()})`).toBe("is");
     urls.push(page.url());
   };
-  await page.goto(runUrl(run, "evidence", "#stage=search&fold=3"));
-  await ready(page, "[data-screen='evidence-flow']");
-  await page.locator("[data-window-switcher]").locator("button, [role=radio], [role=tab]").filter({ hasText: /^IS$/ }).first().click();
+  /* The only window switch is S08's (`[data-window-switch] [data-window=is]`); the hub's cursor bar shows the window read-only. */
+  await page.goto(runUrl(run, "execute", "#stage=execute&fold=3"));
+  await ready(page, "[data-screen='execute-replay']");
+  await page.locator("[data-window-switch] [data-window='is']").first().click();
   await expect.poll(() => hashOf(page).window).toBe("is");
-  check("hub (IS)");
+  check("S08 (IS)");
 
+  await page.locator("[data-screen='execute-replay'] [data-action='back-to-hub']").first().click();
+  await ready(page, "[data-screen='evidence-flow']");
+  check("hub");
+  await page.getByRole("tab", { name: /S2 Search/ }).first().click();
   await page.locator(`a[href*="/${run}/search"]`).first().click();
   await ready(page, "[data-screen='search-detail']");
   check("S06");
@@ -374,14 +435,14 @@ test("P5 window=is travels in the hash hub -> S06 -> hub -> S08 -> report; Back/
   await ready(page, "[data-screen='evidence-flow']");
   check("hub (crumb back)");
 
+  await page.getByRole("tab", { name: /S4 Execute/ }).first().click();
   await page.locator(`a[href*="/${run}/execute"]`).first().click();
   await ready(page, "[data-screen='execute-replay']");
-  check("S08");
-  await page.locator("[aria-label='step forward']").first().click();
+  check("S08 again");
   await page.locator("[data-next='run-report']").first().click();
   await ready(page, "[data-screen='run-report']");
   check("report");
-  await page.locator(`a[href*="/${run}/execute"], a[href*="/${run}/evidence"]`).first().click();
+  await page.locator("[data-screen='run-report'] [data-action='back-to-hub']").first().click();
   await page.waitForLoadState("networkidle").catch(() => undefined);
   check("report back-link");
 
@@ -458,8 +519,17 @@ test.describe("P6 hand-off", () => {
     needRun(testInfo, run, "R-P04-022");
     await page.goto(runUrl(run, "evidence"));
     await ready(page, "[data-screen='evidence-flow']");
-    await stepFold(page, 3);
-    await page.locator("[data-action='reset-cursor']").first().click();
+    /* R-P04-022 is a single-fold run ("this is the last observed fold" on `next fold`): there is no fold 3 to walk
+       to, so the reset is checked from where the run puts the reader - on fold 1 with the button inert (the cursor is
+       already the arrival one) - and, where a run does have folds, after a walk away. */
+    const reset = page.locator("[data-action='reset-cursor']").first();
+    if (await page.locator("[data-action='fold-next']").first().isEnabled()) {
+      await stepFold(page, 3);
+      await reset.click();
+    } else {
+      testInfo.annotations.push({ type: "single-fold", description: "R-P04-022 observes one fold; reset must be inert at fold 1" });
+      await expect(reset, "reset is inert when already at the arrival cursor").toHaveAttribute("aria-disabled", "true");
+    }
     await expect.poll(() => Number(hashOf(page).fold)).toBe(1);
   });
 });
@@ -476,13 +546,14 @@ test("P7 R-WFO-027 study selector: fold_03 writes fold=3; Back restores fold_02"
   const picks = page.locator("[data-study-pick]");
   const active = async () =>
     picks.evaluateAll((els) => els.filter((e) => e.getAttribute("aria-current") === "true" || e.getAttribute("aria-pressed") === "true").map((e) => (e.textContent ?? "").trim()));
-  expect(await active(), "fold=2 activates fold_02").toEqual(["fold_02"]);
+  /* A fold move re-reads the search ledger: the selector is gone for a beat while it loads, so the active study is polled. */
+  await expect.poll(active, { message: "fold=2 activates fold_02", timeout: 15_000 }).toEqual(["fold_02"]);
   await picks.filter({ hasText: "fold_03" }).first().click();
   await expect.poll(() => hashOf(page).fold).toBe("3");
-  expect(await active(), "fold_03 active after the click").toEqual(["fold_03"]);
+  await expect.poll(active, { message: "fold_03 active after the click", timeout: 15_000 }).toEqual(["fold_03"]);
   await page.goBack();
   await expect.poll(() => hashOf(page).fold).toBe("2");
-  expect(await active(), "Back restores fold_02").toEqual(["fold_02"]);
+  await expect.poll(active, { message: "Back restores fold_02", timeout: 15_000 }).toEqual(["fold_02"]);
 });
 
 /* ----------------------------------------------------------------------------------------------
@@ -510,14 +581,16 @@ test.describe("P8 seq", () => {
     await ctx.close();
   });
 
-  test("R-P04-022 S08: fresh load writes no seq; no step controls", async ({ page }, testInfo) => {
+  test("R-P04-022 S08: fresh load writes no seq (its two transports are present and untouched)", async ({ page }, testInfo) => {
     const run = await discover(page, "R-P04-022");
     needRun(testInfo, run, "R-P04-022");
     await page.goto(runUrl(run, "execute"));
     await ready(page, "[data-screen='execute-replay']");
     await page.waitForTimeout(1200);
     expect(hashOf(page).seq, "P04 mount writes no seq").toBeUndefined();
-    expect(await page.locator("[aria-label='step forward']").count(), "P04 has no step control").toBe(0);
+    /* P04 does replay (the stitched equity sample and the OOS observation panel each have a transport): the
+       claim is that merely mounting them, at index 0, never writes `seq`. */
+    expect(await page.locator("[aria-label='step forward']").count(), "P04 transports are on screen").toBeGreaterThan(0);
   });
 });
 

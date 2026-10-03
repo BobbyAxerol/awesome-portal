@@ -298,6 +298,21 @@ export function seedCursor(hash: string, seed: EvidenceCursor): Read {
   return { ...read, cursor };
 }
 
+/**
+ * W5 §3.7: `seq` names a bar of the replay window, so it only means something on the Execute stage (S08 and
+ * hub#execute). Arriving with one on any other stage, it is reported and dropped from the address rather than
+ * carried through every link of a screen that has no replay. (A reader's own tab change keeps the cursor: this
+ * runs on arrival and on a hand-edited hash, never on `setStage`.)
+ */
+function dropSeqOffExecute(read: Read): Read {
+  if (read.cursor.seq === null || read.cursor.stage === "execute") return read;
+  return {
+    ...read,
+    cursor: { ...read.cursor, seq: null },
+    problems: [...read.problems, { code: "CURSOR_VALUE_UNREADABLE", key: "seq", value: String(read.cursor.seq) }],
+  };
+}
+
 export function parseCursor(hash: string): EvidenceCursor {
   return readHash(hash).cursor;
 }
@@ -425,7 +440,7 @@ export function useEvidenceCursor(
   const handoff = options.handoff ?? null;
   const [initial] = useState(() => {
     if (typeof window === "undefined") return null;
-    const read = withLegacyWindow(seedCursor(window.location.hash, seed), window.location.search);
+    const read = dropSeqOffExecute(withLegacyWindow(seedCursor(window.location.hash, seed), window.location.search));
     /* W5 §3.3: no fold in the arriving hash and a hand-off in hand -> open on θ*, not on fold 1. */
     if (!read.named.fold && handoff !== null) {
       return { ...read, cursor: { ...read.cursor, fold: handoff.fold, trial: handoff.trial, params: handoff.params }, handoffApplied: true };
@@ -483,11 +498,11 @@ export function useEvidenceCursor(
     const onHashChange = () => {
       /* An edited hash that names no stage keeps the stage in hand (FE-X-10). */
       const observed = observedFoldsFor(runId ?? "");
-      const read = seedCursor(window.location.hash, DEFAULT_CURSOR);
+      const read = dropSeqOffExecute(seedCursor(window.location.hash, latest.current));
       /* QA S04-U3: a fold the run never observed is clamped here too, with the same notice a fresh load gets. */
       const clamped = observed !== null ? clampFold(seedCursor(window.location.hash, latest.current).cursor.fold, observed) : null;
       setCursor((previous) => {
-        const next = seedCursor(window.location.hash, previous).cursor;
+        const next = dropSeqOffExecute(seedCursor(window.location.hash, previous)).cursor;
         return clamped !== null && clamped.note !== null ? { ...next, fold: clamped.fold } : next;
       });
       setProblems(read.problems);

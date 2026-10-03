@@ -1393,7 +1393,8 @@ function FoldOrderingAxes({ ordering }: { ordering: FoldOrdering }) {
         <span className="mono text-[9.5px] font-bold uppercase tracking-[.1em]" style={{ color: "var(--warn)" }}>
           {ordering.counts.folds} {ordering.counts.folds === 1 ? "fold" : "folds"}
         </span>
-        <ol className="flex max-h-[320px] flex-col gap-1 overflow-y-auto" tabIndex={0} role="region" aria-label="trial pool">
+        <div className="max-h-[320px] overflow-y-auto" tabIndex={0} role="region" aria-label="trial pool">
+        <ol className="flex flex-col gap-1">
           {ordering.folds.map((fold) => (
             <li
               key={fold.fold_id}
@@ -1438,6 +1439,7 @@ function FoldOrderingAxes({ ordering }: { ordering: FoldOrdering }) {
             </li>
           ))}
         </ol>
+        </div>
         <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-ordering-reason>
           {reasonText(ordering.folds[0]?.reason_code) ?? ordering.folds[0]?.reason_code ?? "no retained fold"}
           {global ? " — report evidence only" : ""}

@@ -206,6 +206,8 @@ function LiveWhatIf({
   const navigate = useNavigate();
   const [x, setX] = useState(4);
   const [y, setY] = useState(4);
+  /* One tab stop for the 81-cell grid (roving tabindex); arrows move the stop, Enter/Space/click selects. */
+  const [rove, setRove] = useState<[number, number]>([4, 4]);
   const heatRef = useEntryRef<HTMLDivElement>();
   const sliders = whatIf.sliders;
   const available = whatIf.state === "AVAILABLE" && whatIf.grid !== null && sliders.length === 2;
@@ -380,7 +382,20 @@ function LiveWhatIf({
             <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
               9 × 9 · {sliders[1]!.parameter} ↑ · {sliders[0]!.parameter} →
             </span>
-            <div ref={heatRef} className="grid grid-cols-[repeat(9,24px)]" role="group" aria-label={`what-if grid, ${coverage?.label ?? "0 / 81"} cells evaluated`}>
+            <div ref={heatRef} className="grid grid-cols-[repeat(9,24px)]" role="group" aria-label={`what-if grid, ${coverage?.label ?? "0 / 81"} cells evaluated`}
+              onKeyDown={(event) => {
+                const step: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
+                const base: [number, number] | undefined = step[event.key];
+                if (!base && event.key !== "Home" && event.key !== "End") return;
+                event.preventDefault();
+                const nx = event.key === "Home" ? 0 : event.key === "End" ? 8 : Math.min(8, Math.max(0, rove[0] + (base?.[0] ?? 0)));
+                const ny = event.key === "Home" || event.key === "End" ? rove[1] : Math.min(8, Math.max(0, rove[1] + (base?.[1] ?? 0)));
+                const next = heat.flat().find((entry) => entry.x_index === nx && entry.y_index === ny);
+                if (!next) return;
+                setRove([nx, ny]);
+                heatRef.current?.querySelector<HTMLElement>(`[data-heat-cell="${CSS.escape(next.cell_id)}"]`)?.focus();
+              }}
+            >
               {heat.flat().map((entry) => (
                 <button
                   key={entry.cell_id}
@@ -389,6 +404,7 @@ function LiveWhatIf({
                   data-entry="fade"
                   data-heat-cell={entry.cell_id}
                   data-heat-state={entry.state}
+                  tabIndex={entry.x_index === rove[0] && entry.y_index === rove[1] ? 0 : -1}
                   aria-label={`${entry.cell_id} ${CELL_WORDS[entry.state]}`}
                   title={`${Object.entries(entry.parameters).map(([k, v]) => `${k} ${v}`).join(" · ")} — ${
                     entry.delta_j !== null ? `ΔJ ${shownSignedDecimal(entry.delta_j)}` : CELL_WORDS[entry.state]
@@ -396,6 +412,7 @@ function LiveWhatIf({
                   onClick={() => {
                     setX(entry.x_index);
                     setY(entry.y_index);
+                    setRove([entry.x_index, entry.y_index]);
                   }}
                   style={{
                     borderColor: entry.cell_id === cell?.cell_id ? "var(--ink)" : entry.is_base ? "var(--accent)" : "var(--line)",

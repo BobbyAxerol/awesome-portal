@@ -49,6 +49,8 @@ export interface ResearchPanelProps {
   minBodyHeight?: number;
   /** S00 reading canvas keeps the state boundary without a nested card. */
   variant?: "framed" | "plain";
+  /** Heading level the title announces at (default 3); a screen whose panel follows its h1 directly passes 2. */
+  headingLevel?: 2 | 3;
 }
 
 /**
@@ -118,6 +120,7 @@ export function ResearchPanel({
   children,
   actions,
   variant = "framed",
+  headingLevel,
   recovery,
   minBodyHeight = 72,
 }: ResearchPanelProps) {
@@ -142,6 +145,7 @@ export function ResearchPanel({
         style={{ borderColor: "var(--line)" }}
       >
         <h3
+          aria-level={headingLevel}
           className="mono text-[10px] font-medium uppercase tracking-[.07em]"
           style={{ color: "var(--ink-faint)" }}
         >

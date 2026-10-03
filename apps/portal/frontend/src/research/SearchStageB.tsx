@@ -20,7 +20,7 @@
 import type { ReactNode } from "react";
 
 import { useEntryRef } from "./chartLife";
-import { useChartContract } from "./chartContract";
+import { TAP_SNAP_PX, useChartContract } from "./chartContract";
 import { Formula } from "./Formula";
 import { foldLabel, formatUtc, groupDecimalString } from "./researchFormat";
 import { reasonCodeSentence } from "./researchRefusal";
@@ -390,7 +390,20 @@ export function PoolPlane({ search, selected }: { search: CurrentSourceSearch; s
     count: placed.length,
     describe: (i) => wordsOf(placed[i]!.candidate),
     summary: `Pool plane, ${placed.length} of ${search.candidates.rows.length} pool members placed, in published order.`,
+    /* Hover snaps by x; a press snaps in 2-D (dots sit at (IS, OOS)), within the 24 px target. */
     xs: placed.map(({ point }) => at(point.is)),
+    locate: (x, y, rect) => {
+      let best = -1;
+      let nearest = TAP_SNAP_PX;
+      placed.forEach(({ point }, i) => {
+        const gap = Math.hypot((at(point.is) / 100) * rect.width - (x - rect.left), ((100 - at(point.oos)) / 100) * rect.height - (y - rect.top));
+        if (gap <= nearest) {
+          nearest = gap;
+          best = i;
+        }
+      });
+      return best < 0 ? null : best;
+    },
   });
   const { className, style, ...region } = c.regionProps;
   return (

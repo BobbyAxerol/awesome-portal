@@ -30,7 +30,8 @@
  * survives pointerleave and blur, and ends on Escape, a tap on the same point, a tap on no point
  * within 24 px, or a pointerdown outside the region (one document listener, removed on unmount).
  * Mouse pointerleave/blur clear. `controlledIndex` makes the caller own the index (hover is then
- * ignored; keys and taps go through `onIndex`).
+ * ignored; keys and taps go through `onIndex`). `locate` maps a pointer to a point where x alone does not
+ * (a 2-D plane, an ECharts canvas); `pointProps(i)` does the same per mark where marks wrap (the month strip).
  *
  * The hook never animates; entry motion stays in chartLife / useDrawIn / entryAnimation.
  */
@@ -76,12 +77,27 @@ export interface ChartContractOptions {
   onActivate?(i: number): void;
   onIndex?(i: number | null): void;
   controlledIndex?: number | null;
+  /**
+   * A chart whose points are not placed by x alone (a 2-D plane, an ECharts canvas) maps a pointer position to a
+   * point: client coordinates and the region's rect in, point index (null = no point there) out. It replaces `xs`.
+   */
+  locate?(clientX: number, clientY: number, region: DOMRect): number | null;
+  /** `false`: the chart draws its own hover (ECharts); the hook then reads keys and presses only. */
+  hover?: boolean;
+}
+
+/** Props for one mark inside a region whose marks wrap or sit off the x-axis (months in rows). */
+export interface ChartPointProps {
+  onPointerDown(event: PointerEvent<HTMLElement>): void;
+  onPointerEnter(event: PointerEvent<HTMLElement>): void;
 }
 
 export interface ChartContract {
   regionProps: HTMLAttributes<HTMLElement>;
   index: number | null;
   setIndex(i: number | null): void;
+  /** Handlers for the mark of point `i`: a press reads (and, for touch, pins) it exactly like a hit on `xs`. */
+  pointProps(i: number): ChartPointProps;
   text: string | null;
   live: string | null;
   summaryId: string;
@@ -146,7 +162,11 @@ export function useChartContract(o: ChartContractOptions): ChartContract {
   }, [pinned, clear]);
 
   const pick = (event: PointerEvent<HTMLElement>): { i: number; within: boolean } | null => {
-    const xs = optsRef.current.xs;
+    const { xs, locate } = optsRef.current;
+    if (locate) {
+      const at = locate(event.clientX, event.clientY, event.currentTarget.getBoundingClientRect());
+      return at === null || at < 0 || at >= optsRef.current.count ? { i: -1, within: false } : { i: at, within: true };
+    }
     if (!xs || xs.length === 0) return null;
     const rect = event.currentTarget.getBoundingClientRect();
     if (rect.width <= 0) return null;
@@ -157,15 +177,30 @@ export function useChartContract(o: ChartContractOptions): ChartContract {
   const isMouse = (event: PointerEvent<HTMLElement>) => !event.pointerType || event.pointerType === "mouse";
 
   const onPointerMove = (event: PointerEvent<HTMLElement>) => {
-    if (optsRef.current.controlledIndex !== undefined) return;
+    if (optsRef.current.controlledIndex !== undefined || optsRef.current.hover === false) return;
     const hit = pick(event);
     if (!hit) return;
     /* Hover (and a touch drag) moves the readout but never the live node. */
     setOwn(hit.i);
     optsRef.current.onIndex?.(hit.i);
   };
+  /** A press on point `i`: set, announce and (touch/pen) pin the readout; a second tap on it lets go. */
+  const press = (i: number, touch: boolean) => {
+    if (touch && pinned && indexRef.current === i) {
+      clear();
+      return;
+    }
+    setPinned(touch);
+    commit(i, true);
+  };
+  /* A mark's own press runs before the region's (bubbling): the region must not read the same press twice. */
+  const pressed = useRef(false);
   const onPointerDown = (event: PointerEvent<HTMLElement>) => {
     regionRef.current = event.currentTarget;
+    if (pressed.current) {
+      pressed.current = false;
+      return;
+    }
     const hit = pick(event);
     const touch = !isMouse(event);
     if (!hit) {
@@ -176,13 +211,20 @@ export function useChartContract(o: ChartContractOptions): ChartContract {
       clear();
       return;
     }
-    if (touch && pinned && indexRef.current === hit.i) {
-      clear();
-      return;
-    }
-    setPinned(touch);
-    commit(hit.i, true);
+    press(hit.i, touch);
   };
+  const pointProps = (i: number): ChartPointProps => ({
+    onPointerDown: (event) => {
+      if (count === 0) return;
+      pressed.current = true;
+      press(i, !isMouse(event));
+    },
+    onPointerEnter: (event) => {
+      if (!isMouse(event) || optsRef.current.controlledIndex !== undefined) return;
+      setOwn(i);
+      optsRef.current.onIndex?.(i);
+    },
+  });
   const onPointerLeave = (event: PointerEvent<HTMLElement>) => {
     if (isMouse(event) && !pinned) commit(null, false);
   };
@@ -245,6 +287,7 @@ export function useChartContract(o: ChartContractOptions): ChartContract {
     regionProps,
     index,
     setIndex,
+    pointProps,
     text,
     live,
     summaryId,

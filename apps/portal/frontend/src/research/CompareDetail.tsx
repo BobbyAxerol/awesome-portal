@@ -970,18 +970,21 @@ function MiniPlot({ chart, plot }: { chart: MarketChart; plot: Plot & { line: st
   /* Hover only when every served point has its own vertex (a single point is drawn as a rule, a dropped one has none). */
   const scrubbable = vertices.length === chart.points.length && vertices.length > 1;
   const xs = useMemo(() => vertices.map((v) => v.x), [vertices]);
-  const { index, handlers } = useScrub(scrubbable ? xs : []);
+  const label = `equity, ${chart.emitted_point_count ?? chart.points.length} retained points`;
+  const scrub = useScrub(scrubbable ? xs : [], {
+    label,
+    describe: (i) => `${iso(chart.points[i]!.at_utc_ms)} equity ${chart.points[i]!.equity}`,
+    summary: `${label}. Arrow keys read a point.`,
+  });
+  const { index } = scrub;
   const point = index === null ? null : chart.points[index];
   const vertex = index === null ? null : vertices[index];
-  const label = `equity, ${chart.emitted_point_count ?? chart.points.length} retained points`;
   return (
     <div className="cp-plot" data-size="mini" style={gutterOf(plot)} data-mini-chart={chart.state}>
       <div
         className="cp-plot-area"
         data-scrubbable={scrubbable ? "true" : undefined}
-        tabIndex={scrubbable ? 0 : undefined}
-        aria-label={scrubbable ? `${label}. Left and right arrows read each point.` : undefined}
-        {...(scrubbable ? handlers : {})}
+        {...(scrubbable ? scrub.region : {})}
       >
         <svg
           viewBox={`0 0 ${plot.width} ${plot.height}`}
@@ -1003,11 +1006,7 @@ function MiniPlot({ chart, plot }: { chart: MarketChart; plot: Plot & { line: st
             </div>
           </ScrubLayer>
         ) : null}
-        {point ? (
-          <span className="sr-only" role="status" data-scrub-live>
-            {`${iso(point.at_utc_ms)} equity ${point.equity}`}
-          </span>
-        ) : null}
+        {scrubbable ? scrub.nodes : null}
       </div>
     </div>
   );
@@ -1034,7 +1033,7 @@ function Header({
   return (
     <header className="cp-head" data-panel="header">
       <div className="l">
-        <nav className="cp-crumb" aria-label="Breadcrumb">
+        <nav className="cp-crumb" aria-label="Screen path">
           <Link to={runsHref(alphaId)}>Library</Link>
           <span className="sep">/</span>
           <span className="here cp-long" title={compare ? compare.alpha.name : undefined}>
@@ -1254,7 +1253,7 @@ function Ladder({ result }: { result: AttemptResult }) {
   return (
     <section data-panel="ladder" aria-label="claim ladder">
       {/* VD-F1-03: the rule sentences ride the heading's title, in the hi-fi's order, as far as the ladder really strengthens. */}
-      <h3 className="cp-ladderhead" title={attemptsRule(steps)}>
+      <h3 aria-level={2} className="cp-ladderhead" title={attemptsRule(steps)}>
         <span data-ladder-header>{LADDER_TITLE}</span>
         <span className="cp-faint" data-ladder-order-key={result.order} title={`server order: ${result.order}, laid out reversed`}>
           {oneClaim !== null ? (
@@ -1644,7 +1643,7 @@ function DiffCard({ alphaId, diff, result }: { alphaId: string | null; diff: Con
   const valueOf = (path: ConfigDiff["paths"][number], runId: string) => path.values.find((entry) => entry.run_id === runId)?.value ?? null;
   return (
     <section className="cp-tcard cp-diffcard" data-panel="diff" aria-label="config diff" data-config-diff={diff.availability.state}>
-      <h3 className="t">
+      <h3 aria-level={2} className="t">
         <span>{DIFF_TITLE}</span>
         <span
           className="cp-faint"
@@ -2224,7 +2223,12 @@ export function OverlayPlot({
   const right = useMemo(() => pathVertices(plot.right), [plot.right]);
   const scrubbable = left.length === points.length && right.length === points.length && points.length > 1;
   const xs = useMemo(() => left.map((v) => v.x), [left]);
-  const { index, handlers } = useScrub(scrubbable ? xs : []);
+  const scrub = useScrub(scrubbable ? xs : [], {
+    label: "Two-run equity overlay",
+    describe: (i) => `${iso(points[i]!.at_utc_ms)} left ${points[i]!.left_equity}, right ${points[i]!.right_equity}`,
+    summary: `Two-run equity overlay, ${points.length} points. Arrow keys read a point, Escape clears.`,
+  });
+  const { index } = scrub;
   const point = index === null ? null : points[index];
   const toggle = (side: "left" | "right") => setShown((prev) => ({ ...prev, [side]: !prev[side] }));
   const legendProps = (side: "left" | "right") => ({
@@ -2255,9 +2259,7 @@ export function OverlayPlot({
       <div
         className="cp-plot-area"
         data-scrubbable={scrubbable ? "true" : undefined}
-        tabIndex={scrubbable ? 0 : undefined}
-        aria-label={scrubbable ? "Two-run equity overlay. Left and right arrows read each point; Escape clears." : undefined}
-        {...(scrubbable ? handlers : {})}
+        {...(scrubbable ? scrub.region : {})}
       >
         <svg
           viewBox={`0 0 ${plot.width} ${plot.height}`}
@@ -2297,11 +2299,7 @@ export function OverlayPlot({
             ) : null}
           </ScrubLayer>
         ) : null}
-        {point ? (
-          <span className="sr-only" role="status" data-scrub-live>
-            {`${iso(point.at_utc_ms)} left ${point.left_equity}, right ${point.right_equity}`}
-          </span>
-        ) : null}
+        {scrubbable ? scrub.nodes : null}
       </div>
     </div>
   );
@@ -2482,7 +2480,7 @@ function DeltaTable({ result }: { result: PairComparable }) {
   const window = result.pair.common_window;
   return (
     <section className="cp-tcard cp-deltacard" data-panel="delta" data-delta-table aria-label="metric deltas">
-      <h3 className="t" title={DELTA_NOTE}>
+      <h3 aria-level={2} className="t" title={DELTA_NOTE}>
         <span>{DELTA_TITLE}</span>
       </h3>
       <div className="cp-scroll">
@@ -2571,7 +2569,7 @@ function CorrelationCard({ correlation }: { correlation: Correlation }) {
       : "window not published";
   return (
     <section className="cp-corr" data-panel="correlation" data-correlation={correlation.state} aria-label="correlation">
-      <h3 className="t" title={`${CORRELATION_HELP} — ${CORRELATION_NOTE} ${correlation.source_label} · ${correlation.formula_id} · ${correlation.formula_version}`} data-correlation-source={correlation.source_label}>
+      <h3 aria-level={2} className="t" title={`${CORRELATION_HELP} — ${CORRELATION_NOTE} ${correlation.source_label} · ${correlation.formula_id} · ${correlation.formula_version}`} data-correlation-source={correlation.source_label}>
         <span className="k">{CORRELATION_TITLE}</span>
       </h3>
       {derived ? (
@@ -2620,7 +2618,7 @@ function Differences({ result }: { result: PairComparable }) {
   const differences = result.pair.intentional_differences;
   return (
     <section className="cp-tcard" data-panel="differences" aria-label={DIFFERENCES_TITLE}>
-      <h3 className="t">
+      <h3 aria-level={2} className="t">
         <span>{DIFFERENCES_TITLE}</span>
         <span className="sr-only" hidden title="server order · A → B" />
       </h3>
@@ -2765,7 +2763,7 @@ function PendingBody({
         </figure>
         <div className="cp-grid">
           <section className="cp-tcard cp-deltacard" data-panel="delta" data-panel-state={state}>
-            <h3 className="t" title={DELTA_NOTE}>
+            <h3 aria-level={2} className="t" title={DELTA_NOTE}>
               <span>{DELTA_TITLE}</span>
             </h3>
             <div className="body">
@@ -2773,7 +2771,7 @@ function PendingBody({
             </div>
           </section>
           <section className="cp-corr" data-panel="correlation" data-panel-state={state}>
-            <h3 className="t" title={CORRELATION_HELP}>
+            <h3 aria-level={2} className="t" title={CORRELATION_HELP}>
               <span className="k">{CORRELATION_TITLE}</span>
             </h3>
             <Pending what="correlation" state={state} />
@@ -2785,7 +2783,7 @@ function PendingBody({
   return (
     <>
       <section data-panel="ladder" data-panel-state={state} aria-label="claim ladder">
-        <h3 className="cp-ladderhead" title={ATTEMPTS_RULE_BASE}>
+        <h3 aria-level={2} className="cp-ladderhead" title={ATTEMPTS_RULE_BASE}>
           <span data-ladder-header>{LADDER_TITLE}</span>
         </h3>
         <Pending what="attempts" state={state} />
@@ -2800,7 +2798,7 @@ function PendingBody({
       </figure>
       <div className="cp-grid">
         <section className="cp-tcard cp-diffcard" data-panel="diff" data-panel-state={state}>
-          <h3 className="t">
+          <h3 aria-level={2} className="t">
             <span>{DIFF_TITLE}</span>
           </h3>
           <div className="body">
@@ -2808,7 +2806,7 @@ function PendingBody({
           </div>
         </section>
         <section className="cp-card cp-trajcard" data-panel="trajectory" data-panel-state={state}>
-          <h3 className="t">
+          <h3 aria-level={2} className="t">
             <span>{TRAJECTORY_TITLE}</span>
           </h3>
           <Pending what="trajectory" state={state} />

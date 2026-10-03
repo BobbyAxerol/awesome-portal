@@ -1479,7 +1479,7 @@ export function EngineAtlas({
       >
         {embedded ? null : (
         <div className="flex flex-col gap-[3px]">
-          <nav className="flex items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" data-breadcrumb>
+          <nav className="flex items-center gap-1.5 text-[12px]" aria-label="Screen path" data-breadcrumb>
             {location.run ? (
               <Link to={`/research/quantbt/runs/${encodeURIComponent(location.run)}/evidence`} style={{ color: "var(--accent)" }}>
                 Evidence

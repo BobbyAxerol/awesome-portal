@@ -12,7 +12,7 @@ import { RunNotFound, SCREEN_FRAME } from "./SplitDetail";
 export function StageDenied({ runId, stage, screen }: { runId: string; stage: string; screen: string }) {
   return (
     <div className={SCREEN_FRAME} data-screen={screen} data-run={runId} data-stage-denied>
-      <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" style={{ color: "var(--ink-soft)" }}>
+      <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Run path" style={{ color: "var(--ink-soft)" }}>
         <Link to="/research/quantbt/runs" style={{ color: "var(--accent)" }} data-action="run-library-crumb">
           Library
         </Link>

@@ -2443,15 +2443,14 @@ function ThetaLane({ id, track, is, oos, isLabel, isTitle, digest, active, pick,
             style={{
               left: `${placeInTimeline(track, is).leftPercent}%`,
               width: `${placeInTimeline(track, is).widthPercent}%`,
-              /* HiFi IS-bar fill approximated by --surface-3 (no exact token). */
-              /* Fade the fill only: opacity on the bar would dim its label below contrast. */
-              background: active ? "var(--surface-3)" : "color-mix(in srgb, var(--surface-3) 60%, transparent)",
               borderColor: "var(--viz-train)",
             }}
             title={`${isTitle ? `${isTitle}\n` : ""}IS ${exact(is.start_utc_ms)} → ${exact(is.end_exclusive_utc_ms)}`}
             data-theta-is
           >
-            <span className="mono overflow-hidden whitespace-nowrap text-[8.5px] max-[700px]:hidden" style={{ color: "var(--ink-soft)" }}>
+            {/* HiFi IS-bar fill approximated by --surface-3 (no exact token). Fade the fill layer only: opacity on the bar would dim its label below contrast. */}
+            <span aria-hidden className="absolute inset-0" style={{ background: "var(--surface-3)", opacity: active ? 1 : 0.6 }} />
+            <span className="relative mono overflow-hidden whitespace-nowrap text-[8.5px] max-[700px]:hidden" style={{ color: "var(--ink-soft)" }}>
               {isLabel}
             </span>
           </span>
@@ -2462,12 +2461,12 @@ function ThetaLane({ id, track, is, oos, isLabel, isTitle, digest, active, pick,
             style={{
               left: `${placeInTimeline(track, oos).leftPercent}%`,
               width: `${placeInTimeline(track, oos).widthPercent}%`,
-              background: active ? "var(--role-oos)" : "color-mix(in srgb, var(--role-oos) 65%, transparent)",
             }}
             title={`outer OOS ${exact(oos.start_utc_ms)} → ${exact(oos.end_exclusive_utc_ms)}`}
             data-theta-oos
           >
-            <span className="mono overflow-hidden whitespace-nowrap text-[8.5px] max-[700px]:hidden" style={{ color: "var(--accent-contrast)" }}>
+            <span aria-hidden className="absolute inset-0" style={{ background: "var(--role-oos)", opacity: active ? 1 : 0.65 }} />
+            <span className="relative mono overflow-hidden whitespace-nowrap text-[8.5px] max-[700px]:hidden" style={{ color: "var(--accent-contrast)" }}>
               OOS
             </span>
           </span>

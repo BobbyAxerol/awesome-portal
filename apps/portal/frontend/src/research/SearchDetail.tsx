@@ -1735,7 +1735,7 @@ function RetainedModeReads({ search, runId, view }: { search: CurrentSourceSearc
             Engine Atlas →
           </Link>
         ) : null}
-        <span className="flex flex-wrap gap-x-3 gap-y-1" data-mode-reads-tokens tabIndex={0} title={tokenSummary} aria-label={`Mode parameters. ${tokenSummary}`}>
+        <span className="flex flex-wrap gap-x-3 gap-y-1" data-mode-reads-tokens role="group" tabIndex={0} title={tokenSummary} aria-label={`Mode parameters. ${tokenSummary}`}>
           <InfoMark />
           {[...atlasTokens, ...tokens].map(([key, value, why]) => (
             <span key={key} hidden className="mono text-[10.5px]" data-mode-read={key}>
@@ -2077,7 +2077,7 @@ export function SearchScreen({
         style={{ borderColor: "var(--line)" }}
       >
         <div className="flex min-w-0 flex-col gap-[3px]">
-          <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" style={{ color: "var(--ink-soft)" }}>
+          <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Run path" style={{ color: "var(--ink-soft)" }}>
             {notFound ? (
               <Link to="/research/quantbt/runs" style={{ color: "var(--accent)" }} data-action="run-library-crumb">
                 Run Library

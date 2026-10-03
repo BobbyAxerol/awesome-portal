@@ -1817,7 +1817,7 @@ function Selected({
   if (attempt === null) {
     return (
       <section className="ln-block" data-panel="selected" aria-label="selected attempt">
-        <h3 className="t">selected attempt</h3>
+        <h3 aria-level={2} className="t">selected attempt</h3>
         <p className="ln-dnote">No attempt selected.</p>
       </section>
     );
@@ -1835,7 +1835,7 @@ function Selected({
       aria-label="selected attempt"
       data-selected-attempt={attempt.attempt_id}
     >
-      <h3 className="t">
+      <h3 aria-level={2} className="t">
         <span title={attempt.attempt_id}>
           <ShortId id={attempt.primary_run.run_id ?? attempt.attempt_id} className="ln-selid" label={attempt.primary_run.run_id ? "run" : "attempt"} />
         </span>
@@ -1998,7 +1998,7 @@ function DiffPanel({ attempt }: { attempt: LineageAttempt | null }) {
   const regular = diff ? diff.changes.filter((change) => change.kind !== "ALPHA_VERSION") : [];
   return (
     <section className="ln-block" data-panel="diff" aria-label="diff vs parent" data-diff-state={diff?.state ?? "NONE"} style={{ gap: 5 }}>
-      <h3 className="t" title="config keys only">Diff vs parent</h3>
+      <h3 aria-level={2} className="t" title="config keys only">Diff vs parent</h3>
       {diff === null ? (
         <p className="ln-dnote" title="Select an attempt to read its diff against its parent.">No attempt selected.</p>
       ) : diff.state === "ROOT" ? (
@@ -2107,7 +2107,7 @@ function Counts({ lineage }: { lineage: Lineage }) {
   const rest = COUNT_LABELS.filter(([key]) => !SHOWN.has(key));
   return (
     <section className="ln-block" data-panel="counts" aria-label="attempt counts and coverage">
-      <h3 className="t">
+      <h3 aria-level={2} className="t">
         <span>counts</span>
         <span className="ln-faint" data-read-authority={lineage.read_authority} title={`${lineage.read_authority} · ${lineage.counts_definitions?.version ?? "count definitions not published"}`}>
           as of {iso(lineage.as_of_utc_ms)}
@@ -2239,18 +2239,18 @@ function PendingFrame({ state }: { state: ResearchState["state"] }) {
         </div>
         <aside className="ln-right" aria-label="selected attempt detail">
           <section className="ln-block" data-panel="selected" data-panel-state={state} aria-label="selected attempt">
-            <h3 className="t">selected attempt</h3>
+            <h3 aria-level={2} className="t">selected attempt</h3>
             <Pending what="selected attempt" state={state} />
           </section>
           <section className="ln-block" data-panel="diff" data-panel-state={state} aria-label="diff vs parent">
-            <h3 className="t" title="config keys only">Diff vs parent</h3>
+            <h3 aria-level={2} className="t" title="config keys only">Diff vs parent</h3>
             <Pending what="diff vs parent" state={state} />
           </section>
           <PromotionRule />
         </aside>
       </div>
       <section className="ln-block" data-panel="counts" data-panel-state={state} aria-label="attempt counts and coverage">
-        <h3 className="t">
+        <h3 aria-level={2} className="t">
           <span>counts</span>
         </h3>
         <Pending what="counts and coverage" state={state} />

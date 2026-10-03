@@ -135,7 +135,7 @@ export function ExecuteContainer({
 
   /* Arrival with `seq`: the hub lane reads it with one at_ordinal read; on the retained lane the window is read
      by fold, then the playhead lands on that source bar. A seq outside the loaded window is said and dropped. */
-  const hubAnswered = controller.replay !== null && retainedRows === null;
+  const hubAnswered = controller.replay !== null && controller.replay.route.state !== "NOT_PUBLISHED" && retainedRows === null;
   const applied = useRef(false);
   useEffect(() => {
     if (applied.current || arrivalSeq === null) return;
@@ -145,6 +145,11 @@ export function ExecuteContainer({
       return;
     }
     if (!retainedRows || retainedRows.length === 0) return;
+    /* The first retained window is the in-sample flat bars; a run with a bar ledger then reads the fold's test
+       window (`useReplay` arrival). `seq` is read against that window, never against the one that is only a stop on
+       the way: wait until a fold window is on screen and nothing more is in flight. */
+    const settled = controller.retained.state === "ready" && controller.retained.inFlight !== true && (retainedFold !== null || segments === null);
+    if (!settled) return;
     applied.current = true;
     const at = retainedRows.findIndex((row) => row.source_ordinal === arrivalSeq - 1);
     if (at >= 0) {
@@ -154,7 +159,7 @@ export function ExecuteContainer({
       addNote({ code: "CURSOR_SEQ_OUT_OF_RANGE", from: arrivalSeq, to: retainedRows[retainedRows.length - 1]!.source_ordinal + 1 });
       update({ seq: null }, { replace: true });
     }
-  }, [arrivalSeq, hubAnswered, retainedRows, transport, addNote, update]);
+  }, [arrivalSeq, hubAnswered, retainedRows, retainedFold, segments, controller.retained, transport, addNote, update]);
 
   /* E2c (8.5): one bounded read of the split the answering lane owns, for the
      IS / OOS / HOLDOUT band. It belongs to the container, not the screen —

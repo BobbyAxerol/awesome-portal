@@ -220,7 +220,7 @@ describe("E5 · display rules on S06 (E1 helpers)", () => {
 
   it("the run id in the breadcrumb is short, with the full id kept for copy", async () => {
     const root = await settled();
-    const crumb = root.querySelector("nav[aria-label='Breadcrumb'] [data-full-id]") as HTMLElement;
+    const crumb = root.querySelector("nav[aria-label='Run path'] [data-full-id]") as HTMLElement;
     expect(crumb.getAttribute("data-full-id")).toBe(RUN);
   });
 

@@ -655,7 +655,7 @@ function MonthsBody({ block }: { block: EnrichedAnalysis }) {
       block.scope.locator,
     ].join("\n");
   };
-  /* One region for the strip; the months wrap onto rows, so a tap goes through each month's own handler. */
+  /* One region for the strip; the months wrap onto rows, so a press goes through each month's own pointProps. */
   const chart = useChartContract({
     label: "Monthly returns",
     noun: "month",
@@ -692,8 +692,7 @@ function MonthsBody({ block }: { block: EnrichedAnalysis }) {
               data-month-extreme={extreme}
               aria-hidden="true"
               title={title}
-              onPointerEnter={(event) => (!event.pointerType || event.pointerType === "mouse") && chart.setIndex(index)}
-              onPointerDown={() => chart.setIndex(index)}
+              {...chart.pointProps(index)}
             >
               <span
                 className="rr-at-cell"

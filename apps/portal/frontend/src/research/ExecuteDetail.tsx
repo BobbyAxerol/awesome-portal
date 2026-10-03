@@ -1511,7 +1511,7 @@ export function ExecuteScreen({
     >
       {embedded ? null : (
       <>
-      <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" style={{ color: "var(--ink-soft)" }}>
+      <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Run path" style={{ color: "var(--ink-soft)" }}>
         <Link
           to={runScreenHref(runId, "hub", cursor, { stage: "execute" })}
           style={{ color: "var(--accent)" }}

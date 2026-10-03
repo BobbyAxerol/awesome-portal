@@ -1445,7 +1445,7 @@ function CursorBar({
         <CursorPill
           data-cursor-window
           data-cursor-compact
-          title="trial, params and seq are not served for this lane. The evidence window is written to ?window= in the link."
+          title="trial, params and seq are not served for this lane. The evidence window is written to #window= in the link."
         >
           <span style={{ color: "var(--ink-faint)" }}>
             cursor: fold {cursor.fold} · window {windowWord}
@@ -2938,9 +2938,9 @@ function WindowSwitcher({
         <Segmented
           label="window"
           options={[
-            choice("is", "IS", `?window=is — ${windowWhy(windows?.is, notWindow)}`),
-            choice("oos", "OOS", `?window=oos — the window every metric and series on this tab describes${windows && windows.oos.state !== "AVAILABLE" ? ` · ${windowWhy(windows.oos, "")}` : ""}`),
-            choice("holdout", "Holdout Live", `?window=holdout — ${windowWhy(windows?.holdout, notWindow)}`),
+            choice("is", "IS", `#window=is — ${windowWhy(windows?.is, notWindow)}`),
+            choice("oos", "OOS", `#window=oos — the window every metric and series on this tab describes${windows && windows.oos.state !== "AVAILABLE" ? ` · ${windowWhy(windows.oos, "")}` : ""}`),
+            choice("holdout", "Holdout Live", `#window=holdout — ${windowWhy(windows?.holdout, notWindow)}`),
             { label: "Compare", on: false, why: `Compare needs the IS window — ${windowWhy(windows?.is, "not published")}` },
           ]}
         />

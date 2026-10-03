@@ -24,7 +24,7 @@
  *    read as a boundary.
  */
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import * as echarts from "echarts/core";
 import type { ECharts } from "echarts/core";
 
@@ -258,6 +258,19 @@ function useChartLink(group: string | undefined, option: unknown) {
     chart.dispatchAction({ type: "showTip", seriesIndex: 0, dataIndex: index });
     chart.dispatchAction({ type: "highlight", seriesIndex: 0, dataIndex: index });
   };
+  /** The point nearest a pointer, through the chart's own axis (a tap on the canvas reads like a hover). */
+  const locate = (clientX: number, clientY: number, xs: readonly number[]): number | null => {
+    const chart = chartRef.current;
+    const dom = chart?.getDom();
+    if (!chart || !dom || xs.length === 0) return null;
+    const rect = dom.getBoundingClientRect();
+    const at = chart.convertFromPixel({ seriesIndex: 0 }, [clientX - rect.left, clientY - rect.top]);
+    const x = Array.isArray(at) ? Number(at[0]) : Number.NaN;
+    if (!Number.isFinite(x)) return null;
+    let best = 0;
+    for (let i = 1; i < xs.length; i += 1) if (Math.abs(xs[i]! - x) < Math.abs(xs[best]! - x)) best = i;
+    return best;
+  };
   const zoom = {
     zoomIn: () => step("+"),
     zoomOut: () => step("-"),
@@ -265,7 +278,7 @@ function useChartLink(group: string | undefined, option: unknown) {
     reset,
     zoomed,
   };
-  return { wrapper, zoomed, reset, zoom, show };
+  return { wrapper, zoomed, reset, zoom, show, locate };
 }
 
 /** Key help lives in the sr-only summary, not in the accessible name (fewer words on screen). */
@@ -291,6 +304,16 @@ function tooltipReadout(option: unknown): { count: number; describe: (i: number)
   return { count, describe };
 }
 
+/** The first series' x values (epoch ms), index-aligned with `tooltipReadout`. */
+function seriesTimes(option: unknown): number[] {
+  const data = (option as { series?: { data?: unknown[] }[] })?.series?.[0]?.data;
+  if (!Array.isArray(data)) return [];
+  return data.map((entry) => {
+    const pair = Array.isArray(entry) ? entry : (entry as { value?: unknown })?.value;
+    return Array.isArray(pair) ? Number(pair[0]) : Number.NaN;
+  });
+}
+
 /**
  * Chrome shared by the time-axis charts: focusable, keyboard zoom, a "Reset zoom" control that exists
  * only while zoomed, and the connect group that shares one crosshair and one zoom window.
@@ -310,8 +333,9 @@ function ChartShell({
   children: ReactNode;
   attrs?: Record<string, string | undefined>;
 }) {
-  const { wrapper, zoomed, reset, zoom, show } = useChartLink(group, option);
+  const { wrapper, zoomed, reset, zoom, show, locate } = useChartLink(group, option);
   const readout = tooltipReadout(option);
+  const xsMs = seriesTimes(option);
   const c = useChartContract({
     label,
     noun: "point",
@@ -321,11 +345,27 @@ function ChartShell({
     zoom,
     events: { prev: () => zoom.pan(-1), next: () => zoom.pan(1) },
     onIndex: show,
+    hover: false,
+    locate: (x, y) => locate(x, y, xsMs),
   });
   const { className, style, ...region } = c.regionProps;
+  /*
+   * A touch tap makes ECharts draw its own tooltip for the touched time, after our press: two series sampled at
+   * different times would then show a different moment than the live text says. Re-assert the pinned point once
+   * the chart's own tap handling has run, so the pinned tooltip and the live text read the same point.
+   */
+  const pinnedAt = useRef<number | null>(null);
+  pinnedAt.current = c.index;
+  const onPointerUp = (event: PointerEvent<HTMLElement>) => {
+    if (event.pointerType === "mouse" || !event.pointerType) return;
+    window.setTimeout(() => {
+      if (pinnedAt.current !== null) show(pinnedAt.current);
+    }, 60);
+  };
   return (
     <div
       ref={wrapper}
+      onPointerUp={onPointerUp}
       data-chart={chart}
       {...attrs}
       {...region}

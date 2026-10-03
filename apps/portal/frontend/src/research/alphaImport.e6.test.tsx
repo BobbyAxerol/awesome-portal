@@ -123,7 +123,7 @@ describe("14-1/14-2 — header: crumb, title, state chip, meta line", () => {
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(IMPORT_TITLE);
     expect(IMPORT_TITLE).toBe("Import alpha");
 
-    const crumb = screen.getByRole("navigation", { name: "Breadcrumb" });
+    const crumb = screen.getByRole("navigation", { name: "Screen path" });
     expect(crumb.textContent).toBe("JourneyNew run →");
     expect(within(crumb).getByText("Journey").getAttribute("href")).toBe("/research/quantbt/journey");
 

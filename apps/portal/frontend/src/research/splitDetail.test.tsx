@@ -2235,8 +2235,8 @@ describe("QA S05 — retained lane screen", () => {
 
   it("U11: the inline bar labels hide under 700 px so a narrow viewport never shows 'search · 400 tri'", async () => {
     const { container } = await laneRoute();
-    expect(container.querySelector("[data-theta-is] span")?.className).toContain("max-[700px]:hidden");
-    expect(container.querySelector("[data-theta-oos] span")?.className).toContain("max-[700px]:hidden");
+    expect(container.querySelector("[data-theta-is] span.mono")?.className).toContain("max-[700px]:hidden");
+    expect(container.querySelector("[data-theta-oos] span.mono")?.className).toContain("max-[700px]:hidden");
   });
 
   it("U1: S05 labels the id it prints as the source's trial id", async () => {

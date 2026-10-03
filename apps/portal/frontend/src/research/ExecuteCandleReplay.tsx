@@ -457,6 +457,8 @@ function useReplayRegion(o: {
   describe: (i: number) => string;
   events?: { prev: () => void; next: () => void };
   xs?: readonly number[];
+  /** The reader moved the playhead (key or tap): a resting pointer's bar must stop shadowing the readout. */
+  onSeek?: () => void;
 }) {
   const snap = useTransport(o.transport);
   const ref = useRef(o);
@@ -481,7 +483,9 @@ function useReplayRegion(o: {
     xs: o.xs,
     controlledIndex: snap.index,
     onIndex: (i) => {
-      if (i !== null) o.transport.seek(i);
+      if (i === null) return;
+      ref.current.onSeek?.();
+      o.transport.seek(i);
     },
     events: o.events,
     zoom: {
@@ -499,6 +503,8 @@ function useReplayRegion(o: {
   }, [snap.playing, snap.moved, snap.index]);
   const merge = (className?: string, style?: React.CSSProperties) => ({
     ...c.regionProps,
+    /* The playhead owns the readout: it is always shown, so Escape and an outside tap leave it in place. */
+    "data-chart-controlled": "true",
     className: `${c.regionProps.className ?? ""} ${className ?? ""}`.trim(),
     style: { ...c.regionProps.style, ...style },
   });
@@ -759,13 +765,15 @@ function CandleChart({
     transport,
     label: "Candle chart",
     noun: "bar",
-    count: cut,
+    /* The reader may step past the revealed bars: the playhead moves, the reveal follows. */
+    count: rows.length,
     total: rows.length,
     firstAt: rows[0] ? iso(rows[0].at_utc_ms) : null,
     lastAt: rows.length > 0 ? iso(rows[rows.length - 1]!.at_utc_ms) : null,
     describe: (i) => readoutText(crosshairReadout(rows[i]!)),
     events: onTransition ? { prev: () => onTransition(-1), next: () => onTransition(1) } : undefined,
     xs,
+    onSeek: () => setProbe(null),
   });
 
   return (
@@ -2625,6 +2633,7 @@ export function FixedCandleChart({ rows, transport }: { rows: readonly FixedRepl
       const r = fixedCrosshairReadout(rows[i]!);
       return [r.at, `O ${r.open ?? "not published"}`, `H ${r.high ?? "not published"}`, `L ${r.low ?? "not published"}`, `C ${r.close ?? "not published"}`, ...r.positions.map((p) => `pos ${p.key} ${p.shown}`), `equity ${r.equity ?? "not published"}`].join(" ");
     },
+    onSeek: () => setProbe(null),
   });
 
   return (

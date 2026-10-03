@@ -970,7 +970,7 @@ function IdentityBlock({ compose, state, publication }: { compose: RcCompose | n
   return (
     <section className="rc-card rc-ident" data-panel="identity" aria-label="identity and lineage">
       <div className="rc-cardhead">
-        <h3 className="rc-k" title={`${IDENTITY_TITLE} · ${IDENTITY_SPEC} · ${IDENTITY_SPEC_TITLE}`}>{IDENTITY_LABEL}</h3>
+        <h3 aria-level={2} className="rc-k" title={`${IDENTITY_TITLE} · ${IDENTITY_SPEC} · ${IDENTITY_SPEC_TITLE}`}>{IDENTITY_LABEL}</h3>
       </div>
       {compose ? (
         <>
@@ -984,7 +984,7 @@ function IdentityBlock({ compose, state, publication }: { compose: RcCompose | n
             {/* B2: `gate_verdict` is composed before the seal and knows nothing of it; once the seal exists the chip and the seal card say it. */}
             {compose.local_seal.state === "SEALED_LOCAL" ? null : (
               <div className="rc-verdict" data-panel-part="verdict" title={VERDICT_TITLE}>
-                <h4 className="rc-k">{VERDICT_LABEL}</h4>
+                <h4 aria-level={3} className="rc-k">{VERDICT_LABEL}</h4>
                 <span className="t" data-verdict-title title={compose.gate_verdict.body}>
                   {compose.gate_verdict.title}
                 </span>
@@ -1283,7 +1283,7 @@ function PackBlock({ items, runId, alphaId, counts, axes, declarations, editor, 
   return (
     <section className="rc-card rc-packcard" data-panel="pack" aria-label="evidence pack">
       <div className="rc-packhead">
-        <h3 className="rc-k" title={PACK_TITLE}>{PACK_HEADER}</h3>
+        <h3 aria-level={2} className="rc-k" title={PACK_TITLE}>{PACK_HEADER}</h3>
         <div className="rc-chips">
           {items ? <PackStrip items={items} hl={hl} setHl={setHl} /> : null}
           {items ? <CertChips axes={axes} /> : null}
@@ -1404,7 +1404,7 @@ function RecordBlock({ fields, state }: { fields: readonly RcField[] | null; sta
   return (
     <section className="rc-card rc-record" data-panel="record" aria-label="record preview">
       <div className="h">
-        <h3 className="rc-k" title={`${RECORD_TITLE} · spec v0.7 §3.2`}>{RECORD_HEADER}</h3>
+        <h3 aria-level={2} className="rc-k" title={`${RECORD_TITLE} · spec v0.7 §3.2`}>{RECORD_HEADER}</h3>
         <button type="button" className="rc-copy" data-action="copy-yaml" aria-disabled={fields === null || undefined} aria-live="polite" onClick={onCopy}>
           {copy === "copied" ? "✓ copied" : copy === "failed" ? "copy unavailable" : "copy yaml"}
         </button>
@@ -1502,7 +1502,7 @@ function SealCard({ compose, controller, dirty, publishing }: {
 
   return (
     <section className="rc-seal" data-panel="seal" aria-label="local seal">
-      <h3 className="k" title={SEAL_SENTENCE}>Seal</h3>
+      <h3 aria-level={2} className="k" title={SEAL_SENTENCE}>Seal</h3>
       {confirming && blocked === null && compose ? (
         <Confirm
           label="confirm local seal"
@@ -1575,7 +1575,7 @@ function SealedCard({ seal, replayed }: {
 }) {
   return (
     <section className="rc-sealed" data-panel="sealed" data-sealed={seal.release_candidate_id ?? ""} aria-label="sealed locally">
-      <h3 className="k" title={SEALED_SENTENCE}>Sealed</h3>
+      <h3 aria-level={2} className="k" title={SEALED_SENTENCE}>Sealed</h3>
       <span className="id" data-sealed-id>
         {seal.release_candidate_id !== null ? (
           <Link to={releaseCandidatePackHref(seal.release_candidate_id)} data-action="open-pack">
@@ -1767,7 +1767,7 @@ function PublishCard({ compose, controller, publication }: {
 
   return (
     <section className="rc-seal" data-panel="publish" aria-label="publish" data-publish-state={view.state === "fresh" ? view.publication.state : view.state}>
-      <h3 className="k" title={`${before}${releaseCandidateId ?? "rc_(draft)"}${after}`}>
+      <h3 aria-level={2} className="k" title={`${before}${releaseCandidateId ?? "rc_(draft)"}${after}`}>
         {PUBLISH_LABEL}
       </h3>
       {/* The candidate's id is in the identity rail; here it is the button's tooltip. */}
@@ -1860,7 +1860,7 @@ function UnknownOutcomeCard({ publication, controller }: { publication: RcPublic
             : null;
   return (
     <section className="rc-unknown" data-panel="publish-unknown" aria-label={UNKNOWN_LABEL} data-publication-state={current.state}>
-      <h3 className="k" title={`${UNKNOWN_SHORT} ${UNKNOWN_COPY}`} tabIndex={0}>{UNKNOWN_LABEL}</h3>
+      <h3 aria-level={2} className="k" title={`${UNKNOWN_SHORT} ${UNKNOWN_COPY}`} tabIndex={0}>{UNKNOWN_LABEL}</h3>
       <span className="sr-only" hidden data-unknown-copy title={`${UNKNOWN_SHORT} ${UNKNOWN_COPY}`} />
       <p className="rc-pubfacts" data-publication-facts={current.state}>
         publication {current.state} · {current.release_candidate_id} · as of {iso(current.as_of_utc_ms)}
@@ -1918,7 +1918,7 @@ function PublishedCard({ releaseCandidateId, publication }: { releaseCandidateId
   const approval = current?.approval_read === "AVAILABLE" ? current.approval : null;
   return (
     <section className="rc-sealed" data-panel="published" aria-label="published">
-      <h3 className="k" title={PUBLISHED_SENTENCE}>
+      <h3 aria-level={2} className="k" title={PUBLISHED_SENTENCE}>
         {PUBLISHED_LABEL}
       </h3>
       <span className="id" data-published-id>
@@ -2045,7 +2045,7 @@ function MirrorCard({ publication }: { publication: RcPublicationController }) {
   return (
     <section className="rc-mirror" data-panel="mirror" data-mirror-read={read ?? view.state} aria-label="approval inbox mirror">
       <div className="rc-cardhead">
-        <h3 className="k" title={MIRROR_PUBLISHED_NOTE}>{MIRROR_LABEL}</h3>
+        <h3 aria-level={2} className="k" title={MIRROR_PUBLISHED_NOTE}>{MIRROR_LABEL}</h3>
         <span className="rc-spec">{MIRROR_SIDE}</span>
       </div>
       {current === null ? (
@@ -2504,7 +2504,7 @@ function PackScreen({ releaseCandidateId, controller, publication }: { releaseCa
           ) : (
             <>
               <section className="rc-ghost" data-panel="publish-ghost" aria-label="publish, on the run's composition">
-                <h3 className="k">{PUBLISH_GHOST_LABEL}</h3>
+                <h3 aria-level={2} className="k">{PUBLISH_GHOST_LABEL}</h3>
                 <p title={PUBLISH_GHOST_COPY}>{PUBLISH_GHOST_SHORT}</p>
                 {current ? <PublicationReason publication={current} /> : <ReadFailure view={publication.view} />}
                 <PublicationConflict publication={current} />
@@ -2529,7 +2529,7 @@ function PackIdentity({ pack, state, publication }: { pack: RcPack | null; state
   return (
     <section className="rc-card rc-ident" data-panel="identity" aria-label="identity and lineage">
       <div className="rc-cardhead">
-        <h3 className="rc-k" title={`${IDENTITY_TITLE} · ${IDENTITY_SPEC} · ${IDENTITY_SPEC_TITLE}`}>{IDENTITY_LABEL}</h3>
+        <h3 aria-level={2} className="rc-k" title={`${IDENTITY_TITLE} · ${IDENTITY_SPEC} · ${IDENTITY_SPEC_TITLE}`}>{IDENTITY_LABEL}</h3>
       </div>
       {pack ? (
         <>
