@@ -3,7 +3,7 @@
  * The search body is the published canonical fixture; the "overruled" case
  * edits the served ids only (identity of two ids is all the cinema compares).
  */
-import { act, cleanup, fireEvent, render, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, within, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { MemoryRouter } from "react-router-dom";
@@ -12,11 +12,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_CURSOR } from "./evidenceCursor";
 import { SearchCinema } from "./SearchCinema";
 import type { CurrentSourceSearch } from "./searchClient";
+import { searchApi } from "./searchClient";
 
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 const FIXTURES = join(process.cwd(), "..", "..", "..", "packages", "contracts", "fixtures");
@@ -58,6 +60,59 @@ beforeEach(() => {
 });
 
 describe("P25 · cinema — five beats", () => {
+  it("a published centroid retains its actual parameters without pretending to be a source trial or guessing a digest", () => {
+    const source = clone(); source.selection.selected_trial_id = null; source.surface!.selected_trial_id = null;
+    source.selection.roles.centroid = { ...source.selection.roles.centroid, state: "AVAILABLE", reason_code: null };
+    source.selection.parameters = { window: "34", scale: "9007199254740993" };
+    const read = vi.spyOn(searchApi, "currentSource");
+    const { container } = mount(source, { digestOf: () => "a".repeat(64) });
+    fireEvent.click(pill(container, 5));
+    expect(container.querySelector("[data-beat-seal]")?.textContent).toContain("centroid · no source trial");
+    expect(container.querySelector("[data-seal-params]")?.textContent).toBe("window 34 · scale 9007199254740993");
+    expect(container.querySelector("[data-seal-digest]")).toBeNull();
+    expect(container.querySelector('[data-absent="UI_SEARCH_READ_PUBLISHES_NO_CENTROID_PARAMS_DIGEST"]')).toBeTruthy();
+    expect(container.querySelector('[data-action="cinema-to-freeze"]')).toBeTruthy();
+    expect(read).not.toHaveBeenCalled();
+  });
+  it("an empty no-selection or an unrelated causal study cannot borrow centroid parameters", () => {
+    const source = clone(); source.selection.selected_trial_id = null; source.surface!.selected_trial_id = null;
+    source.selection.parameters = {};
+    const none = mount(source);
+    fireEvent.click(pill(none.container, 5));
+    expect(none.container.querySelector("[data-beat-seal]")).toBeNull();
+    expect(none.container.querySelector("[data-beat-absent]")?.textContent).toBe("θ*: not published");
+    cleanup();
+    source.selection.roles.centroid = { ...source.selection.roles.centroid, state: "AVAILABLE", reason_code: null };
+    source.selection.parameters = { window: "34" };
+    const causal = mount(source, { studyLabel: "fold 1", study: { studyId: "study_0", foldId: "fold_0" } });
+    fireEvent.click(pill(causal.container, 5));
+    expect(causal.container.querySelector("[data-beat-seal]")).toBeNull();
+    expect(causal.container.querySelector("[data-seal-params]")).toBeNull();
+  });
+  it("Beat5 resolves the exact selected digest beyond page100 without rewriting the displayed study or selection", async () => {
+    const source = clone(); source.ledger.source_trial_count = 400;
+    source.selection.selected_trial_id = "342"; source.surface!.selected_trial_id = "342";
+    source.surface!.points.push({ ...structuredClone(source.surface!.points[0]!), trial_id: "342", source_ordinal: 342 });
+    source.ledger.page.has_more = true; source.ledger.page.next_cursor = "opaque-page100";
+    const digest = "b".repeat(64);
+    const page = (start: number): CurrentSourceSearch => {
+      const answer = structuredClone(source);
+      answer.ledger.trials = Array.from({ length: 100 }, (_, n) => ({ ...structuredClone(BASE.ledger.trials[0]!), trial_id: String(start + n), source_ordinal: start + n,
+        params_digest: start + n === 342 ? digest : "a".repeat(64) }));
+      answer.ledger.page.has_more = start < 300; answer.ledger.page.next_cursor = start < 300 ? `opaque-page${start + 100}` : null;
+      return answer;
+    };
+    const before = JSON.stringify(source.selection);
+    const read = vi.spyOn(searchApi, "currentSource").mockResolvedValueOnce(page(100)).mockResolvedValueOnce(page(200)).mockResolvedValueOnce(page(300));
+    const { container } = mount(source, { workspaceId: "owned" });
+    fireEvent.click(pill(container, 5));
+    await waitFor(() => expect(container.querySelector("[data-seal-digest]")?.getAttribute("title")).toBe(digest));
+    expect(read).toHaveBeenCalledTimes(3);
+    expect(read.mock.calls.every(call => call[1]?.workspaceId === "owned")).toBe(true);
+    expect(container.querySelector("[data-beat-seal]")?.textContent).toContain("trial 342");
+    expect(JSON.stringify(source.selection)).toBe(before);
+    expect(container.querySelectorAll("[data-cinema-point]")).toHaveLength(4);
+  });
   it("renders five step pills, the first current, and every trial in order", () => {
     const { container } = mount(clone());
     expect(container.querySelectorAll("[data-cinema-step]")).toHaveLength(5);
@@ -117,6 +172,18 @@ describe("P25 · cinema — five beats", () => {
     expect(container.querySelector("[data-seal-digest]")?.getAttribute("title")).toBe("a".repeat(64));
   });
 
+  it("a different active study never borrows final-deployment candidate metrics or parameters", () => {
+    const source = clone(); const surface = structuredClone(source.surface!);
+    surface.selected_trial_id = "2"; surface.best_is_trial_id = "2";
+    const point = surface.points.find(value => value.trial_id === "2")!;
+    delete point.parameters;
+    const { container } = mount(source, { surface, studyLabel: "fold 1", study: { studyId: "study_0", foldId: "fold_0" }, digestOf: () => "a".repeat(64) });
+    fireEvent.click(pill(container, 4));
+    expect(container.querySelector('[data-duel-side="IS best · θ*"]')?.textContent).toContain("not in pool");
+    fireEvent.click(pill(container, 5));
+    expect(container.querySelector("[data-seal-params]")).toBeNull();
+  });
+
   it("keeps the sampler absence as one muted line, with the Atlas release default only when it is in hand", () => {
     const none = mount(clone());
     expect(none.container.querySelector("[data-cinema-absences]")?.textContent).toContain("sampler: not published");
@@ -129,6 +196,18 @@ describe("P25 · cinema — five beats", () => {
 });
 
 describe("P25 · cinema — scrubber and motion", () => {
+  it("play/scrub never creates, mutates selection, or drops workspace from Freeze", async () => {
+    const source = clone(); const before = JSON.stringify(source.selection);
+    const read = vi.spyOn(searchApi, "currentSource");
+    const { container } = render(<MemoryRouter initialEntries={["/research/quantbt/runs/r/search?workspace_id=owned"]}>
+      <SearchCinema runId={source.run_id} cursor={DEFAULT_CURSOR} search={source} surface={source.surface!} parametersOf={() => undefined} digestOf={() => "a".repeat(64)} workspaceId="owned" />
+    </MemoryRouter>);
+    fireEvent.click(container.querySelector('[data-action="cinema-play"]')!);
+    fireEvent.keyDown(container.querySelector('[data-cinema-plot]')!, { key: "Home" });
+    fireEvent.click(pill(container, 5));
+    expect(container.querySelector('[data-action="cinema-to-freeze"]')?.getAttribute("href")).toContain("workspace_id=owned");
+    expect(read).not.toHaveBeenCalled(); expect(JSON.stringify(source.selection)).toBe(before);
+  });
   it("one tab stop; arrows move the trial, Shift jumps, Home/End, and the live node says the point's title", () => {
     const { container } = mount(clone());
     const plot = container.querySelector<HTMLElement>("[data-cinema-plot]")!;

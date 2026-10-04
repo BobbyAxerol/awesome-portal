@@ -120,6 +120,7 @@ export interface ResearchProgressDeniedArtifact {
 
 export interface ResearchProgressReadResponse {
   schema_version: "research.progress-read.v1";
+  run_declaration?: import("./run-declaration.contract").ResearchRunDeclaration;
   run_id: string;
   run: ResearchProgressRunIdentity | null;
   /** Four run-scoped methodology facts. Optional on older/SSE read frames. */
@@ -672,6 +673,7 @@ export class ResearchProgressService {
       schema_version: "research.progress-read.v1",
       run_id: current.runId,
       run: identity ? this.runIdentity(identity) : null,
+      ...(identity?.runDeclaration ? { run_declaration: identity.runDeclaration } : {}),
       queue: {
         queue_class: current.queueClass,
         queued_at_utc_ms: current.queuedAt.valueOf(),

@@ -2,6 +2,7 @@
 
 import { Inject, Injectable } from "@nestjs/common";
 import { z } from "zod";
+import { readRunDeclaration } from "./run-declaration.read";
 
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -285,6 +286,7 @@ export class ResearchSplitService {
       : { ...source.windows.warmup, availability: availability("NOT_APPLICABLE", source.windows.warmup.reason_code) };
     const body = {
       schema_version: "research.split-detail.v1",
+      run_declaration: readRunDeclaration(row.runDeclarationInputs ?? {}),
       read_authority: "PORTAL_PERSISTED_RESEARCH",
       run_id: row.runId,
       revision: row.revision,
@@ -356,6 +358,7 @@ export class ResearchSplitService {
     };
     const body = {
       schema_version: "research.split-detail.v1",
+      run_declaration: readRunDeclaration(row.runDeclarationInputs ?? {}),
       read_authority: "PORTAL_PERSISTED_RESEARCH",
       run_id: row.runId,
       revision: null,

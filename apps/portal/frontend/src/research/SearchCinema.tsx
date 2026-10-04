@@ -18,7 +18,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
-import { Link } from "react-router-dom";
+import { ResearchScopedLink as Link } from "./ResearchScopedLink";
 
 import { smokeMotionAllowed } from "../execution/smokeMotion";
 import { useChartContract } from "./chartContract";
@@ -31,6 +31,8 @@ import { AxisPill, RAMP, defaultAxes, pointParameters, pointTitle, two, type Sur
 import { FrozenAt, freezeLineLabel, selectedCandidate } from "./SearchStageB";
 import type { CurrentSourceSearch } from "./searchClient";
 import { Digest } from "./SplitDetail";
+import { useSelectedCinemaTrial, type CinemaStudy } from "./useSelectedCinemaTrial";
+import { SamplerEvidenceRead } from "./SamplerEvidenceRead";
 
 type Point = Surface["points"][number];
 type Candidate = CurrentSourceSearch["candidates"]["rows"][number];
@@ -110,6 +112,9 @@ export interface SearchCinemaProps {
   surface: Surface;
   /** A causal run's study the points belong to (named in the label). */
   studyLabel?: string;
+  /** Exact source study/fold identities, never inferred from its display label. */
+  study?: CinemaStudy;
+  workspaceId?: string;
   /** Ledger parameter text for a point that carries none. */
   parametersOf: (trialId: string) => Record<string, string> | undefined;
   /** The params digest the ledger served for a trial (only a loaded page has it). */
@@ -126,7 +131,7 @@ function samplerFromAtlas(atlas: AtlasSlot | undefined): string | null {
   return `${String(field.default_value)} · release default, ${field.override_state.toLowerCase()}`;
 }
 
-export function SearchCinema({ runId, cursor, search, surface, studyLabel, parametersOf, digestOf, atlas }: SearchCinemaProps) {
+export function SearchCinema({ runId, cursor, search, surface, studyLabel, study, workspaceId, parametersOf, digestOf, atlas }: SearchCinemaProps) {
   const pts = useMemo(() => [...surface.points].sort((a, b) => a.source_ordinal - b.source_ordinal), [surface.points]);
   const N = pts.length;
   const [axes, setAxes] = useState(() => defaultAxes(surface.axes));
@@ -138,6 +143,9 @@ export function SearchCinema({ runId, cursor, search, surface, studyLabel, param
   const trackRef = useRef<HTMLDivElement | null>(null);
 
   const selectedId = surface.selected_trial_id;
+  const knownDigest = selectedId ? digestOf(selectedId) : null;
+  const selectedTrial = useSelectedCinemaTrial(runId, search, selectedId, workspaceId, study, knownDigest === null);
+  const selectedDigest = knownDigest ?? (selectedTrial.state === "ready" ? selectedTrial.trial.params_digest ?? null : null);
   const bestId = surface.best_is_trial_id;
   const pool = search.pool;
   /* A causal run's candidate rows belong to the outer folds, not to the study drawn: only rows of the drawn trials count. */
@@ -380,15 +388,13 @@ export function SearchCinema({ runId, cursor, search, surface, studyLabel, param
             {beat === 2 ? <BeatPool search={search} served={poolServed} /> : null}
             {beat === 3 ? <BeatRescore search={search} rows={rows} selectedId={selectedId} bestId={bestId} /> : null}
             {beat === 4 ? <BeatDuel search={search} rows={rows} pts={pts} selectedId={selectedId} bestId={bestId} /> : null}
-            {beat === 5 ? <BeatSeal runId={runId} cursor={cursor} search={search} selectedId={selectedId} point={thetaPoint} digest={selectedId ? digestOf(selectedId) : null} /> : null}
+            {beat === 5 ? <BeatSeal runId={runId} cursor={cursor} search={search} selectedId={selectedId} point={thetaPoint} digest={selectedId ? selectedDigest : null} resolvedParameters={selectedTrial.state === "ready" ? selectedTrial.trial.parameters : undefined} digestReason={selectedTrial.state === "absent" ? selectedTrial.reason : undefined} allowCentroid={study === undefined && studyLabel === undefined} /> : null}
           </div>
         </div>
       </div>
 
       <p className="mono flex flex-wrap items-baseline gap-x-2 text-[9.5px]" style={FAINT} data-cinema-absences>
-        <span className="italic" title={samplerCode ?? undefined} data-absent={samplerCode ?? ""}>
-          sampler: not published
-        </span>
+        <SamplerEvidenceRead fact={search.sampler_evidence} fallbackCode={samplerCode} />
         {sampler ? (
           <span title="Atlas release metadata, not run evidence" data-sampler-default>
             {sampler}
@@ -534,7 +540,9 @@ function BeatDuel({ search, rows, pts, selectedId, bestId }: { search: CurrentSo
     return <Absent code={search.selection.availability?.reason_code ?? null} words="IS best or θ*: not published" data-beat-absent />;
   }
   const same = selectedId === bestId;
-  const theta = selectedCandidate(search) ?? candidateOf(rows, selectedId);
+  const theta = search.selection.selected_trial_id === selectedId
+    ? selectedCandidate(search) ?? candidateOf(rows, selectedId)
+    : candidateOf(rows, selectedId);
   return (
     <div className="flex flex-col gap-2" data-beat-duel data-duel={same ? "same" : "overruled"}>
       <div className="sc-duel">
@@ -548,13 +556,15 @@ function BeatDuel({ search, rows, pts, selectedId, bestId }: { search: CurrentSo
   );
 }
 
-function BeatSeal({ runId, cursor, search, selectedId, point, digest }: { runId: string; cursor: EvidenceCursor; search: CurrentSourceSearch; selectedId: string | null; point: Point | undefined; digest: string | null }) {
-  if (selectedId === null) return <Absent code={search.selection.availability?.reason_code ?? null} words="θ*: not published" data-beat-absent />;
-  const params = cleanParameters(point?.parameters ?? search.selection.parameters);
+function BeatSeal({ runId, cursor, search, selectedId, point, digest, resolvedParameters, digestReason, allowCentroid }: { runId: string; cursor: EvidenceCursor; search: CurrentSourceSearch; selectedId: string | null; point: Point | undefined; digest: string | null; resolvedParameters?: Record<string, string>; digestReason?: string; allowCentroid: boolean }) {
+  const centroid = allowCentroid && selectedId === null && search.selection.selected_trial_id === null
+    && search.selection.roles.centroid.state === "AVAILABLE" && Object.keys(search.selection.parameters).length > 0;
+  if (selectedId === null && !centroid) return <Absent code={search.selection.availability?.reason_code ?? null} words="θ*: not published" data-beat-absent />;
+  const params = cleanParameters(point?.parameters ?? resolvedParameters ?? (search.selection.selected_trial_id === selectedId ? search.selection.parameters : undefined));
   return (
     <div className="sc-slot mono" data-beat-seal>
       <span style={{ color: "var(--accent-2)" }} className="font-bold">
-        ❖ θ* · trial {selectedId}
+        {centroid ? "❖ θ* · centroid · no source trial" : `❖ θ* · trial ${selectedId}`}
       </span>
       {params ? (
         <span style={SOFT} data-seal-params>
@@ -562,7 +572,7 @@ function BeatSeal({ runId, cursor, search, selectedId, point, digest }: { runId:
         </span>
       ) : null}
       <span style={SOFT}>
-        params digest {digest ? <Digest value={digest} data-seal-digest /> : <Absent code="UI_DIGEST_NOT_IN_LOADED_LEDGER_PAGE" words="not in the loaded ledger page" />}
+        params digest {digest ? <Digest value={digest} data-seal-digest /> : <Absent code={centroid ? "UI_SEARCH_READ_PUBLISHES_NO_CENTROID_PARAMS_DIGEST" : digestReason ?? "UI_DIGEST_NOT_IN_LOADED_LEDGER_PAGE"} words={centroid ? "not published for centroid" : "not in the loaded ledger page"} />}
       </span>
       <span style={SOFT}>
         sealed at <Absent code="UI_SEARCH_READ_PUBLISHES_NO_SEAL_CLOCK" data-seal-at="absent" />

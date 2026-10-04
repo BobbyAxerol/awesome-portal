@@ -25,6 +25,71 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Safe immutable AlphaVersion validator inputs, not raw source, provenance or mutable execution instructions. */
+        RunDeclarationAlphaVersionDeclaration: {
+            /** @constant */
+            schema_version: "research.alpha-version-declaration.v1";
+            entrypoint: string;
+            timeframes: string[];
+            required_columns: ("open" | "high" | "low" | "close" | "volume")[];
+            warmup_bars: number;
+            determinism: {
+                seed_required: boolean;
+            };
+            parameter_space: {
+                [key: string]: components["schemas"]["RunDeclarationParameterDeclaration"];
+            };
+        };
+        RunDeclarationParameterDeclaration: {
+            /** @constant */
+            kind: "fixed";
+            value: components["schemas"]["RunDeclarationDeclarationScalar"];
+        } | {
+            /** @constant */
+            kind: "int_range";
+            low: number;
+            high: number;
+            step: number;
+        } | {
+            /** @constant */
+            kind: "float_range";
+            low: number;
+            high: number;
+            step: number;
+        } | {
+            /** @constant */
+            kind: "categorical";
+            values: components["schemas"]["RunDeclarationDeclarationScalar"][];
+        };
+        RunDeclarationDeclarationScalar: string | number | boolean | null;
+        RunDeclaration: {
+            /** @constant */
+            schema_version: "research.run-declaration.v1";
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+            reason_code: string | null;
+            /** @constant */
+            source_ref: "IMMUTABLE_RUN_REQUEST_AND_ALPHA_VERSION_DECLARATION_V1";
+            alpha_binding: {
+                alpha_id: string;
+                alpha_version_id: string;
+            } | null;
+            declaration_digest: string | null;
+            requested_spec_digest: string | null;
+            declaration: components["schemas"]["RunDeclarationAlphaVersionDeclaration"] | null;
+            requested_overrides: ({
+                name: string;
+                /** @constant */
+                kind: "sweep";
+                low: string | number | boolean;
+                high: string | number | boolean;
+            } | {
+                name: string;
+                /** @constant */
+                kind: "pin";
+                value: string | number | boolean;
+            })[] | null;
+        } & unknown;
         WorkspaceId: string;
         RunId: string;
         Digest: string;
@@ -214,6 +279,8 @@ export interface components {
             source_absences: {
                 [key: string]: components["schemas"]["AbsentFact"];
             };
+            /** @description Immutable bound version declaration and explicit requested overrides. Never current registry defaults or evidence of actual runtime/sampler execution. Optional during additive rollout. */
+            run_declaration?: components["schemas"]["RunDeclaration"];
         };
     };
     responses: {

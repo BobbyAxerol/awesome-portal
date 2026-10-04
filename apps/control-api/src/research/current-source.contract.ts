@@ -9,6 +9,8 @@
  */
 
 import { z } from "zod";
+import { ResearchRunDeclarationSchema } from "./run-declaration.contract";
+import { ResearchSamplerEvidenceSchema } from "./sampler-evidence.contract";
 import { SelectedTrialPresentationSchema } from "./selected-trial-presentation";
 import { ResearchEnrichedAnalysisSchema, ResearchEnrichedAvailabilitySchema } from "./enriched-analysis.contract";
 import { ResearchMonthlyPointSchema } from "./all-time-distributions.contract";
@@ -141,6 +143,7 @@ const ProvenanceSchema = ProvenanceBaseSchema.superRefine((value, context) => {
 });
 
 const CommonSchema = z.object({
+  run_declaration: ResearchRunDeclarationSchema.optional(),
   read_authority: z.literal("PORTAL_RETAINED_CURRENT_SOURCE"),
   run_id: ResearchCurrentSourceRunIdSchema,
   revision: z.string().regex(/^rs02_[a-z0-9_-]{2,32}_[0-9a-f]{64}$/),
@@ -924,6 +927,7 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
       dedupe: ResearchCurrentSourceFactSchema,
     }).strict(),
   }).strict(),
+  sampler_evidence: ResearchSamplerEvidenceSchema.optional(),
   /**
    * X2 · B3: the declared space this run searched (the historical binding of
    * its retained lane profile) with θ*'s DR-02 placement, and the Screen-06

@@ -8,6 +8,7 @@
  */
 
 import { z } from "zod";
+import { ResearchRunDeclarationSchema } from "./run-declaration.contract";
 
 export const ResearchSplitRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
@@ -143,6 +144,7 @@ const AbsenceIndexEntrySchema = z.object({
 }).strict();
 
 export const ResearchSplitResponseSchema = z.object({
+  run_declaration: ResearchRunDeclarationSchema.optional(),
   schema_version: z.literal("research.split-detail.v1"),
   read_authority: z.literal("PORTAL_PERSISTED_RESEARCH"),
   run_id: ResearchSplitRunIdSchema,

@@ -20,6 +20,7 @@ import { Component, createContext, lazy, Suspense, useCallback, useContext, useE
 import { lineageHref } from "./LineageLink";
 import { ResearchScopedLineageLink as LineageLink, ResearchScopedLink as Link } from "./ResearchScopedLink";
 import { RunExitBar } from "./RunExitBar";
+import { RunDeclarationRead } from "./RunDeclarationRead";
 import { isEndedWithoutEvidence, phaseOfStatus, runStatusWord, runTerminalState, stageChip, type RunPhase } from "./runTerminalState";
 import { libraryHref, newRunHref, progressHref, rcHref, reportHref } from "./runLinks";
 import { trialLabel, trialTitle } from "./trialLabel";
@@ -4821,6 +4822,7 @@ export function EvidenceFlow({
         onToggleDataset={() => setDatasetOpen((open) => !open)}
       />
       {view && datasetOpen ? <DatasetPanel hub={view} id={datasetPanelId} onClose={closeDataset} /> : null}
+      <RunDeclarationRead fact={laneEvidence?.run_declaration ?? view?.run_declaration} />
 
       {statusOnly ? null : (
         <ClaimPassport

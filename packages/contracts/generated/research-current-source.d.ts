@@ -160,6 +160,106 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Safe immutable AlphaVersion validator inputs, not raw source, provenance or mutable execution instructions. */
+        RunDeclarationAlphaVersionDeclaration: {
+            /** @constant */
+            schema_version: "research.alpha-version-declaration.v1";
+            entrypoint: string;
+            timeframes: string[];
+            required_columns: ("open" | "high" | "low" | "close" | "volume")[];
+            warmup_bars: number;
+            determinism: {
+                seed_required: boolean;
+            };
+            parameter_space: {
+                [key: string]: components["schemas"]["RunDeclarationParameterDeclaration"];
+            };
+        };
+        RunDeclarationParameterDeclaration: {
+            /** @constant */
+            kind: "fixed";
+            value: components["schemas"]["RunDeclarationDeclarationScalar"];
+        } | {
+            /** @constant */
+            kind: "int_range";
+            low: number;
+            high: number;
+            step: number;
+        } | {
+            /** @constant */
+            kind: "float_range";
+            low: number;
+            high: number;
+            step: number;
+        } | {
+            /** @constant */
+            kind: "categorical";
+            values: components["schemas"]["RunDeclarationDeclarationScalar"][];
+        };
+        RunDeclarationDeclarationScalar: string | number | boolean | null;
+        SamplerEvidence: {
+            /** @constant */
+            schema_version: "research.sampler-evidence.v1";
+            requested_configuration: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_PUBLISHED";
+                /** @constant */
+                scope: "RUN_REQUESTED_SPEC";
+                reason_code: string | null;
+                /** @constant */
+                source_ref: "IMMUTABLE_RUN_REQUESTED_OPTIMIZER_CONFIG_V1";
+                requested_spec_digest: string | null;
+                optimization_config: {
+                    [key: string]: string | number | boolean;
+                } | null;
+                random_seed: number | null;
+            } & unknown;
+            internal_trace: {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_SAMPLER_INTERNAL_TRACE";
+                /** @constant */
+                source_ref: "QUANTBT_1_1_1_RETAINED_NATIVE_WFO_RESULT_V2";
+            };
+            observed_trials: {
+                /** @constant */
+                state: "AVAILABLE";
+                /** @constant */
+                scope: "RETAINED_SOURCE_TRIAL_ROWS_NOT_SAMPLER_INTERNAL_TRACE";
+                /** @constant */
+                source_ref: "SEALED_RETAINED_TRIAL_LEDGER_V1";
+                source_trial_count: number;
+            };
+        };
+        RunDeclaration: {
+            /** @constant */
+            schema_version: "research.run-declaration.v1";
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+            reason_code: string | null;
+            /** @constant */
+            source_ref: "IMMUTABLE_RUN_REQUEST_AND_ALPHA_VERSION_DECLARATION_V1";
+            alpha_binding: {
+                alpha_id: string;
+                alpha_version_id: string;
+            } | null;
+            declaration_digest: string | null;
+            requested_spec_digest: string | null;
+            declaration: components["schemas"]["RunDeclarationAlphaVersionDeclaration"] | null;
+            requested_overrides: ({
+                name: string;
+                /** @constant */
+                kind: "sweep";
+                low: string | number | boolean;
+                high: string | number | boolean;
+            } | {
+                name: string;
+                /** @constant */
+                kind: "pin";
+                value: string | number | boolean;
+            })[] | null;
+        } & unknown;
         EnrichedAnalysis: {
             /** @constant */
             schema_version: "research.enriched-analysis.v1";
@@ -1123,6 +1223,8 @@ export interface components {
             source_revision?: string;
             /** @description Exact response representation validator, including display/verification changes. Use the HTTP ETag for caching. Existing revision remains unchanged for backward cursor/reader compatibility. */
             presentation_revision?: string;
+            /** @description Immutable bound version declaration and explicit requested overrides. Never current registry defaults or evidence of actual runtime/sampler execution. Optional during additive rollout. */
+            run_declaration?: components["schemas"]["RunDeclaration"];
         };
         Page: {
             limit: number;
@@ -1431,6 +1533,8 @@ export interface components {
             stage_events?: components["schemas"]["P11StageEvents"];
             /** @description Only for the exact causal profile: independently ranked inner-validation study surfaces. Never a run-global ranking or theta. Total source trials remain bounded to 48. */
             surfaces_by_study?: components["schemas"]["SearchStudySurface"][];
+            /** @description Explicit immutable requested config, retained trial observations and truthful source gap for sampler-internal trace. Request config never attests the effective sampler or proposal provenance. */
+            sampler_evidence?: components["schemas"]["SamplerEvidence"];
         };
         ArtifactByteMismatch: {
             /** @enum {unknown} */

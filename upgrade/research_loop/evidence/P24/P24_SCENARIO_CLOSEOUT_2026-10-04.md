@@ -532,3 +532,20 @@ it does not certify untested branches or replace Bobby's final acceptance.
 Root owns normal QA disable/session revocation, final exact-cell teardown,
 the aggregate 24-row disposition and any release decision. No remote push,
 production change, staging or commit was performed by this scenario agent.
+
+## 11. Later bounded remaining-branch acceptance — append-only pointer
+
+The broad unexercised list in §10.3 is superseded **only at the exact scopes
+actually proved** in [remaining §16.6 scenario acceptance](P24_REMAINING_SCENARIO_ACCEPTANCE_2026-10-04.md)
+§§2–11. That packet keeps all24 scenario IDs, exact original-receipt/source
+anchors and failed records; adds real opaque-page selected-trial/declaration
+and sampler reads, canonical main-field/conflict/pin refusals, two-user
+holdout/privacy reads and actual explicit audit allocation→ordinary failed
+lease→bounded normal retry→verified child; and clearly labels None/centroid,
+boundary/undefined/corruption/unmapped-route edge fixtures. Existing accepted
+engine/load/fault/publication/export/restore receipts are reused, not rerun
+or overwritten. Its final narrow centroid/None consumer retake is recorded
+there after the actual Web-only fix (2/2 PASS); the actual verified linked
+child, QA/session revocation and exact C4 teardown are also complete. No
+pending branch remains in that bounded lane. Owner visual/signed-release authority
+remains downstream; this link is not an all-profile engine24/24 assertion.

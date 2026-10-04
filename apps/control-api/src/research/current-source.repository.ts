@@ -9,6 +9,7 @@
 
 import { createHash } from "node:crypto";
 import { Inject, Injectable, Optional } from "@nestjs/common";
+import type { RunDeclarationInputs } from "./run-declaration.read";
 import { readEnriched } from "./enriched-analysis.read";
 import { appendRetainedExposure, retainedExposureAuthority, type RetainedExposureFence } from "./retained-exposure";
 import { ResearchEnrichedAnalysisSchema, type ResearchEnrichedAnalysis } from "./enriched-analysis.contract";
@@ -93,6 +94,8 @@ export type CurrentSourceSealWrite = CurrentSourceLanePair & {
 type JsonColumn = Record<string, unknown> | string | null;
 
 export type CurrentSourceSealRow = CurrentSourceLanePair & {
+  /** Exact immutable run/version inputs; never stored back into a sealed summary. */
+  runDeclarationInputs?: RunDeclarationInputs;
   runId: string;
   artifactRevision: number;
   manifestDigest: string;
@@ -201,6 +204,11 @@ export interface CurrentSourceRunState {
 }
 
 interface SealQueryRow {
+  bound_alpha_id?: string | null;
+  bound_alpha_version_id?: string | null;
+  bound_requested_spec?: Record<string, unknown> | null;
+  alpha_declared_contract?: Record<string, unknown> | null;
+  alpha_entrypoint?: string | null;
   run_id: string;
   artifact_revision: string | number;
   source_adapter_id: string;
@@ -672,6 +680,9 @@ export class ResearchCurrentSourceRepository {
         `SELECT seal.run_id, seal.artifact_revision, seal.source_adapter_id, seal.profile_id, seal.manifest_digest,
                 seal.source_transform_digest, seal.retained_import_digest, seal.requested_spec_digest,
                 seal.effective_spec_digest, seal.dataset_binding_digest, seal.table_rows, seal.total_rows,
+                producer.alpha_id AS bound_alpha_id, producer.alpha_version_id AS bound_alpha_version_id,
+                preflight.requested_spec AS bound_requested_spec,
+                version.declared_contract AS alpha_declared_contract, version.entrypoint AS alpha_entrypoint,
                 seal.summary, floor(extract(epoch FROM seal.retained_at) * 1000)::bigint AS retained_at_utc_ms,
                 sidecar.retained_import_digest AS sidecar_retained_import_digest,
                 sidecar.source_rows_digest AS sidecar_source_rows_digest,
@@ -681,6 +692,18 @@ export class ResearchCurrentSourceRepository {
                 distributions.source_rows_digest AS distributions_source_rows_digest,
                 distributions.distributions_digest, distributions.distributions
            FROM research.current_source_seals_v1 seal
+           LEFT JOIN research.run_producers producer
+             ON producer.workspace_id = seal.workspace_id AND producer.run_id = seal.run_id
+            AND producer.requested_spec_digest = seal.requested_spec_digest
+            AND producer.effective_spec_digest = seal.effective_spec_digest
+            AND producer.dataset_binding_digest = seal.dataset_binding_digest
+           LEFT JOIN research.preflight_manifests preflight
+             ON preflight.workspace_id = producer.workspace_id AND preflight.preflight_token = producer.preflight_token
+            AND preflight.actor_user_id = producer.actor_user_id
+            AND preflight.requested_spec_digest = seal.requested_spec_digest
+           LEFT JOIN research.alpha_versions version
+             ON version.workspace_id = producer.workspace_id AND version.alpha_version_id = producer.alpha_version_id
+            AND version.alpha_id = producer.alpha_id
            LEFT JOIN research.current_source_analytics_sidecars_v2 sidecar
              ON sidecar.workspace_id = seal.workspace_id AND sidecar.run_id = seal.run_id
             AND sidecar.artifact_revision = seal.artifact_revision
@@ -695,7 +718,12 @@ export class ResearchCurrentSourceRepository {
       if (result.rowCount !== 1) return null;
       const enrichedAnalysis = includeEnrichment ? await readEnriched(client, scope.workspaceId, runId,
         () => new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Stored analytics supplement is incompatible.", 503)) : null;
-      return { ...this.toSeal(result.rows[0]!), ...(enrichedAnalysis ? { enrichedAnalysis } : {}) };
+      const row = result.rows[0]!;
+      return { ...this.toSeal(row), runDeclarationInputs: {
+        alphaId: row.bound_alpha_id, alphaVersionId: row.bound_alpha_version_id,
+        requestedSpec: row.bound_requested_spec, requestedSpecDigest: row.requested_spec_digest,
+        declaredContract: row.alpha_declared_contract, entrypoint: row.alpha_entrypoint,
+      }, ...(enrichedAnalysis ? { enrichedAnalysis } : {}) };
   }
 
   /**

@@ -1,6 +1,7 @@
 /** P13 Evidence Flow Hub projection builder and same-origin reader. */
 
 import { Inject, Injectable, Optional } from "@nestjs/common";
+import { readRunDeclaration } from "./run-declaration.read";
 import { failedAt } from "./run-state";
 import { enrichedAvailability } from "./enriched-analysis.contract";
 import { z } from "zod";
@@ -756,6 +757,7 @@ export class ResearchEvidenceService {
     const warnings = projection ? this.warnings(projection, sourceAbsences) : [];
     const response = {
       schema_version: "research.evidence-hub.v1",
+      run_declaration: readRunDeclaration(row.runDeclarationInputs ?? {}),
       ...(row.enrichedAnalysis ? { enriched_analysis: row.enrichedAnalysis } : {}),
       enriched_analysis_availability: enrichedAvailability(row.enrichedAnalysis, !!projection || retainedReady),
       ...(projection?.summary_analytics ? { summary_analytics: projection.summary_analytics } : {}),

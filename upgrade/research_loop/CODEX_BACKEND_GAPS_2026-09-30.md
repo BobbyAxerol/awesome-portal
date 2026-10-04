@@ -1976,3 +1976,53 @@ are retained; no duplicate job/export/publication/R1 was created to rerun them.
 Mandatory24 denominator and unperformed variant/owner/release gates remain
 explicit, not counted from scoped proof. All previous delivered §32 contracts
 remain. Final local normal commit/FF is not a push or signed Portal2.0.0 release.
+
+### §33 — Bobby-approved cinema/declaration and scenario closeout, 2026-10-04
+
+Read/reconciled baseline `de424fad` (Claude cinema, parameter table and sample
+commits all preserved). Status **IN_PROGRESS**. Work order is the P24 continuation
+at the end of Unified; implementation/evidence cannot be inferred from this plan.
+
+1. Publish immutable version/run declaration facts for parameter chips S03–S05;
+   do not consult today's active registry version for an old run.
+2. Resolve cinema θ* outside a100-row page through a bounded existing named read,
+   bound to run/workspace/study/cursor/revision; no fake trial or selection mutation.
+3. Inspect actual pinned engine/retained sampler trace. Deliver source-backed facts
+   or exact typed historical/source absence with locator; an Atlas default is not
+   proof that a particular sampler generated a particular retained trial.
+4. Reconcile all24 mandatory scenario rows and run missing applicable variants
+   on the isolated authorized cell. Existing real GUI/CAS/ACK/export/engine/load/
+   DR proofs are reused at their original scopes, not unnecessarily repeated.
+5. Update cinema/declaration/sample closure and board with actual build/API/
+   browser/side-effect/cleanup results. Keep all Claude layouts/goldens. The sample
+   is a reference example, not a claim that Bobby supplied a canonical new alpha.
+
+Ownership: engine agent backend/contracts; consumer agent FEdata-binding/tests;
+scenario agent bounded harness/acceptance; root source/build/custody/integration
+and canonical docs. No stage/commit/push by subagents, no shared8095/production
+mutation in tests. Normal grouped commit/clean local FF only after actual gates;
+then helper-managed Research preview review rebuild, preserving all existing
+volumes/accounts/flags, not a Production rollout or a new shared test workload.
+
+**§33 final current-source disposition:** implementation and bounded scenario
+assignment delivered; [closeout](./evidence/P24/P24_CINEMA_CURRENT_SOURCE_CLOSEOUT_2026-10-04.md),
+[24-row ledger](./evidence/P24/P24_REMAINING_SCENARIO_ACCEPTANCE_2026-10-04.md)
+and [v7](./evidence/P24/current-source-candidate-manifest.v7.json). Actual trial350
+is resolved outside100rows; all3 owning reads carry immutable declarations;
+centroid params/no-trial and Noneabsence are faithfully consumed. Sampler
+configuration/retained observations publish truth; internal proposal trace
+remains exact typed source absence. Canonical Bobby sample has not been supplied;
+Claude's example is retained, nonblocking. No guessed trace/hash or active-version
+lookup. FE439 affected cases and backend/contracts/builds PASS; current-source
+all24 dispositions do not become24realengineexecutions. First GUI audit expiry
+kept; normal new intent with workerready VERIFIED9fold/2508bars/optimizer0.
+QA4disabled/session0/privatecopiesremoved; C4 ownedcontainers/network0, four
+volumes retained, no broad prune. One normal local source commit/clean FF and
+normal preview review rollout only. No new backend implementation request in
+this slice; Bobby visual review/protected signed Portal2.0.0 release separate.
+
+Final gate hardening delivered: public `source_ref` literal enums replace internal
+locator metadata in the new projections; precise implementation locators stay
+in the packet. Original RS-03 boundary assertion not weakened. Targeted real
+PostgreSQL retake11/11, FE9/9, contracts7/7 PASS; changed Control/Web rebuilt,
+older actual/technical receipts retain their exact old wire/image scope in v7.

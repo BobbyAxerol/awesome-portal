@@ -1,5 +1,25 @@
 # P24 — frontend closeout amendment, 2026-10-04 (append-only)
 
+## Latest cinema/parameter/sample amendment — Codex, 2026-10-04
+
+This later amendment preserves the historical audit below. Claude's
+`5115b34e`, `1c65ff71`, `de424fad` remain ancestors of the shared source.
+Codex adds only approved source contracts and data-binding: exact selected
+trial paging, owning-read immutable declarations for S03–S05, source-scoped
+sampler facts, scoped new-attempt/Freeze links and centroid parameters with
+no invented source trial/digest. No CSS, typography, golden or visual-baseline
+change. Current imports keep Claude's illustrative sample and required-field
+table; Bobby's original canonical sample has not been supplied and is not
+silently invented.
+
+Actual source trial on the owned400-row run is **350**;342 is a focused fixture,
+not the real run's selected identity. Existing and new real/technical scenario
+scopes, retained failed harness diagnostics, actual audit child and cleanup are
+reconciled in [the current closeout](./P24_CINEMA_CURRENT_SOURCE_CLOSEOUT_2026-10-04.md).
+Full24 dispositions are tracked, without turning technical/refused branches
+into real engine executions. Owner by-eye approval/signed release are not
+inferred from a passing data-binding receipt.
+
 Agent AC · docs only. No history file was edited. Each row was checked against the
 file at lane HEAD `d0569d49` (line numbers are that copy) and against git/receipts.
 "be-gaps" = `codex/be-gaps` / `docs/research-loop-plan` `0df6030f`, which already

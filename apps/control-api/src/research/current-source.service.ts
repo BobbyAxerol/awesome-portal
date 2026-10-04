@@ -4,6 +4,8 @@ import { Buffer } from "node:buffer";
 import { selectedTrialPresentation } from "./selected-trial-presentation";
 import { replayNavigation, replayRequestedIdentity } from "./replay-navigation";
 import { Inject, Injectable, Optional } from "@nestjs/common";
+import { readRunDeclaration } from "./run-declaration.read";
+import { readSamplerEvidence } from "./sampler-evidence.read";
 import { enrichedAvailability } from "./enriched-analysis.contract";
 import { z } from "zod";
 
@@ -794,6 +796,7 @@ export class ResearchCurrentSourceService {
         availability: available(),
       },
       diagnostics: searchDiagnostics(facts),
+      sampler_evidence: readSamplerEvidence(inputs.requestedSpec, seal.requestedSpecDigest, seal.tableRows.TRIAL),
       declared_space: space,
       surface: isCausalSeal(seal) ? runGlobalCausalSurface(allTrials.length,
         surfaceTrials.filter(trial => trial.state === "COMPLETE" && trial.objective !== null).length) : searchSurface({
@@ -1416,13 +1419,21 @@ export class ResearchCurrentSourceService {
     // for its signed cursor. Reuse that value, not a cross-request cache.
     const facts = currentSourceReadRevisions([kind], seal);
     const value = alreadyComputedRevision ?? facts.revisions[kind]!;
+    const declaration = ["evidence", "split", "search"].includes(kind) && seal.runDeclarationInputs
+      ? readRunDeclaration(seal.runDeclarationInputs) : null;
+    // Keep source/cursor revision unchanged. Only the exact representation
+    // validator includes the additive immutable run declaration.
+    const presentation = declaration ? `rs02_${kind}_${sha256ResearchJson({
+      source_presentation_revision: value, run_declaration: declaration,
+    })}` : value;
     return {
+      ...(declaration ? { run_declaration: declaration } : {}),
       read_authority: "PORTAL_RETAINED_CURRENT_SOURCE" as const,
       run_id: seal.runId,
       revision: value,
       source_revision: `rs02_${kind}_${facts.sealDigest}`,
-      presentation_revision: value,
-      etag: `"${value}"`,
+      presentation_revision: presentation,
+      etag: `"${presentation}"`,
       availability: available(),
       as_of_utc_ms: seal.retainedAtUtcMs,
       provenance: {

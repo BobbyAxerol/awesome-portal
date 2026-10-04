@@ -374,6 +374,15 @@ function admitted(): SearchDetail {
  * ---------------------------------------------------------------------- */
 
 describe("P15-T01 — the source is described as what it is", () => {
+  it("the existing-pattern new-attempt link preserves the exact source run/workspace and allocates nothing", () => {
+    const fetch = vi.fn(); vi.stubGlobal("fetch", fetch);
+    const { container } = render(<MemoryRouter initialEntries={["/research/quantbt/runs/R-WFO-118/search?workspace_id=owned"]}>
+      <SearchScreen runId="R-WFO-118" workspaceId="owned" detail={detail()} state={OK} cursor={DEFAULT_CURSOR} ledger={{ state: "idle" }} ensureLedger={vi.fn()} onReread={vi.fn()} />
+    </MemoryRouter>);
+    const link = container.querySelector('[data-action="propose-new-attempt"]')!;
+    expect(link.getAttribute("href")).toBe("/research/quantbt/runs/new?from=R-WFO-118&workspace_id=owned");
+    expect(fetch).not.toHaveBeenCalled();
+  });
   it("labels the installed source a fixed profile", () => {
     const { container } = view();
     expect(container.querySelector("[data-source-profile='FIXED_PROFILE_NO_SEARCH']")).toBeTruthy();

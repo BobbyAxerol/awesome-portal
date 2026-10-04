@@ -1,5 +1,16 @@
 # P24 — acceptance and read-preserving rehearsal
 
+**Latest current-source continuation, 2026-10-04:**
+[Cinema/parameter/scenario closeout](./P24_CINEMA_CURRENT_SOURCE_CLOSEOUT_2026-10-04.md),
+[all24 scenario dispositions](./P24_REMAINING_SCENARIO_ACCEPTANCE_2026-10-04.md),
+and [unsigned candidate v7](./current-source-candidate-manifest.v7.json) supersede
+only the explicitly retaken scopes of the historical checkpoints below.
+Claude's three cinema/parameter/sample commits and all earlier source history
+are preserved. The real second-engine qualification, GUI imported execution,
+CAS, publication ACK-loss and prepared exports already have exact receipts;
+do not reopen them from the older narrative. Owner visual acceptance and a
+signed Portal2.0.0 release are still separate, not pre-claimed PASS.
+
 **Latest affected frontend amendment, 2026-10-04:**
 [candidate v4](./current-source-candidate-manifest.v4.json) and
 [scoped S09/S11 workspace/audit consumer receipt](../P23/WORKSPACE_AND_LINKED_AUDIT_CONSUMER_2026-10-04.md).

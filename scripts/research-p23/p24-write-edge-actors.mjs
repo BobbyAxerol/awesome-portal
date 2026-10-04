@@ -11,12 +11,21 @@ import { container, dbQuery, docker } from './runtime-tools.mjs';
 
 export const EDGE_USERS = Object.freeze(['p24-edge-a', 'p24-edge-b', 'p24-edge-publish']);
 export const PRODUCER_USER = 'p24-edge-producer';
-const ALL_EDGE_USERS = Object.freeze([...EDGE_USERS, PRODUCER_USER]);
-const actorRole = username => username === PRODUCER_USER ? 'ADMIN' : 'USER';
+export const FOLLOWUP_USERS = Object.freeze(['p24-round2-a', 'p24-round2-b', 'p24-round2-publish']);
+export const FOLLOWUP_PRODUCER_USER = 'p24-round2-producer';
+const ALL_EDGE_USERS = Object.freeze([...EDGE_USERS, PRODUCER_USER, ...FOLLOWUP_USERS, FOLLOWUP_PRODUCER_USER]);
+const actorRole = username => [PRODUCER_USER, FOLLOWUP_PRODUCER_USER].includes(username) ? 'ADMIN' : 'USER';
 const IMPORTED_RUN = 'rrun_534c60ecb6337bb1503e48f8726142b7';
 const IMPORTED_AV = 'av_p23_section32_imported_0_1_0';
 const PUBLISH_RUN = 'rrun_3258a4c450816129d2d285f25b801061';
 const HASH = bytes => createHash('sha256').update(bytes).digest('hex');
+
+export function campaignProfile(campaign = 'write-edges') {
+  assert(['write-edges', 'cinema-remaining'].includes(campaign), 'FINITE_APPROVED_CAMPAIGN_ONLY');
+  const isFollowup = campaign === 'cinema-remaining';
+  return { isFollowup, users: isFollowup ? FOLLOWUP_USERS : EDGE_USERS,
+    producerUser: isFollowup ? FOLLOWUP_PRODUCER_USER : PRODUCER_USER };
+}
 
 export function requireEdgeUser(user) {
   assert(ALL_EDGE_USERS.includes(user?.username), 'EXACT_FRESH_EDGE_QA_ONLY');
@@ -117,13 +126,19 @@ if(u.status!=='DISABLED')await new AdminService(p,c,auth).disable(input.id);
 async function main() {
   const command = process.argv[2];
   assert(['prepare', 'prepare-producer', 'cleanup'].includes(command), 'FINITE_PREPARE_OR_CLEANUP_ONLY');
+  const campaign = process.argv.find(value => value.startsWith('--campaign='))?.slice(11) ?? 'write-edges';
+  const { isFollowup, users, producerUser } = campaignProfile(campaign);
+  const campaignUsers = [...users, producerUser];
   const home = validateHome(process.argv[3]);
   mkdirSync(home, { recursive: true, mode: 0o700 }); chmodSync(home, 0o700);
   assertCell();
   if (command === 'cleanup') {
     const actors = [];
-    for (const username of ALL_EDGE_USERS) { const result = await disableExact(home, username); if (result) actors.push(result); }
-    for (const filename of ['p24-write-consumer-config.json', 'p24-write-producer-config.json']) {
+    for (const username of campaignUsers) { const result = await disableExact(home, username); if (result) actors.push(result); }
+    for (const filename of ['p24-write-consumer-config.json', 'p24-write-producer-config.json',
+      ...(isFollowup ? ['remaining-scenarios-config.json', 'remaining-scenarios-retake-config.json',
+        'audit-scenarios-config.json', 'audit-retry-config.json', 'audit-verify-config.json', 'remaining-final-read-config.json',
+        'remaining-absence-config.json'] : [])]) {
       const combinedPath = join(home, filename);
       if (!existsSync(combinedPath)) continue;
       const config = privateJson(combinedPath);
@@ -139,7 +154,7 @@ async function main() {
     console.log(JSON.stringify({ operation: 'CLEANUP', actors, receipt_path: path, receipt_sha256: HASH(readFileSync(path)) }));
     return;
   }
-  const selectedUsers = command === 'prepare-producer' ? [PRODUCER_USER] : EDGE_USERS;
+  const selectedUsers = command === 'prepare-producer' ? [producerUser] : users;
   const existing = dbQuery('SELECT username FROM portal_users WHERE username=ANY($1::text[])', [selectedUsers]).rows;
   assert.equal(existing.length, 0, 'SELECTED_QA_MUST_BE_FRESH_NO_RESET_OR_REENABLE');
   for (const username of selectedUsers) assert(!existsSync(configPath(home, username)), 'PRIVATE_CUSTODY_MUST_NOT_BE_OVERWRITTEN');
@@ -148,18 +163,19 @@ async function main() {
     for (const username of selectedUsers) {
       const role = actorRole(username);
       const user = { username, password: randomBytes(32).toString('hex'), cookies: {} };
-      const selected = username === 'p24-edge-publish' ? run.publish : run.imported;
+      const selected = username === users[2] ? run.publish : run.imported;
       const workspaces = [selected.workspace_id,
-        ...(username === 'p24-edge-a' ? [run.alternate.workspace_id] : [])];
+        ...(username === users[0] ? [run.alternate.workspace_id] : []),
+        ...(isFollowup && selected.workspace_id !== run.publish.workspace_id ? [run.publish.workspace_id] : [])];
       const config = { project: PROJECT, base_url: BASE_URL, origin: BASE_URL, user, username,
         role, prepared: false, expected_images: images, workspace_id: selected.workspace_id,
         imported_workspace_id: run.imported.workspace_id, alternate_workspace_id: run.alternate.workspace_id,
         run_id: selected.run_id, alpha_version_id: selected.alpha_version_id,
         credential_path: configPath(home, username), out: join(home, `${username}-browser`),
         cleanup_state: 'PENDING_DISABLE_REVOKE', created_at_utc: new Date().toISOString(),
-        ...(username === PRODUCER_USER ? {
-          cleanup_deadline_utc: new Date(Date.now() + 15 * 60_000).toISOString(),
-          expiry_policy: 'OPERATOR_GUARD_NOT_AUTH_TTL_ROOT_NORMAL_DISABLE_REVOKE_AFTER_BOUNDED_180S_GUI',
+        ...(username === producerUser ? {
+          cleanup_deadline_utc: new Date(Date.now() + (isFollowup ? 60 : 15) * 60_000).toISOString(),
+          expiry_policy: 'OPERATOR_GUARD_NOT_AUTH_TTL_ROOT_NORMAL_DISABLE_REVOKE_AFTER_APPROVED_BOUNDED_LANE',
           role_basis: 'run-admission.service.ts:153_ADMIN_ACTIVE_PASSWORD_CHANGED_REQUIRED',
         } : {}) };
       savePrivate(configPath(home, username), config);

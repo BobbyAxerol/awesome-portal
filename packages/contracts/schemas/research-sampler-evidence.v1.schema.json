@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "research.sampler-evidence.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "requested_configuration",
+    "internal_trace",
+    "observed_trials"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "research.sampler-evidence.v1"
+    },
+    "requested_configuration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "scope",
+        "reason_code",
+        "source_ref",
+        "requested_spec_digest",
+        "optimization_config",
+        "random_seed"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "AVAILABLE",
+            "NOT_PUBLISHED"
+          ]
+        },
+        "scope": {
+          "const": "RUN_REQUESTED_SPEC"
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_ref": {
+          "const": "IMMUTABLE_RUN_REQUESTED_OPTIMIZER_CONFIG_V1"
+        },
+        "requested_spec_digest": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "optimization_config": {
+          "anyOf": [
+            {
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+              },
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ]
+              },
+              "maxProperties": 64
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "random_seed": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2147483647
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "AVAILABLE"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason_code": {
+                "type": "null"
+              },
+              "requested_spec_digest": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "optimization_config": {
+                "type": "object"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "reason_code": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+              },
+              "optimization_config": {
+                "type": "null"
+              },
+              "random_seed": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "internal_trace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "reason_code",
+        "source_ref"
+      ],
+      "properties": {
+        "state": {
+          "const": "NOT_PUBLISHED"
+        },
+        "reason_code": {
+          "const": "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_SAMPLER_INTERNAL_TRACE"
+        },
+        "source_ref": {
+          "const": "QUANTBT_1_1_1_RETAINED_NATIVE_WFO_RESULT_V2"
+        }
+      }
+    },
+    "observed_trials": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "scope",
+        "source_ref",
+        "source_trial_count"
+      ],
+      "properties": {
+        "state": {
+          "const": "AVAILABLE"
+        },
+        "scope": {
+          "const": "RETAINED_SOURCE_TRIAL_ROWS_NOT_SAMPLER_INTERNAL_TRACE"
+        },
+        "source_ref": {
+          "const": "SEALED_RETAINED_TRIAL_LEDGER_V1"
+        },
+        "source_trial_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        }
+      }
+    }
+  }
+}

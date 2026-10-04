@@ -46,6 +46,7 @@ import { useRunStatus } from "./useRunStatus";
 
 import { useEntryRef, useReadout } from "./chartLife";
 import { ProvenanceStrip } from "./ProvenanceStrip";
+import { RunDeclarationRead } from "./RunDeclarationRead";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import {
   ABSENT_WORDS,
@@ -2038,6 +2039,7 @@ export function SplitScreen({
                   : detail.provenance
               }
             />
+            <RunDeclarationRead fact={lane?.split.run_declaration ?? detail.run_declaration} />
 
             {/* ------------------------------------ S1 · fold construction */}
             <section className={`${CARD} gap-[6px] p-4`} style={RAISED_STYLE} data-card="fold-construction">

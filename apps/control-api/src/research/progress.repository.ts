@@ -15,6 +15,8 @@ import {
   type ResearchProgressSnapshot,
 } from "./progress.contract";
 import { ResearchProgressError } from "./progress.error";
+import { readRunDeclaration } from "./run-declaration.read";
+import type { ResearchRunDeclaration } from "./run-declaration.contract";
 
 const TERMINAL_JOB_STATES = new Set(["SUCCEEDED", "FAILED", "CANCELLED"]);
 
@@ -38,6 +40,9 @@ interface IngressRow {
 }
 
 interface ReadRunRow {
+  bound_requested_spec?: Record<string, unknown> | null;
+  alpha_declared_contract?: Record<string, unknown> | null;
+  alpha_entrypoint?: string | null;
   run_id: string;
   attempt_id: string;
   job_id: string;
@@ -212,6 +217,7 @@ export interface ProgressWorkerAttempt {
  * manifest. Every field is a stored fact; nothing is derived from progress.
  */
 export interface ProgressRunIdentity {
+  runDeclaration?: ResearchRunDeclaration;
   alphaId: string;
   alphaName: string | null;
   alphaVersionId: string;
@@ -520,6 +526,8 @@ export class ResearchProgressRepository {
                 job.terminal_reason AS job_terminal_reason, job.requested_by_user_id,
                 producer.alpha_id, alpha.name AS alpha_name, producer.alpha_version_id,
                 producer.execution_profile_id, producer.requested_spec_digest,
+                preflight.requested_spec AS bound_requested_spec,
+                version.declared_contract AS alpha_declared_contract, version.entrypoint AS alpha_entrypoint,
                 preflight.requested_spec->>'protocol' AS spec_protocol,
                 preflight.requested_spec->>'optimization_mode' AS spec_mode,
                 preflight.requested_spec->>'optimization_schedule' AS spec_schedule,
@@ -543,6 +551,9 @@ export class ResearchProgressRepository {
              ON job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
           LEFT JOIN research.alphas alpha
              ON alpha.workspace_id = producer.workspace_id AND alpha.alpha_id = producer.alpha_id
+          LEFT JOIN research.alpha_versions version
+             ON version.workspace_id = producer.workspace_id AND version.alpha_version_id = producer.alpha_version_id
+            AND version.alpha_id = producer.alpha_id
           LEFT JOIN research.preflight_manifests preflight
              ON preflight.workspace_id = producer.workspace_id
             AND preflight.preflight_token = producer.preflight_token
@@ -731,6 +742,9 @@ export class ResearchProgressRepository {
       }
     }
     return {
+      runDeclaration: readRunDeclaration({ alphaId: row.alpha_id, alphaVersionId: row.alpha_version_id,
+        requestedSpec: row.bound_requested_spec, requestedSpecDigest: row.requested_spec_digest,
+        declaredContract: row.alpha_declared_contract, entrypoint: row.alpha_entrypoint }),
       alphaId: row.alpha_id,
       alphaName: text(row.alpha_name),
       alphaVersionId: row.alpha_version_id,

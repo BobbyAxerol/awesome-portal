@@ -3,6 +3,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import { readEnriched } from "./enriched-analysis.read";
+import type { RunDeclarationInputs } from "./run-declaration.read";
 import type { ResearchEnrichedAnalysis } from "./enriched-analysis.contract";
 import { ResearchEnrichedAnalysisSchema } from "./enriched-analysis.contract";
 import { sha256ResearchJson } from "./preflight.service";
@@ -56,6 +57,7 @@ export interface EvidenceProjectionWrite {
 }
 
 export interface EvidenceHubRow {
+  runDeclarationInputs?: RunDeclarationInputs;
   /** Private same-snapshot proof; never infer readiness from enrichment alone. */
   retainedSource?: {
     runId: string;
@@ -141,6 +143,8 @@ interface HubQueryRow {
   alpha_id: string | null;
   alpha_name: string | null;
   alpha_version_id: string | null;
+  alpha_declared_contract?: Record<string, unknown> | null;
+  alpha_entrypoint?: string | null;
   requested_spec: JsonValue;
   preflight_snapshot: JsonValue;
   preflight_topology: JsonValue;
@@ -403,6 +407,8 @@ export class ResearchEvidenceRepository {
                 producer.alpha_id,
                 alpha.name AS alpha_name,
                 producer.alpha_version_id,
+                version.declared_contract AS alpha_declared_contract,
+                version.entrypoint AS alpha_entrypoint,
                 preflight.requested_spec,
                 preflight.snapshot AS preflight_snapshot,
                 preflight.topology AS preflight_topology,
@@ -442,6 +448,9 @@ export class ResearchEvidenceRepository {
              ON job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
            LEFT JOIN research.alphas alpha
              ON alpha.workspace_id = producer.workspace_id AND alpha.alpha_id = producer.alpha_id
+           LEFT JOIN research.alpha_versions version
+             ON version.workspace_id = producer.workspace_id AND version.alpha_version_id = producer.alpha_version_id
+            AND version.alpha_id = producer.alpha_id
            LEFT JOIN research.preflight_manifests preflight
              ON preflight.workspace_id = producer.workspace_id
             AND preflight.preflight_token = producer.preflight_token
@@ -520,6 +529,9 @@ export class ResearchEvidenceRepository {
           alphaName: row.alpha_name,
           alphaVersionId: row.alpha_version_id,
           requestedSpec: row.requested_spec,
+          runDeclarationInputs: { alphaId: row.alpha_id, alphaVersionId: row.alpha_version_id,
+            requestedSpec: row.requested_spec, requestedSpecDigest: row.requested_spec_digest,
+            declaredContract: row.alpha_declared_contract, entrypoint: row.alpha_entrypoint },
           preflightSnapshot: row.preflight_snapshot,
           preflightTopology: row.preflight_topology,
           requestedSpecDigest: row.requested_spec_digest,

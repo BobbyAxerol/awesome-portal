@@ -78,6 +78,7 @@ import {
 import { type EvidenceCursor } from "./evidenceCursor";
 import { runScreenHref } from "./runScreenHref";
 import { SearchCinema } from "./SearchCinema";
+import { SamplerEvidenceRead } from "./SamplerEvidenceRead";
 import { AsOf, CopyEvidenceLink, Digest, RunNotFound, SCREEN_FRAME, StageRunBar } from "./SplitDetail";
 import { LANE_STATE_COPY } from "./splitClient";
 import { useEntryRef } from "./chartLife";
@@ -2126,6 +2127,16 @@ export function SearchScreen({
           <div className="flex flex-none flex-col items-end gap-[5px]">
             <AsOf at={detail.as_of_utc_ms} source="search read" basis={detail.as_of_basis} />
             <CopyEvidenceLink href={searchEvidenceLink(runId, cursor, lane, retainedRun, pick)} />
+            {notFound ? null : (
+              <Link
+                to={`/research/quantbt/runs/new?from=${encodeURIComponent(runId)}`}
+                className="mono text-[10px] uppercase tracking-[.06em]"
+                style={{ color: "var(--accent)" }}
+                data-action="propose-new-attempt"
+              >
+                propose new attempt →
+              </Link>
+            )}
           </div>
         ) : null}
       </header>
@@ -2402,6 +2413,8 @@ export function SearchScreen({
                     search={lane}
                     surface={cinemaSurface}
                     studyLabel={study ? foldShort(study.fold_id) : undefined}
+                    study={study ? { studyId: study.study_id, foldId: study.fold_id } : undefined}
+                    workspaceId={workspaceId}
                     parametersOf={(id) => cleanParameters(ledgerTrials.find((trial) => trial.trial_id === id)?.parameters)}
                     digestOf={(id) => ledgerTrials.find((trial) => trial.trial_id === id)?.params_digest ?? null}
                     atlas={modeReads?.atlas}
@@ -2419,9 +2432,7 @@ export function SearchScreen({
                   data-cinema="absent"
                   data-gap-state="NOT_PUBLISHED"
                 >
-                  <span className="italic" title={samplerCode ?? undefined}>
-                    Sampler trace: not published
-                  </span>
+                  <SamplerEvidenceRead fact={lane?.sampler_evidence} fallbackCode={samplerCode} fallbackWords="Sampler trace: not published" />
                 </div>
               );
             })()}

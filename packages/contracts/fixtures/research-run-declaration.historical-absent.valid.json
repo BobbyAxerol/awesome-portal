@@ -1,0 +1,8 @@
+{
+  "schema_version": "research.run-declaration.v1", "state": "NOT_PUBLISHED",
+  "reason_code": "P24_RUN_BOUND_ALPHA_VERSION_DECLARATION_NOT_RECORDED",
+  "source_ref": "IMMUTABLE_RUN_REQUEST_AND_ALPHA_VERSION_DECLARATION_V1",
+  "alpha_binding": null, "declaration_digest": null,
+  "requested_spec_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "declaration": null, "requested_overrides": null
+}

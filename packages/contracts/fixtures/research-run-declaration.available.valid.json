@@ -1,0 +1,16 @@
+{
+  "schema_version": "research.run-declaration.v1",
+  "state": "AVAILABLE",
+  "reason_code": null,
+  "source_ref": "IMMUTABLE_RUN_REQUEST_AND_ALPHA_VERSION_DECLARATION_V1",
+  "alpha_binding": { "alpha_id": "alpha_fixture", "alpha_version_id": "av_fixture_historical" },
+  "declaration_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "requested_spec_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "declaration": {
+    "schema_version": "research.alpha-version-declaration.v1", "entrypoint": "strategy.example:generate_signals",
+    "timeframes": ["1h"], "required_columns": ["open", "high", "low", "close", "volume"], "warmup_bars": 0,
+    "determinism": { "seed_required": false },
+    "parameter_space": { "scale": { "kind": "fixed", "value": 1000 } }
+  },
+  "requested_overrides": [{ "kind": "pin", "name": "scale", "value": 1000 }]
+}

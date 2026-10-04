@@ -1,6 +1,7 @@
 /** P14 immutable split-source persistence and bounded same-origin reader. */
 
 import { Inject, Injectable } from "@nestjs/common";
+import type { RunDeclarationInputs } from "./run-declaration.read";
 import type { Pool, PoolClient } from "pg";
 
 import { CONTROL_API_POOL } from "../tokens";
@@ -24,6 +25,7 @@ export interface SplitProjectionWrite {
 }
 
 export interface SplitHubRow {
+  runDeclarationInputs?: RunDeclarationInputs;
   kind: "DURABLE" | "LEGACY";
   runId: string;
   /**
@@ -87,6 +89,8 @@ interface HubQueryRow {
   manifest_digest: string | null;
   legacy_request: JsonValue;
   alpha_version_id: string;
+  alpha_id?: string | null;
+  bound_requested_spec?: Record<string, unknown> | null;
   alpha_code_digest: string | null;
   alpha_entrypoint: string | null;
   alpha_declared_contract: Record<string, unknown> | null;
@@ -214,6 +218,8 @@ export class ResearchSplitRepository {
                 producer.manifest_digest,
                 producer.legacy_request,
                 producer.alpha_version_id,
+                producer.alpha_id,
+                preflight.requested_spec AS bound_requested_spec,
                 version.code_digest AS alpha_code_digest,
                 version.entrypoint AS alpha_entrypoint,
                 version.declared_contract AS alpha_declared_contract,
@@ -234,6 +240,7 @@ export class ResearchSplitRepository {
              ON job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
            LEFT JOIN research.alpha_versions version
              ON version.workspace_id = producer.workspace_id AND version.alpha_version_id = producer.alpha_version_id
+            AND version.alpha_id = producer.alpha_id
            LEFT JOIN research.run_progress_snapshots snapshot
              ON snapshot.workspace_id = producer.workspace_id
             AND snapshot.run_id = producer.run_id
@@ -266,6 +273,9 @@ export class ResearchSplitRepository {
           datasetBindingDigest: row.dataset_binding_digest,
           manifestDigest: row.manifest_digest,
           legacyRequest: row.legacy_request,
+          runDeclarationInputs: { alphaId: row.alpha_id, alphaVersionId: row.alpha_version_id,
+            requestedSpec: row.bound_requested_spec, requestedSpecDigest: row.requested_spec_digest,
+            declaredContract: row.alpha_declared_contract, entrypoint: row.alpha_entrypoint },
           importedAlphaVersion: row.alpha_code_digest && row.alpha_entrypoint && row.alpha_declared_contract
             ? { alphaVersionId: row.alpha_version_id, sourceDigest: row.alpha_code_digest,
                 entrypoint: row.alpha_entrypoint, declaredContract: row.alpha_declared_contract } : null,

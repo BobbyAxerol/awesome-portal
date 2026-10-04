@@ -95,3 +95,18 @@ version-dispatch gap, not a QuantBT execution gap. Current disposition stays
 3. Needs Bobby's say-so for preview writes: SC-02, 04, 07, 10, 23.
 4. Isolated cell only: SC-19 (timeout), SC-24 (GC/re-export), SC-12 (two accounts).
 5. Blocked: SC-06 upgrade half, SC-21 new-route half, T05.
+
+## 2026-10-04 additive reconciliation — retain original findings
+
+The original table above is a dated checkpoint, not the latest closure ledger.
+Use [remaining §16.6 scenario acceptance](P24_REMAINING_SCENARIO_ACCEPTANCE_2026-10-04.md)
+§§2–11 for the complete **SC-01…SC-24 denominator**, retained proof hashes,
+actual engine transition, scoped publication ACK-loss/export/GC proof, new
+two-user/privacy and explicit linked-audit GUI/worker/verified-child receipts,
+and typed technical/source-unsupported dispositions. It preserves each failed
+attempt and does not relabel fixtures as real engine results. The older
+NEEDS_RUN/BLOCKED_EXTERNAL rows must not reopen later-proven exact scopes;
+likewise they are not replaced by a blanket24/24 engine PASS or owner approval.
+Final affected None/centroid2/2, real verified audit child, finite QA revocation
+and exact C4 teardown are now recorded there; no pending branch remains in
+that bounded lane, and the original dated table remains intact.

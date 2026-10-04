@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { ResearchCurrentSourceService, currentSourceReadRevision, currentSourceSealDigest, currentSourceFactRevision } from "../src/research/current-source.service";
 import { mockSearchRepository } from "./research-search-inputs.fixture";
 import { wfoRequested } from "./research-w1-wfo.fixture";
+import { P04_DELTA_BINDING } from "../src/research/p04-delta.binding";
 import { sha256ResearchJson } from "../src/research/preflight.service";
 import type { ResearchCurrentSourceNotApplicableResponse } from "../src/research/current-source.contract";
 import { p11StageEvents, POOL_FREEZE_CLOCK_ABSENT } from "../src/research/p11-stage-events";
@@ -119,6 +120,32 @@ function service(repository: Record<string, unknown>) {
 }
 
 describe("RS-02 retained current-source named read models", () => {
+  it("P24 discloses immutable parameters without repinning seal/cursors or fabricating sampler trace", async () => {
+    const requested = wfoRequested();
+    const source = { ...seal, requestedSpecDigest: sha256ResearchJson(requested) };
+    const rows = vi.fn().mockImplementation((_scope, _runId, _revision, kind: string) =>
+      page(kind === "FOLD" ? folds : kind === "TRIAL" ? trials : candidates));
+    const repository = { sealForRead: vi.fn().mockResolvedValue(source), rows,
+      admittedRequestedSpec: vi.fn().mockResolvedValue(requested) };
+    const without = sealed(await service(repository).search(scope, source.runId, { limit: 100 }));
+    const bound = { ...source, runDeclarationInputs: {
+      alphaId: P04_DELTA_BINDING.alphaId, alphaVersionId: P04_DELTA_BINDING.alphaVersionId,
+      declaredContract: P04_DELTA_BINDING.declaredContract, entrypoint: P04_DELTA_BINDING.entrypoint,
+      requestedSpec: requested, requestedSpecDigest: source.requestedSpecDigest,
+    } };
+    repository.sealForRead.mockResolvedValue(bound);
+    const withDeclaration = sealed(await service(repository).search(scope, source.runId, { limit: 100 }));
+    expect(withDeclaration.run_declaration?.state).toBe("AVAILABLE");
+    expect(withDeclaration.revision).toBe(without.revision);
+    expect(withDeclaration.source_revision).toBe(without.source_revision);
+    expect(withDeclaration.ledger.page).toEqual(without.ledger.page);
+    expect(withDeclaration.etag).not.toBe(without.etag);
+    expect(currentSourceSealDigest(bound)).toBe(currentSourceSealDigest(source));
+    expect(withDeclaration.sampler_evidence).toMatchObject({
+      requested_configuration: { state: "AVAILABLE", scope: "RUN_REQUESTED_SPEC", optimization_config: {}, random_seed: 42 },
+      internal_trace: { state: "NOT_PUBLISHED" }, observed_trials: { source_trial_count: 2 },
+    });
+  });
   it("§32 separates retained source identity from presentation and view identity", () => {
     const split = currentSourceFactRevision("split", seal);
     const replay = currentSourceFactRevision("replay", seal);
