@@ -149,3 +149,15 @@ assertion or application behavior was weakened. The original failed hook log
 is retained as `grouped-hook.log`; the normal commit retry uses
 `grouped-hook-r02.log`. No actual HMD, load or DR receipt is fabricated from
 that failed test-harness run.
+
+**Preview image permission repair:** the source commit `be859a1b` passed its
+normal hook and landed cleanly. Rebuilding Python exposed a pre-existing
+Dockerfile dependence on checkout modes: `research_alpha_analyzer.py` was copied
+0600/root-owned, unreadable to runtime UID10001, because PYTHONPATH selects
+`/opt/portal/src` before the installed package. The exact retained prior images
+were restored before further work; no DB/flag/user reset. The image now uses
+`COPY --chmod=0755` for the bounded code-only source subtree, retaining root
+ownership (the runtime cannot write it). No host permission or secret path is
+widened. Validate a restrictive-mode code copy as UID10001 and the actual image
+readiness, then rebuild only Python; reuse the unchanged accepted Control/Web
+builds. The one-line Docker correction receives its normal commit gate.

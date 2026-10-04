@@ -7957,3 +7957,11 @@ composition/goldens. One normal grouped gate, clean local landing and affected
 Research preview build; private runtime/browser receipt path is in the packet.
 No remote push/dev/main/stable authorization; no engine upgrade needed for
 these two items, no duplicate unchanged load/DR campaign.
+
+**Preview packaging follow-up:** source `be859a1b` landed with normal hook PASS;
+the Python rebuild exposed umask-0077 source copied0600/root-owned and therefore
+unreadable at UID10001 through PYTHONPATH. Exact old preview images restored,
+DB/users/flags preserved. Bounded image-only `COPY --chmod=0755` fixes it without
+granting runtime source-write ownership or changing host permissions. This is
+the same scope's packaging repair, not an engine fault/new phase. Actual image
+permission/readiness/browser proof is in the combined receipt's private path.
