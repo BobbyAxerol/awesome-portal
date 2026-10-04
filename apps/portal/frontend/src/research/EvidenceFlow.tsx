@@ -1494,7 +1494,7 @@ function CursorBar({
           type="button"
           data-action="copy-link"
           onClick={copyLink}
-          className="mono rounded-[6px] border px-3 py-[3px] text-[10px] uppercase tracking-[.06em]"
+          className="no-print mono rounded-[6px] border px-3 py-[3px] text-[10px] uppercase tracking-[.06em]"
           style={{ color: "var(--accent)", borderColor: "var(--accent)", background: "transparent" }}
         >
           {copied ? COPY_LINK_DONE : COPY_LINK_IDLE}
@@ -3850,7 +3850,7 @@ function SummaryTab({
 /** The HiFi's two gated hooks under NEXT, disabled with SOON. */
 function SoonHook({ label, hint, children }: { label: string; hint?: string; children?: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center gap-3" data-soon-hook={label} title={hint}>
+    <div className="no-print flex flex-wrap items-center gap-3" data-soon-hook={label} title={hint}>
       <button
         type="button"
         disabled
@@ -4061,7 +4061,7 @@ function WindowDisclosureTable({
       <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: disclosure.availability.reason_code }} what="bars" />
     );
   const rows: { key: string; tone: string; who: ReactNode; count: ReactNode }[] = [
-    { key: "IS", tone: "var(--role-is)", who: none("read permission, card count"), count: bars(disclosure?.is_bars) },
+    { key: "IS", tone: "var(--ink-mute)", who: none("read permission, card count"), count: bars(disclosure?.is_bars) },
     {
       key: "OOS",
       tone: "var(--role-oos)",
@@ -4116,6 +4116,9 @@ function WindowDisclosureTable({
     <TableCard
       title="window disclosure — who may read what"
       data-window-disclosure-panel
+      role="region"
+      aria-label="window disclosure"
+      tabIndex={0}
       style={{ ...PANEL_STYLE, boxShadow: "none", flex: "1 1 0", minWidth: "min(340px, 100%)" }}
     >
       <table className="w-full border-collapse text-[12px]">

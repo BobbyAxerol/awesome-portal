@@ -16,7 +16,7 @@ import { useEffect, useMemo } from "react";
 import { useLocation, useParams, useSearchParams } from "react-router-dom";
 
 import { ReportScreen } from "./ReportDetail";
-import { linkFromLocation } from "./reportClient";
+import { coreV2, linkFromLocation } from "./reportClient";
 import { useReport } from "./useReport";
 import { useReportExport } from "./useReportExport";
 import { LinkedAuditConsumer } from "./LinkedAuditConsumer";
@@ -39,7 +39,7 @@ function ReportContainer({ runId }: { runId: string }) {
   }, []);
 
   return <ReportScreen runId={runId} workspaceId={workspaceId} cursor={link.cursor ?? null} window={link.window ?? null} controller={controller} exporter={exporter} requestedRevision={requestedRevision}
-    linkedAudit={controller.report ? <LinkedAuditConsumer runId={runId} workspaceId={workspaceId} onSettled={controller.retry} /> : undefined} />;
+    linkedAudit={controller.report ? <LinkedAuditConsumer runId={runId} workspaceId={workspaceId} onSettled={controller.retry} targetKind={coreV2(controller.report.frozen_core)?.final_audit?.audit_target_kind ?? null} /> : undefined} />;
 }
 
 export function ReportRoute() {

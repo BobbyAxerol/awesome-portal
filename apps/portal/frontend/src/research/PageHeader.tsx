@@ -85,6 +85,7 @@ export function PageHeader({
               <button
                 type="button"
                 data-action="copy-link"
+                className="no-print"
                 onClick={onCopy}
                 aria-label="Copy link"
                 title={copied ? "Copied" : "Copy link"}

@@ -23,7 +23,7 @@ import { linkFromLocation } from "./reportClient";
 import { useRunStatus } from "./useRunStatus";
 import { useReleaseCandidate, useReleaseCandidatePack } from "./useReleaseCandidate";
 import { useReleaseCandidatePublication } from "./useReleaseCandidatePublication";
-import { LinkedAuditConsumer } from "./LinkedAuditConsumer";
+import { LinkedAuditForRun } from "./LinkedAuditConsumer";
 
 function ComposeContainer({ runId }: { runId: string }) {
   /* One writer for the screen: a save, a seal and a publish never overlap. */
@@ -43,7 +43,7 @@ function ComposeContainer({ runId }: { runId: string }) {
     onSettled: controller.retry,
   });
   return <ReleaseCandidateScreen mode="compose" runId={runId} controller={controller} publication={publication} status={status} link={link}
-    linkedAudit={controller.compose ? <LinkedAuditConsumer runId={runId} workspaceId={workspaceId} writer={writer}
+    linkedAudit={controller.compose ? <LinkedAuditForRun runId={runId} workspaceId={workspaceId} writer={writer}
       writesLocked={controller.writesLocked || publication.publication?.state === "DELIVERED"} onSettled={controller.retry} /> : undefined} />;
 }
 
@@ -54,7 +54,7 @@ function PackContainer({ releaseCandidateId }: { releaseCandidateId: string }) {
   /* Read-only here: the publication and its mirror are printed, never operated. */
   const publication = useReleaseCandidatePublication(controller.pack ? releaseCandidateId : null, { workspaceId: link.workspaceId });
   return <ReleaseCandidateScreen mode="pack" releaseCandidateId={releaseCandidateId} controller={controller} publication={publication} link={link}
-    linkedAudit={controller.pack ? <LinkedAuditConsumer runId={controller.pack.run_id} workspaceId={link.workspaceId} readOnly /> : undefined} />;
+    linkedAudit={controller.pack ? <LinkedAuditForRun runId={controller.pack.run_id} workspaceId={link.workspaceId} readOnly /> : undefined} />;
 }
 
 export function ReleaseCandidateRoute() {

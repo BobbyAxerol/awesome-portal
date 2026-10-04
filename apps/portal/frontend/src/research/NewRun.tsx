@@ -845,7 +845,8 @@ function RouteStep({
                         <span
                           className="mono rounded-[3px] border px-1 text-[8.5px] font-bold leading-[13px]"
                           style={{
-                            color: statusTone(route.status_word).color,
+                            /* Text in an ink token (4.5:1 on the selected card's tint); the tone stays on the border. */
+                            color: "var(--ink-soft)",
                             borderColor: statusTone(route.status_word).color,
                             borderStyle: statusTone(route.status_word).dashed ? "dashed" : "solid",
                           }}
@@ -3312,7 +3313,7 @@ export function NewRun(props: NewRunProps) {
             <Link to="/research/quantbt/runs" data-link="run-library" title="Back to the Run Library">← Run Library</Link>
             <Link to="/research/quantbt/alpha-import" data-link="alpha-import" title="Import a new alpha version, then come back here">Import a version</Link>
             {onStartOver && !draftIsEmpty(draft) ? (
-              <button type="button" className="text-[10px] font-semibold" style={{ color: "var(--accent)" }} data-action="start-over" title="Drop the saved draft and open a blank form" onClick={onStartOver}>
+              <button type="button" className="no-print text-[10px] font-semibold" style={{ color: "var(--accent)" }} data-action="start-over" title="Drop the saved draft and open a blank form" onClick={onStartOver}>
                 Start over
               </button>
             ) : null}

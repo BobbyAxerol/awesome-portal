@@ -2580,7 +2580,7 @@ function DeltaTable({ result }: { result: PairComparable }) {
       <h3 aria-level={2} className="t" title={DELTA_NOTE}>
         <span>{DELTA_TITLE}</span>
       </h3>
-      <div className="cp-scroll">
+      <div className="cp-scroll" tabIndex={0} role="region" aria-label="metric deltas table">
         <table className="cp-delta">
           <thead>
             <tr>
@@ -2724,7 +2724,7 @@ function Differences({ result }: { result: PairComparable }) {
           {NO_DIFFERENCES}
         </div>
       ) : (
-        <div className="cp-scroll">
+        <div className="cp-scroll" tabIndex={0} role="region" aria-label="differences table">
           <table className="cp-dtable">
             <thead>
               <tr>

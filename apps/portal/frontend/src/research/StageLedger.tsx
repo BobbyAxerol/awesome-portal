@@ -81,6 +81,7 @@ export function StageLedger({ folds, foldTrials, cursor, studyTrials = null }: S
   return (
     <div
       data-stage-ledger
+      tabIndex={0}
       role="table"
       aria-label="Stage log — one row per reported fold"
       style={{
@@ -117,7 +118,7 @@ export function StageLedger({ folds, foldTrials, cursor, studyTrials = null }: S
         folds.map((fold) => {
           const running = fold.state === "RUNNING";
           const current = cursor === fold.fold;
-          const tone = fold.state === "DONE" ? "var(--good)" : fold.state === "FAILED" ? "var(--bad)" : "var(--accent)";
+          const tone = fold.state === "DONE" ? "var(--ink-soft)" : fold.state === "FAILED" ? "var(--bad)" : "var(--accent)";
           const trial = foldTrials[fold.fold];
           const selection = fold.selection ?? NOT_PUBLISHED_SELECTION;
           const available = selection.state === "AVAILABLE";
@@ -158,7 +159,7 @@ export function StageLedger({ folds, foldTrials, cursor, studyTrials = null }: S
               </span>
               <span
                 role="cell"
-                style={{ ...cell(3), color: "var(--good)" }}
+                style={{ ...cell(3), color: "var(--ink-soft)", fontWeight: 600 }}
                 data-ledger-objective={fold.fold}
                 title={global ? `${selection.objective ?? ""} · ${GLOBAL_OBJECTIVE_NOTE}` : selection.objective ?? undefined}
               >

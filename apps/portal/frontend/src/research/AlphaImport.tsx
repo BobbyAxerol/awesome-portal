@@ -383,7 +383,7 @@ function StepButton({
   const inert = disabled === true || reason !== null;
   const reasonId = `ai-reason-${action}`;
   return (
-    <span className="ai-controls">
+    <span className="ai-controls no-print">
       <button
         type="button"
         className="ai-btn"
@@ -938,6 +938,23 @@ export interface AlphaImportProps {
 
 export type ImportStep = 1 | 2 | 3;
 
+const STEP_HASH: Record<ImportStep, string> = { 1: "source", 2: "gates", 3: "register" };
+/** `#step=gates` -> 2; anything else (absent, garbage) -> null. */
+export function stepFromHash(hash: string): ImportStep | null {
+  const word = new URLSearchParams(hash.replace(/^#/, "")).get("step");
+  const found = (Object.keys(STEP_HASH) as unknown as string[]).find((key) => STEP_HASH[Number(key) as ImportStep] === word);
+  return found === undefined ? null : (Number(found) as ImportStep);
+}
+/** The step lives in the hash (replace, no history entry); step 1 is the default and keeps the URL clean. */
+function writeStepHash(step: ImportStep): void {
+  if (typeof window === "undefined") return;
+  const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  if (step === 1) params.delete("step"); else params.set("step", STEP_HASH[step]);
+  const hash = params.toString();
+  const next = `${window.location.pathname}${window.location.search}${hash ? `#${hash}` : ""}`;
+  if (next !== `${window.location.pathname}${window.location.search}${window.location.hash}`) window.history.replaceState(window.history.state, "", next);
+}
+
 /** The three authority states (DQ-06), with the HiFi's label + sub-line shape. */
 export const IMPORT_STEPS: readonly { n: ImportStep; key: string; label: string; sub: string }[] = [
   { n: 1, key: "source", label: "Source", sub: "Source & mirror — one .py, contract and code" },
@@ -1026,7 +1043,14 @@ export function AlphaImport(props: AlphaImportProps) {
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [view, setView] = useState<ImportStep>(() => stepForReceipts(gates, registration));
+  const [view, setView] = useState<ImportStep>(() => {
+    const wanted = stepFromHash(typeof window === "undefined" ? "" : window.location.hash);
+    /* The pasted source is never persisted: a step that needs the parsed source or its gate receipt
+       is restored only when that receipt is in memory, otherwise the wizard opens at step 1, silently. */
+    if (wanted === 1 || (wanted === 2 && parse !== null) || (wanted === 3 && parse !== null && gates !== null)) return wanted;
+    return stepForReceipts(gates, registration);
+  });
+  useEffect(() => { writeStepHash(view); }, [view]);
   /* Follow a new receipt, once, when it arrives: running the gates shows the
      gates, a registration shows the registry. Clicking the stepper afterwards
      is the reader's choice and is kept. */

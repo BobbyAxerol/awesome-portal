@@ -208,7 +208,7 @@ function IntegrityPanel({
 
         <button
           type="button"
-          className="btn-ghost mono ml-auto text-[10px]"
+          className="btn-ghost no-print mono ml-auto text-[10px]"
           data-action="verify"
           onClick={onVerify}
           disabled={verify.state === "verifying"}
@@ -1064,7 +1064,7 @@ function RetainedIntegrity({
         {/* Spec 07 §2.3: "verify now" — disabled while verifying, never optimistic. */}
         <button
           type="button"
-          className="btn-ghost mono ml-auto text-[10px]"
+          className="btn-ghost no-print mono ml-auto text-[10px]"
           data-action="verify"
           onClick={onVerify}
           disabled={verify.state === "verifying"}

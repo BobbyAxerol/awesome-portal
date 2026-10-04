@@ -482,7 +482,7 @@ function LiveWhatIf({
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          className="btn-ghost mono text-[10px]"
+          className="btn-ghost no-print mono text-[10px]"
           data-action="evaluate-grid"
           data-evaluate-state={evaluateAction.state}
           disabled={!evaluateAction.may_submit || evaluate.state === "submitting" || !whatIf.grid}
@@ -497,7 +497,7 @@ function LiveWhatIf({
         </button>
         <button
           type="button"
-          className="btn-ghost mono text-[10px]"
+          className="btn-ghost no-print mono text-[10px]"
           data-action="create-sibling"
           disabled={!sibling.may_create || !sibling.href_template || !available || !moved}
           title={

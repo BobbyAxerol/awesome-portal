@@ -487,7 +487,7 @@ function CurveBody({ block, activeEpisode = null }: { block: EnrichedAnalysis; a
         <p className="rr-at-sub" data-curve-windows title={windows.map((win) => win.title).join("\n\n")}>
           <span>
             {windows.map((win, index) => (
-              <span key={win.key} data-window-legend={win.key} style={{ color: `var(--role-${win.key})` }}>
+              <span key={win.key} data-window-legend={win.key} style={{ color: win.key === "is" ? "var(--ink-mute)" : `var(--role-${win.key})` }}>
                 {index > 0 ? " · " : ""}
                 {win.label} {DAY(win.start_ms)} → {DAY(win.end_ms)}
               </span>

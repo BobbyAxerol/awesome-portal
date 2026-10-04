@@ -2012,7 +2012,10 @@ export function CandleReplayBody({
   const segments = execution.fold_capital.segments;
   const selectedOrdinal = replay.replay.state_at_cursor.source_ordinal;
   const [reveal, setReveal] = useState(false);
-  const [selected, setSelected] = useState<TransitionRow | null>(null);
+  /* F-06: the reader's pick counts only while it lies in the window on screen; otherwise the selection is the
+     window's own default (first ledger row at or after its first bar), so the same window selects the same row
+     after a fold change, a reload or a deep link. */
+  const [picked, setSelected] = useState<TransitionRow | null>(null);
   /* One hover across chart and ledger: a marker and its ledger row light together. */
   const [hover, setHover] = useState<number | null>(null);
   const inFlight = slot.inFlight === true;
@@ -2092,11 +2095,12 @@ export function CandleReplayBody({
   /* E2 (audit 8.14): the anatomy opens on a transition, as the HiFi does — the
      first one at or after the playhead — instead of an empty "pick one". */
   const ledgerRows = controller.transitions?.state === "ready" ? controller.transitions.ledger.rows : null;
-  useEffect(() => {
-    if (selected !== null || !ledgerRows || ledgerRows.length === 0) return;
-    const here = rows[0]?.source_ordinal ?? 0;
-    setSelected(ledgerRows.find((row) => row.source_ordinal >= here) ?? ledgerRows[0]!);
-  }, [ledgerRows, rows, selected]);
+  const windowFirst = rows[0]?.source_ordinal ?? 0;
+  const windowLast = rows[rows.length - 1]?.source_ordinal ?? windowFirst;
+  const selected: TransitionRow | null =
+    picked !== null && picked.source_ordinal >= windowFirst && picked.source_ordinal <= windowLast
+      ? picked
+      : (ledgerRows && ledgerRows.length > 0 ? (ledgerRows.find((row) => row.source_ordinal >= windowFirst) ?? ledgerRows[0]!) : null);
   const seekTransition = (row: TransitionRow) => {
     setSelected(row);
     const at = rows.findIndex((candidate) => candidate.source_ordinal === row.source_ordinal);

@@ -990,7 +990,7 @@ function EquityFigure({ equity, folds, equityIs, sourceFallback = null }: { equi
             <div className="rr-eq-legend" aria-hidden="true" data-equity-legend>
               <span data-legend="is" data-legend-state={withIs ? "published" : "absent"}>
                 <span className="sw" />
-                {withIs ? equityIsLegend(equityIs!) : equityIs ? <span title={factReason(equityIs)} tabIndex={0}>IS account — not published</span> : EQUITY_LEGEND_IS}
+                {withIs ? equityIsLegend(equityIs!) : equityIs ? <span title={factReason(equityIs)}>IS account — not published</span> : EQUITY_LEGEND_IS}
               </span>
               <span data-legend="oos">
                 <span className="sw" />
