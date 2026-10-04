@@ -38,10 +38,21 @@ describe("formatValue", () => {
     expect(formatValue.utc(Date.UTC(2026, 9, 2, 16, 31, 59))).toBe("2026-10-02 16:31 UTC");
     expect(formatValue.utc(Number.NaN)).toBe("");
   });
+  it("a real value that rounds to zero prints ≈0, an exact zero prints 0 (OOS Sharpe -3.3e-16, Bobby 2026-10-04)", async () => {
+    const { formatMetric } = await import("./researchFormat");
+    expect(formatMetric("-0.00000000000000033333333333333333", "ratio")).toBe("≈0");
+    expect(formatMetric("0", "ratio")).toBe("0.000");
+    expect(formatMetric("0.0004", "ratio")).toBe("≈0");
+    expect(formatMetric("0.0006", "ratio")).toBe("0.001");
+    expect(formatMetric("-0.000000001", "fraction")).toBe("≈0%");
+    expect(formatMetric("0.0000001", "currency")).toBe("≈0");
+    expect(formatValue.number(0, { dp: 3 })).toBe("0.000");
+  });
+
   it("never prints a raw float, uses U+2212 and no negative zero", () => {
     expect(formatValue.number(0.03386197520287556)).toBe("0.03");
     expect(formatValue.number("-0.537", { dp: 3 })).toBe("−0.537");
-    expect(formatValue.number(-0.0001)).toBe("0.00");
+    expect(formatValue.number(-0.0001)).toBe("≈0");
     expect(formatValue.number(19909.419272059647, { dp: 2 })).toBe("19,909.42");
     expect(formatValue.number(6.1013, { unit: "ratio" })).toBe("6.101");
     expect(formatValue.number(12, { unit: "bars" })).toBe("12");

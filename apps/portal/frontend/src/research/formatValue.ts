@@ -3,7 +3,7 @@
  * `YYYY-MM-DD HH:mm UTC`, 2/3-decimal rules, U+2212 for negatives, and never a
  * raw float. Display only; callers keep the exact value in a tooltip.
  */
-import { formatMetric, typographicMinus } from "./researchFormat";
+import { NEAR_ZERO, formatMetric, roundsToZero, typographicMinus } from "./researchFormat";
 
 const KNOWN_UNITS = new Set(["currency", "fraction", "count", "bars", "seconds", "ratio"]);
 
@@ -16,6 +16,8 @@ function utc(ms: number): string {
 }
 
 function fixed(parsed: number, dp: number): string {
+  /* A real, non-zero value that prints as 0.00 is `≈0`; the exact string stays in the caller's tooltip. */
+  if (roundsToZero(parsed, dp)) return NEAR_ZERO;
   const text = new Intl.NumberFormat("en-US", { minimumFractionDigits: dp, maximumFractionDigits: dp }).format(parsed);
   /* No negative zero: -0.00 reads as a loss of nothing. */
   return typographicMinus(/^-0(?:\.0+)?$/.test(text) ? text.slice(1) : text);

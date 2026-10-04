@@ -27,23 +27,32 @@ export function typographicMinus(text: string): string {
   return text.replace(/^-(?=\d)/, "−");
 }
 
+/** The glyph for a value that is exactly not zero but rounds to zero at the printed precision (e.g. -3.3e-16). */
+export const NEAR_ZERO = "≈0";
+
+/** True when `value` is not zero yet would print as 0 at `dp` places: show `≈0`, never `0.000`/`-0.000` (the exact string stays in the tooltip). */
+export function roundsToZero(value: number, dp: number): boolean {
+  return Number.isFinite(value) && value !== 0 && Math.abs(value) < 0.5 * 10 ** -dp;
+}
+
 /** A metric value for a tile or a table cell, by unit. */
 export function formatMetric(value: string | number | null | undefined, unit: string | null | undefined): string | null {
   const parsed = parse(value);
   if (parsed === null) return null;
   switch (unit) {
     case "currency":
-      return typographicMinus(GROUPED(2).format(parsed));
+      return roundsToZero(parsed, 2) ? NEAR_ZERO : typographicMinus(GROUPED(2).format(parsed));
     case "fraction":
-      return `${parsed >= 0 ? "+" : "−"}${GROUPED(2).format(Math.abs(parsed * 100))}%`;
+      return roundsToZero(parsed * 100, 2) ? `${NEAR_ZERO}%` : `${parsed >= 0 ? "+" : "−"}${GROUPED(2).format(Math.abs(parsed * 100))}%`;
     case "count":
     case "bars":
       return typographicMinus(Number.isInteger(parsed) ? GROUPED(0).format(parsed) : GROUPED(2).format(parsed));
     case "seconds":
       return formatDuration(parsed);
     case "ratio":
-      return typographicMinus(GROUPED(3).format(parsed));
+      return roundsToZero(parsed, 3) ? NEAR_ZERO : typographicMinus(GROUPED(3).format(parsed));
     default:
+      if (roundsToZero(parsed, 6)) return NEAR_ZERO;
       return typographicMinus(Math.abs(parsed) >= 1000 ? GROUPED(2).format(parsed) : String(Number(parsed.toPrecision(6))));
   }
 }

@@ -55,7 +55,7 @@ describe("W4A-contract primitives (identical contract)", () => {
   it("formatValue: UTC minute, grouped numbers, U+2212, never a signed zero", () => {
     expect(formatValue.utc(Date.UTC(2026, 9, 1, 13, 44))).toBe("2026-10-01 13:44 UTC");
     expect(formatValue.number("-1234.5")).toBe("−1,234.50");
-    expect(formatValue.number(-0.0000003, { dp: 3 })).toBe("0.000");
+    expect(formatValue.number(-0.0000003, { dp: 3 })).toBe("≈0");
     expect(formatValue.number(0.5, { dp: 1, unit: "%" })).toBe("0.5 %");
   });
 

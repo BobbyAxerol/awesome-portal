@@ -84,7 +84,7 @@ describe("W1-S13 negative zero", () => {
     expect(noNegativeZero("−0.000")).toBe("0.000");
     expect(noNegativeZero("-0.00")).toBe("0.00");
     expect(noNegativeZero("−0.00%")).toBe("0.00%");
-    expect(ppDelta("-0.0000001")).toBe("0.00 pp");
+    expect(ppDelta("-0.0000001")).toBe("≈0 pp");
   });
   it("a real negative keeps the typographic minus", () => {
     expect(noNegativeZero("−0.001")).toBe("−0.001");
