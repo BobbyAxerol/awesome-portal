@@ -4,6 +4,23 @@
 
 **Target:** deployed preview `http://localhost:8095` (public `research-portal.primusspark.com`), bundle `index-Dim4AT4Z.js`, stack rebuilt 04:14Z by the lead; the matrix below is a full run on that bundle (five parallel shards, then one re-run of 11 cells after the F-07 allow-list entry). **GET and navigation only**: `getOnly` aborts every non-GET `/api/` call; no write control was clicked.
 
+## Re-run on the final bundle — 2026-10-04 (supersedes the per-cell FAIL table below)
+
+Bundle `index-Bu8sUwob.js` (lane HEAD `0d1b54d7` + this spec change), full spec, GET/navigation only.
+**73 cells · 682 checks = 613 PASS / 0 FAIL / 69 NA.** The 29 FAILs of the first run (F-01…F-06) were fixed in `0d1b54d7`:
+F-01 copy-link no-print · F-02 write-named controls no-print · F-03/F-04 ink-token contrast + focusable scroll regions ·
+F-05 S14 step in the hash only where restorable · F-06 deterministic S08 selected transition · F-07 linked-audit panel asks only for
+`SINGLE_PARAMETER_SET` (typed "not applicable" otherwise; 6 failing lane cells now pass). S14 `refresh`: the wizard keeps the pasted source
+in memory only, so a reload cannot restore step 2/3; the contract is "return to the entry state, clean URL, no error" and the cell now asserts that
+(`refreshFallback`), not "same state".
+
+Lane + gate on the same bundle: real-API + W1 + W5 gate 227/228 (the one failure, `S06 on real reads at mobile`, is a load flake: 3/3 pass alone).
+
+Verdict: **T09 / T13 = READY_FOR_BOBBY_REVIEW for the GET/navigation denominator** (nav, deep link, reload, print, responsive 1440/1280/390/360, a11y, console on every screen × run state).
+Still not covered, by design or by missing data: write controls are enumerated `NOT_RUN_WRITE` here (real receipts: P22 publish of R-WFO-027 and the journey receipt `FE_JOURNEY_RECEIPT_2026-10-04.md`);
+`denied` and `stale` states do not exist on the preview (stale seals exist on R-WFO-022/023 and are exercised by the lane); Operations Dark and mobile print are covered by the QA REPORT.md addendum, not re-run here;
+real-device print is a review item. Everything below is the FIRST run, kept as history.
+
 **Totals:** 73 cells · 682 checks = **584 PASS / 29 FAIL / 69 NA** · cells with every check PASS/NA: **50**, cells with ≥1 FAIL: **23**. (A cell = screen × tab/mode × run; 15 screens, 73 cells.)
 
 ## Verdict

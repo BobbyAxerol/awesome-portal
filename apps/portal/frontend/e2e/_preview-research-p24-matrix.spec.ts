@@ -184,6 +184,8 @@ interface Cell {
   path: (run: string, label: string) => string;
   /** One state change by GET-only controls; returns the sig-relevant description. The URL afterwards is the deep link. */
   act?: (page: Page, label: string) => Promise<void>;
+  /** State lives in memory only (never persisted): after a reload the screen must return to its entry state, cleanly. */
+  refreshFallback?: boolean;
   nav?: NavProbe[];
   writes?: (kind: RunKind) => WriteExpect[];
   /** Print probe applies (all screens); false only where print is meaningless. */
@@ -621,6 +623,9 @@ const CELLS: Cell[] = [
       await page.getByRole("tab", { name: /Register/ }).click();
       await page.waitForTimeout(300);
     },
+    /* The wizard keeps the pasted source in memory only (never persisted), so a reload cannot restore step 2/3:
+       the product falls back to step 1 with a clean URL and no error (AlphaImport `#step=` rule). */
+    refreshFallback: true,
     nav: [
       { label: "Journey", kind: "route", loc: (p) => p.locator("a[href$='/journey']").first(), path: () => new RegExp(`${RQ}/journey$`), root: "[data-screen='journey-map']" },
       { label: "New run →", kind: "route", loc: (p) => p.getByRole("link", { name: /^New run/ }).first(), path: () => new RegExp(`${RQ}/runs/new$`), root: "[data-screen='new-run']" },
@@ -802,6 +807,9 @@ async function battery({ page, browser }: { page: Page; browser: Browser }, test
     return `data-screen=${screen}; ${cell.scope === "run" ? `run ${kind}=${runId.slice(0, 13)}…` : "global"}; ${url0.replace(RQ, "")}`;
   });
 
+  /* the entry state, before any control (the writes probe below clicks wizard tabs) */
+  const entry = await sig(page);
+
   /* ---- writes (never clicked) ---- */
   await step("writes", async () => {
     const lines: string[] = [];
@@ -845,8 +853,10 @@ async function battery({ page, browser }: { page: Page; browser: Browser }, test
     await page.reload();
     await ready(page, cell.root);
     const after = await sig(page);
-    const d = diff(before, after);
-    expect(d, `state after reload equals state before (${JSON.stringify(before.hash)}${JSON.stringify(before.search)})`).toEqual([]);
+    /* In-memory-only state (S14) must come back as the entry state: same as a cold open of the screen's own path. */
+    const expected = cell.refreshFallback ? entry : before;
+    const d = diff(expected, after);
+    expect(d, `state after reload equals ${cell.refreshFallback ? "the entry state (in-memory wizard state is not restorable)" : "state before"} (${JSON.stringify(expected.hash)}${JSON.stringify(expected.search)})`).toEqual([]);
     return `reload kept ${before.path}${before.search ?? ""}${before.hash ?? ""} · tab=${JSON.stringify(before.tabs)} pressed=${JSON.stringify(before.pressed)}`;
   });
 

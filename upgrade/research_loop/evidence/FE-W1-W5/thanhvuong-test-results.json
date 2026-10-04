@@ -2,20 +2,19 @@
   "packet": "FE-W1-W5",
   "owner": "Thanhvuong (Claude, frontend)",
   "date": "2026-10-03",
-  "status": "W1-W7 FE landed on claude/fe-parity · gates measured 2026-10-03 · NOT_VERIFIED at product level (Bobby by-eye review + signed release pending)",
+  "status": "W1-W7 + P24 FE fixes landed on claude/fe-parity · gates measured 2026-10-04 · READY_FOR_BOBBY_REVIEW (frontend) · not OWNER_ACCEPTED",
   "branch": "claude/fe-parity",
-  "head": "2f4cb81a7600eeeb8efa2bf61dee743ea1ddbb52",
+  "head": "0d1b54d7a8d3423fa43d2b531979b6ffe952ef7b",
   "tree": "d49144200ff3cbd0cec07604c6d5b364e48cef32",
   "base": "b2098a81",
   "diff_base_head": "450 files +19352/-5529",
   "measured_on": "2026-10-03",
-  "bundle": "index-C41KmM2A.js",
+  "bundle": "index-Bu8sUwob.js",
   "gates": {
     "vitest_full": {
-      "passed": 5892,
+      "passed": 5918,
       "skipped": 1,
-      "files": 338,
-      "note": "load-flaky searchF2 D7 and foundation P09-T04 made deterministic (green twice in a row)"
+      "files": 340
     },
     "tsc": "clean",
     "preview_real_api_lane": {
@@ -61,10 +60,27 @@
       "S09": "57/51"
     },
     "lane_plus_gate_combined": {
-      "passed": 228,
+      "passed": 227,
       "total": 228,
-      "bundle": "index-C41KmM2A.js",
-      "note": "S06 mobile real-read cell failed once under load and passed 3/3 alone"
+      "bundle": "index-Bu8sUwob.js",
+      "note": "S06 mobile real-read cell is a load flake: 3/3 pass alone"
+    },
+    "p24_matrix": {
+      "spec": "e2e/_preview-research-p24-matrix.spec.ts",
+      "cells": 73,
+      "checks": 682,
+      "pass": 613,
+      "fail": 0,
+      "na": 69,
+      "bundle": "index-Bu8sUwob.js"
+    },
+    "p24_reconcile": {
+      "script": "scripts/research-preview/p24-reconcile.mjs",
+      "pass": 182,
+      "fail": 18,
+      "na": 75,
+      "pass_with_note": 6,
+      "note": "18 = stale seals R-WFO-022/023 (expected) + Codex §32-1/2/3"
     }
   },
   "p22_publish": {
@@ -87,6 +103,7 @@
     "raw_enum_tokens_S04_S11": "398 occurrences/79 distinct -> 141/23 (rest: names, ids, acronyms kept by decision)",
     "visual": "Research spec 28 cells recorded; legacy spec 101 cells; print cells now light palette",
     "codex_payloads_on_preview": "d5d09875 verified: R-WFO-022/023 P22_CURRENT_SOURCE_CHANGED + CREATE_NEW_RUN_AND_SEAL on both readers; R-WFO-027 DELIVERED/NONE/approval_read DENIED; rail selected_params ordinal 351 RUN_GLOBAL / 2 STUDY_LOCAL",
-    "causal_360": "Real causal run R-WFO-027 (per_fold_causal) checked at 360/390: no overflow, 0 console errors; 4 mobile layout defects found and fixed (claim chips, artifact rows, S07 per-fold selection, S05 fold table headers); evidence /home/bobby/portal-research-qa-2026-10-03/causal360/"
+    "causal_360": "Real causal run R-WFO-027 (per_fold_causal) checked at 360/390: no overflow, 0 console errors; 4 mobile layout defects found and fixed (claim chips, artifact rows, S07 per-fold selection, S05 fold table headers); evidence /home/bobby/portal-research-qa-2026-10-03/causal360/",
+    "p24_journey": "FE_JOURNEY_RECEIPT_2026-10-04.md: import UI→gates→register DRAFT→preflight→typed create refusals→WFO run→RC seal+publish→R1 approval apr_06GGAC00VHRN2Y9C34S55HEDC2"
   }
 }

@@ -1,7 +1,7 @@
 {
   "packet": "FE-W1-W5",
-  "date": "2026-10-03 (W6-W7 update)",
-  "head": "2f4cb81a7600eeeb8efa2bf61dee743ea1ddbb52",
+  "date": "2026-10-04 (P24 update)",
+  "head": "0d1b54d7a8d3423fa43d2b531979b6ffe952ef7b",
   "open_debt": [
     {
       "id": "DEBT-S06-CONTRAST",
@@ -96,7 +96,7 @@
     {
       "id": "DEBT-OOS-ZERO",
       "what": "strict OOS Sharpe prints 0.000",
-      "state": "OPEN_DECISION · server serves a real -3.3e-16 (AVAILABLE); UI prints 0.000 with the exact value in the title; '≈0' is a formatter choice for Bobby"
+      "state": "CLOSED · Bobby delegated; formatMetric/formatValue print ≈0 for a real non-zero value that rounds to zero (f79b3875)"
     },
     {
       "id": "DEBT-PRINT-REALDEVICE",
@@ -107,6 +107,16 @@
       "id": "DEBT-W8-LEFTOVERS",
       "what": "null dashes on S06/S07/S09, :has() stopgap, Vietnamese inbox label, S04 exact table, two flaky tests",
       "state": "CLOSED · a9ff796a; gate 228/228"
+    },
+    {
+      "id": "DEBT-P24-MATRIX",
+      "what": "matrix F-01…F-07",
+      "state": "CLOSED · 0d1b54d7; matrix 613 PASS / 0 FAIL / 69 NA on index-Bu8sUwob.js"
+    },
+    {
+      "id": "DEBT-IMPORTED-EXEC",
+      "what": "imported alpha cannot create a run on this stack (admission PREFLIGHT_ONLY, 409 RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE); scratch refused likewise",
+      "state": "OPEN_CODEX · §32-4"
     }
   ],
   "codex_dependencies": [
