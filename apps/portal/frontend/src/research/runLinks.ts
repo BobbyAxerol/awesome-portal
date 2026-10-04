@@ -18,6 +18,8 @@ import type { EvidenceWindow } from "./evidenceWindow";
 import { runScreenHref, runScreenPath, type RunScreen } from "./runScreenHref";
 
 export interface LinkCursor {
+  /** Explicit navigation scope, never an authorization assertion. */
+  workspaceId?: string;
   cursor?: EvidenceCursor | null;
   window?: EvidenceWindow | null;
 }
@@ -42,7 +44,19 @@ function link(runId: string, screen: RunScreen, c: LinkCursor | undefined, stage
   /* A stage named beside no cursor is not a cursor: the link stays bare (never `#stage=` alone). */
   if (stage !== undefined && c?.cursor != null) over.stage = stage;
   if (c?.window != null) over.window = c.window;
-  return runScreenHref(runId, screen, c?.cursor ?? null, Object.keys(over).length > 0 ? over : undefined);
+  return withWorkspace(runScreenHref(runId, screen, c?.cursor ?? null, Object.keys(over).length > 0 ? over : undefined), c?.workspaceId);
+}
+
+/** Preserve existing query/hash without accepting an arbitrary URL. */
+export function withWorkspace(href: string, workspaceId?: string): string {
+  if (!workspaceId || !href.startsWith("/") || href.startsWith("//")) return href;
+  const hashAt = href.indexOf("#");
+  const hash = hashAt < 0 ? "" : href.slice(hashAt);
+  const path = hashAt < 0 ? href : href.slice(0, hashAt);
+  const queryAt = path.indexOf("?");
+  const params = new URLSearchParams(queryAt < 0 ? "" : path.slice(queryAt + 1));
+  params.set("workspace_id", workspaceId);
+  return `${queryAt < 0 ? path : path.slice(0, queryAt)}?${params}${hash}`;
 }
 
 /** Hub. The stage is the cursor's own unless the caller names one; never defaulted. */

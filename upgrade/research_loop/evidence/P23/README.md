@@ -1,5 +1,13 @@
 # P23 backend qualification packet
 
+**Latest workspace and linked-audit consumer — 2026-10-04:** Codex owns and
+delivered the affected FE read slice. [Implementation, real 4/4 browser
+receipts, tests, C4 and remaining gates](./WORKSPACE_AND_LINKED_AUDIT_CONSUMER_2026-10-04.md).
+285/285 affected frontend tests, official Node-22 web build and actual scoped
+S09/S11 at 1280/660 PASS. Original proof/report custody and jobs unchanged;
+both fresh QA disabled/revoked, cell down. Prior 404/setup failures preserved.
+Strict 83/86, second qualified engine and full P24/release remain OPEN.
+
 **Current 2026-10-03:** [independent WFO engine recomputation](./WFO_DIRECT_ENGINE_RECOMPUTATION_2026-10-03.md)
 is SCOPED_PASS: 2,208 equity/time rows, six native metrics, selected params
 and four exact BFF metrics. [P24 checkpoint](../P24/V1_ACCEPTANCE.md) records

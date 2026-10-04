@@ -88,7 +88,7 @@ import { runLabelFor } from "./runLabels";
 import { markRunUnknown } from "../app/researchRunCrumb";
 import { ResearchNotice } from "./ResearchNotice";
 import { RunExitBar } from "./RunExitBar";
-import { hubHref, libraryHref, lineageRunHref, newRunHref, reportHref, type LinkCursor } from "./runLinks";
+import { hubHref, libraryHref, lineageRunHref, newRunHref, reportHref, withWorkspace, type LinkCursor } from "./runLinks";
 import { runTerminalState, type RunTerminalState } from "./runTerminalState";
 import { trialLabel, trialTitle } from "./trialLabel";
 import type { RunStatusRead } from "./useRunStatus";
@@ -651,7 +651,7 @@ function Header({ runId, here, chips, alpha = null, composeRun = null, attemptId
           ) : null}
           {composeRun !== null ? (
             <>
-              <Link to={releaseCandidateHref(composeRun)} data-action="crumb-composition" title="the run's live composition">
+              <Link to={releaseCandidateHref(composeRun, link)} data-action="crumb-composition" title="the run's live composition">
                 {RC_CRUMB}
               </Link>
               <span className="sep">/</span>
@@ -672,7 +672,7 @@ function Header({ runId, here, chips, alpha = null, composeRun = null, attemptId
         ) : null}
         {alpha !== null ? (
           <Link
-            to={lineageRunHref(alpha.alphaId, { av: alpha.alphaVersionId, run: runId, attempt: attemptId })}
+            to={withWorkspace(lineageRunHref(alpha.alphaId, { av: alpha.alphaVersionId, run: runId, attempt: attemptId }), link.workspaceId)}
             className="rc-linkbtn"
             data-action="open-lineage"
             title="This alpha's attempt lineage, on this version"
@@ -793,6 +793,7 @@ function Banner({ availability }: { availability: RcAvailability }) {
  * read is a typed absence — the contract serves no reason for it, so none is shown.
  */
 function PromotionPickNode({ publication }: { publication: RcPublication | null }) {
+  const link = useContext(LinkContext);
   const pick = publication?.promotion_pick ?? null;
   if (pick === null) {
     return (
@@ -809,7 +810,7 @@ function PromotionPickNode({ publication }: { publication: RcPublication | null 
   /* The trial opens on Screen 06 (the hash's `pick=`); the approval opens only where the mirror served this approval's own href. */
   const trialHref =
     pick.selected_trial_id !== null && IDENTIFIER_OK.test(pick.selected_trial_id) && IDENTIFIER_OK.test(pick.run_id)
-      ? `${runHref(pick.run_id, "search")}#${encodeInspectionCursor({ stage: "search", pick: pick.selected_trial_id })}`
+      ? withWorkspace(`${runHref(pick.run_id, "search")}#${encodeInspectionCursor({ stage: "search", pick: pick.selected_trial_id })}`, link.workspaceId)
       : null;
   const mirror = publication?.approval_read === "AVAILABLE" ? publication.approval : null;
   const approvalHref = mirror !== null && mirror.approval_id === pick.approval_id && isLocalPath(mirror.href) ? mirror.href : null;
@@ -910,7 +911,7 @@ function Rail({ compose, sealedId, pick }: { compose: RcCompose; sealedId: strin
             <span className="k">{label}</span>
             <span className="v" data-rail-value>
               {linkedPack ? (
-                <Link to={releaseCandidatePackHref(node.value)} data-action="open-pack">
+                <Link to={releaseCandidatePackHref(node.value, link.workspaceId)} data-action="open-pack">
                   {node.key === "run" ? runLabelFor(node.value) ?? shortId(node.value) : shortId(node.value)}
                 </Link>
               ) : (
@@ -951,6 +952,7 @@ function Rail({ compose, sealedId, pick }: { compose: RcCompose; sealedId: strin
 }
 
 function Taxonomy({ rows, comparison }: { rows: readonly RcTaxonomyRow[]; comparison: RcCompose["published_comparison"] }) {
+  const link = useContext(LinkContext);
   /* No predecessor: one line (the four UNSET rows said the same thing); the table only when there is something to compare. */
   if (comparison.last_release_candidate_id === null) {
     return (
@@ -965,7 +967,7 @@ function Taxonomy({ rows, comparison }: { rows: readonly RcTaxonomyRow[]; compar
     <div className="rc-tax" data-panel-part="taxonomy">
       <p className="rc-k" data-taxonomy-caption data-last-rc={comparison.last_release_candidate_id}>
         {TAXONOMY_CAPTION}
-        <Link className="rc-mono" to={releaseCandidatePackHref(comparison.last_release_candidate_id)} data-action="open-last-rc">
+        <Link className="rc-mono" to={releaseCandidatePackHref(comparison.last_release_candidate_id, link.workspaceId)} data-action="open-last-rc">
           {comparison.last_release_candidate_id}
         </Link>
       </p>
@@ -1310,6 +1312,7 @@ function PackBlock({ items, runId, alphaId, counts, axes, declarations, editor, 
   state: ResearchState;
 }) {
   /* F2b: the strip's hovered/focused cell and the table row are one selection. */
+  const link = useContext(LinkContext);
   const [hl, setHl] = useState<number | null>(null);
   return (
     <section className="rc-card rc-packcard" data-panel="pack" aria-label="evidence pack">
@@ -1365,7 +1368,7 @@ function PackBlock({ items, runId, alphaId, counts, axes, declarations, editor, 
                   <PackRow
                     key={`${item.key}-${item.n}`}
                     item={item}
-                    route={runId !== null ? packSourceRoute(item, runId, alphaId) : null}
+                    route={runId !== null ? (() => { const route = packSourceRoute(item, runId, alphaId); return route ? withWorkspace(route, link.workspaceId) : null; })() : null}
                     declared={decl !== null && declarations ? declarations[DECLARATION_FIELD[decl]] : undefined}
                     editor={editor}
                     highlighted={hl === item.n}
@@ -1614,12 +1617,13 @@ function SealedCard({ seal, replayed }: {
   };
   replayed: boolean;
 }) {
+  const link = useContext(LinkContext);
   return (
     <section className="rc-sealed" data-panel="sealed" data-sealed={seal.release_candidate_id ?? ""} aria-label="sealed locally">
       <h3 aria-level={2} className="k" title={SEALED_SENTENCE}>Sealed</h3>
       <span className="id" data-sealed-id>
         {seal.release_candidate_id !== null ? (
-          <Link to={releaseCandidatePackHref(seal.release_candidate_id)} data-action="open-pack">
+          <Link to={releaseCandidatePackHref(seal.release_candidate_id, link.workspaceId)} data-action="open-pack">
             {seal.release_candidate_id}
           </Link>
         ) : (
@@ -2007,6 +2011,7 @@ function UnknownOutcomeCard({ publication, controller }: { publication: RcPublic
 
 /** Hi-fi published branch: the immutable record, facts from the server's publication read. */
 function PublishedCard({ releaseCandidateId, publication }: { releaseCandidateId: string | null; publication: RcPublicationController }) {
+  const link = useContext(LinkContext);
   const current = publication.publication;
   const published = current?.published ?? null;
   const approval = current?.approval_read === "AVAILABLE" ? current.approval : null;
@@ -2017,7 +2022,7 @@ function PublishedCard({ releaseCandidateId, publication }: { releaseCandidateId
       </h3>
       <span className="id" data-published-id>
         {releaseCandidateId !== null ? (
-          <Link to={releaseCandidatePackHref(releaseCandidateId)} data-action="open-pack">
+          <Link to={releaseCandidatePackHref(releaseCandidateId, link.workspaceId)} data-action="open-pack">
             {releaseCandidateId}
           </Link>
         ) : (
@@ -2316,8 +2321,9 @@ export type ReleaseCandidateScreenProps =
       status?: RunStatusRead;
       /** The hash cursor and `?window=` of the page that sent the reader here; none when it carried none. */
       link?: LinkCursor;
+      linkedAudit?: ReactNode;
     }
-  | { mode: "pack"; releaseCandidateId: string; controller: RcPackController; publication: RcPublicationController };
+  | { mode: "pack"; releaseCandidateId: string; controller: RcPackController; publication: RcPublicationController; link?: LinkCursor; linkedAudit?: ReactNode };
 
 const NO_STATUS: RunStatusRead = { state: "idle" };
 const NO_LINK: LinkCursor = {};
@@ -2415,7 +2421,7 @@ function ghostFoot(compose: RcCompose | null, publication: RcPublication | null)
   return absence ? <Reason code={reasonOf(absence)} what="approval_mirror" /> : "mirror not published";
 }
 
-function ComposeScreen({ runId, controller, publication, status = NO_STATUS, link = NO_LINK }: { runId: string; controller: ReleaseCandidateController; publication: RcPublicationController; status?: RunStatusRead; link?: LinkCursor }) {
+function ComposeScreen({ runId, controller, publication, status = NO_STATUS, link = NO_LINK, linkedAudit }: { runId: string; controller: ReleaseCandidateController; publication: RcPublicationController; status?: RunStatusRead; link?: LinkCursor; linkedAudit?: ReactNode }) {
   const face = rcFaceOf(controller.compose, controller.state, status);
   const held = face.kind === "hold";
   const compose = held ? null : controller.compose;
@@ -2511,6 +2517,7 @@ function ComposeScreen({ runId, controller, publication, status = NO_STATUS, lin
       <div className="rc-group3">
         <RecordBlock fields={compose ? withSealedId(compose.yaml, sealed?.release_candidate_id ?? null) : null} state={state} />
         <div className="rc-side">
+          {linkedAudit}
           {ownDraftSealed && !sealRetryOpen ? null : <SealCard compose={compose} controller={controller} dirty={editor.dirty} publishing={publication.write.state === "pending"} />}
           {sealed ? <SealedCard seal={sealed} replayed={replayed} /> : null}
           {slot === "published" ? (
@@ -2528,7 +2535,7 @@ function ComposeScreen({ runId, controller, publication, status = NO_STATUS, lin
   );
 }
 
-function PackScreen({ releaseCandidateId, controller, publication }: { releaseCandidateId: string; controller: RcPackController; publication: RcPublicationController }) {
+function PackScreen({ releaseCandidateId, controller, publication, link = NO_LINK, linkedAudit }: { releaseCandidateId: string; controller: RcPackController; publication: RcPublicationController; link?: LinkCursor; linkedAudit?: ReactNode }) {
   const { pack, state } = controller;
   const current = publication.publication;
   const delivered = pack !== null && isDelivered({ local_seal: pack.delivery }, current);
@@ -2536,6 +2543,7 @@ function PackScreen({ releaseCandidateId, controller, publication }: { releaseCa
   const packAlphaId = pack?.frozen_core.fields.find((field) => field.key === "alpha_id")?.value ?? null;
   const packAlpha = packAlphaId !== null && packAlphaId !== undefined ? { alphaId: packAlphaId, alphaVersionId: current?.alpha_version_id ?? pack?.frozen_core.fields.find((field) => field.key === "alpha_version_id")?.value ?? null } : null;
   return (
+    <LinkContext.Provider value={link}>
     <div
       className="rc-page"
       data-screen="release-candidate"
@@ -2590,6 +2598,7 @@ function PackScreen({ releaseCandidateId, controller, publication }: { releaseCa
       <div className="rc-group3">
         <RecordBlock fields={pack?.frozen_core.fields ?? null} state={state} />
         <div className="rc-side">
+          {linkedAudit}
           {pack ? (
             <SealedCard
               seal={{ ...pack.delivery, release_candidate_id: pack.release_candidate_id, pack_digest: pack.pack_digest, sealed_at_utc_ms: pack.sealed_at_utc_ms }}
@@ -2610,7 +2619,7 @@ function PackScreen({ releaseCandidateId, controller, publication }: { releaseCa
                 <PublicationConflict publication={current} />
                 {pack ? (
                   <span>
-                    <Link to={releaseCandidateHref(pack.run_id)} data-action="open-composition">
+                    <Link to={releaseCandidateHref(pack.run_id, link)} data-action="open-composition">
                       open the run's composition →
                     </Link>
                   </span>
@@ -2622,10 +2631,12 @@ function PackScreen({ releaseCandidateId, controller, publication }: { releaseCa
         </div>
       </div>
     </div>
+    </LinkContext.Provider>
   );
 }
 
 function PackIdentity({ pack, state, publication }: { pack: RcPack | null; state: ResearchState; publication: RcPublication | null }) {
+  const link = useContext(LinkContext);
   return (
     <section className="rc-card rc-ident" data-panel="identity" aria-label="identity and lineage">
       <div className="rc-cardhead">
@@ -2635,7 +2646,7 @@ function PackIdentity({ pack, state, publication }: { pack: RcPack | null; state
         <>
           <ol className="rc-rail" data-rail aria-label="sealed identity">
             <li>
-              <Link className="rc-node" to={runHref(pack.run_id, "evidence")} data-rail-node="run" data-tone="ink">
+              <Link className="rc-node" to={hubHref(pack.run_id, link)} data-rail-node="run" data-tone="ink">
                 <span className="k">{RAIL_LABEL.run}</span>
                 <span className="v" title={pack.run_id}>{runLabelFor(pack.run_id) ?? shortId(pack.run_id)}</span>
               </Link>
@@ -2659,7 +2670,7 @@ function PackIdentity({ pack, state, publication }: { pack: RcPack | null; state
           </ol>
           <p className="rc-verdict b" style={{ borderLeft: 0, paddingLeft: 0 }} data-pack-identity-note title={PACK_ROUTE_IDENTITY}>
             {PACK_ROUTE_SHORT}{" "}
-            <Link to={releaseCandidateHref(pack.run_id)} data-action="open-composition">
+            <Link to={releaseCandidateHref(pack.run_id, link)} data-action="open-composition">
               open the run's composition →
             </Link>
           </p>
@@ -2682,10 +2693,10 @@ export function ReleaseCandidateScreen(props: ReleaseCandidateScreenProps) {
   return props.mode === "compose" ? (
     <>
       <ArrivalCursorNotice />
-      <ComposeScreen runId={props.runId} controller={props.controller} publication={props.publication} status={props.status} link={props.link} />
+      <ComposeScreen runId={props.runId} controller={props.controller} publication={props.publication} status={props.status} link={props.link} linkedAudit={props.linkedAudit} />
     </>
   ) : (
-    <PackScreen releaseCandidateId={props.releaseCandidateId} controller={props.controller} publication={props.publication} />
+    <PackScreen releaseCandidateId={props.releaseCandidateId} controller={props.controller} publication={props.publication} link={props.link} linkedAudit={props.linkedAudit} />
   );
 }
 

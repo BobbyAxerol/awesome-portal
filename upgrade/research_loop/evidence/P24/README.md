@@ -1,5 +1,12 @@
 # P24 — acceptance and read-preserving rehearsal
 
+**Latest affected frontend amendment, 2026-10-04:**
+[candidate v4](./current-source-candidate-manifest.v4.json) and
+[scoped S09/S11 workspace/audit consumer receipt](../P23/WORKSPACE_AND_LINKED_AUDIT_CONSUMER_2026-10-04.md).
+Actual 4/4 restored-proof browser and 285/285 affected FE tests PASS; no full
+product/action/visual-owner/signed release claim. Strict 83/86 and genuinely
+second qualified engine remain independent gates.
+
 **Current:** [V1_ACCEPTANCE.md](./V1_ACCEPTANCE.md), 2026-10-03.
 Independent WFO recomputation and isolated producer rollback are scoped PASS;
 full P24/owner review/release is not complete.

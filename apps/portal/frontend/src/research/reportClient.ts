@@ -431,7 +431,8 @@ const CURSOR_KEY = /(?:^#|&)(?:stage|fold|trial|params|schedule|route|seq)=/;
  * with no cursor key means no cursor in hand: the way back then carries none
  * (it used to invent `fold=1`). Screens 09 and 11 read it the same way.
  */
-export function linkFromLocation(hash: string, _search = ""): LinkCursor {
+export function linkFromLocation(hash: string, search = ""): LinkCursor {
   const parsed = parseCursor(hash);
-  return { cursor: CURSOR_KEY.test(hash) ? parsed : null, window: parsed.window };
+  const workspaceId = new URLSearchParams(search).get("workspace_id") || undefined;
+  return { cursor: CURSOR_KEY.test(hash) ? parsed : null, window: parsed.window, ...(workspaceId ? { workspaceId } : {}) };
 }

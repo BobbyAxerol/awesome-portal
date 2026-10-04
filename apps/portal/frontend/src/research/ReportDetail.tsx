@@ -60,7 +60,7 @@ import { foldLabel, formatMetric, shortDigest, typographicMinus } from "./resear
 import { reasonCodeSentence } from "./researchRefusal";
 import { equitySvg } from "./reportEquity";
 import { RunExitBar } from "./RunExitBar";
-import { executeHref, hubHref, lineageRunHref, newRunHref, progressHref, libraryHref, rcHref, type LinkCursor } from "./runLinks";
+import { executeHref, hubHref, lineageRunHref, newRunHref, progressHref, libraryHref, rcHref, withWorkspace, type LinkCursor } from "./runLinks";
 import { runStatusWord, runTerminalState, type RunTerminalState } from "./runTerminalState";
 import type { ReportController } from "./useReport";
 import type { ReportExportController } from "./useReportExport";
@@ -517,15 +517,15 @@ function NoPrintBar({
         <>
           {/* W1: the failed sheet is honest about the run; the way on is Progress, a fresh draft or the Library. */}
           <span style={{ color: "var(--ink-faint)" }}>·</span>
-          <Link to={progressHref(runId)} data-exit="progress">
+          <Link to={progressHref(runId, link)} data-exit="progress">
             Progress
           </Link>
           <span style={{ color: "var(--ink-faint)" }}>·</span>
-          <Link to={newRunHref(runId)} data-exit="new-run" title="Same draft, fresh preflight">
+          <Link to={withWorkspace(newRunHref(runId), link.workspaceId)} data-exit="new-run" title="Same draft, fresh preflight">
             New run
           </Link>
           <span style={{ color: "var(--ink-faint)" }}>·</span>
-          <Link to={libraryHref()} data-exit="library">
+          <Link to={withWorkspace(libraryHref(), link.workspaceId)} data-exit="library">
             Library
           </Link>
         </>
@@ -543,7 +543,7 @@ function NoPrintBar({
         <>
           <span style={{ color: "var(--ink-faint)" }}>·</span>
           <Link
-            to={lineageRunHref(scope.alphaId, { av: scope.version, run: runId })}
+            to={withWorkspace(lineageRunHref(scope.alphaId, { av: scope.version, run: runId }), link.workspaceId)}
             data-action="attempt-lineage"
             title={`Attempt lineage of ${scope.alphaId}`}
           >
@@ -1410,10 +1410,10 @@ const REVISION_ROWS: [keyof FrozenCore["source_revisions"], string][] = [
  * looking at. Every part is the server's — the run id and the revision — and
  * a report with no revision yet gets no link rather than a guessed one.
  */
-export function reportEvidenceLink(runId: string, report: ReportDetail | null): string | null {
+export function reportEvidenceLink(runId: string, report: ReportDetail | null, workspaceId?: string): string | null {
   if (typeof window === "undefined" || !window.location || report === null) return null;
   const base = `${window.location.origin}/research/quantbt/runs/${encodeURIComponent(runId)}/report`;
-  return `${base}?report_revision=${encodeURIComponent(report.report_revision)}`;
+  return `${base}?report_revision=${encodeURIComponent(report.report_revision)}${workspaceId ? `&workspace_id=${encodeURIComponent(workspaceId)}` : ""}`;
 }
 
 /**
@@ -1437,10 +1437,10 @@ export function reportEvidenceLinkLabel(runId: string, report: ReportDetail): st
  * blocks restating the same revisions and digests. They are one block now: who
  * the run is, what it sealed, where the report came from.
  */
-function Provenance({ core, runId, report }: { core: FrozenCore; runId: string; report: ReportDetail | null }) {
+function Provenance({ core, runId, report, workspaceId }: { core: FrozenCore; runId: string; report: ReportDetail | null; workspaceId?: string }) {
   const { provenance } = core;
   const absences = Object.entries(core.source_absences);
-  const evidenceLink = reportEvidenceLink(runId, report);
+  const evidenceLink = reportEvidenceLink(runId, report, workspaceId);
   return (
     <section className="rr-prov" data-panel="provenance" aria-label="provenance of this report">
       {/* QA S09: the server's sentence re-lists the five revisions the table below already carries; it rides the heading's tooltip. */}
@@ -1727,6 +1727,8 @@ export function reportFaceOf(controller: ReportController, visibility: RunVisibi
 
 export interface ReportScreenProps {
   runId: string;
+  workspaceId?: string;
+  linkedAudit?: ReactNode;
   /** The cursor of the page that sent the reader here; `null` when it carried none. */
   cursor?: EvidenceCursor | null;
   /** `?window=` of that page. */
@@ -1743,14 +1745,14 @@ export function revisionNotice(requested: string | null | undefined, report: Rep
   return `This link names report revision ${requested}. The page shows the current sealed revision, ${report.report_revision}.`;
 }
 
-export function ReportScreen({ runId, cursor = null, window: evidenceWindow = null, controller, exporter, requestedRevision = null }: ReportScreenProps) {
+export function ReportScreen({ runId, workspaceId, linkedAudit, cursor = null, window: evidenceWindow = null, controller, exporter, requestedRevision = null }: ReportScreenProps) {
   const { report } = controller;
-  const link = useMemo<LinkCursor>(() => ({ cursor, window: evidenceWindow }), [cursor, evidenceWindow]);
+  const link = useMemo<LinkCursor>(() => ({ cursor, window: evidenceWindow, workspaceId }), [cursor, evidenceWindow, workspaceId]);
   const revisionLine = revisionNotice(requestedRevision, report);
   const sourceFallback = report ? (enrichedBlock(enrichedOfReport(report))?.curves.sampling.source_observation_count ?? null) : null;
   /* F1: ask the Run Library which 404 this is — only when the report read answered one. */
   const reportMissing = controller.refusal !== null && controller.refusal.status === 404 && controller.refusal.code === "RESEARCH_REPORT_NOT_FOUND";
-  const visibility = useRunVisibility(runId, reportMissing);
+  const visibility = useRunVisibility(runId, reportMissing, workspaceId);
   const state = reportNoticeState(controller, visibility);
   const face = reportFaceOf(controller, visibility);
   /* X2 · spec 09 T06: a failed run's sheet has no claim blocks; it is drawn by its own component. */
@@ -1816,7 +1818,7 @@ export function ReportScreen({ runId, cursor = null, window: evidenceWindow = nu
             <AllTimeSupplement read={enrichedOfReport(report)} absentCode={enrichedAbsenceOfReport(report)} />
             <div className="rr-pp rr-keep" data-promotion-provenance>
               <Promotion core={core} runId={runId} link={link} />
-              <Provenance core={core} runId={runId} report={report} />
+              <Provenance core={core} runId={runId} report={report} workspaceId={workspaceId} />
             </div>
           </>
         ) : (
@@ -1828,6 +1830,7 @@ export function ReportScreen({ runId, cursor = null, window: evidenceWindow = nu
         <div className="rr-screen no-print">
           {/* QA S09 (UX-22): a run that ended without a claim has nothing to export. */}
           {core ? <Exports report={report} exporter={exporter} /> : null}
+          {linkedAudit}
           <AnnotationBlock report={report} />
         </div>
       ) : null}

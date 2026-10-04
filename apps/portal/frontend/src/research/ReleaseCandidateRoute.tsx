@@ -15,7 +15,7 @@
  */
 
 import { useMemo, useRef } from "react";
-import { Navigate, useLocation, useParams } from "react-router-dom";
+import { Navigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 
 import { ReleaseCandidateScreen } from "./ReleaseCandidateDetail";
 import { packFromHash, releaseCandidatePackHref } from "./releaseCandidateClient";
@@ -23,41 +23,52 @@ import { linkFromLocation } from "./reportClient";
 import { useRunStatus } from "./useRunStatus";
 import { useReleaseCandidate, useReleaseCandidatePack } from "./useReleaseCandidate";
 import { useReleaseCandidatePublication } from "./useReleaseCandidatePublication";
+import { LinkedAuditConsumer } from "./LinkedAuditConsumer";
 
 function ComposeContainer({ runId }: { runId: string }) {
   /* One writer for the screen: a save, a seal and a publish never overlap. */
   const writer = useRef(false);
   const { hash, search } = useLocation();
   const link = useMemo(() => linkFromLocation(hash, search), [hash, search]);
+  const workspaceId = link.workspaceId;
   /* The compose read has no run status; the Run Library row is the one served fact (W1 S11). */
-  const status = useRunStatus(runId, true);
-  const controller = useReleaseCandidate(runId, { writer });
+  const status = useRunStatus(runId, true, workspaceId);
+  const controller = useReleaseCandidate(runId, { writer, workspaceId });
   const sealed = controller.compose?.local_seal.state === "SEALED_LOCAL" ? controller.compose.local_seal.release_candidate_id : null;
   const publication = useReleaseCandidatePublication(sealed, {
+    workspaceId,
     writer,
     writesLocked: controller.writesLocked,
     onDenied: controller.lock,
     onSettled: controller.retry,
   });
-  return <ReleaseCandidateScreen mode="compose" runId={runId} controller={controller} publication={publication} status={status} link={link} />;
+  return <ReleaseCandidateScreen mode="compose" runId={runId} controller={controller} publication={publication} status={status} link={link}
+    linkedAudit={controller.compose ? <LinkedAuditConsumer runId={runId} workspaceId={workspaceId} writer={writer}
+      writesLocked={controller.writesLocked || publication.publication?.state === "DELIVERED"} onSettled={controller.retry} /> : undefined} />;
 }
 
 function PackContainer({ releaseCandidateId }: { releaseCandidateId: string }) {
-  const controller = useReleaseCandidatePack(releaseCandidateId);
+  const { hash, search } = useLocation();
+  const link = useMemo(() => linkFromLocation(hash, search), [hash, search]);
+  const controller = useReleaseCandidatePack(releaseCandidateId, link.workspaceId);
   /* Read-only here: the publication and its mirror are printed, never operated. */
-  const publication = useReleaseCandidatePublication(controller.pack ? releaseCandidateId : null);
-  return <ReleaseCandidateScreen mode="pack" releaseCandidateId={releaseCandidateId} controller={controller} publication={publication} />;
+  const publication = useReleaseCandidatePublication(controller.pack ? releaseCandidateId : null, { workspaceId: link.workspaceId });
+  return <ReleaseCandidateScreen mode="pack" releaseCandidateId={releaseCandidateId} controller={controller} publication={publication} link={link}
+    linkedAudit={controller.pack ? <LinkedAuditConsumer runId={controller.pack.run_id} workspaceId={link.workspaceId} readOnly /> : undefined} />;
 }
 
 export function ReleaseCandidateRoute() {
   const { runId = "" } = useParams();
   const { hash } = useLocation();
+  const [search] = useSearchParams();
+  const workspaceId = search.get("workspace_id") || undefined;
   const pack = packFromHash(hash);
-  if (pack) return <Navigate to={releaseCandidatePackHref(pack)} replace />;
-  return <ComposeContainer key={runId} runId={runId} />;
+  if (pack) return <Navigate to={releaseCandidatePackHref(pack, workspaceId)} replace />;
+  return <ComposeContainer key={`${workspaceId ?? ""}|${runId}`} runId={runId} />;
 }
 
 export function ReleaseCandidatePackRoute() {
   const { releaseCandidateId = "" } = useParams();
-  return <PackContainer key={releaseCandidateId} releaseCandidateId={releaseCandidateId} />;
+  const [search] = useSearchParams();
+  return <PackContainer key={`${search.get("workspace_id") ?? ""}|${releaseCandidateId}`} releaseCandidateId={releaseCandidateId} />;
 }

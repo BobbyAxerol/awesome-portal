@@ -19,14 +19,16 @@ import { ReportScreen } from "./ReportDetail";
 import { linkFromLocation } from "./reportClient";
 import { useReport } from "./useReport";
 import { useReportExport } from "./useReportExport";
+import { LinkedAuditConsumer } from "./LinkedAuditConsumer";
 
 export const PRINT_SHEET_ATTRIBUTE = "data-research-print-sheet";
 
 function ReportContainer({ runId }: { runId: string }) {
   const [search] = useSearchParams();
   const requestedRevision = search.get("report_revision");
-  const controller = useReport(runId);
-  const exporter = useReportExport(runId);
+  const workspaceId = search.get("workspace_id") || undefined;
+  const controller = useReport(runId, { workspaceId });
+  const exporter = useReportExport(runId, { workspaceId });
   const { hash, search: locationSearch } = useLocation();
   const link = useMemo(() => linkFromLocation(hash, locationSearch), [hash, locationSearch]);
 
@@ -36,10 +38,12 @@ function ReportContainer({ runId }: { runId: string }) {
     return () => root.removeAttribute(PRINT_SHEET_ATTRIBUTE);
   }, []);
 
-  return <ReportScreen runId={runId} cursor={link.cursor ?? null} window={link.window ?? null} controller={controller} exporter={exporter} requestedRevision={requestedRevision} />;
+  return <ReportScreen runId={runId} workspaceId={workspaceId} cursor={link.cursor ?? null} window={link.window ?? null} controller={controller} exporter={exporter} requestedRevision={requestedRevision}
+    linkedAudit={controller.report ? <LinkedAuditConsumer runId={runId} workspaceId={workspaceId} onSettled={controller.retry} /> : undefined} />;
 }
 
 export function ReportRoute() {
   const { runId = "" } = useParams();
-  return <ReportContainer key={runId} runId={runId} />;
+  const [search] = useSearchParams();
+  return <ReportContainer key={`${search.get("workspace_id") ?? ""}|${runId}`} runId={runId} />;
 }

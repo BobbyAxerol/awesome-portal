@@ -5,6 +5,19 @@ Implemented, measured, browser-accepted and deployed are different verdicts.
 This packet closes the independent WFO and isolated version-rehearsal work,
 not the outstanding product/source/owner gates. No new phase is introduced.
 
+## Latest frontend consumer amendment — 2026-10-04
+
+Codex delivered explicit workspace binding and generated linked-audit
+consumer, preserving UI/CSS/frozen core/RBAC. [Candidate v4](./current-source-candidate-manifest.v4.json)
+and [receipt](../P23/WORKSPACE_AND_LINKED_AUDIT_CONSUMER_2026-10-04.md):
+285/285 affected FE tests, Node-22 web build, actual restored-proof S09/S11
+at 1280/660 **4/4 PASS**. Job/proof/report custody unchanged, foreign scope
+refuses, QA disabled/revoked, cell down. This supersedes the scoped consumer
+404 pending below, not complete P24. Pack/POST intent paths have focused
+tests; no fresh button-to-child browser allocation/owner-visual claim.
+Original manifests **83/86** and real second-engine T07/T13 remain open;
+owner backup/disposition and qualification target requested. No release.
+
 ## Latest current-candidate amendment — 128276d7, 2026-10-03
 
 [Candidate v3](./current-source-candidate-manifest.v3.json) and

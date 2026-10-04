@@ -1780,3 +1780,34 @@ consumer; original three historical bytes or Bobby disposition (strict
 **83/86**); actual qualified engine two; full P24/owner/signed release.
 All earlier accepted backend/source/negative gates retain their exact scope.
 No push, dev/main, release dispatch, shared :8095 or production mutation.
+
+## §40 — Codex workspace and linked-audit consumer delivery, 2026-10-04
+
+Bobby assigns this FE logic slice to Codex; no longer awaiting Claude.
+Explicit workspace now reaches S09/S11 reads/writes/status/export/pack and
+contextual links; route remounts and abort/fencing prevent cross-scope held
+state. Generated named audit GET/POST, server `may_create`, qualified proof
+identity, same-origin CSRF, confirmed intent and same-intent lost-answer
+retry are consumed. No POST on mount, generic CLI/DB, authority inference,
+new CSS/baseline or frozen-print/core/seal rewrite.
+
+**285/285** affected FE tests and official Node-22 web build PASS. Actual
+restored original-parent S09/S11 at **1280/660, 4/4 PASS**: scoped 200s,
+VERIFIED proof, frozen Report/custody/jobs unchanged; refresh/navigation
+GET-only and foreign workspace refusal. Pack redirect and POST intent paths
+are focused tests, not claimed as a fresh browser allocation. Four HiFi
+reference captures retained. QA `p23-reader-98/97` disabled, sessions revoked,
+owned containers/network 0, shared worker unchanged; no broad prune.
+
+[Receipt/hashes and exact limitation](./evidence/P23/WORKSPACE_AND_LINKED_AUDIT_CONSUMER_2026-10-04.md),
+[unsigned additive candidate v4](./evidence/P24/current-source-candidate-manifest.v4.json).
+Prior 404/provenance setup failures remain intact. No unchanged load/engine/
+restore suite was manually repeated; current Control 128276d7 is retained.
+
+Exact-ID read-only scans of five additional artifact volumes find no original
+three manifests. Strict integrity still **83/86**; no bytes invented/resealed.
+Only engine 1.1.1 is Portal-qualified; older published wheel != qualification.
+Owner questions: another original backup or exact-three-run scope exception;
+supplied second pin or isolated 1.1.0 qualification then 1.1.1 upgrade.
+Neither exception nor pin was assumed. Full P24 and signed release remain
+OPEN. No push, dev/main merge, shared :8095 or Production operation.

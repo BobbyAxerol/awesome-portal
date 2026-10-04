@@ -39,7 +39,7 @@ import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
 import { reportSessionExpired } from "../auth/sessionExpiry";
 import { PortalApiError } from "../lib/api";
 import { toLineageRefusal, type LineageRefusal } from "./lineageClient";
-import { freezeHref, hubHref, lineageRunHref, rcHref, type LinkCursor } from "./runLinks";
+import { freezeHref, hubHref, lineageRunHref, rcHref, withWorkspace, type LinkCursor } from "./runLinks";
 import { rememberRunLabel } from "./runLabels";
 import type { ResearchState } from "./state";
 import { REFUSAL_COPY } from "./researchRefusal";
@@ -138,8 +138,8 @@ export function releaseCandidateHref(runId: string, c?: LinkCursor): string {
 }
 
 /** A sealed pack's own read-only route (VD-P21-09); the 01 rc chip of a LOCAL_SEAL opens it. */
-export function releaseCandidatePackHref(releaseCandidateId: string): string {
-  return `/research/quantbt/release-candidates/${encodeURIComponent(releaseCandidateId)}`;
+export function releaseCandidatePackHref(releaseCandidateId: string, workspaceId?: string): string {
+  return withWorkspace(`/research/quantbt/release-candidates/${encodeURIComponent(releaseCandidateId)}`, workspaceId);
 }
 
 /**
@@ -390,11 +390,11 @@ export function railRoute(node: RcRailNode, compose: Pick<RcCompose, "run" | "ru
   /* F2b: the alpha and its version both open Screen 10 on the bound version; the selected params open Screen 07 on this run. */
   if ((node.key === "alpha" || node.key === "alpha_version") && compose.run.binding) {
     const attempt = compose.run.attempt;
-    return lineageRunHref(compose.run.binding.alpha_id, {
+    return withWorkspace(lineageRunHref(compose.run.binding.alpha_id, {
       av: compose.run.binding.alpha_version_id,
       run: compose.run_id,
       attempt: /^[A-Za-z0-9_-]{1,128}$/.test(attempt) ? attempt : null,
-    });
+    }), link?.workspaceId);
   }
   if (node.key === "run") return hubHref(compose.run_id, link);
   if (node.key === "selected_params") return freezeHref(compose.run_id, link);
