@@ -109,7 +109,7 @@ export const ResearchReleaseCandidatePublicationResponseSchema = z.object({
   conflicting_approval_href: z.string().regex(/^\/governance\/approvals\/[A-Za-z0-9._-]+\/r1$/).nullable().optional(),
   downstream_code: Reason.nullable().optional(),
   publication_created_at: Timestamp.nullable().optional(),
-  updated_at_utc_ms: UtcMs.optional(),
+  updated_at_utc_ms: UtcMs.nullable().optional(),
   intent_actor: z.object({ user_id: z.string().min(1).max(191), username: z.string().min(1).max(191) }).strict().nullable().optional(),
   reconcile_allowed: z.boolean().optional(),
   claim_candidates: z.array(z.string().min(1).max(191)).max(64).optional(),

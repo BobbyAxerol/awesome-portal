@@ -999,6 +999,13 @@ export interface components {
             approval_annotation: components["schemas"]["Annotation"];
             exports: components["schemas"]["ExportCapabilities"];
             linked_final_audit?: components["schemas"]["VerifiedPinnedAudit"];
+            /**
+             * @description Frozen source_revisions are archived response-revision pins at capture time, including then-current presentation. Never compare them unconditionally with a newer live read or rewrite an old seal. Compare immutable source_digests for source identity.
+             * @constant
+             */
+            source_revision_scope?: "CAPTURED_READ_REPRESENTATION";
+            /** @description Installed linked-audit target compatibility: true for a typed SINGLE_PARAMETER_SET, false for FIXED_PARAMETER_PROFILE or PER_FOLD_PARAMETER_SELECTIONS, null when unpublished. Not feature enablement, RBAC or may_create. The linked audit GET remains the permission authority; do not probe when false/null. */
+            final_audit_applicable?: boolean | null;
         };
         ExportCreate: {
             /** @enum {unknown} */

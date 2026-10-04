@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { ResearchCurrentSourceService, currentSourceReadRevision, currentSourceSealDigest } from "../src/research/current-source.service";
+import { ResearchCurrentSourceService, currentSourceReadRevision, currentSourceSealDigest, currentSourceFactRevision } from "../src/research/current-source.service";
 import { mockSearchRepository } from "./research-search-inputs.fixture";
 import { wfoRequested } from "./research-w1-wfo.fixture";
 import { sha256ResearchJson } from "../src/research/preflight.service";
@@ -119,6 +119,14 @@ function service(repository: Record<string, unknown>) {
 }
 
 describe("RS-02 retained current-source named read models", () => {
+  it("§32 separates retained source identity from presentation and view identity", () => {
+    const split = currentSourceFactRevision("split", seal);
+    const replay = currentSourceFactRevision("replay", seal);
+    expect(split).not.toBe(replay);
+    expect(split.slice("rs02_split_".length)).toBe(replay.slice("rs02_replay_".length));
+    expect(currentSourceReadRevision("split", seal)).not.toBe(split);
+    expect(currentSourceFactRevision("split", { ...seal, manifestDigest: "9".repeat(64) })).not.toBe(split);
+  });
   it("publishes digest-bound Replay IDs and fold metadata without changing source pins or issuing duplicate fold reads", async () => {
     const request = wfoRequested();
     const source = { ...seal, requestedSpecDigest: sha256ResearchJson(request) };
@@ -211,6 +219,12 @@ describe("RS-02 retained current-source named read models", () => {
     expect(evidence.passport.artifact_table_rows).toMatchObject({ observations: 3, trials: 2 });
     expect(split.fold_plan.folds).toHaveLength(2);
     expect(split.revision).toBe(currentSourceReadRevision("split", seal));
+    expect(split.source_revision).toBe(currentSourceFactRevision("split", seal));
+    expect(split.presentation_revision).toBe(split.etag.slice(1, -1));
+    expect(search.source_revision).toBe(currentSourceFactRevision("search", seal));
+    expect(search.presentation_revision).toBe(search.revision);
+    expect(freeze.source_revision).toBe(currentSourceFactRevision("freeze", seal));
+    expect(freeze.presentation_revision).toBe(freeze.revision);
     expect(split.etag).not.toBe(`"${split.revision}"`);
     expect(sealed(await current.split(scope, "run-rs02")).etag).toBe(split.etag);
     expect(split.guards.train_test_disjoint).toMatchObject({

@@ -33,7 +33,11 @@ for (const [name, components] of [
   let next = old;
   for (const component of components) {
     const schema = structuredClone(JSON.parse(next).components.schemas[component]);
-    if (component === "PublicationResponse") schema.properties.blocked_action = action;
+    if (component === "PublicationResponse") {
+      schema.properties.blocked_action = action;
+      schema.properties.updated_at_utc_ms = { ...nullable({ type: "integer", minimum: 0, maximum: Number.MAX_SAFE_INTEGER }),
+        description: "Persisted publication intent update time; null before an intent exists. as_of_utc_ms is the observation time, never substituted for this fact." };
+    }
     else if (component === "ComposeActions") schema.properties.publish.properties.blocked_action = action;
     else if (component === "ComposeRailNode") {
       Object.assign(schema.properties, presentation);

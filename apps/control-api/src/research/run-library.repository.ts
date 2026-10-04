@@ -693,7 +693,13 @@ export class ResearchRunLibraryRepository {
     const buckets = Math.max(1, Math.floor(maximum / 4));
     return this.withScopedRead(scope, async (client) => {
       const result = await client.query<{ at_utc_ms: string | number | null; equity: string; oos_count: string | number }>(
-        `WITH scoped AS (
+        `WITH fold_bounds AS MATERIALIZED (
+           SELECT (payload->>'test_start_utc_ms')::bigint AS start_ms,
+                  (payload->>'test_end_utc_ms')::bigint AS end_ms
+             FROM research.current_source_rows_v1
+            WHERE workspace_id = $1 AND run_id = $2 AND artifact_revision = $3
+              AND table_kind = 'FOLD'
+         ), scoped AS (
            SELECT observation.source_ordinal, observation.occurred_at_utc_ms,
                   observation.payload->>'equity' AS equity,
                   (observation.payload->>'equity')::numeric AS equity_numeric,
@@ -703,14 +709,8 @@ export class ResearchRunLibraryRepository {
             WHERE observation.workspace_id = $1 AND observation.run_id = $2
               AND observation.artifact_revision = $3 AND observation.table_kind = 'OBSERVATION'
               AND EXISTS (
-                SELECT 1 FROM research.current_source_rows_v1 fold
-                 WHERE fold.workspace_id = observation.workspace_id
-                   AND fold.run_id = observation.run_id
-                   AND fold.artifact_revision = observation.artifact_revision
-                   AND fold.table_kind = 'FOLD'
-                   AND observation.occurred_at_utc_ms BETWEEN
-                       (fold.payload->>'test_start_utc_ms')::bigint AND
-                       (fold.payload->>'test_end_utc_ms')::bigint
+                SELECT 1 FROM fold_bounds fold
+                 WHERE observation.occurred_at_utc_ms BETWEEN fold.start_ms AND fold.end_ms
               )
          ), obs AS (
            SELECT *, (oos_ordinal * $5::bigint) / oos_count AS bucket FROM scoped

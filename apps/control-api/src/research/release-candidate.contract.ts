@@ -157,6 +157,7 @@ export const ResearchReleaseCandidateRunStatusSchema = z.enum([
 ]);
 
 export const ResearchReleaseCandidateComposeResponseSchema = z.object({
+  final_audit_applicable: z.boolean().nullable().optional(),
   linked_final_audit: VerifiedPinnedAuditSchema.optional(),
   schema_version: z.literal("research.release-candidate-compose.v1"),
   read_authority: z.literal("PORTAL_PERSISTED_RESEARCH"),

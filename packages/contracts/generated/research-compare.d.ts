@@ -647,10 +647,15 @@ export interface components {
                 requested_spec_digest: components["schemas"]["Digest"] | null;
                 effective_spec_digest: components["schemas"]["Digest"] | null;
                 dataset_binding_digest: components["schemas"]["Digest"] | null;
+                /** @description Preflight dataset/spec manifest. Not the retained artifact manifest; preserved for existing clients. */
                 manifest_digest: components["schemas"]["Digest"] | null;
                 evidence_revision: string | null;
                 split_revision: string | null;
                 current_source_revision: string | null;
+                /** @constant */
+                manifest_digest_scope?: "PREFLIGHT_DATASET_SPEC";
+                /** @description Sealed retained artifact manifest, matching Evidence/Report/RC. Null when no sealed artifact is available. */
+                source_manifest_digest?: components["schemas"]["Digest"] | null;
             };
         };
         RunSchedule: {

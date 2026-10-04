@@ -128,6 +128,15 @@ function subject(intake: "true" | "false" = "true", bridgeEnabled = false) {
 }
 
 describe("P22 actor-bound publication over existing R1", () => {
+  it("§32 unpublished intent has no update timestamp, independent of observation time", async () => {
+    const x = subject();
+    const first = await x.service.publication(scope, user as never, rcId);
+    const second = await x.service.publication(scope, user as never, rcId);
+    expect(first.updated_at_utc_ms).toBeNull();
+    expect(second.updated_at_utc_ms).toBeNull();
+    expect(x.repository.begin).not.toHaveBeenCalled();
+    expect(x.governance.createApproval).not.toHaveBeenCalled();
+  });
   it("accepts only a frozen verified linked child and keeps Governance evidence on the parent selection",async()=>{
     const x=subject("true",true);
     const result={...auditProof.result,parent_run_id:"run_p22"};

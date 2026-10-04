@@ -175,7 +175,8 @@ export interface components {
             conflicting_approval_href?: string | null;
             downstream_code?: components["schemas"]["Reason"] | null;
             publication_created_at?: string | null;
-            updated_at_utc_ms?: components["schemas"]["UtcMs"];
+            /** @description Persisted publication intent update time; null before an intent exists. as_of_utc_ms is the observation time, never substituted for this fact. */
+            updated_at_utc_ms?: number | null;
             intent_actor?: {
                 user_id: string;
                 username: string;

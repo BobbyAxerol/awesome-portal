@@ -5,6 +5,7 @@ const root=new URL("../",import.meta.url),check=process.argv.includes("--check")
 const ref=name=>({$ref:`#/components/schemas/${name}`});
 const object=properties=>({type:"object",additionalProperties:false,required:Object.keys(properties),properties});
 const nullable=value=>({anyOf:[value,{type:"null"}]});
+const applicability={...nullable({type:"boolean"}),description:"Installed linked-audit target compatibility: true for a typed SINGLE_PARAMETER_SET, false for FIXED_PARAMETER_PROFILE or PER_FOLD_PARAMETER_SELECTIONS, null when unpublished. Not feature enablement, RBAC or may_create. The linked audit GET remains the permission authority; do not probe when false/null."};
 const id={type:"string",pattern:"^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"};
 const digest={type:"string",pattern:"^[a-f0-9]{64}$"};
 const positive={type:"integer",minimum:1,maximum:9007199254740991};
@@ -58,9 +59,17 @@ emit("openapi/research-final-audit.openapi.json",doc);
 for(const name of ["research-report","research-release-candidate","research-attempt-lineage"]){
   const path=`openapi/${name}.openapi.json`,other=JSON.parse(readFileSync(new URL(path,root)));
   Object.assign(other.components.schemas,{PinnedAuditResult:result,VerifiedPinnedAudit:proof});
-  if(name==="research-report") other.components.schemas.ReportDetail.properties.linked_final_audit=ref("VerifiedPinnedAudit");
+  if(name==="research-report") {
+    other.components.schemas.ReportDetail.properties.linked_final_audit=ref("VerifiedPinnedAudit");
+    other.components.schemas.ReportDetail.properties.final_audit_applicable=applicability;
+    other.components.schemas.ReportDetail.properties.source_revision_scope={const:"CAPTURED_READ_REPRESENTATION",
+      description:"Frozen source_revisions are archived response-revision pins at capture time, including then-current presentation. Never compare them unconditionally with a newer live read or rewrite an old seal. Compare immutable source_digests for source identity."};
+  }
   if(name==="research-release-candidate"){
-    for(const key of ["ComposeResponse","ComposeResponseP21"]) other.components.schemas[key].properties.linked_final_audit=ref("VerifiedPinnedAudit");
+    for(const key of ["ComposeResponse","ComposeResponseP21"]) {
+      other.components.schemas[key].properties.linked_final_audit=ref("VerifiedPinnedAudit");
+      other.components.schemas[key].properties.final_audit_applicable=applicability;
+    }
     other.components.schemas.PackResponse.properties.frozen_core.properties.linked_final_audit=ref("VerifiedPinnedAudit");
   }
   if(name==="research-attempt-lineage") other.components.schemas.ChildRun.properties.verified_audit=ref("VerifiedPinnedAudit");

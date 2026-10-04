@@ -55,6 +55,15 @@ export const VerifiedPinnedAuditSchema = z.object({
 });
 export type VerifiedPinnedAudit = z.infer<typeof VerifiedPinnedAuditSchema>;
 
+/** Profile applicability only, never RBAC, enabled state or permission to create. */
+export function finalAuditTargetApplicable(audit: unknown): boolean | null {
+  if (!audit || typeof audit !== "object" || Array.isArray(audit)) return null;
+  const target = (audit as Record<string, unknown>).audit_target_kind;
+  if (target === "SINGLE_PARAMETER_SET") return true;
+  if (target === "FIXED_PARAMETER_PROFILE" || target === "PER_FOLD_PARAMETER_SELECTIONS") return false;
+  return null;
+}
+
 /** P05 publishes exact decimal strings. Never round them through Number. */
 export function pinnedAuditParametersDigest(raw: string): string {
   const value: unknown = JSON.parse(raw);

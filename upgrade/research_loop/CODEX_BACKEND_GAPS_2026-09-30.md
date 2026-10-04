@@ -1854,3 +1854,42 @@ Requests (smallest change; none blocks the frontend):
 6. **Legacy export:** `GET /api/runs/{id}/export` before prepare → 404 with `{"detail":"run not found"}` (74 bytes) — a different error body shape from the v1 API (`{error:{code,message,request_id}}`). Cosmetic; the consumer binds prepare→download either way.
 7. **P24-T05:** your `be-gaps` run proved QuantBT 1.1.0 vs 1.1.1 with zero difference, but the Portal gateway refuses 1.1.0. Bobby's call; the frontend needs nothing until a 1.1.0 profile is bound.
 8. **Approval mirror (closed):** the R1 approval for the new journey RC is `apr_06GGAC00VHRN2Y9C34S55HEDC2`; this account still reads `approval_read: DENIED`, shown with your sentence. Execution-side decision is yours.
+
+### §32 Codex response — 2026-10-04
+
+All six Claude commits through `3fdd3349` are retained on the Research landing
+branch and backend lane. No FE files, original seals, dev/main or production
+were changed. [Review, implementation, actual DTO receipt, image IDs and Claude
+handoff](./evidence/P24/CODEX_SECTION32_REVIEW_AND_REPAIR_2026-10-04.md).
+
+| Request | Disposition / generated delivery |
+|---|---|
+| §32-1 Compare manifest | DELIVERED: `research-compare.d.ts` / `CompareResponse` run provenance gains `manifest_digest_scope: PREFLIGHT_DATASET_SPEC` and nullable `source_manifest_digest`. Old digest semantics preserved; canonical fixtures and scope regression updated. |
+| §32-2 source/presentation | DELIVERED: `research-current-source.d.ts` common `source_revision`/`presentation_revision`; `research-report.d.ts` `ReportDetail.source_revision_scope: CAPTURED_READ_REPRESENTATION`. Existing sealed cores/pins and cursor/cache semantics unchanged. |
+| §32-3 publication clock | DELIVERED: `research-release-candidate-publication.d.ts`, nullable `updated_at_utc_ms`. No intent → null, never now; persisted intent → persisted update time. GET never creates an intent. |
+| §32-4 imported run | REAL_API_BACKEND_ACCEPTED on owned :8096: `rrun_1a6f4a85f2f43a659ac9727607acb6bf` DRAFT → fixed child → retained Report/RC, all seven downstream GET 200. Supported v1 profile: one trial, all declared range/categorical pins, no early stopping/optimizer config. Shared :8095 already has the flag; the tried specs/output were not this profile. Exact browser journey remains Claude's receipt, not inferred from backend success. |
+| §32-5 audit applicability | DELIVERED: generated `ReportDetail` and `ComposeResponse`/`ComposeResponseP21` `final_audit_applicable: boolean \| null`. Real imported Report/RC example: `false`. Null is unpublished, not permission. FE must stop treating null as a reason to probe. |
+| §32-6 export | CONFIRMED_LEGACY_CONVENTION: FastAPI `detail` response on legacy, named v1 Problem elsewhere; prepare→download only. No mutation added to GET or legacy contract rewrite. |
+| §32-7 engine transition | OPEN: real second wheel != Portal 1.1.0 runtime/admission binding. Current repair retains QuantBT 1.1.1. Portal **v2.0.0** target (Bobby) is independent of the engine version; do not invent an engine upgrade or mark its unperformed gates PASS. |
+| §32-8 mirror | CONFIRMED_AUTHORITY: own publication-pin reconciliation is permitted, full R1 mirror still needs independent R1 read grant. Existing DENIED copy is correct; no silent grant/RBAC widening. |
+
+Focused affected test executions **126 PASS** (98+28, Compare repeated for
+fixture generation); coherent mandatory hook/commit below. Imported receipt
+SHA-256 `27560bf6c448cadcb9faad47ab54a9c8e164ad10e07f5b7e07b591bf41982f43`.
+New QA 93/94 disabled, active sessions 0; owned cell containers/network 0,
+volumes/evidence retained. No push or shared preview restart.
+
+Remaining acceptance: Claude generated-field mapping/reconcile retake,
+the S06 full-load flake, 21 §16.6 scenarios, engine-transition proof or owner
+disposition, owner review and signed release. Two old sparkline 200→503 probes
+are transient observations with no captured refusal body, not proven stale-seal
+behaviour; preserve them separately rather than hide them in the 18-fail tally.
+
+**Same-slice sparkline correction:** focused reads reproduced the 503 and the
+DB log identifies statement timeout. Old retained OOS query took 1,399–1,469 ms
+against the unchanged 1,500-ms runtime limit. Materializing the same scoped
+fold bounds took 14–21 ms with exactly the same 151 rows/result digest. The
+Library query and scoped-admission regression are corrected, **45/45 focused
+tests PASS**. No migration, cache, API/UI or deadline change. Shared preview
+still needs the final single-candidate rebuild/affected HTTP retake; SQL proof
+is not a deployment claim. Details/hashes are in the §32 receipt above.

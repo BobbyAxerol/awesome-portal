@@ -281,6 +281,7 @@ describe("P21 Release Candidate composer and local immutable pack", () => {
     const result = await service.detail(scope, sourceValue.runId);
 
     expect(result.fields).toHaveLength(17);
+    expect(result).toHaveProperty("final_audit_applicable");
     expect(result.yaml).toEqual(result.fields);
     expect(result.pack).toHaveLength(12);
     expect(result.pack.map((item) => item.n)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);

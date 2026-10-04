@@ -481,7 +481,8 @@ export class ResearchReleaseCandidatePublicationService {
       conflicting_approval_href: input.intent?.conflictingApprovalId ? `/governance/approvals/${input.intent.conflictingApprovalId}/r1` : null,
       downstream_code: input.intent?.downstreamCode ?? null,
       publication_created_at: input.intent?.createdAtUtcMs ? new Date(input.intent.createdAtUtcMs).toISOString() : null,
-      updated_at_utc_ms: input.intent?.updatedAtUtcMs ?? Date.now(),
+      // No publication intent exists yet: an observation time is not an update.
+      updated_at_utc_ms: input.intent?.updatedAtUtcMs ?? null,
       intent_actor: input.intent ? { user_id: input.intent.actorUserId, username: input.intent.actorUsername } : null,
       reconcile_allowed: Boolean(input.intent && ["PENDING", "UNKNOWN"].includes(input.intent.state)),
       claim_candidates: input.ready.source.eligible_methodology_claim_ids,

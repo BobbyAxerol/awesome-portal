@@ -209,6 +209,8 @@ export interface components {
                 [key: string]: components["schemas"]["Availability"];
             };
             linked_final_audit?: components["schemas"]["VerifiedPinnedAudit"];
+            /** @description Installed linked-audit target compatibility: true for a typed SINGLE_PARAMETER_SET, false for FIXED_PARAMETER_PROFILE or PER_FOLD_PARAMETER_SELECTIONS, null when unpublished. Not feature enablement, RBAC or may_create. The linked audit GET remains the permission authority; do not probe when false/null. */
+            final_audit_applicable?: boolean | null;
         };
         /** @enum {unknown} */
         FieldKey: "release_candidate_id" | "alpha_id" | "alpha_version_id" | "alpha_code_digest" | "alpha_entrypoint" | "final_audit_run_id" | "final_audit_attempt_id" | "requested_spec_digest" | "effective_spec_digest" | "dataset_binding_digest" | "manifest_digest" | "source_transform_digest" | "engine_release_id" | "adapter_contract_digest" | "parameter_bundle_digest" | "evidence_revision" | "report_revision";
@@ -331,6 +333,8 @@ export interface components {
                 [key: string]: components["schemas"]["Availability"];
             };
             linked_final_audit?: components["schemas"]["VerifiedPinnedAudit"];
+            /** @description Installed linked-audit target compatibility: true for a typed SINGLE_PARAMETER_SET, false for FIXED_PARAMETER_PROFILE or PER_FOLD_PARAMETER_SELECTIONS, null when unpublished. Not feature enablement, RBAC or may_create. The linked audit GET remains the permission authority; do not probe when false/null. */
+            final_audit_applicable?: boolean | null;
         };
         DraftPatch: {
             expected_revision: number;

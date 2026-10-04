@@ -973,6 +973,17 @@
           },
           "linked_final_audit": {
             "$ref": "#/components/schemas/VerifiedPinnedAudit"
+          },
+          "final_audit_applicable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Installed linked-audit target compatibility: true for a typed SINGLE_PARAMETER_SET, false for FIXED_PARAMETER_PROFILE or PER_FOLD_PARAMETER_SELECTIONS, null when unpublished. Not feature enablement, RBAC or may_create. The linked audit GET remains the permission authority; do not probe when false/null."
           }
         }
       },
@@ -1766,6 +1777,17 @@
           },
           "linked_final_audit": {
             "$ref": "#/components/schemas/VerifiedPinnedAudit"
+          },
+          "final_audit_applicable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Installed linked-audit target compatibility: true for a typed SINGLE_PARAMETER_SET, false for FIXED_PARAMETER_PROFILE or PER_FOLD_PARAMETER_SELECTIONS, null when unpublished. Not feature enablement, RBAC or may_create. The linked audit GET remains the permission authority; do not probe when false/null."
           }
         }
       },

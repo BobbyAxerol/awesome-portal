@@ -397,6 +397,11 @@ describe("P20 bounded Compare persisted truth", () => {
     const ok = await bound.service.detail(scope, "alpha-p20", { mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
     expect(ok.result).toMatchObject({ mode: "pair", state: "AVAILABLE" });
     expect(bound.repository.pairRaw).toHaveBeenCalledTimes(1);
+    if (ok.result.mode !== "pair" || !ok.result.pair) throw new Error("test guard");
+    expect(ok.result.pair.runs[0].provenance).toMatchObject({
+      manifest_digest_scope: "PREFLIGHT_DATASET_SPEC", source_manifest_digest: digest("c"),
+    });
+    expect(ok.result.pair.runs[1].provenance.source_manifest_digest).toBe(digest("7"));
 
     for (const broken of [
       { current_artifact_sealed: false },
@@ -406,6 +411,8 @@ describe("P20 bounded Compare persisted truth", () => {
       const refused = subject(snapshot([wfo("run-p20-left", broken), wfo("run-p20-right")]));
       const answer = await refused.service.detail(scope, "alpha-p20", { mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
       expect(answer.result).toMatchObject({ mode: "pair", state: "PARTIAL" });
+      if (answer.result.mode !== "pair" || !answer.result.pair) throw new Error("test guard");
+      expect(answer.result.pair.runs[0].provenance.source_manifest_digest).toBeNull();
       expect(JSON.stringify(answer.result)).toContain("P20_CURRENT_SOURCE_SEAL_DOES_NOT_MATCH_P14_AND_RUN_BINDINGS");
       expect(refused.repository.pairRaw).not.toHaveBeenCalled();
     }

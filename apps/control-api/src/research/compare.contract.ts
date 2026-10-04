@@ -158,7 +158,11 @@ const RunSchema = z.object({
     requested_spec_digest: DigestSchema.nullable(),
     effective_spec_digest: DigestSchema.nullable(),
     dataset_binding_digest: DigestSchema.nullable(),
+    /** Backward-compatible preflight dataset/spec manifest, NOT artifact bytes. */
     manifest_digest: DigestSchema.nullable(),
+    manifest_digest_scope: z.literal("PREFLIGHT_DATASET_SPEC").optional(),
+    /** Sealed retained artifact manifest, as named by Evidence/Report/RC. */
+    source_manifest_digest: DigestSchema.nullable().optional(),
     evidence_revision: z.string().min(1).max(160).nullable(),
     split_revision: z.string().min(1).max(160).nullable(),
     current_source_revision: z.string().min(1).max(160).nullable(),

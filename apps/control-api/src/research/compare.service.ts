@@ -434,6 +434,10 @@ function buildCandidate(row: CompareRunRow): Candidate | null {
       effective_spec_digest: row.effective_spec_digest,
       dataset_binding_digest: row.dataset_binding_digest,
       manifest_digest: row.manifest_digest,
+      manifest_digest_scope: "PREFLIGHT_DATASET_SPEC",
+      source_manifest_digest: row.current_artifact_sealed === true && row.current_artifact_revision !== null
+        && row.current_manifest_digest !== null && /^[0-9a-f]{64}$/.test(row.current_manifest_digest)
+        ? row.current_manifest_digest : null,
       evidence_revision: row.evidence_revision,
       split_revision: row.split_revision,
       current_source_revision: row.current_artifact_revision === null ? null : String(row.current_artifact_revision),

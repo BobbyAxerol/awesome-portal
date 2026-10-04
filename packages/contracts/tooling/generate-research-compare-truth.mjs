@@ -20,6 +20,12 @@ components.CompareChartAnnotation = object({
   }),
 });
 const document = JSON.parse(original), pair = document.components.schemas.PairData;
+const run = document.components.schemas.Run;
+run.properties.provenance.properties.manifest_digest.description = "Preflight dataset/spec manifest. Not the retained artifact manifest; preserved for existing clients.";
+run.properties.provenance.properties.manifest_digest_scope = { const: "PREFLIGHT_DATASET_SPEC" };
+run.properties.provenance.properties.source_manifest_digest = {
+  ...nullable(ref('Digest')), description: "Sealed retained artifact manifest, matching Evidence/Report/RC. Null when no sealed artifact is available.",
+};
 pair.properties.chart_annotations = { type: 'array', minItems: 2, maxItems: 2, items: ref('CompareChartAnnotation') };
 let next = original.replace(/^      "(?:EnrichedAnalysis[^"\n]*|CompareChartAnnotation)":.*\n/gm, '');
 next = next.replace('"schemas": {\n', '"schemas": {\n' + Object.entries(components)
@@ -27,6 +33,7 @@ next = next.replace('"schemas": {\n', '"schemas": {\n' + Object.entries(componen
 const line = /^      "PairData": [^\n]+,$/m;
 if (!line.test(next)) throw new Error('Missing named PairData component');
 next = next.replace(line, () => `      "PairData": ${JSON.stringify(pair)},`);
+next = next.replace(/^      "Run": [^\n]+,$/m, () => `      "Run": ${JSON.stringify(run)},`);
 if (next !== original) {
   if (process.argv.includes('--check')) throw new Error('Compare chart contract drift');
   writeFileSync(path, next);

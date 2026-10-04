@@ -12,6 +12,13 @@ export const selectedTrialPresentation = {
 export function amendW1Presentation(original, name) {
   const d = JSON.parse(original), s = d.components.schemas, updates = {};
   if (name === "research-current-source") {
+    updates.Common = structuredClone(s.Common);
+    updates.Common.properties.source_revision = {
+      ...s.Common.properties.revision,
+      description: "Immutable retained seal facts for this view. Does not include presentation, byte-verification receipts or utility-job state. Different view prefixes may share the seal hash. Not an HTTP cache validator.",
+    };
+    updates.Common.properties.presentation_revision = { type: "string", minLength: 1, maxLength: 200,
+      description: "Exact response representation validator, including display/verification changes. Use the HTTP ETag for caching. Existing revision remains unchanged for backward cursor/reader compatibility." };
     for (const key of ["Selection", "FrozenSelection", "CausalSelection"]) {
       const schema = structuredClone(s[key]);
       if (!schema?.properties) throw new Error(`Missing named selection ${key}`);

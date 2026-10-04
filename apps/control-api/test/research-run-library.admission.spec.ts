@@ -33,6 +33,21 @@ function cell(member = true) {
 afterEach(() => vi.useRealTimers());
 
 describe("P23 bounded Run Library admission", () => {
+  it("§32 materializes scoped fold bounds once without weakening OOS or read authority", async () => {
+    const value = cell();
+    const repository = new ResearchRunLibraryRepository(value.pool);
+    await repository.findRetainedSparklineValues(scope, "rrun_sparkline", 7, 192);
+    const query = value.statements.find(entry => entry.sql.includes("WITH fold_bounds AS MATERIALIZED"));
+    expect(query).toBeDefined();
+    expect(query!.values).toEqual([scope.workspaceId, "rrun_sparkline", 7, 192, 48]);
+    expect(query!.sql).toContain("WHERE workspace_id = $1 AND run_id = $2 AND artifact_revision = $3");
+    expect(query!.sql).toContain("SELECT 1 FROM fold_bounds fold");
+    expect(query!.sql).toContain("BETWEEN fold.start_ms AND fold.end_ms");
+    expect(query!.sql).toContain("LIMIT $4");
+    expect(value.statements.some(entry => entry.sql === `SET LOCAL ROLE ${RESEARCH_DB_RUNTIME_ROLE}`)).toBe(true);
+    expect(value.statements.some(entry => entry.sql.startsWith("SELECT 1 FROM workspace_members"))).toBe(true);
+    expect(value.clients[0]!.release).toHaveBeenCalledOnce();
+  });
   it("reads exact card metrics, not unused full fold/candle payloads", () => {
     const joins = ResearchRunLibraryRepository.pageJoins();
     expect(joins).not.toContain("retained_fold_rows");

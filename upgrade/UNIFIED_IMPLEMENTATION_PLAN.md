@@ -7764,3 +7764,52 @@ linked-audit product binding, strict historical 83/86 or Bobby disposition,
 real qualified engine two T07/T13/P24-T05, full P24 field/action/scenario /
 owner acceptance and authorized signed release. No remote push/dev-main/
 production action or new phase; reuse unaffected accepted gates.
+
+#### P24 §32 backend review/repair and Portal v2.0.0 target — 2026-10-04
+
+**SCOPED_BACKEND_DELIVERED / FULL_PRODUCT_ACCEPTANCE_OPEN.** Latest addendum
+supersedes stale observations above only in its scope. All six Claude commits
+through `3fdd3349` are ancestors of `docs/research-loop-plan`; no frontend code
+was replaced. Claude's 73-cell matrix is 613 PASS / 0 FAIL / 69 N/A; full lane
+is 227/228, not 228/228. S06 isolated 3/3 does not erase the full-load flake.
+Their 182/18/75 reconciliation includes expected old immutable pins as well
+as digest-scope/time defects; do not call all 18 expected old-seal failures.
+
+Bobby's next **Portal release target is v2.0.0**, including Research Loop
+V1.1. Current stable Portal v1.1.1 and pinned **QuantBT 1.1.1** are different
+version namespaces. This release target does not imply a QuantBT version
+change. Preserve the open 1.1.0→1.1.1 Portal-transition experiment/gates until
+actually bound/exercised or explicitly disposed; no false upgrade PASS.
+
+Codex publishes Compare preflight/source manifest scopes, current-source
+fact/presentation revision metadata, Report's archived revision scope,
+nullable no-intent publication timestamp, and Report/RC audit applicability.
+OpenAPI/types/fixtures regenerated; source seals and existing revision/cursor
+semantics unchanged. Claude consumes the generated fields; null audit target
+must not probe, and true applicability still is not permission to create.
+
+One new **real imported fixed-profile** run on owned :8096,
+`rrun_1a6f4a85f2f43a659ac9727607acb6bf`, proves DRAFT import → preflight
+(missing pin refused / exact pin admitted) → confined QuantBT 1.1.1 child →
+retention → seven downstream reads 200. No executor widening or production
+flag change. Report/RC return `final_audit_applicable: false`; DRAFT still
+cannot seal/publish. This does not replace final-candidate browser evidence.
+
+Focused executions 126 PASS; mandatory coherent commit gate recorded in
+[the §32 receipt](./research_loop/evidence/P24/CODEX_SECTION32_REVIEW_AND_REPAIR_2026-10-04.md).
+Two new isolated QA disabled/revoked, active sessions 0; owned cell containers/
+network 0, historical queued undispatched fixture and all volumes/bytes/receipts
+retained. No remote push, dev/main merge, shared :8095 restart or production
+operation. Remaining: affected FE mapping/reconcile/browser journey, transient
+sparkline observations, S06 flake, 21 scenario receipts, owner/release acceptance.
+[Live eight-request disposition](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#32-codex-response--2026-10-04).
+
+**Same-slice sparkline finding corrected in backend:** the intermittent 503
+is a real query timeout, not stale-seal refusal. Exact authorized RLS reads
+measure old 1,399–1,469 ms versus scoped materialized fold bounds 14–21 ms;
+151 rows and their digest match. Product 1,500-ms timeout, scope, inclusive
+OOS bounds and sampling remain unchanged. Library focused tests 45/45 PASS.
+The shared preview was not deployed; take the affected HTTP/reconcile receipt
+after its final single-candidate rebuild. Initial mandatory gate was not green;
+additive P04 applicability golden handling corrected without rewriting seal/
+baseline bytes, with focused golden PASS. Coherent corrected gate required.

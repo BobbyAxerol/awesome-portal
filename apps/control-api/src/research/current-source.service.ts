@@ -145,6 +145,11 @@ export function currentSourceReadRevision(kind: string, seal: Pick<CurrentSource
   return currentSourceReadRevisions([kind], seal).revisions[kind]!;
 }
 
+/** Stable source identity only. View kinds share a seal hash, not an identity. */
+export function currentSourceFactRevision(kind: string, seal: Parameters<typeof currentSourceSealDigest>[0]): string {
+  return `rs02_${kind}_${currentSourceSealDigest(seal)}`;
+}
+
 /** Request-local batch: hash this exact authorized seal once, not per view. */
 export function currentSourceReadRevisions(kinds: readonly string[], seal: Parameters<typeof currentSourceReadRevision>[1]): {
   sealDigest: string; revisions: Record<string, string>;
@@ -605,6 +610,9 @@ export class ResearchCurrentSourceService {
     // Version only the HTTP representation when its guard interpretation changes.
     const { etag: _sourceEtag, ...representation } = value;
     return this.valid(ResearchCurrentSourceSplitResponseSchema, { ...value,
+      presentation_revision: `rs02_split-presentation_${sha256ResearchJson({
+        presentation_revision: "S05_APPLIED_TEMPORAL_GUARD_V3", representation,
+      })}`,
       etag: `"rs02_split-presentation_${sha256ResearchJson({
         presentation_revision: "S05_APPLIED_TEMPORAL_GUARD_V3", representation,
       })}"`,
@@ -873,6 +881,7 @@ export class ResearchCurrentSourceService {
       schema_version: "research.current-source-freeze.v1" as const,
       ...common,
       revision: freezeRevision,
+      presentation_revision: freezeRevision,
       etag: `"${freezeRevision}"`,
       integrity: {
         state: integrityState,
@@ -1405,11 +1414,14 @@ export class ResearchCurrentSourceService {
   private common(kind: string, seal: CurrentSourceSealRow, alreadyComputedRevision?: string) {
     // One request already computed the exact same immutable seal revision
     // for its signed cursor. Reuse that value, not a cross-request cache.
-    const value = alreadyComputedRevision ?? revision(kind, seal);
+    const facts = currentSourceReadRevisions([kind], seal);
+    const value = alreadyComputedRevision ?? facts.revisions[kind]!;
     return {
       read_authority: "PORTAL_RETAINED_CURRENT_SOURCE" as const,
       run_id: seal.runId,
       revision: value,
+      source_revision: `rs02_${kind}_${facts.sealDigest}`,
+      presentation_revision: value,
       etag: `"${value}"`,
       availability: available(),
       as_of_utc_ms: seal.retainedAtUtcMs,

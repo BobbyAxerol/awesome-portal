@@ -1119,6 +1119,10 @@ export interface components {
             availability: components["schemas"]["Availability"];
             as_of_utc_ms: components["schemas"]["UtcMs"];
             provenance: components["schemas"]["Provenance"];
+            /** @description Immutable retained seal facts for this view. Does not include presentation, byte-verification receipts or utility-job state. Different view prefixes may share the seal hash. Not an HTTP cache validator. */
+            source_revision?: string;
+            /** @description Exact response representation validator, including display/verification changes. Use the HTTP ETag for caching. Existing revision remains unchanged for backward cursor/reader compatibility. */
+            presentation_revision?: string;
         };
         Page: {
             limit: number;

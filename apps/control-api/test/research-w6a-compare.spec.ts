@@ -163,6 +163,10 @@ describe("W6a · Compare reads the retained WFO lane and answers CG-P20-02…11"
     const result = attempts(await read(rows(), { mode: "attempts", run_ids: [] }));
     const wfo = result.attempts.find((run) => run.run_id === "run-w6a-wfo-a")!;
     expect(wfo.lane).toBe("RS02_RETAINED_CURRENT_SOURCE");
+    expect(wfo.provenance.manifest_digest).toBe(digest("b"));
+    expect(wfo.provenance.manifest_digest_scope).toBe("PREFLIGHT_DATASET_SPEC");
+    expect(wfo.provenance.source_manifest_digest).toBe(real.manifest_digest);
+    expect(wfo.provenance.source_manifest_digest).not.toBe(wfo.provenance.manifest_digest);
     expect(wfo.claim).toMatchObject({ family: "WALK_FORWARD_OOS_COMPATIBILITY", rank: 3, origin: "SOURCE_ATTESTED" });
     expect(wfo.claim.text).toContain("validation_claim=walk_forward_oos");
     const metric = Object.fromEntries(wfo.original_metrics.map((item) => [item.key, item]));

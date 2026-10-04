@@ -467,6 +467,9 @@ const ApprovalAnnotationSchema = z.object({
 }).strict();
 
 export const ResearchReportDetailResponseSchema = z.object({
+  final_audit_applicable: z.boolean().nullable().optional(),
+  /** Old immutable pins captured the read representation, not just seal facts. */
+  source_revision_scope: z.literal("CAPTURED_READ_REPRESENTATION").optional(),
   /** New proof is supplemental. An old frozen core/revision is never rewritten. */
   linked_final_audit: VerifiedPinnedAuditSchema.optional(),
   enriched_analysis: ResearchEnrichedAnalysisSchema.optional(),

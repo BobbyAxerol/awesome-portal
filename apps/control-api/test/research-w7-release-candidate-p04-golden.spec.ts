@@ -181,6 +181,10 @@ describe("W7 · P21 P04 lane golden (byte-for-byte)", () => {
       // §31 changes only the live DTO guidance/presentation. Original frozen
       // golden bytes, source fingerprint, pin set and seal digest remain exact.
       for (const composed of [result.virtual, result.declared]) {
+        // §32 adds a live applicability disclosure, never a sealed-core field.
+        // These historical v1 stand-ins have no typed final-audit target.
+        expect(composed.final_audit_applicable).toBeNull();
+        delete composed.final_audit_applicable;
         expect(composed.actions.publish.blocked_action).toBe("SEAL_CANDIDATE");
         delete composed.actions.publish.blocked_action;
         const node = composed.rail.find((item: { key: string }) => item.key === "selected_params");

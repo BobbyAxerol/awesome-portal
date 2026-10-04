@@ -52,6 +52,7 @@ import { ResearchSearchService } from "./search.service";
 import { ResearchSplitService } from "./split.service";
 import { memoizedResearchJsonDigest } from "./memoized-json-digest";
 import { ExactJsonCalculationMemo } from "./exact-json-calculation-memo";
+import { finalAuditTargetApplicable } from "./final-audit.contract";
 
 /** Which sealed read model a report is assembled from; the run's P10 profile decides. */
 export type ResearchReportLane = "P04_FIXED_PROFILE" | "RS02_RETAINED_CURRENT_SOURCE";
@@ -387,6 +388,8 @@ export class ResearchReportService {
   private detail(stored: StoredResearchReport, linkedAudit?: import("./final-audit.contract").VerifiedPinnedAudit): ResearchReportDetailResponse {
     const response = {
       schema_version: "research.report-detail.v1" as const,
+      source_revision_scope: "CAPTURED_READ_REPRESENTATION" as const,
+      final_audit_applicable: finalAuditTargetApplicable("final_audit" in stored.frozenCore ? stored.frozenCore.final_audit : undefined),
       ...(linkedAudit ? { linked_final_audit: linkedAudit } : {}),
       ...(stored.enrichedAnalysis ? { enriched_analysis: stored.enrichedAnalysis } : {}),
       enriched_analysis_availability: enrichedAvailability(stored.enrichedAnalysis),

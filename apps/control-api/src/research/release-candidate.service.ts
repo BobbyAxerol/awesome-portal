@@ -1,6 +1,7 @@
 /** P21 Release Candidate composer/local-seal authority. */
 
 import { Inject, Injectable } from "@nestjs/common";
+import { finalAuditTargetApplicable } from "./final-audit.contract";
 
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -277,6 +278,7 @@ export class ResearchReleaseCandidateService {
       ? candidateNumber : null;
     const response = {
       schema_version: "research.release-candidate-compose.v1" as const,
+      final_audit_applicable: finalAuditTargetApplicable(report.core && "final_audit" in report.core ? report.core.final_audit : undefined),
       ...(linkedAudit ? { linked_final_audit: linkedAudit } : {}),
       read_authority: "PORTAL_PERSISTED_RESEARCH" as const,
       run_id: source.runId,

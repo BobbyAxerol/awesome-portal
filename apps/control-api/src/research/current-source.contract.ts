@@ -144,6 +144,10 @@ const CommonSchema = z.object({
   read_authority: z.literal("PORTAL_RETAINED_CURRENT_SOURCE"),
   run_id: ResearchCurrentSourceRunIdSchema,
   revision: z.string().regex(/^rs02_[a-z0-9_-]{2,32}_[0-9a-f]{64}$/),
+  /** Immutable retained source, independent of display/verification/job state. */
+  source_revision: z.string().regex(/^rs02_[a-z0-9_-]{2,32}_[0-9a-f]{64}$/).optional(),
+  /** Exact HTTP representation validator; remains distinct from source pins. */
+  presentation_revision: z.string().min(1).max(200).optional(),
   etag: z.string().regex(/^"rs02_[a-z0-9_-]{2,32}_[0-9a-f]{64}"$/),
   availability: ResearchCurrentSourceAvailabilitySchema,
   as_of_utc_ms: UtcMsSchema,
