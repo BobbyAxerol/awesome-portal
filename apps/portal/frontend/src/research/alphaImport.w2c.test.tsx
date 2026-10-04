@@ -340,7 +340,9 @@ describe("S14 fewer words (step 1, empty)", () => {
     const words = (step1.textContent ?? "").replace(/([a-z])([A-Z])/g, "$1 $2").split(/\s+/).filter(Boolean).length;
     // The visible step-1 text, not tooltips. Budget ~85 (TEXT_C); the code-anatomy details body is collapsed prose.
     const anatomy = (step1.querySelector("[data-code-anatomy]")?.textContent ?? "").split(/\s+/).filter(Boolean).length;
-    expect(words - anatomy).toBeLessThanOrEqual(60);
+    // P25-AF: the required-fields reference table is Bobby's explicit ask (a table, not prose), counted apart.
+    const reference = (step1.querySelector("[data-required-fields]")?.textContent ?? "").replace(/([a-z])([A-Z])/g, "$1 $2").split(/\s+/).filter(Boolean).length;
+    expect(words - anatomy - reference).toBeLessThanOrEqual(60);
     expect(step1.textContent).not.toMatch(/\^\[a-z\]|\^av_|\(\?:m\|h\|d\|w\)/);
     expect(step1.textContent).not.toMatch(/held in quarantine|one \.py|contract \+ code/i);
   });

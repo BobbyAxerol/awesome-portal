@@ -44,7 +44,7 @@ export function two(value: string | null | undefined): string | null {
 }
 
 /** The hi-fi axis pill (`spill`). */
-function AxisPill({ name, active, onPick, what }: { name: string; active: boolean; onPick: () => void; what: string }) {
+export function AxisPill({ name, active, onPick, what, attr = "data-axis-pick" }: { name: string; active: boolean; onPick: () => void; what: string; attr?: string }) {
   return (
     <button
       type="button"
@@ -55,7 +55,7 @@ function AxisPill({ name, active, onPick, what }: { name: string; active: boolea
           : { borderColor: "var(--line)", background: "transparent", color: "var(--ink-soft)" }
       }
       aria-pressed={active}
-      data-axis-pick={`${what}:${name}`}
+      {...{ [attr]: `${what}:${name}` }}
       onClick={onPick}
     >
       {name}
@@ -63,7 +63,7 @@ function AxisPill({ name, active, onPick, what }: { name: string; active: boolea
   );
 }
 
-function defaultAxes(axes: readonly string[]): { x: string; y: string } {
+export function defaultAxes(axes: readonly string[]): { x: string; y: string } {
   /* Hi-fi defaults: x = window, y = the entry threshold (entry_z; on Delta, rvol — the what-if mapping). */
   const x = axes.includes("window") ? "window" : axes[0] ?? "";
   const y = axes.includes("rvol") && x !== "rvol" ? "rvol" : axes.find((axis) => axis !== x) ?? x;
@@ -87,7 +87,7 @@ export function pointParameters(
   return ledger !== undefined ? { parameters: ledger, source: "ledger" } : { parameters: undefined, source: "none" };
 }
 
-function pointTitle(point: Point, x: string, y: string, parameters: Record<string, string> | undefined): string {
+export function pointTitle(point: Point, x: string, y: string, parameters: Record<string, string> | undefined): string {
   const score = point.state === "PRUNED" ? "PRUNED (duplicate)" : `IS ${two(point.objective) ?? "not published"}`;
   const at = (name: string) => `${name} ${parameters?.[name] ?? "not published"}`;
   return `trial ${point.trial_id} · ${score} · ${at(x)} · ${at(y)}`;
@@ -744,6 +744,12 @@ export function ThetaJourney({ surface, declared, schedule }: { surface: Surface
 
 export type StudySurface = NonNullable<CurrentSourceSearch["surfaces_by_study"]>[number];
 
+/** The engine's fold_id is 0-based; the hash counts from 1. Non-numeric ids fall back to their position. */
+export const studyOrdinal = (study: StudySurface, index: number) => (/^\d+$/.test(study.fold_id) ? Number(study.fold_id) + 1 : index + 1);
+/** The study the cursor's fold names (else the first): one rule for the A2 selector and the cinema. */
+export const activeStudy = (studies: readonly StudySurface[], foldOrdinal: number): StudySurface =>
+  studies.find((study, index) => studyOrdinal(study, index) === foldOrdinal) ?? studies[0]!;
+
 /**
  * B11 S06: the causal profile ranks each outer fold's inner-validation study on
  * its own, so there is one surface per study and no run-global surface. A study
@@ -779,8 +785,8 @@ export function StudySurfaces({
   onFold: (fold: number, options?: { replace?: boolean }) => void;
 }) {
   /* The engine's fold_id is 0-based; the hash counts from 1. Non-numeric ids fall back to their position. */
-  const ordinalOf = (study: StudySurface, index: number) => (/^\d+$/.test(study.fold_id) ? Number(study.fold_id) + 1 : index + 1);
-  const active = studies.find((study, index) => ordinalOf(study, index) === foldOrdinal) ?? studies[0]!;
+  const ordinalOf = studyOrdinal;
+  const active = activeStudy(studies, foldOrdinal);
   const activeOrdinal = ordinalOf(active, studies.indexOf(active));
   /* A pick inside another study moves the selector to it, so the point stays visible. */
   const ownerIndex = pick === null ? -1 : studies.findIndex((study) => study.surface.points?.some((point) => point.trial_id === pick));

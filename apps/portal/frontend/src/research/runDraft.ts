@@ -42,6 +42,8 @@ export interface ParameterEntry {
    * column. Absent on a fixed or categorical parameter, which has no step.
    */
   declaredStep?: number | null;
+  /** The declaration's kind, as served (int_range / float_range / categorical / fixed). */
+  declaredKind?: DeclaredParameter["kind"];
   /** Present when the parameter is categorical rather than numeric. */
   levels?: readonly (string | number | boolean | null)[];
   dimension: ParameterDimension;
@@ -1201,6 +1203,7 @@ export function parameterEntriesFrom(
           declaredLow: declared.values[0],
           declaredHigh: declared.values[declared.values.length - 1],
           levels: declared.values,
+          declaredKind: declared.kind,
           dimension: "sweep" as const,
           low: String(declared.values[0]),
           high: String(declared.values[declared.values.length - 1]),
@@ -1211,6 +1214,7 @@ export function parameterEntriesFrom(
           name,
           declaredLow: declared.value,
           declaredHigh: declared.value,
+          declaredKind: declared.kind,
           dimension: "pin" as const,
           low: String(declared.value),
           high: "",
@@ -1221,6 +1225,7 @@ export function parameterEntriesFrom(
         declaredLow: declared.low,
         declaredHigh: declared.high,
         declaredStep: declared.step ?? null,
+        declaredKind: declared.kind,
         dimension: "sweep" as const,
         low: String(declared.low),
         high: String(declared.high),

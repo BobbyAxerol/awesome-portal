@@ -24,6 +24,7 @@
 import { useEntryRef, useReadout } from "./chartLife";
 import { lineageHref } from "./LineageLink";
 import { ResearchScopedLineageLink as LineageLink, ResearchScopedLink as RouterLink } from "./ResearchScopedLink";
+import { ParameterSpaceTable, rowsFromEntries } from "./ParameterSpaceTable";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useInRouterContext } from "react-router-dom";
 
@@ -729,10 +730,12 @@ function StrategyStep({
   draft,
   patch,
   error,
+  onAllParameters,
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
   error: string | null;
+  onAllParameters?: () => void;
 }) {
   return (
     <Card title="Strategy">
@@ -749,6 +752,21 @@ function StrategyStep({
           aria-label="Strategy id"
         />
       </Field>
+      {draft.bound && draft.parameters.length > 0 ? (
+        <p className="m-0 flex flex-wrap items-center gap-1.5 text-[10.5px]" data-declared-params-summary style={{ color: "var(--ink-soft)" }}>
+          <span className="mono">{draft.parameters.length} declared parameters</span>
+          {draft.parameters.slice(0, 4).map((entry) => (
+            <span key={entry.name} className="mono rounded-full border px-2 py-px text-[9.5px]" style={{ borderColor: "var(--line)", color: "var(--ink-faint)" }}>
+              {entry.name}
+            </span>
+          ))}
+          {onAllParameters ? (
+            <button type="button" className="btn-ghost mono text-[10px]" data-action="all-parameters" onClick={onAllParameters}>
+              all →
+            </button>
+          ) : null}
+        </p>
+      ) : null}
       {error ? <ErrorBlock message={error} /> : null}
     </Card>
   );
@@ -2915,6 +2933,11 @@ function ReviewRows({
         <Row label="parameter_space" labelWidth={labelWidth}>
           {draft.parameters.length} entries · {sweptCount(draft)} swept · {pinnedCount(draft)} pinned
           {sweepCeiling === null ? "" : ` (sweep ceiling ${sweepCeiling})`}
+          {withWindows && draft.parameters.length > 0 ? (
+            <div className="mt-1.5" data-review-parameter-table>
+              <ParameterSpaceTable rows={rowsFromEntries(draft.parameters)} ariaLabel="parameters of this run" />
+            </div>
+          ) : null}
         </Row>
       ) : null}
       {draft.protocol === "advanced" && usesV2 ? (
@@ -3472,7 +3495,7 @@ export function NewRun(props: NewRunProps) {
             </>
           ) : null}
           {step === "strategy" ? (
-            <StrategyStep draft={draft} patch={stepPatch} error={shownError.get("strategy") ?? null} />
+            <StrategyStep draft={draft} patch={stepPatch} error={shownError.get("strategy") ?? null} onAllParameters={() => goTo("parameters")} />
           ) : null}
           {step === "route" ? (
             <RouteStep

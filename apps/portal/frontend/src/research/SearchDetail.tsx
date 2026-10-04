@@ -40,7 +40,7 @@ import {
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import type { DeclaredParameter } from "./alphaImportClient";
 import { reasonCodeSentence } from "./researchRefusal";
-import { claimToken, formatUtc, groupDecimalString } from "./researchFormat";
+import { claimToken, foldShort, formatUtc, groupDecimalString } from "./researchFormat";
 import { InfoMark } from "../components/InfoMark";
 import { ShortId } from "./ShortId";
 import { ImportedAlphaLine } from "./ImportedAlphaLine";
@@ -77,6 +77,7 @@ import {
 } from "./searchClient";
 import { type EvidenceCursor } from "./evidenceCursor";
 import { runScreenHref } from "./runScreenHref";
+import { SearchCinema } from "./SearchCinema";
 import { AsOf, CopyEvidenceLink, Digest, RunNotFound, SCREEN_FRAME, StageRunBar } from "./SplitDetail";
 import { LANE_STATE_COPY } from "./splitClient";
 import { useEntryRef } from "./chartLife";
@@ -92,6 +93,7 @@ import {
   two,
   type DeclaredSpace,
   StudySurfaces,
+  activeStudy,
 } from "./SearchSurface";
 import type { ResearchState } from "./state";
 import { trialLabel, trialTitle } from "./trialLabel";
@@ -2385,8 +2387,27 @@ export function SearchScreen({
 
             <ProvenanceStrip provenance={lane ? retainedProvenance(lane, detail) : detail.provenance} />
 
-            {/* F3 · H06 hero: the search cinema stays unbuilt until the engine publishes a sampler trace; one typed line holds its place. */}
+            {/* The search cinema: a selection story over the served artifacts. A fixed profile has none; where the surface is not served one typed line holds its place. */}
             {fixed ? null : (() => {
+              const studies = lane?.surfaces_by_study ?? [];
+              const study = lane && studies.length > 0 ? activeStudy(studies, cursor.fold) : null;
+              const cinemaSurface = study ? study.surface : lane?.surface;
+              if (lane && cinemaSurface && cinemaSurface.state === "AVAILABLE" && cinemaSurface.points.length > 0) {
+                const ledgerTrials = (pages.merged ?? lane).ledger.trials;
+                return (
+                  <SearchCinema
+                    key={study?.study_id ?? "run"}
+                    runId={runId}
+                    cursor={cursor}
+                    search={lane}
+                    surface={cinemaSurface}
+                    studyLabel={study ? foldShort(study.fold_id) : undefined}
+                    parametersOf={(id) => cleanParameters(ledgerTrials.find((trial) => trial.trial_id === id)?.parameters)}
+                    digestOf={(id) => ledgerTrials.find((trial) => trial.trial_id === id)?.params_digest ?? null}
+                    atlas={modeReads?.atlas}
+                  />
+                );
+              }
               const samplerCode = lane
                 ? lane.diagnostics.probe.sampler.reason_code
                 : gapOf("sampler_seed_warm_start")?.reason_code ?? null;
@@ -2395,6 +2416,7 @@ export function SearchScreen({
                   className="mono flex flex-wrap items-baseline gap-x-2 rounded-[6px] border border-dashed px-3 py-1.5 text-[10.5px]"
                   style={{ borderColor: "var(--line)", color: "var(--ink-faint)" }}
                   data-panel="search-cinema"
+                  data-cinema="absent"
                   data-gap-state="NOT_PUBLISHED"
                 >
                   <span className="italic" title={samplerCode ?? undefined}>

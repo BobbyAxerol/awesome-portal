@@ -51,6 +51,8 @@ import type {
 } from "./alphaImportClient";
 import { lineageHref } from "./LineageLink";
 import { ResearchScopedLineageLink as LineageLink } from "./ResearchScopedLink";
+import { ALPHA_SOURCE_SAMPLE, REQUIRED_FIELDS } from "./alphaImportSample";
+import { ParameterSpaceTable, rowsFromDeclaration } from "./ParameterSpaceTable";
 import { newRunPrefillHref } from "./lineageClient";
 import { smokeMotionAllowed } from "../execution/smokeMotion";
 import {
@@ -558,6 +560,11 @@ function MirrorValue({ field }: { field: MirrorField }) {
     /* E1: a digest is prefix + 8 hex on screen, the full value in its title. */
     return <Digest value={field.value} label="artifact digest" />;
   }
+  const declared = hasValue && field.field === "parameter_space" ? rowsFromDeclaration(field.value) : null;
+  if (declared && declared.length > 0 && declared.every((row) => row.kind !== null)) {
+    /* The shared table under the mirror carries the rows; a second copy here would print them twice. */
+    return <>{declared.length} declared · table below</>;
+  }
   if (hasValue) return <>{formatMirrorValue(field.value)}</>;
   /* A field the parser did not find, or the v1 file cannot carry, has no value
      to print. Its typed absence says which; an invented dash would read as a value. */
@@ -566,6 +573,25 @@ function MirrorValue({ field }: { field: MirrorField }) {
     <span className="ai-absent" style={{ color: absence.color }} data-absent={field.state}>
       {absence.label}
     </span>
+  );
+}
+
+/** The parsed `parameter_space` as the shared table; a field the parser did not find says so, nothing is read from the source here. */
+function DeclaredParameters({ mirror }: { mirror: readonly MirrorField[] }) {
+  const field = mirror.find((entry) => entry.field === "parameter_space");
+  const hasValue = field !== undefined && (field.state === "parsed" || field.state === "server_computed");
+  const rows = hasValue ? rowsFromDeclaration(field.value) : null;
+  return (
+    <div className="px-3 pb-3 pt-2" data-declared-parameters>
+      <h3 className="ai-label m-0 mb-1">Declared parameters</h3>
+      {rows !== null && rows.length > 0 ? (
+        <ParameterSpaceTable rows={rows} />
+      ) : (
+        <span className="ai-absent text-[10.5px] italic" style={{ color: "var(--ink-mute)" }} data-absent="parameter_space" title={field?.note}>
+          {rows !== null ? "none declared" : field ? (MIRROR_ABSENCE[field.state]?.label ?? field.state) : "not published"}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -1252,6 +1278,7 @@ export function AlphaImport(props: AlphaImportProps) {
                 {parse ? <MirrorTable mirror={parse.mirror} /> : null}
               </ResearchPanel>
               )}
+              {parse ? <DeclaredParameters mirror={parse.mirror} /> : null}
             </div>
           </div>
 
@@ -1329,6 +1356,23 @@ export function AlphaImport(props: AlphaImportProps) {
                 </p>
               ) : null}
 
+              {sourceText.trim().length === 0 && parse === null ? (
+                <button
+                  type="button"
+                  className="ai-btn self-start"
+                  data-quiet
+                  data-action="use-sample"
+                  title="Fills the box with an illustrative alpha. Nothing is sent until you press Parse."
+                  onClick={() => {
+                    setReplacedPaste(null);
+                    setFileNote(null);
+                    onSourceChange(ALPHA_SOURCE_SAMPLE, null);
+                  }}
+                >
+                  Use sample
+                </button>
+              ) : null}
+
               <label className="ai-paste">
                 <span className="ai-label" title="Last input wins: a file replaces pasted text; typing clears the file.">
                   or paste
@@ -1363,6 +1407,33 @@ export function AlphaImport(props: AlphaImportProps) {
                 </button>
               ) : null}
             </div>
+
+            {parse === null ? (
+              <div className="ai-card" data-pad data-required-fields>
+                <h2 className="ai-label" title="What the analyser requires in ALPHA_CONTRACT. Illustrative examples, not server data.">Required fields</h2>
+                <table className="mono w-full border-collapse text-[10.5px]" aria-label="required fields">
+                  <thead>
+                    <tr className="text-[9px] uppercase" style={{ color: "var(--ink-faint)", textAlign: "left" }}>
+                      <th className="pb-1 pr-3 font-normal">field</th>
+                      <th className="pb-1 pr-3 font-normal">declares</th>
+                      <th className="pb-1 font-normal">example</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {REQUIRED_FIELDS.map((row) => (
+                      <tr key={row.field} style={{ borderTop: "1px solid var(--line-soft)" }}>
+                        <td className="whitespace-nowrap py-[2px] pr-3" style={{ color: "var(--ink)" }}>{row.field}</td>
+                        <td className="py-[2px] pr-3" style={{ color: "var(--ink-soft)" }}>{row.declares}</td>
+                        <td className="py-[2px]" style={{ color: "var(--ink-faint)" }}>{row.example}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="ai-note m-0" data-sample-note>
+                  The sample passes the gates; it is not a trading strategy. Running it depends on the stack&apos;s admission.
+                </p>
+              </div>
+            ) : null}
 
             <div className="ai-card" data-pad data-entrypoint-card>
               <h2 className="ai-label" title="v1 single-file contract: one literal, one plain function. No classes, decorators or imports.">Entrypoint</h2>
