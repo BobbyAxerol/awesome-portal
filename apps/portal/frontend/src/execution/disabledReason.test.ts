@@ -101,6 +101,7 @@ const STRUCTURAL: Readonly<Record<string, string>> = {
   "execution/screens/profileContainers.tsx|disabled={!prevCursor}": "pagination: no previous cursor",
   "execution/screens/profileContainers.tsx|disabled={!nextCursor}": "pagination: no next cursor",
   "features/command-center/CommandCenter.tsx|disabled={summary.isFetching}": "refresh greyed while its own fetch is in flight",
+  "research/LinkedAuditConsumer.tsx|disabled={busy}": "linked-audit buttons are greyed only while their own read/create request is in flight",
 };
 
 describe("§3.5 — a disabled control states its reason", () => {

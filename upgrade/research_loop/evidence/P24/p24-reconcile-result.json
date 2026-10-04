@@ -1,0 +1,5858 @@
+{
+  "generated_at": "2026-10-04T03:56:32.218Z",
+  "base": "http://localhost:8095",
+  "public_origin": "https://research-portal.primusspark.com",
+  "wait_ms": 5000,
+  "runs": [
+    {
+      "label": "R-WFO-027",
+      "run_id": "rrun_686af4b1d64472591b6a64a1db1233a3",
+      "why": "per_fold_causal, published RC",
+      "library_status": "COMPLETED",
+      "read_statuses": {
+        "library_ids": "200",
+        "progress": "200",
+        "spec": "200",
+        "evidence": "200",
+        "cs_evidence": "200",
+        "cs_split": "200",
+        "cs_search": "200",
+        "cs_freeze": "200",
+        "cs_replay": "200",
+        "sealed_replay": "200 NOT_PUBLISHED",
+        "report": "200",
+        "rc": "200",
+        "sparkline": "200",
+        "lineage": "200",
+        "compare_attempts": "200",
+        "compare_pair": "200",
+        "compare_markets": "200",
+        "atlas": "200",
+        "library": "200",
+        "pack": "200",
+        "publication": "200",
+        "av_publication": "200"
+      },
+      "checks": [
+        {
+          "id": "eq:run_id",
+          "result": "PASS",
+          "detail": "22 reads equal rrun_686af4b1d644 [library, library_ids, progress, spec, cs_evidence, cs_split, cs_search, cs_freeze, cs_replay, evidence(sealed), report, rc, rc.run.id, rc.rail.run, pack, publication, pack.final_audit_run_id, report.identity.run_id, sparkline, sealed_replay, lineage.primary_run, compare_attempts]",
+          "values": [
+            [
+              "library",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "library_ids",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "progress",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "spec",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "cs_evidence",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "cs_split",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "cs_search",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "cs_freeze",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "cs_replay",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "evidence(sealed)",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "report",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "rc",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "rc.run.id",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "rc.rail.run",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "pack",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "publication",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "pack.final_audit_run_id",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "report.identity.run_id",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "sparkline",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "sealed_replay",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "lineage.primary_run",
+              "rrun_686af4b1d644"
+            ],
+            [
+              "compare_attempts",
+              "rrun_686af4b1d644"
+            ]
+          ]
+        },
+        {
+          "id": "eq:display_label",
+          "result": "PASS",
+          "detail": "7 reads equal R-WFO-027 [library, progress, report, rc, pack, lineage.primary_run, compare_attempts]",
+          "values": [
+            [
+              "library",
+              "R-WFO-027"
+            ],
+            [
+              "progress",
+              "R-WFO-027"
+            ],
+            [
+              "report",
+              "R-WFO-027"
+            ],
+            [
+              "rc",
+              "R-WFO-027"
+            ],
+            [
+              "pack",
+              "R-WFO-027"
+            ],
+            [
+              "lineage.primary_run",
+              "R-WFO-027"
+            ],
+            [
+              "compare_attempts",
+              "R-WFO-027"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_id",
+          "result": "PASS",
+          "detail": "13 reads equal delta-rsi-polynomial-alpha [library.binding, progress, spec, spec.alpha_binding, cs_replay.identity, rc.run.binding, pack.fields, rc.fields, rc.rail.alpha, publication, lineage.alpha, report.identity, sealed_replay]",
+          "values": [
+            [
+              "library.binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "progress",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "spec",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "spec.alpha_binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "cs_replay.identity",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.run.binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "pack.fields",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.fields",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.rail.alpha",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "publication",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "lineage.alpha",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "report.identity",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "sealed_replay",
+              "delta-rsi-polynomial-alpha"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_version_id",
+          "result": "PASS",
+          "detail": "15 reads equal av_delta_rsi_polynomial_alpha_1_0_0 [library.binding, progress, spec, spec.alpha_binding, cs_replay.identity, rc.run.binding, pack.fields, rc.fields, rc.rail.alpha_version, publication, av_publication, lineage.attempt, report.identity, compare_attempts, sealed_replay]",
+          "values": [
+            [
+              "library.binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "progress",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "spec",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "spec.alpha_binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "cs_replay.identity",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.run.binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "pack.fields",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.fields",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.rail.alpha_version",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "publication",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "av_publication",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "lineage.attempt",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "report.identity",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "compare_attempts",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "sealed_replay",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_code_digest",
+          "result": "PASS",
+          "detail": "5 reads equal 34dc1847d051 [library.binding.digest, pack.fields, rc.fields, rc.pack.ALPHA_VERSION_PASSPORT, lineage.version]",
+          "values": [
+            [
+              "library.binding.digest",
+              "34dc1847d051"
+            ],
+            [
+              "pack.fields",
+              "34dc1847d051"
+            ],
+            [
+              "rc.fields",
+              "34dc1847d051"
+            ],
+            [
+              "rc.pack.ALPHA_VERSION_PASSPORT",
+              "34dc1847d051"
+            ],
+            [
+              "lineage.version",
+              "34dc1847d051"
+            ]
+          ]
+        },
+        {
+          "id": "eq:requested_spec_digest",
+          "result": "PASS",
+          "detail": "10 reads equal d09d6b35c729 [progress, spec, cs_evidence, cs_split, cs_search, cs_freeze, cs_replay, report.source_digests, pack.fields, rc.fields]",
+          "values": [
+            [
+              "progress",
+              "d09d6b35c729"
+            ],
+            [
+              "spec",
+              "d09d6b35c729"
+            ],
+            [
+              "cs_evidence",
+              "d09d6b35c729"
+            ],
+            [
+              "cs_split",
+              "d09d6b35c729"
+            ],
+            [
+              "cs_search",
+              "d09d6b35c729"
+            ],
+            [
+              "cs_freeze",
+              "d09d6b35c729"
+            ],
+            [
+              "cs_replay",
+              "d09d6b35c729"
+            ],
+            [
+              "report.source_digests",
+              "d09d6b35c729"
+            ],
+            [
+              "pack.fields",
+              "d09d6b35c729"
+            ],
+            [
+              "rc.fields",
+              "d09d6b35c729"
+            ]
+          ]
+        },
+        {
+          "id": "eq:effective_spec_digest",
+          "result": "PASS",
+          "detail": "10 reads equal f8cd5d367000 [cs_evidence, cs_split, cs_search, cs_freeze, cs_replay, report.source_digests, pack.fields, rc.fields, lineage.primary_run, compare_attempts.provenance]",
+          "values": [
+            [
+              "cs_evidence",
+              "f8cd5d367000"
+            ],
+            [
+              "cs_split",
+              "f8cd5d367000"
+            ],
+            [
+              "cs_search",
+              "f8cd5d367000"
+            ],
+            [
+              "cs_freeze",
+              "f8cd5d367000"
+            ],
+            [
+              "cs_replay",
+              "f8cd5d367000"
+            ],
+            [
+              "report.source_digests",
+              "f8cd5d367000"
+            ],
+            [
+              "pack.fields",
+              "f8cd5d367000"
+            ],
+            [
+              "rc.fields",
+              "f8cd5d367000"
+            ],
+            [
+              "lineage.primary_run",
+              "f8cd5d367000"
+            ],
+            [
+              "compare_attempts.provenance",
+              "f8cd5d367000"
+            ]
+          ]
+        },
+        {
+          "id": "eq:dataset_binding_digest",
+          "result": "PASS",
+          "detail": "9 reads equal efe345160911 [cs_evidence, cs_split, cs_search, cs_freeze, cs_replay, report.source_digests, pack.fields, lineage.primary_run, compare_attempts.provenance]",
+          "values": [
+            [
+              "cs_evidence",
+              "efe345160911"
+            ],
+            [
+              "cs_split",
+              "efe345160911"
+            ],
+            [
+              "cs_search",
+              "efe345160911"
+            ],
+            [
+              "cs_freeze",
+              "efe345160911"
+            ],
+            [
+              "cs_replay",
+              "efe345160911"
+            ],
+            [
+              "report.source_digests",
+              "efe345160911"
+            ],
+            [
+              "pack.fields",
+              "efe345160911"
+            ],
+            [
+              "lineage.primary_run",
+              "efe345160911"
+            ],
+            [
+              "compare_attempts.provenance",
+              "efe345160911"
+            ]
+          ]
+        },
+        {
+          "id": "eq:source_manifest_digest",
+          "result": "FAIL",
+          "detail": "expected 1df90ba5e094 (cs_evidence); differs: compare_attempts.provenance=d72af53355ac",
+          "expected": "1df90ba5e094 (cs_evidence)",
+          "actual": "compare_attempts.provenance=d72af53355ac",
+          "endpoints": [
+            "cs_evidence",
+            "cs_split",
+            "cs_search",
+            "cs_freeze",
+            "cs_replay",
+            "cs_freeze.integrity.expected",
+            "cs_freeze.integrity.observed",
+            "report.source_digests",
+            "pack.fields",
+            "publication.source.legacy_artifact_sha256",
+            "compare_attempts.provenance"
+          ],
+          "values": [
+            [
+              "cs_evidence",
+              "1df90ba5e094"
+            ],
+            [
+              "cs_split",
+              "1df90ba5e094"
+            ],
+            [
+              "cs_search",
+              "1df90ba5e094"
+            ],
+            [
+              "cs_freeze",
+              "1df90ba5e094"
+            ],
+            [
+              "cs_replay",
+              "1df90ba5e094"
+            ],
+            [
+              "cs_freeze.integrity.expected",
+              "1df90ba5e094"
+            ],
+            [
+              "cs_freeze.integrity.observed",
+              "1df90ba5e094"
+            ],
+            [
+              "report.source_digests",
+              "1df90ba5e094"
+            ],
+            [
+              "pack.fields",
+              "1df90ba5e094"
+            ],
+            [
+              "publication.source.legacy_artifact_sha256",
+              "1df90ba5e094"
+            ],
+            [
+              "compare_attempts.provenance",
+              "d72af53355ac"
+            ]
+          ]
+        },
+        {
+          "id": "eq:source_transform_digest",
+          "result": "PASS",
+          "detail": "7 reads equal 4cad16ebad71 [cs_evidence, cs_split, cs_search, cs_freeze, cs_replay, report.source_digests, pack.fields]",
+          "values": [
+            [
+              "cs_evidence",
+              "4cad16ebad71"
+            ],
+            [
+              "cs_split",
+              "4cad16ebad71"
+            ],
+            [
+              "cs_search",
+              "4cad16ebad71"
+            ],
+            [
+              "cs_freeze",
+              "4cad16ebad71"
+            ],
+            [
+              "cs_replay",
+              "4cad16ebad71"
+            ],
+            [
+              "report.source_digests",
+              "4cad16ebad71"
+            ],
+            [
+              "pack.fields",
+              "4cad16ebad71"
+            ]
+          ]
+        },
+        {
+          "id": "eq:retained_import_digest",
+          "result": "PASS",
+          "detail": "7 reads equal 057f9d3d96eb [cs_evidence, cs_split, cs_search, cs_freeze, cs_replay, cs_freeze.integrity.expected, cs_freeze.integrity.observed]",
+          "values": [
+            [
+              "cs_evidence",
+              "057f9d3d96eb"
+            ],
+            [
+              "cs_split",
+              "057f9d3d96eb"
+            ],
+            [
+              "cs_search",
+              "057f9d3d96eb"
+            ],
+            [
+              "cs_freeze",
+              "057f9d3d96eb"
+            ],
+            [
+              "cs_replay",
+              "057f9d3d96eb"
+            ],
+            [
+              "cs_freeze.integrity.expected",
+              "057f9d3d96eb"
+            ],
+            [
+              "cs_freeze.integrity.observed",
+              "057f9d3d96eb"
+            ]
+          ]
+        },
+        {
+          "id": "eq:engine_release_id",
+          "result": "PASS",
+          "detail": "5 reads equal er_quantbt_111 [progress, spec.client, pack.fields, lineage.primary_run, atlas.selected_release_id]",
+          "values": [
+            [
+              "progress",
+              "er_quantbt_111"
+            ],
+            [
+              "spec.client",
+              "er_quantbt_111"
+            ],
+            [
+              "pack.fields",
+              "er_quantbt_111"
+            ],
+            [
+              "lineage.primary_run",
+              "er_quantbt_111"
+            ],
+            [
+              "atlas.selected_release_id",
+              "er_quantbt_111"
+            ]
+          ]
+        },
+        {
+          "id": "eq:config_digest",
+          "result": "PASS",
+          "detail": "2 reads equal 69c9431ee0ca [progress, spec.client]",
+          "values": [
+            [
+              "progress",
+              "69c9431ee0ca"
+            ],
+            [
+              "spec.client",
+              "69c9431ee0ca"
+            ]
+          ]
+        },
+        {
+          "id": "eq:selected_trial_id",
+          "result": "PASS",
+          "detail": "4 reads equal study_2.trial_1 [cs_search.selection, cs_search.roles.selected, cs_freeze.frozen_selection, rc.selected_params.source_id]",
+          "values": [
+            [
+              "cs_search.selection",
+              "study_2.trial_1"
+            ],
+            [
+              "cs_search.roles.selected",
+              "study_2.trial_1"
+            ],
+            [
+              "cs_freeze.frozen_selection",
+              "study_2.trial_1"
+            ],
+            [
+              "rc.selected_params.source_id",
+              "study_2.trial_1"
+            ]
+          ]
+        },
+        {
+          "id": "eq:selected_trial_ordinal",
+          "result": "PASS",
+          "detail": "3 reads equal 2 [cs_search.selection, cs_freeze.frozen_selection, rc.selected_params]",
+          "values": [
+            [
+              "cs_search.selection",
+              "2"
+            ],
+            [
+              "cs_freeze.frozen_selection",
+              "2"
+            ],
+            [
+              "rc.selected_params",
+              "2"
+            ]
+          ]
+        },
+        {
+          "id": "eq:selected_trial_ordinal_scope",
+          "result": "PASS",
+          "detail": "3 reads equal STUDY_LOCAL [cs_search.selection, cs_freeze.frozen_selection, rc.selected_params]",
+          "values": [
+            [
+              "cs_search.selection",
+              "STUDY_LOCAL"
+            ],
+            [
+              "cs_freeze.frozen_selection",
+              "STUDY_LOCAL"
+            ],
+            [
+              "rc.selected_params",
+              "STUDY_LOCAL"
+            ]
+          ]
+        },
+        {
+          "id": "eq:fold_selection_fold_id",
+          "result": "PASS",
+          "detail": "4 reads equal 2 [cs_search.selection, cs_search.roles.selected, cs_freeze.frozen_selection, rc.selected_params.study_id]",
+          "values": [
+            [
+              "cs_search.selection",
+              "2"
+            ],
+            [
+              "cs_search.roles.selected",
+              "2"
+            ],
+            [
+              "cs_freeze.frozen_selection",
+              "2"
+            ],
+            [
+              "rc.selected_params.study_id",
+              "2"
+            ]
+          ]
+        },
+        {
+          "id": "eq:fold_selection_scope",
+          "result": "PASS",
+          "detail": "3 reads equal LAST_FOLD_DEPLOYMENT [cs_search.selection, cs_search.roles.selected, cs_freeze.frozen_selection]",
+          "values": [
+            [
+              "cs_search.selection",
+              "LAST_FOLD_DEPLOYMENT"
+            ],
+            [
+              "cs_search.roles.selected",
+              "LAST_FOLD_DEPLOYMENT"
+            ],
+            [
+              "cs_freeze.frozen_selection",
+              "LAST_FOLD_DEPLOYMENT"
+            ]
+          ]
+        },
+        {
+          "id": "eq:selected_parameters",
+          "result": "PASS",
+          "detail": "2 reads equal {\"len_atr1\":\"8\",\"len_atr2\":\"52\",\"len_vol\":\"8\",\"rsi_l\":\"30\",\"rvol\":\"2.3\",\"signalLength\":\"20\",\"slpercent\":\"0.7\",\"window\":\"48\"} [cs_search.selection, cs_freeze.frozen_selection]",
+          "values": [
+            [
+              "cs_search.selection",
+              "{\"len_atr1\":\"8\",\"len_atr2\":\"52\",\"len_vol\":\"8\",\"rsi_l\":\"30\",\"rvol\":\"2.3\",\"signalLength\":\"20\",\"slpercent\":\"0.7\",\"window\":\"48\"}"
+            ],
+            [
+              "cs_freeze.frozen_selection",
+              "{\"len_atr1\":\"8\",\"len_atr2\":\"52\",\"len_vol\":\"8\",\"rsi_l\":\"30\",\"rvol\":\"2.3\",\"signalLength\":\"20\",\"slpercent\":\"0.7\",\"window\":\"48\"}"
+            ]
+          ]
+        },
+        {
+          "id": "eq:selected_params_digest",
+          "result": "PASS",
+          "detail": "3 reads equal 8ea57bdd6881 [rc.rail.selected_params, pack.fields.parameter_bundle_digest, rc.fields.parameter_bundle_digest]",
+          "values": [
+            [
+              "rc.rail.selected_params",
+              "8ea57bdd6881"
+            ],
+            [
+              "pack.fields.parameter_bundle_digest",
+              "8ea57bdd6881"
+            ],
+            [
+              "rc.fields.parameter_bundle_digest",
+              "8ea57bdd6881"
+            ]
+          ]
+        },
+        {
+          "id": "eq:pack_digest",
+          "result": "PASS",
+          "detail": "3 reads equal dca4974c3f3d [rc.local_seal, pack, publication]",
+          "values": [
+            [
+              "rc.local_seal",
+              "dca4974c3f3d"
+            ],
+            [
+              "pack",
+              "dca4974c3f3d"
+            ],
+            [
+              "publication",
+              "dca4974c3f3d"
+            ]
+          ]
+        },
+        {
+          "id": "eq:release_candidate_id",
+          "result": "PASS",
+          "detail": "6 reads equal rc_06GG2K1TN6QQNJJN3RJ5AS5XC1 [library.rc, rc.local_seal, pack, publication, pack.fields, lineage.release_candidate]",
+          "values": [
+            [
+              "library.rc",
+              "rc_06GG2K1TN6QQNJJN3RJ5AS5XC1"
+            ],
+            [
+              "rc.local_seal",
+              "rc_06GG2K1TN6QQNJJN3RJ5AS5XC1"
+            ],
+            [
+              "pack",
+              "rc_06GG2K1TN6QQNJJN3RJ5AS5XC1"
+            ],
+            [
+              "publication",
+              "rc_06GG2K1TN6QQNJJN3RJ5AS5XC1"
+            ],
+            [
+              "pack.fields",
+              "rc_06GG2K1TN6QQNJJN3RJ5AS5XC1"
+            ],
+            [
+              "lineage.release_candidate",
+              "rc_06GG2K1TN6QQNJJN3RJ5AS5XC1"
+            ]
+          ]
+        },
+        {
+          "id": "eq:source_fingerprint",
+          "result": "PASS",
+          "detail": "3 reads equal 13ccbd7a89a3 [rc, rc.draft, pack.frozen_core]",
+          "values": [
+            [
+              "rc",
+              "13ccbd7a89a3"
+            ],
+            [
+              "rc.draft",
+              "13ccbd7a89a3"
+            ],
+            [
+              "pack.frozen_core",
+              "13ccbd7a89a3"
+            ]
+          ]
+        },
+        {
+          "id": "eq:report_revision",
+          "result": "PASS",
+          "detail": "3 reads equal p18r1_018d62ec6961 [report, pack.fields, rc.fields]",
+          "values": [
+            [
+              "report",
+              "p18r1_018d62ec6961"
+            ],
+            [
+              "pack.fields",
+              "p18r1_018d62ec6961"
+            ],
+            [
+              "rc.fields",
+              "p18r1_018d62ec6961"
+            ]
+          ]
+        },
+        {
+          "id": "eq:evidence_revision",
+          "result": "PASS",
+          "detail": "4 reads equal rs02_evidence_def6a02fdc32 [cs_evidence.revision, report.source_revisions, pack.fields, rc.fields]",
+          "values": [
+            [
+              "cs_evidence.revision",
+              "rs02_evidence_def6a02fdc32"
+            ],
+            [
+              "report.source_revisions",
+              "rs02_evidence_def6a02fdc32"
+            ],
+            [
+              "pack.fields",
+              "rs02_evidence_def6a02fdc32"
+            ],
+            [
+              "rc.fields",
+              "rs02_evidence_def6a02fdc32"
+            ]
+          ]
+        },
+        {
+          "id": "eq:split_revision",
+          "result": "FAIL",
+          "detail": "expected rs02_split_d12ed6b8878f (cs_split.revision); differs: report.source_revisions=rs02_split_e08c93a775ce",
+          "expected": "rs02_split_d12ed6b8878f (cs_split.revision)",
+          "actual": "report.source_revisions=rs02_split_e08c93a775ce",
+          "endpoints": [
+            "cs_split.revision",
+            "report.source_revisions"
+          ],
+          "values": [
+            [
+              "cs_split.revision",
+              "rs02_split_d12ed6b8878f"
+            ],
+            [
+              "report.source_revisions",
+              "rs02_split_e08c93a775ce"
+            ]
+          ]
+        },
+        {
+          "id": "eq:search_revision",
+          "result": "FAIL",
+          "detail": "expected rs02_search_cb72db4b48a7 (cs_search.revision); differs: report.source_revisions=rs02_search_907372db8e6d",
+          "expected": "rs02_search_cb72db4b48a7 (cs_search.revision)",
+          "actual": "report.source_revisions=rs02_search_907372db8e6d",
+          "endpoints": [
+            "cs_search.revision",
+            "report.source_revisions"
+          ],
+          "values": [
+            [
+              "cs_search.revision",
+              "rs02_search_cb72db4b48a7"
+            ],
+            [
+              "report.source_revisions",
+              "rs02_search_907372db8e6d"
+            ]
+          ]
+        },
+        {
+          "id": "eq:freeze_revision",
+          "result": "FAIL",
+          "detail": "expected rs02_freeze_9d0f43d1f3d2 (cs_freeze.revision); differs: report.source_revisions=rs02_freeze_e41d87877df9",
+          "expected": "rs02_freeze_9d0f43d1f3d2 (cs_freeze.revision)",
+          "actual": "report.source_revisions=rs02_freeze_e41d87877df9",
+          "endpoints": [
+            "cs_freeze.revision",
+            "report.source_revisions"
+          ],
+          "values": [
+            [
+              "cs_freeze.revision",
+              "rs02_freeze_9d0f43d1f3d2"
+            ],
+            [
+              "report.source_revisions",
+              "rs02_freeze_e41d87877df9"
+            ]
+          ]
+        },
+        {
+          "id": "eq:replay_revision",
+          "result": "PASS",
+          "detail": "2 reads equal rs02_replay_e08c93a775ce [cs_replay.revision, report.source_revisions]",
+          "values": [
+            [
+              "cs_replay.revision",
+              "rs02_replay_e08c93a775ce"
+            ],
+            [
+              "report.source_revisions",
+              "rs02_replay_e08c93a775ce"
+            ]
+          ]
+        },
+        {
+          "id": "eq:workspace_id",
+          "result": "PASS",
+          "detail": "3 reads equal ws_06GCVTHWC9WVPGEPR85AB15K82 [cs_replay.page.next_cursor, execution.approval-inbox, execution.runtime-manifest]",
+          "values": [
+            [
+              "cs_replay.page.next_cursor",
+              "ws_06GCVTHWC9WVPGEPR85AB15K82"
+            ],
+            [
+              "execution.approval-inbox",
+              "ws_06GCVTHWC9WVPGEPR85AB15K82"
+            ],
+            [
+              "execution.runtime-manifest",
+              "ws_06GCVTHWC9WVPGEPR85AB15K82"
+            ]
+          ]
+        },
+        {
+          "id": "chronology",
+          "result": "PASS",
+          "detail": "10 timestamps non-decreasing: library.created_at=1790960539851, progress.queued_at=1790960539851, cs.retained_at=1790960551602, cs_evidence.as_of=1790960551602, report.sealed_at=1790960552667, rc.local_seal.sealed_at=1791023135368, pack.sealed_at=1791023135368, publication.as_of=1791086156048, rc.as_of=1791086154586, library.list_as_of=1791086155730",
+          "values": [
+            [
+              "library.created_at",
+              1790960539851
+            ],
+            [
+              "progress.queued_at",
+              1790960539851
+            ],
+            [
+              "cs.retained_at",
+              1790960551602
+            ],
+            [
+              "cs_evidence.as_of",
+              1790960551602
+            ],
+            [
+              "report.sealed_at",
+              1790960552667
+            ],
+            [
+              "rc.local_seal.sealed_at",
+              1791023135368
+            ],
+            [
+              "pack.sealed_at",
+              1791023135368
+            ],
+            [
+              "publication.as_of",
+              1791086156048
+            ],
+            [
+              "rc.as_of",
+              1791086154586
+            ],
+            [
+              "library.list_as_of",
+              1791086155730
+            ]
+          ]
+        },
+        {
+          "id": "stability_5s",
+          "result": "PASS",
+          "detail": "22 reads identical after 22s round gap (volatile as_of*/cursors stripped): library_ids=f0b53d19ca54, progress=8c5f69b38ca0, spec=a32b4726d952, evidence=0e3d79e8b7a5, cs_evidence=9c98de3f699a, cs_split=3a44890463f8, cs_search=8deae3d06296, cs_freeze=c756bbd2c482, cs_replay=1d7cc0565537, sealed_replay=2aad5e9791c4, report=dbaf8e27cc14, rc=510eea173b3a, sparkline=144910557850, lineage=7d2170533458, compare_attempts=823060002800, compare_pair=cde274734089, compare_markets=de61e75f355d, atlas=73f39070393b, library=344b777c38b2, pack=9e9c2da6b150, publication=ca4490abb55b, av_publication=1aacd0e126c4"
+        },
+        {
+          "id": "as_of_monotone_across_rounds",
+          "result": "PASS",
+          "detail": "15 reads with as_of: none regressed between rounds"
+        },
+        {
+          "id": "replay_cutoff",
+          "result": "PASS",
+          "detail": "served 1080/1080 bars 2026-06-01T00:00:00.000Z..2026-07-15T23:00:00.000Z max; declared walk_forward.end_exclusive=2026-07-16T00:00:00.000Z (exclusive); late replay bars=0; evidence-series points=0 late=0"
+        }
+      ]
+    },
+    {
+      "label": "R-WFO-023",
+      "run_id": "rrun_3d5633d2adb712722fe4ba108102aa5d",
+      "why": "sealed-local, stale",
+      "library_status": "COMPLETED",
+      "read_statuses": {
+        "library_ids": "200",
+        "progress": "200",
+        "spec": "200",
+        "evidence": "200",
+        "cs_evidence": "200",
+        "cs_split": "200",
+        "cs_search": "200",
+        "cs_freeze": "200",
+        "cs_replay": "200",
+        "sealed_replay": "200 NOT_PUBLISHED",
+        "report": "200",
+        "rc": "200",
+        "sparkline": "200",
+        "lineage": "200",
+        "compare_attempts": "200",
+        "compare_pair": "200",
+        "compare_markets": "200",
+        "atlas": "200",
+        "library": "200",
+        "pack": "200",
+        "publication": "200",
+        "av_publication": "200"
+      },
+      "checks": [
+        {
+          "id": "eq:run_id",
+          "result": "PASS",
+          "detail": "22 reads equal rrun_3d5633d2adb7 [library, library_ids, progress, spec, cs_evidence, cs_split, cs_search, cs_freeze, cs_replay, evidence(sealed), report, rc, rc.run.id, rc.rail.run, pack, publication, pack.final_audit_run_id, report.identity.run_id, sparkline, sealed_replay, lineage.primary_run, compare_attempts]",
+          "values": [
+            [
+              "library",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "library_ids",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "progress",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "spec",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "cs_evidence",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "cs_split",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "cs_search",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "cs_freeze",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "cs_replay",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "evidence(sealed)",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "report",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "rc",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "rc.run.id",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "rc.rail.run",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "pack",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "publication",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "pack.final_audit_run_id",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "report.identity.run_id",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "sparkline",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "sealed_replay",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "lineage.primary_run",
+              "rrun_3d5633d2adb7"
+            ],
+            [
+              "compare_attempts",
+              "rrun_3d5633d2adb7"
+            ]
+          ]
+        },
+        {
+          "id": "eq:display_label",
+          "result": "PASS",
+          "detail": "7 reads equal R-WFO-023 [library, progress, report, rc, pack, lineage.primary_run, compare_attempts]",
+          "values": [
+            [
+              "library",
+              "R-WFO-023"
+            ],
+            [
+              "progress",
+              "R-WFO-023"
+            ],
+            [
+              "report",
+              "R-WFO-023"
+            ],
+            [
+              "rc",
+              "R-WFO-023"
+            ],
+            [
+              "pack",
+              "R-WFO-023"
+            ],
+            [
+              "lineage.primary_run",
+              "R-WFO-023"
+            ],
+            [
+              "compare_attempts",
+              "R-WFO-023"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_id",
+          "result": "PASS",
+          "detail": "13 reads equal delta-rsi-polynomial-alpha [library.binding, progress, spec, spec.alpha_binding, cs_replay.identity, rc.run.binding, pack.fields, rc.fields, rc.rail.alpha, publication, lineage.alpha, report.identity, sealed_replay]",
+          "values": [
+            [
+              "library.binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "progress",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "spec",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "spec.alpha_binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "cs_replay.identity",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.run.binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "pack.fields",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.fields",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.rail.alpha",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "publication",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "lineage.alpha",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "report.identity",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "sealed_replay",
+              "delta-rsi-polynomial-alpha"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_version_id",
+          "result": "PASS",
+          "detail": "15 reads equal av_delta_rsi_polynomial_alpha_1_0_0 [library.binding, progress, spec, spec.alpha_binding, cs_replay.identity, rc.run.binding, pack.fields, rc.fields, rc.rail.alpha_version, publication, av_publication, lineage.attempt, report.identity, compare_attempts, sealed_replay]",
+          "values": [
+            [
+              "library.binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "progress",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "spec",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "spec.alpha_binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "cs_replay.identity",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.run.binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "pack.fields",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.fields",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.rail.alpha_version",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "publication",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "av_publication",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "lineage.attempt",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "report.identity",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "compare_attempts",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "sealed_replay",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_code_digest",
+          "result": "PASS",
+          "detail": "5 reads equal 34dc1847d051 [library.binding.digest, pack.fields, rc.fields, rc.pack.ALPHA_VERSION_PASSPORT, lineage.version]",
+          "values": [
+            [
+              "library.binding.digest",
+              "34dc1847d051"
+            ],
+            [
+              "pack.fields",
+              "34dc1847d051"
+            ],
+            [
+              "rc.fields",
+              "34dc1847d051"
+            ],
+            [
+              "rc.pack.ALPHA_VERSION_PASSPORT",
+              "34dc1847d051"
+            ],
+            [
+              "lineage.version",
+              "34dc1847d051"
+            ]
+          ]
+        },
+        {
+          "id": "eq:requested_spec_digest",
+          "result": "PASS",
+          "detail": "10 reads equal c990a312518c [progress, spec, cs_evidence, cs_split, cs_search, cs_freeze, cs_replay, report.source_digests, pack.fields, rc.fields]",
+          "values": [
+            [
+              "progress",
+              "c990a312518c"
+            ],
+            [
+              "spec",
+              "c990a312518c"
+            ],
+            [
+              "cs_evidence",
+              "c990a312518c"
+            ],
+            [
+              "cs_split",
+              "c990a312518c"
+            ],
+            [
+              "cs_search",
+              "c990a312518c"
+            ],
+            [
+              "cs_freeze",
+              "c990a312518c"
+            ],
+            [
+              "cs_replay",
+              "c990a312518c"
+            ],
+            [
+              "report.source_digests",
+              "c990a312518c"
+            ],
+            [
+              "pack.fields",
+              "c990a312518c"
+            ],
+            [
+              "rc.fields",
+              "c990a312518c"
+            ]
+          ]
+        },
+        {
+          "id": "eq:effective_spec_digest",
+          "result": "PASS",
+          "detail": "10 reads equal a7f84919b0c8 [cs_evidence, cs_split, cs_search, cs_freeze, cs_replay, report.source_digests, pack.fields, rc.fields, lineage.primary_run, compare_attempts.provenance]",
+          "values": [
+            [
+              "cs_evidence",
+              "a7f84919b0c8"
+            ],
+            [
+              "cs_split",
+              "a7f84919b0c8"
+            ],
+            [
+              "cs_search",
+              "a7f84919b0c8"
+            ],
+            [
+              "cs_freeze",
+              "a7f84919b0c8"
+            ],
+            [
+              "cs_replay",
+              "a7f84919b0c8"
+            ],
+            [
+              "report.source_digests",
+              "a7f84919b0c8"
+            ],
+            [
+              "pack.fields",
+              "a7f84919b0c8"
+            ],
+            [
+              "rc.fields",
+              "a7f84919b0c8"
+            ],
+            [
+              "lineage.primary_run",
+              "a7f84919b0c8"
+            ],
+            [
+              "compare_attempts.provenance",
+              "a7f84919b0c8"
+            ]
+          ]
+        },
+        {
+          "id": "eq:dataset_binding_digest",
+          "result": "PASS",
+          "detail": "9 reads equal ffd476fad978 [cs_evidence, cs_split, cs_search, cs_freeze, cs_replay, report.source_digests, pack.fields, lineage.primary_run, compare_attempts.provenance]",
+          "values": [
+            [
+              "cs_evidence",
+              "ffd476fad978"
+            ],
+            [
+              "cs_split",
+              "ffd476fad978"
+            ],
+            [
+              "cs_search",
+              "ffd476fad978"
+            ],
+            [
+              "cs_freeze",
+              "ffd476fad978"
+            ],
+            [
+              "cs_replay",
+              "ffd476fad978"
+            ],
+            [
+              "report.source_digests",
+              "ffd476fad978"
+            ],
+            [
+              "pack.fields",
+              "ffd476fad978"
+            ],
+            [
+              "lineage.primary_run",
+              "ffd476fad978"
+            ],
+            [
+              "compare_attempts.provenance",
+              "ffd476fad978"
+            ]
+          ]
+        },
+        {
+          "id": "eq:source_manifest_digest",
+          "result": "FAIL",
+          "detail": "expected afc3d407ee73 (cs_evidence); differs: compare_attempts.provenance=39db7cf1bc7b",
+          "expected": "afc3d407ee73 (cs_evidence)",
+          "actual": "compare_attempts.provenance=39db7cf1bc7b",
+          "endpoints": [
+            "cs_evidence",
+            "cs_split",
+            "cs_search",
+            "cs_freeze",
+            "cs_replay",
+            "cs_freeze.integrity.expected",
+            "cs_freeze.integrity.observed",
+            "report.source_digests",
+            "pack.fields",
+            "compare_attempts.provenance"
+          ],
+          "values": [
+            [
+              "cs_evidence",
+              "afc3d407ee73"
+            ],
+            [
+              "cs_split",
+              "afc3d407ee73"
+            ],
+            [
+              "cs_search",
+              "afc3d407ee73"
+            ],
+            [
+              "cs_freeze",
+              "afc3d407ee73"
+            ],
+            [
+              "cs_replay",
+              "afc3d407ee73"
+            ],
+            [
+              "cs_freeze.integrity.expected",
+              "afc3d407ee73"
+            ],
+            [
+              "cs_freeze.integrity.observed",
+              "afc3d407ee73"
+            ],
+            [
+              "report.source_digests",
+              "afc3d407ee73"
+            ],
+            [
+              "pack.fields",
+              "afc3d407ee73"
+            ],
+            [
+              "compare_attempts.provenance",
+              "39db7cf1bc7b"
+            ]
+          ]
+        },
+        {
+          "id": "eq:source_transform_digest",
+          "result": "PASS",
+          "detail": "7 reads equal c42d08896ac1 [cs_evidence, cs_split, cs_search, cs_freeze, cs_replay, report.source_digests, pack.fields]",
+          "values": [
+            [
+              "cs_evidence",
+              "c42d08896ac1"
+            ],
+            [
+              "cs_split",
+              "c42d08896ac1"
+            ],
+            [
+              "cs_search",
+              "c42d08896ac1"
+            ],
+            [
+              "cs_freeze",
+              "c42d08896ac1"
+            ],
+            [
+              "cs_replay",
+              "c42d08896ac1"
+            ],
+            [
+              "report.source_digests",
+              "c42d08896ac1"
+            ],
+            [
+              "pack.fields",
+              "c42d08896ac1"
+            ]
+          ]
+        },
+        {
+          "id": "eq:retained_import_digest",
+          "result": "PASS",
+          "detail": "7 reads equal c1d27c7494b8 [cs_evidence, cs_split, cs_search, cs_freeze, cs_replay, cs_freeze.integrity.expected, cs_freeze.integrity.observed]",
+          "values": [
+            [
+              "cs_evidence",
+              "c1d27c7494b8"
+            ],
+            [
+              "cs_split",
+              "c1d27c7494b8"
+            ],
+            [
+              "cs_search",
+              "c1d27c7494b8"
+            ],
+            [
+              "cs_freeze",
+              "c1d27c7494b8"
+            ],
+            [
+              "cs_replay",
+              "c1d27c7494b8"
+            ],
+            [
+              "cs_freeze.integrity.expected",
+              "c1d27c7494b8"
+            ],
+            [
+              "cs_freeze.integrity.observed",
+              "c1d27c7494b8"
+            ]
+          ]
+        },
+        {
+          "id": "eq:engine_release_id",
+          "result": "PASS",
+          "detail": "5 reads equal er_quantbt_111 [progress, spec.client, pack.fields, lineage.primary_run, atlas.selected_release_id]",
+          "values": [
+            [
+              "progress",
+              "er_quantbt_111"
+            ],
+            [
+              "spec.client",
+              "er_quantbt_111"
+            ],
+            [
+              "pack.fields",
+              "er_quantbt_111"
+            ],
+            [
+              "lineage.primary_run",
+              "er_quantbt_111"
+            ],
+            [
+              "atlas.selected_release_id",
+              "er_quantbt_111"
+            ]
+          ]
+        },
+        {
+          "id": "eq:config_digest",
+          "result": "PASS",
+          "detail": "2 reads equal 69c9431ee0ca [progress, spec.client]",
+          "values": [
+            [
+              "progress",
+              "69c9431ee0ca"
+            ],
+            [
+              "spec.client",
+              "69c9431ee0ca"
+            ]
+          ]
+        },
+        {
+          "id": "eq:selected_trial_id",
+          "result": "PASS",
+          "detail": "4 reads equal 350 [cs_search.selection, cs_search.roles.selected, cs_freeze.frozen_selection, rc.selected_params.source_id]",
+          "values": [
+            [
+              "cs_search.selection",
+              "350"
+            ],
+            [
+              "cs_search.roles.selected",
+              "350"
+            ],
+            [
+              "cs_freeze.frozen_selection",
+              "350"
+            ],
+            [
+              "rc.selected_params.source_id",
+              "350"
+            ]
+          ]
+        },
+        {
+          "id": "eq:selected_trial_ordinal",
+          "result": "PASS",
+          "detail": "3 reads equal 351 [cs_search.selection, cs_freeze.frozen_selection, rc.selected_params]",
+          "values": [
+            [
+              "cs_search.selection",
+              "351"
+            ],
+            [
+              "cs_freeze.frozen_selection",
+              "351"
+            ],
+            [
+              "rc.selected_params",
+              "351"
+            ]
+          ]
+        },
+        {
+          "id": "eq:selected_trial_ordinal_scope",
+          "result": "PASS",
+          "detail": "3 reads equal RUN_GLOBAL [cs_search.selection, cs_freeze.frozen_selection, rc.selected_params]",
+          "values": [
+            [
+              "cs_search.selection",
+              "RUN_GLOBAL"
+            ],
+            [
+              "cs_freeze.frozen_selection",
+              "RUN_GLOBAL"
+            ],
+            [
+              "rc.selected_params",
+              "RUN_GLOBAL"
+            ]
+          ]
+        },
+        {
+          "id": "eq:fold_selection_fold_id",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:fold_selection_scope",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:selected_parameters",
+          "result": "PASS",
+          "detail": "2 reads equal {\"len_atr1\":\"20\",\"len_atr2\":\"47\",\"len_vol\":\"28\",\"rsi_l\":\"14\",\"rvol\":\"1\",\"signalLength\":\"15\",\"slpercent\":\"1.6\",\"window\":\"54\"} [cs_search.selection, cs_freeze.frozen_selection]",
+          "values": [
+            [
+              "cs_search.selection",
+              "{\"len_atr1\":\"20\",\"len_atr2\":\"47\",\"len_vol\":\"28\",\"rsi_l\":\"14\",\"rvol\":\"1\",\"signalLength\":\"15\",\"slpercent\":\"1.6\",\"window\":\"54\"}"
+            ],
+            [
+              "cs_freeze.frozen_selection",
+              "{\"len_atr1\":\"20\",\"len_atr2\":\"47\",\"len_vol\":\"28\",\"rsi_l\":\"14\",\"rvol\":\"1\",\"signalLength\":\"15\",\"slpercent\":\"1.6\",\"window\":\"54\"}"
+            ]
+          ]
+        },
+        {
+          "id": "eq:selected_params_digest",
+          "result": "PASS",
+          "detail": "3 reads equal a74872817bf1 [rc.rail.selected_params, pack.fields.parameter_bundle_digest, rc.fields.parameter_bundle_digest]",
+          "values": [
+            [
+              "rc.rail.selected_params",
+              "a74872817bf1"
+            ],
+            [
+              "pack.fields.parameter_bundle_digest",
+              "a74872817bf1"
+            ],
+            [
+              "rc.fields.parameter_bundle_digest",
+              "a74872817bf1"
+            ]
+          ]
+        },
+        {
+          "id": "eq:pack_digest",
+          "result": "PASS",
+          "detail": "3 reads equal a720a588558d [rc.local_seal, pack, publication]",
+          "values": [
+            [
+              "rc.local_seal",
+              "a720a588558d"
+            ],
+            [
+              "pack",
+              "a720a588558d"
+            ],
+            [
+              "publication",
+              "a720a588558d"
+            ]
+          ]
+        },
+        {
+          "id": "eq:release_candidate_id",
+          "result": "PASS",
+          "detail": "6 reads equal rc_06GFFDG3SA17Y5WPBN58NFM5B2 [library.rc, rc.local_seal, pack, publication, pack.fields, lineage.release_candidate]",
+          "values": [
+            [
+              "library.rc",
+              "rc_06GFFDG3SA17Y5WPBN58NFM5B2"
+            ],
+            [
+              "rc.local_seal",
+              "rc_06GFFDG3SA17Y5WPBN58NFM5B2"
+            ],
+            [
+              "pack",
+              "rc_06GFFDG3SA17Y5WPBN58NFM5B2"
+            ],
+            [
+              "publication",
+              "rc_06GFFDG3SA17Y5WPBN58NFM5B2"
+            ],
+            [
+              "pack.fields",
+              "rc_06GFFDG3SA17Y5WPBN58NFM5B2"
+            ],
+            [
+              "lineage.release_candidate",
+              "rc_06GFFDG3SA17Y5WPBN58NFM5B2"
+            ]
+          ]
+        },
+        {
+          "id": "eq:source_fingerprint",
+          "result": "FAIL",
+          "detail": "expected 74b266bcb64f (rc); differs: rc.draft=805ec9becf34; pack.frozen_core=805ec9becf34",
+          "expected": "74b266bcb64f (rc)",
+          "actual": "rc.draft=805ec9becf34; pack.frozen_core=805ec9becf34",
+          "endpoints": [
+            "rc",
+            "rc.draft",
+            "pack.frozen_core"
+          ],
+          "values": [
+            [
+              "rc",
+              "74b266bcb64f"
+            ],
+            [
+              "rc.draft",
+              "805ec9becf34"
+            ],
+            [
+              "pack.frozen_core",
+              "805ec9becf34"
+            ]
+          ]
+        },
+        {
+          "id": "eq:report_revision",
+          "result": "PASS",
+          "detail": "3 reads equal p18r1_45e018386ed7 [report, pack.fields, rc.fields]",
+          "values": [
+            [
+              "report",
+              "p18r1_45e018386ed7"
+            ],
+            [
+              "pack.fields",
+              "p18r1_45e018386ed7"
+            ],
+            [
+              "rc.fields",
+              "p18r1_45e018386ed7"
+            ]
+          ]
+        },
+        {
+          "id": "eq:evidence_revision",
+          "result": "FAIL",
+          "detail": "expected rs02_evidence_399badcf84a0 (cs_evidence.revision); differs: report.source_revisions=rs02_evidence_7533074a250a; pack.fields=rs02_evidence_7533074a250a",
+          "expected": "rs02_evidence_399badcf84a0 (cs_evidence.revision)",
+          "actual": "report.source_revisions=rs02_evidence_7533074a250a; pack.fields=rs02_evidence_7533074a250a",
+          "endpoints": [
+            "cs_evidence.revision",
+            "report.source_revisions",
+            "pack.fields",
+            "rc.fields"
+          ],
+          "values": [
+            [
+              "cs_evidence.revision",
+              "rs02_evidence_399badcf84a0"
+            ],
+            [
+              "report.source_revisions",
+              "rs02_evidence_7533074a250a"
+            ],
+            [
+              "pack.fields",
+              "rs02_evidence_7533074a250a"
+            ],
+            [
+              "rc.fields",
+              "rs02_evidence_399badcf84a0"
+            ]
+          ]
+        },
+        {
+          "id": "eq:split_revision",
+          "result": "FAIL",
+          "detail": "expected rs02_split_0929f7599740 (cs_split.revision); differs: report.source_revisions=rs02_split_7533074a250a",
+          "expected": "rs02_split_0929f7599740 (cs_split.revision)",
+          "actual": "report.source_revisions=rs02_split_7533074a250a",
+          "endpoints": [
+            "cs_split.revision",
+            "report.source_revisions"
+          ],
+          "values": [
+            [
+              "cs_split.revision",
+              "rs02_split_0929f7599740"
+            ],
+            [
+              "report.source_revisions",
+              "rs02_split_7533074a250a"
+            ]
+          ]
+        },
+        {
+          "id": "eq:search_revision",
+          "result": "FAIL",
+          "detail": "expected rs02_search_ecc5a8e1e96e (cs_search.revision); differs: report.source_revisions=rs02_search_7533074a250a",
+          "expected": "rs02_search_ecc5a8e1e96e (cs_search.revision)",
+          "actual": "report.source_revisions=rs02_search_7533074a250a",
+          "endpoints": [
+            "cs_search.revision",
+            "report.source_revisions"
+          ],
+          "values": [
+            [
+              "cs_search.revision",
+              "rs02_search_ecc5a8e1e96e"
+            ],
+            [
+              "report.source_revisions",
+              "rs02_search_7533074a250a"
+            ]
+          ]
+        },
+        {
+          "id": "eq:freeze_revision",
+          "result": "FAIL",
+          "detail": "expected rs02_freeze_bce796b9e439 (cs_freeze.revision); differs: report.source_revisions=rs02_freeze_2cec6d9bcfd8",
+          "expected": "rs02_freeze_bce796b9e439 (cs_freeze.revision)",
+          "actual": "report.source_revisions=rs02_freeze_2cec6d9bcfd8",
+          "endpoints": [
+            "cs_freeze.revision",
+            "report.source_revisions"
+          ],
+          "values": [
+            [
+              "cs_freeze.revision",
+              "rs02_freeze_bce796b9e439"
+            ],
+            [
+              "report.source_revisions",
+              "rs02_freeze_2cec6d9bcfd8"
+            ]
+          ]
+        },
+        {
+          "id": "eq:replay_revision",
+          "result": "PASS",
+          "detail": "2 reads equal rs02_replay_7533074a250a [cs_replay.revision, report.source_revisions]",
+          "values": [
+            [
+              "cs_replay.revision",
+              "rs02_replay_7533074a250a"
+            ],
+            [
+              "report.source_revisions",
+              "rs02_replay_7533074a250a"
+            ]
+          ]
+        },
+        {
+          "id": "eq:workspace_id",
+          "result": "PASS",
+          "detail": "3 reads equal ws_06GCVTHWC9WVPGEPR85AB15K82 [cs_replay.page.next_cursor, execution.approval-inbox, execution.runtime-manifest]",
+          "values": [
+            [
+              "cs_replay.page.next_cursor",
+              "ws_06GCVTHWC9WVPGEPR85AB15K82"
+            ],
+            [
+              "execution.approval-inbox",
+              "ws_06GCVTHWC9WVPGEPR85AB15K82"
+            ],
+            [
+              "execution.runtime-manifest",
+              "ws_06GCVTHWC9WVPGEPR85AB15K82"
+            ]
+          ]
+        },
+        {
+          "id": "chronology",
+          "result": "PASS",
+          "detail": "10 timestamps non-decreasing: library.created_at=1790862239345, progress.queued_at=1790862239345, cs.retained_at=1790862291685, cs_evidence.as_of=1790862291685, report.sealed_at=1790862293073, rc.local_seal.sealed_at=1790862295978, pack.sealed_at=1790862295978, publication.as_of=1791086159932, rc.as_of=1791086157144, library.list_as_of=1791086159512",
+          "values": [
+            [
+              "library.created_at",
+              1790862239345
+            ],
+            [
+              "progress.queued_at",
+              1790862239345
+            ],
+            [
+              "cs.retained_at",
+              1790862291685
+            ],
+            [
+              "cs_evidence.as_of",
+              1790862291685
+            ],
+            [
+              "report.sealed_at",
+              1790862293073
+            ],
+            [
+              "rc.local_seal.sealed_at",
+              1790862295978
+            ],
+            [
+              "pack.sealed_at",
+              1790862295978
+            ],
+            [
+              "publication.as_of",
+              1791086159932
+            ],
+            [
+              "rc.as_of",
+              1791086157144
+            ],
+            [
+              "library.list_as_of",
+              1791086159512
+            ]
+          ]
+        },
+        {
+          "id": "stability_5s",
+          "result": "FAIL",
+          "detail": "publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791086159932 -> 1791086181629",
+          "expected": "identical digests (volatile keys stripped) and non-decreasing as_of",
+          "actual": "publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791086159932 -> 1791086181629",
+          "endpoints": [
+            "publication"
+          ]
+        },
+        {
+          "id": "as_of_monotone_across_rounds",
+          "result": "PASS",
+          "detail": "15 reads with as_of: none regressed between rounds"
+        },
+        {
+          "id": "replay_cutoff",
+          "result": "PASS",
+          "detail": "served 2208/2208 bars 2026-06-01T00:00:00.000Z..2026-08-31T23:00:00.000Z max; declared walk_forward.end_exclusive=2026-09-01T00:00:00.000Z (exclusive); late replay bars=0; evidence-series points=0 late=0"
+        }
+      ]
+    },
+    {
+      "label": "R-WFO-022",
+      "run_id": "rrun_a76afa62adb6c427ba2f4cec44bb43bd",
+      "why": "stale seal",
+      "library_status": "COMPLETED",
+      "read_statuses": {
+        "library_ids": "200",
+        "progress": "200",
+        "spec": "200",
+        "evidence": "200",
+        "cs_evidence": "200",
+        "cs_split": "200",
+        "cs_search": "200",
+        "cs_freeze": "200",
+        "cs_replay": "200",
+        "sealed_replay": "200 NOT_PUBLISHED",
+        "report": "200",
+        "rc": "200",
+        "sparkline": "200",
+        "lineage": "200",
+        "compare_attempts": "200",
+        "compare_pair": "200",
+        "compare_markets": "200",
+        "atlas": "200",
+        "library": "200",
+        "pack": "200",
+        "publication": "200",
+        "av_publication": "200"
+      },
+      "checks": [
+        {
+          "id": "eq:run_id",
+          "result": "PASS",
+          "detail": "22 reads equal rrun_a76afa62adb6 [library, library_ids, progress, spec, cs_evidence, cs_split, cs_search, cs_freeze, cs_replay, evidence(sealed), report, rc, rc.run.id, rc.rail.run, pack, publication, pack.final_audit_run_id, report.identity.run_id, sparkline, sealed_replay, lineage.primary_run, compare_attempts]",
+          "values": [
+            [
+              "library",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "library_ids",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "progress",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "spec",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "cs_evidence",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "cs_split",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "cs_search",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "cs_freeze",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "cs_replay",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "evidence(sealed)",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "report",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "rc",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "rc.run.id",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "rc.rail.run",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "pack",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "publication",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "pack.final_audit_run_id",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "report.identity.run_id",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "sparkline",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "sealed_replay",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "lineage.primary_run",
+              "rrun_a76afa62adb6"
+            ],
+            [
+              "compare_attempts",
+              "rrun_a76afa62adb6"
+            ]
+          ]
+        },
+        {
+          "id": "eq:display_label",
+          "result": "PASS",
+          "detail": "7 reads equal R-WFO-022 [library, progress, report, rc, pack, lineage.primary_run, compare_attempts]",
+          "values": [
+            [
+              "library",
+              "R-WFO-022"
+            ],
+            [
+              "progress",
+              "R-WFO-022"
+            ],
+            [
+              "report",
+              "R-WFO-022"
+            ],
+            [
+              "rc",
+              "R-WFO-022"
+            ],
+            [
+              "pack",
+              "R-WFO-022"
+            ],
+            [
+              "lineage.primary_run",
+              "R-WFO-022"
+            ],
+            [
+              "compare_attempts",
+              "R-WFO-022"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_id",
+          "result": "PASS",
+          "detail": "13 reads equal delta-rsi-polynomial-alpha [library.binding, progress, spec, spec.alpha_binding, cs_replay.identity, rc.run.binding, pack.fields, rc.fields, rc.rail.alpha, publication, lineage.alpha, report.identity, sealed_replay]",
+          "values": [
+            [
+              "library.binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "progress",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "spec",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "spec.alpha_binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "cs_replay.identity",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.run.binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "pack.fields",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.fields",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.rail.alpha",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "publication",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "lineage.alpha",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "report.identity",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "sealed_replay",
+              "delta-rsi-polynomial-alpha"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_version_id",
+          "result": "PASS",
+          "detail": "15 reads equal av_delta_rsi_polynomial_alpha_1_0_0 [library.binding, progress, spec, spec.alpha_binding, cs_replay.identity, rc.run.binding, pack.fields, rc.fields, rc.rail.alpha_version, publication, av_publication, lineage.attempt, report.identity, compare_attempts, sealed_replay]",
+          "values": [
+            [
+              "library.binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "progress",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "spec",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "spec.alpha_binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "cs_replay.identity",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.run.binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "pack.fields",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.fields",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.rail.alpha_version",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "publication",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "av_publication",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "lineage.attempt",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "report.identity",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "compare_attempts",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "sealed_replay",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_code_digest",
+          "result": "PASS",
+          "detail": "5 reads equal 34dc1847d051 [library.binding.digest, pack.fields, rc.fields, rc.pack.ALPHA_VERSION_PASSPORT, lineage.version]",
+          "values": [
+            [
+              "library.binding.digest",
+              "34dc1847d051"
+            ],
+            [
+              "pack.fields",
+              "34dc1847d051"
+            ],
+            [
+              "rc.fields",
+              "34dc1847d051"
+            ],
+            [
+              "rc.pack.ALPHA_VERSION_PASSPORT",
+              "34dc1847d051"
+            ],
+            [
+              "lineage.version",
+              "34dc1847d051"
+            ]
+          ]
+        },
+        {
+          "id": "eq:requested_spec_digest",
+          "result": "PASS",
+          "detail": "10 reads equal c990a312518c [progress, spec, cs_evidence, cs_split, cs_search, cs_freeze, cs_replay, report.source_digests, pack.fields, rc.fields]",
+          "values": [
+            [
+              "progress",
+              "c990a312518c"
+            ],
+            [
+              "spec",
+              "c990a312518c"
+            ],
+            [
+              "cs_evidence",
+              "c990a312518c"
+            ],
+            [
+              "cs_split",
+              "c990a312518c"
+            ],
+            [
+              "cs_search",
+              "c990a312518c"
+            ],
+            [
+              "cs_freeze",
+              "c990a312518c"
+            ],
+            [
+              "cs_replay",
+              "c990a312518c"
+            ],
+            [
+              "report.source_digests",
+              "c990a312518c"
+            ],
+            [
+              "pack.fields",
+              "c990a312518c"
+            ],
+            [
+              "rc.fields",
+              "c990a312518c"
+            ]
+          ]
+        },
+        {
+          "id": "eq:effective_spec_digest",
+          "result": "PASS",
+          "detail": "10 reads equal a7f84919b0c8 [cs_evidence, cs_split, cs_search, cs_freeze, cs_replay, report.source_digests, pack.fields, rc.fields, lineage.primary_run, compare_attempts.provenance]",
+          "values": [
+            [
+              "cs_evidence",
+              "a7f84919b0c8"
+            ],
+            [
+              "cs_split",
+              "a7f84919b0c8"
+            ],
+            [
+              "cs_search",
+              "a7f84919b0c8"
+            ],
+            [
+              "cs_freeze",
+              "a7f84919b0c8"
+            ],
+            [
+              "cs_replay",
+              "a7f84919b0c8"
+            ],
+            [
+              "report.source_digests",
+              "a7f84919b0c8"
+            ],
+            [
+              "pack.fields",
+              "a7f84919b0c8"
+            ],
+            [
+              "rc.fields",
+              "a7f84919b0c8"
+            ],
+            [
+              "lineage.primary_run",
+              "a7f84919b0c8"
+            ],
+            [
+              "compare_attempts.provenance",
+              "a7f84919b0c8"
+            ]
+          ]
+        },
+        {
+          "id": "eq:dataset_binding_digest",
+          "result": "PASS",
+          "detail": "9 reads equal ffd476fad978 [cs_evidence, cs_split, cs_search, cs_freeze, cs_replay, report.source_digests, pack.fields, lineage.primary_run, compare_attempts.provenance]",
+          "values": [
+            [
+              "cs_evidence",
+              "ffd476fad978"
+            ],
+            [
+              "cs_split",
+              "ffd476fad978"
+            ],
+            [
+              "cs_search",
+              "ffd476fad978"
+            ],
+            [
+              "cs_freeze",
+              "ffd476fad978"
+            ],
+            [
+              "cs_replay",
+              "ffd476fad978"
+            ],
+            [
+              "report.source_digests",
+              "ffd476fad978"
+            ],
+            [
+              "pack.fields",
+              "ffd476fad978"
+            ],
+            [
+              "lineage.primary_run",
+              "ffd476fad978"
+            ],
+            [
+              "compare_attempts.provenance",
+              "ffd476fad978"
+            ]
+          ]
+        },
+        {
+          "id": "eq:source_manifest_digest",
+          "result": "FAIL",
+          "detail": "expected 3c2f6cefdcfe (cs_evidence); differs: compare_attempts.provenance=39db7cf1bc7b",
+          "expected": "3c2f6cefdcfe (cs_evidence)",
+          "actual": "compare_attempts.provenance=39db7cf1bc7b",
+          "endpoints": [
+            "cs_evidence",
+            "cs_split",
+            "cs_search",
+            "cs_freeze",
+            "cs_replay",
+            "cs_freeze.integrity.expected",
+            "cs_freeze.integrity.observed",
+            "report.source_digests",
+            "pack.fields",
+            "compare_attempts.provenance"
+          ],
+          "values": [
+            [
+              "cs_evidence",
+              "3c2f6cefdcfe"
+            ],
+            [
+              "cs_split",
+              "3c2f6cefdcfe"
+            ],
+            [
+              "cs_search",
+              "3c2f6cefdcfe"
+            ],
+            [
+              "cs_freeze",
+              "3c2f6cefdcfe"
+            ],
+            [
+              "cs_replay",
+              "3c2f6cefdcfe"
+            ],
+            [
+              "cs_freeze.integrity.expected",
+              "3c2f6cefdcfe"
+            ],
+            [
+              "cs_freeze.integrity.observed",
+              "3c2f6cefdcfe"
+            ],
+            [
+              "report.source_digests",
+              "3c2f6cefdcfe"
+            ],
+            [
+              "pack.fields",
+              "3c2f6cefdcfe"
+            ],
+            [
+              "compare_attempts.provenance",
+              "39db7cf1bc7b"
+            ]
+          ]
+        },
+        {
+          "id": "eq:source_transform_digest",
+          "result": "PASS",
+          "detail": "7 reads equal 539c0932fa32 [cs_evidence, cs_split, cs_search, cs_freeze, cs_replay, report.source_digests, pack.fields]",
+          "values": [
+            [
+              "cs_evidence",
+              "539c0932fa32"
+            ],
+            [
+              "cs_split",
+              "539c0932fa32"
+            ],
+            [
+              "cs_search",
+              "539c0932fa32"
+            ],
+            [
+              "cs_freeze",
+              "539c0932fa32"
+            ],
+            [
+              "cs_replay",
+              "539c0932fa32"
+            ],
+            [
+              "report.source_digests",
+              "539c0932fa32"
+            ],
+            [
+              "pack.fields",
+              "539c0932fa32"
+            ]
+          ]
+        },
+        {
+          "id": "eq:retained_import_digest",
+          "result": "PASS",
+          "detail": "7 reads equal a6c74f30998e [cs_evidence, cs_split, cs_search, cs_freeze, cs_replay, cs_freeze.integrity.expected, cs_freeze.integrity.observed]",
+          "values": [
+            [
+              "cs_evidence",
+              "a6c74f30998e"
+            ],
+            [
+              "cs_split",
+              "a6c74f30998e"
+            ],
+            [
+              "cs_search",
+              "a6c74f30998e"
+            ],
+            [
+              "cs_freeze",
+              "a6c74f30998e"
+            ],
+            [
+              "cs_replay",
+              "a6c74f30998e"
+            ],
+            [
+              "cs_freeze.integrity.expected",
+              "a6c74f30998e"
+            ],
+            [
+              "cs_freeze.integrity.observed",
+              "a6c74f30998e"
+            ]
+          ]
+        },
+        {
+          "id": "eq:engine_release_id",
+          "result": "PASS",
+          "detail": "5 reads equal er_quantbt_111 [progress, spec.client, pack.fields, lineage.primary_run, atlas.selected_release_id]",
+          "values": [
+            [
+              "progress",
+              "er_quantbt_111"
+            ],
+            [
+              "spec.client",
+              "er_quantbt_111"
+            ],
+            [
+              "pack.fields",
+              "er_quantbt_111"
+            ],
+            [
+              "lineage.primary_run",
+              "er_quantbt_111"
+            ],
+            [
+              "atlas.selected_release_id",
+              "er_quantbt_111"
+            ]
+          ]
+        },
+        {
+          "id": "eq:config_digest",
+          "result": "PASS",
+          "detail": "2 reads equal 69c9431ee0ca [progress, spec.client]",
+          "values": [
+            [
+              "progress",
+              "69c9431ee0ca"
+            ],
+            [
+              "spec.client",
+              "69c9431ee0ca"
+            ]
+          ]
+        },
+        {
+          "id": "eq:selected_trial_id",
+          "result": "PASS",
+          "detail": "4 reads equal 350 [cs_search.selection, cs_search.roles.selected, cs_freeze.frozen_selection, rc.selected_params.source_id]",
+          "values": [
+            [
+              "cs_search.selection",
+              "350"
+            ],
+            [
+              "cs_search.roles.selected",
+              "350"
+            ],
+            [
+              "cs_freeze.frozen_selection",
+              "350"
+            ],
+            [
+              "rc.selected_params.source_id",
+              "350"
+            ]
+          ]
+        },
+        {
+          "id": "eq:selected_trial_ordinal",
+          "result": "PASS",
+          "detail": "3 reads equal 351 [cs_search.selection, cs_freeze.frozen_selection, rc.selected_params]",
+          "values": [
+            [
+              "cs_search.selection",
+              "351"
+            ],
+            [
+              "cs_freeze.frozen_selection",
+              "351"
+            ],
+            [
+              "rc.selected_params",
+              "351"
+            ]
+          ]
+        },
+        {
+          "id": "eq:selected_trial_ordinal_scope",
+          "result": "PASS",
+          "detail": "3 reads equal RUN_GLOBAL [cs_search.selection, cs_freeze.frozen_selection, rc.selected_params]",
+          "values": [
+            [
+              "cs_search.selection",
+              "RUN_GLOBAL"
+            ],
+            [
+              "cs_freeze.frozen_selection",
+              "RUN_GLOBAL"
+            ],
+            [
+              "rc.selected_params",
+              "RUN_GLOBAL"
+            ]
+          ]
+        },
+        {
+          "id": "eq:fold_selection_fold_id",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:fold_selection_scope",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:selected_parameters",
+          "result": "PASS",
+          "detail": "2 reads equal {\"len_atr1\":\"20\",\"len_atr2\":\"47\",\"len_vol\":\"28\",\"rsi_l\":\"14\",\"rvol\":\"1\",\"signalLength\":\"15\",\"slpercent\":\"1.6\",\"window\":\"54\"} [cs_search.selection, cs_freeze.frozen_selection]",
+          "values": [
+            [
+              "cs_search.selection",
+              "{\"len_atr1\":\"20\",\"len_atr2\":\"47\",\"len_vol\":\"28\",\"rsi_l\":\"14\",\"rvol\":\"1\",\"signalLength\":\"15\",\"slpercent\":\"1.6\",\"window\":\"54\"}"
+            ],
+            [
+              "cs_freeze.frozen_selection",
+              "{\"len_atr1\":\"20\",\"len_atr2\":\"47\",\"len_vol\":\"28\",\"rsi_l\":\"14\",\"rvol\":\"1\",\"signalLength\":\"15\",\"slpercent\":\"1.6\",\"window\":\"54\"}"
+            ]
+          ]
+        },
+        {
+          "id": "eq:selected_params_digest",
+          "result": "PASS",
+          "detail": "3 reads equal a74872817bf1 [rc.rail.selected_params, pack.fields.parameter_bundle_digest, rc.fields.parameter_bundle_digest]",
+          "values": [
+            [
+              "rc.rail.selected_params",
+              "a74872817bf1"
+            ],
+            [
+              "pack.fields.parameter_bundle_digest",
+              "a74872817bf1"
+            ],
+            [
+              "rc.fields.parameter_bundle_digest",
+              "a74872817bf1"
+            ]
+          ]
+        },
+        {
+          "id": "eq:pack_digest",
+          "result": "PASS",
+          "detail": "3 reads equal 5b4b43450e67 [rc.local_seal, pack, publication]",
+          "values": [
+            [
+              "rc.local_seal",
+              "5b4b43450e67"
+            ],
+            [
+              "pack",
+              "5b4b43450e67"
+            ],
+            [
+              "publication",
+              "5b4b43450e67"
+            ]
+          ]
+        },
+        {
+          "id": "eq:release_candidate_id",
+          "result": "PASS",
+          "detail": "6 reads equal rc_06GFW43NE42YF64NMXYDS6GD32 [library.rc, rc.local_seal, pack, publication, pack.fields, lineage.release_candidate]",
+          "values": [
+            [
+              "library.rc",
+              "rc_06GFW43NE42YF64NMXYDS6GD32"
+            ],
+            [
+              "rc.local_seal",
+              "rc_06GFW43NE42YF64NMXYDS6GD32"
+            ],
+            [
+              "pack",
+              "rc_06GFW43NE42YF64NMXYDS6GD32"
+            ],
+            [
+              "publication",
+              "rc_06GFW43NE42YF64NMXYDS6GD32"
+            ],
+            [
+              "pack.fields",
+              "rc_06GFW43NE42YF64NMXYDS6GD32"
+            ],
+            [
+              "lineage.release_candidate",
+              "rc_06GFW43NE42YF64NMXYDS6GD32"
+            ]
+          ]
+        },
+        {
+          "id": "eq:source_fingerprint",
+          "result": "FAIL",
+          "detail": "expected d2c4f2a6c1b4 (rc); differs: rc.draft=b38ff999f780; pack.frozen_core=b38ff999f780",
+          "expected": "d2c4f2a6c1b4 (rc)",
+          "actual": "rc.draft=b38ff999f780; pack.frozen_core=b38ff999f780",
+          "endpoints": [
+            "rc",
+            "rc.draft",
+            "pack.frozen_core"
+          ],
+          "values": [
+            [
+              "rc",
+              "d2c4f2a6c1b4"
+            ],
+            [
+              "rc.draft",
+              "b38ff999f780"
+            ],
+            [
+              "pack.frozen_core",
+              "b38ff999f780"
+            ]
+          ]
+        },
+        {
+          "id": "eq:report_revision",
+          "result": "PASS",
+          "detail": "3 reads equal p18r1_20a374e4b9ae [report, pack.fields, rc.fields]",
+          "values": [
+            [
+              "report",
+              "p18r1_20a374e4b9ae"
+            ],
+            [
+              "pack.fields",
+              "p18r1_20a374e4b9ae"
+            ],
+            [
+              "rc.fields",
+              "p18r1_20a374e4b9ae"
+            ]
+          ]
+        },
+        {
+          "id": "eq:evidence_revision",
+          "result": "FAIL",
+          "detail": "expected rs02_evidence_711378c42e61 (cs_evidence.revision); differs: report.source_revisions=rs02_evidence_6ba6db690d2e; pack.fields=rs02_evidence_6ba6db690d2e",
+          "expected": "rs02_evidence_711378c42e61 (cs_evidence.revision)",
+          "actual": "report.source_revisions=rs02_evidence_6ba6db690d2e; pack.fields=rs02_evidence_6ba6db690d2e",
+          "endpoints": [
+            "cs_evidence.revision",
+            "report.source_revisions",
+            "pack.fields",
+            "rc.fields"
+          ],
+          "values": [
+            [
+              "cs_evidence.revision",
+              "rs02_evidence_711378c42e61"
+            ],
+            [
+              "report.source_revisions",
+              "rs02_evidence_6ba6db690d2e"
+            ],
+            [
+              "pack.fields",
+              "rs02_evidence_6ba6db690d2e"
+            ],
+            [
+              "rc.fields",
+              "rs02_evidence_711378c42e61"
+            ]
+          ]
+        },
+        {
+          "id": "eq:split_revision",
+          "result": "FAIL",
+          "detail": "expected rs02_split_cd3bb8ab50fd (cs_split.revision); differs: report.source_revisions=rs02_split_6ba6db690d2e",
+          "expected": "rs02_split_cd3bb8ab50fd (cs_split.revision)",
+          "actual": "report.source_revisions=rs02_split_6ba6db690d2e",
+          "endpoints": [
+            "cs_split.revision",
+            "report.source_revisions"
+          ],
+          "values": [
+            [
+              "cs_split.revision",
+              "rs02_split_cd3bb8ab50fd"
+            ],
+            [
+              "report.source_revisions",
+              "rs02_split_6ba6db690d2e"
+            ]
+          ]
+        },
+        {
+          "id": "eq:search_revision",
+          "result": "FAIL",
+          "detail": "expected rs02_search_2b51a5908a84 (cs_search.revision); differs: report.source_revisions=rs02_search_6ba6db690d2e",
+          "expected": "rs02_search_2b51a5908a84 (cs_search.revision)",
+          "actual": "report.source_revisions=rs02_search_6ba6db690d2e",
+          "endpoints": [
+            "cs_search.revision",
+            "report.source_revisions"
+          ],
+          "values": [
+            [
+              "cs_search.revision",
+              "rs02_search_2b51a5908a84"
+            ],
+            [
+              "report.source_revisions",
+              "rs02_search_6ba6db690d2e"
+            ]
+          ]
+        },
+        {
+          "id": "eq:freeze_revision",
+          "result": "FAIL",
+          "detail": "expected rs02_freeze_27c289b1b381 (cs_freeze.revision); differs: report.source_revisions=rs02_freeze_8fa5ba6ffb09",
+          "expected": "rs02_freeze_27c289b1b381 (cs_freeze.revision)",
+          "actual": "report.source_revisions=rs02_freeze_8fa5ba6ffb09",
+          "endpoints": [
+            "cs_freeze.revision",
+            "report.source_revisions"
+          ],
+          "values": [
+            [
+              "cs_freeze.revision",
+              "rs02_freeze_27c289b1b381"
+            ],
+            [
+              "report.source_revisions",
+              "rs02_freeze_8fa5ba6ffb09"
+            ]
+          ]
+        },
+        {
+          "id": "eq:replay_revision",
+          "result": "PASS",
+          "detail": "2 reads equal rs02_replay_6ba6db690d2e [cs_replay.revision, report.source_revisions]",
+          "values": [
+            [
+              "cs_replay.revision",
+              "rs02_replay_6ba6db690d2e"
+            ],
+            [
+              "report.source_revisions",
+              "rs02_replay_6ba6db690d2e"
+            ]
+          ]
+        },
+        {
+          "id": "eq:workspace_id",
+          "result": "PASS",
+          "detail": "3 reads equal ws_06GCVTHWC9WVPGEPR85AB15K82 [cs_replay.page.next_cursor, execution.approval-inbox, execution.runtime-manifest]",
+          "values": [
+            [
+              "cs_replay.page.next_cursor",
+              "ws_06GCVTHWC9WVPGEPR85AB15K82"
+            ],
+            [
+              "execution.approval-inbox",
+              "ws_06GCVTHWC9WVPGEPR85AB15K82"
+            ],
+            [
+              "execution.runtime-manifest",
+              "ws_06GCVTHWC9WVPGEPR85AB15K82"
+            ]
+          ]
+        },
+        {
+          "id": "chronology",
+          "result": "PASS",
+          "detail": "10 timestamps non-decreasing: library.created_at=1790858607754, progress.queued_at=1790858607754, cs.retained_at=1790858655824, cs_evidence.as_of=1790858655824, report.sealed_at=1790858657201, rc.local_seal.sealed_at=1790968886606, pack.sealed_at=1790968886606, publication.as_of=1791086164064, rc.as_of=1791086161063, library.list_as_of=1791086163621",
+          "values": [
+            [
+              "library.created_at",
+              1790858607754
+            ],
+            [
+              "progress.queued_at",
+              1790858607754
+            ],
+            [
+              "cs.retained_at",
+              1790858655824
+            ],
+            [
+              "cs_evidence.as_of",
+              1790858655824
+            ],
+            [
+              "report.sealed_at",
+              1790858657201
+            ],
+            [
+              "rc.local_seal.sealed_at",
+              1790968886606
+            ],
+            [
+              "pack.sealed_at",
+              1790968886606
+            ],
+            [
+              "publication.as_of",
+              1791086164064
+            ],
+            [
+              "rc.as_of",
+              1791086161063
+            ],
+            [
+              "library.list_as_of",
+              1791086163621
+            ]
+          ]
+        },
+        {
+          "id": "stability_5s",
+          "result": "FAIL",
+          "detail": "publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791086164064 -> 1791086185898",
+          "expected": "identical digests (volatile keys stripped) and non-decreasing as_of",
+          "actual": "publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791086164064 -> 1791086185898",
+          "endpoints": [
+            "publication"
+          ]
+        },
+        {
+          "id": "as_of_monotone_across_rounds",
+          "result": "PASS",
+          "detail": "15 reads with as_of: none regressed between rounds"
+        },
+        {
+          "id": "replay_cutoff",
+          "result": "PASS",
+          "detail": "served 2208/2208 bars 2026-06-01T00:00:00.000Z..2026-08-31T23:00:00.000Z max; declared walk_forward.end_exclusive=2026-09-01T00:00:00.000Z (exclusive); late replay bars=0; evidence-series points=0 late=0"
+        }
+      ]
+    },
+    {
+      "label": "R-P04-022",
+      "run_id": "rrun_9ec42333b812f7e41e389a36e06328df",
+      "why": "three_window_decay",
+      "library_status": "COMPLETED",
+      "read_statuses": {
+        "library_ids": "200",
+        "progress": "200",
+        "spec": "200",
+        "evidence": "200",
+        "cs_evidence": "200 NOT_APPLICABLE",
+        "cs_split": "200 NOT_APPLICABLE",
+        "cs_search": "200 NOT_APPLICABLE",
+        "cs_freeze": "200 NOT_APPLICABLE",
+        "cs_replay": "200 NOT_APPLICABLE",
+        "sealed_replay": "200",
+        "report": "200",
+        "rc": "200",
+        "sparkline": "200",
+        "lineage": "200",
+        "compare_attempts": "200",
+        "compare_pair": "200",
+        "compare_markets": "200",
+        "atlas": "200",
+        "library": "200"
+      },
+      "checks": [
+        {
+          "id": "eq:run_id",
+          "result": "PASS",
+          "detail": "14 reads equal rrun_9ec42333b812 [library, library_ids, progress, spec, evidence(sealed), report, rc, rc.run.id, rc.rail.run, report.identity.run_id, sparkline, sealed_replay, lineage.primary_run, compare_attempts]",
+          "values": [
+            [
+              "library",
+              "rrun_9ec42333b812"
+            ],
+            [
+              "library_ids",
+              "rrun_9ec42333b812"
+            ],
+            [
+              "progress",
+              "rrun_9ec42333b812"
+            ],
+            [
+              "spec",
+              "rrun_9ec42333b812"
+            ],
+            [
+              "evidence(sealed)",
+              "rrun_9ec42333b812"
+            ],
+            [
+              "report",
+              "rrun_9ec42333b812"
+            ],
+            [
+              "rc",
+              "rrun_9ec42333b812"
+            ],
+            [
+              "rc.run.id",
+              "rrun_9ec42333b812"
+            ],
+            [
+              "rc.rail.run",
+              "rrun_9ec42333b812"
+            ],
+            [
+              "report.identity.run_id",
+              "rrun_9ec42333b812"
+            ],
+            [
+              "sparkline",
+              "rrun_9ec42333b812"
+            ],
+            [
+              "sealed_replay",
+              "rrun_9ec42333b812"
+            ],
+            [
+              "lineage.primary_run",
+              "rrun_9ec42333b812"
+            ],
+            [
+              "compare_attempts",
+              "rrun_9ec42333b812"
+            ]
+          ]
+        },
+        {
+          "id": "eq:display_label",
+          "result": "PASS",
+          "detail": "6 reads equal R-P04-022 [library, progress, report, rc, lineage.primary_run, compare_attempts]",
+          "values": [
+            [
+              "library",
+              "R-P04-022"
+            ],
+            [
+              "progress",
+              "R-P04-022"
+            ],
+            [
+              "report",
+              "R-P04-022"
+            ],
+            [
+              "rc",
+              "R-P04-022"
+            ],
+            [
+              "lineage.primary_run",
+              "R-P04-022"
+            ],
+            [
+              "compare_attempts",
+              "R-P04-022"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_id",
+          "result": "PASS",
+          "detail": "10 reads equal delta-rsi-polynomial-alpha [library.binding, progress, spec, spec.alpha_binding, rc.run.binding, rc.fields, rc.rail.alpha, lineage.alpha, report.identity, sealed_replay]",
+          "values": [
+            [
+              "library.binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "progress",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "spec",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "spec.alpha_binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.run.binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.fields",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.rail.alpha",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "lineage.alpha",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "report.identity",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "sealed_replay",
+              "delta-rsi-polynomial-alpha"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_version_id",
+          "result": "PASS",
+          "detail": "11 reads equal av_delta_rsi_polynomial_alpha_1_0_0 [library.binding, progress, spec, spec.alpha_binding, rc.run.binding, rc.fields, rc.rail.alpha_version, lineage.attempt, report.identity, compare_attempts, sealed_replay]",
+          "values": [
+            [
+              "library.binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "progress",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "spec",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "spec.alpha_binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.run.binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.fields",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.rail.alpha_version",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "lineage.attempt",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "report.identity",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "compare_attempts",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "sealed_replay",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_code_digest",
+          "result": "PASS",
+          "detail": "4 reads equal 34dc1847d051 [library.binding.digest, rc.fields, rc.pack.ALPHA_VERSION_PASSPORT, lineage.version]",
+          "values": [
+            [
+              "library.binding.digest",
+              "34dc1847d051"
+            ],
+            [
+              "rc.fields",
+              "34dc1847d051"
+            ],
+            [
+              "rc.pack.ALPHA_VERSION_PASSPORT",
+              "34dc1847d051"
+            ],
+            [
+              "lineage.version",
+              "34dc1847d051"
+            ]
+          ]
+        },
+        {
+          "id": "eq:requested_spec_digest",
+          "result": "PASS",
+          "detail": "4 reads equal cbe11c236d51 [progress, spec, report.source_digests, rc.fields]",
+          "values": [
+            [
+              "progress",
+              "cbe11c236d51"
+            ],
+            [
+              "spec",
+              "cbe11c236d51"
+            ],
+            [
+              "report.source_digests",
+              "cbe11c236d51"
+            ],
+            [
+              "rc.fields",
+              "cbe11c236d51"
+            ]
+          ]
+        },
+        {
+          "id": "eq:effective_spec_digest",
+          "result": "PASS",
+          "detail": "4 reads equal 0cfe2330d5fc [report.source_digests, rc.fields, lineage.primary_run, compare_attempts.provenance]",
+          "values": [
+            [
+              "report.source_digests",
+              "0cfe2330d5fc"
+            ],
+            [
+              "rc.fields",
+              "0cfe2330d5fc"
+            ],
+            [
+              "lineage.primary_run",
+              "0cfe2330d5fc"
+            ],
+            [
+              "compare_attempts.provenance",
+              "0cfe2330d5fc"
+            ]
+          ]
+        },
+        {
+          "id": "eq:dataset_binding_digest",
+          "result": "PASS",
+          "detail": "3 reads equal 16cc048b2605 [report.source_digests, lineage.primary_run, compare_attempts.provenance]",
+          "values": [
+            [
+              "report.source_digests",
+              "16cc048b2605"
+            ],
+            [
+              "lineage.primary_run",
+              "16cc048b2605"
+            ],
+            [
+              "compare_attempts.provenance",
+              "16cc048b2605"
+            ]
+          ]
+        },
+        {
+          "id": "eq:source_manifest_digest",
+          "result": "PASS",
+          "detail": "2 reads equal 3fd03a552ea9 [report.source_digests, compare_attempts.provenance]",
+          "values": [
+            [
+              "report.source_digests",
+              "3fd03a552ea9"
+            ],
+            [
+              "compare_attempts.provenance",
+              "3fd03a552ea9"
+            ]
+          ]
+        },
+        {
+          "id": "eq:source_transform_digest",
+          "result": "NOT_APPLICABLE",
+          "detail": "only one read states it: report.source_digests=8924794d8e61",
+          "values": [
+            [
+              "report.source_digests",
+              "8924794d8e61"
+            ]
+          ]
+        },
+        {
+          "id": "eq:retained_import_digest",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:engine_release_id",
+          "result": "PASS",
+          "detail": "4 reads equal er_quantbt_111 [progress, spec.client, lineage.primary_run, atlas.selected_release_id]",
+          "values": [
+            [
+              "progress",
+              "er_quantbt_111"
+            ],
+            [
+              "spec.client",
+              "er_quantbt_111"
+            ],
+            [
+              "lineage.primary_run",
+              "er_quantbt_111"
+            ],
+            [
+              "atlas.selected_release_id",
+              "er_quantbt_111"
+            ]
+          ]
+        },
+        {
+          "id": "eq:config_digest",
+          "result": "PASS",
+          "detail": "2 reads equal 69c9431ee0ca [progress, spec.client]",
+          "values": [
+            [
+              "progress",
+              "69c9431ee0ca"
+            ],
+            [
+              "spec.client",
+              "69c9431ee0ca"
+            ]
+          ]
+        },
+        {
+          "id": "eq:selected_trial_id",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:selected_trial_ordinal",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:selected_trial_ordinal_scope",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:fold_selection_fold_id",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:fold_selection_scope",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:selected_parameters",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:selected_params_digest",
+          "result": "PASS",
+          "detail": "2 reads equal 2486e573470e [rc.rail.selected_params, rc.fields.parameter_bundle_digest]",
+          "values": [
+            [
+              "rc.rail.selected_params",
+              "2486e573470e"
+            ],
+            [
+              "rc.fields.parameter_bundle_digest",
+              "2486e573470e"
+            ]
+          ]
+        },
+        {
+          "id": "eq:pack_digest",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:release_candidate_id",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:source_fingerprint",
+          "result": "PASS",
+          "detail": "2 reads equal c61dfd90c036 [rc, rc.draft]",
+          "values": [
+            [
+              "rc",
+              "c61dfd90c036"
+            ],
+            [
+              "rc.draft",
+              "c61dfd90c036"
+            ]
+          ]
+        },
+        {
+          "id": "eq:report_revision",
+          "result": "PASS",
+          "detail": "2 reads equal p18r1_1b90a117c82b [report, rc.fields]",
+          "values": [
+            [
+              "report",
+              "p18r1_1b90a117c82b"
+            ],
+            [
+              "rc.fields",
+              "p18r1_1b90a117c82b"
+            ]
+          ]
+        },
+        {
+          "id": "eq:evidence_revision",
+          "result": "PASS",
+          "detail": "4 reads equal p13r1_19e3d1f931f7 [library.evidence_revision, report.source_revisions, rc.fields, compare_attempts.provenance]",
+          "values": [
+            [
+              "library.evidence_revision",
+              "p13r1_19e3d1f931f7"
+            ],
+            [
+              "report.source_revisions",
+              "p13r1_19e3d1f931f7"
+            ],
+            [
+              "rc.fields",
+              "p13r1_19e3d1f931f7"
+            ],
+            [
+              "compare_attempts.provenance",
+              "p13r1_19e3d1f931f7"
+            ]
+          ]
+        },
+        {
+          "id": "eq:split_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "only one read states it: report.source_revisions=p14r1_40d27e153360",
+          "values": [
+            [
+              "report.source_revisions",
+              "p14r1_40d27e153360"
+            ]
+          ]
+        },
+        {
+          "id": "eq:search_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "only one read states it: report.source_revisions=p15r1_052bfd981bbb",
+          "values": [
+            [
+              "report.source_revisions",
+              "p15r1_052bfd981bbb"
+            ]
+          ]
+        },
+        {
+          "id": "eq:freeze_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "only one read states it: report.source_revisions=p16r1_09124de66dd2",
+          "values": [
+            [
+              "report.source_revisions",
+              "p16r1_09124de66dd2"
+            ]
+          ]
+        },
+        {
+          "id": "eq:replay_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "only one read states it: report.source_revisions=p17r1_f9b402f4bd63",
+          "values": [
+            [
+              "report.source_revisions",
+              "p17r1_f9b402f4bd63"
+            ]
+          ]
+        },
+        {
+          "id": "eq:workspace_id",
+          "result": "PASS",
+          "detail": "2 reads equal ws_06GCVTHWC9WVPGEPR85AB15K82 [execution.approval-inbox, execution.runtime-manifest]",
+          "values": [
+            [
+              "execution.approval-inbox",
+              "ws_06GCVTHWC9WVPGEPR85AB15K82"
+            ],
+            [
+              "execution.runtime-manifest",
+              "ws_06GCVTHWC9WVPGEPR85AB15K82"
+            ]
+          ]
+        },
+        {
+          "id": "chronology",
+          "result": "PASS",
+          "detail": "5 timestamps non-decreasing: library.created_at=1790958699018, progress.queued_at=1790958699018, report.sealed_at=1790958710305, rc.as_of=1791086164475, library.list_as_of=1791086165440",
+          "values": [
+            [
+              "library.created_at",
+              1790958699018
+            ],
+            [
+              "progress.queued_at",
+              1790958699018
+            ],
+            [
+              "report.sealed_at",
+              1790958710305
+            ],
+            [
+              "rc.as_of",
+              1791086164475
+            ],
+            [
+              "library.list_as_of",
+              1791086165440
+            ]
+          ]
+        },
+        {
+          "id": "stability_5s",
+          "result": "PASS",
+          "detail": "19 reads identical after 22s round gap (volatile as_of*/cursors stripped): library_ids=aa83f4d07186, progress=dc954f21dcfb, spec=e39cce499248, evidence=2a5463ab4995, cs_evidence=ecb9fe8ab014, cs_split=d00e664f5ca3, cs_search=90844de160bb, cs_freeze=c132385f7fb5, cs_replay=b4e95ada6094, sealed_replay=77d35b63cdfb, report=32d808e4bca6, rc=a84725d0e88b, sparkline=a1cd306a1ae0, lineage=7d2170533458, compare_attempts=823060002800, compare_pair=9c00b7ac4c04, compare_markets=de61e75f355d, atlas=73f39070393b, library=18fb19203dc2"
+        },
+        {
+          "id": "as_of_monotone_across_rounds",
+          "result": "PASS",
+          "detail": "8 reads with as_of: none regressed between rounds"
+        },
+        {
+          "id": "replay_cutoff",
+          "result": "NOT_APPLICABLE",
+          "detail": "cs_replay 200 NOT_APPLICABLE"
+        }
+      ]
+    },
+    {
+      "label": "R-P04-020",
+      "run_id": "rrun_3955ea932446580929253b86ec5e7317",
+      "why": "FAILED",
+      "library_status": "FAILED",
+      "read_statuses": {
+        "library_ids": "200",
+        "progress": "200",
+        "spec": "200",
+        "evidence": "200 NOT_PUBLISHED",
+        "cs_evidence": "200 NOT_APPLICABLE",
+        "cs_split": "200 NOT_APPLICABLE",
+        "cs_search": "200 NOT_APPLICABLE",
+        "cs_freeze": "200 NOT_APPLICABLE",
+        "cs_replay": "200 NOT_APPLICABLE",
+        "sealed_replay": "200 NOT_PUBLISHED",
+        "report": "200",
+        "rc": "200 PARTIAL",
+        "sparkline": "200 NOT_PUBLISHED",
+        "lineage": "200",
+        "compare_attempts": "200",
+        "compare_pair": "200",
+        "compare_markets": "200",
+        "atlas": "200",
+        "library": "200"
+      },
+      "checks": [
+        {
+          "id": "eq:run_id",
+          "result": "PASS",
+          "detail": "13 reads equal rrun_3955ea932446 [library, library_ids, progress, spec, report, rc, rc.run.id, rc.rail.run, report.identity.run_id, sparkline, sealed_replay, lineage.primary_run, compare_attempts]",
+          "values": [
+            [
+              "library",
+              "rrun_3955ea932446"
+            ],
+            [
+              "library_ids",
+              "rrun_3955ea932446"
+            ],
+            [
+              "progress",
+              "rrun_3955ea932446"
+            ],
+            [
+              "spec",
+              "rrun_3955ea932446"
+            ],
+            [
+              "report",
+              "rrun_3955ea932446"
+            ],
+            [
+              "rc",
+              "rrun_3955ea932446"
+            ],
+            [
+              "rc.run.id",
+              "rrun_3955ea932446"
+            ],
+            [
+              "rc.rail.run",
+              "rrun_3955ea932446"
+            ],
+            [
+              "report.identity.run_id",
+              "rrun_3955ea932446"
+            ],
+            [
+              "sparkline",
+              "rrun_3955ea932446"
+            ],
+            [
+              "sealed_replay",
+              "rrun_3955ea932446"
+            ],
+            [
+              "lineage.primary_run",
+              "rrun_3955ea932446"
+            ],
+            [
+              "compare_attempts",
+              "rrun_3955ea932446"
+            ]
+          ]
+        },
+        {
+          "id": "eq:display_label",
+          "result": "PASS",
+          "detail": "6 reads equal R-P04-020 [library, progress, report, rc, lineage.primary_run, compare_attempts]",
+          "values": [
+            [
+              "library",
+              "R-P04-020"
+            ],
+            [
+              "progress",
+              "R-P04-020"
+            ],
+            [
+              "report",
+              "R-P04-020"
+            ],
+            [
+              "rc",
+              "R-P04-020"
+            ],
+            [
+              "lineage.primary_run",
+              "R-P04-020"
+            ],
+            [
+              "compare_attempts",
+              "R-P04-020"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_id",
+          "result": "PASS",
+          "detail": "10 reads equal delta-rsi-polynomial-alpha [library.binding, progress, spec, spec.alpha_binding, rc.run.binding, rc.fields, rc.rail.alpha, lineage.alpha, report.identity, sealed_replay]",
+          "values": [
+            [
+              "library.binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "progress",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "spec",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "spec.alpha_binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.run.binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.fields",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.rail.alpha",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "lineage.alpha",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "report.identity",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "sealed_replay",
+              "delta-rsi-polynomial-alpha"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_version_id",
+          "result": "PASS",
+          "detail": "11 reads equal av_delta_rsi_polynomial_alpha_1_0_0 [library.binding, progress, spec, spec.alpha_binding, rc.run.binding, rc.fields, rc.rail.alpha_version, lineage.attempt, report.identity, compare_attempts, sealed_replay]",
+          "values": [
+            [
+              "library.binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "progress",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "spec",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "spec.alpha_binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.run.binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.fields",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.rail.alpha_version",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "lineage.attempt",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "report.identity",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "compare_attempts",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "sealed_replay",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_code_digest",
+          "result": "PASS",
+          "detail": "4 reads equal 34dc1847d051 [library.binding.digest, rc.fields, rc.pack.ALPHA_VERSION_PASSPORT, lineage.version]",
+          "values": [
+            [
+              "library.binding.digest",
+              "34dc1847d051"
+            ],
+            [
+              "rc.fields",
+              "34dc1847d051"
+            ],
+            [
+              "rc.pack.ALPHA_VERSION_PASSPORT",
+              "34dc1847d051"
+            ],
+            [
+              "lineage.version",
+              "34dc1847d051"
+            ]
+          ]
+        },
+        {
+          "id": "eq:requested_spec_digest",
+          "result": "PASS",
+          "detail": "3 reads equal c35406dc5d04 [progress, spec, rc.fields]",
+          "values": [
+            [
+              "progress",
+              "c35406dc5d04"
+            ],
+            [
+              "spec",
+              "c35406dc5d04"
+            ],
+            [
+              "rc.fields",
+              "c35406dc5d04"
+            ]
+          ]
+        },
+        {
+          "id": "eq:effective_spec_digest",
+          "result": "PASS",
+          "detail": "3 reads equal 3ddc9f468edc [rc.fields, lineage.primary_run, compare_attempts.provenance]",
+          "values": [
+            [
+              "rc.fields",
+              "3ddc9f468edc"
+            ],
+            [
+              "lineage.primary_run",
+              "3ddc9f468edc"
+            ],
+            [
+              "compare_attempts.provenance",
+              "3ddc9f468edc"
+            ]
+          ]
+        },
+        {
+          "id": "eq:dataset_binding_digest",
+          "result": "PASS",
+          "detail": "2 reads equal ffd476fad978 [lineage.primary_run, compare_attempts.provenance]",
+          "values": [
+            [
+              "lineage.primary_run",
+              "ffd476fad978"
+            ],
+            [
+              "compare_attempts.provenance",
+              "ffd476fad978"
+            ]
+          ]
+        },
+        {
+          "id": "eq:source_manifest_digest",
+          "result": "NOT_APPLICABLE",
+          "detail": "only one read states it: compare_attempts.provenance=e202497b011b",
+          "values": [
+            [
+              "compare_attempts.provenance",
+              "e202497b011b"
+            ]
+          ]
+        },
+        {
+          "id": "eq:source_transform_digest",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:retained_import_digest",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:engine_release_id",
+          "result": "PASS",
+          "detail": "4 reads equal er_quantbt_111 [progress, spec.client, lineage.primary_run, atlas.selected_release_id]",
+          "values": [
+            [
+              "progress",
+              "er_quantbt_111"
+            ],
+            [
+              "spec.client",
+              "er_quantbt_111"
+            ],
+            [
+              "lineage.primary_run",
+              "er_quantbt_111"
+            ],
+            [
+              "atlas.selected_release_id",
+              "er_quantbt_111"
+            ]
+          ]
+        },
+        {
+          "id": "eq:config_digest",
+          "result": "PASS",
+          "detail": "2 reads equal 69c9431ee0ca [progress, spec.client]",
+          "values": [
+            [
+              "progress",
+              "69c9431ee0ca"
+            ],
+            [
+              "spec.client",
+              "69c9431ee0ca"
+            ]
+          ]
+        },
+        {
+          "id": "eq:selected_trial_id",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:selected_trial_ordinal",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:selected_trial_ordinal_scope",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:fold_selection_fold_id",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:fold_selection_scope",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:selected_parameters",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:selected_params_digest",
+          "result": "NOT_APPLICABLE",
+          "detail": "only one read states it: rc.rail.selected_params=— selection not published",
+          "values": [
+            [
+              "rc.rail.selected_params",
+              "— selection not published"
+            ]
+          ]
+        },
+        {
+          "id": "eq:pack_digest",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:release_candidate_id",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:source_fingerprint",
+          "result": "PASS",
+          "detail": "2 reads equal 0b849c9c4dae [rc, rc.draft]",
+          "values": [
+            [
+              "rc",
+              "0b849c9c4dae"
+            ],
+            [
+              "rc.draft",
+              "0b849c9c4dae"
+            ]
+          ]
+        },
+        {
+          "id": "eq:report_revision",
+          "result": "PASS",
+          "detail": "2 reads equal p18r1_38580e93d8b0 [report, rc.fields]",
+          "values": [
+            [
+              "report",
+              "p18r1_38580e93d8b0"
+            ],
+            [
+              "rc.fields",
+              "p18r1_38580e93d8b0"
+            ]
+          ]
+        },
+        {
+          "id": "eq:evidence_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:split_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:search_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:freeze_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:replay_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:workspace_id",
+          "result": "PASS",
+          "detail": "2 reads equal ws_06GCVTHWC9WVPGEPR85AB15K82 [execution.approval-inbox, execution.runtime-manifest]",
+          "values": [
+            [
+              "execution.approval-inbox",
+              "ws_06GCVTHWC9WVPGEPR85AB15K82"
+            ],
+            [
+              "execution.runtime-manifest",
+              "ws_06GCVTHWC9WVPGEPR85AB15K82"
+            ]
+          ]
+        },
+        {
+          "id": "chronology",
+          "result": "PASS",
+          "detail": "5 timestamps non-decreasing: library.created_at=1790862258682, progress.queued_at=1790862258682, report.sealed_at=1790862300968, rc.as_of=1791086166060, library.list_as_of=1791086167047",
+          "values": [
+            [
+              "library.created_at",
+              1790862258682
+            ],
+            [
+              "progress.queued_at",
+              1790862258682
+            ],
+            [
+              "report.sealed_at",
+              1790862300968
+            ],
+            [
+              "rc.as_of",
+              1791086166060
+            ],
+            [
+              "library.list_as_of",
+              1791086167047
+            ]
+          ]
+        },
+        {
+          "id": "stability_5s",
+          "result": "PASS",
+          "detail": "19 reads identical after 22s round gap (volatile as_of*/cursors stripped): library_ids=826902418d73, progress=3539627e3233, spec=3c060492e9b3, evidence=2ea684d1db82, cs_evidence=1acb4ab98e81, cs_split=70407930958c, cs_search=3a61f1825d9b, cs_freeze=691bbe6ab2be, cs_replay=32cdfcda8ce2, sealed_replay=15d0b23004a6, report=b80a288df1d8, rc=3f5f71543351, sparkline=8154c4ee7d43, lineage=7d2170533458, compare_attempts=823060002800, compare_pair=b3cd5a0cae0e, compare_markets=de61e75f355d, atlas=73f39070393b, library=44f7cbd98839"
+        },
+        {
+          "id": "as_of_monotone_across_rounds",
+          "result": "PASS",
+          "detail": "8 reads with as_of: none regressed between rounds"
+        },
+        {
+          "id": "replay_cutoff",
+          "result": "NOT_APPLICABLE",
+          "detail": "cs_replay 200 NOT_APPLICABLE"
+        }
+      ]
+    },
+    {
+      "label": "R-WFO-019",
+      "run_id": "rrun_ef3e10730fcb16a884ee6dfed3bd87f3",
+      "why": "CANCELLED",
+      "library_status": "CANCELLED",
+      "read_statuses": {
+        "library_ids": "200",
+        "progress": "200",
+        "spec": "200",
+        "evidence": "200 NOT_PUBLISHED",
+        "cs_evidence": "409 RESEARCH_CURRENT_SOURCE_CONFLICT",
+        "cs_split": "200 NOT_PUBLISHED",
+        "cs_search": "409 RESEARCH_CURRENT_SOURCE_CONFLICT",
+        "cs_freeze": "409 RESEARCH_CURRENT_SOURCE_CONFLICT",
+        "cs_replay": "409 RESEARCH_CURRENT_SOURCE_CONFLICT",
+        "sealed_replay": "200 NOT_PUBLISHED",
+        "report": "404 RESEARCH_REPORT_NOT_FOUND",
+        "rc": "200",
+        "sparkline": "200 NOT_PUBLISHED",
+        "lineage": "200",
+        "compare_attempts": "200",
+        "compare_pair": "200",
+        "compare_markets": "200",
+        "atlas": "200",
+        "library": "200"
+      },
+      "checks": [
+        {
+          "id": "eq:run_id",
+          "result": "PASS",
+          "detail": "11 reads equal rrun_ef3e10730fcb [library, library_ids, progress, spec, rc, rc.run.id, rc.rail.run, sparkline, sealed_replay, lineage.primary_run, compare_attempts]",
+          "values": [
+            [
+              "library",
+              "rrun_ef3e10730fcb"
+            ],
+            [
+              "library_ids",
+              "rrun_ef3e10730fcb"
+            ],
+            [
+              "progress",
+              "rrun_ef3e10730fcb"
+            ],
+            [
+              "spec",
+              "rrun_ef3e10730fcb"
+            ],
+            [
+              "rc",
+              "rrun_ef3e10730fcb"
+            ],
+            [
+              "rc.run.id",
+              "rrun_ef3e10730fcb"
+            ],
+            [
+              "rc.rail.run",
+              "rrun_ef3e10730fcb"
+            ],
+            [
+              "sparkline",
+              "rrun_ef3e10730fcb"
+            ],
+            [
+              "sealed_replay",
+              "rrun_ef3e10730fcb"
+            ],
+            [
+              "lineage.primary_run",
+              "rrun_ef3e10730fcb"
+            ],
+            [
+              "compare_attempts",
+              "rrun_ef3e10730fcb"
+            ]
+          ]
+        },
+        {
+          "id": "eq:display_label",
+          "result": "PASS",
+          "detail": "5 reads equal R-WFO-019 [library, progress, rc, lineage.primary_run, compare_attempts]",
+          "values": [
+            [
+              "library",
+              "R-WFO-019"
+            ],
+            [
+              "progress",
+              "R-WFO-019"
+            ],
+            [
+              "rc",
+              "R-WFO-019"
+            ],
+            [
+              "lineage.primary_run",
+              "R-WFO-019"
+            ],
+            [
+              "compare_attempts",
+              "R-WFO-019"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_id",
+          "result": "PASS",
+          "detail": "9 reads equal delta-rsi-polynomial-alpha [library.binding, progress, spec, spec.alpha_binding, rc.run.binding, rc.fields, rc.rail.alpha, lineage.alpha, sealed_replay]",
+          "values": [
+            [
+              "library.binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "progress",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "spec",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "spec.alpha_binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.run.binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.fields",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.rail.alpha",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "lineage.alpha",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "sealed_replay",
+              "delta-rsi-polynomial-alpha"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_version_id",
+          "result": "PASS",
+          "detail": "10 reads equal av_delta_rsi_polynomial_alpha_1_0_0 [library.binding, progress, spec, spec.alpha_binding, rc.run.binding, rc.fields, rc.rail.alpha_version, lineage.attempt, compare_attempts, sealed_replay]",
+          "values": [
+            [
+              "library.binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "progress",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "spec",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "spec.alpha_binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.run.binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.fields",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.rail.alpha_version",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "lineage.attempt",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "compare_attempts",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "sealed_replay",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_code_digest",
+          "result": "PASS",
+          "detail": "4 reads equal 34dc1847d051 [library.binding.digest, rc.fields, rc.pack.ALPHA_VERSION_PASSPORT, lineage.version]",
+          "values": [
+            [
+              "library.binding.digest",
+              "34dc1847d051"
+            ],
+            [
+              "rc.fields",
+              "34dc1847d051"
+            ],
+            [
+              "rc.pack.ALPHA_VERSION_PASSPORT",
+              "34dc1847d051"
+            ],
+            [
+              "lineage.version",
+              "34dc1847d051"
+            ]
+          ]
+        },
+        {
+          "id": "eq:requested_spec_digest",
+          "result": "PASS",
+          "detail": "3 reads equal 9b8bede78011 [progress, spec, rc.fields]",
+          "values": [
+            [
+              "progress",
+              "9b8bede78011"
+            ],
+            [
+              "spec",
+              "9b8bede78011"
+            ],
+            [
+              "rc.fields",
+              "9b8bede78011"
+            ]
+          ]
+        },
+        {
+          "id": "eq:effective_spec_digest",
+          "result": "PASS",
+          "detail": "3 reads equal 0668e6418ba2 [rc.fields, lineage.primary_run, compare_attempts.provenance]",
+          "values": [
+            [
+              "rc.fields",
+              "0668e6418ba2"
+            ],
+            [
+              "lineage.primary_run",
+              "0668e6418ba2"
+            ],
+            [
+              "compare_attempts.provenance",
+              "0668e6418ba2"
+            ]
+          ]
+        },
+        {
+          "id": "eq:dataset_binding_digest",
+          "result": "PASS",
+          "detail": "2 reads equal 8581c52986a4 [lineage.primary_run, compare_attempts.provenance]",
+          "values": [
+            [
+              "lineage.primary_run",
+              "8581c52986a4"
+            ],
+            [
+              "compare_attempts.provenance",
+              "8581c52986a4"
+            ]
+          ]
+        },
+        {
+          "id": "eq:source_manifest_digest",
+          "result": "NOT_APPLICABLE",
+          "detail": "only one read states it: compare_attempts.provenance=333558cc1b39",
+          "values": [
+            [
+              "compare_attempts.provenance",
+              "333558cc1b39"
+            ]
+          ]
+        },
+        {
+          "id": "eq:source_transform_digest",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:retained_import_digest",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:engine_release_id",
+          "result": "PASS",
+          "detail": "4 reads equal er_quantbt_111 [progress, spec.client, lineage.primary_run, atlas.selected_release_id]",
+          "values": [
+            [
+              "progress",
+              "er_quantbt_111"
+            ],
+            [
+              "spec.client",
+              "er_quantbt_111"
+            ],
+            [
+              "lineage.primary_run",
+              "er_quantbt_111"
+            ],
+            [
+              "atlas.selected_release_id",
+              "er_quantbt_111"
+            ]
+          ]
+        },
+        {
+          "id": "eq:config_digest",
+          "result": "PASS",
+          "detail": "2 reads equal 69c9431ee0ca [progress, spec.client]",
+          "values": [
+            [
+              "progress",
+              "69c9431ee0ca"
+            ],
+            [
+              "spec.client",
+              "69c9431ee0ca"
+            ]
+          ]
+        },
+        {
+          "id": "eq:selected_trial_id",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:selected_trial_ordinal",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:selected_trial_ordinal_scope",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:fold_selection_fold_id",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:fold_selection_scope",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:selected_parameters",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:selected_params_digest",
+          "result": "NOT_APPLICABLE",
+          "detail": "only one read states it: rc.rail.selected_params=— selection not published",
+          "values": [
+            [
+              "rc.rail.selected_params",
+              "— selection not published"
+            ]
+          ]
+        },
+        {
+          "id": "eq:pack_digest",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:release_candidate_id",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:source_fingerprint",
+          "result": "PASS",
+          "detail": "2 reads equal 599303fad59c [rc, rc.draft]",
+          "values": [
+            [
+              "rc",
+              "599303fad59c"
+            ],
+            [
+              "rc.draft",
+              "599303fad59c"
+            ]
+          ]
+        },
+        {
+          "id": "eq:report_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:evidence_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:split_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:search_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:freeze_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:replay_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:workspace_id",
+          "result": "PASS",
+          "detail": "2 reads equal ws_06GCVTHWC9WVPGEPR85AB15K82 [execution.approval-inbox, execution.runtime-manifest]",
+          "values": [
+            [
+              "execution.approval-inbox",
+              "ws_06GCVTHWC9WVPGEPR85AB15K82"
+            ],
+            [
+              "execution.runtime-manifest",
+              "ws_06GCVTHWC9WVPGEPR85AB15K82"
+            ]
+          ]
+        },
+        {
+          "id": "chronology",
+          "result": "PASS",
+          "detail": "4 timestamps non-decreasing: library.created_at=1790796008696, progress.queued_at=1790796008696, rc.as_of=1791086167633, library.list_as_of=1791086168630",
+          "values": [
+            [
+              "library.created_at",
+              1790796008696
+            ],
+            [
+              "progress.queued_at",
+              1790796008696
+            ],
+            [
+              "rc.as_of",
+              1791086167633
+            ],
+            [
+              "library.list_as_of",
+              1791086168630
+            ]
+          ]
+        },
+        {
+          "id": "stability_5s",
+          "result": "PASS",
+          "detail": "19 reads identical after 22s round gap (volatile as_of*/cursors stripped): library_ids=cf45dfe101aa, progress=9b95226551f3, spec=cb3c5665191d, evidence=8a37006b618b, cs_split=258724f50e2c, sealed_replay=931ca2cd097a, rc=6bced8f298a7, sparkline=e59d1273d6b4, lineage=7d2170533458, compare_attempts=823060002800, compare_pair=a0369fa2ecaf, compare_markets=de61e75f355d, atlas=73f39070393b, library=0068264f68f6"
+        },
+        {
+          "id": "as_of_monotone_across_rounds",
+          "result": "PASS",
+          "detail": "8 reads with as_of: none regressed between rounds"
+        },
+        {
+          "id": "replay_cutoff",
+          "result": "NOT_APPLICABLE",
+          "detail": "cs_replay 409 RESEARCH_CURRENT_SOURCE_CONFLICT"
+        }
+      ]
+    },
+    {
+      "label": "R-WFO-025",
+      "run_id": "rrun_5e1185f847dddd418bdbd1f9f32b87c7",
+      "why": "QUEUED",
+      "library_status": "QUEUED",
+      "read_statuses": {
+        "library_ids": "200",
+        "progress": "200",
+        "spec": "200",
+        "evidence": "200 PENDING_SOURCE_CALLBACK",
+        "cs_evidence": "409 RESEARCH_CURRENT_SOURCE_CONFLICT",
+        "cs_split": "409 RESEARCH_CURRENT_SOURCE_CONFLICT",
+        "cs_search": "409 RESEARCH_CURRENT_SOURCE_CONFLICT",
+        "cs_freeze": "409 RESEARCH_CURRENT_SOURCE_CONFLICT",
+        "cs_replay": "409 RESEARCH_CURRENT_SOURCE_CONFLICT",
+        "sealed_replay": "200 PENDING_SOURCE_CALLBACK",
+        "report": "404 RESEARCH_REPORT_NOT_FOUND",
+        "rc": "200",
+        "sparkline": "200 PENDING_SOURCE_CALLBACK",
+        "lineage": "200",
+        "compare_attempts": "200",
+        "compare_pair": "200",
+        "compare_markets": "200",
+        "atlas": "200",
+        "library": "200"
+      },
+      "checks": [
+        {
+          "id": "eq:run_id",
+          "result": "PASS",
+          "detail": "11 reads equal rrun_5e1185f847dd [library, library_ids, progress, spec, rc, rc.run.id, rc.rail.run, sparkline, sealed_replay, lineage.primary_run, compare_attempts]",
+          "values": [
+            [
+              "library",
+              "rrun_5e1185f847dd"
+            ],
+            [
+              "library_ids",
+              "rrun_5e1185f847dd"
+            ],
+            [
+              "progress",
+              "rrun_5e1185f847dd"
+            ],
+            [
+              "spec",
+              "rrun_5e1185f847dd"
+            ],
+            [
+              "rc",
+              "rrun_5e1185f847dd"
+            ],
+            [
+              "rc.run.id",
+              "rrun_5e1185f847dd"
+            ],
+            [
+              "rc.rail.run",
+              "rrun_5e1185f847dd"
+            ],
+            [
+              "sparkline",
+              "rrun_5e1185f847dd"
+            ],
+            [
+              "sealed_replay",
+              "rrun_5e1185f847dd"
+            ],
+            [
+              "lineage.primary_run",
+              "rrun_5e1185f847dd"
+            ],
+            [
+              "compare_attempts",
+              "rrun_5e1185f847dd"
+            ]
+          ]
+        },
+        {
+          "id": "eq:display_label",
+          "result": "PASS",
+          "detail": "5 reads equal R-WFO-025 [library, progress, rc, lineage.primary_run, compare_attempts]",
+          "values": [
+            [
+              "library",
+              "R-WFO-025"
+            ],
+            [
+              "progress",
+              "R-WFO-025"
+            ],
+            [
+              "rc",
+              "R-WFO-025"
+            ],
+            [
+              "lineage.primary_run",
+              "R-WFO-025"
+            ],
+            [
+              "compare_attempts",
+              "R-WFO-025"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_id",
+          "result": "PASS",
+          "detail": "9 reads equal delta-rsi-polynomial-alpha [library.binding, progress, spec, spec.alpha_binding, rc.run.binding, rc.fields, rc.rail.alpha, lineage.alpha, sealed_replay]",
+          "values": [
+            [
+              "library.binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "progress",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "spec",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "spec.alpha_binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.run.binding",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.fields",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "rc.rail.alpha",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "lineage.alpha",
+              "delta-rsi-polynomial-alpha"
+            ],
+            [
+              "sealed_replay",
+              "delta-rsi-polynomial-alpha"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_version_id",
+          "result": "PASS",
+          "detail": "10 reads equal av_delta_rsi_polynomial_alpha_1_0_0 [library.binding, progress, spec, spec.alpha_binding, rc.run.binding, rc.fields, rc.rail.alpha_version, lineage.attempt, compare_attempts, sealed_replay]",
+          "values": [
+            [
+              "library.binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "progress",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "spec",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "spec.alpha_binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.run.binding",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.fields",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "rc.rail.alpha_version",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "lineage.attempt",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "compare_attempts",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ],
+            [
+              "sealed_replay",
+              "av_delta_rsi_polynomial_alpha_1_0_0"
+            ]
+          ]
+        },
+        {
+          "id": "eq:alpha_code_digest",
+          "result": "PASS",
+          "detail": "4 reads equal 34dc1847d051 [library.binding.digest, rc.fields, rc.pack.ALPHA_VERSION_PASSPORT, lineage.version]",
+          "values": [
+            [
+              "library.binding.digest",
+              "34dc1847d051"
+            ],
+            [
+              "rc.fields",
+              "34dc1847d051"
+            ],
+            [
+              "rc.pack.ALPHA_VERSION_PASSPORT",
+              "34dc1847d051"
+            ],
+            [
+              "lineage.version",
+              "34dc1847d051"
+            ]
+          ]
+        },
+        {
+          "id": "eq:requested_spec_digest",
+          "result": "PASS",
+          "detail": "3 reads equal d09d6b35c729 [progress, spec, rc.fields]",
+          "values": [
+            [
+              "progress",
+              "d09d6b35c729"
+            ],
+            [
+              "spec",
+              "d09d6b35c729"
+            ],
+            [
+              "rc.fields",
+              "d09d6b35c729"
+            ]
+          ]
+        },
+        {
+          "id": "eq:effective_spec_digest",
+          "result": "PASS",
+          "detail": "3 reads equal f8cd5d367000 [rc.fields, lineage.primary_run, compare_attempts.provenance]",
+          "values": [
+            [
+              "rc.fields",
+              "f8cd5d367000"
+            ],
+            [
+              "lineage.primary_run",
+              "f8cd5d367000"
+            ],
+            [
+              "compare_attempts.provenance",
+              "f8cd5d367000"
+            ]
+          ]
+        },
+        {
+          "id": "eq:dataset_binding_digest",
+          "result": "PASS",
+          "detail": "2 reads equal efe345160911 [lineage.primary_run, compare_attempts.provenance]",
+          "values": [
+            [
+              "lineage.primary_run",
+              "efe345160911"
+            ],
+            [
+              "compare_attempts.provenance",
+              "efe345160911"
+            ]
+          ]
+        },
+        {
+          "id": "eq:source_manifest_digest",
+          "result": "NOT_APPLICABLE",
+          "detail": "only one read states it: compare_attempts.provenance=d72af53355ac",
+          "values": [
+            [
+              "compare_attempts.provenance",
+              "d72af53355ac"
+            ]
+          ]
+        },
+        {
+          "id": "eq:source_transform_digest",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:retained_import_digest",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:engine_release_id",
+          "result": "PASS",
+          "detail": "4 reads equal er_quantbt_111 [progress, spec.client, lineage.primary_run, atlas.selected_release_id]",
+          "values": [
+            [
+              "progress",
+              "er_quantbt_111"
+            ],
+            [
+              "spec.client",
+              "er_quantbt_111"
+            ],
+            [
+              "lineage.primary_run",
+              "er_quantbt_111"
+            ],
+            [
+              "atlas.selected_release_id",
+              "er_quantbt_111"
+            ]
+          ]
+        },
+        {
+          "id": "eq:config_digest",
+          "result": "PASS",
+          "detail": "2 reads equal 69c9431ee0ca [progress, spec.client]",
+          "values": [
+            [
+              "progress",
+              "69c9431ee0ca"
+            ],
+            [
+              "spec.client",
+              "69c9431ee0ca"
+            ]
+          ]
+        },
+        {
+          "id": "eq:selected_trial_id",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:selected_trial_ordinal",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:selected_trial_ordinal_scope",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:fold_selection_fold_id",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:fold_selection_scope",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:selected_parameters",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:selected_params_digest",
+          "result": "NOT_APPLICABLE",
+          "detail": "only one read states it: rc.rail.selected_params=— selection not published",
+          "values": [
+            [
+              "rc.rail.selected_params",
+              "— selection not published"
+            ]
+          ]
+        },
+        {
+          "id": "eq:pack_digest",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:release_candidate_id",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:source_fingerprint",
+          "result": "PASS",
+          "detail": "2 reads equal d28d6a48da2b [rc, rc.draft]",
+          "values": [
+            [
+              "rc",
+              "d28d6a48da2b"
+            ],
+            [
+              "rc.draft",
+              "d28d6a48da2b"
+            ]
+          ]
+        },
+        {
+          "id": "eq:report_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:evidence_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:split_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:search_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:freeze_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:replay_revision",
+          "result": "NOT_APPLICABLE",
+          "detail": "no read states it",
+          "values": []
+        },
+        {
+          "id": "eq:workspace_id",
+          "result": "PASS",
+          "detail": "2 reads equal ws_06GCVTHWC9WVPGEPR85AB15K82 [execution.approval-inbox, execution.runtime-manifest]",
+          "values": [
+            [
+              "execution.approval-inbox",
+              "ws_06GCVTHWC9WVPGEPR85AB15K82"
+            ],
+            [
+              "execution.runtime-manifest",
+              "ws_06GCVTHWC9WVPGEPR85AB15K82"
+            ]
+          ]
+        },
+        {
+          "id": "chronology",
+          "result": "PASS",
+          "detail": "4 timestamps non-decreasing: library.created_at=1790958717643, progress.queued_at=1790958717643, rc.as_of=1791086169200, library.list_as_of=1791086170271",
+          "values": [
+            [
+              "library.created_at",
+              1790958717643
+            ],
+            [
+              "progress.queued_at",
+              1790958717643
+            ],
+            [
+              "rc.as_of",
+              1791086169200
+            ],
+            [
+              "library.list_as_of",
+              1791086170271
+            ]
+          ]
+        },
+        {
+          "id": "stability_5s",
+          "result": "PASS",
+          "detail": "19 reads identical after 22s round gap (volatile as_of*/cursors stripped): library_ids=30d9521ae307, progress=956b78906e64, spec=b0edceaaa1fc, evidence=86329195d987, sealed_replay=ddd6fb590d07, rc=197000dc3598, sparkline=026f0ac6ddd6, lineage=7d2170533458, compare_attempts=823060002800, compare_pair=f33f87f1a45d, compare_markets=de61e75f355d, atlas=73f39070393b, library=7d0931eefa1d"
+        },
+        {
+          "id": "as_of_monotone_across_rounds",
+          "result": "PASS",
+          "detail": "8 reads with as_of: none regressed between rounds"
+        },
+        {
+          "id": "replay_cutoff",
+          "result": "NOT_APPLICABLE",
+          "detail": "cs_replay 409 RESEARCH_CURRENT_SOURCE_CONFLICT"
+        }
+      ]
+    }
+  ],
+  "legacy": {
+    "searched": "49 library rows; counters.legacy_metadata_rows=0",
+    "found": null
+  },
+  "security": [
+    {
+      "id": "S1",
+      "name": "unauthenticated GET /api/v1/quantbt/runs/{run}/evidence (no cookie, no dev header)",
+      "expected": "401",
+      "result": "PASS",
+      "detail": "anon -> 401 {\"error\":{\"code\":\"SESSION_REQUIRED\",\"message\":\"Invalid session.\"},\"request_id\":\"fdf531ef91; dev-header-only without session cookie -> 401",
+      "endpoint": "/api/v1/quantbt/runs/{run}/evidence",
+      "status": 401,
+      "dev_header_only_status": 401
+    },
+    {
+      "id": "S1",
+      "name": "unauthenticated GET /api/v1/research/runs/{run}/progress (no cookie, no dev header)",
+      "expected": "401",
+      "result": "PASS",
+      "detail": "anon -> 401 {\"error\":{\"code\":\"SESSION_REQUIRED\",\"message\":\"Invalid session.\"},\"request_id\":\"ecd71e6315; dev-header-only without session cookie -> 401",
+      "endpoint": "/api/v1/research/runs/{run}/progress",
+      "status": 401,
+      "dev_header_only_status": 401
+    },
+    {
+      "id": "S1",
+      "name": "unauthenticated GET /api/v1/quantbt/runs (no cookie, no dev header)",
+      "expected": "401",
+      "result": "PASS",
+      "detail": "anon -> 401 {\"error\":{\"code\":\"SESSION_REQUIRED\",\"message\":\"Invalid session.\"},\"request_id\":\"0308c7d270; dev-header-only without session cookie -> 401",
+      "endpoint": "/api/v1/quantbt/runs?limit=5",
+      "status": 401,
+      "dev_header_only_status": 401
+    },
+    {
+      "id": "S1",
+      "name": "unauthenticated GET /api/v1/quantbt/runs/{run}/current-source/replay (no cookie, no dev header)",
+      "expected": "401",
+      "result": "PASS",
+      "detail": "anon -> 401 {\"error\":{\"code\":\"SESSION_REQUIRED\",\"message\":\"Invalid session.\"},\"request_id\":\"e51f4adde9; dev-header-only without session cookie -> 401",
+      "endpoint": "/api/v1/quantbt/runs/{run}/current-source/replay?limit=1",
+      "status": 401,
+      "dev_header_only_status": 401
+    },
+    {
+      "id": "S2",
+      "name": "/api/v1/quantbt/runs/{run}/evidence: unknown id and well-formed foreign id -> 404, identical body shape/code/message",
+      "expected": "404, identical",
+      "result": "PASS",
+      "detail": "unknown -> 404 RESEARCH_EVIDENCE_NOT_FOUND; foreign -> 404 RESEARCH_EVIDENCE_NOT_FOUND; shapes identical",
+      "endpoint": "/api/v1/quantbt/runs/{run}/evidence"
+    },
+    {
+      "id": "S2w",
+      "name": "/api/v1/quantbt/runs/{run}/evidence: under a foreign workspace_id an existing run and a nonexistent run answer identically (no run-existence oracle)",
+      "expected": "404 RESEARCH_EVIDENCE_NOT_FOUND + same message",
+      "result": "PASS",
+      "detail": "existing+foreign-ws -> 404 RESEARCH_EVIDENCE_NOT_FOUND \"Research workspace was not found.\"; nonexistent+foreign-ws -> 404 RESEARCH_EVIDENCE_NOT_FOUND \"Research workspace was not found.\"",
+      "endpoint": "/api/v1/quantbt/runs/{run}/evidence?workspace_id=<foreign>",
+      "status": 404,
+      "code": "RESEARCH_EVIDENCE_NOT_FOUND"
+    },
+    {
+      "id": "S2m",
+      "name": "/api/v1/quantbt/runs/{run}/evidence: foreign-workspace message vs own-workspace unknown-run message (workspace-existence wording)",
+      "expected": "informational",
+      "result": "PASS_WITH_NOTE",
+      "detail": "foreign-ws \"Research workspace was not found.\" vs unknown-run \"Research run was not found.\" (same status 404/404, same code true); the wording tells a caller which of workspace/run was missing",
+      "endpoint": "/api/v1/quantbt/runs/{run}/evidence?workspace_id=<foreign>"
+    },
+    {
+      "id": "S2",
+      "name": "/api/v1/research/runs/{run}/progress: unknown id and well-formed foreign id -> 404, identical body shape/code/message",
+      "expected": "404, identical",
+      "result": "PASS",
+      "detail": "unknown -> 404 RESEARCH_PROGRESS_NOT_FOUND; foreign -> 404 RESEARCH_PROGRESS_NOT_FOUND; shapes identical",
+      "endpoint": "/api/v1/research/runs/{run}/progress"
+    },
+    {
+      "id": "S2w",
+      "name": "/api/v1/research/runs/{run}/progress: under a foreign workspace_id an existing run and a nonexistent run answer identically (no run-existence oracle)",
+      "expected": "404 RESEARCH_PROGRESS_NOT_FOUND + same message",
+      "result": "PASS",
+      "detail": "existing+foreign-ws -> 404 RESEARCH_PROGRESS_NOT_FOUND \"Research workspace was not found.\"; nonexistent+foreign-ws -> 404 RESEARCH_PROGRESS_NOT_FOUND \"Research workspace was not found.\"",
+      "endpoint": "/api/v1/research/runs/{run}/progress?workspace_id=<foreign>",
+      "status": 404,
+      "code": "RESEARCH_PROGRESS_NOT_FOUND"
+    },
+    {
+      "id": "S2m",
+      "name": "/api/v1/research/runs/{run}/progress: foreign-workspace message vs own-workspace unknown-run message (workspace-existence wording)",
+      "expected": "informational",
+      "result": "PASS_WITH_NOTE",
+      "detail": "foreign-ws \"Research workspace was not found.\" vs unknown-run \"Research run was not found.\" (same status 404/404, same code true); the wording tells a caller which of workspace/run was missing",
+      "endpoint": "/api/v1/research/runs/{run}/progress?workspace_id=<foreign>"
+    },
+    {
+      "id": "S2",
+      "name": "/api/v1/quantbt/runs/{run}/current-source/search: unknown id and well-formed foreign id -> 404, identical body shape/code/message",
+      "expected": "404, identical",
+      "result": "PASS",
+      "detail": "unknown -> 404 RESEARCH_CURRENT_SOURCE_NOT_FOUND; foreign -> 404 RESEARCH_CURRENT_SOURCE_NOT_FOUND; shapes identical",
+      "endpoint": "/api/v1/quantbt/runs/{run}/current-source/search"
+    },
+    {
+      "id": "S2w",
+      "name": "/api/v1/quantbt/runs/{run}/current-source/search: under a foreign workspace_id an existing run and a nonexistent run answer identically (no run-existence oracle)",
+      "expected": "404 RESEARCH_CURRENT_SOURCE_NOT_FOUND + same message",
+      "result": "PASS",
+      "detail": "existing+foreign-ws -> 404 RESEARCH_CURRENT_SOURCE_NOT_FOUND \"Research workspace was not found.\"; nonexistent+foreign-ws -> 404 RESEARCH_CURRENT_SOURCE_NOT_FOUND \"Research workspace was not found.\"",
+      "endpoint": "/api/v1/quantbt/runs/{run}/current-source/search?workspace_id=<foreign>",
+      "status": 404,
+      "code": "RESEARCH_CURRENT_SOURCE_NOT_FOUND"
+    },
+    {
+      "id": "S2m",
+      "name": "/api/v1/quantbt/runs/{run}/current-source/search: foreign-workspace message vs own-workspace unknown-run message (workspace-existence wording)",
+      "expected": "informational",
+      "result": "PASS_WITH_NOTE",
+      "detail": "foreign-ws \"Research workspace was not found.\" vs unknown-run \"Research run was not found.\" (same status 404/404, same code true); the wording tells a caller which of workspace/run was missing",
+      "endpoint": "/api/v1/quantbt/runs/{run}/current-source/search?workspace_id=<foreign>"
+    },
+    {
+      "id": "S2",
+      "name": "/api/v1/quantbt/runs/{run}/release-candidate: unknown id and well-formed foreign id -> 404, identical body shape/code/message",
+      "expected": "404, identical",
+      "result": "PASS",
+      "detail": "unknown -> 404 RESEARCH_RELEASE_CANDIDATE_NOT_FOUND; foreign -> 404 RESEARCH_RELEASE_CANDIDATE_NOT_FOUND; shapes identical",
+      "endpoint": "/api/v1/quantbt/runs/{run}/release-candidate"
+    },
+    {
+      "id": "S2w",
+      "name": "/api/v1/quantbt/runs/{run}/release-candidate: under a foreign workspace_id an existing run and a nonexistent run answer identically (no run-existence oracle)",
+      "expected": "404 RESEARCH_RELEASE_CANDIDATE_NOT_FOUND + same message",
+      "result": "PASS",
+      "detail": "existing+foreign-ws -> 404 RESEARCH_RELEASE_CANDIDATE_NOT_FOUND \"Release Candidate was not found.\"; nonexistent+foreign-ws -> 404 RESEARCH_RELEASE_CANDIDATE_NOT_FOUND \"Release Candidate was not found.\"",
+      "endpoint": "/api/v1/quantbt/runs/{run}/release-candidate?workspace_id=<foreign>",
+      "status": 404,
+      "code": "RESEARCH_RELEASE_CANDIDATE_NOT_FOUND"
+    },
+    {
+      "id": "S2m",
+      "name": "/api/v1/quantbt/runs/{run}/release-candidate: foreign-workspace message vs own-workspace unknown-run message (workspace-existence wording)",
+      "expected": "informational",
+      "result": "PASS_WITH_NOTE",
+      "detail": "foreign-ws \"Release Candidate was not found.\" vs unknown-run \"Research run was not found.\" (same status 404/404, same code true); the wording tells a caller which of workspace/run was missing",
+      "endpoint": "/api/v1/quantbt/runs/{run}/release-candidate?workspace_id=<foreign>"
+    },
+    {
+      "id": "S2",
+      "name": "/api/v1/quantbt/runs/{run}/report: unknown id and well-formed foreign id -> 404, identical body shape/code/message",
+      "expected": "404, identical",
+      "result": "PASS",
+      "detail": "unknown -> 404 RESEARCH_REPORT_NOT_FOUND; foreign -> 404 RESEARCH_REPORT_NOT_FOUND; shapes identical",
+      "endpoint": "/api/v1/quantbt/runs/{run}/report"
+    },
+    {
+      "id": "S2w",
+      "name": "/api/v1/quantbt/runs/{run}/report: under a foreign workspace_id an existing run and a nonexistent run answer identically (no run-existence oracle)",
+      "expected": "404 RESEARCH_REPORT_NOT_FOUND + same message",
+      "result": "PASS",
+      "detail": "existing+foreign-ws -> 404 RESEARCH_REPORT_NOT_FOUND \"Research report was not found.\"; nonexistent+foreign-ws -> 404 RESEARCH_REPORT_NOT_FOUND \"Research report was not found.\"",
+      "endpoint": "/api/v1/quantbt/runs/{run}/report?workspace_id=<foreign>",
+      "status": 404,
+      "code": "RESEARCH_REPORT_NOT_FOUND"
+    },
+    {
+      "id": "S2m",
+      "name": "/api/v1/quantbt/runs/{run}/report: foreign-workspace message vs own-workspace unknown-run message (workspace-existence wording)",
+      "expected": "informational",
+      "result": "PASS",
+      "detail": "foreign-ws \"Research report was not found.\" vs unknown-run \"Research report was not found.\" (same status 404/404, same code true); the wording tells a caller which of workspace/run was missing",
+      "endpoint": "/api/v1/quantbt/runs/{run}/report?workspace_id=<foreign>"
+    },
+    {
+      "id": "S2",
+      "name": "/api/v1/research/runs/{run}/requested-spec: unknown id and well-formed foreign id -> 404, identical body shape/code/message",
+      "expected": "404, identical",
+      "result": "PASS",
+      "detail": "unknown -> 404 RESEARCH_PROGRESS_NOT_FOUND; foreign -> 404 RESEARCH_PROGRESS_NOT_FOUND; shapes identical",
+      "endpoint": "/api/v1/research/runs/{run}/requested-spec"
+    },
+    {
+      "id": "S2w",
+      "name": "/api/v1/research/runs/{run}/requested-spec: under a foreign workspace_id an existing run and a nonexistent run answer identically (no run-existence oracle)",
+      "expected": "404 RESEARCH_PROGRESS_NOT_FOUND + same message",
+      "result": "PASS",
+      "detail": "existing+foreign-ws -> 404 RESEARCH_PROGRESS_NOT_FOUND \"Research workspace was not found.\"; nonexistent+foreign-ws -> 404 RESEARCH_PROGRESS_NOT_FOUND \"Research workspace was not found.\"",
+      "endpoint": "/api/v1/research/runs/{run}/requested-spec?workspace_id=<foreign>",
+      "status": 404,
+      "code": "RESEARCH_PROGRESS_NOT_FOUND"
+    },
+    {
+      "id": "S2m",
+      "name": "/api/v1/research/runs/{run}/requested-spec: foreign-workspace message vs own-workspace unknown-run message (workspace-existence wording)",
+      "expected": "informational",
+      "result": "PASS_WITH_NOTE",
+      "detail": "foreign-ws \"Research workspace was not found.\" vs unknown-run \"Research run was not found.\" (same status 404/404, same code true); the wording tells a caller which of workspace/run was missing",
+      "endpoint": "/api/v1/research/runs/{run}/requested-spec?workspace_id=<foreign>"
+    },
+    {
+      "id": "S2",
+      "name": "/api/v1/quantbt/runs/{run}/current-source/replay: unknown id and well-formed foreign id -> 404, identical body shape/code/message",
+      "expected": "404, identical",
+      "result": "PASS",
+      "detail": "unknown -> 404 RESEARCH_CURRENT_SOURCE_NOT_FOUND; foreign -> 404 RESEARCH_CURRENT_SOURCE_NOT_FOUND; shapes identical",
+      "endpoint": "/api/v1/quantbt/runs/{run}/current-source/replay"
+    },
+    {
+      "id": "S2w",
+      "name": "/api/v1/quantbt/runs/{run}/current-source/replay: under a foreign workspace_id an existing run and a nonexistent run answer identically (no run-existence oracle)",
+      "expected": "404 RESEARCH_CURRENT_SOURCE_NOT_FOUND + same message",
+      "result": "PASS",
+      "detail": "existing+foreign-ws -> 404 RESEARCH_CURRENT_SOURCE_NOT_FOUND \"Research workspace was not found.\"; nonexistent+foreign-ws -> 404 RESEARCH_CURRENT_SOURCE_NOT_FOUND \"Research workspace was not found.\"",
+      "endpoint": "/api/v1/quantbt/runs/{run}/current-source/replay?workspace_id=<foreign>",
+      "status": 404,
+      "code": "RESEARCH_CURRENT_SOURCE_NOT_FOUND"
+    },
+    {
+      "id": "S2m",
+      "name": "/api/v1/quantbt/runs/{run}/current-source/replay: foreign-workspace message vs own-workspace unknown-run message (workspace-existence wording)",
+      "expected": "informational",
+      "result": "PASS_WITH_NOTE",
+      "detail": "foreign-ws \"Research workspace was not found.\" vs unknown-run \"Research run was not found.\" (same status 404/404, same code true); the wording tells a caller which of workspace/run was missing",
+      "endpoint": "/api/v1/quantbt/runs/{run}/current-source/replay?workspace_id=<foreign>"
+    },
+    {
+      "id": "S3",
+      "name": "write refused: no Origin header, no CSRF header",
+      "expected": "403 (any 4xx refusal acceptable; never 2xx)",
+      "result": "PASS",
+      "detail": "POST .../runs/R-WFO-023/cancel -> 403 RESEARCH_PROGRESS_FORBIDDEN",
+      "endpoint": "POST /api/v1/research/runs/{run}/cancel",
+      "status": 403,
+      "code": "RESEARCH_PROGRESS_FORBIDDEN"
+    },
+    {
+      "id": "S3",
+      "name": "write refused: cross-site Origin (https://evil.example), no CSRF header",
+      "expected": "403 (any 4xx refusal acceptable; never 2xx)",
+      "result": "PASS",
+      "detail": "POST .../runs/R-WFO-023/cancel -> 403 RESEARCH_PROGRESS_FORBIDDEN",
+      "endpoint": "POST /api/v1/research/runs/{run}/cancel",
+      "status": 403,
+      "code": "RESEARCH_PROGRESS_FORBIDDEN"
+    },
+    {
+      "id": "S3",
+      "name": "write refused: correct Origin, no x-portal-csrf header",
+      "expected": "403 (any 4xx refusal acceptable; never 2xx)",
+      "result": "PASS",
+      "detail": "POST .../runs/R-WFO-023/cancel -> 403 RESEARCH_PROGRESS_FORBIDDEN",
+      "endpoint": "POST /api/v1/research/runs/{run}/cancel",
+      "status": 403,
+      "code": "RESEARCH_PROGRESS_FORBIDDEN"
+    },
+    {
+      "id": "S3-state",
+      "name": "refused writes changed no run state",
+      "expected": "no library status change",
+      "result": "PASS",
+      "detail": "all 49 library statuses unchanged",
+      "endpoint": "GET /api/v1/quantbt/runs"
+    },
+    {
+      "id": "S4",
+      "name": "legacy GET /api/runs/{id}/export before prepare (R-WFO-027)",
+      "expected": "404; no archive built/served",
+      "result": "PASS",
+      "detail": "-> 404 content-type=application/json bytes=74 {\"detail\":\"run not found\",\"request_id\":\"aa180ffd14ab0b6614a3ecf4c7d37a28\"}",
+      "endpoint": "GET /api/runs/{run}/export",
+      "status": 404,
+      "content_type": "application/json; charset=utf-8",
+      "bytes": 74
+    },
+    {
+      "id": "S4",
+      "name": "legacy GET /api/runs/{id}/export before prepare (R-WFO-023)",
+      "expected": "404; no archive built/served",
+      "result": "PASS",
+      "detail": "-> 404 content-type=application/json bytes=74 {\"detail\":\"run not found\",\"request_id\":\"5068e459d14e94cc74c5ea0ea3023343\"}",
+      "endpoint": "GET /api/runs/{run}/export",
+      "status": 404,
+      "content_type": "application/json; charset=utf-8",
+      "bytes": 74
+    },
+    {
+      "id": "S4",
+      "name": "legacy GET /api/runs/{id}/export before prepare (R-WFO-022)",
+      "expected": "404; no archive built/served",
+      "result": "PASS",
+      "detail": "-> 404 content-type=application/json bytes=74 {\"detail\":\"run not found\",\"request_id\":\"4bf85f019c8943bafe95064499daedc4\"}",
+      "endpoint": "GET /api/runs/{run}/export",
+      "status": 404,
+      "content_type": "application/json; charset=utf-8",
+      "bytes": 74
+    },
+    {
+      "id": "S5",
+      "name": "own workspace_id query yields the same body as no workspace_id",
+      "expected": "200, identical",
+      "result": "PASS",
+      "detail": "own -> 200, bare -> 200",
+      "endpoint": "/api/v1/research/runs/{run}/progress"
+    },
+    {
+      "id": "S5",
+      "name": "foreign workspace_id",
+      "expected": "refused (4xx) or body identical to own workspace; never foreign data",
+      "result": "PASS",
+      "detail": "-> 404 RESEARCH_PROGRESS_NOT_FOUND",
+      "endpoint": "/api/v1/research/runs/{run}/progress?workspace_id=ws_00000000000000000000000000",
+      "status": 404
+    },
+    {
+      "id": "S5",
+      "name": "duplicate workspace_id (own then foreign)",
+      "expected": "refused (4xx) or body identical to own workspace; never foreign data",
+      "result": "PASS",
+      "detail": "-> 400 RESEARCH_PROGRESS_INVALID",
+      "endpoint": "/api/v1/research/runs/{run}/progress?workspace_id=<own>&workspace_id=ws_00000000000000000000000000",
+      "status": 400
+    },
+    {
+      "id": "S5",
+      "name": "duplicate workspace_id (foreign then own)",
+      "expected": "refused (4xx) or body identical to own workspace; never foreign data",
+      "result": "PASS",
+      "detail": "-> 400 RESEARCH_PROGRESS_INVALID",
+      "endpoint": "/api/v1/research/runs/{run}/progress?workspace_id=ws_00000000000000000000000000&workspace_id=<own>",
+      "status": 400
+    },
+    {
+      "id": "S5",
+      "name": "encoded injection workspace_id",
+      "expected": "refused (4xx) or body identical to own workspace; never foreign data",
+      "result": "PASS",
+      "detail": "-> 400 RESEARCH_PROGRESS_INVALID",
+      "endpoint": "/api/v1/research/runs/{run}/progress?workspace_id=<own>%26x%3D1",
+      "status": 400
+    },
+    {
+      "id": "S5",
+      "name": "unknown extra params do not change scope",
+      "expected": "refused (4xx) or body identical to own workspace; never foreign data",
+      "result": "PASS",
+      "detail": "-> 400 RESEARCH_PROGRESS_INVALID",
+      "endpoint": "/api/v1/research/runs/{run}/progress?bogus=1&workspace_id_override=ws_00000000000000000000000000",
+      "status": 400
+    },
+    {
+      "id": "S5",
+      "name": "library list with foreign workspace_id returns none of the own rows",
+      "expected": "4xx or empty items",
+      "result": "PASS",
+      "detail": "-> 404 items=n/a RESEARCH_RUN_LIBRARY_NOT_FOUND",
+      "endpoint": "/api/v1/quantbt/runs?workspace_id=<foreign>",
+      "status": 404
+    },
+    {
+      "id": "S5",
+      "name": "current-source replay with foreign workspace_id",
+      "expected": "404/403",
+      "result": "PASS",
+      "detail": "-> 404 RESEARCH_CURRENT_SOURCE_NOT_FOUND",
+      "endpoint": "/current-source/replay?workspace_id=<foreign>",
+      "status": 404
+    },
+    {
+      "id": "S5",
+      "name": "own-workspace cursor replayed under foreign workspace_id",
+      "expected": "4xx",
+      "result": "PASS",
+      "detail": "-> 404 RESEARCH_CURRENT_SOURCE_NOT_FOUND",
+      "endpoint": "/current-source/replay?cursor=<own>&workspace_id=<foreign>",
+      "status": 404
+    },
+    {
+      "id": "S6",
+      "name": "replay/evidence never serve rows at/after the declared cutoff (S08 replay lane)",
+      "expected": "max served bar time < declared OOS/WFO end",
+      "result": "PASS",
+      "detail": "R-WFO-027: PASS served 1080/1080 bars 2026-06-01T00:00:00.000Z..2026-07-15T23:00:00.000Z max; declared walk_forward.end_exclusive=2026-07-16T00:00:00.000Z (exclusive); late replay bars=0; evidence-series points=0 late=0 || R-WFO-023: PASS served 2208/2208 bars 2026-06-01T00:00:00.000Z..2026-08-31T23:00:00.000Z max; declared walk_forward.end_exclusive=2026-09-01T00:00:00.000Z (exclusive); late replay bars=0; evidence-series points=0 late=0 || R-WFO-022: PASS served 2208/2208 bars 2026-06-01T00:00:00.000Z..2026-08-31T23:00:00.000Z max; declared walk_forward.end_exclusive=2026-09-01T00:00:00.000Z (exclusive); late replay bars=0; evidence-series points=0 late=0 || R-P04-022: NOT_APPLICABLE cs_replay 200 NOT_APPLICABLE || R-P04-020: NOT_APPLICABLE cs_replay 200 NOT_APPLICABLE || R-WFO-019: NOT_APPLICABLE cs_replay 409 RESEARCH_CURRENT_SOURCE_CONFLICT || R-WFO-025: NOT_APPLICABLE cs_replay 409 RESEARCH_CURRENT_SOURCE_CONFLICT",
+      "endpoint": "GET .../current-source/replay (all pages) + /current-source/evidence"
+    },
+    {
+      "id": "S7",
+      "name": "Execution endpoint counts unchanged by the probes (approval inbox, operations queue)",
+      "expected": "identical counts + stripped-body digests",
+      "result": "PASS",
+      "detail": "before {\"inbox_counts\":{\"pending\":0,\"overdue\":0,\"due_soon\":0,\"page\":{\"rows\":[],\"total_count\":0,\"filtered_count\":0,\"next_cursor\":null,\"prev_cursor\":null,\"has_more\":false,\"has_previous\":false,\"applied_filters\":[{\"field\":\"status\",\"op\":\"eq\",\"value\":\"PENDING\"}],\"applied_sort\":[{\"field\":\"sla_due_at\",\"direction\":\"asc\"},{\"field\":\"approval_id\",\"direction\":\"asc\"}]}},\"inbox_digest\":\"f098dd8443b9\",\"ops_counts\":{\"page\":{\"rows\":[],\"total_count\":0,\"filtered_count\":0,\"next_cursor\":null,\"prev_cursor\":null,\"has_more\":false,\"has_previous\":false,\"applied_filters\":[],\"applied_sort\":[{\"field\":\"created_at\",\"direction\":\"desc\"},{\"field\":\"operation_id\",\"direction\":\"desc\"}]}},\"ops_digest\":\"f0b029dc203e\"}; after {\"inbox_counts\":{\"pending\":0,\"overdue\":0,\"due_soon\":0,\"page\":{\"rows\":[],\"total_count\":0,\"filtered_count\":0,\"next_cursor\":null,\"prev_cursor\":null,\"has_more\":false,\"has_previous\":false,\"applied_filters\":[{\"field\":\"status\",\"op\":\"eq\",\"value\":\"PENDING\"}],\"applied_sort\":[{\"field\":\"sla_due_at\",\"direction\":\"asc\"},{\"field\":\"approval_id\",\"direction\":\"asc\"}]}},\"inbox_digest\":\"f098dd8443b9\",\"ops_counts\":{\"page\":{\"rows\":[],\"total_count\":0,\"filtered_count\":0,\"next_cursor\":null,\"prev_cursor\":null,\"has_more\":false,\"has_previous\":false,\"applied_filters\":[],\"applied_sort\":[{\"field\":\"created_at\",\"direction\":\"desc\"},{\"field\":\"operation_id\",\"direction\":\"desc\"}]}},\"ops_digest\":\"f0b029dc203e\"}. GET /api/v1/execution/deployments does not exist (404), so no deployments list is readable.",
+      "endpoint": "GET /api/v1/execution/governance/approvals, /api/v1/execution/operations",
+      "before": {
+        "inbox_counts": {
+          "pending": 0,
+          "overdue": 0,
+          "due_soon": 0,
+          "page": {
+            "rows": [],
+            "total_count": 0,
+            "filtered_count": 0,
+            "next_cursor": null,
+            "prev_cursor": null,
+            "has_more": false,
+            "has_previous": false,
+            "applied_filters": [
+              {
+                "field": "status",
+                "op": "eq",
+                "value": "PENDING"
+              }
+            ],
+            "applied_sort": [
+              {
+                "field": "sla_due_at",
+                "direction": "asc"
+              },
+              {
+                "field": "approval_id",
+                "direction": "asc"
+              }
+            ]
+          }
+        },
+        "inbox_digest": "f098dd8443b9",
+        "ops_counts": {
+          "page": {
+            "rows": [],
+            "total_count": 0,
+            "filtered_count": 0,
+            "next_cursor": null,
+            "prev_cursor": null,
+            "has_more": false,
+            "has_previous": false,
+            "applied_filters": [],
+            "applied_sort": [
+              {
+                "field": "created_at",
+                "direction": "desc"
+              },
+              {
+                "field": "operation_id",
+                "direction": "desc"
+              }
+            ]
+          }
+        },
+        "ops_digest": "f0b029dc203e"
+      },
+      "after": {
+        "inbox_counts": {
+          "pending": 0,
+          "overdue": 0,
+          "due_soon": 0,
+          "page": {
+            "rows": [],
+            "total_count": 0,
+            "filtered_count": 0,
+            "next_cursor": null,
+            "prev_cursor": null,
+            "has_more": false,
+            "has_previous": false,
+            "applied_filters": [
+              {
+                "field": "status",
+                "op": "eq",
+                "value": "PENDING"
+              }
+            ],
+            "applied_sort": [
+              {
+                "field": "sla_due_at",
+                "direction": "asc"
+              },
+              {
+                "field": "approval_id",
+                "direction": "asc"
+              }
+            ]
+          }
+        },
+        "inbox_digest": "f098dd8443b9",
+        "ops_counts": {
+          "page": {
+            "rows": [],
+            "total_count": 0,
+            "filtered_count": 0,
+            "next_cursor": null,
+            "prev_cursor": null,
+            "has_more": false,
+            "has_previous": false,
+            "applied_filters": [],
+            "applied_sort": [
+              {
+                "field": "created_at",
+                "direction": "desc"
+              },
+              {
+                "field": "operation_id",
+                "direction": "desc"
+              }
+            ]
+          }
+        },
+        "ops_digest": "f0b029dc203e"
+      }
+    }
+  ],
+  "summary": {
+    "tally": {
+      "PASS": 182,
+      "FAIL": 18,
+      "NOT_APPLICABLE": 75,
+      "PASS_WITH_NOTE": 6
+    },
+    "failures": 18,
+    "runs": 7,
+    "gets_issued": 390,
+    "wait_ms": 5000
+  },
+  "failures": [
+    {
+      "scope": "R-WFO-027",
+      "id": "eq:source_manifest_digest",
+      "endpoint": "cs_evidence vs cs_split vs cs_search vs cs_freeze vs cs_replay vs cs_freeze.integrity.expected vs cs_freeze.integrity.observed vs report.source_digests vs pack.fields vs publication.source.legacy_artifact_sha256 vs compare_attempts.provenance",
+      "expected": "1df90ba5e094 (cs_evidence)",
+      "actual": "compare_attempts.provenance=d72af53355ac"
+    },
+    {
+      "scope": "R-WFO-027",
+      "id": "eq:split_revision",
+      "endpoint": "cs_split.revision vs report.source_revisions",
+      "expected": "rs02_split_d12ed6b8878f (cs_split.revision)",
+      "actual": "report.source_revisions=rs02_split_e08c93a775ce"
+    },
+    {
+      "scope": "R-WFO-027",
+      "id": "eq:search_revision",
+      "endpoint": "cs_search.revision vs report.source_revisions",
+      "expected": "rs02_search_cb72db4b48a7 (cs_search.revision)",
+      "actual": "report.source_revisions=rs02_search_907372db8e6d"
+    },
+    {
+      "scope": "R-WFO-027",
+      "id": "eq:freeze_revision",
+      "endpoint": "cs_freeze.revision vs report.source_revisions",
+      "expected": "rs02_freeze_9d0f43d1f3d2 (cs_freeze.revision)",
+      "actual": "report.source_revisions=rs02_freeze_e41d87877df9"
+    },
+    {
+      "scope": "R-WFO-023",
+      "id": "eq:source_manifest_digest",
+      "endpoint": "cs_evidence vs cs_split vs cs_search vs cs_freeze vs cs_replay vs cs_freeze.integrity.expected vs cs_freeze.integrity.observed vs report.source_digests vs pack.fields vs compare_attempts.provenance",
+      "expected": "afc3d407ee73 (cs_evidence)",
+      "actual": "compare_attempts.provenance=39db7cf1bc7b"
+    },
+    {
+      "scope": "R-WFO-023",
+      "id": "eq:source_fingerprint",
+      "endpoint": "rc vs rc.draft vs pack.frozen_core",
+      "expected": "74b266bcb64f (rc)",
+      "actual": "rc.draft=805ec9becf34; pack.frozen_core=805ec9becf34"
+    },
+    {
+      "scope": "R-WFO-023",
+      "id": "eq:evidence_revision",
+      "endpoint": "cs_evidence.revision vs report.source_revisions vs pack.fields vs rc.fields",
+      "expected": "rs02_evidence_399badcf84a0 (cs_evidence.revision)",
+      "actual": "report.source_revisions=rs02_evidence_7533074a250a; pack.fields=rs02_evidence_7533074a250a"
+    },
+    {
+      "scope": "R-WFO-023",
+      "id": "eq:split_revision",
+      "endpoint": "cs_split.revision vs report.source_revisions",
+      "expected": "rs02_split_0929f7599740 (cs_split.revision)",
+      "actual": "report.source_revisions=rs02_split_7533074a250a"
+    },
+    {
+      "scope": "R-WFO-023",
+      "id": "eq:search_revision",
+      "endpoint": "cs_search.revision vs report.source_revisions",
+      "expected": "rs02_search_ecc5a8e1e96e (cs_search.revision)",
+      "actual": "report.source_revisions=rs02_search_7533074a250a"
+    },
+    {
+      "scope": "R-WFO-023",
+      "id": "eq:freeze_revision",
+      "endpoint": "cs_freeze.revision vs report.source_revisions",
+      "expected": "rs02_freeze_bce796b9e439 (cs_freeze.revision)",
+      "actual": "report.source_revisions=rs02_freeze_2cec6d9bcfd8"
+    },
+    {
+      "scope": "R-WFO-023",
+      "id": "stability_5s",
+      "endpoint": "publication",
+      "expected": "identical digests (volatile keys stripped) and non-decreasing as_of",
+      "actual": "publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791086159932 -> 1791086181629"
+    },
+    {
+      "scope": "R-WFO-022",
+      "id": "eq:source_manifest_digest",
+      "endpoint": "cs_evidence vs cs_split vs cs_search vs cs_freeze vs cs_replay vs cs_freeze.integrity.expected vs cs_freeze.integrity.observed vs report.source_digests vs pack.fields vs compare_attempts.provenance",
+      "expected": "3c2f6cefdcfe (cs_evidence)",
+      "actual": "compare_attempts.provenance=39db7cf1bc7b"
+    },
+    {
+      "scope": "R-WFO-022",
+      "id": "eq:source_fingerprint",
+      "endpoint": "rc vs rc.draft vs pack.frozen_core",
+      "expected": "d2c4f2a6c1b4 (rc)",
+      "actual": "rc.draft=b38ff999f780; pack.frozen_core=b38ff999f780"
+    },
+    {
+      "scope": "R-WFO-022",
+      "id": "eq:evidence_revision",
+      "endpoint": "cs_evidence.revision vs report.source_revisions vs pack.fields vs rc.fields",
+      "expected": "rs02_evidence_711378c42e61 (cs_evidence.revision)",
+      "actual": "report.source_revisions=rs02_evidence_6ba6db690d2e; pack.fields=rs02_evidence_6ba6db690d2e"
+    },
+    {
+      "scope": "R-WFO-022",
+      "id": "eq:split_revision",
+      "endpoint": "cs_split.revision vs report.source_revisions",
+      "expected": "rs02_split_cd3bb8ab50fd (cs_split.revision)",
+      "actual": "report.source_revisions=rs02_split_6ba6db690d2e"
+    },
+    {
+      "scope": "R-WFO-022",
+      "id": "eq:search_revision",
+      "endpoint": "cs_search.revision vs report.source_revisions",
+      "expected": "rs02_search_2b51a5908a84 (cs_search.revision)",
+      "actual": "report.source_revisions=rs02_search_6ba6db690d2e"
+    },
+    {
+      "scope": "R-WFO-022",
+      "id": "eq:freeze_revision",
+      "endpoint": "cs_freeze.revision vs report.source_revisions",
+      "expected": "rs02_freeze_27c289b1b381 (cs_freeze.revision)",
+      "actual": "report.source_revisions=rs02_freeze_8fa5ba6ffb09"
+    },
+    {
+      "scope": "R-WFO-022",
+      "id": "stability_5s",
+      "endpoint": "publication",
+      "expected": "identical digests (volatile keys stripped) and non-decreasing as_of",
+      "actual": "publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791086164064 -> 1791086185898"
+    }
+  ]
+}

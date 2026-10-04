@@ -91,6 +91,8 @@ describe("no internal identifier or direct source access on the Research surface
     "datasetClient.ts",
     // B10: child-audit companion (full source lifecycle rows, paged).
     "childAuditCompanionClient.ts",
+    // P23 (Codex 7d18fe4e): linked final-audit custody read + pinned create, workspace scoped.
+    "linkedAuditClient.ts",
   ];
 
   /*
