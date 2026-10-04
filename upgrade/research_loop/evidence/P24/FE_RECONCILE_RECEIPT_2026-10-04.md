@@ -4,7 +4,7 @@ Read-only against the Research preview `http://localhost:8095` (public `https://
 
 Runs: R-WFO-027 (per_fold_causal, published RC); R-WFO-023 (sealed-local, stale); R-WFO-022 (stale seal); R-P04-022 (three_window_decay); R-P04-020 (FAILED); R-WFO-019 (CANCELLED); R-WFO-025 (QUEUED).
 
-Legacy/historical run: NOT_APPLICABLE - none exists on this preview (49 library rows; counters.legacy_metadata_rows=0; every row is RESEARCH_DURABLE / LOGICAL_RUN / binding AVAILABLE).
+Legacy/historical run: NOT_APPLICABLE - none exists on this preview (50 library rows; counters.legacy_metadata_rows=0; every row is RESEARCH_DURABLE / LOGICAL_RUN / binding AVAILABLE).
 
 Totals: PASS 182, FAIL 18, NOT_APPLICABLE 75, PASS_WITH_NOTE 6. Stability: two full read rounds >= 5s apart.
 
@@ -22,23 +22,23 @@ Totals: PASS 182, FAIL 18, NOT_APPLICABLE 75, PASS_WITH_NOTE 6. Stability: two f
 | 8 | R-WFO-023 | eq:split_revision | cs_split.revision vs report.source_revisions | rs02_split_0929f7599740 (cs_split.revision) | report.source_revisions=rs02_split_7533074a250a |
 | 9 | R-WFO-023 | eq:search_revision | cs_search.revision vs report.source_revisions | rs02_search_ecc5a8e1e96e (cs_search.revision) | report.source_revisions=rs02_search_7533074a250a |
 | 10 | R-WFO-023 | eq:freeze_revision | cs_freeze.revision vs report.source_revisions | rs02_freeze_bce796b9e439 (cs_freeze.revision) | report.source_revisions=rs02_freeze_2cec6d9bcfd8 |
-| 11 | R-WFO-023 | stability_5s | publication | identical digests (volatile keys stripped) and non-decreasing as_of | publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791086159932 -> 1791086181629 |
+| 11 | R-WFO-023 | stability_5s | sparkline vs publication | identical digests (volatile keys stripped) and non-decreasing as_of | sparkline [/api/v1/quantbt/runs/{run}/sparkline]: 200->503 .schema_version: research.run-sparkline.v1 -> undefined \| .run_id: rrun_3d5633d2adb7 -> undefined \| . |
 | 12 | R-WFO-022 | eq:source_manifest_digest | cs_evidence vs cs_split vs cs_search vs cs_freeze vs cs_replay vs cs_freeze.integrity.expected vs cs_freeze.integrity.observed vs report.source_digests vs pack. | 3c2f6cefdcfe (cs_evidence) | compare_attempts.provenance=39db7cf1bc7b |
 | 13 | R-WFO-022 | eq:source_fingerprint | rc vs rc.draft vs pack.frozen_core | d2c4f2a6c1b4 (rc) | rc.draft=b38ff999f780; pack.frozen_core=b38ff999f780 |
 | 14 | R-WFO-022 | eq:evidence_revision | cs_evidence.revision vs report.source_revisions vs pack.fields vs rc.fields | rs02_evidence_711378c42e61 (cs_evidence.revision) | report.source_revisions=rs02_evidence_6ba6db690d2e; pack.fields=rs02_evidence_6ba6db690d2e |
 | 15 | R-WFO-022 | eq:split_revision | cs_split.revision vs report.source_revisions | rs02_split_cd3bb8ab50fd (cs_split.revision) | report.source_revisions=rs02_split_6ba6db690d2e |
 | 16 | R-WFO-022 | eq:search_revision | cs_search.revision vs report.source_revisions | rs02_search_2b51a5908a84 (cs_search.revision) | report.source_revisions=rs02_search_6ba6db690d2e |
 | 17 | R-WFO-022 | eq:freeze_revision | cs_freeze.revision vs report.source_revisions | rs02_freeze_27c289b1b381 (cs_freeze.revision) | report.source_revisions=rs02_freeze_8fa5ba6ffb09 |
-| 18 | R-WFO-022 | stability_5s | publication | identical digests (volatile keys stripped) and non-decreasing as_of | publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791086164064 -> 1791086185898 |
+| 18 | R-WFO-022 | stability_5s | sparkline vs publication | identical digests (volatile keys stripped) and non-decreasing as_of | sparkline [/api/v1/quantbt/runs/{run}/sparkline]: 200->503 .schema_version: research.run-sparkline.v1 -> undefined \| .run_id: rrun_a76afa62adb6 -> undefined \| . |
 
 ## Security negative probes
 
 | id | probe | expected | result | actual |
 |---|---|---|---|---|
-| S1 | unauthenticated GET /api/v1/quantbt/runs/{run}/evidence (no cookie, no dev header) | 401 | PASS | anon -> 401 {"error":{"code":"SESSION_REQUIRED","message":"Invalid session."},"request_id":"fdf531ef91; dev-header-only without session cookie -> 401 |
-| S1 | unauthenticated GET /api/v1/research/runs/{run}/progress (no cookie, no dev header) | 401 | PASS | anon -> 401 {"error":{"code":"SESSION_REQUIRED","message":"Invalid session."},"request_id":"ecd71e6315; dev-header-only without session cookie -> 401 |
-| S1 | unauthenticated GET /api/v1/quantbt/runs (no cookie, no dev header) | 401 | PASS | anon -> 401 {"error":{"code":"SESSION_REQUIRED","message":"Invalid session."},"request_id":"0308c7d270; dev-header-only without session cookie -> 401 |
-| S1 | unauthenticated GET /api/v1/quantbt/runs/{run}/current-source/replay (no cookie, no dev header) | 401 | PASS | anon -> 401 {"error":{"code":"SESSION_REQUIRED","message":"Invalid session."},"request_id":"e51f4adde9; dev-header-only without session cookie -> 401 |
+| S1 | unauthenticated GET /api/v1/quantbt/runs/{run}/evidence (no cookie, no dev header) | 401 | PASS | anon -> 401 {"error":{"code":"SESSION_REQUIRED","message":"Invalid session."},"request_id":"6c1cf360a9; dev-header-only without session cookie -> 401 |
+| S1 | unauthenticated GET /api/v1/research/runs/{run}/progress (no cookie, no dev header) | 401 | PASS | anon -> 401 {"error":{"code":"SESSION_REQUIRED","message":"Invalid session."},"request_id":"5d7d96bed0; dev-header-only without session cookie -> 401 |
+| S1 | unauthenticated GET /api/v1/quantbt/runs (no cookie, no dev header) | 401 | PASS | anon -> 401 {"error":{"code":"SESSION_REQUIRED","message":"Invalid session."},"request_id":"76be4d0284; dev-header-only without session cookie -> 401 |
+| S1 | unauthenticated GET /api/v1/quantbt/runs/{run}/current-source/replay (no cookie, no dev header) | 401 | PASS | anon -> 401 {"error":{"code":"SESSION_REQUIRED","message":"Invalid session."},"request_id":"8edddbbb61; dev-header-only without session cookie -> 401 |
 | S2 | /api/v1/quantbt/runs/{run}/evidence: unknown id and well-formed foreign id -> 404, identical body shape/code/message | 404, identical | PASS | unknown -> 404 RESEARCH_EVIDENCE_NOT_FOUND; foreign -> 404 RESEARCH_EVIDENCE_NOT_FOUND; shapes identical |
 | S2w | /api/v1/quantbt/runs/{run}/evidence: under a foreign workspace_id an existing run and a nonexistent run answer identically (no run-existence oracle) | 404 RESEARCH_EVIDENCE_NOT_FOUND + same message | PASS | existing+foreign-ws -> 404 RESEARCH_EVIDENCE_NOT_FOUND "Research workspace was not found."; nonexistent+foreign-ws -> 404 RESEARCH_EVIDENCE_NOT_FOUND "Research  |
 | S2m | /api/v1/quantbt/runs/{run}/evidence: foreign-workspace message vs own-workspace unknown-run message (workspace-existence wording) | informational | PASS_WITH_NOTE | foreign-ws "Research workspace was not found." vs unknown-run "Research run was not found." (same status 404/404, same code true); the wording tells a caller wh |
@@ -63,10 +63,10 @@ Totals: PASS 182, FAIL 18, NOT_APPLICABLE 75, PASS_WITH_NOTE 6. Stability: two f
 | S3 | write refused: no Origin header, no CSRF header | 403 (any 4xx refusal acceptable; never 2xx) | PASS | POST .../runs/R-WFO-023/cancel -> 403 RESEARCH_PROGRESS_FORBIDDEN |
 | S3 | write refused: cross-site Origin (https://evil.example), no CSRF header | 403 (any 4xx refusal acceptable; never 2xx) | PASS | POST .../runs/R-WFO-023/cancel -> 403 RESEARCH_PROGRESS_FORBIDDEN |
 | S3 | write refused: correct Origin, no x-portal-csrf header | 403 (any 4xx refusal acceptable; never 2xx) | PASS | POST .../runs/R-WFO-023/cancel -> 403 RESEARCH_PROGRESS_FORBIDDEN |
-| S3-state | refused writes changed no run state | no library status change | PASS | all 49 library statuses unchanged |
-| S4 | legacy GET /api/runs/{id}/export before prepare (R-WFO-027) | 404; no archive built/served | PASS | -> 404 content-type=application/json bytes=74 {"detail":"run not found","request_id":"aa180ffd14ab"} |
-| S4 | legacy GET /api/runs/{id}/export before prepare (R-WFO-023) | 404; no archive built/served | PASS | -> 404 content-type=application/json bytes=74 {"detail":"run not found","request_id":"5068e459d14e"} |
-| S4 | legacy GET /api/runs/{id}/export before prepare (R-WFO-022) | 404; no archive built/served | PASS | -> 404 content-type=application/json bytes=74 {"detail":"run not found","request_id":"4bf85f019c89"} |
+| S3-state | refused writes changed no run state | no library status change | PASS | all 50 library statuses unchanged |
+| S4 | legacy GET /api/runs/{id}/export before prepare (R-WFO-027) | 404; no archive built/served | PASS | -> 404 content-type=application/json bytes=74 {"detail":"run not found","request_id":"f03a6e0d4f6c"} |
+| S4 | legacy GET /api/runs/{id}/export before prepare (R-WFO-023) | 404; no archive built/served | PASS | -> 404 content-type=application/json bytes=74 {"detail":"run not found","request_id":"00adbc93c782"} |
+| S4 | legacy GET /api/runs/{id}/export before prepare (R-WFO-022) | 404; no archive built/served | PASS | -> 404 content-type=application/json bytes=74 {"detail":"run not found","request_id":"1f1ffe312536"} |
 | S5 | own workspace_id query yields the same body as no workspace_id | 200, identical | PASS | own -> 200, bare -> 200 |
 | S5 | foreign workspace_id | refused (4xx) or body identical to own workspace; never foreign data | PASS | -> 404 RESEARCH_PROGRESS_NOT_FOUND |
 | S5 | duplicate workspace_id (own then foreign) | refused (4xx) or body identical to own workspace; never foreign data | PASS | -> 400 RESEARCH_PROGRESS_INVALID |
@@ -159,7 +159,7 @@ Read statuses: library_ids=200, progress=200, spec=200, evidence=200, cs_evidenc
 | eq:replay_revision | PASS | 2 reads equal rs02_replay_e08c93a775ce [cs_replay.revision, report.source_revisions] |
 | eq:workspace_id | PASS | 3 reads equal ws_06GCVTHWC9WVPGEPR85AB15K82 [cs_replay.page.next_cursor, execution.approval-inbox, execution.runtime-manifest] |
 | chronology | PASS | 10 timestamps non-decreasing: library.created_at=1790960539851, progress.queued_at=1790960539851, cs.retained_at=1790960551602, cs_evidence.as_of=1790960551602, |
-| stability_5s | PASS | 22 reads identical after 22s round gap (volatile as_of*/cursors stripped): library_ids=f0b53d19ca54, progress=8c5f69b38ca0, spec=a32b4726d952, evidence=0e3d79e8 |
+| stability_5s | PASS | 22 reads identical after 25s round gap (volatile as_of*/cursors stripped): library_ids=9f95dc302b1f, progress=8c5f69b38ca0, spec=a32b4726d952, evidence=0e3d79e8 |
 | as_of_monotone_across_rounds | PASS | 15 reads with as_of: none regressed between rounds |
 | replay_cutoff | PASS | served 1080/1080 bars 2026-06-01T00:00:00.000Z..2026-07-15T23:00:00.000Z max; declared walk_forward.end_exclusive=2026-07-16T00:00:00.000Z (exclusive); late rep |
 
@@ -200,7 +200,7 @@ Read statuses: library_ids=200, progress=200, spec=200, evidence=200, cs_evidenc
 | eq:replay_revision | PASS | 2 reads equal rs02_replay_7533074a250a [cs_replay.revision, report.source_revisions] |
 | eq:workspace_id | PASS | 3 reads equal ws_06GCVTHWC9WVPGEPR85AB15K82 [cs_replay.page.next_cursor, execution.approval-inbox, execution.runtime-manifest] |
 | chronology | PASS | 10 timestamps non-decreasing: library.created_at=1790862239345, progress.queued_at=1790862239345, cs.retained_at=1790862291685, cs_evidence.as_of=1790862291685, |
-| stability_5s | FAIL | publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791086159932 -> 1791086181629 |
+| stability_5s | FAIL | sparkline [/api/v1/quantbt/runs/{run}/sparkline]: 200->503 .schema_version: research.run-sparkline.v1 -> undefined \| .run_id: rrun_3d5633d2adb7 -> undefined \| . |
 | as_of_monotone_across_rounds | PASS | 15 reads with as_of: none regressed between rounds |
 | replay_cutoff | PASS | served 2208/2208 bars 2026-06-01T00:00:00.000Z..2026-08-31T23:00:00.000Z max; declared walk_forward.end_exclusive=2026-09-01T00:00:00.000Z (exclusive); late rep |
 
@@ -241,7 +241,7 @@ Read statuses: library_ids=200, progress=200, spec=200, evidence=200, cs_evidenc
 | eq:replay_revision | PASS | 2 reads equal rs02_replay_6ba6db690d2e [cs_replay.revision, report.source_revisions] |
 | eq:workspace_id | PASS | 3 reads equal ws_06GCVTHWC9WVPGEPR85AB15K82 [cs_replay.page.next_cursor, execution.approval-inbox, execution.runtime-manifest] |
 | chronology | PASS | 10 timestamps non-decreasing: library.created_at=1790858607754, progress.queued_at=1790858607754, cs.retained_at=1790858655824, cs_evidence.as_of=1790858655824, |
-| stability_5s | FAIL | publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791086164064 -> 1791086185898 |
+| stability_5s | FAIL | sparkline [/api/v1/quantbt/runs/{run}/sparkline]: 200->503 .schema_version: research.run-sparkline.v1 -> undefined \| .run_id: rrun_a76afa62adb6 -> undefined \| . |
 | as_of_monotone_across_rounds | PASS | 15 reads with as_of: none regressed between rounds |
 | replay_cutoff | PASS | served 2208/2208 bars 2026-06-01T00:00:00.000Z..2026-08-31T23:00:00.000Z max; declared walk_forward.end_exclusive=2026-09-01T00:00:00.000Z (exclusive); late rep |
 
@@ -281,8 +281,8 @@ Read statuses: library_ids=200, progress=200, spec=200, evidence=200, cs_evidenc
 | eq:freeze_revision | N/A | only one read states it: report.source_revisions=p16r1_09124de66dd2 |
 | eq:replay_revision | N/A | only one read states it: report.source_revisions=p17r1_f9b402f4bd63 |
 | eq:workspace_id | PASS | 2 reads equal ws_06GCVTHWC9WVPGEPR85AB15K82 [execution.approval-inbox, execution.runtime-manifest] |
-| chronology | PASS | 5 timestamps non-decreasing: library.created_at=1790958699018, progress.queued_at=1790958699018, report.sealed_at=1790958710305, rc.as_of=1791086164475, library |
-| stability_5s | PASS | 19 reads identical after 22s round gap (volatile as_of*/cursors stripped): library_ids=aa83f4d07186, progress=dc954f21dcfb, spec=e39cce499248, evidence=2a5463ab |
+| chronology | PASS | 5 timestamps non-decreasing: library.created_at=1790958699018, progress.queued_at=1790958699018, report.sealed_at=1790958710305, rc.as_of=1791088486524, library |
+| stability_5s | PASS | 19 reads identical after 25s round gap (volatile as_of*/cursors stripped): library_ids=fcc2ea86a120, progress=dc954f21dcfb, spec=e39cce499248, evidence=2a5463ab |
 | as_of_monotone_across_rounds | PASS | 8 reads with as_of: none regressed between rounds |
 | replay_cutoff | N/A | cs_replay 200 NOT_APPLICABLE |
 
@@ -322,8 +322,8 @@ Read statuses: library_ids=200, progress=200, spec=200, evidence=200 NOT_PUBLISH
 | eq:freeze_revision | N/A | no read states it |
 | eq:replay_revision | N/A | no read states it |
 | eq:workspace_id | PASS | 2 reads equal ws_06GCVTHWC9WVPGEPR85AB15K82 [execution.approval-inbox, execution.runtime-manifest] |
-| chronology | PASS | 5 timestamps non-decreasing: library.created_at=1790862258682, progress.queued_at=1790862258682, report.sealed_at=1790862300968, rc.as_of=1791086166060, library |
-| stability_5s | PASS | 19 reads identical after 22s round gap (volatile as_of*/cursors stripped): library_ids=826902418d73, progress=3539627e3233, spec=3c060492e9b3, evidence=2ea684d1 |
+| chronology | PASS | 5 timestamps non-decreasing: library.created_at=1790862258682, progress.queued_at=1790862258682, report.sealed_at=1790862300968, rc.as_of=1791088488159, library |
+| stability_5s | PASS | 19 reads identical after 25s round gap (volatile as_of*/cursors stripped): library_ids=77c52f944dfa, progress=3539627e3233, spec=3c060492e9b3, evidence=2ea684d1 |
 | as_of_monotone_across_rounds | PASS | 8 reads with as_of: none regressed between rounds |
 | replay_cutoff | N/A | cs_replay 200 NOT_APPLICABLE |
 
@@ -363,8 +363,8 @@ Read statuses: library_ids=200, progress=200, spec=200, evidence=200 NOT_PUBLISH
 | eq:freeze_revision | N/A | no read states it |
 | eq:replay_revision | N/A | no read states it |
 | eq:workspace_id | PASS | 2 reads equal ws_06GCVTHWC9WVPGEPR85AB15K82 [execution.approval-inbox, execution.runtime-manifest] |
-| chronology | PASS | 4 timestamps non-decreasing: library.created_at=1790796008696, progress.queued_at=1790796008696, rc.as_of=1791086167633, library.list_as_of=1791086168630 |
-| stability_5s | PASS | 19 reads identical after 22s round gap (volatile as_of*/cursors stripped): library_ids=cf45dfe101aa, progress=9b95226551f3, spec=cb3c5665191d, evidence=8a37006b |
+| chronology | PASS | 4 timestamps non-decreasing: library.created_at=1790796008696, progress.queued_at=1790796008696, rc.as_of=1791088489708, library.list_as_of=1791088490722 |
+| stability_5s | PASS | 19 reads identical after 25s round gap (volatile as_of*/cursors stripped): library_ids=655b8b6fb20b, progress=9b95226551f3, spec=cb3c5665191d, evidence=8a37006b |
 | as_of_monotone_across_rounds | PASS | 8 reads with as_of: none regressed between rounds |
 | replay_cutoff | N/A | cs_replay 409 RESEARCH_CURRENT_SOURCE_CONFLICT |
 
@@ -404,8 +404,8 @@ Read statuses: library_ids=200, progress=200, spec=200, evidence=200 PENDING_SOU
 | eq:freeze_revision | N/A | no read states it |
 | eq:replay_revision | N/A | no read states it |
 | eq:workspace_id | PASS | 2 reads equal ws_06GCVTHWC9WVPGEPR85AB15K82 [execution.approval-inbox, execution.runtime-manifest] |
-| chronology | PASS | 4 timestamps non-decreasing: library.created_at=1790958717643, progress.queued_at=1790958717643, rc.as_of=1791086169200, library.list_as_of=1791086170271 |
-| stability_5s | PASS | 19 reads identical after 22s round gap (volatile as_of*/cursors stripped): library_ids=30d9521ae307, progress=956b78906e64, spec=b0edceaaa1fc, evidence=86329195 |
+| chronology | PASS | 4 timestamps non-decreasing: library.created_at=1790958717643, progress.queued_at=1790958717643, rc.as_of=1791088491281, library.list_as_of=1791088492300 |
+| stability_5s | PASS | 19 reads identical after 25s round gap (volatile as_of*/cursors stripped): library_ids=d74eb324b597, progress=956b78906e64, spec=b0edceaaa1fc, evidence=86329195 |
 | as_of_monotone_across_rounds | PASS | 8 reads with as_of: none regressed between rounds |
 | replay_cutoff | N/A | cs_replay 409 RESEARCH_CURRENT_SOURCE_CONFLICT |
 

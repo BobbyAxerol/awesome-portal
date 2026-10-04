@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-04T03:56:32.218Z",
+  "generated_at": "2026-10-04T04:35:17.374Z",
   "base": "http://localhost:8095",
   "public_origin": "https://research-portal.primusspark.com",
   "wait_ms": 5000,
@@ -980,7 +980,7 @@
         {
           "id": "chronology",
           "result": "PASS",
-          "detail": "10 timestamps non-decreasing: library.created_at=1790960539851, progress.queued_at=1790960539851, cs.retained_at=1790960551602, cs_evidence.as_of=1790960551602, report.sealed_at=1790960552667, rc.local_seal.sealed_at=1791023135368, pack.sealed_at=1791023135368, publication.as_of=1791086156048, rc.as_of=1791086154586, library.list_as_of=1791086155730",
+          "detail": "10 timestamps non-decreasing: library.created_at=1790960539851, progress.queued_at=1790960539851, cs.retained_at=1790960551602, cs_evidence.as_of=1790960551602, report.sealed_at=1790960552667, rc.local_seal.sealed_at=1791023135368, pack.sealed_at=1791023135368, publication.as_of=1791088477495, rc.as_of=1791088475694, library.list_as_of=1791088477100",
           "values": [
             [
               "library.created_at",
@@ -1012,22 +1012,22 @@
             ],
             [
               "publication.as_of",
-              1791086156048
+              1791088477495
             ],
             [
               "rc.as_of",
-              1791086154586
+              1791088475694
             ],
             [
               "library.list_as_of",
-              1791086155730
+              1791088477100
             ]
           ]
         },
         {
           "id": "stability_5s",
           "result": "PASS",
-          "detail": "22 reads identical after 22s round gap (volatile as_of*/cursors stripped): library_ids=f0b53d19ca54, progress=8c5f69b38ca0, spec=a32b4726d952, evidence=0e3d79e8b7a5, cs_evidence=9c98de3f699a, cs_split=3a44890463f8, cs_search=8deae3d06296, cs_freeze=c756bbd2c482, cs_replay=1d7cc0565537, sealed_replay=2aad5e9791c4, report=dbaf8e27cc14, rc=510eea173b3a, sparkline=144910557850, lineage=7d2170533458, compare_attempts=823060002800, compare_pair=cde274734089, compare_markets=de61e75f355d, atlas=73f39070393b, library=344b777c38b2, pack=9e9c2da6b150, publication=ca4490abb55b, av_publication=1aacd0e126c4"
+          "detail": "22 reads identical after 25s round gap (volatile as_of*/cursors stripped): library_ids=9f95dc302b1f, progress=8c5f69b38ca0, spec=a32b4726d952, evidence=0e3d79e8b7a5, cs_evidence=9c98de3f699a, cs_split=3a44890463f8, cs_search=8deae3d06296, cs_freeze=c756bbd2c482, cs_replay=1d7cc0565537, sealed_replay=2aad5e9791c4, report=dbaf8e27cc14, rc=4925cce94b5b, sparkline=144910557850, lineage=480d7e4f0b94, compare_attempts=3bd7fdcf6b76, compare_pair=8a17401588ec, compare_markets=023e5a4eed9c, atlas=73f39070393b, library=344b777c38b2, pack=9e9c2da6b150, publication=ca4490abb55b, av_publication=b59a53de12a4"
         },
         {
           "id": "as_of_monotone_across_rounds",
@@ -1997,7 +1997,7 @@
         {
           "id": "chronology",
           "result": "PASS",
-          "detail": "10 timestamps non-decreasing: library.created_at=1790862239345, progress.queued_at=1790862239345, cs.retained_at=1790862291685, cs_evidence.as_of=1790862291685, report.sealed_at=1790862293073, rc.local_seal.sealed_at=1790862295978, pack.sealed_at=1790862295978, publication.as_of=1791086159932, rc.as_of=1791086157144, library.list_as_of=1791086159512",
+          "detail": "10 timestamps non-decreasing: library.created_at=1790862239345, progress.queued_at=1790862239345, cs.retained_at=1790862291685, cs_evidence.as_of=1790862291685, report.sealed_at=1790862293073, rc.local_seal.sealed_at=1790862295978, pack.sealed_at=1790862295978, publication.as_of=1791088481828, rc.as_of=1791088478823, library.list_as_of=1791088481412",
           "values": [
             [
               "library.created_at",
@@ -2029,25 +2029,26 @@
             ],
             [
               "publication.as_of",
-              1791086159932
+              1791088481828
             ],
             [
               "rc.as_of",
-              1791086157144
+              1791088478823
             ],
             [
               "library.list_as_of",
-              1791086159512
+              1791088481412
             ]
           ]
         },
         {
           "id": "stability_5s",
           "result": "FAIL",
-          "detail": "publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791086159932 -> 1791086181629",
+          "detail": "sparkline [/api/v1/quantbt/runs/{run}/sparkline]: 200->503 .schema_version: research.run-sparkline.v1 -> undefined | .run_id: rrun_3d5633d2adb7 -> undefined | .values: [\"20000\",\"19979.776556677327\",\"20156.96950051892\",\"20121.72002813218\",\"20187.86671631199\",\"20135.45884151315\",\"20248.36320721715\",\"20199.855384929248\",\"20275.23 -> undefined; publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791088481828 -> 1791088505107",
           "expected": "identical digests (volatile keys stripped) and non-decreasing as_of",
-          "actual": "publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791086159932 -> 1791086181629",
+          "actual": "sparkline [/api/v1/quantbt/runs/{run}/sparkline]: 200->503 .schema_version: research.run-sparkline.v1 -> undefined | .run_id: rrun_3d5633d2adb7 -> undefined | .values: [\"20000\",\"19979.776556677327\",\"20156.96950051892\",\"20121.72002813218\",\"20187.86671631199\",\"20135.45884151315\",\"20248.36320721715\",\"20199.855384929248\",\"20275.23 -> undefined; publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791088481828 -> 1791088505107",
           "endpoints": [
+            "sparkline",
             "publication"
           ]
         },
@@ -3019,7 +3020,7 @@
         {
           "id": "chronology",
           "result": "PASS",
-          "detail": "10 timestamps non-decreasing: library.created_at=1790858607754, progress.queued_at=1790858607754, cs.retained_at=1790858655824, cs_evidence.as_of=1790858655824, report.sealed_at=1790858657201, rc.local_seal.sealed_at=1790968886606, pack.sealed_at=1790968886606, publication.as_of=1791086164064, rc.as_of=1791086161063, library.list_as_of=1791086163621",
+          "detail": "10 timestamps non-decreasing: library.created_at=1790858607754, progress.queued_at=1790858607754, cs.retained_at=1790858655824, cs_evidence.as_of=1790858655824, report.sealed_at=1790858657201, rc.local_seal.sealed_at=1790968886606, pack.sealed_at=1790968886606, publication.as_of=1791088486079, rc.as_of=1791088483090, library.list_as_of=1791088485671",
           "values": [
             [
               "library.created_at",
@@ -3051,25 +3052,26 @@
             ],
             [
               "publication.as_of",
-              1791086164064
+              1791088486079
             ],
             [
               "rc.as_of",
-              1791086161063
+              1791088483090
             ],
             [
               "library.list_as_of",
-              1791086163621
+              1791088485671
             ]
           ]
         },
         {
           "id": "stability_5s",
           "result": "FAIL",
-          "detail": "publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791086164064 -> 1791086185898",
+          "detail": "sparkline [/api/v1/quantbt/runs/{run}/sparkline]: 200->503 .schema_version: research.run-sparkline.v1 -> undefined | .run_id: rrun_a76afa62adb6 -> undefined | .values: [\"20000\",\"19979.776556677327\",\"20156.96950051892\",\"20121.72002813218\",\"20187.86671631199\",\"20135.45884151315\",\"20248.36320721715\",\"20199.855384929248\",\"20275.23 -> undefined; publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791088486079 -> 1791088509752",
           "expected": "identical digests (volatile keys stripped) and non-decreasing as_of",
-          "actual": "publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791086164064 -> 1791086185898",
+          "actual": "sparkline [/api/v1/quantbt/runs/{run}/sparkline]: 200->503 .schema_version: research.run-sparkline.v1 -> undefined | .run_id: rrun_a76afa62adb6 -> undefined | .values: [\"20000\",\"19979.776556677327\",\"20156.96950051892\",\"20121.72002813218\",\"20187.86671631199\",\"20135.45884151315\",\"20248.36320721715\",\"20199.855384929248\",\"20275.23 -> undefined; publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791088486079 -> 1791088509752",
           "endpoints": [
+            "sparkline",
             "publication"
           ]
         },
@@ -3640,7 +3642,7 @@
         {
           "id": "chronology",
           "result": "PASS",
-          "detail": "5 timestamps non-decreasing: library.created_at=1790958699018, progress.queued_at=1790958699018, report.sealed_at=1790958710305, rc.as_of=1791086164475, library.list_as_of=1791086165440",
+          "detail": "5 timestamps non-decreasing: library.created_at=1790958699018, progress.queued_at=1790958699018, report.sealed_at=1790958710305, rc.as_of=1791088486524, library.list_as_of=1791088487538",
           "values": [
             [
               "library.created_at",
@@ -3656,18 +3658,18 @@
             ],
             [
               "rc.as_of",
-              1791086164475
+              1791088486524
             ],
             [
               "library.list_as_of",
-              1791086165440
+              1791088487538
             ]
           ]
         },
         {
           "id": "stability_5s",
           "result": "PASS",
-          "detail": "19 reads identical after 22s round gap (volatile as_of*/cursors stripped): library_ids=aa83f4d07186, progress=dc954f21dcfb, spec=e39cce499248, evidence=2a5463ab4995, cs_evidence=ecb9fe8ab014, cs_split=d00e664f5ca3, cs_search=90844de160bb, cs_freeze=c132385f7fb5, cs_replay=b4e95ada6094, sealed_replay=77d35b63cdfb, report=32d808e4bca6, rc=a84725d0e88b, sparkline=a1cd306a1ae0, lineage=7d2170533458, compare_attempts=823060002800, compare_pair=9c00b7ac4c04, compare_markets=de61e75f355d, atlas=73f39070393b, library=18fb19203dc2"
+          "detail": "19 reads identical after 25s round gap (volatile as_of*/cursors stripped): library_ids=fcc2ea86a120, progress=dc954f21dcfb, spec=e39cce499248, evidence=2a5463ab4995, cs_evidence=ecb9fe8ab014, cs_split=d00e664f5ca3, cs_search=90844de160bb, cs_freeze=c132385f7fb5, cs_replay=b4e95ada6094, sealed_replay=77d35b63cdfb, report=32d808e4bca6, rc=595288867827, sparkline=a1cd306a1ae0, lineage=480d7e4f0b94, compare_attempts=3bd7fdcf6b76, compare_pair=4b323c817ba1, compare_markets=023e5a4eed9c, atlas=73f39070393b, library=18fb19203dc2"
         },
         {
           "id": "as_of_monotone_across_rounds",
@@ -4170,7 +4172,7 @@
         {
           "id": "chronology",
           "result": "PASS",
-          "detail": "5 timestamps non-decreasing: library.created_at=1790862258682, progress.queued_at=1790862258682, report.sealed_at=1790862300968, rc.as_of=1791086166060, library.list_as_of=1791086167047",
+          "detail": "5 timestamps non-decreasing: library.created_at=1790862258682, progress.queued_at=1790862258682, report.sealed_at=1790862300968, rc.as_of=1791088488159, library.list_as_of=1791088489117",
           "values": [
             [
               "library.created_at",
@@ -4186,18 +4188,18 @@
             ],
             [
               "rc.as_of",
-              1791086166060
+              1791088488159
             ],
             [
               "library.list_as_of",
-              1791086167047
+              1791088489117
             ]
           ]
         },
         {
           "id": "stability_5s",
           "result": "PASS",
-          "detail": "19 reads identical after 22s round gap (volatile as_of*/cursors stripped): library_ids=826902418d73, progress=3539627e3233, spec=3c060492e9b3, evidence=2ea684d1db82, cs_evidence=1acb4ab98e81, cs_split=70407930958c, cs_search=3a61f1825d9b, cs_freeze=691bbe6ab2be, cs_replay=32cdfcda8ce2, sealed_replay=15d0b23004a6, report=b80a288df1d8, rc=3f5f71543351, sparkline=8154c4ee7d43, lineage=7d2170533458, compare_attempts=823060002800, compare_pair=b3cd5a0cae0e, compare_markets=de61e75f355d, atlas=73f39070393b, library=44f7cbd98839"
+          "detail": "19 reads identical after 25s round gap (volatile as_of*/cursors stripped): library_ids=77c52f944dfa, progress=3539627e3233, spec=3c060492e9b3, evidence=2ea684d1db82, cs_evidence=1acb4ab98e81, cs_split=70407930958c, cs_search=3a61f1825d9b, cs_freeze=691bbe6ab2be, cs_replay=32cdfcda8ce2, sealed_replay=15d0b23004a6, report=b80a288df1d8, rc=f1f7498f6f3b, sparkline=8154c4ee7d43, lineage=480d7e4f0b94, compare_attempts=3bd7fdcf6b76, compare_pair=b17d15a6d928, compare_markets=023e5a4eed9c, atlas=73f39070393b, library=44f7cbd98839"
         },
         {
           "id": "as_of_monotone_across_rounds",
@@ -4671,7 +4673,7 @@
         {
           "id": "chronology",
           "result": "PASS",
-          "detail": "4 timestamps non-decreasing: library.created_at=1790796008696, progress.queued_at=1790796008696, rc.as_of=1791086167633, library.list_as_of=1791086168630",
+          "detail": "4 timestamps non-decreasing: library.created_at=1790796008696, progress.queued_at=1790796008696, rc.as_of=1791088489708, library.list_as_of=1791088490722",
           "values": [
             [
               "library.created_at",
@@ -4683,18 +4685,18 @@
             ],
             [
               "rc.as_of",
-              1791086167633
+              1791088489708
             ],
             [
               "library.list_as_of",
-              1791086168630
+              1791088490722
             ]
           ]
         },
         {
           "id": "stability_5s",
           "result": "PASS",
-          "detail": "19 reads identical after 22s round gap (volatile as_of*/cursors stripped): library_ids=cf45dfe101aa, progress=9b95226551f3, spec=cb3c5665191d, evidence=8a37006b618b, cs_split=258724f50e2c, sealed_replay=931ca2cd097a, rc=6bced8f298a7, sparkline=e59d1273d6b4, lineage=7d2170533458, compare_attempts=823060002800, compare_pair=a0369fa2ecaf, compare_markets=de61e75f355d, atlas=73f39070393b, library=0068264f68f6"
+          "detail": "19 reads identical after 25s round gap (volatile as_of*/cursors stripped): library_ids=655b8b6fb20b, progress=9b95226551f3, spec=cb3c5665191d, evidence=8a37006b618b, cs_split=258724f50e2c, sealed_replay=931ca2cd097a, rc=ce7c7ed03198, sparkline=e59d1273d6b4, lineage=480d7e4f0b94, compare_attempts=3bd7fdcf6b76, compare_pair=108e564126d5, compare_markets=023e5a4eed9c, atlas=73f39070393b, library=0068264f68f6"
         },
         {
           "id": "as_of_monotone_across_rounds",
@@ -5168,7 +5170,7 @@
         {
           "id": "chronology",
           "result": "PASS",
-          "detail": "4 timestamps non-decreasing: library.created_at=1790958717643, progress.queued_at=1790958717643, rc.as_of=1791086169200, library.list_as_of=1791086170271",
+          "detail": "4 timestamps non-decreasing: library.created_at=1790958717643, progress.queued_at=1790958717643, rc.as_of=1791088491281, library.list_as_of=1791088492300",
           "values": [
             [
               "library.created_at",
@@ -5180,18 +5182,18 @@
             ],
             [
               "rc.as_of",
-              1791086169200
+              1791088491281
             ],
             [
               "library.list_as_of",
-              1791086170271
+              1791088492300
             ]
           ]
         },
         {
           "id": "stability_5s",
           "result": "PASS",
-          "detail": "19 reads identical after 22s round gap (volatile as_of*/cursors stripped): library_ids=30d9521ae307, progress=956b78906e64, spec=b0edceaaa1fc, evidence=86329195d987, sealed_replay=ddd6fb590d07, rc=197000dc3598, sparkline=026f0ac6ddd6, lineage=7d2170533458, compare_attempts=823060002800, compare_pair=f33f87f1a45d, compare_markets=de61e75f355d, atlas=73f39070393b, library=7d0931eefa1d"
+          "detail": "19 reads identical after 25s round gap (volatile as_of*/cursors stripped): library_ids=d74eb324b597, progress=956b78906e64, spec=b0edceaaa1fc, evidence=86329195d987, sealed_replay=ddd6fb590d07, rc=04f81716cd4c, sparkline=026f0ac6ddd6, lineage=480d7e4f0b94, compare_attempts=3bd7fdcf6b76, compare_pair=e11ff9c57d40, compare_markets=023e5a4eed9c, atlas=73f39070393b, library=7d0931eefa1d"
         },
         {
           "id": "as_of_monotone_across_rounds",
@@ -5207,7 +5209,7 @@
     }
   ],
   "legacy": {
-    "searched": "49 library rows; counters.legacy_metadata_rows=0",
+    "searched": "50 library rows; counters.legacy_metadata_rows=0",
     "found": null
   },
   "security": [
@@ -5216,7 +5218,7 @@
       "name": "unauthenticated GET /api/v1/quantbt/runs/{run}/evidence (no cookie, no dev header)",
       "expected": "401",
       "result": "PASS",
-      "detail": "anon -> 401 {\"error\":{\"code\":\"SESSION_REQUIRED\",\"message\":\"Invalid session.\"},\"request_id\":\"fdf531ef91; dev-header-only without session cookie -> 401",
+      "detail": "anon -> 401 {\"error\":{\"code\":\"SESSION_REQUIRED\",\"message\":\"Invalid session.\"},\"request_id\":\"6c1cf360a9; dev-header-only without session cookie -> 401",
       "endpoint": "/api/v1/quantbt/runs/{run}/evidence",
       "status": 401,
       "dev_header_only_status": 401
@@ -5226,7 +5228,7 @@
       "name": "unauthenticated GET /api/v1/research/runs/{run}/progress (no cookie, no dev header)",
       "expected": "401",
       "result": "PASS",
-      "detail": "anon -> 401 {\"error\":{\"code\":\"SESSION_REQUIRED\",\"message\":\"Invalid session.\"},\"request_id\":\"ecd71e6315; dev-header-only without session cookie -> 401",
+      "detail": "anon -> 401 {\"error\":{\"code\":\"SESSION_REQUIRED\",\"message\":\"Invalid session.\"},\"request_id\":\"5d7d96bed0; dev-header-only without session cookie -> 401",
       "endpoint": "/api/v1/research/runs/{run}/progress",
       "status": 401,
       "dev_header_only_status": 401
@@ -5236,7 +5238,7 @@
       "name": "unauthenticated GET /api/v1/quantbt/runs (no cookie, no dev header)",
       "expected": "401",
       "result": "PASS",
-      "detail": "anon -> 401 {\"error\":{\"code\":\"SESSION_REQUIRED\",\"message\":\"Invalid session.\"},\"request_id\":\"0308c7d270; dev-header-only without session cookie -> 401",
+      "detail": "anon -> 401 {\"error\":{\"code\":\"SESSION_REQUIRED\",\"message\":\"Invalid session.\"},\"request_id\":\"76be4d0284; dev-header-only without session cookie -> 401",
       "endpoint": "/api/v1/quantbt/runs?limit=5",
       "status": 401,
       "dev_header_only_status": 401
@@ -5246,7 +5248,7 @@
       "name": "unauthenticated GET /api/v1/quantbt/runs/{run}/current-source/replay (no cookie, no dev header)",
       "expected": "401",
       "result": "PASS",
-      "detail": "anon -> 401 {\"error\":{\"code\":\"SESSION_REQUIRED\",\"message\":\"Invalid session.\"},\"request_id\":\"e51f4adde9; dev-header-only without session cookie -> 401",
+      "detail": "anon -> 401 {\"error\":{\"code\":\"SESSION_REQUIRED\",\"message\":\"Invalid session.\"},\"request_id\":\"8edddbbb61; dev-header-only without session cookie -> 401",
       "endpoint": "/api/v1/quantbt/runs/{run}/current-source/replay?limit=1",
       "status": 401,
       "dev_header_only_status": 401
@@ -5468,7 +5470,7 @@
       "name": "refused writes changed no run state",
       "expected": "no library status change",
       "result": "PASS",
-      "detail": "all 49 library statuses unchanged",
+      "detail": "all 50 library statuses unchanged",
       "endpoint": "GET /api/v1/quantbt/runs"
     },
     {
@@ -5476,7 +5478,7 @@
       "name": "legacy GET /api/runs/{id}/export before prepare (R-WFO-027)",
       "expected": "404; no archive built/served",
       "result": "PASS",
-      "detail": "-> 404 content-type=application/json bytes=74 {\"detail\":\"run not found\",\"request_id\":\"aa180ffd14ab0b6614a3ecf4c7d37a28\"}",
+      "detail": "-> 404 content-type=application/json bytes=74 {\"detail\":\"run not found\",\"request_id\":\"f03a6e0d4f6c6dcae464a89119f064c9\"}",
       "endpoint": "GET /api/runs/{run}/export",
       "status": 404,
       "content_type": "application/json; charset=utf-8",
@@ -5487,7 +5489,7 @@
       "name": "legacy GET /api/runs/{id}/export before prepare (R-WFO-023)",
       "expected": "404; no archive built/served",
       "result": "PASS",
-      "detail": "-> 404 content-type=application/json bytes=74 {\"detail\":\"run not found\",\"request_id\":\"5068e459d14e94cc74c5ea0ea3023343\"}",
+      "detail": "-> 404 content-type=application/json bytes=74 {\"detail\":\"run not found\",\"request_id\":\"00adbc93c78208334a3fbd7f51c53752\"}",
       "endpoint": "GET /api/runs/{run}/export",
       "status": 404,
       "content_type": "application/json; charset=utf-8",
@@ -5498,7 +5500,7 @@
       "name": "legacy GET /api/runs/{id}/export before prepare (R-WFO-022)",
       "expected": "404; no archive built/served",
       "result": "PASS",
-      "detail": "-> 404 content-type=application/json bytes=74 {\"detail\":\"run not found\",\"request_id\":\"4bf85f019c8943bafe95064499daedc4\"}",
+      "detail": "-> 404 content-type=application/json bytes=74 {\"detail\":\"run not found\",\"request_id\":\"1f1ffe312536d9318b5633dcc22ff749\"}",
       "endpoint": "GET /api/runs/{run}/export",
       "status": 404,
       "content_type": "application/json; charset=utf-8",
@@ -5801,9 +5803,9 @@
     {
       "scope": "R-WFO-023",
       "id": "stability_5s",
-      "endpoint": "publication",
+      "endpoint": "sparkline vs publication",
       "expected": "identical digests (volatile keys stripped) and non-decreasing as_of",
-      "actual": "publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791086159932 -> 1791086181629"
+      "actual": "sparkline [/api/v1/quantbt/runs/{run}/sparkline]: 200->503 .schema_version: research.run-sparkline.v1 -> undefined | .run_id: rrun_3d5633d2adb7 -> undefined | .values: [\"20000\",\"19979.776556677327\",\"20156.96950051892\",\"20121.72002813218\",\"20187.86671631199\",\"20135.45884151315\",\"20248.36320721715\",\"20199.855384929248\",\"20275.23 -> undefined; publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791088481828 -> 1791088505107"
     },
     {
       "scope": "R-WFO-022",
@@ -5850,9 +5852,9 @@
     {
       "scope": "R-WFO-022",
       "id": "stability_5s",
-      "endpoint": "publication",
+      "endpoint": "sparkline vs publication",
       "expected": "identical digests (volatile keys stripped) and non-decreasing as_of",
-      "actual": "publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791086164064 -> 1791086185898"
+      "actual": "sparkline [/api/v1/quantbt/runs/{run}/sparkline]: 200->503 .schema_version: research.run-sparkline.v1 -> undefined | .run_id: rrun_a76afa62adb6 -> undefined | .values: [\"20000\",\"19979.776556677327\",\"20156.96950051892\",\"20121.72002813218\",\"20187.86671631199\",\"20135.45884151315\",\"20248.36320721715\",\"20199.855384929248\",\"20275.23 -> undefined; publication [/api/v1/research/release-candidates/{rc}/publication]: 200->200 .updated_at_utc_ms: 1791088486079 -> 1791088509752"
     }
   ]
 }
