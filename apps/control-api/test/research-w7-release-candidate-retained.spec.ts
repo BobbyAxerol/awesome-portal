@@ -400,6 +400,54 @@ describe("W7 · P21 retained lane on the real Delta WFO run", () => {
     },
   );
 
+  it.each(["enrichment", "analytics", "distributions", "analytics-and-distributions"])(
+    "keeps the exact base-seal Report eligible after %s companions without rewriting it", async (kind) => {
+      const fixture = (name: string) => JSON.parse(readFileSync(join(
+        process.env.PORTAL_CONTRACTS_DIR ?? join(__dirname, "../../../packages/contracts"), "fixtures", name,
+      ), "utf8"));
+      const seal = structuredClone(lane().seal!);
+      if (kind === "enrichment") seal.enrichedAnalysis = { ...fixture("research-enriched-analysis.healthy.valid.json"), run_id: preview.run_id };
+      if (kind.includes("analytics")) {
+        const analytics = fixture("research-retained-analytics-v2.fixed.valid.json");
+        seal.analyticsSidecar = { digest: sha(analytics), sourceRowsDigest: "a".repeat(64), analytics };
+      }
+      if (kind.includes("distributions")) {
+        const distributions = fixture("research-all-time-distributions.valid.json");
+        seal.distributionsSidecar = { digest: sha(distributions), distributions };
+      }
+      const value = source({}, { seal });
+      const captured = preview.report.frozen_core.source_revisions.evidence_revision;
+      expect(captured).toBe(`rs02_evidence_${retainedLaneFacts(value.wfo!).sealDigest}`);
+      expect(captured).not.toBe(retainedLaneFacts(value.wfo!).evidenceRevision);
+      const originalBytes = JSON.stringify(value.report);
+      const { service, repository } = subject(value, draft(value));
+      const composed = await service.detail(scope, value.runId);
+      expect(rows(composed).METRICS_SEMANTICS).toEqual(["COMPLETE", null]);
+      expect(composed.actions.may_seal).toBe(true);
+      expect(composed.fields.find(item => item.key === "evidence_revision")?.value).toBe(retainedLaneFacts(value.wfo!).evidenceRevision);
+      expect(composed.fields.find(item => item.key === "report_revision")?.value).toBe(value.report.reportRevision);
+      expect(JSON.stringify(value.report)).toBe(originalBytes);
+      expect(repository.seal).not.toHaveBeenCalled();
+      expect(repository.patchDraft).not.toHaveBeenCalled();
+      composeValidator.assert(composed);
+    },
+  );
+
+  it.each(["manifest_digest", "source_transform_digest", "requested_spec_digest", "effective_spec_digest", "dataset_binding_digest"])(
+    "refuses an archived base Report with missing or changed %s instead of borrowing a current companion", async (pin) => {
+      for (const wrong of [null, "0".repeat(64)]) {
+        const core = structuredClone(preview.report.frozen_core);
+        core.source_digests[pin] = wrong;
+        const value = source({ report: { ...source().report, frozenCore: core, reportRevision: `p18r1_${sha(core)}` } });
+        const originalBytes = JSON.stringify(value.report);
+        const composed = await subject(value, draft(value)).service.detail(scope, value.runId);
+        expect(rows(composed).METRICS_SEMANTICS).toEqual(["MISSING", "P21_RETAINED_REPORT_NOT_SEALED"]);
+        expect(composed.actions.may_seal).toBe(false);
+        expect(JSON.stringify(value.report)).toBe(originalBytes);
+      }
+    },
+  );
+
   it("rejects stale, forged, unsealed and other-run report cores without repairing an immutable seal", async () => {
     const healthy = source();
     const sealedReport = (core: Json) => ({ ...healthy.report, frozenCore: core, reportRevision: `p18r1_${sha(core)}` });

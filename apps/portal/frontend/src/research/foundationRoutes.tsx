@@ -112,6 +112,12 @@ export function useFoundationRead<T>(
 
 export function JourneyMapRoute() {
   const location = useLocation();
+  const workspaceId = new URLSearchParams(location.search).get("workspace_id") ?? "";
+  return <JourneyMapContainer key={workspaceId} />;
+}
+
+function JourneyMapContainer() {
+  const location = useLocation();
   const [retry, setRetry] = useState(0);
 
   /* A malformed link is a refusal before any request: sending a query we
@@ -172,6 +178,12 @@ export function atlasQueryFromSearch(search: string): AtlasQuery {
 }
 
 export function EngineAtlasRoute() {
+  const location = useLocation();
+  const workspaceId = new URLSearchParams(location.search).get("workspace_id") ?? "";
+  return <EngineAtlasContainer key={workspaceId} />;
+}
+
+function EngineAtlasContainer() {
   const location = useLocation();
   useEffect(() => preloadKatex(), []);
   const query = useMemo(() => atlasQueryFromSearch(location.search), [location.search]);

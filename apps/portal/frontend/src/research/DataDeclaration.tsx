@@ -197,6 +197,7 @@ type Remote =
   | { state: "ok"; q: string; items: readonly CatalogSymbol[]; total: number | null; nextCursor: string | null };
 
 export function SymbolCombobox({
+  workspaceId,
   value,
   symbols,
   total,
@@ -225,6 +226,7 @@ export function SymbolCombobox({
   /** The catalog's own cursor, when it served a first page only. */
   nextCursor?: string | null;
   search?: typeof readDatasetSymbols;
+  workspaceId?: string;
   debounceMs?: number;
   /** Told the symbol the server was asked for and answered "none" for; null otherwise. */
   onServerMiss?: (symbol: string | null) => void;
@@ -260,7 +262,7 @@ export function SymbolCombobox({
     const controller = new AbortController();
     const timer = setTimeout(() => {
       setRemote({ state: "loading" });
-      void search(datasetId, { q: needle, kind, timeframe, limit: PAGE_LIMIT }, controller.signal).then((result: SymbolSearchResult) => {
+      void search(datasetId, { q: needle, kind, timeframe, limit: PAGE_LIMIT, ...(workspaceId ? { workspaceId } : {}) }, controller.signal).then((result: SymbolSearchResult) => {
         if (controller.signal.aborted) return;
         if (result.state === "absent") {
           absentFor.current = datasetId;
@@ -278,7 +280,7 @@ export function SymbolCombobox({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [partial, datasetId, needle, kind, timeframe, search, debounceMs]);
+  }, [partial, datasetId, needle, kind, timeframe, search, debounceMs, workspaceId]);
 
   const fromServer = remote.state === "ok";
   const shownSymbols = fromServer ? remote.items : kind === "" ? symbols : symbols.filter((item) => item.contract_kind === kind);
@@ -286,7 +288,7 @@ export function SymbolCombobox({
   const cursor = fromServer ? remote.nextCursor : remote.state === "absent" || remote.state === "unindexed" ? null : nextCursor;
   const loadMore = useCallback(() => {
     if (cursor === null || datasetId === "") return;
-    void search(datasetId, { q: needle, kind, timeframe, cursor, limit: PAGE_LIMIT }).then((result) => {
+    void search(datasetId, { q: needle, kind, timeframe, cursor, limit: PAGE_LIMIT, ...(workspaceId ? { workspaceId } : {}) }).then((result) => {
       if (result.state !== "page") return;
       setRemote((current) => {
         const base = current.state === "ok" ? current.items : symbols;
@@ -300,7 +302,7 @@ export function SymbolCombobox({
         };
       });
     });
-  }, [cursor, datasetId, search, needle, kind, timeframe, symbols, total]);
+  }, [cursor, datasetId, search, needle, kind, timeframe, symbols, total, workspaceId]);
   const missed = fromServer && remote.total === 0 && remote.q === value.trim().toUpperCase() ? remote.q : null;
   useEffect(() => {
     onServerMiss?.(missed);

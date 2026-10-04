@@ -15,8 +15,8 @@ import { LineageScreen } from "./LineageDetail";
 import { useLineage } from "./useLineage";
 
 function LineageContainer({ alphaId }: { alphaId: string }) {
-  const controller = useLineage(alphaId);
   const [params, setParams] = useSearchParams();
+  const controller = useLineage(alphaId, { workspaceId: params.get("workspace_id") || undefined });
   const [initial] = useState(() => ({
     av: params.get("av"),
     attempt: params.get("attempt"),
@@ -69,5 +69,6 @@ function LineageContainer({ alphaId }: { alphaId: string }) {
 
 export function LineageRoute() {
   const { alphaId = "" } = useParams();
-  return <LineageContainer key={alphaId} alphaId={alphaId} />;
+  const [params] = useSearchParams();
+  return <LineageContainer key={`${params.get("workspace_id") ?? ""}|${alphaId}`} alphaId={alphaId} />;
 }

@@ -308,7 +308,7 @@ export const ResearchEvidenceSourceSchema = z.object({
   schema_version: z.literal("research.p13.evidence-source.v1"),
   source: z.object({
     execution_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]),
-    engine_version: z.string().regex(/^1\.1\.1$/),
+    engine_version: z.enum(["1.1.0", "1.1.1"]),
     input_scope: z.literal("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY"),
     oos_observation_count: z.number().int().positive().max(2_000_000),
     emitted_equity_points: z.number().int().positive().max(192),
@@ -554,7 +554,7 @@ export const ResearchSplitSourceSchema = z.object({
     /** E17 child-verified raw-source SHA; absent on P04/historical receipts. */
     imported_source_digest: DigestSchema.optional(),
     execution_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]),
-    engine_version: z.string().regex(/^1\.1\.1$/),
+    engine_version: z.enum(["1.1.0", "1.1.1"]),
     input_scope: z.literal("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY"),
     source_transform_digest: DigestSchema,
     manifest_digest: DigestSchema,

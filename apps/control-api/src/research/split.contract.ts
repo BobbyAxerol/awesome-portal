@@ -157,7 +157,7 @@ export const ResearchSplitResponseSchema = z.object({
   dataset: DatasetFactSchema,
   provenance: z.object({
     source_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]).nullable(),
-    engine_version: z.literal("1.1.1").nullable(),
+    engine_version: z.enum(["1.1.0", "1.1.1"]).nullable(),
     input_scope: z.literal("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY").nullable(),
     source_transform_digest: DigestSchema.nullable(),
     requested_spec_digest: DigestSchema.nullable(),

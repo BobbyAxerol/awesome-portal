@@ -133,6 +133,7 @@ class ResearchRunProducerEnvelope(PortalModel):
     alpha_version_id: str = Field(pattern=_IDENTIFIER, max_length=191)
     execution_adapter_id: Literal["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]
     adapter_contract_digest: str = Field(pattern=_DIGEST)
+    qualification_binding: dict[str, Any] | None = Field(default=None, max_length=16)
     # W1 §1.1: absent ⇒ the unchanged P04 fixed qualification.  The P04 wire
     # never carries these two fields (see the serializer below), so the P04
     # durable request, its spec digest and the child receipt stay byte-equal.
@@ -196,6 +197,8 @@ class ResearchRunProducerEnvelope(PortalModel):
             data.pop("imported_entrypoint", None)
         if self.imported_parameters is None:
             data.pop("imported_parameters", None)
+        if self.qualification_binding is None:
+            data.pop("qualification_binding", None)
         return data
 
     @model_validator(mode="after")
@@ -215,6 +218,18 @@ class ResearchRunProducerEnvelope(PortalModel):
             raise ValueError("requested_spec AlphaVersion does not match the immutable producer binding")
         if self.requested_spec.get("strategy_id") != self.alpha_id:
             raise ValueError("requested_spec strategy_id does not match the immutable Alpha identity")
+        from .research_engine_qualification import validate_engine_qualification_binding
+        release_id = self.requested_spec.get("client", {}).get("engine_release_id")
+        if release_id == "er_quantbt_110" or self.qualification_binding is not None:
+            validate_engine_qualification_binding(self.qualification_binding, release_id=release_id,
+                profile_id=self.execution_profile_id, adapter_contract_digest=self.adapter_contract_digest)
+            if (self.requested_spec.get("schema_version") != "research.requested-spec.v1"
+                    or self.requested_spec.get("data") != {"dataset_id": "crypto-binance-1m", "symbol": "BTCUSDT", "timeframe": "1h"}
+                    or self.requested_spec.get("optuna_trials") != 1 or self.requested_spec.get("early_stopping") is not None
+                    or self.requested_spec.get("random_seed") is not None
+                    or self.requested_spec.get("optimization_config") not in ({}, None)
+                    or self.requested_spec.get("parameter_space_overrides") != []):
+                raise ValueError("ENGINE_QUALIFICATION_FIXED_PROFILE_ONLY")
         if self.is_final_audit:
             self._validate_final_audit_profile()
             return self
@@ -281,6 +296,8 @@ class ResearchRunProducerEnvelope(PortalModel):
             return self
         if self.execution_profile_digest is not None:
             raise ValueError("the P04 fixed qualification profile carries no execution profile digest")
+        validate_engine_qualification_binding(self.qualification_binding, release_id=release_id,
+            profile_id=self.execution_profile_id, adapter_contract_digest=self.adapter_contract_digest)
         if self.p04_parameters is None:
             raise ValueError("P10 must retain exactly the installed P04 parameter map")
         if self.requested_spec.get("execution_route") != "signal_notional":

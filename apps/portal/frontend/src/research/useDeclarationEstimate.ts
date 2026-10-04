@@ -59,6 +59,7 @@ export function useDeclarationEstimate(
   enabled: boolean,
   post: (spec: unknown, workspaceId: string | undefined, signal?: AbortSignal) => Promise<DeclarationEstimateResult> = postDeclarationEstimate,
   debounceMs: number = DECLARATION_ESTIMATE_DEBOUNCE_MS,
+  workspaceId?: string,
 ): DeclarationEstimateState {
   const ready = enabled && estimateReady(draft);
   const spec = useMemo(() => (ready ? serializeRequestedSpec(draft) : null), [ready, draft]);
@@ -68,7 +69,7 @@ export function useDeclarationEstimate(
   latest.current = spec;
   const [attempt, setAttempt] = useState(0);
   const [answer, setAnswer] = useState<{ key: string; status: EstimateStatus } | null>(null);
-  const key = signature === null ? null : `${attempt}|${signature}`;
+  const key = signature === null ? null : `${workspaceId ?? ""}|${attempt}|${signature}`;
 
   useEffect(() => {
     if (key === null) return;
@@ -76,7 +77,7 @@ export function useDeclarationEstimate(
     const timer = setTimeout(() => {
       const spec = latest.current;
       if (spec === null) return;
-      post(spec, undefined, controller.signal).then(
+      post(spec, workspaceId, controller.signal).then(
         (result) => {
           if (!controller.signal.aborted) setAnswer({ key, status: statusOf(result) });
         },

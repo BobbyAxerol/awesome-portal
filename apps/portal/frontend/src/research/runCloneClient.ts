@@ -20,8 +20,8 @@ import type { ResearchState } from "./state";
  */
 export type RunRequestedSpec = Omit<GeneratedRunRequestedSpec, "requested_spec"> & { requested_spec: RequestedSpec };
 
-export async function readRunRequestedSpec(runId: string, signal?: AbortSignal): Promise<RunRequestedSpec> {
-  return (await progressApi.requestedSpec(runId, undefined, signal)) as unknown as RunRequestedSpec;
+export async function readRunRequestedSpec(runId: string, signal?: AbortSignal, workspaceId?: string): Promise<RunRequestedSpec> {
+  return (await progressApi.requestedSpec(runId, workspaceId, signal)) as unknown as RunRequestedSpec;
 }
 
 /** Copy for each typed refusal of the clone read; the form stays usable. */

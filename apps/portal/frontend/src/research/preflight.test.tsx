@@ -23,6 +23,7 @@ import {
   type Topology,
   type UtcRange,
   sameRequestedSpec,
+  preflightApi,
   toPreflightRefusal,
 } from "./preflightClient";
 import { SPEC_CHANGED_NOTE, usePreflight } from "./usePreflight";
@@ -451,6 +452,65 @@ describe("P08-T06 — a token belongs to the spec it was issued for", () => {
     expect(
       sameRequestedSpec(spec(), spec({ data: { dataset_id: "ds_btcusdt_4h", symbol: "ETHUSDT", timeframe: "4h" } })),
     ).toBe(false);
+  });
+});
+
+describe("SC23 — pending preflight response belongs to its declaration and workspace", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it.each([
+    ["create", "answer"], ["create", "refusal"],
+    ["reopen", "answer"], ["reopen", "refusal"],
+  ] as const)("late %s %s for A cannot populate edited B", async (operation, outcome) => {
+    let resolve!: (value: PreflightResponse) => void, reject!: (reason: Error) => void;
+    const read = vi.spyOn(preflightApi, operation === "create" ? "create" : "get").mockImplementation(() => new Promise<PreflightResponse>((ok, fail) => { resolve = ok; reject = fail; }));
+    const { result, rerender } = renderHook(({ s }) => usePreflight(s, "workspace_a"), { initialProps: { s: spec() } });
+    act(() => {
+      if (operation === "create") { result.current.runPreflight(); result.current.runPreflight(); }
+      else { result.current.reopen("pf_a"); result.current.reopen("pf_a"); }
+    });
+    expect(read).toHaveBeenCalledTimes(1);
+    rerender({ s: spec({ random_seed: 43 }) });
+    await act(async () => { if (outcome === "answer") resolve(preflight()); else reject(new TypeError("Late A refusal")); });
+    expect(result.current.preflight).toBeNull();
+    expect(result.current.refusal).toBeNull();
+    expect(result.current.needsPreflight).toBe(true);
+    expect(result.current.pending).toBe(false);
+  });
+
+  it.each(["create", "reopen"] as const)("pending %s cannot cross a workspace change", async operation => {
+    let resolve!: (value: PreflightResponse) => void;
+    vi.spyOn(preflightApi, operation === "create" ? "create" : "get").mockImplementation(() => new Promise<PreflightResponse>(ok => { resolve = ok; }));
+    const { result, rerender } = renderHook(({ workspace }) => usePreflight(spec(), workspace), { initialProps: { workspace: "workspace_a" } });
+    act(() => operation === "create" ? result.current.runPreflight() : result.current.reopen("pf_a"));
+    rerender({ workspace: "workspace_b" });
+    await act(async () => resolve(preflight()));
+    expect(result.current.preflight).toBeNull();
+    expect(result.current.refusal).toBeNull();
+    expect(result.current.pending).toBe(false);
+  });
+
+  it("an accepted token invalidates on workspace change even with an equal declaration", async () => {
+    vi.spyOn(preflightApi, "create").mockResolvedValue(preflight());
+    const { result, rerender } = renderHook(({ workspace }) => usePreflight(spec(), workspace), { initialProps: { workspace: "workspace_a" } });
+    await act(async () => result.current.runPreflight());
+    expect(result.current.preflight).not.toBeNull();
+    rerender({ workspace: "workspace_b" });
+    expect(result.current.preflight).toBeNull();
+    expect(result.current.needsPreflight).toBe(true);
+  });
+
+  it.each(["answer", "refusal"] as const)("unmounted preflight ignores late %s", async outcome => {
+    let resolve!: (value: PreflightResponse) => void, reject!: (reason: Error) => void;
+    vi.spyOn(preflightApi, "create").mockImplementation(() => new Promise((ok, fail) => { resolve = ok; reject = fail; }));
+    const { result, unmount } = renderHook(() => usePreflight(spec(), "workspace_a"));
+    act(() => result.current.runPreflight());
+    const previous = result.current;
+    unmount();
+    await act(async () => { if (outcome === "answer") resolve(preflight()); else reject(new TypeError("Late unmounted refusal")); });
+    expect(result.current).toBe(previous);
+    expect(result.current.preflight).toBeNull();
+    expect(result.current.refusal).toBeNull();
   });
 });
 

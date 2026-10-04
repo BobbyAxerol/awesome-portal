@@ -7,7 +7,7 @@
  * hiding the question.
  */
 
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 
 import { FreezeScreen } from "./FreezeDetail";
 import { RouteCursorNotice } from "./CursorNotice";
@@ -18,10 +18,16 @@ import { StageDenied } from "./StageDenied";
 
 export function FreezeRoute({ embedded = false }: { embedded?: boolean } = {}) {
   const { runId = "" } = useParams<{ runId: string }>();
+  const [search] = useSearchParams();
+  const workspaceId = search.get("workspace_id") || undefined;
+  return <FreezeRouteBody key={`${workspaceId ?? ""}|${runId}`} runId={runId} workspaceId={workspaceId} embedded={embedded} />;
+}
+
+function FreezeRouteBody({ runId, workspaceId, embedded }: { runId: string; workspaceId?: string; embedded: boolean }) {
   const { cursor, problems } = useEvidenceCursor({ stage: "freeze" });
-  const freeze = useFreeze(runId, cursor.fold);
+  const freeze = useFreeze(runId, cursor.fold, workspaceId);
   /* W3b: the run identity (schedule, folds, readiness) a retained answer is read against. */
-  const identity = useRunIdentity(runId, undefined, freeze.laneRetained);
+  const identity = useRunIdentity(runId, workspaceId, freeze.laneRetained);
 
   /* E2 (X8): a refused run gets the shared "run not available" page, not the stage chrome. */
   if (freeze.state.state === "denied" && freeze.detail === null) {
@@ -32,6 +38,7 @@ export function FreezeRoute({ embedded = false }: { embedded?: boolean } = {}) {
       {embedded ? null : <RouteCursorNotice problems={problems} />}
       <FreezeScreen
         runId={runId}
+        workspaceId={workspaceId}
         detail={freeze.detail}
         state={freeze.state}
         cursor={cursor}

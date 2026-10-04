@@ -62,6 +62,20 @@ export function usePreflight(
 
   /** The exact spec the held token was issued for. Never sent anywhere. */
   const issuedFor = useRef<RequestedSpec | null>(null);
+  const issuedWorkspace = useRef(workspaceId);
+  const mounted = useRef(true);
+  const activeRequest = useRef<object | null>(null);
+  const context = useRef({ spec: requestedSpec, workspaceId, generation: 0 });
+  /* Relevance changes synchronously with render, before a late promise can
+     adopt the preceding declaration's token. Equal structural copies remain
+     the same declaration; no client digest is invented. */
+  if (!sameRequestedSpec(context.current.spec, requestedSpec) || context.current.workspaceId !== workspaceId) {
+    context.current = { spec: requestedSpec, workspaceId, generation: context.current.generation + 1 };
+  }
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; context.current.generation += 1; };
+  }, []);
 
   /*
    * Any difference in the declaration drops the preview. This runs as an
@@ -71,12 +85,12 @@ export function usePreflight(
    */
   useEffect(() => {
     if (issuedFor.current === null) return;
-    if (sameRequestedSpec(issuedFor.current, requestedSpec)) return;
+    if (sameRequestedSpec(issuedFor.current, requestedSpec) && issuedWorkspace.current === workspaceId) return;
     issuedFor.current = null;
     setPreflight(null);
     setRefusal(null);
     setClearedBecause(SPEC_CHANGED_NOTE);
-  }, [requestedSpec]);
+  }, [requestedSpec, workspaceId]);
 
   const fail = useCallback((error: unknown) => {
     const next = toPreflightRefusal(error);
@@ -85,42 +99,40 @@ export function usePreflight(
       issuedFor.current = null;
       setPreflight(null);
     }
-    setPending(false);
   }, []);
 
-  const runPreflight = useCallback(() => {
-    if (requestedSpec === null) return;
+  const loadPreflight = useCallback((load: () => Promise<PreflightResponse>) => {
+    if (activeRequest.current !== null || context.current.workspaceId !== workspaceId || !sameRequestedSpec(context.current.spec, requestedSpec)) return;
+    const request = { generation: context.current.generation };
+    activeRequest.current = request;
+    const relevant = () => mounted.current && context.current.generation === request.generation && context.current.workspaceId === workspaceId && sameRequestedSpec(context.current.spec, requestedSpec);
     setPending(true);
     setRefusal(null);
     setClearedBecause(null);
-    /* The body carries the spec. The digest is the server's to derive. */
-    preflightApi
-      .create({ workspace_id: workspaceId, requested_spec: requestedSpec })
+    load()
       .then((response) => {
+        if (!relevant()) return;
         issuedFor.current = requestedSpec;
+        issuedWorkspace.current = workspaceId;
         setPreflight(response);
-        setPending(false);
       })
-      .catch(fail);
+      .catch((error: unknown) => { if (relevant()) fail(error); })
+      .finally(() => {
+        if (activeRequest.current !== request) return;
+        activeRequest.current = null;
+        if (mounted.current) setPending(false);
+      });
   }, [fail, requestedSpec, workspaceId]);
 
+  const runPreflight = useCallback(() => {
+    if (requestedSpec === null) return;
+    /* The body carries the spec. The digest is the server's to derive. */
+    loadPreflight(() => preflightApi.create({ workspace_id: workspaceId, requested_spec: requestedSpec }));
+  }, [loadPreflight, requestedSpec, workspaceId]);
+
   const reopen = useCallback(
-    (token: string) => {
-      setPending(true);
-      setRefusal(null);
-      preflightApi
-        .get(token, workspaceId)
-        .then((response) => {
-          /* A reopened preview is only usable for the spec on screen. If the
-             two have drifted the metadata is still shown, but the token is not
-             adopted as valid for this declaration. */
-          issuedFor.current = requestedSpec;
-          setPreflight(response);
-          setPending(false);
-        })
-        .catch(fail);
-    },
-    [fail, requestedSpec, workspaceId],
+    (token: string) => loadPreflight(() => preflightApi.get(token, workspaceId)),
+    [loadPreflight, workspaceId],
   );
 
   function panelState(): ResearchState {

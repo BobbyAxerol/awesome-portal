@@ -13,7 +13,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 
 import { SearchScreen } from "./SearchDetail";
 import { useModeReads } from "./SearchFoldStrip";
@@ -24,6 +24,12 @@ import { SEARCH_FOLD_MAX, retainedSearchOf, useRetainedRunFacts, useSearch } fro
 
 export function SearchRoute({ embedded = false }: { embedded?: boolean } = {}) {
   const { runId = "" } = useParams<{ runId: string }>();
+  const [search] = useSearchParams();
+  const workspaceId = search.get("workspace_id") || undefined;
+  return <SearchRouteBody key={`${workspaceId ?? ""}|${runId}`} runId={runId} workspaceId={workspaceId} embedded={embedded} />;
+}
+
+function SearchRouteBody({ runId, workspaceId, embedded }: { runId: string; workspaceId?: string; embedded: boolean }) {
   const { cursor, problems, notes, replaceFold, decline, clampToObserved, update, addNote } = useEvidenceCursor({ stage: "search" });
   /* X2 · F4 (T07/T08): the inspected trial lives in the hash as `pick=`, so a
      link restores it; picking never moves θ* or any other cursor key. */
@@ -46,13 +52,13 @@ export function SearchRoute({ embedded = false }: { embedded?: boolean } = {}) {
   const target = known && known.length > 0 ? clampFold(cursor.fold, known).fold : cursor.fold;
   const clamped = target !== cursor.fold;
   const inRange = target >= 1 && target <= SEARCH_FOLD_MAX;
-  const search = useSearch(runId, inRange ? target : DEFAULT_CURSOR.fold);
+  const search = useSearch(runId, inRange ? target : DEFAULT_CURSOR.fold, workspaceId);
   /* W3b: a retained WFO run is read against its own identity and declared space. */
-  const retainedRun = useRetainedRunFacts(runId, undefined, search.ledger);
+  const retainedRun = useRetainedRunFacts(runId, workspaceId, search.ledger);
   /* G8: the fold plan and the Atlas, for the "what this mode reads" strip — asked only on a retained run. */
-  const modeReads = useModeReads(runId, search.ledger);
+  const modeReads = useModeReads(runId, search.ledger, workspaceId);
   /* F2: the retained trial ledger asked with the cursor's fold, named by the fold plan. */
-  const foldLedger = useFoldLedger(runId, search.ledger, modeReads.plan, inRange ? target : DEFAULT_CURSOR.fold);
+  const foldLedger = useFoldLedger(runId, search.ledger, modeReads.plan, inRange ? target : DEFAULT_CURSOR.fold, workspaceId);
 
   useEffect(() => {
     if (known && known.length > 0) clampToObserved(known);
@@ -117,6 +123,7 @@ export function SearchRoute({ embedded = false }: { embedded?: boolean } = {}) {
       ) : null}
       <SearchScreen
         runId={runId}
+        workspaceId={workspaceId}
         detail={search.detail}
         state={search.state}
         notFound={search.refusal?.notFound === true}

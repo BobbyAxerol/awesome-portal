@@ -40,7 +40,8 @@
  */
 
 import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { ResearchScopedLink as Link } from "./ResearchScopedLink";
 
 import { RouteCursorNotice } from "./CursorNotice";
 import { parseCursorProblems } from "./evidenceCursor";
@@ -1971,7 +1972,7 @@ function UnknownOutcomeCard({ publication, controller }: { publication: RcPublic
         {" · recorded "}
         {current.publication_created_at ?? "not published"}
         {" · updated "}
-        {current.updated_at_utc_ms !== undefined ? new Date(current.updated_at_utc_ms).toISOString() : "not published"}
+        {current.updated_at_utc_ms != null ? new Date(current.updated_at_utc_ms).toISOString() : "not published"}
       </p>
       <PublicationConflict publication={current} />
       {claims.length > 1 && current.may_publish ? (

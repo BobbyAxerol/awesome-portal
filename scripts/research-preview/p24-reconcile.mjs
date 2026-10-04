@@ -194,7 +194,7 @@ const FACTS = {
     ...csProv('source_manifest_digest'), ['cs_freeze.integrity.expected', (R) => R.cs_freeze.j?.integrity?.expected_manifest_digest], ['cs_freeze.integrity.observed', (R) => R.cs_freeze.j?.integrity?.observed_manifest_digest],
     ['report.source_digests', (R) => R.report.j?.frozen_core?.source_digests?.manifest_digest], ['pack.fields', (R) => fieldv(R.pack?.j, 'manifest_digest')],
     ['publication.source.legacy_artifact_sha256', (R) => R.publication?.j?.source?.legacy_artifact_sha256?.replace('sha256:', '')],
-    ['compare_attempts.provenance', (R) => cmpEntry(R, run, 'compare_attempts')?.provenance?.manifest_digest],
+    ['compare_attempts.provenance.source_manifest_digest', (R) => cmpEntry(R, run, 'compare_attempts')?.provenance?.source_manifest_digest],
   ],
   source_transform_digest: () => [...csProv('source_transform_digest'), ['report.source_digests', (R) => R.report.j?.frozen_core?.source_digests?.source_transform_digest], ['pack.fields', (R) => fieldv(R.pack?.j, 'source_transform_digest')]],
   retained_import_digest: () => [...csProv('retained_import_digest'), ['cs_freeze.integrity.expected', (R) => R.cs_freeze.j?.integrity?.expected_retained_import_digest], ['cs_freeze.integrity.observed', (R) => R.cs_freeze.j?.integrity?.observed_retained_import_digest]],
@@ -271,6 +271,18 @@ function evalFact(name, run, R) {
     const base = read.split('.')[0];
     if (base.startsWith('cs_') && R[base]?.j?.availability?.state && R[base].j.availability.state !== 'AVAILABLE') continue;
     stated.push([read, v]);
+  }
+  // The archived Report explicitly labels these pins as captured read
+  // representations. A live presentation amendment is not a new sealed fact.
+  // Retain both observed values, but never assert an equality across scopes or
+  // rewrite the old seal to make them equal. Historical receipts stay intact.
+  if (['split_revision', 'search_revision', 'freeze_revision', 'replay_revision'].includes(name)
+      && R.report.j?.source_revision_scope === 'CAPTURED_READ_REPRESENTATION') {
+    const kind = name.replace('_revision', '');
+    const live = R[`cs_${kind}`]?.j;
+    return { result: 'NOT_APPLICABLE',
+      detail: `archived CAPTURED_READ_REPRESENTATION is not equality-comparable to live presentation; source_revision=${short(live?.source_revision)}; presentation_revision=${short(live?.presentation_revision)}`,
+      values: stated.map(([read, value]) => [read, short(value)]) };
   }
   if (stated.length < 2) {
     return { result: 'NOT_APPLICABLE', detail: stated.length ? `only one read states it: ${stated[0][0]}=${short(stated[0][1])}` : 'no read states it', values: stated.map(([r, v]) => [r, short(v)]) };
@@ -541,9 +553,9 @@ md.push('## Equalities checked', '', 'Each `eq:` row asserts that every listed r
 for (const f of Object.keys(FACTS)) md.push(`- \`${f}\`: ${[...new Set(FACTS[f](RUNS[0]).map(([n]) => n))].join(' == ')}`);
 md.push('', 'Also: `chronology` (created <= retained <= sealed <= later as_of; pack.sealed_at == rc.local_seal.sealed_at), `stability_5s` (two reads 5s apart, volatile keys as_of*/cursors stripped, digests equal), `as_of_monotone_across_rounds`, `replay_cutoff` (all replay pages + evidence-series points strictly before the declared window end).', '');
 md.push('## Triage notes (context for the FAIL rows; none is downgraded)', '',
-  '- `*_revision` FAILs: the sealed report pins source revisions (`frozen_core.source_revisions`) that differ from the live `current-source/*` revisions. For R-WFO-023/022 (stale seals) the evidence/fingerprint drift is the expected stale-seal condition; for R-WFO-027 (fresh seal) evidence_revision matches but split/search/freeze do not, and split_revision == replay_revision inside the report - a real cross-screen identity gap to review.',
-  '- `eq:source_manifest_digest`: Compare(attempts).provenance.manifest_digest is a different value from every other manifest digest (and identical for R-WFO-022 and R-WFO-023), i.e. it is not the per-run source manifest.',
-  '- `stability_5s` on publication: `updated_at_utc_ms` moves between reads of the same unchanged publication (tracks wall clock, not a stored timestamp).',
+  '- Archived Report representation pins and live presentation revisions are not equality-comparable when the named scope is CAPTURED_READ_REPRESENTATION. Both values remain in the receipt; N/A is not a source-integrity PASS. Evidence/fingerprint/source manifest drift on old seals remains measured without rewriting expected bytes.',
+  '- `eq:source_manifest_digest` uses Compare provenance.source_manifest_digest. Compare manifest_digest is separately scoped PREFLIGHT_DATASET_SPEC and must not be compared as an artifact-byte digest.',
+  '- `stability_5s` still measures the stored publication timestamp (or explicit null); it is not stripped as an allowed wall-clock observation.',
   '- `S2m` PASS_WITH_NOTE: error wording differs between foreign-workspace and unknown-run (same status and code).',
   '- S7 note: the Execution approval inbox and operations queue are empty on this preview (fixture delivery profile), so the before/after equality is weak evidence for isolation.', '');
 writeFileSync(`${OUT}/FE_RECONCILE_RECEIPT_${DATE}.md`, md.join('\n'));

@@ -18,7 +18,8 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { ResearchScopedLink as Link, workspaceNamedHref } from "./ResearchScopedLink";
 
 import { useEntryRef } from "./chartLife";
 import { formatMetric, formatUtc, shortDigest } from "./researchFormat";
@@ -204,6 +205,7 @@ function LiveWhatIf({
   onEvaluate: (gridKey: string) => void;
 }) {
   const navigate = useNavigate();
+  const [search] = useSearchParams();
   const [x, setX] = useState(4);
   const [y, setY] = useState(4);
   /* One tab stop for the 81-cell grid (roving tabindex); arrows move the stop, Enter/Space/click selects. */
@@ -509,7 +511,7 @@ function LiveWhatIf({
           }
           onClick={() => {
             if (!sibling.href_template || !cell) return;
-            navigate(sibling.href_template.replace("{cell_id}", cell.cell_id));
+            navigate(workspaceNamedHref(sibling.href_template.replace("{cell_id}", cell.cell_id), search.get("workspace_id") || undefined));
           }}
         >
           create sibling attempt →

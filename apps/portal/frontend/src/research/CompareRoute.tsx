@@ -23,6 +23,7 @@ import { Navigate, useParams, useSearchParams } from "react-router-dom";
 import { CompareScreen, PAIR_NEEDS_TWO, RESOLVER_NEEDS_ALPHA } from "./CompareDetail";
 import { compareHref, isCompareMode, pairRuns, splitRuns, type CompareMode } from "./compareClient";
 import { useCompare, type CompareQuery } from "./useCompare";
+import { withWorkspace } from "./runLinks";
 
 function CompareContainer({ alphaId }: { alphaId: string | null }) {
   const [params, setParams] = useSearchParams();
@@ -33,7 +34,7 @@ function CompareContainer({ alphaId }: { alphaId: string | null }) {
   const pairIncomplete = requested === "pair" && pairRuns(runs) === null;
 
   const query: CompareQuery | null = alphaId && !pairIncomplete ? { mode: requested, runs: requested === "pair" ? runs : null } : null;
-  const controller = useCompare(alphaId, query);
+  const controller = useCompare(alphaId, query, { workspaceId: params.get("workspace_id") || undefined });
 
   const onMode = useCallback(
     (next: CompareMode) => {
@@ -63,7 +64,8 @@ function CompareContainer({ alphaId }: { alphaId: string | null }) {
 
 export function CompareRoute() {
   const { alphaId = "" } = useParams();
-  return <CompareContainer key={alphaId} alphaId={alphaId || null} />;
+  const [params] = useSearchParams();
+  return <CompareContainer key={`${params.get("workspace_id") ?? ""}|${alphaId}`} alphaId={alphaId || null} />;
 }
 
 /** `/research/quantbt/compare` — resolves to the canonical route when the URL names an Alpha. */
@@ -78,7 +80,7 @@ export function CompareResolverRoute() {
     const href = isCompareMode(mode) || mode === null
       ? compareHref(alpha, { mode: isCompareMode(mode) ? mode : runs ? "pair" : undefined, runs })
       : `${compareHref(alpha, { runs })}${runs ? "&" : "?"}mode=${encodeURIComponent(mode)}`;
-    return <Navigate replace to={href} />;
+    return <Navigate replace to={withWorkspace(href, params.get("workspace_id") || undefined)} />;
   }
   return <CompareContainer alphaId={null} />;
 }

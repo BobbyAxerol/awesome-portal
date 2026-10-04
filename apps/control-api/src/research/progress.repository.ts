@@ -33,6 +33,8 @@ interface IngressRow {
   dispatch_state: "PENDING" | "DISPATCHED";
   job_state: string;
   execution_profile_id: string;
+  engine_release_id?: string;
+  qualification_binding?: Record<string, unknown> | null;
 }
 
 interface ReadRunRow {
@@ -170,6 +172,8 @@ export interface ProgressIngressScope {
   leaseEpoch: number;
   /** W1 immutable run execution profile; absent is read as the P04 fixed qualification. */
   executionProfileId?: string;
+  engineReleaseId?: string;
+  qualificationBinding?: Record<string, unknown> | null;
 }
 
 /**
@@ -321,7 +325,9 @@ export class ResearchProgressRepository {
       const result = await client.query<IngressRow>(
         `SELECT producer.workspace_id, producer.actor_user_id, producer.job_id,
                 producer.worker_attempt_id, producer.lease_epoch, producer.dispatch_state,
-                job.state AS job_state, producer.execution_profile_id
+                job.state AS job_state, producer.execution_profile_id,
+                producer.legacy_request #>> '{research,requested_spec,client,engine_release_id}' AS engine_release_id,
+                producer.legacy_request #> '{research,qualification_binding}' AS qualification_binding
            FROM research.run_producers producer
            JOIN research.jobs job
              ON job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
@@ -345,6 +351,8 @@ export class ResearchProgressRepository {
         workerAttemptId: row.worker_attempt_id,
         leaseEpoch: asSafeNumber(row.lease_epoch, "lease epoch"),
         executionProfileId: row.execution_profile_id,
+        ...(row.engine_release_id ? { engineReleaseId: row.engine_release_id,
+          qualificationBinding: row.qualification_binding ?? null } : {}),
       };
     });
   }

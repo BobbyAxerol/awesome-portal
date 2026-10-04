@@ -163,7 +163,7 @@ export interface components {
             dataset: components["schemas"]["DatasetFact"];
             provenance: {
                 source_adapter_id: ("p04.delta-rsi.v1" | "p17.imported-signal-notional.v1") | null;
-                engine_version: "1.1.1" | null;
+                engine_version: ("1.1.0" | "1.1.1") | null;
                 input_scope: "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY" | null;
                 source_transform_digest: components["schemas"]["Digest"] | null;
                 requested_spec_digest: components["schemas"]["Digest"] | null;

@@ -200,7 +200,7 @@ const StoredProjectionSchema = z.object({
   schema_version: z.literal("research.evidence-projection.v1"),
   source: z.object({
     execution_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]),
-    engine_version: z.string().regex(/^1\.1\.1$/),
+    engine_version: z.enum(["1.1.0", "1.1.1"]),
     input_scope: z.literal("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY"),
     oos_observation_count: z.number().int().positive().max(2_000_000),
     emitted_equity_points: z.number().int().positive().max(192),
@@ -716,7 +716,12 @@ export class ResearchEvidenceService {
     const metricRegistryVersion = projection?.metric_registry_version ?? "research.metric-registry.v1";
     const metrics = researchMetricDefinitions(metricRegistryVersion).map((definition) => {
       const missing = definition.key === "BENCHMARK_RETURN_FRACTION"
-        ? sourceAbsences.benchmark as Availability
+        // The registry-v1 scalar has no retained value/provenance mapping.
+        // A genuine analytics-v2 benchmark clears the source gap, but must
+        // not make this distinct null-valued legacy metric AVAILABLE.
+        ? benchmarkV2?.state === "AVAILABLE"
+          ? notPublished("P13_LEGACY_BENCHMARK_USE_ANALYTICS_V2")
+          : sourceAbsences.benchmark as Availability
         : definition.key === "FUNDING_TOTAL"
           ? sourceAbsences.funding as Availability
           : projectionAvailability;

@@ -24,8 +24,8 @@ import { EarliestStartOffer, servedEarliestStart } from "./EstimateParts";
 import type { EstimateStatus } from "./useDeclarationEstimate";
 import { NewRun } from "./NewRun";
 import { NewRunRoute, constraintsFrom, emptyDraft } from "./NewRunRoute";
-import { type RunDraft, applyCoveragePrefill, planCoverage } from "./runDraft";
-import { RUN_DRAFT_STORAGE_KEY, clearRunDraft, restoreRunDraft, saveRunDraft } from "./runDraftStore";
+import { type RunDraft, applyCoveragePrefill, applyOverrides, parameterEntriesFrom, planCoverage, serializeRequestedSpec } from "./runDraft";
+import { clearRunDraft as clearScopedDraft, restoreRunDraft as restoreScopedDraft, runDraftScope, runDraftStorageKey, saveRunDraft as saveScopedDraft } from "./runDraftStore";
 import { researchState } from "./state";
 
 const ROOT = join(__dirname, "..", "..", "..", "..", "..");
@@ -43,6 +43,12 @@ const ALPHA = REGISTRY.entries[0]!;
 const RUNNABLE: readonly RegistryEntry[] = REGISTRY.entries.map((entry, index) => (index === 0 ? { ...entry, run_admission: { may_create_run: true, code: null } } : entry));
 const LIMITS = constraintsFrom(ATLAS, REGISTRY.entries, ALPHA.alpha_version_id);
 const OK = researchState({ kind: "ok", rowCount: 1 });
+const DRAFT_SCOPE = runDraftScope("principal_qa02b", "ws_qa02b")!;
+const RUN_DRAFT_STORAGE_KEY = runDraftStorageKey(DRAFT_SCOPE)!;
+const saveRunDraft = (value: RunDraft) => saveScopedDraft(value, DRAFT_SCOPE);
+const clearRunDraft = () => clearScopedDraft(DRAFT_SCOPE);
+const restoreRunDraft = (base: RunDraft, search: string) => restoreScopedDraft(base, search, DRAFT_SCOPE);
+vi.mock("../auth/session", () => ({ useSession: () => ({ principal: { principalId: "principal_qa02b" }, access: { kind: "unavailable", requestId: null } }) }));
 
 function draft(overrides: Partial<RunDraft> = {}): RunDraft {
   return {
@@ -99,6 +105,11 @@ function mount(overrides: Partial<React.ComponentProps<typeof NewRun>> = {}) {
   );
   return { ...view, patch };
 }
+
+it("missing persistence context does not describe the current declaration as a saved draft", () => {
+  const view = mount({ onStartOver: vi.fn(), draftPersistenceAvailable: false });
+  expect(view.container.querySelector('[data-action="start-over"]')?.getAttribute("title")).toBe("Discard the current declaration and open a blank form");
+});
 
 afterEach(() => {
   cleanup();
@@ -418,7 +429,7 @@ describe("U15 — on the route: a reload restores the declaration, leaving the f
   const notFound = () => new Response(JSON.stringify({ error: { code: "NOT_FOUND", message: "x" } }), { status: 404, headers: { "content-type": "application/json" } });
   const route = (search = "?step=data") =>
     render(
-      <MemoryRouter initialEntries={[`/research/quantbt/runs/new${search}`]}>
+      <MemoryRouter initialEntries={[`/research/quantbt/runs/new${search}${search ? "&" : "?"}workspace_id=ws_qa02b`]}>
         <NewRunRoute />
       </MemoryRouter>,
     );
@@ -429,10 +440,10 @@ describe("U15 — on the route: a reload restores the declaration, leaving the f
     const view = route();
     await waitFor(() => expect((q('input[aria-label="Symbol"]') as HTMLInputElement).value).toBe("ETHUSDT"));
     fireEvent.change(q('input[aria-label="Symbol"]') as HTMLInputElement, { target: { value: "SOLUSDT" } });
-    await waitFor(() => expect(JSON.parse(window.sessionStorage.getItem(RUN_DRAFT_STORAGE_KEY)!).symbol).toBe("SOLUSDT"));
+    await waitFor(() => expect(JSON.parse(window.sessionStorage.getItem(RUN_DRAFT_STORAGE_KEY)!).draft.symbol).toBe("SOLUSDT"));
     view.unmount();
     /* Autosave: a link out of the wizard and back, or the browser Back button, finds the declaration where it was left. */
-    expect(JSON.parse(window.sessionStorage.getItem(RUN_DRAFT_STORAGE_KEY)!).symbol).toBe("SOLUSDT");
+    expect(JSON.parse(window.sessionStorage.getItem(RUN_DRAFT_STORAGE_KEY)!).draft.symbol).toBe("SOLUSDT");
     clearRunDraft();
     expect(window.sessionStorage.getItem(RUN_DRAFT_STORAGE_KEY)).toBeNull();
   });
@@ -447,6 +458,25 @@ describe("U15 — on the route: a reload restores the declaration, leaving the f
     route("?step=data&from=rrun_1");
     await waitFor(() => expect(q('input[aria-label="Symbol"]')).not.toBeNull());
     expect((q('input[aria-label="Symbol"]') as HTMLInputElement).value).toBe("");
+  });
+
+  it("a restored explicit pin survives a registry arriving after the draft", async () => {
+    const overrides = [{ name: "window", kind: "pin" as const, value: 16 }];
+    const parameters = applyOverrides(parameterEntriesFrom(ALPHA.declaration.parameter_space), overrides);
+    saveRunDraft(draft({ parameters, windows: THREE }));
+    let releaseRegistry!: (value: Response) => void;
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
+      const path = String(input);
+      if (path.split("?")[0] === "/api/v1/research/alphas") return new Promise<Response>(resolve => { releaseRegistry = resolve; });
+      if (path.includes("atlas")) return Promise.resolve(new Response(JSON.stringify(ATLAS_RESPONSE), { headers: { "content-type": "application/json" } }));
+      return Promise.resolve(notFound());
+    }));
+    route("?step=parameters");
+    await waitFor(() => expect(releaseRegistry).toBeTypeOf("function"));
+    expect(serializeRequestedSpec(restoreRunDraft(emptyDraft(), "")!).parameter_space_overrides).toEqual(overrides);
+    releaseRegistry(new Response(JSON.stringify(REGISTRY), { headers: { "content-type": "application/json" } }));
+    await waitFor(() => expect((q('input[aria-label="window value"]') as HTMLInputElement)?.value).toBe("16"));
+    expect(serializeRequestedSpec(restoreRunDraft(emptyDraft(), "")!).parameter_space_overrides).toEqual(overrides);
   });
 });
 

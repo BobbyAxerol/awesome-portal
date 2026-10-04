@@ -144,7 +144,7 @@ class ResearchRetainedReceiptClient:
             artifact_revision=revision,
             workspace_id=request.workspace_id,
             run_id=request.run_id,
-            engine_release_id="quantbt-engine-1.1.1",
+            engine_release_id="quantbt-engine-1.1.0" if research.qualification_binding is not None else "quantbt-engine-1.1.1",
             engine_build_ref=research.adapter_contract_digest,
             request_spec_digest=research.requested_spec_digest,
             effective_spec_digest=research.effective_spec_digest,

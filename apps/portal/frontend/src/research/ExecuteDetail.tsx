@@ -20,7 +20,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { ResearchScopedLink as Link } from "./ResearchScopedLink";
 
 import { EChart } from "../charts/EChart";
 import { baseOption, roleColorsNow } from "../charts/theme";
@@ -1437,6 +1437,7 @@ export function executeLane(controller: ReplayController): "hub" | "retained" | 
 
 export interface ExecuteScreenProps {
   runId: string;
+  workspaceId?: string;
   cursor: EvidenceCursor;
   controller: ReplayController;
   transport: ReplayTransport;
@@ -1459,6 +1460,7 @@ export interface ExecuteScreenProps {
 
 export function ExecuteScreen({
   runId,
+  workspaceId,
   cursor,
   controller,
   transport,
@@ -1545,7 +1547,7 @@ export function ExecuteScreen({
         </Link>
       </nav>
 
-      <StageRunBar runId={runId} active={(controller.retained.state === "refused" && controller.retained.refusal.status === 409) || (replay != null && replay.route.state === "NOT_PUBLISHED")} />
+      <StageRunBar runId={runId} workspaceId={workspaceId} active={(controller.retained.state === "refused" && controller.retained.refusal.status === 409) || (replay != null && replay.route.state === "NOT_PUBLISHED")} />
 
       <div className="flex flex-col gap-[3px]">
         <h1 className="text-[22px] font-light tracking-[-0.01em] [line-height:normal]" style={{ fontFamily: "var(--font-display)" }}>

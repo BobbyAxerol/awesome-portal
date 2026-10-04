@@ -1747,6 +1747,16 @@ describe("S11 P22 closeout bindings (FG-05)", () => {
     }
   });
 
+  it.each([null, undefined])("S11 publication updated timestamp %s remains absent rather than epoch/current time", async updatedAt => {
+    server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(publication({ state: "UNKNOWN", updated_at_utc_ms: updatedAt }))] });
+    renderCompose();
+    await ready();
+    const card = await until("[data-panel='publish-unknown']");
+    const text = card.querySelector("[data-publication-intent]")!.textContent;
+    expect(text).toContain("updated not published");
+    expect(text).not.toContain("1970-01-01");
+  });
+
   it("S11-U55 a conflict keeps the conflicting approval and the downstream code; the recorded intent's actor and attempts print; reconcile_allowed false blocks the same-request retry", async () => {
     const unknown = publication({
       state: "UNKNOWN",

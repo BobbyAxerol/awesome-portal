@@ -20,6 +20,7 @@ from typing import Any
 CONTRACTS_ROOT = Path(__file__).resolve().parents[1]
 
 TRACKED = (
+    "tooling/generate-research-engine-qualification.mjs",
     "openapi/research-final-audit.openapi.json",
     "generated/research-final-audit.d.ts",
     "tooling/generate-research-final-audit.mjs",

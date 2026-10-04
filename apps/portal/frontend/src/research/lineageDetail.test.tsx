@@ -411,6 +411,17 @@ async function ready() {
 /* ------------------------------------------------------------------ screen */
 
 describe("S10 Attempt Lineage — the screen", () => {
+  it("P24 workspace deep link scopes the named Lineage read exactly", async () => {
+    const { calls } = server();
+    renderRoute("?workspace_id=ws%26review");
+    await ready();
+    expect(calls).toHaveLength(1);
+    expect(new URL(calls[0].url, "http://localhost").searchParams.get("workspace_id")).toBe("ws&review");
+    const outgoing = [...document.querySelectorAll<HTMLAnchorElement>('a[href^="/research/quantbt/"]')];
+    expect(outgoing.length).toBeGreaterThan(0);
+    for (const link of outgoing) expect(new URL(link.href).searchParams.get("workspace_id")).toBe("ws&review");
+  });
+
   it("S10-U01 shows the loading frame and the header before the server answers (no rules footer, VD-TEXT-01)", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(() => new Promise(() => {}));
     renderRoute();

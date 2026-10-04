@@ -70,3 +70,26 @@ describe("CG-P02-01 generated request wire", () => {
     expect(ResearchRequestedSpecSchema.parse(request)).toEqual(request);
   });
 });
+
+describe("P24 SC04 canonical study fields", () => {
+  it("accepts absent overrides and identical native study values", () => {
+    expect(ResearchRequestedSpecSchema.parse({ ...request, early_stopping: 3,
+      optimization_config: { n_trials: 1, seed: 7, early_stopping_rounds: 3 } }).optuna_trials).toBe(1);
+    expect(ResearchRequestedSpecSchema.parse(request).optimization_config).toEqual({});
+  });
+
+  it.each([
+    ["n_trials", 2], ["n_trials", "1"], ["seed", 8],
+    ["early_stopping_rounds", 3], ["optuna_trials", 1], ["random_seed", 7],
+  ])("refuses conflicting or non-native %s at its typed field path", (field, value) => {
+    const result = ResearchRequestedSpecSchema.safeParse({ ...request, optimization_config: { [field]: value } });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues.map(issue => issue.path))
+      .toContainEqual(["optimization_config", field]);
+  });
+
+  it("does not turn a missing canonical seed into a requested optimizer seed", () => {
+    expect(ResearchRequestedSpecSchema.safeParse({ ...request, random_seed: null,
+      optimization_config: { seed: 7 } }).success).toBe(false);
+  });
+});

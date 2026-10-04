@@ -21,7 +21,7 @@ export function useLinkedAudit(runId: string | null, options: { workspaceId?: st
     pending.current = null;
     setRead(null); setFailure(null); setBusy(false);
     return () => { fence.current += 1; writeAbort.current?.abort(); };
-  }, [runId, workspaceId]);
+  }, [runId, workspaceId, enabled]);
   useEffect(() => {
     if (!runId || !enabled) return;
     const controller = new AbortController();
@@ -32,7 +32,7 @@ export function useLinkedAudit(runId: string | null, options: { workspaceId?: st
     return () => controller.abort();
   }, [runId, workspaceId, generation, enabled]);
   const create = useCallback(() => {
-    if (!runId || !read?.may_create || writesLocked || writer.current || failure && !failure.retryable) return;
+    if (!runId || !enabled || !read?.may_create || writesLocked || writer.current || failure && !failure.retryable) return;
     // Retrying a lost answer reuses the original intent and target. A changed target requires a new click/intent.
     if (!pending.current || pending.current.target_digest !== read.target_digest)
       pending.current = { client_intent_id: `audit:${crypto.randomUUID()}`, target_digest: read.target_digest };
@@ -43,6 +43,6 @@ export function useLinkedAudit(runId: string | null, options: { workspaceId?: st
       .then(answer => { if (!controller.signal.aborted && current === fence.current) { setRead(answer); callback.current?.(); } })
       .catch(error => { if (!controller.signal.aborted && current === fence.current) setFailure(linkedAuditFailure(error)); })
       .finally(() => { writer.current = false; if (!controller.signal.aborted && current === fence.current) setBusy(false); });
-  }, [runId, read, workspaceId, writer, writesLocked, failure]);
+  }, [runId, read, workspaceId, writer, writesLocked, failure, enabled]);
   return { read, failure, busy, create, retry: useCallback(() => setGeneration(n => n + 1), []) };
 }

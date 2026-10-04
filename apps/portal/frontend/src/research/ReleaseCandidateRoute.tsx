@@ -23,7 +23,7 @@ import { linkFromLocation } from "./reportClient";
 import { useRunStatus } from "./useRunStatus";
 import { useReleaseCandidate, useReleaseCandidatePack } from "./useReleaseCandidate";
 import { useReleaseCandidatePublication } from "./useReleaseCandidatePublication";
-import { LinkedAuditForRun } from "./LinkedAuditConsumer";
+import { LinkedAuditConsumer, LinkedAuditForRun } from "./LinkedAuditConsumer";
 
 function ComposeContainer({ runId }: { runId: string }) {
   /* One writer for the screen: a save, a seal and a publish never overlap. */
@@ -43,7 +43,7 @@ function ComposeContainer({ runId }: { runId: string }) {
     onSettled: controller.retry,
   });
   return <ReleaseCandidateScreen mode="compose" runId={runId} controller={controller} publication={publication} status={status} link={link}
-    linkedAudit={controller.compose ? <LinkedAuditForRun runId={runId} workspaceId={workspaceId} writer={writer}
+    linkedAudit={controller.compose ? <LinkedAuditConsumer runId={runId} workspaceId={workspaceId} writer={writer} applicable={controller.compose.final_audit_applicable}
       writesLocked={controller.writesLocked || publication.publication?.state === "DELIVERED"} onSettled={controller.retry} /> : undefined} />;
 }
 

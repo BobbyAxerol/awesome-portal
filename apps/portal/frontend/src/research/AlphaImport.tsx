@@ -49,7 +49,8 @@ import type {
   RegistryEntry,
   SourceResponse,
 } from "./alphaImportClient";
-import { LineageLink, lineageHref } from "./LineageLink";
+import { lineageHref } from "./LineageLink";
+import { ResearchScopedLineageLink as LineageLink } from "./ResearchScopedLink";
 import { newRunPrefillHref } from "./lineageClient";
 import { smokeMotionAllowed } from "../execution/smokeMotion";
 import {

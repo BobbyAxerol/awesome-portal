@@ -47,12 +47,12 @@ function stubLibrary(answer: { status: number; body?: unknown } = { status: 200,
   );
 }
 
-function mountAt(path: string) {
+function mountAt(path: string, breadcrumbs: Parameters<typeof TopBar>[0]["breadcrumbs"] = []) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <PreferencesProvider>
         <PortalPresentationProvider registry={null}>
-          <TopBar breadcrumbs={[]} environment={null} onOpenPalette={() => {}} onToggleMobileNav={() => {}} />
+          <TopBar breadcrumbs={breadcrumbs} environment={null} onOpenPalette={() => {}} onToggleMobileNav={() => {}} />
         </PortalPresentationProvider>
       </PreferencesProvider>
     </MemoryRouter>,
@@ -85,6 +85,24 @@ describe("the shell asks the Run Library for the label of a stage screen opened 
     expect(idsReads()).toEqual([`/api/v1/quantbt/runs?ids=${RUN}`]);
     /* The whole id is still the crumb's title: nothing that identifies the run was lost. */
     expect(document.querySelector<HTMLElement>(".portal-breadcrumbs a.mono")!.getAttribute("title")).toBe(RUN);
+  });
+
+  it("a cold stage deep link binds both its label read and Research crumbs to the explicit workspace only", async () => {
+    stubLibrary();
+    const workspace = "ws_explicit_cold_stage";
+    mountAt(`/research/quantbt/runs/${RUN}/split?workspace_id=${workspace}`, [
+      { label: "Runs", route: "/research/quantbt/runs" },
+      { label: "Execution", route: "/execution" },
+    ]);
+    await waitFor(() => expect(crumbRun()).toBe(LABEL));
+    expect(idsReads()).toHaveLength(1);
+    const read = new URL(idsReads()[0], "http://localhost");
+    expect(read.pathname).toBe("/api/v1/quantbt/runs");
+    expect(Object.fromEntries(read.searchParams)).toEqual({ ids: RUN, workspace_id: workspace });
+    const crumbs = [...document.querySelectorAll<HTMLAnchorElement>(".portal-breadcrumbs a")];
+    expect(crumbs.find((node) => node.textContent === "Runs")?.getAttribute("href")).toBe(`/research/quantbt/runs?workspace_id=${workspace}`);
+    expect(crumbs.find((node) => node.textContent === "Execution")?.getAttribute("href")).toBe("/execution");
+    expect(document.querySelector<HTMLAnchorElement>(".portal-breadcrumbs a.mono")?.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/evidence?workspace_id=${workspace}`);
   });
 
   it.each(["progress", "evidence", "report", "release-candidate"])("%s: asks nothing — its own read carries the label", async (segment) => {

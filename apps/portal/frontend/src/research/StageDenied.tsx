@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { ResearchScopedLink as Link } from "./ResearchScopedLink";
 
 import { ShortId } from "./ShortId";
 import { RunNotFound, SCREEN_FRAME } from "./SplitDetail";

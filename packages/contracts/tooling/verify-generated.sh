@@ -47,6 +47,7 @@ generate_and_compare openapi/research-dataset-index.openapi.json generated/resea
 generate_and_compare openapi/research-foundation.openapi.json generated/research-foundation.d.ts
 generate_and_compare openapi/research-run-create.openapi.json generated/research-run-create.d.ts
 generate_and_compare openapi/research-progress.openapi.json generated/research-progress.d.ts
+node tooling/generate-research-engine-qualification.mjs --check
 generate_and_compare openapi/research-run-library.openapi.json generated/research-run-library.d.ts
 generate_and_compare openapi/research-evidence.openapi.json generated/research-evidence.d.ts
 generate_and_compare openapi/research-split.openapi.json generated/research-split.d.ts

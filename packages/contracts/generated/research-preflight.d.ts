@@ -99,7 +99,7 @@ export interface components {
             warmup_semantics: "LAST_N_OBSERVED_PREDECESSORS_V1";
             warmup_start_utc_ms: number;
         };
-        /** @description P02 requested spec. v1 is the frozen P02 contract; v2 (CG-P02-02) adds rolling train width, temporal guards and causal Mode 1 inner folds on an advanced walk-forward. P08 validates every v2 field against the pinned engine; P10 runs neither v2 field yet. */
+        /** @description P02 requested spec. v1 is the frozen P02 structural contract; v2 adds rolling train width, temporal guards and causal inner folds. Admitted P10 profiles determine execution support. Authenticated intake separately validates at most 64 sparse native optimizer overrides: n_trials, seed and early_stopping_rounds must agree with top-level optuna_trials, random_seed and early_stopping respectively. optuna_trials and random_seed are not native override keys. Cross-field equality is enforced by intake, not JSON Schema alone. */
         RequestedSpec: components["schemas"]["research-requested-spec.v1.schema"] | components["schemas"]["research-requested-spec.v2.schema"];
         CreateRequest: {
             workspace_id?: string;

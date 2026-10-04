@@ -26,7 +26,7 @@
  */
 
 import { Fragment, useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
-import { Link } from "react-router-dom";
+import { ResearchScopedLink as Link } from "./ResearchScopedLink";
 
 import { smokeMotionAllowed } from "../execution/smokeMotion";
 

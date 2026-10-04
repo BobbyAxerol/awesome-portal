@@ -35,7 +35,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
-import { Link } from "react-router-dom";
+import { ResearchScopedLink as Link, ResearchScopedLineageLink as LineageLink, workspaceNamedHref } from "./ResearchScopedLink";
 import { markRunUnknown } from "../app/researchRunCrumb";
 import { RunExitBar } from "./RunExitBar";
 import { phaseOfStatus, runTerminalState } from "./runTerminalState";
@@ -80,7 +80,7 @@ import { retainedSplitOf, type FoldsSlot, type RetainedFact, type RetainedFacts 
 import type { ResearchState } from "./state";
 import { protocolLabel, retainedReadiness, walkForwardOf } from "./retainedLane";
 import { reasonCodeSentence, refusalState, type ResearchStateWithDiagnostics } from "./researchRefusal";
-import { LineageLink, lineageHref } from "./LineageLink";
+import { lineageHref } from "./LineageLink";
 
 import type { CurrentSourceSearch } from "./searchClient";
 import type { CurrentSourceClaimFact } from "./evidenceClient";
@@ -393,7 +393,7 @@ export function CopyEvidenceLink({ href }: { href?: string } = {}) {
       aria-live="polite"
       onClick={() => {
         /* X2 (T16): a screen may hand the exact link it means; else this address. */
-        const link = href ?? window.location.href;
+        const link = href ? workspaceNamedHref(href, new URLSearchParams(window.location.search).get("workspace_id") || undefined) as string : window.location.href;
         const clipboard = typeof navigator !== "undefined" ? navigator.clipboard : undefined;
         if (!clipboard) {
           setCopied("failed");
@@ -430,27 +430,27 @@ export function RunNotFound({ runId }: { runId: string }) {
 const FAILED_STAGE_NAME: Record<string, string> = { S1: "Split", S2: "Search", S3: "Freeze", S4: "Execute", S5: "Claim" };
 
 /** Where a failed run stopped, as the progress read served it (`current.failed_at.stage`); null until read or when unserved. */
-function useFailedStage(runId: string, enabled: boolean): string | null {
+function useFailedStage(runId: string, enabled: boolean, workspaceId?: string): string | null {
   const [stage, setStage] = useState<string | null>(null);
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
     progressApi
-      .read(runId, undefined, controller.signal)
+      .read(runId, workspaceId, controller.signal)
       .then((read) => {
         const key = read?.current?.failed_at?.stage;
         if (!controller.signal.aborted && typeof key === "string") setStage(FAILED_STAGE_NAME[key] ? `${key} ${FAILED_STAGE_NAME[key]}` : key);
       })
       .catch(() => undefined);
     return () => controller.abort();
-  }, [runId, enabled]);
+  }, [runId, enabled, workspaceId]);
   return stage;
 }
 
-export function StageRunBar({ runId, active }: { runId: string; active: boolean }) {
-  const listed = useRunStatus(runId, active);
+export function StageRunBar({ runId, active, workspaceId }: { runId: string; active: boolean; workspaceId?: string }) {
+  const listed = useRunStatus(runId, active, workspaceId);
   const failed = listed.state === "listed" && phaseOfStatus(listed.status) === "failed";
-  const failedStage = useFailedStage(runId, failed);
+  const failedStage = useFailedStage(runId, failed, workspaceId);
   if (!active || listed.state === "idle" || listed.state === "reading") return null;
   const base = runTerminalState(
     listed.state === "listed"
@@ -1663,6 +1663,7 @@ export function splitScreenState(state: ResearchState, detail: SplitDetailDocume
 
 export interface SplitScreenProps {
   runId: string;
+  workspaceId?: string;
   detail: SplitDetailDocument | null;
   state: ResearchState;
   /** FE-X-11: the server said this run does not exist (404). */
@@ -1684,6 +1685,7 @@ export interface SplitScreenProps {
 
 export function SplitScreen({
   runId,
+  workspaceId,
   detail,
   state,
   notFound = false,
@@ -1801,7 +1803,7 @@ export function SplitScreen({
 
       {notFound ? <RunNotFound runId={runId} /> : (
       <>
-      <StageRunBar runId={runId} active={(folds.state === "refused" && folds.laneState != null) || (screenState.state === "partial" && folds.state !== "loading" && folds.state !== "idle")} />
+      <StageRunBar runId={runId} workspaceId={workspaceId} active={(folds.state === "refused" && folds.laneState != null) || (screenState.state === "partial" && folds.state !== "loading" && folds.state !== "idle")} />
 
       <ResearchPanel
         title="split"

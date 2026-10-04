@@ -112,6 +112,24 @@ export const ResearchRequestedSpecSchema = z.object({
   if (parameterNames.length !== new Set(parameterNames).size) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["parameter_space_overrides"], message: "parameter override names must be unique." });
   }
+  // Sparse native overrides may repeat a canonical S02 study field, but may
+  // not describe a different computation than the top-level receipt does.
+  // Refuse at intake, before snapshot creation or engine execution.
+  const canonicalStudyFields = {
+    n_trials: value.optuna_trials,
+    seed: value.random_seed,
+    early_stopping_rounds: value.early_stopping,
+  };
+  for (const [field, canonical] of Object.entries(canonicalStudyFields)) {
+    if (Object.hasOwn(value.optimization_config, field) && value.optimization_config[field] !== canonical) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ["optimization_config", field], message: `${field} must agree with its canonical study field.` });
+    }
+  }
+  for (const field of ["optuna_trials", "random_seed"]) {
+    if (Object.hasOwn(value.optimization_config, field)) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ["optimization_config", field], message: `${field} is a top-level field, not a native optimizer override.` });
+    }
+  }
 });
 
 export type ResearchRequestedSpec = z.infer<typeof ResearchRequestedSpecSchema>;

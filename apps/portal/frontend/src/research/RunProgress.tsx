@@ -62,6 +62,7 @@ import { QUANTBT_ROOT } from "../features/quantbt/routes";
 import { RunExitBar } from "./RunExitBar";
 import { libraryHref } from "./runLinks";
 import { runStatusWord, runTerminalState } from "./runTerminalState";
+import { ResearchScopedAnchor } from "./ResearchScopedLink";
 import { trialLabel, trialTitle } from "./trialLabel";
 import { humanise } from "./humanise";
 import { PageHeader } from "./PageHeader";
@@ -528,7 +529,7 @@ function StagePills({
         return (
           <span key={stage.key} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
             {linked ? (
-              <a
+              <ResearchScopedAnchor
                 data-stage={stage.key}
                 data-stage-state={issued ? "ISSUED" : stage.state}
                 href={runHref(runId, target.screen, cursor, target.stage)}
@@ -536,7 +537,7 @@ function StagePills({
                 style={style}
               >
                 {label}
-              </a>
+              </ResearchScopedAnchor>
             ) : (
               <span
                 data-stage={stage.key}
@@ -1302,7 +1303,7 @@ function CursorRow({
         )}
       </span>
       {evidenceHref !== null && fold !== null && foldState === "DONE" ? (
-        <a
+        <ResearchScopedAnchor
           data-action="open-fold-evidence"
           href={evidenceHref}
           aria-label={`open ${foldId(fold)} in Evidence Flow`}
@@ -1310,7 +1311,7 @@ function CursorRow({
           style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 10, color: "var(--accent)" }}
         >
           evidence →
-        </a>
+        </ResearchScopedAnchor>
       ) : null}
     </div>
   );
@@ -1916,7 +1917,7 @@ function ClaimPassport({
         </span>
         {note === null || noteIsLong ? null : <span style={{ fontSize: 10.5, color: "var(--ink-faint)" }}>{note}</span>}
         {sealed ? (
-          <a
+          <ResearchScopedAnchor
             data-open-evidence
             href={handoffHref}
             aria-label={handoffLabel ? `open evidence flow at ${handoffLabel}` : "open evidence flow"}
@@ -1938,7 +1939,7 @@ function ClaimPassport({
             }}
           >
             open evidence flow →
-          </a>
+          </ResearchScopedAnchor>
         ) : null}
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 24px", padding: "10px 14px" }}>
@@ -2268,7 +2269,7 @@ function NewRunFrom({ runId, read }: { runId: string; read: ProgressRead }) {
   const from = read.current.new_run_from;
   if (from?.state === "AVAILABLE") {
     return (
-      <a
+      <ResearchScopedAnchor
         data-action="new-run-from"
         href={newRunFromHref(runId)}
         title="Opens New Run seeded from this run's requested spec; it is admitted as a new run through a fresh preflight."
@@ -2285,7 +2286,7 @@ function NewRunFrom({ runId, read }: { runId: string; read: ProgressRead }) {
         }}
       >
         {NEW_RUN_FROM_LABEL}
-      </a>
+      </ResearchScopedAnchor>
     );
   }
   return (
@@ -2767,9 +2768,9 @@ export function RunProgress(props: RunProgressProps) {
         <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 8 }}>
           {read !== null && terminalStatus ? <NewRunFrom runId={runId} read={read} /> : null}
           {read !== null && terminalStatus ? (
-            <a href={libraryHref()} data-exit="library" style={{ fontFamily: MONO, fontSize: 10 }}>
+            <ResearchScopedAnchor href={libraryHref()} data-exit="library" style={{ fontFamily: MONO, fontSize: 10 }}>
               Library
-            </a>
+            </ResearchScopedAnchor>
           ) : null}
           {read?.current.may_cancel && live ? (
             <button

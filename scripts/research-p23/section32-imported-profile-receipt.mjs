@@ -9,6 +9,7 @@ import { container, dbQuery, docker } from './runtime-tools.mjs';
 
 const home = validateHome(process.argv[2]);
 const username = process.argv[3] ?? 'p23-reader-94';
+const browserContinuation = process.argv.includes('--browser-continuation');
 assert.match(username, /^p23-reader-[0-9]{2}$/);
 assert.equal(dbQuery('SELECT count(*)::int n FROM portal_users WHERE username=$1', [username]).rows[0].n, 0,
   'EXISTING_QA_IDENTITY_MUST_NOT_BE_RESET');
@@ -25,6 +26,7 @@ const receipt = { schema_version: 'research.section32-imported-profile-receipt.v
   images: Object.fromEntries(['control-api', 'portal-api', 'quant-worker-py'].map(service => [service,
     docker(['inspect', '--format', '{{.Image}}', container(service)]).trim()])),
   undispatched_fixtures_preserved: pendingFixtures.map(row => row.run_id) };
+if (browserContinuation) receipt.scope = 'REAL_API_IMPORTED_DRAFT_FIXED_RUN_AND_REAL_BROWSER_CONTINUATION';
 const user = { username, password: randomBytes(32).toString('hex'), cookies: {} };
 const client = makeClient(user);
 const call = async (label, method, path, body, statuses = [200]) => {
@@ -112,6 +114,13 @@ def generate_signals(context):
   const compose = receipt.responses.find(row => row.label === 'release-candidate').body;
   assert.equal(compose.final_audit_applicable, false);
   assert.equal(compose.actions.may_seal, false); // DRAFT execution is not ACTIVE publication.
+  if (browserContinuation) {
+    const { importedBrowserContinuation } = await import('./section32-imported-browser-continuation.mjs');
+    const workspace = dbQuery('SELECT workspace_id FROM research.jobs WHERE run_id=$1', [created.run_id]).rows[0]?.workspace_id;
+    receipt.browser = await importedBrowserContinuation({ home, user, runId: created.run_id, workspace,
+      registration, report, compose, expectedImages: Object.fromEntries(['control', 'web', 'python'].map(name => [name,
+        process.argv.find(arg => arg.startsWith(`--expected-${name}=`))?.slice(name.length + 12)])) });
+  }
 } finally {
   if (user.id) {
     const program = `const {Pool}=require('pg');const {loadConfig}=require('./dist/config');const {AuthService}=require('./dist/auth/auth.service');

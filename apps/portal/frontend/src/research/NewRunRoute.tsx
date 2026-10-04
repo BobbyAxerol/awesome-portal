@@ -11,18 +11,19 @@
  * no route is offered, and the step says why.
  */
 
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { NewRun } from "./NewRun";
 import { type RegistryEntry, alphaImportApi, toRefusal } from "./alphaImportClient";
 import type { AtlasDocument } from "./atlas";
 import { type AtlasResponse, foundationApi, toFoundationRefusal } from "./foundationClient";
-import { STEPS, type StepId, type DraftConstraints, type ParameterEntry, type RunDraft, RECEIPT_ALPHA, applyCoveragePrefill, applyOverrides, draftFromRequestedSpec, draftIsEmpty, firstIncompleteStep, parameterEntriesFrom, planCoverage, usesSpecV2 } from "./runDraft";
+import { STEPS, type StepId, type DraftConstraints, type ParameterEntry, type RunDraft, RECEIPT_ALPHA, applyCoveragePrefill, applyOverrides, draftFromRequestedSpec, draftIsEmpty, firstIncompleteStep, parameterEntriesFrom, planCoverage, serializeRequestedSpec, usesSpecV2 } from "./runDraft";
 import { type DatasetCatalog, catalogFailureState, readDatasetCatalog } from "./datasetClient";
 import { admitsSpecV2, mergeEstimates, profileTrialDefault, readCatalogIndex, readPreflightEstimate, readProfiles, seedPinned, selectProfile, specVersionOf, symbolListing } from "./dataDeclaration";
 import { useWindowMetadata } from "./useWindowMetadata";
-import { clearRunDraft, restoreRunDraft, saveRunDraft } from "./runDraftStore";
+import { clearRunDraft, restoreRunDraft, runDraftScope, saveRunDraft, type RunDraftScope } from "./runDraftStore";
+import { useSession } from "../auth/session";
 import { useDeclarationEstimate } from "./useDeclarationEstimate";
 import { type RunRequestedSpec, cloneFailureState, readRunRequestedSpec } from "./runCloneClient";
 import { runLineageFor, useNewRun, type RunLineage } from "./useNewRun";
@@ -31,6 +32,7 @@ import { NOT_MODIFIED, freezeApi, isFreezeLaneNotApplicable } from "./freezeClie
 import { isWhatIf } from "./WhatIfCard";
 import type { ForkSource } from "./NewRun";
 import { researchState, type ResearchState } from "./state";
+import { withWorkspace } from "./runLinks";
 
 /** An empty declaration. Every field is the reader's to fill. */
 export function emptyDraft(): RunDraft {
@@ -153,17 +155,22 @@ export function soleActiveEntry(registry: readonly RegistryEntry[]): RegistryEnt
  * adoption ref or loaded copy of the old declaration survives it.
  */
 export function NewRunRoute() {
+  const { principal } = useSession();
+  const [search] = useSearchParams();
+  const workspaceId = search.get("workspace_id") || undefined;
+  const actorId = principal?.principalId ?? null;
+  const draftScope = useMemo(() => runDraftScope(actorId, workspaceId), [actorId, workspaceId]);
   const [epoch, setEpoch] = useState(0);
   const navigate = useNavigate();
   const startOver = useCallback(() => {
-    clearRunDraft();
-    navigate({ pathname: "/research/quantbt/runs/new", search: "" }, { replace: true });
+    clearRunDraft(draftScope);
+    navigate(withWorkspace("/research/quantbt/runs/new", workspaceId), { replace: true });
     setEpoch((value) => value + 1);
-  }, [navigate]);
-  return <NewRunRouteBody key={epoch} onStartOver={startOver} />;
+  }, [navigate, workspaceId, draftScope]);
+  return <NewRunRouteBody key={JSON.stringify([actorId, workspaceId ?? null, epoch])} workspaceId={workspaceId} draftScope={draftScope} onStartOver={startOver} />;
 }
 
-function NewRunRouteBody({ onStartOver }: { onStartOver: () => void }) {
+function NewRunRouteBody({ onStartOver, workspaceId, draftScope }: { onStartOver: () => void; workspaceId?: string; draftScope: RunDraftScope | null }) {
   const location = useLocation();
   const [atlas, setAtlas] = useState<AtlasResponse | null>(null);
   const [atlasState, setAtlasState] = useState<ResearchState>(() =>
@@ -174,7 +181,7 @@ function NewRunRouteBody({ onStartOver }: { onStartOver: () => void }) {
     const controller = new AbortController();
     let live = true;
     foundationApi
-      .atlas({}, controller.signal)
+      .atlas(workspaceId ? { workspace_id: workspaceId } : {}, controller.signal)
       .then((response) => {
         if (!live) return;
         setAtlas(response);
@@ -204,7 +211,7 @@ function NewRunRouteBody({ onStartOver }: { onStartOver: () => void }) {
   useEffect(() => {
     let live = true;
     alphaImportApi
-      .registry()
+      .registry(workspaceId)
       .then((response) => {
         if (!live) return;
         setRegistry(response.entries);
@@ -230,7 +237,7 @@ function NewRunRouteBody({ onStartOver }: { onStartOver: () => void }) {
   const [catalogReason, setCatalogReason] = useState<string | null>(null);
   useEffect(() => {
     const controller = new AbortController();
-    readDatasetCatalog(undefined, controller.signal)
+    readDatasetCatalog(workspaceId, controller.signal)
       .then((response) => setCatalog(response))
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
@@ -240,7 +247,8 @@ function NewRunRouteBody({ onStartOver }: { onStartOver: () => void }) {
   }, []);
 
   const document = atlas?.atlas ?? null;
-  const [draft, setDraft] = useState<RunDraft>(() => restoreRunDraft(emptyDraft(), location.search) ?? emptyDraft());
+  const [draft, setDraft] = useState<RunDraft>(() => restoreRunDraft(emptyDraft(), location.search, draftScope) ?? emptyDraft());
+  const restoredOverrides = useRef({ alphaVersionId: draft.alphaVersionId, overrides: serializeRequestedSpec(draft).parameter_space_overrides });
   /* LW-07: the served profiles, read once: they decide the trial default and whether the temporal guards are required. */
   const profiles = useMemo(
     () => (atlas?.selected_release_kind === "CURRENT" ? readProfiles(atlas.portal_admission?.profiles ?? null) : null),
@@ -267,7 +275,7 @@ function NewRunRouteBody({ onStartOver }: { onStartOver: () => void }) {
     const controller = new AbortController();
     setFork({ runId: forkRun, cellId: forkCell, state: "loading", parameters: null, reason: null });
     freezeApi
-      .currentSource(forkRun, { signal: controller.signal })
+      .currentSource(forkRun, { workspaceId, signal: controller.signal })
       .then((answer) => {
         if (answer === NOT_MODIFIED || isFreezeLaneNotApplicable(answer)) {
           setFork({ runId: forkRun, cellId: forkCell, state: "missing", parameters: null, reason: "That run has no what-if grid — nothing was pinned." });
@@ -284,7 +292,7 @@ function NewRunRouteBody({ onStartOver }: { onStartOver: () => void }) {
         setFork({ runId: forkRun, cellId: forkCell, state: "missing", parameters: null, reason: "The what-if grid could not be read — nothing was pinned." });
       });
     return () => controller.abort();
-  }, [forkRun, forkCell]);
+  }, [forkRun, forkCell, workspaceId]);
   /*
    * `?from=<runId>` (CG-P11-07): copy the run's admitted declaration into a
    * NEW draft. The copy is only the declaration — a fresh preflight is owed,
@@ -301,13 +309,13 @@ function NewRunRouteBody({ onStartOver }: { onStartOver: () => void }) {
   const fromRun = new URLSearchParams(location.search).get("from");
   /* D4 walk: the "copied from" / "sibling of" banners name the run `R-WFO-020`,
      not `rrun_…`. A cold link has no list read to learn the label from, so ask. */
-  useRunLabelRead(fromRun);
+  useRunLabelRead(fromRun, workspaceId);
   const [clone, setClone] = useState<{ runId: string; state: ResearchState; spec: RunRequestedSpec | null } | null>(null);
   useEffect(() => {
     if (!fromRun) return;
     const controller = new AbortController();
     setClone({ runId: fromRun, state: researchState({ kind: "in-flight", hasAcceptedResponse: false }), spec: null });
-    readRunRequestedSpec(fromRun, controller.signal)
+    readRunRequestedSpec(fromRun, controller.signal, workspaceId)
       .then((response) => {
         setClone({ runId: fromRun, state: researchState({ kind: "ok", rowCount: 1 }), spec: response });
       })
@@ -316,7 +324,7 @@ function NewRunRouteBody({ onStartOver }: { onStartOver: () => void }) {
         setClone({ runId: fromRun, state: cloneFailureState(fromRun, error), spec: null });
       });
     return () => controller.abort();
-  }, [fromRun]);
+  }, [fromRun, workspaceId]);
   /* Which parent, if any, this draft may name. The rule lives beside the
      lineage types so it can be read and tested without the route. */
   const forkReady = fork?.state === "ready";
@@ -331,7 +339,7 @@ function NewRunRouteBody({ onStartOver }: { onStartOver: () => void }) {
     ),
     [forkReady, forkRunId, forkCellId, cloneCopied, cloneRunId],
   );
-  const run = useNewRun(draft, limits, undefined, lineage);
+  const run = useNewRun(draft, limits, workspaceId, lineage);
 
   const clonedFor = useRef<string | null>(null);
   useEffect(() => {
@@ -416,12 +424,15 @@ function NewRunRouteBody({ onStartOver }: { onStartOver: () => void }) {
     const forkKey = fork?.state === "ready" ? `${fork.runId}@${fork.cellId}` : "";
     const adoptionKey = `${run.draft.alphaVersionId}|${forkKey}`;
     if (adoptedFor.current === adoptionKey) return;
+    /* A restored draft can have parameters before the registry arrives. Do
+       not mark an unavailable declaration adopted or erase those values. */
+    if (!registry.some(entry => entry.alpha_version_id === run.draft.alphaVersionId)) return;
     const declared = parametersFor(registry, run.draft.alphaVersionId);
-    if (declared.length === 0 && run.draft.parameters.length === 0) return;
     adoptedFor.current = adoptionKey;
     /* A clone re-applies the copied overrides on the version's own table;
        a what-if fork then pins its node's two values on top. */
-    const copied = clone?.spec?.requested_spec.parameter_space_overrides ?? [];
+    const copied = clone?.spec?.requested_spec.parameter_space_overrides
+      ?? (restoredOverrides.current.alphaVersionId === run.draft.alphaVersionId ? restoredOverrides.current.overrides : []);
     const pins = fork?.state === "ready" && fork.parameters
       ? Object.entries(fork.parameters).map(([name, value]) => ({ name, kind: "pin" as const, value: Number(value) }))
       : [];
@@ -512,9 +523,9 @@ function NewRunRouteBody({ onStartOver }: { onStartOver: () => void }) {
   useEffect(() => {
     if (!createdId) return;
     /* The declaration became a run: it is no longer a draft to continue. */
-    clearRunDraft();
-    navigate(`/research/quantbt/runs/${encodeURIComponent(createdId)}/progress`);
-  }, [createdId, navigate]);
+    clearRunDraft(draftScope);
+    navigate(withWorkspace(`/research/quantbt/runs/${encodeURIComponent(createdId)}/progress`, workspaceId));
+  }, [createdId, navigate, workspaceId, draftScope]);
 
   /* `?route=` from the Atlas "declare →" link preselects an offered route. */
   const routeFromQuery = new URLSearchParams(location.search).get("route");
@@ -564,7 +575,7 @@ function NewRunRouteBody({ onStartOver }: { onStartOver: () => void }) {
   /* Keeps this component's copy of the draft in step with the controller's. */
   useEffect(() => setDraft(run.draft), [run.draft]);
   /* Autosave: every edit is kept for the session, so a reload, Back or any link out and back brings the declaration back. */
-  useEffect(() => saveRunDraft(run.draft), [run.draft]);
+  useEffect(() => saveRunDraft(run.draft, draftScope), [run.draft, draftScope]);
 
   /* An address never opens Review on a declaration with nothing in it (a stale link, a Back past the draft): it opens
      the first step still to fill in. A copied or forked run fills its draft a moment after the first render, so those wait. */
@@ -585,10 +596,10 @@ function NewRunRouteBody({ onStartOver }: { onStartOver: () => void }) {
   /* B7: bars per declared window and the warmup from the index, only against a v2 catalog; the preflight's own numbers win. */
   const indexServed = readCatalogIndex(catalog) !== null;
   /* The declaration-estimate route answers the whole declaration (windows, warmup, folds, conditions) in one call. */
-  const declared = useDeclarationEstimate(run.draft, indexServed);
+  const declared = useDeclarationEstimate(run.draft, indexServed, undefined, undefined, workspaceId);
   /* The per-window bar metadata is the fallback: the route is absent (older server), failed, or the declaration is not complete enough to ask. */
   const barMetadataFallback = indexServed && (declared.status.kind === "idle" || declared.status.kind === "absent" || declared.status.kind === "error");
-  const metadataEstimate = useWindowMetadata(run.draft, limits.warmupBars, barMetadataFallback);
+  const metadataEstimate = useWindowMetadata(run.draft, limits.warmupBars, barMetadataFallback, undefined, undefined, workspaceId);
   const estimate = useMemo(
     () => mergeEstimates(preflightEstimate, declared.estimate ?? metadataEstimate),
     [preflightEstimate, declared.estimate, metadataEstimate],
@@ -596,11 +607,13 @@ function NewRunRouteBody({ onStartOver }: { onStartOver: () => void }) {
 
   return (
     <NewRun
+      workspaceId={workspaceId}
       initialStep={shownStep}
       stepSyncKey={stepSyncKey}
       onStepChange={writeStep}
       onSymbolMiss={setSymbolMiss}
       onStartOver={onStartOver}
+      draftPersistenceAvailable={draftScope !== null}
       draft={run.draft}
       patch={run.patch}
       limits={limits}

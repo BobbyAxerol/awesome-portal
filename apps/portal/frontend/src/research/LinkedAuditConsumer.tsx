@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { ResearchScopedLink as Link } from "./ResearchScopedLink";
 import { shortDigest } from "./researchFormat";
 import { progressHref } from "./runLinks";
 import { useLinkedAudit } from "./useLinkedAudit";
@@ -10,30 +10,31 @@ import type { RcWriter } from "./useReleaseCandidate";
 /**
  * What the run's own report says about its final-audit target. The linked audit
  * exists for one selected parameter set only (the contract's constant); any other
- * kind is the server's typed 409 RESEARCH_FINAL_AUDIT_NOT_APPLICABLE, so the read
- * is not sent. `null` (report unread / unavailable) = ask exactly as before.
+ * kind is the server's typed 409 RESEARCH_FINAL_AUDIT_NOT_APPLICABLE. Only the
+ * named read's explicit applicability fact enables a probe; an absent fact is
+ * not permission to ask or compute.
  */
 export type AuditTargetKind = "SINGLE_PARAMETER_SET" | "FIXED_PARAMETER_PROFILE" | "PER_FOLD_PARAMETER_SELECTIONS" | null;
-export const auditApplies = (kind: AuditTargetKind | undefined): boolean => kind == null || kind === "SINGLE_PARAMETER_SET";
+export const auditApplies = (applicable: boolean | null | undefined): boolean => applicable === true;
 
 /** Reads the report (cached, ETag) only to learn the target kind; for screens that have no report in hand. */
-export function LinkedAuditForRun(props: Omit<Parameters<typeof LinkedAuditConsumer>[0], "targetKind" | "targetPending">) {
+export function LinkedAuditForRun(props: Omit<Parameters<typeof LinkedAuditConsumer>[0], "applicable" | "targetKind" | "targetPending">) {
   const report = useReport(props.runId, { workspaceId: props.workspaceId });
-  return <LinkedAuditConsumer {...props} targetKind={(report.report ? coreV2(report.report.frozen_core)?.final_audit?.audit_target_kind : null) ?? null} targetPending={report.inFlight && !report.report && !report.refusal} />;
+  return <LinkedAuditConsumer {...props} applicable={report.report?.final_audit_applicable} targetKind={(report.report ? coreV2(report.report.frozen_core)?.final_audit?.audit_target_kind : null) ?? null} targetPending={report.inFlight && !report.report && !report.refusal} />;
 }
 
 /** Supplemental live custody, never an amendment to the frozen printable core/pack. */
-export function LinkedAuditConsumer({ runId, workspaceId, writer, writesLocked, readOnly = false, onSettled, targetKind, targetPending = false }: {
+export function LinkedAuditConsumer({ runId, workspaceId, writer, writesLocked, readOnly = false, onSettled, applicable, targetKind, targetPending = false }: {
   runId: string; workspaceId?: string; writer?: RcWriter; writesLocked?: boolean; readOnly?: boolean; onSettled?: () => void;
-  targetKind?: AuditTargetKind; targetPending?: boolean;
+  applicable?: boolean | null; targetKind?: AuditTargetKind; targetPending?: boolean;
 }) {
-  const applies = auditApplies(targetKind);
+  const applies = auditApplies(applicable);
   const audit = useLinkedAudit(runId, { workspaceId, writer, writesLocked, onSettled, enabled: applies && !targetPending });
   const [confirm, setConfirm] = useState(false);
   if (!applies) return (
-    <section className="rc-card no-print" data-linked-final-audit data-audit-state="NOT_APPLICABLE" aria-label="Linked final audit">
+    <section className="rc-card no-print" data-linked-final-audit data-audit-state={targetPending ? "loading" : applicable === false ? "NOT_APPLICABLE" : "NOT_PUBLISHED"} aria-label="Linked final audit">
       <h3 className="rc-k">Linked final audit</h3>
-      <p role="status">not applicable</p>
+      <p role="status">{targetPending ? "Reading audit custody…" : applicable === false ? "not applicable" : "not published"}</p>
       <p className="mono" data-audit-target={targetKind ?? undefined}>{targetKind}</p>
     </section>
   );

@@ -58,7 +58,8 @@
  */
 
 import { Fragment, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { ResearchScopedLink as Link, ResearchScopedLineageLink as LineageLink, workspaceNamedHref } from "./ResearchScopedLink";
 
 import { ResearchPanel } from "./ResearchPanel";
 import {
@@ -94,7 +95,7 @@ import {
   type FoldSeries,
   compareApi,
 } from "./compareClient";
-import { LineageLink, lineageHref } from "./LineageLink";
+import { lineageHref } from "./LineageLink";
 import { foldBars, identicalSeriesGroups, LINES_PAST_FOLDS, SINGLE_OOS_ORDINAL, SINGLE_OOS_WINDOW } from "./compareFoldBars";
 import { equitySvg, type AxisLabel } from "./reportEquity";
 import { foldShort, foldTitle, formatAxisValue, formatCorrelation, formatMetric as sharedFormatMetric, shortId } from "./researchFormat";
@@ -120,6 +121,11 @@ function sid(id: string): string {
  */
 export function runName(run: CompareRun): string {
   return run.display_label ?? runLabelFor(run.run_id) ?? shortId(run.run_id) ?? run.run_id;
+}
+
+/** Separate source artifact identity from the older preflight dataset/spec pin. */
+export function runManifestProvenance(run: CompareRun): string {
+  return `retained artifact manifest ${run.provenance.source_manifest_digest ?? "not published"} · preflight dataset/spec manifest ${run.provenance.manifest_digest ?? "not published"}`;
 }
 
 /**
@@ -748,9 +754,12 @@ function RunLine({ run, withState = false, skipLabel = false }: { run: CompareRu
   const scheduled = run.schedule.availability.state === "AVAILABLE" && run.schedule.mode !== null && run.schedule.schedule !== null;
   const scheduleText = scheduled ? `${run.schedule.mode} × ${run.schedule.schedule}` : null;
   /* Ladder card: state, version and mode × schedule ride one tooltip; only a non-completed state and a typed absence stay visible. */
-  const detail = withState ? [runStatusWord(run.run_state), run.alpha_version_label, scheduleText].filter(Boolean).join(" · ") : undefined;
+  const detail = [withState ? [runStatusWord(run.run_state), run.alpha_version_label, scheduleText].filter(Boolean).join(" · ") : null, runManifestProvenance(run)].filter(Boolean).join(" · ");
   return (
-    <span className="cp-faint" data-run-line title={detail}>
+    <span className="cp-faint" data-run-line title={detail}
+      data-source-manifest-digest={run.provenance.source_manifest_digest ?? undefined}
+      data-preflight-manifest-digest={run.provenance.manifest_digest ?? undefined}
+      data-preflight-manifest-scope={run.provenance.manifest_digest_scope ?? undefined}>
       {skipLabel ? null : (
         <>
           <Link to={evidenceHref(run.run_id)} data-run-link={run.run_id} title={`${run.run_id} — open in Evidence Flow`}>
@@ -1947,13 +1956,15 @@ function MarketsBody({ result }: { result: MarketResult }) {
  */
 function PairPicker({ alphaId, named }: { alphaId: string; named: readonly string[] }) {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const workspaceId = params.get("workspace_id") || undefined;
   const [options, setOptions] = useState<{ id: string; label: string }[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [first, setFirst] = useState(named[0] ?? "");
   useEffect(() => {
     const abort = new AbortController();
     compareApi
-      .get(alphaId, { mode: "attempts", signal: abort.signal })
+      .get(alphaId, { mode: "attempts", workspaceId, signal: abort.signal })
       .then((answer) => {
         if (abort.signal.aborted || typeof answer !== "object" || answer === null || !("result" in answer) || answer.result.mode !== "attempts") {
           if (!abort.signal.aborted) setFailed(true);
@@ -1965,7 +1976,7 @@ function PairPicker({ alphaId, named }: { alphaId: string; named: readonly strin
         if (!abort.signal.aborted) setFailed(true);
       });
     return () => abort.abort();
-  }, [alphaId]);
+  }, [alphaId, workspaceId]);
   if (failed || (options !== null && options.length < 2 - Math.min(named.length, 1))) {
     return (
       <span data-pair-picker="none" className="cp-picker">
@@ -1977,7 +1988,7 @@ function PairPicker({ alphaId, named }: { alphaId: string; named: readonly strin
     );
   }
   const choose = (a: string, b: string) => {
-    if (a && b && a !== b) navigate(compareHref(alphaId, { mode: "pair", runs: [a, b] }));
+    if (a && b && a !== b) navigate(workspaceNamedHref(compareHref(alphaId, { mode: "pair", runs: [a, b] }), workspaceId));
   };
   const pool = options ?? [];
   const select = (label: string, value: string, exclude: string, onPick: (id: string) => void) => (

@@ -73,16 +73,17 @@ export function useWindowMetadata(
   enabled: boolean,
   read: (datasetId: string, query: BarMetadataQuery, signal?: AbortSignal) => Promise<BarMetadataResult> = readBarMetadata,
   debounceMs: number = WINDOW_METADATA_DEBOUNCE_MS,
+  workspaceId?: string,
 ): PreflightEstimate | null {
   const requests = useMemo(() => (enabled ? windowRequests(draft, warmupBars) : []), [enabled, draft, warmupBars]);
-  const signature = JSON.stringify([draft.datasetId, requests]);
+  const signature = JSON.stringify([workspaceId ?? null, draft.datasetId, requests]);
   const [answer, setAnswer] = useState<{ signature: string; estimate: PreflightEstimate | null } | null>(null);
 
   useEffect(() => {
     if (requests.length === 0) return;
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      void Promise.all(requests.map((request) => read(draft.datasetId, request.query, controller.signal))).then((results) => {
+      void Promise.all(requests.map((request) => read(draft.datasetId, { ...request.query, ...(workspaceId ? { workspaceId } : {}) }, controller.signal))).then((results) => {
         if (controller.signal.aborted) return;
         const windows: { -readonly [K in WindowKey]?: NonNullable<WindowMetadata[K]> } = {};
         results.forEach((result, index) => {

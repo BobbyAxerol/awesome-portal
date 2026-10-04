@@ -39,7 +39,7 @@ function ReportContainer({ runId }: { runId: string }) {
   }, []);
 
   return <ReportScreen runId={runId} workspaceId={workspaceId} cursor={link.cursor ?? null} window={link.window ?? null} controller={controller} exporter={exporter} requestedRevision={requestedRevision}
-    linkedAudit={controller.report ? <LinkedAuditConsumer runId={runId} workspaceId={workspaceId} onSettled={controller.retry} targetKind={coreV2(controller.report.frozen_core)?.final_audit?.audit_target_kind ?? null} /> : undefined} />;
+    linkedAudit={controller.report ? <LinkedAuditConsumer runId={runId} workspaceId={workspaceId} onSettled={controller.retry} applicable={controller.report.final_audit_applicable} targetKind={coreV2(controller.report.frozen_core)?.final_audit?.audit_target_kind ?? null} /> : undefined} />;
 }
 
 export function ReportRoute() {

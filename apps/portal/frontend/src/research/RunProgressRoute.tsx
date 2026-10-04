@@ -18,14 +18,18 @@ import { useRunProgress } from "./useRunProgress";
 
 export function RunProgressRoute() {
   const { runId = "" } = useParams<{ runId: string }>();
+  const [search] = useSearchParams();
+  const workspaceId = search.get("workspace_id") || undefined;
+  return <RunProgressContainer key={`${workspaceId ?? ""}|${runId}`} runId={runId} workspaceId={workspaceId} />;
+}
+
+function RunProgressContainer({ runId, workspaceId }: { runId: string; workspaceId?: string }) {
   /*
    * X7: the workspace a link carries (`?workspace_id=`, the journey address key)
    * goes to every read of this screen — snapshot, console, stream and cancel.
    * Without it the reads fall to the actor's default workspace, exactly as
    * before; nothing is guessed here.
    */
-  const [search] = useSearchParams();
-  const workspaceId = search.get("workspace_id") || undefined;
   const progress = useRunProgress(runId, workspaceId);
   /* A hand-edited hash is named once, on arrival; the address is rewritten without it. */
   const [problems] = useState(() => (typeof window === "undefined" ? [] : parseCursorProblems(window.location.hash)));

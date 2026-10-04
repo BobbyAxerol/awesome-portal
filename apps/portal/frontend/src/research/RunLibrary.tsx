@@ -29,7 +29,7 @@
  */
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { ResearchScopedLink as Link } from "./ResearchScopedLink";
 
 import {
   COMPARE_REFUSAL,
@@ -67,6 +67,8 @@ import { humanise } from "./humanise";
 import { datasetKey, ScrubLayer, tipMinus, useDrawIn, useScrub } from "./compareChartLife";
 import { needsAlphaToOpen, resolveJourneyCardRoute } from "./screenRoutes";
 import { readLibraryDraftSummary } from "./libraryDraftChip";
+import { runDraftScope } from "./runDraftStore";
+import { useSession } from "../auth/session";
 import { clearedFilters, isLiveStatus, type LibraryFilters, type SelectedRun, type SparklineRead } from "./useRunLibrary";
 import type { ResearchState } from "./state";
 import { runLabelOrShortId, useRunLabel } from "./runLabels";
@@ -2616,6 +2618,7 @@ function useDebouncedQuery(filters: LibraryFilters, onFilters: (next: LibraryFil
 /* ----------------------------------------------------------------- screen */
 
 export interface RunLibraryProps {
+  workspaceId?: string;
   filters: LibraryFilters;
   onFilters: (next: LibraryFilters) => void;
   onToggleSel: (runId: string) => void;
@@ -2658,7 +2661,9 @@ export function RunLibrary(props: RunLibraryProps) {
   const [draft, setDraft] = useDebouncedQuery(filters, onFilters);
   /* The alpha-version card is alpha-scoped; the Library is grouped by alpha for it. */
   const alphaPick = filters.to === "alpha_version_legacy";
-  const draftSummary = useMemo(() => readLibraryDraftSummary(), []);
+  const { principal } = useSession();
+  const actorId = principal?.principalId ?? null;
+  const draftSummary = useMemo(() => readLibraryDraftSummary(runDraftScope(actorId, props.workspaceId)), [actorId, props.workspaceId]);
   const catalog = response?.filter_catalog;
 
   /* QA UX-5: a third pick replaces the oldest (spec 01 §3.3); the bar says which. */
@@ -2737,7 +2742,7 @@ export function RunLibrary(props: RunLibraryProps) {
   const cursorExpired = (filters.cursor || filters.before) && state.state === "terminal";
 
   /* FG-05: one P22 publication lookup per Alpha version with a sealed rc on this page. */
-  const rcPublications = useAlphaVersionPublications(rcLookupVersions(items));
+  const rcPublications = useAlphaVersionPublications(rcLookupVersions(items), { workspaceId: props.workspaceId });
 
   return (
     <RcPublicationContext.Provider value={rcPublications}>

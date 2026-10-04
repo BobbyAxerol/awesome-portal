@@ -22,9 +22,10 @@
  */
 
 import { useEntryRef, useReadout } from "./chartLife";
-import { LineageLink, lineageHref } from "./LineageLink";
+import { lineageHref } from "./LineageLink";
+import { ResearchScopedLineageLink as LineageLink, ResearchScopedLink as RouterLink } from "./ResearchScopedLink";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Link as RouterLink, useInRouterContext } from "react-router-dom";
+import { useInRouterContext } from "react-router-dom";
 
 import {
   ALPHA_VERSION_PUBLICATION_WORDS,
@@ -499,6 +500,7 @@ const LIFECYCLE_NOTE: Record<string, string> = {
 };
 
 function ContextStep({
+  workspaceId,
   draft,
   patch,
   limits,
@@ -508,6 +510,7 @@ function ContextStep({
   patch: (change: Partial<RunDraft>) => void;
   limits: DraftConstraints;
   registry: readonly RegistryEntry[];
+  workspaceId?: string;
 }) {
   const bound = registry.find((entry) => entry.alpha_id === draft.alphaId && entry.alpha_version_id === draft.alphaVersionId);
   /* The receipt alphas the platform's own checks register cannot create runs: they are not offered (one the draft already holds stays visible). */
@@ -519,7 +522,7 @@ function ContextStep({
   };
   /* FG-05: the P22 lookup runs only for a bound version the registry listed. */
   const lookedUp = draft.bound && bound ? bound.alpha_version_id : null;
-  const publications = useAlphaVersionPublications(lookedUp !== null ? [lookedUp] : []);
+  const publications = useAlphaVersionPublications(lookedUp !== null ? [lookedUp] : [], { workspaceId });
   const supersedes = supersedesFact(bound ?? null, registry);
   /* `run_admission` as the registry serves it: a version that cannot create runs says why, here, before any step is filled. */
   const admission = draft.bound ? (bound?.run_admission ?? null) : null;
@@ -1086,6 +1089,7 @@ function DataStep({
   registry = [],
   profileFit = null,
   onSymbolMiss,
+  workspaceId,
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
@@ -1093,6 +1097,7 @@ function DataStep({
   error: string | null;
   /** Reports the typed symbol when the server's own search says the dataset does not list it (a partial list). */
   onSymbolMiss?: (symbol: string | null) => void;
+  workspaceId?: string;
   /** CG-P08-04: the research dataset catalog, or null when it was not read. */
   catalog?: DatasetCatalog | null;
   catalogReason?: string | null;
@@ -1212,6 +1217,7 @@ function DataStep({
         <div className="flex min-w-[220px] flex-1 flex-col gap-1">
           <span title={catalog?.coverage_rule ?? undefined}><Label>Symbol *</Label></span>
           <SymbolCombobox
+            workspaceId={workspaceId}
             value={draft.symbol}
             symbols={symbols}
             total={dataset?.symbols.total ?? null}
@@ -3058,6 +3064,7 @@ export interface ForkSource {
 }
 
 export interface NewRunProps {
+  workspaceId?: string;
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
   limits: DraftConstraints;
@@ -3078,6 +3085,8 @@ export interface NewRunProps {
   onSymbolMiss?: (symbol: string | null) => void;
   /** Drops the saved draft and opens the form blank; the link shows only while there is something to drop. */
   onStartOver?: () => void;
+  /** False when named actor/workspace context cannot safely persist a draft. */
+  draftPersistenceAvailable?: boolean;
   /** Bumped by the route when it turned the address's step down, so the screen follows the step it was given. */
   stepSyncKey?: number;
 
@@ -3114,6 +3123,7 @@ export interface NewRunProps {
 }
 
 export function NewRun(props: NewRunProps) {
+  const workspaceId = props.workspaceId;
   const {
     draft,
     patch,
@@ -3138,6 +3148,7 @@ export function NewRun(props: NewRunProps) {
     onStepChange,
     onSymbolMiss,
     onStartOver,
+    draftPersistenceAvailable,
     stepSyncKey = 0,
     preflightRefusal = null,
     preflightPending = false,
@@ -3313,7 +3324,7 @@ export function NewRun(props: NewRunProps) {
             <Link to="/research/quantbt/runs" data-link="run-library" title="Back to the Run Library">← Run Library</Link>
             <Link to="/research/quantbt/alpha-import" data-link="alpha-import" title="Import a new alpha version, then come back here">Import a version</Link>
             {onStartOver && !draftIsEmpty(draft) ? (
-              <button type="button" className="no-print text-[10px] font-semibold" style={{ color: "var(--accent)" }} data-action="start-over" title="Drop the saved draft and open a blank form" onClick={onStartOver}>
+              <button type="button" className="no-print text-[10px] font-semibold" style={{ color: "var(--accent)" }} data-action="start-over" title={draftPersistenceAvailable === false ? "Discard the current declaration and open a blank form" : "Drop the saved draft and open a blank form"} onClick={onStartOver}>
                 Start over
               </button>
             ) : null}
@@ -3438,7 +3449,7 @@ export function NewRun(props: NewRunProps) {
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           {step === "context" ? (
             <>
-              <ContextStep draft={draft} patch={stepPatch} limits={limits} registry={registry} />
+              <ContextStep workspaceId={workspaceId} draft={draft} patch={stepPatch} limits={limits} registry={registry} />
               {/* What could not be read, named. A rule the browser did not get
                   is not a rule that passed — and a blank space would read as
                   the second thing. */}
@@ -3474,7 +3485,7 @@ export function NewRun(props: NewRunProps) {
             />
           ) : null}
           {step === "data" ? (
-            <DataStep draft={draft} patch={stepPatch} limits={limits} error={shownError.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} registry={registry} profileFit={profileFit} onSymbolMiss={onSymbolMiss} />
+            <DataStep workspaceId={workspaceId} draft={draft} patch={stepPatch} limits={limits} error={shownError.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} registry={registry} profileFit={profileFit} onSymbolMiss={onSymbolMiss} />
           ) : null}
           {step === "windows" ? (
             <WindowsStep draft={draft} patch={stepPatch} adopt={patch} atlas={atlas} profile={profile} family={family} profiles={profiles} estimateStatus={estimateStatus} estimate={estimate} error={shownError.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} />

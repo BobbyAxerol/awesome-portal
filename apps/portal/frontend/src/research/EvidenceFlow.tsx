@@ -17,8 +17,8 @@
  */
 
 import { Component, createContext, lazy, Suspense, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { LineageLink, lineageHref } from "./LineageLink";
-import { Link } from "react-router-dom";
+import { lineageHref } from "./LineageLink";
+import { ResearchScopedLineageLink as LineageLink, ResearchScopedLink as Link } from "./ResearchScopedLink";
 import { RunExitBar } from "./RunExitBar";
 import { isEndedWithoutEvidence, phaseOfStatus, runStatusWord, runTerminalState, stageChip, type RunPhase } from "./runTerminalState";
 import { libraryHref, newRunHref, progressHref, rcHref, reportHref } from "./runLinks";

@@ -3,7 +3,8 @@
  * icon. No breadcrumb: the top bar already shows the path.
  */
 import { useState, type ReactNode } from "react";
-import { Link, useInRouterContext } from "react-router-dom";
+import { useInRouterContext } from "react-router-dom";
+import { ResearchScopedLink as Link } from "./ResearchScopedLink";
 
 const MONO = "var(--font-mono)";
 const DISPLAY = "var(--font-display)";

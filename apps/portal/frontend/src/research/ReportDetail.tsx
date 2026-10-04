@@ -21,7 +21,7 @@
 
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { markRunUnknown } from "../app/researchRunCrumb";
-import { Link } from "react-router-dom";
+import { ResearchScopedLink as Link, ResearchScopedAnchor } from "./ResearchScopedLink";
 
 import { ResearchPanel } from "./ResearchPanel";
 import { researchState, type ResearchState } from "./state";
@@ -1456,9 +1456,9 @@ function Provenance({ core, runId, report, workspaceId }: { core: FrozenCore; ru
         <dt className="k">evidence link</dt>
         <dd className="v rr-long" data-evidence-link>
           {evidenceLink !== null && report !== null ? (
-            <a href={evidenceLink} title={evidenceLink} style={{ color: "var(--accent)" }} data-evidence-href={evidenceLink}>
+            <ResearchScopedAnchor href={evidenceLink} title={evidenceLink} style={{ color: "var(--accent)" }} data-evidence-href={evidenceLink}>
               Link to this report
-            </a>
+            </ResearchScopedAnchor>
           ) : (
             <span className="rr-absent" data-evidence-link-absent>
               no sealed revision to link to yet

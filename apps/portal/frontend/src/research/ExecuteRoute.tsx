@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 
 import { ExecuteScreen, executeLane, useTransportInput } from "./ExecuteDetail";
 import { useSplitBand } from "./SplitBand";
@@ -22,8 +22,9 @@ import { StageDenied } from "./StageDenied";
 
 export function ExecuteRoute() {
   const { runId = "" } = useParams<{ runId: string }>();
+  const [search] = useSearchParams();
   /* Keyed by run: a different run is a new arrival with nothing carried over. */
-  return <ExecuteContainer key={runId} runId={runId} />;
+  return <ExecuteContainer key={`${search.get("workspace_id") ?? ""}|${runId}`} runId={runId} />;
 }
 
 /**
@@ -46,6 +47,8 @@ export function ExecuteContainer({
   hubFold?: number | null;
   onHubFold?: (fold: number) => void;
 }) {
+  const [search] = useSearchParams();
+  const workspaceId = search.get("workspace_id") || undefined;
   const { cursor, update, problems, notes, addNote } = useEvidenceCursor({ stage: "execute" });
   /* The window is the cursor's (`#window=`); a change the reader makes is one history entry, the same window none. */
   const windowKey = windowOf(cursor);
@@ -54,7 +57,7 @@ export function ExecuteContainer({
   };
   const [arrivalSeq] = useState(cursor.seq);
   const [arrivalFold] = useState(cursor.fold);
-  const controller = useReplay(runId, arrivalSeq === null ? null : arrivalSeq - 1, { arrivalFold });
+  const controller = useReplay(runId, arrivalSeq === null ? null : arrivalSeq - 1, { arrivalFold, workspaceId });
 
   /* W5b: on the retained bar ledger the hash names the fold window on screen
      (1-based, spec 08 `#fold=`); it is written when a fold window arrives. */
@@ -169,7 +172,7 @@ export function ExecuteContainer({
      "hub" for every run, so a walk-forward run would read the P04 hub split
      first and its own fold plan a moment later — two reads to draw one band. */
   const answered = controller.replay !== null || controller.retained.state !== "idle";
-  const band = useSplitBand(runId, answered ? executeLane(controller) : "pending");
+  const band = useSplitBand(runId, answered ? executeLane(controller) : "pending", workspaceId);
 
   /* E2 (X8): a refused run gets the shared "run not available" page, not the stage chrome. */
   if (controller.state.state === "denied" && controller.replay === null) {
@@ -178,7 +181,7 @@ export function ExecuteContainer({
   return (
     <>
       {embedded ? null : <RouteCursorNotice problems={problems} notes={notes} />}
-      <ExecuteScreen runId={runId} cursor={cursor} controller={controller} transport={transport} band={band} embedded={embedded} windowKey={windowKey} onWindow={setWindowKey} />
+      <ExecuteScreen runId={runId} workspaceId={workspaceId} cursor={cursor} controller={controller} transport={transport} band={band} embedded={embedded} windowKey={windowKey} onWindow={setWindowKey} />
     </>
   );
 }

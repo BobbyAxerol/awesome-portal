@@ -16,6 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { withWorkspace } from "./runLinks";
 
 import {
   IDS_LIMIT,
@@ -319,9 +320,9 @@ export function useRunLibrary(workspaceId?: string): RunLibraryController {
         target.mode.join(",") === current.mode.join(",") &&
         target.alpha.join(",") === current.alpha.join(",") &&
         target.group === current.group;
-      navigate({ search: searchFromFilters(target) }, { replace: typing && !selChanged && !pageChanged });
+      navigate({ search: withWorkspace(`${location.pathname}${searchFromFilters(target)}`, workspaceId).slice(location.pathname.length) }, { replace: typing && !selChanged && !pageChanged });
     },
-    [navigate],
+    [navigate, location.pathname, workspaceId],
   );
 
   const toggleSel = useCallback(
@@ -394,7 +395,7 @@ export function useRunLibrary(workspaceId?: string): RunLibraryController {
         const current = filtersRef.current;
         const kept = current.sel.filter((id) => !absent.has(id));
         if (kept.length !== current.sel.length) {
-          navigate({ search: searchFromFilters({ ...current, sel: kept }) }, { replace: true });
+          navigate({ search: withWorkspace(`${location.pathname}${searchFromFilters({ ...current, sel: kept })}`, workspaceId).slice(location.pathname.length) }, { replace: true });
         }
       })
       .catch(() => {
@@ -408,7 +409,7 @@ export function useRunLibrary(workspaceId?: string): RunLibraryController {
         setLookupFailed((previous) => new Set([...previous, ...missing]));
       });
     return () => controller.abort();
-  }, [response, selKey, lookedUp, navigate, workspaceId]);
+  }, [response, selKey, lookedUp, navigate, workspaceId, location.pathname]);
 
   /* -------------------------------------------------- the running poll */
 

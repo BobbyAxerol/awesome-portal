@@ -27,6 +27,7 @@ import {
   CLAIM_SENTENCE,
   LADDER_TITLE,
   scopeWords,
+  runManifestProvenance,
   COMPARE_PANELS,
   COMPARE_TITLE,
   MODE_LABELS,
@@ -152,6 +153,22 @@ const TRAJECTORY = {
   text: "claims rank before numbers — inspection never selects, promotes, approves, or publishes a run.",
   availability: AVAILABLE,
 } as const;
+
+describe("P24 distinct manifest identity scopes", () => {
+  it("discloses retained artifact and preflight pins independently", () => {
+    const body = run("rrun_manifest");
+    body.provenance.manifest_digest = "1".repeat(64);
+    body.provenance.manifest_digest_scope = "PREFLIGHT_DATASET_SPEC";
+    body.provenance.source_manifest_digest = "2".repeat(64);
+    expect(runManifestProvenance(body)).toBe(`retained artifact manifest ${"2".repeat(64)} · preflight dataset/spec manifest ${"1".repeat(64)}`);
+  });
+  it("never substitutes a preflight digest when retained source identity is absent", () => {
+    const body = run("rrun_manifest");
+    body.provenance.manifest_digest = "1".repeat(64);
+    body.provenance.source_manifest_digest = null;
+    expect(runManifestProvenance(body)).toBe(`retained artifact manifest not published · preflight dataset/spec manifest ${"1".repeat(64)}`);
+  });
+});
 
 function attempts(runs: CompareRun[]) {
   return envelope({
@@ -376,6 +393,38 @@ const location = () => document.querySelector("[data-location]")?.textContent;
 /* ------------------------------------------------------------------- tests */
 
 describe("S13 Compare — reads and order", () => {
+  it("P24 workspace deep link scopes the named Compare read exactly", async () => {
+    const { calls } = server([{ status: 200, body: attempts([run("run_a")]) }]);
+    renderAt(`${base}?workspace_id=ws%26review`);
+    await settled();
+    expect(calls).toHaveLength(1);
+    expect(new URL(calls[0]!.url, "http://localhost").searchParams.get("workspace_id")).toBe("ws&review");
+    const outgoing = [...document.querySelectorAll<HTMLAnchorElement>('a[href^="/research/quantbt/"]')];
+    expect(outgoing.length).toBeGreaterThan(0);
+    for (const link of outgoing) expect(new URL(link.href).searchParams.get("workspace_id")).toBe("ws&review");
+  });
+
+  it("P24 legacy Compare resolver preserves the explicit workspace on redirect and GET", async () => {
+    const { calls } = server([{ status: 200, body: attempts([run("run_a")]) }]);
+    renderAt(`/research/quantbt/compare?alpha=${ALPHA}&workspace_id=ws%26review`);
+    await settled();
+    expect(new URL(`http://localhost${location()}`).searchParams.get("workspace_id")).toBe("ws&review");
+    expect(calls).toHaveLength(1);
+    expect(new URL(calls[0]!.url, "http://localhost").searchParams.get("workspace_id")).toBe("ws&review");
+  });
+
+  it("P24 pair picker keeps workspace on its options GET and resulting pair navigation", async () => {
+    const { calls } = server([{ status: 200, body: attempts([run("run_a"), run("run_b")]) }, { status: 200, body: pair() }]);
+    renderAt(`${base}?mode=pair&workspace_id=ws%26review`);
+    await waitFor(() => expect(document.querySelector('[data-pair-picker="ready"]')).not.toBeNull());
+    expect(new URL(calls[0]!.url, "http://localhost").searchParams.get("workspace_id")).toBe("ws&review");
+    fireEvent.change(document.querySelector('[data-pair-pick="A"]')!, { target: { value: "run_a" } });
+    fireEvent.change(document.querySelector('[data-pair-pick="B"]')!, { target: { value: "run_b" } });
+    await waitFor(() => expect(calls).toHaveLength(2));
+    expect(new URL(`http://localhost${location()}`).searchParams.get("workspace_id")).toBe("ws&review");
+    expect(new URL(calls[1]!.url, "http://localhost").searchParams.get("workspace_id")).toBe("ws&review");
+  });
+
   it("S13-U01 loading keeps the attempts frame: every block in place, no digit, no ladder card", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(() => new Promise(() => {}));
     renderAt(base);

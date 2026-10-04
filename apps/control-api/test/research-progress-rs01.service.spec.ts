@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ResearchProgressService } from "../src/research/progress.service";
 import { DELTA_CAUSAL_INNER_PROFILE_ID } from "../src/research/delta-causal-inner.profile";
 import { PINNED_AUDIT_PROFILE_ID } from "../src/research/final-audit.contract";
+import { ENGINE_110_QUALIFICATION_BINDING, ENGINE_110_QUALIFICATION_BINDING_DIGEST } from "../src/research/engine-qualification.profile";
 
 const ingressScope = {
   workspaceId: "research-workspace",
@@ -88,6 +89,23 @@ function subject(options?: { evidenceFailsOnce?: boolean; current?: Record<strin
 }
 
 describe("RS-01 terminal materialization and retry recovery", () => {
+  it("accepts old-engine evidence only on its exact immutable qualification pin", async () => {
+    const input = { ...terminalIngress, evidence: { source: { engine_version: "1.1.0" } } };
+    const binding = { ...ENGINE_110_QUALIFICATION_BINDING, binding_digest: ENGINE_110_QUALIFICATION_BINDING_DIGEST };
+    for (const scope of [
+      { engineReleaseId: "er_quantbt_111" },
+      { engineReleaseId: "er_quantbt_110", executionProfileId: "p04.fixed-qualification.v1", qualificationBinding: null },
+      { engineReleaseId: "er_quantbt_110", executionProfileId: "p04.fixed-qualification.v1", qualificationBinding: { ...binding, binding_digest: "0".repeat(64) } },
+    ]) {
+      const wrong = subject({ scope });
+      await expect(wrong.service.ingest(input as never)).rejects.toMatchObject({ code: "RESEARCH_PROGRESS_INVALID" });
+      expect(wrong.progress.persistIngress).not.toHaveBeenCalled();
+    }
+    const valid = subject({ scope: { engineReleaseId: "er_quantbt_110", executionProfileId: "p04.fixed-qualification.v1", qualificationBinding: binding } });
+    await expect(valid.service.ingest(input as never)).resolves.toEqual({ accepted: true, latest_sequence: 9 });
+    expect(valid.progress.persistIngress).toHaveBeenCalledTimes(1);
+  });
+
   it("re-publishes an exact duplicate terminal event only after its durable checkpoint", async () => {
     const { service, progress, metadata, fanout, evidence, split } = subject();
 

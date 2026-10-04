@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { ResearchScopedLink as Link } from "./ResearchScopedLink";
 
 import { libraryHref } from "./runLinks";
 

@@ -16,6 +16,7 @@ import type { PortalEnvironment } from "../portal/contracts";
 import type { Breadcrumb } from "../portal/navigation";
 import { useRunLabel } from "../research/runLabels";
 import { useRunLabelRead } from "../research/useRunLabelRead";
+import { workspaceNamedHref } from "../research/ResearchScopedLink";
 import { researchRunCrumb, useRunUnknown } from "./researchRunCrumb";
 import { ADMIN_USERS_ROUTE } from "./PortalRoutes";
 import { usePreferences, type PreferencesContextValue } from "./preferences";
@@ -38,6 +39,7 @@ export function TopBar({
   const { mode: presentationMode, entityLabel, chrome } = usePresentation();
   const { access } = useSession();
   const location = useLocation();
+  const workspaceId = new URLSearchParams(location.search).get("workspace_id") || undefined;
   /*
    * D1 / audit X1 and X-1: a run-scoped Research address extends the trail to
    * `… / R-WFO-118 / Stage 1 · Split`. Subscribing to the run's label here is
@@ -48,7 +50,7 @@ export function TopBar({
   const runCrumb = researchRunCrumb(location.pathname);
   useRunLabel(runCrumb?.runId);
   /* G3: Stages 1–4 make no read that carries the label, so the shell asks the Run Library for it. */
-  useRunLabelRead(runCrumb?.needsLabelRead ? runCrumb.runId : null);
+  useRunLabelRead(runCrumb?.needsLabelRead ? runCrumb.runId : null, workspaceId);
   const runUnknown = useRunUnknown(runCrumb?.runId);
   const crumbTail = entityLabel ?? runCrumb?.screen ?? null;
 
@@ -95,7 +97,7 @@ export function TopBar({
             ].filter(Boolean).join(" ")}
           >
             {index > 0 ? <span aria-hidden="true" className="portal-crumb-sep">/</span> : null}
-            {crumb.route ? <Link to={crumb.route}>{crumb.label}</Link> : <span>{crumb.label}</span>}
+            {crumb.route ? <Link to={workspaceNamedHref(crumb.route, workspaceId)}>{crumb.label}</Link> : <span>{crumb.label}</span>}
           </span>
         ))}
         {/* §4.3 product locator tail: `Deployments / Paper / Carry v3.2`. The
@@ -108,7 +110,7 @@ export function TopBar({
             {runUnknown ? (
               <span title={runCrumb.runId} className="mono" data-run-unknown="">{runCrumb.label}</span>
             ) : (
-              <Link to={runCrumb.route} title={runCrumb.runId} className="mono">{runCrumb.label}</Link>
+              <Link to={workspaceNamedHref(runCrumb.route, workspaceId)} title={runCrumb.runId} className="mono">{runCrumb.label}</Link>
             )}
           </span>
         ) : null}

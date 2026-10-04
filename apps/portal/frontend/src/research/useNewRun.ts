@@ -22,7 +22,7 @@
  * worker status from a `202`.
  */
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   type RunCreateRefusal,
@@ -119,8 +119,18 @@ export function useNewRun(
 
   /** One id per submission attempt, reused by `recheck`. */
   const intentId = useRef<string | null>(null);
+  const generation = useRef(0);
+  const activeRequest = useRef<object | null>(null);
+  const mounted = useRef(true);
+  const currentWorkspace = useRef(workspaceId);
+  currentWorkspace.current = workspaceId;
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; generation.current += 1; };
+  }, []);
 
   const patch = useCallback((change: Partial<RunDraft>) => {
+    generation.current += 1;
     setDraft((previous) => ({ ...previous, ...change }));
     /* A changed declaration invalidates a created run's relevance to the form,
        but never the run itself — so the receipt is cleared, not cancelled. */
@@ -130,6 +140,8 @@ export function useNewRun(
   }, []);
 
   const requestedSpec = useMemo(() => serializeRequestedSpec(draft), [draft]);
+  const currentDeclaration = useRef(requestedSpec);
+  currentDeclaration.current = requestedSpec;
   const blocking = useMemo(() => blockingProblems(draft, limits), [draft, limits]);
 
   /* The preflight container owns the token and drops it whenever the spec
@@ -137,12 +149,15 @@ export function useNewRun(
   const preflight = usePreflight(blocking.length === 0 ? requestedSpec : null, workspaceId);
 
   const mayCreateRun = preflight.preflight?.may_create_run === true;
-  const canSubmit = preflight.preflight !== null && blocking.length === 0;
+  const canSubmit = preflight.preflight !== null && blocking.length === 0 && !pending;
 
   const send = useCallback(() => {
     const token = preflight.preflight?.preflight_token;
-    if (!token) return;
+    if (!token || blocking.length !== 0 || activeRequest.current !== null || currentWorkspace.current !== workspaceId || currentDeclaration.current !== requestedSpec) return;
     if (intentId.current === null) intentId.current = newClientIntentId();
+    const request = { generation: generation.current, token };
+    activeRequest.current = request;
+    const relevant = () => mounted.current && generation.current === request.generation && currentDeclaration.current === requestedSpec && currentWorkspace.current === workspaceId;
 
     setPending(true);
     setCreateRefusal(null);
@@ -157,18 +172,22 @@ export function useNewRun(
         ...(lineage ? { lineage } : {}),
       })
       .then((response) => {
-        setCreated(response);
-        setPending(false);
+        if (relevant()) setCreated(response);
       })
       .catch((error: unknown) => {
+        if (!relevant()) return;
         const refusal = toRunCreateRefusal(error);
         setCreateRefusal(refusal);
-        setPending(false);
         /* A dead preflight means a fresh one is owed before another attempt;
            the intent id goes with it, because it belonged to that preview. */
         if (refusal.invalidatesPreflight) intentId.current = null;
+      })
+      .finally(() => {
+        if (activeRequest.current !== request) return;
+        activeRequest.current = null;
+        if (mounted.current) setPending(false);
       });
-  }, [preflight.preflight, requestedSpec, workspaceId, lineage]);
+  }, [preflight.preflight, requestedSpec, workspaceId, lineage, blocking.length]);
 
   const createState: ResearchState = pending
     ? researchState({ kind: "in-flight", hasAcceptedResponse: false })

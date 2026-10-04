@@ -25,7 +25,7 @@
 
 import { OrchestrationClocks } from "./OrchestrationClocks";
 import { useEffect, useId, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { ResearchScopedLink as Link } from "./ResearchScopedLink";
 
 import { ProvenanceStrip, type ProvenanceFacts } from "./ProvenanceStrip";
 import {
@@ -1893,6 +1893,7 @@ function FreezeLine({ detail, retained = null }: { detail: SearchDetailDocument;
 
 export interface SearchScreenProps {
   runId: string;
+  workspaceId?: string;
   detail: SearchDetailDocument | null;
   state: ResearchState;
   /** FE-X-11: the server said this run does not exist (404). */
@@ -1979,6 +1980,7 @@ const SHOWN_GAPS = new Set<string>([
 
 export function SearchScreen({
   runId,
+  workspaceId,
   detail,
   state,
   notFound = false,
@@ -2048,7 +2050,7 @@ export function SearchScreen({
   /* F2: the fold-filtered answer replaces the unfiltered one for the trial ledger and the inspection panel only. */
   const folded = lane && foldLedger.state === "ready" ? foldLedger.search : null;
   /* D5: later pages of the retained ledger, appended to the first one in hand. */
-  const pages = useLedgerPages(runId, folded ?? lane, folded && foldLedger.state === "ready" ? foldLedger.foldId : null);
+  const pages = useLedgerPages(runId, folded ?? lane, folded && foldLedger.state === "ready" ? foldLedger.foldId : null, workspaceId);
   const ledgerSlot: LedgerSlot = pages.merged && (folded || lane) ? { state: "ready", search: pages.merged } : ledger;
   const inspected = folded ?? lane;
   const ledgerMore: LedgerMore = { hasMore: pages.hasMore, loading: pages.loading, error: pages.error !== null, onMore: pages.loadMore };
@@ -2129,7 +2131,7 @@ export function SearchScreen({
 
       {notFound ? <RunNotFound runId={runId} /> : (
       <>
-      <StageRunBar runId={runId} active={(ledger.state === "refused" && ledger.laneState != null) || (shownState.state === "partial" && ledger.state !== "loading" && ledger.state !== "idle")} />
+      <StageRunBar runId={runId} workspaceId={workspaceId} active={(ledger.state === "refused" && ledger.laneState != null) || (shownState.state === "partial" && ledger.state !== "loading" && ledger.state !== "idle")} />
 
       <ResearchPanel
         title="search & selection"

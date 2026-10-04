@@ -1,0 +1,119 @@
+{
+  "schema_version": "research.p24-unsigned-source-candidate.v6",
+  "recorded_date_utc": "2026-10-04",
+  "status": "AFFECTED_READS_IMPORTED_EXECUTION_AND_ENGINE_QUALIFICATION_ACCEPTED_FULL_PRODUCT_OPEN",
+  "portal_release_target": "2.0.0",
+  "normal_quantbt_engine": "1.1.1",
+  "actual_second_portal_qualified_engine": true,
+  "owner_scope_exception_approved": true,
+  "signed_release": false,
+  "inherits": {
+    "file": "current-source-candidate-manifest.v5.json",
+    "sha256": "1ef295693939656ea4a5a795cd01f13b7b923a7f511f7a305948088e8f51789b",
+    "rule": "Preserve v1-v5, earlier actual scopes and failures. Supersede only explicitly repaired, retaken or owner-disposed prerequisites; never infer full product acceptance."
+  },
+  "source": {
+    "base_commit": "b7e0b867235df31e98e1d168d0646015520b171c",
+    "claude_preserved_ancestor": "3fdd3349",
+    "dirty_at_build": true,
+    "changed_build_input_count": 91,
+    "changed_build_inputs_sha256": "a1be2fb555f175a6e1b6f6e3655291fdb59167d23a8f7bb6aa453e47357c9699",
+    "input_selection": "Changed apps/control-api/src, apps/portal/backend/src, apps/portal/frontend (including focused tests), packages/contracts/generated; sorted path/sha256 JSON. Historical74-input predecessor scope retained in closeout receipt.",
+    "normal_commit_gate": "REQUIRED_WITHOUT_BYPASS; successful normal commit is the commit-bound gate receipt",
+    "landing_branch": "docs/research-loop-plan",
+    "remote_push_authorized": false
+  },
+  "final_owned_candidate": {
+    "project": "portal-research-p23-ol12",
+    "port": 8096,
+    "web_image": "sha256:08f4df00dc80e4b3f708e57e141ee3c2881db32c1f9524474e4509ea0ac175ae",
+    "control_image": "sha256:47a6cd0241358bc6249538d483809eba02ec21ae33ba120a523e5d1cddcc2ce3",
+    "python_and_worker_image": "sha256:c939a7b5639a9a17419af60ae40269546340af9a9ea0d712b4b58766c52e2738",
+    "bundle": "/assets/index-yatIkhOa.js",
+    "bundle_sha256": "1e3517a58cbd8ff4857a03374e5cee1d5a72ec2b0b065ef028080fa5ab6e93db",
+    "scope": "Final exact candidate real draft/CAS/preflight/GUI child and publication ACK-loss plus prepared export GET/download/GC-reference scope. Earlier authenticated read scopes keep their actual predecessor pins."
+  },
+  "post_build_generator_sync": {
+    "scope": "DESCRIPTION_ONLY_NO_RUNTIME_OR_DECLARATION_SHAPE_CHANGE",
+    "paths": ["packages/contracts/openapi/research-dataset-index.openapi.json", "packages/contracts/generated/research-dataset-index.d.ts"],
+    "changed_json_path": "components.schemas.RequestedSpec.description",
+    "generated_type_without_comments_sha256": "20e9968912b199c6287d7fa1edd5124c3b8b6776c35fb5f5a02afd183494fa41",
+    "unnecessary_image_or_browser_rebuild": false
+  },
+  "actual_acceptance": {
+    "affected_backend_read_checks": { "passed": 56, "required": 56, "responses": 38 },
+    "imported_draft_run": "rrun_534c60ecb6337bb1503e48f8726142b7",
+    "imported_api_reads_200": 7,
+    "imported_browser_pages_pass": 3,
+    "imported_api_actor": "QA97",
+    "imported_browser_member": "QA99",
+    "full_gui_import_proved": false,
+    "gui_cloned_imported_fixed_run": "rrun_144e04e13c07b5d65ca5a915b6e4e743",
+    "gui_clone_preflight_create_confined_child_retention": "PASS_ONE_JOB_DOUBLE_CLICK_AND_STALE_ACK_FENCED",
+    "ordinary_user_create": "REFUSED_RESEARCH_RUN_CREATE_FORBIDDEN_RBAC_UNCHANGED",
+    "real_two_actor_draft_and_actor_local_cas": "PASS_SCOPED",
+    "real_late_preflight_response": "PASS_SCOPED",
+    "real_publication_ack_loss": "PASS_SCOPED_BEFORE_AFTER_AND_EXACT_RETRY_ONE_INTENT_ONE_R1",
+    "post_child_prepared_export_download_and_gc": "PASS_SCOPED_26_CHECKS_NO_GC_DELETE_NEW_RESTORE_OR_REPEAT_JOB",
+    "archived_report_base_source_compatibility_tests": 37,
+    "preflight_create_affected_tests": 139,
+    "restored_pin_affected_tests": 65,
+    "mobile_concurrent_reads": { "passed": 240, "required": 240, "principals": 1, "concurrent_lanes": 20, "not_W06_SLO": true },
+    "draft_create_focused_tests": 166,
+    "last_guard_tooltip_tests": 43,
+    "frontend_typecheck": "PASS",
+    "default_production_engine_changed": false,
+    "actual_engine_transition": { "old": "1.1.0", "new": "1.1.1", "completed_runs": 3, "byte_verified_files": 9, "scope": "ISOLATED_EXACT_FIXED_PROFILE_NOT_GENERAL_ADMISSION" }
+  },
+  "integrity": {
+    "strict_verified_historical_manifests": 83,
+    "strict_required_historical_manifests": 86,
+    "full_store_integrity": false,
+    "exact_owner_exception_approved": true,
+    "exception_run_ids": [
+      "rrun_1690a9830787332de93d93d457c8aa0e",
+      "rrun_e2c3a4d31decb9f5d77b77fe49616fdb",
+      "rrun_c93896666b0f3f1647aaa4967ce8c792"
+    ],
+    "synthetic_byte_recovery": false
+  },
+  "private_receipts": [
+    { "file": "p24-candidate-read-receipt-final-01.json", "sha256": "b5dc22c8c8a343e997695f0ab2726af6ac679bb69f38161c5c375bb1dd17c6c4", "scope": "Actual Control108c reads, not later image/browser acceptance" },
+    { "file": "section32-imported-profile-p23-reader-97.json", "sha256": "016dd44fc52348683effdefe3e5eb4e5c03d87e952904492d48e630e9d763db2", "scope": "One real imported child" },
+    { "file": "section32-imported-browser-resume-p23-reader-99.json", "sha256": "b16d127c2c91ea321862ff2eca9b1c403d9f2567175c234d2a076ef671287659", "scope": "Distinct ordinary member, actual final-shell Webeaf pages" },
+    { "file": "p24-benchmark-read-truth.json", "sha256": "a431d2a5ff9ac72e7625a0df4d4334f7a5aa788d10ab461a8b312e706ec31958", "scope": "Actual final Control7999 GET; genuine v2 preserved, null legacy absent, jobs68→68" },
+    { "file": "p24-pre-teardown-custody.json", "sha256": "319cd277b4645a8f0f74deeda1cd865ef6f30461b75f5ca1fb50deb5c3118723", "scope": "QA95/97/98/99 disabled/session0, workerOFF, old pending fixture preserved" },
+    { "file": "p24-c4-final.json", "sha256": "4b7805b73417fc3e4f0a5b8fefd22466fc999db1f20f14204ac2dd45f4dfbc0e", "scope": "Predecessor cleanup before additive write-edge continuation, not its final cleanup" },
+    { "file": "producer-browser-r01/producer-cas-receipt.json", "sha256": "8bd763ae1b5826582cc04f55e558214b625955a003f2b0fb9ccb912ca6eb9bad", "scope": "Actual final candidate GUI preflight/create/one child, edited-form lateACK fence; distinct normal QA ADMIN" },
+    { "file": "p24-edge-publish-browser-r02/p24-publication-export-edges.json", "sha256": "826f1360efd1bd3a63b093d57a428a3b80ccb0dc83aa2f839c8d29161fd54ba7", "scope": "Actual SC19 before/after ACK-loss and exact retry PASS; exports completed before harness stdout-parser failure; preserved, not fully successful harness" },
+    { "file": "p24-edge-publish-browser-r04/p24-publication-export-edges.json", "sha256": "5255c037306cbc6956b1ad20f798bb818033cdfa6d9c954df6b81f709ee2bb2c", "scope": "Final26/26 read continuation: same2READY exports/bytes/core/RC/AlphaLineage/reference exclusions; zero repeat write/CLI" },
+    { "file": "producer-browser-r01/actual-child-config-byte-proof.json", "sha256": "ac033eada208a7d3a47f176ff11f00068917f411c9a4a3b474513456ccc2be15", "scope": "Final GUI request equals sealed config blob and requested/effective/native pins;5sealed docs+3retained file hashes" },
+    { "file": "p24-edge-cleanup-1791113337613.json", "sha256": "a54f707bc3ce00564998e033a96851571911f0021fd8ee4a038f64a1195ab1f8", "scope": "Fresh3USER+1distinctproducerADMIN disabled/session0/passwords removed beforedeadline" },
+    { "file": "p24-final-c4-cleanup.json", "sha256": "70ad858ac2b9516109b097279955ef286b5098187b7e32a08900e8e35df66ddb", "scope": "Final7containers+network removed,4actual mounted volumes retained,8096/8097free; no shared/production action" }
+  ],
+  "cleanup": {
+    "owned_containers_remaining": 0,
+    "owned_networks_remaining": 0,
+    "ports_free": [8096, 8097],
+    "qa_accounts_disabled": ["QA95", "QA97", "QA98", "QA99", "p24-edge-a", "p24-edge-b", "p24-edge-publish", "p24-edge-producer"],
+    "active_qa_sessions": 0,
+    "volumes_business_data_and_rollback_images_retained": true,
+    "actual_retained_mounted_volume_count": 4,
+    "final_cleanup_sha256": "70ad858ac2b9516109b097279955ef286b5098187b7e32a08900e8e35df66ddb",
+    "broad_prune": false
+  },
+  "mandatory_scenarios": {
+    "denominator": 24,
+    "ledger": "P24_SCENARIO_CLOSEOUT_2026-10-04.md",
+    "all_passed": false,
+    "remaining_exact_branches": [
+      "EXPLICIT_BROWSER_AUDIT_ALLOCATION",
+      "COMPLETE_SCRATCH_WIDEN_AND_BUDGET_VARIANTS_BEYOND_THE_ACCEPTED_FIXED_GUI_PROFILE",
+      "COMPLETE_MULTIUSER_HOLDOUT_EXPOSURE_AND_POST_APPROVAL_CORRUPTION_VARIANTS",
+      "ALL_24_MANDATORY_SCENARIO_DISPOSITIONS_NOT_INFERRED_FROM_SCOPED_OR_CANONICAL_FIXTURE_PROOF"
+    ]
+  },
+  "owner_visual_accepted": false,
+  "release_sbom_provenance_dispatched": false,
+  "protected_execution_planning_design_changed": false
+}

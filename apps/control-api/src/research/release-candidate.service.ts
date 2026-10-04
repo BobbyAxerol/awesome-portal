@@ -697,8 +697,21 @@ export class ResearchReleaseCandidateService {
       && source.verifiedAudit.result.parameters_digest === facts.parameterDigest ? source.verifiedAudit : undefined;
     const finalAudit = source.runState === "READY" && facts.replayRetained && facts.parameterDigest !== null
       && (childAuditMatches || linkedAudit !== undefined);
-    const reportFromLane = retainedReport && report.sealed
-      && stringAt(reportCore, ["source_revisions", "evidence_revision"]) === facts.evidenceRevision;
+    const capturedEvidenceRevision = stringAt(reportCore, ["source_revisions", "evidence_revision"]);
+    // A companion adds a new read representation, not a new immutable source.
+    // Reports captured before that companion remain usable only when their
+    // original revision is the exact base seal revision AND all five source
+    // pins still match. Never adopt an arbitrary historical presentation hash
+    // or rewrite the archived report to manufacture current evidence.
+    const reportSourcePinsMatch = seal !== null && strictDatasetDigest !== null
+      && manifest !== null && sourceTransform !== null
+      && ["manifest_digest", "source_transform_digest", "requested_spec_digest", "effective_spec_digest", "dataset_binding_digest"]
+        .every(key => digest(reportDigestAt(key)) !== null)
+      && this.sameDigest(seal.requestedSpecDigest, source.requestSpecDigest, reportDigestAt("requested_spec_digest")) !== null
+      && this.sameDigest(seal.effectiveSpecDigest, source.effectiveSpecDigest, reportDigestAt("effective_spec_digest")) !== null;
+    const reportFromLane = retainedReport && report.sealed && reportSourcePinsMatch
+      && (capturedEvidenceRevision === facts.evidenceRevision
+        || (facts.sealDigest !== null && capturedEvidenceRevision === `rs02_evidence_${facts.sealDigest}`));
     const fields = base.fields.map((item): Field => {
       switch (item.key) {
         case "final_audit_run_id":

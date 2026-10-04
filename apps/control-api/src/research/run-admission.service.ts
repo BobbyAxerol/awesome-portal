@@ -37,6 +37,7 @@ import { DELTA_CAUSAL_INNER_PROFILE, DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL
 import { parseDecimal } from "./whatif.grid";
 import { WHATIF_PROFILE } from "./whatif.profile";
 import { ResearchRunCreateError } from "./run-create.error";
+import { engine110QualificationEnabled } from "./engine-qualification.profile";
 import { researchRunVersionPrecheck } from "./version-admission";
 import { VN_OBSERVED_FIXED_PROFILE, VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST, vnObservedSourceDateMs } from "./vn-observed-fixed.profile";
 import {
@@ -516,7 +517,11 @@ export class ResearchRunAdmissionService {
       return "The effective preflight engine binding no longer matches the submitted request.";
     }
     if (requested.client.engine_release_id !== P04_DELTA_DECLARED_CONTRACT.execution.engine_release_id) {
-      return "The installed Delta adapter is bound to engine release er_quantbt_111.";
+      if (!(engine110QualificationEnabled(this.config) && requested.client.engine_release_id === "er_quantbt_110"
+          && requested.schema_version === "research.requested-spec.v1" && requested.data.dataset_id === "crypto-binance-1m"
+          && requested.data.symbol === "BTCUSDT" && requested.data.timeframe === "1h")) {
+        return "The installed Delta adapter is bound to engine release er_quantbt_111.";
+      }
     }
     if (requested.execution_route !== "signal_notional" || requested.protocol !== "three_window_decay") {
       return "The installed Delta adapter currently accepts only the signal-notional three-window profile.";

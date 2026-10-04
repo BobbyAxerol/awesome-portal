@@ -79,6 +79,9 @@ const EnvSchema = z.object({
   // without accepting a browser-originated run until the bounded producer,
   // Portal private route and durable worker are deployed as one approved unit.
   FEATURE_RESEARCH_RUN_PRODUCER: z.enum(["true", "false"]).default("false"),
+  // P23 only: exact old-wheel compatibility binding, never a current default.
+  RESEARCH_ENGINE_QUALIFICATION_VERSION: z.preprocess(value => value === "" ? undefined : value,
+    z.literal("1.1.0").optional()),
   RESEARCH_RUN_PRODUCER_LEASE_SECONDS: z.coerce.number().int().min(15).max(300).default(90),
   // P11 is an explicitly deployed, additive callback/read plane.  It stays
   // dark until the Python worker journal, shared durable volume and Control
@@ -448,6 +451,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     "GOVERNANCE_APPLY_KEYS_FILE",
   );
   const config = EnvSchema.parse(resolved);
+  if (config.RESEARCH_ENGINE_QUALIFICATION_VERSION !== undefined
+      && (config.PORTAL_ENV !== "local" || config.AUTH_MODE !== "dev")) {
+    throw new Error("RESEARCH_ENGINE_QUALIFICATION_VERSION is isolated-only (PORTAL_ENV=local and AUTH_MODE=dev)");
+  }
   if (config.PORTAL_ENV !== "local") {
     const missingSigningKeys = ["QUERY_CURSOR_KEYS_JSON", "GOVERNANCE_APPLY_KEYS_JSON"]
       .filter((name) => !resolved[name]);

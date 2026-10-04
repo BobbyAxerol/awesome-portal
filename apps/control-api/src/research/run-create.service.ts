@@ -17,6 +17,7 @@ import {
   type ResearchRunCreateResponse,
 } from "./run-create.contract";
 import { ResearchRunCreateError } from "./run-create.error";
+import { ENGINE_110_QUALIFICATION_BINDING, ENGINE_110_QUALIFICATION_BINDING_DIGEST } from "./engine-qualification.profile";
 import { ResearchRunAdmissionService } from "./run-admission.service";
 import { VnObservedSourceObservationSchema } from "./preflight.contract";
 import { VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_RESOURCE_CLASS, VN_OBSERVED_FIXED_RESOURCE_PROFILE,
@@ -288,6 +289,9 @@ export class ResearchRunCreateService {
         // the child never receives an implied UI default or discovers params
         // from arbitrary Alpha source.
         p04_parameters: alpha.fixedParameters,
+        ...(requested.client.engine_release_id === "er_quantbt_110" ? {
+          qualification_binding: { ...ENGINE_110_QUALIFICATION_BINDING, binding_digest: ENGINE_110_QUALIFICATION_BINDING_DIGEST },
+        } : {}),
         ...(vnObserved ? { execution_profile_id: profile.id, execution_profile_digest: profile.digest,
           source_observation: sourceObservation } : {}),
         work_digest: workDigest,

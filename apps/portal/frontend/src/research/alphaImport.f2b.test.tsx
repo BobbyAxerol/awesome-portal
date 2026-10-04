@@ -10,7 +10,7 @@
  *
  * Server objects are the canonical contract fixtures (never hand-built).
  */
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -87,6 +87,13 @@ const q = (selector: string) => document.querySelector(selector) as HTMLElement 
 const href = (selector: string) => q(selector)?.getAttribute("href");
 
 describe("F2b — S14 links keep their context", () => {
+  it("P24 retains workspace in admitted version, Lineage and New Run product links", () => {
+    render(<MemoryRouter initialEntries={["/research/quantbt/alpha-import?workspace_id=ws%26review"]}><AlphaImport {...registered()} /></MemoryRouter>);
+    const outgoing = [...document.querySelectorAll<HTMLAnchorElement>('a[href^="/research/quantbt/"]')];
+    expect(outgoing.length).toBeGreaterThan(2);
+    for (const link of outgoing) expect(new URL(link.href).searchParams.get("workspace_id")).toBe("ws&review");
+  });
+
   it("the shared href helpers produce what the receiving screens read", () => {
     expect(newRunPrefillHref("alpha-demo")).toBe("/research/quantbt/runs/new?alpha=alpha-demo");
     expect(newRunPrefillHref("alpha-demo", "av_1")).toBe("/research/quantbt/runs/new?alpha=alpha-demo&av=av_1");
@@ -229,6 +236,22 @@ describe("F2b — AlphaImportRoute keeps ?alpha= in the URL", () => {
     await settled();
     expect((document.querySelector('input[aria-label="Alpha id"]') as HTMLInputElement | null)?.value ?? "").toBe("alpha-demo");
     expect(href('[data-action="back-to-lineage"]')).toBe(lineageHref("alpha-demo"));
+  });
+
+  it("P24 keeps explicit workspace for the existing registry read and parse write", async () => {
+    renderRoute("?alpha=alpha-demo&workspace_id=ws%26review");
+    await settled();
+    const fetch = vi.mocked(globalThis.fetch);
+    expect(new URL(String(fetch.mock.calls[0][0]), "http://localhost").searchParams.get("workspace_id")).toBe("ws&review");
+    fetch.mockResolvedValueOnce(new Response(JSON.stringify(SOURCE), { status: 200, headers: { "content-type": "application/json" } }));
+    fireEvent.change(document.querySelector("textarea")!, { target: { value: "ALPHA_CONTRACT = {}\n" } });
+    fireEvent.click(document.querySelector('[data-action="parse"]')!);
+    await waitFor(() => expect(fetch.mock.calls.some(([, init]) => init?.method === "POST")).toBe(true));
+    const [, request] = fetch.mock.calls.find(([, init]) => init?.method === "POST")!;
+    expect(JSON.parse(String(request?.body)).workspace_id).toBe("ws&review");
+    expect(document.querySelector("[data-where]")?.textContent).toContain("workspace_id=ws%26review");
+    for (const link of document.querySelectorAll<HTMLAnchorElement>('a[href^="/research/quantbt/"]'))
+      expect(new URL(link.href).searchParams.get("workspace_id")).toBe("ws&review");
   });
 
   it("an id that is not a valid alpha id is neither pre-filled as context nor linked", async () => {

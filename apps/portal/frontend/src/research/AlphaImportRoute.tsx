@@ -24,10 +24,10 @@ const ALPHA_QUERY = /^[a-z][a-z0-9-]{2,63}$/;
  * `replace`, so "copy link" and Back land on the same alpha. The uploaded bytes
  * and receipts are never in the URL: they belong to this tab.
  */
-export function AlphaImportRoute() {
+function AlphaImportContainer({ workspaceId }: { workspaceId?: string }) {
   const [params, setParams] = useSearchParams();
   const [initialAlpha] = useState(() => params.get("alpha") ?? "");
-  const controller = useAlphaImport(undefined, initialAlpha);
+  const controller = useAlphaImport(workspaceId, initialAlpha);
   const { onAlphaIdChange } = controller;
   const mirrorAlpha = useCallback(
     (value: string) => {
@@ -86,4 +86,10 @@ export function AlphaImportRoute() {
       activationRefusal={controller.activationRefusal}
     />
   );
+}
+
+export function AlphaImportRoute() {
+  const [params] = useSearchParams();
+  const workspaceId = params.get("workspace_id") || undefined;
+  return <AlphaImportContainer key={workspaceId ?? ""} workspaceId={workspaceId} />;
 }

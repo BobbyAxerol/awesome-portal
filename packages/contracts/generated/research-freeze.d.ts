@@ -138,7 +138,7 @@ export interface components {
         EnginePin: {
             /** @enum {unknown} */
             state: "AVAILABLE" | "NOT_PUBLISHED";
-            engine_version: "1.1.1" | null;
+            engine_version: ("1.1.0" | "1.1.1") | null;
             execution_adapter_id: ("p04.delta-rsi.v1" | "p17.imported-signal-notional.v1") | null;
             adapter_contract_digest: components["schemas"]["Digest"] | null;
             availability: components["schemas"]["Availability"];

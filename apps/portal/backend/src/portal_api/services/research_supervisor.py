@@ -132,6 +132,7 @@ class ResearchChildReceipt:
     execution_profile_id: str | None = None
     execution_profile_digest: str | None = None
     source_observation: dict[str, Any] | None = None
+    qualification_binding: dict[str, Any] | None = None
 
     def as_payload(self) -> dict[str, Any]:
         payload = {
@@ -163,6 +164,11 @@ class ResearchChildReceipt:
                 source_observation=VnSourceObservation.model_validate(self.source_observation).model_dump(mode="json"))
         elif self.execution_profile_digest is not None or self.source_observation is not None:
             raise ResearchSupervisorError("legacy fixed child cannot carry another profile's provenance")
+        if self.qualification_binding is not None:
+            from portal_api.domain.research_engine_qualification import validate_engine_qualification_binding
+            validate_engine_qualification_binding(self.qualification_binding, release_id="er_quantbt_110",
+                profile_id="p04.fixed-qualification.v1", adapter_contract_digest=self.qualification_binding.get("adapter_contract_digest", ""))
+            payload["qualification_binding"] = dict(self.qualification_binding)
         return payload
 
 
@@ -675,8 +681,11 @@ class IsolatedResearchSupervisor:
         except (KeyError, TypeError, ValueError) as error:
             raise ResearchSupervisorError("P06 child returned an invalid bounded receipt") from error
         evidence_source = payload.get("evidence_source")
+        expected_engine_version = "1.1.0" if receipt.qualification_binding is not None else "1.1.1"
+        if engine_version != expected_engine_version or payload.get("qualification_binding") != receipt.qualification_binding:
+            raise ResearchSupervisorError("fixed child engine/binding differs from the immutable launch pin")
         if evidence_source is not None:
-            self._validate_evidence_source(evidence_source)
+            self._validate_evidence_source(evidence_source, expected_engine_version=expected_engine_version)
         fixed_replay_source, fixed_replay_path = self._validated_fixed_replay(payload, receipt)
         is_qualification_source, is_qualification_path = self._validated_is_qualification(payload, receipt)
         return ResearchChildResult(
@@ -1029,6 +1038,11 @@ class IsolatedResearchSupervisor:
                 and capture_is_qualification \
                 and os.environ.get("RESEARCH_IS_QUALIFICATION_CAPTURE") == "true":
             environment["RESEARCH_IS_QUALIFICATION_CAPTURE"] = "true"
+        if expected_task == "P04_DELTA_SMOKE" and json.loads(receipt_path.read_text()).get("qualification_binding") is not None:
+            # Only this exact already-validated binding receives these two
+            # non-secret local qualification switches; never inherited secrets.
+            from portal_api.domain.research_engine_qualification import ENGINE_110_QUALIFICATION_BINDING_DIGEST
+            environment["RESEARCH_ENGINE_QUALIFICATION_CHILD_BINDING_SHA256"] = ENGINE_110_QUALIFICATION_BINDING_DIGEST
         # `-I` ignores PYTHONPATH and the user site. The controlled bootstrap
         # adds only this repository's immutable source roots, rather than
         # inheriting a parent interpreter's arbitrary module search path.
@@ -1171,6 +1185,7 @@ class IsolatedResearchSupervisor:
         value: object,
         *,
         expected_adapter_id: str = "p04.delta-rsi.v1",
+        expected_engine_version: str = "1.1.1",
     ) -> None:
         """Reject a malformed P13 receipt before it crosses P06's boundary.
 
@@ -1199,7 +1214,7 @@ class IsolatedResearchSupervisor:
         unavailable = value.get("unavailable")
         if not all(isinstance(item, dict) for item in (source, direct, derived, unavailable)) or not isinstance(points, list):
             raise ResearchSupervisorError("P06 child evidence receipt shape is invalid")
-        if source.get("execution_adapter_id") != expected_adapter_id or source.get("engine_version") != "1.1.1":
+        if source.get("execution_adapter_id") != expected_adapter_id or source.get("engine_version") != expected_engine_version:
             raise ResearchSupervisorError("P06 child evidence receipt source identity is invalid")
         if not 1 <= len(points) <= 192 or source.get("emitted_equity_points") != len(points):
             raise ResearchSupervisorError("P06 child evidence receipt point count is invalid")

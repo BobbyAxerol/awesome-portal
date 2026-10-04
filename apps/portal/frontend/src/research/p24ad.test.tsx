@@ -1,5 +1,5 @@
 /** P24 agent AD: print convention, scroll-container focus, S14 step hash, linked-audit gate. */
-import { render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { stepFromHash } from "./AlphaImport";
@@ -7,7 +7,7 @@ import { LinkedAuditConsumer } from "./LinkedAuditConsumer";
 import { PageHeader } from "./PageHeader";
 import { StageLedger } from "./StageLedger";
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("P24-AD", () => {
   it("F-01 the copy-link button is no-print", () => {
@@ -32,16 +32,24 @@ describe("P24-AD", () => {
 
   it("F-07 a target kind the linked audit does not cover sends no request and says so", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("must not be called"));
-    render(<LinkedAuditConsumer runId="rrun_x" targetKind="FIXED_PARAMETER_PROFILE" />);
+    render(<LinkedAuditConsumer runId="rrun_x" applicable={false} targetKind="FIXED_PARAMETER_PROFILE" />);
     const panel = document.querySelector("[data-linked-final-audit]") as HTMLElement;
     expect(panel.getAttribute("data-audit-state")).toBe("NOT_APPLICABLE");
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("F-07 a covered (or unknown) target still asks the server", async () => {
+  it.each([null, undefined])("F-07 absent applicability (%s) never infers permission from a target kind", applicable => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("must not be called"));
+    render(<LinkedAuditConsumer runId="rrun_x" applicable={applicable} targetKind="SINGLE_PARAMETER_SET" />);
+    expect(document.querySelector("[data-linked-final-audit]")?.getAttribute("data-audit-state")).toBe("NOT_PUBLISHED");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("F-07 explicit applicability asks the server once, never starts compute", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 409, headers: { "content-type": "application/json" } }));
-    render(<LinkedAuditConsumer runId="rrun_x" targetKind="SINGLE_PARAMETER_SET" />);
+    render(<LinkedAuditConsumer runId="rrun_x" applicable targetKind="SINGLE_PARAMETER_SET" />);
     await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
     expect(await screen.findByText(/RESEARCH|does not admit/i, {}, { timeout: 2000 }).catch(() => null)).toBeDefined();
+    expect(fetchSpy.mock.calls[0]?.[1]?.method ?? "GET").toBe("GET");
   });
 });

@@ -10,7 +10,7 @@
  */
 
 import { humanise } from "./humanise";
-import { Link } from "react-router-dom";
+import { ResearchScopedLink as Link } from "./ResearchScopedLink";
 
 import { Withheld } from "./EvidenceFlow";
 import type { EvidenceCursor } from "./evidenceCursor";

@@ -4,7 +4,7 @@
  * Renders nothing for a completed run, so successful screens are untouched.
  */
 
-import { Link } from "react-router-dom";
+import { ResearchScopedLink as Link } from "./ResearchScopedLink";
 
 import type { EvidenceCursor } from "./evidenceCursor";
 import { exitHref } from "./runLinks";

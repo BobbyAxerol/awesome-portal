@@ -5,6 +5,39 @@ Implemented, measured, browser-accepted and deployed are different verdicts.
 This packet closes the independent WFO and isolated version-rehearsal work,
 not the outstanding product/source/owner gates. No new phase is introduced.
 
+## Latest approved continuation — 2026-10-04
+
+This latest addendum supersedes older **engine-two absent / owner decision
+requested** statements below, only in the stated scope. Portal's next release
+target is **v2.0.0**; Research's V1.1 specification and QuantBT **1.1.1** are
+independent version namespaces. No production default is changed.
+
+- Bobby approved the exception for exactly three historical test manifests.
+  Original bytes remain missing, strict integrity stays **83/86**, and
+  `full_store_integrity` remains false. This is a scope disposition, not byte
+  recovery, a rewritten seal, or a fabricated 86/86 PASS.
+- The [actual Portal engine transition](./P24_PORTAL_ENGINE_TRANSITION_2026-10-04.md)
+  supplies P23-T07/T13 and P24-T05's isolated fixed-profile proof: old 1.1.0
+  in-flight pin, new-default 1.1.1, exact old-input reproduction, confined
+  child/P05/reads and rollback. **3 runs completed / 9 files byte-verified**.
+  This is no longer a direct-wheel-only experiment. Production multi-version
+  scheduling, other 1.1.0 profiles and signed deployment are not certified.
+- [Current-candidate closeout](./P24_CURRENT_CANDIDATE_CLOSEOUT_2026-10-04.md)
+  records the grouped historical Search / canonical study-field fixes and
+  **56/56** actual affected backend read checks. Comprehensive S01–S08
+  workspace propagation is repaired without changing Claude's design.
+- The [consumer](./P24_CONSUMER_FINISH_2026-10-04.md) and
+  [24-row scenario ledger](./P24_SCENARIO_CLOSEOUT_2026-10-04.md) preserve exact
+  image/branch scopes and distinguish real, reused and technical-fixture
+  evidence. Browser, imported-run and cleanup results belong to those final
+  receipts, not to a blanket inference from the code or an old page visit.
+
+**Full P24 is not automatically GO.** The remaining exact scenario/field/action
+branches, owner product review and authorized signed release retain their
+own denominator and disposition. Historic paragraphs/tables below remain
+as evidence of earlier results, not requests to repeat an already approved
+decision or a gate now proved by this addendum.
+
 ## Latest frontend consumer amendment — 2026-10-04
 
 Codex delivered explicit workspace binding and generated linked-audit
@@ -124,12 +157,12 @@ not relabelled as all running on today's latest frontend image.
 
 | ID | Current disposition | Receipt / exact remaining work |
 | --- | --- | --- |
-| P24-T01 | PARTIAL | [Imported/DRAFT real execution](../P10/E17_IMPORTED_DRAFT_EXECUTION_BACKEND_RECEIPT_2026-09-27.md) and [P22](../P22/README.md) exist separately. One exact-candidate import→report→RC product journey still needed. |
+| P24-T01 | SCOPED_PASS / other-profile variants OPEN | [Imported DRAFT API→child→P05 and downstream browser](./P24_IMPORTED_DRAFT_API_AND_BROWSER_2026-10-04.md) plus [real same-actor fixed GUI clone/preflight/create→confined111 child→READY](./P24_CONSUMER_FINISH_2026-10-04.md), exact requested/effective/native byte proof, one job despite double-click and late ACK. Existing registered imported pin reused; not a new GUI import/registration or generic WFO profile claim. |
 | P24-T02 | PARTIAL | Scratch/nonpublishable service and publication guards tested previously; whole latest-candidate journey remains. |
 | P24-T03 | SCOPED_PASS / aggregate OPEN | [Actual DB/NATS/worker retry](../P23/TEMPORAL_CANDIDATE_LOAD_2026-10-02.md): same intent resumes and seals COMPLETED/READY; don't claim a new engine or latest FE test. |
-| P24-T04 | PARTIAL | [Source-attested temporal guards/exposure](../P14/BR_F3_02_APPLIED_GUARDS_AND_W5_NAVIGATION_2026-10-03.md); eligible retained final-audit proof exists. Non-reusable linked audit remains typed, not a fabricated child. |
-| P24-T05 | OPEN_EXTERNAL | Real second qualified engine/default/in-flight/historical proof absent; two images of 1.1.1 are not two engines. |
-| P24-T06 | SCOPED_PASS / aggregate OPEN | [P22 actual sealed RC→unchanged R1→independent approval](../P22/README.md). Full latest-product journey still needed. |
+| P24-T04 | SCOPED_PASS / browser allocation OPEN | [Source-attested temporal guards/exposure](../P14/BR_F3_02_APPLIED_GUARDS_AND_W5_NAVIGATION_2026-10-03.md) plus [actual non-reusable R-WFO-020 linked child, optimizer0, byte verification and restart/restore](../P23/NONREUSABLE_ORIGINAL_AUDIT_AND_READ_COST_2026-10-03.md). Explicit browser allocation→verification→publish is a separate missing branch; unsupported per-fold targets stay typed. |
+| P24-T05 | SCOPED_PASS | [Actual Portal 1.1.0 → 1.1.1 qualification](./P24_PORTAL_ENGINE_TRANSITION_2026-10-04.md): in-flight old pin, new default, exact old-input reproduction, child/retention/history reads and rollback. Fixed qualification only, not production multi-version scheduling or other old profiles. |
+| P24-T06 | SCOPED_PASS / independent decision variants OPEN | [P22 sealed RC→unchanged R1→independent approval](../P22/README.md) plus [current-candidate browser publication lost ACK before/after commit, exact retry one intent/one R1](./P24_SCENARIO_CLOSEOUT_2026-10-04.md). Current test does not decide the pending R1 or grant reviewer privileges. |
 | P24-T07 | PARTIAL | [151-table coherent restore + five worker-off API reads](../P23/MIXED_LOAD_AND_HISTORICAL_MANIFEST_EXCEPTION_2026-10-03.md#7-same-candidate-coherent-restore--actual-outcome). Restored browser receipt and full byte integrity are not proved. |
 | P24-T08 | SCOPED_PASS | No product/protected source changed in this slice; outside runtime identities/restarts and migration custody unchanged during rollback. Full journey protected-hash bundle still required. |
 | P24-T09 | OPEN_FE | Claude's latest W5/visual work is preserved, not edited or accepted by this backend run. Need full 15-screen actual candidate visual/interaction/a11y receipt. |
@@ -138,7 +171,7 @@ not relabelled as all running on today's latest frontend image.
 | P24-T12 | OPEN | Full §16.6 scenario matrix and exact per-scenario traces remain required; selected WFO/restore/rollback cases are not its whole denominator. |
 | P24-T13 | OPEN_FE | All 15 screens field/action mapped/integrated/browser/resource coverage; existing P01/RS-02/FG matrices are inputs, not full current-product acceptance. |
 | P24-T14 | SCOPED_PASS / whole journey OPEN | No Execution/Trading mutations or production commands; exact outside runtime/DB custody unchanged during rehearsal. Full journey authority/protected-hash receipt remains. |
-| P24-T15 | OPEN_OWNER | No new COR/waiver invented. Any release exception for second engine, missing historical bytes, typed child absence or unreachable 502 must retain evidence and Bobby's explicit disposition. |
+| P24-T15 | OPEN_OWNER_PRODUCT_REVIEW | Bobby approved exactly three historical test-run manifest exceptions; strict83/86 remains, bytes are not recovered. Second-engine fixed qualification and actual502 are proved, not pending exception requests. Whole product review/release authorization stays separate. |
 
 V11-P24-DR is **PARTIAL**: direct WFO proven but whole journey incomplete.
 V11-P24-BR is **OPEN**. V11-P24-GX: scoped cleanup/rollback PASS; full product
@@ -157,9 +190,9 @@ are unchanged; this table creates no new owner decision.
 | FND-03 | P07 immutable source/readonly mirror; latest S14 real parse/register/changed-digest browser receipt required. |
 | FND-04 | [Temporal executor](../P10/B7_B8_TEMPORAL_EXECUTOR_2026-10-02.md), canonical effective config; product form round trip required. |
 | FND-05 | P08/P11/P15 topology/counter contracts; direct oracle verifies 13/3 count for one global profile, not every schedule. |
-| FND-06 | Release pin/current negative proof exists; real second-engine/default/reproduce case OPEN. |
+| FND-06 | [Real local second-engine/default/reproduce case accepted](./P24_PORTAL_ENGINE_TRANSITION_2026-10-04.md) with exact finite binding. Normal111 unchanged; unsupported old profiles remain refused. |
 | FND-07 | Workspace Library/attempt registry; latest screen census and retry cardinality journey required. |
-| FND-08 | Exact retained self-audit proved. Linked non-reusable child typed unsupported; cannot silently call all profiles executed. |
+| FND-08 | Exact retained self-audit and actual non-reusable R-WFO-020 linked child/restart/restore proved in the P23 receipt above. No generic all-profile claim; explicit browser allocation/verification/publication remains separately recorded. |
 | FND-09 | Typed null-trial/selection identities and P22 pins; whole selected-artifact journey required, no fake centroid trial. |
 | FND-10 | Holdout source metadata readonly; no invented unlock authority or mutation. Keep guide DR-01 boundary. |
 | FND-11 | Source-attested exposure writer delivered; preserved in coherent DB restore. Complete exposure/browser disclosure remains. |
@@ -169,7 +202,7 @@ are unchanged; this table creates no new owner decision.
 | FND-15 | Stable scoped replay/current retrospective lane and prior cold-browser receipt; latest Reveal/future-state round trip required. |
 | FND-16 | Typed causal study/trial scopes delivered; Claude's latest hash/deep-link changes need product receipt. |
 | FND-17 | P22 R1-governed promotion fact, no rank/reset mutation; full end-to-end disclosure receipt remains. |
-| FND-18 | Current profile qualification/negative mapper proof; informational new engine never auto-admitted. Second-engine case OPEN. |
+| FND-18 | Current profile qualification/negative mapper proof retained; informational new engine never auto-admitted. Local old110 fixed profile is now separately qualified, not blanket mapper availability. |
 | FND-19 | Exact artifact/native/snapshot/config pins in direct WFO and P22; full downstream browser pin/readback remains. |
 | FND-20 | 15 required P24 IDs above and existing P01/RS-02/FG field/action matrices retained. Full matrices/browser denominator still OPEN. |
 
@@ -210,9 +243,9 @@ dispatch was added. No generated DTO/contract/schema/migration/UI change.
 3. Combine those results with this backend matrix. Rebuild only changed
    dependencies and remeasure image-sensitive acceptance where necessary,
    not every unchanged PASS gate. Preserve each original image/source hash.
-4. Bobby decides the second-engine qualification/exception and historical
-   lost-byte disposition. Strict integrity stays false pending real recovery
-   or explicit scope disposition; no synthetic recovery permitted.
+4. Reuse Bobby's approved exact-three-historical-test scope disposition and
+   the now completed local second-engine qualification; do not ask again.
+   Strict integrity stays false (83/86), no synthetic recovery permitted.
 5. Only after full gates/owner review: authorized remote merge and existing
    signed publish/deploy workflow. Local rehearsal is not signed release,
    SBOM/provenance, protected main merge or production deployment.

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { ResearchEvidenceService } from "../src/research/evidence.service";
@@ -230,6 +232,36 @@ describe("P13 Evidence Flow projection authority", () => {
       state: "NOT_PUBLISHED",
       reason_code: "P04_SOURCE_PREDATES_E16_CANDLE_OVERVIEW",
       data: null,
+    });
+  });
+
+  it("does not mark the null legacy benchmark AVAILABLE when analytics-v2 publishes a genuine benchmark", async () => {
+    const evidence = p13EvidenceSourceFixture();
+    const analytics = JSON.parse(readFileSync(resolve(process.env.PORTAL_CONTRACTS_DIR
+      ?? resolve(__dirname, "../../../packages/contracts"), "fixtures/research-retained-analytics-v2.fixed.valid.json"), "utf8"));
+    const persist = vi.fn().mockResolvedValue(undefined);
+    const repository = { persist, inputBinding: vi.fn().mockResolvedValue(null), hub: vi.fn() };
+    const service = new ResearchEvidenceService(repository as never, { FEATURE_RESEARCH_EVIDENCE: "true" } as never);
+    await service.ingest(ingressScope, {
+      run_id: "run_p13",
+      event: { event_type: "run_completed", sequence: 9, payload: { evidence_digest: sha256ResearchJson(evidence) } },
+      evidence,
+    } as unknown as ResearchProgressIngress);
+    const write = persist.mock.calls[0]![1];
+    repository.hub.mockResolvedValue({
+      kind: "DURABLE", runId: "run_p13", requestedSpec: requestedSpec(),
+      requestedSpecDigest: "a".repeat(64), effectiveSpecDigest: "b".repeat(64), datasetBindingDigest: "c".repeat(64),
+      manifestDigest: "d".repeat(64), progressSnapshot: null, jobState: "SUCCEEDED",
+      revision: write.projectionRevision, projection: { ...write.projection, summary_analytics_v2: analytics },
+      readiness: write.readiness, sourceEvidenceDigest: write.sourceEvidenceDigest,
+      receivedAt: new Date(), asOfUtcMs: 1_725_000_000_000,
+    });
+    const hub = await service.hub(scope, "run_p13");
+    expect(hub.source_absences.benchmark).toEqual({ state: "AVAILABLE", reason_code: null });
+    expect(hub.summary_analytics_v2).toEqual(analytics);
+    expect(hub.metrics.find((item) => item.key === "BENCHMARK_RETURN_FRACTION")).toMatchObject({
+      value: null, origin: "NOT_PUBLISHED", scope: "NOT_PUBLISHED",
+      availability: { state: "NOT_PUBLISHED", reason_code: "P13_LEGACY_BENCHMARK_USE_ANALYTICS_V2" },
     });
   });
 

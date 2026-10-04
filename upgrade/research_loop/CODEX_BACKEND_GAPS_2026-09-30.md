@@ -1893,3 +1893,86 @@ Library query and scoped-admission regression are corrected, **45/45 focused
 tests PASS**. No migration, cache, API/UI or deadline change. Shared preview
 still needs the final single-candidate rebuild/affected HTTP retake; SQL proof
 is not a deployment claim. Details/hashes are in the §32 receipt above.
+
+### §32 approved remaining closeout — 2026-10-04
+
+Bobby requests completing all available remaining work, using independent
+subagents. The existing P24 work order is recorded in Unified; no new campaign
+or remote/production operation is opened. Consumer logic, isolated engine
+transition and the full 24-row scenario denominator are worked in parallel.
+Root integrates one exact-candidate receipt and cleanup. Code/fixture success
+does not stand in for a missing real child, browser or scenario receipt.
+
+Pending results are recorded in `evidence/P24/P24_CONSUMER_FINISH_2026-10-04.md`,
+`P24_PORTAL_ENGINE_TRANSITION_2026-10-04.md` and
+`P24_SCENARIO_CLOSEOUT_2026-10-04.md`; links become acceptance only after the
+files contain actual measured results. Existing §32 delivered contracts and
+the unchanged source/immutable-seal limitations remain authoritative.
+
+**Engine lane delivered, not still waiting for approval:** actual local Portal
+110 old-in-flight → 111 new default → 110 exact reproduction completes 3/3,
+P05 byte verification 9/9, reads 200 and rollback; see the engine receipt above.
+Default/production 111 unchanged. Exact-three historical manifest disposition
+is owner-approved; strict 83/86 is retained, not synthetic recovery.
+
+**Actual new defects repaired:** historical 400-trial Search read no longer
+depends on the new long-job flag (absolute 400 bound/admission unchanged);
+preflight refuses conflicting native study fields before snapshot/child.
+Affected real GET retake 56/56, 38 responses has unchanged custody. Product
+workspace audit corrects S01–S08 named reads, pagination, clone/estimates,
+links and RC publication lookups; source/input scope is retained on navigation.
+No design/baseline change. Final candidate browser/imported child/C4 outcomes
+are in the linked current-candidate receipt; full scenario acceptance and
+authorized owner/signed release remain separately recorded, not blanket PASS.
+
+**Final actual continuation / §32 handoff:** imported DRAFT
+`rrun_534c60ecb6337bb1503e48f8726142b7` finishes Portal intake→confined111 child→
+retention with seven API reads200; distinct ordinary member browser reviewer
+gets Progress→Report→RC3/3 PASS. No new job during browser resume. Imported
+packet preserves diagnostic matcher failures and exact image/actor scopes.
+This removes the old imported execution prerequisite, not the unperformed full
+GUI producer round-trip. The engine experiment likewise removes the old
+110-binding prerequisite; do not ask Bobby again about those approvals.
+
+The new child's Evidence DTO revealed a null legacy benchmark incorrectly
+marked AVAILABLE. Fixed read-side: legacy typed absence
+`P13_LEGACY_BENCHMARK_USE_ANALYTICS_V2`, genuine analytics-v2 and source gap
+availability unchanged. One regression and one actual GET PASS, jobs68→68;
+Control-only rebuild. SC23 review also identified global browser draft storage
+and unfenced old create responses after edits; close through context/fencing
+logic only, preserving Claude's UI:166/166 affected tests plus TypeScript PASS,
+last mounted-guard/tooltip retake43/43. Scoped actor/workspace draft and Library
+chip never adopt legacy global data; stale ACK/refusal and double-submit are
+fenced without canceling the accepted server job. Exact lane/candidate receipts supersede
+older pending comments; complete mandatory scenario/owner/release acceptance
+is not inferred. All four new clone reviewers are disabled/session0.
+
+[Final unsigned source v6](./evidence/P24/current-source-candidate-manifest.v6.json)
+records exact final builds plus earlier real receipt image scopes. Exact C4
+removed seven owned containers/network, ports8096/8097 free; retained clone
+volumes/backups/bytes/rollback images, no broad prune or shared/production
+operation. One normal grouped hook/commit then local FF landing only; no push.
+No new source/backend implementation prerequisite is invented for approved
+engine/manifest/import work. Remaining mandatory write/state/GUI scenario
+branches and owner/signed release keep their explicit unperformed disposition.
+
+**Final write-edge addendum (same phase, no new campaign):** actual browser
+found and closed late preflight adoption and registry-late restored-pin erasure;
+139/139 and65/65 focused regressions/typecheck. P21 archived base Report is
+compatible with an optional analytics/enrichment read revision only after
+verified seal and all five non-null source pins match;37/37 regressions/build.
+Original Report/source bytes are unchanged. Ordinary USER create is correctly
+denied. A separate temporary eligible QA ADMIN in the clone performed exact
+fixed GUI preflight/create/double-click/edited-form ACK→one child READY;
+real native config/byte verification PASS. No Bobby or contributor account was
+reset/elevated. [Consumer receipt](./evidence/P24/P24_CONSUMER_FINISH_2026-10-04.md).
+
+SC19 browser lost ACK before/after commit + exact retry produces one publication
+and one R1, not approval. SC24 checksum-bound GET continuation verifies both
+completed prepared export bytes, same original Report, current RC/child/Alpha
+Lineage and GC exclusions:26/26 PASS. The test-parser/incorrect test-URL failures
+are retained; no duplicate job/export/publication/R1 was created to rerun them.
+[Current evidence/hash/image/cleanup scopes](./evidence/P24/P24_CURRENT_CANDIDATE_CLOSEOUT_2026-10-04.md).
+Mandatory24 denominator and unperformed variant/owner/release gates remain
+explicit, not counted from scoped proof. All previous delivered §32 contracts
+remain. Final local normal commit/FF is not a push or signed Portal2.0.0 release.

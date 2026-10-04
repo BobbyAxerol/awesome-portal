@@ -3634,7 +3634,7 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P21](#rl-p21) | P07,P16–P19 | 11 composer | 11 | **CURRENT 2026-09-26 (Claude): Screen 11 = Thanhvuong version (Bobby 2026-09-26); W7 retained lane DELIVERED (WFO 3/0/2/7 → 8/2/2/0, sealable; merge `0e9c23e2`); integration with P22/P23 `177df754`. Open: port W5c features + 8 P22 adapter defects + publish-intake flag (X1). See [audit P15–P23](./research_loop/evidence/AUDIT_P15_P23_CLAUDE_2026-09-26.md) · [W7](./research_loop/evidence/P21/W7_P21_RETAINED_LANE_CLAUDE_2026-09-25.md).** — **BACKEND_AND_TYPED_CONTRACT_COMPLETE · FEATURE_DARK · S11_PRODUCT_BROWSER_PENDING_CLAUDE** — Codex / [P21 packet](./research_loop/evidence/P21/README.md): same-origin bounded 17-field/12-item composer, actor-local declaration CAS, immutable Portal-local seal/pins and separate `NOT_DELIVERED`/`NOT_APPROVED` lifecycle are proven. No P22 publication, Approval mirror, Execution/QuantBT/source-byte call, deployment or browser acceptance is claimed. Claude owns [the S11 handoff](./research_loop/evidence/P21/frontend-handoff-claude.md). |
 | [P22](#rl-p22) | P02,P10,P21 | 11 handoff | 11 | **BACKEND_REAL_PREVIEW_COMPLETE · PRODUCT_BROWSER_PENDING** — Codex / [P22 packet](./research_loop/evidence/P22/README.md): isolated historical-data WFO → sealed P21 pack → publication → unchanged R1 → independent owner approval → versioned settlement/promotion fact passed. Named alpha-version lookup, canonical mirror and two-route RC publication contract are generated. Claude still owns S01/S02/S10/S11 browser/HiFi acceptance; no dev/Production activation or P23 qualification is claimed. |
 | [P23](#rl-p23) | P11–P22 | mọi màn | 12 | **LATEST 2026-10-04 / Codex:** S09/S11 explicit workspace + linked-audit consumer delivered; **285/285** affected FE tests, Node-22 web build and restored-proof **4/4 browser PASS**, unchanged jobs/frozen custody, QA/cell C4 complete. [Receipt](./research_loop/evidence/P23/WORKSPACE_AND_LINKED_AUDIT_CONSUMER_2026-10-04.md). Strict 83/86, genuine engine two and complete P24 remain OPEN. **Historical checkpoint retained:** **LATEST 128276d7 / 2026-10-03:** affected Report/RC 377/487 ms PASS; original non-reusable child + restart/restore accepted; exact QA/cell C4 done. New shared-workspace restored browser FAIL 404 → CG-P23-WORKSPACE-01, explicit same-actor reads 200. Strict historical 83/86, engine two and whole P24 remain OPEN. [Current receipt](./research_loop/evidence/P23/CURRENT_CANDIDATE_CLOSEOUT_AMENDMENT_2026-10-03.md). **Historical board snapshot:** **CURRENT 2026-10-03 / Codex: clean mixed-load 499/403 ms, coherent restore / exact loss accounting, independent WFO recomputation and QA teardown SCOPED_PASS. Full byte integrity, real second-engine, full current-product browser / candidate aggregation remain OPEN. [Latest P23/P24 matrix](./research_loop/evidence/P24/V1_ACCEPTANCE.md). Historical 2026-09-29 receipt scope retained below:** **OWNED REAL QUALIFICATION IN_PROGRESS · FULL_QUALIFICATION_PENDING (2026-09-29)** — Codex / [P23 packet](./research_loop/evidence/P23/README.md): P22 real publication closed. On one clean current image, exact W06 mixed HEAVY+four queued/20 principals passed twice at the original 500-ms warm SLO; T08 cold-start mixed and W07 bounded interaction also passed in scope. [W05 storage-only scale](./research_loop/evidence/P23/W05_STORAGE_SCALE_2026-09-29.md) measured 100k trial + 100k evaluation + 1M replay rows with indexed keysets and 823-MB seven-service peak; [V11-P23-DR](./research_loop/evidence/P23/V11_DIRECT_PARITY_2026-09-29.md) proved exact direct-engine/sealed/API parity for three real P04 facts. Earlier W06 failures remain history. T03/T04/T05/T06/T09/T10/T11 have scoped receipts; **T02 scratch, T07/T13 new-engine upgrade, T12 quota/audit, T14 exposure/audit-child, T15 browser-real and full DR/BR/GX remain OPEN**. No full P23/product/deployment acceptance or SLO relaxation. |
-| [P24](#rl-p24) | P23 | mọi màn | 12 | **LATEST 2026-10-04:** [candidate v4](./research_loop/evidence/P24/current-source-candidate-manifest.v4.json) pins changed web inputs/image and actual four restored-proof read receipts; inherited Control/read-cost scope retained. Original bytes/disposition, engine two, complete action/visual/print/owner and signed-release gates OPEN. **Historical checkpoint retained:** **LATEST 128276d7 / 2026-10-03:** [candidate v3](./research_loop/evidence/P24/current-source-candidate-manifest.v3.json), latest P23 accepted scopes and exact C4 aggregated. Restored workspace consumer, linked-audit product binding, original lost bytes/disposition, engine two, full scenario/owner/signed-release gates OPEN. **Historical board snapshot:** **IN_PROGRESS / Codex backend, Claude FE / 2026-10-03** — [P24 packet](./research_loop/evidence/P24/README.md): actual read-preserving producer rollback PASS (3 intake refusals, 20/20 historical reads, custody/migrations/jobs/outside runtime unchanged); current Control reader must be retained. Full 15-test / 20-FND disposition matrix, unsigned candidate and operating checklist delivered. Full-product browser/engine-two/strict integrity/owner review/signed release OPEN; no remote/deployment action. Historical status: PLANNED / unassigned. |
+| [P24](#rl-p24) | P23 | mọi màn | 12 | **LATEST 2026-10-04:** [candidate v6](./research_loop/evidence/P24/current-source-candidate-manifest.v6.json) / [actual closeout](./research_loop/evidence/P24/P24_CURRENT_CANDIDATE_CLOSEOUT_2026-10-04.md): affected reads56/56; actual Portal110→111→old reproduction3/3 and nine retained files verified; exact fixed imported GUI→one confined111 child→READY PASS with real config/byte equality; two-actor draft/actor-local CAS and late preflight/ACK PASS; publication ACK-loss/retry one intent/oneR1; post-child export/reference graph26/26 PASS. Archived Report companion-revision compatibility verifies all five source pins. Claude design/history preserved. Owner-approved exact-three exception keeps strict83/86. Remaining full24-scenario variants, owner visual review and signed release OPEN; no remote/shared preview/production operation. **Historical checkpoint retained:** [v4](./research_loop/evidence/P24/current-source-candidate-manifest.v4.json) restored-read scope; **128276d7 / 2026-10-03:** [v3](./research_loop/evidence/P24/current-source-candidate-manifest.v3.json) inherited P23 load/restore/rollback and C4; [P24 packet](./research_loop/evidence/P24/README.md) historical disposition matrix/checklist. Old engine/imported-GUI/manifest-approval blockers superseded only at the actual v6 scope. |
 
 <a id="rl-fe-w1-w7"></a>
 **Frontend board rows 2026-10-04 (FE campaign W1–W7, Claude/Thanhvuong; Codex slice marked):** sống tại [FE-W1-W5 packet](./research_loop/evidence/FE-W1-W5/thanhvuong-frontend-receipt.md); chi tiết ở [§13.4.2](#rl-fe-w1-w7-note). Mọi hàng dưới đây là `NOT_VERIFIED` ở mức sản phẩm cho tới khi Bobby rà bằng mắt; không hàng nào là `OWNER_ACCEPTED`.
@@ -3644,7 +3644,7 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | P21 | 11 | **IMPLEMENTED · NOT_VERIFIED** (Claude). S11 gồm Codex `d5d09875` (blocked_action, stale-seal wording, rail ordinal, RC record absences) và `7d18fe4e` (workspace + linked-audit consumer, panel chỉ hỏi `/final-audit` cho `SINGLE_PARAMETER_SET`); nhánh `claude/fe-parity` đã rebase lên `be-gaps 0df6030f` | lane + gate 227/228 trên `index-Bu8sUwob.js` (1 ô là flake khi tải, 3/3 qua riêng); [receipt Codex](./research_loop/evidence/P23/WORKSPACE_AND_LINKED_AUDIT_CONSUMER_2026-10-04.md) |
 | P22 | 11 handoff | **IMPLEMENTED · NOT_VERIFIED.** publish thật trên :8095 hai lần: R-WFO-027 `rc_06GG2K1TN6QQNJJN3RJ5AS5XC1` / `apr_06GG2K4A9Q3AHFVK0WV5GXNCY2` và run mới `rc_06GGABY3ZPCK8HWMA762Z327M1` / `apr_06GGAC00VHRN2Y9C34S55HEDC2`; `approval_read DENIED` có copy riêng; stale seal (R-WFO-022/023) một lối thoát `CREATE_NEW_RUN_AND_SEAL` | [journey receipt](./research_loop/evidence/P24/FE_JOURNEY_RECEIPT_2026-10-04.md); HiFi/owner chưa |
 | P23 | mọi màn | **FE_QUALIFICATION_INPUT.** FE không thêm cờ/contract/migration; vitest 5918 pass/1 skip/340 file, tsc sạch, real-API + W1 + W5 gate 227/228, overflow 0 ở 390/360/1280/1440, axe 0 critical/serious/moderate | in thật trên thiết bị: `DEBT-PRINT-REALDEVICE` OPEN_LOW; baseline Research 28 + legacy 100 PNG |
-| P24 | mọi màn | **T09/T13: READY_FOR_BOBBY_REVIEW** cho phạm vi GET/navigation (ma trận 73 ô/682 kiểm = 613 PASS / 0 FAIL / 69 NA); T01/T02/T06 FE journey xem receipt; T05 BLOCKED_EXTERNAL; T12 [matrix §16.6](./research_loop/evidence/P24/SCENARIO_MATRIX_16_6_2026-10-04.md) (1/24 PASS_REUSED, 21 NEEDS_RUN) | [ma trận](./research_loop/evidence/P24/FE_SCREEN_ACTION_MATRIX_2026-10-04.md), [đối chiếu dữ liệu/bảo mật](./research_loop/evidence/P24/FE_RECONCILE_RECEIPT_2026-10-04.md), [pin FE](./research_loop/evidence/P24/FE_CANDIDATE_MANIFEST_2026-10-04.json), [amendment](./research_loop/evidence/P24/AMENDMENT_FE_2026-10-04.md); Codex §32 (8 yêu cầu) |
+| P24 | mọi màn | **T09/T13: READY_FOR_BOBBY_REVIEW** cho phạm vi GET/navigation của Claude (73 ô/682 kiểm = 613 PASS / 0 FAIL / 69 NA), không đổi thành full-product PASS. **LATEST:** [consumer](./research_loop/evidence/P24/P24_CONSUMER_FINISH_2026-10-04.md) real draft/CAS/late-response + exact fixed GUI child PASS; [engine](./research_loop/evidence/P24/P24_PORTAL_ENGINE_TRANSITION_2026-10-04.md) actual110→111/reproduce PASS; [write/export scope](./research_loop/evidence/P24/P24_SCENARIO_CLOSEOUT_2026-10-04.md) SC19 ACK-loss/retry + SC24 existing-child re-export/reference graph PASS. T12 keeps all24 rows and distinguishes actual/scoped/canonical/not-run. Remaining full scenario variants OPEN. **Historical:** 1/24 PASS_REUSED, 21 NEEDS_RUN precedes these retakes. | [ma trận](./research_loop/evidence/P24/FE_SCREEN_ACTION_MATRIX_2026-10-04.md), [đối chiếu dữ liệu/bảo mật](./research_loop/evidence/P24/FE_RECONCILE_RECEIPT_2026-10-04.md), [pin FE](./research_loop/evidence/P24/FE_CANDIDATE_MANIFEST_2026-10-04.json), [amendment](./research_loop/evidence/P24/AMENDMENT_FE_2026-10-04.md); Codex §32/addendum supersede exactly proven findings, no blanket PASS |
 
 **Frontend status 2026-09-30:** Claude's newer P15–P21 status and the remaining G1–G12 work are in [§13.4.1 G](#rl-open-ledger) and the [frontend gap evidence](./research_loop/evidence/FRONTEND_GAPS_STATUS_CLAUDE_2026-09-30.md); they supersede only the historical FE snippets in the rows above. The local P22/P23 backend acceptance rows and current P23 receipt remain authoritative. E11–E17 source/real-API closeouts below remain intact; the new E14 field record is linked from the frontend gap evidence.
 
@@ -7813,3 +7813,78 @@ The shared preview was not deployed; take the affected HTTP/reconcile receipt
 after its final single-candidate rebuild. Initial mandatory gate was not green;
 additive P04 applicability golden handling corrected without rewriting seal/
 baseline bytes, with focused golden PASS. Coherent corrected gate required.
+
+#### P24 approved continuation work order — 2026-10-04
+
+Bobby authorizes finishing the remaining implementation and acceptance in
+parallel, inside the existing P24 scope. The landing branch remains
+`docs/research-loop-plan`; working lane is `codex/be-gaps`. No remote push,
+dev/main merge or production release is implied by this instruction.
+
+| Lane | Exact work | Exit evidence |
+|---|---|---|
+| Consumer | Generated `final_audit_applicable` controls GET/creation only when true; guard nullable publication time; distinguish Compare source/preflight provenance. Preserve layout, typography, colors and approved baselines. | Affected Vitest + typecheck, real read/browser receipt, no audit probe for false/null. |
+| Engine transition | Local, explicitly opted-in and independently pinned QuantBT 1.1.0 compatibility binding; default 1.1.1 unchanged. Validate actual version/native wheel and old in-flight provenance, reproduction and rollback; no false 1.1.1 stamp. | Actual confined Portal child/retention and version-transition receipt; unsupported profile refused. Direct-wheel comparison alone is not PASS. |
+| Scenario acceptance | Retain all 24 guide §16.6 scenario rows, execute available real cases with explicit input/actor/workspace, HTTP mutation and custody/job oracle; distinguish fixtures and unperformed cases. | Machine receipt per scenario and honest PASS/REUSED/NOT_RUN disposition; no denominator reduction. |
+| Integration | One exact candidate on the owned :8096 clone, source/image identity, affected §32 HTTP and browser retake. Reuse unchanged accepted load/DR evidence only in its recorded scope. | Candidate hashes, test results, fresh QA disabled/sessions revoked, exact owned containers/network removed without deleting volumes/data/receipts. |
+
+The separate engine experiment may use its own :8097 cell. Shared :8095 and
+Production are not changed. Original seals and the approved exact-three-test
+manifest exception remain immutable; strict integrity remains 83/86, not
+fabricated 86/86. Portal release target **v2.0.0** is independent of QuantBT
+versioning. Owner review and signed production release are separate gates.
+
+**Actual continuation delivery:** isolated Portal 1.1.0 → 1.1.1 → exact 1.1.0
+reproduction now completes **3/3 runs**, with **9/9 retained files verified**;
+the fixed-profile engine lane of P23-T07/T13/P24-T05 is accepted, not an open
+owner question or direct-wheel-only claim. Production/default remains 1.1.1.
+The approved exact-three-historical-manifest exception is recorded while
+strict integrity remains 83/86. Historical Search400 reader/admission coupling
+and conflicting study fields are repaired; actual affected GET retake is
+**56/56 checks, 38 responses**, with immutable custody unchanged. S01–S08
+workspace forwarding, all subordinate named reads and RC lookup scopes are
+corrected without CSS/layout/baseline changes. Final browser/positive imported
+run/C4 evidence and exact remaining scenario branches are consolidated in
+[current-candidate closeout](./research_loop/evidence/P24/P24_CURRENT_CANDIDATE_CLOSEOUT_2026-10-04.md)
+and the linked lane receipts. This does not authorize a remote push or call
+the full 24-scenario/owner/signed-release denominator green.
+
+**Final independent review / actual imported continuation:** one new real
+imported DRAFT child `rrun_534c60ecb6337bb1503e48f8726142b7` completed on the
+owned clone, seven named downstream API reads200 and Progress→Report→RC
+browser3/3 PASS (API actor97, member reviewer99, not a full GUI-import receipt).
+S06 mobile read-load gives240/240 HTTP200 in the consumer lane; it is one
+principal with20 concurrent lanes, not a replacement for the W06 user/SLO gate.
+Retaken workspace cold-links and breadcrumbs retain their actual API/DOM proof.
+
+Actual child found one backend read-truth mismatch: legacy benchmark had null
+value but AVAILABLE state inherited from genuine analytics-v2. Fixed to typed
+`P13_LEGACY_BENCHMARK_USE_ANALYTICS_V2`, preserving v2 value/source availability.
+Focused regression, affected Control-only build and actual authorized GET PASS;
+no job allocation68→68. QA95/97/98/99 DISABLED/session0, worker stopped and the
+historical undispatched fixture preserved. Independent reviews found no engine
+default/production-policy weakening or UI/CSS/baseline changes. Two additional
+SC23 consumer defects—unscoped local draft and stale create ACK after edits—are
+closed with scoped persistence/relevance fences, not a schema/engine change.
+Draft/create affected batch166/166 and TypeScript PASS; last guard/tooltip
+retake43/43, no full frontend suite repeat. Persistence requires named actor
+and explicit workspace; legacy unscoped drafts are not adopted. No late ACK/
+refusal attaches to an edited form, duplicate-submit is synchronously fenced,
+and the old accepted job remains discoverable without being cancelled.
+
+The current receipt is the live disposition for these scopes. Remaining
+mandatory product branches are GUI producer→effective worker round-trip,
+multiuser/CAS/write-state edges, publication timeout before/after ACK, explicit
+browser audit allocation and post-child re-export/GC, followed by owner review
+and authorized signed release. Existing unchanged backend proofs remain valid;
+neither a new phase nor a full load/visual/HMD rerun is required for these docs.
+
+**Final candidate/C4:** [Unsigned source v6](./research_loop/evidence/P24/current-source-candidate-manifest.v6.json)
+pins finalWeb/Control/Python and each receipt's real predecessor image/scope;
+the SC23 final static smoke is not relabelled as full browser acceptance.
+Seven owned containers removed, owned network0, ports8096/8097 free, exact
+clone DB/artifact/NATS volumes and all original bytes/backups/rollback images
+retained. Shared8095/dev/main/production unchanged. Successful normal grouped
+commit is the commit-bound gate; fast-forward landing preserves all Claude
+ancestry. No remote push is authorized. Full P24 mandatory scenario and
+owner/signed-release acceptance remains explicitly OPEN, not engine-blocked.

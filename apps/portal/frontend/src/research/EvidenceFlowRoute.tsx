@@ -9,7 +9,7 @@
  */
 
 import { useCallback, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 
 import { EvidenceFlow } from "./EvidenceFlow";
 import { RouteCursorNotice } from "./CursorNotice";
@@ -25,18 +25,20 @@ import { useHandoffCursor } from "./handoffCursor";
  */
 export function EvidenceFlowRoute() {
   const { runId = "" } = useParams<{ runId: string }>();
-  return <EvidenceFlowRun key={runId} runId={runId} />;
+  const [search] = useSearchParams();
+  const workspaceId = search.get("workspace_id") || undefined;
+  return <EvidenceFlowRun key={`${workspaceId ?? ""}|${runId}`} runId={runId} workspaceId={workspaceId} />;
 }
 
-function EvidenceFlowRun({ runId }: { runId: string }) {
+function EvidenceFlowRun({ runId, workspaceId }: { runId: string; workspaceId?: string }) {
   /* W5 §3.3: the run's hand-off (θ*) seeds a hash-less arrival and is the target of "reset to θ*". One progress read, shared with the stage summaries. */
-  const handoffRead = useHandoffCursor(runId);
+  const handoffRead = useHandoffCursor(runId, true, workspaceId);
   const runIdentity = handoffRead.identity;
   const { cursor, setStage, setFold, update, reset, problems, notes, clampToObserved, handoff, atHandoff } = useEvidenceCursor(
     {},
     { handoff: handoffRead.cursor },
   );
-  const evidence = useEvidence(runId);
+  const evidence = useEvidence(runId, workspaceId);
   const onWindow = useCallback((next: EvidenceWindow) => update({ window: next }), [update]);
 
   /* RF-06 FE-S04-06: a linked fold the run never observed is moved to the

@@ -830,7 +830,11 @@ export class ResearchCurrentSourceRepository {
   }
 
   private async readSearchInputs(client: PoolClient, scope: ResearchScope, seal: CurrentSourceSealRow): Promise<CurrentSourceSearchInputs> {
-      const trialLimit = deltaWfoPreviewLongEnabled(this.config) ? DELTA_WFO_PREVIEW_LONG_LIMITS.max_trials : 64;
+      // A sealed, qualified historical run remains readable when its producer
+      // profile is disabled. The immutable census controls this bounded read,
+      // not a flag that admits NEW long-running optimizer jobs. Keep the same
+      // absolute 400-row reader ceiling; assertSeal/admission stay flag-gated.
+      const trialLimit = Math.min(DELTA_WFO_PREVIEW_LONG_LIMITS.max_trials, Math.max(64, seal.tableRows.TRIAL));
       const limits = { TRIAL: trialLimit, CANDIDATE: 64, FOLD: 256 };
       const rows = await client.query<SourceRowQueryRow & { table_kind: keyof typeof limits }>(
         `WITH bounds(table_kind, row_limit) AS (VALUES ('TRIAL', $4::int), ('CANDIDATE', 64), ('FOLD', 256))

@@ -145,6 +145,28 @@ describe("RS-02 retained-current-source custody writes", () => {
     await expect(denied.repository.searchInputs(scope, seal)).rejects.toMatchObject({ status: 403 });
     expect(denied.calls.some(({ sql }) => sql.includes("WITH bounds"))).toBe(false);
   });
+
+  it("reads an already sealed 400-trial history with new long-job admission disabled", async () => {
+    const seal = { ...sealInput(), retainedImportDigest: digest("f"), retainedAtUtcMs: 100,
+      tableRows: { OBSERVATION: 1, FOLD: 2, TRIAL: 400, CANDIDATE: 1, SELECTION: 1 }, totalRows: 405 };
+    const kindRows = [...Array.from({ length: 400 }, (_, index) => ({
+      table_kind: "TRIAL", source_ordinal: index, source_id: `trial-${index}`, occurred_at_utc_ms: null, payload: {},
+    })), ...["CANDIDATE", "FOLD", "FOLD"].map((kind, index) => ({
+      table_kind: kind, source_ordinal: index, source_id: `${kind}-${index}`, occurred_at_utc_ms: null, payload: {},
+    }))];
+    const { repository, calls } = fakeRepository(sql => sql.includes("FROM workspace_members")
+      ? { rowCount: 1, rows: [{}] } : sql.includes("WITH bounds") ? { rows: kindRows }
+        : sql === CURRENT_SOURCE_STAGE_EVENTS_SQL ? { rows: [stageRow()] } : {});
+    expect((await repository.searchInputs(scope, seal)).trials).toHaveLength(400);
+    expect(calls.find(({ sql }) => sql.includes("WITH bounds"))!.params.at(-1)).toBe(400);
+    expect(calls.some(({ sql }) => /INSERT|UPDATE|DELETE/.test(sql))).toBe(false);
+    // The reader correction must not qualify a new long optimizer seal.
+    await expect(repository.seal(scope, seal)).rejects.toMatchObject({ code: "RESEARCH_CURRENT_SOURCE_INVALID" });
+    expect(calls.some(({ sql }) => /INSERT|UPDATE|DELETE/.test(sql))).toBe(false);
+    const excess = { ...seal, tableRows: { ...seal.tableRows, TRIAL: 401 } };
+    await expect(repository.searchInputs(scope, excess)).rejects.toMatchObject({ code: "RESEARCH_CURRENT_SOURCE_UNAVAILABLE" });
+    expect(calls.filter(({ sql }) => sql.includes("WITH bounds")).at(-1)!.params.at(-1)).toBe(400);
+  });
   it("binds P11 clocks to the exact SEALED artifact attempt, lease, request/effective/data and historical profile", async () => {
     const seal = { ...sealInput(), retainedImportDigest: digest("f"), retainedAtUtcMs: 100 };
     const { repository, calls } = fakeRepository(sql => sql.includes("FROM workspace_members")

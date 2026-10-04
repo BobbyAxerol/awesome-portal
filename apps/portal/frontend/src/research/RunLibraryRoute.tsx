@@ -9,12 +9,20 @@
 
 import { RunLibrary } from "./RunLibrary";
 import { useRunLibrary } from "./useRunLibrary";
+import { useSearchParams } from "react-router-dom";
 
 export function RunLibraryRoute() {
-  const library = useRunLibrary();
+  const [search] = useSearchParams();
+  const workspaceId = search.get("workspace_id") || undefined;
+  return <RunLibraryContainer key={workspaceId ?? ""} workspaceId={workspaceId} />;
+}
+
+function RunLibraryContainer({ workspaceId }: { workspaceId?: string }) {
+  const library = useRunLibrary(workspaceId);
 
   return (
     <RunLibrary
+      workspaceId={workspaceId}
       filters={library.filters}
       onFilters={library.setFilters}
       onToggleSel={library.toggleSel}

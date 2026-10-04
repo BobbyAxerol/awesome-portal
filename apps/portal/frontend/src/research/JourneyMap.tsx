@@ -21,7 +21,7 @@
  * quietly shrink the map of the domain, which is the one thing the map is for.
  */
 
-import { Link } from "react-router-dom";
+import { ResearchScopedLink as Link } from "./ResearchScopedLink";
 
 import type {
   InspectionCursor,

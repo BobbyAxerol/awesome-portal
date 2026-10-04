@@ -19,7 +19,7 @@
  */
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { ResearchScopedLink as Link } from "./ResearchScopedLink";
 
 import { Formula } from "./Formula";
 import { FOUNDATION_REFUSAL_SENTENCE, type AtlasResponse } from "./foundationClient";

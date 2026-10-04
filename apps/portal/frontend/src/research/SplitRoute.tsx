@@ -9,7 +9,7 @@
  */
 
 import { useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 
 import { SplitScreen } from "./SplitDetail";
 import { RouteCursorNotice } from "./CursorNotice";
@@ -18,6 +18,11 @@ import { useSplit } from "./useSplit";
 
 export function SplitRoute() {
   const { runId = "" } = useParams<{ runId: string }>();
+  const [search] = useSearchParams();
+  return <SplitRouteContainer key={`${search.get("workspace_id") ?? ""}|${runId}`} runId={runId} />;
+}
+
+function SplitRouteContainer({ runId }: { runId: string }) {
   const { cursor, setFold, problems, notes, clampToObserved } = useEvidenceCursor({ stage: "split" });
 
   return (
@@ -48,7 +53,8 @@ export function SplitRouteBody({
   clampToObserved?: (observed: readonly number[]) => void;
   embedded?: boolean;
 }) {
-  const split = useSplit(runId);
+  const [search] = useSearchParams();
+  const split = useSplit(runId, search.get("workspace_id") || undefined);
 
   /* FE-S04-06: once the retained source publishes its observed folds, a fold
      outside them is clamped (golden cases 8–9) and the notice says so. Where
@@ -66,8 +72,9 @@ export function SplitRouteBody({
   }, [clampToObserved, observed, knownKey, cursor.fold]);
 
   return (
-    <SplitScreen
-      runId={runId}
+      <SplitScreen
+        runId={runId}
+        workspaceId={search.get("workspace_id") || undefined}
       detail={split.detail}
       state={split.state}
       notFound={split.refusal?.notFound === true}

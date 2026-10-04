@@ -48,8 +48,15 @@ class QuantBTGateway:
     this gateway deliberately never adds a source checkout to ``sys.path``.
     """
 
-    @staticmethod
-    def _module():
+    def __init__(self, *, expected_version: str = QUANTBT_ENGINE_VERSION, confined_qualification_child: bool = False) -> None:
+        if expected_version != QUANTBT_ENGINE_VERSION:
+            from portal_api.domain.research_engine_qualification import engine110_qualification_enabled, confined_engine110_qualification_enabled
+            opted_in = confined_engine110_qualification_enabled() if confined_qualification_child else engine110_qualification_enabled()
+            if expected_version != "1.1.0" or not opted_in:
+                raise RuntimeError("QuantBT old-version compatibility is isolated-only and explicitly opted in")
+        self._expected_version = expected_version
+
+    def _module(self):
         try:
             distribution = metadata.distribution(QUANTBT_DISTRIBUTION)
         except metadata.PackageNotFoundError as exc:
@@ -58,11 +65,13 @@ class QuantBTGateway:
                 "from PyPI through the backend project dependencies."
             ) from exc
         installed_version = distribution.version
-        if installed_version != QUANTBT_ENGINE_VERSION:
+        if installed_version != self._expected_version:
             raise RuntimeError(
                 f"Unsupported {QUANTBT_DISTRIBUTION} version {installed_version!r}; "
-                f"expected {QUANTBT_ENGINE_VERSION!r}."
+                f"expected {self._expected_version!r}."
             )
+        if self._expected_version == "1.1.0" and metadata.version("quantbt-native") != "0.4.1":
+            raise RuntimeError("Old-engine qualification requires exact quantbt-native==0.4.1")
         try:
             module = importlib.import_module("quantbt")
         except ModuleNotFoundError as exc:

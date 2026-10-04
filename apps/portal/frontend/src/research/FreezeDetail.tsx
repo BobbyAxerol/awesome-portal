@@ -24,9 +24,9 @@
  */
 
 import { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { ResearchScopedLink as Link, ResearchScopedLineageLink as LineageLink } from "./ResearchScopedLink";
 
-import { LineageLink, lineageHref } from "./LineageLink";
+import { lineageHref } from "./LineageLink";
 
 import { BoundWarningNote } from "./BoundWarning";
 import { isWhatIf, WhatIfCard } from "./WhatIfCard";
@@ -1705,7 +1705,7 @@ export function FreezeScreen({
       </nav>
       )}
 
-      <StageRunBar runId={runId} active={(retained.state === "refused" && retained.laneState != null) || (state.state === "partial" && retained.state !== "loading" && retained.state !== "idle")} />
+      <StageRunBar runId={runId} workspaceId={workspaceId} active={(retained.state === "refused" && retained.laneState != null) || (state.state === "partial" && retained.state !== "loading" && retained.state !== "idle")} />
 
       {bytes && bytesBlock(bytes) ? <BlockedBanner bytes={bytes} /> : null}
 

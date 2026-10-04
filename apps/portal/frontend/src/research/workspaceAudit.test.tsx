@@ -40,6 +40,36 @@ function route(url: string) {
 }
 
 describe("workspace S09/S11 product route binding", () => {
+  it.each([true, false, null, undefined])("S09 probes final audit only for explicit applicability %s", async applicable => {
+    const body = { ...report, final_audit_applicable: applicable };
+    const calls: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async input => {
+      const url = new URL(String(input), "http://local"); calls.push(url.pathname);
+      if (url.pathname.endsWith("/report")) return json(body);
+      if (url.pathname.endsWith("/final-audit")) return json(auditFixture("ready_to_admit"));
+      if (url.pathname.endsWith("/exports")) return problem(503);
+      return json(libraryPage([libraryRow("COMPLETED", { runId: RUN, sealed: true })]));
+    });
+    route(`/research/quantbt/runs/${RUN}/report?workspace_id=${WS}`);
+    await waitFor(() => expect(document.querySelector("[data-linked-final-audit]")).not.toBeNull());
+    await waitFor(() => expect(calls.filter(p => p.endsWith("/final-audit"))).toHaveLength(applicable === true ? 1 : 0));
+    expect(document.querySelector("[data-linked-final-audit]")?.getAttribute("data-audit-state")).not.toBe("loading");
+  });
+  it.each([true, false, null, undefined])("S11 uses composition applicability %s without a second Report source", async applicable => {
+    const body = { ...compose("sealed"), final_audit_applicable: applicable };
+    const calls: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async input => {
+      const url = new URL(String(input), "http://local"); calls.push(url.pathname);
+      if (url.pathname.endsWith("/release-candidate")) return json(body);
+      if (url.pathname.endsWith("/final-audit")) return json(auditFixture("ready_to_admit"));
+      if (url.pathname.endsWith("/runs")) return json(libraryPage([libraryRow("COMPLETED", { runId: body.run_id, sealed: true })]));
+      return problem(409);
+    });
+    route(`/research/quantbt/runs/${body.run_id}/release-candidate?workspace_id=${WS}`);
+    await waitFor(() => expect(document.querySelector("[data-linked-final-audit]")).not.toBeNull());
+    await waitFor(() => expect(calls.filter(p => p.endsWith("/final-audit"))).toHaveLength(applicable === true ? 1 : 0));
+    expect(calls.some(p => p.endsWith("/report"))).toBe(false);
+  });
   it("links preserve only explicit scope alongside revision/query/hash; default stays default", () => {
     const link = linkFromLocation("#stage=claim&fold=2", `?workspace_id=${WS}`);
     expect(reportHref(RUN, link)).toContain(`?workspace_id=${WS}#`);
@@ -101,6 +131,18 @@ describe("workspace S09/S11 product route binding", () => {
 });
 
 describe("linked audit explicit generated consumer", () => {
+  it("disabling applicability fences an obsolete answer and removes prior create permission", async () => {
+    const body = auditFixture("ready_to_admit");
+    let answer: (value: Response) => void = () => { throw new Error("Read did not start"); };
+    const fetcher = vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Promise<Response>(resolve => { answer = resolve; }));
+    const rendered = render(<MemoryRouter><LinkedAuditConsumer runId={body.parent_run_id} workspaceId={WS} applicable /></MemoryRouter>);
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+    rendered.rerender(<MemoryRouter><LinkedAuditConsumer runId={body.parent_run_id} workspaceId={WS} applicable={false} /></MemoryRouter>);
+    answer(json(body));
+    await waitFor(() => expect(document.querySelector("[data-linked-final-audit]")?.getAttribute("data-audit-state")).toBe("NOT_APPLICABLE"));
+    expect(screen.queryByText("Run pinned audit")).toBeNull();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
   it("mount/re-read never POST; confirmed double click has one intent and exact original target", async () => {
     const body = auditFixture("ready_to_admit");
     const requests: { method: string; init?: RequestInit }[] = [];
@@ -109,7 +151,7 @@ describe("linked audit explicit generated consumer", () => {
       requests.push({ method: init?.method ?? "GET", init });
       return init?.method === "POST" ? new Promise<Response>(resolve => { answer = resolve; }) : json(body);
     });
-    render(<MemoryRouter><LinkedAuditConsumer runId={body.parent_run_id} workspaceId={WS} /></MemoryRouter>);
+    render(<MemoryRouter><LinkedAuditConsumer runId={body.parent_run_id} workspaceId={WS} applicable /></MemoryRouter>);
     const start = await screen.findByText("Run pinned audit");
     expect(requests.map(x => x.method)).toEqual(["GET"]);
     fireEvent.click(start); expect(requests).toHaveLength(1);
@@ -125,7 +167,7 @@ describe("linked audit explicit generated consumer", () => {
   it.each(["verified", "running", "awaiting_verification", "failed", "cancelled"])("renders %s faithfully without inferring a proof or allocating", async state => {
     const body = auditFixture(state);
     const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(json(body));
-    render(<MemoryRouter><LinkedAuditConsumer runId={body.parent_run_id} workspaceId={WS} readOnly /></MemoryRouter>);
+    render(<MemoryRouter><LinkedAuditConsumer runId={body.parent_run_id} workspaceId={WS} applicable readOnly /></MemoryRouter>);
     await screen.findByText(body.state);
     expect(Boolean(document.querySelector("[data-audit-proof]"))).toBe(state === "verified");
     expect(screen.queryByText("Run pinned audit")).toBeNull();
@@ -134,7 +176,7 @@ describe("linked audit explicit generated consumer", () => {
   it.each([401, 403, 404, 400, 409, 502, 503])("%s stays typed, secret prose is never shown; no automatic retry", async status => {
     const body = auditFixture("ready_to_admit");
     const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(problem(status));
-    render(<MemoryRouter><LinkedAuditConsumer runId={body.parent_run_id} workspaceId={WS} /></MemoryRouter>);
+    render(<MemoryRouter><LinkedAuditConsumer runId={body.parent_run_id} workspaceId={WS} applicable /></MemoryRouter>);
     await waitFor(() => expect(document.querySelector("[data-audit-refusal]")).not.toBeNull());
     expect(document.body.textContent).not.toContain("PRIVATE SOURCE PATH");
     expect(fetcher).toHaveBeenCalledTimes(1);
@@ -154,7 +196,7 @@ describe("linked audit explicit generated consumer", () => {
       if (intents.length === 1) throw new TypeError("Lost response");
       return json(auditFixture("queued"), 202);
     });
-    render(<MemoryRouter><LinkedAuditConsumer runId={ready.parent_run_id} workspaceId={WS} /></MemoryRouter>);
+    render(<MemoryRouter><LinkedAuditConsumer runId={ready.parent_run_id} workspaceId={WS} applicable /></MemoryRouter>);
     fireEvent.click(await screen.findByText("Run pinned audit"));
     fireEvent.click(screen.getByText("Confirm pinned audit"));
     await screen.findByText("Audit service is temporarily unavailable — no verification is inferred.");
@@ -172,8 +214,8 @@ describe("linked audit explicit generated consumer", () => {
       const url = new URL(String(input), "http://local");
       return url.searchParams.get("workspace_id") === WS ? new Promise<Response>(resolve => { oldAnswer = resolve; }) : problem(404);
     });
-    const rendered = render(<MemoryRouter><LinkedAuditConsumer runId={proof.parent_run_id} workspaceId={WS} /></MemoryRouter>);
-    rendered.rerender(<MemoryRouter><LinkedAuditConsumer runId={proof.parent_run_id} workspaceId={OTHER} /></MemoryRouter>);
+    const rendered = render(<MemoryRouter><LinkedAuditConsumer runId={proof.parent_run_id} workspaceId={WS} applicable /></MemoryRouter>);
+    rendered.rerender(<MemoryRouter><LinkedAuditConsumer runId={proof.parent_run_id} workspaceId={OTHER} applicable /></MemoryRouter>);
     await screen.findByText("Audit not available to this workspace and reader.");
     oldAnswer(json(proof));
     await waitFor(() => expect(document.querySelector("[data-audit-proof]")).toBeNull());

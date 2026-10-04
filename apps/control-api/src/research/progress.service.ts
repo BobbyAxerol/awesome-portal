@@ -41,6 +41,8 @@ import {
 import { WHATIF_PROFILE, WHATIF_PROFILE_ID } from "./whatif.profile";
 import { VN_OBSERVED_FIXED_PROFILE_ID } from "./vn-observed-fixed.profile";
 import { PINNED_AUDIT_PROFILE, PINNED_AUDIT_PROFILE_ID } from "./final-audit.contract";
+import { ENGINE_110_QUALIFICATION_BINDING, ENGINE_110_QUALIFICATION_BINDING_DIGEST } from "./engine-qualification.profile";
+import { sha256ResearchJson } from "./preflight.service";
 import {
   RETRY_WAIT_DISPATCH_GRACE_SECONDS,
   STRANDED_TERMINAL_MIN_AGE_SECONDS,
@@ -256,6 +258,16 @@ export class ResearchProgressService {
   async ingest(input: ResearchProgressIngress): Promise<{ accepted: true; latest_sequence: number }> {
     this.requireEnabled();
     const ingressScope = await this.progress.resolveIngress(input);
+    for (const source of [input.evidence?.source, input.split?.source]) {
+      if (!source) continue;
+      const expectedVersion = ingressScope.engineReleaseId === "er_quantbt_110" ? "1.1.0" : "1.1.1";
+      const oldBinding = { ...ENGINE_110_QUALIFICATION_BINDING, binding_digest: ENGINE_110_QUALIFICATION_BINDING_DIGEST };
+      if (source.engine_version !== expectedVersion || expectedVersion === "1.1.0"
+          && (ingressScope.executionProfileId !== "p04.fixed-qualification.v1"
+            || sha256ResearchJson(ingressScope.qualificationBinding) !== sha256ResearchJson(oldBinding))) {
+        throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Source engine version does not match its immutable producer binding.", 400);
+      }
+    }
     this.assertProfileBoundIngress(ingressScope, input);
     const persisted = await this.progress.persistIngress(ingressScope, input);
     // P13 is a terminal sidecar only. If its own immutable write temporarily

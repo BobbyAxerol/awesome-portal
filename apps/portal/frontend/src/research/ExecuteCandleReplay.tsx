@@ -24,7 +24,7 @@
  */
 
 import { useEffect, useId, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { ResearchScopedLink as Link } from "./ResearchScopedLink";
 
 import { paletteNow } from "../charts/theme";
 import { smokeMotionAllowed } from "../execution/smokeMotion";

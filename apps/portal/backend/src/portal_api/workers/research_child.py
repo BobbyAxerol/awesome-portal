@@ -572,6 +572,7 @@ def _p13_evidence_source(
     is_start_utc_ms: int | None = None,
     run_id: str | None = None,
     source_windows: dict[str, Any] | None = None,
+    engine_version: str | None = None,
 ) -> dict[str, Any]:
     """Build the bounded evidence passport from the actual QuantBT result.
 
@@ -631,7 +632,7 @@ def _p13_evidence_source(
         "schema_version": "research.p13.evidence-source.v1",
         "source": {
             "execution_adapter_id": execution_adapter_id,
-            "engine_version": QuantBTGateway().version(),
+            "engine_version": engine_version if engine_version is not None else QuantBTGateway().version(),
             "input_scope": "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY",
             "oos_observation_count": len(equity),
             "emitted_equity_points": len(points),
@@ -854,6 +855,15 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
     from portal_api.adapters.quantbt import QuantBTGateway
     from strategy.delta_rsi import generate_signals
 
+    from portal_api.domain.research_engine_qualification import validate_engine_qualification_binding
+    qualification_binding = receipt.get("qualification_binding")
+    engine_version = validate_engine_qualification_binding(qualification_binding,
+        release_id="er_quantbt_110" if qualification_binding is not None else "er_quantbt_111",
+        profile_id="p04.fixed-qualification.v1",
+        adapter_contract_digest=qualification_binding.get("adapter_contract_digest", "") if qualification_binding else "",
+        confined_child=True)
+    gateway = QuantBTGateway(expected_version=engine_version, confined_qualification_child=qualification_binding is not None)
+
     vn_observed = receipt.get("execution_profile_id") is not None
     if vn_observed:
         from portal_api.domain.research_vn_observed_fixed_profile import VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST
@@ -883,7 +893,7 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
                 or int(index[0].value // 1_000_000) != observation.warmup_start_utc_ms):
             raise ValueError("VN fixed child requires its exact observed predecessor tape and source-local clock")
     signal = generate_signals(market, dict(parameters))["pos_weight"]
-    endpoint = QuantBTGateway().signal_notional_endpoint(
+    endpoint = gateway.signal_notional_endpoint(
         initial_capital=20_000,
         leverage=3,
         alloc_per_trade=2_000,
@@ -894,11 +904,13 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
     report = result.full_report()
     output = {
         "task": "P04_DELTA_SMOKE",
-        "engine_version": QuantBTGateway().version(),
+        "engine_version": gateway.version(),
         "bars": int(len(market)),
         "final_equity": float(report["final_equity"]),
         "num_trades": int(report["num_trades"]),
     }
+    if qualification_binding is not None:
+        output["qualification_binding"] = qualification_binding
     if vn_observed:
         output.update(execution_profile_id=receipt["execution_profile_id"],
             execution_profile_digest=receipt["execution_profile_digest"], source_observation=observation.model_dump(mode="json"))
@@ -914,6 +926,7 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
             is_start_utc_ms=receipt.get("is_start_utc_ms"),
             run_id=receipt.get("run_id"),
             source_windows=receipt.get("source_windows"),
+            engine_version=gateway.version(),
         )
     _capture_fixed_replay_source(receipt=receipt, receipt_dir=receipt_dir, market=market, result=result, output=output)
     _capture_is_qualification_source(receipt=receipt, receipt_dir=receipt_dir, market=market, result=result, output=output)

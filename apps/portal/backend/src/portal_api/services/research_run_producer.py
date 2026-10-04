@@ -559,6 +559,7 @@ class ResearchRunProducerExecutor:
                     oos_start_utc_ms=int(oos_start.value // 1_000_000),
                     is_start_utc_ms=int(is_start.value // 1_000_000),
                     source_windows=source_windows,
+                    qualification_binding=research.qualification_binding,
                     **({"execution_profile_id": research.execution_profile_id,
                         "execution_profile_digest": research.execution_profile_digest,
                         "source_observation": research.source_observation.model_dump(mode="json")} if vn_observed else {}),
@@ -663,6 +664,8 @@ class ResearchRunProducerExecutor:
             "source_observation": research.source_observation.model_dump(mode="json"),
             "account_model": "GENERIC_SIGNAL_NOTIONAL_RESEARCH_NOT_VN_VENUE", "calendar_authority": "NOT_PUBLISHED"}
             if vn_observed else {})
+        if research.qualification_binding is not None:
+            provenance["qualification_binding"] = research.qualification_binding
         public_config = {
             "schema_version": "research.p17.imported-run-config.v1" if imported else "research.p10.run-config.v1",
             "run_id": request.run_id,
@@ -721,6 +724,8 @@ class ResearchRunProducerExecutor:
             },
         }
         receipt_document.update(provenance)
+        if research.qualification_binding is not None:
+            receipt_document["qualification_binding"] = research.qualification_binding
         split_source = self._p14_split_source(
             request=request,
             imported_source_digest=child.imported_source_digest,
@@ -1156,7 +1161,7 @@ class ResearchRunProducerExecutor:
             "source": {
                 "execution_adapter_id": research.execution_adapter_id,
                 **({"imported_source_digest": imported_source_digest} if imported else {}),
-                "engine_version": "1.1.1",
+                "engine_version": "1.1.0" if research.qualification_binding is not None else "1.1.1",
                 "input_scope": "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY",
                 "source_transform_digest": source_transform_digest,
                 "manifest_digest": research.manifest_digest,

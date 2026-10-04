@@ -29,8 +29,12 @@ import {
   validateData,
   windowProblems,
 } from "./runDraft";
-import { RUN_DRAFT_STORAGE_KEY, clearRunDraft, readDraftSummary, saveRunDraft } from "./runDraftStore";
+import { RUN_DRAFT_STORAGE_KEY, clearRunDraft as clearScopedDraft, readDraftSummary as readScopedSummary, runDraftScope, saveRunDraft as saveScopedDraft } from "./runDraftStore";
 import { researchState } from "./state";
+const DRAFT_SCOPE = runDraftScope("principal_w2a", "ws_w2a")!;
+const saveRunDraft = (value: RunDraft) => saveScopedDraft(value, DRAFT_SCOPE);
+const clearRunDraft = () => clearScopedDraft(DRAFT_SCOPE);
+const readDraftSummary = () => readScopedSummary(DRAFT_SCOPE);
 
 beforeEach(() => {
   window.sessionStorage.clear();

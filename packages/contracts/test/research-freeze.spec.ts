@@ -8,6 +8,13 @@ const openApiPath = join(ROOT, "openapi", "research-freeze.openapi.json");
 const generatedPath = join(ROOT, "generated", "research-freeze.d.ts");
 
 describe("P16 published Research Freeze contract", () => {
+  it("preserves the actual qualified engine pin without admitting arbitrary historical versions", () => {
+    const document = JSON.parse(readFileSync(openApiPath, "utf8"));
+    expect(document.components.schemas.FreezeDetail.properties.engine_pin.$ref).toBe("#/components/schemas/EnginePin");
+    const version = document.components.schemas.EnginePin.properties.engine_version;
+    expect(version.anyOf).toEqual([{ enum: ["1.1.0", "1.1.1"] }, { type: "null" }]);
+    expect(readFileSync(generatedPath, "utf8")).toMatch(/engine_version:\s*\("1\.1\.0"\s*\|\s*"1\.1\.1"\)\s*\|\s*null/);
+  });
   it("E17 publishes imported identity at the response root and keeps shared Stage 4 schemas aligned", () => {
     const freeze = JSON.parse(readFileSync(openApiPath, "utf8"));
     const retained = JSON.parse(readFileSync(join(ROOT, "openapi", "research-current-source.openapi.json"), "utf8"));
