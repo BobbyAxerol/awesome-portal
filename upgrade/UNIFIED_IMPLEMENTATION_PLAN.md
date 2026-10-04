@@ -7937,3 +7937,23 @@ RS-03 boundary test retained, targeted real PostgreSQL 11/11 PASS, affected FE
 9/9 and contracts7/7 PASS. Changed Control/Web rebuilt once; no new engine job,
 load/DR repeat or Python build. v7 retains earlier receipts at their original
 wire/image scope and names final public-ref image/bundle separately.
+
+**Owner continuation, 2026-10-05 — canonical Delta/RSI and sampler capture:**
+Bobby authorizes a purpose-separated executable reference sample without
+waiting for his own source, plus actual confined-child Optuna observation.
+This stays in P24, not a new phase. The bounded pure helper loader preserves
+sandbox restrictions; the reference does not claim protected-kernel parity.
+New runs may publish actual calls/suggestions, not private TPE densities or
+reconstructed historical trace. Preserve Claude's composition and baselines.
+Plan/tests/delivery: [queue §33 amendment](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#33-owner-amendment--canonical-deltarsi-sample-and-sampler-capture-2026-10-05).
+State **SOURCE_DELIVERED**; [combined closeout](./research_loop/evidence/P24/P24_CANONICAL_SAMPLE_SAMPLER_CLOSEOUT_2026-10-05.md).
+Canonical184-line source with three pure helper classes/seven methods and one
+entrypoint; analyzer/child agree and pinned1.1.1 child executes exact bytes.
+Actual HMD WFO2fold/3trial/36sampler calls are retained with identical source/
+P05/manifest/public hash; actual TS source-block projection PASS. New observed
+execution trace is displayed; old seals stay unchanged and private TPE density
+is not inferred. Generated additive contract/narrow FE binding preserve Claude
+composition/goldens. One normal grouped gate, clean local landing and affected
+Research preview build; private runtime/browser receipt path is in the packet.
+No remote push/dev/main/stable authorization; no engine upgrade needed for
+these two items, no duplicate unchanged load/DR campaign.

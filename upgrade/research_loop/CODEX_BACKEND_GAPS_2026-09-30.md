@@ -2026,3 +2026,38 @@ locator metadata in the new projections; precise implementation locators stay
 in the packet. Original RS-03 boundary assertion not weakened. Targeted real
 PostgreSQL retake11/11, FE9/9, contracts7/7 PASS; changed Control/Web rebuilt,
 older actual/technical receipts retain their exact old wire/image scope in v7.
+
+### §33 owner amendment — canonical Delta/RSI sample and sampler capture, 2026-10-05
+
+Bobby authorizes Codex to publish the sample without waiting for owner code,
+and to finish the actual sampler observation path. This supersedes only the
+preceding pending-sample/capture scope, not old receipts or release authority.
+
+1. Publish one runnable Delta/RSI reference source divided into parameter,
+   indicator, signal-policy and entrypoint purposes. Preserve the protected
+   built-in kernel. Disclose bounded past-window reference semantics; never
+   claim full-history kernel equivalence or trading certification.
+2. Admit only pure helper definitions: literal contract, plain functions and
+   static helper classes. Keep imports, external IO, reflection, arbitrary
+   attributes, inheritance and recursion blocked. Verify analyzer/child agree
+   and preserve old single-function imports, digest and resource limits.
+3. Capture actual public Optuna sampler calls in the confined child, preserving
+   sampler identity, RNG calls, study/trial scope and engine outputs. Retain
+   bounded observations and digest-bound summary. Do not invent private TPE
+   densities/ranking or historical traces.
+4. Regenerate additive Search contracts and consume actual trace facts without
+   changing Claude's design/baselines. Old runs lacking capture remain typed
+   not recorded.
+5. Focused security/parity tests, one shortest actual pinned WFO receipt, one
+   grouped normal commit gate and clean local fast-forward landing. Update
+   packet/Unified together. Do not repeat unchanged load/DR suites.
+
+State **SOURCE_DELIVERED**. [Combined receipt](./evidence/P24/P24_CANONICAL_SAMPLE_SAMPLER_CLOSEOUT_2026-10-05.md):
+one184-line purpose-separated Delta/RSI source, actual pinned imported child;
+actual confined HMD WFO2fold/3trial/36sampler calls, canonical byte hash verified
+through P05 and the typed read. New execution observation is available;
+old seals/private TPE densities are not fabricated. Generated contract and
+narrow existing consumer delivered without design/baseline changes. One
+grouped normal gate/local FF and affected helper-managed preview build follow.
+No remote push, dev/main merge or stable rollout. Actual preview custody is
+recorded at the receipt's private `preview-closeout.md` path after rollout.

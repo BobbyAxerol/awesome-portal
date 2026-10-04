@@ -1,10 +1,19 @@
 import { ResearchRequestedSpecSchema } from "./preflight.contract";
 import { sha256ResearchJson } from "./preflight.service";
-import { ResearchSamplerEvidenceSchema, type ResearchSamplerEvidence } from "./sampler-evidence.contract";
+import { ResearchSamplerCaptureSchema, ResearchSamplerEvidenceSchema, type ResearchSamplerEvidence } from "./sampler-evidence.contract";
 
-export function readSamplerEvidence(requested: unknown, digest: string, trialCount: number): ResearchSamplerEvidence {
+export function readSamplerEvidence(requested: unknown, digest: string, trialCount: number, captured?: unknown): ResearchSamplerEvidence {
   const parsed = ResearchRequestedSpecSchema.safeParse(requested);
   const valid = parsed.success && sha256ResearchJson(requested) === digest;
+  const trace = ResearchSamplerCaptureSchema.safeParse(captured);
+  let executionTrace: NonNullable<ResearchSamplerEvidence["execution_trace"]> = {
+    state: "NOT_PUBLISHED", scope: "OPTUNA_PUBLIC_SAMPLER_INVOCATIONS_NOT_TPE_DENSITY",
+      source_ref: "SEALED_CHILD_OPTUNA_PUBLIC_HOOK_CAPTURE_V1", reason_code: captured === undefined || captured === null
+        ? "SAMPLER_PUBLIC_HOOK_TRACE_NOT_RECORDED" : "SAMPLER_PUBLIC_HOOK_TRACE_INCOMPATIBLE", capture: null };
+  if (trace.success && trace.data.state === "AVAILABLE") executionTrace = {
+    state: "AVAILABLE", scope: trace.data.scope, source_ref: "SEALED_CHILD_OPTUNA_PUBLIC_HOOK_CAPTURE_V1", reason_code: null, capture: trace.data };
+  if (trace.success && trace.data.state === "PARTIAL" && trace.data.reason_code) executionTrace = {
+    state: "PARTIAL", scope: trace.data.scope, source_ref: "SEALED_CHILD_OPTUNA_PUBLIC_HOOK_CAPTURE_V1", reason_code: trace.data.reason_code, capture: trace.data };
   return ResearchSamplerEvidenceSchema.parse({
     schema_version: "research.sampler-evidence.v1",
     requested_configuration: {
@@ -21,5 +30,6 @@ export function readSamplerEvidence(requested: unknown, digest: string, trialCou
     },
     observed_trials: { state: "AVAILABLE", scope: "RETAINED_SOURCE_TRIAL_ROWS_NOT_SAMPLER_INTERNAL_TRACE",
       source_ref: "SEALED_RETAINED_TRIAL_LEDGER_V1", source_trial_count: trialCount },
+    execution_trace: executionTrace,
   });
 }

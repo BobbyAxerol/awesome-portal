@@ -940,6 +940,18 @@ def _load_imported_entrypoint(source_text: str, *, expected_entrypoint: str) -> 
         tree = ast.parse(source_text, filename="<imported-alpha>", mode="exec")
     except SyntaxError as exc:
         raise ValueError("E17 imported Alpha source is not valid Python") from exc
+    definitions = [node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))]
+    if any(isinstance(node, ast.ClassDef) for node in definitions) or len(definitions) > 1:
+        from portal_api.services.research_alpha_definition import load_research_alpha_definition
+        entrypoint, contract = load_research_alpha_definition(source_text, expected_entrypoint=expected_entrypoint)
+        warmup, required = contract.get("warmup_bars"), contract.get("required_columns")
+        if (
+            type(warmup) is not int or not 0 <= warmup <= _IMPORTED_MAX_WARMUP_BARS
+            or not isinstance(required, list) or not required
+            or any(column not in {"open", "high", "low", "close", "volume"} for column in required)
+        ):
+            raise ValueError("E17 imported Alpha data contract exceeds the execution profile")
+        return entrypoint, contract
     stack: list[tuple[ast.AST, int]] = [(tree, 1)]
     count = 0
     while stack:
@@ -1205,7 +1217,7 @@ class _ChildProgressWriter:
         os.close(self._descriptor)
 
 
-def _observe_optuna_trials(writer: _ChildProgressWriter) -> Any:
+def _observe_optuna_trials(writer: _ChildProgressWriter, *, sampler_trace: Any = None) -> Any:
     """Observe each finished trial through QuantBT's own study callback.
 
     ``quantbt.walkforward`` passes its module-level ``logging_callback`` to
@@ -1232,7 +1244,8 @@ def _observe_optuna_trials(writer: _ChildProgressWriter) -> Any:
 
     walkforward.logging_callback = observed
     original_optimize = walkforward.WalkForwardEngine.optimize_params
-    if writer._cumulative_trials:
+    observe_study_scope = writer._cumulative_trials or sampler_trace is not None
+    if observe_study_scope:
         # Observe the engine's actual public study_id argument. Compact Optuna
         # trial attrs omit it; callback order is not a source identity.
         import inspect
@@ -1250,10 +1263,15 @@ def _observe_optuna_trials(writer: _ChildProgressWriter) -> Any:
                 writer._study_id = previous
 
         walkforward.WalkForwardEngine.optimize_params = observed_optimize
+    restore_sampler = (
+        sampler_trace.install(source_study_id=lambda: writer._study_id)
+        if sampler_trace is not None else lambda: None
+    )
 
     def restore() -> None:
+        restore_sampler()
         walkforward.logging_callback = original
-        if writer._cumulative_trials:
+        if observe_study_scope:
             walkforward.WalkForwardEngine.optimize_params = original_optimize
 
     return restore
@@ -1446,9 +1464,11 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
         ),
     )
     from portal_api.services.research_supervisor import CHILD_PROGRESS_FILENAME
+    from portal_api.services.research_sampler_trace import SamplerPublicTrace
 
     writer = _ChildProgressWriter(output_root.parent / CHILD_PROGRESS_FILENAME, cumulative_trials=causal_inner)
-    restore = _observe_optuna_trials(writer)
+    trace = SamplerPublicTrace(run_id=run_id, engine_version=QuantBTGateway().version())
+    restore = _observe_optuna_trials(writer, sampler_trace=trace)
     try:
         summary = AdvancedWalkForwardRunner(
             gateway=QuantBTGateway(),
@@ -1469,6 +1489,7 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
         trials = pd.read_parquet(trials_path)
         if "study_id" not in trials or len(trials.groupby("study_id")) != n_folds or not trials.groupby("study_id").size().eq(3).all():
             raise ValueError("causal inner source did not publish exactly 3 trials for every outer study")
+    trace.write(artifacts=ArtifactRepository(output_root), run_id=run_id)
     return {
         "task": "P10_DELTA_WFO",
         "engine_version": QuantBTGateway().version(),

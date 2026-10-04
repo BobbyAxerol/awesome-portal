@@ -796,7 +796,7 @@ export class ResearchCurrentSourceService {
         availability: available(),
       },
       diagnostics: searchDiagnostics(facts),
-      sampler_evidence: readSamplerEvidence(inputs.requestedSpec, seal.requestedSpecDigest, seal.tableRows.TRIAL),
+      sampler_evidence: readSamplerEvidence(inputs.requestedSpec, seal.requestedSpecDigest, seal.tableRows.TRIAL, facts?.search.sampler_trace),
       declared_space: space,
       surface: isCausalSeal(seal) ? runGlobalCausalSurface(allTrials.length,
         surfaceTrials.filter(trial => trial.state === "COMPLETE" && trial.objective !== null).length) : searchSurface({

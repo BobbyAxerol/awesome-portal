@@ -160,7 +160,7 @@ describe("F2b — S14 less text, more picture", () => {
     render(<AlphaImport {...props()} />);
     const card = q("[data-entrypoint-card]")!;
     expect(card.querySelector("p")).toBeNull();
-    expect(card.querySelector(".ai-entry")?.getAttribute("title")).toBe("One literal, one plain function. No classes, decorators or imports.");
+    expect(card.querySelector(".ai-entry")?.getAttribute("title")).toBe("Helpers may be plain functions or plain classes with static methods only; no inheritance, instance state or dynamic calls.");
   });
 
   it("each anatomy section carries its note as a tooltip and prints no paragraph", () => {

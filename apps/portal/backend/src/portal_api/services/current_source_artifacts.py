@@ -690,6 +690,11 @@ class CurrentSourceArtifactAdapter:
             objective_terms=self._objective_terms(config),
             causal=causal,
         )
+        from portal_api.services.research_sampler_trace import SAMPLER_TRACE_PATH, retain_sampler_trace
+        try:
+            sampler_trace = retain_sampler_trace(raw_dir / SAMPLER_TRACE_PATH, run_id=run_id, trial_count=len(trials))
+        except (OSError, ValueError, TypeError, KeyError) as exc:
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_SAMPLER_TRACE_INVALID", "Sampler source trace is incompatible with this run's retained source.") from exc
         if causal:
             selection = self._attach_causal_selections(raw_dir, folds=folds, trials=trials, candidates=candidates, config=config, selection=selection)
         selection_rows = [self._selection_row(selection)]
@@ -746,6 +751,7 @@ class CurrentSourceArtifactAdapter:
                     ("account_contract", account_contract if account_ledger is not None else None),
                     ("strategy_lifecycle_contract", lifecycle_contract if child_audit_summary is not None else None),
                     ("execution_observation", execution_observation),
+                    ("sampler_public_trace", None if sampler_trace is None else sampler_trace[0]),
                 )
                 if value is not None
             },
@@ -767,6 +773,8 @@ class CurrentSourceArtifactAdapter:
                 folds=folds if causal else None,
             ),
         )
+        if sampler_trace is not None and isinstance(summary.get("source_facts"), dict):
+            summary["source_facts"]["search"]["sampler_trace"] = sampler_trace[1]
         # The retained table/manifest hashes authenticate the projection,
         # not the source equity file itself. Seal its actual bytes once here.
         series_path = raw_dir / "series" / "stitched.parquet"
@@ -827,6 +835,8 @@ class CurrentSourceArtifactAdapter:
             })
             if source_contract is not None:
                 writer.write_small_document("source_contract", self._document(source_contract))
+            if sampler_trace is not None:
+                writer.write_small_document("source_sampler_public_trace", self._document(sampler_trace[0]))
             if fold_metrics is not None:
                 writer.write_small_document("source_selected_fold_metrics", self._document(fold_metrics))
             if summary_analytics is not None:

@@ -15,8 +15,9 @@
  * lifecycle would invent a fourth authority state the backend does not have.
  *
  * The visual grouping follows the HiFi, but the copy follows the current
- * restricted-definition parser and seven-gate contract. HiFi class/Numba
- * examples are not accepted by this release and must not be advertised.
+ * restricted-definition parser and seven-gate contract. Plain stateless
+ * classes/functions now organize the canonical Delta-RSI reference; imports,
+ * inheritance, instance state and Numba decorators remain unadmitted.
  */
 
 /** Which stage a chip's unlock belongs to, for its tone. */
@@ -53,17 +54,35 @@ export const CODE_ANATOMY: readonly AnatomySection[] = [
     section: "literal ALPHA_CONTRACT",
     unlocks: [unlock("contract-complete gate")],
     code: `ALPHA_CONTRACT = {"schema_version":"research.alpha-source.v1",
-  "version":"0.1.0","entrypoint":"generate_signals","timeframes":["1h"],
+  "version":"1.0.0","entrypoint":"generate_signals","timeframes":["1h","4h","1d"],
   "required_columns":["open","high","low","close","volume"],
-  "warmup_bars":32,"determinism":{"seed_required":true},
-  "parameter_space":{"window":{"kind":"int_range","low":8,"high":64,"step":1}}}`,
+  "warmup_bars":256,"determinism":{"seed_required":True},
+  "parameter_space":{"window":{"kind":"int_range","low":20,"high":60,"step":2}, …}}`,
     note: "One literal declaration; the server verifies each field.",
   },
   {
-    section: "one restricted entrypoint",
+    section: "parameters — admitted run pins",
+    unlocks: [unlock("parameter-space-sane gate")],
+    code: `class DeltaRsiParameters:\n    @staticmethod\n    def read(parameters):\n        # eight declared parameters; no silent defaults\n        return { … }`,
+    note: "Exact run pins; missing keys fail.",
+  },
+  {
+    section: "indicators — pure causal arithmetic",
+    unlocks: [unlock("no-lookahead-static-scan gate")],
+    code: `class DeltaRsiIndicators:\n    @staticmethod\n    def rsi(close, length): …\n    @staticmethod\n    def quadratic_derivative(values, window): …\n    # ema · sma · atr: bounded stateless helpers`,
+    note: "Past-only RSI, quadratic derivative, ATR and volume.",
+  },
+  {
+    section: "policy — entries, exits and hard stop",
+    unlocks: [unlock("determinism-declared gate")],
+    code: `class DeltaRsiPolicy:\n    @staticmethod\n    def target_weight(close, high, low, volume, parameters):\n        # filtered entries; direction-change exits; hard stop\n        return previous_target`,
+    note: "Bounded-history reference; not protected full-history kernel parity.",
+  },
+  {
+    section: "entrypoint — typed notional output",
     unlocks: [unlock("entrypoint-importable gate")],
-    code: `def generate_signals(context):\n    return context`,
-    note: "One .py file, one restricted function.",
+    code: `def generate_signals(context):\n    # only the child supplies past-only history and admitted pins\n    weight = DeltaRsiPolicy.target_weight( … )\n    return {"schema_version":"research.imported-signal-notional-output.v1",\n            "signal_notional":1000.0 * weight}`,
+    note: "Fixed target notional; QuantBT owns accounting and metrics.",
   },
   {
     section: "seven ordered gates",

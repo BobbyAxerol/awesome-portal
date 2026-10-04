@@ -4,9 +4,10 @@ This module intentionally does *not* import, instantiate, or call an uploaded
 strategy.  A browser supplies one bounded Python source string to the Control
 API; the Control API holds the bytes and calls this private adapter only for
 AST/literal analysis.  The only ``exec`` below receives a rebuilt AST that
-contains a literal ``ALPHA_CONTRACT`` assignment and an undecorated function
-definition with no defaults or annotations.  Defining that function does not
-run its body.  It is therefore a structural entrypoint check, not a runtime
+contains a literal ``ALPHA_CONTRACT`` and approved side-effect-free definitions.
+Purpose-separated modules additionally pass the child-shared pure-helper
+validator. Defining functions/static classes never calls strategy bodies.
+It is therefore a structural entrypoint check, not a runtime
 security certificate, a dependency installer, or a causality proof.
 
 P10 owns any future worker-side execution adapter.  Keeping this distinction
@@ -230,6 +231,7 @@ def _extract_module_contract(
     entrypoint: ast.FunctionDef | None = None
     contract_error: str | None = None
     entrypoint_error: str | None = None
+    functions: list[ast.FunctionDef] = []
 
     for index, statement in enumerate(tree.body):
         if index == 0 and _is_docstring(statement):
@@ -249,15 +251,22 @@ def _extract_module_contract(
             contract = value
             continue
         if isinstance(statement, ast.FunctionDef):
-            if entrypoint is not None:
-                entrypoint_error = "The single-file v1 contract permits one entrypoint definition."
-                continue
-            entrypoint = statement
+            functions.append(statement)
+            continue
+        if isinstance(statement, ast.ClassDef):
+            # No class body is evaluated here. The shared validator below
+            # admits only bounded stateless @staticmethod helper definitions.
             continue
         if isinstance(statement, (ast.Import, ast.ImportFrom)):
             entrypoint_error = "Top-level imports are not permitted in the single-file v1 contract."
             continue
-        entrypoint_error = "Only a literal ALPHA_CONTRACT and one entrypoint definition are permitted at module scope."
+        entrypoint_error = "Only a literal ALPHA_CONTRACT and pure definitions are permitted at module scope."
+
+    declared = contract.get("entrypoint") if contract else None
+    matches = [function for function in functions if function.name == declared]
+    entrypoint = matches[0] if len(matches) == 1 else functions[0] if len(functions) == 1 else None
+    if len(matches) > 1:
+        entrypoint_error = "The admitted entrypoint must be defined exactly once."
 
     if contract is None and contract_error is None:
         contract_error = "ALPHA_CONTRACT is required."
@@ -347,6 +356,15 @@ def _restricted_definition_check(
     )
     if contract_assignment is None:
         return False, "ALPHA_CONTRACT is not available for restricted-definition loading."
+    if any(isinstance(statement, ast.ClassDef) for statement in tree.body) or sum(
+        isinstance(statement, ast.FunctionDef) for statement in tree.body
+    ) > 1:
+        from portal_api.services.research_alpha_definition import load_research_alpha_definition
+        try:
+            load_research_alpha_definition(ast.unparse(tree), expected_entrypoint=declared_entrypoint)
+        except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
+            return False, "Pure-helper definitions violate the bounded execution grammar."
+        return True, "Restricted-definition sandbox loaded pure helpers without calling strategy code."
     # Compile only the safe declaration pair.  The submitted module is never
     # imported; the function body is defined but never called.
     sandbox_module = ast.fix_missing_locations(ast.Module(body=[contract_assignment, entrypoint], type_ignores=[]))

@@ -231,6 +231,123 @@ export interface components {
                 source_ref: "SEALED_RETAINED_TRIAL_LEDGER_V1";
                 source_trial_count: number;
             };
+            execution_trace?: {
+                /** @constant */
+                scope: "OPTUNA_PUBLIC_SAMPLER_INVOCATIONS_NOT_TPE_DENSITY";
+                /** @constant */
+                source_ref: "SEALED_CHILD_OPTUNA_PUBLIC_HOOK_CAPTURE_V1";
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                capture: null;
+                /** @enum {unknown} */
+                reason_code: "SAMPLER_PUBLIC_HOOK_TRACE_NOT_RECORDED" | "SAMPLER_PUBLIC_HOOK_TRACE_INCOMPATIBLE";
+            } | {
+                /** @constant */
+                scope: "OPTUNA_PUBLIC_SAMPLER_INVOCATIONS_NOT_TPE_DENSITY";
+                /** @constant */
+                source_ref: "SEALED_CHILD_OPTUNA_PUBLIC_HOOK_CAPTURE_V1";
+                /** @constant */
+                state: "AVAILABLE";
+                reason_code: null;
+                capture: {
+                    /** @constant */
+                    schema_version: "research.sampler-public-observer.v1";
+                    /** @enum {unknown} */
+                    state: "AVAILABLE" | "PARTIAL" | "NOT_PUBLISHED";
+                    reason_code: string | null;
+                    /** @constant */
+                    scope: "OPTUNA_PUBLIC_SAMPLER_INVOCATIONS_NOT_TPE_DENSITY";
+                    /** @constant */
+                    engine_version: "1.1.1";
+                    optuna_version: string;
+                    capture_complete: boolean;
+                    invocation_count: number;
+                    recorded_trial_count: number;
+                    omitted_trial_count: number;
+                    study_count: number;
+                    artifact_sha256: string;
+                    size_bytes: number;
+                    studies: {
+                        observer_study_index: number;
+                        source_study_id: string | null;
+                        sampler_class: string;
+                        pruner_class: string;
+                        directions: ("MAXIMIZE" | "MINIMIZE")[];
+                        /** @constant */
+                        effective_configuration_state: "NOT_PUBLISHED";
+                    }[];
+                    sampled_trial_count: number;
+                    omitted_sample_trial_count: number;
+                    sample_trials: {
+                        observer_study_index: number;
+                        source_study_id: string | null;
+                        trial_number: number;
+                        started_at_utc_ms: number;
+                        completed_at_utc_ms: number | null;
+                        /** @enum {unknown} */
+                        state: "COMPLETE" | "PRUNED" | "FAIL" | "RUNNING" | "WAITING";
+                        invocation_kinds: ("before_trial" | "infer_relative_search_space" | "sample_relative" | "sample_independent" | "after_trial")[];
+                        invocation_count: number;
+                        returned_parameters: {
+                            [key: string]: string | boolean;
+                        };
+                        values: string[] | null;
+                    }[];
+                } & unknown;
+            } | {
+                /** @constant */
+                scope: "OPTUNA_PUBLIC_SAMPLER_INVOCATIONS_NOT_TPE_DENSITY";
+                /** @constant */
+                source_ref: "SEALED_CHILD_OPTUNA_PUBLIC_HOOK_CAPTURE_V1";
+                /** @constant */
+                state: "PARTIAL";
+                reason_code: string;
+                capture: {
+                    /** @constant */
+                    schema_version: "research.sampler-public-observer.v1";
+                    /** @enum {unknown} */
+                    state: "AVAILABLE" | "PARTIAL" | "NOT_PUBLISHED";
+                    reason_code: string | null;
+                    /** @constant */
+                    scope: "OPTUNA_PUBLIC_SAMPLER_INVOCATIONS_NOT_TPE_DENSITY";
+                    /** @constant */
+                    engine_version: "1.1.1";
+                    optuna_version: string;
+                    capture_complete: boolean;
+                    invocation_count: number;
+                    recorded_trial_count: number;
+                    omitted_trial_count: number;
+                    study_count: number;
+                    artifact_sha256: string;
+                    size_bytes: number;
+                    studies: {
+                        observer_study_index: number;
+                        source_study_id: string | null;
+                        sampler_class: string;
+                        pruner_class: string;
+                        directions: ("MAXIMIZE" | "MINIMIZE")[];
+                        /** @constant */
+                        effective_configuration_state: "NOT_PUBLISHED";
+                    }[];
+                    sampled_trial_count: number;
+                    omitted_sample_trial_count: number;
+                    sample_trials: {
+                        observer_study_index: number;
+                        source_study_id: string | null;
+                        trial_number: number;
+                        started_at_utc_ms: number;
+                        completed_at_utc_ms: number | null;
+                        /** @enum {unknown} */
+                        state: "COMPLETE" | "PRUNED" | "FAIL" | "RUNNING" | "WAITING";
+                        invocation_kinds: ("before_trial" | "infer_relative_search_space" | "sample_relative" | "sample_independent" | "after_trial")[];
+                        invocation_count: number;
+                        returned_parameters: {
+                            [key: string]: string | boolean;
+                        };
+                        values: string[] | null;
+                    }[];
+                } & unknown;
+            };
         };
         RunDeclaration: {
             /** @constant */
@@ -1533,7 +1650,7 @@ export interface components {
             stage_events?: components["schemas"]["P11StageEvents"];
             /** @description Only for the exact causal profile: independently ranked inner-validation study surfaces. Never a run-global ranking or theta. Total source trials remain bounded to 48. */
             surfaces_by_study?: components["schemas"]["SearchStudySurface"][];
-            /** @description Explicit immutable requested config, retained trial observations and truthful source gap for sampler-internal trace. Request config never attests the effective sampler or proposal provenance. */
+            /** @description Immutable requested config, retained trial observations and optional actual public Optuna-hook capture from a new confined child. Private TPE densities and historical traces are never inferred. */
             sampler_evidence?: components["schemas"]["SamplerEvidence"];
         };
         ArtifactByteMismatch: {

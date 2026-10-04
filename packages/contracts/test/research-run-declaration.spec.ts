@@ -6,6 +6,17 @@ import { amendRunDeclaration } from "../tooling/generate-research-run-declaratio
 const root = join(__dirname, ".."), read = (path: string) => JSON.parse(readFileSync(join(root, path), "utf8"));
 
 describe("P24 immutable declarations and honest sampler scope", () => {
+  it("validates new actual-hook and historical-absence shapes without permitting private internals", () => {
+    const validate = new Ajv2020({ strict: true, allowUnionTypes: true }).compile(read("schemas/research-sampler-evidence.v1.schema.json"));
+    const original = read("fixtures/research-sampler-evidence.valid.json");
+    const trace = read("fixtures/research-sampler-execution-trace.valid.json");
+    expect(validate({ ...original, execution_trace: trace })).toBe(true);
+    expect(validate({ ...original, execution_trace: { state: "NOT_PUBLISHED", scope: trace.scope,
+      source_ref: trace.source_ref, capture: null, reason_code: "SAMPLER_PUBLIC_HOOK_TRACE_NOT_RECORDED" } })).toBe(true);
+    expect(validate({ ...original, execution_trace: { ...trace, source_ref: "postgres://private" } })).toBe(false);
+    expect(validate({ ...original, execution_trace: { ...trace, capture: { ...trace.capture, density_ratio: "0.3" } } })).toBe(false);
+    expect(validate({ ...original, execution_trace: { ...trace, capture: { ...trace.capture, capture_complete: false } } })).toBe(false);
+  });
   it.each(["available", "historical-absent"])("validates %s declaration without promoting missing source", kind => {
     const validate = new Ajv2020({ strict: true, allowUnionTypes: true }).compile(read("schemas/research-run-declaration.v1.schema.json"));
     const fixture = read(`fixtures/research-run-declaration.${kind}.valid.json`);

@@ -12,6 +12,7 @@ import { ResearchEnrichedAnalysisSchema } from "./enriched-analysis.contract";
 import { RetainedExecutionObservationSchema } from "./retained-exposure";
 import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
 import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
+import { ResearchSamplerCaptureSchema } from "./sampler-evidence.contract";
 
 import type { CurrentSourceTableKind } from "./current-source.repository";
 
@@ -165,6 +166,7 @@ export const CurrentSourceFactsSchema = z.object({
     candidate_source_trial_ids: z.array(FactTokenSchema).max(64),
     pruned_trial_count: FactCountSchema,
     objective_probe: z.object({ rows: FactCountSchema, verified_rows: FactCountSchema }).strict(),
+    sampler_trace: ResearchSamplerCaptureSchema.optional(),
   }).strict(),
   execution: z.object({
     engine_id: FactTokenSchema.nullable(),

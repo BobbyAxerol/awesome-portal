@@ -39,6 +39,47 @@ const runDeclaration = {
     else: { properties: { reason_code: reason, declaration: { type: "null" }, declaration_digest: { type: "null" },
       requested_overrides: { type: "null" } } } }],
 };
+const count = { type: "integer", minimum: 0, maximum: 131072 };
+const token = { type: "string", pattern: "^[A-Za-z0-9_-]{1,96}$" };
+const exactDecimal = { type: "string", maxLength: 96, pattern: "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$" };
+const utcMs = { type: "integer", minimum: 0, maximum: Number.MAX_SAFE_INTEGER };
+const hook = { enum: ["before_trial", "infer_relative_search_space", "sample_relative", "sample_independent", "after_trial"] };
+const capture = {
+  ...object({
+    schema_version: { const: "research.sampler-public-observer.v1" },
+    state: { enum: ["AVAILABLE", "PARTIAL", "NOT_PUBLISHED"] }, reason_code: nullable(reason),
+    scope: { const: "OPTUNA_PUBLIC_SAMPLER_INVOCATIONS_NOT_TPE_DENSITY" },
+    engine_version: { const: "1.1.1" }, optuna_version: { type: "string", pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    capture_complete: { type: "boolean" }, invocation_count: count, recorded_trial_count: count,
+    omitted_trial_count: count, study_count: count, artifact_sha256: digest,
+    size_bytes: { type: "integer", minimum: 1, maximum: 262144 },
+    studies: { type: "array", maxItems: 16, items: object({ observer_study_index: count,
+      source_study_id: nullable(token), sampler_class: token, pruner_class: token,
+      directions: { type: "array", minItems: 1, maxItems: 8, items: { enum: ["MAXIMIZE", "MINIMIZE"] } },
+      effective_configuration_state: { const: "NOT_PUBLISHED" },
+    }) },
+    sampled_trial_count: { type: "integer", minimum: 0, maximum: 8 }, omitted_sample_trial_count: count,
+    sample_trials: { type: "array", maxItems: 8, items: object({ observer_study_index: count,
+      source_study_id: nullable(token), trial_number: count, started_at_utc_ms: utcMs,
+      completed_at_utc_ms: nullable(utcMs), state: { enum: ["COMPLETE", "PRUNED", "FAIL", "RUNNING", "WAITING"] },
+      invocation_kinds: { type: "array", maxItems: 5, items: hook }, invocation_count: count,
+      returned_parameters: { type: "object", maxProperties: 12, propertyNames: token,
+        additionalProperties: { anyOf: [exactDecimal, { type: "boolean" }] } },
+      values: nullable({ type: "array", maxItems: 8, items: exactDecimal }),
+    }) },
+  }),
+  allOf: [{ if: { properties: { state: { const: "AVAILABLE" } } }, then: {
+    properties: { capture_complete: { const: true }, omitted_trial_count: { const: 0 }, reason_code: { type: "null" } },
+  }, else: { properties: { reason_code: reason } } }],
+};
+const traceBoundary = { scope: { const: "OPTUNA_PUBLIC_SAMPLER_INVOCATIONS_NOT_TPE_DENSITY" },
+  source_ref: { const: "SEALED_CHILD_OPTUNA_PUBLIC_HOOK_CAPTURE_V1" } };
+const executionTrace = { oneOf: [
+  object({ ...traceBoundary, state: { const: "NOT_PUBLISHED" }, capture: { type: "null" },
+    reason_code: { enum: ["SAMPLER_PUBLIC_HOOK_TRACE_NOT_RECORDED", "SAMPLER_PUBLIC_HOOK_TRACE_INCOMPATIBLE"] } }),
+  object({ ...traceBoundary, state: { const: "AVAILABLE" }, reason_code: { type: "null" }, capture }),
+  object({ ...traceBoundary, state: { const: "PARTIAL" }, reason_code: reason, capture }),
+] };
 const sampler = {
   $schema: "https://json-schema.org/draft/2020-12/schema", $id: "research.sampler-evidence.v1",
   ...object({ schema_version: { const: "research.sampler-evidence.v1" },
@@ -54,8 +95,11 @@ const sampler = {
     observed_trials: object({ state: { const: "AVAILABLE" },
       scope: { const: "RETAINED_SOURCE_TRIAL_ROWS_NOT_SAMPLER_INTERNAL_TRACE" }, source_ref: { const: "SEALED_RETAINED_TRIAL_LEDGER_V1" },
       source_trial_count: { type: "integer", minimum: 0, maximum: 4096 } }),
+    execution_trace: executionTrace,
   }),
 };
+// Additive rollout: old retained responses remain valid without this new field.
+sampler.required = sampler.required.filter(name => name !== "execution_trace");
 function emit(path, value, check) {
   const target = new URL(path, root), next = JSON.stringify(value, null, 2) + "\n";
   let old = ""; try { old = readFileSync(target, "utf8"); } catch {}
@@ -91,7 +135,7 @@ export function amendRunDeclaration(original, name) {
     const body = search.properties ? search : search.allOf.find(part => part.properties?.schema_version);
     if (!body?.properties) throw new Error("Missing Search response body");
     body.properties.sampler_evidence = { $ref: "#/components/schemas/SamplerEvidence",
-      description: "Explicit immutable requested config, retained trial observations and truthful source gap for sampler-internal trace. Request config never attests the effective sampler or proposal provenance." };
+      description: "Immutable requested config, retained trial observations and optional actual public Optuna-hook capture from a new confined child. Private TPE densities and historical traces are never inferred." };
     updates.Search = search;
     updates.SamplerEvidence = structuredClone(sampler);
     delete updates.SamplerEvidence.$schema; delete updates.SamplerEvidence.$id;

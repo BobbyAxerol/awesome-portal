@@ -1362,7 +1362,7 @@ export function AlphaImport(props: AlphaImportProps) {
                   className="ai-btn self-start"
                   data-quiet
                   data-action="use-sample"
-                  title="Fills the box with an illustrative alpha. Nothing is sent until you press Parse."
+                  title="Fills the box with the canonical Delta-RSI reference. Nothing is sent until you press Parse."
                   onClick={() => {
                     setReplacedPaste(null);
                     setFileNote(null);
@@ -1430,14 +1430,14 @@ export function AlphaImport(props: AlphaImportProps) {
                   </tbody>
                 </table>
                 <p className="ai-note m-0" data-sample-note>
-                  The sample passes the gates; it is not a trading strategy. Running it depends on the stack&apos;s admission.
+                  Canonical Delta-RSI reference: bounded-history signals, not protected-kernel parity. Running it depends on the stack&apos;s admission.
                 </p>
               </div>
             ) : null}
 
             <div className="ai-card" data-pad data-entrypoint-card>
-              <h2 className="ai-label" title="v1 single-file contract: one literal, one plain function. No classes, decorators or imports.">Entrypoint</h2>
-              <pre className="ai-entry" title="One literal, one plain function. No classes, decorators or imports.">{"ALPHA_CONTRACT = { … }     # one literal\ndef generate_signals(context): …"}</pre>
+              <h2 className="ai-label" title="One literal and one Portal entrypoint; bounded stateless helper classes/functions are allowed. No imports or external IO.">Entrypoint</h2>
+              <pre className="ai-entry" title="Helpers may be plain functions or plain classes with static methods only; no inheritance, instance state or dynamic calls.">{"ALPHA_CONTRACT = { … }     # one literal\ndef generate_signals(context): …"}</pre>
             </div>
           </div>
         </div>

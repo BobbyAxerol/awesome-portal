@@ -182,6 +182,710 @@
           "maximum": 4096
         }
       }
+    },
+    "execution_trace": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scope",
+            "source_ref",
+            "state",
+            "capture",
+            "reason_code"
+          ],
+          "properties": {
+            "scope": {
+              "const": "OPTUNA_PUBLIC_SAMPLER_INVOCATIONS_NOT_TPE_DENSITY"
+            },
+            "source_ref": {
+              "const": "SEALED_CHILD_OPTUNA_PUBLIC_HOOK_CAPTURE_V1"
+            },
+            "state": {
+              "const": "NOT_PUBLISHED"
+            },
+            "capture": {
+              "type": "null"
+            },
+            "reason_code": {
+              "enum": [
+                "SAMPLER_PUBLIC_HOOK_TRACE_NOT_RECORDED",
+                "SAMPLER_PUBLIC_HOOK_TRACE_INCOMPATIBLE"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scope",
+            "source_ref",
+            "state",
+            "reason_code",
+            "capture"
+          ],
+          "properties": {
+            "scope": {
+              "const": "OPTUNA_PUBLIC_SAMPLER_INVOCATIONS_NOT_TPE_DENSITY"
+            },
+            "source_ref": {
+              "const": "SEALED_CHILD_OPTUNA_PUBLIC_HOOK_CAPTURE_V1"
+            },
+            "state": {
+              "const": "AVAILABLE"
+            },
+            "reason_code": {
+              "type": "null"
+            },
+            "capture": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "schema_version",
+                "state",
+                "reason_code",
+                "scope",
+                "engine_version",
+                "optuna_version",
+                "capture_complete",
+                "invocation_count",
+                "recorded_trial_count",
+                "omitted_trial_count",
+                "study_count",
+                "artifact_sha256",
+                "size_bytes",
+                "studies",
+                "sampled_trial_count",
+                "omitted_sample_trial_count",
+                "sample_trials"
+              ],
+              "properties": {
+                "schema_version": {
+                  "const": "research.sampler-public-observer.v1"
+                },
+                "state": {
+                  "enum": [
+                    "AVAILABLE",
+                    "PARTIAL",
+                    "NOT_PUBLISHED"
+                  ]
+                },
+                "reason_code": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "scope": {
+                  "const": "OPTUNA_PUBLIC_SAMPLER_INVOCATIONS_NOT_TPE_DENSITY"
+                },
+                "engine_version": {
+                  "const": "1.1.1"
+                },
+                "optuna_version": {
+                  "type": "string",
+                  "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+                },
+                "capture_complete": {
+                  "type": "boolean"
+                },
+                "invocation_count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 131072
+                },
+                "recorded_trial_count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 131072
+                },
+                "omitted_trial_count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 131072
+                },
+                "study_count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 131072
+                },
+                "artifact_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "size_bytes": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 262144
+                },
+                "studies": {
+                  "type": "array",
+                  "maxItems": 16,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "observer_study_index",
+                      "source_study_id",
+                      "sampler_class",
+                      "pruner_class",
+                      "directions",
+                      "effective_configuration_state"
+                    ],
+                    "properties": {
+                      "observer_study_index": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 131072
+                      },
+                      "source_study_id": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]{1,96}$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "sampler_class": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_-]{1,96}$"
+                      },
+                      "pruner_class": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_-]{1,96}$"
+                      },
+                      "directions": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 8,
+                        "items": {
+                          "enum": [
+                            "MAXIMIZE",
+                            "MINIMIZE"
+                          ]
+                        }
+                      },
+                      "effective_configuration_state": {
+                        "const": "NOT_PUBLISHED"
+                      }
+                    }
+                  }
+                },
+                "sampled_trial_count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 8
+                },
+                "omitted_sample_trial_count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 131072
+                },
+                "sample_trials": {
+                  "type": "array",
+                  "maxItems": 8,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "observer_study_index",
+                      "source_study_id",
+                      "trial_number",
+                      "started_at_utc_ms",
+                      "completed_at_utc_ms",
+                      "state",
+                      "invocation_kinds",
+                      "invocation_count",
+                      "returned_parameters",
+                      "values"
+                    ],
+                    "properties": {
+                      "observer_study_index": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 131072
+                      },
+                      "source_study_id": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]{1,96}$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "trial_number": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 131072
+                      },
+                      "started_at_utc_ms": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "completed_at_utc_ms": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "state": {
+                        "enum": [
+                          "COMPLETE",
+                          "PRUNED",
+                          "FAIL",
+                          "RUNNING",
+                          "WAITING"
+                        ]
+                      },
+                      "invocation_kinds": {
+                        "type": "array",
+                        "maxItems": 5,
+                        "items": {
+                          "enum": [
+                            "before_trial",
+                            "infer_relative_search_space",
+                            "sample_relative",
+                            "sample_independent",
+                            "after_trial"
+                          ]
+                        }
+                      },
+                      "invocation_count": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 131072
+                      },
+                      "returned_parameters": {
+                        "type": "object",
+                        "maxProperties": 12,
+                        "propertyNames": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z0-9_-]{1,96}$"
+                        },
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 96,
+                              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                            },
+                            {
+                              "type": "boolean"
+                            }
+                          ]
+                        }
+                      },
+                      "values": {
+                        "anyOf": [
+                          {
+                            "type": "array",
+                            "maxItems": 8,
+                            "items": {
+                              "type": "string",
+                              "maxLength": 96,
+                              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                            }
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "state": {
+                        "const": "AVAILABLE"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "capture_complete": {
+                        "const": true
+                      },
+                      "omitted_trial_count": {
+                        "const": 0
+                      },
+                      "reason_code": {
+                        "type": "null"
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "reason_code": {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scope",
+            "source_ref",
+            "state",
+            "reason_code",
+            "capture"
+          ],
+          "properties": {
+            "scope": {
+              "const": "OPTUNA_PUBLIC_SAMPLER_INVOCATIONS_NOT_TPE_DENSITY"
+            },
+            "source_ref": {
+              "const": "SEALED_CHILD_OPTUNA_PUBLIC_HOOK_CAPTURE_V1"
+            },
+            "state": {
+              "const": "PARTIAL"
+            },
+            "reason_code": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+            },
+            "capture": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "schema_version",
+                "state",
+                "reason_code",
+                "scope",
+                "engine_version",
+                "optuna_version",
+                "capture_complete",
+                "invocation_count",
+                "recorded_trial_count",
+                "omitted_trial_count",
+                "study_count",
+                "artifact_sha256",
+                "size_bytes",
+                "studies",
+                "sampled_trial_count",
+                "omitted_sample_trial_count",
+                "sample_trials"
+              ],
+              "properties": {
+                "schema_version": {
+                  "const": "research.sampler-public-observer.v1"
+                },
+                "state": {
+                  "enum": [
+                    "AVAILABLE",
+                    "PARTIAL",
+                    "NOT_PUBLISHED"
+                  ]
+                },
+                "reason_code": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "scope": {
+                  "const": "OPTUNA_PUBLIC_SAMPLER_INVOCATIONS_NOT_TPE_DENSITY"
+                },
+                "engine_version": {
+                  "const": "1.1.1"
+                },
+                "optuna_version": {
+                  "type": "string",
+                  "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+                },
+                "capture_complete": {
+                  "type": "boolean"
+                },
+                "invocation_count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 131072
+                },
+                "recorded_trial_count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 131072
+                },
+                "omitted_trial_count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 131072
+                },
+                "study_count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 131072
+                },
+                "artifact_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "size_bytes": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 262144
+                },
+                "studies": {
+                  "type": "array",
+                  "maxItems": 16,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "observer_study_index",
+                      "source_study_id",
+                      "sampler_class",
+                      "pruner_class",
+                      "directions",
+                      "effective_configuration_state"
+                    ],
+                    "properties": {
+                      "observer_study_index": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 131072
+                      },
+                      "source_study_id": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]{1,96}$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "sampler_class": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_-]{1,96}$"
+                      },
+                      "pruner_class": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_-]{1,96}$"
+                      },
+                      "directions": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 8,
+                        "items": {
+                          "enum": [
+                            "MAXIMIZE",
+                            "MINIMIZE"
+                          ]
+                        }
+                      },
+                      "effective_configuration_state": {
+                        "const": "NOT_PUBLISHED"
+                      }
+                    }
+                  }
+                },
+                "sampled_trial_count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 8
+                },
+                "omitted_sample_trial_count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 131072
+                },
+                "sample_trials": {
+                  "type": "array",
+                  "maxItems": 8,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "observer_study_index",
+                      "source_study_id",
+                      "trial_number",
+                      "started_at_utc_ms",
+                      "completed_at_utc_ms",
+                      "state",
+                      "invocation_kinds",
+                      "invocation_count",
+                      "returned_parameters",
+                      "values"
+                    ],
+                    "properties": {
+                      "observer_study_index": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 131072
+                      },
+                      "source_study_id": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]{1,96}$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "trial_number": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 131072
+                      },
+                      "started_at_utc_ms": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "completed_at_utc_ms": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "state": {
+                        "enum": [
+                          "COMPLETE",
+                          "PRUNED",
+                          "FAIL",
+                          "RUNNING",
+                          "WAITING"
+                        ]
+                      },
+                      "invocation_kinds": {
+                        "type": "array",
+                        "maxItems": 5,
+                        "items": {
+                          "enum": [
+                            "before_trial",
+                            "infer_relative_search_space",
+                            "sample_relative",
+                            "sample_independent",
+                            "after_trial"
+                          ]
+                        }
+                      },
+                      "invocation_count": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 131072
+                      },
+                      "returned_parameters": {
+                        "type": "object",
+                        "maxProperties": 12,
+                        "propertyNames": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z0-9_-]{1,96}$"
+                        },
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 96,
+                              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                            },
+                            {
+                              "type": "boolean"
+                            }
+                          ]
+                        }
+                      },
+                      "values": {
+                        "anyOf": [
+                          {
+                            "type": "array",
+                            "maxItems": 8,
+                            "items": {
+                              "type": "string",
+                              "maxLength": 96,
+                              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                            }
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "state": {
+                        "const": "AVAILABLE"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "capture_complete": {
+                        "const": true
+                      },
+                      "omitted_trial_count": {
+                        "const": 0
+                      },
+                      "reason_code": {
+                        "type": "null"
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "reason_code": {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
     }
   }
 }

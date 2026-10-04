@@ -88,6 +88,44 @@ describe("P24 immutable run declaration projection", () => {
 });
 
 describe("P24 sampler source scope", () => {
+  const contractsRoot = process.env.PORTAL_CONTRACTS_DIR ?? join(__dirname, "../../../packages/contracts");
+  const capturedFixture = () => JSON.parse(readFileSync(join(contractsRoot,
+    "fixtures/research-sampler-execution-trace.valid.json"), "utf8")).capture;
+  it("publishes only strictly bounded sealed public-hook capture, not requested defaults", () => {
+    const spec = wfoRequested({ optimization_config: { sampler_name: "random" } });
+    const capture = capturedFixture();
+    const dto = readSamplerEvidence(spec, sha256ResearchJson(spec), 1, capture);
+    expect(dto.execution_trace).toMatchObject({ state: "AVAILABLE", capture: {
+      studies: [{ sampler_class: "TPESampler", effective_configuration_state: "NOT_PUBLISHED" }],
+      sample_trials: [{ source_study_id: "0", trial_number: 0, returned_parameters: { window: "32" } }],
+    } });
+    expect(dto.internal_trace.state).toBe("NOT_PUBLISHED");
+    expect(dto.requested_configuration.optimization_config).toEqual({ sampler_name: "random" });
+    expect(JSON.stringify(dto.execution_trace)).not.toMatch(/source_locator|postgres:|\/private\//i);
+  });
+  it("keeps historical/malformed captures absent and refuses inconsistent completeness or study identity", () => {
+    const spec = wfoRequested(), digest = sha256ResearchJson(spec);
+    expect(readSamplerEvidence(spec, digest, 1).execution_trace).toMatchObject({ state: "NOT_PUBLISHED",
+      reason_code: "SAMPLER_PUBLIC_HOOK_TRACE_NOT_RECORDED", capture: null });
+    for (const alter of [
+      (capture: ReturnType<typeof capturedFixture>) => { capture.sampled_trial_count = 2; },
+      (capture: ReturnType<typeof capturedFixture>) => { capture.capture_complete = false; },
+      (capture: ReturnType<typeof capturedFixture>) => { capture.sample_trials[0].source_study_id = "other"; },
+      (capture: ReturnType<typeof capturedFixture>) => { capture.source_locator = "/private/input"; },
+      (capture: ReturnType<typeof capturedFixture>) => { capture.studies[0].sampler_class = "postgres://private"; },
+    ]) {
+      const capture = capturedFixture(); alter(capture);
+      expect(readSamplerEvidence(spec, digest, 1, capture).execution_trace).toMatchObject({
+        state: "NOT_PUBLISHED", reason_code: "SAMPLER_PUBLIC_HOOK_TRACE_INCOMPATIBLE", capture: null });
+    }
+  });
+  it("discloses actual capture truncation instead of making partial data available", () => {
+    const spec = wfoRequested();
+    const partial = { ...capturedFixture(), state: "PARTIAL", capture_complete: false,
+      reason_code: "SAMPLER_CAPTURE_BYTE_BOUND_REACHED", omitted_trial_count: 1 };
+    expect(readSamplerEvidence(spec, sha256ResearchJson(spec), 2, partial).execution_trace).toMatchObject({
+      state: "PARTIAL", reason_code: partial.reason_code, capture: { recorded_trial_count: 1, omitted_trial_count: 1 } });
+  });
   it("publishes only explicit request config; empty config does not invent TPE defaults", () => {
     const spec = wfoRequested();
     const dto = readSamplerEvidence(spec, sha256ResearchJson(spec), 12);

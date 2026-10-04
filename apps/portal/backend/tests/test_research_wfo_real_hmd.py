@@ -219,6 +219,19 @@ def test_w1_real_hmd_delta_wfo_child_within_half_the_cap(tmp_path: Path) -> None
         admission=signal_notional_current_source_admission(),
         fence_validator=lambda candidate: candidate == fence,
     )
+    # Current child capture is source-time evidence, not reconstructed from
+    # this test's trial table. P05 must keep its exact byte hash after sealing.
+    trace = exported.receipt.summary["source_facts"]["search"]["sampler_trace"]
+    assert trace["state"] == "AVAILABLE"
+    assert trace["recorded_trial_count"] == 3 and trace["omitted_trial_count"] == 0
+    assert trace["capture_complete"] is True
+    assert trace["studies"][0]["sampler_class"] == "TPESampler"
+    assert trace["studies"][0]["source_study_id"] == "0"
+    manifest = json.loads((retained.artifacts_dir / exported.candidate.artifact_id / "manifest.json").read_text())
+    trace_document = next(document for document in manifest["documents"] if document["name"] == "source_sampler_public_trace")
+    assert trace_document["sha256"] == trace["artifact_sha256"]
+    assert trace_document["bytes"] == trace["size_bytes"]
+    print("SAMPLER_REAL_HMD_RETAINED " + json.dumps(trace, sort_keys=True))
     batches = list(iter_current_source_retention_batches(
         retained_artifacts=retained,
         receipt=exported.receipt,
