@@ -21,7 +21,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerE
 import { Link } from "react-router-dom";
 
 import { smokeMotionAllowed } from "../execution/smokeMotion";
-import { TAP_SNAP_PX, useChartContract } from "./chartContract";
+import { useChartContract } from "./chartContract";
 import type { EvidenceCursor } from "./evidenceCursor";
 import { humanise } from "./humanise";
 import { runScreenHref } from "./runScreenHref";
@@ -181,7 +181,8 @@ export function SearchCinema({ runId, cursor, search, surface, studyLabel, param
         const d = Math.hypot((at.left / 100) * rect.width - (cx - rect.left), (at.top / 100) * rect.height - (cy - rect.top));
         if (hit === null || d < hit.d) hit = { k, d };
       }
-      return hit !== null && hit.d <= TAP_SNAP_PX ? hit.k : null;
+      /* the plot owns a persistent trial cursor: a press anywhere moves it to the nearest drawn trial */
+      return hit !== null ? hit.k : null;
     },
   });
 
@@ -234,7 +235,7 @@ export function SearchCinema({ runId, cursor, search, surface, studyLabel, param
     <section className="sc-card" data-panel="search-cinema" data-cinema="ready" data-beat={beat} data-motion={motion ? "on" : "off"} data-playing={playing ? "true" : "false"} aria-label="search cinema">
       <style>{CSS}</style>
       <div className="sc-head">
-        <h3 className="[font-family:var(--font-body)] text-[10px] font-medium uppercase tracking-[.07em]" style={FAINT}>
+        <h3 aria-level={2} className="[font-family:var(--font-body)] text-[10px] font-medium uppercase tracking-[.07em]" style={FAINT}>
           search cinema{studyLabel ? ` · ${studyLabel}` : ""}
         </h3>
         <button
@@ -273,6 +274,7 @@ export function SearchCinema({ runId, cursor, search, surface, studyLabel, param
             className={`sc-plot ${c.regionProps.className ?? ""}`}
             style={{ ...c.regionProps.style }}
             data-cinema-plot
+            data-chart-controlled="true"
             data-cinema-shown={shownTo + 1}
           >
             {pts.map((point, k) => {
