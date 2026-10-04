@@ -1811,3 +1811,31 @@ Owner questions: another original backup or exact-three-run scope exception;
 supplied second pin or isolated 1.1.0 qualification then 1.1.1 upgrade.
 Neither exception nor pin was assumed. Full P24 and signed release remain
 OPEN. No push, dev/main merge, shared :8095 or Production operation.
+
+## §41 — Bobby-approved historical exception and second engine, 2026-10-04
+
+Bobby approves the **exact three historical test-run scope exception** and
+chooses isolated **published QuantBT 1.1.0 qualification → 1.1.1 upgrade**.
+Strict integrity stays **83/86**; no new bytes, reseal, metadata deletion or
+expected-digest rewrite. The original §40 non-approval statement is historical
+and superseded only by this explicit decision. Missing bytes are not recovered.
+
+[Exact IDs, pins, execution plan and result](./evidence/P23/SECOND_ENGINE_UPGRADE_AND_HISTORICAL_SCOPE_2026-10-04.md).
+Implement a bounded isolated qualification: actual distinct wheel versions,
+real supported strategy/history, old in-flight pin, declared defaults and
+reproduction semantics, unsupported mapper refusal, rollback/history reads.
+A direct engine test alone is not full Portal upgrade acceptance. Keep
+T07/T13/P24-T05 pending until their actual receipts exist. No production
+default/flags, shared :8095, dev/main, remote push or release operation.
+
+**Actual result:** real 1.1.0/native 0.4.1 and 1.1.1/native 0.4.2 both
+execute the same 636-bar read-only HMD fixed Delta profile, **4 trades**, equity
+`20130.193634373325`, differences **0/0**, original bytes unchanged. Receipt
+SHA-256 `b6668139398f02a5c968450881a0b87718b63d0ebe871eb77bc1a07834561e31`.
+The current gateway actually refuses 1.1.0; P10/supervisor only admit 1.1.1.
+Thus **public engine profile qualification PASS**, but **Portal two-version
+upgrade still OPEN**. Do not infer old Portal in-flight/reproduction/default
+rollback from this direct test. Narrow isolated 1.1.0 producer/runtime binding
+is the remaining integration prerequisite, not a missing QuantBT capability.
+No constant/pin was weakened. Setup failure is retained, compute containers
+removed, volumes/images preserved; no push or production mutation.
