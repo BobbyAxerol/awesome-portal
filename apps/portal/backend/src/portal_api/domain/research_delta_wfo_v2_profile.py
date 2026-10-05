@@ -5,27 +5,15 @@ causal selection is not mislabeled as global: it requires its own retained
 selection-sequence profile. The caller receives an explicit refusal today.
 """
 from __future__ import annotations
+from portal_api.domain.research_execution_recipes import execution_recipe
+
 import hashlib
 import json
 import re
 from typing import Any, Mapping
 
 DELTA_WFO_V2_PROFILE_ID = "p10.delta-signal-notional-wfo.v2"
-DELTA_WFO_V2_PROFILE = {
-    "schema_version": "research.p10.delta-wfo-profile.v2",
-    "profile_id": DELTA_WFO_V2_PROFILE_ID,
-    "adapter_id": "p04.delta-rsi.v1",
-    "adapter_contract_digest": "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784",
-    "engine_release_id": "er_quantbt_111", "requested_spec_version": "research.requested-spec.v2",
-    "execution_route": "signal_notional", "protocol": "advanced", "timeframe": "1h",
-    "frequencies": ["weekly", "monthly", "quarterly"], "window_modes": ["expanding", "rolling"],
-    "max_span_days": 92, "fold_bounds": {"min": 2, "max": 16},
-    "optimization_mode": "mode_1_decay", "optimization_schedule": "global", "random_seed": 42,
-    "max_guard_bars": 10_000, "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
-    "trial_count": {"min": 3, "max": 3},
-    "current_source": {"source_adapter_id": "rs02.quantbt-signal-notional-wfo.v1", "profile_id": "rs02.delta-signal-notional-wfo.v1"},
-    "child_limits": {"cpu_seconds": 120, "wall_seconds": 240},
-}
+DELTA_WFO_V2_PROFILE = execution_recipe(DELTA_WFO_V2_PROFILE_ID)["descriptor"]
 DELTA_WFO_V2_PROFILE_DIGEST = hashlib.sha256(json.dumps(DELTA_WFO_V2_PROFILE,
     sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
 if DELTA_WFO_V2_PROFILE_DIGEST != "d65291f776dce1fef162da9eb6505ba63fc6e3ae0f55679fe12dece3858c7fa0":

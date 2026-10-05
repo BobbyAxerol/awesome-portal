@@ -1,5 +1,7 @@
 """Immutable causal/nested executor; historical global profiles stay unchanged."""
 from __future__ import annotations
+from portal_api.domain.research_execution_recipes import execution_recipe
+
 
 import hashlib
 import json
@@ -8,25 +10,7 @@ from types import MappingProxyType
 from typing import Any, Mapping
 
 DELTA_CAUSAL_INNER_PROFILE_ID = "p10.delta-signal-notional-causal-inner.v1"
-_PROFILE = {
-    "schema_version": "research.p10.delta-causal-inner-profile.v1",
-    "profile_id": DELTA_CAUSAL_INNER_PROFILE_ID,
-    "adapter_id": "p04.delta-rsi.v1",
-    "adapter_contract_digest": "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784",
-    "engine_release_id": "er_quantbt_111", "requested_spec_version": "research.requested-spec.v2",
-    "execution_route": "signal_notional", "protocol": "advanced", "timeframe": "1h",
-    "frequencies": ["weekly", "monthly", "quarterly"], "window_modes": ["expanding", "rolling"],
-    "max_span_days": 92, "fold_bounds": {"min": 2, "max": 16},
-    "optimization_mode": "mode_1_decay", "optimization_schedule": "per_fold_causal", "random_seed": 42,
-    "max_guard_bars": 10_000, "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
-    "inner_constraints": {"frequencies": ["weekly", "monthly", "quarterly"],
-        "window_modes": ["expanding", "rolling"], "fold_bounds": {"min": 2, "max": 16},
-        "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"},
-    "trial_count": {"min": 3, "max": 3},
-    "trial_scope": "PER_OUTER_FOLD_STUDY", "max_total_trials": 48,
-    "current_source": {"source_adapter_id": "rs02.quantbt-signal-notional-causal-inner.v1", "profile_id": "rs02.delta-signal-notional-causal-inner.v1"},
-    "child_limits": {"cpu_seconds": 120, "wall_seconds": 240},
-}
+_PROFILE = execution_recipe(DELTA_CAUSAL_INNER_PROFILE_ID)["descriptor"]
 DELTA_CAUSAL_INNER_PROFILE_DIGEST = "60a041b373808405f8896aee0a3421d41cc2199d516dadc9f40e1187e2fefdd1"
 if hashlib.sha256(json.dumps(_PROFILE, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest() != DELTA_CAUSAL_INNER_PROFILE_DIGEST:
     raise RuntimeError("Causal inner executor profile digest drifted")

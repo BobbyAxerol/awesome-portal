@@ -2248,10 +2248,37 @@ export class ResearchMetadataRepository {
       RESEARCH_DB_BUDGET.maxPreflightActiveManifestsPerActor,
     );
     return this.withScopedWrite(scope, async (client) => {
-      const active = await client.query<{ count: string | number }>(
-        `SELECT count(*) AS count
-           FROM research.preflight_manifests
-          WHERE workspace_id = $1 AND actor_user_id = $2 AND expires_at > now()`,
+      // Count + insert must serialize across API replicas. This bounded,
+      // actor-local lock does not consume a worker/scheduler lock.
+      await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
+        `research.preflight:${scope.workspaceId}:${scope.actorUserId}`,
+      ]);
+      // The private source has just been revalidated by P08. Reuse requires
+      // every immutable document as well as all identity hashes to agree;
+      // source change, expiry, different actor/workspace or bound history
+      // cannot reuse a token. Expiry is never extended.
+      const identical = await client.query<PreflightManifestRow>(
+        `SELECT m.* FROM research.preflight_manifests m
+          WHERE m.workspace_id=$1 AND m.actor_user_id=$2 AND m.expires_at>now()
+            AND m.requested_spec_digest=$3 AND m.effective_spec_digest=$4
+            AND m.dataset_binding_digest=$5 AND m.manifest_digest=$6
+            AND m.requested_spec=$7::jsonb AND m.effective_spec=$8::jsonb
+            AND m.dataset_binding=$9::jsonb AND m.topology=$10::jsonb
+            AND m.resource_estimate=$11::jsonb AND m.snapshot=$12::jsonb
+            AND NOT EXISTS(SELECT 1 FROM research.run_producers p
+              WHERE p.workspace_id=m.workspace_id AND p.actor_user_id=m.actor_user_id AND p.preflight_token=m.preflight_token)
+          ORDER BY m.created_at,m.preflight_token LIMIT 1`,
+        [scope.workspaceId,scope.actorUserId,input.requestedSpecDigest,input.effectiveSpecDigest,input.datasetBindingDigest,input.manifestDigest,
+          JSON.stringify(input.requestedSpec),JSON.stringify(input.effectiveSpec),JSON.stringify(input.datasetBinding),JSON.stringify(input.topology),
+          JSON.stringify(input.resourceEstimate),JSON.stringify(input.snapshot)],
+      );
+      if (identical.rows[0]) return this.preflightRecord(identical.rows[0]);
+      const active = await client.query<{ count: string | number; retry_seconds: string | number }>(
+        `SELECT count(*) AS count, COALESCE(ceil(extract(epoch FROM min(m.expires_at)-now())),1) AS retry_seconds
+           FROM research.preflight_manifests m
+          WHERE m.workspace_id = $1 AND m.actor_user_id = $2 AND m.expires_at > now()
+            AND NOT EXISTS(SELECT 1 FROM research.run_producers p
+              WHERE p.workspace_id=m.workspace_id AND p.actor_user_id=m.actor_user_id AND p.preflight_token=m.preflight_token)`,
         [scope.workspaceId, scope.actorUserId],
       );
       if (asNumber(active.rows[0]?.count ?? 0) >= maximumActiveManifests) {
@@ -2259,6 +2286,7 @@ export class ResearchMetadataRepository {
           "RESEARCH_ADMISSION_SATURATED",
           "Too many live Research preflight manifests exist for this actor; let one expire before creating another.",
           503,
+          Math.max(1, Math.min(3_600, asNumber(active.rows[0]?.retry_seconds ?? 1))),
         );
       }
       const inserted = await client.query<PreflightManifestRow>(

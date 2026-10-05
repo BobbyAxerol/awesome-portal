@@ -339,7 +339,8 @@ class DurableQuantWorker:
                         if not callable(planner):
                             raise _DeltaWfoProfileUnavailable("Causal executor cannot bind its trial count to the immutable snapshot")
                         wfo_trials = await asyncio.to_thread(planner, research_request)
-                        wfo_cpu_cap = 120
+                        from portal_api.domain.research_execution_recipes import execution_recipe
+                        wfo_cpu_cap = execution_recipe(DELTA_CAUSAL_INNER_PROFILE_ID)["budgets"]["cpu_seconds"]
                     else:
                         wfo_trials = delta_wfo_admitted_trials(research_request.research.requested_spec)
                         wfo_cpu_cap = delta_wfo_child_cpu_seconds()

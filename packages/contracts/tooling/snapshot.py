@@ -20,6 +20,8 @@ from typing import Any
 CONTRACTS_ROOT = Path(__file__).resolve().parents[1]
 
 TRACKED = (
+    "fixtures/research-preflight.quota.valid.json",
+    "tooling/generate-research-execution-recipes.mjs",
     "openapi/research-run-setup.openapi.json",
     "generated/research-run-setup.d.ts",
     "tooling/generate-research-run-setup.mjs",

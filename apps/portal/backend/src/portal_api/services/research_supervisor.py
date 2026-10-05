@@ -23,6 +23,11 @@ from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Callable, TypedDict
+from portal_api.domain.research_execution_recipes import execution_recipe
+
+_FIXED_BUDGET = execution_recipe("p04.fixed-qualification.v1")["budgets"]
+_WFO_BUDGET = execution_recipe("p10.delta-signal-notional-wfo.v1")["budgets"]
+_IMPORTED_BUDGET = execution_recipe("p17.imported-signal-notional.v1")["budgets"]
 
 from portal_api.domain.research_delta_wfo_profile import (
     DELTA_WFO_PREVIEW_LONG_CPU_SECONDS,
@@ -86,12 +91,12 @@ class ResearchChildLimits:
     # much lower. A 4 GiB address-space ceiling is therefore the smallest
     # reliable P04 QuantBT bound on this pinned runtime; CPU/FD/file/scratch
     # limits still make one child materially bounded on the 32 GiB host.
-    memory_bytes: int = 4 * 1024 * 1024 * 1024
-    cpu_seconds: int = 45
-    scratch_bytes: int = 64 * 1024 * 1024
-    file_bytes: int = 2 * 1024 * 1024
-    fd_limit: int = 128
-    wall_seconds: int = 90
+    memory_bytes: int = _FIXED_BUDGET["memory_bytes"]
+    cpu_seconds: int = _FIXED_BUDGET["cpu_seconds"]
+    scratch_bytes: int = _FIXED_BUDGET["scratch_bytes"]
+    file_bytes: int = _FIXED_BUDGET["file_bytes"]
+    fd_limit: int = _FIXED_BUDGET["fd_limit"]
+    wall_seconds: int = _FIXED_BUDGET["wall_seconds"]
 
     def validate(self) -> None:
         if not (2 * 1024 * 1024 * 1024 <= self.memory_bytes <= 8 * 1024 * 1024 * 1024):
@@ -204,10 +209,10 @@ class ResearchChildResult:
 # per-file caps. Memory/FD/NPROC stay at the P04 defaults.  The P04 default
 # ``ResearchChildLimits()`` is unchanged.
 DELTA_WFO_CHILD_LIMITS = ResearchChildLimits(
-    cpu_seconds=120,
-    wall_seconds=240,
-    scratch_bytes=128 * 1024 * 1024,
-    file_bytes=16 * 1024 * 1024,
+    cpu_seconds=_WFO_BUDGET["cpu_seconds"],
+    wall_seconds=_WFO_BUDGET["wall_seconds"],
+    scratch_bytes=_WFO_BUDGET["scratch_bytes"],
+    file_bytes=_WFO_BUDGET["file_bytes"],
 )
 
 # Research preview only (PORTAL_FEATURE_RESEARCH_PREVIEW_LONG_WFO, PORTAL_ENV=
@@ -216,15 +221,15 @@ DELTA_WFO_CHILD_LIMITS = ResearchChildLimits(
 DELTA_WFO_PREVIEW_LONG_CHILD_LIMITS = ResearchChildLimits(
     cpu_seconds=DELTA_WFO_PREVIEW_LONG_CPU_SECONDS,
     wall_seconds=DELTA_WFO_PREVIEW_LONG_WALL_SECONDS,
-    scratch_bytes=128 * 1024 * 1024,
-    file_bytes=16 * 1024 * 1024,
+    scratch_bytes=_WFO_BUDGET["scratch_bytes"],
+    file_bytes=_WFO_BUDGET["file_bytes"],
 )
 
 IMPORTED_ALPHA_CHILD_LIMITS = ResearchChildLimits(
-    cpu_seconds=120,
-    wall_seconds=240,
-    scratch_bytes=128 * 1024 * 1024,
-    file_bytes=16 * 1024 * 1024,
+    cpu_seconds=_IMPORTED_BUDGET["cpu_seconds"],
+    wall_seconds=_IMPORTED_BUDGET["wall_seconds"],
+    scratch_bytes=_IMPORTED_BUDGET["scratch_bytes"],
+    file_bytes=_IMPORTED_BUDGET["file_bytes"],
 )
 
 
@@ -864,7 +869,8 @@ class IsolatedResearchSupervisor:
         ):
             raise ResearchSupervisorError("pinned final audit cannot widen its admitted resource caps")
         from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE_ID
-        if receipt.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID and (limits.cpu_seconds > 120 or limits.wall_seconds > 240):
+        causal_caps = execution_recipe(DELTA_CAUSAL_INNER_PROFILE_ID)["budgets"]
+        if receipt.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID and (limits.cpu_seconds > causal_caps["cpu_seconds"] or limits.wall_seconds > causal_caps["wall_seconds"]):
             raise ResearchSupervisorError("causal inner child cannot widen its 120 CPU/240 wall-second profile caps")
         self._validate_launch_identity(
             job_id=receipt.job_id,

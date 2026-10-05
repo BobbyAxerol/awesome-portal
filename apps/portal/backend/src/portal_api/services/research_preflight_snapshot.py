@@ -43,6 +43,7 @@ from portal_api.services.data_catalog import (
     SnapshotStore,
 )
 from portal_api.domain.errors import PortalDomainError
+from portal_api.domain.research_execution_recipes import EXECUTION_MAX_WARMUP_BARS
 from portal_api.adapters.quantbt import QuantBTGateway
 from portal_api.services.research_engine_catalog import (
     ResearchEngineCatalogError,
@@ -52,7 +53,7 @@ from portal_api.services.research_engine_catalog import (
 
 PREFLIGHT_SNAPSHOT_SCHEMA_VERSION = "research.preflight-snapshot.v1"
 EFFECTIVE_SPEC_SCHEMA_VERSION = "research.effective-spec.v1"
-PREFLIGHT_MAXIMUM_WARMUP_BARS = 100_000
+PREFLIGHT_MAXIMUM_WARMUP_BARS = EXECUTION_MAX_WARMUP_BARS
 # A topology is persisted as one metadata document in Control API. Keeping it
 # comfortably below the database document bound means a valid request is
 # explicitly refused instead of being silently truncated or failing later with

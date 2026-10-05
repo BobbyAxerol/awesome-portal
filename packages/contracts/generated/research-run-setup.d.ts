@@ -108,6 +108,7 @@ export interface components {
             };
             independent_holdout: boolean;
             refusals?: components["schemas"]["SetupRefusal"][];
+            budget?: components["schemas"]["Budget"];
         } & unknown;
         SetupOptions: {
             /** @constant */
@@ -125,6 +126,15 @@ export interface components {
             /** @constant */
             preflight_required: true;
             engine_options?: components["schemas"]["EngineOptions"];
+            recipe_revision?: string;
+            preflight_policy?: {
+                maximum_active_unbound_per_actor: number;
+                ttl_seconds: number;
+                /** @constant */
+                reuse: "IDENTICAL_FRESH_SOURCE_REVALIDATED_UNBOUND_ONLY";
+                /** @constant */
+                expiry_extension: false;
+            };
         };
         SetupRefusal: {
             reason_code: string;
@@ -166,6 +176,28 @@ export interface components {
                 field_path: string[];
                 profile_ids: string[];
             } & (unknown & unknown))[];
+        };
+        Budget: {
+            /** @constant */
+            scope: "DECLARED_CAPS_NOT_RESERVATION_OR_ESTIMATE";
+            recipe_digest: string;
+            profile_digest: string | null;
+            /** @constant */
+            qualification: "LEGACY_EXACT_BINDING";
+            memory_bytes: number;
+            cpu_seconds: number;
+            wall_seconds: number;
+            scratch_bytes: number;
+            io_bytes: number;
+            file_bytes: number;
+            fd_limit: number;
+            /** @constant */
+            planning_max_bars: 100000;
+            max_warmup_bars: number;
+            /** @enum {unknown} */
+            queue_class: "HEAVY" | "INTERACTIVE";
+            resource_class: string;
+            preview_override: boolean;
         };
         WindowPatch: {
             /** @constant */
@@ -268,6 +300,7 @@ export interface components {
                 gate?: string;
                 field_path?: components["schemas"]["FieldPath"];
                 field_paths?: components["schemas"]["FieldPath"][];
+                retry_after_seconds?: number;
                 reason_code?: string;
             };
         };

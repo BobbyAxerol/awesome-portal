@@ -13,7 +13,9 @@ const en=(...values)=>({enum:values});
 const bounds=obj({min:count,max:count});
 const fieldPath={type:"array",minItems:1,maxItems:8,items:{type:"string",pattern:"^[A-Za-z_][A-Za-z0-9_]*$|^[0-9]+$"}};
 const refusal=obj({reason_code:reason,field_path:fieldPath});
-const choiceFields={state:en("ENABLED","DISABLED"),reason_code:nullable(reason),field_path:fieldPath,profile_ids:array(id,6)};
+const recipeTable=JSON.parse(readFileSync(new URL("../../apps/portal/registry/research-execution-recipes.v1.json",root)));
+const maximumProfiles=recipeTable.setup_bounds.maximum_profiles;
+const choiceFields={state:en("ENABLED","DISABLED"),reason_code:nullable(reason),field_path:fieldPath,profile_ids:array(id,maximumProfiles)};
 const choiceRules=[{if:{properties:{state:{const:"ENABLED"}}},then:{properties:{reason_code:{type:"null"}}},else:{properties:{reason_code:reason}}},
   {if:{properties:{profile_ids:{maxItems:0}}},then:{properties:{reason_code:{const:"PROFILE_NOT_OPENED"}}},else:{properties:{reason_code:{not:{const:"PROFILE_NOT_OPENED"}}}}}];
 const engineChoice={...obj({value:id,...choiceFields}),allOf:choiceRules};
@@ -37,9 +39,19 @@ const profile=obj({profile_id:id,state:en("ENABLED","DISABLED"),reason_code:null
   independent_holdout:{type:"boolean"}});
 profile.allOf=[{if:{properties:{state:{const:"ENABLED"}}},then:{properties:{reason_code:{type:"null"},refusals:{maxItems:0}}},else:{properties:{reason_code:reason,refusals:{minItems:1}}}}];
 profile.properties.refusals=array(ref("SetupRefusal"),8);
+const budget=obj({scope:{const:"DECLARED_CAPS_NOT_RESERVATION_OR_ESTIMATE"},recipe_digest:digest,profile_digest:nullable(digest),
+  qualification:{const:"LEGACY_EXACT_BINDING"},memory_bytes:{type:"integer",minimum:2147483648,maximum:8589934592},
+  cpu_seconds:{type:"integer",minimum:1,maximum:1800},wall_seconds:{type:"integer",minimum:1,maximum:3600},
+  scratch_bytes:{type:"integer",minimum:1,maximum:536870912},io_bytes:{type:"integer",minimum:1,maximum:1073741824},
+  file_bytes:{type:"integer",minimum:1,maximum:16777216},fd_limit:{type:"integer",minimum:32,maximum:512},
+  planning_max_bars:{const:100000},max_warmup_bars:count,queue_class:en("HEAVY","INTERACTIVE"),resource_class:id,preview_override:{type:"boolean"}});
+profile.properties.budget=ref("Budget");
 const options=obj({schema_version:{const:"research.run-setup-options.v1"},context:ref("Context"),scope:{const:"CONFIGURATION_FACTS_NOT_RUN_AUTHORIZATION"},
-  source_revision:digest,catalog_revision:nullable(digest),as_of_utc_ms:nullable(ms),warmup_bars:count,source_timezone:en("UTC","Asia/Ho_Chi_Minh"),profiles:array(ref("Profile"),6),preflight_required:{const:true}});
+  source_revision:digest,catalog_revision:nullable(digest),as_of_utc_ms:nullable(ms),warmup_bars:count,source_timezone:en("UTC","Asia/Ho_Chi_Minh"),profiles:array(ref("Profile"),maximumProfiles),preflight_required:{const:true}});
 options.properties.engine_options=ref("EngineOptions");
+options.properties.recipe_revision=digest;
+options.properties.preflight_policy=obj({maximum_active_unbound_per_actor:{type:"integer",minimum:1,maximum:16},
+  ttl_seconds:{type:"integer",minimum:60,maximum:3600},reuse:{const:"IDENTICAL_FRESH_SOURCE_REVALIDATED_UNBOUND_ONLY"},expiry_extension:{const:false}});
 const span=obj({start_utc_ms:ms,end_exclusive_utc_ms:ms,bars:{...count,minimum:1}});
 const patch={oneOf:[obj({protocol:{const:"three_window_decay"},windows:obj({is:span,oos:span,holdout:span})}),
   obj({protocol:{const:"advanced"},walk_forward:obj({...span.properties,first_oos_utc_ms:ms,frequency:en("weekly","monthly","quarterly"),window_mode:en("expanding","rolling"),train_window:nullable(str)})})]};
@@ -66,6 +78,7 @@ const doc={openapi:"3.1.0",info:{title:"Research New Run setup",version:"1.0.0",
       requestBody:{required:true,content:{"application/json":{schema:ref("SuggestionRequest")}}},responses:responses("WindowSuggestion")}}},
   components:{securitySchemes:{portalSession:{type:"apiKey",in:"cookie",name:"portal_session"}},schemas:{Context:context,Profile:profile,SetupOptions:options,
     SetupRefusal:refusal,EngineOptions:engineOptions,
+    Budget:budget,
     WindowPatch:patch,SuggestionMetadata:metadata,SuggestionRequest:request,WindowSuggestion:suggestion,
     FieldPath:old.components.schemas.FieldPath,Problem:problem}}};
 function emit(path,value){const next=JSON.stringify(value,null,2)+"\n",url=new URL(path,root);if(check){if(readFileSync(url,"utf8")!==next)throw new Error(`${path} drift`);}else writeFileSync(url,next);}
@@ -109,6 +122,13 @@ const engineFixture={scope:"ENGINE_CATALOGUE_NOT_RUN_AUTHORIZATION",
   frequencies:(unopened.current_release.walk_forward_options?.frequency??[]).map(row=>({value:row.value,state:"DISABLED",reason_code:"PROFILE_NOT_OPENED",field_path:["walk_forward","frequency"],profile_ids:[]})),
   window_modes:(unopened.current_release.walk_forward_options?.window_mode??[]).map(row=>({value:row.value,state:"DISABLED",reason_code:"PROFILE_NOT_OPENED",field_path:["walk_forward","window_mode"],profile_ids:[]}))};
 optionsFixture.profiles[0].refusals=[];optionsFixture.engine_options=engineFixture;
+const recipe=recipeTable.recipes.find(row=>row.profile_id===fixed.profile_id);
+const qualified=recipeTable.qualification_references.find(row=>row.profile_id===fixed.profile_id);
+fixed.budget={...recipe.budgets,scope:"DECLARED_CAPS_NOT_RESERVATION_OR_ESTIMATE",recipe_digest:qualified.recipe_digest,
+  profile_digest:recipe.profile_digest,qualification:"LEGACY_EXACT_BINDING",queue_class:recipe.queue_class,
+  resource_class:recipe.resource_class,preview_override:false};
+optionsFixture.preflight_policy={maximum_active_unbound_per_actor:8,ttl_seconds:600,
+  reuse:"IDENTICAL_FRESH_SOURCE_REVALIDATED_UNBOUND_ONLY",expiry_extension:false};
 emit("fixtures/research-run-setup-options.fixed.valid.json",optionsFixture);
 emit("fixtures/research-run-setup-options.stale.valid.json",{error:{code:"RESEARCH_SETUP_OPTIONS_STALE",message:"Run setup changed. Reload setup options before applying a suggestion."},
   request_id:"s02-stale-fixture",details:{gate:"setup_revision",field_path:["options_revision"]}});

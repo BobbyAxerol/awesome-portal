@@ -145,7 +145,9 @@ def _spec(payload: dict) -> dict:
     (lambda p: _spec(p)["data"].__setitem__("timeframe", "4h"), "1h"),
     (lambda p: _spec(p)["walk_forward"].__setitem__("end_exclusive", "2024-04-03T00:00:00Z"), "92 days"),
     (lambda p: _spec(p)["walk_forward"].__setitem__("split_mode", "2023-12-01"), "strictly inside"),
-    (lambda p: _spec(p)["client"].__setitem__("engine_release_id", "er_quantbt_110"), "engine release"),
+    # The separately qualified 1.1.0 lane rejects an unbound local receipt
+    # before ordinary WFO checks; do not weaken that established boundary.
+    (lambda p: _spec(p)["client"].__setitem__("engine_release_id", "er_quantbt_110"), "ENGINE_QUALIFICATION_EXACT_LOCAL_BINDING_REQUIRED"),
     (lambda p: p.__setitem__("protocol", "three_window_decay"), "legacy protocol"),
 ])
 def test_w1_wfo_profile_rejects_every_deviation(mutate, message) -> None:

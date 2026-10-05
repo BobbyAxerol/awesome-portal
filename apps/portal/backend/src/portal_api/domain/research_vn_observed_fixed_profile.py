@@ -1,5 +1,7 @@
 """One immutable FPT observed-date research profile; no VN venue authority."""
 from __future__ import annotations
+from portal_api.domain.research_execution_recipes import execution_recipe
+
 
 import hashlib
 import json
@@ -11,19 +13,7 @@ from zoneinfo import ZoneInfo
 VN_OBSERVED_FIXED_PROFILE_ID = "p10.vn-stock-daily-observed-fixed.v1"
 VN_OBSERVED_FIXED_PROFILE_DIGEST = "acb6566ebae23bcf77c77974136c9d083a95f0967260b1332530f600f5abe00e"
 VN_OBSERVED_FIXED_FLAG = "PORTAL_FEATURE_RESEARCH_VN_OBSERVED_PROFILE"
-_PROFILE = {
-    "schema_version": "research.p10.vn-daily-observed-fixed-profile.v1",
-    "profile_id": VN_OBSERVED_FIXED_PROFILE_ID,
-    "adapter_id": "p04.delta-rsi.v1",
-    "adapter_contract_digest": "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784",
-    "engine_release_id": "er_quantbt_111", "execution_route": "signal_notional",
-    "protocol": "three_window_decay", "dataset_id": "vn-stock-daily", "symbol": "FPT", "timeframe": "1d",
-    "source_timezone": "Asia/Ho_Chi_Minh", "clock_basis": "OBSERVED_SOURCE_LOCAL_DATE_V1",
-    "warmup_bars": 300, "warmup_semantics": "LAST_N_OBSERVED_PREDECESSORS_V1",
-    "max_span_days": 732, "optuna_trials": 1, "parameter_policy": "P04_FIXED_PARAMETERS_V1",
-    "account_model": "GENERIC_SIGNAL_NOTIONAL_RESEARCH_NOT_VN_VENUE", "calendar_authority": "NOT_PUBLISHED",
-    "child_limits": {"cpu_seconds": 45, "wall_seconds": 90},
-}
+_PROFILE = execution_recipe(VN_OBSERVED_FIXED_PROFILE_ID)["descriptor"]
 
 
 def vn_observed_fixed_profile() -> dict:

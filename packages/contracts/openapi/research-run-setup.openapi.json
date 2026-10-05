@@ -676,6 +676,9 @@
             },
             "maxItems": 8,
             "minItems": 0
+          },
+          "budget": {
+            "$ref": "#/components/schemas/Budget"
           }
         },
         "allOf": [
@@ -779,7 +782,7 @@
             "items": {
               "$ref": "#/components/schemas/Profile"
             },
-            "maxItems": 6,
+            "maxItems": 256,
             "minItems": 0
           },
           "preflight_required": {
@@ -787,6 +790,38 @@
           },
           "engine_options": {
             "$ref": "#/components/schemas/EngineOptions"
+          },
+          "recipe_revision": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "preflight_policy": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "maximum_active_unbound_per_actor",
+              "ttl_seconds",
+              "reuse",
+              "expiry_extension"
+            ],
+            "properties": {
+              "maximum_active_unbound_per_actor": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16
+              },
+              "ttl_seconds": {
+                "type": "integer",
+                "minimum": 60,
+                "maximum": 3600
+              },
+              "reuse": {
+                "const": "IDENTICAL_FRESH_SOURCE_REVALIDATED_UNBOUND_ONLY"
+              },
+              "expiry_extension": {
+                "const": false
+              }
+            }
           }
         }
       },
@@ -876,7 +911,7 @@
                     "type": "string",
                     "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
                   },
-                  "maxItems": 6,
+                  "maxItems": 256,
                   "minItems": 0
                 }
               },
@@ -989,7 +1024,7 @@
                     "type": "string",
                     "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
                   },
-                  "maxItems": 6,
+                  "maxItems": 256,
                   "minItems": 0
                 }
               },
@@ -1097,7 +1132,7 @@
                     "type": "string",
                     "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
                   },
-                  "maxItems": 6,
+                  "maxItems": 256,
                   "minItems": 0
                 }
               },
@@ -1205,7 +1240,7 @@
                     "type": "string",
                     "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
                   },
-                  "maxItems": 6,
+                  "maxItems": 256,
                   "minItems": 0
                 }
               },
@@ -1263,6 +1298,107 @@
             },
             "maxItems": 4,
             "minItems": 0
+          }
+        }
+      },
+      "Budget": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "scope",
+          "recipe_digest",
+          "profile_digest",
+          "qualification",
+          "memory_bytes",
+          "cpu_seconds",
+          "wall_seconds",
+          "scratch_bytes",
+          "io_bytes",
+          "file_bytes",
+          "fd_limit",
+          "planning_max_bars",
+          "max_warmup_bars",
+          "queue_class",
+          "resource_class",
+          "preview_override"
+        ],
+        "properties": {
+          "scope": {
+            "const": "DECLARED_CAPS_NOT_RESERVATION_OR_ESTIMATE"
+          },
+          "recipe_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "profile_digest": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "qualification": {
+            "const": "LEGACY_EXACT_BINDING"
+          },
+          "memory_bytes": {
+            "type": "integer",
+            "minimum": 2147483648,
+            "maximum": 8589934592
+          },
+          "cpu_seconds": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1800
+          },
+          "wall_seconds": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3600
+          },
+          "scratch_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 536870912
+          },
+          "io_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1073741824
+          },
+          "file_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 16777216
+          },
+          "fd_limit": {
+            "type": "integer",
+            "minimum": 32,
+            "maximum": 512
+          },
+          "planning_max_bars": {
+            "const": 100000
+          },
+          "max_warmup_bars": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "queue_class": {
+            "enum": [
+              "HEAVY",
+              "INTERACTIVE"
+            ]
+          },
+          "resource_class": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+          },
+          "preview_override": {
+            "type": "boolean"
           }
         }
       },
@@ -1800,6 +1936,11 @@
                 "items": {
                   "$ref": "#/components/schemas/FieldPath"
                 }
+              },
+              "retry_after_seconds": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3600
               },
               "reason_code": {
                 "type": "string",

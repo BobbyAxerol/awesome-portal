@@ -7,6 +7,7 @@
  */
 
 import { Inject, Injectable } from "@nestjs/common";
+import {executionRecipe, wfoExecutionRecipe} from "./execution-recipes";
 
 import { ControlApiConfig } from "../config";
 import { PortalUser } from "../domain";
@@ -257,13 +258,15 @@ export class ResearchRunAdmissionService {
       profile: vnObserved
         ? { id: VN_OBSERVED_FIXED_PROFILE_ID, digest: VN_OBSERVED_FIXED_PROFILE_DIGEST }
         : wfo
-        ? requestedSpec.optimization_schedule === "per_fold_causal"
-          ? { id: DELTA_CAUSAL_INNER_PROFILE_ID, digest: DELTA_CAUSAL_INNER_PROFILE_DIGEST }
-          : requestedSpec.schema_version === "research.requested-spec.v2"
-          ? { id: DELTA_WFO_V2_PROFILE_ID, digest: DELTA_WFO_V2_PROFILE_DIGEST }
-          : { id: DELTA_WFO_PROFILE_ID, digest: DELTA_WFO_PROFILE_DIGEST }
+        ? this.wfoProfileIdentity(requestedSpec)
         : { id: P04_FIXED_QUALIFICATION_PROFILE_ID, digest: null },
     };
+  }
+
+  private wfoProfileIdentity(spec: ResearchRequestedSpec): {id: ResearchExecutionProfileId; digest: string | null} {
+    const row = wfoExecutionRecipe(spec);
+    if (!row) throw new ResearchRunCreateError("RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE", "No exact qualified execution recipe matches this request.", 409);
+    return {id: row.profile_id, digest: row.profile_digest};
   }
 
   /** Only P08's source-qualified observed FPT tape grants this source pair. */
@@ -433,7 +436,8 @@ export class ResearchRunAdmissionService {
     requested: ResearchRequestedSpec,
     manifest: ResearchPreflightManifestRecord,
   ): string | null {
-    const profile = DELTA_WFO_PROFILE;
+    const row = wfoExecutionRecipe(requested);
+    const profile = (row ?? executionRecipe(DELTA_WFO_PROFILE_ID)).public_profile;
     const temporal = requested.schema_version === "research.requested-spec.v2";
     const causal = temporal && requested.optimization_schedule === DELTA_CAUSAL_INNER_PROFILE.optimization_schedule;
     const engine = manifest.effectiveSpec.engine;
@@ -474,7 +478,7 @@ export class ResearchRunAdmissionService {
           trials > DELTA_WFO_PREVIEW_LONG_LIMITS.max_trials) {
         return "The preview long walk-forward profile admits 2 to 400 Optuna trials.";
       }
-    } else if (requested.optuna_trials !== profile.optuna_trials) {
+    } else if (requested.optuna_trials !== profile.trial_default) {
       return "The Delta walk-forward profile runs exactly 3 Optuna trials.";
     }
     if (requested.random_seed !== profile.random_seed) {
@@ -544,10 +548,11 @@ export class ResearchRunAdmissionService {
         return "The installed Delta adapter is bound to engine release er_quantbt_111.";
       }
     }
-    if (requested.execution_route !== "signal_notional" || requested.protocol !== "three_window_decay") {
+    const profile = executionRecipe(P04_FIXED_QUALIFICATION_PROFILE_ID).public_profile;
+    if (requested.execution_route !== profile.execution_route || requested.protocol !== profile.protocol) {
       return "The installed Delta adapter currently accepts only the signal-notional three-window profile.";
     }
-    if (requested.optimization_mode !== "mode_1_decay" || requested.optimization_schedule !== "global") {
+    if (requested.optimization_mode !== profile.optimization_mode || requested.optimization_schedule !== profile.optimization_schedule) {
       return "The installed fixed Delta adapter does not execute the requested optimization mode or schedule.";
     }
     if (requested.route_params && Object.keys(requested.route_params).length !== 0) {

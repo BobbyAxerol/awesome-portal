@@ -35,6 +35,7 @@ export interface ResearchPreflightErrorDetails {
   gate?: string;
   field_path?: readonly string[];
   field_paths?: readonly (readonly string[])[];
+  retry_after_seconds?: number;
 }
 
 export class ResearchPreflightError extends Error {

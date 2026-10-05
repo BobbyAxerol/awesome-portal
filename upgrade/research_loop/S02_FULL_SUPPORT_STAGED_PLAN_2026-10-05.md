@@ -116,6 +116,14 @@ is passed to a later stage merely to enable the menu.
 
 Requests: BR-FULL-03, foundation of BR-FULL-05. Estimated **1–2 working days**.
 
+Implementation started by Codex at shared `491eb066`, backend lane
+`codex/be-gaps`. Bobby approved FULL-01. Owned surfaces: recipe registry,
+generated TS/Python views, current admission/setup/limits, preflight repository
+and append-only migration **095** (094 is the latest baseline). Shared
+contract ownership: Codex alone edits setup/preflight generation in this
+slice; Claude receives generated additions, not a UI/layout change. No new
+profile, remote push or shared/runtime deployment is authorized by this stage.
+
 1. Import existing descriptors without changing their canonical digest or
    historical behavior. Generate shared TS/Python views; remove duplicate
    decision switches while retaining exact legacy adapters.
@@ -136,6 +144,12 @@ unknown/tampered recipe refusal, workspace/CSRF, quota concurrency/expiry,
 bounded response and off-state parity. **No new recipe enabled in FULL-01.**
 Reuse old real-run receipts only for unchanged exact descriptors; a changed
 execution binding needs its own real qualification.
+
+FULL-01 delivery, 2026-10-05: **BACKEND_DELIVERED / NO_RECIPE_OPENED**;
+[implementation, compatibility/quota/migration proof and Claude handoff](./evidence/P10/FULL_01_SHARED_RECIPES_2026-10-05.md).
+Six legacy bindings now share one generated TS/Python policy. Migration 095
+is append-only and tested on fresh/094 databases only; runtime is unchanged.
+Normal grouped commit hook remains mandatory. FULL-02–06 are still PLANNED.
 
 <a id="full-02"></a>
 ### FULL-02 — Finish Mode 1 schedules and optimized Three Window
@@ -311,11 +325,11 @@ alter the approved design. Existing accepted S02 calendar/presets stay intact.
 | --- | --- | --- |
 | BR-FULL-01 | FULL-02 + FULL-04; meaningful protocol check in FULL-06 | PLANNED, not enabled |
 | BR-FULL-02 | FULL-03 + per-mode extension in FULL-04 | PLANNED, not enabled |
-| BR-FULL-03 | FULL-01 | PLANNED, no registry/migration created |
+| BR-FULL-03 | FULL-01 | BACKEND_DELIVERED: shared registry and append-only 095; no new recipe opened |
 | BR-FULL-04 | Each vertical stage, especially FULL-02/04 | PLANNED, no reader widened |
-| BR-FULL-05 | FULL-01 + measured per-mode FULL-04 | PLANNED, existing limits unchanged |
+| BR-FULL-05 | FULL-01 + measured per-mode FULL-04 | Shared cap/quota foundation DELIVERED; per-mode qualification PLANNED; existing limits unchanged |
 | BR-FULL-06 | FULL-06 batches 6a–6f | PLANNED, no route opened |
 | BR-FULL-07 | FULL-05 + compatible FULL-06 inputs | PLANNED, imported fixed path unchanged |
 
-Next proposed implementation: **FULL-01**, then FULL-02. This document is the
-requested staged response, not a passing qualification or a Portal release.
+Next proposed implementation: **FULL-02**. FULL-01 delivery is linked above;
+the remaining staged response is not a passing qualification or a Portal release.

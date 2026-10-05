@@ -6,6 +6,8 @@ bytes through the current-lease internal authority just before child launch.
 """
 
 from __future__ import annotations
+from portal_api.domain.research_execution_recipes import execution_recipe
+
 
 import hashlib
 import json
@@ -32,25 +34,7 @@ _ADAPTER_CONTRACT: dict[str, Any] = {
     "security_policy": "research.imported-python-restricted.v1",
 }
 
-_PROFILE: dict[str, Any] = {
-    "schema_version": "research.p17.imported-signal-notional-profile.v1",
-    "profile_id": IMPORTED_ALPHA_PROFILE_ID,
-    "adapter_id": IMPORTED_ALPHA_ADAPTER_ID,
-    "adapter_contract_digest": IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST,
-    "engine_release_id": "er_quantbt_111",
-    "execution_route": "signal_notional",
-    "protocol": "three_window_decay",
-    "parameter_mode": "declared-pins-v1",
-    "source_contract": "research.alpha-source.v1",
-    "context_contract": "research.imported-alpha-context.v1",
-    "output_contract": "research.imported-signal-notional-output.v1",
-    "child_limits": {
-        "cpu_seconds": 120,
-        "wall_seconds": 240,
-        "max_source_bytes": 256 * 1024,
-        "max_signal_points": 250_000,
-    },
-}
+_PROFILE = execution_recipe(IMPORTED_ALPHA_PROFILE_ID)["descriptor"]
 
 
 def _canonical_json(value: object) -> str:

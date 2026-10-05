@@ -27,9 +27,10 @@ import { ResearchPreflightError } from "./preflight.error";
 import { ResearchMetadataRepository } from "./repository";
 import { VN_OBSERVED_FIXED_PROFILE } from "./vn-observed-fixed.profile";
 import type { SetupRefusal } from "./run-setup.contract";
+import { EXECUTION_MAX_WARMUP_BARS } from "./execution-recipes";
 
 const DEFAULT_COLUMNS = ["open", "high", "low", "close", "volume"] as const;
-const MAX_ALPHA_WARMUP_BARS = 100_000;
+const MAX_ALPHA_WARMUP_BARS = EXECUTION_MAX_WARMUP_BARS;
 
 /** Deterministic JSON equivalent to Python P08 `canonical_json`. */
 export function canonicalResearchJson(value: unknown): string {
@@ -474,7 +475,9 @@ export function asResearchPreflightError(error: unknown): never {
       throw new ResearchPreflightError(code, error.message, error.status);
     }
     if (code === "RESEARCH_ADMISSION_SATURATED" || code === "RESEARCH_DB_ROLE_UNAVAILABLE") {
-      throw new ResearchPreflightError("RESEARCH_PREFLIGHT_UNAVAILABLE", "Research preflight is temporarily unavailable.", 503);
+      throw new ResearchPreflightError("RESEARCH_PREFLIGHT_UNAVAILABLE", "Research preflight is temporarily unavailable.", 503,
+        error.preflightQuotaRetrySeconds !== undefined
+          ? {gate:"preflight_manifest_quota", retry_after_seconds:error.preflightQuotaRetrySeconds} : undefined);
     }
     if (code === "RESEARCH_INVALID_INPUT") {
       throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "Invalid Research preflight request.", 400);

@@ -9,6 +9,7 @@ import { IMPORTED_ALPHA_ADAPTER_ID, IMPORTED_ALPHA_PROFILE } from "./imported-al
 import { sha256ResearchJson } from "./preflight.service";
 import { RunSetupOptionsSchema, type RunSetupContext, type RunSetupProfile, type SetupRefusal } from "./run-setup.contract";
 import { WHATIF_PROFILE } from "./whatif.profile";
+import {executionRecipe, executionRecipeBudgets, executionRecipeQualification, EXECUTION_RECIPE_REVISION, EXECUTION_SETUP_BOUNDS} from "./execution-recipes";
 
 type Version = NonNullable<Awaited<ReturnType<ResearchMetadataRepository["loadRunAdapterEligibility"]>>>;
 /** Version-specific view. This never grants a token, admits a job or mutates defaults. */
@@ -84,12 +85,24 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
       temporal_guards: { policy: "NOT_APPLICABLE", defaults: null, max_bars: null, zero_semantics: "ZERO_APPLIES_NO_TEMPORAL_GUARD" },
       independent_holdout: true });
   }
+  for (const profile of profiles) {
+    const row = executionRecipe(profile.profile_id), budgets = executionRecipeBudgets(row, config);
+    profile.budget = {...budgets, scope:"DECLARED_CAPS_NOT_RESERVATION_OR_ESTIMATE", profile_digest:row.profile_digest,
+      recipe_digest:executionRecipeQualification(row.profile_id).recipe_digest, qualification:"LEGACY_EXACT_BINDING",
+      queue_class:row.queue_class, resource_class:row.resource_class, preview_override:budgets.cpu_seconds !== row.budgets.cpu_seconds};
+  }
   const payload = { schema_version: "research.run-setup-options.v1" as const, context,
     scope: "CONFIGURATION_FACTS_NOT_RUN_AUTHORIZATION" as const, catalog_revision: catalog.catalog_revision,
     as_of_utc_ms: catalog.as_of_utc_ms, warmup_bars: declaration.warmup_bars,
     source_timezone: context.dataset_id === "vn-stock-daily" ? "Asia/Ho_Chi_Minh" as const : "UTC" as const,
-    profiles, ...(engine ? {engine_options: engineSetupOptions(engine, profiles)} : {}), preflight_required: true as const };
-  return RunSetupOptionsSchema.parse({ ...payload, source_revision: sha256ResearchJson(payload) });
+    profiles, recipe_revision:EXECUTION_RECIPE_REVISION,
+    preflight_policy:{maximum_active_unbound_per_actor:config.RESEARCH_PREFLIGHT_MAXIMUM_ACTIVE_MANIFESTS_PER_ACTOR ?? 8,
+      ttl_seconds:config.RESEARCH_PREFLIGHT_TTL_SECONDS ?? 600, reuse:"IDENTICAL_FRESH_SOURCE_REVALIDATED_UNBOUND_ONLY" as const,
+      expiry_extension:false as const},
+    ...(engine ? {engine_options: engineSetupOptions(engine, profiles)} : {}), preflight_required: true as const };
+  const result = RunSetupOptionsSchema.parse({ ...payload, source_revision: sha256ResearchJson(payload) });
+  if (Buffer.byteLength(JSON.stringify(result), "utf8") > EXECUTION_SETUP_BOUNDS.maximum_bytes) throw new Error("Execution setup exceeds its bounded response");
+  return result;
 }
 
 /** Actual catalogue axes, not Cartesian runnable configurations or new recipes. */

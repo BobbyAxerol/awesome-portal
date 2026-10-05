@@ -21,6 +21,16 @@ const p02FrozenRequestedSpecPath = join(
 );
 
 describe("P08 published Research preflight contract", () => {
+  it("publishes a bounded public quota retry without private diagnostics", () => {
+    const doc = JSON.parse(readFileSync(openApiPath, "utf8"));
+    const validate = new Ajv2020({strict:false}).compile(JSON.parse(JSON.stringify({
+      ...doc.components.schemas.Problem,$defs:doc.components.schemas,
+    }).replaceAll("#/components/schemas/","#/$defs/")));
+    const fixture: components["schemas"]["Problem"] = JSON.parse(readFileSync(join(ROOT,"fixtures/research-preflight.quota.valid.json"),"utf8"));
+    expect(validate(fixture),JSON.stringify(validate.errors)).toBe(true);
+    expect(validate({...fixture,details:{...fixture.details,retry_after_seconds:0}})).toBe(false);
+    expect(validate({...fixture,details:{...fixture.details,retry_after_seconds:3601}})).toBe(false);
+  });
   it("packages the P02 frozen requested_spec schema without a divergent copy", () => {
     expect(JSON.parse(readFileSync(packagedRequestedSpecPath, "utf8"))).toEqual(
       JSON.parse(readFileSync(p02FrozenRequestedSpecPath, "utf8")),

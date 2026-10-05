@@ -309,6 +309,44 @@ describe("Research Loop P08 · data snapshots, effective spec and preflight", ()
     expect(await repository.cleanupExpiredPreflightManifests(scopeA, 1)).toBe(1);
   });
 
+  it("FULL-01 revalidates source and reuses identical fresh unbound actor metadata without extending TTL", async () => {
+    await seedIdentity();
+    const first = await service.create(admin,scopeA,requested(),"full01-first");
+    const repeated = await Promise.all(Array.from({length:6},(_,i)=>service.create(admin,scopeA,requested(),`full01-${i}`)));
+    expect(new Set(repeated.map(r=>r.preflight_token))).toEqual(new Set([first.preflight_token]));
+    expect(repeated.every(r=>r.expires_at_utc_ms===first.expires_at_utc_ms && r.issued_at_utc_ms===first.issued_at_utc_ms)).toBe(true);
+    expect(client.calls).toHaveLength(7); // private source validation never bypassed
+    expect((await pool.query("SELECT count(*)::int AS n FROM research.preflight_manifests")).rows[0].n).toBe(1);
+    const other = await service.create({...admin,userId:scopeB.actorUserId},scopeB,requested(),"full01-other");
+    expect(other.preflight_token).not.toBe(first.preflight_token);
+  });
+
+  it("FULL-01 concurrent different preflights cannot exceed actor quota and return bounded retry detail", async () => {
+    await seedIdentity();
+    const results=await Promise.allSettled(Array.from({length:6},(_,i)=>service.create(admin,scopeA,requested({random_seed:50+i}),`full01-distinct-${i}`)));
+    expect(results.filter(r=>r.status==="fulfilled")).toHaveLength(2);
+    const rejected=results.filter((r):r is PromiseRejectedResult=>r.status==="rejected");
+    expect(rejected).toHaveLength(4);
+    rejected.forEach(r=>expect(r.reason).toMatchObject({code:"RESEARCH_ADMISSION_SATURATED",status:503,
+      preflightQuotaRetrySeconds:expect.any(Number)}));
+    expect((await pool.query("SELECT count(*)::int AS n FROM research.preflight_manifests")).rows[0].n).toBe(2);
+  });
+
+  it("FULL-01 a changed private-source identity cannot reuse an old opaque token", async () => {
+    await seedIdentity();
+    const first=await service.create(admin,scopeA,requested(),"full01-source-before");
+    const changed=privateResponse(requested());
+    changed.snapshot.source_manifest_digest="9".repeat(64);
+    changed.dataset_binding.source_manifest_digest="9".repeat(64);
+    changed.effective_spec.data_binding.source_manifest_digest="9".repeat(64);
+    changed.effective_spec_digest=sha256ResearchJson(changed.effective_spec);
+    changed.dataset_binding_digest=sha256ResearchJson(changed.dataset_binding);
+    client.response=changed;
+    const after=await service.create(admin,scopeA,requested(),"full01-source-after");
+    expect(after.preflight_token).not.toBe(first.preflight_token);
+    expect(after.dataset_binding_digest).not.toBe(first.dataset_binding_digest);
+  });
+
   it("P08 rejects private digest inconsistency before it can become durable authority", async () => {
     await seedIdentity();
     client.response = { ...privateResponse(requested()), effective_spec_digest: "0".repeat(64) };

@@ -13,6 +13,8 @@ to re-verify the profile before it runs QuantBT.
 """
 
 from __future__ import annotations
+from portal_api.domain.research_execution_recipes import execution_recipe
+
 
 import hashlib
 import json
@@ -26,29 +28,7 @@ EXECUTION_PROFILE_IDS: Final = (P04_FIXED_QUALIFICATION_PROFILE_ID, DELTA_WFO_PR
 
 DELTA_WFO_PROFILE_DIGEST: Final = "b86c66fa68c41e76c6106bd06a48b5ba1281bc4b168a915ec2fa7e34ec2a6cca"
 
-_PROFILE: dict[str, Any] = {
-    "schema_version": "research.p10.delta-wfo-profile.v1",
-    "profile_id": DELTA_WFO_PROFILE_ID,
-    "adapter_id": "p04.delta-rsi.v1",
-    "adapter_contract_digest": "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784",
-    "engine_release_id": "er_quantbt_111",
-    "execution_route": "signal_notional",
-    "protocol": "advanced",
-    "frequency": "weekly",
-    "window_mode": "expanding",
-    "timeframe": "1h",
-    "max_span_days": 92,
-    "fold_bounds": {"min": 2, "max": 16},
-    "optimization_mode": "mode_1_decay",
-    "optimization_schedule": "global",
-    "optuna_trials": 3,
-    "random_seed": 42,
-    "current_source": {
-        "source_adapter_id": "rs02.quantbt-signal-notional-wfo.v1",
-        "profile_id": "rs02.delta-signal-notional-wfo.v1",
-    },
-    "child_limits": {"cpu_seconds": 120, "wall_seconds": 240},
-}
+_PROFILE = execution_recipe(DELTA_WFO_PROFILE_ID)["descriptor"]
 
 
 def _canonical_json(value: object) -> str:
@@ -88,10 +68,11 @@ DELTA_WFO_MAX_SPAN_DAYS: Final[int] = int(_PROFILE["max_span_days"])
 # its identity and digest are unchanged; a preview run records its real trial
 # count in its requested spec. Off by default; refused outside PORTAL_ENV=local.
 DELTA_WFO_PREVIEW_LONG_FLAG: Final = "PORTAL_FEATURE_RESEARCH_PREVIEW_LONG_WFO"
-DELTA_WFO_PREVIEW_LONG_MIN_TRIALS: Final[int] = 2
-DELTA_WFO_PREVIEW_LONG_MAX_TRIALS: Final[int] = 400
-DELTA_WFO_PREVIEW_LONG_CPU_SECONDS: Final[int] = 1800
-DELTA_WFO_PREVIEW_LONG_WALL_SECONDS: Final[int] = 3600
+_PREVIEW = execution_recipe(DELTA_WFO_PROFILE_ID)["preview_override"]
+DELTA_WFO_PREVIEW_LONG_MIN_TRIALS: Final[int] = _PREVIEW["min_trials"]
+DELTA_WFO_PREVIEW_LONG_MAX_TRIALS: Final[int] = _PREVIEW["max_trials"]
+DELTA_WFO_PREVIEW_LONG_CPU_SECONDS: Final[int] = _PREVIEW["cpu_seconds"]
+DELTA_WFO_PREVIEW_LONG_WALL_SECONDS: Final[int] = _PREVIEW["wall_seconds"]
 
 
 class DeltaWfoPreviewLongMisconfigured(RuntimeError):

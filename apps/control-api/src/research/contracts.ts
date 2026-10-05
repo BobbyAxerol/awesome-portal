@@ -185,6 +185,7 @@ export class ResearchMetadataError extends Error {
       | "RESEARCH_WHATIF_IN_FLIGHT",
     message: string,
     readonly status: 400 | 403 | 404 | 409 | 503,
+    readonly preflightQuotaRetrySeconds?: number,
   ) {
     super(message);
     this.name = "ResearchMetadataError";

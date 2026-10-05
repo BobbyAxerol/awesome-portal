@@ -70,6 +70,8 @@ mkdir -p \
   "${WORKSPACE_DIR}/packages/contracts" \
   "${WORKSPACE_DIR}/apps/portal/registry/openapi" \
   "${WORKSPACE_DIR}/apps/control-api/src/operations" \
+  "${WORKSPACE_DIR}/apps/control-api/src/research" \
+  "${WORKSPACE_DIR}/apps/portal/backend/src/portal_api/domain" \
   "${WORKSPACE_DIR}/upgrade/research_loop/evidence/P02" \
   "${WORKSPACE_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_portal_contract_pack/extract"
 cp -a \
@@ -91,6 +93,26 @@ cp -a \
 cp -a \
   "${ROOT_DIR}/apps/control-api/src/operations/catalog.generated.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/operations/"
+# FULL-01 verifies image-owned TS/Python views against the same recipe source
+# and the six exact legacy receipt references. No runtime inputs are staged.
+cp -a "${ROOT_DIR}/apps/portal/registry/research-execution-recipes.v1.json" \
+  "${ROOT_DIR}/apps/portal/registry/research-execution-recipes.v1.schema.json" \
+  "${WORKSPACE_DIR}/apps/portal/registry/"
+cp -a "${ROOT_DIR}/apps/control-api/src/research/execution-recipes.generated.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/research/"
+cp -a "${ROOT_DIR}/apps/portal/backend/src/portal_api/domain/research_execution_recipes_generated.py" \
+  "${WORKSPACE_DIR}/apps/portal/backend/src/portal_api/domain/"
+for receipt in \
+  P04/phase-report.md \
+  P23/P23_QUALIFICATION_CLOSEOUT_2026-10-05.md \
+  P10/B7_B8_TEMPORAL_EXECUTOR_2026-10-02.md \
+  P10/B8_CAUSAL_INNER_CURRENT_SOURCE_2026-10-02.md \
+  P10/B8_VN_FIXED_PRODUCT_VERTICAL_2026-10-02.md \
+  P10/E17_IMPORTED_DRAFT_EXECUTION_BACKEND_RECEIPT_2026-09-27.md; do
+  mkdir -p "${WORKSPACE_DIR}/upgrade/research_loop/evidence/${receipt%/*}"
+  cp -a "${ROOT_DIR}/upgrade/research_loop/evidence/${receipt}" \
+    "${WORKSPACE_DIR}/upgrade/research_loop/evidence/${receipt}"
+done
 cp -a \
   "${ROOT_DIR}/upgrade/research_loop/evidence/P02/requested-spec.v1.schema.json" \
   "${WORKSPACE_DIR}/upgrade/research_loop/evidence/P02/"

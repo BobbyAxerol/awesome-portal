@@ -27,6 +27,7 @@ from portal_api.adapters.market_data import (
     VnStockDailyQualificationProvider,
 )
 from portal_api.domain.errors import DatasetNotFoundError
+from portal_api.domain.research_execution_recipes import EXECUTION_MAX_WARMUP_BARS, EXECUTION_PLANNING_MAX_BARS
 from portal_api.services.research_dataset_catalog import build_research_dataset_catalog
 
 MAX_BYTES = 8 * 1024 * 1024
@@ -396,7 +397,7 @@ def earliest_start_with_warmup(index: dict, warmup_bars: int, step: int) -> int 
 
 def window_metadata(document: dict | None, *, dataset_id: str, symbol: str, timeframe: str,
                     start_ms: int, end_ms: int, warmup_bars: int) -> dict[str, object]:
-    if start_ms >= end_ms or start_ms < 0 or not _SYMBOL.fullmatch(symbol) or not 0 <= warmup_bars <= 100_000:
+    if start_ms >= end_ms or start_ms < 0 or not _SYMBOL.fullmatch(symbol) or not 0 <= warmup_bars <= EXECUTION_MAX_WARMUP_BARS:
         raise DatasetIndexError("DATASET_WINDOW_QUERY_INVALID")
     step = timeframe_ms(timeframe)
     if dataset_id == VN_STOCK_DAILY_DATASET_ID:
@@ -536,7 +537,7 @@ def declaration_estimate(document: dict | None, requested: dict, *, warmup_bars:
         right = max(row["end_exclusive_utc_ms"] for row in windows)
         count = sum((min(last, right-step)-max(first, left))//step+1 for first, last in index["runs"]
             if max(first, left) <= min(last, right-step))
-        if count > 100_000:
+        if count > EXECUTION_PLANNING_MAX_BARS:
             result["planned_folds"] = {**absence, "reason_code": "DECLARATION_TIMESTAMP_PLAN_BUDGET_EXCEEDED"}
             return result
         stamps = [stamp for first, last in index["runs"]
@@ -584,7 +585,7 @@ def declaration_estimate(document: dict | None, requested: dict, *, warmup_bars:
     left = min(x[1] for x in bounds); right = max(x[2] for x in bounds)
     count = sum((min(last, right-step)-max(first,left))//step+1 for first,last in index["runs"]
         if max(first,left) <= min(last,right-step))
-    if count > 100_000:
+    if count > EXECUTION_PLANNING_MAX_BARS:
         result["planned_folds"] = {**absence, "reason_code": "DECLARATION_TIMESTAMP_PLAN_BUDGET_EXCEEDED"}
         return result
     stamps = [stamp for first,last in index["runs"] for stamp in range(max(first,left), min(last,right-step)+1, step)]

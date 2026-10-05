@@ -29,6 +29,7 @@ from portal_api.domain.research_delta_wfo_profile import (
     delta_wfo_preview_long_enabled,
 )
 from portal_api.serialization import canonicalize
+from portal_api.domain.research_execution_recipes import execution_recipe
 
 
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$")
@@ -38,8 +39,8 @@ _FOLD_SEGMENT_KINDS = ("search", "oos", "freeze_tick")
 _FOLD_SEGMENT_STATES = {"RUNNING", "DONE", "FAILED"}
 _METHODOLOGY_CERTIFICATE_GRADES = {"A", "B", "C", "D"}
 _MAX_EVENT_BYTES = 2_048
-_P04_CPU_SECONDS = 45
-_MAX_PROFILE_CPU_SECONDS = 120
+_P04_CPU_SECONDS = execution_recipe("p04.fixed-qualification.v1")["budgets"]["cpu_seconds"]
+_MAX_PROFILE_CPU_SECONDS = execution_recipe("p10.delta-signal-notional-wfo.v1")["budgets"]["cpu_seconds"]
 
 
 def _max_profile_cpu_seconds() -> int:

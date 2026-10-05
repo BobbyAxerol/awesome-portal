@@ -1,3 +1,4 @@
+import { executionRecipe, executionRecipeResources } from "./execution-recipes";
 /**
  * W1 §1.1 locked run execution profiles.
  *
@@ -37,29 +38,7 @@ export const RS02_DELTA_WFO_GLOBAL_PROFILE_ID = "rs02.delta-wfo-global.v1" as co
 export const RS02_SIGNAL_NOTIONAL_SOURCE_ADAPTER_ID = "rs02.quantbt-signal-notional-wfo.v1" as const;
 export const RS02_SIGNAL_NOTIONAL_PROFILE_ID = "rs02.delta-signal-notional-wfo.v1" as const;
 
-export const DELTA_WFO_PROFILE = Object.freeze({
-  schema_version: "research.p10.delta-wfo-profile.v1",
-  profile_id: DELTA_WFO_PROFILE_ID,
-  adapter_id: "p04.delta-rsi.v1",
-  adapter_contract_digest: "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784",
-  engine_release_id: "er_quantbt_111",
-  execution_route: "signal_notional",
-  protocol: "advanced",
-  frequency: "weekly",
-  window_mode: "expanding",
-  timeframe: "1h",
-  max_span_days: 92,
-  fold_bounds: Object.freeze({ min: 2, max: 16 }),
-  optimization_mode: "mode_1_decay",
-  optimization_schedule: "global",
-  optuna_trials: 3,
-  random_seed: 42,
-  current_source: Object.freeze({
-    source_adapter_id: RS02_SIGNAL_NOTIONAL_SOURCE_ADAPTER_ID,
-    profile_id: RS02_SIGNAL_NOTIONAL_PROFILE_ID,
-  }),
-  child_limits: Object.freeze({ cpu_seconds: 120, wall_seconds: 240 }),
-} as const);
+export const DELTA_WFO_PROFILE = executionRecipe(DELTA_WFO_PROFILE_ID).descriptor;
 
 // Local twin of `sha256ResearchJson` (P08 canonical form: code-point key
 // order, compact separators). Kept local so repository/admission modules can
@@ -90,12 +69,7 @@ if (computed !== DELTA_WFO_PROFILE_DIGEST) {
 }
 
 /** Durable worker cost declared for one WFO job (P06 scheduler admission). */
-export const DELTA_WFO_RESOURCE_PROFILE = Object.freeze({
-  memoryBytes: 4 * 1024 * 1024 * 1024,
-  cpuSeconds: DELTA_WFO_PROFILE.child_limits.cpu_seconds,
-  scratchBytes: 128 * 1024 * 1024,
-  ioBytes: 512 * 1024 * 1024,
-});
+export const DELTA_WFO_RESOURCE_PROFILE = Object.freeze(executionRecipeResources(executionRecipe(DELTA_WFO_PROFILE_ID), {}));
 
 /**
  * Research preview only (FEATURE_RESEARCH_PREVIEW_LONG_WFO, AUTH_MODE=dev +
@@ -104,10 +78,10 @@ export const DELTA_WFO_RESOURCE_PROFILE = Object.freeze({
  * floor because the retained RS-02 lane seals at least two TRIAL rows.
  */
 export const DELTA_WFO_PREVIEW_LONG_LIMITS = Object.freeze({
-  min_trials: 2,
-  max_trials: 400,
-  cpu_seconds: 1_800,
-  wall_seconds: 3_600,
+  min_trials: executionRecipe(DELTA_WFO_PROFILE_ID).preview_override.min_trials,
+  max_trials: executionRecipe(DELTA_WFO_PROFILE_ID).preview_override.max_trials,
+  cpu_seconds: executionRecipe(DELTA_WFO_PROFILE_ID).preview_override.cpu_seconds,
+  wall_seconds: executionRecipe(DELTA_WFO_PROFILE_ID).preview_override.wall_seconds,
 } as const);
 
 export const DELTA_WFO_PREVIEW_LONG_RESOURCE_PROFILE = Object.freeze({
@@ -125,9 +99,9 @@ export const DELTA_WFO_RESOURCE_CLASS = "p10-delta-wfo-v1" as const;
 export const DELTA_WFO_WORK_SCHEMA_VERSION = "research.p10.delta-wfo-work.v1" as const;
 
 export function isDeltaWfoProfile(profileId: string | null | undefined, profileDigest: string | null | undefined): boolean {
-  return (profileId === DELTA_WFO_PROFILE_ID && profileDigest === DELTA_WFO_PROFILE_DIGEST)
-    || (profileId === DELTA_WFO_V2_PROFILE_ID && profileDigest === DELTA_WFO_V2_PROFILE_DIGEST)
-    || (profileId === DELTA_CAUSAL_INNER_PROFILE_ID && profileDigest === DELTA_CAUSAL_INNER_PROFILE_DIGEST);
+  if (!profileId) return false;
+  try { return executionRecipe(profileId, profileDigest ?? null).adapter_kind === "DELTA_WFO"; }
+  catch { return false; }
 }
 
 /** Profile-bound custody pair; global and causal seals may never be mixed. */

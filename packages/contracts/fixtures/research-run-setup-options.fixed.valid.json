@@ -52,7 +52,25 @@
         "zero_semantics": "ZERO_APPLIES_NO_TEMPORAL_GUARD"
       },
       "independent_holdout": true,
-      "refusals": []
+      "refusals": [],
+      "budget": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 45,
+        "wall_seconds": 90,
+        "scratch_bytes": 67108864,
+        "io_bytes": 536870912,
+        "file_bytes": 2097152,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000,
+        "scope": "DECLARED_CAPS_NOT_RESERVATION_OR_ESTIMATE",
+        "recipe_digest": "00136ee2c90b6ce0b35d13f2df3d8494d6f4c38a4df405fd0d9acdcc727fe013",
+        "profile_digest": null,
+        "qualification": "LEGACY_EXACT_BINDING",
+        "queue_class": "INTERACTIVE",
+        "resource_class": "p10-delta-rsi-v1",
+        "preview_override": false
+      }
     }
   ],
   "preflight_required": true,
@@ -356,5 +374,11 @@
         "profile_ids": []
       }
     ]
+  },
+  "preflight_policy": {
+    "maximum_active_unbound_per_actor": 8,
+    "ttl_seconds": 600,
+    "reuse": "IDENTICAL_FRESH_SOURCE_REVALIDATED_UNBOUND_ONLY",
+    "expiry_extension": false
   }
 }

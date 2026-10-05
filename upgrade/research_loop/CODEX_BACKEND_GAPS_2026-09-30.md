@@ -2234,3 +2234,20 @@ shapes/enum displays may need a narrowly proven Claude consumer handoff.
 
 No new code/schema/flag/migration/engine run or runtime action in this plan.
 No push, dev/main/stable promotion. Proposed first implementation: FULL-01.
+
+#### §37 FULL-01 delivery — 2026-10-05
+
+**BACKEND_DELIVERED / NO_RECIPE_OPENED**. Bobby authorized FULL-01; the six
+existing recipes are now source-controlled data with checked generated TS/Python
+views, preserved descriptor/private-work compatibility, separate scoped legacy
+qualification references and additive declared budget/quota setup contracts.
+Repeated identical unbound preflights no longer exhaust actor quota; source
+validation remains mandatory, TTL is not extended and bound history is retained.
+Migration 095 has fresh/094→095 disposable DB proof; no runtime migration.
+
+[Full receipt, generated names, example fixtures, commit locator and Claude
+handoff](./evidence/P10/FULL_01_SHARED_RECIPES_2026-10-05.md).
+Backend completion does not mean new modes/timeframes opened or a frontend
+rebuild. Claude can consume optional declared caps and bounded retry detail
+without changing S02 design. FULL-02 is the next stage; it has not started.
+No remote push, dev/main promotion or runtime change.

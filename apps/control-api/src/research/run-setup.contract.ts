@@ -1,4 +1,5 @@
 import { z } from "zod";
+import {EXECUTION_SETUP_BOUNDS} from "./execution-recipes";
 
 const Id = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/);
 const Ms = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
@@ -8,7 +9,7 @@ export const SetupFieldPathSchema = z.array(z.string().regex(/^[A-Za-z_][A-Za-z0
 export const SetupRefusalSchema = z.object({ reason_code: Reason, field_path: SetupFieldPathSchema }).strict();
 export type SetupRefusal = z.infer<typeof SetupRefusalSchema>;
 const EngineChoiceFields = z.object({ value: Id, state: z.enum(["ENABLED", "DISABLED"]), reason_code: Reason.nullable(),
-  field_path: SetupFieldPathSchema, profile_ids: z.array(Id).max(6) }).strict();
+  field_path: SetupFieldPathSchema, profile_ids: z.array(Id).max(EXECUTION_SETUP_BOUNDS.maximum_profiles) }).strict();
 const consistentChoice = (v: {state: string; reason_code: string | null; profile_ids: string[]}) =>
   (v.state === "ENABLED") === (v.reason_code === null)
   && (v.profile_ids.length === 0) === (v.reason_code === "PROFILE_NOT_OPENED");
@@ -20,6 +21,16 @@ const EngineOptions = z.object({
   frequencies: z.array(EngineChoice).max(8), window_modes: z.array(EngineChoice).max(4),
 }).strict();
 const Bounds = z.object({ min: z.number().int().nonnegative(), max: z.number().int().nonnegative() }).strict();
+export const RunSetupBudgetSchema = z.object({
+  scope: z.literal("DECLARED_CAPS_NOT_RESERVATION_OR_ESTIMATE"), recipe_digest: Digest,
+  profile_digest: Digest.nullable(), qualification: z.literal("LEGACY_EXACT_BINDING"),
+  memory_bytes: z.number().int().min(2_147_483_648).max(8_589_934_592),
+  cpu_seconds: z.number().int().min(1).max(1_800), wall_seconds: z.number().int().min(1).max(3_600),
+  scratch_bytes: z.number().int().min(1).max(536_870_912), io_bytes: z.number().int().min(1).max(1_073_741_824),
+  file_bytes: z.number().int().min(1).max(16_777_216), fd_limit: z.number().int().min(32).max(512),
+  planning_max_bars: z.literal(100_000), max_warmup_bars: z.number().int().min(0).max(100_000),
+  queue_class: z.enum(["HEAVY", "INTERACTIVE"]), resource_class: Id, preview_override: z.boolean(),
+}).strict();
 export const RunSetupContextSchema = z.object({
   workspace_id: Id.optional(), alpha_id: Id, alpha_version_id: Id,
   dataset_id: Id, symbol: z.string().regex(/^[A-Z0-9][A-Z0-9_-]{1,31}$/),
@@ -47,6 +58,7 @@ export const RunSetupProfileSchema = z.object({
     zero_semantics: z.literal("ZERO_APPLIES_NO_TEMPORAL_GUARD"),
   }).strict(),
   independent_holdout: z.boolean(),
+  budget: RunSetupBudgetSchema.optional(),
 }).strict().refine(v => (v.state === "ENABLED") === (v.reason_code === null)
   && (v.refusals === undefined || (v.state === "ENABLED" ? v.refusals.length === 0
     : v.refusals.length > 0 && v.refusals[0].reason_code === v.reason_code)));
@@ -57,7 +69,11 @@ export const RunSetupOptionsSchema = z.object({
   source_revision: Digest, catalog_revision: Digest.nullable(), as_of_utc_ms: Ms.nullable(),
   warmup_bars: z.number().int().min(0).max(100_000),
   source_timezone: z.enum(["UTC", "Asia/Ho_Chi_Minh"]),
-  profiles: z.array(RunSetupProfileSchema).max(6),
+  profiles: z.array(RunSetupProfileSchema).max(EXECUTION_SETUP_BOUNDS.maximum_profiles),
+  recipe_revision: Digest.optional(),
+  preflight_policy: z.object({ maximum_active_unbound_per_actor: z.number().int().min(1).max(16),
+    ttl_seconds: z.number().int().min(60).max(3_600),
+    reuse: z.literal("IDENTICAL_FRESH_SOURCE_REVALIDATED_UNBOUND_ONLY"), expiry_extension: z.literal(false) }).strict().optional(),
   engine_options: EngineOptions.optional(),
   preflight_required: z.literal(true),
 }).strict();

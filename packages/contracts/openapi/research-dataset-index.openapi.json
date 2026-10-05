@@ -1868,6 +1868,11 @@
                 "items": {
                   "$ref": "#/components/schemas/FieldPath"
                 }
+              },
+              "retry_after_seconds": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3600
               }
             }
           }

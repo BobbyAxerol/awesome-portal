@@ -123,7 +123,7 @@ def test_child_receipt_carries_a_trial_count_only_when_the_parent_sets_one() -> 
 
 def test_child_runs_the_receipt_trial_count_within_bounds(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     seen: list[int] = []
-    monkeypatch.setattr(research_child, "_run_delta_wfo_study", lambda _r, _o, *, optuna_trials: seen.append(optuna_trials) or {})
+    monkeypatch.setattr(research_child, "_run_delta_wfo_study", lambda _r, _o, *, optuna_trials, **_controls: seen.append(optuna_trials) or {})
     base = _receipt().as_payload(output_root=tmp_path)
     research_child._run_p10_delta_wfo(dict(base), tmp_path)
     research_child._run_p10_delta_wfo({**base, "optuna_trials": 400}, tmp_path)

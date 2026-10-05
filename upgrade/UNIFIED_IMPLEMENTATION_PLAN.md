@@ -8074,7 +8074,7 @@ S02 calendar/presets and Claude receipts preserved, not retaken by this plan.
 
 | Stage | Scope | Guide / current state |
 | --- | --- | --- |
-| FULL-01 | Shared versioned recipe table, common admission authority, bounded budgets/quota and historic compatibility | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-01) · PLANNED |
+| FULL-01 | Shared versioned recipe table, common admission authority, bounded budgets/quota and historic compatibility | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-01) · BACKEND_DELIVERED / NO_RECIPE_OPENED · [Receipt/handoff](./research_loop/evidence/P10/FULL_01_SHARED_RECIPES_2026-10-05.md) |
 | FULL-02 | Mode 1 missing schedule + optimized Three Window/global, full retained/read chain | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-02) · PLANNED |
 | FULL-03 | All actual indexed timeframes, source clocks/warmup and immutable Delta declaration extension | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-03) · PLANNED |
 | FULL-04 | All other valid optimizer pairs, mode-native readers and measured slow-mode limits | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-04) · PLANNED |
@@ -8089,3 +8089,15 @@ enabled recipe carries its own real P08/P10/child/P05/named-read receipt.
 No enablement, run, migration, UI edit, push or deployment in this planning
 change. Codex next proposed implementation: FULL-01; Claude retains design
 ownership and only consumes proven named contract additions where necessary.
+
+FULL-01 addendum, 2026-10-05 (Bobby approved implementation): six exact legacy
+profiles now derive from one generated recipe table, with separate scoped
+qualification references and shared bounded setup/admission/queue/child/progress
+facts. Identical fresh source-revalidated unbound preflights reuse their token
+without extending TTL; actor-local serialization prevents quota overshoot.
+Migration **095** is append-only and applied only in disposable proof cells;
+old producer bytes remain unchanged. [Receipt, tests, generated contract names,
+commit locator and Claude handoff](./research_loop/evidence/P10/FULL_01_SHARED_RECIPES_2026-10-05.md).
+No frontend/design changes, recipe opening, preview/production deployment,
+remote push or dev/main merge. Next: FULL-02, not yet started. The historical
+planning-only text above records the earlier planning turn, not this delivery.

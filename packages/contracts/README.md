@@ -222,6 +222,18 @@ Regenerate with `npm run generate` or `npm run generate:research-run-setup`;
 fixtures are synthetic wire examples, not product/run receipts. Final P08/P10
 admission is always required.
 
+FULL-01 centralizes the six existing execution recipes in
+`apps/portal/registry/research-execution-recipes.v1.json` with its strict schema.
+Run `npm run generate:research-execution-recipes` here to regenerate the
+image-owned TS/Python views plus setup/preflight types. Verification checks
+the old descriptor digests and exact receipt hashes separately from the
+recipe-policy revision. Future qualified recipe changes need their own
+append-only migration; do not regenerate applied migration 095.
+`SetupOptions` optionally publishes declared budget/quota facts (256 profile
+rows, 1-MiB serialized cap). These are neither duration estimates nor grants.
+The preflight Problem can carry bounded `retry_after_seconds` for actor quota;
+old consumers remain compatible. No new recipe is opened by this generation.
+
 P13 publishes the additive Research Evidence Flow contract at
 `openapi/research-evidence.openapi.json`, generated as
 `generated/research-evidence.d.ts`. It contains exactly two same-origin

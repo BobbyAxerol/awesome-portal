@@ -354,6 +354,7 @@ export interface components {
                 gate?: string;
                 field_path?: components["schemas"]["FieldPath"];
                 field_paths?: components["schemas"]["FieldPath"][];
+                retry_after_seconds?: number;
             };
         };
         /** @description CG-P08-06: per-window missing-bar scan of the sealed snapshot's timestamps (never prices). The sealed holdout is not scanned per window. Severity per gap run is not published by the source; a window verdict is WATCH when it misses any bar and CRITICAL above the snapshot quality profile's max_gap_ratio. */

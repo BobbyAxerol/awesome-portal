@@ -10,6 +10,7 @@ import type { ResearchScope } from "./contracts";
 import { ResearchMetadataError } from "./contracts";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { sha256ResearchJson } from "./preflight.service";
+import {executionRecipe, executionRecipeResources} from "./execution-recipes";
 import { ResearchMetadataRepository } from "./repository";
 import {
   ResearchRunCreateResponseSchema,
@@ -20,31 +21,19 @@ import { ResearchRunCreateError } from "./run-create.error";
 import { ENGINE_110_QUALIFICATION_BINDING, ENGINE_110_QUALIFICATION_BINDING_DIGEST } from "./engine-qualification.profile";
 import { ResearchRunAdmissionService } from "./run-admission.service";
 import { VnObservedSourceObservationSchema } from "./preflight.contract";
-import { VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_RESOURCE_CLASS, VN_OBSERVED_FIXED_RESOURCE_PROFILE,
+import { VN_OBSERVED_FIXED_PROFILE_ID,
   VN_OBSERVED_FIXED_WORK_SCHEMA_VERSION } from "./vn-observed-fixed.profile";
 import { DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_WORK_SCHEMA_VERSION } from "./delta-wfo-v2.profile";
 import { DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_WORK_SCHEMA_VERSION } from "./delta-causal-inner.profile";
 import {
   DELTA_WFO_PROFILE_ID,
-  DELTA_WFO_RESOURCE_CLASS,
-  DELTA_WFO_PREVIEW_LONG_RESOURCE_PROFILE,
-  DELTA_WFO_RESOURCE_PROFILE,
   DELTA_WFO_WORK_SCHEMA_VERSION,
   deltaWfoPreviewLongEnabled,
 } from "./delta-wfo.profile";
 import {
   IMPORTED_ALPHA_PROFILE_ID,
-  IMPORTED_ALPHA_RESOURCE_CLASS,
-  IMPORTED_ALPHA_RESOURCE_PROFILE,
   IMPORTED_ALPHA_WORK_SCHEMA_VERSION,
 } from "./imported-alpha.profile";
-
-const P10_RESOURCE_PROFILE = Object.freeze({
-  memoryBytes: 4 * 1024 * 1024 * 1024,
-  cpuSeconds: 45,
-  scratchBytes: 64 * 1024 * 1024,
-  ioBytes: 512 * 1024 * 1024,
-});
 
 function stableId(prefix: string, digest: string): string {
   return `${prefix}_${digest.slice(0, 32)}`;
@@ -323,20 +312,13 @@ export class ResearchRunCreateService {
         workDigest,
         engineReleaseId: requested.client.engine_release_id,
         legacyRequest,
-        cost: vnObserved
-          ? VN_OBSERVED_FIXED_RESOURCE_PROFILE
-          : imported
-          ? IMPORTED_ALPHA_RESOURCE_PROFILE
-          : wfo
-            // Research preview only: the long WFO declares its own child CPU cap.
-            ? (deltaWfoPreviewLongEnabled(this.config) && !causal ? DELTA_WFO_PREVIEW_LONG_RESOURCE_PROFILE : DELTA_WFO_RESOURCE_PROFILE)
-            : P10_RESOURCE_PROFILE,
+        cost: executionRecipeResources(executionRecipe(profile.id, profile.digest), this.config),
         // The wide confined profiles are compute, not viewer interactions.
         // P06's existing one-heavy-per-workspace admission must see them;
         // otherwise several creates reserve leases before a single worker
         // can consume them. Keep the historical fixed P04 policy unchanged.
-        queueClass: wfo || imported ? "HEAVY" : "INTERACTIVE",
-        resourceClass: vnObserved ? VN_OBSERVED_FIXED_RESOURCE_CLASS : imported ? IMPORTED_ALPHA_RESOURCE_CLASS : wfo ? DELTA_WFO_RESOURCE_CLASS : "p10-delta-rsi-v1",
+        queueClass: executionRecipe(profile.id, profile.digest).queue_class,
+        resourceClass: executionRecipe(profile.id, profile.digest).resource_class,
         attemptLimit: 2,
         // The edge the browser declared, if any. Both relations reach the
         // same column; only SIBLING_OF carries a cell and the same-version
