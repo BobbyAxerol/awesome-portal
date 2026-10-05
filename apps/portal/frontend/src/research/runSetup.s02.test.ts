@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { admitsSpecV2, admittedFrequencies, readDeclarationEstimate, readPlannedFolds, seedPinned, selectProfile, trialsPinned } from "./dataDeclaration";
 import { type SetupOptions, type SetupOptionsResult, type SetupProfile, getRunSetupOptions, postWindowSuggestion, resetSetupRouteMemory, setupQueryString } from "./setupClient";
-import { answersContext, disabledSetupProfiles, profilePinsFromSetup, profilesFromSetup, setupContextFrom, setupContextKey, setupProfilesOr, unopenedCombination, useRunSetup } from "./useRunSetup";
+import { answersContext, disabledSetupProfiles, profilePinsFromSetup, profilesFromSetup, setupContextFrom, setupContextKey, engineModeClosed, engineOptionPair, setupProfilesOr, unopenedCombination, useRunSetup } from "./useRunSetup";
 import { emptyDraft } from "./NewRunRoute";
 
 const ROOT = join(__dirname, "..", "..", "..", "..", "..");
@@ -179,7 +179,7 @@ describe("setup client", () => {
     vi.stubGlobal("fetch", vi.fn(async () => problem(404, "RESEARCH_PREFLIGHT_NOT_FOUND")));
     expect(await getRunSetupOptions(query)).toMatchObject({ state: "client-error", status: 404, code: "RESEARCH_PREFLIGHT_NOT_FOUND" });
     vi.stubGlobal("fetch", vi.fn(async () => problem(400, "RESEARCH_PREFLIGHT_INVALID", { details: { field_path: ["data", "symbol"] } })));
-    expect(await getRunSetupOptions(query)).toEqual({ state: "refused", status: 400, code: "RESEARCH_PREFLIGHT_INVALID", fieldPath: ["data", "symbol"], requestId: "req_1" });
+    expect(await getRunSetupOptions(query)).toEqual({ state: "refused", status: 400, code: "RESEARCH_PREFLIGHT_INVALID", fieldPath: ["data", "symbol"], reasonCode: null, requestId: "req_1" });
     vi.stubGlobal("fetch", vi.fn(async () => problem(503, "RESEARCH_PREFLIGHT_UNAVAILABLE")));
     expect((await getRunSetupOptions(query)).state).toBe("server-error");
     vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new TypeError("offline"))));
@@ -187,10 +187,10 @@ describe("setup client", () => {
   });
 
   it("POST is same-origin with the CSRF header; 409 is stale-options, 400 is refused with its field path", async () => {
-    const fetchMock = vi.fn(async () => problem(409, "RESEARCH_PREFLIGHT_STALE"));
+    const fetchMock = vi.fn(async () => problem(409, "RESEARCH_SETUP_OPTIONS_STALE"));
     vi.stubGlobal("fetch", fetchMock);
     const request = { alpha_id: "a", alpha_version_id: "av", dataset_id: "d", symbol: "S", timeframe: "1h", profile_id: "p", options_revision: "r" };
-    expect(await postWindowSuggestion(request)).toEqual({ state: "stale-options", code: "RESEARCH_PREFLIGHT_STALE", requestId: "req_1" });
+    expect(await postWindowSuggestion(request)).toEqual({ state: "stale-options", code: "RESEARCH_SETUP_OPTIONS_STALE", requestId: "req_1" });
     const init = (fetchMock.mock.calls[0] as unknown[])[1] as RequestInit;
     expect(init.method).toBe("POST");
     expect(init.credentials).toBe("same-origin");
@@ -198,6 +198,17 @@ describe("setup client", () => {
     expect(Object.keys(init.headers as object)).toContain("x-portal-csrf");
     vi.stubGlobal("fetch", vi.fn(async () => problem(400, "RESEARCH_PREFLIGHT_INVALID", { details: { field_paths: [["walk_forward", "train_window"]] } })));
     expect(await postWindowSuggestion(request)).toMatchObject({ state: "refused", fieldPath: ["walk_forward", "train_window"] });
+  });
+
+  it("only RESEARCH_SETUP_OPTIONS_STALE is stale: a profile 409 and a preference 400 are refusals with their field path and reason", async () => {
+    const request = { alpha_id: "a", alpha_version_id: "av", dataset_id: "d", symbol: "S", timeframe: "1h", profile_id: "p", options_revision: "r" };
+    vi.stubGlobal("fetch", vi.fn(async () => problem(409, "RESEARCH_SETUP_PROFILE_REFUSED", { details: { field_path: ["profile_id"], reason_code: "ALPHA_EXECUTOR_MISMATCH" } })));
+    expect(await postWindowSuggestion(request)).toEqual({ state: "refused", status: 409, code: "RESEARCH_SETUP_PROFILE_REFUSED", fieldPath: ["profile_id"], reasonCode: "ALPHA_EXECUTOR_MISMATCH", requestId: "req_1" });
+    vi.stubGlobal("fetch", vi.fn(async () => problem(400, "RESEARCH_SETUP_PREFERENCE_REFUSED", { details: { field_path: ["window_mode"], reason_code: "WINDOW_MODE_NOT_ADMITTED" } })));
+    expect(await postWindowSuggestion(request)).toMatchObject({ state: "refused", status: 400, fieldPath: ["window_mode"], reasonCode: "WINDOW_MODE_NOT_ADMITTED" });
+    /* A 409 with some other code, or none, is not stale either. */
+    vi.stubGlobal("fetch", vi.fn(async () => problem(409, "RESEARCH_PREFLIGHT_STALE")));
+    expect(await postWindowSuggestion(request)).toMatchObject({ state: "refused", status: 409, code: "RESEARCH_PREFLIGHT_STALE" });
   });
 
   it("POST: a missing route is absent", async () => {
@@ -303,19 +314,28 @@ describe("planned folds (declaration estimate)", () => {
     outer_oos: { start_utc_ms: t0, end_exclusive_utc_ms: t0 + 3_600_000 * 12, bars: 12 },
   });
 
-  it("items present: the engine's geometry, per fold, as served", () => {
+  it("the canonical available fixture carries the engine's geometry per fold, ordered and as served", () => {
+    const served = (AVAILABLE.metadata.planned_folds as { items: { ordinal: number; train: { start_utc_ms: number; end_exclusive_utc_ms: number; bars: number }; outer_oos: { start_utc_ms: number; end_exclusive_utc_ms: number; bars: number } }[] }).items;
+    expect(served.length).toBeGreaterThanOrEqual(2);
+    const estimate = readDeclarationEstimate(AVAILABLE)!;
+    expect(estimate.plannedFoldItems).toEqual(
+      served.map((fold) => ({
+        ordinal: fold.ordinal,
+        train: { startUtcMs: fold.train.start_utc_ms, endExclusiveUtcMs: fold.train.end_exclusive_utc_ms, bars: fold.train.bars },
+        outerOos: { startUtcMs: fold.outer_oos.start_utc_ms, endExclusiveUtcMs: fold.outer_oos.end_exclusive_utc_ms, bars: fold.outer_oos.bars },
+      })),
+    );
+    for (const fold of estimate.plannedFoldItems!) expect(fold.outerOos.startUtcMs).toBeGreaterThanOrEqual(fold.train.endExclusiveUtcMs);
+    expect(estimate.plannedFolds?.count).toBe(served.length);
+  });
+
+  it("a hand-built item list reads the same way (the fixture is the contract, this is the parser)", () => {
     const body = structuredClone(AVAILABLE);
     body.metadata.planned_folds.items = [item(1, 86_400_000), item(2, 172_800_000)];
-    const estimate = readDeclarationEstimate(body)!;
-    expect(estimate.plannedFoldItems).toEqual([
-      { ordinal: 1, train: { startUtcMs: 0, endExclusiveUtcMs: 86_400_000, bars: 24 }, outerOos: { startUtcMs: 86_400_000, endExclusiveUtcMs: 86_400_000 + 43_200_000, bars: 12 } },
-      { ordinal: 2, train: { startUtcMs: 0, endExclusiveUtcMs: 172_800_000, bars: 24 }, outerOos: { startUtcMs: 172_800_000, endExclusiveUtcMs: 172_800_000 + 43_200_000, bars: 12 } },
-    ]);
-    expect(estimate.plannedFolds?.count).toBe(2);
+    expect(readDeclarationEstimate(body)!.plannedFoldItems).toHaveLength(2);
   });
 
   it("items missing stay null: never built from frequency or count", () => {
-    expect(readDeclarationEstimate(AVAILABLE)!.plannedFoldItems).toBeNull();
     expect(readDeclarationEstimate(PARTIAL)!.plannedFoldItems).toBeNull();
     expect(readPlannedFolds({ availability: "AVAILABLE", count: 5, items: [] })).toBeNull();
     expect(readPlannedFolds(undefined)).toBeNull();
@@ -348,8 +368,35 @@ describe("unopenedCombination — a combination no enabled profile opens says so
 
   it("names the combination when no profile is enabled for it, with the server's reason of a disabled twin", () => {
     const message = unopenedCombination(draft({ optimizationSchedule: "per_fold_decay" }), options([WFO]));
-    expect(message).toBe("No enabled profile runs Advanced × mode_1_decay × per_fold_decay for this Alpha.");
+    expect(message).toBe("No enabled profile runs Advanced × mode_1_decay × per_fold_decay for this Alpha · PROFILE_NOT_OPENED.");
     const disabled: SetupProfile = { ...WFO, state: "DISABLED", reason_code: "ALPHA_EXECUTOR_MISMATCH" };
     expect(unopenedCombination(draft({}), options([disabled]))).toBe("No enabled profile runs Advanced × mode_1_decay × global for this Alpha · ALPHA_EXECUTOR_MISMATCH.");
+  });
+});
+
+describe("engine_options — the catalogue disclosure of what is not opened (never an authorization)", () => {
+  const pairs = FIXED_OPTIONS.engine_options!.optimization_pairs;
+  const closed = pairs.find((entry) => entry.state === "DISABLED")!;
+  const open = pairs.find((entry) => entry.state === "ENABLED");
+
+  it("a listed disabled pair says PROFILE_NOT_OPENED; an enabled one is enabled; an unlisted one is unknown", () => {
+    expect(engineOptionPair(FIXED_OPTIONS, closed.optimization_mode, closed.optimization_schedule)).toEqual({ enabled: false, reasonCode: "PROFILE_NOT_OPENED" });
+    if (open) expect(engineOptionPair(FIXED_OPTIONS, open.optimization_mode, open.optimization_schedule)).toEqual({ enabled: true, reasonCode: null });
+    expect(engineOptionPair(FIXED_OPTIONS, "mode_nope", "global")).toBeNull();
+    expect(engineOptionPair(null, closed.optimization_mode, closed.optimization_schedule)).toBeNull();
+  });
+
+  it("a mode is closed only when it has pairs and every one is disabled", () => {
+    const onlyClosed = pairs.filter((entry) => entry.state === "DISABLED").map((entry) => entry.optimization_mode);
+    const everyClosedMode = onlyClosed.find((mode) => pairs.filter((entry) => entry.optimization_mode === mode).every((entry) => entry.state === "DISABLED"));
+    expect(everyClosedMode).toBeDefined();
+    expect(engineModeClosed(FIXED_OPTIONS, everyClosedMode!)).toEqual({ reasonCode: "PROFILE_NOT_OPENED" });
+    if (open) expect(engineModeClosed(FIXED_OPTIONS, open.optimization_mode)).toBeNull();
+    expect(engineModeClosed(FIXED_OPTIONS, "mode_nope")).toBeNull();
+  });
+
+  it("with no profile for the pair, the unopened message carries the catalogue's reason", () => {
+    const message = unopenedCombination({ protocol: "advanced", executionRoute: "signal_notional", optimizationMode: closed.optimization_mode, optimizationSchedule: closed.optimization_schedule }, FIXED_OPTIONS);
+    expect(message).toBe(`No enabled profile runs Advanced × ${closed.optimization_mode} × ${closed.optimization_schedule} for this Alpha · PROFILE_NOT_OPENED.`);
   });
 });

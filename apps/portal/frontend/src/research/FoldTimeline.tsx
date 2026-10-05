@@ -163,9 +163,9 @@ export function FoldTimeline({ folds, analysis, firstOosUtcMs = null, windowMode
         {c.nodes}
       </div>
       <p className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-fold-summary>
-        {count} · {windowMode}
-        {all.length > MAX_DRAWN_FOLDS ? ` · first ${MAX_DRAWN_FOLDS} drawn, all in the table` : ""}
-        {tick !== null ? " · tick = first OOS" : ""}
+        {/* The count is the rail's "≈ N folds" chip (with its basis) and the mode is the line above: said once; here only for a reader of the region. */}
+        <span className="sr-only">{count} · {windowMode}</span>
+        {[all.length > MAX_DRAWN_FOLDS ? `first ${MAX_DRAWN_FOLDS} drawn, all in the table` : null, tick !== null ? "tick = first OOS" : null].filter(Boolean).join(" · ")}
       </p>
       <div className="sr-only">
         <table data-chart-table={`fold-timeline-${tableId}`}>

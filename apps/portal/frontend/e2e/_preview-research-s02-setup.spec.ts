@@ -131,21 +131,17 @@ for (const width of WIDTHS) {
       expect(errors).toEqual([]);
     });
 
-    test("a mode x schedule no enabled profile opens: said on screen with the reason; preflight and Run stay off", async ({ page }) => {
+    test("a mode x schedule no profile opens is shown closed with the server's reason, before any choice", async ({ page }) => {
       await signIn(page);
       const { counts, errors } = await watch(page);
       await toWindows(page, DELTA);
       await page.getByRole("button", { name: /Advanced Walk-Forward/ }).click();
       await page.locator('select[aria-label="Optimization mode"]').selectOption("mode_1_decay");
-      await page.locator('select[aria-label="Optimization schedule"]').selectOption("per_fold_decay");
-      await page.locator('[data-step-pill="optimization"]').click();
-      await page.locator('input[aria-label="Optuna trials"]').fill("12");
-      await page.locator('[data-step-pill="review"]').click();
-      await expect(page.locator("main")).toContainText("No enabled profile runs Advanced × mode_1_decay × per_fold_decay");
-      const create = page.locator('[data-action="create-run"]');
-      await expect(create).toBeDisabled();
-      /* Like any blocking problem, it keeps the preflight off too: no pointless preflight record for a combination nothing runs. */
-      await expect(page.locator('[data-action="preflight"]')).toBeDisabled();
+      const closed = page.locator('select[aria-label="Optimization schedule"] option[value="per_fold_decay"]');
+      await expect(closed).toHaveJSProperty("disabled", true);
+      await expect(closed).toContainText("not opened");
+      expect(await closed.getAttribute("title")).toBe("PROFILE_NOT_OPENED");
+      await expect(page.locator('select[aria-label="Optimization schedule"] option[value="global"]')).toHaveJSProperty("disabled", false);
       expect(counts.preflights + counts.runCreates, "nothing is written").toBe(0);
       expect(errors).toEqual([]);
     });

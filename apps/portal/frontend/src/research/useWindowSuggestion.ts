@@ -276,7 +276,7 @@ export type SuggestionState =
   /** A 409: the options revision this was bound to is obsolete. Read the options again. */
   | { kind: "stale"; revision: string }
   | { kind: "blocked"; reason: Extract<SuggestionRequestResult, { state: "blocked" }>["reason"] }
-  | { kind: "refused"; code: string; fieldPath: readonly string[] | null; requestId: string | null }
+  | { kind: "refused"; code: string; fieldPath: readonly string[] | null; reasonCode: string | null; requestId: string | null }
   | { kind: "error"; failure: "client-error" | "server-error" | "network" | "absent" | "mismatch"; status: number | null; code: string | null; requestId: string | null };
 
 export interface WindowSuggestionInput {
@@ -379,7 +379,7 @@ export function useWindowSuggestion(input: WindowSuggestionInput): WindowSuggest
             latest.current.onStale?.(revision);
             break;
           case "refused":
-            state = { kind: "refused", code: result.code, fieldPath: result.fieldPath, requestId: result.requestId };
+            state = { kind: "refused", code: result.code, fieldPath: result.fieldPath, reasonCode: result.reasonCode ?? null, requestId: result.requestId };
             break;
           case "absent":
             state = { kind: "error", failure: "absent", status: null, code: null, requestId: null };

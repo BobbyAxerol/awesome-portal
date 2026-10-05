@@ -256,7 +256,20 @@ export function unopenedCombination(
       && profile.optimizationSchedule === draft.optimizationSchedule,
   );
   if (candidates.some((profile) => profile.enabled)) return null;
-  const why = candidates.find((profile) => profile.reason !== null)?.reason ?? null;
+  const why = candidates.find((profile) => profile.reason !== null)?.reason ?? engineOptionPair(options, draft.optimizationMode, draft.optimizationSchedule)?.reasonCode ?? null;
   const named = `${draft.protocol === "advanced" ? "Advanced" : "Three Window"} × ${draft.optimizationMode} × ${draft.optimizationSchedule}`;
   return `No enabled profile runs ${named} for this Alpha${why !== null ? ` · ${why}` : ""}.`;
+}
+
+/** The catalogue state of a mode x schedule pair as the setup discloses it, or null when the setup does not list it (or is older). */
+export function engineOptionPair(options: SetupOptions | null, mode: string, schedule: string): { enabled: boolean; reasonCode: string | null } | null {
+  const pair = options?.engine_options?.optimization_pairs.find((entry) => entry.optimization_mode === mode && entry.optimization_schedule === schedule);
+  return pair === undefined ? null : { enabled: pair.state === "ENABLED", reasonCode: pair.reason_code };
+}
+
+/** A mode is offered as closed only when the setup lists pairs for it and every one is DISABLED (a catalogue fact, never an authorization). */
+export function engineModeClosed(options: SetupOptions | null, mode: string): { reasonCode: string | null } | null {
+  const pairs = options?.engine_options?.optimization_pairs.filter((entry) => entry.optimization_mode === mode) ?? [];
+  if (pairs.length === 0 || pairs.some((entry) => entry.state === "ENABLED")) return null;
+  return { reasonCode: pairs[0]!.reason_code };
 }

@@ -45,14 +45,19 @@ export interface SetupRefusalFacts {
   status: number;
   code: string;
   fieldPath: readonly string[] | null;
+  /** The axis reason the server named (`details.reason_code`), when it did. */
+  reasonCode?: string | null;
   requestId: string | null;
 }
+
+/** The only code that says the options snapshot a suggestion was bound to is obsolete (any other 409 is a refusal). */
+export const SETUP_OPTIONS_STALE = "RESEARCH_SETUP_OPTIONS_STALE";
 
 /**
  * What a setup call answered, as states the screen can tell apart:
  *  - `served`        a 200 that is the expected body;
- *  - `refused`       a 400 with the server's own code, and the requested-spec field it names;
- *  - `stale-options` (POST only) a 409: the options snapshot the request was bound to is obsolete; read the options again;
+ *  - `refused`       a 400 or a 409 other than the stale one, with the server's own code, the field it names and its reason code;
+ *  - `stale-options` (POST only) a 409 `RESEARCH_SETUP_OPTIONS_STALE`: the options snapshot is obsolete; read the options again. Nothing else is stale;
  *  - `absent`        the route is not there (older server), or a 200 that is not this body;
  *  - `client-error`  any other 4xx (401 ends the session; 403/404 are a denial), `server-error` a 5xx, `network` no answer.
  */
@@ -113,6 +118,7 @@ interface FailureBody {
   code: string | null;
   requestId: string | null;
   fieldPath: readonly string[] | null;
+  reasonCode: string | null;
   message: string;
 }
 
@@ -121,16 +127,18 @@ async function failureOf(response: Response): Promise<FailureBody> {
   let message = `${response.status} ${response.statusText}`;
   let requestId: string | null = response.headers.get("x-request-id");
   let fieldPath: readonly string[] | null = null;
+  let reasonCode: string | null = null;
   try {
     const body = (await response.json()) as Partial<SetupProblem>;
     code = body?.error?.code ?? null;
     message = body?.error?.message ?? message;
     requestId = body?.request_id ?? requestId;
     fieldPath = body?.details?.field_path ?? body?.details?.field_paths?.[0] ?? null;
+    reasonCode = (body?.details as { reason_code?: string } | undefined)?.reason_code ?? null;
   } catch {
     /* keep the status line */
   }
-  return { code, requestId, fieldPath, message };
+  return { code, requestId, fieldPath, reasonCode, message };
 }
 
 /** The query string of a setup read; `workspace_id` only when there is one. */
@@ -160,9 +168,9 @@ async function settle<T>(
       absentRoutes.add(route);
       return { state: "absent" };
     }
-    if (staleOn409 && response.status === 409) return { state: "stale-options", code: failure.code, requestId: failure.requestId };
-    if (response.status === 400 && failure.code) {
-      return { state: "refused", status: 400, code: failure.code, fieldPath: failure.fieldPath, requestId: failure.requestId };
+    if (staleOn409 && response.status === 409 && failure.code === SETUP_OPTIONS_STALE) return { state: "stale-options", code: failure.code, requestId: failure.requestId };
+    if ((response.status === 400 || response.status === 409) && failure.code) {
+      return { state: "refused", status: response.status, code: failure.code, fieldPath: failure.fieldPath, reasonCode: failure.reasonCode, requestId: failure.requestId };
     }
     return { state: response.status >= 500 ? "server-error" : "client-error", status: response.status, code: failure.code, requestId: failure.requestId };
   }
@@ -189,7 +197,7 @@ export async function getRunSetupOptions(query: SetupQuery, signal?: AbortSignal
 /**
  * `POST /api/v1/research/runs/window-suggestions` (`researchRunWindowSuggestionPostV1`). Same-origin,
  * session cookie, `x-portal-csrf` from the CSRF cookie. Read-only: it creates no preflight token,
- * job or run authorization. A 409 means `options_revision` is obsolete.
+ * job or run authorization. Only a 409 `RESEARCH_SETUP_OPTIONS_STALE` means `options_revision` is obsolete.
  */
 export async function postWindowSuggestion(request: SuggestionRequest, signal?: AbortSignal): Promise<WindowSuggestionResult> {
   if (absentRoutes.has("window-suggestions")) return { state: "absent" };

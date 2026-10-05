@@ -215,7 +215,7 @@ describe("RG2 — one fold statement per protocol", () => {
   const folds = (count: number | null) => {
     const status = served(Z("2026-07-01T00:00"));
     if (status.kind !== "served") throw new Error("unreachable");
-    return { kind: "served", estimate: { ...status.estimate, plannedFolds: { count, basis: "P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1", minBarsPerFold: null, reasonCode: count === null ? "WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE" : null } } } as EstimateStatus;
+    return { kind: "served", estimate: { ...status.estimate, plannedFoldItems: null, plannedFolds: { count, basis: "P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1", minBarsPerFold: null, reasonCode: count === null ? "WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE" : null } } } as EstimateStatus;
   };
   const withProfiles = { portalAdmission: PROFILES_RAW as never };
 

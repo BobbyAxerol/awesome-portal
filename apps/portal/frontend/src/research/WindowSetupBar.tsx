@@ -87,7 +87,7 @@ export function WindowSetupBar({
         : state.kind === "stale"
           ? { text: "Setup changed on the server · reloading", tone: "warn" }
           : state.kind === "refused"
-            ? { text: `Refused · ${humaniseTokens(state.code)}`, tone: "warn" }
+            ? { text: `Refused · ${humaniseTokens(state.reasonCode ?? state.code)}`, title: state.fieldPath !== null ? `field ${state.fieldPath.join(".")}` : undefined, tone: "warn" }
             : state.kind === "error"
               ? { text: "Suggestion unavailable · try again", tone: "warn" }
               : state.kind === "blocked"

@@ -80,7 +80,7 @@ import { InstantInput as DateTimeInput, datetimeInputValue } from "./InstantInpu
 import { FoldTimeline, foldsFromPlanned } from "./FoldTimeline";
 import { LinkedWindowCalendar } from "./LinkedWindowCalendar";
 import { WindowSetupBar } from "./WindowSetupBar";
-import { setupProfilesOr, type RunSetupState } from "./useRunSetup";
+import { engineModeClosed, engineOptionPair, setupProfilesOr, type RunSetupState } from "./useRunSetup";
 import { edgesOf, windowsFromEdges } from "./useWindowSuggestion";
 import { timeframeBarMs } from "./windowGeometry";
 import type { EstimateStatus } from "./useDeclarationEstimate";
@@ -1758,11 +1758,15 @@ function WindowsStep({
             disabled={modes.length === 0}
           >
             <option value="">{modes.length === 0 ? "Atlas not available" : "choose a mode"}</option>
-            {modes.map((mode) => (
-              <option key={mode.mode_id} value={mode.mode_id} title={mode.mode_id}>
-                {mode.display_name || mode.mode_id}
-              </option>
-            ))}
+            {modes.map((mode) => {
+              /* The setup's catalogue disclosure: a mode with no opened pair for this Alpha is shown closed, with the server's reason. */
+              const closed = engineModeClosed(setup.options, mode.mode_id);
+              return (
+                <option key={mode.mode_id} value={mode.mode_id} title={closed !== null ? `${closed.reasonCode ?? "NOT_OPENED"} · ${mode.mode_id}` : mode.mode_id} disabled={closed !== null} data-mode-closed={closed !== null ? (closed.reasonCode ?? "") : undefined}>
+                  {mode.display_name || mode.mode_id}{closed !== null ? " · not opened" : ""}
+                </option>
+              );
+            })}
           </select>
         </Field>
         <Field label="optimization_schedule">
@@ -1782,18 +1786,20 @@ function WindowsStep({
               const causal = schedule === SCHEDULE_PER_FOLD_CAUSAL ? causalScheduleProfile(profiles, draft) : null;
               const refusingProfile = schedule !== SCHEDULE_PER_FOLD_CAUSAL ? null : causal ?? (profile?.enabled === true ? profile : null);
               const innerRefused = refusingProfile !== null && (!refusingProfile.enabled || refusesInner(refusingProfile));
-              const shown = valid && !innerRefused;
+              const pair = engineOptionPair(setup.options, draft.optimizationMode, schedule);
+              const pairClosed = pair !== null && !pair.enabled;
+              const shown = valid && !innerRefused && !pairClosed;
               const refusalWord = refusingProfile === null ? null : !refusingProfile.enabled ? (refusingProfile.reason ?? "DISABLED") : refusingProfile.innerValidation;
               return (
                 <option
                   key={schedule}
                   value={schedule}
                   disabled={!shown}
-                  title={shown ? (isCausalProfile(causal) ? `profile ${causal?.profileId}` : undefined) : innerRefused ? `${refusalWord} · ${refusingProfile?.profileId}` : (selectedMode?.invalid_schedules?.find((entry) => entry.schedule === schedule)?.reason ?? "Not admitted for this mode in the installed release manifest.")}
+                  title={shown ? (isCausalProfile(causal) ? `profile ${causal?.profileId}` : undefined) : pairClosed ? (pair?.reasonCode ?? "NOT_OPENED") : innerRefused ? `${refusalWord} · ${refusingProfile?.profileId}` : (selectedMode?.invalid_schedules?.find((entry) => entry.schedule === schedule)?.reason ?? "Not admitted for this mode in the installed release manifest.")}
                   data-invalid-schedule={shown ? undefined : schedule}
                   data-causal-profile={shown && isCausalProfile(causal) ? causal?.profileId : undefined}
                 >
-                  {schedule}{shown ? "" : " · not admitted"}
+                  {schedule}{shown ? "" : pairClosed ? " · not opened" : " · not admitted"}
                 </option>
               );
             })}
@@ -2743,7 +2749,7 @@ function WindowTimeline({
           <p className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1" data-estimate-strip>
             <WarmupChip estimate={estimate} />
             {/* One fold statement per protocol: the three-window protocol has no outer folds, so the planner's count would contradict it (RG2). */}
-            {hasNoOuterFolds(fold, draft.protocol) || foldsFromPlanned(estimate?.plannedFoldItems) !== null ? null : <PlannedFolds estimate={estimate} />}
+            {hasNoOuterFolds(fold, draft.protocol) ? null : <PlannedFolds estimate={estimate} />}
             <EstimateStatusLine status={estimateStatus} onRetry={onRetryEstimate} />
           </p>
         ) : null}
