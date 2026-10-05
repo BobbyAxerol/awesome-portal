@@ -32,7 +32,8 @@ async function watch(page: Page): Promise<{ counts: Counts; errors: string[] }> 
   await page.route("**/api/**", (route) => {
     const request = route.request();
     if (request.method() === "GET") return route.continue();
-    return route.fetch({ headers: { ...request.headers(), origin: ORIGIN } }).then((response) => route.fulfill({ response }));
+    /* A stateless POST still in flight when a test ends must not turn teardown into a failure. */
+    return route.fetch({ headers: { ...request.headers(), origin: ORIGIN } }).then((response) => route.fulfill({ response }), () => route.abort().catch(() => undefined));
   });
   page.on("request", (request) => {
     const path = new URL(request.url()).pathname;
@@ -78,6 +79,9 @@ const noHorizontalScroll = (page: Page) => page.evaluate(() => document.document
 for (const width of WIDTHS) {
   test.describe(`S02 setup @${width}`, () => {
     test.use({ viewport: { width, height: 900 } });
+    test.afterEach(async ({ page }) => {
+      await page.unrouteAll({ behavior: "ignoreErrors" });
+    });
 
     test("three window: the first suggestion fills A/B/C/D from the indexed bars, once; B moves atomically; Reset empties", async ({ page }) => {
       await signIn(page);
