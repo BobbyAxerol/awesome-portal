@@ -27,7 +27,35 @@
       "count": 2,
       "basis": "P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1",
       "min_train_bars": 24,
-      "min_oos_bars": 12
+      "min_oos_bars": 12,
+      "items": [
+        {
+          "ordinal": 1,
+          "train": {
+            "start_utc_ms": 1782864000000,
+            "end_exclusive_utc_ms": 1782950400000,
+            "bars": 24
+          },
+          "outer_oos": {
+            "start_utc_ms": 1782950400000,
+            "end_exclusive_utc_ms": 1782993600000,
+            "bars": 12
+          }
+        },
+        {
+          "ordinal": 2,
+          "train": {
+            "start_utc_ms": 1782864000000,
+            "end_exclusive_utc_ms": 1782993600000,
+            "bars": 36
+          },
+          "outer_oos": {
+            "start_utc_ms": 1782993600000,
+            "end_exclusive_utc_ms": 1783036800000,
+            "bars": 12
+          }
+        }
+      ]
     },
     "earliest_start_utc_ms": 1782864000000,
     "earliest_start_basis": "CONTIGUOUS_INDEXED_WARMUP_BARS_V1"
@@ -38,7 +66,10 @@
       "state": "PASS",
       "reason_code": null,
       "observed": "2",
-      "required": "P08-compatible indexed fold plan"
+      "required": "P08-compatible indexed fold plan",
+      "field_path": [
+        "walk_forward"
+      ]
     }
   ],
   "ready_for_preflight": true

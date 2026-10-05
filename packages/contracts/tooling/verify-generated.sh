@@ -44,6 +44,8 @@ generate_and_compare openapi/research-alpha-import.openapi.json generated/resear
 generate_and_compare openapi/research-preflight.openapi.json generated/research-preflight.d.ts
 node tooling/generate-research-dataset-index.mjs --check
 generate_and_compare openapi/research-dataset-index.openapi.json generated/research-dataset-index.d.ts
+node tooling/generate-research-run-setup.mjs --check
+generate_and_compare openapi/research-run-setup.openapi.json generated/research-run-setup.d.ts
 generate_and_compare openapi/research-foundation.openapi.json generated/research-foundation.d.ts
 generate_and_compare openapi/research-run-create.openapi.json generated/research-run-create.d.ts
 generate_and_compare openapi/research-progress.openapi.json generated/research-progress.d.ts

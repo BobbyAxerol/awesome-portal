@@ -107,6 +107,7 @@ export interface components {
                 zero_semantics: "ZERO_APPLIES_NO_TEMPORAL_GUARD";
             };
             independent_holdout: boolean;
+            refusals?: components["schemas"]["SetupRefusal"][];
         } & unknown;
         SetupOptions: {
             /** @constant */
@@ -123,6 +124,48 @@ export interface components {
             profiles: components["schemas"]["Profile"][];
             /** @constant */
             preflight_required: true;
+            engine_options?: components["schemas"]["EngineOptions"];
+        };
+        SetupRefusal: {
+            reason_code: string;
+            field_path: string[];
+        };
+        EngineOptions: {
+            /** @constant */
+            scope: "ENGINE_CATALOGUE_NOT_RUN_AUTHORIZATION";
+            execution_routes: ({
+                value: string;
+                /** @enum {unknown} */
+                state: "ENABLED" | "DISABLED";
+                reason_code: string | null;
+                field_path: string[];
+                profile_ids: string[];
+            } & (unknown & unknown))[];
+            optimization_pairs: ({
+                optimization_mode: string;
+                optimization_schedule: string;
+                /** @enum {unknown} */
+                state: "ENABLED" | "DISABLED";
+                reason_code: string | null;
+                field_path: string[];
+                profile_ids: string[];
+            } & (unknown & unknown))[];
+            frequencies: ({
+                value: string;
+                /** @enum {unknown} */
+                state: "ENABLED" | "DISABLED";
+                reason_code: string | null;
+                field_path: string[];
+                profile_ids: string[];
+            } & (unknown & unknown))[];
+            window_modes: ({
+                value: string;
+                /** @enum {unknown} */
+                state: "ENABLED" | "DISABLED";
+                reason_code: string | null;
+                field_path: string[];
+                profile_ids: string[];
+            } & (unknown & unknown))[];
         };
         WindowPatch: {
             /** @constant */
@@ -216,7 +259,7 @@ export interface components {
         Problem: {
             error: {
                 /** @enum {unknown} */
-                code: "SESSION_REQUIRED" | "REQUEST_REJECTED" | "RESEARCH_PREFLIGHT_INVALID" | "RESEARCH_PREFLIGHT_DATA_UNAVAILABLE" | "RESEARCH_PREFLIGHT_REQUIRED_COLUMNS_UNAVAILABLE" | "RESEARCH_PREFLIGHT_FUNDING_UNAVAILABLE" | "RESEARCH_PREFLIGHT_WARMUP_UNAVAILABLE" | "RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED" | "RESEARCH_PREFLIGHT_ROUTE_UNKNOWN" | "RESEARCH_PREFLIGHT_RELEASE_STALE" | "RESEARCH_PREFLIGHT_SCHEDULE_NOT_ADMITTED" | "RESEARCH_PREFLIGHT_TOPOLOGY_INVALID" | "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED" | "RESEARCH_PREFLIGHT_RESOURCE_REFUSED" | "RESEARCH_PREFLIGHT_SNAPSHOT_TOO_LARGE" | "RESEARCH_PREFLIGHT_UNAVAILABLE" | "RESEARCH_PREFLIGHT_REJECTED" | "RESEARCH_PREFLIGHT_NOT_FOUND" | "RESEARCH_PREFLIGHT_EXPIRED" | "RESEARCH_PREFLIGHT_STALE";
+                code: "SESSION_REQUIRED" | "REQUEST_REJECTED" | "RESEARCH_PREFLIGHT_INVALID" | "RESEARCH_PREFLIGHT_DATA_UNAVAILABLE" | "RESEARCH_PREFLIGHT_REQUIRED_COLUMNS_UNAVAILABLE" | "RESEARCH_PREFLIGHT_FUNDING_UNAVAILABLE" | "RESEARCH_PREFLIGHT_WARMUP_UNAVAILABLE" | "RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED" | "RESEARCH_PREFLIGHT_ROUTE_UNKNOWN" | "RESEARCH_PREFLIGHT_RELEASE_STALE" | "RESEARCH_PREFLIGHT_SCHEDULE_NOT_ADMITTED" | "RESEARCH_PREFLIGHT_TOPOLOGY_INVALID" | "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED" | "RESEARCH_PREFLIGHT_RESOURCE_REFUSED" | "RESEARCH_PREFLIGHT_SNAPSHOT_TOO_LARGE" | "RESEARCH_PREFLIGHT_UNAVAILABLE" | "RESEARCH_PREFLIGHT_REJECTED" | "RESEARCH_PREFLIGHT_NOT_FOUND" | "RESEARCH_PREFLIGHT_EXPIRED" | "RESEARCH_PREFLIGHT_STALE" | "RESEARCH_SETUP_OPTIONS_STALE" | "RESEARCH_SETUP_PROFILE_REFUSED" | "RESEARCH_SETUP_PREFERENCE_REFUSED";
                 message: string;
             };
             request_id: string;
@@ -225,6 +268,7 @@ export interface components {
                 gate?: string;
                 field_path?: components["schemas"]["FieldPath"];
                 field_paths?: components["schemas"]["FieldPath"][];
+                reason_code?: string;
             };
         };
     };

@@ -8048,3 +8048,14 @@ rerun; no whole-S02/UI/deployed completion is claimed here.
 **Frontend integration 2026-10-05 (Claude):** linked A/B/C/D calendar, Suggest/Apply/Reset, engine fold timeline, v1-clone guard fix and
 profile-aware prefill are on the lane (`d9dc8697`, `0f4919c5`); real-API acceptance 8/8 at 1280/660, full lane 309 passed + 2 environment/budget items resolved per the notes in the
 [frontend receipt](./research_loop/evidence/P10/S02_FE_INTEGRATION_RECEIPT_2026-10-05.md). `READY_FOR_BOBBY_REVIEW`; not pushed, not `OWNER_ACCEPTED`.
+
+**S02 backend follow-up §36, 2026-10-05 — BACKEND_CONTRACT_TESTED / CLAUDE_CONSUMER_HANDOFF_READY:** Codex supplies precise
+axis refusals/field paths, unopened engine-option disclosure, consistent
+Conditions, a dedicated stale-options conflict and canonical fold geometry.
+Scope: [queue §36](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#36--s02-precise-refusal-and-setup-disclosure-2026-10-05).
+Claude owns consumers/UI; all current profiles and admission fences stay unchanged.
+[Delivery/contract examples/tests and Claude tasks](./research_loop/evidence/P10/S02_PRECISE_REFUSALS_2026-10-05.md).
+Control130/130 affected cases including VN source-bound regression, contracts17/17 and Control
+build pass; generated/digest verification included. No remote push or runtime
+rollout. Claude next: consume precise paths/engine disclosure and classify
+only stale-options409 as reload, then the affected combined preview receipt.

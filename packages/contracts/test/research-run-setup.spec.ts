@@ -19,7 +19,15 @@ describe("S02 named setup contract and safe canonical examples",()=>{
     const fixture:components["schemas"]["SetupOptions"]=read("fixtures/research-run-setup-options.fixed.valid.json");
     const validate=schema("SetupOptions");expect(validate(fixture),JSON.stringify(validate.errors)).toBe(true);
     expect(validate({...fixture,profiles:[{...fixture.profiles[0],state:"DISABLED"}]})).toBe(false);
-    expect(validate({...fixture,profiles:[{...fixture.profiles[0],state:"DISABLED",reason_code:"PROFILE_FLAG_OFF"}]})).toBe(true);
+    expect(validate({...fixture,profiles:[{...fixture.profiles[0],state:"DISABLED",reason_code:"PROFILE_FLAG_OFF",refusals:[{reason_code:"PROFILE_FLAG_OFF",field_path:["profile_id"]}]}]})).toBe(true);
+    expect(fixture.engine_options?.optimization_pairs.find(row=>row.optimization_mode==="mode_2_sbb")).toMatchObject({state:"DISABLED",reason_code:"PROFILE_NOT_OPENED",profile_ids:[]});
+    const invalid=structuredClone(fixture);invalid.engine_options!.execution_routes.find(row=>row.value==="portfolio")!.state="ENABLED";
+    expect(validate(invalid)).toBe(false);
+  });
+  it("publishes a separate typed stale revision, not a generic profile conflict",()=>{
+    const value:components["schemas"]["Problem"]=read("fixtures/research-run-setup-options.stale.valid.json");
+    const validate=schema("Problem");expect(validate(value),JSON.stringify(validate.errors)).toBe(true);
+    expect(value.error.code).toBe("RESEARCH_SETUP_OPTIONS_STALE");expect(value.details?.field_path).toEqual(["options_revision"]);
   });
   it("exports exactly two named operations, requires both explicit bounds and a context revision",()=>{
     expect(Object.keys(doc.paths)).toHaveLength(2);

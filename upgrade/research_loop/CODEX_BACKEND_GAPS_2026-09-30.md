@@ -2119,3 +2119,30 @@ remote push, preview restart, flags, dev/main or Production changes. Claude must
 consume the generated fields, link dates, keep v1 clones free of v2 guard
 requirements, and take actual API/browser receipts after the combined preview
 rebuild. No already-accepted P23 gate is reopened by this addition.
+
+### §36 — S02 precise refusal and setup disclosure, 2026-10-05
+
+Bobby authorizes the five backend requests reported by Claude: axis-specific
+refusals with `field_path`; engine choices without a Portal recipe explicitly
+`PROFILE_NOT_OPENED`; consistent Conditions reasons; a distinct stale
+`options_revision` 409; and a canonical `planned_folds.items` fixture.
+The request was supplied in Bobby's message; the committed queue previously
+ended at §35. **BACKEND_CONTRACT_TESTED / CLAUDE_CONSUMER_HANDOFF_READY**,
+backend lane based on shared `5c0e5006`.
+
+Implementation plan: additive setup/condition DTOs, reuse immutable Alpha and
+current admission predicates, publish only actual Atlas catalogue choices,
+regenerate OpenAPI/types/fixtures, test axis failures and stale/conflict
+distinction before any suggestion I/O. One grouped normal commit gate and local
+landing. No new profiles, flags, create/admission widening, UI changes, HMD
+scan, preview/Production rollout, remote push or repeated P23 acceptance.
+
+Delivered all five contract requests; [receipt and exact Claude next steps](./evidence/P10/S02_PRECISE_REFUSALS_2026-10-05.md).
+Setup profiles preserve independent typed refusals; actual engine catalogue
+choices without recipes are `PROFILE_NOT_OPENED`. Conditions preserve exact
+axis paths/reasons, including the shared imported/Alpha seed predicate.
+Stale revision409 is `RESEARCH_SETUP_OPTIONS_STALE`, never generic profile409.
+Canonical positive/partial geometry, generated types, verifier and296-file
+digest updated. Focused Control130/130 including VN symbol-fence regression, contracts17/17
+and TypeScript build pass. Consumer integration/runtime acceptance remain
+explicitly separate; no profiles or admission were opened.

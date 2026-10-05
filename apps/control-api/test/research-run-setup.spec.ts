@@ -11,6 +11,10 @@ import {w1Admin,p04Requested} from "./research-w1-wfo.fixture";
 import {sha256} from "../src/auth/argon";
 import {declarationConditions} from "../src/research/declaration-conditions";
 import {ResearchDatasetIndexClient} from "../src/research/dataset-index.client";
+import {HttpErrorFilter} from "../src/http-error.filter";
+import {ResearchRunSetupError} from "../src/research/run-setup.error";
+import {declaredOptimizationRefusal} from "../src/research/preflight.service";
+import {ResearchRunAdmissionService} from "../src/research/run-admission.service";
 const root=process.env.PORTAL_CONTRACTS_DIR??resolve(__dirname,"../../../packages/contracts");
 const read=(name:string)=>JSON.parse(readFileSync(resolve(root,`fixtures/${name}`),"utf8"));
 const config={FEATURE_RESEARCH_RUN_PRODUCER:"true",FEATURE_RESEARCH_WFO_PROFILE:"true",FEATURE_RESEARCH_PREVIEW_LONG_WFO:"true",
@@ -44,6 +48,43 @@ describe("S02 Alpha-bound setup without admission widening",()=>{
     catalog.datasets.find((d:any)=>d.dataset_id===context.dataset_id).symbols.items.find((s:any)=>s.symbol===context.symbol).coverage_by_timeframe=[];
     expect(runSetupOptions(w1Admin,config,version,context,admission,catalog,guards).profiles[0].reason_code).toBe("SYMBOL_TIMEFRAME_COVERAGE_NOT_PUBLISHED");
   });
+  it("discloses unopened engine axes without adding profiles or enabling workloads",()=>{
+    const engine=read("research-foundation.atlas-current.valid.json").atlas;
+    const r=runSetupOptions(w1Admin,config,version,context,admission,read("research-dataset-catalog.v2.healthy.valid.json"),guards,engine);
+    expect(r.profiles).toEqual(build().profiles);
+    expect(r.engine_options?.execution_routes.find(row=>row.value==="portfolio")).toMatchObject({state:"DISABLED",reason_code:"PROFILE_NOT_OPENED",field_path:["execution_route"],profile_ids:[]});
+    expect(r.engine_options?.optimization_pairs.find(row=>row.optimization_mode==="mode_2_sbb")).toMatchObject({state:"DISABLED",reason_code:"PROFILE_NOT_OPENED",field_path:["optimization_mode"]});
+    expect(r.engine_options?.optimization_pairs.find(row=>row.optimization_mode==="mode_1_decay"&&row.optimization_schedule==="per_fold_decay")).toMatchObject({reason_code:"PROFILE_NOT_OPENED",field_path:["optimization_schedule"]});
+    expect(r.engine_options?.frequencies.find(row=>row.value==="yearly")).toMatchObject({reason_code:"PROFILE_NOT_OPENED",field_path:["walk_forward","frequency"]});
+    expect(r.engine_options?.optimization_pairs.some(row=>row.optimization_mode==="mode_2_sbb"&&row.optimization_schedule!=="global")).toBe(false);
+    expect(r.source_revision).not.toEqual(build().source_revision);
+    const invalid=structuredClone(r);invalid.engine_options!.execution_routes.find(row=>row.value==="portfolio")!.state="ENABLED";
+    expect(RunSetupOptionsSchema.safeParse(invalid).success).toBe(false);
+    const blocked=runSetupOptions({...w1Admin,role:"USER"},config,version,context,admission,read("research-dataset-catalog.v2.healthy.valid.json"),guards,engine);
+    expect(blocked.engine_options?.execution_routes.find(row=>row.value==="signal_notional"))
+      .toMatchObject({state:"DISABLED",reason_code:"RESEARCH_RUN_CREATE_FORBIDDEN",field_path:["alpha_binding"]});
+  });
+  it("keeps all independent context refusal paths instead of one generic reason",()=>{
+    const r=build(version,{...context,timeframe:"15m"},{...w1Admin,role:"USER"});
+    expect(r.profiles[0].refusals).toEqual(expect.arrayContaining([
+      expect.objectContaining({field_path:["alpha_binding"]}),
+      {reason_code:"DATASET_TIMEFRAME_NOT_AVAILABLE",field_path:["data","timeframe"]},
+      {reason_code:"ALPHA_TIMEFRAME_NOT_DECLARED",field_path:["data","timeframe"]},
+      {reason_code:"PROFILE_TIMEFRAME_NOT_ADMITTED",field_path:["data","timeframe"]},
+    ]));
+    expect(r.profiles[0].reason_code).toBe(r.profiles[0].refusals![0].reason_code);
+  });
+  it("uses the same declaration/seed/pin predicate as actual admission, with typed paths",()=>{
+    const v={...version,declaredContract:{...P04_DELTA_DECLARED_CONTRACT,schema_version:"research.alpha-source.v1",determinism:{seed_required:true}}};
+    const admissionService=new ResearchRunAdmissionService({} as never,config);
+    const missing=p04Requested();
+    expect(declaredOptimizationRefusal(v,missing)).toMatchObject({reason_code:"ALPHA_RANDOM_SEED_REQUIRED",field_path:["random_seed"]});
+    expect(admissionService.importedConfigurationRefusal(missing,v.declaredContract,v.entrypoint)).toEqual({reason_code:"ALPHA_RANDOM_SEED_REQUIRED",field_path:["random_seed"]});
+    const unknown=p04Requested({random_seed:42,parameter_space_overrides:[{name:"unknown",kind:"pin",value:1}]});
+    expect(declaredOptimizationRefusal(v,unknown)).toMatchObject({reason_code:"ALPHA_PARAMETER_NOT_DECLARED",field_path:["parameter_space_overrides","0","name"]});
+    expect(admissionService.importedConfigurationRefusal({...missing,random_seed:42,protocol:"advanced",windows:null} as never,v.declaredContract,v.entrypoint))
+      .toEqual({reason_code:"PROFILE_PROTOCOL_NOT_ADMITTED",field_path:["protocol"]});
+  });
   it("gives imported DRAFT its own pins-only recipe, not Delta WFO",()=>{
     const declaration={...P04_DELTA_DECLARED_CONTRACT,schema_version:"research.alpha-source.v1",determinism:{seed_required:true}};
     const v={...version,lifecycleState:"DRAFT",declaredContract:declaration,sourceDigest:"b".repeat(64),
@@ -72,10 +113,25 @@ describe("S02 Alpha-bound setup without admission widening",()=>{
     await expect(controller.suggest({...req as any,headers:{}} as never,body,reply as never)).rejects.toMatchObject({status:403});
     const allowed=new ResearchRunSetupController({loadRunAdapterEligibility:load} as never,{isMember:async()=>true} as never,
       {atlas:async()=>atlas} as never,{catalog,suggest} as never,config);
-    await expect(allowed.suggest(req,body,reply as never)).rejects.toMatchObject({status:409});expect(suggest).not.toHaveBeenCalled();
+    await expect(allowed.suggest(req,body,reply as never)).rejects.toMatchObject({status:409,code:"RESEARCH_SETUP_OPTIONS_STALE",details:{field_path:["options_revision"]}});expect(suggest).not.toHaveBeenCalled();
     const opts=await allowed.options(req,context,reply as never);
-    await expect(allowed.suggest(req,{...body,options_revision:opts.source_revision,frequency:"monthly"},reply as never)).rejects.toMatchObject({status:400});
+    for(const patch of [{start_utc_ms:1},{start_utc_ms:3,end_exclusive_utc_ms:2}]) {
+      await expect(allowed.suggest(req,{...body,options_revision:opts.source_revision,...patch},reply as never))
+        .rejects.toMatchObject({status:400,details:{field_path:["end_exclusive_utc_ms"]}});
+    }
+    await expect(allowed.suggest(req,{...body,options_revision:opts.source_revision,frequency:"monthly"},reply as never)).rejects.toMatchObject({status:400,code:"RESEARCH_SETUP_PREFERENCE_REFUSED",details:{field_path:["frequency"]}});
+    await expect(allowed.suggest(req,{...body,profile_id:"unknown",options_revision:opts.source_revision},reply as never)).rejects.toMatchObject({status:409,code:"RESEARCH_SETUP_PROFILE_REFUSED",details:{reason_code:"PROFILE_NOT_FOUND",field_path:["profile_id"]}});
+    for(const [field,value] of [["frequency","monthly"],["window_mode","rolling"],["train_window","60D"]]) {
+      await expect(allowed.suggest(req,{...body,profile_id:admission.profiles[1].profile_id,options_revision:opts.source_revision,[field as string]:value},reply as never))
+        .rejects.toMatchObject({status:400,code:"RESEARCH_SETUP_PREFERENCE_REFUSED",details:{field_path:[field]}});
+    }
     expect(suggest).not.toHaveBeenCalled();
+  });
+  it("serializes the distinct stale conflict with request identity, without leaking state",()=>{
+    const send=vi.fn(),status=vi.fn(()=>({send}));
+    new HttpErrorFilter().catch(new ResearchRunSetupError("RESEARCH_SETUP_OPTIONS_STALE","Run setup changed. Reload setup options before applying a suggestion.",409,
+      {gate:"setup_revision",field_path:["options_revision"]}),{switchToHttp:()=>({getResponse:()=>({status}),getRequest:()=>({headers:{"x-request-id":"s02-stale-fixture"}})})} as never);
+    expect(status).toHaveBeenCalledWith(409);expect(send).toHaveBeenCalledWith(read("research-run-setup-options.stale.valid.json"));
   });
   it("validates shared A/B/C/D and typed absence, refusing extra authorization",()=>{
     const r=read("research-window-suggestion.three-window.valid.json");expect(WindowSuggestionSchema.safeParse(r).success).toBe(true);

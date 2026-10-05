@@ -668,6 +668,14 @@
           },
           "independent_holdout": {
             "type": "boolean"
+          },
+          "refusals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SetupRefusal"
+            },
+            "maxItems": 8,
+            "minItems": 0
           }
         },
         "allOf": [
@@ -683,6 +691,9 @@
               "properties": {
                 "reason_code": {
                   "type": "null"
+                },
+                "refusals": {
+                  "maxItems": 0
                 }
               }
             },
@@ -691,6 +702,9 @@
                 "reason_code": {
                   "type": "string",
                   "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                },
+                "refusals": {
+                  "minItems": 1
                 }
               }
             }
@@ -770,6 +784,485 @@
           },
           "preflight_required": {
             "const": true
+          },
+          "engine_options": {
+            "$ref": "#/components/schemas/EngineOptions"
+          }
+        }
+      },
+      "SetupRefusal": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reason_code",
+          "field_path"
+        ],
+        "properties": {
+          "reason_code": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+          },
+          "field_path": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$|^[0-9]+$"
+            }
+          }
+        }
+      },
+      "EngineOptions": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "scope",
+          "execution_routes",
+          "optimization_pairs",
+          "frequencies",
+          "window_modes"
+        ],
+        "properties": {
+          "scope": {
+            "const": "ENGINE_CATALOGUE_NOT_RUN_AUTHORIZATION"
+          },
+          "execution_routes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "value",
+                "state",
+                "reason_code",
+                "field_path",
+                "profile_ids"
+              ],
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+                },
+                "state": {
+                  "enum": [
+                    "ENABLED",
+                    "DISABLED"
+                  ]
+                },
+                "reason_code": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "field_path": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 8,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*$|^[0-9]+$"
+                  }
+                },
+                "profile_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+                  },
+                  "maxItems": 6,
+                  "minItems": 0
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "state": {
+                        "const": "ENABLED"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "reason_code": {
+                        "type": "null"
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "reason_code": {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "profile_ids": {
+                        "maxItems": 0
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "reason_code": {
+                        "const": "PROFILE_NOT_OPENED"
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "reason_code": {
+                        "not": {
+                          "const": "PROFILE_NOT_OPENED"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "maxItems": 32,
+            "minItems": 0
+          },
+          "optimization_pairs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "optimization_mode",
+                "optimization_schedule",
+                "state",
+                "reason_code",
+                "field_path",
+                "profile_ids"
+              ],
+              "properties": {
+                "optimization_mode": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+                },
+                "optimization_schedule": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+                },
+                "state": {
+                  "enum": [
+                    "ENABLED",
+                    "DISABLED"
+                  ]
+                },
+                "reason_code": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "field_path": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 8,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*$|^[0-9]+$"
+                  }
+                },
+                "profile_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+                  },
+                  "maxItems": 6,
+                  "minItems": 0
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "state": {
+                        "const": "ENABLED"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "reason_code": {
+                        "type": "null"
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "reason_code": {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "profile_ids": {
+                        "maxItems": 0
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "reason_code": {
+                        "const": "PROFILE_NOT_OPENED"
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "reason_code": {
+                        "not": {
+                          "const": "PROFILE_NOT_OPENED"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "maxItems": 24,
+            "minItems": 0
+          },
+          "frequencies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "value",
+                "state",
+                "reason_code",
+                "field_path",
+                "profile_ids"
+              ],
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+                },
+                "state": {
+                  "enum": [
+                    "ENABLED",
+                    "DISABLED"
+                  ]
+                },
+                "reason_code": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "field_path": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 8,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*$|^[0-9]+$"
+                  }
+                },
+                "profile_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+                  },
+                  "maxItems": 6,
+                  "minItems": 0
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "state": {
+                        "const": "ENABLED"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "reason_code": {
+                        "type": "null"
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "reason_code": {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "profile_ids": {
+                        "maxItems": 0
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "reason_code": {
+                        "const": "PROFILE_NOT_OPENED"
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "reason_code": {
+                        "not": {
+                          "const": "PROFILE_NOT_OPENED"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "maxItems": 8,
+            "minItems": 0
+          },
+          "window_modes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "value",
+                "state",
+                "reason_code",
+                "field_path",
+                "profile_ids"
+              ],
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+                },
+                "state": {
+                  "enum": [
+                    "ENABLED",
+                    "DISABLED"
+                  ]
+                },
+                "reason_code": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "field_path": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 8,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*$|^[0-9]+$"
+                  }
+                },
+                "profile_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+                  },
+                  "maxItems": 6,
+                  "minItems": 0
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "state": {
+                        "const": "ENABLED"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "reason_code": {
+                        "type": "null"
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "reason_code": {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "profile_ids": {
+                        "maxItems": 0
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "reason_code": {
+                        "const": "PROFILE_NOT_OPENED"
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "reason_code": {
+                        "not": {
+                          "const": "PROFILE_NOT_OPENED"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "maxItems": 4,
+            "minItems": 0
           }
         }
       },
@@ -1272,7 +1765,10 @@
                   "RESEARCH_PREFLIGHT_REJECTED",
                   "RESEARCH_PREFLIGHT_NOT_FOUND",
                   "RESEARCH_PREFLIGHT_EXPIRED",
-                  "RESEARCH_PREFLIGHT_STALE"
+                  "RESEARCH_PREFLIGHT_STALE",
+                  "RESEARCH_SETUP_OPTIONS_STALE",
+                  "RESEARCH_SETUP_PROFILE_REFUSED",
+                  "RESEARCH_SETUP_PREFERENCE_REFUSED"
                 ]
               },
               "message": {
@@ -1304,6 +1800,10 @@
                 "items": {
                   "$ref": "#/components/schemas/FieldPath"
                 }
+              },
+              "reason_code": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
               }
             }
           }

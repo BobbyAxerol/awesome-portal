@@ -80,6 +80,7 @@ declarationMetadata.properties.planned_folds.properties.items = {type:"array",ma
   items:obj({ordinal:{type:"integer",minimum:1,maximum:128},train:foldSpan,outer_oos:foldSpan})};
 const condition = obj({key:{type:"string",pattern:"^[a-z][a-z0-9_.]{0,63}$"},state:{enum:["PASS","FAIL","NOT_PUBLISHED"]},reason_code:nullable(reason),
   observed:nullable({type:"string",maxLength:200}),required:{type:"string",maxLength:200}});
+condition.properties.field_path={type:"array",minItems:1,maxItems:8,items:{type:"string",pattern:"^[A-Za-z_][A-Za-z0-9_]*$|^[0-9]+$"}};
 const estimate = obj({schema_version:{const:"research.declaration-estimate.v1"},metadata:ref("DeclarationMetadata"),profile_id:nullable(id),
   conditions:{type:"array",items:ref("DeclarationCondition"),minItems:1,maxItems:32},ready_for_preflight:{type:"boolean"}});
 const parameter = (name, schema, required = false, location = "query") => ({ name, in: location, required, schema });
@@ -153,13 +154,16 @@ const estimateFixture = {schema_version:"research.declaration-estimate.v1",profi
     scope:"INDEX_ESTIMATE_NOT_PREFLIGHT_OR_RUN_AUTHORIZATION",windows:[{window:"SPAN",start_utc_ms:start,end_exclusive_utc_ms:end,
       availability:"AVAILABLE",reason_code:null,bars:48,first_bar_utc_ms:start,last_bar_utc_ms:end-3600000,
       warmup_bars_required:0,warmup_bars_available_before_start:0}],
-    planned_folds:{availability:"AVAILABLE",reason_code:null,count:2,basis:"P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1",min_train_bars:24,min_oos_bars:12},
+    planned_folds:{availability:"AVAILABLE",reason_code:null,count:2,basis:"P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1",min_train_bars:24,min_oos_bars:12,
+      items:[{ordinal:1,train:{start_utc_ms:start,end_exclusive_utc_ms:start+24*3600000,bars:24},outer_oos:{start_utc_ms:start+24*3600000,end_exclusive_utc_ms:start+36*3600000,bars:12}},
+        {ordinal:2,train:{start_utc_ms:start,end_exclusive_utc_ms:start+36*3600000,bars:36},outer_oos:{start_utc_ms:start+36*3600000,end_exclusive_utc_ms:end,bars:12}}]},
     earliest_start_utc_ms:start,earliest_start_basis:"CONTIGUOUS_INDEXED_WARMUP_BARS_V1"},
-  conditions:[{key:"fold_plan",state:"PASS",reason_code:null,observed:"2",required:"P08-compatible indexed fold plan"}],ready_for_preflight:true};
+  conditions:[{key:"fold_plan",state:"PASS",reason_code:null,observed:"2",required:"P08-compatible indexed fold plan",field_path:["walk_forward"]}],ready_for_preflight:true};
 for (const name of ["available","partial"]) {
   const value=structuredClone(estimateFixture);
   if(name==="partial") {
     Object.assign(value.metadata.planned_folds,{availability:"NOT_PUBLISHED",reason_code:"WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE",count:null,min_train_bars:null,min_oos_bars:null});
+    delete value.metadata.planned_folds.items;
     Object.assign(value.conditions[0],{state:"NOT_PUBLISHED",reason_code:"WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE",observed:null});
     value.ready_for_preflight=false;
   }

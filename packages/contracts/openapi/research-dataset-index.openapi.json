@@ -4374,6 +4374,15 @@
           "required": {
             "type": "string",
             "maxLength": 200
+          },
+          "field_path": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$|^[0-9]+$"
+            }
           }
         }
       },

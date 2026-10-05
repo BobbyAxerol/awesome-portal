@@ -24,6 +24,7 @@ TRACKED = (
     "generated/research-run-setup.d.ts",
     "tooling/generate-research-run-setup.mjs",
     "fixtures/research-run-setup-options.fixed.valid.json",
+    "fixtures/research-run-setup-options.stale.valid.json",
     "fixtures/research-window-suggestion.three-window.valid.json",
     "fixtures/research-window-suggestion.advanced.valid.json",
     "fixtures/research-window-suggestion.unavailable.valid.json",

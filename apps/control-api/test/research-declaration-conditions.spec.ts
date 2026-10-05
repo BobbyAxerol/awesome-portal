@@ -26,13 +26,32 @@ describe("DR-09 source-bound advisory conditions",()=>{
    if(which==="v2") s.schema_version="research.requested-spec.v2";
    if(which==="frequency") s.walk_forward!.frequency="monthly";
    if(which==="range") m.windows[0].end_exclusive_utc_ms=m.windows[0].start_utc_ms+93*86400000;
-   if(which==="folds") m.planned_folds.count=17;
+   if(which==="folds") {m.planned_folds.count=17;delete m.planned_folds.items;}
    if(which==="disabled") p[1].state="DISABLED";
-   if(which==="unknown") Object.assign(m.planned_folds,{availability:"NOT_PUBLISHED",reason_code:"HMD_SYMBOL_INTERVAL_NOT_INDEXED",count:null,min_train_bars:null,min_oos_bars:null});
+   if(which==="unknown") {Object.assign(m.planned_folds,{availability:"NOT_PUBLISHED",reason_code:"HMD_SYMBOL_INTERVAL_NOT_INDEXED",count:null,min_train_bars:null,min_oos_bars:null});delete m.planned_folds.items;}
    if(which==="warmup") Object.assign(m.windows[0],{warmup_bars_required:300,warmup_bars_available_before_start:299});
    const r=declarationConditions(s,m,p,["1h"]);
    expect(r.ready_for_preflight).toBe(false);
    expect(DeclarationEstimateSchema.safeParse(r).success).toBe(true);
+ });
+ it.each([
+   ["optimization_mode","mode_2_sbb","PROFILE_MODE_NOT_ADMITTED"],
+   ["optimization_schedule","per_fold_decay","PROFILE_SCHEDULE_NOT_ADMITTED"],
+   ["execution_route","pct_equity","PROFILE_ROUTE_NOT_ADMITTED"],
+   ["schema_version","research.requested-spec.v2","REQUESTED_SPEC_EXECUTOR_NOT_INSTALLED"],
+ ])("names the refused %s axis consistently in both Conditions rows",(field,value,reason)=>{
+   const r=declarationConditions({...spec,[field]:value} as ResearchRequestedSpec,example.metadata,profiles,["1h"]);
+   for(const key of ["profile","executor_version"])
+     expect(r.conditions.find(row=>row.key===key)).toMatchObject({state:"FAIL",reason_code:reason,field_path:[field]});
+   expect(r.profile_id).toBeNull();expect(r.ready_for_preflight).toBe(false);
+   expect(DeclarationEstimateSchema.safeParse(r).success).toBe(true);
+ });
+ it("assigns each independent invalid axis a path rather than reddening all windows",()=>{
+   const s={...spec,random_seed:null,optuna_trials:401,walk_forward:{...spec.walk_forward,frequency:"monthly"}} as ResearchRequestedSpec;
+   const r=declarationConditions(s,example.metadata,profiles,["1h"]);
+   for(const [key,path] of [["seed",["random_seed"]],["trials",["optuna_trials"]],["fold_frequency",["walk_forward","frequency"]]])
+     expect(r.conditions.find(row=>row.key===key)).toMatchObject({state:"FAIL",field_path:path});
+   expect(r.conditions.find(row=>row.key==="fold_plan")?.state).toBe("PASS");
  });
  it.each(["available","partial"])("matches generated %s fixture",name=>{
    expect(DeclarationEstimateSchema.safeParse(read(`research-declaration-estimate.v1.${name}.valid.json`)).success).toBe(true);

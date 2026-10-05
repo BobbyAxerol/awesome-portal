@@ -1,0 +1,13 @@
+{
+  "error": {
+    "code": "RESEARCH_SETUP_OPTIONS_STALE",
+    "message": "Run setup changed. Reload setup options before applying a suggestion."
+  },
+  "request_id": "s02-stale-fixture",
+  "details": {
+    "gate": "setup_revision",
+    "field_path": [
+      "options_revision"
+    ]
+  }
+}

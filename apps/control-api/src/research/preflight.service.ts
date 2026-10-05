@@ -26,6 +26,7 @@ import { preflightGates } from "./preflight-gates";
 import { ResearchPreflightError } from "./preflight.error";
 import { ResearchMetadataRepository } from "./repository";
 import { VN_OBSERVED_FIXED_PROFILE } from "./vn-observed-fixed.profile";
+import type { SetupRefusal } from "./run-setup.contract";
 
 const DEFAULT_COLUMNS = ["open", "high", "low", "close", "volume"] as const;
 const MAX_ALPHA_WARMUP_BARS = 100_000;
@@ -85,19 +86,23 @@ export function sweptDimensionCount(
 
 /** P08 checks only immutable P07 declarations; preflight is not execution admission. */
 export function assertDeclaredOptimization(alpha: ResearchAlphaVersionDataContract, spec: ResearchRequestedSpec): void {
+  const refusal = declaredOptimizationRefusal(alpha, spec);
+  if (refusal) throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", refusal.message, 409, {
+    gate: "alpha_declaration", field_path: refusal.field_path,
+  });
+}
+
+/** One predicate shared by preflight and advisory Conditions; never parse prose. */
+export function declaredOptimizationRefusal(alpha: ResearchAlphaVersionDataContract, spec: ResearchRequestedSpec): (SetupRefusal & {message: string}) | null {
   let declaration: ReturnType<typeof projectResearchAlphaVersionDeclaration>;
   try {
     declaration = projectResearchAlphaVersionDeclaration(alpha.declaredContract, alpha.entrypoint);
   } catch (error) {
     if (!(error instanceof ResearchAlphaVersionDeclarationError)) throw error;
-    throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "The bound AlphaVersion declaration is unavailable.", 409, {
-      gate: "alpha_declaration", field_path: ["alpha_binding"],
-    });
+    return {reason_code: "ALPHA_DECLARATION_NOT_PUBLISHED", message: "The bound AlphaVersion declaration is unavailable.", field_path: ["alpha_binding"]};
   }
   if (declaration.determinism.seed_required && spec.random_seed === null) {
-    throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "The bound AlphaVersion requires random_seed.", 409, {
-      gate: "alpha_declaration", field_path: ["random_seed"],
-    });
+    return {reason_code: "ALPHA_RANDOM_SEED_REQUIRED", message: "The bound AlphaVersion requires random_seed.", field_path: ["random_seed"]};
   }
   const sameScalar = (left: unknown, right: unknown): boolean =>
     typeof left === typeof right && left === right;
@@ -107,12 +112,11 @@ export function assertDeclaredOptimization(alpha: ResearchAlphaVersionDataContra
     const steps = (value - low) / step;
     return Math.abs(steps - Math.round(steps)) <= 1e-9;
   };
-  for (const override of spec.parameter_space_overrides) {
+  for (const [index, override] of spec.parameter_space_overrides.entries()) {
     const declared = declaration.parameter_space[override.name];
     if (!declared) {
-      throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "A parameter override is not declared by the bound AlphaVersion.", 409, {
-        gate: "alpha_declaration", field_path: ["parameter_space_overrides"],
-      });
+      return {reason_code: "ALPHA_PARAMETER_NOT_DECLARED", message: "A parameter override is not declared by the bound AlphaVersion.",
+        field_path: ["parameter_space_overrides", String(index), "name"]};
     }
     let valid = false;
     if (override.kind === "pin") {
@@ -125,11 +129,11 @@ export function assertDeclaredOptimization(alpha: ResearchAlphaVersionDataContra
         typeof override.low === "number" && typeof override.high === "number" && override.low <= override.high;
     }
     if (!valid) {
-      throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "A parameter override exceeds the bound AlphaVersion declaration.", 409, {
-        gate: "alpha_declaration", field_path: ["parameter_space_overrides"],
-      });
+      return {reason_code: "ALPHA_PARAMETER_OUTSIDE_DECLARATION", message: "A parameter override exceeds the bound AlphaVersion declaration.",
+        field_path: ["parameter_space_overrides", String(index)]};
     }
   }
+  return null;
 }
 
 @Injectable()

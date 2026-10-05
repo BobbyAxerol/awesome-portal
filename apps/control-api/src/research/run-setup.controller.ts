@@ -11,6 +11,7 @@ import { ResearchDatasetIndexClient } from "./dataset-index.client";
 import { ResearchFoundationService } from "./foundation.service";
 import { ResearchMetadataRepository } from "./repository";
 import { ResearchPreflightError } from "./preflight.error";
+import { ResearchRunSetupError } from "./run-setup.error";
 import { RunSetupContextSchema, WindowSuggestionRequestSchema, WindowSuggestionSchema, type RunSetupContext } from "./run-setup.contract";
 import { runSetupOptions } from "./run-setup";
 
@@ -30,7 +31,7 @@ export class ResearchRunSetupController {
   @Get("setup-options")
   async options(@Req() request: Request, @Query() raw: unknown, @Res({ passthrough: true }) reply: FastifyReply) {
     const parsed = RunSetupContextSchema.safeParse(raw);
-    if (!parsed.success) throw this.error("Invalid run setup context.", 400);
+    if (!parsed.success) throw this.error("Invalid run setup context.", 400, parsed.error.issues.map(row => row.path.map(String)));
     reply.header("cache-control", "private, no-store");
     return this.load(request, parsed.data);
   }
@@ -44,18 +45,29 @@ export class ResearchRunSetupController {
       || !request.portalSession || !constantTimeEqual(sha256(header), request.portalSession.csrfSecretHash))
       throw this.error("Window suggestion request security refused.", 403);
     const parsed = WindowSuggestionRequestSchema.safeParse(raw);
-    if (!parsed.success) throw this.error("Invalid window suggestion request.", 400);
+    if (!parsed.success) throw this.error("Invalid window suggestion request.", 400, parsed.error.issues.map(row => row.path.map(String)));
     const { profile_id, options_revision, start_utc_ms, end_exclusive_utc_ms, frequency, window_mode,
       train_window, initial_train_bars, ...context } = parsed.data;
     const options = await this.load(request, context);
-    if (options.source_revision !== options_revision) throw this.error("Run setup changed. Reload setup options before applying a suggestion.", 409);
+    if (options.source_revision !== options_revision) throw new ResearchRunSetupError("RESEARCH_SETUP_OPTIONS_STALE",
+      "Run setup changed. Reload setup options before applying a suggestion.", 409, {gate: "setup_revision", field_path: ["options_revision"]});
     const profile = options.profiles.find(row => row.profile_id === profile_id);
-    if (!profile || profile.state !== "ENABLED") throw this.error(`Run setup is not enabled: ${profile?.reason_code ?? "PROFILE_NOT_FOUND"}.`, 409);
+    if (!profile || profile.state !== "ENABLED") throw new ResearchRunSetupError("RESEARCH_SETUP_PROFILE_REFUSED",
+      `Run setup is not enabled: ${profile?.reason_code ?? "PROFILE_NOT_FOUND"}.`, 409,
+      {gate: "setup_profile", field_path: profile?.refusals?.[0]?.field_path ?? ["profile_id"], reason_code: profile?.reason_code ?? "PROFILE_NOT_FOUND"});
+    const preference = (message: string, field: string): never => { throw new ResearchRunSetupError(
+      "RESEARCH_SETUP_PREFERENCE_REFUSED", message, 400, {gate: "setup_preferences", field_path: [field],
+        reason_code: field === "frequency" ? "PROFILE_FREQUENCY_NOT_ADMITTED" : field === "window_mode"
+          ? "PROFILE_WINDOW_MODE_NOT_ADMITTED" : field === "train_window" ? "PROFILE_TRAIN_WINDOW_NOT_ADMITTED" : "PROFILE_INITIAL_TRAIN_NOT_ADMITTED"}); };
     if (profile.protocol === "three_window_decay" && [frequency, window_mode, train_window, initial_train_bars].some(value => value !== undefined))
-      throw this.error("Advanced preferences do not apply to Three Window.", 400);
+      preference("Advanced preferences do not apply to Three Window.", frequency !== undefined ? "frequency"
+        : window_mode !== undefined ? "window_mode" : train_window !== undefined ? "train_window" : "initial_train_bars");
     const chosenFrequency = frequency ?? "weekly", chosenMode = window_mode ?? "expanding";
-    if (profile.protocol === "advanced" && (!profile.frequencies.includes(chosenFrequency) || !profile.window_modes.includes(chosenMode)
-      || (chosenMode === "rolling") !== (train_window !== undefined))) throw this.error("Frequency, window mode or training width is outside the selected profile.", 400);
+    if (profile.protocol === "advanced") {
+      if (!profile.frequencies.includes(chosenFrequency)) preference("Frequency is outside the selected profile.", "frequency");
+      if (!profile.window_modes.includes(chosenMode)) preference("Window mode is outside the selected profile.", "window_mode");
+      if ((chosenMode === "rolling") !== (train_window !== undefined)) preference("Training width must be supplied for rolling only.", "train_window");
+    }
     const metadata = await this.client.suggest(request.portalUser, {
       dataset_id: context.dataset_id, symbol: context.symbol, timeframe: context.timeframe,
       protocol: profile.protocol, warmup_bars: options.warmup_bars,
@@ -81,11 +93,13 @@ export class ResearchRunSetupController {
     const guards = atlas.atlas.current_release.walk_forward_options?.temporal_guards;
     try {
       return runSetupOptions(request.portalUser, this.config, version, {...context, workspace_id}, atlas.portal_admission,
-        catalog, guards ? {label_horizon_bars: guards.release_default, purge_bars: guards.release_default, embargo_bars: guards.release_default} : null);
+        catalog, guards ? {label_horizon_bars: guards.release_default, purge_bars: guards.release_default, embargo_bars: guards.release_default} : null, atlas.atlas);
     } catch { throw this.error("AlphaVersion setup declaration is unavailable.", 503); }
   }
-  private error(message: string, status: 400 | 403 | 404 | 409 | 503) {
+  private error(message: string, status: 400 | 403 | 404 | 409 | 503, paths?: string[][]) {
+    const fields = paths?.map(path => path.length ? path : ["request"]);
     return new ResearchPreflightError(status === 404 ? "RESEARCH_PREFLIGHT_NOT_FOUND" : status === 503 ? "RESEARCH_PREFLIGHT_UNAVAILABLE"
-      : status === 409 ? "RESEARCH_PREFLIGHT_REJECTED" : "RESEARCH_PREFLIGHT_INVALID", message, status);
+      : status === 409 ? "RESEARCH_PREFLIGHT_REJECTED" : "RESEARCH_PREFLIGHT_INVALID", message, status,
+      fields ? {gate: "setup_structure", field_path: fields[0], field_paths: fields} : undefined);
   }
 }

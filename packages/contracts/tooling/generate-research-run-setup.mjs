@@ -11,6 +11,15 @@ const digest={...str,pattern:"^[a-f0-9]{64}$"},reason={...str,pattern:"^[A-Z][A-
 const array=(items,maxItems,minItems=0)=>({type:"array",items,maxItems,minItems});
 const en=(...values)=>({enum:values});
 const bounds=obj({min:count,max:count});
+const fieldPath={type:"array",minItems:1,maxItems:8,items:{type:"string",pattern:"^[A-Za-z_][A-Za-z0-9_]*$|^[0-9]+$"}};
+const refusal=obj({reason_code:reason,field_path:fieldPath});
+const choiceFields={state:en("ENABLED","DISABLED"),reason_code:nullable(reason),field_path:fieldPath,profile_ids:array(id,6)};
+const choiceRules=[{if:{properties:{state:{const:"ENABLED"}}},then:{properties:{reason_code:{type:"null"}}},else:{properties:{reason_code:reason}}},
+  {if:{properties:{profile_ids:{maxItems:0}}},then:{properties:{reason_code:{const:"PROFILE_NOT_OPENED"}}},else:{properties:{reason_code:{not:{const:"PROFILE_NOT_OPENED"}}}}}];
+const engineChoice={...obj({value:id,...choiceFields}),allOf:choiceRules};
+const enginePair={...obj({optimization_mode:id,optimization_schedule:id,...choiceFields}),allOf:choiceRules};
+const engineOptions=obj({scope:{const:"ENGINE_CATALOGUE_NOT_RUN_AUTHORIZATION"},execution_routes:array(engineChoice,32),
+  optimization_pairs:array(enginePair,24),frequencies:array(engineChoice,8),window_modes:array(engineChoice,4)});
 const context=obj({workspace_id:id,alpha_id:id,alpha_version_id:id,dataset_id:id,
   symbol:{...str,pattern:"^[A-Z0-9][A-Z0-9_-]{1,31}$"},timeframe:{...str,pattern:"^[1-9][0-9]*(?:min|m|h|d)$"}});
 const profile=obj({profile_id:id,state:en("ENABLED","DISABLED"),reason_code:nullable(reason),engine_release_id:id,execution_route:id,
@@ -26,9 +35,11 @@ const profile=obj({profile_id:id,state:en("ENABLED","DISABLED"),reason_code:null
   temporal_guards:obj({policy:en("V1_ABSENT_V2_EXPLICIT","NOT_APPLICABLE"),
     defaults:nullable(obj({label_horizon_bars:count,purge_bars:count,embargo_bars:count})),max_bars:nullable(count),zero_semantics:{const:"ZERO_APPLIES_NO_TEMPORAL_GUARD"}}),
   independent_holdout:{type:"boolean"}});
-profile.allOf=[{if:{properties:{state:{const:"ENABLED"}}},then:{properties:{reason_code:{type:"null"}}},else:{properties:{reason_code:reason}}}];
+profile.allOf=[{if:{properties:{state:{const:"ENABLED"}}},then:{properties:{reason_code:{type:"null"},refusals:{maxItems:0}}},else:{properties:{reason_code:reason,refusals:{minItems:1}}}}];
+profile.properties.refusals=array(ref("SetupRefusal"),8);
 const options=obj({schema_version:{const:"research.run-setup-options.v1"},context:ref("Context"),scope:{const:"CONFIGURATION_FACTS_NOT_RUN_AUTHORIZATION"},
   source_revision:digest,catalog_revision:nullable(digest),as_of_utc_ms:nullable(ms),warmup_bars:count,source_timezone:en("UTC","Asia/Ho_Chi_Minh"),profiles:array(ref("Profile"),6),preflight_required:{const:true}});
+options.properties.engine_options=ref("EngineOptions");
 const span=obj({start_utc_ms:ms,end_exclusive_utc_ms:ms,bars:{...count,minimum:1}});
 const patch={oneOf:[obj({protocol:{const:"three_window_decay"},windows:obj({is:span,oos:span,holdout:span})}),
   obj({protocol:{const:"advanced"},walk_forward:obj({...span.properties,first_oos_utc_ms:ms,frequency:en("weekly","monthly","quarterly"),window_mode:en("expanding","rolling"),train_window:nullable(str)})})]};
@@ -44,6 +55,9 @@ const suggestion=obj({schema_version:{const:"research.window-suggestion.v1"},con
   scope:{const:"EDITABLE_HEURISTIC_NOT_PREFLIGHT_OR_RUN_AUTHORIZATION"},policy:{const:"INDEXED_BAR_SPLIT_70_20_10_OR_HALF_INITIAL_IS_V1"},
   metadata:ref("SuggestionMetadata"),fold_authority:{const:"EXISTING_DECLARATION_ESTIMATE_AND_P08_PLANNER"},preflight_required:{const:true}});
 const responses=name=>Object.fromEntries([200,400,401,403,404,409,502,503].map(status=>[status,{description:status===200?"Read-only setup facts; no authorization":"Typed refusal",content:{"application/json":{schema:ref(status===200?name:"Problem")}}}]));
+const problem=structuredClone(old.components.schemas.Problem);
+problem.properties.error.properties.code.enum.push("RESEARCH_SETUP_OPTIONS_STALE","RESEARCH_SETUP_PROFILE_REFUSED","RESEARCH_SETUP_PREFERENCE_REFUSED");
+problem.properties.details.properties.reason_code=reason;
 const doc={openapi:"3.1.0",info:{title:"Research New Run setup",version:"1.0.0",description:"Alpha-bound current Portal executor facts and editable indexed-bar hints. No HMD scan, execution, preflight token or admission widening. Advanced folds remain engine/P08 authoritative."},
   paths:{"/api/v1/research/runs/setup-options":{get:{operationId:"researchRunSetupOptionsGetV1",security:[{portalSession:[]}],
     parameters:Object.entries(context.properties).map(([name,schema])=>({name,in:"query",required:name!=="workspace_id",schema})),responses:responses("SetupOptions")}},
@@ -51,8 +65,9 @@ const doc={openapi:"3.1.0",info:{title:"Research New Run setup",version:"1.0.0",
       description:"Read-only POST requires same-origin and CSRF; apply only after confirming; discard after context changes.",
       requestBody:{required:true,content:{"application/json":{schema:ref("SuggestionRequest")}}},responses:responses("WindowSuggestion")}}},
   components:{securitySchemes:{portalSession:{type:"apiKey",in:"cookie",name:"portal_session"}},schemas:{Context:context,Profile:profile,SetupOptions:options,
+    SetupRefusal:refusal,EngineOptions:engineOptions,
     WindowPatch:patch,SuggestionMetadata:metadata,SuggestionRequest:request,WindowSuggestion:suggestion,
-    FieldPath:old.components.schemas.FieldPath,Problem:old.components.schemas.Problem}}};
+    FieldPath:old.components.schemas.FieldPath,Problem:problem}}};
 function emit(path,value){const next=JSON.stringify(value,null,2)+"\n",url=new URL(path,root);if(check){if(readFileSync(url,"utf8")!==next)throw new Error(`${path} drift`);}else writeFileSync(url,next);}
 emit("openapi/research-run-setup.openapi.json",doc);
 const start=1780272000000,step=3600000;
@@ -79,6 +94,21 @@ const fixed={profile_id:p.profile_id,state:p.state,reason_code:p.reason,engine_r
   trial_count:p.trial_count,trial_default:1,trial_scope:"GLOBAL_STUDY",max_total_trials:null,seed_policy:"FORBIDDEN",random_seed:null,
   max_span_days:null,fold_bounds:null,frequencies:[],window_modes:[],parameter_policy:"FIXED_NO_OVERRIDES",allowed_pin_names:[],inner_validation:"NOT_APPLICABLE",inner_constraints:null,
   temporal_guards:{policy:"NOT_APPLICABLE",defaults:null,max_bars:null,zero_semantics:"ZERO_APPLIES_NO_TEMPORAL_GUARD"},independent_holdout:true};
-emit("fixtures/research-run-setup-options.fixed.valid.json",{schema_version:"research.run-setup-options.v1",context:ctx,
+const optionsFixture={schema_version:"research.run-setup-options.v1",context:ctx,
   scope:"CONFIGURATION_FACTS_NOT_RUN_AUTHORIZATION",source_revision:"a".repeat(64),catalog_revision:"b".repeat(64),as_of_utc_ms:start+1000*step,
-  warmup_bars:300,source_timezone:"UTC",profiles:[fixed],preflight_required:true});
+  warmup_bars:300,source_timezone:"UTC",profiles:[fixed],preflight_required:true};
+const unopened=structuredClone(atlasFixture.atlas);
+const engineFixture={scope:"ENGINE_CATALOGUE_NOT_RUN_AUTHORIZATION",
+  execution_routes:unopened.routes.map(row=>({value:row.route_id,state:row.route_id===fixed.execution_route?"ENABLED":"DISABLED",
+    reason_code:row.route_id===fixed.execution_route?null:"PROFILE_NOT_OPENED",field_path:["execution_route"],profile_ids:row.route_id===fixed.execution_route?[fixed.profile_id]:[]})),
+  optimization_pairs:unopened.modes.flatMap(row=>row.valid_schedules.map(schedule=>({optimization_mode:row.mode_id,optimization_schedule:schedule,
+    state:row.mode_id===fixed.optimization_mode&&schedule===fixed.optimization_schedule?"ENABLED":"DISABLED",
+    reason_code:row.mode_id===fixed.optimization_mode&&schedule===fixed.optimization_schedule?null:"PROFILE_NOT_OPENED",
+    field_path:[row.mode_id===fixed.optimization_mode?"optimization_schedule":"optimization_mode"],
+    profile_ids:row.mode_id===fixed.optimization_mode&&schedule===fixed.optimization_schedule?[fixed.profile_id]:[]}))),
+  frequencies:(unopened.current_release.walk_forward_options?.frequency??[]).map(row=>({value:row.value,state:"DISABLED",reason_code:"PROFILE_NOT_OPENED",field_path:["walk_forward","frequency"],profile_ids:[]})),
+  window_modes:(unopened.current_release.walk_forward_options?.window_mode??[]).map(row=>({value:row.value,state:"DISABLED",reason_code:"PROFILE_NOT_OPENED",field_path:["walk_forward","window_mode"],profile_ids:[]}))};
+optionsFixture.profiles[0].refusals=[];optionsFixture.engine_options=engineFixture;
+emit("fixtures/research-run-setup-options.fixed.valid.json",optionsFixture);
+emit("fixtures/research-run-setup-options.stale.valid.json",{error:{code:"RESEARCH_SETUP_OPTIONS_STALE",message:"Run setup changed. Reload setup options before applying a suggestion."},
+  request_id:"s02-stale-fixture",details:{gate:"setup_revision",field_path:["options_revision"]}});

@@ -722,6 +722,7 @@ export interface components {
             reason_code: string | null;
             observed: string | null;
             required: string;
+            field_path?: string[];
         };
         DeclarationEstimate: {
             /** @constant */

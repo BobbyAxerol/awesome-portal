@@ -49,6 +49,15 @@ describe("B7 named metadata contracts", () => {
     expect(validate(fixture),JSON.stringify(validate.errors)).toBe(true);
     expect(validate({...fixture,preflight_token:"invented"})).toBe(false);
     expect(fixture.metadata.scope).toBe("INDEX_ESTIMATE_NOT_PREFLIGHT_OR_RUN_AUTHORIZATION");
+    expect(fixture.conditions[0].field_path).toEqual(["walk_forward"]);
+    if(name==="available") {
+      const items=fixture.metadata.planned_folds.items!;
+      expect(items).toHaveLength(fixture.metadata.planned_folds.count!);
+      expect(items.map(row=>row.ordinal)).toEqual([1,2]);
+      expect(items[0].outer_oos.end_exclusive_utc_ms).toBe(items[1].outer_oos.start_utc_ms);
+      expect(items[1].train.start_utc_ms).toBe(items[0].train.start_utc_ms);
+      expect(items[1].outer_oos.end_exclusive_utc_ms).toBe(fixture.metadata.windows[0].end_exclusive_utc_ms);
+    } else expect(fixture.metadata.planned_folds.items).toBeUndefined();
   });
   it.each(["healthy", "partial-quality", "multi-dataset", "symbol-absent"])("accepts canonical synthetic %s", name => {
     const validate = new Ajv2020({ strict: true }).compile(JSON.parse(JSON.stringify({ ...doc.components.schemas.DatasetCatalogV2, $defs: doc.components.schemas }).replaceAll("#/components/schemas/", "#/$defs/")));

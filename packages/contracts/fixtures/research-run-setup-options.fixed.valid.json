@@ -51,8 +51,310 @@
         "max_bars": null,
         "zero_semantics": "ZERO_APPLIES_NO_TEMPORAL_GUARD"
       },
-      "independent_holdout": true
+      "independent_holdout": true,
+      "refusals": []
     }
   ],
-  "preflight_required": true
+  "preflight_required": true,
+  "engine_options": {
+    "scope": "ENGINE_CATALOGUE_NOT_RUN_AUTHORIZATION",
+    "execution_routes": [
+      {
+        "value": "signal_notional",
+        "state": "ENABLED",
+        "reason_code": null,
+        "field_path": [
+          "execution_route"
+        ],
+        "profile_ids": [
+          "p04.fixed-qualification.v1"
+        ]
+      },
+      {
+        "value": "pct_equity",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "execution_route"
+        ],
+        "profile_ids": []
+      },
+      {
+        "value": "intrabar_bracket",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "execution_route"
+        ],
+        "profile_ids": []
+      },
+      {
+        "value": "dca_ladder",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "execution_route"
+        ],
+        "profile_ids": []
+      },
+      {
+        "value": "reactive",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "execution_route"
+        ],
+        "profile_ids": []
+      },
+      {
+        "value": "event_driven",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "execution_route"
+        ],
+        "profile_ids": []
+      },
+      {
+        "value": "native_event_lifecycle",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "execution_route"
+        ],
+        "profile_ids": []
+      },
+      {
+        "value": "orders",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "execution_route"
+        ],
+        "profile_ids": []
+      },
+      {
+        "value": "fill_replay",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "execution_route"
+        ],
+        "profile_ids": []
+      },
+      {
+        "value": "basket",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "execution_route"
+        ],
+        "profile_ids": []
+      },
+      {
+        "value": "arbitrage",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "execution_route"
+        ],
+        "profile_ids": []
+      },
+      {
+        "value": "portfolio",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "execution_route"
+        ],
+        "profile_ids": []
+      },
+      {
+        "value": "nautilus_dca_grid",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "execution_route"
+        ],
+        "profile_ids": []
+      },
+      {
+        "value": "options",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "execution_route"
+        ],
+        "profile_ids": []
+      }
+    ],
+    "optimization_pairs": [
+      {
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "state": "ENABLED",
+        "reason_code": null,
+        "field_path": [
+          "optimization_schedule"
+        ],
+        "profile_ids": [
+          "p04.fixed-qualification.v1"
+        ]
+      },
+      {
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "optimization_schedule"
+        ],
+        "profile_ids": []
+      },
+      {
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "optimization_schedule"
+        ],
+        "profile_ids": []
+      },
+      {
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "optimization_mode"
+        ],
+        "profile_ids": []
+      },
+      {
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "optimization_mode"
+        ],
+        "profile_ids": []
+      },
+      {
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "optimization_mode"
+        ],
+        "profile_ids": []
+      },
+      {
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "optimization_mode"
+        ],
+        "profile_ids": []
+      },
+      {
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "optimization_mode"
+        ],
+        "profile_ids": []
+      }
+    ],
+    "frequencies": [
+      {
+        "value": "single",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "walk_forward",
+          "frequency"
+        ],
+        "profile_ids": []
+      },
+      {
+        "value": "yearly",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "walk_forward",
+          "frequency"
+        ],
+        "profile_ids": []
+      },
+      {
+        "value": "semi_yearly",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "walk_forward",
+          "frequency"
+        ],
+        "profile_ids": []
+      },
+      {
+        "value": "quarterly",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "walk_forward",
+          "frequency"
+        ],
+        "profile_ids": []
+      },
+      {
+        "value": "monthly",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "walk_forward",
+          "frequency"
+        ],
+        "profile_ids": []
+      },
+      {
+        "value": "weekly",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "walk_forward",
+          "frequency"
+        ],
+        "profile_ids": []
+      }
+    ],
+    "window_modes": [
+      {
+        "value": "expanding",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "walk_forward",
+          "window_mode"
+        ],
+        "profile_ids": []
+      },
+      {
+        "value": "rolling",
+        "state": "DISABLED",
+        "reason_code": "PROFILE_NOT_OPENED",
+        "field_path": [
+          "walk_forward",
+          "window_mode"
+        ],
+        "profile_ids": []
+      }
+    ]
+  }
 }

@@ -8,9 +8,12 @@ import {sha256} from "../src/auth/argon";
 import {sha256ResearchJson} from "../src/research/preflight.service";
 import {P04_DELTA_DECLARED_CONTRACT} from "../src/research/p04-delta.binding";
 import {wfoRequested} from "./research-w1-wfo.fixture";
+import {p04Requested} from "./research-w1-wfo.fixture";
 import {ResearchDatasetIndexError} from "../src/research/dataset-index.error";
 import {HttpErrorFilter} from "../src/http-error.filter";
 import {P04_DELTA_ADAPTER_CONTRACT_DIGEST,P04_DELTA_BINDING} from "../src/research/p04-delta.binding";
+import {IMPORTED_ALPHA_ADAPTER_ID,IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST} from "../src/research/imported-alpha.profile";
+import {ResearchRunAdmissionService} from "../src/research/run-admission.service";
 const root = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
 const fixture = (name = "healthy") => JSON.parse(readFileSync(resolve(root, `fixtures/research-dataset-catalog.v2.${name}.valid.json`), "utf8"));
 const config = { INTERNAL_PRINCIPAL_SECRET: "b7-test-principal-secret-0123456789", PORTAL_API_BASE_URL: "http://portal-api.test",
@@ -20,6 +23,27 @@ const request = { portalUser: { userId: "u1", username: "u1", role: "ADMIN", mus
 const make = (data = fixture(), member = true) => new ResearchDatasetIndexController({ catalog: async () => data } as never, { isMember: async () => member } as never, config, {} as never, {} as never, {} as never);
 afterEach(() => vi.unstubAllGlobals());
 describe("B7 indexed dataset BFF", () => {
+  it("publishes the exact imported refusal consistently instead of conflicting Conditions",async()=>{
+    const spec=wfoRequested(),metadata=JSON.parse(readFileSync(resolve(root,"fixtures/research-declaration-estimate.v1.available.valid.json"),"utf8")).metadata;
+    const atlas=JSON.parse(readFileSync(resolve(root,"fixtures/research-foundation.atlas-current.valid.json"),"utf8"));
+    const flags={...config as any,PORTAL_PUBLIC_ORIGIN:"https://portal.test",FEATURE_RESEARCH_RUN_PRODUCER:"true",FEATURE_RESEARCH_IMPORTED_EXECUTION:"true"};
+    const version={alphaId:P04_DELTA_BINDING.alphaId,alphaVersionId:P04_DELTA_BINDING.alphaVersionId,lifecycleState:"DRAFT",
+      declaredContract:{...P04_DELTA_DECLARED_CONTRACT,schema_version:"research.alpha-source.v1"},entrypoint:P04_DELTA_DECLARED_CONTRACT.entrypoint,
+      sourceDigest:"a".repeat(64),binding:{...P04_DELTA_BINDING,adapterId:IMPORTED_ALPHA_ADAPTER_ID,contractDigest:IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST}};
+    const controller=new ResearchDatasetIndexController({estimate:async()=>metadata,catalog:async()=>fixture()} as never,{isMember:async()=>true} as never,
+      flags,{loadRunAdapterEligibility:async()=>version} as never,{atlas:async()=>atlas} as never,new ResearchRunAdmissionService({} as never,flags));
+    const csrf="typed-estimate-csrf",req={...request as any,headers:{origin:"https://portal.test","x-portal-csrf":csrf},cookies:{"__Host-portal_csrf":csrf},portalSession:{csrfSecretHash:sha256(csrf)}};
+    const result=await controller.estimate(req as never,{requested_spec:spec});
+    for(const key of ["profile","executor_version","imported_executor"])
+      expect(result.conditions.find(row=>row.key===key)).toMatchObject({state:"FAIL",reason_code:"PROFILE_PROTOCOL_NOT_ADMITTED",field_path:["protocol"]});
+    expect(result.ready_for_preflight).toBe(false);
+    const seeded={...version,declaredContract:{...version.declaredContract,determinism:{seed_required:true}}};
+    const seededController=new ResearchDatasetIndexController({estimate:async()=>metadata,catalog:async()=>fixture()} as never,{isMember:async()=>true} as never,
+      flags,{loadRunAdapterEligibility:async()=>seeded} as never,{atlas:async()=>atlas} as never,new ResearchRunAdmissionService({} as never,flags));
+    const missingSeed=await seededController.estimate(req as never,{requested_spec:p04Requested()});
+    for(const key of ["seed","alpha_parameters","imported_executor"])
+      expect(missingSeed.conditions.find(row=>row.key===key)).toMatchObject({state:"FAIL",reason_code:"ALPHA_RANDOM_SEED_REQUIRED",field_path:["random_seed"]});
+  });
   it("preserves typed observed-date absence instead of inventing a UTC session grid", () => {
     const sample=JSON.parse(readFileSync(resolve(root,"fixtures/research-dataset-bar-metadata.observed-local-date.valid.json"),"utf8"));
     expect(BarMetadataSchema.safeParse(sample).success).toBe(true);

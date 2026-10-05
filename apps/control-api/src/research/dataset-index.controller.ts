@@ -13,7 +13,7 @@ import { ResearchMetadataRepository } from "./repository";
 import { ResearchFoundationService } from "./foundation.service";
 import { projectResearchAlphaVersionDeclaration } from "./alpha-version-declaration";
 import { declarationConditions } from "./declaration-conditions";
-import { assertDeclaredOptimization } from "./preflight.service";
+import { declaredOptimizationRefusal } from "./preflight.service";
 import { ResearchDatasetIndexClient } from "./dataset-index.client";
 import { BarMetadataQuery, DatasetId, DeclarationEstimateRequestSchema, DeclarationEstimateSchema, IndexedCatalogQuery, SymbolPageQuery, SymbolPageSchema } from "./dataset-index.contract";
 import { ResearchPreflightError } from "./preflight.error";
@@ -100,24 +100,41 @@ export class ResearchDatasetIndexController {
     if (atlas.selected_release_kind !== "CURRENT") throw this.invalid();
     const options = runSetupOptions(request.portalUser, this.config, version,
       {workspace_id: workspaceId, ...spec.data, alpha_id: spec.alpha_binding.alpha_id, alpha_version_id: spec.alpha_binding.alpha_version_id},
-      atlas.portal_admission, catalog, null);
+      atlas.portal_admission, catalog, null, atlas.atlas);
     // Bound to the selected Alpha, not the engine-global Delta descriptor.
     const profiles = options.profiles.map(profile => ({...profile, reason: null,
       random_seed: profile.random_seed, frequency: null, window_mode: null,
       ...(spec.data.dataset_id === "vn-stock-daily" ? {dataset_id: "vn-stock-daily" as const, symbol: "FPT" as const} : {}),
     }));
     const result = declarationConditions(spec, metadata, profiles, declaration.timeframes);
-    let declarationPass = true;
-    try { assertDeclaredOptimization(binding, spec); }
-    catch (error) { if (!(error instanceof ResearchPreflightError)) throw error; declarationPass = false; }
-    result.conditions.push({key:"alpha_parameters", state: declarationPass ? "PASS" : "FAIL",
-      reason_code: declarationPass ? null : "ALPHA_OPTIMIZATION_DECLARATION_REFUSED", observed:null,
-      required:"Overrides and seed satisfy the bound AlphaVersion declaration"});
+    const declarationRefusal = declaredOptimizationRefusal(binding, spec);
+    result.conditions.push({key:"alpha_parameters", state: declarationRefusal ? "FAIL" : "PASS",
+      reason_code: declarationRefusal?.reason_code ?? null, observed:null,
+      required:"Overrides and seed satisfy the bound AlphaVersion declaration",
+      field_path: declarationRefusal?.field_path ?? ["parameter_space_overrides"]});
+    if (declarationRefusal) for (const row of result.conditions) {
+      if (row.state !== "NOT_PUBLISHED" && row.field_path?.[0] === declarationRefusal.field_path[0]) {
+        row.state = "FAIL"; row.reason_code = declarationRefusal.reason_code; row.field_path = declarationRefusal.field_path;
+      }
+    }
     if (version.binding?.adapterId === IMPORTED_ALPHA_ADAPTER_ID) {
-      const reason = this.runAdmission.importedConfigurationReason(spec, version.declaredContract, version.entrypoint);
-      result.conditions.push({key:"imported_executor", state: reason === null ? "PASS" : "FAIL",
-        reason_code: reason === null ? null : "IMPORTED_CONFIGURATION_NOT_ADMITTED", observed: null,
-        required: "Restricted imported fixed executor: declared pins, one trial, requested-spec v1"});
+      const refusal = this.runAdmission.importedConfigurationRefusal(spec, version.declaredContract, version.entrypoint);
+      result.conditions.push({key:"imported_executor", state: refusal ? "FAIL" : "PASS",
+        reason_code: refusal?.reason_code ?? null, observed: null,
+        required: "Restricted imported fixed executor: declared pins, one trial, requested-spec v1",
+        field_path: refusal?.field_path ?? ["alpha_binding"]});
+      // A missing recipe must not simultaneously claim "wrong Alpha" and
+      // "executor version absent". Both rows describe the same exact refusal.
+      if (refusal) {
+        const recipeRefused = result.conditions.find(row => row.key === "profile")?.state === "FAIL";
+        if (recipeRefused) result.profile_id = null;
+        for (const row of result.conditions) {
+          if (recipeRefused && (row.key === "profile" || row.key === "executor_version")
+            || row.state !== "NOT_PUBLISHED" && row.field_path?.[0] === refusal.field_path[0]) {
+            row.state = "FAIL"; row.reason_code = refusal.reason_code; row.field_path = refusal.field_path;
+          }
+        }
+      }
     }
     result.ready_for_preflight = result.conditions.every(row => row.state === "PASS");
     return DeclarationEstimateSchema.parse(result);

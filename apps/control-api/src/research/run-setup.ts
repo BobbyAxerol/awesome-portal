@@ -1,20 +1,21 @@
 import type { ControlApiConfig } from "../config";
 import type { PortalUser } from "../domain";
 import type { ResearchMetadataRepository } from "./repository";
-import type { ResearchPortalAdmission } from "./foundation.contract";
+import type { ResearchPortalAdmission, ResearchEngineAtlasPublic } from "./foundation.contract";
 import type { ResearchDatasetCatalogV2 } from "./dataset-index.contract";
 import { projectResearchAlphaVersionDeclaration } from "./alpha-version-declaration";
 import { researchRunVersionPrecheck } from "./version-admission";
 import { IMPORTED_ALPHA_ADAPTER_ID, IMPORTED_ALPHA_PROFILE } from "./imported-alpha.profile";
 import { sha256ResearchJson } from "./preflight.service";
-import { RunSetupOptionsSchema, type RunSetupContext, type RunSetupProfile } from "./run-setup.contract";
+import { RunSetupOptionsSchema, type RunSetupContext, type RunSetupProfile, type SetupRefusal } from "./run-setup.contract";
 import { WHATIF_PROFILE } from "./whatif.profile";
 
 type Version = NonNullable<Awaited<ReturnType<ResearchMetadataRepository["loadRunAdapterEligibility"]>>>;
 /** Version-specific view. This never grants a token, admits a job or mutates defaults. */
 export function runSetupOptions(user: PortalUser, config: ControlApiConfig, version: Version,
   context: RunSetupContext & { workspace_id: string }, admission: ResearchPortalAdmission,
-  catalog: ResearchDatasetCatalogV2, guards: { label_horizon_bars: number; purge_bars: number; embargo_bars: number } | null) {
+  catalog: ResearchDatasetCatalogV2, guards: { label_horizon_bars: number; purge_bars: number; embargo_bars: number } | null,
+  engine?: ResearchEngineAtlasPublic) {
   const declaration = projectResearchAlphaVersionDeclaration(version.declaredContract, version.entrypoint);
   const precheck = researchRunVersionPrecheck(user, config, version);
   const imported = version.binding?.adapterId === IMPORTED_ALPHA_ADAPTER_ID;
@@ -28,16 +29,24 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
       ? "SYMBOL_TIMEFRAME_COVERAGE_NOT_PUBLISHED" : null;
   const callerReason = precheck.may_create_run ? null : precheck.code;
   const declaredReason = declaration.timeframes.includes(context.timeframe) ? null : "ALPHA_TIMEFRAME_NOT_DECLARED";
+  const refusal = (reason_code: string | null, field_path: string[]): SetupRefusal[] => reason_code ? [{reason_code, field_path}] : [];
+  const common = [
+    ...refusal(callerReason, ["alpha_binding"]),
+    ...refusal(sourceReason, sourceReason === "DATASET_NOT_AVAILABLE" ? ["data", "dataset_id"]
+      : sourceReason === "DATASET_SYMBOL_NOT_PUBLISHED" ? ["data", "symbol"] : ["data", "timeframe"]),
+    ...refusal(declaredReason, ["data", "timeframe"]),
+  ];
   const profiles: RunSetupProfile[] = admission.profiles.map(row => {
     const temporal = row.protocol === "advanced";
-    const reason = callerReason ?? sourceReason ?? declaredReason
-      ?? (imported ? "ALPHA_EXECUTOR_MISMATCH" : null)
-      ?? (row.dataset_id ? row.dataset_id !== context.dataset_id || row.symbol !== context.symbol ? "PROFILE_DATASET_NOT_ADMITTED" : null
-        : context.dataset_id === "vn-stock-daily" ? "PROFILE_DATASET_NOT_ADMITTED" : null)
-      ?? (row.timeframe !== context.timeframe ? "PROFILE_TIMEFRAME_NOT_ADMITTED" : null)
-      ?? row.reason;
+    const refusals = [...common, ...refusal(imported ? "ALPHA_EXECUTOR_MISMATCH" : null, ["alpha_binding"]),
+      ...refusal(row.dataset_id ? row.dataset_id !== context.dataset_id ? "PROFILE_DATASET_NOT_ADMITTED" : null
+        : context.dataset_id === "vn-stock-daily" ? "PROFILE_DATASET_NOT_ADMITTED" : null, ["data", "dataset_id"]),
+      ...refusal(row.symbol && row.symbol !== context.symbol ? "PROFILE_SYMBOL_NOT_ADMITTED" : null, ["data", "symbol"]),
+      ...refusal(row.timeframe !== context.timeframe ? "PROFILE_TIMEFRAME_NOT_ADMITTED" : null, ["data", "timeframe"]),
+      ...refusal(row.reason ?? (row.state === "DISABLED" ? "PROFILE_NOT_ENABLED" : null), ["profile_id"])];
+    const reason = refusals[0]?.reason_code ?? null;
     return {
-      profile_id: row.profile_id, state: reason ? "DISABLED" : "ENABLED", reason_code: reason,
+      profile_id: row.profile_id, state: reason ? "DISABLED" : "ENABLED", reason_code: reason, refusals,
       engine_release_id: row.engine_release_id, execution_route: row.execution_route,
       protocol: row.protocol as RunSetupProfile["protocol"], optimization_mode: row.optimization_mode,
       optimization_schedule: row.optimization_schedule,
@@ -57,12 +66,13 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
     };
   });
   if (imported) {
-    const reason = callerReason ?? sourceReason ?? declaredReason
-      ?? (declaration.warmup_bars > 4096 ? "IMPORTED_WARMUP_EXCEEDS_EXECUTOR_LIMIT" : null)
-      ?? (context.dataset_id === "vn-stock-daily" ? "IMPORTED_SOURCE_PROFILE_UNQUALIFIED" : null)
-      ?? (admission.profiles[0]?.engine_release_id !== IMPORTED_ALPHA_PROFILE.engine_release_id
-        || admission.profiles[0]?.reason ? "SOURCE_RELEASE_UNVERIFIED" : null);
-    profiles.push({ profile_id: IMPORTED_ALPHA_PROFILE.profile_id, state: reason ? "DISABLED" : "ENABLED", reason_code: reason,
+    const refusals = [...common,
+      ...refusal(declaration.warmup_bars > 4096 ? "IMPORTED_WARMUP_EXCEEDS_EXECUTOR_LIMIT" : null, ["alpha_binding"]),
+      ...refusal(context.dataset_id === "vn-stock-daily" ? "IMPORTED_SOURCE_PROFILE_UNQUALIFIED" : null, ["data", "dataset_id"]),
+      ...refusal(admission.profiles[0]?.engine_release_id !== IMPORTED_ALPHA_PROFILE.engine_release_id
+        || admission.profiles[0]?.reason ? "SOURCE_RELEASE_UNVERIFIED" : null, ["client", "engine_release_id"])];
+    const reason = refusals[0]?.reason_code ?? null;
+    profiles.push({ profile_id: IMPORTED_ALPHA_PROFILE.profile_id, state: reason ? "DISABLED" : "ENABLED", reason_code: reason, refusals,
       engine_release_id: IMPORTED_ALPHA_PROFILE.engine_release_id, execution_route: IMPORTED_ALPHA_PROFILE.execution_route,
       protocol: "three_window_decay", optimization_mode: "mode_1_decay", optimization_schedule: "global",
       requested_spec_versions: ["research.requested-spec.v1"], timeframe: context.timeframe,
@@ -78,6 +88,27 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
     scope: "CONFIGURATION_FACTS_NOT_RUN_AUTHORIZATION" as const, catalog_revision: catalog.catalog_revision,
     as_of_utc_ms: catalog.as_of_utc_ms, warmup_bars: declaration.warmup_bars,
     source_timezone: context.dataset_id === "vn-stock-daily" ? "Asia/Ho_Chi_Minh" as const : "UTC" as const,
-    profiles, preflight_required: true as const };
+    profiles, ...(engine ? {engine_options: engineSetupOptions(engine, profiles)} : {}), preflight_required: true as const };
   return RunSetupOptionsSchema.parse({ ...payload, source_revision: sha256ResearchJson(payload) });
+}
+
+/** Actual catalogue axes, not Cartesian runnable configurations or new recipes. */
+function engineSetupOptions(engine: ResearchEngineAtlasPublic, profiles: RunSetupProfile[]) {
+  const choice = (matches: RunSetupProfile[], field_path: string[]) => {
+    const selected = matches.find(row => row.state === "ENABLED") ?? matches[0];
+    return {state: selected?.state ?? "DISABLED", reason_code: selected?.reason_code ?? (selected ? null : "PROFILE_NOT_OPENED"),
+      field_path: selected?.refusals?.[0]?.field_path ?? field_path, profile_ids: matches.map(row => row.profile_id)};
+  };
+  return {scope: "ENGINE_CATALOGUE_NOT_RUN_AUTHORIZATION" as const,
+    execution_routes: engine.routes.map(row => ({value: row.route_id,
+      ...choice(profiles.filter(profile => profile.execution_route === row.route_id), ["execution_route"])})),
+    optimization_pairs: engine.modes.flatMap(row => row.valid_schedules.map(schedule => ({optimization_mode: row.mode_id,
+      optimization_schedule: schedule, ...choice(profiles.filter(profile => profile.optimization_mode === row.mode_id
+        && profile.optimization_schedule === schedule), [profiles.some(profile => profile.optimization_mode === row.mode_id)
+          ? "optimization_schedule" : "optimization_mode"])}))),
+    frequencies: (engine.current_release.walk_forward_options?.frequency ?? []).map(row => ({value: row.value,
+      ...choice(profiles.filter(profile => profile.frequencies.includes(row.value)), ["walk_forward", "frequency"])})),
+    window_modes: (engine.current_release.walk_forward_options?.window_mode ?? []).map(row => ({value: row.value,
+      ...choice(profiles.filter(profile => profile.window_modes.includes(row.value as "expanding" | "rolling")), ["walk_forward", "window_mode"])})),
+  };
 }

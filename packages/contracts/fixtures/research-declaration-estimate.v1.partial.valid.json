@@ -38,7 +38,10 @@
       "state": "NOT_PUBLISHED",
       "reason_code": "WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE",
       "observed": null,
-      "required": "P08-compatible indexed fold plan"
+      "required": "P08-compatible indexed fold plan",
+      "field_path": [
+        "walk_forward"
+      ]
     }
   ],
   "ready_for_preflight": false

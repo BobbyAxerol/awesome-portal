@@ -198,6 +198,7 @@ export const DeclarationMetadataSchema = z.object({
 });
 export const DeclarationConditionSchema = z.object({ key: z.string().regex(/^[a-z][a-z0-9_.]{0,63}$/),
   state: z.enum(["PASS", "FAIL", "NOT_PUBLISHED"]), reason_code: Reason.nullable(),
+  field_path: z.array(z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$|^[0-9]+$/)).min(1).max(8).optional(),
   observed: z.string().max(200).nullable(), required: z.string().max(200),
 }).strict().refine(v => (v.state === "PASS") === (v.reason_code === null));
 export const DeclarationEstimateSchema = z.object({ schema_version: z.literal("research.declaration-estimate.v1"),

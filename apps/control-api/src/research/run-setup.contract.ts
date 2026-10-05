@@ -4,6 +4,21 @@ const Id = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/);
 const Ms = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 const Reason = z.string().regex(/^[A-Z][A-Z0-9_]{2,159}$/);
 const Digest = z.string().regex(/^[a-f0-9]{64}$/);
+export const SetupFieldPathSchema = z.array(z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$|^[0-9]+$/)).min(1).max(8);
+export const SetupRefusalSchema = z.object({ reason_code: Reason, field_path: SetupFieldPathSchema }).strict();
+export type SetupRefusal = z.infer<typeof SetupRefusalSchema>;
+const EngineChoiceFields = z.object({ value: Id, state: z.enum(["ENABLED", "DISABLED"]), reason_code: Reason.nullable(),
+  field_path: SetupFieldPathSchema, profile_ids: z.array(Id).max(6) }).strict();
+const consistentChoice = (v: {state: string; reason_code: string | null; profile_ids: string[]}) =>
+  (v.state === "ENABLED") === (v.reason_code === null)
+  && (v.profile_ids.length === 0) === (v.reason_code === "PROFILE_NOT_OPENED");
+const EngineChoice = EngineChoiceFields.refine(consistentChoice);
+const EngineOptions = z.object({
+  scope: z.literal("ENGINE_CATALOGUE_NOT_RUN_AUTHORIZATION"),
+  execution_routes: z.array(EngineChoice).max(32),
+  optimization_pairs: z.array(EngineChoiceFields.omit({ value: true }).extend({ optimization_mode: Id, optimization_schedule: Id }).refine(consistentChoice)).max(24),
+  frequencies: z.array(EngineChoice).max(8), window_modes: z.array(EngineChoice).max(4),
+}).strict();
 const Bounds = z.object({ min: z.number().int().nonnegative(), max: z.number().int().nonnegative() }).strict();
 export const RunSetupContextSchema = z.object({
   workspace_id: Id.optional(), alpha_id: Id, alpha_version_id: Id,
@@ -12,6 +27,7 @@ export const RunSetupContextSchema = z.object({
 }).strict();
 export const RunSetupProfileSchema = z.object({
   profile_id: Id, state: z.enum(["ENABLED", "DISABLED"]), reason_code: Reason.nullable(),
+  refusals: z.array(SetupRefusalSchema).max(8).optional(),
   engine_release_id: Id, execution_route: Id, protocol: z.enum(["three_window_decay", "advanced"]),
   optimization_mode: Id, optimization_schedule: Id,
   requested_spec_versions: z.array(z.enum(["research.requested-spec.v1", "research.requested-spec.v2"])).min(1).max(2),
@@ -31,7 +47,9 @@ export const RunSetupProfileSchema = z.object({
     zero_semantics: z.literal("ZERO_APPLIES_NO_TEMPORAL_GUARD"),
   }).strict(),
   independent_holdout: z.boolean(),
-}).strict().refine(v => (v.state === "ENABLED") === (v.reason_code === null));
+}).strict().refine(v => (v.state === "ENABLED") === (v.reason_code === null)
+  && (v.refusals === undefined || (v.state === "ENABLED" ? v.refusals.length === 0
+    : v.refusals.length > 0 && v.refusals[0].reason_code === v.reason_code)));
 export const RunSetupOptionsSchema = z.object({
   schema_version: z.literal("research.run-setup-options.v1"),
   context: RunSetupContextSchema.omit({ workspace_id: true }).extend({ workspace_id: Id }),
@@ -40,6 +58,7 @@ export const RunSetupOptionsSchema = z.object({
   warmup_bars: z.number().int().min(0).max(100_000),
   source_timezone: z.enum(["UTC", "Asia/Ho_Chi_Minh"]),
   profiles: z.array(RunSetupProfileSchema).max(6),
+  engine_options: EngineOptions.optional(),
   preflight_required: z.literal(true),
 }).strict();
 export const WindowSuggestionRequestSchema = RunSetupContextSchema.extend({
@@ -50,9 +69,13 @@ export const WindowSuggestionRequestSchema = RunSetupContextSchema.extend({
   window_mode: z.enum(["expanding", "rolling"]).optional(),
   train_window: z.string().regex(/^[1-9][0-9]{0,4}(?:D|h)$/).optional(),
   initial_train_bars: z.number().int().min(1).max(100_000).optional(),
-}).strict().refine(v => (v.start_utc_ms === undefined) === (v.end_exclusive_utc_ms === undefined),
-  "Supply both explicit range bounds or neither.")
-  .refine(v => v.start_utc_ms === undefined || v.start_utc_ms < v.end_exclusive_utc_ms!);
+}).strict().superRefine((v, ctx) => {
+  if ((v.start_utc_ms === undefined) !== (v.end_exclusive_utc_ms === undefined))
+    ctx.addIssue({code: z.ZodIssueCode.custom, message: "Supply both explicit range bounds or neither.",
+      path: [v.start_utc_ms === undefined ? "start_utc_ms" : "end_exclusive_utc_ms"]});
+  else if (v.start_utc_ms !== undefined && v.start_utc_ms >= v.end_exclusive_utc_ms!)
+    ctx.addIssue({code: z.ZodIssueCode.custom, message: "The range must be increasing.", path: ["end_exclusive_utc_ms"]});
+});
 const SpanFields = z.object({ start_utc_ms: Ms, end_exclusive_utc_ms: Ms, bars: z.number().int().positive().max(100_000) }).strict();
 const Span = SpanFields.refine(v => v.start_utc_ms < v.end_exclusive_utc_ms);
 const ThreeWindowPatch = z.object({ protocol: z.literal("three_window_decay"),

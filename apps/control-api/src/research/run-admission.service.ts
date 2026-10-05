@@ -14,6 +14,7 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import type { ResearchPreflightManifestRecord, ResearchScope } from "./contracts";
 import { ResearchRequestedSpecSchema, type ResearchRequestedSpec } from "./preflight.contract";
 import { sha256ResearchJson } from "./preflight.service";
+import type { SetupRefusal } from "./run-setup.contract";
 import {
   DELTA_WFO_PROFILE,
   DELTA_WFO_PROFILE_DIGEST,
@@ -318,47 +319,56 @@ export class ResearchRunAdmissionService {
     requested: ResearchRequestedSpec,
     declaration: Record<string, unknown>,
     entrypoint: string,
-  ): { reason: string | null; parameters: Readonly<Record<string, string | number | boolean>> | null } {
+  ): { reason: string | null; parameters: Readonly<Record<string, string | number | boolean>> | null; refusal?: SetupRefusal } {
+    const reject = (reason: string, reason_code: string, field_path: string[]) => ({reason, parameters: null, refusal: {reason_code, field_path}});
     if (requested.schema_version !== "research.requested-spec.v1") {
-      return { reason: "The installed imported Alpha adapter accepts requested-spec v1 only.", parameters: null };
+      return reject("The installed imported Alpha adapter accepts requested-spec v1 only.", "REQUESTED_SPEC_EXECUTOR_NOT_INSTALLED", ["schema_version"]);
     }
     if (declaration.schema_version !== IMPORTED_ALPHA_PROFILE.source_contract || declaration.entrypoint !== entrypoint) {
-      return { reason: "The imported Alpha source declaration no longer matches its immutable entrypoint.", parameters: null };
+      return reject("The imported Alpha source declaration no longer matches its immutable entrypoint.", "ALPHA_DECLARATION_NOT_PUBLISHED", ["alpha_binding"]);
     }
     if (requested.client.engine_release_id !== IMPORTED_ALPHA_PROFILE.engine_release_id ||
         requested.execution_route !== IMPORTED_ALPHA_PROFILE.execution_route ||
         requested.protocol !== IMPORTED_ALPHA_PROFILE.protocol || !requested.windows || requested.walk_forward) {
-      return { reason: "The imported Alpha adapter accepts only the QuantBT 1.1.1 three-window signal-notional profile.", parameters: null };
+      return reject("The imported Alpha adapter accepts only the QuantBT 1.1.1 three-window signal-notional profile.",
+        requested.client.engine_release_id !== IMPORTED_ALPHA_PROFILE.engine_release_id ? "ENGINE_RELEASE_MISMATCH"
+          : requested.execution_route !== IMPORTED_ALPHA_PROFILE.execution_route ? "PROFILE_ROUTE_NOT_ADMITTED" : "PROFILE_PROTOCOL_NOT_ADMITTED",
+        requested.client.engine_release_id !== IMPORTED_ALPHA_PROFILE.engine_release_id ? ["client", "engine_release_id"]
+          : requested.execution_route !== IMPORTED_ALPHA_PROFILE.execution_route ? ["execution_route"] : ["protocol"]);
     }
     if (Object.keys(requested.route_params).length !== 0 || requested.optuna_trials !== 1 ||
         requested.early_stopping !== null || Object.keys(requested.optimization_config).length !== 0) {
-      return { reason: "The imported Alpha fixed profile accepts no route configuration, optimizer study or early stopping.", parameters: null };
+      const axis = Object.keys(requested.route_params).length ? "route_params" : requested.optuna_trials !== 1 ? "optuna_trials"
+        : requested.early_stopping !== null ? "early_stopping" : "optimization_config";
+      return reject("The imported Alpha fixed profile accepts no route configuration, optimizer study or early stopping.",
+        axis === "route_params" ? "PROFILE_ROUTE_PARAMS_NOT_ADMITTED" : axis === "optuna_trials" ? "PROFILE_TRIAL_COUNT_NOT_ADMITTED"
+          : axis === "early_stopping" ? "PROFILE_EARLY_STOPPING_NOT_ADMITTED" : "PROFILE_OPTIMIZER_OVERRIDES_NOT_ADMITTED", [axis]);
     }
     const timeframes = declaration.timeframes;
     if (!Array.isArray(timeframes) || !timeframes.includes(requested.data.timeframe)) {
-      return { reason: "The requested timeframe is outside the imported Alpha declaration.", parameters: null };
+      return reject("The requested timeframe is outside the imported Alpha declaration.", "ALPHA_TIMEFRAME_NOT_DECLARED", ["data", "timeframe"]);
     }
     if (!Number.isInteger(declaration.warmup_bars) || (declaration.warmup_bars as number) < 0 ||
         (declaration.warmup_bars as number) > 4_096) {
-      return { reason: "The imported Alpha warmup exceeds the restricted execution profile ceiling of 4096 bars.", parameters: null };
+      return reject("The imported Alpha warmup exceeds the restricted execution profile ceiling of 4096 bars.", "IMPORTED_WARMUP_EXCEEDS_EXECUTOR_LIMIT", ["alpha_binding"]);
     }
     const determinism = declaration.determinism;
     if (!determinism || typeof determinism !== "object" || Array.isArray(determinism) ||
         (determinism as Record<string, unknown>).seed_required === true && requested.random_seed === null) {
-      return { reason: "The imported Alpha determinism declaration requires an explicit random seed.", parameters: null };
+      return reject("The imported Alpha determinism declaration requires an explicit random seed.", "ALPHA_RANDOM_SEED_REQUIRED", ["random_seed"]);
     }
     const space = declaration.parameter_space;
     if (!space || typeof space !== "object" || Array.isArray(space)) {
-      return { reason: "The imported Alpha parameter declaration is unavailable.", parameters: null };
+      return reject("The imported Alpha parameter declaration is unavailable.", "ALPHA_DECLARATION_NOT_PUBLISHED", ["alpha_binding"]);
     }
     const overrides = new Map(requested.parameter_space_overrides.map((row) => [row.name, row]));
     if (requested.parameter_space_overrides.some((row) => row.kind !== "pin")) {
-      return { reason: "The imported Alpha fixed profile accepts parameter pins only; sweeps require a separately versioned adapter.", parameters: null };
+      return reject("The imported Alpha fixed profile accepts parameter pins only; sweeps require a separately versioned adapter.", "IMPORTED_PARAMETER_PIN_REQUIRED", ["parameter_space_overrides"]);
     }
     const parameters: Record<string, string | number | boolean> = {};
     for (const [name, raw] of Object.entries(space as Record<string, unknown>)) {
       if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-        return { reason: `The imported Alpha parameter ${name} has an invalid declaration.`, parameters: null };
+        return reject(`The imported Alpha parameter ${name} has an invalid declaration.`, "ALPHA_DECLARATION_NOT_PUBLISHED", ["alpha_binding"]);
       }
       const spec = raw as Record<string, unknown>;
       const override = overrides.get(name);
@@ -366,19 +376,19 @@ export class ResearchRunAdmissionService {
         const value = spec.value;
         if (!["string", "number", "boolean"].includes(typeof value) ||
             (typeof value === "number" && !Number.isFinite(value))) {
-          return { reason: `The imported Alpha fixed parameter ${name} is invalid.`, parameters: null };
+          return reject(`The imported Alpha fixed parameter ${name} is invalid.`, "ALPHA_DECLARATION_NOT_PUBLISHED", ["alpha_binding"]);
         }
         if (override && (override.kind !== "pin" || override.value !== value)) {
-          return { reason: `The imported Alpha fixed parameter ${name} cannot be overridden.`, parameters: null };
+          return reject(`The imported Alpha fixed parameter ${name} cannot be overridden.`, "ALPHA_PARAMETER_OUTSIDE_DECLARATION", ["parameter_space_overrides"]);
         }
         parameters[name] = value as string | number | boolean;
       } else {
         if (!override || override.kind !== "pin") {
-          return { reason: `The imported Alpha parameter ${name} must be pinned for this execution profile.`, parameters: null };
+          return reject(`The imported Alpha parameter ${name} must be pinned for this execution profile.`, "IMPORTED_PARAMETER_PIN_REQUIRED", ["parameter_space_overrides"]);
         }
         if (spec.kind === "categorical") {
           if (!Array.isArray(spec.values) || !spec.values.some((value) => value === override.value)) {
-            return { reason: `The imported Alpha parameter ${name} is outside its categorical declaration.`, parameters: null };
+            return reject(`The imported Alpha parameter ${name} is outside its categorical declaration.`, "ALPHA_PARAMETER_OUTSIDE_DECLARATION", ["parameter_space_overrides"]);
           }
         } else if (spec.kind === "int_range" || spec.kind === "float_range") {
           const value = override.value;
@@ -389,17 +399,17 @@ export class ResearchRunAdmissionService {
               typeof high !== "number" || typeof step !== "number" || step <= 0 || value < low || value > high ||
               Math.abs((value - low) / step - Math.round((value - low) / step)) > 1e-9 ||
               (spec.kind === "int_range" && !Number.isInteger(value))) {
-            return { reason: `The imported Alpha parameter ${name} is outside its declared range/step.`, parameters: null };
+            return reject(`The imported Alpha parameter ${name} is outside its declared range/step.`, "ALPHA_PARAMETER_OUTSIDE_DECLARATION", ["parameter_space_overrides"]);
           }
         } else {
-          return { reason: `The imported Alpha parameter ${name} has an unsupported declaration kind.`, parameters: null };
+          return reject(`The imported Alpha parameter ${name} has an unsupported declaration kind.`, "ALPHA_DECLARATION_NOT_PUBLISHED", ["alpha_binding"]);
         }
         parameters[name] = override.value;
       }
       overrides.delete(name);
     }
     if (overrides.size > 0) {
-      return { reason: `The imported Alpha request pins undeclared parameters: ${[...overrides.keys()].sort().join(", ")}.`, parameters: null };
+      return reject(`The imported Alpha request pins undeclared parameters: ${[...overrides.keys()].sort().join(", ")}.`, "ALPHA_PARAMETER_NOT_DECLARED", ["parameter_space_overrides"]);
     }
     return { reason: null, parameters };
   }
@@ -407,6 +417,10 @@ export class ResearchRunAdmissionService {
   /** Advisory S02/P08 check reuses the exact imported executor predicate. */
   importedConfigurationReason(requested: ResearchRequestedSpec, declaration: Record<string, unknown>, entrypoint: string): string | null {
     return this.importedUnsupportedReason(requested, declaration, entrypoint).reason;
+  }
+
+  importedConfigurationRefusal(requested: ResearchRequestedSpec, declaration: Record<string, unknown>, entrypoint: string): SetupRefusal | null {
+    return this.importedUnsupportedReason(requested, declaration, entrypoint).refusal ?? null;
   }
 
   /**
