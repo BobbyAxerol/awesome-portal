@@ -95,16 +95,11 @@ async function openDataStep(page: Page): Promise<void> {
   await page.locator("[data-step-card]").first().waitFor({ state: "visible" });
 }
 
-/** S02 Walk-forward, Three Window: a bound version, the v2 catalog's first symbol and timeframe, then the four linked edges typed in. */
+/** S02 Walk-forward, Three Window: a bound version, then the four linked edges typed in (no timeframe: the calendar stands on the edges alone). */
 async function openLinkedWindows(page: Page): Promise<void> {
   const alpha = page.getByLabel("Alpha", { exact: true });
   await alpha.selectOption({ index: 1 });
   await page.getByLabel("Alpha version", { exact: true }).selectOption({ index: 1 });
-  await page.locator("[data-step-pill='data']").click();
-  const dataset = page.getByLabel("Dataset", { exact: true });
-  await dataset.selectOption({ index: 1 });
-  await page.getByLabel("Symbol", { exact: true }).fill("BTCUSDT");
-  await page.locator("[data-timeframe-chips] button, [data-timeframe-chips] [role=radio]").first().click();
   await page.locator("[data-step-pill='windows']").click();
   const edges = ["2026-05-01T00:00", "2026-07-01T00:00", "2026-08-01T00:00", "2026-08-15T00:00"];
   const inputs = page.locator("[data-calendar-edge] input[type=datetime-local]");

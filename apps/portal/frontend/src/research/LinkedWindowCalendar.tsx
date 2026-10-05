@@ -65,8 +65,6 @@ const ROLES = [
   { key: "oos", label: "OOS", tone: "var(--role-oos)", from: "b", to: "c" },
   { key: "holdout", label: "Holdout", tone: "var(--role-holdout)", from: "c", to: "d" },
 ] as const;
-/** Wide enough for `05/01/2026, 12:00 AM`, the picker icon and the `UTC` suffix at 11px mono (same as the form's rows). */
-const INSTANT_FIELD_WIDTH = 236;
 /** WCAG 2.5.8 target size. */
 const HANDLE = 24;
 const DAY_MS = 86_400_000;
@@ -164,9 +162,9 @@ export function LinkedWindowCalendar({
 
   return (
     <div className="flex flex-col gap-2" data-linked-window-calendar>
-      <div className="flex flex-wrap gap-2.5" data-calendar-inputs>
+      <div className="grid grid-cols-1 gap-2.5 min-[560px]:grid-cols-2" data-calendar-inputs>
         {EDGE_KEYS.map((k) => (
-          <label key={k} className="flex min-w-0 flex-1 flex-col gap-1" style={{ minWidth: INSTANT_FIELD_WIDTH }} data-calendar-edge={k}>
+          <label key={k} className="flex min-w-0 flex-col gap-1" data-calendar-edge={k}>
             <span className="mono text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>{LABEL[k]}</span>
             <InstantInput
               style={inputStyle(Boolean(errors[k]) || invalid[k] === true)}
