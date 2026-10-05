@@ -323,7 +323,7 @@ describe("400-trial audit — a copied run's instants are shown, not blanked", (
       } }),
     });
     go("windows");
-    expect((screen.getByLabelText("IS start") as HTMLInputElement).value).toBe("2022-01-01T00:00");
+    expect((screen.getByLabelText("IS start (A)") as HTMLInputElement).value).toBe("2022-01-01T00:00");
   });
 });
 

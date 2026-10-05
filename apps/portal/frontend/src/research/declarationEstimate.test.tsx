@@ -420,8 +420,17 @@ describe("refusals point at the offending field", () => {
   it("three windows: only the window the path names carries it", () => {
     mount({ draft: threeWindow(), estimateStatus: refused(["windows", "oos", "start"]) });
     expect(qa("[data-estimate-field-refusal]").length).toBe(1);
-    expect(q('[data-window="oos"] [data-estimate-field-refusal="windows.oos.start"]')).not.toBeNull();
-    expect(q('[data-window="is"] [data-estimate-field-refusal]')).toBeNull();
+    /* The linked calendar has no per-window rows: the one refusal is printed below it, naming its own path. */
+    const refusal = q('[data-estimate-field-refusal="windows.oos.start"]')!;
+    const calendar = q("[data-linked-window-calendar]")!;
+    expect(refusal).not.toBeNull();
+    expect(calendar.contains(refusal)).toBe(false);
+    expect(Boolean(calendar.compareDocumentPosition(refusal) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    expect(q('[data-estimate-field-refusal="windows.is.start"]')).toBeNull();
+    expect(q('[data-estimate-field-refusal="windows.holdout.start"]')).toBeNull();
+    /* ... and the path binds the edge it names: oos.start is B; no other edge is marked. */
+    const invalid = (edge: string) => q(`[data-calendar-edge="${edge}"] input`)!.getAttribute("aria-invalid");
+    expect([invalid("a"), invalid("b"), invalid("c"), invalid("d")]).toEqual([null, "true", null, null]);
   });
 
   it("typed absence: a refusal that names no field prints no inline note, only the strip line", () => {
@@ -723,12 +732,10 @@ describe("the route", () => {
     fireEvent.change(screen.getByLabelText("Symbol"), { target: { value: "BTCUSDT" } });
     fireEvent.click(document.querySelector('[data-step-pill="windows"]') as HTMLElement);
     const set = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
-    set("IS start", "2026-07-01T00:00");
-    set("IS end exclusive", "2026-07-01T12:00");
-    set("OOS start", "2026-07-01T12:00");
-    set("OOS end exclusive", "2026-07-02T00:00");
-    set("Holdout start", "2026-07-02T00:00");
-    set("Holdout end exclusive", "2026-07-03T00:00");
+    set("IS start (A)", "2026-07-01T00:00");
+    set("IS end · OOS start (B)", "2026-07-01T12:00");
+    set("OOS end · Holdout start (C)", "2026-07-02T00:00");
+    set("Holdout end exclusive (D)", "2026-07-03T00:00");
     /* The estimate is asked only once the mode and schedule are declared too. */
     fireEvent.change(screen.getByLabelText("Optimization mode"), { target: { value: "mode_1_decay" } });
     fireEvent.change(screen.getByLabelText("Optimization schedule"), { target: { value: "global" } });
@@ -804,10 +811,11 @@ describe("the route", () => {
     expect(held().trials).toBe("7");
   });
 
-  it("a typed 400 shows its code under the OOS start", async () => {
+  it("a typed 400 shows its code under the calendar (oos.start is the B edge)", async () => {
     stub(() => json({ error: { code: "WINDOW_BOUND_NOT_ALIGNED", message: "x" }, request_id: "r", details: { field_path: ["windows", "oos", "start"] } }, 400));
     await declare();
-    await waitFor(() => expect(document.querySelector('[data-window="oos"] [data-estimate-field-refusal="windows.oos.start"]')?.textContent).toBe("WINDOW_BOUND_NOT_ALIGNED · windows.oos.start"), { timeout: 4000 });
+    await waitFor(() => expect(document.querySelector('[data-estimate-field-refusal="windows.oos.start"]')?.textContent).toBe("WINDOW_BOUND_NOT_ALIGNED · windows.oos.start"), { timeout: 4000 });
+    expect(document.querySelector('[data-calendar-edge="b"] input')?.getAttribute("aria-invalid")).toBe("true");
   });
 });
 

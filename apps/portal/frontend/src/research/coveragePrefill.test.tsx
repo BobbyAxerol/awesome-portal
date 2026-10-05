@@ -29,6 +29,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { RegistryListResponse } from "./alphaImportClient";
 import type { AtlasDocument } from "./atlas";
 import type { DatasetCatalog } from "./datasetClient";
+import { resetSetupRouteMemory } from "./setupClient";
+import { RUN_SETUP_SETTLE_MS } from "./useRunSetup";
 import { NewRun } from "./NewRun";
 import { NewRunRoute, constraintsFrom, emptyDraft } from "./NewRunRoute";
 import type { PreflightResponse, RequestedSpec } from "./preflightClient";
@@ -50,6 +52,7 @@ import { researchState } from "./state";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  resetSetupRouteMemory();
 });
 
 /* ---------------------------------------------------------------- fixtures */
@@ -76,13 +79,12 @@ const BTC_BYBIT = { dataset: "fixture-bybit-1h", symbol: "BTCUSDT", lower: "2022
 /** A quarterly contract with a much shorter coverage: `2025-09 → 2026-04`. */
 const QUARTERLY = { dataset: "crypto-binance-1m", symbol: "BTCUSDT_260327", lower: "2025-09-01T00:00", upper: "2026-05-01T00:00" };
 
+/* The four linked edges of the calendar (was six independent inputs): A, B (IS end = OOS start), C (OOS end = Holdout start), D. */
 const WINDOW_LABELS = [
-  "IS start",
-  "IS end exclusive",
-  "OOS start",
-  "OOS end exclusive",
-  "Holdout start",
-  "Holdout end exclusive",
+  "IS start (A)",
+  "IS end · OOS start (B)",
+  "OOS end · Holdout start (C)",
+  "Holdout end exclusive (D)",
 ] as const;
 
 function catalogWith(change: (copy: DatasetCatalog) => void): DatasetCatalog {
@@ -341,10 +343,20 @@ function serve(options: { catalog: DatasetCatalog | "not-served" } = { catalog: 
         ? json({ error: { code: "NOT_FOUND", message: "not found" } }, 404)
         : json(options.catalog);
     }
+    /* The run-setup read of a complete context: not served here, so the coverage fallback owns the outer bounds. */
+    if (method === "GET" && url.pathname === "/api/v1/research/runs/setup-options") return json({ error: { code: "NOT_FOUND", message: "not found" } }, 404);
     if (method === "POST" && url.pathname === "/api/v1/research/preflights") return json(PREFLIGHT);
     throw new Error(`unexpected request ${method} ${url.pathname}`);
   }));
   return served;
+}
+
+/**
+ * A pick that completes the Alpha / dataset / symbol / timeframe context makes the setup read pending for its settle
+ * delay (the suggestion owns the windows meanwhile); once it answers "absent" the coverage fallback fills them.
+ */
+async function settleSetup() {
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, RUN_SETUP_SETTLE_MS + 120)); });
 }
 
 async function settle() {
@@ -379,7 +391,7 @@ const tip = (selector: string) => document.querySelector(selector)?.getAttribute
 describe("D4 — Screen 02, real route and hook", () => {
   it("nothing chosen → every date is blank, and the reason is on screen", async () => {
     const { served } = await mountRoute("windows");
-    expect(windowValues()).toEqual(["", "", "", "", "", ""]);
+    expect(windowValues()).toEqual(["", "", "", ""]);
     expect(document.querySelector("[data-window-prefill-note]")?.getAttribute("data-prefill-state")).toBe("no-dataset");
     expect(text("[data-prefill-reason]")).toBe("No dataset is chosen, so nothing is prefilled.");
     expect(document.querySelector("[data-prefill-caption]")).toBeNull();
@@ -397,9 +409,9 @@ describe("D4 — Screen 02, real route and hook", () => {
     expect(document.querySelector("[data-window-prefill-status]")).toBeNull();
 
     goTo("windows");
-    expect(windowValues()).toEqual([BTC.lower, "", "", "", "", BTC.upper]);
-    expect(text('[data-prefill-caption="is.start"]')).toBe("prefilled · first day of 2020-01");
-    expect(text('[data-prefill-caption="holdout.endExclusive"]')).toBe("prefilled · end of 2026-09");
+    expect(windowValues()).toEqual([BTC.lower, "", "", BTC.upper]);
+    /* The per-edge captions went with the six-row layout; the one source line says it. */
+    expect(document.querySelector("[data-prefill-caption]")).toBeNull();
     expect(text("[data-prefill-source]")).toBe("Prefilled from crypto-binance-1m · BTCUSDT · 2020-01 → 2026-09 · 81 months");
     expect(tip("[data-prefill-source]")).toContain("UTC month partitions.");
     /* The version's own declared warmup (the registry fixture's 32 bars) is named, not converted into a date. */
@@ -415,12 +427,13 @@ describe("D4 — Screen 02, real route and hook", () => {
   it("edit → the value survives a re-render, later effects and the next pick", async () => {
     const { view } = await mountRoute("data");
     choose(BTC.dataset, BTC.symbol);
+    await settleSetup();
     goTo("windows");
-    fireEvent.change(field("IS start"), { target: { value: "2021-03-04T05:00" } });
-    expect(field("IS start").value).toBe("2021-03-04T05:00");
-    /* The edited field loses its caption; the untouched one keeps it. */
-    expect(document.querySelector('[data-prefill-caption="is.start"]')).toBeNull();
-    expect(document.querySelector('[data-prefill-caption="holdout.endExclusive"]')).not.toBeNull();
+    fireEvent.change(field("IS start (A)"), { target: { value: "2021-03-04T05:00" } });
+    expect(field("IS start (A)").value).toBe("2021-03-04T05:00");
+    /* The untouched end is still a prefill, so the one source line stays (there are no per-edge captions any more). */
+    expect(document.querySelector("[data-prefill-caption]")).toBeNull();
+    expect(text("[data-prefill-source]")).toContain("Prefilled from crypto-binance-1m · BTCUSDT");
 
     /* A re-render, a step away and back, and every late effect the route runs. */
     view.rerender(
@@ -431,34 +444,38 @@ describe("D4 — Screen 02, real route and hook", () => {
     goTo("review");
     goTo("windows");
     await settle();
-    expect(field("IS start").value).toBe("2021-03-04T05:00");
-    expect(field("Holdout end exclusive").value).toBe(BTC.upper);
+    expect(field("IS start (A)").value).toBe("2021-03-04T05:00");
+    expect(field("Holdout end exclusive (D)").value).toBe(BTC.upper);
 
     /* A later pick with a different coverage: the edit stays, the prefill moves. */
     goTo("data");
     fireEvent.change(field("Symbol"), { target: { value: QUARTERLY.symbol } });
+    await settleSetup();
     goTo("windows");
-    expect(windowValues()).toEqual(["2021-03-04T05:00", "", "", "", "", QUARTERLY.upper]);
+    expect(windowValues()).toEqual(["2021-03-04T05:00", "", "", QUARTERLY.upper]);
     expect(text("[data-prefill-source]")).toContain("BTCUSDT_260327 · 2025-09 → 2026-04 · 8 months");
   });
 
   it("change the dataset → the prefilled bounds are replaced by the new coverage, not merged", async () => {
     await mountRoute("data");
     choose(BTC.dataset, BTC.symbol);
+    await settleSetup();
     goTo("windows");
     expect(windowValues()[0]).toBe(BTC.lower);
 
     goTo("data");
     fireEvent.change(field("Dataset"), { target: { value: BTC_BYBIT.dataset } });
+    await settleSetup();
     goTo("windows");
-    expect(windowValues()).toEqual([BTC_BYBIT.lower, "", "", "", "", BTC_BYBIT.upper]);
+    expect(windowValues()).toEqual([BTC_BYBIT.lower, "", "", BTC_BYBIT.upper]);
     expect(text("[data-prefill-source]")).toContain("fixture-bybit-1h · BTCUSDT · 2022-05 → 2025-11 · 43 months");
 
     /* A dataset that does not list the symbol takes the bounds away rather than keeping the old ones. */
     goTo("data");
     fireEvent.change(field("Dataset"), { target: { value: "fixture-single-symbol-1d" } });
+    await settleSetup();
     goTo("windows");
-    expect(windowValues()).toEqual(["", "", "", "", "", ""]);
+    expect(windowValues()).toEqual(["", "", "", ""]);
     expect(text("[data-prefill-reason]")).toBe("BTCUSDT is not among this dataset's 1 listed symbols, so nothing is prefilled.");
   });
 
@@ -471,7 +488,7 @@ describe("D4 — Screen 02, real route and hook", () => {
     /* The symbol line already says the coverage is not published; the two agree. */
     expect(text("[data-symbol-coverage]")).toContain("coverage not published");
     goTo("windows");
-    expect(windowValues()).toEqual(["", "", "", "", "", ""]);
+    expect(windowValues()).toEqual(["", "", "", ""]);
     expect(text("[data-prefill-reason]")).toBe(reason);
   });
 
@@ -479,7 +496,7 @@ describe("D4 — Screen 02, real route and hook", () => {
     await mountRoute("data");
     choose("fixture-query-any-symbol", "BTCUSDT");
     goTo("windows");
-    expect(windowValues()).toEqual(["", "", "", "", "", ""]);
+    expect(windowValues()).toEqual(["", "", "", ""]);
     expect(text("[data-prefill-reason]")).toBe("This source answers any symbol by query and publishes no symbol list. Nothing is prefilled.");
     cleanup();
 
@@ -488,7 +505,7 @@ describe("D4 — Screen 02, real route and hook", () => {
     fireEvent.change(field("Symbol"), { target: { value: BTC.symbol } });
     expect(document.querySelector("[data-catalog-unread]")).not.toBeNull();
     goTo("windows");
-    expect(windowValues()).toEqual(["", "", "", "", "", ""]);
+    expect(windowValues()).toEqual(["", "", "", ""]);
     expect(text("[data-prefill-reason]")).toBe("The dataset catalog was not read, so there is no coverage to prefill from.");
   });
 
@@ -498,10 +515,9 @@ describe("D4 — Screen 02, real route and hook", () => {
     choose(BTC.dataset, BTC.symbol);
     goTo("windows");
     /* The interior boundaries are the reader's to choose. */
-    fireEvent.change(field("IS end exclusive"), { target: { value: "2024-01-01T00:00" } });
-    fireEvent.change(field("OOS start"), { target: { value: "2024-01-01T00:00" } });
-    fireEvent.change(field("OOS end exclusive"), { target: { value: "2025-01-01T00:00" } });
-    fireEvent.change(field("Holdout start"), { target: { value: "2025-01-01T00:00" } });
+    /* B is the IS end and the OOS start in one edit; C is the OOS end and the Holdout start. */
+    fireEvent.change(field("IS end · OOS start (B)"), { target: { value: "2024-01-01T00:00" } });
+    fireEvent.change(field("OOS end · Holdout start (C)"), { target: { value: "2025-01-01T00:00" } });
     /* The mode is the reader's to choose: the Walk-forward step asks for it, and Review would list it as missing. */
     fireEvent.change(field("Optimization mode"), { target: { value: "mode_1_decay" } });
     goTo("optimization");
@@ -531,6 +547,7 @@ describe("D4 — Screen 02, real route and hook", () => {
        start the coverage replaced), so the held preview is gone. */
     goTo("data");
     fireEvent.change(field("Symbol"), { target: { value: "SOLUSDT" } });
+    await settleSetup();
     goTo("review");
     await waitFor(() => expect(document.querySelector("[data-preflight-preview]")).not.toBeNull());
     expect(text("[data-cleared-note]")).toBe(SPEC_CHANGED_NOTE);
@@ -598,7 +615,7 @@ describe("D4 — the advanced protocol fills its own outer bounds and leaves the
     render(<Harness initial={emptyDraft()} step="data" />);
     choose(BTC.dataset, BTC.symbol);
     goTo("windows");
-    expect(windowValues()).toEqual([BTC.lower, "", "", "", "", BTC.upper]);
+    expect(windowValues()).toEqual([BTC.lower, "", "", BTC.upper]);
   });
 });
 
@@ -608,7 +625,7 @@ describe("D4 — the caption tells the truth about the coverage it came from", (
     choose(BTC_BYBIT.dataset, "ETHUSDT");
     goTo("windows");
     expect(text("[data-prefill-source]")).toBe("Prefilled from fixture-bybit-1h · ETHUSDT · 2022-05 → 2025-11 · 40 of 43 months present");
-    expect(field("IS start").value).toBe("2022-05-01T00:00");
+    expect(field("IS start (A)").value).toBe("2022-05-01T00:00");
   });
 
   it("keeps a bound the reader cleared cleared, and a bound they retyped theirs, through the next pick", () => {
@@ -616,19 +633,18 @@ describe("D4 — the caption tells the truth about the coverage it came from", (
     choose(BTC.dataset, BTC.symbol);
     goTo("windows");
     /* Cleared: an empty field is the reader's answer, not a blank waiting to be filled. */
-    fireEvent.change(field("Holdout end exclusive"), { target: { value: "" } });
-    expect(field("Holdout end exclusive").value).toBe("");
+    fireEvent.change(field("Holdout end exclusive (D)"), { target: { value: "" } });
+    expect(field("Holdout end exclusive (D)").value).toBe("");
     /* Retyped to the very value the coverage had put there: it is theirs from that keystroke. */
-    fireEvent.change(field("IS start"), { target: { value: "2020-02-02T00:00" } });
-    fireEvent.change(field("IS start"), { target: { value: BTC.lower } });
-    expect(document.querySelector('[data-prefill-caption="is.start"]')).toBeNull();
-    expect(document.querySelector('[data-prefill-caption="holdout.endExclusive"]')).toBeNull();
+    fireEvent.change(field("IS start (A)"), { target: { value: "2020-02-02T00:00" } });
+    fireEvent.change(field("IS start (A)"), { target: { value: BTC.lower } });
+    /* Both bounds are the reader's now: the source line is replaced by the "kept" reason after the next pick. */
 
     goTo("data");
     fireEvent.change(field("Symbol"), { target: { value: "SOLUSDT" } });
     goTo("windows");
-    expect(field("IS start").value).toBe(BTC.lower);
-    expect(field("Holdout end exclusive").value).toBe("");
+    expect(field("IS start (A)").value).toBe(BTC.lower);
+    expect(field("Holdout end exclusive (D)").value).toBe("");
     /* Nothing of the coverage is left to caption: both bounds are the reader's. */
     expect(document.querySelector("[data-prefill-caption]")).toBeNull();
     expect(text("[data-prefill-reason]")).toBe("Your bounds kept · coverage 2020-09 → 2026-09 · 73 months");
@@ -657,13 +673,13 @@ describe("D4 — the caption tells the truth about the coverage it came from", (
 
   it("does not say a coverage filled anything once every outer bound is the reader's own", () => {
     render(<Harness initial={emptyDraft()} step="windows" />);
-    fireEvent.change(field("IS start"), { target: { value: "2021-01-01T00:00" } });
-    fireEvent.change(field("Holdout end exclusive"), { target: { value: "2025-01-01T00:00" } });
+    fireEvent.change(field("IS start (A)"), { target: { value: "2021-01-01T00:00" } });
+    fireEvent.change(field("Holdout end exclusive (D)"), { target: { value: "2025-01-01T00:00" } });
     goTo("data");
     choose(BTC.dataset, BTC.symbol);
     expect(document.querySelector("[data-window-prefill-status]")).toBeNull();
     goTo("windows");
-    expect(windowValues()).toEqual(["2021-01-01T00:00", "", "", "", "", "2025-01-01T00:00"]);
+    expect(windowValues()).toEqual(["2021-01-01T00:00", "", "", "2025-01-01T00:00"]);
     expect(text("[data-prefill-reason]")).toBe("Your bounds kept · coverage 2020-01 → 2026-09 · 81 months");
     expect(tip("[data-prefill-reason]")).toContain("nothing was prefilled.");
     expect(document.querySelector("[data-prefill-caption]")).toBeNull();

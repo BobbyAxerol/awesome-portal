@@ -524,10 +524,11 @@ describe("U12 / U13 — one instant format, and the zone is stated", () => {
     expect(timelineRows(draft()).map((row) => row.text)).toEqual(["not declared → not declared", "not declared → not declared", "not declared → not declared"]);
   });
 
-  it("each datetime input carries 'UTC' beside it (3 windows x 2 + advanced 3)", () => {
+  it("each datetime input carries 'UTC' beside it (linked calendar 4 edges + advanced 3; was 3 windows x 2)", () => {
     mount();
     go("windows");
-    expect(qa("[data-utc-suffix]")).toHaveLength(6);
+    expect(qa("[data-utc-suffix]")).toHaveLength(4);
+    expect(qa("[data-calendar-edge] [data-utc-suffix]")).toHaveLength(4);
     expect(qa("[data-utc-suffix]").every((node) => node.textContent === "UTC")).toBe(true);
     cleanup();
     mount({ draft: draft({ protocol: "advanced" }) });

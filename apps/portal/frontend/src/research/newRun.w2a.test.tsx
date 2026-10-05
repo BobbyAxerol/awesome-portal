@@ -145,13 +145,15 @@ describe("Advanced walk-forward is as strict as Three-Window", () => {
 
   it("the mode is required for both protocols and the step is in error, Review lists them and Preflight is off", () => {
     const draft = advancedEmpty({ start: "2026-01-01T00:00", endExclusive: "2026-06-01T00:00", splitMode: "", frequency: "weekly", windowMode: "expanding" });
-    expect(blockingProblems(draft, LIMITS).map((problem) => problem.message)).toEqual(
-      expect.arrayContaining(["First OOS instant is required.", "Label horizon is required.", "Choose an optimization mode."]),
-    );
+    /* S02 guard rule: a v1 declaration carries no temporal guards, so none is required of it. */
+    const messages = blockingProblems(draft, LIMITS).map((problem) => problem.message);
+    expect(messages).toEqual(expect.arrayContaining(["First OOS instant is required.", "Choose an optimization mode."]));
+    expect(messages).not.toContain("Label horizon is required.");
     mount({ draft });
     go("review");
     const links = qa('[data-blocking-link="windows"]');
-    expect(links.length).toBeGreaterThanOrEqual(3);
+    /* First OOS instant and the optimization mode; the guards are no longer required of a v1 declaration. */
+    expect(links.length).toBeGreaterThanOrEqual(2);
     expect((q('[data-action="preflight"]') as HTMLButtonElement).disabled).toBe(true);
     expect(q('[data-action="preflight"]')!.getAttribute("title")).toBeTruthy();
     /* Each error is a link to the step that owns it. */

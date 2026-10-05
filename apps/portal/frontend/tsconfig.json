@@ -85,6 +85,9 @@
       "@portal/contracts-research-compare": [
         "../../../packages/contracts/generated/research-compare.d.ts"
       ],
+      "@portal/contracts-research-run-setup": [
+        "../../../packages/contracts/generated/research-run-setup.d.ts"
+      ],
       "@portal/contracts-research-release-candidate": [
         "../../../packages/contracts/generated/research-release-candidate.d.ts"
       ],

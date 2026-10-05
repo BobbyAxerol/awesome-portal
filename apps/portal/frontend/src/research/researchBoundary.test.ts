@@ -93,6 +93,8 @@ describe("no internal identifier or direct source access on the Research surface
     "childAuditCompanionClient.ts",
     // P23 (Codex 7d18fe4e): linked final-audit custody read + pinned create, workspace scoped.
     "linkedAuditClient.ts",
+    // S02: Alpha-bound run setup options + window suggestion (same-origin read-only GET/POST).
+    "setupClient.ts",
   ];
 
   /*

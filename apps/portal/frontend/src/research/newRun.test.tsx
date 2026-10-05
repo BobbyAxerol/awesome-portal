@@ -1024,12 +1024,21 @@ describe("RF02-F2 — the P02 field map is covered 24/24", () => {
         expect(screen.getByLabelText({ datasetId: "Dataset", symbol: "Symbol", timeframe: "Timeframe" }[path])).toBeTruthy();
       } else if (path.startsWith("windows[*].start")) {
         at("windows", { protocol: "three_window_decay" });
-        expect(screen.getByLabelText("IS start")).toBeTruthy();
+        /* The six start/end inputs became four linked edges: A = IS start, B = IS end AND OOS start, C = OOS end AND
+           Holdout start, D = Holdout end. Every window start of the map still has an input: A, B (OOS start), C (Holdout start). */
+        /* B and C also carry a slider handle of the same name on the track, so the input is read by its edge slot. */
+        const edge = (key: string) => document.querySelector(`[data-calendar-edge="${key}"] input[type=datetime-local]`);
+        expect(screen.getByLabelText("IS start (A)")).toBeTruthy();
+        expect(edge("b")).toBeTruthy();
+        expect(edge("c")).toBeTruthy();
         at("windows", { protocol: "advanced" });
         expect(screen.getByLabelText("Analysis start")).toBeTruthy();
       } else if (path === "windows[*].end") {
         at("windows", { protocol: "three_window_decay" });
-        expect(screen.getByLabelText("Holdout end exclusive")).toBeTruthy();
+        /* Every window end: IS end (B), OOS end (C), Holdout end (D). */
+        expect(document.querySelector('[data-calendar-edge="b"] input[type=datetime-local]')).toBeTruthy();
+        expect(document.querySelector('[data-calendar-edge="c"] input[type=datetime-local]')).toBeTruthy();
+        expect(screen.getByLabelText("Holdout end exclusive (D)")).toBeTruthy();
       } else if (path === "advanced.*") {
         at("windows", { protocol: "advanced" });
         expect(screen.getByLabelText("Analysis end exclusive")).toBeTruthy();

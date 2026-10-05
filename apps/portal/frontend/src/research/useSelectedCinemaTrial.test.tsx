@@ -21,7 +21,7 @@ const deferred = <T,>() => { let resolve!: (value: T) => void, reject!: (cause: 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("Cinema exact selected-row lookup", () => {
-  it("selected #342 outside page100 resolves exact digest with only three opaque named GETs", async () => {
+  it("selected trial 342 outside page100 resolves exact digest with only three opaque named GETs", async () => {
     const read = vi.fn().mockResolvedValueOnce(page(100)).mockResolvedValueOnce(page(200)).mockResolvedValueOnce(page(300));
     const answer = await readSelectedCinemaTrial(fixture.run_id, page(), "342", "owned-workspace", signal(), undefined, read);
     expect(answer).toMatchObject({ state: "ready", trial: { trial_id: "342", source_ordinal: 342, params_digest: "342".padStart(64, "0"), parameters: { window: "9007199254740993" } } });

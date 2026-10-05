@@ -76,6 +76,13 @@ import {
 } from "./dataDeclaration";
 import { ConditionsChecklist, EarliestStartOffer, PlannedFolds, WarmupChip, WindowBars, WindowBarsLine, hasEstimateStrip } from "./EstimateParts";
 import { EstimateFieldRefusal, EstimateStatusLine, refusedAt } from "./EstimateStatus";
+import { InstantInput as DateTimeInput, datetimeInputValue } from "./InstantInput";
+import { FoldTimeline, foldsFromPlanned } from "./FoldTimeline";
+import { LinkedWindowCalendar } from "./LinkedWindowCalendar";
+import { WindowSetupBar } from "./WindowSetupBar";
+import { setupProfilesOr, type RunSetupState } from "./useRunSetup";
+import { edgesOf, windowsFromEdges } from "./useWindowSuggestion";
+import { timeframeBarMs } from "./windowGeometry";
 import type { EstimateStatus } from "./useDeclarationEstimate";
 import { OOS_STATE_LABEL, statusTone } from "./EngineAtlas";
 import type { PreflightRefusal } from "./preflightClient";
@@ -92,8 +99,10 @@ import {
   STEPS,
   RECEIPT_ALPHA,
   SWEEP_CEILING,
-  applyCoveragePrefill,
+  adoptGuardDefaults,
+  applyCoveragePrefillFor,
   draftIsEmpty,
+  guardAppliesNoProtection,
   blockingProblems,
   isIncompleteProblem,
   carriedCoverage,
@@ -235,6 +244,8 @@ function Field({
     </label>
   );
 }
+
+export { datetimeInputValue };
 
 const INPUT_CLASS = "mono rounded-[6px] border px-2 py-[5px] text-[11px]";
 const inputStyle = (bad?: boolean) => ({
@@ -1066,21 +1077,6 @@ function prefillHint(draft: RunDraft, field: PrefillField | null): React.ReactNo
 }
 
 /**
- * The same caption for a three-window row. It sits on its own line under the
- * row, because a hint under one input would lift that input out of line with
- * its neighbour (the row aligns its inputs by their bottom edge).
- */
-function PrefillLine({ draft, field, label }: { draft: RunDraft; field: PrefillField | null; label: string }) {
-  const source = field === null ? null : carriedCoverage(draft, field);
-  if (field === null || source === null) return null;
-  return (
-    <p className="w-full pl-[82px] text-[9.5px]" style={{ color: "var(--ink-soft)" }}>
-      {label} <span data-prefill-caption={field}>{prefillCaption(field, source)}</span>
-    </p>
-  );
-}
-
-/**
  * The reader's own edit of a field. For one of the four outer bounds it also
  * records that the value is theirs, so no later pick replaces it.
  */
@@ -1108,6 +1104,7 @@ function DataStep({
   profileFit = null,
   onSymbolMiss,
   workspaceId,
+  setupStatus = "idle",
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
@@ -1116,6 +1113,8 @@ function DataStep({
   /** Reports the typed symbol when the server's own search says the dataset does not list it (a partial list). */
   onSymbolMiss?: (symbol: string | null) => void;
   workspaceId?: string;
+  /** The run-setup read: while it serves (or is asked) the suggestion owns the windows, not the coverage envelope. */
+  setupStatus?: RunSetupState["status"];
   /** CG-P08-04: the research dataset catalog, or null when it was not read. */
   catalog?: DatasetCatalog | null;
   catalogReason?: string | null;
@@ -1142,14 +1141,14 @@ function DataStep({
     missRef.current?.(serverMiss !== null && serverMiss === typedSymbol ? serverMiss : null);
   }, [serverMiss, typedSymbol]);
   const pickDataset = (datasetId: string) =>
-    patch({ datasetId, ...applyCoveragePrefill(draft, planCoverage(catalog, datasetId, draft.symbol, draft.timeframe)) });
+    patch({ datasetId, ...applyCoveragePrefillFor(draft, planCoverage(catalog, datasetId, draft.symbol, draft.timeframe), setupStatus) });
   const pickSymbol = (symbol: string) =>
-    patch({ symbol, ...applyCoveragePrefill(draft, planCoverage(catalog, draft.datasetId, symbol, draft.timeframe)) });
+    patch({ symbol, ...applyCoveragePrefillFor(draft, planCoverage(catalog, draft.datasetId, symbol, draft.timeframe), setupStatus) });
   /* The exact bar edges differ per timeframe, so a timeframe pick re-places bounds the reader never touched. */
   const pickTimeframe = (timeframe: string) =>
     patch({
       timeframe,
-      ...(draft.coveragePrefill?.source ? applyCoveragePrefill(draft, planCoverage(catalog, draft.datasetId, draft.symbol, timeframe)) : {}),
+      ...(draft.coveragePrefill?.source ? applyCoveragePrefillFor(draft, planCoverage(catalog, draft.datasetId, draft.symbol, timeframe), setupStatus) : {}),
     });
   const prefillPlan = planCoverage(catalog, draft.datasetId, draft.symbol, draft.timeframe);
   /* One line, and only while the popup has no match to offer: typing `BNB` shows BNBUSDT, which is no reason to say "not listed". */
@@ -1317,64 +1316,6 @@ function bindingVersionLabel(draft: Pick<RunDraft, "alphaId" | "alphaVersionId">
   );
 }
 
-/**
- * What a `datetime-local` input can be handed for a draft instant.
- *
- * A copied run carries its instants as the server stored them
- * (`2026-05-01T00:00:00Z`); the input only takes local text with no zone, so
- * with the "Z" on it the browser dropped the value and showed a blank
- * `mm/dd/yyyy` box over a draft that held a real date. The draft keeps its own
- * text; only what the input is given loses the trailing "Z" (the form reads
- * these instants as UTC everywhere). An instant the input cannot show at all -
- * an explicit offset, a stray format - comes back as `raw`, to be printed
- * beside the input instead of vanishing.
- */
-export function datetimeInputValue(draftValue: string): { input: string; raw: string | null } {
-  if (draftValue === "") return { input: "", raw: null };
-  const local = draftValue.endsWith("Z") ? draftValue.slice(0, -1) : draftValue;
-  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?$/.test(local)
-    ? { input: local, raw: null }
-    : { input: "", raw: draftValue };
-}
-
-function DateTimeInput({
-  value,
-  onChange,
-  label,
-  style,
-  dataSplitMode = false,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  label: string;
-  style: React.CSSProperties;
-  dataSplitMode?: boolean;
-}) {
-  const shown = datetimeInputValue(value);
-  return (
-    <>
-      <span className="flex items-center gap-1.5">
-        <input
-          type="datetime-local"
-          className={`${INPUT_CLASS} min-w-0 flex-1`}
-          style={style}
-          value={shown.input}
-          onChange={(event) => onChange(event.target.value)}
-          aria-label={label}
-          data-split-mode={dataSplitMode ? "" : undefined}
-        />
-        {/* The inputs render in the reader's locale; the form reads every instant as UTC. */}
-        <span className="mono flex-none text-[9px]" style={{ color: "var(--ink-faint)" }} data-utc-suffix>UTC</span>
-      </span>
-      {shown.raw !== null ? (
-        <span className="mono text-[9.5px]" style={{ color: "var(--accent-2)" }} data-instant-unshown>
-          copied as {shown.raw} — this input cannot show it
-        </span>
-      ) : null}
-    </>
-  );
-}
-
 /** The profile id that fixes a value, when the draft holds exactly that value; else undefined (the field stays editable). */
 function pinnedBy(profile: ProfilePins | null, pinned: string | null, current: string): string | undefined {
   return profile?.enabled && pinned !== null && pinned === current ? profile.profileId : undefined;
@@ -1530,9 +1471,17 @@ function WindowsStep({
   profiles = null,
   estimateStatus = IDLE_ESTIMATE,
   estimate = null,
+  setup = IDLE_SETUP,
+  workspaceId,
+  timeframe = "",
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
+  /** S02 linked-window setup: the runnable options the Suggest / Apply / Reset bar reads. */
+  setup?: RunSetupState;
+  workspaceId?: string;
+  /** The declared timeframe: the bar size the linked calendar steps and counts by. */
+  timeframe?: string;
   /** The merged served estimate: its earliest start (bar-metadata) is offered only when the index published one. */
   estimate?: PreflightEstimate | null;
   /** Every enabled profile of this protocol, route and mode (v1 and v2): what a v2 declaration would be admitted by. */
@@ -1602,21 +1551,6 @@ function WindowsStep({
     if (!draft.walkForward.windowMode) change.windowMode = profileWindowMode ?? options.window_mode_default;
     if (Object.keys(change).length > 0) adopt({ walkForward: { ...draft.walkForward, ...change } });
   }, [options, draft.protocol, draft.walkForward, adopt, profile]);
-  const rows = [
-    ["is", "IS"],
-    ["oos", "OOS"],
-    ["holdout", "Holdout"],
-  ] as const;
-
-  /* D4: of the six three-window inputs only the IS start and the holdout end
-     are outer bounds a coverage can fill; the four between them are not. */
-  const outerField = (key: (typeof rows)[number][0], edge: "start" | "endExclusive"): PrefillField | null =>
-    key === "is" && edge === "start" ? "is.start" : key === "holdout" && edge === "endExclusive" ? "holdout.endExclusive" : null;
-  const setWindow = (key: (typeof rows)[number][0], edge: "start" | "endExclusive", value: string) =>
-    patch({
-      windows: { ...draft.windows, [key]: { ...draft.windows[key], [edge]: value } },
-      ...touchPatch(draft, outerField(key, edge)),
-    });
 
   return (
     <Card title="Walk-forward">
@@ -1624,38 +1558,46 @@ function WindowsStep({
       <WindowPrefillNote draft={draft} plan={prefillPlan} warmupBars={warmupBars} />
       {draft.protocol === "three_window_decay" ? (
         <div className="flex flex-col gap-2" data-three-window>
-          {rows.map(([key, label]) => (
-            <div key={key} className="flex flex-wrap items-end gap-2.5" data-window={key}>
-              <span className="mono w-[72px] flex-none text-[10.5px] font-semibold">{label}</span>
-              <Field minWidth={INSTANT_FIELD_WIDTH} label="start">
-                <DateTimeInput
-                  style={inputStyle(Boolean(error) || refusedAt(estimateStatus, "windows", key, "start"))}
-                  value={draft.windows[key].start}
-                  onChange={(value) => setWindow(key, "start", value)}
-                  label={`${label} start`}
-                />
-              </Field>
-              <Field minWidth={INSTANT_FIELD_WIDTH} label="end exclusive">
-                <DateTimeInput
-                  style={inputStyle(Boolean(error) || refusedAt(estimateStatus, "windows", key, "end_exclusive"))}
-                  value={draft.windows[key].endExclusive}
-                  onChange={(value) => setWindow(key, "endExclusive", value)}
-                  label={`${label} end exclusive`}
-                />
-              </Field>
-              <PrefillLine draft={draft} field={outerField(key, "start")} label={`${label} start`} />
-              <PrefillLine draft={draft} field={outerField(key, "endExclusive")} label={`${label} end`} />
-              <EstimateFieldRefusal status={estimateStatus} owns="windows" key2={key} />
-              {key === "is" ? (
-                <div className="w-full pl-[82px] empty:hidden">
-                  <EarliestStartOffer estimate={servedEstimate} start={draft.windows.is.start} onUse={(instant) => setWindow("is", "start", instant)} />
-                </div>
-              ) : null}
-            </div>
-          ))}
+          <WindowSetupBar draft={draft} patch={patch} setup={setup} profileId={profile?.enabled ? profile.profileId : null} workspaceId={workspaceId} />
+          <LinkedWindowCalendar
+            idPrefix="s02-windows"
+            edges={{ a: draft.windows.is.start, b: draft.windows.is.endExclusive, c: draft.windows.oos.endExclusive, d: draft.windows.holdout.endExclusive }}
+            onChange={(next) => {
+              const current = edgesOf(draft);
+              if (current === null) return;
+              const edges = { a: current.a, b: current.b, c: current.c, d: current.d, ...next };
+              /* A copied draft whose windows overlap or leave a gap is not linked: editing A or D then changes only that
+                 edge's own field, never the OOS or holdout start the reader (or the copy) set. B and C link by definition. */
+              const relink = current.linked || next.b !== undefined || next.c !== undefined;
+              patch({
+                windows: relink
+                  ? windowsFromEdges(edges)
+                  : {
+                      ...draft.windows,
+                      ...(next.a !== undefined ? { is: { ...draft.windows.is, start: next.a } } : {}),
+                      ...(next.d !== undefined ? { holdout: { ...draft.windows.holdout, endExclusive: next.d } } : {}),
+                    },
+                ...(next.a !== undefined ? touchPatch(draft, "is.start") : {}),
+                ...(next.d !== undefined ? touchPatch(draft, "holdout.endExclusive") : {}),
+              });
+            }}
+            barMs={timeframeBarMs(timeframe)}
+            coverage={coverageRange(prefillPlan)}
+            warmupBars={warmupBars}
+            maxSpanMs={profile?.enabled && profile.maxSpanDays !== null ? profile.maxSpanDays * 86_400_000 : null}
+            invalid={{
+              a: Boolean(error) || refusedAt(estimateStatus, "windows", "is", "start"),
+              b: Boolean(error) || refusedAt(estimateStatus, "windows", "is", "end_exclusive") || refusedAt(estimateStatus, "windows", "oos", "start"),
+              c: Boolean(error) || refusedAt(estimateStatus, "windows", "oos", "end_exclusive") || refusedAt(estimateStatus, "windows", "holdout", "start"),
+              d: Boolean(error) || refusedAt(estimateStatus, "windows", "holdout", "end_exclusive"),
+            }}
+          />
+          {(["is", "oos", "holdout"] as const).map((key) => <EstimateFieldRefusal key={key} status={estimateStatus} owns="windows" key2={key} />)}
+          <EarliestStartOffer estimate={servedEstimate} start={draft.windows.is.start} onUse={(instant) => patch({ windows: windowsFromEdges({ ...edgesOf(draft)!, a: instant }), ...touchPatch(draft, "is.start") })} />
         </div>
       ) : (
         <div className="flex flex-wrap gap-2.5" data-advanced-window>
+          <div className="w-full"><WindowSetupBar draft={draft} patch={patch} setup={setup} profileId={profile?.enabled ? profile.profileId : null} workspaceId={workspaceId} /></div>
           <Field minWidth={INSTANT_FIELD_WIDTH} label="Analysis start" hint={prefillHint(draft, "walkForward.start")}>
             <DateTimeInput
               style={inputStyle(refusedAt(estimateStatus, "walk_forward", "start"))}
@@ -1749,6 +1691,23 @@ function WindowsStep({
                   />
                 </Field>
               ))}
+              {/* Spec v1 carries no guards. Choosing v2 is explicit: the published defaults fill the EMPTY fields only. */}
+              {profile?.temporalGuards?.defaults && (["labelHorizonBars", "purgeBars", "embargoBars"] as const).some((key) => (draft.walkForward[key] ?? "").trim() === "") ? (
+                <button
+                  type="button"
+                  className="btn-ghost mono text-[10px]"
+                  data-action="adopt-guard-defaults"
+                  title="Declare requested-spec v2 and fill the EMPTY guard fields with the release defaults; values you typed stay. A zero applies no temporal guard."
+                  onClick={() => adopt({ walkForward: adoptGuardDefaults(draft.walkForward, profile.temporalGuards!.defaults!) })}
+                >
+                  Use v2 guards
+                </button>
+              ) : null}
+              {(["labelHorizonBars", "purgeBars", "embargoBars"] as const).some((key) => guardAppliesNoProtection(draft.walkForward[key])) ? (
+                <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-guard-zero title="A zero label horizon, purge or embargo applies no temporal guard; it is the published default, not a protection.">
+                  0 applies no guard
+                </span>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -2626,6 +2585,7 @@ function FoldPlanLine({ plan, protocol }: { plan: FoldPlan; protocol: RunDraft["
 }
 
 const IDLE_ESTIMATE: EstimateStatus = { kind: "idle" };
+const IDLE_SETUP: RunSetupState = { status: "idle", options: null, error: null, retry: () => undefined, invalidate: () => undefined };
 
 function WindowTimeline({
   draft,
@@ -2743,6 +2703,27 @@ function WindowTimeline({
               </p>
             ) : null}
             <WindowBarsLine estimate={estimate} />
+            <FoldTimeline
+              folds={foldsFromPlanned(estimate?.plannedFoldItems)}
+              analysis={(() => {
+                const from = utcMs(draft.walkForward.start);
+                const to = utcMs(draft.walkForward.endExclusive);
+                return from !== null && to !== null && to > from ? { startUtcMs: from, endUtcMs: to } : undefined;
+              })()}
+              firstOosUtcMs={utcMs(draft.walkForward.splitMode)}
+              windowMode={draft.walkForward.windowMode}
+              status={
+                foldsFromPlanned(estimate?.plannedFoldItems) !== null
+                  ? "served"
+                  : estimateStatus.kind === "pending"
+                    ? "pending"
+                    : estimateStatus.kind === "refused"
+                      ? "refused"
+                      : "missing"
+              }
+              missingNote={estimateStatus.kind === "idle" ? "Fold geometry appears once the declaration is complete." : "Fold geometry not published for this declaration."}
+              refusalNote={estimateStatus.kind === "refused" ? estimateStatus.message : undefined}
+            />
           </>
         ) : null}
         {hasEstimateStrip(estimate) || estimateStatus.kind !== "idle" ? (
@@ -3131,6 +3112,8 @@ export interface NewRunProps {
   /** What the declaration-estimate call is doing: asking, refused (typed, with a field path), or failed (4xx / 5xx / no answer). */
   estimateStatus?: EstimateStatus;
   onRetryEstimate?: () => void;
+  /** S02 linked-window setup: the runnable options of this Alpha / dataset / symbol / timeframe, and the suggestion that reads them. */
+  setup?: RunSetupState;
   /** CG-P11-07 `?from=`: the run this draft was copied from, and the read's state. */
   cloneSource?: { runId: string; state: ResearchState; copiedAt?: number | null } | null;
   /** W5a: the Screen-07 what-if node this draft forks, read from the server's grid. */
@@ -3181,11 +3164,12 @@ export function NewRun(props: NewRunProps) {
     estimate = null,
     estimateStatus = IDLE_ESTIMATE,
     onRetryEstimate,
+    setup = IDLE_SETUP,
     cloneSource = null,
     forkSource = null,
   } = props;
   /* LW-07: the profile this declaration falls under, when exactly one does. */
-  const profiles = useMemo(() => readProfiles(portalAdmission), [portalAdmission]);
+  const profiles = useMemo(() => setupProfilesOr(setup.options, readProfiles(portalAdmission)), [setup.options, portalAdmission]);
   /* Two advanced profiles can be enabled (v1 and v2): the one whose requested-spec version the draft serializes as. */
   const v2 = usesSpecV2(draft);
   const profile = useMemo(
@@ -3508,10 +3492,10 @@ export function NewRun(props: NewRunProps) {
             />
           ) : null}
           {step === "data" ? (
-            <DataStep workspaceId={workspaceId} draft={draft} patch={stepPatch} limits={limits} error={shownError.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} registry={registry} profileFit={profileFit} onSymbolMiss={onSymbolMiss} />
+            <DataStep workspaceId={workspaceId} draft={draft} patch={stepPatch} limits={limits} error={shownError.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} registry={registry} profileFit={profileFit} onSymbolMiss={onSymbolMiss} setupStatus={setup.status} />
           ) : null}
           {step === "windows" ? (
-            <WindowsStep draft={draft} patch={stepPatch} adopt={patch} atlas={atlas} profile={profile} family={family} profiles={profiles} estimateStatus={estimateStatus} estimate={estimate} error={shownError.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} />
+            <WindowsStep draft={draft} patch={stepPatch} adopt={patch} atlas={atlas} profile={profile} family={family} profiles={profiles} estimateStatus={estimateStatus} estimate={estimate} error={shownError.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} setup={setup} workspaceId={workspaceId} timeframe={draft.timeframe} />
           ) : null}
           {step === "parameters" ? (
             <ParametersStep draft={draft} patch={stepPatch} error={shownError.get("parameters") ?? null} ceiling={sweepCeiling} />

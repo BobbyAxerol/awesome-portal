@@ -71,7 +71,7 @@ async function problemOf(response: Response): Promise<PortalApiError> {
  * A 404 that carries a `RESEARCH_` code is a refusal of this request (the same
  * denial a 403 is), not a route the server lacks; a bare 404/405/501 is the route.
  */
-function isMissingRoute(error: PortalApiError): boolean {
+export function isMissingRoute(error: PortalApiError): boolean {
   return ROUTE_ABSENT.has(error.status) && !(error.status === 404 && error.code?.startsWith("RESEARCH_") === true);
 }
 

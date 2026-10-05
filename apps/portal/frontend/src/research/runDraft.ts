@@ -1043,6 +1043,33 @@ export function applyCoveragePrefill(
   };
 }
 
+/** The status words of the run setup read (`useRunSetup`); named here so the prefill rule needs no hook import. */
+export type SetupStatusWord = "idle" | "pending" | "served" | "absent" | "error";
+
+/**
+ * Whether the whole-coverage prefill may fill the outer bounds. While the Alpha-bound setup is served (or being
+ * read) the profile-aware suggestion owns the windows; the coverage envelope is the fallback only when the setup
+ * is not there (no context yet, an older server without the route, a failed read).
+ */
+export function coveragePrefillAllowed(setupStatus: SetupStatusWord): boolean {
+  return setupStatus !== "served" && setupStatus !== "pending";
+}
+
+const NO_PLAN: CoveragePlan = { state: "no-dataset", reason: "" };
+
+/**
+ * `applyCoveragePrefill` behind `coveragePrefillAllowed`. When the setup owns the windows nothing is filled;
+ * a value an earlier prefill placed for another dataset or symbol is still replaced by nothing, never kept stale
+ * (the same call with a plan that offers no bounds), and anything the reader or a copied run holds is untouched.
+ */
+export function applyCoveragePrefillFor(
+  draft: Pick<RunDraft, "windows" | "walkForward" | "coveragePrefill">,
+  plan: CoveragePlan,
+  setupStatus: SetupStatusWord,
+): Pick<RunDraft, "windows" | "walkForward" | "coveragePrefill"> {
+  return applyCoveragePrefill(draft, coveragePrefillAllowed(setupStatus) ? plan : NO_PLAN);
+}
+
 /** The provenance after the reader edited `field`: it is theirs from now on. */
 export function markPrefillTouched(draft: Pick<RunDraft, "coveragePrefill">, field: PrefillField): CoveragePrefill {
   const prior = draft.coveragePrefill ?? NO_PREFILL;
@@ -1066,6 +1093,40 @@ export function carriedCoverage(
   if (!prefill?.source || placed === undefined || placed !== readPrefillField(draft, field)) return null;
   if (prefill.source.datasetId !== draft.datasetId || prefill.source.symbol !== draft.symbol.trim().toUpperCase()) return null;
   return prefill.source;
+}
+
+/* ------------------------------------------------ temporal guard defaults */
+
+/** The served zero semantics of a guard: a 0 applies no temporal guard and is never shown as protection. */
+export const ZERO_APPLIES_NO_TEMPORAL_GUARD = "ZERO_APPLIES_NO_TEMPORAL_GUARD";
+
+/** Published release defaults of the three guards (a v2 profile's `temporal_guards.defaults`), in bars. */
+export interface GuardDefaults {
+  labelHorizonBars: number;
+  purgeBars: number;
+  embargoBars: number;
+}
+
+/**
+ * The explicit choice of requested-spec v2: the published defaults go into EMPTY guard fields only. A value
+ * the reader typed is kept, with its units (bars); nothing is overwritten. The declaration is marked v2.
+ */
+export function adoptGuardDefaults(walkForward: RunDraft["walkForward"], defaults: GuardDefaults): RunDraft["walkForward"] {
+  const fill = (current: string | undefined, value: number) => (current === undefined || current.trim() === "" ? String(value) : current);
+  return {
+    ...walkForward,
+    labelHorizonBars: fill(walkForward.labelHorizonBars, defaults.labelHorizonBars),
+    purgeBars: fill(walkForward.purgeBars, defaults.purgeBars),
+    embargoBars: fill(walkForward.embargoBars, defaults.embargoBars),
+    declaredV2: true,
+  };
+}
+
+/** True when a guard field holds a zero: under `ZERO_APPLIES_NO_TEMPORAL_GUARD` that is no purge/embargo/horizon, not a protective one. */
+export function guardAppliesNoProtection(value: string | undefined): boolean {
+  if (value === undefined || value.trim() === "") return false;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed === 0;
 }
 
 /* ----------------------------------------------------- field path → step */

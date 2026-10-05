@@ -251,24 +251,29 @@ describe("RG3 — a refusal reddens only the bound it names and says its served 
   it("windows.holdout.end_exclusive: the holdout end is red, its start and the other windows are not", () => {
     mount({ estimateStatus: refused(["windows", "holdout", "end_exclusive"]) });
     go("windows");
-    expect(border('[aria-label="Holdout end exclusive"]')).toBe("var(--bad)");
-    expect(border('[aria-label="Holdout start"]')).not.toBe("var(--bad)");
-    expect(border('[aria-label="IS start"]')).not.toBe("var(--bad)");
-    expect(border('[aria-label="IS end exclusive"]')).not.toBe("var(--bad)");
+    expect(border('[aria-label="Holdout end exclusive (D)"]')).toBe("var(--bad)");
+    expect(border('[aria-label="OOS end · Holdout start (C)"]')).not.toBe("var(--bad)");
+    expect(border('[aria-label="IS start (A)"]')).not.toBe("var(--bad)");
+    expect(border('[aria-label="IS end · OOS start (B)"]')).not.toBe("var(--bad)");
   });
 
   it("windows.is.start: only the IS start", () => {
     mount({ estimateStatus: refused(["windows", "is", "start"]) });
     go("windows");
-    expect(border('[aria-label="IS start"]')).toBe("var(--bad)");
-    expect(border('[aria-label="IS end exclusive"]')).not.toBe("var(--bad)");
+    expect(border('[aria-label="IS start (A)"]')).toBe("var(--bad)");
+    expect(border('[aria-label="IS end · OOS start (B)"]')).not.toBe("var(--bad)");
+    expect(border('[aria-label="OOS end · Holdout start (C)"]')).not.toBe("var(--bad)");
+    expect(border('[aria-label="Holdout end exclusive (D)"]')).not.toBe("var(--bad)");
   });
 
   it("a path that names the window only (no bound) still marks the whole window", () => {
     mount({ estimateStatus: refused(["windows", "oos"]) });
     go("windows");
-    expect(border('[aria-label="OOS start"]')).toBe("var(--bad)");
-    expect(border('[aria-label="OOS end exclusive"]')).toBe("var(--bad)");
+    /* The OOS window is [B, C): naming it reddens both of its linked edges, and not the outer ones. */
+    expect(border('[aria-label="IS end · OOS start (B)"]')).toBe("var(--bad)");
+    expect(border('[aria-label="OOS end · Holdout start (C)"]')).toBe("var(--bad)");
+    expect(border('[aria-label="IS start (A)"]')).not.toBe("var(--bad)");
+    expect(border('[aria-label="Holdout end exclusive (D)"]')).not.toBe("var(--bad)");
   });
 
   it("the served sentence of the typed code sits under the code; a code with no sentence adds none", () => {
@@ -595,8 +600,9 @@ describe("T04 — that bounds were prefilled is said once", () => {
     expect(q("[data-window-prefill-status]")).toBeNull();
     go("windows");
     expect(qa("[data-prefill-source]").length).toBe(1);
-    const captions = qa("[data-prefill-caption]").map((node) => node.textContent);
-    expect(captions).toEqual(["prefilled · first 1h bar", "prefilled · end of the last 1h bar"]);
+    /* The linked calendar has no per-row edge captions: the one note above is the whole statement. */
+    expect(qa("[data-prefill-caption]")).toHaveLength(0);
+    expect(text("[data-prefill-source]")).toContain("Prefilled from crypto-binance-1m · BTCUSDT");
   });
 
   it("typed absence: a reason nothing could be prefilled is still printed on Market data", () => {

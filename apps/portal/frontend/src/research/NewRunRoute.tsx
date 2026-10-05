@@ -18,13 +18,14 @@ import { NewRun } from "./NewRun";
 import { type RegistryEntry, alphaImportApi, toRefusal } from "./alphaImportClient";
 import type { AtlasDocument } from "./atlas";
 import { type AtlasResponse, foundationApi, toFoundationRefusal } from "./foundationClient";
-import { STEPS, type StepId, type DraftConstraints, type ParameterEntry, type RunDraft, RECEIPT_ALPHA, applyCoveragePrefill, applyOverrides, draftFromRequestedSpec, draftIsEmpty, firstIncompleteStep, parameterEntriesFrom, planCoverage, serializeRequestedSpec, usesSpecV2 } from "./runDraft";
+import { STEPS, type StepId, type DraftConstraints, type ParameterEntry, type RunDraft, RECEIPT_ALPHA, applyCoveragePrefillFor, coveragePrefillAllowed, applyOverrides, draftFromRequestedSpec, draftIsEmpty, firstIncompleteStep, parameterEntriesFrom, planCoverage, serializeRequestedSpec, usesSpecV2 } from "./runDraft";
 import { type DatasetCatalog, catalogFailureState, readDatasetCatalog } from "./datasetClient";
 import { admitsSpecV2, mergeEstimates, profileTrialDefault, readCatalogIndex, readPreflightEstimate, readProfiles, seedPinned, selectProfile, specVersionOf, symbolListing } from "./dataDeclaration";
 import { useWindowMetadata } from "./useWindowMetadata";
 import { clearRunDraft, restoreRunDraft, runDraftScope, saveRunDraft, type RunDraftScope } from "./runDraftStore";
 import { useSession } from "../auth/session";
 import { useDeclarationEstimate } from "./useDeclarationEstimate";
+import { setupContextFrom, useRunSetup } from "./useRunSetup";
 import { type RunRequestedSpec, cloneFailureState, readRunRequestedSpec } from "./runCloneClient";
 import { runLineageFor, useNewRun, type RunLineage } from "./useNewRun";
 import { useRunLabelRead } from "./useRunLabelRead";
@@ -90,6 +91,11 @@ export function constraintsFrom(
     unlistedSymbol?: string | null;
     /** The Atlas's served profiles; with one that admits requested-spec v2, Advanced walk-forward requires the temporal guards. */
     profiles?: ReturnType<typeof readProfiles>;
+    /**
+     * The draft really is a requested-spec v2 declaration (`usesSpecV2(draft)`). The temporal guards are required only
+     * then: a v1 declaration (a cloned v1 run) carries none, and another enabled profile admitting v2 does not make it v2.
+     */
+    usesSpecV2?: boolean;
   },
 ): DraftConstraints {
   const blocked: Record<string, string> = {};
@@ -114,6 +120,7 @@ export function constraintsFrom(
     listedSymbols: data ? listedSymbolsFor(data.catalog, data.datasetId) : null,
     unlistedSymbol: data?.unlistedSymbol ?? null,
     temporalGuardsRequired: atlas?.current_release.walk_forward_options?.temporal_guards != null
+      && data?.usesSpecV2 === true
       && (data?.profiles == null || data.profiles.some((profile) => profile.protocol === "advanced" && admitsSpecV2(profile))),
   };
 }
@@ -256,9 +263,10 @@ function NewRunRouteBody({ onStartOver, workspaceId, draftScope }: { onStartOver
   );
   /* A symbol the server's own search answered "not listed" for (a partial symbol list), reported by the Market data step. */
   const [symbolMiss, setSymbolMiss] = useState<string | null>(null);
+  const draftUsesV2 = usesSpecV2(draft);
   const limits = useMemo(
-    () => constraintsFrom(document, registry, draft.alphaVersionId, { catalog, datasetId: draft.datasetId, unlistedSymbol: symbolMiss, profiles }),
-    [document, registry, draft.alphaVersionId, catalog, draft.datasetId, symbolMiss, profiles],
+    () => constraintsFrom(document, registry, draft.alphaVersionId, { catalog, datasetId: draft.datasetId, unlistedSymbol: symbolMiss, profiles, usesSpecV2: draftUsesV2 }),
+    [document, registry, draft.alphaVersionId, catalog, draft.datasetId, symbolMiss, profiles, draftUsesV2],
   );
   /*
    * W5a · `?from=<run>&fork=<cell>` (spec 07 §2.5 / §15.5): Screen 07's
@@ -340,6 +348,8 @@ function NewRunRouteBody({ onStartOver, workspaceId, draftScope }: { onStartOver
     [forkReady, forkRunId, forkCellId, cloneCopied, cloneRunId],
   );
   const run = useNewRun(draft, limits, workspaceId, lineage);
+  /* S02 linked-window setup: the runnable options for this exact Alpha / dataset / symbol / timeframe, read when that context settles. */
+  const setup = useRunSetup(setupContextFrom(run.draft, workspaceId));
 
   const clonedFor = useRef<string | null>(null);
   useEffect(() => {
@@ -386,9 +396,25 @@ function NewRunRouteBody({ onStartOver, workspaceId, draftScope }: { onStartOver
     const placed = run.draft.coveragePrefill?.source ?? null;
     run.patch({
       timeframe: first,
-      ...(placed ? applyCoveragePrefill(run.draft, planCoverage(catalog, run.draft.datasetId, run.draft.symbol, first)) : {}),
+      ...(placed ? applyCoveragePrefillFor(run.draft, planCoverage(catalog, run.draft.datasetId, run.draft.symbol, first), setup.status) : {}),
     });
-  }, [limits.declaredTimeframes, run, catalog]);
+  }, [limits.declaredTimeframes, run, catalog, setup.status]);
+
+  /* While the setup read is asked the suggestion owns the windows, so a pick made then fills nothing. When the read
+     answers "absent" or fails, the coverage fallback applies what that pick skipped (empty or still-prefilled fields
+     only; a served setup keeps owning them). Only the pending -> fallback turn: nothing else re-fills a field. */
+  const previousSetup = useRef(setup.status);
+  useEffect(() => {
+    const before = previousSetup.current;
+    previousSetup.current = setup.status;
+    if (before !== "pending" || !coveragePrefillAllowed(setup.status)) return;
+    const draftNow = run.draft;
+    const change = applyCoveragePrefillFor(draftNow, planCoverage(catalog, draftNow.datasetId, draftNow.symbol, draftNow.timeframe), setup.status);
+    const same = JSON.stringify(change) === JSON.stringify({ windows: draftNow.windows, walkForward: draftNow.walkForward, coveragePrefill: draftNow.coveragePrefill });
+    if (!same) run.patch(change);
+    // Only the status turn matters; `run` and `catalog` are read at that moment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setup.status]);
 
   /* S02_DATA: when the catalog serves exactly one available dataset it is the
      only choice, so a plain visit opens on it (with its coverage prefill). Done
@@ -405,9 +431,9 @@ function NewRunRouteBody({ onStartOver, workspaceId, draftScope }: { onStartOver
     const only = available[0]!;
     run.patch({
       datasetId: only.dataset_id,
-      ...applyCoveragePrefill(run.draft, planCoverage(catalog, only.dataset_id, run.draft.symbol, run.draft.timeframe)),
+      ...applyCoveragePrefillFor(run.draft, planCoverage(catalog, only.dataset_id, run.draft.symbol, run.draft.timeframe), setup.status),
     });
-  }, [catalog, location.search, run]);
+  }, [catalog, location.search, run, setup.status]);
 
   /*
    * Binding a version adopts its declared parameter space, once.
@@ -633,6 +659,7 @@ function NewRunRouteBody({ onStartOver, workspaceId, draftScope }: { onStartOver
       portalAdmission={atlas?.selected_release_kind === "CURRENT" ? (atlas.portal_admission?.profiles ?? null) : null}
       estimate={estimate}
       estimateStatus={declared.status}
+      setup={setup}
       onRetryEstimate={declared.retry}
       cloneSource={clone ? { runId: clone.runId, state: clone.state } : null}
       forkSource={fork}

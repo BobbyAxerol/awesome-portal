@@ -639,6 +639,28 @@ export interface ProfilePins {
     windowModes: readonly string[];
     trainWindowPattern: string | null;
   } | null;
+  /**
+   * S02 setup options only (`profilePinsFromSetup`); absent on an Atlas profile. Never inferred.
+   * `FORBIDDEN`/`LOCKED` are `seed.state`; `REQUIRED`/`OPTIONAL` leave the seed open (`free`) and say which here.
+   */
+  seedRequirement?: "required" | "optional" | null;
+  /** The parameter pins the profile admits (`allowed_pin_names`); an empty list admits none. Null: not served. */
+  allowedPinNames?: readonly string[] | null;
+  /** `FIXED_NO_OVERRIDES`, `DECLARED_PINS_ONLY` or `DELTA_SEARCH_WITH_QUALIFIED_PINS` as served. */
+  parameterPolicy?: string | null;
+  /** The profile's temporal-guard policy; null when it was not served. */
+  temporalGuards?: ProfileTemporalGuards | null;
+  /** The protocol has a separate holdout (Fixed); false for Advanced. Not whether a sealed holdout was evaluated. */
+  independentHoldout?: boolean | null;
+}
+
+/** `V1_ABSENT_V2_EXPLICIT`: v1 carries no guard; a v2 declaration may adopt the published defaults. `NOT_APPLICABLE`: no guards. */
+export interface ProfileTemporalGuards {
+  policy: "V1_ABSENT_V2_EXPLICIT" | "NOT_APPLICABLE";
+  defaults: { labelHorizonBars: number; purgeBars: number; embargoBars: number } | null;
+  maxBars: number | null;
+  /** A zero guard applies no temporal guard: a 0 default is never presented as protective. */
+  zeroSemantics: "ZERO_APPLIES_NO_TEMPORAL_GUARD";
 }
 
 /** The schedule whose profile is the distinct immutable causal one. */
@@ -877,6 +899,43 @@ export interface EstimateCondition {
   required: string | null;
 }
 
+/**
+ * One engine-planned outer fold, as `metadata.planned_folds.items[]` served it: actual half-open UTC bounds
+ * and indexed bar counts of the train and the outer OOS span. Never derived from frequency or count.
+ */
+export interface PlannedFold {
+  ordinal: number;
+  train: { startUtcMs: number; endExclusiveUtcMs: number; bars: number };
+  outerOos: { startUtcMs: number; endExclusiveUtcMs: number; bars: number };
+}
+
+function foldSpan(raw: unknown): PlannedFold["train"] | null {
+  const row = bag(raw);
+  const start = num(row?.start_utc_ms);
+  const end = num(row?.end_exclusive_utc_ms);
+  const bars = count(row?.bars);
+  return start === null || end === null || bars === null || end <= start ? null : { startUtcMs: start, endExclusiveUtcMs: end, bars };
+}
+
+/**
+ * `planned_folds.items`, or null when the planner published none (`NOT_PUBLISHED`, no `items`, an empty
+ * list, or any item that is not a complete fold: a partial list would draw a plan that is not the engine's).
+ */
+export function readPlannedFolds(raw: unknown): readonly PlannedFold[] | null {
+  const folds = bag(raw);
+  if (folds === null || folds.availability !== "AVAILABLE" || !Array.isArray(folds.items) || folds.items.length === 0) return null;
+  const out: PlannedFold[] = [];
+  for (const entry of folds.items) {
+    const row = bag(entry);
+    const ordinal = count(row?.ordinal);
+    const train = foldSpan(row?.train);
+    const outerOos = foldSpan(row?.outer_oos);
+    if (ordinal === null || train === null || outerOos === null) return null;
+    out.push({ ordinal, train: { ...train }, outerOos: { ...outerOos } });
+  }
+  return out;
+}
+
 export interface PreflightEstimate {
   windows: Readonly<Partial<Record<"is" | "oos" | "holdout" | "analysis", EstimateWindow>>>;
   warmup: { barsRequired: number | null; barsAvailableBeforeIs: number | null; reasonCode?: string | null } | null;
@@ -890,6 +949,8 @@ export interface PreflightEstimate {
     minOosBars?: number | null;
   } | null;
   conditions: readonly EstimateCondition[] | null;
+  /** The engine's per-fold geometry (`planned_folds.items`); null when not published, never synthesized. */
+  plannedFoldItems?: readonly PlannedFold[] | null;
   /** Where this came from: the declaration-estimate route (`estimate`) or the per-window bar metadata (`metadata`). */
   source?: "estimate" | "metadata";
   /** Served `ready_for_preflight`: information only, never permission to create a run. */
@@ -1059,6 +1120,7 @@ export function readDeclarationEstimate(raw: unknown): PreflightEstimate | null 
             minOosBars: foldsPublished ? count(folds.min_oos_bars) : null,
           },
     conditions,
+    plannedFoldItems: readPlannedFolds(folds),
     source: "estimate",
     readyForPreflight: typeof body.ready_for_preflight === "boolean" ? body.ready_for_preflight : null,
     profileId: text(body.profile_id),
@@ -1079,6 +1141,7 @@ export function mergeEstimates(preflight: PreflightEstimate | null, metadata: Pr
     warmup: preflight.warmup ?? metadata.warmup,
     plannedFolds: preflight.plannedFolds,
     conditions: preflight.conditions,
+    ...(preflight.plannedFoldItems !== undefined ? { plannedFoldItems: preflight.plannedFoldItems } : {}),
     /* The preflight's own served earliest start wins; the index's fills only when it published one. */
     ...(preflight.earliestStartUtcMs != null
       ? { earliestStartUtcMs: preflight.earliestStartUtcMs, earliestStartBasis: preflight.earliestStartBasis ?? null }

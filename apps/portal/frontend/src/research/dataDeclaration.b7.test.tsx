@@ -538,10 +538,9 @@ describe("the route", () => {
     /* The prefill places the outer bounds; the interior ones are the reader's. */
     fireEvent.click(q("[data-step-pill=windows]")!);
     const set = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
-    set("IS end exclusive", "2026-06-15T00:00");
-    set("OOS start", "2026-06-15T00:00");
-    set("OOS end exclusive", "2026-06-20T00:00");
-    set("Holdout start", "2026-06-20T00:00");
+    /* B is the IS end and the OOS start; C is the OOS end and the Holdout start: two edits carry the four old ones. */
+    set("IS end · OOS start (B)", "2026-06-15T00:00");
+    set("OOS end · Holdout start (C)", "2026-06-20T00:00");
     await waitFor(() => expect(q("[data-window-bars]")).not.toBeNull(), { timeout: 4000 });
     expect(asked.length).toBeGreaterThan(0);
     expect(asked[0]!.searchParams.get("symbol")).toBe("BTCUSDT");
