@@ -1466,6 +1466,26 @@
    "test_owner": "codex"
   },
   {
+   "route": "GET /api/v1/research/runs/setup-options",
+   "controller": "research/run-setup.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "S02 2026-10-05: actor/workspace and immutable Alpha adapter-bound current configuration facts. Distinct from engine catalogue, not a run grant. Claude owns frontend consumption and product browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/research/runs/window-suggestions",
+   "controller": "research/run-setup.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "S02 2026-10-05: CSRF-protected read-only bounded index rank/select hint, exact context/revision/profile fence, no job, token, HMD scan, price or calendar authority. Claude must explicitly apply and re-estimate before fresh preflight.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
    "route": "GET /api/v1/research/datasets/catalog-v2",
    "controller": "research/dataset-index.controller.ts",
    "interaction_class": "AUTO_READ",

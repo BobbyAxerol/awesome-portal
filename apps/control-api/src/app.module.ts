@@ -115,6 +115,7 @@ import { ResearchDatasetCatalogController } from "./research/dataset-catalog.con
 import { ResearchDatasetCatalogClient } from "./research/dataset-catalog.client";
 import { ResearchDatasetIndexClient } from "./research/dataset-index.client";
 import { ResearchDatasetIndexController } from "./research/dataset-index.controller";
+import { ResearchRunSetupController } from "./research/run-setup.controller";
 import { ResearchPreflightSnapshotClient } from "./research/preflight.client";
 import { ResearchPreflightService } from "./research/preflight.service";
 import { ResearchFoundationController } from "./research/foundation.controller";
@@ -237,6 +238,7 @@ export class AppModule {
         ResearchPreflightController,
         ResearchDatasetCatalogController,
         ResearchDatasetIndexController,
+        ResearchRunSetupController,
         ResearchFoundationController,
         ResearchRunCreateController,
         ResearchP04DeltaBindingController,

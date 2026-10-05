@@ -75,6 +75,9 @@ const declarationMetadata = obj({schema_version:{const:"research.declaration-met
   planned_folds:obj({availability:{enum:["AVAILABLE","NOT_PUBLISHED"]},reason_code:nullable(reason),count:nullable({type:"integer",minimum:1,maximum:128}),
     basis:{const:"P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1"},min_train_bars:nullable(count),min_oos_bars:nullable(count)}),
   earliest_start_utc_ms:nullable(ms),earliest_start_basis:{enum:["CONTIGUOUS_INDEXED_WARMUP_BARS_V1","OBSERVED_INDEXED_WARMUP_BARS_V1"]} });
+const foldSpan = obj({start_utc_ms:ms,end_exclusive_utc_ms:ms,bars:count});
+declarationMetadata.properties.planned_folds.properties.items = {type:"array",maxItems:128,
+  items:obj({ordinal:{type:"integer",minimum:1,maximum:128},train:foldSpan,outer_oos:foldSpan})};
 const condition = obj({key:{type:"string",pattern:"^[a-z][a-z0-9_.]{0,63}$"},state:{enum:["PASS","FAIL","NOT_PUBLISHED"]},reason_code:nullable(reason),
   observed:nullable({type:"string",maxLength:200}),required:{type:"string",maxLength:200}});
 const estimate = obj({schema_version:{const:"research.declaration-estimate.v1"},metadata:ref("DeclarationMetadata"),profile_id:nullable(id),

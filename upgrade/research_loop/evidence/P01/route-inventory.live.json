@@ -2,7 +2,7 @@
   "schema": "research-loop.live-route-ledger.v1",
   "statement": "Live static route ledger. Regenerate with --write-live-routes in the same change that adds or removes a route.",
   "protected_kernel_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
-  "route_count": 259,
+  "route_count": 262,
   "routes": [
     {
       "method": "DELETE",
@@ -876,6 +876,11 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/research/runs/setup-options",
+      "owner": "apps/control-api/src/research/run-setup.controller.ts"
+    },
+    {
+      "method": "GET",
       "path": "/api/workspaces",
       "owner": "apps/control-api/src/facade/facade.controller.ts"
     },
@@ -1211,6 +1216,11 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/research/runs/window-suggestions",
+      "owner": "apps/control-api/src/research/run-setup.controller.ts"
+    },
+    {
+      "method": "POST",
       "path": "/internal/research/alpha-analysis",
       "owner": "apps/portal/backend/src/portal_api/api/routes_research_internal.py"
     },
@@ -1222,6 +1232,11 @@
     {
       "method": "POST",
       "path": "/internal/research/dataset-declaration-estimate",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_research_internal.py"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/research/dataset-window-suggestion",
       "owner": "apps/portal/backend/src/portal_api/api/routes_research_internal.py"
     },
     {

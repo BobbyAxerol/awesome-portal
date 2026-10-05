@@ -697,6 +697,19 @@ export interface components {
                 basis: "P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1";
                 min_train_bars: number | null;
                 min_oos_bars: number | null;
+                items?: {
+                    ordinal: number;
+                    train: {
+                        start_utc_ms: number;
+                        end_exclusive_utc_ms: number;
+                        bars: number;
+                    };
+                    outer_oos: {
+                        start_utc_ms: number;
+                        end_exclusive_utc_ms: number;
+                        bars: number;
+                    };
+                }[];
             };
             earliest_start_utc_ms: number | null;
             /** @enum {unknown} */

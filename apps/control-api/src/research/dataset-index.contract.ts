@@ -175,9 +175,20 @@ export const DeclarationMetadataSchema = z.object({
   scope: z.literal("INDEX_ESTIMATE_NOT_PREFLIGHT_OR_RUN_AUTHORIZATION"), windows: z.array(WindowEstimate).min(1).max(3),
   planned_folds: z.object({ availability: z.enum(["AVAILABLE", "NOT_PUBLISHED"]), reason_code: Reason.nullable(),
     count: z.number().int().min(1).max(128).nullable(), basis: z.literal("P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1"),
-    min_train_bars: Count.nullable(), min_oos_bars: Count.nullable() }).strict(),
+    min_train_bars: Count.nullable(), min_oos_bars: Count.nullable(),
+    items: z.array(z.object({ ordinal: z.number().int().min(1).max(128),
+      train: z.object({ start_utc_ms: Ms, end_exclusive_utc_ms: Ms, bars: Count }).strict(),
+      outer_oos: z.object({ start_utc_ms: Ms, end_exclusive_utc_ms: Ms, bars: Count }).strict(),
+    }).strict()).max(128).optional() }).strict(),
   earliest_start_utc_ms: Ms.nullable(), earliest_start_basis: z.enum(["CONTIGUOUS_INDEXED_WARMUP_BARS_V1", "OBSERVED_INDEXED_WARMUP_BARS_V1"]),
 }).strict().superRefine((v, ctx) => {
+  const plan = v.planned_folds;
+  if (plan.items && (plan.availability !== "AVAILABLE" || plan.items.length !== plan.count
+    || plan.items.some((fold, i) => fold.ordinal !== i + 1
+      || fold.train.start_utc_ms >= fold.train.end_exclusive_utc_ms
+      || fold.outer_oos.start_utc_ms >= fold.outer_oos.end_exclusive_utc_ms
+      || fold.train.end_exclusive_utc_ms > fold.outer_oos.start_utc_ms)))
+    ctx.addIssue({code: z.ZodIssueCode.custom, message: "Inconsistent engine fold geometry"});
   for (const row of [v.planned_folds, ...v.windows]) {
     if ((row.availability === "AVAILABLE") !== (row.reason_code === null)
       || ("bars" in row && (row.availability === "AVAILABLE") !== (row.bars !== null))

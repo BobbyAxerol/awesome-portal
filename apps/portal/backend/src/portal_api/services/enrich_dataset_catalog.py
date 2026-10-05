@@ -452,6 +452,16 @@ def _vn_observed_qualification(engine_catalog) -> dict | None:
         return None
 
 
+def _fold_geometry(folds: list[dict]) -> list[dict]:
+    """Sanitized actual P08/engine plan; never a second calendar inference."""
+    def interval(value):
+        return {"start_utc_ms": int(pd.Timestamp(value["start_utc"]).value // 1_000_000),
+            "end_exclusive_utc_ms": int(pd.Timestamp(value["end_exclusive_utc"]).value // 1_000_000),
+            "bars": value["bars"]}
+    return [{"ordinal": ordinal, "train": interval(fold["train"]),
+        "outer_oos": interval(fold["outer_oos"])} for ordinal, fold in enumerate(folds, 1)]
+
+
 def declaration_estimate(document: dict | None, requested: dict, *, warmup_bars: int,
                          engine_catalog, gateway=None) -> dict:
     """DR-08: plan only from actual indexed timestamps, never OHLCV or a job.
@@ -544,7 +554,7 @@ def declaration_estimate(document: dict | None, requested: dict, *, warmup_bars:
         folds = topology["folds"]
         result["planned_folds"] = {**absence, "availability": "AVAILABLE", "reason_code": None,
             "count": len(folds), "min_train_bars": min(f["train"]["bars"] for f in folds),
-            "min_oos_bars": min(f["outer_oos"]["bars"] for f in folds)}
+            "min_oos_bars": min(f["outer_oos"]["bars"] for f in folds), "items": _fold_geometry(folds)}
         return result
     spans = requested.get("windows") or {"span": requested["walk_forward"]}
     def instant(text):
@@ -598,7 +608,7 @@ def declaration_estimate(document: dict | None, requested: dict, *, warmup_bars:
     folds = topology["folds"]
     result["planned_folds"] = {**absence, "availability": "AVAILABLE", "reason_code": None,
         "count": len(folds), "min_train_bars": min(f["train"]["bars"] for f in folds),
-        "min_oos_bars": min(f["outer_oos"]["bars"] for f in folds)}
+        "min_oos_bars": min(f["outer_oos"]["bars"] for f in folds), "items": _fold_geometry(folds)}
     return result
 
 

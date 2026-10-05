@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request, Query
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -158,6 +158,45 @@ class DeclarationEstimateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     requested_spec: dict[str, Any]
     warmup_bars: int = Field(ge=0, le=100_000)
+
+
+class WindowSuggestionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    dataset_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$")
+    symbol: str = Field(pattern=r"^[A-Z0-9][A-Z0-9_-]{1,31}$")
+    timeframe: str = Field(pattern=r"^[1-9][0-9]*(min|m|h|d)$")
+    protocol: Literal["three_window_decay", "advanced"]
+    warmup_bars: int = Field(ge=0, le=100_000)
+    max_span_days: int | None = Field(ge=1, le=10000)
+    expected_catalog_revision: str | None = Field(pattern=r"^[a-f0-9]{64}$")
+    start_utc_ms: int | None = Field(default=None, ge=0, le=9_007_199_254_740_991)
+    end_exclusive_utc_ms: int | None = Field(default=None, ge=0, le=9_007_199_254_740_991)
+    frequency: Literal["weekly", "monthly", "quarterly"] | None = None
+    window_mode: Literal["expanding", "rolling"] | None = None
+    train_window: str | None = Field(default=None, pattern=r"^[1-9][0-9]{0,4}(D|h)$")
+    initial_train_bars: int | None = Field(default=None, ge=1, le=100_000)
+
+
+@router.post("/dataset-window-suggestion")
+async def read_window_suggestion(request: Request, payload: WindowSuggestionRequest) -> dict:
+    try:
+        require_internal_principal(request.headers)
+    except InternalPrincipalError as exc:
+        raise HTTPException(status_code=401, detail="private service authentication failed") from exc
+    from portal_api.services.research_window_suggestion import window_suggestion
+    values = payload.model_dump(exclude_none=True)
+    values.update(max_span_days=payload.max_span_days, expected_catalog_revision=payload.expected_catalog_revision)
+    if (payload.start_utc_ms is None) != (payload.end_exclusive_utc_ms is None) or (
+        payload.start_utc_ms is not None and payload.start_utc_ms >= payload.end_exclusive_utc_ms):
+        raise HTTPException(status_code=400, detail="Invalid window range.")
+    try:
+        revision, document, reason = dataset_index_store(request).read(source_digest(request.app.state.market_data_provider))
+        result = window_suggestion(document, revision, values)
+        if document is None and reason:
+            result["reason_code"] = reason
+        return result
+    except (DatasetIndexError, OSError, ValueError) as exc:
+        raise HTTPException(status_code=503, detail="historical window metadata is unavailable") from exc
 
 
 @router.post("/dataset-declaration-estimate")

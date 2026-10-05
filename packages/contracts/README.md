@@ -209,6 +209,19 @@ self-contained in local, CI and release-image containers. The P08 contract
 test requires its parsed JSON to remain exactly equal to the immutable P02
 evidence copy; P02 remains the freeze authority.
 
+The S02 setup refinement publishes `openapi/research-run-setup.openapi.json`,
+generated as `generated/research-run-setup.d.ts`. Its two named operations are
+Alpha/version/workspace/dataset/symbol/timeframe-bound setup options and an
+explicit CSRF-protected window suggestion. They disclose the current Portal
+executor constraints, not the wider engine catalogue or a run authorization.
+Suggestions use source-pinned compressed bar metadata: shared Three Window
+A/B/C/D edges, or Advanced range/first-OOS/preferences. The existing declaration
+estimator publishes actual P08/engine fold geometry; neither operation invents
+an Advanced holdout, reads prices, runs an optimizer or creates a preflight.
+Regenerate with `npm run generate` or `npm run generate:research-run-setup`;
+fixtures are synthetic wire examples, not product/run receipts. Final P08/P10
+admission is always required.
+
 P13 publishes the additive Research Evidence Flow contract at
 `openapi/research-evidence.openapi.json`, generated as
 `generated/research-evidence.d.ts`. It contains exactly two same-origin

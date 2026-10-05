@@ -1,0 +1,83 @@
+import type { ControlApiConfig } from "../config";
+import type { PortalUser } from "../domain";
+import type { ResearchMetadataRepository } from "./repository";
+import type { ResearchPortalAdmission } from "./foundation.contract";
+import type { ResearchDatasetCatalogV2 } from "./dataset-index.contract";
+import { projectResearchAlphaVersionDeclaration } from "./alpha-version-declaration";
+import { researchRunVersionPrecheck } from "./version-admission";
+import { IMPORTED_ALPHA_ADAPTER_ID, IMPORTED_ALPHA_PROFILE } from "./imported-alpha.profile";
+import { sha256ResearchJson } from "./preflight.service";
+import { RunSetupOptionsSchema, type RunSetupContext, type RunSetupProfile } from "./run-setup.contract";
+import { WHATIF_PROFILE } from "./whatif.profile";
+
+type Version = NonNullable<Awaited<ReturnType<ResearchMetadataRepository["loadRunAdapterEligibility"]>>>;
+/** Version-specific view. This never grants a token, admits a job or mutates defaults. */
+export function runSetupOptions(user: PortalUser, config: ControlApiConfig, version: Version,
+  context: RunSetupContext & { workspace_id: string }, admission: ResearchPortalAdmission,
+  catalog: ResearchDatasetCatalogV2, guards: { label_horizon_bars: number; purge_bars: number; embargo_bars: number } | null) {
+  const declaration = projectResearchAlphaVersionDeclaration(version.declaredContract, version.entrypoint);
+  const precheck = researchRunVersionPrecheck(user, config, version);
+  const imported = version.binding?.adapterId === IMPORTED_ALPHA_ADAPTER_ID;
+  const dataset = catalog.datasets.find(row => row.dataset_id === context.dataset_id);
+  const symbol = dataset?.symbols.items.find(row => row.symbol === context.symbol);
+  const sourceReason = !dataset || dataset.availability !== "available" ? "DATASET_NOT_AVAILABLE"
+    : !symbol ? "DATASET_SYMBOL_NOT_PUBLISHED"
+    : !dataset.timeframes.some(row => row.timeframe === context.timeframe && row.availability === "available")
+      ? "DATASET_TIMEFRAME_NOT_AVAILABLE"
+    : !symbol.coverage_by_timeframe.some(row => row.timeframe === context.timeframe && row.availability === "AVAILABLE")
+      ? "SYMBOL_TIMEFRAME_COVERAGE_NOT_PUBLISHED" : null;
+  const callerReason = precheck.may_create_run ? null : precheck.code;
+  const declaredReason = declaration.timeframes.includes(context.timeframe) ? null : "ALPHA_TIMEFRAME_NOT_DECLARED";
+  const profiles: RunSetupProfile[] = admission.profiles.map(row => {
+    const temporal = row.protocol === "advanced";
+    const reason = callerReason ?? sourceReason ?? declaredReason
+      ?? (imported ? "ALPHA_EXECUTOR_MISMATCH" : null)
+      ?? (row.dataset_id ? row.dataset_id !== context.dataset_id || row.symbol !== context.symbol ? "PROFILE_DATASET_NOT_ADMITTED" : null
+        : context.dataset_id === "vn-stock-daily" ? "PROFILE_DATASET_NOT_ADMITTED" : null)
+      ?? (row.timeframe !== context.timeframe ? "PROFILE_TIMEFRAME_NOT_ADMITTED" : null)
+      ?? row.reason;
+    return {
+      profile_id: row.profile_id, state: reason ? "DISABLED" : "ENABLED", reason_code: reason,
+      engine_release_id: row.engine_release_id, execution_route: row.execution_route,
+      protocol: row.protocol as RunSetupProfile["protocol"], optimization_mode: row.optimization_mode,
+      optimization_schedule: row.optimization_schedule,
+      requested_spec_versions: (row.requested_spec_versions ?? ["research.requested-spec.v1"]) as RunSetupProfile["requested_spec_versions"],
+      timeframe: row.timeframe, trial_count: row.trial_count, trial_default: row.trial_default ?? row.trial_count.min,
+      trial_scope: row.trial_scope ?? "GLOBAL_STUDY", max_total_trials: row.max_total_trials ?? null,
+      seed_policy: row.seed_policy ?? "LOCKED", random_seed: row.random_seed,
+      max_span_days: row.max_span_days, fold_bounds: row.fold_bounds,
+      frequencies: row.frequencies ?? (row.frequency ? [row.frequency] : []),
+      window_modes: (row.window_modes ?? (row.window_mode ? [row.window_mode] : [])) as RunSetupProfile["window_modes"],
+      parameter_policy: temporal ? "DELTA_SEARCH_WITH_QUALIFIED_PINS" : "FIXED_NO_OVERRIDES",
+      allowed_pin_names: temporal ? WHATIF_PROFILE.axes.map(axis => axis.parameter) : [],
+      inner_validation: row.inner_validation ?? "NOT_APPLICABLE", inner_constraints: row.inner_constraints ?? null,
+      temporal_guards: { policy: temporal ? "V1_ABSENT_V2_EXPLICIT" : "NOT_APPLICABLE", defaults: temporal ? guards : null,
+        max_bars: temporal ? 10_000 : null, zero_semantics: "ZERO_APPLIES_NO_TEMPORAL_GUARD" },
+      independent_holdout: !temporal,
+    };
+  });
+  if (imported) {
+    const reason = callerReason ?? sourceReason ?? declaredReason
+      ?? (declaration.warmup_bars > 4096 ? "IMPORTED_WARMUP_EXCEEDS_EXECUTOR_LIMIT" : null)
+      ?? (context.dataset_id === "vn-stock-daily" ? "IMPORTED_SOURCE_PROFILE_UNQUALIFIED" : null)
+      ?? (admission.profiles[0]?.engine_release_id !== IMPORTED_ALPHA_PROFILE.engine_release_id
+        || admission.profiles[0]?.reason ? "SOURCE_RELEASE_UNVERIFIED" : null);
+    profiles.push({ profile_id: IMPORTED_ALPHA_PROFILE.profile_id, state: reason ? "DISABLED" : "ENABLED", reason_code: reason,
+      engine_release_id: IMPORTED_ALPHA_PROFILE.engine_release_id, execution_route: IMPORTED_ALPHA_PROFILE.execution_route,
+      protocol: "three_window_decay", optimization_mode: "mode_1_decay", optimization_schedule: "global",
+      requested_spec_versions: ["research.requested-spec.v1"], timeframe: context.timeframe,
+      trial_count: { min: 1, max: 1 }, trial_default: 1, trial_scope: "GLOBAL_STUDY", max_total_trials: null,
+      seed_policy: declaration.determinism.seed_required ? "REQUIRED" : "OPTIONAL", random_seed: null,
+      max_span_days: null, fold_bounds: null, frequencies: [], window_modes: [], parameter_policy: "DECLARED_PINS_ONLY",
+      allowed_pin_names: Object.keys(declaration.parameter_space),
+      inner_validation: "NOT_APPLICABLE", inner_constraints: null,
+      temporal_guards: { policy: "NOT_APPLICABLE", defaults: null, max_bars: null, zero_semantics: "ZERO_APPLIES_NO_TEMPORAL_GUARD" },
+      independent_holdout: true });
+  }
+  const payload = { schema_version: "research.run-setup-options.v1" as const, context,
+    scope: "CONFIGURATION_FACTS_NOT_RUN_AUTHORIZATION" as const, catalog_revision: catalog.catalog_revision,
+    as_of_utc_ms: catalog.as_of_utc_ms, warmup_bars: declaration.warmup_bars,
+    source_timezone: context.dataset_id === "vn-stock-daily" ? "Asia/Ho_Chi_Minh" as const : "UTC" as const,
+    profiles, preflight_required: true as const };
+  return RunSetupOptionsSchema.parse({ ...payload, source_revision: sha256ResearchJson(payload) });
+}

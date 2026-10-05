@@ -3,20 +3,33 @@ import type { z } from "zod";
 import type { DeclarationConditionSchema, DeclarationMetadataSchema } from "./dataset-index.contract";
 import type { ResearchRequestedSpec } from "./preflight.contract";
 import type { ResearchPortalAdmission } from "./foundation.contract";
+type CheckProfile = Pick<ResearchPortalAdmission["profiles"][number],
+  "profile_id" | "state" | "protocol" | "execution_route" | "optimization_mode" | "optimization_schedule"
+  | "engine_release_id" | "timeframe" | "trial_count" | "random_seed" | "max_span_days" | "fold_bounds"> & {
+  dataset_id?: string; symbol?: string; requested_spec_versions?: string[];
+  reason_code?: string | null; allowed_pin_names?: string[];
+  frequency?: string | null; window_mode?: string | null; frequencies?: string[]; window_modes?: string[];
+  seed_policy?: "LOCKED" | "FORBIDDEN" | "REQUIRED" | "OPTIONAL";
+  inner_validation?: "NOT_APPLICABLE" | "NOT_ADMITTED_GLOBAL_RETENTION_ONLY" | "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY";
+  inner_constraints?: ResearchPortalAdmission["profiles"][number]["inner_constraints"] | null;
+  trial_scope?: "GLOBAL_STUDY" | "PER_OUTER_FOLD_STUDY";
+  parameter_policy?: "FIXED_NO_OVERRIDES" | "DECLARED_PINS_ONLY" | "DELTA_SEARCH_WITH_QUALIFIED_PINS";
+};
 
 export function declarationConditions(spec: ResearchRequestedSpec, metadata: z.infer<typeof DeclarationMetadataSchema>,
-  profiles: ResearchPortalAdmission["profiles"], declaredTimeframes: readonly string[]) {
+  profiles: CheckProfile[], declaredTimeframes: readonly string[]) {
   const rows: z.infer<typeof DeclarationConditionSchema>[] = [];
   const add = (key: string, pass: boolean | null, reason: string, observed: unknown, required: string) => rows.push({
     key, state: pass === null ? "NOT_PUBLISHED" : pass ? "PASS" : "FAIL", reason_code: pass ? null : reason,
     observed: observed === null || observed === undefined ? null : String(observed).slice(0, 200), required });
   const sourceQualified = profiles.some(row => row.dataset_id === spec.data.dataset_id);
-  const profile = profiles.find(row => row.protocol === spec.protocol && row.execution_route === spec.execution_route
+  const matching = profiles.filter(row => row.protocol === spec.protocol && row.execution_route === spec.execution_route
     && (sourceQualified ? row.dataset_id === spec.data.dataset_id && row.symbol === spec.data.symbol && row.timeframe === spec.data.timeframe
       : row.dataset_id === undefined)
     && (spec.protocol !== "advanced" || row.optimization_schedule === spec.optimization_schedule)
     && (row.requested_spec_versions ?? ["research.requested-spec.v1"]).includes(spec.schema_version));
-  add("profile", profile?.state === "ENABLED", "PORTAL_EXECUTION_PROFILE_NOT_ENABLED", profile?.profile_id, "Enabled execution profile");
+  const profile = matching.find(row => row.state === "ENABLED") ?? matching[0];
+  add("profile", profile?.state === "ENABLED", profile?.reason_code ?? "PORTAL_EXECUTION_PROFILE_NOT_ENABLED", profile?.profile_id, "Enabled execution profile");
   add("declared_timeframe", declaredTimeframes.includes(spec.data.timeframe), "ALPHA_TIMEFRAME_NOT_DECLARED", spec.data.timeframe, declaredTimeframes.join(", "));
   add("executor_version", profile !== undefined, "REQUESTED_SPEC_EXECUTOR_NOT_INSTALLED", spec.schema_version, "Installed executor version");
   if (profile) {
@@ -24,15 +37,20 @@ export function declarationConditions(spec: ResearchRequestedSpec, metadata: z.i
     add("profile_timeframe", spec.data.timeframe === profile.timeframe, "PROFILE_TIMEFRAME_NOT_ADMITTED", spec.data.timeframe, profile.timeframe);
     add("trials", spec.optuna_trials >= profile.trial_count.min && spec.optuna_trials <= profile.trial_count.max,
       "PROFILE_TRIAL_COUNT_NOT_ADMITTED", spec.optuna_trials, `${profile.trial_count.min}…${profile.trial_count.max}`);
-    add("seed", spec.random_seed === profile.random_seed, "PROFILE_RANDOM_SEED_NOT_ADMITTED", spec.random_seed, String(profile.random_seed));
+    const seedOk = profile.seed_policy === "OPTIONAL" ? true : profile.seed_policy === "REQUIRED"
+      ? spec.random_seed !== null : spec.random_seed === profile.random_seed;
+    add("seed", seedOk, "PROFILE_RANDOM_SEED_NOT_ADMITTED", spec.random_seed, profile.seed_policy === "REQUIRED" ? "Explicit seed" : profile.seed_policy === "OPTIONAL" ? "Optional seed" : String(profile.random_seed));
     add("optimizer", spec.optimization_mode === profile.optimization_mode && spec.optimization_schedule === profile.optimization_schedule,
       "PROFILE_OPTIMIZER_NOT_ADMITTED", `${spec.optimization_mode}/${spec.optimization_schedule}`, `${profile.optimization_mode}/${profile.optimization_schedule}`);
     add("early_stopping", spec.early_stopping === null, "PROFILE_EARLY_STOPPING_NOT_ADMITTED", spec.early_stopping, "null");
     add("route_params", Object.keys(spec.route_params).length === 0, "PROFILE_ROUTE_PARAMS_NOT_ADMITTED", Object.keys(spec.route_params).length, "0 overrides");
     add("optimizer_overrides", Object.keys(spec.optimization_config).length === 0,
       "PROFILE_OPTIMIZER_OVERRIDES_NOT_ADMITTED", Object.keys(spec.optimization_config).length, "0 overrides");
-    if (profile.protocol === "three_window_decay") add("parameter_overrides", spec.parameter_space_overrides.length === 0,
+    if (profile.protocol === "three_window_decay" && profile.parameter_policy !== "DECLARED_PINS_ONLY") add("parameter_overrides", spec.parameter_space_overrides.length === 0,
       "FIXED_PROFILE_PARAMETER_OVERRIDES_NOT_ADMITTED", spec.parameter_space_overrides.length, "0 overrides");
+    if (profile.parameter_policy === "DELTA_SEARCH_WITH_QUALIFIED_PINS" && profile.allowed_pin_names) add("parameter_overrides",
+      spec.parameter_space_overrides.every(row => row.kind === "pin" && profile.allowed_pin_names!.includes(row.name)),
+      "DELTA_PROFILE_PARAMETER_OVERRIDES_NOT_ADMITTED", spec.parameter_space_overrides.length, "Only qualified declared what-if axis pins");
     if (profile.frequency && spec.walk_forward) {
       add("fold_frequency", spec.walk_forward.frequency === profile.frequency, "PROFILE_FREQUENCY_NOT_ADMITTED", spec.walk_forward.frequency, profile.frequency);
       add("window_mode", spec.walk_forward.window_mode === profile.window_mode, "PROFILE_WINDOW_MODE_NOT_ADMITTED", spec.walk_forward.window_mode, String(profile.window_mode));

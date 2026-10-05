@@ -20,6 +20,13 @@ from typing import Any
 CONTRACTS_ROOT = Path(__file__).resolve().parents[1]
 
 TRACKED = (
+    "openapi/research-run-setup.openapi.json",
+    "generated/research-run-setup.d.ts",
+    "tooling/generate-research-run-setup.mjs",
+    "fixtures/research-run-setup-options.fixed.valid.json",
+    "fixtures/research-window-suggestion.three-window.valid.json",
+    "fixtures/research-window-suggestion.advanced.valid.json",
+    "fixtures/research-window-suggestion.unavailable.valid.json",
     "tooling/generate-research-engine-qualification.mjs",
     "openapi/research-final-audit.openapi.json",
     "generated/research-final-audit.d.ts",

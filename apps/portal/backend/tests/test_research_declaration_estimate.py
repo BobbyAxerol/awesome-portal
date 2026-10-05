@@ -31,6 +31,15 @@ def test_real_index_fold_edges_count_match_existing_preflight_planner():
     assert result["planned_folds"]["count"] == len(plan["folds"]) == 9
     assert result["planned_folds"]["min_train_bars"] == 720
     assert result["planned_folds"]["min_oos_bars"] == 144
+    assert result["planned_folds"]["items"] == [
+        {"ordinal": ordinal, "train": {
+            "start_utc_ms": int(pd.Timestamp(fold["train"]["start_utc"]).value // 1_000_000),
+            "end_exclusive_utc_ms": int(pd.Timestamp(fold["train"]["end_exclusive_utc"]).value // 1_000_000),
+            "bars": fold["train"]["bars"]}, "outer_oos": {
+            "start_utc_ms": int(pd.Timestamp(fold["outer_oos"]["start_utc"]).value // 1_000_000),
+            "end_exclusive_utc_ms": int(pd.Timestamp(fold["outer_oos"]["end_exclusive_utc"]).value // 1_000_000),
+            "bars": fold["outer_oos"]["bars"]}}
+        for ordinal, fold in enumerate(plan["folds"], 1)]
     assert result["windows"][0]["bars"] == 2208
     assert result["windows"][0]["warmup_bars_available_before_start"] == 300
 

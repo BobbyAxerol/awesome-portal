@@ -404,6 +404,11 @@ export class ResearchRunAdmissionService {
     return { reason: null, parameters };
   }
 
+  /** Advisory S02/P08 check reuses the exact imported executor predicate. */
+  importedConfigurationReason(requested: ResearchRequestedSpec, declaration: Record<string, unknown>, entrypoint: string): string | null {
+    return this.importedUnsupportedReason(requested, declaration, entrypoint).reason;
+  }
+
   /**
    * W1 §1.1: the one locked Delta signal-notional walk-forward profile. It
    * accepts exactly the profile object's values and nothing else; each
@@ -492,7 +497,9 @@ export class ResearchRunAdmissionService {
     }
     const folds = advancedFoldCount(manifest.topology, walkForward.frequency, walkForward.window_mode);
     if (folds === null || folds < profile.fold_bounds.min || folds > profile.fold_bounds.max) {
-      return "The Delta walk-forward profile admits 2 to 16 weekly expanding folds in the preflight topology.";
+      return temporal
+        ? "The selected temporal walk-forward profile requires 2 to 16 engine-planned outer folds in the preflight topology."
+        : "The Delta walk-forward profile admits 2 to 16 weekly expanding folds in the preflight topology.";
     }
     if (requested.alpha_binding === null || requested.strategy_id !== requested.alpha_binding.alpha_id) {
       return "The run strategy identity must equal the explicitly bound AlphaVersion identity.";

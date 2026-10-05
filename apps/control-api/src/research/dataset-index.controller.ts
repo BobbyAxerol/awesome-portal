@@ -18,6 +18,9 @@ import { ResearchDatasetIndexClient } from "./dataset-index.client";
 import { BarMetadataQuery, DatasetId, DeclarationEstimateRequestSchema, DeclarationEstimateSchema, IndexedCatalogQuery, SymbolPageQuery, SymbolPageSchema } from "./dataset-index.contract";
 import { ResearchPreflightError } from "./preflight.error";
 import { ResearchDatasetIndexError } from "./dataset-index.error";
+import { runSetupOptions } from "./run-setup";
+import { ResearchRunAdmissionService } from "./run-admission.service";
+import { IMPORTED_ALPHA_ADAPTER_ID } from "./imported-alpha.profile";
 interface Request extends FastifyRequest { portalUser: PortalUser; portalWorkspaceId: string; portalSession: {csrfSecretHash: string}; }
 
 @UseGuards(SessionGuard)
@@ -28,7 +31,8 @@ export class ResearchDatasetIndexController {
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ResearchMetadataRepository) private readonly metadataRepository: ResearchMetadataRepository,
-    @Inject(ResearchFoundationService) private readonly foundation: ResearchFoundationService) {
+    @Inject(ResearchFoundationService) private readonly foundation: ResearchFoundationService,
+    @Inject(ResearchRunAdmissionService) private readonly runAdmission: ResearchRunAdmissionService) {
     this.cursors = new KeysetCursorCodec({ activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID, keys: querySigningKeys(config), ttlSeconds: config.QUERY_CURSOR_TTL_SECONDS });
   }
   private async scope(request: Request, workspace?: string): Promise<string> {
@@ -81,23 +85,40 @@ export class ResearchDatasetIndexController {
       [`${key}.end_exclusive`,this.sourceInstant(value.end_exclusive,spec.data.dataset_id)],
     ] as Array<[string,number]>),spec.data.dataset_id);
     if (!spec.alpha_binding) throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "Bind an AlphaVersion to estimate its declaration.", 409);
-    const binding = await this.metadataRepository.loadAlphaVersionDataContract({workspaceId, actorUserId: request.portalUser.userId},
+    const version = await this.metadataRepository.loadRunAdapterEligibility({workspaceId, actorUserId: request.portalUser.userId},
       spec.alpha_binding.alpha_id, spec.alpha_binding.alpha_version_id);
+    if (!version || version.binding === null && version.sourceDigest === null) throw this.missing();
+    const binding = version;
     let declaration: ReturnType<typeof projectResearchAlphaVersionDeclaration>;
     try { declaration = projectResearchAlphaVersionDeclaration(binding.declaredContract, binding.entrypoint); }
     catch { throw new ResearchPreflightError("RESEARCH_PREFLIGHT_REJECTED", "AlphaVersion declaration unavailable.", 409); }
-    const [metadata, atlas] = await Promise.all([
+    const [metadata, atlas, catalog] = await Promise.all([
       this.client.estimate(request.portalUser, spec, declaration.warmup_bars),
       this.foundation.atlas(request.portalUser, {}),
+      this.client.catalog(request.portalUser),
     ]);
     if (atlas.selected_release_kind !== "CURRENT") throw this.invalid();
-    const result = declarationConditions(spec, metadata, atlas.portal_admission.profiles, declaration.timeframes);
+    const options = runSetupOptions(request.portalUser, this.config, version,
+      {workspace_id: workspaceId, ...spec.data, alpha_id: spec.alpha_binding.alpha_id, alpha_version_id: spec.alpha_binding.alpha_version_id},
+      atlas.portal_admission, catalog, null);
+    // Bound to the selected Alpha, not the engine-global Delta descriptor.
+    const profiles = options.profiles.map(profile => ({...profile, reason: null,
+      random_seed: profile.random_seed, frequency: null, window_mode: null,
+      ...(spec.data.dataset_id === "vn-stock-daily" ? {dataset_id: "vn-stock-daily" as const, symbol: "FPT" as const} : {}),
+    }));
+    const result = declarationConditions(spec, metadata, profiles, declaration.timeframes);
     let declarationPass = true;
     try { assertDeclaredOptimization(binding, spec); }
     catch (error) { if (!(error instanceof ResearchPreflightError)) throw error; declarationPass = false; }
     result.conditions.push({key:"alpha_parameters", state: declarationPass ? "PASS" : "FAIL",
       reason_code: declarationPass ? null : "ALPHA_OPTIMIZATION_DECLARATION_REFUSED", observed:null,
       required:"Overrides and seed satisfy the bound AlphaVersion declaration"});
+    if (version.binding?.adapterId === IMPORTED_ALPHA_ADAPTER_ID) {
+      const reason = this.runAdmission.importedConfigurationReason(spec, version.declaredContract, version.entrypoint);
+      result.conditions.push({key:"imported_executor", state: reason === null ? "PASS" : "FAIL",
+        reason_code: reason === null ? null : "IMPORTED_CONFIGURATION_NOT_ADMITTED", observed: null,
+        required: "Restricted imported fixed executor: declared pins, one trial, requested-spec v1"});
+    }
     result.ready_for_preflight = result.conditions.every(row => row.state === "PASS");
     return DeclarationEstimateSchema.parse(result);
   }

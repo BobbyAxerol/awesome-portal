@@ -2089,3 +2089,33 @@ deployment. Claude need not remount/recompose a screen: the current consumer
 already renders the new typed execution trace in Cinema step2. Bobby's visual
 review and authorized Portal2.0.0 release remain separate. This owner slice
 adds no further backend implementation request.
+
+### §35 — S02 Alpha-bound runnable setup and linked-window backend, 2026-10-05
+
+Bobby approves one backend refinement with the linked calendar implementation
+assigned to Claude. **BACKEND_CONTRACT_TESTED / FRONTEND_INTEGRATION_PENDING**.
+[Contract, receipt and exact Claude tasks](./evidence/P10/S02_LINKED_WINDOW_SETUP_2026-10-05.md).
+
+Two named same-origin reads: `researchRunSetupOptionsGetV1` and
+`researchRunWindowSuggestionPostV1`; generated `research-run-setup.d.ts` with
+canonical synthetic wire fixtures and explicit source/actor/context revision.
+Profiles are bound to immutable AlphaVersion, symbol's indexed timeframe and
+existing environment/executor fences. Imported Alpha gets its pins-only fixed
+recipe, not Delta WFO. Declaration checks reuse the imported admission predicate;
+temporal-fold refusal copy no longer incorrectly says every v2 plan is weekly
+and expanding. Existing v1/v2 create/admission limits and flags are unchanged.
+
+Three Window hints use observed bar rank and shared A/B/C/D; Advanced hints
+publish range/first-OOS/preferences only. Existing declaration estimates add
+actual P08/engine fold items, no synthetic calendar/independent holdout. Automatic
+range is profile-bounded; explicit bounds are never silently clamped. No HMD
+price scan, child/job, preflight token, dataset/index write or DB migration.
+
+Focused Control API95/95, contracts16/16, Python79/79 plus affected geometry7/7
+retake and Control build PASS. Existing pinned real HMD metadata proof yields
+1,440bars/300warmup and5actual weekly folds; this is not a product API/run receipt.
+One normal grouped commit gate/clean landing on `docs/research-loop-plan`; no
+remote push, preview restart, flags, dev/main or Production changes. Claude must
+consume the generated fields, link dates, keep v1 clones free of v2 guard
+requirements, and take actual API/browser receipts after the combined preview
+rebuild. No already-accepted P23 gate is reopened by this addition.

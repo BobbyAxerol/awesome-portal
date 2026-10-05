@@ -8,6 +8,7 @@ import { BarMetadataSchema, DeclarationMetadataSchema, ResearchDatasetCatalogV2S
 import type { ResearchRequestedSpec } from "./preflight.contract";
 import { sha256ResearchJson } from "./preflight.service";
 import { ResearchPreflightError } from "./preflight.error";
+import { WindowSuggestionMetadataSchema } from "./run-setup.contract";
 
 /** Existing signed deployment-bound adapter. URLs are never browser input. */
 @Injectable()
@@ -44,6 +45,24 @@ export class ResearchDatasetIndexClient {
     const result = await this.read(user, "/internal/research/dataset-declaration-estimate", {}, DeclarationMetadataSchema,
       { requested_spec: requestedSpec, warmup_bars: warmupBars });
     if (result.requested_spec_digest !== sha256ResearchJson(requestedSpec)) throw this.error(502);
+    return result;
+  }
+  async suggest(user: PortalUser, body: Record<string, unknown>) {
+    const result = await this.read(user, "/internal/research/dataset-window-suggestion", {}, WindowSuggestionMetadataSchema, body);
+    if (["dataset_id", "symbol", "timeframe"].some(key => result[key as "dataset_id"] !== body[key])
+      || result.warmup_bars !== body.warmup_bars || result.patch && result.patch.protocol !== body.protocol
+      || result.range_origin !== (body.start_utc_ms === undefined ? "PROFILE_BOUNDED_AUTOMATIC" : "EXPLICIT_UNCHANGED")
+      || result.state === "AVAILABLE" && result.catalog_revision !== body.expected_catalog_revision) throw this.error(502);
+    if (result.patch) {
+      const span = result.patch.protocol === "advanced" ? result.patch.walk_forward
+        : {start_utc_ms: result.patch.windows.is.start_utc_ms, end_exclusive_utc_ms: result.patch.windows.holdout.end_exclusive_utc_ms};
+      if (body.start_utc_ms !== undefined && (span.start_utc_ms !== body.start_utc_ms || span.end_exclusive_utc_ms !== body.end_exclusive_utc_ms)
+        || typeof body.max_span_days === "number" && span.end_exclusive_utc_ms - span.start_utc_ms > body.max_span_days * 86_400_000)
+        throw this.error(502);
+      if (result.patch.protocol === "advanced" && (result.patch.walk_forward.frequency !== body.frequency
+        || result.patch.walk_forward.window_mode !== body.window_mode
+        || result.patch.walk_forward.train_window !== (body.train_window ?? null))) throw this.error(502);
+    }
     return result;
   }
   private async read<T>(user: PortalUser, path: string, query: Record<string, string | number>, schema: z.ZodType<T>, body?: unknown): Promise<T> {

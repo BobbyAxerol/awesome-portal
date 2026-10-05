@@ -8001,3 +8001,46 @@ with strict83/86, no forged all-PASS aggregator. Prior receipt identities and
 failures retained. This slice changes only docs/evidence, no UI/backend code,
 release manifest, remote push, dev/main merge or production action. Canonical
 landing remains `docs/research-loop-plan`; Bobby reviews before release.
+
+#### S02 linked-window setup refinement — Bobby, 2026-10-05
+
+**BACKEND_CONTRACT_TESTED / FRONTEND_INTEGRATION_PENDING — one slice; no new campaign.** Bobby approves
+Alpha/dataset/timeframe-bound runnable options, indexed-bar window suggestions,
+and accurate admission reasons. Codex works in `portal-research-be` /
+`codex/be-gaps`; land on `docs/research-loop-plan` after focused gates. No
+frontend edits, profile widening, feature-flag changes, jobs, remote push or
+production rollout. Claude owns the linked calendar/preset presentation.
+
+- Publish named same-origin typed setup options distinct from the engine
+  catalogue. Reuse current version/adapter eligibility and environment profile
+  fences; disclose imported fixed-only/pins, timeframe, trials, seed, folds,
+  range, inner-validation and requested-spec version restrictions.
+- Suggest Three Window A/B/C/D from actual indexed bars, with contiguous shared
+  edges and required warmup. Clamp automatic range to the selected profile;
+  never silently replace explicitly requested bounds. Suggestions are editable
+  heuristics, not optimal-methodology claims or execution authorization.
+- Advanced estimates keep the current P08/engine planner as fold authority;
+  expose bounded fold geometry for the calendar and no independent holdout.
+  Keep v1 guards absent; v2 defaults are explicitly available, not fabricated
+  protection. Reuse debounced read-only estimation, no compute during dragging.
+- Test adapter/profile parity, auth/workspace/CSRF, v1/v2 guard semantics,
+  indexed gap/warmup/date boundaries, bounded cost and refusal/absence. Generate
+  OpenAPI/client and fixtures; record real-index proof separately from unit
+  proof. One normal commit hook at coherent closeout, not per edit.
+- Exit: backend contract/tests ready plus exact Claude handoff linked here.
+  UI/calendar, real product browser receipt and deployment remain Claude's
+  explicit next step; do not call the whole S02 refinement complete early.
+
+[Backend receipt and Claude integration guide](./research_loop/evidence/P10/S02_LINKED_WINDOW_SETUP_2026-10-05.md).
+Delivered two named setup reads, generated OpenAPI/types/canonical fixtures,
+Alpha-bound declaration checks (including imported pins/seed), corrected
+temporal-fold admission copy and additive actual fold geometry. Focused Control
+API95/95, contracts16/16, Python79/79 (affected fold geometry7/7 retake), final
+Control build PASS. Real pinned HMD index proof: BTCUSDT1h60-day suggestion,
+1,440bars/300warmup; actual planner5folds, no new run or historical-source write.
+Live route ledger, capability inventory and contracts digest record updated;
+one grouped normal hook/local landing, no remote or preview/Production rollout.
+Claude next: generated consumers + linked calendar/presets, v1-clone guard fix,
+debounced engine timeline, actual API/browser receipt after rebuilding API,
+Control and Web from the combined source. Existing passed P23 gates are not
+rerun; no whole-S02/UI/deployed completion is claimed here.
