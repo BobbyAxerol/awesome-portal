@@ -14,7 +14,8 @@ function setup(over: Partial<LinkedWindowCalendarProps> = {}) {
   const utils = render(<LinkedWindowCalendar edges={EDGES} onChange={onChange} barMs={H} idPrefix="t" {...over} />);
   return { onChange, ...utils };
 }
-const handle = (e: "b" | "c") => screen.getByRole("slider", { name: e === "b" ? /IS end · OOS start \(B\)/ : /OOS end · Holdout start \(C\)/ });
+const NAMES = { a: "IS start (A) handle", b: "IS end · OOS start (B) handle", c: "OOS end · Holdout start (C) handle", d: "Holdout end exclusive (D) handle" };
+const handle = (e: "a" | "b" | "c" | "d") => screen.getByRole("slider", { name: NAMES[e] });
 const track = () => document.querySelector("[data-calendar-track]") as HTMLElement;
 function sizeTrack(width = 1000) {
   track().getBoundingClientRect = () => ({ left: 0, top: 0, right: width, bottom: 24, width, height: 24, x: 0, y: 0, toJSON: () => ({}) });
@@ -64,8 +65,8 @@ describe("LinkedWindowCalendar", () => {
 
   it("handles are sliders with UTC value text, two tab stops, 24px targets", () => {
     setup();
-    expect(screen.getAllByRole("slider")).toHaveLength(2);
-    for (const h of [handle("b"), handle("c")]) {
+    expect(screen.getAllByRole("slider")).toHaveLength(4);
+    for (const h of [handle("a"), handle("b"), handle("c"), handle("d")]) {
       expect(h.getAttribute("tabindex")).toBe("0");
       expect(h.style.width).toBe("24px");
       expect(h.style.touchAction).toBe("none");
@@ -110,19 +111,19 @@ describe("LinkedWindowCalendar", () => {
     sizeTrack(1000);
     const b = handle("b");
     pointer("pointerdown", b, 0);
-    /* The axis is A..D = 1,440 bars wide on 1,000px: x=500 is 720 bars after A. */
+
     pointer("pointermove", b, 500);
     pointer("pointermove", b, 510);
     expect(onChange).not.toHaveBeenCalled();
     const shown = (screen.getByLabelText("IS end · OOS start (B)", { selector: "input" }) as HTMLInputElement).value;
-    /* 510px = 734.4 bars after A, snapped to the bar grid: A + 734h. */
-    expect(shown).toBe("2026-09-02T13:00");
-    expect(b.getAttribute("aria-valuetext")).toBe("2026-09-02 13:00 UTC, end exclusive");
+    /* Axis = A..D padded by a quarter each side: 510px lands at A + 735h, snapped from B. */
+    expect(shown).toBe("2026-09-02T21:00");
+    expect(b.getAttribute("aria-valuetext")).toBe("2026-09-02 21:00 UTC, end exclusive");
     pointer("pointerup", b, 510);
     expect(onChange).toHaveBeenCalledTimes(1);
     const patch = onChange.mock.calls[0]![0] as { b: string };
     expect(Object.keys(onChange.mock.calls[0]![0])).toEqual(["b"]);
-    expect(patch.b).toBe("2026-09-02T13:00");
+    expect(patch.b).toBe("2026-09-02T21:00");
   });
 
   it("a drag cannot pass the neighbour, and cancel or an unmoved release patches nothing", () => {
@@ -188,6 +189,116 @@ describe("LinkedWindowCalendar", () => {
     expect(b.getAttribute("aria-describedby")).toBe("t-err-b");
     expect(within(document.getElementById("t-err-b")!.parentElement!).getByText("B must be after A.")).toBeTruthy();
     expect(screen.getByTestId("refusal")).toBeTruthy();
+  });
+});
+
+const D = Date.parse("2026-10-01T23:00:00Z");
+const iso = (ms: number) => new Date(ms).toISOString().slice(0, 16);
+const RANGE = { from: A - 300 * H, to: D + 100 * H };
+
+describe("all four handles", () => {
+  it("A and D have keyboard steps and neighbour limits", () => {
+    const { onChange } = setup();
+    fireEvent.keyDown(handle("a"), { key: "ArrowRight" });
+    expect(onChange).toHaveBeenLastCalledWith({ a: iso(A + H) });
+    fireEvent.keyDown(handle("a"), { key: "End" });
+    expect(onChange).toHaveBeenLastCalledWith({ a: iso(Date.parse("2026-09-13T22:00:00Z")) });
+    fireEvent.keyDown(handle("d"), { key: "ArrowLeft" });
+    expect(onChange).toHaveBeenLastCalledWith({ d: iso(D - H) });
+    /* Shift would take D 144 bars left, onto C: it stops one bar after C. */
+    fireEvent.keyDown(handle("d"), { key: "ArrowLeft", shiftKey: true });
+    expect(onChange).toHaveBeenLastCalledWith({ d: iso(Date.parse("2026-09-26T00:00:00Z")) });
+    fireEvent.keyDown(handle("d"), { key: "Home" });
+    expect(onChange).toHaveBeenLastCalledWith({ d: iso(Date.parse("2026-09-26T00:00:00Z")) });
+  });
+
+  it("the range holds A and D in; maxSpan clamps the dragged edge and says so", () => {
+    const { onChange, unmount } = setup({ range: RANGE });
+    fireEvent.keyDown(handle("a"), { key: "Home" });
+    expect(onChange).toHaveBeenLastCalledWith({ a: iso(RANGE.from) });
+    fireEvent.keyDown(handle("d"), { key: "End" });
+    expect(onChange).toHaveBeenLastCalledWith({ d: iso(RANGE.to) });
+    unmount();
+    const again = setup({ range: RANGE, maxSpanMs: 61 * 86_400_000 });
+    fireEvent.keyDown(handle("d"), { key: "End" });
+    expect(again.onChange).toHaveBeenLastCalledWith({ d: iso(A + 61 * 24 * H) });
+    fireEvent.keyDown(handle("a"), { key: "Home" });
+    expect(again.onChange).toHaveBeenLastCalledWith({ a: iso(D - 61 * 24 * H) });
+    expect(document.querySelector("[data-calendar-span]")!.textContent).toBe("span 60 d · max 61 d");
+  });
+
+  it("dragging A or D commits once on release, inside the range", () => {
+    const { onChange } = setup({ range: RANGE });
+    sizeTrack(1000);
+    pointer("pointerdown", handle("a"), 0);
+    pointer("pointermove", handle("a"), 100);
+    pointer("pointermove", handle("a"), 110);
+    expect(onChange).not.toHaveBeenCalled();
+    pointer("pointerup", handle("a"), 100);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenLastCalledWith({ a: iso(A - 98 * H) });
+    onChange.mockClear();
+    pointer("pointerdown", handle("d"), 0);
+    pointer("pointermove", handle("d"), 1000);
+    pointer("pointerup", handle("d"), 1000);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenLastCalledWith({ d: iso(RANGE.to) });
+  });
+});
+
+describe("presets", () => {
+  const preset = (k: string) => document.querySelector(`[data-calendar-preset='${k}']`) as HTMLButtonElement;
+
+  it("never patch on mount", () => {
+    const { onChange } = setup({ range: RANGE });
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("70/20/10 re-splits A..D by bars in one atomic patch", () => {
+    const { onChange } = setup({ edges: { ...EDGES, d: iso(A + 1000 * H) } });
+    fireEvent.click(preset("70-20-10"));
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith({ a: EDGES.a, b: iso(A + 700 * H), c: iso(A + 900 * H), d: iso(A + 1000 * H) });
+  });
+
+  it("70/20/10 is disabled without a bar size or valid A and D, with a reason", () => {
+    setup({ barMs: null });
+    expect(preset("70-20-10").disabled).toBe(true);
+    expect(preset("70-20-10").title).toBe("Needs a known bar size.");
+    cleanup();
+    setup({ edges: { ...EDGES, d: "" } });
+    expect(preset("70-20-10").disabled).toBe(true);
+    expect(preset("70-20-10").title).toBe("Needs a valid A and D.");
+  });
+
+  it.each([30, 60, 90])("Last %id sets A..D from range.to and splits 70/20/10", (n) => {
+    const { onChange } = setup({ range: { from: D - 200 * 24 * H, to: D } });
+    fireEvent.click(preset(`last-${n}d`));
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const a = D - n * 24 * H;
+    const bars = n * 24;
+    expect(onChange).toHaveBeenCalledWith({ a: iso(a), b: iso(a + Math.round(bars * 0.7) * H), c: iso(a + Math.round(bars * 0.9) * H), d: iso(D) });
+  });
+
+  it("Last N d is disabled with a reason: no range, over max span, range too short", () => {
+    setup({});
+    expect(preset("last-30d").disabled).toBe(true);
+    expect(preset("last-30d").title).toBe("Needs a verified data range.");
+    cleanup();
+    setup({ range: { from: D - 200 * 24 * H, to: D }, maxSpanMs: 45 * 86_400_000 });
+    expect(preset("last-30d").disabled).toBe(false);
+    expect(preset("last-60d").disabled).toBe(true);
+    expect(preset("last-60d").title).toContain("exceeds the profile's maximum span (45 d)");
+    cleanup();
+    setup({ range: { from: D - 40 * 24 * H, to: D } });
+    expect(preset("last-30d").disabled).toBe(false);
+    expect(preset("last-60d").disabled).toBe(true);
+    expect(preset("last-60d").title).toBe("The verified range is shorter than 60 days.");
+  });
+
+  it("presets are blocked while disabled", () => {
+    setup({ range: RANGE, disabled: true });
+    expect(preset("70-20-10").disabled).toBe(true);
   });
 });
 

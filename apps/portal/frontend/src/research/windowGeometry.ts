@@ -52,15 +52,70 @@ function gap(barMs: number | null): number {
   return barMs !== null && barMs > 0 ? barMs : MINUTE_MS;
 }
 
+export interface EdgeBounds {
+  /** The verified data range: A may not precede `from`, D may not pass `to`. */
+  range?: Axis | null;
+  /** The profile's maximum D - A. */
+  maxSpanMs?: number | null;
+}
+
 /**
- * The closed interval an interior edge may take: one gap after its lower neighbour, one gap before its upper one.
- * `null` when the neighbours leave no room (a range shorter than three gaps).
+ * The closed interval an edge may take: one gap after its lower neighbour, one gap before its upper one; A is also
+ * held to the range start and to D - maxSpan, D to the range end and to A + maxSpan.
+ * `null` when the neighbours leave no room.
  */
-export function edgeLimits(edge: "b" | "c", ordered: { a: number; b: number; c: number; d: number }, barMs: number | null): { min: number; max: number } | null {
+export function edgeLimits(
+  edge: EdgeKey,
+  ordered: { a: number; b: number; c: number; d: number },
+  barMs: number | null,
+  bounds: EdgeBounds = {},
+): { min: number; max: number } | null {
   const step = gap(barMs);
-  const min = (edge === "b" ? ordered.a : ordered.b) + step;
-  const max = (edge === "b" ? ordered.c : ordered.d) - step;
+  const maxSpan = bounds.maxSpanMs !== null && bounds.maxSpanMs !== undefined && bounds.maxSpanMs > 0 ? bounds.maxSpanMs : null;
+  let min: number;
+  let max: number;
+  if (edge === "a") {
+    min = Math.max(bounds.range?.from ?? -Infinity, maxSpan === null ? -Infinity : ordered.d - maxSpan);
+    max = ordered.b - step;
+  } else if (edge === "d") {
+    min = ordered.c + step;
+    max = Math.min(bounds.range?.to ?? Infinity, maxSpan === null ? Infinity : ordered.a + maxSpan);
+  } else {
+    min = (edge === "b" ? ordered.a : ordered.b) + step;
+    max = (edge === "b" ? ordered.c : ordered.d) - step;
+  }
   return min <= max ? { min, max } : null;
+}
+
+/** B and C of a 70/20/10 split of [a, d) by whole bars; null without a bar size or when the split is not strictly ordered. */
+export function splitSeventyTwentyTen(a: number, d: number, barMs: number | null): { b: number; c: number } | null {
+  if (barMs === null || barMs <= 0 || d <= a) return null;
+  const total = Math.round((d - a) / barMs);
+  const b = a + Math.round(total * 0.7) * barMs;
+  const c = a + Math.round(total * 0.9) * barMs;
+  return a < b && b < c && c < d ? { b, c } : null;
+}
+
+/**
+ * The axis of a track. With edges drawn it is their extent padded by a quarter on each side (so the three windows fill the track and
+ * a handle can still be pulled outwards), kept inside the verified range but never narrower than the edges; each commit rescales it,
+ * so repeated drags reach further. With nothing drawn it is the verified range (else the coverage) padded 1%.
+ */
+export function trackAxis(drawn: Axis | null, range: Axis | null | undefined, coverage: Axis | null | undefined): Axis | null {
+  if (drawn && drawn.to > drawn.from) {
+    const pad = (drawn.to - drawn.from) * 0.25;
+    let from = drawn.from - pad;
+    let to = drawn.to + pad;
+    if (range && range.to > range.from) {
+      from = Math.min(drawn.from, Math.max(from, range.from));
+      to = Math.max(drawn.to, Math.min(to, range.to));
+    }
+    return { from, to };
+  }
+  const base = range && range.to > range.from ? axisOf([[range.from, range.to]]) : axisOf([], coverage);
+  if (!base) return null;
+  const pad = (base.to - base.from) * 0.01;
+  return { from: base.from - pad, to: base.to + pad };
 }
 
 export function clamp(value: number, min: number, max: number): number {

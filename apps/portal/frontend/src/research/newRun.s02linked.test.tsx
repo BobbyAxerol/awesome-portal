@@ -364,3 +364,28 @@ describe("S02 coverage prefill is the fallback, not the rule", () => {
     expect(document.querySelector("[data-prefill-source]")).toBeNull();
   });
 });
+
+describe("S02 a context no profile is enabled for says so once, instead of every mode looking closed for no reason", () => {
+  const closedFor = (reason: string): SetupOptions => ({
+    ...structuredClone(OPTIONS),
+    profiles: OPTIONS.profiles.map((profile) => ({ ...structuredClone(profile), state: "DISABLED" as const, reason_code: reason, refusals: [{ reason_code: reason, field_path: ["data", "timeframe"] }] })),
+  });
+
+  it("every profile disabled by the timeframe: one line names the reason and where to change it", () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
+    render(<Harness initial={bound({ windows: THREE, timeframe: "15m" })} setup={served(closedFor("DATASET_TIMEFRAME_NOT_AVAILABLE"))} />);
+    const note = document.querySelector("[data-context-closed]") as HTMLElement;
+    expect(note.getAttribute("data-context-closed")).toBe("DATASET_TIMEFRAME_NOT_AVAILABLE");
+    expect(note.textContent).toMatch(/BTCUSDT 15m/);
+    expect(note.textContent).toMatch(/Market data/);
+  });
+
+  it("an enabled profile, or no setup, prints no such line", () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
+    render(<Harness initial={bound({ windows: THREE })} setup={served(OPTIONS)} />);
+    expect(document.querySelector("[data-context-closed]")).toBeNull();
+    cleanup();
+    render(<Harness initial={bound({ windows: THREE })} setup={absent} />);
+    expect(document.querySelector("[data-context-closed]")).toBeNull();
+  });
+});

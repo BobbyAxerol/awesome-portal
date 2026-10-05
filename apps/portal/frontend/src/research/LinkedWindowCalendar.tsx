@@ -14,7 +14,6 @@ import { useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode
 
 import { InstantInput, inputStyle } from "./InstantInput";
 import {
-  axisOf,
   barCount,
   edgeLimits,
   EDGE_KEYS,
@@ -23,6 +22,8 @@ import {
   orderedEdges,
   parseEdges,
   percentOn,
+  splitSeventyTwentyTen,
+  trackAxis,
   snapEdge,
   spanOn,
   stepEdge,
@@ -38,6 +39,8 @@ export interface LinkedWindowCalendarProps {
   onChange(next: Partial<Record<EdgeKey, string>>): void;
   /** Bar size of the timeframe in ms, for stepping and snapping; null = no stepping help. */
   barMs: number | null;
+  /** The verified data range (epoch ms): the track axis (padded 1%); A may not precede `from`, D may not pass `to`; also the base of the Last N d presets. */
+  range?: { from: number; to: number } | null;
   /** Served coverage on the same clock (epoch ms): drawn as a faint band. */
   coverage?: { from: number; to: number } | null;
   /** Bars the bound version declares before the IS start. */
@@ -74,7 +77,7 @@ function days(ms: number): string {
 }
 
 interface Drag {
-  edge: "b" | "c";
+  edge: EdgeKey;
   origin: number;
   now: number;
 }
@@ -83,6 +86,7 @@ export function LinkedWindowCalendar({
   edges,
   onChange,
   barMs,
+  range = null,
   coverage = null,
   warmupBars = null,
   maxSpanMs = null,
@@ -106,9 +110,14 @@ export function LinkedWindowCalendar({
   const preview = drag && ordered ? { ...ordered, [drag.edge]: drag.now } : ordered;
   const shownEdge = (key: EdgeKey): string => (drag && preview && (key === drag.edge) ? msToInstant(drag.now) : edges[key]);
 
-  const drawn = preview ? [[preview.a, preview.d] as const] : EDGE_KEYS.flatMap((key) => (ms[key] !== null ? [[ms[key]!, ms[key]!] as const] : []));
-  const axis = axisOf(drawn, coverage);
-  const limits = ordered ? { b: edgeLimits("b", ordered, barMs), c: edgeLimits("c", ordered, barMs) } : null;
+  /* The axis is computed from the committed edges, never the preview, so the track does not rescale under a drag. */
+  const known = EDGE_KEYS.flatMap((key) => (ms[key] !== null ? [ms[key]!] : []));
+  const drawn = known.length > 0 ? { from: Math.min(...known), to: Math.max(...known) } : null;
+  const axis = trackAxis(drawn, range, coverage);
+  const bounds = { range, maxSpanMs };
+  const limits = ordered
+    ? { a: edgeLimits("a", ordered, barMs, bounds), b: edgeLimits("b", ordered, barMs, bounds), c: edgeLimits("c", ordered, barMs, bounds), d: edgeLimits("d", ordered, barMs, bounds) }
+    : null;
   const span = ordered ? ordered.d - ordered.a : 0;
 
   /* Percent position of a pointer on the track -> an instant. */
@@ -117,7 +126,7 @@ export function LinkedWindowCalendar({
     if (!rect || rect.width <= 0 || !axis) return null;
     return msAt((event.clientX - rect.left) / rect.width, axis);
   };
-  const press = (edge: "b" | "c") => (event: PointerEvent<HTMLElement>) => {
+  const press = (edge: EdgeKey) => (event: PointerEvent<HTMLElement>) => {
     if (disabled || !ordered || !limits?.[edge]) return;
     event.currentTarget.setPointerCapture?.(event.pointerId);
     setDragged({ edge, origin: ordered[edge], now: ordered[edge] });
@@ -141,7 +150,7 @@ export function LinkedWindowCalendar({
   };
   const cancel = () => setDragged(null);
 
-  const key = (edge: "b" | "c") => (event: KeyboardEvent<HTMLElement>) => {
+  const key = (edge: EdgeKey) => (event: KeyboardEvent<HTMLElement>) => {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
     if (event.key === "Escape" && dragRef.current) {
       event.preventDefault();
@@ -155,6 +164,30 @@ export function LinkedWindowCalendar({
     event.preventDefault();
     if (next !== ordered[edge]) onChange({ [edge]: msToInstant(next) });
   };
+
+  const asStrings = (e: { a: number; b: number; c: number; d: number }) => ({ a: msToInstant(e.a), b: msToInstant(e.b), c: msToInstant(e.c), d: msToInstant(e.d) });
+  const presets: readonly Preset[] = [
+    (() => {
+      const title = "Re-split A..D by observed bar count: IS 70%, OOS 20%, Holdout 10%, snapped to the bar grid.";
+      const split = ms.a !== null && ms.d !== null ? splitSeventyTwentyTen(ms.a, ms.d, barMs) : null;
+      const reason = barMs === null ? "Needs a known bar size." : ms.a === null || ms.d === null || ms.d <= ms.a ? "Needs a valid A and D." : split === null ? "A..D is too short to split." : null;
+      return { key: "70-20-10", label: "70/20/10", title, reason, edges: split && ms.a !== null && ms.d !== null ? asStrings({ a: ms.a, d: ms.d, ...split }) : null };
+    })(),
+    ...([30, 60, 90] as const).map((n): Preset => {
+      const title = `Set A..D to the last ${n} days of the verified range, then split 70/20/10.`;
+      const want = n * DAY_MS;
+      const to = range?.to ?? null;
+      const a = to === null ? null : to - (barMs !== null ? Math.round(want / barMs) * barMs : want);
+      const split = a !== null && to !== null ? splitSeventyTwentyTen(a, to, barMs) : null;
+      const reason =
+        range === null ? "Needs a verified data range."
+        : barMs === null ? "Needs a known bar size."
+        : maxSpanMs !== null && maxSpanMs > 0 && want > maxSpanMs ? `${n} days exceeds the profile's maximum span (${days(maxSpanMs)}).`
+        : range.to - range.from < want ? `The verified range is shorter than ${n} days.`
+        : split === null ? "Too short to split." : null;
+      return { key: `last-${n}d`, label: `Last ${n}d`, title, reason, edges: a !== null && to !== null && split ? asStrings({ a, d: to, ...split }) : null };
+    }),
+  ];
 
   const errorId = (k: EdgeKey) => `${idPrefix}-err-${k}`;
   const barsOf = (from: EdgeKey, to: EdgeKey): number | null => (preview ? barCount(preview[from], preview[to], barMs) : null);
@@ -180,6 +213,22 @@ export function LinkedWindowCalendar({
             ) : null}
             {fieldRefusals[k] ?? null}
           </label>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Window presets" data-calendar-presets>
+        {presets.map((preset) => (
+          <button
+            key={preset.key}
+            type="button"
+            className="btn-ghost mono text-[10px]"
+            disabled={disabled || preset.reason !== null}
+            title={preset.reason ?? preset.title}
+            onClick={() => preset.edges && onChange(preset.edges)}
+            data-calendar-preset={preset.key}
+          >
+            {preset.label}
+          </button>
         ))}
       </div>
 
@@ -217,7 +266,7 @@ export function LinkedWindowCalendar({
               : null}
           </div>
           {axis && preview && limits
-            ? (["b", "c"] as const).map((edge) => {
+            ? EDGE_KEYS.map((edge) => {
                 const lim = limits[edge];
                 if (!lim) return null;
                 const at = preview[edge];
@@ -228,8 +277,8 @@ export function LinkedWindowCalendar({
                     tabIndex={disabled ? -1 : 0}
                     aria-label={`${LABEL[edge]} handle`}
                     aria-orientation="horizontal"
-                    aria-valuemin={lim.min}
-                    aria-valuemax={lim.max}
+                    aria-valuemin={Number.isFinite(lim.min) ? lim.min : Math.min(axis.from, at)}
+                    aria-valuemax={Number.isFinite(lim.max) ? lim.max : Math.max(axis.to, at)}
                     aria-valuenow={at}
                     aria-valuetext={`${utcLabel(at)}, end exclusive`}
                     aria-disabled={disabled || undefined}
@@ -276,6 +325,16 @@ export function LinkedWindowCalendar({
       </div>
     </div>
   );
+}
+
+interface Preset {
+  key: string;
+  label: string;
+  title: string;
+  /** Why the preset cannot run now; null when it can. */
+  reason: string | null;
+  /** The four edges one click patches at once. */
+  edges: Record<EdgeKey, string> | null;
 }
 
 function cssSpan(s: { left: number; width: number }): { left: string; width: string } {

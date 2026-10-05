@@ -78,9 +78,10 @@ import { ConditionsChecklist, EarliestStartOffer, PlannedFolds, WarmupChip, Wind
 import { EstimateFieldRefusal, EstimateStatusLine, refusedAt } from "./EstimateStatus";
 import { InstantInput as DateTimeInput, datetimeInputValue } from "./InstantInput";
 import { FoldTimeline, foldsFromPlanned } from "./FoldTimeline";
+import { humaniseTokens } from "./humanise";
 import { LinkedWindowCalendar } from "./LinkedWindowCalendar";
 import { WindowSetupBar } from "./WindowSetupBar";
-import { engineModeClosed, engineOptionPair, setupProfilesOr, type RunSetupState } from "./useRunSetup";
+import { contextClosure, engineModeClosed, engineOptionPair, setupProfilesOr, type RunSetupState } from "./useRunSetup";
 import { edgesOf, windowsFromEdges } from "./useWindowSuggestion";
 import { timeframeBarMs } from "./windowGeometry";
 import type { EstimateStatus } from "./useDeclarationEstimate";
@@ -1596,6 +1597,14 @@ function WindowsStep({
               });
             }}
             barMs={timeframeBarMs(timeframe)}
+            range={(() => {
+              /* The verified range: from the served coverage's first bar to the end of the last bar the index verified (its as-of, floored to a bar).
+                 Month-partition coverage says "to the end of the month", which can lie in the future: not a verified end, so no range then. */
+              const served = coverageRange(prefillPlan);
+              const barMs = timeframeBarMs(timeframe);
+              const asOf = setup.options?.as_of_utc_ms ?? null;
+              return served && barMs !== null && asOf !== null ? { from: served.from, to: Math.min(Math.floor(asOf / barMs) * barMs, served.to) } : null;
+            })()}
             warmupBars={warmupBars}
             maxSpanMs={profile?.enabled && profile.maxSpanDays !== null ? profile.maxSpanDays * 86_400_000 : null}
             invalid={{
@@ -1742,6 +1751,12 @@ function WindowsStep({
         </p>
       ) : null}
 
+      {contextClosure(setup.options) !== null ? (
+        <p className="mono text-[10px]" style={{ color: "var(--role-holdout)" }} data-context-closed={contextClosure(setup.options)!.reasonCode} role="status">
+          No profile runs this Alpha on {draft.symbol || "this symbol"} {draft.timeframe} · {humaniseTokens(contextClosure(setup.options)!.reasonCode)}. Change the timeframe, symbol or dataset on Market data: that, not the mode, closes every option below.
+        </p>
+      ) : null}
+
       {/* Keep invalid schedules visible but disabled; the source explains why. */}
       <div className="flex flex-wrap gap-2.5">
         <Field label="optimization_mode">
@@ -1763,7 +1778,7 @@ function WindowsStep({
               const closed = engineModeClosed(setup.options, mode.mode_id);
               return (
                 <option key={mode.mode_id} value={mode.mode_id} title={closed !== null ? `${closed.reasonCode ?? "NOT_OPENED"} · ${mode.mode_id}` : mode.mode_id} disabled={closed !== null} data-mode-closed={closed !== null ? (closed.reasonCode ?? "") : undefined}>
-                  {mode.display_name || mode.mode_id}{closed !== null ? " · not opened" : ""}
+                  {mode.display_name || mode.mode_id}{closed !== null ? ` · ${closed.reasonCode === null || closed.reasonCode === "PROFILE_NOT_OPENED" ? "not opened" : humaniseTokens(closed.reasonCode)}` : ""}
                 </option>
               );
             })}
@@ -1799,7 +1814,7 @@ function WindowsStep({
                   data-invalid-schedule={shown ? undefined : schedule}
                   data-causal-profile={shown && isCausalProfile(causal) ? causal?.profileId : undefined}
                 >
-                  {schedule}{shown ? "" : pairClosed ? " · not opened" : " · not admitted"}
+                  {schedule}{shown ? "" : pairClosed ? ` · ${pair?.reasonCode === null || pair?.reasonCode === "PROFILE_NOT_OPENED" ? "not opened" : humaniseTokens(pair?.reasonCode)}` : " · not admitted"}
                 </option>
               );
             })}

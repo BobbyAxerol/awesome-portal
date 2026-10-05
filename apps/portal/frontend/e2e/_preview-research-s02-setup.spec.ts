@@ -135,6 +135,34 @@ for (const width of WIDTHS) {
       expect(errors).toEqual([]);
     });
 
+    test("dragging: Last 30d ends at the verified bar, handles drag one edge each, 70/20/10 re-splits, no request per drag", async ({ page }) => {
+      await signIn(page);
+      const { counts, errors } = await watch(page);
+      await toWindows(page, DELTA);
+      await expect(edges(page).nth(0)).not.toHaveValue("", { timeout: 20_000 });
+      const read = () => edges(page).evaluateAll((nodes) => nodes.map((node) => (node as HTMLInputElement).value));
+      const [, , , verifiedEnd] = await read();
+      const suggestions = counts.suggestions;
+      await page.getByRole("button", { name: "Last 30d" }).click();
+      const [a30, , , d30] = await read();
+      expect(d30, "ends at the last verified bar, never in the future").toBe(verifiedEnd);
+      expect((new Date(`${d30}Z`).getTime() - new Date(`${a30}Z`).getTime()) / 86_400_000).toBe(30);
+      await page.getByRole("button", { name: "70/20/10" }).click();
+      const before = await read();
+      const handle = page.getByRole("slider", { name: /IS end · OOS start \(B\) handle/ });
+      const box = (await handle.boundingBox())!;
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x - 80, box.y + box.height / 2, { steps: 8 });
+      await page.mouse.up();
+      const after = await read();
+      expect(after[1], "B moved").not.toBe(before[1]);
+      expect([after[0], after[2], after[3]], "A, C and D stayed").toEqual([before[0], before[2], before[3]]);
+      expect(counts.suggestions + counts.preflights + counts.runCreates, "dragging asks nothing").toBe(suggestions);
+      expect(await noHorizontalScroll(page)).toBe(true);
+      expect(errors).toEqual([]);
+    });
+
     test("a mode x schedule no profile opens is shown closed with the server's reason, before any choice", async ({ page }) => {
       await signIn(page);
       const { counts, errors } = await watch(page);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { axisOf, barCount, edgeLimits, largeStep, msToInstant, orderedEdges, parseEdges, percentOn, snapEdge, spanOn, stepEdge, utcLabel } from "./windowGeometry";
+import { splitSeventyTwentyTen, trackAxis, axisOf, barCount, edgeLimits, largeStep, msToInstant, orderedEdges, parseEdges, percentOn, snapEdge, spanOn, stepEdge, utcLabel } from "./windowGeometry";
 
 const H = 3_600_000;
 const A = Date.UTC(2026, 7, 2, 23);
@@ -57,5 +57,28 @@ describe("windowGeometry", () => {
     expect(stepEdge("End", false, ORD.b, span, H, lim)).toBe(lim.max);
     expect(stepEdge("x", false, ORD.b, span, H, lim)).toBeNull();
     expect(stepEdge("ArrowRight", false, ORD.b, span, null, lim)).toBe(ORD.b + 60_000);
+  });
+
+  it("A and D limits honour the range and the max span", () => {
+    const range = { from: ORD.a - 10 * H, to: ORD.d + 10 * H };
+    expect(edgeLimits("a", ORD, H, { range })).toEqual({ min: range.from, max: ORD.b - H });
+    expect(edgeLimits("d", ORD, H, { range })).toEqual({ min: ORD.c + H, max: range.to });
+    expect(edgeLimits("a", ORD, H, { range, maxSpanMs: 205 * H })).toEqual({ min: ORD.d - 205 * H, max: ORD.b - H });
+    expect(edgeLimits("d", ORD, H, { range, maxSpanMs: 205 * H })).toEqual({ min: ORD.c + H, max: ORD.a + 205 * H });
+    expect(edgeLimits("a", ORD, H, { range: { from: ORD.b, to: ORD.d } })).toBeNull();
+  });
+  it("splits 70/20/10 by whole bars and refuses what cannot be ordered", () => {
+    expect(splitSeventyTwentyTen(0, 1000 * H, H)).toEqual({ b: 700 * H, c: 900 * H });
+    expect(splitSeventyTwentyTen(0, 1000 * H, null)).toBeNull();
+    expect(splitSeventyTwentyTen(0, 2 * H, H)).toBeNull();
+  });
+  it("the track axis is the drawn extent padded by a quarter, kept inside the range; the padded range when nothing is drawn", () => {
+    expect(trackAxis({ from: 20, to: 80 }, { from: 0, to: 100 }, null)).toEqual({ from: 5, to: 95 });
+    /* never wider than the range, never narrower than the edges */
+    expect(trackAxis({ from: 10, to: 90 }, { from: 0, to: 100 }, null)).toEqual({ from: 0, to: 100 });
+    expect(trackAxis({ from: 0, to: 100 }, { from: 10, to: 90 }, null)).toEqual({ from: 0, to: 100 });
+    expect(trackAxis({ from: 0, to: 100 }, null, null)).toEqual({ from: -25, to: 125 });
+    expect(trackAxis(null, { from: 0, to: 100 }, null)).toEqual({ from: -1, to: 101 });
+    expect(trackAxis(null, null, null)).toBeNull();
   });
 });

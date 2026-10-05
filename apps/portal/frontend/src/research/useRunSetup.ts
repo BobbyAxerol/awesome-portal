@@ -273,3 +273,14 @@ export function engineModeClosed(options: SetupOptions | null, mode: string): { 
   if (pairs.length === 0 || pairs.some((entry) => entry.state === "ENABLED")) return null;
   return { reasonCode: pairs[0]!.reason_code };
 }
+
+/**
+ * When no profile at all is enabled for the chosen context, the one reason that closes it (the first disabled profile's own), so the
+ * screen can say "this timeframe / dataset / symbol is not admitted" once, instead of every mode looking closed for no reason.
+ */
+export function contextClosure(options: SetupOptions | null): { reasonCode: string; fieldPath: readonly string[] | null } | null {
+  if (options === null || options.profiles.length === 0 || options.profiles.some((profile) => profile.state === "ENABLED")) return null;
+  const first = options.profiles.find((profile) => profile.reason_code !== null);
+  if (first === undefined || first.reason_code === null) return null;
+  return { reasonCode: first.reason_code, fieldPath: first.refusals?.[0]?.field_path ?? null };
+}

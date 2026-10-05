@@ -2169,3 +2169,37 @@ which choice to change before they reach Run. The list of profiles to open is Bo
 Not requested: opening any new profile, mode, schedule, protocol or the VN profile; no flag change.
 Frontend, done in the same step (`unopenedCombination`): when the chosen mode × schedule matches no ENABLED setup profile, Review says so with the
 server's reason code, and preflight and Run stay off (no pointless preflight record). It uses `profiles[]` today and `unopened_options[]` once published.
+
+### §37 — Open full QuantBT support for Delta RSI (Bobby, 2026-10-05) — Claude → Codex
+
+Bobby, asked which profiles to open first: **"Mở full, support full chứ"** — he wants the whole QuantBT capability usable from S02, not one recipe at a time.
+This replaces the earlier "open after my review" posture for modes/timeframes; it is the owner's decision, recorded here. Frontend needs nothing but the
+served `setup-options` to follow (it already renders every pair/profile from it).
+
+**What the preview serves today** (Delta RSI `av_delta_rsi_polynomial_alpha_1_0_0`, dataset `crypto-binance-1m`, real `GET setup-options`, 2026-10-05):
+
+| Axis | Opened | Closed (reason) |
+|---|---|---|
+| mode × schedule | `mode_1_decay × global` (4 profiles), `mode_1_decay × per_fold_causal` (1) | `mode_1 × per_fold_decay`, every pair of `mode_2_sbb`, `mode_3_flat_minima`, `mode_4_is_only_robust` (global, per_fold_causal), `mode_5_full_robust` — all `PROFILE_NOT_OPENED`, 0 profiles |
+| timeframe | `1h` only | `15m` → every profile `DATASET_TIMEFRAME_NOT_AVAILABLE`; `4h` → `TIMEFRAME_NOT_ADMITTED`. **Choosing any other timeframe closes mode 1–5 at once** — what Bobby saw as "everything locked" |
+| symbol | BTCUSDT / ETHUSDT / SOLUSDT at 1h | (others not probed) |
+| route | `signal_notional` | the other 13 engine routes `PROFILE_NOT_OPENED` |
+| protocol | Three Window (fixed, 1 trial), Advanced WFO (2–400 trials), causal (3 trials) | — |
+
+Where the closure is in code (not engine limits as far as I can read): `apps/control-api/src/research/run-admission.service.ts` ~456 and ~550
+(`mode_1_decay` + `global` hard-coded), `delta-wfo.profile.ts`, `delta-wfo-v2.profile.ts`, `delta-causal-inner.profile.ts`, `portal-admission.ts` (mode_1 only),
+`current-source-pool.ts:56` (`POOL_IS_CANDIDATE_LIST_MODES = {mode_1_decay}` — search/pool readers only understand mode 1 candidate lists).
+`advanced_walkforward_runner.py` passes `optimization_mode` through, so the runner itself is not obviously mode-limited. Please confirm.
+
+| ID | Request | Expected |
+|---|---|---|
+| BR-FULL-01 | Open every valid engine mode × schedule pair for Delta RSI, both protocols where meaningful: `mode_2_sbb`, `mode_3_flat_minima`, `mode_4_is_only_robust` (global + per_fold_causal), `mode_5_full_robust`, and `mode_1 × per_fold_decay` | one qualified profile per (protocol, mode, schedule), each with its own real run receipt; `setup-options` lists them ENABLED |
+| BR-FULL-02 | Every timeframe the dataset index serves (not only `1h`): at least `5m`, `15m`, `1h`, `4h`, `1d` where indexed, with per-timeframe warmup, 100k-bar planner budget, `max_span_days` and trial/time limits | a timeframe the index serves is never `TIMEFRAME_NOT_ADMITTED`; the typed reason remains only for what is truly not indexed |
+| BR-FULL-03 | Make profiles data, not code: a registry of recipes (protocol, mode, schedule, timeframe class, trials, seed policy, caps) that admission, `setup-options`, preflight conditions and the estimator all read; no `mode_1_decay`/`global` literals in admission | opening a recipe = one registry row + its qualification test |
+| BR-FULL-04 | Downstream readers per mode: runner → artifacts → current-source pool/search surface → freeze → report → final audit → retention → RC. Each mode states what it publishes (e.g. a mode with no IS candidate list publishes none, typed) | S06–S11 render a run of every opened mode without a `NOT_PUBLISHED` that is really a missing reader |
+| BR-FULL-05 | Time and quota for the slow modes (mode 4 ~2–10 min; others unknown): job time limit, per-actor preflight quota (a test actor already hits 503 after repeated preflights), queue behaviour | a documented limit per profile, surfaced in `setup-options` so S02 can say it |
+| BR-FULL-06 | Execution routes beyond `signal_notional` (13 engine routes) — Bobby said "full"; propose the order and what each needs (cost model, route params) | a staged plan; do not open without its own qualification |
+| BR-FULL-07 | Imported alphas: the same recipes as Delta where the declaration allows (today only the pins-only fixed recipe `p17`) | imported WFO/robust modes opened or each refused with a typed reason |
+
+Reply with a staged plan (what opens first, the qualification each stage needs, the effort) before opening anything; nothing is to be enabled without a
+passing real run of that recipe. No frontend change is needed for any stage: S02 reads `profiles[]` and `engine_options`.
