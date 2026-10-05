@@ -24,6 +24,7 @@ export function WindowSetupBar({
   patch,
   setup,
   profileId,
+  unavailableReason = null,
   workspaceId,
 }: {
   draft: RunDraft;
@@ -31,6 +32,8 @@ export function WindowSetupBar({
   setup: RunSetupState;
   /** The selected profile's id when it is enabled; null otherwise (nothing can be suggested for a disabled profile). */
   profileId: string | null;
+  /** The server's typed reason when every profile of this protocol is disabled for this Alpha. */
+  unavailableReason?: string | null;
   workspaceId?: string;
 }) {
   const context = setupContextFrom(draft, workspaceId);
@@ -70,12 +73,14 @@ export function WindowSetupBar({
   const why =
     profileId === null
       ? options !== null
-        ? "No runnable profile for this protocol and Alpha."
+        ? "Pick a runnable mode and schedule first: no single profile fits yet."
         : null
       : null;
 
   const note: { text: string; title?: string; tone: "soft" | "warn" } | null =
-    state.kind === "pending"
+    unavailableReason !== null
+      ? { text: `Not runnable · ${humaniseTokens(unavailableReason)}`, tone: "warn" }
+      : state.kind === "pending"
       ? { text: "Suggesting…", tone: "soft" }
       : state.kind === "not-published"
         ? { text: `No suggestion · ${humaniseTokens(state.reasonCode ?? "NOT_PUBLISHED")}`, tone: "warn" }

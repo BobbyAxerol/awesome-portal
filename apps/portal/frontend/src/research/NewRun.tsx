@@ -102,6 +102,7 @@ import {
   adoptGuardDefaults,
   applyCoveragePrefillFor,
   draftIsEmpty,
+  validateWindows,
   guardAppliesNoProtection,
   blockingProblems,
   isIncompleteProblem,
@@ -1517,6 +1518,16 @@ function WindowsStep({
     return { [kind]: value, ...(outside ? { declaredV2: true } : admitsSpecV2(profile) ? {} : { declaredV2: undefined }) };
   };
   const prefillPlan = planCoverage(catalog, draft.datasetId, draft.symbol, draft.timeframe);
+  /* The profile a suggestion is asked for: the one this declaration falls under, else the only enabled one of the protocol and route
+     (the mode and schedule selects sit below the windows, so a fixed protocol has its single profile before they are chosen). */
+  /* The step error reddens the edges only when it is about the windows (a missing mode is not an edge's fault). */
+  const windowsFlagged = Boolean(error) && validateWindows(draft) !== null;
+  const suggestionProfile = profile?.enabled ? profile : family.length === 1 ? family[0]! : null;
+  /* Every profile of this protocol and route is disabled for this Alpha: the server's typed reason, said where Suggest would be. */
+  const unavailableReason =
+    suggestionProfile === null && family.length === 0
+      ? ((profiles ?? []).find((entry) => !entry.enabled && entry.protocol === draft.protocol && entry.executionRoute === draft.executionRoute && entry.reason !== null)?.reason ?? null)
+      : null;
   /* U01: only the declaration-estimate answer serves the earliest start; no other estimate does. */
   const servedEstimate = estimateStatus.kind === "served" ? estimateStatus.estimate : estimate?.earliestStartUtcMs != null ? estimate : null;
   const modes = atlas?.modes ?? [];
@@ -1545,8 +1556,11 @@ function WindowsStep({
        default, when the release lists it as admitted; otherwise the release's own. */
     const admitted = (list: readonly { value: string; admission: string }[], value: string | null) =>
       value !== null && list.some((option) => option.value === value && option.admission === "ADMITTED") ? value : null;
-    const profileFrequency = profile?.enabled ? admitted(options.frequency, profile.granularity) : null;
-    const profileWindowMode = profile?.enabled ? admitted(options.window_mode, profile.windowMode) : null;
+    /* A profile that serves a LIST (the Alpha-bound setup does) supplies the release default when it admits it, else its first entry. */
+    const fromList = (list: readonly string[] | null, kind: readonly { value: string; admission: string }[], releaseDefault: string): string | null =>
+      list === null || list.length === 0 ? null : admitted(kind, list.includes(releaseDefault) ? releaseDefault : list[0]!);
+    const profileFrequency = profile?.enabled ? (admitted(options.frequency, profile.granularity) ?? fromList(profile.frequencies, options.frequency, options.frequency_default)) : null;
+    const profileWindowMode = profile?.enabled ? (admitted(options.window_mode, profile.windowMode) ?? fromList(profile.windowModes, options.window_mode, options.window_mode_default)) : null;
     if (!draft.walkForward.frequency) change.frequency = profileFrequency ?? options.frequency_default;
     if (!draft.walkForward.windowMode) change.windowMode = profileWindowMode ?? options.window_mode_default;
     if (Object.keys(change).length > 0) adopt({ walkForward: { ...draft.walkForward, ...change } });
@@ -1555,10 +1569,10 @@ function WindowsStep({
   return (
     <Card title="Walk-forward">
       <ProtocolToggle draft={draft} patch={patch} />
-      <WindowPrefillNote draft={draft} plan={prefillPlan} warmupBars={warmupBars} />
+      {setup.status !== "served" ? <WindowPrefillNote draft={draft} plan={prefillPlan} warmupBars={warmupBars} /> : null}
       {draft.protocol === "three_window_decay" ? (
         <div className="flex flex-col gap-2" data-three-window>
-          <WindowSetupBar draft={draft} patch={patch} setup={setup} profileId={profile?.enabled ? profile.profileId : null} workspaceId={workspaceId} />
+          <WindowSetupBar draft={draft} patch={patch} setup={setup} profileId={suggestionProfile?.profileId ?? null} unavailableReason={unavailableReason} workspaceId={workspaceId} />
           <LinkedWindowCalendar
             idPrefix="s02-windows"
             edges={{ a: draft.windows.is.start, b: draft.windows.is.endExclusive, c: draft.windows.oos.endExclusive, d: draft.windows.holdout.endExclusive }}
@@ -1582,14 +1596,13 @@ function WindowsStep({
               });
             }}
             barMs={timeframeBarMs(timeframe)}
-            coverage={coverageRange(prefillPlan)}
             warmupBars={warmupBars}
             maxSpanMs={profile?.enabled && profile.maxSpanDays !== null ? profile.maxSpanDays * 86_400_000 : null}
             invalid={{
-              a: Boolean(error) || refusedAt(estimateStatus, "windows", "is", "start"),
-              b: Boolean(error) || refusedAt(estimateStatus, "windows", "is", "end_exclusive") || refusedAt(estimateStatus, "windows", "oos", "start"),
-              c: Boolean(error) || refusedAt(estimateStatus, "windows", "oos", "end_exclusive") || refusedAt(estimateStatus, "windows", "holdout", "start"),
-              d: Boolean(error) || refusedAt(estimateStatus, "windows", "holdout", "end_exclusive"),
+              a: windowsFlagged || refusedAt(estimateStatus, "windows", "is", "start"),
+              b: windowsFlagged || refusedAt(estimateStatus, "windows", "is", "end_exclusive") || refusedAt(estimateStatus, "windows", "oos", "start"),
+              c: windowsFlagged || refusedAt(estimateStatus, "windows", "oos", "end_exclusive") || refusedAt(estimateStatus, "windows", "holdout", "start"),
+              d: windowsFlagged || refusedAt(estimateStatus, "windows", "holdout", "end_exclusive"),
             }}
           />
           {(["is", "oos", "holdout"] as const).map((key) => <EstimateFieldRefusal key={key} status={estimateStatus} owns="windows" key2={key} />)}
@@ -1597,7 +1610,7 @@ function WindowsStep({
         </div>
       ) : (
         <div className="flex flex-wrap gap-2.5" data-advanced-window>
-          <div className="w-full"><WindowSetupBar draft={draft} patch={patch} setup={setup} profileId={profile?.enabled ? profile.profileId : null} workspaceId={workspaceId} /></div>
+          <div className="w-full"><WindowSetupBar draft={draft} patch={patch} setup={setup} profileId={suggestionProfile?.profileId ?? null} unavailableReason={unavailableReason} workspaceId={workspaceId} /></div>
           <Field minWidth={INSTANT_FIELD_WIDTH} label="Analysis start" hint={prefillHint(draft, "walkForward.start")}>
             <DateTimeInput
               style={inputStyle(refusedAt(estimateStatus, "walk_forward", "start"))}
@@ -2730,7 +2743,7 @@ function WindowTimeline({
           <p className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1" data-estimate-strip>
             <WarmupChip estimate={estimate} />
             {/* One fold statement per protocol: the three-window protocol has no outer folds, so the planner's count would contradict it (RG2). */}
-            {hasNoOuterFolds(fold, draft.protocol) ? null : <PlannedFolds estimate={estimate} />}
+            {hasNoOuterFolds(fold, draft.protocol) || foldsFromPlanned(estimate?.plannedFoldItems) !== null ? null : <PlannedFolds estimate={estimate} />}
             <EstimateStatusLine status={estimateStatus} onRetry={onRetryEstimate} />
           </p>
         ) : null}

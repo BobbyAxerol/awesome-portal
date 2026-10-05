@@ -394,7 +394,9 @@ export function useWindowSuggestion(input: WindowSuggestionInput): WindowSuggest
         if (state.kind === "proposal" && latest.current.onAutoApply && autoApplyAllowed(latest.current.draft)) {
           const patch = suggestionToDraftPatch(state.suggestion, latest.current.draft);
           if (patch.state === "patch") {
-            setBaseline((previous) => (previous?.scope === scopeAtAsk ? previous : { scope: scopeAtAsk, before: preApplyOf(latest.current.draft) }));
+            /* Read the draft now: a state updater runs at the next render, by which time the patch below has already landed. */
+            const before = preApplyOf(latest.current.draft);
+            setBaseline((previous) => (previous?.scope === scopeAtAsk ? previous : { scope: scopeAtAsk, before }));
             latest.current.onAutoApply(patch.patch);
           }
         }
