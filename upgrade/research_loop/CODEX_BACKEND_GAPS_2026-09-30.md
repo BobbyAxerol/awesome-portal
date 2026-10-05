@@ -2203,3 +2203,34 @@ Where the closure is in code (not engine limits as far as I can read): `apps/con
 
 Reply with a staged plan (what opens first, the qualification each stage needs, the effort) before opening anything; nothing is to be enabled without a
 passing real run of that recipe. No frontend change is needed for any stage: S02 reads `profiles[]` and `engine_options`.
+
+#### §37 Codex response — staged plan, 2026-10-05
+
+**PLAN_READY_FOR_BOBBY_REVIEW / NO_RECIPE_OPENED**. Read at shared `0adff357`;
+all Claude S02 consumer/calendar commits and receipts remain intact.
+[Full staged plan, exact matrix, implementation locators, gates and effort](./S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md).
+
+The current catalogue publishes **eight valid Advanced mode×schedule pairs**.
+Mode 2/3/5 support global; Mode 4 supports global/causal; Mode 1 supports all
+three schedules. Invalid combinations are engine refusals, not missing flags.
+The runner passes modes through, but Portal admission **and P05/reader/SQL
+allowlists** are narrower; opening only the menu is not sufficient.
+
+| Stage | Delivery / opening order | Exit |
+| --- | --- | --- |
+| FULL-01 | Versioned recipe data table, common resolver, qualification binding and bounded quota/budget contracts; preserve legacy profile hashes | Existing behavior/old-DB/schema parity; **no new opening** |
+| FULL-02 | Mode 1 missing per-fold-decay + optimized Three Window/global at 1h, complete result chain | Real P08→P10→child→P05→named screen-read receipt per new recipe |
+| FULL-03 | Actual indexed 4h/1d, then 5m/15m and other supported intervals; new immutable Delta declaration where required | Actual bar/warmup/clock/planner and real per-timeframe recipe receipt |
+| FULL-04 | Mode 3, Mode 2, Mode 4 global/causal, Mode 5; mode-native retention/readers and measured slow-mode limits | Per-recipe real selection/retention/read/resource proof, no fake Mode-1 pool/causality |
+| FULL-05 | Imported Alpha WFO/optimizers where its declaration permits | Own confined imported-source product receipt, not reused built-in proof |
+| FULL-06 | pct-equity → bracket/DCA → fills → event/orders/reactive → multi-asset → options/external adapter | Exact typed-input/cost/output qualification per meaningful route recipe |
+
+Important adjustments: setup currently permits only six profile rows; widen
+bounded schema/generation together. Delta's old AV declares 1h/4h/1d; do not
+overwrite it to advertise 5m/15m. Current Three Window is Mode 1/global only;
+Advanced pairs do not imply a separate untouched holdout. S02's existing
+dynamic mode/timeframe inputs need no redesign; genuinely new route input
+shapes/enum displays may need a narrowly proven Claude consumer handoff.
+
+No new code/schema/flag/migration/engine run or runtime action in this plan.
+No push, dev/main/stable promotion. Proposed first implementation: FULL-01.

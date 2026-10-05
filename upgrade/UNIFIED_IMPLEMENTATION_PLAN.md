@@ -8059,3 +8059,33 @@ Control130/130 affected cases including VN source-bound regression, contracts17/
 build pass; generated/digest verification included. No remote push or runtime
 rollout. Claude next: consume precise paths/engine disclosure and classify
 only stale-options409 as reload, then the affected combined preview receipt.
+
+<a id="s02-full-support"></a>
+#### S02 §37 — Full current-engine support, staged backend expansion
+
+Bobby direction, 2026-10-05: **mở full, support full**; qualify every new exact
+recipe before opening it. **PLAN_READY_FOR_BOBBY_REVIEW / NO_RECIPE_OPENED**.
+This replaces waiting for a later mode/timeframe list, not qualification,
+immutable source/custody, frontend ownership or release safeguards.
+
+Detailed guide: [S02 full-support staged plan](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md).
+Request/response: backend queue §37. Source reviewed at `0adff357`; existing
+S02 calendar/presets and Claude receipts preserved, not retaken by this plan.
+
+| Stage | Scope | Guide / current state |
+| --- | --- | --- |
+| FULL-01 | Shared versioned recipe table, common admission authority, bounded budgets/quota and historic compatibility | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-01) · PLANNED |
+| FULL-02 | Mode 1 missing schedule + optimized Three Window/global, full retained/read chain | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-02) · PLANNED |
+| FULL-03 | All actual indexed timeframes, source clocks/warmup and immutable Delta declaration extension | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-03) · PLANNED |
+| FULL-04 | All other valid optimizer pairs, mode-native readers and measured slow-mode limits | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-04) · PLANNED |
+| FULL-05 | Confined imported Alpha execution on compatible qualified recipes | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-05) · PLANNED |
+| FULL-06 | Remaining route families with exact inputs/cost/claims; staged batch order, no Cartesian mode/route invention | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-06) · PLANNED |
+
+Exact target: five published modes / eight valid Advanced pairs. Current Three
+Window remains distinct Mode 1/global with independent holdout. New profiles
+need consistent expansion across setup's six-row bounds, immutable Alpha
+declarations, worker/P05/readers and SQL custody constraints. Every newly
+enabled recipe carries its own real P08/P10/child/P05/named-read receipt.
+No enablement, run, migration, UI edit, push or deployment in this planning
+change. Codex next proposed implementation: FULL-01; Claude retains design
+ownership and only consumes proven named contract additions where necessary.
