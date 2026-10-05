@@ -820,7 +820,11 @@ export function selectProfile(
   const schedule = draft.optimizationSchedule ?? "";
   const named = schedule === "" ? [] : family.filter((profile) => profile.optimizationSchedule === schedule);
   const matches = named.length > 0 ? named : family.filter((profile) => profile.optimizationSchedule !== SCHEDULE_PER_FOLD_CAUSAL);
-  return matches.length === 1 ? matches[0]! : null;
+  if (matches.length === 1) return matches[0]!;
+  /* The Alpha-bound setup also lists the profiles disabled for this Alpha (e.g. the VN fixed one beside the Delta fixed one):
+     among several candidates the one enabled for it is the declaration's profile. */
+  const enabled = matches.filter((profile) => profile.enabled);
+  return enabled.length === 1 ? enabled[0]! : null;
 }
 
 /** Every profile that fits protocol, route and mode, whatever requested-spec version it admits. */

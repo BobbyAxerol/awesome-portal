@@ -419,6 +419,15 @@ describe("profiles (LW-07)", () => {
     expect(selectProfile(null, { protocol: "advanced", executionRoute: "signal_notional", optimizationMode: "" })).toBeNull();
   });
 
+  it("the Alpha-bound setup lists a disabled twin (the VN fixed profile beside the Delta one): the enabled one is the profile", () => {
+    const disabledTwin = { ...p04, profileId: "p10.vn-stock-daily-observed-fixed.v1", enabled: false, reason: "PROFILE_DATASET_NOT_ADMITTED" };
+    const draft = { protocol: p04.protocol!, executionRoute: "signal_notional", optimizationMode: "mode_1_decay", optimizationSchedule: "global" };
+    expect(selectProfile([p04, disabledTwin], draft)!.profileId).toBe(p04.profileId);
+    expect(selectProfile([disabledTwin, p04], draft)!.profileId).toBe(p04.profileId);
+    /* Several disabled candidates and none enabled is still no profile. */
+    expect(selectProfile([disabledTwin, { ...disabledTwin, profileId: "other" }], draft)).toBeNull();
+  });
+
   it("trial default: the fixed count, else the served default (none today), else nothing", () => {
     expect(profileTrialDefault(p04)).toBe(1);
     expect(profileTrialDefault(p10)).toBeNull();

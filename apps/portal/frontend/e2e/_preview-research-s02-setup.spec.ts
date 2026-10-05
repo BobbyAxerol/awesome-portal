@@ -113,6 +113,24 @@ for (const width of WIDTHS) {
       expect(errors).toEqual([]);
     });
 
+    test("three window: with the disabled VN twin listed, the Delta fixed profile still pins trials to 1 and every condition is green", async ({ page }) => {
+      await signIn(page);
+      const { counts, errors } = await watch(page);
+      await toWindows(page, DELTA);
+      await expect(edges(page).nth(0)).not.toHaveValue("", { timeout: 20_000 });
+      await page.locator('select[aria-label="Optimization mode"]').selectOption("mode_1_decay");
+      await page.locator('select[aria-label="Optimization schedule"]').selectOption("global");
+      await page.locator('[data-step-pill="optimization"]').click();
+      await expect(page.locator('input[aria-label="Optuna trials"]')).toHaveValue("1");
+      await expect(page.locator("main")).toContainText("p04.fixed-qualification.v1");
+      await page.locator('[data-step-pill="review"]').click();
+      await page.locator('[data-action="preflight"]').click();
+      await expect(page.locator('[data-action="create-run"]')).toBeEnabled({ timeout: 30_000 });
+      await expect(page.locator("main")).not.toContainText(/PORTAL_EXECUTION_PROFILE_NOT_ENABLED|REQUESTED_SPEC_EXECUTOR_NOT_INSTALLED|WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE/);
+      expect(counts.runCreates, "no run is created by this acceptance").toBe(0);
+      expect(errors).toEqual([]);
+    });
+
     test("advanced: Suggest + Apply write the range and first OOS; the rail draws the engine's own folds", async ({ page }) => {
       await signIn(page);
       const { counts, errors } = await watch(page);
