@@ -25,7 +25,7 @@ import { useWindowMetadata } from "./useWindowMetadata";
 import { clearRunDraft, restoreRunDraft, runDraftScope, saveRunDraft, type RunDraftScope } from "./runDraftStore";
 import { useSession } from "../auth/session";
 import { useDeclarationEstimate } from "./useDeclarationEstimate";
-import { setupContextFrom, useRunSetup } from "./useRunSetup";
+import { setupContextFrom, unopenedCombination, useRunSetup } from "./useRunSetup";
 import { type RunRequestedSpec, cloneFailureState, readRunRequestedSpec } from "./runCloneClient";
 import { runLineageFor, useNewRun, type RunLineage } from "./useNewRun";
 import { useRunLabelRead } from "./useRunLabelRead";
@@ -350,6 +350,8 @@ function NewRunRouteBody({ onStartOver, workspaceId, draftScope }: { onStartOver
   const run = useNewRun(draft, limits, workspaceId, lineage);
   /* S02 linked-window setup: the runnable options for this exact Alpha / dataset / symbol / timeframe, read when that context settles. */
   const setup = useRunSetup(setupContextFrom(run.draft, workspaceId));
+  /* A combination no enabled profile opens cannot run: said before Run, with the server's own reason, and Run stays off. */
+  const unopened = useMemo(() => unopenedCombination(run.draft, setup.options), [run.draft, setup.options]);
 
   const clonedFor = useRef<string | null>(null);
   useEffect(() => {
@@ -664,7 +666,8 @@ function NewRunRouteBody({ onStartOver, workspaceId, draftScope }: { onStartOver
       cloneSource={clone ? { runId: clone.runId, state: clone.state } : null}
       forkSource={fork}
       mayCreateRun={run.mayCreateRun}
-      canSubmit={run.canSubmit}
+      canSubmit={run.canSubmit && unopened === null}
+      unopenedCombination={unopened}
       created={run.created}
       createState={run.createState}
       outcomeUnknown={run.outcomeUnknown}

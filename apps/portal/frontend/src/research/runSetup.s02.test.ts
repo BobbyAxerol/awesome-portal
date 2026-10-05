@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { admitsSpecV2, admittedFrequencies, readDeclarationEstimate, readPlannedFolds, seedPinned, selectProfile, trialsPinned } from "./dataDeclaration";
 import { type SetupOptions, type SetupOptionsResult, type SetupProfile, getRunSetupOptions, postWindowSuggestion, resetSetupRouteMemory, setupQueryString } from "./setupClient";
-import { answersContext, disabledSetupProfiles, profilePinsFromSetup, profilesFromSetup, setupContextFrom, setupContextKey, setupProfilesOr, useRunSetup } from "./useRunSetup";
+import { answersContext, disabledSetupProfiles, profilePinsFromSetup, profilesFromSetup, setupContextFrom, setupContextKey, setupProfilesOr, unopenedCombination, useRunSetup } from "./useRunSetup";
 import { emptyDraft } from "./NewRunRoute";
 
 const ROOT = join(__dirname, "..", "..", "..", "..", "..");
@@ -325,5 +325,31 @@ describe("planned folds (declaration estimate)", () => {
     expect(readPlannedFolds({ availability: "NOT_PUBLISHED", items: [item(1, 10)] })).toBeNull();
     expect(readPlannedFolds({ availability: "AVAILABLE", items: [item(1, 10), { ordinal: 2 }] })).toBeNull();
     expect(readPlannedFolds({ availability: "AVAILABLE", items: [{ ...item(1, 10), train: { start_utc_ms: 5, end_exclusive_utc_ms: 5, bars: 1 } }] })).toBeNull();
+  });
+});
+
+describe("unopenedCombination — a combination no enabled profile opens says so, before Run", () => {
+  const options = (profiles: readonly SetupProfile[]): SetupOptions => ({ ...structuredClone(FIXED_OPTIONS), profiles: structuredClone([...profiles]) });
+  const draft = (over: Partial<{ protocol: "three_window_decay" | "advanced"; optimizationMode: string; optimizationSchedule: string }>) => ({
+    protocol: "advanced" as const,
+    executionRoute: "signal_notional" as const,
+    optimizationMode: "mode_1_decay",
+    optimizationSchedule: "global",
+    ...over,
+  });
+  const WFO: SetupProfile = { ...structuredClone(FIXED_OPTIONS.profiles[0]!), profile_id: "p10.wfo", protocol: "advanced", optimization_schedule: "global" };
+
+  it("is silent while mode or schedule is not chosen, with no setup, and when an enabled profile opens the combination", () => {
+    expect(unopenedCombination(draft({}), null)).toBeNull();
+    expect(unopenedCombination(draft({ optimizationMode: "" }), options([WFO]))).toBeNull();
+    expect(unopenedCombination(draft({ optimizationSchedule: "" }), options([WFO]))).toBeNull();
+    expect(unopenedCombination(draft({}), options([WFO]))).toBeNull();
+  });
+
+  it("names the combination when no profile is enabled for it, with the server's reason of a disabled twin", () => {
+    const message = unopenedCombination(draft({ optimizationSchedule: "per_fold_decay" }), options([WFO]));
+    expect(message).toBe("No enabled profile runs Advanced × mode_1_decay × per_fold_decay for this Alpha.");
+    const disabled: SetupProfile = { ...WFO, state: "DISABLED", reason_code: "ALPHA_EXECUTOR_MISMATCH" };
+    expect(unopenedCombination(draft({}), options([disabled]))).toBe("No enabled profile runs Advanced × mode_1_decay × global for this Alpha · ALPHA_EXECUTOR_MISMATCH.");
   });
 });

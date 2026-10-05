@@ -237,3 +237,26 @@ export function setupProfilesOr(options: SetupOptions | null, atlasProfiles: rea
 export function disabledSetupProfiles(options: SetupOptions): readonly { profileId: string; protocol: string; reasonCode: string | null }[] {
   return options.profiles.filter((profile) => profile.state !== "ENABLED").map((profile) => ({ profileId: profile.profile_id, protocol: profile.protocol, reasonCode: profile.reason_code }));
 }
+
+/**
+ * The reason a chosen combination cannot run for this Alpha, or null when it can (or cannot be judged yet).
+ * Judged only against a served setup and only once the protocol, route, mode and schedule are all chosen: an ENABLED profile
+ * of that protocol, route, mode and schedule must exist. Disabled twins say why in the server's own reason code.
+ */
+export function unopenedCombination(
+  draft: Pick<RunDraft, "protocol" | "executionRoute" | "optimizationMode" | "optimizationSchedule">,
+  options: SetupOptions | null,
+): string | null {
+  if (options === null || draft.optimizationMode === "" || draft.optimizationSchedule === "") return null;
+  const candidates = profilesFromSetup(options).filter(
+    (profile) =>
+      profile.protocol === draft.protocol
+      && profile.executionRoute === draft.executionRoute
+      && profile.optimizationMode === draft.optimizationMode
+      && profile.optimizationSchedule === draft.optimizationSchedule,
+  );
+  if (candidates.some((profile) => profile.enabled)) return null;
+  const why = candidates.find((profile) => profile.reason !== null)?.reason ?? null;
+  const named = `${draft.protocol === "advanced" ? "Advanced" : "Three Window"} × ${draft.optimizationMode} × ${draft.optimizationSchedule}`;
+  return `No enabled profile runs ${named} for this Alpha${why !== null ? ` · ${why}` : ""}.`;
+}

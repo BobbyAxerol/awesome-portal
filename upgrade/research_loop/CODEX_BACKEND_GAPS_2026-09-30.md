@@ -2146,3 +2146,26 @@ Canonical positive/partial geometry, generated types, verifier and296-file
 digest updated. Focused Control130/130 including VN symbol-fence regression, contracts17/17
 and TypeScript build pass. Consumer integration/runtime acceptance remain
 explicitly separate; no profiles or admission were opened.
+
+#### §36 request as filed (Claude → Codex, 2026-10-05) — answered above
+
+Bobby, on the rebuilt preview (`5c0e5006`), saw this on a run he tried to create:
+`RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE — The installed Delta adapter currently accepts only the signal-notional three-window profile`,
+with Conditions `profile ✗ PORTAL_EXECUTION_PROFILE_NOT_ENABLED`, `executor version ✗ REQUESTED_SPEC_EXECUTOR_NOT_INSTALLED`.
+Frontend check on the same preview, no run created: Delta Three Window (mode_1_decay × global, trials 1) and Delta Advanced (mode_1_decay × global)
+both preflight with `run_admission.may_create_run: true`; Advanced with `per_fold_decay` preflights with `may_create_run: false`,
+`RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE`, `field_path ["optimization_schedule"]`, the same two red Conditions.
+So the refusal is the designed "no enabled profile opens this combination" — but its words are not precise, and the screen cannot tell the reader
+which choice to change before they reach Run. The list of profiles to open is Bobby's later decision after his review; none is requested here.
+
+| ID | Request | Locator / actual | Expected | Smallest proposal | Fallback running now |
+|---|---|---|---|---|---|
+| BR-S02-01 | Combination-specific refusal sentence and field path | `run-admission.service.ts` `p04UnsupportedReason` returns "accepts only the signal-notional three-window profile" for any request that reaches it, including Advanced / other modes where Delta WFO profiles are enabled — a false statement; `field_path` is empty for it | One typed code per cause (mode / schedule / protocol / route / trials / spec version) with `field_path` naming the draft field and the sentence naming the value that is not opened | Map each rejected axis to its own `field_path`; keep the code `RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE` | UI prints the server sentence as is |
+| BR-S02-02 | Say in `setup-options` which published engine options are NOT runnable for this Alpha | Atlas lists modes/schedules as admitted release options; `setup-options` lists only profiles. The UI cannot grey out `per_fold_decay`, mode 2–10 etc. | An additive list `unopened_options[]` (`axis`, `value`, `reason_code: PROFILE_NOT_OPENED` or the profile's own disabled reason) so S02 can disable them with a reason before preflight | Derive from the Atlas catalogue minus enabled profiles; no new store | Claude will derive "no enabled profile" from `profiles[]` and block Run with the same words; the unopened list stays hidden |
+| BR-S02-03 | One reason across Conditions and admission | `profile ✗ PORTAL_EXECUTION_PROFILE_NOT_ENABLED` and `executor version ✗ REQUESTED_SPEC_EXECUTOR_NOT_INSTALLED` both go red for the same cause; the reader sees two codes | Either the second condition is `N/A` when the first fails, or both name the same profile reason | Mark executor-version `NOT_EVALUATED` when profile is not enabled | Printed as served |
+| BR-S02-04 | Distinct code for an obsolete `options_revision` | `POST /runs/window-suggestions` 409 has no code that separates a stale revision from other conflicts | `RESEARCH_SETUP_OPTIONS_REVISION_STALE` (or the existing equivalent) | one enum value in the problem schema | every POST 409 is treated as stale and the options are read again |
+| BR-S02-05 | Canonical declaration-estimate fixture with `planned_folds.items` | `research-declaration-estimate.v1.*` have none; the FE test patches a clone | one valid fixture with 5 fold items (train + outer OOS start/end/bars) and one with `planned_folds` NOT_PUBLISHED | add to `packages/contracts/fixtures` | FE test patches a clone |
+
+Not requested: opening any new profile, mode, schedule, protocol or the VN profile; no flag change.
+Frontend, done in the same step (`unopenedCombination`): when the chosen mode × schedule matches no ENABLED setup profile, Review says so with the
+server's reason code, and preflight and Run stay off (no pointless preflight record). It uses `profiles[]` today and `unopened_options[]` once published.

@@ -131,6 +131,25 @@ for (const width of WIDTHS) {
       expect(errors).toEqual([]);
     });
 
+    test("a mode x schedule no enabled profile opens: said on screen with the reason; preflight and Run stay off", async ({ page }) => {
+      await signIn(page);
+      const { counts, errors } = await watch(page);
+      await toWindows(page, DELTA);
+      await page.getByRole("button", { name: /Advanced Walk-Forward/ }).click();
+      await page.locator('select[aria-label="Optimization mode"]').selectOption("mode_1_decay");
+      await page.locator('select[aria-label="Optimization schedule"]').selectOption("per_fold_decay");
+      await page.locator('[data-step-pill="optimization"]').click();
+      await page.locator('input[aria-label="Optuna trials"]').fill("12");
+      await page.locator('[data-step-pill="review"]').click();
+      await expect(page.locator("main")).toContainText("No enabled profile runs Advanced × mode_1_decay × per_fold_decay");
+      const create = page.locator('[data-action="create-run"]');
+      await expect(create).toBeDisabled();
+      /* Like any blocking problem, it keeps the preflight off too: no pointless preflight record for a combination nothing runs. */
+      await expect(page.locator('[data-action="preflight"]')).toBeDisabled();
+      expect(counts.preflights + counts.runCreates, "nothing is written").toBe(0);
+      expect(errors).toEqual([]);
+    });
+
     test("advanced: Suggest + Apply write the range and first OOS; the rail draws the engine's own folds", async ({ page }) => {
       await signIn(page);
       const { counts, errors } = await watch(page);

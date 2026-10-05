@@ -3127,6 +3127,8 @@ export interface NewRunProps {
   onRetryEstimate?: () => void;
   /** S02 linked-window setup: the runnable options of this Alpha / dataset / symbol / timeframe, and the suggestion that reads them. */
   setup?: RunSetupState;
+  /** The reason no enabled profile runs the chosen mode × schedule for this Alpha (from the setup), or null. */
+  unopenedCombination?: string | null;
   /** CG-P11-07 `?from=`: the run this draft was copied from, and the read's state. */
   cloneSource?: { runId: string; state: ResearchState; copiedAt?: number | null } | null;
   /** W5a: the Screen-07 what-if node this draft forks, read from the server's grid. */
@@ -3178,6 +3180,7 @@ export function NewRun(props: NewRunProps) {
     estimateStatus = IDLE_ESTIMATE,
     onRetryEstimate,
     setup = IDLE_SETUP,
+    unopenedCombination = null,
     cloneSource = null,
     forkSource = null,
   } = props;
@@ -3252,7 +3255,10 @@ export function NewRun(props: NewRunProps) {
     },
     [patch, step],
   );
-  const blocking = useMemo(() => blockingProblems(draft, limits), [draft, limits]);
+  const blocking = useMemo(
+    () => [...blockingProblems(draft, limits), ...(unopenedCombination !== null ? [{ step: "windows" as const, message: unopenedCombination }] : [])],
+    [draft, limits, unopenedCombination],
+  );
   problemsRef.current = { draft, blocking };
   const errorByStep = useMemo(
     () => new Map(blocking.map((problem) => [problem.step, problem.message])),
@@ -3661,7 +3667,7 @@ export function NewRun(props: NewRunProps) {
                   onClick={onSubmit}
                   disabled={!canSubmit}
                   style={!canSubmit ? { opacity: 0.4, cursor: "not-allowed" } : undefined}
-                  title={!canSubmit ? "Run preflight first." : undefined}
+                  title={!canSubmit ? (unopenedCombination ?? "Run preflight first.") : undefined}
                 >
                   Create run
                 </button>
