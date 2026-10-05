@@ -310,8 +310,15 @@ const CELLS: Cell[] = [
     title: "New Run",
     root: "[data-screen='new-run']",
     scope: "global",
-    path: () => `${RQ}/runs/new`,
+    /* A copy of the P04 run: the registry may list several ACTIVE versions, so a plain visit preselects none; a copy binds its own. */
+    path: () => `${RQ}/runs/new${RUNS["R-P04-022"] ? `?from=${RUNS["R-P04-022"]}` : ""}`,
     act: async (page) => {
+      /* The registry may list several ACTIVE versions (an imported alpha was activated): then nothing is preselected, so bind the built-in one. */
+      const alpha = page.getByLabel("Alpha", { exact: true });
+      if ((await alpha.inputValue()) === "") {
+        await alpha.selectOption("delta-rsi-polynomial-alpha");
+        await page.getByLabel("Alpha version", { exact: true }).selectOption({ index: 1 });
+      }
       await page.getByRole("tab", { name: /^Route/ }).click();
       await settle(page);
     },

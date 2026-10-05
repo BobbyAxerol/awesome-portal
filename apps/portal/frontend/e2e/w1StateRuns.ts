@@ -92,9 +92,15 @@ export function observe(page: Page): Observed {
   return o;
 }
 
-/** Read-only guard: abort anything that is not a GET to the API. Call before navigating. */
+/** The two POSTs that only compute an answer (an estimate of the declaration, a window hint): nothing is stored, no job starts. */
+const STATELESS_POSTS = /\/(datasets\/declaration-estimates|runs\/window-suggestions)$/;
+
+/** Read-only guard: abort anything that is not a GET to the API, except the stateless computing POSTs. Call before navigating. */
 export async function getOnly(page: Page): Promise<void> {
-  await page.route("**/api/**", (route) => (route.request().method() === "GET" ? route.continue() : route.abort()));
+  await page.route("**/api/**", (route) => {
+    const request = route.request();
+    return request.method() === "GET" || STATELESS_POSTS.test(new URL(request.url()).pathname) ? route.continue() : route.abort();
+  });
 }
 
 /** The visible text of the screen root (`[data-screen]`), for banner / absence assertions. */

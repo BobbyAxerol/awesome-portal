@@ -318,7 +318,7 @@ test.describe("P2 chart keyboard (one tab stop; live text == readout; Home/End/E
     });
   }
 
-  test("tab-stop budgets: S06 page < 120 (was 717), S07 page < 80 (was 130)", async ({ page }, testInfo) => {
+  test("tab-stop budgets: S06 page < 125 (was 717), S07 page < 80 (was 130)", async ({ page }, testInfo) => {
     const run = await discover(page, "R-WFO-023");
     needRun(testInfo, run, "R-WFO-023");
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -332,7 +332,8 @@ test.describe("P2 chart keyboard (one tab stop; live text == readout; Home/End/E
       counts[screen] = await tabStops(page);
     }
     testInfo.annotations.push({ type: "tab-stops", description: JSON.stringify(counts) });
-    expect(counts.search, "S06 tab stops").toBeLessThan(120);
+    /* 120 since the cinema gained the sampler-configuration tooltip trigger (one deliberate stop); 125 keeps the guard tight. */
+    expect(counts.search, "S06 tab stops").toBeLessThan(125);
     expect(counts.freeze, "S07 tab stops").toBeLessThan(80);
   });
 });

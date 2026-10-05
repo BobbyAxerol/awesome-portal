@@ -50,7 +50,7 @@ for (const width of [1440, 390]) {
     await expect(cinema.locator("[data-duel-side='θ*']")).toContainText("trial 342");
     await cinema.locator("[data-cinema-step='5']").click();
     await expect(cinema.locator("[data-action='cinema-to-freeze']")).toHaveAttribute("href", /\/freeze/);
-    await expect(cinema.locator("[data-cinema-absences]")).toContainText("sampler: not published");
+    await expect(cinema.locator("[data-cinema-absences]")).toContainText("sampler internal trace: not published");
 
     /* no horizontal overflow, axe 0 critical / 0 serious on the cinema */
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);

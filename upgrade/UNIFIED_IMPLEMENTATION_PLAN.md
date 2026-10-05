@@ -8044,3 +8044,7 @@ Claude next: generated consumers + linked calendar/presets, v1-clone guard fix,
 debounced engine timeline, actual API/browser receipt after rebuilding API,
 Control and Web from the combined source. Existing passed P23 gates are not
 rerun; no whole-S02/UI/deployed completion is claimed here.
+
+**Frontend integration 2026-10-05 (Claude):** linked A/B/C/D calendar, Suggest/Apply/Reset, engine fold timeline, v1-clone guard fix and
+profile-aware prefill are on the lane (`d9dc8697`, `0f4919c5`); real-API acceptance 8/8 at 1280/660, full lane 309 passed + 2 environment/budget items resolved per the notes in the
+[frontend receipt](./research_loop/evidence/P10/S02_FE_INTEGRATION_RECEIPT_2026-10-05.md). `READY_FOR_BOBBY_REVIEW`; not pushed, not `OWNER_ACCEPTED`.
