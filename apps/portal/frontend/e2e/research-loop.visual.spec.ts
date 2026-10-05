@@ -95,6 +95,29 @@ async function openDataStep(page: Page): Promise<void> {
   await page.locator("[data-step-card]").first().waitFor({ state: "visible" });
 }
 
+/** S02 Walk-forward, Three Window: a bound version, the v2 catalog's first symbol and timeframe, then the four linked edges typed in. */
+async function openLinkedWindows(page: Page): Promise<void> {
+  const alpha = page.getByLabel("Alpha", { exact: true });
+  await alpha.selectOption({ index: 1 });
+  await page.getByLabel("Alpha version", { exact: true }).selectOption({ index: 1 });
+  await page.locator("[data-step-pill='data']").click();
+  const dataset = page.getByLabel("Dataset", { exact: true });
+  await dataset.selectOption({ index: 1 });
+  await page.getByLabel("Symbol", { exact: true }).fill("BTCUSDT");
+  await page.locator("[data-timeframe-chips] button, [data-timeframe-chips] [role=radio]").first().click();
+  await page.locator("[data-step-pill='windows']").click();
+  const edges = ["2026-05-01T00:00", "2026-07-01T00:00", "2026-08-01T00:00", "2026-08-15T00:00"];
+  const inputs = page.locator("[data-calendar-edge] input[type=datetime-local]");
+  for (const [index, value] of edges.entries()) await inputs.nth(index).fill(value);
+  await expect(page.locator("[data-linked-window-calendar]")).toBeVisible();
+}
+
+/** The Alpha-bound setup read is absent here (an older server): the calendar must stand on the typed edges alone. */
+async function setupAbsent(page: Page): Promise<void> {
+  await datasetCatalogV2(page);
+  await page.route("**/api/v1/research/runs/setup-options*", (route) => route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ error: { code: "REQUEST_REJECTED", message: "Invalid request." }, request_id: "visual" }) }));
+}
+
 interface Cell {
   /** Stable file stem. */
   slug: string;
@@ -117,6 +140,7 @@ const CELLS: Cell[] = [
   { slug: "s00-journey-map", label: "S00 journey map", path: s("00").path, root: s("00").root },
   { slug: "s01-run-library", label: "S01 run library", path: s("01").path, root: s("01").root },
   { slug: "s02-new-run-data-declaration", label: "S02 new run (data declaration)", path: s("02").path, root: s("02").root, arrange: datasetCatalogV2, prepare: openDataStep },
+  { slug: "s02-new-run-linked-windows", label: "S02 new run (linked window calendar)", path: s("02").path, root: s("02").root, arrange: setupAbsent, prepare: openLinkedWindows },
   // The repo numbers Search 06 and Split 05; the labels below follow the screen NAME.
   { slug: "s03-search", label: "S03 search (repo screen 06)", path: s("06").path, root: s("06").root },
   {
