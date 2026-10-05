@@ -1,5 +1,16 @@
 # P23 backend qualification packet
 
+**Current 2026-10-05 — QUALIFICATION_LEDGER_RECONCILED / READY_FOR_BOBBY_REVIEW:**
+[T01–T15 current matrix + R-WFO-031 actual sampler product receipt](./P23_QUALIFICATION_CLOSEOUT_2026-10-05.md).
+Engine 1.1.0→1.1.1 isolated fixed-profile transition and linked-audit/consumer
+are no longer OPEN. The exact-three historical manifest exception is accepted;
+strict remains **83/86**, not strict PASS. One new normal product run proves
+S06 trace AVAILABLE with 3 trials/36 calls, P05/manifest/BFF/DOM hash parity
+and 1280/660 browser checks. No duplicate load/DR run or preview rebuild.
+Older paragraphs below retain original source/image/failure scope and are
+superseded only by this current index. Bobby visual review and release remain
+separate; no release manifest, remote push or production operation.
+
 **Latest workspace and linked-audit consumer — 2026-10-04:** Codex owns and
 delivered the affected FE read slice. [Implementation, real 4/4 browser
 receipts, tests, C4 and remaining gates](./WORKSPACE_AND_LINKED_AUDIT_CONSUMER_2026-10-04.md).

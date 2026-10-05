@@ -1,5 +1,12 @@
 # P24 continuation — canonical sample and actual sampler observations
 
+**Positive product receipt, 2026-10-05:** [R-WFO-031 on the existing preview](../P23/P23_QUALIFICATION_CLOSEOUT_2026-10-05.md#2-new-product-run-child--p05--bff--s06)
+now supplies the ordinary admitted child → P05 → named BFF → S06 AVAILABLE
+proof missing from the original source-only/browser-absence scope below.
+One new run, 2 folds/3 trials/36 sampler calls, exact 22-file P05 verification,
+actual desktop/mobile DOM parity. Old seals and private TPE absence unchanged.
+No new build, release manifest, remote promotion or production deployment.
+
 Client date 2026-10-05 Asia/Saigon; executions 2026-10-04 UTC. Baseline
 `99de587e`, worktree `portal-research-be`, branch `codex/be-gaps`.
 Scope: Bobby's two approved requests, not another phase or engine upgrade.

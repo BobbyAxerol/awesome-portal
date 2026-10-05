@@ -1,5 +1,16 @@
 # P23 backend report — 2026-09-25
 
+**Current 2026-10-05 — QUALIFICATION_LEDGER_RECONCILED / READY_FOR_BOBBY_REVIEW:**
+[current T01–T15 matrix and positive product sampler receipt](./P23_QUALIFICATION_CLOSEOUT_2026-10-05.md)
+supersede the stale OPEN/NOT_RUN statuses below at their named scope. Actual
+two-version Portal transition and non-reusable linked-audit/consumer are
+accepted; the exact-three historical manifest exception is owner-approved,
+with strict **83/86**, not recreated bytes. R-WFO-031 completed via normal
+P08/P10/child/P05; S06 shows `AVAILABLE`, 3 trials/36 sampler calls at1280/660,
+with 22 sealed files independently rehashed. No unchanged load/DR gate rerun,
+preview rebuild, release-manifest change, push or production deployment.
+Earlier sections remain historical receipts, not current unresolved blockers.
+
 **Latest scoped amendment, 2026-10-03 / `128276d7`:** original non-reusable
 linked audit/P05 ACK/Report–RC–Lineage/restart/fresh restore accepted; P22
 six-GET and real JSON502/browser accepted. Actual affected Report/RC
@@ -160,7 +171,11 @@ against default `127.0.0.1:5432` got `ECONNREFUSED` because that fixture
 was not started. It passed when rerun with the isolated PG16 container;
 this is a test-setup error, not a schema or runtime failure.
 
-## P23-T01…T15 status, no inflated PASS
+## Historical initial P23-T01…T15 scaffold — superseded, not current status
+
+For current dispositions use [the 2026-10-05 matrix](./P23_QUALIFICATION_CLOSEOUT_2026-10-05.md#1-current-t01t15-disposition).
+Keep this original table to audit the starting gaps; do not consume its
+NOT_RUN/OPEN labels as the latest verdict.
 
 | Test | Backend status and exact remaining receipt |
 | --- | --- |

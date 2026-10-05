@@ -1,6 +1,11 @@
 # OL-12 / P23 qualification harness
 
-Status: `HARNESS_READY · QUALIFICATION_NOT_RUN`.
+Current ledger status (2026-10-05): `QUALIFICATION_LEDGER_RECONCILED`.
+[Current T01–T15 dispositions and positive product sampler](./P23_QUALIFICATION_CLOSEOUT_2026-10-05.md)
+supersede the historical `HARNESS_READY · QUALIFICATION_NOT_RUN` description
+at the scopes explicitly listed there. The strict fifteen-PASS machine
+aggregator below remains unchanged; an owner-approved 83/86 historical
+exception is not fabricated into a strict PASS envelope or signed certificate.
 
 2026-09-27 verifier amendment: the matrix matches Guide P23 byte-for-byte;
 each private T receipt must bind `project`, `base_url`, `candidate_source_sha`

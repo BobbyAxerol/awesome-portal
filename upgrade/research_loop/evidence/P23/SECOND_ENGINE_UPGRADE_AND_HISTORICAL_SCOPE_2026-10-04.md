@@ -1,5 +1,11 @@
 # P23 — owner historical disposition and real second-engine qualification
 
+**Current 2026-10-05:** [actual Portal engine transition](../P24/P24_PORTAL_ENGINE_TRANSITION_2026-10-04.md)
+supersedes the direct-wheel-only OPEN conclusion below for T07/T13's exact
+isolated fixed Delta/HMD profile. Historical 83/86 exception is owner accepted,
+not byte recovery. [Reconciled current P23 matrix](./P23_QUALIFICATION_CLOSEOUT_2026-10-05.md)
+is authoritative for current status; original experiment/results below remain.
+
 ## Owner decision and boundaries
 
 Bobby's 2026-10-04 approval accepts the exact three old test-run exception

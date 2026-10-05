@@ -2061,3 +2061,31 @@ narrow existing consumer delivered without design/baseline changes. One
 grouped normal gate/local FF and affected helper-managed preview build follow.
 No remote push, dev/main merge or stable rollout. Actual preview custody is
 recorded at the receipt's private `preview-closeout.md` path after rollout.
+
+### §34 — P23 ledger and positive sampler product receipt, 2026-10-05
+
+Owner scope: finish T01–T15 current-status reconciliation and the positive
+product receipt omitted by source-only proof; do not reopen unchanged passed
+load/DR/upgrade gates. **QUALIFICATION_LEDGER_RECONCILED / READY_FOR_BOBBY_REVIEW**.
+[Single current matrix and receipt](./evidence/P23/P23_QUALIFICATION_CLOSEOUT_2026-10-05.md).
+Engine110→111 actual isolated fixed-profile transition and linked-audit/consumer
+are accepted at their documented scope. Exact-three historical manifest loss
+is owner accepted, not strict PASS: **83/86**, missing originals not recreated.
+Different original image receipts retain provenance; no fake single-image or
+strict fifteen-PASS qualification certificate is issued from this index.
+
+**R-WFO-031**, `rrun_b5734ffe0782a3aceab1f9068c25a60e`, admitted normally on
+existing `dec91935` preview: P08/P10 → confined QuantBT1.1.1 child → P05 →
+named Search → S06. Actual 2folds/3trials/36sampler calls; COMPLETED/READY,
+AVAILABLE trace, exact22retainedfile rehash and matching P05/BFF/browser SHA,
+1280/660 px/zero page errors/warnings/implicit writes. Capture2617bytes,
+SHA `38cf5e4dcf0422df3236d629e08e63343c1552a101fc70183ea6c98e96a748eb`.
+Old R-WFO-022 trace unchanged, private TPE-density/config absence kept typed.
+One new job, own session logout201; run/artifacts retained for Bobby review.
+
+No frontend/code/contract changes needed, no preview rebuild/restart, broad
+cleanup, remote push, dev/main merge, release-manifest update or production
+deployment. Claude need not remount/recompose a screen: the current consumer
+already renders the new typed execution trace in Cinema step2. Bobby's visual
+review and authorized Portal2.0.0 release remain separate. This owner slice
+adds no further backend implementation request.
