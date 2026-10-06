@@ -7,7 +7,7 @@
 
 import { useRef } from "react";
 
-import { humaniseTokens } from "./humanise";
+import { humaniseTokens, setupReasonWords } from "./humanise";
 import type { RunDraft } from "./runDraft";
 import { applyRecipe, recipeIsSelected, type Recipe } from "./runRecipes";
 
@@ -75,7 +75,7 @@ export function RecipePicker({ recipes, draft, onPick, disabledReason }: RecipeP
             >
               <span className="flex items-baseline justify-between gap-2">
                 <span className="text-[12px] font-medium" style={{ color: selected ? "var(--accent)" : "var(--ink)" }}>{recipe.label}</span>
-                {index === 0 ? <span className="mono text-[9.5px] uppercase tracking-[.06em]" data-recipe-recommended style={{ color: "var(--ink-faint)" }}>recommended</span> : null}
+                {index === 0 ? <span className="mono flex-none whitespace-nowrap text-[9.5px] uppercase tracking-[.06em]" data-recipe-recommended style={{ color: "var(--ink-faint)" }}>recommended</span> : null}
               </span>
               {recipe.summary !== "" ? <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }}>{recipe.summary}</span> : null}
             </button>
@@ -98,7 +98,7 @@ export function RecipePicker({ recipes, draft, onPick, disabledReason }: RecipeP
                 style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)", opacity: 0.8 }}
               >
                 {recipe.label}
-                {recipe.reasonCode ? <span> · {humaniseTokens(recipe.reasonCode)}</span> : null}
+                {recipe.reasonCode ? <span title={recipe.reasonCode}> · {setupReasonWords(recipe.reasonCode)}</span> : null}
               </li>
             ))}
           </ul>

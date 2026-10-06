@@ -52,7 +52,7 @@ describe("RecipePicker", () => {
     expect(screen.getAllByText("Pick a recipe, then adjust anything below.")).toHaveLength(1);
     const closed = document.querySelector("[data-recipe-closed]")!;
     expect(closed.textContent).toContain("Not opened yet");
-    expect(closed.textContent).toContain("profile not opened");
+    expect(closed.textContent).toContain("not opened yet");
     expect(closed.querySelector("[role=radio]")).toBeNull();
     fireEvent.click(radios[2]!);
     expect(onPick).toHaveBeenCalledWith(applyRecipe(rs[2]!, picked));

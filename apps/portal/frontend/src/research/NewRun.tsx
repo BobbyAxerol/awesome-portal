@@ -79,7 +79,7 @@ import { ConditionsChecklist, EarliestStartOffer, PlannedFolds, WarmupChip, Wind
 import { EstimateFieldRefusal, EstimateStatusLine, refusedAt } from "./EstimateStatus";
 import { datetimeInputValue } from "./InstantInput";
 import { FoldTimeline, foldsFromPlanned } from "./FoldTimeline";
-import { humaniseTokens } from "./humanise";
+import { humaniseTokens, setupReasonWords } from "./humanise";
 import { LinkedWindowCalendar } from "./LinkedWindowCalendar";
 import { WindowSetupBar } from "./WindowSetupBar";
 import { DateInput } from "./DateInput";
@@ -798,6 +798,19 @@ function StrategyStep({
 }
 
 /** The protocol the run is validated under; it decides which windows the next block asks for. */
+/** With recipes on offer the mode and schedule are already chosen by the recipe; the two selects stay available, folded, for a custom change. */
+function CustomizeDisclosure({ folded, summary, children }: { folded: boolean; summary: string; children: React.ReactNode }) {
+  if (!folded) return <>{children}</>;
+  return (
+    <details className="rounded-[6px] border px-2.5 py-1.5" style={{ borderColor: "var(--line)" }} data-customize>
+      <summary className="mono cursor-pointer text-[10px]" style={{ color: "var(--ink-soft)" }}>
+        Customize mode and schedule · {summary}
+      </summary>
+      <div className="pt-2">{children}</div>
+    </details>
+  );
+}
+
 function ProtocolToggle({ draft, patch }: { draft: RunDraft; patch: (change: Partial<RunDraft>) => void }) {
   return (
     <div className="flex flex-wrap gap-1.5" role="group" aria-label="Protocol" title="Only the protocols the installed engine release certifies are offered.">
@@ -1545,6 +1558,12 @@ function WindowsStep({
     [setup.options, atlas],
   );
   /* The recipe a fresh declaration of this protocol starts from: the first enabled one the setup serves (Quick check for Three Window). */
+  /* The single route every enabled recipe of this version shares, when there is one (1.0.1 notional, 1.0.2 percent-equity). */
+  const routeOfRecipes = (() => {
+    const routes = new Set(recipes.filter((recipe) => recipe.enabled).map((recipe) => recipe.executionRoute));
+    return routes.size === 1 ? ([...routes][0] ?? null) : null;
+  })();
+  const recipesOffered = setup.status === "served" && recipes.some((recipe) => recipe.enabled);
   const defaultRecipe = recipes.find((recipe) => recipe.enabled && recipe.protocol === draft.protocol && recipe.executionRoute === draft.executionRoute)
     ?? recipes.find((recipe) => recipe.enabled && recipe.protocol === draft.protocol)
     ?? null;
@@ -1627,11 +1646,16 @@ function WindowsStep({
     <Card title="Walk-forward">
       {setup.status === "served" ? (
         <>
-          <RecipePicker recipes={recipes} draft={draft} onPick={patch} disabledReason={contextClosure(setup.options) !== null ? `${humaniseTokens(contextClosure(setup.options)!.reasonCode)}` : null} />
+          <RecipePicker recipes={recipes} draft={draft} onPick={patch} disabledReason={contextClosure(setup.options) !== null ? setupReasonWords(contextClosure(setup.options)!.reasonCode) : null} />
+          {routeOfRecipes !== null ? (
+            <p className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-route-note>
+              This version runs the <strong>{humaniseTokens(routeOfRecipes)}</strong> route only: picking a recipe sets it.
+            </p>
+          ) : null}
           <AccountFacts account={(profile?.enabled ? profile : defaultRecipe?.profile)?.account} />
         </>
       ) : null}
-      <ProtocolToggle draft={draft} patch={setup.status === "served" ? switchProtocol : patch} />
+      {recipesOffered ? null : <ProtocolToggle draft={draft} patch={setup.status === "served" ? switchProtocol : patch} />}
       {setup.status !== "served" ? <WindowPrefillNote draft={draft} plan={prefillPlan} warmupBars={warmupBars} /> : null}
       {draft.protocol === "three_window_decay" ? (
         <div className="flex flex-col gap-2" data-three-window>
@@ -1809,11 +1833,12 @@ function WindowsStep({
 
       {contextClosure(setup.options) !== null ? (
         <p className="mono text-[10px]" style={{ color: "var(--role-holdout)" }} data-context-closed={contextClosure(setup.options)!.reasonCode} role="status">
-          No profile runs this Alpha on {draft.symbol || "this symbol"} {draft.timeframe} · {humaniseTokens(contextClosure(setup.options)!.reasonCode)}. Change the timeframe, symbol or dataset on Market data: that, not the mode, closes every option below.
+          No profile runs this Alpha on {draft.symbol || "this symbol"} {draft.timeframe} · {setupReasonWords(contextClosure(setup.options)!.reasonCode)}. Change the timeframe, symbol or dataset on Market data: that, not the mode, closes every option below.
         </p>
       ) : null}
 
       {/* Keep invalid schedules visible but disabled; the source explains why. */}
+      <CustomizeDisclosure folded={recipesOffered} summary={`${draft.optimizationMode || "no mode"} × ${draft.optimizationSchedule || "no schedule"}`}>
       <div className="flex flex-wrap gap-2.5">
         <Field label="optimization_mode">
           <select
@@ -1834,7 +1859,7 @@ function WindowsStep({
               const closed = engineModeClosed(setup.options, mode.mode_id);
               return (
                 <option key={mode.mode_id} value={mode.mode_id} title={closed !== null ? `${closed.reasonCode ?? "NOT_OPENED"} · ${mode.mode_id}` : mode.mode_id} disabled={closed !== null} data-mode-closed={closed !== null ? (closed.reasonCode ?? "") : undefined}>
-                  {mode.display_name || mode.mode_id}{closed !== null ? ` · ${closed.reasonCode === null || closed.reasonCode === "PROFILE_NOT_OPENED" ? "not opened" : humaniseTokens(closed.reasonCode)}` : ""}
+                  {mode.display_name || mode.mode_id}{closed !== null ? ` · ${setupReasonWords(closed.reasonCode ?? "PROFILE_NOT_OPENED")}` : ""}
                 </option>
               );
             })}
@@ -1870,13 +1895,14 @@ function WindowsStep({
                   data-invalid-schedule={shown ? undefined : schedule}
                   data-causal-profile={shown && isCausalProfile(causal) ? causal?.profileId : undefined}
                 >
-                  {schedule}{shown ? "" : pairClosed ? ` · ${pair?.reasonCode === null || pair?.reasonCode === "PROFILE_NOT_OPENED" ? "not opened" : humaniseTokens(pair?.reasonCode)}` : " · not admitted"}
+                  {schedule}{shown ? "" : pairClosed ? ` · ${setupReasonWords(pair?.reasonCode ?? "PROFILE_NOT_OPENED")}` : " · not admitted"}
                 </option>
               );
             })}
           </select>
         </Field>
       </div>
+      </CustomizeDisclosure>
       {draft.protocol === "advanced" && draft.optimizationMode === "mode_1_decay" && draft.optimizationSchedule === "per_fold_causal" && innerLockWord !== null && profile !== null ? (
         <p
           className="mono rounded-[6px] border px-3 py-2 text-[10px]"
@@ -2634,7 +2660,8 @@ export function timelineRows(
 
 /** The fold count as a served fact: "≈ 14 outer folds · server plan", a served range, or a typed absence. */
 function hasNoOuterFolds(plan: FoldPlan, protocol: RunDraft["protocol"]): boolean {
-  return plan.kind === "absent" && protocol === "three_window_decay" && plan.reason === "profile publishes no fold bounds";
+  /* Three Window has no outer folds, whatever a planner answers for the declaration (it may plan one span): said once, never "≈ 1 fold". */
+  return protocol === "three_window_decay" && (plan.kind !== "absent" || plan.reason === "profile publishes no fold bounds");
 }
 
 function FoldPlanLine({ plan, protocol }: { plan: FoldPlan; protocol: RunDraft["protocol"] }) {

@@ -845,7 +845,11 @@ export function selectProfile(
   const declared = draft.trials === undefined || draft.trials === null || String(draft.trials).trim() === "" ? null : Number(draft.trials);
   if (declared === null || !Number.isInteger(declared)) return null;
   const holding = enabled.filter((profile) => profile.trials !== null && declared >= profile.trials.min && declared <= profile.trials.max);
-  return holding.length === 1 ? holding[0]! : null;
+  if (holding.length === 1) return holding[0]!;
+  /* Several ranges hold the count (a 3-trial qualification inside a 2–400 one): the widest is the recipe the screen offers. */
+  const widest = Math.max(...holding.map((profile) => profile.trials!.max));
+  const top = holding.filter((profile) => profile.trials!.max === widest);
+  return top.length === 1 ? top[0]! : null;
 }
 
 /** Every profile that fits protocol, route and mode, whatever requested-spec version it admits. */

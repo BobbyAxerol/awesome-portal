@@ -25,3 +25,19 @@ Owner Bobby; UI Claude; backend `ee3663d2` (Codex). State: `READY_FOR_BOBBY_REVI
 
 - Browser baselines for the percent-equity cards are not recorded (cells use the fixture lane, which has no percent-equity setup).
 - 6b–6f routes are not delivered; S02 will render them from the served profiles when they land (inputs beyond sizing — ladders, tapes, legs — need their own form blocks).
+
+## New Run UX audit (all eight steps, 1280 and 660, real preview API) — 2026-10-06
+
+Walked Context → Review for Delta 1.0.2 and 1.0.1 and fixed what was unclear or wrong:
+
+- **Suggestion lost on first entry (real defect):** the first suggestion was aborted when the Walk-forward step mounted and never asked again (windows stayed empty, Review said "IS start is required"
+  ×6). A cancelled ask now asks again.
+- **One control, not three:** with recipes on offer the Three-Window/Advanced toggle is gone and mode × schedule sit in a folded "Customize mode and schedule · mode × schedule" line; the recipe card is the choice.
+- **Route follows the version, and says so:** "This version runs the pct equity route only: picking a recipe sets it" (the Route step precedes Market data, where the setup is first readable).
+- **Reasons in words:** "this version cannot run it — pick a newer version", "not opened yet", "timeframe not admitted yet", … with the typed code in the tooltip.
+- **Several trial ranges for one recipe** (Codex's in-progress 2–400 rows beside the 3-trial qualification): one card, the widest range; profile selection prefers the widest.
+- **Labels:** no more "Decay robustness · Decay robustness"; colliding names end in the schedule ("· global", "· per-fold decay").
+- Three Window no longer prints "≈ 1 fold" (it has no outer folds); the "recommended" tag no longer wraps at 660.
+- Imported alphas are offered their own recipes (FULL-05); the old "Advanced is not runnable" expectation was retired.
+
+Open: version → route is only discoverable after Market data (setup needs dataset, symbol, timeframe); an early `setup-options` for the version's declared defaults would let the Route step say it sooner.

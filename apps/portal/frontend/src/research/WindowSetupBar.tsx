@@ -9,7 +9,7 @@
 
 import { useEffect, useRef } from "react";
 
-import { humaniseTokens } from "./humanise";
+import { humaniseTokens, setupReasonWords } from "./humanise";
 import type { RunDraft } from "./runDraft";
 import type { RunSetupState } from "./useRunSetup";
 import { setupContextFrom } from "./useRunSetup";
@@ -63,6 +63,10 @@ export function WindowSetupBar({
     if (scope === null || autoAsked.current === scope || state.kind !== "idle" || !autoApplyAllowed(draft)) return;
     autoAsked.current = scope;
     suggestion.suggest();
+    /* An aborted ask (the effect torn down before the answer: a re-mount, a StrictMode probe) leaves nothing asked: it may ask again. */
+    return () => {
+      if (autoAsked.current === scope) autoAsked.current = null;
+    };
   }, [scope, state.kind, draft, suggestion]);
 
   const served = suggestion.proposal;
@@ -94,7 +98,7 @@ export function WindowSetupBar({
 
   const note: { text: string; title?: string; tone: "soft" | "warn" } | null =
     unavailableReason !== null
-      ? { text: `Not runnable · ${humaniseTokens(unavailableReason)}`, tone: "warn" }
+      ? { text: `Not runnable · ${setupReasonWords(unavailableReason)}`, tone: "warn" }
       : state.kind === "pending"
       ? { text: "Suggesting…", tone: "soft" }
       : state.kind === "not-published"

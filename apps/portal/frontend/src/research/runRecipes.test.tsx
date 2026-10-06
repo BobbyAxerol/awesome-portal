@@ -97,6 +97,13 @@ describe("applyRecipe", () => {
     expect(patch.walkForward!.declaredV2).toBeUndefined();
     expect(Object.keys(patch)).not.toEqual(expect.arrayContaining(["windows", "datasetId", "symbol", "parameters"]));
   });
+  it("several trial ranges for one combination: ONE recipe, the widest; a one-trial fixed check stays its own", () => {
+    const narrow = variant({ ...WFO, profile_id: "wfo.narrow", trial_count: { min: 3, max: 3 }, trial_default: 3 });
+    const wide = variant({ ...WFO, profile_id: "wfo.wide", trial_count: { min: 2, max: 400 }, trial_default: 10 });
+    const rs = recipesFromSetup(opts([narrow, wide, FIXED], false));
+    expect(ids(rs)).toEqual(["p04.fixed-qualification.v1", "wfo.wide"]);
+    expect(rs[1]!.summary).toContain("2–400 trials");
+  });
   it("v2-only profile declares v2", () => {
     expect(applyRecipe(by([WFO_V2_TWIN], "wfo.v2"), base).walkForward!.declaredV2).toBe(true);
   });

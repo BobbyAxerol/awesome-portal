@@ -66,3 +66,22 @@ export function humaniseTokens(text: string | null | undefined): string {
   if (text === null || text === undefined) return "";
   return String(text).replace(EMBEDDED_TOKEN, (token) => (IDENTIFIER_PREFIX.test(token) ? token : humanise(token)));
 }
+
+/**
+ * What a typed setup reason means to the person choosing, in a few words (the code stays in the tooltip). Unknown codes read as their words.
+ * Setup reasons say why a recipe, mode or schedule is not offered for THIS version, dataset, symbol and timeframe.
+ */
+const SETUP_REASON_WORDS: Readonly<Record<string, string>> = {
+  PROFILE_NOT_OPENED: "not opened yet",
+  ALPHA_EXECUTOR_MISMATCH: "this version cannot run it — pick a newer version",
+  ALPHA_TIMEFRAME_NOT_DECLARED: "this version does not declare this timeframe",
+  PROFILE_TIMEFRAME_NOT_ADMITTED: "timeframe not admitted yet",
+  PROFILE_DATASET_NOT_ADMITTED: "dataset not admitted",
+  PROFILE_SYMBOL_NOT_ADMITTED: "symbol not admitted",
+  DATASET_TIMEFRAME_NOT_AVAILABLE: "the dataset has no bars at this timeframe",
+  PROFILE_FLAG_OFF: "switched off",
+};
+export function setupReasonWords(code: string | null | undefined): string {
+  if (code === null || code === undefined || code === "") return "";
+  return SETUP_REASON_WORDS[code] ?? humaniseTokens(code);
+}

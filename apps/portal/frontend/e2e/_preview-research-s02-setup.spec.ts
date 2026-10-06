@@ -122,8 +122,7 @@ for (const width of WIDTHS) {
       const { counts, errors } = await watch(page);
       await toWindows(page, DELTA);
       await expect(edges(page).nth(0)).not.toHaveValue("", { timeout: 20_000 });
-      await page.locator('select[aria-label="Optimization mode"]').selectOption("mode_1_decay");
-      await page.locator('select[aria-label="Optimization schedule"]').selectOption("global");
+      await page.locator('[data-recipe="p04.fixed-qualification.v1"]').click();
       await page.locator('[data-step-pill="optimization"]').click();
       await expect(page.locator('input[aria-label="Optuna trials"]')).toHaveValue("1");
       await expect(page.locator("main")).toContainText("p04.fixed-qualification.v1");
@@ -163,14 +162,15 @@ for (const width of WIDTHS) {
       expect(errors).toEqual([]);
     });
 
-    test("a mode no profile opens is shown closed with the server's reason, before any choice", async ({ page }) => {
+    test("a mode this version cannot run is shown closed in words, with the typed code in the tooltip", async ({ page }) => {
       await signIn(page);
       const { counts, errors } = await watch(page);
       await toWindows(page, DELTA);
       const closed = page.locator('select[aria-label="Optimization mode"] option[value="mode_2_sbb"]');
       await expect(closed).toHaveJSProperty("disabled", true);
-      await expect(closed).toContainText("not opened");
-      expect(await closed.getAttribute("title")).toContain("PROFILE_NOT_OPENED");
+      /* This older version cannot run mode 2: said in words, the typed code stays in the tooltip. */
+      await expect(closed).toContainText("this version cannot run it");
+      expect(await closed.getAttribute("title")).toContain("ALPHA_EXECUTOR_MISMATCH");
       await expect(page.locator('select[aria-label="Optimization mode"] option[value="mode_1_decay"]')).toHaveJSProperty("disabled", false);
       await expect(page.locator("[data-recipe][data-closed]").first()).toBeVisible();
       expect(counts.preflights + counts.runCreates, "nothing is written").toBe(0);
@@ -226,9 +226,7 @@ for (const width of WIDTHS) {
       await signIn(page);
       const { counts, errors } = await watch(page);
       await toWindows(page, DELTA);
-      await page.getByRole("button", { name: /Advanced Walk-Forward/ }).click();
-      await page.locator('select[aria-label="Optimization mode"]').selectOption("mode_1_decay");
-      await page.locator('select[aria-label="Optimization schedule"]').selectOption("global");
+      await page.locator('[data-recipe="p10.delta-signal-notional-wfo.v1"]').click();
       await page.locator('[data-action="suggest-windows"]').click();
       await expect(page.locator('[data-window-setup][data-suggestion-state="proposal"]')).toBeVisible({ timeout: 20_000 });
       await page.locator('[data-action="apply-suggestion"]').click();
@@ -249,14 +247,17 @@ for (const width of WIDTHS) {
       expect(errors).toEqual([]);
     });
 
-    test("imported alpha: the fixed profile is runnable; Advanced says the server's reason and offers no suggestion", async ({ page }) => {
+    test("imported alpha: its own recipes are offered; an Advanced one suggests windows like a built-in alpha", async ({ page }) => {
       await signIn(page);
       const { counts, errors } = await watch(page);
       await toWindows(page, IMPORTED);
       await expect(edges(page).nth(0)).not.toHaveValue("", { timeout: 20_000 });
-      await page.getByRole("button", { name: /Advanced Walk-Forward/ }).click();
-      await expect(page.locator("[data-suggestion-note]")).toContainText(/Not runnable/i);
-      await expect(page.locator('[data-action="suggest-windows"]')).toBeDisabled();
+      const cards = page.locator("[data-recipe]:not([data-closed])");
+      expect(await cards.count(), "an imported alpha declaring 1h is offered the opened recipes").toBeGreaterThanOrEqual(2);
+      const advanced = page.locator('[data-recipe]:not([data-closed])', { hasText: "Walk-forward search" }).first();
+      await advanced.click();
+      await page.locator('[data-action="suggest-windows"]').click();
+      await expect(page.locator('[data-window-setup][data-suggestion-state="proposal"]')).toBeVisible({ timeout: 20_000 });
       expect(counts.preflights + counts.runCreates).toBe(0);
       expect(errors).toEqual([]);
     });

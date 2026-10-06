@@ -205,15 +205,19 @@ export function recipesFromSetup(options: SetupOptions | null, ctx: RecipeContex
       && (profile.protocol === "advanced" || profile.protocol === "three_window_decay")
       && (ctx.executionRoute === undefined || profile.executionRoute === null || profile.executionRoute === ctx.executionRoute),
   );
-  /* The trial range is part of the identity: a fixed one-trial check and a 3+ trial search of the same protocol, mode and schedule are two recipes. */
-  const combo = (profile: ProfilePins) => [profile.protocol, profile.executionRoute ?? "", profile.optimizationMode ?? "", profile.optimizationSchedule ?? "", profile.trials ? `${profile.trials.min}-${profile.trials.max}` : ""].join("|");
+  /* A one-trial fixed check (no search, no seed) is its own recipe. Every other profile of the same protocol, route, mode and schedule
+     is one recipe: when the backend serves several trial ranges (a minimal 3-trial qualification beside a 2–400 one), the widest stands,
+     so the user is offered ONE card with the real range, not a card per qualification. */
+  const fixedCheck = (profile: ProfilePins) => profile.trials !== null && profile.trials.min === 1 && profile.trials.max === 1 && profile.seed.state === "forbidden";
+  const combo = (profile: ProfilePins) => [profile.protocol, profile.executionRoute ?? "", profile.optimizationMode ?? "", profile.optimizationSchedule ?? "", fixedCheck(profile) ? "fixed" : "search"].join("|");
+  const wider = (a: ProfilePins, b: ProfilePins) => (a.trials?.max ?? 0) > (b.trials?.max ?? 0);
 
-  /* v1/v2 twins of one combination collapse: the v1 one stands, v2 only when it alone is enabled. */
+  /* v1/v2 twins of one combination collapse: the widest range, then the v1 one; v2 only when it alone is enabled. */
   const chosen = new Map<string, ProfilePins>();
   for (const profile of profiles.filter((entry) => entry.enabled)) {
     const key = combo(profile);
     const held = chosen.get(key);
-    if (held === undefined || (onlyV2(held) && !onlyV2(profile))) chosen.set(key, profile);
+    if (held === undefined || wider(profile, held) || (!wider(held, profile) && onlyV2(held) && !onlyV2(profile))) chosen.set(key, profile);
   }
   const twins = new Set<string>();
   for (const profile of profiles.filter((entry) => entry.enabled)) {
@@ -238,8 +242,9 @@ export function recipesFromSetup(options: SetupOptions | null, ctx: RecipeContex
   const enabled: Recipe[] = labelled.map(({ profile, label }) => {
     let text = label;
     if ((counts.get(label) ?? 0) > 1) {
-      const schedule = scheduleWord(profile.optimizationSchedule ?? "");
-      text = schedule !== "" ? `${label} · ${schedule}` : `${label} · ${modeName(profile.optimizationMode ?? "", ctx)}`;
+      /* Told apart by the schedule word — "global" included, so the plain one is not the unlabelled leftover. */
+      const schedule = scheduleWord(profile.optimizationSchedule ?? "") || "global";
+      text = `${label} · ${schedule}`;
     }
     const v2 = onlyV2(profile);
     return build({
