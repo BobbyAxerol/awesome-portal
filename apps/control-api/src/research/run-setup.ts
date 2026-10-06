@@ -77,6 +77,7 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
       temporal_guards: { policy: temporal ? "V1_ABSENT_V2_EXPLICIT" : "NOT_APPLICABLE", defaults: temporal ? guards : null,
         max_bars: temporal ? 10_000 : null, zero_semantics: "ZERO_APPLIES_NO_TEMPORAL_GUARD" },
       independent_holdout: !temporal,
+      ...("account" in recipe.descriptor ? {account_model:"QUANTBT_PERCENT_EQUITY_V1" as const,account:recipe.descriptor.account}:{}),
     };
   });
   if (imported) {

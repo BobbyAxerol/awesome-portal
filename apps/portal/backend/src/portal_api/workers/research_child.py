@@ -20,6 +20,7 @@ import resource
 from decimal import Decimal, localcontext
 from pathlib import Path
 from typing import Any
+from portal_api.domain.research_full03_profiles import indexed_account_kwargs, indexed_execution_kwargs
 
 
 _BLOCKED_ENV_PREFIXES = (
@@ -1486,15 +1487,9 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
             )
             for key, (low, high, step) in DELTA_RSI_SPECIFICATION.parameter_space.items()
         }),
-        # The same account as the installed P04 Delta qualification child.
-        account=AccountConfig(
-            initial_capital=20_000,
-            leverage=3,
-            alloc_per_trade=2_000,
-            canonical_one_way_fee_rate=0.0005,
-            funding_enabled=False,
-        ),
-        execution=ExecutionConfig(target_mode=profile["execution_route"]),
+        # Exact immutable recipe units; historical P04 remains notional.
+        account=AccountConfig(**indexed_account_kwargs(exact_recipe)),
+        execution=ExecutionConfig(target_mode=profile["execution_route"], **indexed_execution_kwargs(exact_recipe)),
         calibration=AdvancedWalkForwardConfig(
             data_start=start.to_pydatetime(),
             data_end_exclusive=end.to_pydatetime(),
@@ -1631,9 +1626,8 @@ def _run_p10_delta_three_window_optimized(receipt: dict[str, Any], output_root: 
         parameter_space=imported_space if imported_space is not None else ParameterSpaceConfig({key: ParameterSpec(kind="fixed", value=pins[key]) if key in pins else ParameterSpec(
             kind="float_range" if isinstance(low, float) else "int_range", low=low, high=high, step=step)
             for key, (low, high, step) in DELTA_RSI_SPECIFICATION.parameter_space.items()}),
-        account=AccountConfig(initial_capital=20_000, leverage=3, alloc_per_trade=2_000,
-            canonical_one_way_fee_rate=0.0005, funding_enabled=False),
-        execution=ExecutionConfig(target_mode=profile["execution_route"]),
+        account=AccountConfig(**indexed_account_kwargs(row)),
+        execution=ExecutionConfig(target_mode=profile["execution_route"], **indexed_execution_kwargs(row)),
         calibration=ThreeWindowConfig(is_start=start, is_end_exclusive=split, oos_start=split,
             oos_end_exclusive=holdout, holdout_start=holdout, holdout_end_exclusive=end,
             optuna_trials=3, optuna_early_stopping=None, random_seed=profile["random_seed"],
@@ -1646,6 +1640,7 @@ def _run_p10_delta_three_window_optimized(receipt: dict[str, Any], output_root: 
         from portal_api.services.research_imported_search import ImportedStrategyRegistry
         strategies = ImportedStrategyRegistry(strategy_specification, imported_space) if imported is not None else StrategyRegistry()
         ThreeWindowRunner(gateway=gateway, strategies=strategies, artifacts=artifacts).run(request, market, run_id,
+            retain_current_source=profile["execution_route"] == "pct_equity" and full03,
             **({"strategy_callable": strategy_fn} if imported is not None else {"strategy_callable": _full03_strategy_callable(market.frame)} if full03 else {}))
     finally:
         restore()

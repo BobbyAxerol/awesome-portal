@@ -21,6 +21,10 @@ const EngineOptions = z.object({
   frequencies: z.array(EngineChoice).max(8), window_modes: z.array(EngineChoice).max(4),
 }).strict();
 const Bounds = z.object({ min: z.number().int().nonnegative(), max: z.number().int().nonnegative() }).strict();
+export const PercentEquityAccountSchema = z.object({initial_capital:z.literal(20000),leverage:z.literal(3),
+  alloc_per_trade:z.literal(0.1),allocation_unit:z.literal("EQUITY_FRACTION"),canonical_one_way_fee_rate:z.literal(0.0005),
+  slippage:z.literal(0),funding_enabled:z.literal(false),
+  sizing_authority:z.literal("QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1")}).strict();
 export const RunSetupBudgetSchema = z.object({
   scope: z.literal("DECLARED_CAPS_NOT_RESERVATION_OR_ESTIMATE"), recipe_digest: Digest,
   profile_digest: Digest.nullable(), qualification: z.enum(["LEGACY_EXACT_BINDING", "CANDIDATE_NOT_QUALIFIED", "PRODUCT_RUN_QUALIFIED"]),
@@ -59,7 +63,12 @@ export const RunSetupProfileSchema = z.object({
   }).strict(),
   independent_holdout: z.boolean(),
   budget: RunSetupBudgetSchema.optional(),
+  account_model: z.literal("QUANTBT_PERCENT_EQUITY_V1").optional(),
+  account: PercentEquityAccountSchema.optional(),
 }).strict().refine(v => (v.state === "ENABLED") === (v.reason_code === null)
+  && (v.account_model === undefined) === (v.account === undefined)
+  && (v.account_model === undefined || v.execution_route === "pct_equity")
+  && (v.execution_route !== "pct_equity" || v.account_model !== undefined)
   && (v.refusals === undefined || (v.state === "ENABLED" ? v.refusals.length === 0
     : v.refusals.length > 0 && v.refusals[0].reason_code === v.reason_code)));
 export const RunSetupOptionsSchema = z.object({

@@ -445,7 +445,8 @@
                 "FEATURE_RESEARCH_VN_OBSERVED_PROFILE",
                 "FEATURE_RESEARCH_FULL03_PROFILE",
                 "FEATURE_RESEARCH_FULL04_PROFILE",
-                "FEATURE_RESEARCH_FULL05_PROFILE"
+                "FEATURE_RESEARCH_FULL05_PROFILE",
+                "FEATURE_RESEARCH_FULL06_PROFILE"
               ]
             },
             "maxItems": 4,

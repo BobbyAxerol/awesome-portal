@@ -9,7 +9,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import {executionRecipe, executionRecipeActivationReason, wfoExecutionRecipe} from "./execution-recipes";
 import { DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_ID } from "./full02.profiles";
-import {isFull03DeltaBinding} from "./full03-delta.binding";
+import {isIndexedDeltaBinding as isFull03DeltaBinding} from "./full06-delta.binding";
+import {executionRecipes} from "./execution-recipes";
 import {bindImportedSearch,importedSearchRecipe,type ImportedSearchBinding} from "./imported-search.binding";
 
 import { ControlApiConfig } from "../config";
@@ -293,8 +294,14 @@ export class ResearchRunAdmissionService {
   }
 
   private optimizedThreeRecipe(requested: ResearchRequestedSpec) {
-    const full03=requested.alpha_binding?.alpha_version_id==="av_delta_rsi_polynomial_alpha_1_0_1";
-    return executionRecipe(full03?`p10.delta-three-window-optimized-${requested.data.timeframe}.v1`:DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID);
+    const full03=["av_delta_rsi_polynomial_alpha_1_0_1","av_delta_rsi_polynomial_alpha_1_0_2"].includes(requested.alpha_binding?.alpha_version_id??"");
+    if(!full03)return executionRecipe(DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID);
+    const matches=executionRecipes.filter(row=>row.adapter_kind==="DELTA_THREE_WINDOW_OPTIMIZED"
+      && row.descriptor.execution_route===requested.execution_route && row.public_profile.timeframe===requested.data.timeframe
+      && "alpha_binding_requirements" in row.descriptor
+      && row.descriptor.alpha_binding_requirements.alpha_version_id===requested.alpha_binding?.alpha_version_id);
+    if(matches.length!==1)throw new Error("No exact optimized Three Window recipe");
+    return matches[0]!;
   }
   private optimizedThreeRecipeIdentity(requested: ResearchRequestedSpec):{id:ResearchExecutionProfileId;digest:string|null} {
     const row=this.optimizedThreeRecipe(requested);return {id:row.profile_id,digest:row.profile_digest};
@@ -529,9 +536,9 @@ export class ResearchRunAdmissionService {
     manifest: ResearchPreflightManifestRecord,
   ): string | null {
     const row = wfoExecutionRecipe(requested);
-    if(!row && requested.alpha_binding?.alpha_version_id==="av_delta_rsi_polynomial_alpha_1_0_1")
+    if(!row && ["av_delta_rsi_polynomial_alpha_1_0_1","av_delta_rsi_polynomial_alpha_1_0_2"].includes(requested.alpha_binding?.alpha_version_id??""))
       return "No exact indexed execution recipe matches the requested AlphaVersion and timeframe.";
-    if (row && (row.feature_flags as readonly string[]).some(flag=>flag==="FEATURE_RESEARCH_FULL02_PROFILE"||flag==="FEATURE_RESEARCH_FULL03_PROFILE"||flag==="FEATURE_RESEARCH_FULL04_PROFILE")) {
+    if (row && (row.feature_flags as readonly string[]).some(flag=>flag==="FEATURE_RESEARCH_FULL02_PROFILE"||flag==="FEATURE_RESEARCH_FULL03_PROFILE"||flag==="FEATURE_RESEARCH_FULL04_PROFILE"||flag==="FEATURE_RESEARCH_FULL06_PROFILE")) {
       const activation = executionRecipeActivationReason(row, this.config, {engine_release_id: requested.client.engine_release_id, verified: true});
       if (activation !== null) return `The exact execution recipe is not admitted: ${activation}.`;
     }

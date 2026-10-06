@@ -680,6 +680,12 @@
           },
           "budget": {
             "$ref": "#/components/schemas/Budget"
+          },
+          "account_model": {
+            "const": "QUANTBT_PERCENT_EQUITY_V1"
+          },
+          "account": {
+            "$ref": "#/components/schemas/PercentEquityAccount"
           }
         },
         "allOf": [
@@ -712,8 +718,48 @@
                 }
               }
             }
+          },
+          {
+            "if": {
+              "required": [
+                "account_model"
+              ]
+            },
+            "then": {
+              "properties": {
+                "execution_route": {
+                  "const": "pct_equity"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "required": [
+                "execution_route"
+              ],
+              "properties": {
+                "execution_route": {
+                  "const": "pct_equity"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "account_model",
+                "account"
+              ]
+            }
           }
-        ]
+        ],
+        "dependentRequired": {
+          "account_model": [
+            "account"
+          ],
+          "account": [
+            "account_model"
+          ]
+        }
       },
       "SetupOptions": {
         "type": "object",
@@ -1404,6 +1450,46 @@
           },
           "preview_override": {
             "type": "boolean"
+          }
+        }
+      },
+      "PercentEquityAccount": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "initial_capital",
+          "leverage",
+          "alloc_per_trade",
+          "allocation_unit",
+          "canonical_one_way_fee_rate",
+          "slippage",
+          "funding_enabled",
+          "sizing_authority"
+        ],
+        "properties": {
+          "initial_capital": {
+            "const": 20000
+          },
+          "leverage": {
+            "const": 3
+          },
+          "alloc_per_trade": {
+            "const": 0.1
+          },
+          "allocation_unit": {
+            "const": "EQUITY_FRACTION"
+          },
+          "canonical_one_way_fee_rate": {
+            "const": 0.0005
+          },
+          "slippage": {
+            "const": 0
+          },
+          "funding_enabled": {
+            "const": false
+          },
+          "sizing_authority": {
+            "const": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
           }
         }
       },

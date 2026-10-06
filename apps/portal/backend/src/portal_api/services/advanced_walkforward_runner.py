@@ -577,13 +577,14 @@ class AdvancedWalkForwardRunner:
             for column in ("turnover", "rejected_orders", "reject_code"):
                 if column in diagnostics.columns:
                     ledger[column] = diagnostics[column].reindex(index)
-        if not len(ledger.columns):
-            return
-        self._artifacts.write_frame(run_id, "series/account_ledger.v1.parquet", ledger)
+        if len(ledger.columns):
+            self._artifacts.write_frame(run_id, "series/account_ledger.v1.parquet", ledger)
 
         # P17-T14: QuantBT's own strategy-isolation audit, one row per child
         # strategy instance (candidate × fold × context), verbatim. Written
-        # only when the engine published it; nothing is derived here.
+        # only when the engine published it; nothing is derived here. Legacy
+        # pct-equity results may omit per-bar fee/diagnostics series. Lifecycle
+        # evidence is independent of that optional accounting ledger.
         lifecycle = wf.get("strategy_lifecycle_table")
         if isinstance(lifecycle, pd.DataFrame) and not lifecycle.empty:
             self._artifacts.write_frame(run_id, "wfo/strategy_lifecycle.v1.parquet", lifecycle.reset_index(drop=True))
@@ -621,9 +622,9 @@ class AdvancedWalkForwardRunner:
             "schema_version": "portal.wfo-account-contract.v1",
             "source": "QuantBT walk_forward final account result (BacktestResultV2) and account_execution_plan",
             # What the result object actually carried, counted — not assumed.
-            "orders_published": len(getattr(result, "orders", ()) or ()),
-            "fills_published": len(getattr(result, "fills", ()) or ()),
-            "trades_published": len(getattr(result, "trades", ()) or ()),
+            "orders_published": len(result.orders or ()) if hasattr(result, "orders") else None,
+            "fills_published": len(result.fills or ()) if hasattr(result, "fills") else None,
+            "trades_published": len(result.trades or ()) if hasattr(result, "trades") else None,
             "account_execution_plan": None if not isinstance(plan, Mapping) else _sanitize({
                 "schema": plan.get("schema"),
                 "policy": plan.get("policy"),

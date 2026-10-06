@@ -46,6 +46,13 @@ const budget=obj({scope:{const:"DECLARED_CAPS_NOT_RESERVATION_OR_ESTIMATE"},reci
   file_bytes:{type:"integer",minimum:1,maximum:16777216},fd_limit:{type:"integer",minimum:32,maximum:512},
   planning_max_bars:{const:100000},max_warmup_bars:count,queue_class:en("HEAVY","INTERACTIVE"),resource_class:id,preview_override:{type:"boolean"}});
 profile.properties.budget=ref("Budget");
+const percentAccount=obj(Object.fromEntries(Object.entries(recipeTable.recipes.find(r=>r.descriptor.schema_version==='research.full06-delta-profile.v1').descriptor.account).map(([key,value])=>[key,{const:value}])));
+profile.properties.account_model={const:'QUANTBT_PERCENT_EQUITY_V1'};
+profile.properties.account=ref('PercentEquityAccount');
+profile.dependentRequired={account_model:['account'],account:['account_model']};
+profile.allOf.push({if:{required:['account_model']},then:{properties:{execution_route:{const:'pct_equity'}}}});
+profile.allOf.push({if:{required:['execution_route'],properties:{execution_route:{const:'pct_equity'}}},
+  then:{required:['account_model','account']}});
 const options=obj({schema_version:{const:"research.run-setup-options.v1"},context:ref("Context"),scope:{const:"CONFIGURATION_FACTS_NOT_RUN_AUTHORIZATION"},
   source_revision:digest,catalog_revision:nullable(digest),as_of_utc_ms:nullable(ms),warmup_bars:count,source_timezone:en("UTC","Asia/Ho_Chi_Minh"),profiles:array(ref("Profile"),maximumProfiles),preflight_required:{const:true}});
 options.properties.engine_options=ref("EngineOptions");
@@ -78,7 +85,7 @@ const doc={openapi:"3.1.0",info:{title:"Research New Run setup",version:"1.0.0",
       requestBody:{required:true,content:{"application/json":{schema:ref("SuggestionRequest")}}},responses:responses("WindowSuggestion")}}},
   components:{securitySchemes:{portalSession:{type:"apiKey",in:"cookie",name:"portal_session"}},schemas:{Context:context,Profile:profile,SetupOptions:options,
     SetupRefusal:refusal,EngineOptions:engineOptions,
-    Budget:budget,
+    Budget:budget,PercentEquityAccount:percentAccount,
     WindowPatch:patch,SuggestionMetadata:metadata,SuggestionRequest:request,WindowSuggestion:suggestion,
     FieldPath:old.components.schemas.FieldPath,Problem:problem}}};
 function emit(path,value){const next=JSON.stringify(value,null,2)+"\n",url=new URL(path,root);if(check){if(readFileSync(url,"utf8")!==next)throw new Error(`${path} drift`);}else writeFileSync(url,next);}

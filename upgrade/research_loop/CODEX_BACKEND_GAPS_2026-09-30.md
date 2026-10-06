@@ -2374,3 +2374,46 @@ publication guard. No frontend source changed. Named API/backend acceptance
 does not replace real browser/visual acceptance. Do not relabel nonnumeric
 optimizer parameters/categorical centroids as supported continuous searches.
 FULL06 remains separately unstarted; no remotes/dev/main/production action.
+
+#### §37 FULL-06 /6a delivery — 2026-10-06
+
+**6a_BACKEND_DELIVERED /63_EXACT_PERCENT_EQUITY_RECIPES_PRODUCT_RUN_QUALIFIED /
+RESEARCH_PREVIEW_ENABLED;6b–6f NOT_DELIVERED** supersedes the earlier FULL06
+unstarted note, not a declaration that all remaining route families are done.
+Nine meaningful method recipes ×seven actual indexed clocks passed ordinary
+P08/P10/confined QuantBT1.1.1/P05/RC,63 actual runs and504 named reads.
+New immutable AV1.0.2 keeps pct-equity fraction0.1 (=10% live equity) distinct
+from AV1.0.1 currency-notional allocation. Source missing per-bar cost series,
+unknown/unspecified account metadata and null certification remain faithful.
+All98 prior descriptors/qualifications deep-equal5e854933; append106/107
+never rewrites old AV/receipt custody. Final table161/revision
+`719650ed34bab617c395ad911886bcc4beacc23e750728da229fe1f36079cc49`.
+
+Final-image504 retained GETs+4 aggregate/progress reads PASS; rollback126 GETs
+PASS/new create409; preview63 Conditions/seven setups/three runnable
+preflights PASS.20 prior seals,accounts/AV/index/pointers/Claude web unchanged.
+Grouped Research1604 PASS/3skip,contracts302 PASS,Python71 PASS/1skip,
+TS builds/typecheck/helper/generator/snapshot gates PASS (only affected failed
+count assertions/subprocess gate retaken, not passing full suites). Resource
+maxima13.242125CPU/13.528728wall seconds/443.707032MiBRSS fit unchanged caps.
+Only old private BuildKit cache reclaimed to restore the C4 build floor;
+22 test sessions revoked/21 disposable users disabled, cell8096 removed,
+4 proof volumes/images retained. No shared frontend rebuild or remote action.
+
+[Full delivery/tests/failures/operations/C4/remaining-route ledger](./evidence/P10/FULL_06_ROUTE_FAMILIES_2026-10-06.md),
+[immutable63-run product packet](./evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md).
+
+**Claude consumer handoff:** new `research-run-setup` profile `account_model`
+and typed `account` units/costs, AV1.0.2 selection; S02 disclosure and Replay
+route/account semantics. In particular `ExecuteCandleReplay.tsx` close-target
+fallback wording and `fee ?? 0` cannot relabel unknown pct metadata/missing
+costs as certified/zero. Keep all approved rich layout/notional baselines;
+retake only affected1280/660 real-API browser cases. Codex has changed no FE
+source. Backend qualification is not browser acceptance. Compare generated
+full-sample analytics were mechanically aligned with the existing schema.
+
+Next6b typed bracket/ladder intent adapter, then6d typed bounded order/event
+runtime and6e multi-leg adapter are **remaining Portal work**, not TS or owner
+approval blockers.6c immutable fill tape,6f option chain/instruments or missing
+`nautilus-trader` dependency are exact genuine input gaps. Installed14-route/
+12-input-class census is recorded; no invented Cartesian capability enablement.

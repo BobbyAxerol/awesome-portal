@@ -5,7 +5,7 @@ import { executionRecipes, executionRecipeActivationReason, executionRecipeTrial
 
 type AdmissionFlags = Pick<ControlApiConfig,
   "FEATURE_RESEARCH_RUN_PRODUCER" | "FEATURE_RESEARCH_WFO_PROFILE" | "FEATURE_RESEARCH_PREVIEW_LONG_WFO">
-  & Partial<Pick<ControlApiConfig, "FEATURE_RESEARCH_VN_OBSERVED_PROFILE" | "FEATURE_RESEARCH_FULL02_PROFILE" | "FEATURE_RESEARCH_FULL03_PROFILE" | "FEATURE_RESEARCH_FULL04_PROFILE" | "FEATURE_RESEARCH_FULL05_PROFILE" | "FEATURE_RESEARCH_IMPORTED_EXECUTION" | "RESEARCH_RECIPE_QUALIFICATION_PROFILE_ID" | "PORTAL_ENV" | "AUTH_MODE">>;
+  & Partial<Pick<ControlApiConfig, "FEATURE_RESEARCH_VN_OBSERVED_PROFILE" | "FEATURE_RESEARCH_FULL02_PROFILE" | "FEATURE_RESEARCH_FULL03_PROFILE" | "FEATURE_RESEARCH_FULL04_PROFILE" | "FEATURE_RESEARCH_FULL05_PROFILE" | "FEATURE_RESEARCH_FULL06_PROFILE" | "FEATURE_RESEARCH_IMPORTED_EXECUTION" | "RESEARCH_RECIPE_QUALIFICATION_PROFILE_ID" | "PORTAL_ENV" | "AUTH_MODE">>;
 
 /** Same installed profiles/flags; catalogue truth is not a grant to execute. */
 export function researchPortalAdmission(
@@ -27,7 +27,9 @@ export function researchPortalAdmission(
       && (!(row.feature_flags as readonly string[]).includes("FEATURE_RESEARCH_FULL03_PROFILE")
         || config.FEATURE_RESEARCH_FULL03_PROFILE === "true")
       && (!(row.feature_flags as readonly string[]).includes("FEATURE_RESEARCH_FULL04_PROFILE")
-        || config.FEATURE_RESEARCH_FULL04_PROFILE === "true")).map((row): ResearchPortalAdmission["profiles"][number] => {
+        || config.FEATURE_RESEARCH_FULL04_PROFILE === "true")
+      && (!(row.feature_flags as readonly string[]).includes("FEATURE_RESEARCH_FULL06_PROFILE")
+        || config.FEATURE_RESEARCH_FULL06_PROFILE === "true")).map((row): ResearchPortalAdmission["profiles"][number] => {
       const reason = executionRecipeActivationReason(row, config, {
         engine_release_id:release.release_id, verified:release.verified, context_qualified:vnQualified,
       });

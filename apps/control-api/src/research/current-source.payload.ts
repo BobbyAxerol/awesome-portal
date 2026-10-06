@@ -324,7 +324,7 @@ export const CurrentSourceReplaySummarySchema = z.object({
   totals: z.object({
     bars: FactCountSchema,
     transitions: FactCountSchema,
-    bars_with_turnover: FactCountSchema,
+    bars_with_turnover: FactCountSchema.nullable(),
     fee: CurrentSourceDecimalSchema.nullable(),
     turnover: CurrentSourceDecimalSchema.nullable(),
     funding: CurrentSourceDecimalSchema.nullable(),

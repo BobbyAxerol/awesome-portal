@@ -54,3 +54,9 @@ test('foreign ownership is never removed even if the name is reused', () => { pr
 test('independent worktree verifications have distinct names', () => {
   assert.notEqual(probe(true), probe(true));
 });
+test('FULL06 product proof is copied as a public hash-bound input, never private evidence', () => {
+  const source = readFileSync(script, 'utf8');
+  assert(source.includes('P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md'));
+  assert(!source.includes('/.local/state/portal-research-p23'));
+  assert(!source.includes('sessions.json'));
+});

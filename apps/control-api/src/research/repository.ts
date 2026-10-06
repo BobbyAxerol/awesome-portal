@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import {FULL03_DELTA_BINDING} from "./full03-delta.binding";
+import {INDEXED_DELTA_BINDINGS} from "./full06-delta.binding";
 import {recipeDigest as sha256ResearchJson,executionRecipe,executionRecipes} from "./execution-recipes";
 import { createHash } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
@@ -678,10 +679,10 @@ export class ResearchMetadataRepository {
     requireText(input.entrypoint, "P04 entrypoint", 512);
     requireText(input.dependencyRef, "P04 dependencyRef", 512);
     const full03 = input.adapterId === FULL03_DELTA_BINDING.adapterId;
-    if (input.adapterId !== "p04.delta-rsi.v1" && !(full03 && input.alphaVersionId === FULL03_DELTA_BINDING.alphaVersionId
-      && input.alphaId===FULL03_DELTA_BINDING.alphaId && input.adapterContractDigest===FULL03_DELTA_BINDING.adapterContractDigest
-      && input.codeDigest===FULL03_DELTA_BINDING.codeDigest
-      && sha256ResearchJson(input.declaredContract)===sha256ResearchJson(FULL03_DELTA_BINDING.declaredContract))) {
+    if (input.adapterId !== "p04.delta-rsi.v1" && !(full03 && INDEXED_DELTA_BINDINGS.some(binding=>
+      input.alphaVersionId===binding.alphaVersionId && input.alphaId===binding.alphaId
+      && input.adapterContractDigest===binding.adapterContractDigest && input.codeDigest===binding.codeDigest
+      && sha256ResearchJson(input.declaredContract)===sha256ResearchJson(binding.declaredContract)))) {
       throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Only the installed P04 Delta adapter may be bound.", 400);
     }
     requireBoundedObject(input.declaredContract, "P04 declared contract", RESEARCH_DB_BUDGET.maxConfigJsonBytes);
@@ -4899,8 +4900,10 @@ export class ResearchMetadataRepository {
       try{
         const row=executionRecipe(profileId,profileDigest);
         full03=row.source_requirement==="FULL03_IMMUTABLE_DELTA_BINDING"
-          && input.alphaId===FULL03_DELTA_BINDING.alphaId && input.alphaVersionId===FULL03_DELTA_BINDING.alphaVersionId
-          && input.adapterContractDigest===FULL03_DELTA_BINDING.adapterContractDigest;
+          && INDEXED_DELTA_BINDINGS.some(binding=>input.alphaId===binding.alphaId && input.alphaVersionId===binding.alphaVersionId
+            && input.adapterContractDigest===binding.adapterContractDigest)
+          && row.descriptor.alpha_binding_requirements.alpha_version_id===input.alphaVersionId
+          && row.descriptor.adapter_contract_digest===input.adapterContractDigest;
       }catch{full03=false;}
     }
     if (!p04 && !imported && !vnObserved && !full03) {

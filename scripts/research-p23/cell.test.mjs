@@ -51,6 +51,17 @@ test('FULL04 keeps exact isolated custody and never exposes a shared candidate s
   assert(!source.includes("compose(['build'"));
   assert(!source.includes("'portal-postgres']);"));
 });
+test('FULL06 only uses its four owned volumes and byte-qualified backend-only preview activation',()=>{
+  const args=composeArguments('/home/bobby/.local/state/portal-research-p23/20261006/full06/preview.env','full06');
+  assert(args.at(-1).endsWith('compose.research-full06-cell.yaml'));
+  const yaml=readFileSync(new URL('../../deploy/research-preview/compose.research-full06-cell.yaml',import.meta.url),'utf8');
+  for(const name of ['artifacts','postgres','nats','roadmap'])assert(yaml.includes(`name: portal-research-full06-20261006-${name}`));
+  assert(!yaml.includes('external:'));assert(!yaml.includes('ports:'));
+  const profile=readFileSync(new URL('../research-preview/full04-profile.mjs',import.meta.url),'utf8');
+  assert(profile.includes("'full06'"));assert(profile.includes("'PRODUCT_RUN_QUALIFIED'"));
+  assert(profile.includes('NO_SHARED_PREVIEW_CANDIDATE_SELECTOR'));
+  assert(profile.includes('CLAUDE_WEB_IMAGE_MUST_STAY'));
+});
 test('sudo forwards only validated non-secret source stamps to the owned Compose invocation', () => {
   const sha = 'a'.repeat(40);
   assert.deepEqual(stampedComposePrefix(['docker'], sha, false), ['docker']);

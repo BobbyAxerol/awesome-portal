@@ -16,6 +16,14 @@ FULL03_DELTA_ADAPTER_ID = "full03.delta-rsi.v1"
 FULL03_DELTA_ALPHA_ID = "delta-rsi-polynomial-alpha"
 FULL03_DELTA_ALPHA_VERSION_ID = "av_delta_rsi_polynomial_alpha_1_0_1"
 FULL03_DELTA_ADAPTER_CONTRACT_DIGEST = "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b"
+FULL06_DELTA_ALPHA_VERSION_ID = "av_delta_rsi_polynomial_alpha_1_0_2"
+FULL06_DELTA_ADAPTER_CONTRACT_DIGEST = "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03"
+FULL06_PERCENT_ACCOUNT = {
+    "initial_capital": 20000, "leverage": 3, "alloc_per_trade": 0.1,
+    "allocation_unit": "EQUITY_FRACTION", "canonical_one_way_fee_rate": 0.0005,
+    "slippage": 0, "funding_enabled": False,
+    "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1",
+}
 _WIDTH = re.compile(r"[1-9][0-9]{0,4}(D|h)")
 
 
@@ -42,12 +50,20 @@ def full03_recipe(profile_id: str, profile_digest: object) -> dict[str, Any]:
             or row["preview_override"] is not None):
         raise ValueError("FULL-03 requires its exact installed Delta recipe")
     requirement, clock = p.get("alpha_binding_requirements"), p.get("source_clock")
+    percent = p.get("schema_version") == "research.full06-delta-profile.v1"
+    expected_av = FULL06_DELTA_ALPHA_VERSION_ID if percent else FULL03_DELTA_ALPHA_VERSION_ID
+    expected_digest = FULL06_DELTA_ADAPTER_CONTRACT_DIGEST if percent else FULL03_DELTA_ADAPTER_CONTRACT_DIGEST
+    if percent and (p.get("execution_route") != "pct_equity" or p.get("account") != FULL06_PERCENT_ACCOUNT
+            or row["public_profile"].get("account_model") != "QUANTBT_PERCENT_EQUITY_V1"):
+        raise ValueError("FULL06 percent-equity recipe has invalid account units/cost authority")
+    if not percent and p.get("execution_route") != "signal_notional":
+        raise ValueError("Historical indexed binding accepts only its immutable notional route")
     if (not isinstance(requirement, dict)
             or requirement.get("alpha_id") != FULL03_DELTA_ALPHA_ID
-            or requirement.get("alpha_version_id") != FULL03_DELTA_ALPHA_VERSION_ID
+            or requirement.get("alpha_version_id") != expected_av
             or requirement.get("adapter_id") != FULL03_DELTA_ADAPTER_ID
             or requirement.get("adapter_contract_digest") != p["adapter_contract_digest"]
-            or p["adapter_contract_digest"] != FULL03_DELTA_ADAPTER_CONTRACT_DIGEST
+            or p["adapter_contract_digest"] != expected_digest
             or requirement.get("warmup_bars") != 300
             or not isinstance(clock, dict)
             or clock.get("clock_basis") != "FIXED_UTC_INTERVAL_V1"
@@ -70,7 +86,9 @@ def full03_profile_enabled(profile_id: str, env: Mapping[str, str] | None = None
         return source.get("PORTAL_FEATURE_RESEARCH_FULL05_PROFILE") == "true" and source.get("PORTAL_FEATURE_RESEARCH_IMPORTED_EXECUTION") == "true" and (
             qualification["kind"] == "PRODUCT_RUN_QUALIFIED" or qualification["kind"] == "CANDIDATE_NOT_QUALIFIED"
             and source.get("PORTAL_ENV") == "local" and source.get("PORTAL_RECIPE_QUALIFICATION_PROFILE_ID") == profile_id)
-    if not is_full03_profile(profile_id) or source.get("PORTAL_FEATURE_RESEARCH_FULL03_PROFILE", "false") != "true":
+    percent = execution_recipe(profile_id)["descriptor"]["schema_version"] == "research.full06-delta-profile.v1"
+    flag = "PORTAL_FEATURE_RESEARCH_FULL06_PROFILE" if percent else "PORTAL_FEATURE_RESEARCH_FULL03_PROFILE"
+    if source.get(flag, "false") != "true":
         return False
     qualification = execution_recipe_qualification(profile_id)
     row = execution_recipe(profile_id)
@@ -81,6 +99,32 @@ def full03_profile_enabled(profile_id: str, env: Mapping[str, str] | None = None
         qualification["kind"] == "CANDIDATE_NOT_QUALIFIED"
         and source.get("PORTAL_ENV") == "local"
         and source.get("PORTAL_RECIPE_QUALIFICATION_PROFILE_ID") == profile_id)
+
+
+def indexed_account_kwargs(row: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Money and fraction are distinct units. No caller-supplied sizing/default."""
+    if row is not None and row["descriptor"].get("execution_route") == "pct_equity":
+        validated = full03_recipe(row["profile_id"], row["profile_digest"])
+        if row != validated:
+            raise ValueError("Percent-equity account requires the unmodified image-owned descriptor")
+        account = validated["descriptor"]["account"]
+        return {key: value for key, value in account.items() if key not in {"allocation_unit", "sizing_authority", "slippage"}}
+    return {"initial_capital": 20000, "leverage": 3, "alloc_per_trade": 2000,
+            "canonical_one_way_fee_rate": 0.0005, "funding_enabled": False}
+
+
+def indexed_execution_kwargs(row: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Execution costs belong to ExecutionConfig, never AccountConfig.
+
+    Preserve the historical notional execution default; only the new immutable
+    percent-equity descriptor supplies its explicit slippage assumption.
+    """
+    if row is not None and row["descriptor"].get("execution_route") == "pct_equity":
+        validated = full03_recipe(row["profile_id"], row["profile_digest"])
+        if row != validated:
+            raise ValueError("Percent-equity execution requires the unmodified image-owned descriptor")
+        return {"slippage": validated["descriptor"]["account"]["slippage"]}
+    return {}
 
 
 def full03_execution_binding(row: Mapping[str, Any]) -> dict[str, Any]:

@@ -85,16 +85,17 @@ export function executionRecipeActivationReason(row: ExecutionRecipe, flags: Rec
   return null;
 }
 /** Exact family selection; numerical topology/declared pins stay in named adapters. */
-export function wfoExecutionRecipe(spec: {schema_version:string; optimization_schedule:string; optimization_mode?:string;
+export function wfoExecutionRecipe(spec: {schema_version:string; optimization_schedule:string; optimization_mode?:string; execution_route?:string;
   data?:{timeframe:string};alpha_binding?:{alpha_version_id:string}|null}): Extract<ExecutionRecipe,{adapter_kind:"DELTA_WFO"}> | null {
   const matches = executionRecipes.filter((row): row is Extract<ExecutionRecipe,{adapter_kind:"DELTA_WFO"}> => row.adapter_kind === "DELTA_WFO"
     && (row.public_profile.requested_spec_versions as readonly string[]).includes(spec.schema_version)
     && row.public_profile.optimization_schedule === spec.optimization_schedule
     && row.public_profile.optimization_mode === (spec.optimization_mode ?? "mode_1_decay")
+    && row.public_profile.execution_route === (spec.execution_route ?? "signal_notional")
     && row.public_profile.timeframe === (spec.data?.timeframe ?? "1h")
     && (row.source_requirement === "FULL03_IMMUTABLE_DELTA_BINDING"
       ? row.descriptor.alpha_binding_requirements.alpha_version_id === spec.alpha_binding?.alpha_version_id
-      : spec.alpha_binding?.alpha_version_id !== "av_delta_rsi_polynomial_alpha_1_0_1"));
+      : !["av_delta_rsi_polynomial_alpha_1_0_1","av_delta_rsi_polynomial_alpha_1_0_2"].includes(spec.alpha_binding?.alpha_version_id ?? "")));
   if (matches.length > 1) throw new Error("Ambiguous WFO execution recipe");
   return matches[0] ?? null;
 }

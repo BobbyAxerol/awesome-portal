@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { runControlApiMigrations } from "../src/cli/migrate";
 import { FULL03_DELTA_BINDING } from "../src/research/full03-delta.binding";
+import { FULL06_DELTA_BINDING } from "../src/research/full06-delta.binding";
 import { P04_DELTA_BINDING } from "../src/research/p04-delta.binding";
 import { ResearchMetadataRepository } from "../src/research/repository";
 import { executionRecipes, executionRecipeQualification } from "../src/research/execution-recipes";
@@ -219,6 +220,46 @@ describe("FULL03 exact immutable AV migration on disposable PostgreSQL", () => {
     await expect(database.query(`UPDATE research.execution_recipe_product_receipts_v1 SET receipt_sha256=$1
       WHERE recipe_digest IN(SELECT recipe_digest FROM research.execution_recipe_descriptors_v1
         WHERE descriptor->>'schema_version'='research.full04-delta-profile.v1')`,["0".repeat(64)])).rejects.toMatchObject({code:"55000"});
+    expect(await historicalBytes()).toBe(historicalSnapshot);
+  });
+  it("adds the exact percent-equity AV and63 candidates without rewriting notional custody", async () => {
+    const before = (await database.query(`SELECT to_jsonb(v)::text AS snapshot FROM research.alpha_versions v
+      WHERE workspace_id=$1 AND alpha_version_id=$2`, [scope.workspaceId, FULL03_DELTA_BINDING.alphaVersionId])).rows[0].snapshot;
+    expect((await repository.ensureP04DeltaBinding(scope, FULL06_DELTA_BINDING)).replayed).toBe(false);
+    expect((await repository.ensureP04DeltaBinding(scope, FULL06_DELTA_BINDING)).replayed).toBe(true);
+    expect(await historicalBytes()).toBe(historicalSnapshot);
+    expect((await database.query(`SELECT to_jsonb(v)::text AS snapshot FROM research.alpha_versions v
+      WHERE workspace_id=$1 AND alpha_version_id=$2`, [scope.workspaceId, FULL03_DELTA_BINDING.alphaVersionId])).rows[0].snapshot).toBe(before);
+    const rows = (await database.query(`SELECT d.profile_id,d.profile_digest,d.recipe_digest,d.descriptor,q.kind,q.state
+      FROM research.execution_recipe_descriptors_v1 d JOIN research.execution_recipe_qualifications_v1 q USING(recipe_digest)
+      WHERE d.descriptor->>'schema_version'='research.full06-delta-profile.v1'`)).rows;
+    expect(rows).toHaveLength(63);
+    for (const row of rows) {
+      const recipe = executionRecipes.find(value => value.profile_id === row.profile_id)!;
+      expect(row).toMatchObject({descriptor: recipe.descriptor, profile_digest: recipe.profile_digest,
+        recipe_digest: executionRecipeQualification(row.profile_id).recipe_digest,kind:"CANDIDATE_NOT_QUALIFIED",state:"CANDIDATE"});
+    }
+    await expect(database.query(`UPDATE research.alpha_versions SET declared_contract=$3::jsonb
+      WHERE workspace_id=$1 AND alpha_version_id=$2`, [scope.workspaceId, FULL06_DELTA_BINDING.alphaVersionId,
+      JSON.stringify({...FULL06_DELTA_BINDING.declaredContract, warmup_bars:299})])).rejects.toMatchObject({code:"23514"});
+    await expect(insertVersion(scope.workspaceId, "av_generic_percent_code_duplicate", {
+      declaredContract:FULL06_DELTA_BINDING.declaredContract,
+    })).rejects.toMatchObject({code:"23505"});
+  });
+  it("appends63 percent-equity product proofs without rewriting the candidate history or notional AV",async()=>{
+    const rows=(await database.query(`SELECT d.profile_id,p.receipt_path,p.receipt_sha256,q.kind,q.state
+      FROM research.execution_recipe_product_receipts_v1 p
+      JOIN research.execution_recipe_descriptors_v1 d ON d.recipe_digest=p.recipe_digest
+      JOIN research.execution_recipe_qualifications_v1 q ON q.recipe_digest=p.recipe_digest
+      WHERE d.descriptor->>'schema_version'='research.full06-delta-profile.v1'`)).rows;
+    expect(rows).toHaveLength(63);
+    for(const row of rows){const ref=executionRecipeQualification(row.profile_id);
+      expect(ref.kind).toBe("PRODUCT_RUN_QUALIFIED");
+      expect(row).toMatchObject({receipt_path:ref.receipt_path,receipt_sha256:ref.receipt_sha256,
+        kind:"CANDIDATE_NOT_QUALIFIED",state:"CANDIDATE"});}
+    await expect(database.query(`UPDATE research.execution_recipe_product_receipts_v1 SET receipt_sha256=$1
+      WHERE recipe_digest IN(SELECT recipe_digest FROM research.execution_recipe_descriptors_v1
+        WHERE descriptor->>'schema_version'='research.full06-delta-profile.v1')`,["0".repeat(64)])).rejects.toMatchObject({code:"55000"});
     expect(await historicalBytes()).toBe(historicalSnapshot);
   });
 });

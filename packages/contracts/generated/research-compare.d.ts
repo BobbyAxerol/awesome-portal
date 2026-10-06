@@ -45,8 +45,8 @@ export interface components {
                 digest: components["schemas"]["EnrichedAnalysisDigest"];
             }[];
             scope: {
-                /** @constant */
-                window: "OOS";
+                /** @enum {unknown} */
+                window: "OOS" | "FULL_SAMPLE";
                 first_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
                 last_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
                 observation_count: number;
@@ -54,7 +54,7 @@ export interface components {
                 locator: components["schemas"]["EnrichedAnalysisLocator"];
                 benchmark_locator: components["schemas"]["EnrichedAnalysisLocator"];
                 /** @enum {unknown} */
-                coverage: "FULL_RETAINED_OOS" | "SAMPLED_RETAINED_EQUITY";
+                coverage: "FULL_RETAINED_OOS" | "SAMPLED_RETAINED_EQUITY" | "FULL_RETAINED_FULL_SAMPLE";
                 source_observation_count: number;
             };
             windows: {
@@ -81,6 +81,16 @@ export interface components {
                 holdout: {
                     /** @enum {unknown} */
                     state: "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                    reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+                    start_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    end_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    source_locator?: components["schemas"]["EnrichedAnalysisLocator"];
+                    /** @constant */
+                    bounds_semantics?: "START_INCLUSIVE_END_EXCLUSIVE";
+                };
+                full_sample?: {
+                    /** @enum {unknown} */
+                    state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
                     reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
                     start_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
                     end_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
@@ -140,8 +150,8 @@ export interface components {
                 sampling: "FULL" | "TAIL_WINDOW_V1";
                 total_period_count: components["schemas"]["EnrichedAnalysisCount"];
                 omitted_transport_period_count: components["schemas"]["EnrichedAnalysisCount"];
-                /** @constant */
-                definition_id: "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1";
+                /** @enum {unknown} */
+                definition_id: "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1" | "FULL_SAMPLE_MONTH_CLOSE_OVER_FIRST_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1";
                 values: {
                     month_start_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
                     return_fraction: components["schemas"]["EnrichedAnalysisDecimal"];
@@ -149,7 +159,7 @@ export interface components {
                     expected_observation_count: components["schemas"]["EnrichedAnalysisCount"];
                     partial: boolean;
                     /** @enum {unknown} */
-                    basis: "FIRST_OOS_CLOSE" | "PREVIOUS_OBSERVED_MONTH_CLOSE";
+                    basis: "FIRST_OOS_CLOSE" | "FIRST_FULL_SAMPLE_CLOSE" | "PREVIOUS_OBSERVED_MONTH_CLOSE";
                     base_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
                     close_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
                 }[];
@@ -223,14 +233,14 @@ export interface components {
             by_window?: {
                 is: components["schemas"]["EnrichedAnalysisISPayload"];
             };
-        } & unknown;
+        } & (unknown & unknown);
         EnrichedAnalysisMonthlyPoint: {
             month_start_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
             return_fraction: components["schemas"]["EnrichedAnalysisDecimal"];
             partial: boolean;
             observation_count: components["schemas"]["EnrichedAnalysisPositiveCount"];
             /** @enum {unknown} */
-            basis: "FIRST_OOS_CLOSE" | "PREVIOUS_OBSERVED_MONTH_CLOSE";
+            basis: "FIRST_OOS_CLOSE" | "FIRST_FULL_SAMPLE_CLOSE" | "PREVIOUS_OBSERVED_MONTH_CLOSE";
             base_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
             close_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
         };
@@ -250,13 +260,13 @@ export interface components {
             schema_version: "research.all-time-distributions.v1";
             /** @constant */
             origin: "PORTAL_DERIVED";
-            /** @constant */
-            scope: "OOS";
+            /** @enum {unknown} */
+            scope: "OOS" | "FULL_SAMPLE";
             scope_locator: components["schemas"]["EnrichedAnalysisLocator"];
             input_digest: components["schemas"]["EnrichedAnalysisDigest"];
             oos_observation_count: number;
-            /** @constant */
-            monthly_definition: "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1";
+            /** @enum {unknown} */
+            monthly_definition: "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1" | "FULL_SAMPLE_MONTH_CLOSE_OVER_FIRST_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1";
             /** @constant */
             distribution_definition: "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1";
             monthly_returns: {
@@ -297,8 +307,8 @@ export interface components {
             value: components["schemas"]["EnrichedAnalysisDecimal"] | null;
             /** @enum {unknown} */
             origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
-            /** @constant */
-            scope: "OOS";
+            /** @enum {unknown} */
+            scope: "OOS" | "FULL_SAMPLE";
             source_locator: components["schemas"]["EnrichedAnalysisLocator"];
             input_digest: components["schemas"]["EnrichedAnalysisDigest"];
         } & unknown;
@@ -319,16 +329,16 @@ export interface components {
             sampling: "EXTREMA_BUCKET_V1";
             source_observation_count: components["schemas"]["EnrichedAnalysisCount"];
             /** @enum {unknown} */
-            coverage: "FULL_RETAINED_OOS" | "SAMPLED_RETAINED_EQUITY";
+            coverage: "FULL_RETAINED_OOS" | "SAMPLED_RETAINED_EQUITY" | "FULL_RETAINED_FULL_SAMPLE";
             return_fraction: components["schemas"]["EnrichedAnalysisDecimal"] | null;
             sharpe: components["schemas"]["EnrichedAnalysisFact"];
             max_drawdown_fraction: components["schemas"]["EnrichedAnalysisDecimal"] | null;
             input_digest: components["schemas"]["EnrichedAnalysisDigest"];
             return_basis?: {
-                /** @constant */
-                definition_id: "FIRST_LAST_RETAINED_OOS_EQUITY_V1";
-                /** @constant */
-                scope: "RETAINED_OOS_OBSERVATIONS";
+                /** @enum {unknown} */
+                definition_id: "FIRST_LAST_RETAINED_OOS_EQUITY_V1" | "FIRST_LAST_RETAINED_FULL_SAMPLE_EQUITY_V1";
+                /** @enum {unknown} */
+                scope: "RETAINED_OOS_OBSERVATIONS" | "RETAINED_FULL_SAMPLE_OBSERVATIONS";
                 first_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
                 last_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
                 start_equity: components["schemas"]["EnrichedAnalysisDecimal"];
@@ -490,8 +500,8 @@ export interface components {
             availability: components["schemas"]["Availability"];
             input_digest: components["schemas"]["Digest"] | null;
             scope: {
-                /** @constant */
-                window: "OOS";
+                /** @enum {unknown} */
+                window: "OOS" | "FULL_SAMPLE";
                 first_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
                 last_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
                 observation_count: number;
@@ -499,7 +509,7 @@ export interface components {
                 locator: components["schemas"]["EnrichedAnalysisLocator"];
                 benchmark_locator: components["schemas"]["EnrichedAnalysisLocator"];
                 /** @enum {unknown} */
-                coverage: "FULL_RETAINED_OOS" | "SAMPLED_RETAINED_EQUITY";
+                coverage: "FULL_RETAINED_OOS" | "SAMPLED_RETAINED_EQUITY" | "FULL_RETAINED_FULL_SAMPLE";
                 source_observation_count: number;
             } | null;
             all_time_metrics: {
@@ -559,7 +569,7 @@ export interface components {
                     expected_observation_count: components["schemas"]["EnrichedAnalysisCount"];
                     partial: boolean;
                     /** @enum {unknown} */
-                    basis: "FIRST_OOS_CLOSE" | "PREVIOUS_OBSERVED_MONTH_CLOSE";
+                    basis: "FIRST_OOS_CLOSE" | "FIRST_FULL_SAMPLE_CLOSE" | "PREVIOUS_OBSERVED_MONTH_CLOSE";
                     base_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
                     close_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
                 } | null;
@@ -570,7 +580,7 @@ export interface components {
                     expected_observation_count: components["schemas"]["EnrichedAnalysisCount"];
                     partial: boolean;
                     /** @enum {unknown} */
-                    basis: "FIRST_OOS_CLOSE" | "PREVIOUS_OBSERVED_MONTH_CLOSE";
+                    basis: "FIRST_OOS_CLOSE" | "FIRST_FULL_SAMPLE_CLOSE" | "PREVIOUS_OBSERVED_MONTH_CLOSE";
                     base_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
                     close_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
                 } | null;

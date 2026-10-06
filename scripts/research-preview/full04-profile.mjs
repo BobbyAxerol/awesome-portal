@@ -9,7 +9,7 @@ import {createHash} from 'node:crypto';
 const root=resolve(fileURLToPath(new URL('../..',import.meta.url)));
 const project='portal-research-preview',file='/home/bobby/.config/portal-research-preview/preview.env';
 const slice=process.argv.find(a=>a.startsWith('--slice='))?.slice(8)??'full04';
-assert(['full04','full05'].includes(slice),'EXACT_APPROVED_PREVIEW_SLICE');
+assert(['full04','full05','full06'].includes(slice),'EXACT_APPROVED_PREVIEW_SLICE');
 const enabled=process.argv.find(a=>a.startsWith('--enabled='))?.slice(10)??'true';
 assert(['true','false'].includes(enabled),'EXPLICIT_ADMISSION_STATE');
 const value=readFileSync(file,'utf8'),stat=lstatSync(file);
@@ -26,7 +26,7 @@ const python=process.argv.find(a=>a.startsWith('--python-image='))?.slice(15);
 assert(/^sha256:[a-f0-9]{64}$/.test(control)&&/^sha256:[a-f0-9]{64}$/.test(python),'EXACT_CONTENT_ADDRESSED_IMAGES_REQUIRED');
 const registry=JSON.parse(readFileSync(root+'/apps/portal/registry/research-execution-recipes.v1.json'));
 const rows=registry.recipes.filter(r=>r.descriptor.schema_version===`research.${slice}-${slice==='full05'?'imported':'delta'}-profile.v1`);
-assert.equal(rows.length,slice==='full05'?27:35);
+assert.equal(rows.length,slice==='full06'?63:slice==='full05'?27:35);
 for(const row of rows){const ref=registry.qualification_references.find(r=>r.profile_id===row.profile_id);
   assert.equal(ref?.kind,'PRODUCT_RUN_QUALIFIED');
   assert.equal(createHash('sha256').update(readFileSync(root+'/'+ref.receipt_path)).digest('hex'),ref.receipt_sha256);}

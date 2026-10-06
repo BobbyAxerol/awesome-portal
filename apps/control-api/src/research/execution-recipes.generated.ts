@@ -12145,6 +12145,8637 @@ export const EXECUTION_RECIPE_TABLE = {
         "max_warmup_bars": 4096
       },
       "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-wfo-temporal-1m.v1",
+      "profile_digest": "b6828bf4c6228c39bacc3a6803072987dd663a7778ce9913dc23a71ba1e3b968",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-wfo-temporal-1m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-wfo-temporal-1m.v1",
+          "profile_id": "full06.delta-pct-equity-wfo-temporal-1m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 60000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-wfo-temporal-1m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "1m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-causal-inner-1m.v1",
+      "profile_digest": "c1b971f515eb6813c9e656522e6811dcb579e0e64f8f71a235687f7905a21e47",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-causal-inner-1m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+        "inner_constraints": {
+          "fold_bounds": {
+            "min": 2,
+            "max": 16
+          },
+          "frequencies": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "window_modes": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"
+        },
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-causal-inner-1m.v1",
+          "profile_id": "full06.delta-pct-equity-causal-inner-1m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 60000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-causal-inner-1m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "1m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+        "inner_constraints": {
+          "fold_bounds": {
+            "min": 2,
+            "max": 16
+          },
+          "frequencies": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "window_modes": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-per-fold-decay-1m.v1",
+      "profile_digest": "0b7e03699422ffc356516f6c39eab4d1b88e8fcd86e3ad4a5a8db090074bb66e",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-per-fold-decay-1m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-per-fold-decay-1m.v1",
+          "profile_id": "full06.delta-pct-equity-per-fold-decay-1m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 60000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-per-fold-decay-1m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "timeframe": "1m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-three-window-optimized-1m.v1",
+      "profile_digest": "3d3580944765c9ef2fb18ef6ccfa089e0ec42b7c84e4b06d08d7ac7b3f2e4891",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-three-window-optimized-1m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v1",
+        "execution_route": "pct_equity",
+        "protocol": "three_window_decay",
+        "timeframe": "1m",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_span_days": 66,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "GLOBAL_STUDY",
+        "independent_holdout": true,
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-three-window-optimized-1m.v1",
+          "profile_id": "full06.delta-pct-equity-three-window-optimized-1m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 60000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_THREE_WINDOW_OPTIMIZED",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-three-window-optimized-1m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "three_window_decay",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "1m",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "random_seed": 42,
+        "max_span_days": 66,
+        "fold_bounds": null,
+        "frequency": null,
+        "window_mode": null,
+        "requested_spec_versions": [
+          "research.requested-spec.v1"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-wfo-temporal-5m.v1",
+      "profile_digest": "3bd7542ade290a87f50d9eef4438d6d0f84402bf568beebf7d823baaab83a670",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-wfo-temporal-5m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "5m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-wfo-temporal-5m.v1",
+          "profile_id": "full06.delta-pct-equity-wfo-temporal-5m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 300000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-wfo-temporal-5m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "5m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-causal-inner-5m.v1",
+      "profile_digest": "d9ce21897dd3f26f09922daa2357ce0812a60177e4f53da1b18541ab2e8715be",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-causal-inner-5m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "5m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+        "inner_constraints": {
+          "fold_bounds": {
+            "min": 2,
+            "max": 16
+          },
+          "frequencies": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "window_modes": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"
+        },
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-causal-inner-5m.v1",
+          "profile_id": "full06.delta-pct-equity-causal-inner-5m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 300000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-causal-inner-5m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "5m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+        "inner_constraints": {
+          "fold_bounds": {
+            "min": 2,
+            "max": 16
+          },
+          "frequencies": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "window_modes": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-per-fold-decay-5m.v1",
+      "profile_digest": "3a2c4721931c5c02a3ddb79b7ee0c52217d14db7e9224c4589404e80b0ebc55f",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-per-fold-decay-5m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "5m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-per-fold-decay-5m.v1",
+          "profile_id": "full06.delta-pct-equity-per-fold-decay-5m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 300000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-per-fold-decay-5m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "timeframe": "5m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-three-window-optimized-5m.v1",
+      "profile_digest": "70aab3e3e6ec59e6b83baeff831b4dc51b8dbb1048961360834bfcb40809a507",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-three-window-optimized-5m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v1",
+        "execution_route": "pct_equity",
+        "protocol": "three_window_decay",
+        "timeframe": "5m",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_span_days": 333,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "GLOBAL_STUDY",
+        "independent_holdout": true,
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-three-window-optimized-5m.v1",
+          "profile_id": "full06.delta-pct-equity-three-window-optimized-5m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 300000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_THREE_WINDOW_OPTIMIZED",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-three-window-optimized-5m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "three_window_decay",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "5m",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "random_seed": 42,
+        "max_span_days": 333,
+        "fold_bounds": null,
+        "frequency": null,
+        "window_mode": null,
+        "requested_spec_versions": [
+          "research.requested-spec.v1"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-wfo-temporal-15m.v1",
+      "profile_digest": "2bcd58efaa4d82c68afca7f02a3935ce6cf6a889baa7c65a56d548a053a8c31a",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-wfo-temporal-15m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "15m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-wfo-temporal-15m.v1",
+          "profile_id": "full06.delta-pct-equity-wfo-temporal-15m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 900000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-wfo-temporal-15m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "15m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-causal-inner-15m.v1",
+      "profile_digest": "8c319714280c5b49b41436310200de7782d082f4dfe677771bd35b75032cb771",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-causal-inner-15m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "15m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+        "inner_constraints": {
+          "fold_bounds": {
+            "min": 2,
+            "max": 16
+          },
+          "frequencies": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "window_modes": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"
+        },
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-causal-inner-15m.v1",
+          "profile_id": "full06.delta-pct-equity-causal-inner-15m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 900000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-causal-inner-15m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "15m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+        "inner_constraints": {
+          "fold_bounds": {
+            "min": 2,
+            "max": 16
+          },
+          "frequencies": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "window_modes": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-per-fold-decay-15m.v1",
+      "profile_digest": "c3981bb65284b8718d3b1dc4e323e0c4259c445db601e1199c0cc294a3204f04",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-per-fold-decay-15m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "15m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-per-fold-decay-15m.v1",
+          "profile_id": "full06.delta-pct-equity-per-fold-decay-15m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 900000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-per-fold-decay-15m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "timeframe": "15m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-three-window-optimized-15m.v1",
+      "profile_digest": "99f611a67f4a203f02f7f5e861aaf8e384caac09590d0a2406be33b30fa21a38",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-three-window-optimized-15m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v1",
+        "execution_route": "pct_equity",
+        "protocol": "three_window_decay",
+        "timeframe": "15m",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_span_days": 1000,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "GLOBAL_STUDY",
+        "independent_holdout": true,
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-three-window-optimized-15m.v1",
+          "profile_id": "full06.delta-pct-equity-three-window-optimized-15m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 900000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_THREE_WINDOW_OPTIMIZED",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-three-window-optimized-15m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "three_window_decay",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "15m",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "random_seed": 42,
+        "max_span_days": 1000,
+        "fold_bounds": null,
+        "frequency": null,
+        "window_mode": null,
+        "requested_spec_versions": [
+          "research.requested-spec.v1"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-wfo-temporal-30m.v1",
+      "profile_digest": "d61e6cb7cd2e63505f57636952cc4298e9be135c4c02d3773e3855164c4115ef",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-wfo-temporal-30m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "30m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-wfo-temporal-30m.v1",
+          "profile_id": "full06.delta-pct-equity-wfo-temporal-30m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 1800000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-wfo-temporal-30m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "30m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-causal-inner-30m.v1",
+      "profile_digest": "d7c903e6885a1a11a6dca3b2201e17caf86ae4077101a8449bca11641ef78513",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-causal-inner-30m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "30m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+        "inner_constraints": {
+          "fold_bounds": {
+            "min": 2,
+            "max": 16
+          },
+          "frequencies": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "window_modes": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"
+        },
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-causal-inner-30m.v1",
+          "profile_id": "full06.delta-pct-equity-causal-inner-30m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 1800000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-causal-inner-30m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "30m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+        "inner_constraints": {
+          "fold_bounds": {
+            "min": 2,
+            "max": 16
+          },
+          "frequencies": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "window_modes": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-per-fold-decay-30m.v1",
+      "profile_digest": "6d3df41e100fef7e76010010da2cd86c580cede3be5d0e8c3ae24fe4907f3f48",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-per-fold-decay-30m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "30m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-per-fold-decay-30m.v1",
+          "profile_id": "full06.delta-pct-equity-per-fold-decay-30m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 1800000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-per-fold-decay-30m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "timeframe": "30m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-three-window-optimized-30m.v1",
+      "profile_digest": "fb062f3ad4cfe4aefd69edfbd2fb601e81f1864f5d1de3d1fa53a25544b0c043",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-three-window-optimized-30m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v1",
+        "execution_route": "pct_equity",
+        "protocol": "three_window_decay",
+        "timeframe": "30m",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_span_days": 2000,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "GLOBAL_STUDY",
+        "independent_holdout": true,
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-three-window-optimized-30m.v1",
+          "profile_id": "full06.delta-pct-equity-three-window-optimized-30m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 1800000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_THREE_WINDOW_OPTIMIZED",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-three-window-optimized-30m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "three_window_decay",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "30m",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "random_seed": 42,
+        "max_span_days": 2000,
+        "fold_bounds": null,
+        "frequency": null,
+        "window_mode": null,
+        "requested_spec_versions": [
+          "research.requested-spec.v1"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-wfo-temporal-1h.v1",
+      "profile_digest": "142b616104a5e356d8473c99f594e88c2e08abaa70bb524942a218706fa77a85",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-wfo-temporal-1h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-wfo-temporal-1h.v1",
+          "profile_id": "full06.delta-pct-equity-wfo-temporal-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-wfo-temporal-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-causal-inner-1h.v1",
+      "profile_digest": "8ff6a734a1bcf9d21ec71e0d85d3550105a58cf54fba112924ef482071c03f38",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-causal-inner-1h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+        "inner_constraints": {
+          "fold_bounds": {
+            "min": 2,
+            "max": 16
+          },
+          "frequencies": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "window_modes": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"
+        },
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-causal-inner-1h.v1",
+          "profile_id": "full06.delta-pct-equity-causal-inner-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-causal-inner-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+        "inner_constraints": {
+          "fold_bounds": {
+            "min": 2,
+            "max": 16
+          },
+          "frequencies": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "window_modes": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-per-fold-decay-1h.v1",
+      "profile_digest": "de7f568ad73060ba0ff9f4d6b7dc366675ff722160958fc76a03901e3265aefe",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-per-fold-decay-1h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-per-fold-decay-1h.v1",
+          "profile_id": "full06.delta-pct-equity-per-fold-decay-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-per-fold-decay-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-three-window-optimized-1h.v1",
+      "profile_digest": "53f43a5c4ebdf228e5484a0b10e8b4ddb25d0a1be54fd27925ad062629f536a1",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-three-window-optimized-1h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v1",
+        "execution_route": "pct_equity",
+        "protocol": "three_window_decay",
+        "timeframe": "1h",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_span_days": 3650,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "GLOBAL_STUDY",
+        "independent_holdout": true,
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-three-window-optimized-1h.v1",
+          "profile_id": "full06.delta-pct-equity-three-window-optimized-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_THREE_WINDOW_OPTIMIZED",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-three-window-optimized-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "three_window_decay",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "1h",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "random_seed": 42,
+        "max_span_days": 3650,
+        "fold_bounds": null,
+        "frequency": null,
+        "window_mode": null,
+        "requested_spec_versions": [
+          "research.requested-spec.v1"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-wfo-temporal-4h.v1",
+      "profile_digest": "921d24df618dd5f0479a3c7271396eabadc7d4a09f0d7c08f1460509266e4d96",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-wfo-temporal-4h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-wfo-temporal-4h.v1",
+          "profile_id": "full06.delta-pct-equity-wfo-temporal-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-wfo-temporal-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-causal-inner-4h.v1",
+      "profile_digest": "912c010ad002dcaab36f234ba7e7ed4cdf010897737119d09d6612e91360f6d5",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-causal-inner-4h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+        "inner_constraints": {
+          "fold_bounds": {
+            "min": 2,
+            "max": 16
+          },
+          "frequencies": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "window_modes": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"
+        },
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-causal-inner-4h.v1",
+          "profile_id": "full06.delta-pct-equity-causal-inner-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-causal-inner-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+        "inner_constraints": {
+          "fold_bounds": {
+            "min": 2,
+            "max": 16
+          },
+          "frequencies": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "window_modes": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-per-fold-decay-4h.v1",
+      "profile_digest": "c5fc2c4a873bb5701604f19d182b6e264e9cd745947986b98835aefe9981e8ff",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-per-fold-decay-4h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-per-fold-decay-4h.v1",
+          "profile_id": "full06.delta-pct-equity-per-fold-decay-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-per-fold-decay-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-three-window-optimized-4h.v1",
+      "profile_digest": "fcf1d4dd8f76a7e2f82b20183eb74e71b6f267f38f5f1b0892baf7889eed688c",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-three-window-optimized-4h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v1",
+        "execution_route": "pct_equity",
+        "protocol": "three_window_decay",
+        "timeframe": "4h",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_span_days": 3650,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "GLOBAL_STUDY",
+        "independent_holdout": true,
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-three-window-optimized-4h.v1",
+          "profile_id": "full06.delta-pct-equity-three-window-optimized-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_THREE_WINDOW_OPTIMIZED",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-three-window-optimized-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "three_window_decay",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "4h",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "random_seed": 42,
+        "max_span_days": 3650,
+        "fold_bounds": null,
+        "frequency": null,
+        "window_mode": null,
+        "requested_spec_versions": [
+          "research.requested-spec.v1"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-wfo-temporal-1d.v1",
+      "profile_digest": "3087f8aa61204adc37cb4e0a2476d736a51873e6cf927200f4a26858dbcdaae2",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-wfo-temporal-1d.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-wfo-temporal-1d.v1",
+          "profile_id": "full06.delta-pct-equity-wfo-temporal-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-wfo-temporal-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-causal-inner-1d.v1",
+      "profile_digest": "b6e97855724998fa975fe89f6c972d040ab14b13892380b4cb3101a9e4815cf4",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-causal-inner-1d.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+        "inner_constraints": {
+          "fold_bounds": {
+            "min": 2,
+            "max": 16
+          },
+          "frequencies": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "window_modes": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"
+        },
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-causal-inner-1d.v1",
+          "profile_id": "full06.delta-pct-equity-causal-inner-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-causal-inner-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+        "inner_constraints": {
+          "fold_bounds": {
+            "min": 2,
+            "max": 16
+          },
+          "frequencies": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "window_modes": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-per-fold-decay-1d.v1",
+      "profile_digest": "7351482318cd95c8546b142ac5bacf9adba268af6d1c438fc92bd43d2dc25182",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-per-fold-decay-1d.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-per-fold-decay-1d.v1",
+          "profile_id": "full06.delta-pct-equity-per-fold-decay-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-per-fold-decay-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-three-window-optimized-1d.v1",
+      "profile_digest": "e0afd609c70e66578206a9e8e78f1b4b05acfd2045e1340309e679456255e59c",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-three-window-optimized-1d.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v1",
+        "execution_route": "pct_equity",
+        "protocol": "three_window_decay",
+        "timeframe": "1d",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_span_days": 3650,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "GLOBAL_STUDY",
+        "independent_holdout": true,
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-three-window-optimized-1d.v1",
+          "profile_id": "full06.delta-pct-equity-three-window-optimized-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_THREE_WINDOW_OPTIMIZED",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-three-window-optimized-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "three_window_decay",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "1d",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "random_seed": 42,
+        "max_span_days": 3650,
+        "fold_bounds": null,
+        "frequency": null,
+        "window_mode": null,
+        "requested_spec_versions": [
+          "research.requested-spec.v1"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "dataset_id": "crypto-binance-1m",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode3-global-1h.v1",
+      "profile_digest": "3f508e4c85506e941a6cffc6c176987617c703fd3141936ed9ae9c55dae6d3a6",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode3-global-1h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode3-global-1h.v1",
+          "profile_id": "full06.delta-pct-equity-mode3-global-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "flat_selector": "centroid",
+          "flat_top_fraction": 1,
+          "flat_eps": 1,
+          "flat_min_samples": 2
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode3-global-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 5,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode3-global-1m.v1",
+      "profile_digest": "f7383d8a4ef53d04b45eaeb592c3bd30f751fb1ee4132fc2c7ef5f014ff94439",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode3-global-1m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode3-global-1m.v1",
+          "profile_id": "full06.delta-pct-equity-mode3-global-1m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 60000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "flat_selector": "centroid",
+          "flat_top_fraction": 1,
+          "flat_eps": 1,
+          "flat_min_samples": 2
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode3-global-1m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "timeframe": "1m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 5,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode3-global-5m.v1",
+      "profile_digest": "283ac89b705d89cdedfa36dcdbd9d16d1f7e5ae6624b262982b7f63d62e75cfd",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode3-global-5m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "5m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode3-global-5m.v1",
+          "profile_id": "full06.delta-pct-equity-mode3-global-5m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 300000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "flat_selector": "centroid",
+          "flat_top_fraction": 1,
+          "flat_eps": 1,
+          "flat_min_samples": 2
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode3-global-5m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "timeframe": "5m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 5,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode3-global-15m.v1",
+      "profile_digest": "79151f110d2c88e490b756fa77e05b0359a507fb6c1a3e0eb2b64556f5e098c8",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode3-global-15m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "15m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode3-global-15m.v1",
+          "profile_id": "full06.delta-pct-equity-mode3-global-15m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 900000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "flat_selector": "centroid",
+          "flat_top_fraction": 1,
+          "flat_eps": 1,
+          "flat_min_samples": 2
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode3-global-15m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "timeframe": "15m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 5,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode3-global-30m.v1",
+      "profile_digest": "a75a3da971842aa0cc66c3f70b6d4b9750d1a8bcde5d863f001ea9d0df869be4",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode3-global-30m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "30m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode3-global-30m.v1",
+          "profile_id": "full06.delta-pct-equity-mode3-global-30m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 1800000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "flat_selector": "centroid",
+          "flat_top_fraction": 1,
+          "flat_eps": 1,
+          "flat_min_samples": 2
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode3-global-30m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "timeframe": "30m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 5,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode3-global-4h.v1",
+      "profile_digest": "a78221eae0065b78214653b0039d5543c27be1e5c2cc7e88ac9ab5895c91b872",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode3-global-4h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode3-global-4h.v1",
+          "profile_id": "full06.delta-pct-equity-mode3-global-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "flat_selector": "centroid",
+          "flat_top_fraction": 1,
+          "flat_eps": 1,
+          "flat_min_samples": 2
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode3-global-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 5,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode3-global-1d.v1",
+      "profile_digest": "1c4d6ef1b21d3c274672caa7303c6686b9ec80e8d0281705dc31a772b22b4ca8",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode3-global-1d.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode3-global-1d.v1",
+          "profile_id": "full06.delta-pct-equity-mode3-global-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "flat_selector": "centroid",
+          "flat_top_fraction": 1,
+          "flat_eps": 1,
+          "flat_min_samples": 2
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode3-global-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 5,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode2-global-1h.v1",
+      "profile_digest": "b54b69c7b9819bb248e1d646c172b7b69563eb51f52d380ab81e2d5dfe9fae1e",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode2-global-1h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode2-global-1h.v1",
+          "profile_id": "full06.delta-pct-equity-mode2-global-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "scoring_backend": "proxy",
+          "sbb_samples": 32,
+          "sbb_block_length": 20,
+          "sbb_simulation": "stationary",
+          "candidate_selection_metric": "mean_is_sharpe"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode2-global-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode2-global-1m.v1",
+      "profile_digest": "2f75aba2f85c874699770e9ead799b5d9f8fa7493f245d1c2d5ed578ab3c393c",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode2-global-1m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode2-global-1m.v1",
+          "profile_id": "full06.delta-pct-equity-mode2-global-1m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 60000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "scoring_backend": "proxy",
+          "sbb_samples": 32,
+          "sbb_block_length": 20,
+          "sbb_simulation": "stationary",
+          "candidate_selection_metric": "mean_is_sharpe"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode2-global-1m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "timeframe": "1m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode2-global-5m.v1",
+      "profile_digest": "adf2ee2a7375d2d9e05f587f9c7906a61c726b2aaaeb41f9d9dc8f0afe8a6819",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode2-global-5m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "5m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode2-global-5m.v1",
+          "profile_id": "full06.delta-pct-equity-mode2-global-5m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 300000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "scoring_backend": "proxy",
+          "sbb_samples": 32,
+          "sbb_block_length": 20,
+          "sbb_simulation": "stationary",
+          "candidate_selection_metric": "mean_is_sharpe"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode2-global-5m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "timeframe": "5m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode2-global-15m.v1",
+      "profile_digest": "bf5a329029409df732be79e3a6cebda3cd9b38a190d11972b1bf638e47f5c1c3",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode2-global-15m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "15m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode2-global-15m.v1",
+          "profile_id": "full06.delta-pct-equity-mode2-global-15m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 900000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "scoring_backend": "proxy",
+          "sbb_samples": 32,
+          "sbb_block_length": 20,
+          "sbb_simulation": "stationary",
+          "candidate_selection_metric": "mean_is_sharpe"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode2-global-15m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "timeframe": "15m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode2-global-30m.v1",
+      "profile_digest": "64ec13c3c08a7bfd54447194ed0e1785358cdf947129f1ccf0a7f190c786d0cc",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode2-global-30m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "30m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode2-global-30m.v1",
+          "profile_id": "full06.delta-pct-equity-mode2-global-30m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 1800000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "scoring_backend": "proxy",
+          "sbb_samples": 32,
+          "sbb_block_length": 20,
+          "sbb_simulation": "stationary",
+          "candidate_selection_metric": "mean_is_sharpe"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode2-global-30m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "timeframe": "30m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode2-global-4h.v1",
+      "profile_digest": "92a996c222f16cb134a59a02dce3b4b9d7bfe45bc0d76d9c72e83df011c8254e",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode2-global-4h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode2-global-4h.v1",
+          "profile_id": "full06.delta-pct-equity-mode2-global-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "scoring_backend": "proxy",
+          "sbb_samples": 32,
+          "sbb_block_length": 20,
+          "sbb_simulation": "stationary",
+          "candidate_selection_metric": "mean_is_sharpe"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode2-global-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode2-global-1d.v1",
+      "profile_digest": "98c59ffe9d3385376a060048896ab4cc8d13c34ed293cb1fd84ffce34c7f082c",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode2-global-1d.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode2-global-1d.v1",
+          "profile_id": "full06.delta-pct-equity-mode2-global-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "scoring_backend": "proxy",
+          "sbb_samples": 32,
+          "sbb_block_length": 20,
+          "sbb_simulation": "stationary",
+          "candidate_selection_metric": "mean_is_sharpe"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode2-global-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-global-1h.v1",
+      "profile_digest": "4d0ba47e5b155df3dd53e35d9a6617ef62e405001eabe56b6e954e3d74f9f090",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode4-global-1h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode4-global-1h.v1",
+          "profile_id": "full06.delta-pct-equity-mode4-global-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode4-global-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-global-1m.v1",
+      "profile_digest": "ac3ac46f10c10fd8f447ca1ede30601d5d42b8b57d8a403795eb51a4e3d15c9b",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode4-global-1m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode4-global-1m.v1",
+          "profile_id": "full06.delta-pct-equity-mode4-global-1m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 60000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode4-global-1m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "timeframe": "1m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-global-5m.v1",
+      "profile_digest": "822e1ccc481dfb9917dd64e9304cf376789fbe865a72c2c7b99d72911ed0cd81",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode4-global-5m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "5m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode4-global-5m.v1",
+          "profile_id": "full06.delta-pct-equity-mode4-global-5m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 300000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode4-global-5m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "timeframe": "5m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-global-15m.v1",
+      "profile_digest": "93bf09fe64525a1055f01003a6e1b04ea372337eecb639ec06c9a0731b71b4cf",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode4-global-15m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "15m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode4-global-15m.v1",
+          "profile_id": "full06.delta-pct-equity-mode4-global-15m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 900000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode4-global-15m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "timeframe": "15m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-global-30m.v1",
+      "profile_digest": "52326b89aed6ab53f09b7633d71eb245c51d183b31b5f943736a194502ef4b28",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode4-global-30m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "30m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode4-global-30m.v1",
+          "profile_id": "full06.delta-pct-equity-mode4-global-30m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 1800000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode4-global-30m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "timeframe": "30m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-global-4h.v1",
+      "profile_digest": "27ff9e6066890e6aa05ae93f8aa64e14056b19a39117c9efeb5a3b8831913156",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode4-global-4h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode4-global-4h.v1",
+          "profile_id": "full06.delta-pct-equity-mode4-global-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode4-global-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-global-1d.v1",
+      "profile_digest": "a2369f0fd84c725869c1d16911296d3000ed73480ed330ddd29040041c245c6c",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode4-global-1d.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode4-global-1d.v1",
+          "profile_id": "full06.delta-pct-equity-mode4-global-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode4-global-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-causal-1h.v1",
+      "profile_digest": "058e8bb7b107fea60c4c2b9b441d3ca58b107c15d7f6646547289eeaf4e2ed1e",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode4-causal-1h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode4-causal-1h.v1",
+          "profile_id": "full06.delta-pct-equity-mode4-causal-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode4-causal-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-causal-1m.v1",
+      "profile_digest": "c3156d843b38a9939498dd673c730c73e7b89fc8c314b55e5a0be31200f6d3a6",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode4-causal-1m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode4-causal-1m.v1",
+          "profile_id": "full06.delta-pct-equity-mode4-causal-1m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 60000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode4-causal-1m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "1m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-causal-5m.v1",
+      "profile_digest": "9c94a6fb0ec96759e1fc6337da4f32d4e90bf97cf46675c97b8e9051bf27333c",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode4-causal-5m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "5m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode4-causal-5m.v1",
+          "profile_id": "full06.delta-pct-equity-mode4-causal-5m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 300000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode4-causal-5m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "5m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-causal-15m.v1",
+      "profile_digest": "c0c18c34798521a162bb57f0f0b0f1e51627c38d00217442df53f7c3ccfcbcd5",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode4-causal-15m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "15m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode4-causal-15m.v1",
+          "profile_id": "full06.delta-pct-equity-mode4-causal-15m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 900000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode4-causal-15m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "15m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-causal-30m.v1",
+      "profile_digest": "e035048ac41e364794e776e40a628269ab911ba653d1e06553362025d72b463d",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode4-causal-30m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "30m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode4-causal-30m.v1",
+          "profile_id": "full06.delta-pct-equity-mode4-causal-30m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 1800000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode4-causal-30m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "30m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-causal-4h.v1",
+      "profile_digest": "a4df668cc84fb2b14087d75326c40f608e5a197bf77e45112baa3dfe3cb5d7b4",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode4-causal-4h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode4-causal-4h.v1",
+          "profile_id": "full06.delta-pct-equity-mode4-causal-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode4-causal-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-causal-1d.v1",
+      "profile_digest": "de2e5388c9bd7f29e5cb9aff432c03d1f3c6d1781c15c50d6f135553938ae658",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode4-causal-1d.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode4-causal-1d.v1",
+          "profile_id": "full06.delta-pct-equity-mode4-causal-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode4-causal-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode5-global-1h.v1",
+      "profile_digest": "23550519fe85db8cba8e3130df3d56c2a582251adf82dc578961ccf98c535220",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode5-global-1h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode5-global-1h.v1",
+          "profile_id": "full06.delta-pct-equity-mode5-global-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "full_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode5-global-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode5-global-1m.v1",
+      "profile_digest": "fd7b3ccac53f1e856b909ba1af9fcfe36dd2e1e66d8c44116989f1df9428c68e",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode5-global-1m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode5-global-1m.v1",
+          "profile_id": "full06.delta-pct-equity-mode5-global-1m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 60000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "full_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode5-global-1m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "timeframe": "1m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode5-global-5m.v1",
+      "profile_digest": "5107657ae864a094b0747f0ecf511fac4ff32f1a0381fe797415d9efb7a0e41a",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode5-global-5m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "5m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode5-global-5m.v1",
+          "profile_id": "full06.delta-pct-equity-mode5-global-5m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 300000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "full_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode5-global-5m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "timeframe": "5m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode5-global-15m.v1",
+      "profile_digest": "7109479a5615096849a1285e9f1cf18e77582274fbf08a60728b187e1ca70a2b",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode5-global-15m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "15m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode5-global-15m.v1",
+          "profile_id": "full06.delta-pct-equity-mode5-global-15m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 900000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "full_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode5-global-15m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "timeframe": "15m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode5-global-30m.v1",
+      "profile_digest": "5ae1f6d1d65efd8c2f62b8ce1f1979898e6c809454d11da174e551bd606b0ee8",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode5-global-30m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "30m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode5-global-30m.v1",
+          "profile_id": "full06.delta-pct-equity-mode5-global-30m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 1800000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "full_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode5-global-30m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "timeframe": "30m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode5-global-4h.v1",
+      "profile_digest": "f21f9b5d281174b9d079eec351636ef3c9b25a59f1a381cbf18cd7f24fef328c",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode5-global-4h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode5-global-4h.v1",
+          "profile_id": "full06.delta-pct-equity-mode5-global-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "full_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode5-global-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode5-global-1d.v1",
+      "profile_digest": "9a52414c8ae304eb937259e63e6bad9afb7646736a162d0252c898f0862cb240",
+      "descriptor": {
+        "schema_version": "research.full06-delta-profile.v1",
+        "profile_id": "p10.delta-pct-equity-mode5-global-1d.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full06.quantbt-pct-equity-mode5-global-1d.v1",
+          "profile_id": "full06.delta-pct-equity-mode5-global-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_2",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "72fce10c57c6cc07be1b50658778863aa53ba73919d0cb45ef160647f669bb03",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "full_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        },
+        "account": {
+          "initial_capital": 20000,
+          "leverage": 3,
+          "alloc_per_trade": 0.1,
+          "allocation_unit": "EQUITY_FRACTION",
+          "canonical_one_way_fee_rate": 0.0005,
+          "slippage": 0,
+          "funding_enabled": false,
+          "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-pct-equity-mode5-global-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "pct_equity",
+        "protocol": "advanced",
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "account_model": "QUANTBT_PERCENT_EQUITY_V1"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
     }
   ],
   "qualification_references": [
@@ -12833,6 +21464,447 @@ export const EXECUTION_RECIPE_TABLE = {
       "kind": "PRODUCT_RUN_QUALIFIED",
       "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
       "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-wfo-temporal-1m.v1",
+      "recipe_digest": "6a738a786f766fb9af2c1bc4433cb36f5e9b87616889db172a885aa4ed5e94eb",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-causal-inner-1m.v1",
+      "recipe_digest": "5c01a393d19ac889cc9c67119ff67b405f8d023f03f6b27cfdaa5e05eaacd2aa",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-per-fold-decay-1m.v1",
+      "recipe_digest": "84b3cc2a15ecf1fc2cf94855ddd472de5037d1f482c7f815a868ab61faf0ba41",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-three-window-optimized-1m.v1",
+      "recipe_digest": "fc63e17f083886a9f882765f4a103e3ee56ee867c468c0dd1b285587850585ed",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-wfo-temporal-5m.v1",
+      "recipe_digest": "82e8e840d17460068128b9dd697c258e0bdbe0adbc917413d601278e469f79d0",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-causal-inner-5m.v1",
+      "recipe_digest": "0d922f2b73bf611b87c6a2da150dd19371cd1698509963f5d95b2f9e97224652",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-per-fold-decay-5m.v1",
+      "recipe_digest": "6f1c92b9566bdf40342a4bfe7ae2180d7282216dcf88721298f9287d643dbe88",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-three-window-optimized-5m.v1",
+      "recipe_digest": "8978689b471d80100e5c50907cc0f74e653d018ea3654de0972e8a6ae8663e3c",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-wfo-temporal-15m.v1",
+      "recipe_digest": "57c2a0640c568a6c94270c95f3dab93232cf61cc830f84db023c9940ab520ece",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-causal-inner-15m.v1",
+      "recipe_digest": "4226e165142fbf63704fb7e0b70629f0ac44c2d26b96d93144bd7eb491288e48",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-per-fold-decay-15m.v1",
+      "recipe_digest": "351eca5112b2b43724cac302842a3bab56df5efe7f81250d52f03353601e5d52",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-three-window-optimized-15m.v1",
+      "recipe_digest": "aa5d73b8499d42b69c2c6e895911980d128bf63625de8160e3bf8b9ad96b1b47",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-wfo-temporal-30m.v1",
+      "recipe_digest": "42a3d35060dd73c364c4444184a2126a04e77c7931134de0f4c9927764d8255a",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-causal-inner-30m.v1",
+      "recipe_digest": "9a58a8a25765009e79d0ea48ba3bddadaeed3c37116b818985835fab22a12688",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-per-fold-decay-30m.v1",
+      "recipe_digest": "790f4d37b37e3b1d54bfe91fd73e5895f5bbcd8901115a74ad9c10aa5cba7f4c",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-three-window-optimized-30m.v1",
+      "recipe_digest": "7a89a11ce965d0511b0a50312878a9e2257454a4a5a1acbad8b4b0efbab2174f",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-wfo-temporal-1h.v1",
+      "recipe_digest": "15cd3c36a318128e623773f11ce0a27b557a408a96c00972a82bea4c38aa530b",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-causal-inner-1h.v1",
+      "recipe_digest": "edc0e7b9bbd7a961f4560ac6fe93bf0cdfcb875a3703fce3fb736e967c335acd",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-per-fold-decay-1h.v1",
+      "recipe_digest": "d20ceac5fea825b1aba90edca849a0e9a011b6f2427a12c9ba47fdfac1a329e0",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-three-window-optimized-1h.v1",
+      "recipe_digest": "165dc06bcc493be1e2a51e712ef85a405e244d71c07fe8aa3a09959debb5a0ef",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-wfo-temporal-4h.v1",
+      "recipe_digest": "13f8bc17b9311da075a4d019ab3f96e65b94859614457af53fe2c382fa4e4aa8",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-causal-inner-4h.v1",
+      "recipe_digest": "4121811f456ecba5c473328620509fea4c90a3e22dbbc7fe8de5f185d2df84ed",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-per-fold-decay-4h.v1",
+      "recipe_digest": "665d4fd47fcc2ca846169b6c4b19bf9124528253d4f775233cf63f94f95bc48f",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-three-window-optimized-4h.v1",
+      "recipe_digest": "36a75a578608d27162bd991db9e80f9c315ce9caaf80fac50d920a988c0636de",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-wfo-temporal-1d.v1",
+      "recipe_digest": "eae70f09b18065601598d4a32c8309167715fde42dd08533cde4d6348ccb7a7c",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-causal-inner-1d.v1",
+      "recipe_digest": "1c1a309a9e1707653aaa4b07d7f5dadd1d75a10030cee6c8029ee0d0715b029e",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-per-fold-decay-1d.v1",
+      "recipe_digest": "b84f83bb831faa0bebc7032c4671bb076ff9c7fd2c524bce54b7d2b9ddea0ea3",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-three-window-optimized-1d.v1",
+      "recipe_digest": "2d98144cdc3389f7ae9cf61b00037a725d114414a7f93ba64998249c2122a9e4",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode3-global-1h.v1",
+      "recipe_digest": "cac972ccbf41d4a816825bbb7494317f51d83b6985ff7adffba98bc8303ca19b",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode3-global-1m.v1",
+      "recipe_digest": "079512f694853645dbd0ab84e957c31ed672cd69d1bbd316b598aaa7be623431",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode3-global-5m.v1",
+      "recipe_digest": "b2e6265922b0801e59f8a33d1094c444b6481d194393f2fe0aa6eb4c88d1b61c",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode3-global-15m.v1",
+      "recipe_digest": "2a844662e55b2f85a47a94b4c92036cebde46b1fa13ff0fb6a1959aa6ea4b35b",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode3-global-30m.v1",
+      "recipe_digest": "dcc5a0c4e2826d190c893f18e9a4919026e5593f33ac3081e270e216c32f995f",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode3-global-4h.v1",
+      "recipe_digest": "58455e03fe2b3294a07db7ada30253a954308a6e85bdd3638101988172ada13a",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode3-global-1d.v1",
+      "recipe_digest": "0e1f6cadf315f32d491818b6b018aaf0d6741a85ebf5940995185ccd3534f7cc",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode2-global-1h.v1",
+      "recipe_digest": "3695ffccbef1ac63d6744c4a6dc0f90de736e79ad71f39f689e532ad0ccb29c6",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode2-global-1m.v1",
+      "recipe_digest": "01825edd035dbfac940625ce670768d4b825883a2cc1cae4b6ad2aebef5733c5",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode2-global-5m.v1",
+      "recipe_digest": "e3b74c900245e5f388c1672c48fa7d403f716256056214101fb8d899d9cc1213",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode2-global-15m.v1",
+      "recipe_digest": "0e464131b852cb381d7dacd0c19e330b7ad384a332fd6991f325448538fb2d4a",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode2-global-30m.v1",
+      "recipe_digest": "ef73588ebd337548002b8d27bc4f15cea9ca5fcc849fecdb3470fc66caec67dc",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode2-global-4h.v1",
+      "recipe_digest": "270e267744fd585b48b31c37ac792e7efc87aefcd05391015a84dec7864b07e3",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode2-global-1d.v1",
+      "recipe_digest": "2fad79098b51756d54982fb640d619898d704d755e661d031220585c8d4b447e",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-global-1h.v1",
+      "recipe_digest": "ee32886cdc48e3295a6e7f9be6995d94f900b957fdaab571d6bcf53298e1191c",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-global-1m.v1",
+      "recipe_digest": "c336f9acceacf4a0fb7440c0466907d8af2ada8c1bd4f4f200b7857f932a0a73",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-global-5m.v1",
+      "recipe_digest": "458dcc0fc7753002dc3957aa80d70097ed71fecf300a2fa036c4a77687327bdd",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-global-15m.v1",
+      "recipe_digest": "a7c7dbd9d49d0061370edb68818070ccdcde081f37ae2bd246a5afa5e83d9b47",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-global-30m.v1",
+      "recipe_digest": "cc943101087e1c5e69880e7629bdd3b04087abf09a2dc18dcf06e43b19512c3c",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-global-4h.v1",
+      "recipe_digest": "d26d97a47223a9b55709cacac792426aa497b1cf2af0796022e9e7bd85ed5fcb",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-global-1d.v1",
+      "recipe_digest": "0f4be10ecd096a5a3299057824bcb6cb98c293a0708d0d82c3978468120b031d",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-causal-1h.v1",
+      "recipe_digest": "5648ef4a79b3cf9dfd18366bb3fdfcdfbdac314a848a74ef1f03a8d13f13ed75",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-causal-1m.v1",
+      "recipe_digest": "7146e6619648d676df48c32f7975c54d0202fcba6a215305733553f94394a369",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-causal-5m.v1",
+      "recipe_digest": "bcfca8ea06cc82991608c69ac63e11d0e43a7c4812932a966359b4fd376b0d1a",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-causal-15m.v1",
+      "recipe_digest": "d5e9ef8706a0d26c24101d4c013c3e45f6c122aeece869acb5d7c0dc56594a82",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-causal-30m.v1",
+      "recipe_digest": "5dcb249511117044daea6d87bed0a67f99691d9792496379ce370889bc341dd1",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-causal-4h.v1",
+      "recipe_digest": "80039f3b698cbd45891142afc992ef42b2263f69af34ba80a80c64dfece703f8",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode4-causal-1d.v1",
+      "recipe_digest": "8b6833fbb5618c4471b2a0fc6393633a747c8f7caf2e1aed7f618be834445f62",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode5-global-1h.v1",
+      "recipe_digest": "117b51232045c17e4341b0f4efb036bf55125ba6be4527f49ad24a196a4e750a",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode5-global-1m.v1",
+      "recipe_digest": "14f1f8f4df669b97d50b68c9951405ce6fd27e23ba7f3c744159dd02e3f48f38",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode5-global-5m.v1",
+      "recipe_digest": "e11bb4f6a3391ca3fe9ec3ff6602062267b22618b236fd03dd31ecd0f086b33d",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode5-global-15m.v1",
+      "recipe_digest": "c380d04157135f48c30dce449a7accc6e3f624152b0d8f9016a637f26f61362f",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode5-global-30m.v1",
+      "recipe_digest": "41ba477eec6a400eb4f0905be0c40b2b56eb717f11adc76a29fc9f3dae7b5713",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode5-global-4h.v1",
+      "recipe_digest": "369c908c2ad47a6b0f1e8a3c38ca5b32f19b95abcaea79e57f085293257558e7",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
+    },
+    {
+      "profile_id": "p10.delta-pct-equity-mode5-global-1d.v1",
+      "recipe_digest": "ccb0d741d1331059a93d58e023885f9fb71ac2e1b99661c68609bc0733be0d95",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "f19377050347f00fb2eabea2418b12ebe2e69299e166d30fe224acedbdda7d0c"
     }
   ],
   "preflight_policy": {
@@ -12845,4 +21917,4 @@ export const EXECUTION_RECIPE_TABLE = {
     "maximum_bytes": 1048576
   }
 } as const;
-export const EXECUTION_RECIPE_REVISION = "1906970746d5c909d7aaeee36a322fc6684b0169de200ecab8ea91d6117b9737" as const;
+export const EXECUTION_RECIPE_REVISION = "719650ed34bab617c395ad911886bcc4beacc23e750728da229fe1f36079cc49" as const;

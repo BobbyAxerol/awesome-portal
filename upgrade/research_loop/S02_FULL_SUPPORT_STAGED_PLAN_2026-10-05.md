@@ -321,6 +321,21 @@ This is staged work inside §37, not permission to call live/broker APIs.
 | 6e | `portfolio`, `basket`, `arbitrage` | Immutable multi-symbol input set/alignment, typed legs/sizing/costs and route-specific reports; retain `arbitrage` engine-partial boundaries. Single-symbol Delta is not a basket declaration. |
 | 6f | `options`, `nautilus_dca_grid` | Actual option instruments/chain/packages or installed external adapter inputs; verify existing dependencies/source first, implement Portal adapters for what exists. Missing genuine input/dependency is an exact request, not a blanket engine-upgrade prerequisite. |
 
+Delivery2026-10-06: **6a_BACKEND_DELIVERED /63_PRODUCT_RUN_QUALIFIED /
+RESEARCH_PREVIEW_ENABLED;6b–6f NOT_DELIVERED**. Percent-equity uses a separate
+immutable AV1.0.2 with10% live-equity allocation, not a notional alias.
+63 actual ordinary runs/504 named reads, separate final-image504+4 reads,
+flag-off126 retained reads/new create409, preview63 Conditions/seven setups/
+three may-create preflights and old20-seal/account/AV/index/web custody PASS.
+Grouped regressions/append106–107/C4/session teardown and exact Claude consumer
+work are in the [delivery ledger](./evidence/P10/FULL_06_ROUTE_FAMILIES_2026-10-06.md)
+and [immutable product packet](./evidence/P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md).
+Whole FULL06 is not green: next6b typed bracket/ladder adapter remains Portal
+work; genuine tape/option-chain/external dependency gaps are separately named.
+Optional fees/funding/turnover and native account certification stay null when
+the actual percent-engine source does not publish them. No UI/baseline edit,
+remote push, dev/main, production or Execution action.
+
 Each batch includes named requested-spec/input schemas, bounded source loader,
 constructor allowlist, P08/admission/child/P05, route-native result/claim mapping
 and reads through RC. Do not form an arbitrary 14-route × 8-mode matrix: replay,
@@ -381,8 +396,8 @@ alter the approved design. Existing accepted S02 calendar/presets stay intact.
 | BR-FULL-03 | FULL-01 | BACKEND_DELIVERED: shared registry and append-only 095; no new recipe opened |
 | BR-FULL-04 | Each vertical stage, especially FULL-02/04 | Exact FULL02/03/04 native retained/read chains DELIVERED; centroid/IS-only/full-sample scopes truthful; separate historical linked-audit executor fence unchanged |
 | BR-FULL-05 | FULL-01 + measured per-mode FULL-04 | Shared caps/quota and real per-mode resource proof DELIVERED at unchanged120CPU/240wall ceilings; no preview-long inheritance |
-| BR-FULL-06 | FULL-06 batches 6a–6f | PLANNED, no route opened |
+| BR-FULL-06 | FULL-06 batches 6a–6f | 6a_BACKEND_DELIVERED /63_PRODUCT_RUN_QUALIFIED /RESEARCH_PREVIEW_ENABLED;6b–6f retain exact adapter/input/dependency work, not generic Soon. [Live delivery/consumer ledger](./evidence/P10/FULL_06_ROUTE_FAMILIES_2026-10-06.md) |
 | BR-FULL-07 | FULL-05 + compatible FULL-06 inputs | FULL05 DELIVERED:27 exact imported signal-notional recipes; other route/input kinds remain FULL06; imported fixed path unchanged |
 
-Next proposed implementation: **FULL-06**, awaiting Bobby's named instruction. FULL-01–05 deliveries are linked above;
+FULL-06 is now authorized and being implemented in the staged order above. FULL-01–05 deliveries are linked above;
 the remaining staged response is not a passing qualification or a Portal release.

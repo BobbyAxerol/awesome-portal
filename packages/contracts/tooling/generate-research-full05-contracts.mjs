@@ -4,7 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {replaceComponent} from './generate-research-progress-truth.mjs';
 const root=new URL('../../../',import.meta.url);
 const table=JSON.parse(readFileSync(new URL('apps/portal/registry/research-execution-recipes.v1.json',root)));
-const rows=table.recipes.filter(r=>r.source_requirement==='IMPORTED_IMMUTABLE_SEARCH_BINDING');
+const rows=table.recipes.filter(r=>r.source_requirement==='IMPORTED_IMMUTABLE_SEARCH_BINDING'||r.descriptor.schema_version==='research.full06-delta-profile.v1');
 export function amendFull05(original,file){
   const document=JSON.parse(original),schemas=document.components.schemas;let next=original;
   for(const [name,raw]of Object.entries(schemas)){
@@ -18,6 +18,11 @@ export function amendFull05(original,file){
     if(name==='ParameterAuthority'&&file==='research-current-source'){
       const scopes=value.properties.code_fixed.properties.hash_scope.enum;
       if(!scopes.includes('SOURCE_CODE_SHA256')){scopes.push('SOURCE_CODE_SHA256');changed=true;}
+    }
+    if(name==='PortalAdmission'){
+      value.properties.profiles.maxItems=table.recipes.length-1;
+      value.properties.profiles.items.properties.account_model={enum:['GENERIC_SIGNAL_NOTIONAL_RESEARCH_NOT_VN_VENUE','QUANTBT_PERCENT_EQUITY_V1']};
+      changed=true;
     }
     if(name==='Provenance'&&file==='research-current-source')for(const row of rows){
       const pair=row.descriptor.current_source;

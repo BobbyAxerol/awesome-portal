@@ -109,7 +109,10 @@ export interface components {
             independent_holdout: boolean;
             refusals?: components["schemas"]["SetupRefusal"][];
             budget?: components["schemas"]["Budget"];
-        } & unknown;
+            /** @constant */
+            account_model?: "QUANTBT_PERCENT_EQUITY_V1";
+            account?: components["schemas"]["PercentEquityAccount"];
+        } & (unknown & unknown & unknown);
         SetupOptions: {
             /** @constant */
             schema_version: "research.run-setup-options.v1";
@@ -198,6 +201,24 @@ export interface components {
             queue_class: "HEAVY" | "INTERACTIVE";
             resource_class: string;
             preview_override: boolean;
+        };
+        PercentEquityAccount: {
+            /** @constant */
+            initial_capital: 20000;
+            /** @constant */
+            leverage: 3;
+            /** @constant */
+            alloc_per_trade: 0.1;
+            /** @constant */
+            allocation_unit: "EQUITY_FRACTION";
+            /** @constant */
+            canonical_one_way_fee_rate: 0.0005;
+            /** @constant */
+            slippage: 0;
+            /** @constant */
+            funding_enabled: false;
+            /** @constant */
+            sizing_authority: "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1";
         };
         WindowPatch: {
             /** @constant */

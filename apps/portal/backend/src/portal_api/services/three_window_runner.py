@@ -167,6 +167,7 @@ class ThreeWindowRunner:
         progress: Callable[[str], None] | None = None,
         *,
         strategy_callable: Callable[..., Any] | None = None,
+        retain_current_source: bool = False,
     ) -> dict[str, Any]:
         if request.protocol != RunProtocol.THREE_WINDOW_DECAY:
             raise ThreeWindowRunnerError("ThreeWindowRunner requires protocol=three_window_decay")
@@ -250,7 +251,7 @@ class ThreeWindowRunner:
                 run_id,
                 key,
                 segment_frame,
-                market.frame if target_mode == "signal_notional" else protocol_tape,
+                market.frame if target_mode == "signal_notional" or retain_current_source else protocol_tape,
                 selected_params["params"],
                 account_kwargs,
                 trading_days=int(request.calibration.optimization.scoring_trading_days),
@@ -259,7 +260,7 @@ class ThreeWindowRunner:
             series_by_segment[key] = series
             metrics_by_segment[key] = metrics
 
-        if target_mode == "signal_notional":
+        if target_mode == "signal_notional" or retain_current_source:
             self._write_current_source_artifacts(run_id, request, wf, endpoint.result, calibration_tape,
                 selected_params=selected_params, holdout_replay_started_at=holdout_replay_started_at)
 

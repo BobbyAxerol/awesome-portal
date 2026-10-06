@@ -824,13 +824,19 @@ class CurrentSourceArtifactAdapter:
         lifecycle = self._optional_frame(lifecycle_path, "strategy lifecycle")
         lifecycle_contract = self._optional_json(raw_dir / "wfo" / "strategy_lifecycle_contract.v1.json", "strategy lifecycle contract")
         child_audit_summary = None
-        if lifecycle is not None and account_ledger is not None:
+        if lifecycle is not None:
             child_audit_summary = self._attach_child_audit(folds, lifecycle=lifecycle, contract=lifecycle_contract)
-        if account_ledger is not None:
+        percent_recipe = recipe is not None and recipe["descriptor"].get("schema_version") == "research.full06-delta-profile.v1"
+        if account_ledger is not None or (percent_recipe and account_contract is not None):
+            stitched = self._read_frame(raw_dir / "series" / "stitched.parquet", "stitched series")
+            # The legacy percent-equity engine publishes the final equity /
+            # position / price replay, but no fee/turnover/funding series.
+            # Retain those real bars with null cost facts; an empty in-memory
+            # frame is not a fabricated or sealed accounting-ledger artifact.
             replay_summary = self._attach_bar_ledger(
                 observations,
-                stitched=self._read_frame(raw_dir / "series" / "stitched.parquet", "stitched series"),
-                ledger=account_ledger,
+                stitched=stitched,
+                ledger=account_ledger if account_ledger is not None else pd.DataFrame(index=stitched.index),
                 folds=folds,
                 account_contract=account_contract,
                 source_contract=source_contract,
@@ -863,7 +869,7 @@ class CurrentSourceArtifactAdapter:
                     ("selected_fold_metrics", fold_metrics),
                     ("summary_analytics", summary_analytics),
                     ("summary_analytics_v2", summary_analytics_v2),
-                    ("account_contract", account_contract if account_ledger is not None else None),
+                    ("account_contract", account_contract if replay_summary is not None else None),
                     ("strategy_lifecycle_contract", lifecycle_contract if child_audit_summary is not None else None),
                     ("execution_observation", execution_observation),
                     ("sampler_public_trace", None if sampler_trace is None else sampler_trace[0]),
@@ -1039,7 +1045,7 @@ class CurrentSourceArtifactAdapter:
                 writer.write_small_document("source_retained_analytics", self._document(summary_analytics))
             if summary_analytics_v2 is not None:
                 writer.write_small_document("source_retained_analytics_v2", self._document(summary_analytics_v2))
-            if account_ledger is not None and account_contract is not None:
+            if replay_summary is not None and account_contract is not None:
                 writer.write_small_document("source_account_contract", self._document(account_contract))
             writer.write_small_document("current_source_summary", self._document(summary))
             candidate = writer.seal()
@@ -2073,7 +2079,7 @@ class CurrentSourceArtifactAdapter:
             totals={
                 "bars": len(observations),
                 "transitions": transitions,
-                "bars_with_turnover": bars_with_turnover,
+                "bars_with_turnover": bars_with_turnover if "turnover" in columns else None,
                 "fee": None if cumulative["fee"] is None else self._decimal(cumulative["fee"], "total fee"),
                 "turnover": None if cumulative["turnover"] is None else self._decimal(cumulative["turnover"], "total turnover"),
                 "funding": None if cumulative["funding"] is None else self._decimal(cumulative["funding"], "total funding"),

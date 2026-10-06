@@ -12,6 +12,7 @@ import {admitRealRun,waitForRun,requestedSpec} from './real-run.mjs';
 const ROOT=resolve(fileURLToPath(new URL('../..',import.meta.url)));
 const table=JSON.parse(readFileSync(join(ROOT,'apps/portal/registry/research-execution-recipes.v1.json')));
 const binding=JSON.parse(readFileSync(join(ROOT,'apps/portal/registry/research-full03-delta-binding.v1.json')));
+const percentBinding=JSON.parse(readFileSync(join(ROOT,'apps/portal/registry/research-full06-delta-binding.v1.json')));
 const routes=['evidence','current-source/evidence','current-source/split','current-source/search',
   'current-source/freeze','current-source/replay','report','release-candidate'];
 function productSpec(_oldBinding,release,row,alphaBinding=binding){
@@ -19,6 +20,7 @@ function productSpec(_oldBinding,release,row,alphaBinding=binding){
   const kind=three?'three-window-optimized':schedule==='per_fold_causal'?'wfo-causal-inner':schedule==='per_fold_decay'?'wfo-per-fold-decay':'wfo-v2';
   const spec=requestedSpec({alpha_id:alphaBinding.alpha_id,alpha_version_id:alphaBinding.alpha_version_id},release,kind);
   spec.optimization_mode=row.public_profile.optimization_mode;
+  spec.execution_route=row.descriptor.execution_route;
   spec.optuna_trials=row.public_profile.trial_default;
   spec.data.timeframe=row.public_profile.timeframe;
   const daily=spec.data.timeframe==='1d';
@@ -43,7 +45,7 @@ function productSpec(_oldBinding,release,row,alphaBinding=binding){
   return spec;
 }
 export function selectExactCandidate(home,id,slice='full03'){
-  assert(['full03','full04','full05'].includes(slice),'KNOWN_EXACT_QUALIFICATION_SLICE');
+  assert(['full03','full04','full05','full06'].includes(slice),'KNOWN_EXACT_QUALIFICATION_SLICE');
   home=validateHome(home);assert(home.endsWith('/'+slice),'EXACT_PRIVATE_CELL');
   const row=table.recipes.find(r=>r.profile_id===id&&r.descriptor.schema_version===`research.${slice}-${slice==='full05'?'imported':'delta'}-profile.v1`);
   assert(row,'EXACT_FULL03_RECIPE');
@@ -60,21 +62,25 @@ export function selectExactCandidate(home,id,slice='full03'){
   return row;
 }
 export async function full03Receipt(home,id,attempt=1,slice='full03'){
-  assert(['full03','full04','full05'].includes(slice),'KNOWN_EXACT_QUALIFICATION_SLICE');
+  assert(['full03','full04','full05','full06'].includes(slice),'KNOWN_EXACT_QUALIFICATION_SLICE');
   home=validateHome(home);assert(home.endsWith('/'+slice),'EXACT_PRIVATE_CELL');
   assert(Number.isInteger(attempt)&&attempt>=1&&attempt<=5,'BOUNDED_ATTEMPTS');
   const row=selectExactCandidate(home,id,slice);
   const baseLabel=id.replace(/^p10\./,'').replace(/\.v1$/,'').replaceAll('.','-');
   const label=baseLabel+(attempt>1?`-${attempt}`:'');
   const originalRun=join(home,`run-${baseLabel}.json`);
+  const workerImage=privateJson(join(home,'identity.json')).images['quant-worker-py'].image_id;
   // A failed read after completion must resume the original ordinary run,
   // not create a new engine run just to obtain a successful receipt.
   const completed=readdirSync(home).filter(file=>file===`run-${baseLabel}.json`||new RegExp(`^run-${baseLabel}-[1-5]\\.json$`).test(file))
     .map(file=>({file,record:privateJson(join(home,file))}))
-    .filter(item=>item.record.created&&item.record.final?.body.current.effective_status==='COMPLETED')
+    .filter(item=>item.record.created&&item.record.final?.body.current.effective_status==='COMPLETED'
+      &&item.record.identity.images['quant-worker-py'].image_id===workerImage)
     .sort((a,b)=>a.file.localeCompare(b.file)).at(-1);
   const prior=existsSync(originalRun)?privateJson(originalRun):null;
-  const runLabel=completed?completed.file.slice(4,-5):attempt>1&&prior?.created&&prior.final?.body.current.effective_status!=='FAILED'?baseLabel:label;
+  const runLabel=completed?completed.file.slice(4,-5):attempt>1&&prior?.created
+    &&prior.identity.images['quant-worker-py'].image_id===workerImage
+    &&prior.final?.body.current.effective_status!=='FAILED'?baseLabel:label;
   const path=join(home,`qualification-${label}.json`);
   // This cell deliberately replaces its gateway between exact candidates.
   // Don't reuse a pooled connection to the previous container generation.
@@ -103,7 +109,7 @@ export async function full03Receipt(home,id,attempt=1,slice='full03'){
     const imported=slice==='full05'?privateJson(join(home,'imported-registration.json')):null;
     if(imported){record.imported_registration=imported;assert.equal(imported.registration.lifecycle_state,'DRAFT');}
     const admitted=await admitRealRun(home,row.descriptor.protocol==='three_window_decay'?'three-window-optimized':'wfo-v2',
-      runLabel,'p23-owner',client,(_binding,release)=>productSpec(_binding,release,row,imported?.registration??binding));
+      runLabel,'p23-owner',client,(_binding,release)=>productSpec(_binding,release,row,imported?.registration??(slice==='full06'?percentBinding:binding)));
     if(imported&&Date.now()-Date.parse(admitted.receipt.created_at_utc)<120000){
       record.idempotent_create=await client.call('POST','/api/v1/research/runs',{
         schema_version:'research.run-create.v1',client_intent_id:admitted.receipt.client_intent_id,
@@ -153,7 +159,7 @@ export async function full03Receipt(home,id,attempt=1,slice='full03'){
       assert.equal(record.run.final.body.progress.claim.handoff_cursor.params_digest,freeze.stage4_binding.sealed_params_sha256);
     else assert(row.public_profile.optimization_mode==='mode_3_flat_minima'&&freeze.frozen_selection.selected_trial_id===null,
       'ONLY_REAL_CENTROID_HAS_NO_TRIAL_CURSOR');
-    if(slice==='full04'||slice==='full05'){
+    if(slice==='full04'||slice==='full05'||slice==='full06'){
       record.final_audit=await client.call('GET',`/api/v1/quantbt/runs/${record.run.run_id}/final-audit`,undefined,[200,409]);
       if(record.final_audit.status===409)assert.equal(record.final_audit.body.error.code,'RESEARCH_FINAL_AUDIT_NOT_APPLICABLE');
       if(row.public_profile.optimization_mode==='mode_5_full_robust')assert.equal(record.reads.report.body.final_audit_applicable,false);

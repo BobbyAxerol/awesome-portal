@@ -12,14 +12,14 @@ import {assertOrdinaryProductReceipt} from './full03-qualification.mjs';
 const root=resolve(fileURLToPath(new URL('../..',import.meta.url)));
 const home=validateHome(process.argv.find(a=>a.startsWith('--home='))?.slice(7));
 const slice=process.argv.find(a=>a.startsWith('--slice='))?.slice(8)??'full04';
-assert(['full04','full05'].includes(slice)&&home.endsWith('/'+slice),'EXACT_APPROVED_SLICE');
+assert(['full04','full05','full06'].includes(slice)&&home.endsWith('/'+slice),'EXACT_APPROVED_SLICE');
 const attempt=process.argv.find(a=>a.startsWith('--attempt='))?.slice(10);
 assert(attempt===undefined||/^[1-9][0-9]*$/.test(attempt),'BOUNDED_RECEIPT_ATTEMPT_NAME');
 const path=join(home,`final-image-read-receipt${attempt?'-attempt'+attempt:''}.json`);
 assert(!existsSync(path),'IMMUTABLE_READ_RECEIPT');
 const table=JSON.parse(readFileSync(join(root,'apps/portal/registry/research-execution-recipes.v1.json')));
 const facts=privateJson(join(home,'qualified-products-summary.json')).facts;
-assert.equal(facts.length,slice==='full05'?27:35);
+assert.equal(facts.length,slice==='full06'?63:slice==='full05'?27:35);
 await refreshTestSessions(home);
 const client=makeClient(loadSessions(home).identities.find(u=>u.username==='p23-owner'),{connectionClose:true});
 const result={schema_version:`research.${slice}-final-read-receipt.v1`,recorded_at_utc:new Date().toISOString(),
@@ -41,6 +41,13 @@ try{
     assert.equal(truth.retained_manifest_digest,fact.retained_manifest_digest
       ??old.reads['current-source/freeze'].body.integrity.expected_manifest_digest,'UNCHANGED_SEAL_BYTES');
     assert.deepEqual(record.reads['current-source/freeze'].body.stage4_binding.pairs,{params:'MATCH',bundle:'MATCH'});
+    if(slice==='full06'){
+      assert.equal(record.run.requested_spec.execution_route,'pct_equity');
+      const execution=record.reads['current-source/replay'].body.execution;
+      for(const cost of ['fee','funding','turnover'])assert.equal(execution.totals[cost],null,'NO_INVENTED_PERCENT_COST:'+cost);
+      assert.equal(execution.counts.bars_with_turnover,null);
+      if(execution.route.engine_id==='unknown')assert.equal(execution.route.accounting_certified,null);
+    }
     if(slice==='full05'){
       const authority=record.reads['current-source/freeze'].body.parameter_authority.code_fixed;
       assert.equal(authority.hash_scope,'SOURCE_CODE_SHA256');assert.equal(authority.code_digest,fact.source_digest);

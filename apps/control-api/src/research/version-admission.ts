@@ -3,7 +3,7 @@ import type { PortalUser } from "../domain";
 import { IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST, IMPORTED_ALPHA_ADAPTER_ID, IMPORTED_ALPHA_PROFILE } from "./imported-alpha.profile";
 import { P04_DELTA_ADAPTER_CONTRACT_DIGEST, P04_DELTA_ADAPTER_ID, P04_DELTA_ALPHA_ID, P04_DELTA_ALPHA_VERSION_ID } from "./p04-delta.binding";
 import type { ResearchMetadataRepository } from "./repository";
-import {isFull03DeltaBinding} from "./full03-delta.binding";
+import {isIndexedDeltaBinding} from "./full06-delta.binding";
 
 type Version = NonNullable<Awaited<ReturnType<ResearchMetadataRepository["loadRunAdapterEligibility"]>>>;
 type Code =
@@ -49,7 +49,7 @@ export function researchRunVersionPrecheck(
   if (version.lifecycleState !== "ACTIVE") {
     return deny("RESEARCH_RUN_ALPHA_NOT_ACTIVE", "The bound AlphaVersion is not active.");
   }
-  if (!isFull03DeltaBinding(version) && (!version.binding || version.binding.adapterId !== P04_DELTA_ADAPTER_ID ||
+  if (!isIndexedDeltaBinding(version) && (!version.binding || version.binding.adapterId !== P04_DELTA_ADAPTER_ID ||
       version.binding.contractDigest !== P04_DELTA_ADAPTER_CONTRACT_DIGEST ||
       version.alphaId !== P04_DELTA_ALPHA_ID || version.alphaVersionId !== P04_DELTA_ALPHA_VERSION_ID)) {
     return deny("RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE", "No installed durable executor is bound to this active AlphaVersion.");

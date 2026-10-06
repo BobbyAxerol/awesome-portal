@@ -455,7 +455,7 @@ export interface ResearchPortalAdmission {
     clock_basis?: "OBSERVED_SOURCE_LOCAL_DATE_V1";
     calendar_authority?: "NOT_PUBLISHED";
     warmup_semantics?: "LAST_N_OBSERVED_PREDECESSORS_V1";
-    account_model?: "GENERIC_SIGNAL_NOTIONAL_RESEARCH_NOT_VN_VENUE";
+    account_model?: "GENERIC_SIGNAL_NOTIONAL_RESEARCH_NOT_VN_VENUE" | "QUANTBT_PERCENT_EQUITY_V1";
   }>;
   note: "PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE";
 }

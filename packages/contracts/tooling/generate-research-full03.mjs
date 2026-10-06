@@ -9,7 +9,7 @@ const table=JSON.parse(readFileSync(new URL("apps/portal/registry/research-execu
 // Applied FULL03 SQL remains reproducible after later recipes reuse its adapter.
 const full=table.recipes.filter(r=>r.descriptor.schema_version==="research.full03-delta-profile.v1");
 const indexed=table.recipes.filter(r=>r.source_requirement==="FULL03_IMMUTABLE_DELTA_BINDING");
-const historicalRecipes=table.recipes.filter(r=>!["research.full04-delta-profile.v1","research.full05-imported-profile.v1"].includes(r.descriptor.schema_version));
+const historicalRecipes=table.recipes.filter(r=>!["research.full04-delta-profile.v1","research.full05-imported-profile.v1","research.full06-delta-profile.v1"].includes(r.descriptor.schema_version));
 const canonical=v=>Array.isArray(v)?v.map(canonical):v&&typeof v==="object"
   ?Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])])):v;
 const hash=v=>createHash("sha256").update(JSON.stringify(canonical(v))).digest("hex");

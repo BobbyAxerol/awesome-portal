@@ -26,6 +26,7 @@ const {Pool}=require('pg'),p=new Pool({connectionString:process.env.DATABASE_URL
     retained_import_digest,md5(summary::text) AS summary_md5 FROM research.current_source_seals_v1) x),
  'users_md5',(SELECT md5(string_agg(user_id||':'||status||':'||session_version::text||':'||must_change_password::text,',' ORDER BY user_id)) FROM portal_users),
  'legacy_av_md5',(SELECT md5(coalesce(string_agg(to_jsonb(v)::text,',' ORDER BY v.workspace_id,v.alpha_version_id),'')) FROM research.alpha_versions v WHERE alpha_version_id='av_delta_rsi_polynomial_alpha_1_0_0'),
+ 'indexed_av_md5',(SELECT md5(coalesce(string_agg(to_jsonb(v)::text,',' ORDER BY v.workspace_id,v.alpha_version_id),'')) FROM research.alpha_versions v WHERE alpha_version_id='av_delta_rsi_polynomial_alpha_1_0_1'),
  'alpha_pointer_md5',(SELECT md5(coalesce(string_agg(workspace_id||':'||alpha_id||':'||coalesce(active_version_id,''),',' ORDER BY workspace_id,alpha_id),'')) FROM research.alphas)
 ) AS data\`);process.stdout.write(JSON.stringify(r.rows[0].data))})().finally(()=>p.end()).catch(()=>{process.exitCode=1});`]).trim());
   const index=JSON.parse(docker(['exec',api,'python','-c',
@@ -59,17 +60,38 @@ async function previewProbe(enabled,slice='full03',home){
     const atlas=await call('GET','/api/v1/research/quantbt/atlas');
     const registry=JSON.parse(readFileSync(join(ROOT,'apps/portal/registry/research-execution-recipes.v1.json')));
     const exactIds=registry.recipes.filter(r=>r.descriptor.schema_version===`research.${slice}-delta-profile.v1`).map(r=>r.profile_id);
-    assert.equal(exactIds.length,slice==='full04'?35:28);
+    assert.equal(exactIds.length,slice==='full06'?63:slice==='full04'?35:28);
     assert.equal(atlas.portal_admission.profiles.filter(r=>exactIds.includes(r.profile_id)).length,enabled?exactIds.length:0);
     for(const timeframe of ['1m','5m','15m','30m','1h','4h','1d']){
-      const query=new URLSearchParams({alpha_id:'delta-rsi-polynomial-alpha',alpha_version_id:'av_delta_rsi_polynomial_alpha_1_0_1',
+      const query=new URLSearchParams({alpha_id:'delta-rsi-polynomial-alpha',alpha_version_id:slice==='full06'?'av_delta_rsi_polynomial_alpha_1_0_2':'av_delta_rsi_polynomial_alpha_1_0_1',
         dataset_id:'crypto-binance-1m',symbol:'BTCUSDT',timeframe});
       const options=await call('GET','/api/v1/research/runs/setup-options?'+query);
       const active=options.profiles.filter(p=>p.state==='ENABLED'&&exactIds.includes(p.profile_id));
-      assert.equal(active.length,enabled?(slice==='full04'?5:4):0);
+      assert.equal(active.length,enabled?(slice==='full06'?9:slice==='full04'?5:4):0);
       for(const profile of active)assert.equal(profile.budget.qualification,'PRODUCT_RUN_QUALIFIED');
+      if(slice==='full06')for(const profile of active){
+        assert.equal(profile.execution_route,'pct_equity');
+        assert.equal(profile.account_model,'QUANTBT_PERCENT_EQUITY_V1');
+        assert.equal(profile.account.allocation_unit,'EQUITY_FRACTION');
+        assert.equal(profile.account.alloc_per_trade,0.1);
+      }
       if(slice==='full04')assert.equal(options.profiles.filter(p=>p.state==='ENABLED'&&!exactIds.includes(p.profile_id)).length,4,
         'FULL03_PREDECESSOR_RECIPES_STAY_ENABLED');
+    }
+    if(slice==='full06'&&enabled){
+      const facts=privateJson(join(home,'qualified-products-summary.json')).facts;
+      assert.equal(facts.length,63);
+      for(const fact of facts){
+        const spec=structuredClone(privateJson(join(home,fact.private_receipt)).run.requested_spec);
+        spec.client={engine_release_id:atlas.atlas.current_release.release_id,config_digest:atlas.atlas.current_release.config_digest};
+        const estimate=await call('POST','/api/v1/research/datasets/declaration-estimates',{requested_spec:spec});
+        assert.equal(estimate.ready_for_preflight,true,'PERCENT_EQUITY_PREVIEW_CONDITIONS:'+fact.profile_id);
+        assert.equal(estimate.profile_id,fact.profile_id);
+        if(['p10.delta-pct-equity-wfo-temporal-1h.v1','p10.delta-pct-equity-three-window-optimized-4h.v1','p10.delta-pct-equity-mode5-global-1d.v1'].includes(fact.profile_id)){
+          const preflight=await call('POST','/api/v1/research/preflights',{requested_spec:spec});
+          assert.equal(preflight.may_create_run,true,'PERCENT_EQUITY_PREVIEW_MAY_CREATE:'+fact.profile_id);
+        }
+      }
     }
     if(slice==='full04'&&enabled){
       const facts=privateJson(join(home,'qualified-products-summary.json')).facts.filter(f=>f.timeframe==='1h');
@@ -84,19 +106,21 @@ async function previewProbe(enabled,slice='full03',home){
   }finally{await call('POST','/api/auth/logout',{});}
 }
 export async function runPreviewReceipt(home,action,preserveConcurrentWebImage,slice='full03'){
-  assert(['full03','full04'].includes(slice),'EXACT_RECIPE_SLICE');
+  assert(['full03','full04','full06'].includes(slice),'EXACT_RECIPE_SLICE');
   home=validateHome(home);assert(home.endsWith('/'+slice),'EXACT_PRIVATE_PROOF_HOME');
   assert(['before','enabled','disabled','after'].includes(action),'EXPLICIT_PREVIEW_PROBE_REQUIRED');
   const path=join(home,`preview-${action}.json`);assert(!existsSync(path),'PRIOR_PREVIEW_EVIDENCE_MUST_NOT_BE_OVERWRITTEN');
   if(action==='enabled'||action==='disabled'){
     const result=await previewProbe(action==='enabled',slice,home);savePrivate(path,result);
     console.log(JSON.stringify({passed:true,action,external_execution_calls:0,setup_checks:7,
-      preflight_checks:slice==='full04'&&action==='enabled'?5:0}));
+      preflight_checks:action==='enabled'?(slice==='full06'?3:slice==='full04'?5:0):0,
+      conditions_checks:action==='enabled'&&slice==='full06'?63:0}));
   }else{
     const result=snapshot();
     if(action==='after'){
       const before=privateJson(join(home,'preview-before.json'));
       for(const key of ['seals','users_md5','legacy_av_md5','alpha_pointer_md5','index'])assert.deepEqual(result[key],before[key],'PREVIEW_CUSTODY_CHANGED:'+key);
+      if(slice==='full06')assert.equal(result.indexed_av_md5,before.indexed_av_md5,'PREVIEW_INDEXED_NOTIONAL_AV_CHANGED');
       if(preserveConcurrentWebImage===undefined){
         assert.equal(result.web_image_id,before.web_image_id,'PREVIEW_CUSTODY_CHANGED:web_image_id');
       }else{
