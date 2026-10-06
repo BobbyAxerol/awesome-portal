@@ -18,6 +18,7 @@ import { selectedTrialPresentation } from "../src/research/selected-trial-presen
 import { retainedFinalAudit } from "../src/research/report-core-v2";
 import { ResearchCurrentSourceSplitResponseSchema } from "../src/research/current-source.contract";
 import { claimStrip,searchContract } from "../src/research/current-source-facts";
+import { executionRecipes } from "../src/research/execution-recipes";
 
 const original = JSON.parse(gunzipSync(readFileSync(join(__dirname, "research-w5b-real-replay.fixture.json.gz"))).toString("utf8"));
 const scope = { workspaceId: "full02-unit-workspace", actorUserId: "full02-unit-user" };
@@ -93,6 +94,30 @@ function protocol() {
 }
 
 describe("FULL-02 exact retained semantics (unit only)", () => {
+  it.each(executionRecipes.filter(row=>row.source_requirement==="FULL03_IMMUTABLE_DELTA_BINDING"
+    && row.adapter_kind==="DELTA_THREE_WINDOW_OPTIMIZED"))("checks Three calibration endpoints with $profile_id's native interval",row=>{
+    const f=structuredClone(original),p=protocol();
+    const descriptor=row.descriptor as {source_clock:{bar_interval_ms:number};current_source:{source_adapter_id:string;profile_id:string}};
+    const interval=descriptor.source_clock.bar_interval_ms;
+    for(const [index,key] of (["is","oos","holdout"] as const).entries()) {
+      p.windows[key]={start_utc_ms:index*interval,end_exclusive_utc_ms:(index+1)*interval,bar_count:1};
+      p.window_series[key][0]!.at_utc_ms=index*interval;
+    }
+    p.independent_holdout={...p.independent_holdout,...p.windows.holdout,
+      selected_params_digest:sha256ResearchJson(f.summary.selection.parameters)};
+    f.rows.FOLD=f.rows.FOLD.slice(0,1);f.table_rows.FOLD=1;
+    Object.assign(f.rows.FOLD[0].payload,{train_start_utc_ms:0,train_end_utc_ms:0,
+      test_start_utc_ms:interval,test_end_utc_ms:interval});
+    f.summary.protocol_disclosure=p;
+    f.summary.source_facts.search.optimization_schedule="global";
+    f.summary.source_facts.claims.oos_used_for_selection=true;
+    if(f.summary.counts) f.summary.counts.folds=1;
+    const input={profileId:descriptor.current_source.profile_id,sourceAdapterId:descriptor.current_source.source_adapter_id,
+      tableRows:f.table_rows,summary:f.summary};
+    expect(()=>assertFull02SealConsistency(input,rowsForCheck(f))).not.toThrow();
+    f.rows.FOLD[0].payload.test_end_utc_ms++;
+    expect(()=>assertFull02SealConsistency(input,rowsForCheck(f))).toThrow();
+  });
   it("serves the one native Three Window calibration fold without widening historical WFO bounds",async()=>{
     const f=structuredClone(original);
     f.rows.FOLD=f.rows.FOLD.slice(0,1);f.table_rows.FOLD=1;

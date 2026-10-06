@@ -31,8 +31,7 @@
 
 import { z } from "zod";
 import { POOL_FREEZE_CLOCK_ABSENT } from "./p11-stage-events";
-import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
-import { DELTA_PER_FOLD_DECAY_PROFILE } from "./full02.profiles";
+import { currentSourceRetainedMethod } from "./current-source-profile";
 
 import type { CurrentSourceFacts, CurrentSourceFoldFacts, CurrentSourceTrialFacts } from "./current-source.payload";
 import { RS02_ROW_PREDATES_FACTS, RS02_SEAL_PREDATES_SOURCE_FACTS, WALK_FORWARD_HAS_NO_CONSTRAINTS } from "./current-source-facts";
@@ -195,15 +194,14 @@ export function searchPool(input: {
   // QuantBT's native FOLD token identifies an outer study, while its
   // candidate objective was evaluated on INNER validation. Name that public
   // scope only for the exact admitted pair and retained study/fold join.
-  const causalPair = input.sourceAdapterId === DELTA_CAUSAL_INNER_PROFILE.current_source.source_adapter_id
-    && input.sourceProfileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id;
+  const method = currentSourceRetainedMethod(input.sourceProfileId,input.sourceAdapterId);
+  const causalPair = method === "CAUSAL_INNER";
   const retainedInnerStudies = pooled.length > 0 && pooled.every(candidate => candidate.facts !== undefined
     && candidate.facts.study_id !== null && candidate.facts.fold_scope.fold_id !== null
     && folds.some(fold => fold.foldId === candidate.facts!.fold_scope.fold_id
       && fold.selection?.scope === "OUTER_FOLD_SELECTION"
       && fold.selection.study_id === candidate.facts!.study_id));
-  const decayPair = input.sourceAdapterId === DELTA_PER_FOLD_DECAY_PROFILE.current_source.source_adapter_id
-    && input.sourceProfileId === DELTA_PER_FOLD_DECAY_PROFILE.current_source.profile_id;
+  const decayPair = method === "PER_FOLD_DECAY";
   const reevaluationScope = (causalPair || decayPair) && perFoldStudies && nativeScope === "FOLD" && retainedInnerStudies
     ? "PER_FOLD_STUDY" as const : nativeScope;
 

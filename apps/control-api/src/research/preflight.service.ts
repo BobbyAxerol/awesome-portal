@@ -308,9 +308,9 @@ export class ResearchPreflightService {
         effectiveBinding.timezone !== binding.timezone ||
         effectiveBinding.calendar_policy !== binding.calendar_policy ||
         effectiveBinding.closed_bar_policy !== binding.closed_bar_policy ||
-        // New observed-date custody is one binding, not independently valid
-        // index documents for different snapshots. Legacy crypto has no such field.
-        binding.closed_bar_policy === "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1" && (
+        // One index custody across all three documents. Historical crypto
+        // remains unindexed; indexed UTC and observed-date grains cannot mix.
+        (binding.provenance !== undefined || effectiveBinding.provenance !== undefined) && (
           snapshot.closed_bar_policy !== binding.closed_bar_policy || snapshot.timezone !== binding.timezone
           || canonicalResearchJson(effectiveBinding.provenance) !== canonicalResearchJson(binding.provenance)
           || Object.entries(binding.provenance!).some(([key, value]) => snapshot.provenance[key] !== value)) ||

@@ -226,6 +226,15 @@ export const VnObservedProvenanceSchema = z.object({
 export const VnObservedSourceObservationSchema = VnObservedProvenanceSchema.extend({
   dataset_id: z.literal("vn-stock-daily"), symbol: z.literal("FPT"), timeframe: z.literal("1d"),
 }).strict();
+/** Additive crypto index custody; historical unindexed manifests stay valid. */
+export const FixedUtcProvenanceSchema = z.object({
+  clock_basis: z.literal("UTC_FIXED_INTERVAL_OPEN_TIME_V1"), source_timezone: z.literal("UTC"),
+  metadata_index_revision: Digest, metadata_index_source_manifest_digest: Digest,
+  metadata_index_as_of_utc_ms: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  warmup_semantics: z.literal("FIXED_INTERVAL_PREDECESSORS_V1"),
+  warmup_start_utc_ms: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+}).strict();
+const IndexedSourceProvenanceSchema = z.union([VnObservedProvenanceSchema, FixedUtcProvenanceSchema]);
 
 const PrivateDatasetBindingSchema = z.object({
   schema_version: z.literal("research.dataset-binding.v1"),
@@ -241,11 +250,12 @@ const PrivateDatasetBindingSchema = z.object({
   timezone: z.string().min(1).max(128),
   calendar_policy: z.string().min(1).max(128),
   closed_bar_policy: z.enum(["CLOSED_BARS_ONLY", "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"]),
-  provenance: VnObservedProvenanceSchema.optional(),
+  provenance: IndexedSourceProvenanceSchema.optional(),
 }).strict().refine(value => value.closed_bar_policy === "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"
   ? value.dataset_id === "vn-stock-daily" && value.symbol === "FPT" && value.timeframe === "1d"
-    && value.timezone === "Asia/Ho_Chi_Minh" && value.provenance !== undefined
-  : value.provenance === undefined, "Observed-date binding is exact source qualified, never crypto closed-bar authority.");
+    && value.timezone === "Asia/Ho_Chi_Minh" && VnObservedProvenanceSchema.safeParse(value.provenance).success
+  : value.provenance === undefined || value.timezone === "UTC" && FixedUtcProvenanceSchema.safeParse(value.provenance).success,
+  "Index provenance must match its exact source clock, never borrow another market's calendar.");
 
 const PrivateResourceEstimateSchema = z.object({
   schema_version: z.literal("research.resource-estimate.v1"),
@@ -371,14 +381,15 @@ const PrivateEffectiveSpecSchema = z.object({
     timezone: z.string().min(1).max(128),
     calendar_policy: z.string().min(1).max(128),
     closed_bar_policy: z.enum(["CLOSED_BARS_ONLY", "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"]),
-    provenance: VnObservedProvenanceSchema.optional(),
+    provenance: IndexedSourceProvenanceSchema.optional(),
     columns: z.array(z.string().min(1).max(64)).min(1).max(16),
     warmup_bars: z.number().int().nonnegative(),
     range_start_utc_ms: z.number().int().nonnegative(),
     range_end_exclusive_utc_ms: z.number().int().nonnegative(),
   }).strict().refine(value => value.closed_bar_policy === "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"
-    ? value.timezone === "Asia/Ho_Chi_Minh" && value.provenance !== undefined
-    : value.provenance === undefined, "Observed effective binding must retain source qualification."),
+    ? value.timezone === "Asia/Ho_Chi_Minh" && VnObservedProvenanceSchema.safeParse(value.provenance).success
+    : value.provenance === undefined || value.timezone === "UTC" && FixedUtcProvenanceSchema.safeParse(value.provenance).success,
+    "Indexed effective binding must retain its exact source-clock qualification."),
   topology: PrivateTopologySchema,
   optimization: z.object({
     mode: Identifier,

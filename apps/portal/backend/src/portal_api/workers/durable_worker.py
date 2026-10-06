@@ -36,6 +36,7 @@ from portal_api.domain.research_delta_wfo_profile import (
 from portal_api.domain.research_run_producer import ResearchRunProducerRequest
 from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE_ID
 from portal_api.domain.research_full02_profiles import DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, full02_profile_enabled
+from portal_api.domain.research_full03_profiles import full03_recipe, full03_profile_enabled
 from portal_api.domain.research_imported_alpha_profile import IMPORTED_ALPHA_CPU_SECONDS
 from portal_api.domain.research_whatif_profile import WHATIF_CPU_SECONDS
 from portal_api.services.artifact_store import ContentAddressedArtifactStore
@@ -331,19 +332,25 @@ class DurableQuantWorker:
                 )
             if is_delta_wfo and research_request.research.execution_profile_id in {DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID} and not full02_profile_enabled(research_request.research.execution_profile_id):
                 raise _DeltaWfoProfileUnavailable("FULL-02 exact profile is not enabled")
+            full03_row = full03_recipe(research_request.research.execution_profile_id, research_request.research.execution_profile_digest) if is_delta_wfo and research_request.research.is_full03 else None
+            if full03_row and not full03_profile_enabled(research_request.research.execution_profile_id):
+                raise _DeltaWfoProfileUnavailable("FULL-03 exact profile is not enabled")
             # Research preview only: a long WFO declares its admitted trial
             # count and the preview child CPU cap. Off, both stay locked.
             wfo_trials = DELTA_WFO_OPTUNA_TRIALS
             wfo_cpu_cap = DELTA_WFO_CPU_SECONDS
             if is_delta_wfo and not is_whatif:
                 try:
-                    if research_request.research.execution_profile_id in {DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_ID}:
+                    if research_request.research.execution_profile_id in {DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_ID} or (full03_row and full03_row["descriptor"]["optimization_schedule"] != "global"):
                         planner = getattr(self._research_executor, "causal_planned_trials", None)
                         if not callable(planner):
                             raise _DeltaWfoProfileUnavailable("Causal executor cannot bind its trial count to the immutable snapshot")
                         wfo_trials = await asyncio.to_thread(planner, research_request)
                         from portal_api.domain.research_execution_recipes import execution_recipe
                         wfo_cpu_cap = execution_recipe(research_request.research.execution_profile_id)["budgets"]["cpu_seconds"]
+                    elif full03_row:
+                        wfo_trials = full03_row["public_profile"]["trial_default"]
+                        wfo_cpu_cap = full03_row["budgets"]["cpu_seconds"]
                     elif research_request.research.is_three_window_optimized:
                         from portal_api.domain.research_execution_recipes import execution_recipe
                         recipe = execution_recipe(DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID)

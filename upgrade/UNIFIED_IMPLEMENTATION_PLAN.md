@@ -8076,7 +8076,7 @@ S02 calendar/presets and Claude receipts preserved, not retaken by this plan.
 | --- | --- | --- |
 | FULL-01 | Shared versioned recipe table, common admission authority, bounded budgets/quota and historic compatibility | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-01) · BACKEND_DELIVERED / NO_RECIPE_OPENED · [Receipt/handoff](./research_loop/evidence/P10/FULL_01_SHARED_RECIPES_2026-10-05.md) |
 | FULL-02 | Mode 1 missing schedule + optimized Three Window/global, full retained/read chain | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-02) · BACKEND_DELIVERED / TWO_EXACT_RECIPES_PRODUCT_RUN_QUALIFIED / RESEARCH_PREVIEW_ENABLED · [Proof, rollback, cleanup and Claude handoff](./research_loop/evidence/P10/FULL_02_MODE1_VERTICAL_2026-10-06.md) |
-| FULL-03 | All actual indexed timeframes, source clocks/warmup and immutable Delta declaration extension | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-03) · PLANNED |
+| FULL-03 | All actual indexed timeframes, source clocks/warmup and immutable Delta declaration extension | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-03) · BACKEND_DELIVERED / 28_EXACT_RECIPES_PRODUCT_RUN_QUALIFIED / RESEARCH_PREVIEW_ENABLED · [Delivery/rollback/custody/cleanup/Claude handoff](./research_loop/evidence/P10/FULL_03_INDEXED_TIMEFRAMES_2026-10-06.md), [immutable product proof](./research_loop/evidence/P10/FULL_03_PRODUCT_QUALIFICATION_2026-10-06.md) |
 | FULL-04 | All other valid optimizer pairs, mode-native readers and measured slow-mode limits | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-04) · PLANNED |
 | FULL-05 | Confined imported Alpha execution on compatible qualified recipes | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-05) · PLANNED |
 | FULL-06 | Remaining route families with exact inputs/cost/claims; staged batch order, no Cartesian mode/route invention | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-06) · PLANNED |
@@ -8118,3 +8118,23 @@ are explicitly handed to Claude, not claimed as a signed/product-UI release.
 No remote push, dev/main/production change. C4 owned-cell teardown/identity
 revocation completed, proof volumes retained. Next proposed backend: FULL-03.
 [Implementation, gates, proof hashes and handoff](./research_loop/evidence/P10/FULL_02_MODE1_VERTICAL_2026-10-06.md).
+
+FULL-03 addendum, 2026-10-06 (Bobby approved): **BACKEND_DELIVERED /
+28_EXACT_RECIPES_PRODUCT_RUN_QUALIFIED / RESEARCH_PREVIEW_ENABLED** supersedes
+the earlier next-stage/planning notes, without starting FULL04–06. Actual
+BTCUSDT/perpetual index/reader proof opens1m/5m/15m/30m/1h/4h/1d through a new
+immutable Delta AV1.0.1 and exact global/causal/decay/Three recipes. Each has
+ordinary P08→P10→confined QuantBT1.1.1→P05→eight200 reads, five current-source
+AVAILABLE, custody/Stage4 MATCH, RCmissing0 and negative cursor/workspace proof.
+300 target-bar warmup,100k planner ceiling, observed clocks and engine folds
+remain authority. Dense1m storage and explicitly sampled display fit existing
+manifest/payload budgets without dropping raw retained data. Append-only098–100
+preserve old recipe/AV/seal/index bytes and immutable qualification history.
+Preview28 recipes/seven setup checks, flag-off56 retained reads+create409,
+20 prior seal/account/AV/index custody and test identity/cell cleanup pass.
+Claude's independent S02 commit `a3b4eabd` and frontend image are preserved;
+Codex changed no frontend file. FE/browser receipt remains Claude's named
+handoff, not a backend release claim. No remotes, dev/main, Execution or prod.
+[Delivery, tests, hashes/images, rollback/C4 and generated-type handoff](./research_loop/evidence/P10/FULL_03_INDEXED_TIMEFRAMES_2026-10-06.md),
+[immutable28-run proof](./research_loop/evidence/P10/FULL_03_PRODUCT_QUALIFICATION_2026-10-06.md).
+Next recommendation: Bobby approve FULL04; no unrequested stage started.

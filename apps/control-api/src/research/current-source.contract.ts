@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import {currentSourceRecipePairs} from "./execution-recipes";
 import { ResearchRunDeclarationSchema } from "./run-declaration.contract";
 import { ResearchSamplerEvidenceSchema } from "./sampler-evidence.contract";
 import { SelectedTrialPresentationSchema } from "./selected-trial-presentation";
@@ -122,8 +123,8 @@ export const ResearchCurrentSourceEvidenceSeriesQuerySchema = ResearchCurrentSou
  * with the signal-notional profile (or vice versa).
  */
 const ProvenanceBaseSchema = z.object({
-  source_adapter_id: z.enum(["rs02.quantbt-advanced-wfo.v1", "rs02.quantbt-signal-notional-wfo.v1", "rs02.quantbt-signal-notional-causal-inner.v1", "full02.quantbt-signal-notional-per-fold-decay.v1", "full02.quantbt-signal-notional-three-window.v1"]),
-  profile_id: z.enum(["rs02.delta-wfo-global.v1", "rs02.delta-signal-notional-wfo.v1", "rs02.delta-signal-notional-causal-inner.v1", "full02.delta-signal-notional-per-fold-decay.v1", "full02.delta-signal-notional-three-window.v1"]),
+  source_adapter_id: z.enum(["rs02.quantbt-advanced-wfo.v1",...currentSourceRecipePairs.map(r=>r.source_adapter_id)]),
+  profile_id: z.enum(["rs02.delta-wfo-global.v1",...currentSourceRecipePairs.map(r=>r.profile_id)]),
   engine_version: z.literal("1.1.1"),
   source_manifest_digest: DigestSchema,
   source_transform_digest: DigestSchema,
@@ -139,7 +140,8 @@ const ProvenanceSchema = ProvenanceBaseSchema.superRefine((value, context) => {
     || (value.source_adapter_id === "rs02.quantbt-signal-notional-wfo.v1" && value.profile_id === "rs02.delta-signal-notional-wfo.v1")
     || (value.source_adapter_id === "rs02.quantbt-signal-notional-causal-inner.v1" && value.profile_id === "rs02.delta-signal-notional-causal-inner.v1")
     || (value.source_adapter_id === "full02.quantbt-signal-notional-per-fold-decay.v1" && value.profile_id === "full02.delta-signal-notional-per-fold-decay.v1")
-    || (value.source_adapter_id === "full02.quantbt-signal-notional-three-window.v1" && value.profile_id === "full02.delta-signal-notional-three-window.v1");
+    || (value.source_adapter_id === "full02.quantbt-signal-notional-three-window.v1" && value.profile_id === "full02.delta-signal-notional-three-window.v1")
+    || currentSourceRecipePairs.some(p=>p.source_adapter_id===value.source_adapter_id&&p.profile_id===value.profile_id);
   if (!paired) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["profile_id"], message: "current-source source adapter and profile must be one admitted pair" });
   }

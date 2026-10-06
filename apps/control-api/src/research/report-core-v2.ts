@@ -24,8 +24,7 @@ import type { ResearchReportFinalAudit, ResearchReportFrozenCoreFailed, Research
 import type { ResearchProgressSnapshot } from "./progress.contract";
 import type { SealedArtifactParts } from "./report.repository";
 import { extremaPreservingSample } from "./run-library.service";
-import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
-import { DELTA_PER_FOLD_DECAY_PROFILE, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE } from "./full02.profiles";
+import { currentSourceRetainedMethod } from "./current-source-profile";
 import { sha256ResearchJson as sha } from "./preflight.service";
 
 export type Availability = {
@@ -264,10 +263,10 @@ export function retainedFinalAudit(
   search: ResearchCurrentSourceSearchResponse,
   replay: ResearchCurrentSourceReplayResponse,
 ): ResearchReportFinalAudit {
-  const causal = freeze.provenance.profile_id === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id
-    && freeze.provenance.source_adapter_id === DELTA_CAUSAL_INNER_PROFILE.current_source.source_adapter_id
+  const method = currentSourceRetainedMethod(freeze.provenance.profile_id,freeze.provenance.source_adapter_id);
+  const causal = method === "CAUSAL_INNER"
     && search.search_contract.optimization_schedule === "per_fold_causal";
-  const decay = freeze.provenance.profile_id === DELTA_PER_FOLD_DECAY_PROFILE.current_source.profile_id
+  const decay = method === "PER_FOLD_DECAY"
     && search.search_contract.optimization_schedule === "per_fold_decay";
   const perFold = causal || decay;
   const target = perFold ? "PER_FOLD_PARAMETER_SELECTIONS" as const : "SINGLE_PARAMETER_SET" as const;
@@ -284,7 +283,7 @@ export function retainedFinalAudit(
     optimizer_reinvoked: null, optimizer_basis: null, source_refs: [], folds: [],
   } : linked;
   const protocol = freeze.protocol_disclosure;
-  if (freeze.provenance.profile_id === DELTA_THREE_WINDOW_OPTIMIZED_PROFILE.current_source.profile_id && protocol) {
+  if (method === "THREE_WINDOW" && protocol) {
     const selectedDigest = sha(search.selection.parameters);
     const exact = protocol.independent_holdout.selected_params_digest === selectedDigest
       && search.protocol_disclosure !== undefined && replay.protocol_disclosure !== undefined
@@ -525,12 +524,12 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
   const folds = [...verdicts.rows].sort((left, right) => left.source_ordinal - right.source_ordinal);
   const schedule = contract.optimization_schedule;
   const params = parameterText(search.selection.parameters);
-  const causalProfile = provenance.profile_id === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id;
-  const decayProfile = provenance.profile_id === DELTA_PER_FOLD_DECAY_PROFILE.current_source.profile_id;
+  const method = currentSourceRetainedMethod(provenance.profile_id,provenance.source_adapter_id);
+  const causalProfile = method === "CAUSAL_INNER";
+  const decayProfile = method === "PER_FOLD_DECAY";
   const perFoldProfile = causalProfile || decayProfile;
   const globalParams = !perFoldProfile && schedule === "global" && params !== null;
-  const causal = causalProfile && provenance.source_adapter_id === DELTA_CAUSAL_INNER_PROFILE.current_source.source_adapter_id
-    && schedule === "per_fold_causal";
+  const causal = causalProfile && schedule === "per_fold_causal";
   const causalParameters = new Map(split.fold_plan.folds.map((fold) => [fold.fold_id,
     causal && fold.causal_selection ? parameterText(fold.causal_selection.parameters)
       : decayProfile && fold.fold_selection ? parameterText(fold.fold_selection.parameters) : null]));

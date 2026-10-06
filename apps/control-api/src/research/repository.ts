@@ -1,4 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
+import {FULL03_DELTA_BINDING} from "./full03-delta.binding";
+import {recipeDigest as sha256ResearchJson,executionRecipe} from "./execution-recipes";
 import { createHash } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 
@@ -199,7 +201,7 @@ interface ExecutionAdapterBindingRow {
   entrypoint: string;
   code_digest: string;
   source_file_ref: string | null;
-  adapter_id: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1" | null;
+  adapter_id: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1" | "full03.delta-rsi.v1" | null;
   contract_digest: string | null;
 }
 
@@ -210,7 +212,7 @@ interface RunProducerRow {
   client_intent_id: string;
   alpha_id: string;
   alpha_version_id: string;
-  execution_adapter_id: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1";
+  execution_adapter_id: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1" | "full03.delta-rsi.v1";
   adapter_contract_digest: string;
   requested_spec_digest: string;
   effective_spec_digest: string;
@@ -224,7 +226,7 @@ interface RunProducerRow {
   worker_attempt_id: string | null;
   lease_epoch: string | number | null;
   portal_receipt: Record<string, unknown> | string | null;
-  execution_profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p10.delta-signal-notional-wfo.v2" | "p10.delta-signal-notional-causal-inner.v1" | "p16.delta-whatif-grid.v1" | "p17.imported-signal-notional.v1" | "p10.vn-stock-daily-observed-fixed.v1" | "p10.delta-signal-notional-per-fold-decay.v1" | "p10.delta-signal-notional-three-window-optimized.v1";
+  execution_profile_id: import("./execution-recipes").ExecutionRecipeId | "p16.delta-whatif-grid.v1" | "p23.delta-pinned-final-audit.v1";
   execution_profile_digest: string | null;
 }
 
@@ -675,7 +677,11 @@ export class ResearchMetadataRepository {
     requireDigest(input.codeDigest, "P04 codeDigest");
     requireText(input.entrypoint, "P04 entrypoint", 512);
     requireText(input.dependencyRef, "P04 dependencyRef", 512);
-    if (input.adapterId !== "p04.delta-rsi.v1") {
+    const full03 = input.adapterId === FULL03_DELTA_BINDING.adapterId;
+    if (input.adapterId !== "p04.delta-rsi.v1" && !(full03 && input.alphaVersionId === FULL03_DELTA_BINDING.alphaVersionId
+      && input.alphaId===FULL03_DELTA_BINDING.alphaId && input.adapterContractDigest===FULL03_DELTA_BINDING.adapterContractDigest
+      && input.codeDigest===FULL03_DELTA_BINDING.codeDigest
+      && sha256ResearchJson(input.declaredContract)===sha256ResearchJson(FULL03_DELTA_BINDING.declaredContract))) {
       throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Only the installed P04 Delta adapter may be bound.", 400);
     }
     requireBoundedObject(input.declaredContract, "P04 declared contract", RESEARCH_DB_BUDGET.maxConfigJsonBytes);
@@ -762,7 +768,7 @@ export class ResearchMetadataRepository {
           throw new ResearchMetadataError("RESEARCH_CONCURRENT_TRANSACTION", "The P04 Alpha activation changed during installation.", 409);
         }
         alphaRow.revision = activated.rows[0].revision;
-      } else if (alphaRow.active_version_id !== input.alphaVersionId) {
+      } else if (alphaRow.active_version_id !== input.alphaVersionId && !full03) {
         throw new ResearchMetadataError(
           "RESEARCH_IMMUTABLE_ALPHA_VERSION_CONFLICT",
           "The P04 Alpha already has a different active version and will not be replaced automatically.",
@@ -1393,7 +1399,7 @@ export class ResearchMetadataRepository {
         isImported: row.is_imported,
         isCurrentActive: row.is_current_active,
         binding: (row.adapter_id === "p04.delta-rsi.v1" ||
-                  row.adapter_id === "p17.imported-signal-notional.v1") &&
+                  row.adapter_id === "p17.imported-signal-notional.v1" || row.adapter_id === "full03.delta-rsi.v1") &&
           typeof row.contract_digest === "string"
           ? {
               alphaId: row.alpha_id, alphaVersionId: row.alpha_version_id,
@@ -1501,7 +1507,7 @@ export class ResearchMetadataRepository {
       const row = result.rows[0];
       if (!row) return null;
       const declaredContract = decodeObject(row.declared_contract, "Research AlphaVersion execution contract");
-      const binding = (row.adapter_id === "p04.delta-rsi.v1" || row.adapter_id === "p17.imported-signal-notional.v1") &&
+      const binding = (row.adapter_id === "p04.delta-rsi.v1" || row.adapter_id === "p17.imported-signal-notional.v1" || row.adapter_id === "full03.delta-rsi.v1") &&
         typeof row.contract_digest === "string"
         ? {
             alphaId: row.alpha_id,
@@ -4886,7 +4892,16 @@ export class ResearchMetadataRepository {
     const vnObserved = input.executionAdapterId === VN_OBSERVED_FIXED_PROFILE.adapter_id &&
       input.adapterContractDigest === VN_OBSERVED_FIXED_PROFILE.adapter_contract_digest &&
       isVnObservedFixedProfile(profileId, profileDigest);
-    if (!p04 && !imported && !vnObserved) {
+    let full03 = false;
+    if(input.executionAdapterId===FULL03_DELTA_BINDING.adapterId){
+      try{
+        const row=executionRecipe(profileId,profileDigest);
+        full03=row.source_requirement==="FULL03_IMMUTABLE_DELTA_BINDING"
+          && input.alphaId===FULL03_DELTA_BINDING.alphaId && input.alphaVersionId===FULL03_DELTA_BINDING.alphaVersionId
+          && input.adapterContractDigest===FULL03_DELTA_BINDING.adapterContractDigest;
+      }catch{full03=false;}
+    }
+    if (!p04 && !imported && !vnObserved && !full03) {
       throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Research execution profile is unsupported.", 400);
     }
     for (const [label, value] of Object.entries({

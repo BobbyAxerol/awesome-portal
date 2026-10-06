@@ -1,0 +1,10 @@
+# FULL03-only qualification custody; never reuse an older cell's data volume.
+volumes:
+  portal-artifacts:
+    name: portal-research-full03-20261006-artifacts
+  portal-postgres-data:
+    name: portal-research-full03-20261006-postgres
+  portal-nats-data:
+    name: portal-research-full03-20261006-nats
+  roadmap-task-board-data:
+    name: portal-research-full03-20261006-roadmap

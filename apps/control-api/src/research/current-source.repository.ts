@@ -24,17 +24,12 @@ import { sha256ResearchJson } from "./preflight.service";
 import { p11StageEvents, type P11StageEvents } from "./p11-stage-events";
 import { ResearchRetainedAnalyticsV2Schema, type ResearchRetainedAnalyticsV2 } from "./retained-analytics-v2.contract";
 import { ResearchAllTimeDistributionsSchema, type ResearchAllTimeDistributions } from "./all-time-distributions.contract";
-import { DELTA_CAUSAL_INNER_PROFILE, DELTA_CAUSAL_INNER_PROFILE_DIGEST } from "./delta-causal-inner.profile";
 import { assertCausalSealConsistency } from "./causal-seal-consistency";
 import { assertFull02SealConsistency } from "./full02-seal-consistency";
-import { DELTA_PER_FOLD_DECAY_PROFILE, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE } from "./full02.profiles";
-import { isCurrentSourceExecutionProfile } from "./current-source-profile";
+import { currentSourceRetainedIntervalMs, currentSourceRetainedMethod, currentSourceRetainedRecipe,
+  isCurrentSourceRetainedPair, isCurrentSourceExecutionProfile } from "./current-source-profile";
 import { MAXIMUM_GUARD_ENDPOINTS, type GuardIndexWitness } from "./applied-temporal-guards";
 import {
-  RS02_ADVANCED_WFO_SOURCE_ADAPTER_ID,
-  RS02_DELTA_WFO_GLOBAL_PROFILE_ID,
-  RS02_SIGNAL_NOTIONAL_PROFILE_ID,
-  RS02_SIGNAL_NOTIONAL_SOURCE_ADAPTER_ID,
   DELTA_WFO_PREVIEW_LONG_LIMITS,
   deltaWfoPreviewLongEnabled,
 } from "./delta-wfo.profile";
@@ -61,19 +56,11 @@ export interface CurrentSourceAppendBatch {
 }
 
 /** RS-02 admits exact historical/global/causal pairs; never a mix. */
-export type CurrentSourceLanePair =
-  | { sourceAdapterId: "rs02.quantbt-advanced-wfo.v1"; profileId: "rs02.delta-wfo-global.v1" }
-  | { sourceAdapterId: "rs02.quantbt-signal-notional-wfo.v1"; profileId: "rs02.delta-signal-notional-wfo.v1" }
-  | { sourceAdapterId: "rs02.quantbt-signal-notional-causal-inner.v1"; profileId: "rs02.delta-signal-notional-causal-inner.v1" }
-  | { sourceAdapterId: "full02.quantbt-signal-notional-per-fold-decay.v1"; profileId: "full02.delta-signal-notional-per-fold-decay.v1" }
-  | { sourceAdapterId: "full02.quantbt-signal-notional-three-window.v1"; profileId: "full02.delta-signal-notional-three-window.v1" };
+export type CurrentSourceLanePair = { sourceAdapterId: string; profileId: string };
 
 export function isCurrentSourceLanePair(sourceAdapterId: unknown, profileId: unknown): boolean {
-  return (sourceAdapterId === RS02_ADVANCED_WFO_SOURCE_ADAPTER_ID && profileId === RS02_DELTA_WFO_GLOBAL_PROFILE_ID)
-    || (sourceAdapterId === RS02_SIGNAL_NOTIONAL_SOURCE_ADAPTER_ID && profileId === RS02_SIGNAL_NOTIONAL_PROFILE_ID)
-    || (sourceAdapterId === DELTA_CAUSAL_INNER_PROFILE.current_source.source_adapter_id && profileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id)
-    || (sourceAdapterId === DELTA_PER_FOLD_DECAY_PROFILE.current_source.source_adapter_id && profileId === DELTA_PER_FOLD_DECAY_PROFILE.current_source.profile_id)
-    || (sourceAdapterId === DELTA_THREE_WINDOW_OPTIMIZED_PROFILE.current_source.source_adapter_id && profileId === DELTA_THREE_WINDOW_OPTIMIZED_PROFILE.current_source.profile_id);
+  return typeof sourceAdapterId === "string" && typeof profileId === "string"
+    && isCurrentSourceRetainedPair(sourceAdapterId,profileId);
 }
 
 export type CurrentSourceSealWrite = CurrentSourceLanePair & {
@@ -566,7 +553,9 @@ export class ResearchCurrentSourceRepository {
       if (input.expectedRetainedImportDigest !== undefined && retainedImportDigest !== input.expectedRetainedImportDigest) {
         throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source retained import digest does not match the accepted batch receipts.", 400);
       }
-      if (input.profileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id) {
+      const method = currentSourceRetainedMethod(input.profileId,input.sourceAdapterId);
+      if (method === "CAUSAL_INNER") {
+        const recipe = currentSourceRetainedRecipe(input.profileId,input.sourceAdapterId)!;
         const pin = await client.query<{ requested_spec: JsonColumn; topology: JsonColumn }>(
           `SELECT preflight.requested_spec, preflight.topology
              FROM research.run_producers producer JOIN research.preflight_manifests preflight
@@ -577,8 +566,8 @@ export class ResearchCurrentSourceRepository {
               AND producer.requested_spec_digest=$5 AND preflight.requested_spec_digest=$5
               AND producer.effective_spec_digest=$6 AND preflight.effective_spec_digest=$6
               AND producer.dataset_binding_digest=$7 AND preflight.dataset_binding_digest=$7 LIMIT 1`,
-          [scope.workspaceId,input.runId,DELTA_CAUSAL_INNER_PROFILE.profile_id,
-            DELTA_CAUSAL_INNER_PROFILE_DIGEST,input.requestedSpecDigest,input.effectiveSpecDigest,input.datasetBindingDigest]);
+          [scope.workspaceId,input.runId,recipe.profile_id,
+            recipe.profile_digest,input.requestedSpecDigest,input.effectiveSpecDigest,input.datasetBindingDigest]);
         if (pin.rowCount !== 1) throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_CONFLICT", "Causal source pins do not match the immutable admission.",409);
         const retained = await client.query<{ table_kind: string; source_ordinal: string | number; source_id: string; payload: JsonColumn }>(
           `SELECT table_kind, source_ordinal, source_id, payload FROM research.current_source_rows_v1
@@ -590,10 +579,11 @@ export class ResearchCurrentSourceRepository {
           payload: asJsonRecord(row.payload,"causal source payload") })), {
           requestedSpec: asJsonRecord(pin.rows[0]!.requested_spec,"causal admitted request"),
           topology: asJsonRecord(pin.rows[0]!.topology,"causal admitted topology"),
+          timeframe: recipe.public_profile.timeframe,
+          intervalMs: currentSourceRetainedIntervalMs(input.profileId,input.sourceAdapterId)!,
         });
       }
-      if (input.profileId === DELTA_PER_FOLD_DECAY_PROFILE.current_source.profile_id
-        || input.profileId === DELTA_THREE_WINDOW_OPTIMIZED_PROFILE.current_source.profile_id) {
+      if (method === "PER_FOLD_DECAY" || method === "THREE_WINDOW") {
         const retained = await client.query<{ table_kind: string; source_ordinal: string | number; source_id: string; payload: JsonColumn }>(
           `SELECT table_kind, source_ordinal, source_id, payload FROM research.current_source_rows_v1
             WHERE workspace_id=$1 AND run_id=$2 AND artifact_revision=$3
@@ -1188,14 +1178,19 @@ export class ResearchCurrentSourceRepository {
     }
     let total = 0;
     // Research preview only: the long WFO seals up to 400 TRIAL rows.
-    const causal = input.profileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id;
-    const decay = input.profileId === DELTA_PER_FOLD_DECAY_PROFILE.current_source.profile_id;
-    const three = input.profileId === DELTA_THREE_WINDOW_OPTIMIZED_PROFILE.current_source.profile_id;
-    const maximumTrials = causal || decay ? 48 : three ? 3 : deltaWfoPreviewLongEnabled(this.config) ? DELTA_WFO_PREVIEW_LONG_LIMITS.max_trials : 64;
+    const method = currentSourceRetainedMethod(input.profileId,input.sourceAdapterId);
+    const causal = method === "CAUSAL_INNER", decay = method === "PER_FOLD_DECAY", three = method === "THREE_WINDOW";
+    const recipe = currentSourceRetainedRecipe(input.profileId,input.sourceAdapterId);
+    const full03 = recipe?.source_requirement === "FULL03_IMMUTABLE_DELTA_BINDING";
+    const foldBounds = recipe?.public_profile.fold_bounds ?? (three ? {min:1,max:1} : null);
+    const maximumTrials = full03 ? "max_total_trials" in recipe.public_profile ? recipe.public_profile.max_total_trials : recipe.public_profile.trial_count.max
+      : causal || decay ? 48 : three ? 3 : deltaWfoPreviewLongEnabled(this.config) ? DELTA_WFO_PREVIEW_LONG_LIMITS.max_trials : 64;
     for (const kind of TABLE_KINDS) {
       const count = input.tableRows[kind];
       if (!Number.isSafeInteger(count) || count < 0 || (kind !== "SELECTION" && count < 1) || (kind === "SELECTION" && count !== 1)
-        || (kind === "TRIAL" && (count < 2 || count > maximumTrials)) || (kind === "CANDIDATE" && count > 64)) {
+        || (kind === "TRIAL" && (count < 2 || count > maximumTrials)) || (kind === "CANDIDATE" && count > (full03 ? maximumTrials : 64))
+        || (full03 && kind === "OBSERVATION" && count > recipe.budgets.planning_max_bars)
+        || (full03 && kind === "FOLD" && (!foldBounds || count < foldBounds.min || count > foldBounds.max))) {
         throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source table counts are invalid.", 400);
       }
       total += count;

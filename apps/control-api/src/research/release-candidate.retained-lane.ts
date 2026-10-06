@@ -31,14 +31,9 @@ import {
 } from "./current-source.payload";
 import type { CurrentSourceSealRow, CurrentSourceTableKind } from "./current-source.repository";
 import { currentSourceReadRevisions } from "./current-source.service";
-import {
-  DELTA_WFO_PROFILE,
-} from "./delta-wfo.profile";
-import { currentSourceExecutionPair, isCurrentSourceExecutionProfile } from "./current-source-profile";
+import { currentSourceExecutionPair, currentSourceRetainedMethod, isCurrentSourceExecutionProfile } from "./current-source-profile";
 import { canonicalResearchJson } from "./preflight.service";
 import { DEFAULT_PARAMETER_BINDING_REGISTRY } from "./parameter-binding.registry";
-import { DELTA_CAUSAL_INNER_PROFILE, DELTA_CAUSAL_INNER_PROFILE_ID } from "./delta-causal-inner.profile";
-import { DELTA_PER_FOLD_DECAY_PROFILE_ID } from "./full02.profiles";
 import { ExactJsonCalculationMemo } from "./exact-json-calculation-memo";
 
 const DIGEST = /^[0-9a-f]{64}$/;
@@ -115,8 +110,9 @@ export function retainedLaneFacts(lane: ReleaseCandidateRetainedLane): RetainedL
   return retainedCalculations.calculate(lane, () => calculateRetainedLaneFacts(lane));
 }
 function calculateRetainedLaneFacts(lane: ReleaseCandidateRetainedLane): RetainedLaneFacts {
-  const causal = lane.executionProfileId === DELTA_CAUSAL_INNER_PROFILE_ID;
-  const decay = lane.executionProfileId === DELTA_PER_FOLD_DECAY_PROFILE_ID;
+  const executionPair = currentSourceExecutionPair(lane.executionProfileId,lane.executionProfileDigest);
+  const method = executionPair && currentSourceRetainedMethod(executionPair.profile_id,executionPair.source_adapter_id);
+  const causal = method === "CAUSAL_INNER", decay = method === "PER_FOLD_DECAY";
   const seal = lane.seal;
   const summary = seal ? CurrentSourceSummarySchema.safeParse(seal.summary) : null;
   const parsed = summary?.success ? summary.data : null;

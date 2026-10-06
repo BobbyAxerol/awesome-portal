@@ -204,6 +204,21 @@ Tests / exit: real run for each newly enabled exact timeframe recipe; adequate
   **every observed/declared timeframe**, not a static five-item allowlist.
   Unindexed/uncovered data stays precisely refused until qualified.
 
+FULL-03 delivery addendum, 2026-10-06: **BACKEND_DELIVERED / 28_EXACT_RECIPES
+PRODUCT_RUN_QUALIFIED / RESEARCH_PREVIEW_ENABLED**. All seven observed indexed
+BTCUSDT/perpetual resolutions (1m/5m/15m/30m/1h/4h/1d) have real ordinary
+P08→P10→QuantBT1.1.1→P05→eight named-read qualification for global, causal,
+decay and optimized Three Window. New immutable AV1.0.1 leaves AV1.0.0,
+kernel, old recipes/seals/index unchanged. 300 target-bar warmup,100k input
+ceiling, source closed/as-of and exact recipe/profile boundaries remain enforced.
+Only dense FULL03 storage batching/display sampling changed; transport200/1MiB
+and core64KiB limits are not widened. Preview activation and flag-off retained
+read/admission rehearsal pass; owned test identities revoked and cell removed.
+[Delivery, failures/fixes, tests/images, custody/rollback, C4 and Claude handoff](./evidence/P10/FULL_03_INDEXED_TIMEFRAMES_2026-10-06.md),
+[immutable 28-run proof](./evidence/P10/FULL_03_PRODUCT_QUALIFICATION_2026-10-06.md).
+No frontend redesign, production or remote push. Native proof is not browser
+acceptance; FULL04 is proposed next, not started by this approval.
+
 <a id="full-04"></a>
 ### FULL-04 — Other optimizer modes, complete retained/read chain
 

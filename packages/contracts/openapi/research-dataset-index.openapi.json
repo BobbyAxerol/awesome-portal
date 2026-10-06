@@ -534,6 +534,48 @@
       }
     },
     "schemas": {
+      "FixedUtcProvenance": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "clock_basis",
+          "source_timezone",
+          "metadata_index_revision",
+          "metadata_index_source_manifest_digest",
+          "metadata_index_as_of_utc_ms",
+          "warmup_semantics",
+          "warmup_start_utc_ms"
+        ],
+        "properties": {
+          "clock_basis": {
+            "const": "UTC_FIXED_INTERVAL_OPEN_TIME_V1"
+          },
+          "source_timezone": {
+            "const": "UTC"
+          },
+          "metadata_index_revision": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "metadata_index_source_manifest_digest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "metadata_index_as_of_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "warmup_semantics": {
+            "const": "FIXED_INTERVAL_PREDECESSORS_V1"
+          },
+          "warmup_start_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        }
+      },
       "RegularSnapshotQuality": {
         "type": "object",
         "additionalProperties": false,
@@ -1372,7 +1414,14 @@
             ]
           },
           "provenance": {
-            "$ref": "#/components/schemas/VnObservedProvenance"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/VnObservedProvenance"
+              },
+              {
+                "$ref": "#/components/schemas/FixedUtcProvenance"
+              }
+            ]
           }
         },
         "allOf": [
@@ -1400,14 +1449,27 @@
                 },
                 "timeframe": {
                   "const": "1d"
+                },
+                "provenance": {
+                  "$ref": "#/components/schemas/VnObservedProvenance"
                 }
               }
             },
             "else": {
-              "not": {
+              "if": {
                 "required": [
                   "provenance"
                 ]
+              },
+              "then": {
+                "properties": {
+                  "timezone": {
+                    "const": "UTC"
+                  },
+                  "provenance": {
+                    "$ref": "#/components/schemas/FixedUtcProvenance"
+                  }
+                }
               }
             }
           }
@@ -1585,7 +1647,14 @@
             "$ref": "#/components/schemas/UtcMilliseconds"
           },
           "provenance": {
-            "$ref": "#/components/schemas/VnObservedProvenance"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/VnObservedProvenance"
+              },
+              {
+                "$ref": "#/components/schemas/FixedUtcProvenance"
+              }
+            ]
           }
         },
         "allOf": [
@@ -1604,14 +1673,27 @@
               "properties": {
                 "timezone": {
                   "const": "Asia/Ho_Chi_Minh"
+                },
+                "provenance": {
+                  "$ref": "#/components/schemas/VnObservedProvenance"
                 }
               }
             },
             "else": {
-              "not": {
+              "if": {
                 "required": [
                   "provenance"
                 ]
+              },
+              "then": {
+                "properties": {
+                  "timezone": {
+                    "const": "UTC"
+                  },
+                  "provenance": {
+                    "$ref": "#/components/schemas/FixedUtcProvenance"
+                  }
+                }
               }
             }
           }

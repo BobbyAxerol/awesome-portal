@@ -93,7 +93,7 @@ describe("one pinned source-qualified VN observed-date profile", () => {
     expect(validate(full02), JSON.stringify(validate.errors)).toBe(true);
     expect(full02.profiles.slice(5).map(profile => profile.profile_id)).toEqual([
       "p10.delta-signal-notional-per-fold-decay.v1", "p10.delta-signal-notional-three-window-optimized.v1"]);
-    expect(document.components.schemas.PortalAdmission.properties.profiles.items.properties.profile_id.enum)
+    expect(document.components.schemas.PortalAdmission.properties.profiles.items.properties.profile_id.enum.slice(0,7))
       .toEqual(full02.profiles.map(profile => profile.profile_id));
   });
   it("pins immutable exact source and generic accounting without claiming a VN calendar", () => {

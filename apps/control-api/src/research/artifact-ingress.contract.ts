@@ -1,5 +1,6 @@
 /** Private P05 worker→Control API artifact authority, never browser input. */
 import { z } from "zod";
+import {currentSourceRecipePairs} from "./execution-recipes";
 
 const Id = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$/);
 const Digest = z.string().regex(/^[0-9a-f]{64}$/);
@@ -104,10 +105,8 @@ const TableRows = z.object({
 export const ResearchCurrentSourceSealIngressSchema = Identity.extend({
   schema_version: z.literal("research.current-source-seal.v1"),
   artifact_revision: z.number().int().positive().max(2_147_483_647),
-  source_adapter_id: z.enum(["rs02.quantbt-signal-notional-wfo.v1", "rs02.quantbt-signal-notional-causal-inner.v1",
-    "full02.quantbt-signal-notional-per-fold-decay.v1", "full02.quantbt-signal-notional-three-window.v1"]),
-  profile_id: z.enum(["rs02.delta-signal-notional-wfo.v1", "rs02.delta-signal-notional-causal-inner.v1",
-    "full02.delta-signal-notional-per-fold-decay.v1", "full02.delta-signal-notional-three-window.v1"]),
+  source_adapter_id: z.enum([currentSourceRecipePairs[0]!.source_adapter_id,...currentSourceRecipePairs.slice(1).map(r=>r.source_adapter_id)]),
+  profile_id: z.enum([currentSourceRecipePairs[0]!.profile_id,...currentSourceRecipePairs.slice(1).map(r=>r.profile_id)]),
   manifest_digest: Digest,
   source_transform_digest: Digest,
   retained_import_digest: Digest,
@@ -121,7 +120,7 @@ export const ResearchCurrentSourceSealIngressSchema = Identity.extend({
     "full02.quantbt-signal-notional-per-fold-decay.v1": "full02.delta-signal-notional-per-fold-decay.v1",
     "full02.quantbt-signal-notional-three-window.v1": "full02.delta-signal-notional-three-window.v1",
   } as const;
-  if (pairs[value.source_adapter_id] !== value.profile_id) {
+  if (!currentSourceRecipePairs.some(p=>p.source_adapter_id===value.source_adapter_id&&p.profile_id===value.profile_id)) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["profile_id"], message: "current-source custody pair is mismatched" });
   }
 });

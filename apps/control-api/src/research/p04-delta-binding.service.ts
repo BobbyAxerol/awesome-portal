@@ -5,6 +5,7 @@ import { Injectable } from "@nestjs/common";
 import { PortalUser } from "../domain";
 import type { ResearchScope } from "./contracts";
 import { P04_DELTA_BINDING } from "./p04-delta.binding";
+import {FULL03_DELTA_BINDING} from "./full03-delta.binding";
 import { ResearchMetadataRepository } from "./repository";
 import { ResearchRunCreateError } from "./run-create.error";
 
@@ -29,6 +30,7 @@ export class ResearchP04DeltaBindingService {
   async install(
     user: PortalUser,
     scope: ResearchScope,
+    installFull03 = false,
   ): Promise<ResearchP04DeltaBindingResponse> {
     if (user.role !== "ADMIN" || user.status !== "ACTIVE" || user.mustChangePassword) {
       throw new ResearchRunCreateError(
@@ -38,6 +40,7 @@ export class ResearchP04DeltaBindingService {
       );
     }
     const installed = await this.repository.ensureP04DeltaBinding(scope, P04_DELTA_BINDING);
+    if(installFull03)await this.repository.ensureP04DeltaBinding(scope,FULL03_DELTA_BINDING);
     return {
       schema_version: "research.p04-delta-binding.v1",
       alpha_id: installed.alphaId,

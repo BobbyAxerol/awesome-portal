@@ -49,6 +49,9 @@ from portal_api.domain.research_full02_profiles import (
     DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST,
     per_fold_decay_controls, full02_profile_enabled,
 )
+from portal_api.domain.research_full03_profiles import (
+    full03_recipe, full03_controls, full03_execution_binding, full03_profile_enabled,
+)
 from portal_api.domain.research_whatif_profile import WHATIF_PROFILE_DIGEST, WHATIF_PROFILE_ID
 from portal_api.domain.research_vn_observed_fixed_profile import vn_source_instant, vn_observed_fixed_enabled
 from portal_api.serialization import canonicalize
@@ -341,8 +344,9 @@ class ResearchRunProducerExecutor:
         """Plan against the exact immutable snapshot before opening P11."""
         from portal_api.adapters.quantbt import QuantBTGateway
         research = request.research
-        decay = research.execution_profile_id == DELTA_PER_FOLD_DECAY_PROFILE_ID
-        if research.execution_profile_id not in {DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_ID}:
+        row = full03_recipe(research.execution_profile_id, research.execution_profile_digest) if research.is_full03 else None
+        decay = row["descriptor"]["optimization_schedule"] == "per_fold_decay" if row else research.execution_profile_id == DELTA_PER_FOLD_DECAY_PROFILE_ID
+        if (row and row["descriptor"]["optimization_schedule"] not in {"per_fold_decay", "per_fold_causal"}) or (not row and research.execution_profile_id not in {DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_ID}):
             raise ResearchRunProducerError("causal trial planning requires its immutable profile")
         identity, _ = self.snapshots.describe(research.snapshot_id)
         frame_path = self.snapshots.snapshot_path(research.snapshot_id) / "frame.parquet"
@@ -353,12 +357,23 @@ class ResearchRunProducerExecutor:
         wf = research.requested_spec["walk_forward"]
         start = _utc_timestamp(wf["start"], label="walk-forward start")
         end = _utc_timestamp(wf["end_exclusive"], label="walk-forward end")
+        if row:
+            interval = pd.Timedelta(milliseconds=row["descriptor"]["source_clock"]["bar_interval_ms"])
+            warmup = index[(index >= start - 300 * interval) & (index < start)]
+            if len(warmup) != 300 or len(index[(index >= start - 300 * interval) & (index < end)]) > row["budgets"]["planning_max_bars"]:
+                raise ResearchRunProducerError("FULL-03 immutable snapshot lacks 300 target-bar predecessors or exceeds its bar budget")
+        controls = full03_controls(research.requested_spec, row) if row else per_fold_decay_controls(research.requested_spec) if decay else causal_inner_controls(research.requested_spec)
+        trial_count = row["public_profile"]["trial_default"] if row else 3
         plan = QuantBTGateway().walk_forward_fold_plan(index=index[(index >= start) & (index < end)], config_fields={
-            **(per_fold_decay_controls(research.requested_spec) if decay else causal_inner_controls(research.requested_spec)), "split_mode": wf["split_mode"],
-            "optimization_mode": "mode_1_decay", "optimization_schedule": "per_fold_decay" if decay else "per_fold_causal", "optuna_trials": 3})
-        if not 2 <= len(plan) <= 16 or not decay and any(not 2 <= len(fold["inner"] or []) <= 16 for fold in plan):
+            **controls, "split_mode": wf["split_mode"],
+            "optimization_mode": "mode_1_decay", "optimization_schedule": "per_fold_decay" if decay else "per_fold_causal", "optuna_trials": trial_count})
+        outer = row["descriptor"]["fold_bounds"] if row else {"min": 2, "max": 16}
+        inner = row["descriptor"].get("inner_constraints", {}).get("fold_bounds", {"min": 2, "max": 16}) if row else {"min": 2, "max": 16}
+        if not outer["min"] <= len(plan) <= outer["max"] or not decay and any(not inner["min"] <= len(fold["inner"] or []) <= inner["max"] for fold in plan):
             raise ResearchRunProducerError("causal inner immutable tape exceeds profile fold bounds")
-        return 3 * len(plan)
+        if row and trial_count * len(plan) > row["descriptor"]["max_total_trials"]:
+            raise ResearchRunProducerError("FULL-03 total study trials exceed the exact recipe budget")
+        return trial_count * len(plan)
 
     async def __call__(
         self,
@@ -895,6 +910,10 @@ class ResearchRunProducerExecutor:
             )
         research = request.research
         whatif = research.whatif if research.is_whatif else None
+        row = full03_recipe(research.execution_profile_id, research.execution_profile_digest) if research.is_full03 else None
+        if row and not full03_profile_enabled(research.execution_profile_id):
+            raise ResearchRunProducerError("FULL-03 exact recipe is not enabled", code="CAPABILITY_MISMATCH")
+        controls = full03_controls(research.requested_spec, row) if row else None
         full02 = research.execution_profile_id in {DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID}
         three_window = research.is_three_window_optimized
         if full02 and not full02_profile_enabled(research.execution_profile_id):
@@ -909,14 +928,14 @@ class ResearchRunProducerExecutor:
                 )
             if research.execution_profile_digest != WHATIF_PROFILE_DIGEST:
                 raise ResearchRunProducerError("P16 what-if profile digest no longer matches", code="CAPABILITY_MISMATCH")
-        elif research.execution_profile_digest != (DELTA_PER_FOLD_DECAY_PROFILE_DIGEST if research.execution_profile_id == DELTA_PER_FOLD_DECAY_PROFILE_ID else DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST if three_window else DELTA_CAUSAL_INNER_PROFILE_DIGEST if research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID else DELTA_WFO_V2_PROFILE_DIGEST if research.execution_profile_id == DELTA_WFO_V2_PROFILE_ID else DELTA_WFO_PROFILE_DIGEST):
+        elif not row and research.execution_profile_digest != (DELTA_PER_FOLD_DECAY_PROFILE_DIGEST if research.execution_profile_id == DELTA_PER_FOLD_DECAY_PROFILE_ID else DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST if three_window else DELTA_CAUSAL_INNER_PROFILE_DIGEST if research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID else DELTA_WFO_V2_PROFILE_DIGEST if research.execution_profile_id == DELTA_WFO_V2_PROFILE_ID else DELTA_WFO_PROFILE_DIGEST):
             raise ResearchRunProducerError("P10 Delta WFO profile digest no longer matches", code="CAPABILITY_MISMATCH")
         # Research preview only: a long study runs the spec's own admitted
         # trial count under the preview child limits. Off, both stay locked.
         try:
-            preview_long = whatif is None and not full02 and research.execution_profile_id != DELTA_CAUSAL_INNER_PROFILE_ID and delta_wfo_preview_long_enabled()
+            preview_long = whatif is None and not row and not full02 and research.execution_profile_id != DELTA_CAUSAL_INNER_PROFILE_ID and delta_wfo_preview_long_enabled()
             study_trials = (
-                delta_wfo_admitted_trials(research.requested_spec) if preview_long else DELTA_WFO_OPTUNA_TRIALS
+                row["public_profile"]["trial_default"] if row else delta_wfo_admitted_trials(research.requested_spec) if preview_long else DELTA_WFO_OPTUNA_TRIALS
             )
         except (DeltaWfoPreviewLongMisconfigured, ValueError) as exc:
             raise ResearchRunProducerError(str(exc), code="CAPABILITY_MISMATCH") from exc
@@ -925,6 +944,9 @@ class ResearchRunProducerExecutor:
             if preview_long and self.wfo_child_limits is DELTA_WFO_CHILD_LIMITS
             else self.wfo_child_limits
         )
+        if row:
+            child_limits = ResearchChildLimits(**{name: min(getattr(self.wfo_child_limits, name), row["budgets"][name])
+                for name in ("memory_bytes", "cpu_seconds", "wall_seconds", "scratch_bytes", "file_bytes", "fd_limit")})
         progress("stage_started", {"stage": "S1"})
         try:
             identity, _ = self.snapshots.describe(research.snapshot_id)
@@ -963,7 +985,10 @@ class ResearchRunProducerExecutor:
                 is_start=span_start,
                 oos_start=first_oos,
                 oos_end=span_end,
+                warmup_lower_bound=span_start - pd.Timedelta(milliseconds=300 * row["descriptor"]["source_clock"]["bar_interval_ms"]) if row else None,
             )
+            if row and (tape_counts.warmup_bars != 300 or tape_counts.total_bars > row["budgets"]["planning_max_bars"]):
+                raise ResearchRunProducerError("FULL-03 immutable snapshot lacks 300 target-bar predecessors or exceeds its bar budget")
             if tape_counts.is_bars < 1 or tape_counts.outer_oos_bars < 1:
                 raise ResearchRunProducerError("P10 immutable snapshot cannot form a bounded walk-forward tape")
             if three_window:
@@ -1004,9 +1029,10 @@ class ResearchRunProducerExecutor:
                     for entry in whatif.evaluations
                 ) if whatif is not None else (),
                 optuna_trials=study_trials if preview_long else None,
-                temporal_controls=per_fold_decay_controls(research.requested_spec) if research.execution_profile_id == DELTA_PER_FOLD_DECAY_PROFILE_ID else temporal_controls(research.requested_spec) if research.execution_profile_id == DELTA_WFO_V2_PROFILE_ID else None,
-                causal_inner_controls=causal_inner_controls(research.requested_spec) if research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID else None,
+                temporal_controls=controls if row and row["descriptor"]["optimization_schedule"] != "per_fold_causal" else per_fold_decay_controls(research.requested_spec) if research.execution_profile_id == DELTA_PER_FOLD_DECAY_PROFILE_ID else temporal_controls(research.requested_spec) if research.execution_profile_id == DELTA_WFO_V2_PROFILE_ID else None,
+                causal_inner_controls=controls if row and row["descriptor"]["optimization_schedule"] == "per_fold_causal" else causal_inner_controls(research.requested_spec) if research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID else None,
                 holdout_start_utc_ms=int(_utc_timestamp(windows["holdout"]["start"], label="holdout start").value // 1_000_000) if three_window else None,
+                execution_binding=full03_execution_binding(row) if row else None,
             )
             progress("stage_completed", {"stage": "S2"})
             progress("stage_started", {"stage": "S3"})
@@ -1015,16 +1041,20 @@ class ResearchRunProducerExecutor:
             cpu_cap = child_limits.cpu_seconds if preview_long else min(child_limits.cpu_seconds, DELTA_WFO_CPU_SECONDS)
             progress("budget_tick", _cpu_budget_tick_payload(0, cpu_cap))
             declared_trials = len(whatif.evaluations) if whatif is not None else study_trials
-            causal = research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID
-            per_fold = causal or research.execution_profile_id == DELTA_PER_FOLD_DECAY_PROFILE_ID
+            causal = row["descriptor"]["optimization_schedule"] == "per_fold_causal" if row else research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID
+            per_fold = causal or (row["descriptor"]["optimization_schedule"] == "per_fold_decay" if row else research.execution_profile_id == DELTA_PER_FOLD_DECAY_PROFILE_ID)
             if per_fold:
                 from portal_api.adapters.quantbt import QuantBTGateway
                 index = pd.read_parquet(tape_path).index
                 plan = QuantBTGateway().walk_forward_fold_plan(index=index[(index >= span_start) & (index < span_end)], config_fields={
-                    **(causal_inner_controls(research.requested_spec) if causal else per_fold_decay_controls(research.requested_spec)), "split_mode": first_oos.isoformat(), "optimization_mode": "mode_1_decay", "optimization_schedule": "per_fold_causal" if causal else "per_fold_decay", "optuna_trials": 3})
-                if not 2 <= len(plan) <= 16 or causal and any(not 2 <= len(fold["inner"] or []) <= 16 for fold in plan):
+                    **(controls if row else causal_inner_controls(research.requested_spec) if causal else per_fold_decay_controls(research.requested_spec)), "split_mode": first_oos.isoformat(), "optimization_mode": "mode_1_decay", "optimization_schedule": "per_fold_causal" if causal else "per_fold_decay", "optuna_trials": study_trials})
+                outer = row["descriptor"]["fold_bounds"] if row else {"min": 2, "max": 16}
+                inner = row["descriptor"].get("inner_constraints", {}).get("fold_bounds", {"min": 2, "max": 16}) if row else {"min": 2, "max": 16}
+                if not outer["min"] <= len(plan) <= outer["max"] or causal and any(not inner["min"] <= len(fold["inner"] or []) <= inner["max"] for fold in plan):
                     raise ResearchRunProducerError("causal inner immutable tape exceeds profile fold bounds")
-                declared_trials = 3 * len(plan)
+                declared_trials = study_trials * len(plan)
+                if row and declared_trials > row["descriptor"]["max_total_trials"]:
+                    raise ResearchRunProducerError("FULL-03 total study trials exceed the exact recipe budget")
             live = LiveStudyProgress(progress, trials_declared=declared_trials, cpu_cap_seconds=cpu_cap, per_fold=per_fold)
             child = self.supervisor.run_delta_wfo(
                 receipt,
@@ -1263,6 +1293,7 @@ class ResearchRunProducerExecutor:
         oos_end: pd.Timestamp,
         is_start: pd.Timestamp,
         oos_start: pd.Timestamp,
+        warmup_lower_bound: pd.Timestamp | None = None,
     ) -> TapeWindowCounts:
         """Write a bounded P08 warmup+IS+OOS tape without reading holdout.
 
@@ -1291,6 +1322,8 @@ class ResearchRunProducerExecutor:
                     pd.to_datetime(table.column(index_column).to_pandas(), utc=True)
                 )
                 mask = timestamps < oos_end
+                if warmup_lower_bound is not None:
+                    mask &= timestamps >= warmup_lower_bound
                 if not bool(mask.any()):
                     continue
                 filtered = table.filter(pa.array(mask.tolist(), type=pa.bool_()))

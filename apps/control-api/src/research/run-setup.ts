@@ -38,9 +38,15 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
     ...refusal(declaredReason, ["data", "timeframe"]),
   ];
   const profiles: RunSetupProfile[] = admission.profiles.map(row => {
+    const recipe = executionRecipe(row.profile_id);
+    const bindingReason = recipe.source_requirement === "FULL03_IMMUTABLE_DELTA_BINDING"
+      ? recipe.descriptor.alpha_binding_requirements.alpha_version_id !== version.alphaVersionId
+        || recipe.descriptor.adapter_id !== version.binding?.adapterId
+        || recipe.descriptor.adapter_contract_digest !== version.binding?.contractDigest
+      : version.binding?.adapterId === "full03.delta-rsi.v1";
     const temporal = row.protocol === "advanced";
     const optimized = executionRecipe(row.profile_id).adapter_kind === "DELTA_THREE_WINDOW_OPTIMIZED";
-    const refusals = [...common, ...refusal(imported ? "ALPHA_EXECUTOR_MISMATCH" : null, ["alpha_binding"]),
+    const refusals = [...common, ...refusal(imported || bindingReason ? "ALPHA_EXECUTOR_MISMATCH" : null, ["alpha_binding"]),
       ...refusal(row.dataset_id ? row.dataset_id !== context.dataset_id ? "PROFILE_DATASET_NOT_ADMITTED" : null
         : context.dataset_id === "vn-stock-daily" ? "PROFILE_DATASET_NOT_ADMITTED" : null, ["data", "dataset_id"]),
       ...refusal(row.symbol && row.symbol !== context.symbol ? "PROFILE_SYMBOL_NOT_ADMITTED" : null, ["data", "symbol"]),

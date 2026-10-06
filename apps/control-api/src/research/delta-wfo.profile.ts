@@ -1,4 +1,4 @@
-import { executionRecipe, executionRecipeResources } from "./execution-recipes";
+import { executionRecipe, executionRecipeResources, executionRecipes } from "./execution-recipes";
 /**
  * W1 §1.1 locked run execution profiles.
  *
@@ -30,6 +30,7 @@ export const RESEARCH_EXECUTION_PROFILE_IDS = [
   VN_OBSERVED_FIXED_PROFILE_ID,
   DELTA_PER_FOLD_DECAY_PROFILE_ID,
   DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID,
+  ...executionRecipes.filter(row=>row.source_requirement==="FULL03_IMMUTABLE_DELTA_BINDING").map(row=>row.profile_id),
 ] as const;
 export type ResearchExecutionProfileId = typeof RESEARCH_EXECUTION_PROFILE_IDS[number];
 

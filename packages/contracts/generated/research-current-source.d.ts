@@ -280,6 +280,26 @@ export interface components {
                     signal_target: string | null;
                 }[];
             };
+            window_series_metadata?: {
+                is: {
+                    source_observation_count: number;
+                    emitted_point_count: number;
+                    /** @enum {unknown} */
+                    sampling: "FULL" | "MULTI_SERIES_EXTREMA_V1";
+                };
+                oos: {
+                    source_observation_count: number;
+                    emitted_point_count: number;
+                    /** @enum {unknown} */
+                    sampling: "FULL" | "MULTI_SERIES_EXTREMA_V1";
+                };
+                holdout: {
+                    source_observation_count: number;
+                    emitted_point_count: number;
+                    /** @enum {unknown} */
+                    sampling: "FULL" | "MULTI_SERIES_EXTREMA_V1";
+                };
+            };
         };
         /** @description Safe immutable AlphaVersion validator inputs, not raw source, provenance or mutable execution instructions. */
         RunDeclarationAlphaVersionDeclaration: {
@@ -1420,9 +1440,9 @@ export interface components {
         /** @description Exact historical/global/causal custody pair; mixing is refused. */
         Provenance: {
             /** @enum {unknown} */
-            source_adapter_id: "rs02.quantbt-advanced-wfo.v1" | "rs02.quantbt-signal-notional-wfo.v1" | "rs02.quantbt-signal-notional-causal-inner.v1" | "full02.quantbt-signal-notional-per-fold-decay.v1" | "full02.quantbt-signal-notional-three-window.v1";
+            source_adapter_id: "rs02.quantbt-advanced-wfo.v1" | "rs02.quantbt-signal-notional-wfo.v1" | "rs02.quantbt-signal-notional-causal-inner.v1" | "full02.quantbt-signal-notional-per-fold-decay.v1" | "full02.quantbt-signal-notional-three-window.v1" | "full03.quantbt-signal-notional-wfo-temporal-1m.v1" | "full03.quantbt-signal-notional-causal-inner-1m.v1" | "full03.quantbt-signal-notional-per-fold-decay-1m.v1" | "full03.quantbt-signal-notional-three-window-optimized-1m.v1" | "full03.quantbt-signal-notional-wfo-temporal-5m.v1" | "full03.quantbt-signal-notional-causal-inner-5m.v1" | "full03.quantbt-signal-notional-per-fold-decay-5m.v1" | "full03.quantbt-signal-notional-three-window-optimized-5m.v1" | "full03.quantbt-signal-notional-wfo-temporal-15m.v1" | "full03.quantbt-signal-notional-causal-inner-15m.v1" | "full03.quantbt-signal-notional-per-fold-decay-15m.v1" | "full03.quantbt-signal-notional-three-window-optimized-15m.v1" | "full03.quantbt-signal-notional-wfo-temporal-30m.v1" | "full03.quantbt-signal-notional-causal-inner-30m.v1" | "full03.quantbt-signal-notional-per-fold-decay-30m.v1" | "full03.quantbt-signal-notional-three-window-optimized-30m.v1" | "full03.quantbt-signal-notional-wfo-temporal-1h.v1" | "full03.quantbt-signal-notional-causal-inner-1h.v1" | "full03.quantbt-signal-notional-per-fold-decay-1h.v1" | "full03.quantbt-signal-notional-three-window-optimized-1h.v1" | "full03.quantbt-signal-notional-wfo-temporal-4h.v1" | "full03.quantbt-signal-notional-causal-inner-4h.v1" | "full03.quantbt-signal-notional-per-fold-decay-4h.v1" | "full03.quantbt-signal-notional-three-window-optimized-4h.v1" | "full03.quantbt-signal-notional-wfo-temporal-1d.v1" | "full03.quantbt-signal-notional-causal-inner-1d.v1" | "full03.quantbt-signal-notional-per-fold-decay-1d.v1" | "full03.quantbt-signal-notional-three-window-optimized-1d.v1";
             /** @enum {unknown} */
-            profile_id: "rs02.delta-wfo-global.v1" | "rs02.delta-signal-notional-wfo.v1" | "rs02.delta-signal-notional-causal-inner.v1" | "full02.delta-signal-notional-per-fold-decay.v1" | "full02.delta-signal-notional-three-window.v1";
+            profile_id: "rs02.delta-wfo-global.v1" | "rs02.delta-signal-notional-wfo.v1" | "rs02.delta-signal-notional-causal-inner.v1" | "full02.delta-signal-notional-per-fold-decay.v1" | "full02.delta-signal-notional-three-window.v1" | "full03.delta-signal-notional-wfo-temporal-1m.v1" | "full03.delta-signal-notional-causal-inner-1m.v1" | "full03.delta-signal-notional-per-fold-decay-1m.v1" | "full03.delta-signal-notional-three-window-optimized-1m.v1" | "full03.delta-signal-notional-wfo-temporal-5m.v1" | "full03.delta-signal-notional-causal-inner-5m.v1" | "full03.delta-signal-notional-per-fold-decay-5m.v1" | "full03.delta-signal-notional-three-window-optimized-5m.v1" | "full03.delta-signal-notional-wfo-temporal-15m.v1" | "full03.delta-signal-notional-causal-inner-15m.v1" | "full03.delta-signal-notional-per-fold-decay-15m.v1" | "full03.delta-signal-notional-three-window-optimized-15m.v1" | "full03.delta-signal-notional-wfo-temporal-30m.v1" | "full03.delta-signal-notional-causal-inner-30m.v1" | "full03.delta-signal-notional-per-fold-decay-30m.v1" | "full03.delta-signal-notional-three-window-optimized-30m.v1" | "full03.delta-signal-notional-wfo-temporal-1h.v1" | "full03.delta-signal-notional-causal-inner-1h.v1" | "full03.delta-signal-notional-per-fold-decay-1h.v1" | "full03.delta-signal-notional-three-window-optimized-1h.v1" | "full03.delta-signal-notional-wfo-temporal-4h.v1" | "full03.delta-signal-notional-causal-inner-4h.v1" | "full03.delta-signal-notional-per-fold-decay-4h.v1" | "full03.delta-signal-notional-three-window-optimized-4h.v1" | "full03.delta-signal-notional-wfo-temporal-1d.v1" | "full03.delta-signal-notional-causal-inner-1d.v1" | "full03.delta-signal-notional-per-fold-decay-1d.v1" | "full03.delta-signal-notional-three-window-optimized-1d.v1";
             /** @constant */
             engine_version: "1.1.1";
             source_manifest_digest: components["schemas"]["Digest"];
@@ -1457,6 +1477,146 @@ export interface components {
             source_adapter_id?: "full02.quantbt-signal-notional-three-window.v1";
             /** @constant */
             profile_id?: "full02.delta-signal-notional-three-window.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-wfo-temporal-1m.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-wfo-temporal-1m.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-causal-inner-1m.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-causal-inner-1m.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-per-fold-decay-1m.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-per-fold-decay-1m.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-three-window-optimized-1m.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-three-window-optimized-1m.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-wfo-temporal-5m.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-wfo-temporal-5m.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-causal-inner-5m.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-causal-inner-5m.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-per-fold-decay-5m.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-per-fold-decay-5m.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-three-window-optimized-5m.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-three-window-optimized-5m.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-wfo-temporal-15m.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-wfo-temporal-15m.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-causal-inner-15m.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-causal-inner-15m.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-per-fold-decay-15m.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-per-fold-decay-15m.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-three-window-optimized-15m.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-three-window-optimized-15m.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-wfo-temporal-30m.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-wfo-temporal-30m.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-causal-inner-30m.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-causal-inner-30m.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-per-fold-decay-30m.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-per-fold-decay-30m.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-three-window-optimized-30m.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-three-window-optimized-30m.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-wfo-temporal-1h.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-wfo-temporal-1h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-causal-inner-1h.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-causal-inner-1h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-per-fold-decay-1h.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-per-fold-decay-1h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-three-window-optimized-1h.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-three-window-optimized-1h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-wfo-temporal-4h.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-wfo-temporal-4h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-causal-inner-4h.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-causal-inner-4h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-per-fold-decay-4h.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-per-fold-decay-4h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-three-window-optimized-4h.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-three-window-optimized-4h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-wfo-temporal-1d.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-wfo-temporal-1d.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-causal-inner-1d.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-causal-inner-1d.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-per-fold-decay-1d.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-per-fold-decay-1d.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-three-window-optimized-1d.v1";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-three-window-optimized-1d.v1";
         });
         Common: {
             /** @constant */

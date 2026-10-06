@@ -16,11 +16,7 @@ import { runDisplayLabel, runDisplayOrdinal, runDisplayOrdinalSql } from "./run-
 import type { ReportAuditRelation } from "./report-core-v2";
 import { readPinnedAuditProofs } from "./final-audit.read";
 import { ExactJsonCalculationMemo } from "./exact-json-calculation-memo";
-import { DELTA_WFO_PROFILE_ID, DELTA_WFO_PROFILE_DIGEST } from "./delta-wfo.profile";
-import { DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST } from "./delta-wfo-v2.profile";
-import { DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST } from "./delta-causal-inner.profile";
-import { DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_DIGEST,
-  DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST } from "./full02.profiles";
+import { currentSourceExecutionRecipes } from "./current-source-profile";
 import {
   ResearchReportFrozenCoreSchema,
   type ResearchReportExportFormat,
@@ -200,11 +196,10 @@ export class ResearchReportRepository {
            JOIN research.jobs job ON job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
           WHERE producer.workspace_id = $1 AND producer.run_id = $2
             AND producer.execution_profile_id = ANY($3::text[]) AND job.state = 'SUCCEEDED'
-            AND ((producer.execution_profile_id = $4 AND producer.execution_profile_digest = $5)
-              OR (producer.execution_profile_id = $6 AND producer.execution_profile_digest = $7)
-              OR (producer.execution_profile_id = $8 AND producer.execution_profile_digest = $9)
-              OR (producer.execution_profile_id = $10 AND producer.execution_profile_digest = $11)
-              OR (producer.execution_profile_id = $12 AND producer.execution_profile_digest = $13))
+            AND EXISTS (SELECT 1 FROM jsonb_to_recordset($4::jsonb)
+              AS installed(profile_id text, profile_digest text)
+              WHERE installed.profile_id=producer.execution_profile_id
+                AND installed.profile_digest=producer.execution_profile_digest)
             AND NOT EXISTS (
               SELECT 1 FROM research.run_report_manifests_v1 manifest
                WHERE manifest.workspace_id = producer.workspace_id AND manifest.run_id = producer.run_id
@@ -217,10 +212,7 @@ export class ResearchReportRepository {
            AND research.run_report_materialization_retries_v1.next_attempt_at <= now()
          RETURNING run_id`,
         [scope.workspaceId, runId, typeof profileId === "string" ? [profileId] : profileId,
-          DELTA_WFO_PROFILE_ID, DELTA_WFO_PROFILE_DIGEST, DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST,
-          DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST,
-          DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_DIGEST,
-          DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST],
+          JSON.stringify(currentSourceExecutionRecipes().map(row => ({profile_id:row.profile_id,profile_digest:row.profile_digest})))],
       );
       return result.rowCount === 1;
     });

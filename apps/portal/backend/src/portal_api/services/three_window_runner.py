@@ -165,6 +165,8 @@ class ThreeWindowRunner:
         market: PreparedMarketData,
         run_id: str,
         progress: Callable[[str], None] | None = None,
+        *,
+        strategy_callable: Callable[..., Any] | None = None,
     ) -> dict[str, Any]:
         if request.protocol != RunProtocol.THREE_WINDOW_DECAY:
             raise ThreeWindowRunnerError("ThreeWindowRunner requires protocol=three_window_decay")
@@ -196,7 +198,7 @@ class ThreeWindowRunner:
         started_at = _utc_now_iso()
         stage("OPTIMIZING_IS")
         endpoint, wf = self._gateway.run_mode1_calibration(
-            strategy_fn=_strategy_callable,
+            strategy_fn=_strategy_callable if strategy_callable is None else strategy_callable,
             data=calibration_tape,
             param_ranges=param_ranges,
             oos_start=config.oos_start,

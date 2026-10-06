@@ -160,6 +160,11 @@ export function preflightGates(
  * sentence is added without a path, so the two cannot drift silently.
  */
 export const ADMISSION_REASON_FIELD_PATHS: Readonly<Record<string, readonly string[]>> = {
+  "The indexed recipe requires its exact dataset and immutable AlphaVersion binding.": ["data","dataset_id"],
+  "The indexed recipe requires a verified fixed-UTC closed-bar metadata binding.": ["data"],
+  "No exact indexed execution recipe matches the requested AlphaVersion and timeframe.": ["data","timeframe"],
+  "The requested timeframe must match the exact indexed execution recipe.": ["data","timeframe"],
+  "The requested span exceeds the target-bar-bounded indexed recipe.": ["walk_forward"],
   "The VN observed daily fixed profile is not enabled.": [],
   "The VN observed daily fixed profile admits requested-spec v1 only.": ["schema_version"],
   "The VN observed daily fixed profile admits only source-qualified FPT 1d three-window research.": ["data"],

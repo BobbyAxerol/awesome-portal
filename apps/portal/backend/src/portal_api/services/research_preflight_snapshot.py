@@ -81,11 +81,12 @@ PREFLIGHT_SAFE_PROVENANCE_KEYS = frozenset(
         "clock_basis", "source_timezone", "metadata_index_revision", "metadata_index_source_manifest_digest",
         "metadata_index_as_of_utc_ms", "warmup_start_utc_ms", "warmup_semantics", "daily_timestamp_basis",
         "session_quality_state", "session_quality_reason_code", "instrument_metadata_state", "instrument_metadata_reason_code",
+        "observed_as_of_utc_ms", "target_interval_ms",
     }
 )
 
 _TIMEFRAME_PATTERN = re.compile(
-    r"^(?P<count>[1-9][0-9]*)(?P<unit>s|sec|secs|second|seconds|min|minute|minutes|h|hour|hours|d|day|days)$",
+    r"^(?P<count>[1-9][0-9]*)(?P<unit>s|sec|secs|second|seconds|m|min|minute|minutes|h|hour|hours|d|day|days)$",
     re.IGNORECASE,
 )
 
@@ -235,6 +236,7 @@ def _timeframe_delta(timeframe: str) -> pd.Timedelta:
         "secs": "s",
         "second": "s",
         "seconds": "s",
+        "m": "min",
         "min": "min",
         "minute": "min",
         "minutes": "min",
@@ -1014,6 +1016,66 @@ def _resource_estimate(
     }
 
 
+def _verified_fixed_utc_index_provenance(
+    provider: MarketDataProvider, market: PreparedMarketData, *, query_start: pd.Timestamp,
+    logical_start: pd.Timestamp, logical_end: pd.Timestamp, warmup_bars: int,
+    metadata_index_store: object | None = None,
+) -> dict[str, object] | None:
+    """Bind a new snapshot to existing immutable metadata; never build an index.
+
+    Historical no-index snapshots remain valid for their existing profiles.
+    FULL-03 admission separately requires this optional verified binding.
+    An uncovered interval is not relabelled as indexed or made available by
+    loading prices: only exact source/duration/timestamp matches grant it.
+    """
+    from portal_api.services.enrich_dataset_catalog import (
+        DatasetIndexError, DatasetIndexStore, _find_index, source_digest, window_metadata,
+    )
+    manifest = source_digest(provider)
+    if not isinstance(manifest, str) or not re.fullmatch(r"[a-f0-9]{64}", manifest):
+        return None
+    if market.descriptor.source_timezone != "UTC" or market.load_metadata.get("manifest_digest") != manifest:
+        return None
+    store = metadata_index_store if metadata_index_store is not None else DatasetIndexStore()
+    try:
+        revision, document, _ = store.read(manifest)
+        if document is None:
+            return None
+        descriptor = market.descriptor
+        dataset, symbol, timeframe = descriptor.dataset_id, descriptor.symbol, descriptor.timeframe
+        if not symbol or not timeframe:
+            return None
+        query_metadata = window_metadata(document, dataset_id=dataset, symbol=symbol, timeframe=timeframe,
+            start_ms=utc_milliseconds(query_start), end_ms=utc_milliseconds(logical_end), warmup_bars=0)
+        logical_metadata = window_metadata(document, dataset_id=dataset, symbol=symbol, timeframe=timeframe,
+            start_ms=utc_milliseconds(logical_start), end_ms=utc_milliseconds(logical_end), warmup_bars=warmup_bars)
+        if query_metadata["availability"] != "AVAILABLE" or logical_metadata["availability"] != "AVAILABLE":
+            return None
+        index = _find_index(document, dataset, symbol, timeframe)
+        if index is None or logical_metadata["warmup_bars_available_before_start"] != warmup_bars:
+            return None
+        # Cardinality alone is not enough: bind every already-loaded open time
+        # to the exact indexed run, without materializing a second price tape.
+        stamps = pd.DatetimeIndex(market.frame.index).as_unit("ns").asi8 // 1_000_000
+        starts = np.array([pair[0] for pair in index["runs"]], dtype=np.int64)
+        ends = np.array([pair[1] for pair in index["runs"]], dtype=np.int64)
+        positions = np.searchsorted(starts, stamps, side="right") - 1
+        matches = len(stamps) == query_metadata["bars"] and np.all(positions >= 0)
+        if matches:
+            matches = bool(np.all(stamps <= ends[positions]))
+        if not matches:
+            raise DatasetIndexError("HMD_LOADED_TIMESTAMPS_DIFFER_FROM_METADATA_INDEX")
+        return {"clock_basis": "UTC_FIXED_INTERVAL_OPEN_TIME_V1", "source_timezone": "UTC",
+            "metadata_index_revision": revision, "metadata_index_source_manifest_digest": manifest,
+            "metadata_index_as_of_utc_ms": document["as_of_utc_ms"],
+            "warmup_start_utc_ms": utc_milliseconds(query_start),
+            "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"}
+    except DatasetIndexError as exc:
+        raise ResearchPreflightSnapshotError("RESEARCH_PREFLIGHT_DATA_UNAVAILABLE",
+            "The bounded source timestamps no longer match their verified metadata index.",
+            field_path=("data",), gate="metadata_index") from exc
+
+
 @dataclass(frozen=True, slots=True)
 class ResearchPreflightSnapshotService:
     provider: MarketDataProvider
@@ -1022,6 +1084,9 @@ class ResearchPreflightSnapshotService:
     # The pinned engine boundary, used only to *plan* a requested-spec v2
     # walk-forward (never to run one). Defaults to the process gateway.
     gateway: QuantBTGateway | None = None
+    # Existing immutable metadata only; injection keeps qualification/tests
+    # isolated. The runtime default is its own artifact-volume index root.
+    metadata_index_store: object | None = None
 
     def build(self, payload: Mapping[str, object]) -> dict[str, object]:
         requested = _require_object(payload.get("requested_spec"), "requested_spec")
@@ -1220,6 +1285,10 @@ class ResearchPreflightSnapshotService:
                 field_path=("windows", "is", "start") if protocol == "three_window_decay" else ("walk_forward", "start"),
                 gate="warmup_available",
             )
+        crypto_provenance = None if observed_vn else _verified_fixed_utc_index_provenance(
+            self.provider, market, query_start=query_start, logical_start=logical_start,
+            logical_end=logical_end, warmup_bars=warmup_bars,
+            metadata_index_store=self.metadata_index_store)
         query_digest = sha256_json(
             {
                 "start": _iso_utc(query_start),
@@ -1403,6 +1472,13 @@ class ResearchPreflightSnapshotService:
             snapshot["provenance"].update(provenance)
             effective_spec["data_binding"]["provenance"] = provenance
             effective_digest = sha256_json(effective_spec)
+        else:
+            provenance = crypto_provenance
+            if provenance is not None:
+                dataset_binding["provenance"] = provenance
+                snapshot["provenance"].update(provenance)
+                effective_spec["data_binding"]["provenance"] = provenance
+                effective_digest = sha256_json(effective_spec)
         for label, value in (
             ("effective-spec", effective_spec),
             ("dataset-binding", dataset_binding),

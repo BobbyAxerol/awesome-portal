@@ -115,10 +115,10 @@ export class ResearchRunCreateService {
     const jobId = stableId("rjob", commandDigest);
     const commandId = stableId("rcmd", commandDigest);
     const profile = accepted.profile!;
-    const causal = profile.id === DELTA_CAUSAL_INNER_PROFILE_ID;
-    const wfo = profile.id === DELTA_WFO_PROFILE_ID || profile.id === DELTA_WFO_V2_PROFILE_ID || causal
-      || profile.id === DELTA_PER_FOLD_DECAY_PROFILE_ID;
-    const optimized = profile.id === DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID;
+    const recipe=executionRecipe(profile.id,profile.digest);
+    const causal = recipe.adapter_kind==="DELTA_WFO" && recipe.public_profile.optimization_schedule==="per_fold_causal";
+    const wfo = recipe.adapter_kind==="DELTA_WFO";
+    const optimized = recipe.adapter_kind==="DELTA_THREE_WINDOW_OPTIMIZED";
     const imported = profile.id === IMPORTED_ALPHA_PROFILE_ID;
     const vnObserved = profile.id === VN_OBSERVED_FIXED_PROFILE_ID;
     const observation = vnObserved ? VnObservedSourceObservationSchema.safeParse({

@@ -24,6 +24,9 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Callable, TypedDict
 from portal_api.domain.research_execution_recipes import execution_recipe
+from portal_api.domain.research_full03_profiles import (
+    is_full03_profile, full03_recipe, validate_full03_execution_binding, full03_controls_from_receipt,
+)
 
 _FIXED_BUDGET = execution_recipe("p04.fixed-qualification.v1")["budgets"]
 _WFO_BUDGET = execution_recipe("p10.delta-signal-notional-wfo.v1")["budgets"]
@@ -311,6 +314,9 @@ class DeltaWfoChildReceipt:
     temporal_controls: dict[str, Any] | None = None
     causal_inner_controls: dict[str, Any] | None = None
     holdout_start_utc_ms: int | None = None
+    # New recipes alone carry the separately immutable Alpha + source clock.
+    # None leaves every historical launch payload byte-for-byte unchanged.
+    execution_binding: dict[str, Any] | None = None
 
     def as_payload(self, *, output_root: Path) -> dict[str, Any]:
         if self.task not in {"P10_DELTA_WFO", "P16_DELTA_WHATIF_GRID", "P10_DELTA_THREE_WINDOW_OPTIMIZED"}:
@@ -336,6 +342,37 @@ class DeltaWfoChildReceipt:
             "data_end_exclusive_utc_ms": self.data_end_exclusive_utc_ms,
             "first_oos_utc_ms": self.first_oos_utc_ms,
         }
+        if is_full03_profile(self.execution_profile_id):
+            try:
+                row = full03_recipe(self.execution_profile_id, self.execution_profile_digest)
+                validate_full03_execution_binding(self.execution_binding, row)
+                if self.optuna_trials is not None or self.whatif_grid_key is not None or self.whatif_evaluations:
+                    raise ValueError("FULL-03 cannot inherit preview/what-if study controls")
+                payload["execution_binding"] = self.execution_binding
+                if self.pinned_parameters:
+                    if len(dict(self.pinned_parameters)) != len(self.pinned_parameters):
+                        raise ValueError("FULL-03 pins must name distinct declared axes")
+                    payload["pinned_parameters"] = dict(self.pinned_parameters)
+                if row["adapter_kind"] == "DELTA_THREE_WINDOW_OPTIMIZED":
+                    if (self.task != "P10_DELTA_THREE_WINDOW_OPTIMIZED"
+                            or type(self.holdout_start_utc_ms) is not int
+                            or not self.data_start_utc_ms < self.first_oos_utc_ms < self.holdout_start_utc_ms < self.data_end_exclusive_utc_ms
+                            or self.temporal_controls is not None or self.causal_inner_controls is not None):
+                        raise ValueError("FULL-03 optimized Three Window requires its independent holdout")
+                    payload["holdout_start_utc_ms"] = self.holdout_start_utc_ms
+                else:
+                    if self.task != "P10_DELTA_WFO" or self.holdout_start_utc_ms is not None:
+                        raise ValueError("FULL-03 Advanced recipe requires its exact task without Holdout")
+                    if self.temporal_controls is not None:
+                        payload["temporal_controls"] = dict(self.temporal_controls)
+                    if self.causal_inner_controls is not None:
+                        payload["causal_inner_controls"] = dict(self.causal_inner_controls)
+                    full03_controls_from_receipt(payload, row)
+            except ValueError as exc:
+                raise ResearchSupervisorError(str(exc)) from exc
+            return payload
+        if self.execution_binding is not None:
+            raise ResearchSupervisorError("FULL-03 Alpha/source-clock binding cannot enter a historical child")
         if self.pinned_parameters:
             if self.task not in {"P10_DELTA_WFO", "P10_DELTA_THREE_WINDOW_OPTIMIZED"}:
                 raise ResearchSupervisorError("P06 only a WFO study may carry pinned parameters")
@@ -884,6 +921,10 @@ class IsolatedResearchSupervisor:
         """
 
         limits.validate()
+        full03_row = full03_recipe(receipt.execution_profile_id, receipt.execution_profile_digest) if is_full03_profile(receipt.execution_profile_id) else None
+        if full03_row is not None and any(getattr(limits, field) > full03_row["budgets"][field]
+                for field in ("memory_bytes", "cpu_seconds", "wall_seconds", "scratch_bytes", "file_bytes", "fd_limit")):
+            raise ResearchSupervisorError("FULL-03 child cannot widen its exact recipe resource caps")
         if isinstance(receipt, PinnedAuditChildReceipt) and (
             limits.memory_bytes > 4 * 1024 ** 3 or limits.cpu_seconds > 120 or limits.wall_seconds > 240
             or limits.scratch_bytes > 128 * 1024 ** 2 or limits.file_bytes > 16 * 1024 ** 2
@@ -944,6 +985,14 @@ class IsolatedResearchSupervisor:
             )
             if profile_digest != receipt.execution_profile_digest:
                 raise ResearchSupervisorError("P06 WFO child did not run the admitted execution profile")
+            if full03_row is not None:
+                profile = full03_row["descriptor"]
+                bounds = profile.get("fold_bounds") or {"min": 1, "max": 1}
+                expected_trials = full03_row["public_profile"]["trial_default"] * (
+                    n_folds if profile["optimization_schedule"] != "global" else 1)
+                if (engine_version != "1.1.1" or not bounds["min"] <= n_folds <= bounds["max"]
+                        or not 0 < bars <= full03_row["budgets"]["planning_max_bars"] or trial_rows != expected_trials):
+                    raise ResearchSupervisorError("FULL-03 child returned incompatible exact recipe counts or engine")
             if receipt.execution_profile_id in {DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID}:
                 minimum, maximum = (1, 1) if receipt.execution_profile_id == DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID else (2, 16)
                 if (engine_version != "1.1.1" or not minimum <= n_folds <= maximum

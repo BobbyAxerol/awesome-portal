@@ -447,7 +447,7 @@ export interface components {
             schema_version: "research.portal-admission.v1";
             profiles: {
                 /** @enum {string} */
-                profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p10.delta-signal-notional-wfo.v2" | "p10.delta-signal-notional-causal-inner.v1" | "p10.vn-stock-daily-observed-fixed.v1" | "p10.delta-signal-notional-per-fold-decay.v1" | "p10.delta-signal-notional-three-window-optimized.v1";
+                profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p10.delta-signal-notional-wfo.v2" | "p10.delta-signal-notional-causal-inner.v1" | "p10.vn-stock-daily-observed-fixed.v1" | "p10.delta-signal-notional-per-fold-decay.v1" | "p10.delta-signal-notional-three-window-optimized.v1" | "p10.delta-wfo-temporal-1m.v1" | "p10.delta-causal-inner-1m.v1" | "p10.delta-per-fold-decay-1m.v1" | "p10.delta-three-window-optimized-1m.v1" | "p10.delta-wfo-temporal-5m.v1" | "p10.delta-causal-inner-5m.v1" | "p10.delta-per-fold-decay-5m.v1" | "p10.delta-three-window-optimized-5m.v1" | "p10.delta-wfo-temporal-15m.v1" | "p10.delta-causal-inner-15m.v1" | "p10.delta-per-fold-decay-15m.v1" | "p10.delta-three-window-optimized-15m.v1" | "p10.delta-wfo-temporal-30m.v1" | "p10.delta-causal-inner-30m.v1" | "p10.delta-per-fold-decay-30m.v1" | "p10.delta-three-window-optimized-30m.v1" | "p10.delta-wfo-temporal-1h.v1" | "p10.delta-causal-inner-1h.v1" | "p10.delta-per-fold-decay-1h.v1" | "p10.delta-three-window-optimized-1h.v1" | "p10.delta-wfo-temporal-4h.v1" | "p10.delta-causal-inner-4h.v1" | "p10.delta-per-fold-decay-4h.v1" | "p10.delta-three-window-optimized-4h.v1" | "p10.delta-wfo-temporal-1d.v1" | "p10.delta-causal-inner-1d.v1" | "p10.delta-per-fold-decay-1d.v1" | "p10.delta-three-window-optimized-1d.v1";
                 /** @enum {unknown} */
                 state: "ENABLED" | "DISABLED";
                 /** @enum {unknown} */
@@ -492,8 +492,8 @@ export interface components {
                     window_modes: ("expanding" | "rolling")[];
                     train_window_pattern: string;
                 };
-                /** @constant */
-                dataset_id?: "vn-stock-daily";
+                /** @enum {unknown} */
+                dataset_id?: "vn-stock-daily" | "crypto-binance-1m";
                 /** @constant */
                 symbol?: "FPT";
                 /** @constant */
@@ -506,7 +506,7 @@ export interface components {
                 warmup_semantics?: "LAST_N_OBSERVED_PREDECESSORS_V1";
                 /** @constant */
                 account_model?: "GENERIC_SIGNAL_NOTIONAL_RESEARCH_NOT_VN_VENUE";
-            }[] & (unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+            }[] & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
             /** @constant */
             note: "PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE";
         };

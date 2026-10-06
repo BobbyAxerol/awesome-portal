@@ -381,6 +381,11 @@ const ProtocolSeriesPointSchema = z.object({
   return_fraction: CurrentSourceDecimalSchema, accepted_position: CurrentSourceDecimalSchema,
   drawdown_fraction: CurrentSourceDecimalSchema, signal_target: CurrentSourceDecimalSchema.nullable(),
 }).strict();
+const ProtocolSeriesMetadataSchema = z.object({
+  source_observation_count: z.number().int().positive().max(100_000),
+  emitted_point_count: z.number().int().positive().max(192),
+  sampling: z.enum(["FULL", "MULTI_SERIES_EXTREMA_V1"]),
+}).strict();
 export const CurrentSourceProtocolDisclosureSchema = z.object({
   schema_version: z.literal("research.current-source-protocol-disclosure.v1"),
   protocol: z.literal("three_window_decay"), engine_operation: z.literal("train_test_split"),
@@ -392,6 +397,8 @@ export const CurrentSourceProtocolDisclosureSchema = z.object({
   windows: z.object({ is: ProtocolWindowSchema, oos: ProtocolWindowSchema, holdout: ProtocolWindowSchema }).strict(),
   window_series: z.object({ is: z.array(ProtocolSeriesPointSchema).min(1).max(192),
     oos: z.array(ProtocolSeriesPointSchema).min(1).max(192), holdout: z.array(ProtocolSeriesPointSchema).min(1).max(192) }).strict(),
+  window_series_metadata: z.object({ is: ProtocolSeriesMetadataSchema, oos: ProtocolSeriesMetadataSchema,
+    holdout: ProtocolSeriesMetadataSchema }).strict().optional(),
 }).strict().superRefine((value, context) => {
   const windows = value.windows;
   if (!(windows.is.start_utc_ms < windows.is.end_exclusive_utc_ms
@@ -406,6 +413,11 @@ export const CurrentSourceProtocolDisclosureSchema = z.object({
   }
   for (const key of ["is", "oos", "holdout"] as const) {
     const window = windows[key], series = value.window_series[key];
+    const meta = value.window_series_metadata?.[key];
+    if (meta && (meta.source_observation_count!==window.bar_count || meta.emitted_point_count!==series.length
+      || series.length>window.bar_count || (meta.sampling==='FULL')!==(series.length===window.bar_count))) {
+      context.addIssue({code:z.ZodIssueCode.custom,path:["window_series_metadata",key],message:"window display sampling must declare exact retained coverage"});
+    }
     if (series.some((point,index) => point.at_utc_ms < window.start_utc_ms || point.at_utc_ms >= window.end_exclusive_utc_ms
       || index > 0 && point.at_utc_ms <= series[index - 1]!.at_utc_ms)) {
       context.addIssue({ code: z.ZodIssueCode.custom, path: ["window_series",key], message: "window series must be chronological and stay inside its own half-open source window" });

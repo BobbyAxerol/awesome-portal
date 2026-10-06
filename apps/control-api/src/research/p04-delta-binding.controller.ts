@@ -41,6 +41,7 @@ export class ResearchP04DeltaBindingController {
     return this.service.install(
       request.portalUser,
       { workspaceId, actorUserId: request.portalUser.userId },
+      this.config.FEATURE_RESEARCH_FULL03_PROFILE === "true",
     );
   }
 

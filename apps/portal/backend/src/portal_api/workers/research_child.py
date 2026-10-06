@@ -1291,6 +1291,27 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
     carries the admitted span, first OOS boundary and dataset labels.
     """
 
+    from portal_api.domain.research_full03_profiles import (
+        is_full03_profile, full03_recipe, validate_full03_execution_binding, full03_controls_from_receipt,
+    )
+    if is_full03_profile(receipt.get("execution_profile_id")):
+        row = full03_recipe(receipt["execution_profile_id"], receipt.get("execution_profile_digest"))
+        if row["adapter_kind"] != "DELTA_WFO" or receipt.get("task") != "P10_DELTA_WFO":
+            raise ValueError("FULL-03 child task does not match its exact Advanced recipe")
+        required = {"schema_version", "task", "job_id", "run_id", "worker_attempt_id", "lease_epoch",
+            "market_path", "artifact_root", "output_root", "execution_profile_id", "execution_profile_digest",
+            "dataset_id", "symbol", "data_start_utc_ms", "data_end_exclusive_utc_ms", "first_oos_utc_ms", "execution_binding"}
+        controls_key = "causal_inner_controls" if row["descriptor"]["optimization_schedule"] == "per_fold_causal" else "temporal_controls"
+        if not (required | {controls_key}) <= set(receipt) or set(receipt) - required - {controls_key, "pinned_parameters"}:
+            raise ValueError("FULL-03 Advanced child requires exactly its bounded task fields")
+        validate_full03_execution_binding(receipt.get("execution_binding"), row)
+        controls = full03_controls_from_receipt(receipt, row)
+        return _run_delta_wfo_study(receipt, output_root, optuna_trials=row["public_profile"]["trial_default"],
+            temporal_controls=controls, profile_digest=row["profile_digest"],
+            causal_inner=row["descriptor"]["optimization_schedule"] == "per_fold_causal",
+            per_fold_decay=row["descriptor"]["optimization_schedule"] == "per_fold_decay", exact_recipe=row)
+    if receipt.get("execution_binding") is not None:
+        raise ValueError("FULL-03 binding cannot enter a historical WFO child")
     from portal_api.domain.research_delta_wfo_profile import (
         DELTA_WFO_PREVIEW_LONG_MAX_TRIALS,
         DELTA_WFO_PREVIEW_LONG_MIN_TRIALS,
@@ -1356,7 +1377,7 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
 
 def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_trials: int,
         temporal_controls: dict[str, Any] | None = None, profile_digest: str | None = None, causal_inner: bool = False,
-        per_fold_decay: bool = False) -> dict[str, Any]:
+        per_fold_decay: bool = False, exact_recipe: dict[str, Any] | None = None) -> dict[str, Any]:
     """The locked W1 Delta WFO study, with a caller-verified trial count.
 
     Both the WFO profile (3 sampled trials) and the P16 what-if profile
@@ -1398,7 +1419,7 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
         pins[name] = float(Decimal(value))
         if not low <= pins[name] <= high:
             raise ValueError("P10 WFO pin leaves its declared range")
-        if per_fold_decay:
+        if per_fold_decay or exact_recipe is not None:
             exact = Decimal(value)
             if not exact.is_finite() or (exact - Decimal(str(low))) % Decimal(str(_step)) != 0:
                 raise ValueError("per-fold decay pin must lie on its declared step")
@@ -1408,7 +1429,7 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
         from portal_api.domain.research_full02_profiles import DELTA_PER_FOLD_DECAY_PROFILE
     if causal_inner and per_fold_decay:
         raise ValueError("one child cannot combine causal and decay selection contracts")
-    profile = DELTA_PER_FOLD_DECAY_PROFILE if per_fold_decay else DELTA_CAUSAL_INNER_PROFILE if causal_inner else DELTA_WFO_PROFILE
+    profile = exact_recipe["descriptor"] if exact_recipe is not None else DELTA_PER_FOLD_DECAY_PROFILE if per_fold_decay else DELTA_CAUSAL_INNER_PROFILE if causal_inner else DELTA_WFO_PROFILE
     per_fold = causal_inner or per_fold_decay
     if per_fold and optuna_trials != 3:
         raise ValueError("per-fold execution runs exactly 3 trials per outer study")
@@ -1422,7 +1443,7 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
     split_ms = _utc_ms_field(receipt, "first_oos_utc_ms")
     if not start_ms < split_ms < end_ms:
         raise ValueError("P10 WFO child span is invalid")
-    if per_fold_decay and end_ms - start_ms > profile["max_span_days"] * 86_400_000:
+    if (per_fold_decay or exact_recipe is not None) and end_ms - start_ms > profile["max_span_days"] * 86_400_000:
         raise ValueError("per-fold decay child exceeds its bounded study span")
 
     market_path = _safe_path(str(receipt["market_path"]), label="market_path")
@@ -1430,6 +1451,8 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
         pd.read_parquet(market_path),
         DatasetDescriptor(dataset_id=dataset_id, symbol=symbol, venue="BINANCE", timeframe=profile["timeframe"]),
     )
+    if exact_recipe is not None:
+        _validate_full03_market(market.frame, receipt, exact_recipe)
     start = pd.Timestamp(start_ms, unit="ms", tz="UTC")
     end = pd.Timestamp(end_ms, unit="ms", tz="UTC")
     split = pd.Timestamp(split_ms, unit="ms", tz="UTC")
@@ -1437,7 +1460,9 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
     if per_fold:
         plan = QuantBTGateway().walk_forward_fold_plan(index=market.frame.index[(market.frame.index >= start) & (market.frame.index < end)], config_fields={
             **temporal, "split_mode": split.isoformat(), "optimization_mode": "mode_1_decay", "optimization_schedule": profile["optimization_schedule"], "optuna_trials": 3})
-        if not 2 <= len(plan) <= 16 or (causal_inner and any(not 2 <= len(fold["inner"] or []) <= 16 for fold in plan)):
+        outer = profile["fold_bounds"]
+        inner = profile.get("inner_constraints", {}).get("fold_bounds", {"min": 2, "max": 16})
+        if not outer["min"] <= len(plan) <= outer["max"] or (causal_inner and any(not inner["min"] <= len(fold["inner"] or []) <= inner["max"] for fold in plan)):
             raise ValueError("per-fold plan exceeds its admitted 2..16 outer/inner fold bounds")
     request = PortalRunRequest(
         strategy_id="delta-rsi-polynomial-alpha",
@@ -1490,7 +1515,8 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
         summary = AdvancedWalkForwardRunner(
             gateway=QuantBTGateway(),
             artifacts=ArtifactRepository(output_root),
-        ).run(request, market, run_id, target_mode=profile["execution_route"])
+        ).run(request, market, run_id, target_mode=profile["execution_route"],
+            **({"strategy_callable": _full03_strategy_callable(market.frame)} if exact_recipe is not None else {}))
     finally:
         restore()
         writer.close()
@@ -1539,16 +1565,26 @@ def _run_p10_delta_three_window_optimized(receipt: dict[str, Any], output_root: 
     from portal_api.services.three_window_runner import ThreeWindowRunner
     from portal_api.strategies import StrategyRegistry
     from strategy.specification import DELTA_RSI_SPECIFICATION
+    from portal_api.domain.research_full03_profiles import is_full03_profile, full03_recipe, validate_full03_execution_binding
+
+    full03 = is_full03_profile(receipt.get("execution_profile_id"))
+    row = full03_recipe(receipt["execution_profile_id"], receipt.get("execution_profile_digest")) if full03 else None
 
     required = {"schema_version", "task", "job_id", "run_id", "worker_attempt_id", "lease_epoch",
         "market_path", "artifact_root", "output_root", "execution_profile_id", "execution_profile_digest",
         "dataset_id", "symbol", "data_start_utc_ms", "data_end_exclusive_utc_ms", "first_oos_utc_ms", "holdout_start_utc_ms"}
+    if full03:
+        required.add("execution_binding")
     if not required <= set(receipt) or set(receipt) - required - {"pinned_parameters"}:
         raise ValueError("optimized Three Window child requires exactly its bounded task fields")
-    if (receipt["task"], receipt["execution_profile_id"], receipt["execution_profile_digest"]) != (
+    if full03:
+        if row["adapter_kind"] != "DELTA_THREE_WINDOW_OPTIMIZED" or receipt["task"] != "P10_DELTA_THREE_WINDOW_OPTIMIZED":
+            raise ValueError("FULL-03 Three Window child requires its exact installed recipe")
+        validate_full03_execution_binding(receipt["execution_binding"], row)
+    elif (receipt["task"], receipt["execution_profile_id"], receipt["execution_profile_digest"]) != (
         "P10_DELTA_THREE_WINDOW_OPTIMIZED", DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST):
         raise ValueError("optimized Three Window child requires its exact installed profile")
-    profile = DELTA_THREE_WINDOW_OPTIMIZED_PROFILE
+    profile = row["descriptor"] if full03 else DELTA_THREE_WINDOW_OPTIMIZED_PROFILE
     run_id, dataset_id, symbol = (receipt.get(name) for name in ("run_id", "dataset_id", "symbol"))
     if not all(isinstance(value, str) and value for value in (run_id, dataset_id, symbol)):
         raise ValueError("optimized Three Window child identity is invalid")
@@ -1571,6 +1607,8 @@ def _run_p10_delta_three_window_optimized(receipt: dict[str, Any], output_root: 
         pins[name] = float(decimal)
     market = prepare_market_data(pd.read_parquet(_safe_path(str(receipt["market_path"]), label="market_path")),
         DatasetDescriptor(dataset_id=dataset_id, symbol=symbol, venue="BINANCE", timeframe=profile["timeframe"]))
+    if full03:
+        _validate_full03_market(market.frame, receipt, row)
     if len(market.frame) > 100_000:
         raise ValueError("optimized Three Window tape exceeds its admitted bar budget")
     timestamps = [pd.Timestamp(value, unit="ms", tz="UTC").to_pydatetime() for value in (start_ms, split_ms, holdout_ms, end_ms)]
@@ -1592,7 +1630,8 @@ def _run_p10_delta_three_window_optimized(receipt: dict[str, Any], output_root: 
     trace = SamplerPublicTrace(run_id=run_id, engine_version=gateway.version())
     restore = _observe_optuna_trials(writer, sampler_trace=trace)
     try:
-        ThreeWindowRunner(gateway=gateway, strategies=StrategyRegistry(), artifacts=artifacts).run(request, market, run_id)
+        ThreeWindowRunner(gateway=gateway, strategies=StrategyRegistry(), artifacts=artifacts).run(request, market, run_id,
+            **({"strategy_callable": _full03_strategy_callable(market.frame)} if full03 else {}))
     finally:
         restore()
         writer.close()
@@ -1602,8 +1641,59 @@ def _run_p10_delta_three_window_optimized(receipt: dict[str, Any], output_root: 
     trace.write(artifacts=artifacts, run_id=run_id)
     return {"task": "P10_DELTA_THREE_WINDOW_OPTIMIZED", "engine_version": gateway.version(),
         "bars": len(market.frame), "n_folds": 1, "trial_rows": len(trials),
-        "execution_profile_digest": DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST,
+        "execution_profile_digest": row["profile_digest"] if full03 else DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST,
         "peak_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024}
+
+
+def _full03_strategy_callable(history: Any) -> Any:
+    """Supply indicator-only history; accounting and scoring keep engine indices.
+
+    Each rolling/inner/outer slice gets its own actual 300 predecessors from
+    the immutable child tape. No closure member at or after the scoring
+    cutoff is exposed to the protected kernel, including independent Holdout.
+    """
+    def full03_fixed_bar_delta_signal(data, params, train_index, test_index, fold):
+        import pandas as pd
+        from strategy.delta_rsi import build_walkforward_signal
+
+        if len(test_index) == 0:
+            return pd.Series(dtype=float, index=test_index, name="pos_weight")
+        if len(data) == 0 or not pd.DatetimeIndex(test_index).isin(data.index).all():
+            raise ValueError("FULL-03 strategy requires engine-owned scoring indices")
+        cutoff = test_index[-1]
+        engine_data = data.loc[:cutoff]
+        predecessors = history.loc[history.index < engine_data.index[0]].tail(300)
+        if len(predecessors) != 300:
+            raise ValueError("FULL-03 strategy lacks 300 observed predecessors before its engine slice")
+        signal_history = pd.concat([predecessors, engine_data])
+        return build_walkforward_signal(signal_history, params, train_index, test_index, fold).reindex(test_index)
+
+    return full03_fixed_bar_delta_signal
+
+
+def _validate_full03_market(frame: Any, receipt: dict[str, Any], row: dict[str, Any]) -> None:
+    """Validate observed fixed-clock bars without manufacturing missing candles."""
+    import pandas as pd
+    from portal_api.domain.research_full03_profiles import validate_full03_execution_binding
+
+    validate_full03_execution_binding(receipt.get("execution_binding"), row)
+    profile = row["descriptor"]
+    if receipt.get("dataset_id") != "crypto-binance-1m" or not isinstance(receipt.get("symbol"), str):
+        raise ValueError("FULL-03 child requires its immutable crypto data binding")
+    if not 0 < len(frame) <= row["budgets"]["planning_max_bars"]:
+        raise ValueError("FULL-03 tape exceeds its admitted bar budget")
+    interval_ns = profile["source_clock"]["bar_interval_ms"] * 1_000_000
+    index = pd.DatetimeIndex(frame.index).as_unit("ns")
+    if (index.tz is None or str(index.tz) != "UTC" or not index.is_monotonic_increasing
+            or index.has_duplicates or bool((index.asi8 % interval_ns != 0).any())):
+        raise ValueError("FULL-03 tape does not follow its exact UTC source clock")
+    start_ms, end_ms = (_utc_ms_field(receipt, name) for name in ("data_start_utc_ms", "data_end_exclusive_utc_ms"))
+    if int((index.asi8 < start_ms * 1_000_000).sum()) != profile["alpha_binding_requirements"]["warmup_bars"]:
+        raise ValueError("FULL-03 tape requires exactly 300 observed predecessor warmup bars")
+    if int(index.asi8[0]) < start_ms * 1_000_000 - 300 * interval_ns:
+        raise ValueError("FULL-03 warmup leaves its fixed target-bar predecessor interval")
+    if int(index.asi8[-1]) + interval_ns > min(end_ms * 1_000_000, pd.Timestamp.now(tz="UTC").value):
+        raise ValueError("FULL-03 tape contains a future or unclosed/out-of-window bar")
 
 
 def _engine_value(value: str, *, kind: type) -> int | float:

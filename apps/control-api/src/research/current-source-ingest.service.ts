@@ -24,9 +24,7 @@ import {
   type CurrentSourceIngestAuthority,
   type CurrentSourceLanePair,
 } from "./current-source.repository";
-import { currentSourceExecutionPair, isCurrentSourceExecutionProfile } from "./current-source-profile";
-import { DELTA_CAUSAL_INNER_PROFILE, DELTA_CAUSAL_INNER_PROFILE_ID } from "./delta-causal-inner.profile";
-import { DELTA_PER_FOLD_DECAY_PROFILE, DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID } from "./full02.profiles";
+import { currentSourceExecutionPair, currentSourceRetainedMethod, isCurrentSourceExecutionProfile } from "./current-source-profile";
 import type { ProgressIngressScope } from "./progress.repository";
 
 export interface CurrentSourceBatchReceipt {
@@ -53,15 +51,17 @@ export class ResearchCurrentSourceIngestService {
   async appendBatch(lease: ProgressIngressScope, input: ResearchCurrentSourceBatchIngress): Promise<CurrentSourceBatchReceipt> {
     const scope = { workspaceId: lease.workspaceId, actorUserId: lease.actorUserId };
     const authority = await this.requireAuthority(lease, input);
+    const pair = currentSourceExecutionPair(authority.executionProfileId,authority.executionProfileDigest)!;
+    const method = currentSourceRetainedMethod(pair.profile_id,pair.source_adapter_id);
     for (const row of input.rows) {
       if (!currentSourceRowMatchesKind(input.table_kind, row)) {
         throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source row payload is incompatible with its table kind.", 400);
       }
-      if (input.table_kind === "FOLD" && (authority.executionProfileId === DELTA_CAUSAL_INNER_PROFILE_ID
+      if (input.table_kind === "FOLD" && (method === "CAUSAL_INNER"
         ? row.payload.causal_selection === undefined : row.payload.causal_selection !== undefined)) {
         throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Per-fold causal selections must match the admitted immutable execution profile.", 400);
       }
-      if (input.table_kind === "FOLD" && (authority.executionProfileId === DELTA_PER_FOLD_DECAY_PROFILE_ID
+      if (input.table_kind === "FOLD" && (method === "PER_FOLD_DECAY"
         ? row.payload.fold_selection === undefined : row.payload.fold_selection !== undefined)) {
         throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "OOS-used fold selections must match the exact per-fold-decay execution profile.", 400);
       }
@@ -103,12 +103,13 @@ export class ResearchCurrentSourceIngestService {
     if (!summary.success) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source seal summary is incompatible.", 400);
     }
-    if (authority.executionProfileId === DELTA_CAUSAL_INNER_PROFILE_ID
+    const method = currentSourceRetainedMethod(pair.profile_id,pair.source_adapter_id);
+    if (method === "CAUSAL_INNER"
       && (summary.data.selection.scope !== "LAST_FOLD_DEPLOYMENT" || summary.data.selection.fold_id === undefined
         || summary.data.source_facts?.search.optimization_schedule !== "per_fold_causal")) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Causal retention requires the actual last-fold deployment singleton and per-fold source facts.", 400);
     }
-    if (authority.executionProfileId === DELTA_PER_FOLD_DECAY_PROFILE_ID
+    if (method === "PER_FOLD_DECAY"
       && (summary.data.selection.scope !== "LAST_FOLD_DEPLOYMENT" || summary.data.selection.fold_id === undefined
         || summary.data.source_facts?.search.optimization_schedule !== "per_fold_decay"
         || summary.data.source_facts.claims.oos_used_for_selection !== true)) {

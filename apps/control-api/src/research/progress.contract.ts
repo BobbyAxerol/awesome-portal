@@ -10,10 +10,8 @@
 
 import { z } from "zod";
 import { ResearchEnrichedAnalysisSchema } from "./enriched-analysis.contract";
-import { DELTA_WFO_PROFILE_ID } from "./delta-wfo.profile";
-import { DELTA_WFO_V2_PROFILE_ID } from "./delta-wfo-v2.profile";
-import { DELTA_CAUSAL_INNER_PROFILE_ID } from "./delta-causal-inner.profile";
-import { DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID } from "./full02.profiles";
+import { currentSourceExecutionPair, currentSourceRetainedMethod } from "./current-source-profile";
+import { executionRecipe } from "./execution-recipes";
 import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
 import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
 import { sourceTrialOrdinal } from "./selected-trial-presentation";
@@ -308,7 +306,7 @@ const ResearchEvidenceAvailabilitySchema = z.object({
 export const ResearchEvidenceSourceSchema = z.object({
   schema_version: z.literal("research.p13.evidence-source.v1"),
   source: z.object({
-    execution_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]),
+    execution_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1", "full03.delta-rsi.v1"]),
     engine_version: z.enum(["1.1.0", "1.1.1"]),
     input_scope: z.literal("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY"),
     oos_observation_count: z.number().int().positive().max(2_000_000),
@@ -554,7 +552,7 @@ export const ResearchSplitSourceSchema = z.object({
   source: z.object({
     /** E17 child-verified raw-source SHA; absent on P04/historical receipts. */
     imported_source_digest: DigestSchema.optional(),
-    execution_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]),
+    execution_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1", "full03.delta-rsi.v1"]),
     engine_version: z.enum(["1.1.0", "1.1.1"]),
     input_scope: z.literal("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY"),
     source_transform_digest: DigestSchema,
@@ -985,8 +983,15 @@ export function toPublicResearchProgressSnapshot(
   const line = publicSnapshot.overall.tqdm_line;
   let handoff = publicSnapshot.claim.handoff_cursor;
   let handoffReason: HandoffProjectionReason | null = null;
-  if (handoff !== null && (executionProfileId === DELTA_CAUSAL_INNER_PROFILE_ID
-    || executionProfileId === DELTA_PER_FOLD_DECAY_PROFILE_ID)) {
+  const method = (() => {
+    if (!executionProfileId) return null;
+    try {
+      const recipe = executionRecipe(executionProfileId);
+      const pair = currentSourceExecutionPair(recipe.profile_id,recipe.profile_digest);
+      return pair && currentSourceRetainedMethod(pair.profile_id,pair.source_adapter_id);
+    } catch { return null; }
+  })();
+  if (handoff !== null && (method === "CAUSAL_INNER" || method === "PER_FOLD_DECAY")) {
     const matches = snapshot.folds.filter(fold => fold.fold === handoff!.fold);
     const selection = matches.length === 1 ? matches[0]!.selection : null;
     if (!selection || selection.state !== "AVAILABLE" || selection.scope !== "PER_FOLD_STUDY") {
@@ -1001,8 +1006,7 @@ export function toPublicResearchProgressSnapshot(
         source_trial_id: selection.source_trial_id!, study_id: selection.study_id,
         progress_trial_ordinal: handoff.trial } as z.infer<typeof PublicResearchHandoffCursorSchema>;
     }
-  } else if (handoff !== null && (executionProfileId === DELTA_WFO_PROFILE_ID || executionProfileId === DELTA_WFO_V2_PROFILE_ID
-    || executionProfileId === DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID)) {
+  } else if (handoff !== null && (method === "GLOBAL_WFO" || method === "THREE_WINDOW")) {
     handoff = { ...handoff, trial_scope: "RUN_GLOBAL", source_trial_id: String(handoff.trial - 1),
       study_id: null, progress_trial_ordinal: handoff.trial } as z.infer<typeof PublicResearchHandoffCursorSchema>;
   }
@@ -1023,10 +1027,10 @@ export function toPublicResearchProgressSnapshot(
         ...fold.selection,
         display_trial_ordinal: fold.selection.trial,
         trial_numbering: "P11_ORDINAL_1_BASED" as const,
-        ...(executionProfileId === DELTA_CAUSAL_INNER_PROFILE_ID && fold.selection.state === "AVAILABLE"
+        ...(method === "CAUSAL_INNER" && fold.selection.state === "AVAILABLE"
           && fold.selection.scope === "PER_FOLD_STUDY" && fold.selection.study_id !== undefined
           && fold.selection.source_trial_id !== undefined ? { objective_kind: "INNER_VALIDATION_DECAY_J" as const } : {}),
-        ...((executionProfileId === DELTA_WFO_PROFILE_ID || executionProfileId === DELTA_WFO_V2_PROFILE_ID)
+        ...((method === "GLOBAL_WFO" || method === "THREE_WINDOW")
           && fold.selection.state === "AVAILABLE"
           && fold.selection.scope === "GLOBAL_STUDY"
           && fold.selection.trial !== null

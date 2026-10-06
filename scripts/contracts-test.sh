@@ -93,8 +93,8 @@ cp -a \
 cp -a \
   "${ROOT_DIR}/apps/control-api/src/operations/catalog.generated.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/operations/"
-# FULL-01 verifies image-owned TS/Python views against the same recipe source
-# and the six exact legacy receipt references. No runtime inputs are staged.
+# Verify image-owned TS/Python views and every exact checked-in receipt
+# reference (legacy/FULL02/FULL03). No private runtime inputs are staged.
 cp -a "${ROOT_DIR}/apps/portal/registry/research-execution-recipes.v1.json" \
   "${ROOT_DIR}/apps/portal/registry/research-execution-recipes.v1.schema.json" \
   "${WORKSPACE_DIR}/apps/portal/registry/"
@@ -109,7 +109,8 @@ for receipt in \
   P10/B8_CAUSAL_INNER_CURRENT_SOURCE_2026-10-02.md \
   P10/B8_VN_FIXED_PRODUCT_VERTICAL_2026-10-02.md \
   P10/E17_IMPORTED_DRAFT_EXECUTION_BACKEND_RECEIPT_2026-09-27.md \
-  P10/FULL_02_PRODUCT_QUALIFICATION_2026-10-06.md; do
+  P10/FULL_02_PRODUCT_QUALIFICATION_2026-10-06.md \
+  P10/FULL_03_PRODUCT_QUALIFICATION_2026-10-06.md; do
   mkdir -p "${WORKSPACE_DIR}/upgrade/research_loop/evidence/${receipt%/*}"
   cp -a "${ROOT_DIR}/upgrade/research_loop/evidence/${receipt}" \
     "${WORKSPACE_DIR}/upgrade/research_loop/evidence/${receipt}"

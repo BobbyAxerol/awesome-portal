@@ -367,13 +367,13 @@ export interface ResearchRunProducerInput {
   intentKind: ResearchIntentKind;
   alphaId: string;
   alphaVersionId: string;
-  executionAdapterId: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1";
+  executionAdapterId: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1" | "full03.delta-rsi.v1";
   adapterContractDigest: string;
   /**
    * W1 run execution profile. Omitted means the P04 fixed qualification
    * (with a NULL digest), so existing callers keep their exact identity.
    */
-  executionProfileId?: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p10.delta-signal-notional-wfo.v2" | "p10.delta-signal-notional-causal-inner.v1" | "p17.imported-signal-notional.v1" | "p10.vn-stock-daily-observed-fixed.v1" | "p10.delta-signal-notional-per-fold-decay.v1" | "p10.delta-signal-notional-three-window-optimized.v1";
+  executionProfileId?: import("./execution-recipes").ExecutionRecipeId;
   executionProfileDigest?: string | null;
   preflightToken: string;
   requestedSpecDigest: string;
@@ -425,7 +425,7 @@ export interface ResearchWhatIfIntentInput {
   preflightToken: string;
   alphaId: string;
   alphaVersionId: string;
-  executionAdapterId: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1";
+  executionAdapterId: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1" | "full03.delta-rsi.v1";
   adapterContractDigest: string;
   requestedSpecDigest: string;
   effectiveSpecDigest: string;
@@ -445,9 +445,9 @@ export interface ResearchRunProducerRecord {
   clientIntentId: string;
   alphaId: string;
   alphaVersionId: string;
-  executionAdapterId: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1";
+  executionAdapterId: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1" | "full03.delta-rsi.v1";
   adapterContractDigest: string;
-  executionProfileId: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p10.delta-signal-notional-wfo.v2" | "p10.delta-signal-notional-causal-inner.v1" | "p16.delta-whatif-grid.v1" | "p17.imported-signal-notional.v1" | "p10.vn-stock-daily-observed-fixed.v1" | "p23.delta-pinned-final-audit.v1" | "p10.delta-signal-notional-per-fold-decay.v1" | "p10.delta-signal-notional-three-window-optimized.v1";
+  executionProfileId: import("./execution-recipes").ExecutionRecipeId | "p16.delta-whatif-grid.v1" | "p23.delta-pinned-final-audit.v1";
   executionProfileDigest: string | null;
   requestedSpecDigest: string;
   effectiveSpecDigest: string;
@@ -467,7 +467,7 @@ export interface ResearchRunProducerRecord {
 export interface ResearchExecutionAdapterBinding {
   alphaId: string;
   alphaVersionId: string;
-  adapterId: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1";
+  adapterId: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1" | "full03.delta-rsi.v1";
   contractDigest: string;
 }
 
@@ -487,7 +487,7 @@ export interface ResearchP04DeltaBindingInput {
   alphaVersionId: string;
   alphaName: string;
   executionSubjectId: string;
-  adapterId: "p04.delta-rsi.v1";
+  adapterId: "p04.delta-rsi.v1" | "full03.delta-rsi.v1";
   adapterContractDigest: string;
   codeDigest: string;
   entrypoint: string;

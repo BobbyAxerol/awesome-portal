@@ -139,7 +139,7 @@ export interface components {
             /** @enum {unknown} */
             state: "AVAILABLE" | "NOT_PUBLISHED";
             engine_version: ("1.1.0" | "1.1.1") | null;
-            execution_adapter_id: ("p04.delta-rsi.v1" | "p17.imported-signal-notional.v1") | null;
+            execution_adapter_id: ("p04.delta-rsi.v1" | "p17.imported-signal-notional.v1" | "full03.delta-rsi.v1") | null;
             adapter_contract_digest: components["schemas"]["Digest"] | null;
             availability: components["schemas"]["Availability"];
         };
@@ -156,7 +156,7 @@ export interface components {
             readiness: "PARTIAL" | "NOT_READY";
             as_of_utc_ms: components["schemas"]["UtcMilliseconds"];
             provenance: {
-                source_adapter_id: ("p04.delta-rsi.v1" | "p17.imported-signal-notional.v1") | null;
+                source_adapter_id: ("p04.delta-rsi.v1" | "p17.imported-signal-notional.v1" | "full03.delta-rsi.v1") | null;
                 adapter_contract_digest: components["schemas"]["Digest"] | null;
                 p14_split_revision: string | null;
                 source_split_digest: components["schemas"]["Digest"] | null;

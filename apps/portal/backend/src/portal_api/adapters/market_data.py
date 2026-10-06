@@ -6,6 +6,7 @@ import importlib.metadata
 import json
 import os
 import re
+import sys
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 from pathlib import Path
@@ -38,9 +39,37 @@ HISTORICAL_EXCLUDED_SCOPES = (
 )
 _SYMBOL_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9_-]{1,31}$")
 _TIMEFRAME_PATTERN = re.compile(
-    r"^[1-9]\d*(?:s|sec|secs|second|seconds|min|minute|minutes|h|hour|hours|d|day|days)$",
+    r"^(?P<count>[1-9]\d*)(?P<unit>s|sec|secs|second|seconds|m|min|minute|minutes|h|hour|hours|d|day|days)$",
     re.IGNORECASE,
 )
+
+
+def fixed_interval_milliseconds(timeframe: str) -> int:
+    """Fixed UTC duration only; ``m`` means minutes, never a calendar month."""
+    match = _TIMEFRAME_PATTERN.fullmatch(str(timeframe).strip())
+    if match is None:
+        raise DataSchemaError("timeframe must be a positive fixed interval")
+    unit = match["unit"].lower()
+    multiplier = (1_000 if unit in {"s", "sec", "secs", "second", "seconds"} else
+                  60_000 if unit in {"m", "min", "minute", "minutes"} else
+                  3_600_000 if unit in {"h", "hour", "hours"} else 86_400_000)
+    value = int(match["count"]) * multiplier
+    if value > 31 * 86_400_000:
+        raise DataSchemaError("timeframe exceeds the bounded fixed interval")
+    return value
+
+
+def canonical_fixed_timeframe(timeframe: str) -> str:
+    """Public interval identity, derived by duration rather than an alias menu."""
+    milliseconds = fixed_interval_milliseconds(timeframe)
+    for divisor, suffix in ((86_400_000, "d"), (3_600_000, "h"), (60_000, "m"), (1_000, "s")):
+        if milliseconds % divisor == 0:
+            return f"{milliseconds // divisor}{suffix}"
+    raise DataSchemaError("timeframe is not a whole-second fixed interval")
+
+
+def _observed_source_as_of_utc_ms() -> int:
+    return int(pd.Timestamp.now(tz="UTC").value // 1_000_000)
 
 
 @dataclass(frozen=True, slots=True)
@@ -955,7 +984,7 @@ class HistoricalMarketDataProvider:
                 timeframe=None,
                 source_path=None,
                 dynamic_query=True,
-                supported_timeframes=self.SUPPORTED_TIMEFRAMES,
+                supported_timeframes=self._published_timeframes(CRYPTO_BINANCE_DATASET_ID),
                 source_class="historical_market_data",
                 availability="available",
                 usage_scopes=HISTORICAL_USAGE_SCOPES,
@@ -968,7 +997,7 @@ class HistoricalMarketDataProvider:
             mounted = self._runtime.storage_root.joinpath(*loader.NEW_PATH_PARTS).is_dir()
             additional.append(DatasetDescriptor(
                 dataset_id=key, symbol=None, venue="BINANCE", timeframe=None,
-                source_path=None, dynamic_query=True, supported_timeframes=self.SUPPORTED_TIMEFRAMES,
+                source_path=None, dynamic_query=True, supported_timeframes=self._published_timeframes(key),
                 source_class="historical_market_data",
                 availability="available" if mounted else "unavailable",
                 unavailable_reason=None if mounted else "HMD_DATASET_COMPONENT_NOT_MOUNTED",
@@ -976,6 +1005,31 @@ class HistoricalMarketDataProvider:
                 excluded_scopes=HISTORICAL_EXCLUDED_SCOPES, source_timezone="UTC",
             ))
         return primary + tuple(additional)
+
+    def _published_timeframes(self, dataset_id: str) -> tuple[str, ...]:
+        """Verify published intervals against the installed reader, without I/O.
+
+        The pinned rc3 reader has a fixed-interval grammar, not a finite
+        SUPPORTED_TIMEFRAMES declaration. Preserve its previously published
+        set, but check its native normalizer. Future finite declarations take
+        precedence; they are not widened by the Portal menu.
+        """
+        loader = self._new_loader(dataset_id) if self._loader_factory is not None else self._loader_class(dataset_id)
+        if getattr(loader, "RESAMPLE_SUPPORTED", True) is not True:
+            return ()
+        declared = getattr(loader, "SUPPORTED_TIMEFRAMES", self.SUPPORTED_TIMEFRAMES)
+        module = sys.modules.get(getattr(loader, "__module__", type(loader).__module__))
+        normalizer = getattr(module, "_normalize_timeframe", None)
+        verified: dict[int, str] = {}
+        for token in declared:
+            try:
+                duration = fixed_interval_milliseconds(token)
+                if callable(normalizer) and int(normalizer(token)[1].total_seconds() * 1_000) != duration:
+                    continue
+            except (DataSchemaError, ValueError, TypeError, KeyError):
+                continue
+            verified.setdefault(duration, token)
+        return tuple(verified.values())
 
     #: The approved reader's documented layout for the Binance USD-M 1m store
     #: (release manifest: canonical component crypto/binance_futures/1m,
@@ -1051,9 +1105,17 @@ class HistoricalMarketDataProvider:
         normalized_symbol = str(query.symbol or "").strip().upper()
         if not _SYMBOL_PATTERN.fullmatch(normalized_symbol):
             raise DataSchemaError("symbol must contain 2-32 uppercase venue characters")
+        if query.dataset_id == "crypto-binance-quarterly-1m" and not re.fullmatch(r"[A-Z0-9]+_[0-9]{6}", normalized_symbol):
+            raise DataSchemaError("symbol is not a quarterly contract in the selected source namespace")
         normalized_timeframe = str(query.timeframe or "").strip()
         if not _TIMEFRAME_PATTERN.fullmatch(normalized_timeframe):
             raise DataSchemaError("timeframe must be a positive interval such as 15min, 1h or 1D")
+        interval_ms = fixed_interval_milliseconds(normalized_timeframe)
+        supported = self._published_timeframes(query.dataset_id)
+        native_timeframe = next((token for token in supported
+            if fixed_interval_milliseconds(token) == interval_ms), None)
+        if native_timeframe is None:
+            raise DataSchemaError("timeframe is not published by the selected historical reader")
         if tuple(query.columns) != REQUIRED_MARKET_COLUMNS:
             raise DataSchemaError(
                 "the certified Binance OHLCV hot path requires open/high/low/close/volume"
@@ -1063,13 +1125,18 @@ class HistoricalMarketDataProvider:
         # The reader's end_date is inclusive and converts to Python datetime.
         # One microsecond preserves the half-open Portal contract without a
         # nanosecond-truncation warning or admitting the next boundary.
-        reader_end = end - pd.Timedelta(1, unit="us")
+        observed_as_of_ms = _observed_source_as_of_utc_ms()
+        closed_end_ms = min(end.value // 1_000_000, observed_as_of_ms) // interval_ms * interval_ms
+        closed_end = pd.Timestamp(closed_end_ms, unit="ms", tz="UTC")
+        if closed_end <= start:
+            raise DatasetNotFoundError("no closed historical bars in the bounded source range")
+        reader_end = closed_end - pd.Timedelta(1, unit="us")
 
         started = perf_counter()
         loader = self._new_loader(query.dataset_id)
         raw = loader.load_resampled(
             normalized_symbol,
-            timeframe=normalized_timeframe,
+            timeframe=native_timeframe,
             start_date=start.isoformat(),
             end_date=reader_end.isoformat(),
             check_val=self._check_val,
@@ -1083,19 +1150,29 @@ class HistoricalMarketDataProvider:
             )
         if "time" not in raw.columns:
             raise DataSchemaError("historical reader output is missing time")
+        if "symbol" not in raw.columns or set(raw["symbol"].astype(str).str.upper()) != {normalized_symbol}:
+            raise DataSchemaError("historical reader output does not match the requested source symbol")
 
         frame = (
             raw.sort_values("time", kind="stable")
             .rename(columns={"time": "datetime"})
             .set_index("datetime")
         )
+        utc_index = pd.DatetimeIndex(pd.to_datetime(frame.index, utc=True)).as_unit("ns")
+        if any(utc_index.asi8 % (interval_ms * 1_000_000)):
+            raise DataSchemaError("historical reader bars are not aligned to their fixed UTC interval")
+        # Source bars carry UTC open time. An open/future bar cannot enter an
+        # immutable snapshot even if a reader returns it at an inclusive edge.
+        frame = frame.loc[utc_index < closed_end]
+        if frame.empty:
+            raise DatasetNotFoundError("no closed historical bars in the bounded source range")
         descriptor = DatasetDescriptor(
             dataset_id=query.dataset_id,
             symbol=normalized_symbol,
             venue="BINANCE",
             timeframe=normalized_timeframe,
             dynamic_query=True,
-            supported_timeframes=self.SUPPORTED_TIMEFRAMES,
+            supported_timeframes=supported,
             source_class="historical_market_data",
             availability="available",
             usage_scopes=HISTORICAL_USAGE_SCOPES,
@@ -1111,6 +1188,11 @@ class HistoricalMarketDataProvider:
                 "source_resolution": "1min",
                 "source_timezone": "UTC",
                 "requested_timeframe": normalized_timeframe,
+                "reader_timeframe": native_timeframe,
+                "clock_basis": "UTC_FIXED_INTERVAL_OPEN_TIME_V1",
+                "closed_bar_policy": "INTERVAL_END_AT_OR_BEFORE_AS_OF_V1",
+                "observed_as_of_utc_ms": observed_as_of_ms,
+                "target_interval_ms": interval_ms,
                 "requested_start": start.isoformat(),
                 "requested_end_exclusive": end.isoformat(),
                 "resample_engine": self._engine,

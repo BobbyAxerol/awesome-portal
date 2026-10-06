@@ -9,12 +9,13 @@
 import { Inject, Injectable } from "@nestjs/common";
 import {executionRecipe, executionRecipeActivationReason, wfoExecutionRecipe} from "./execution-recipes";
 import { DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_ID } from "./full02.profiles";
+import {isFull03DeltaBinding} from "./full03-delta.binding";
 
 import { ControlApiConfig } from "../config";
 import { PortalUser } from "../domain";
 import { CONTROL_API_CONFIG } from "../tokens";
 import type { ResearchPreflightManifestRecord, ResearchScope } from "./contracts";
-import { ResearchRequestedSpecSchema, type ResearchRequestedSpec } from "./preflight.contract";
+import { FixedUtcProvenanceSchema, ResearchRequestedSpecSchema, type ResearchRequestedSpec } from "./preflight.contract";
 import { sha256ResearchJson } from "./preflight.service";
 import type { SetupRefusal } from "./run-setup.contract";
 import {
@@ -60,7 +61,7 @@ export interface ResearchRunAdmission {
   alpha: {
     alphaId: string;
     alphaVersionId: string;
-    adapterId: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1";
+    adapterId: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1" | "full03.delta-rsi.v1";
     adapterContractDigest: string;
     /** P04 fixed map; null for the WFO profile, which searches its parameters. */
     fixedParameters: Readonly<Record<string, number>> | null;
@@ -220,10 +221,10 @@ export class ResearchRunAdmissionService {
     if (eligibility.lifecycleState !== "ACTIVE") {
       return denied("RESEARCH_RUN_ALPHA_NOT_ACTIVE", "The bound AlphaVersion is not active.");
     }
-    if (!eligibility.binding || eligibility.binding.adapterId !== P04_DELTA_ADAPTER_ID ||
+    if (!isFull03DeltaBinding(eligibility) && (!eligibility.binding || eligibility.binding.adapterId !== P04_DELTA_ADAPTER_ID ||
         eligibility.binding.contractDigest !== P04_DELTA_ADAPTER_CONTRACT_DIGEST ||
         eligibility.alphaId !== P04_DELTA_ALPHA_ID ||
-        eligibility.alphaVersionId !== P04_DELTA_ALPHA_VERSION_ID) {
+        eligibility.alphaVersionId !== P04_DELTA_ALPHA_VERSION_ID)) {
       return denied("RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE", "No installed durable executor is bound to this active AlphaVersion.");
     }
     // W1 profile selection. An `advanced` request is the only shape the WFO
@@ -252,8 +253,8 @@ export class ResearchRunAdmissionService {
       alpha: {
         alphaId: eligibility.alphaId,
         alphaVersionId: eligibility.alphaVersionId,
-        adapterId: eligibility.binding.adapterId,
-        adapterContractDigest: eligibility.binding.contractDigest,
+        adapterId: eligibility.binding!.adapterId as NonNullable<ResearchRunAdmission["alpha"]>["adapterId"],
+        adapterContractDigest: eligibility.binding!.contractDigest,
         fixedParameters: (wfo || optimized) && !vnObserved ? null : P04_DELTA_FIXED_PARAMETERS,
         importedParameters: null,
         sourceDigest: null,
@@ -264,7 +265,7 @@ export class ResearchRunAdmissionService {
         : wfo
         ? this.wfoProfileIdentity(requestedSpec)
         : optimized
-        ? {id: DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, digest: executionRecipe(DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID).profile_digest}
+        ? this.optimizedThreeRecipeIdentity(requestedSpec)
         : { id: P04_FIXED_QUALIFICATION_PROFILE_ID, digest: null },
     };
   }
@@ -273,6 +274,31 @@ export class ResearchRunAdmissionService {
     const row = wfoExecutionRecipe(spec);
     if (!row) throw new ResearchRunCreateError("RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE", "No exact qualified execution recipe matches this request.", 409);
     return {id: row.profile_id, digest: row.profile_digest};
+  }
+
+  private optimizedThreeRecipe(requested: ResearchRequestedSpec) {
+    const full03=requested.alpha_binding?.alpha_version_id==="av_delta_rsi_polynomial_alpha_1_0_1";
+    return executionRecipe(full03?`p10.delta-three-window-optimized-${requested.data.timeframe}.v1`:DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID);
+  }
+  private optimizedThreeRecipeIdentity(requested: ResearchRequestedSpec):{id:ResearchExecutionProfileId;digest:string|null} {
+    const row=this.optimizedThreeRecipe(requested);return {id:row.profile_id,digest:row.profile_digest};
+  }
+
+  private full03SourceReason(row:ReturnType<typeof executionRecipe>,requested:ResearchRequestedSpec,
+    manifest:ResearchPreflightManifestRecord):string|null {
+    if(row.source_requirement!=="FULL03_IMMUTABLE_DELTA_BINDING")return null;
+    const p=row.descriptor;
+    if(requested.data.dataset_id!==p.dataset_id || requested.alpha_binding?.alpha_version_id!==p.alpha_binding_requirements.alpha_version_id)
+      return "The indexed recipe requires its exact dataset and immutable AlphaVersion binding.";
+    const binding=manifest.datasetBinding, provenance=FixedUtcProvenanceSchema.safeParse(binding.provenance);
+    if(binding.timeframe!==p.timeframe || binding.symbol!==requested.data.symbol || binding.dataset_id!==requested.data.dataset_id
+      || binding.timezone!=="UTC" || binding.closed_bar_policy!=="CLOSED_BARS_ONLY"
+      || !provenance.success || provenance.data.metadata_index_source_manifest_digest!==binding.source_manifest_digest
+      || provenance.data.warmup_start_utc_ms!==binding.range_start_utc_ms
+      || typeof binding.range_end_exclusive_utc_ms!=="number"
+      || binding.range_end_exclusive_utc_ms>provenance.data.metadata_index_as_of_utc_ms)
+      return "The indexed recipe requires a verified fixed-UTC closed-bar metadata binding.";
+    return null;
   }
 
   /** Only P08's source-qualified observed FPT tape grants this source pair. */
@@ -443,10 +469,13 @@ export class ResearchRunAdmissionService {
     manifest: ResearchPreflightManifestRecord,
   ): string | null {
     const row = wfoExecutionRecipe(requested);
-    if (row && (row.feature_flags as readonly string[]).includes("FEATURE_RESEARCH_FULL02_PROFILE")) {
+    if(!row && requested.alpha_binding?.alpha_version_id==="av_delta_rsi_polynomial_alpha_1_0_1")
+      return "No exact indexed execution recipe matches the requested AlphaVersion and timeframe.";
+    if (row && (row.feature_flags as readonly string[]).some(flag=>flag==="FEATURE_RESEARCH_FULL02_PROFILE"||flag==="FEATURE_RESEARCH_FULL03_PROFILE")) {
       const activation = executionRecipeActivationReason(row, this.config, {engine_release_id: requested.client.engine_release_id, verified: true});
       if (activation !== null) return `The exact execution recipe is not admitted: ${activation}.`;
     }
+    if(row){const source=this.full03SourceReason(row,requested,manifest);if(source)return source;}
     const profile = (row ?? executionRecipe(DELTA_WFO_PROFILE_ID)).public_profile;
     const temporal = requested.schema_version === "research.requested-spec.v2";
     const causal = temporal && requested.optimization_schedule === DELTA_CAUSAL_INNER_PROFILE.optimization_schedule;
@@ -475,7 +504,7 @@ export class ResearchRunAdmissionService {
     // W5a · A10c sibling: the only admitted overrides are pins of the two
     // what-if axes, on a declared step inside the declared range; every other
     // parameter is still searched exactly as the locked profile says.
-    if (profile.profile_id === DELTA_PER_FOLD_DECAY_PROFILE_ID && requested.parameter_space_overrides.length !== 0) {
+    if (profile.optimization_schedule === "per_fold_decay" && requested.parameter_space_overrides.length !== 0) {
       return "The qualified per-fold-decay recipe searches the installed Delta space without parameter overrides.";
     }
     const pinReason = siblingPinReason(requested.parameter_space_overrides);
@@ -501,7 +530,8 @@ export class ResearchRunAdmissionService {
       return "The Delta walk-forward profile does not admit early stopping.";
     }
     if (requested.data.timeframe !== profile.timeframe) {
-      return "The Delta walk-forward profile accepts only the 1h timeframe.";
+      return row?.source_requirement==="FULL03_IMMUTABLE_DELTA_BINDING"
+        ? "The requested timeframe must match the exact indexed execution recipe." : "The Delta walk-forward profile accepts only the 1h timeframe.";
     }
     const walkForward = requested.walk_forward;
     if (temporal && !causal && walkForward.inner !== undefined) {
@@ -524,7 +554,8 @@ export class ResearchRunAdmissionService {
       return "The Delta walk-forward first out-of-sample boundary must lie strictly inside the walk-forward span.";
     }
     if (end - start > profile.max_span_days * 86_400_000) {
-      return "The Delta walk-forward span exceeds the admitted 92 days.";
+      return row?.source_requirement==="FULL03_IMMUTABLE_DELTA_BINDING"
+        ? "The requested span exceeds the target-bar-bounded indexed recipe." : "The Delta walk-forward span exceeds the admitted 92 days.";
     }
     const folds = advancedFoldCount(manifest.topology, walkForward.frequency, walkForward.window_mode);
     if (folds === null || folds < profile.fold_bounds.min || folds > profile.fold_bounds.max) {
@@ -540,17 +571,21 @@ export class ResearchRunAdmissionService {
 
   /** FULL-02: a separate calibration study; never substitutes fixed P04. */
   private optimizedThreeWindowUnsupportedReason(requested: ResearchRequestedSpec, manifest: ResearchPreflightManifestRecord): string | null {
-    const row = executionRecipe(DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID);
+    let row:ReturnType<typeof executionRecipe>;
+    try{row=this.optimizedThreeRecipe(requested);}catch{return "No exact indexed execution recipe matches the requested AlphaVersion and timeframe.";}
     const profile = row.public_profile;
     const reason = executionRecipeActivationReason(row, this.config, {engine_release_id: requested.client.engine_release_id, verified: true});
     if (reason !== null) return `The optimized Three Window recipe is not admitted: ${reason}.`;
+    const source=this.full03SourceReason(row,requested,manifest);if(source)return source;
     const engine = manifest.effectiveSpec.engine as Record<string, unknown> | undefined;
     if (!engine || engine.execution_route !== profile.execution_route || engine.engine_release_id !== profile.engine_release_id)
       return "The effective preflight engine binding does not match the optimized Three Window recipe.";
     if (requested.schema_version !== "research.requested-spec.v1" || requested.execution_route !== profile.execution_route
         || requested.optimization_mode !== profile.optimization_mode || requested.optimization_schedule !== profile.optimization_schedule
         || requested.data.timeframe !== profile.timeframe || requested.protocol !== profile.protocol || requested.walk_forward)
-      return "Optimized Three Window requires requested-spec v1, 1h signal_notional and Mode 1/global.";
+      return row.source_requirement==="FULL03_IMMUTABLE_DELTA_BINDING"
+        ? "Optimized Three Window requires requested-spec v1, its exact signal_notional timeframe and Mode 1/global."
+        : "Optimized Three Window requires requested-spec v1, 1h signal_notional and Mode 1/global.";
     if (requested.optuna_trials !== profile.trial_default || requested.random_seed !== profile.random_seed || requested.early_stopping !== null)
       return "Optimized Three Window requires exactly 3 trials, seed 42 and no early stopping.";
     if (requested.route_params && Object.keys(requested.route_params).length || requested.optimization_config && Object.keys(requested.optimization_config).length)
@@ -564,7 +599,8 @@ export class ResearchRunAdmissionService {
       c2 = utcInstantMs(windows.holdout.start), d = utcInstantMs(windows.holdout.end_exclusive);
     if (a === null || b === null || c === null || d === null || b !== b2 || c !== c2 || !(a < b && b < c && c < d))
       return "Optimized Three Window requires contiguous UTC end-exclusive IS/OOS/holdout boundaries.";
-    if (d - a > profile.max_span_days * 86_400_000) return "Optimized Three Window exceeds its admitted 92-day span.";
+    if (d - a > profile.max_span_days! * 86_400_000) return row.source_requirement==="FULL03_IMMUTABLE_DELTA_BINDING"
+      ? "The requested span exceeds the target-bar-bounded indexed recipe." : "Optimized Three Window exceeds its admitted 92-day span.";
     if (requested.alpha_binding === null || requested.strategy_id !== requested.alpha_binding.alpha_id)
       return "The strategy must match its immutable Delta AlphaVersion binding.";
     return null;

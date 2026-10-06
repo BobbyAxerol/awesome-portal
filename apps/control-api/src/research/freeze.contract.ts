@@ -197,7 +197,7 @@ export const ResearchFreezeResponseSchema = z.object({
   engine_pin: z.object({
     state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
     engine_version: z.enum(["1.1.0", "1.1.1"]).nullable(),
-    execution_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]).nullable(),
+    execution_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1", "full03.delta-rsi.v1"]).nullable(),
     adapter_contract_digest: DigestSchema.nullable(),
     availability: ResearchFreezeAvailabilitySchema,
   }).strict(),

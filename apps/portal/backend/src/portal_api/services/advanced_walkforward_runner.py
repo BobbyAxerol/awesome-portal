@@ -170,6 +170,7 @@ class AdvancedWalkForwardRunner:
         progress: Callable[[str], None] | None = None,
         *,
         target_mode: Literal["pct_equity", "signal_notional"] = "pct_equity",
+        strategy_callable: Callable[..., Any] | None = None,
     ) -> dict[str, Any]:
         if request.protocol != RunProtocol.ADVANCED_WALK_FORWARD:
             raise AdvancedWalkForwardError("AdvancedWalkForwardRunner requires protocol=advanced_walk_forward")
@@ -211,7 +212,7 @@ class AdvancedWalkForwardRunner:
         started_at = _utc_now_iso()
         stage("OPTIMIZING_IS")
         endpoint, wf = self._gateway.run_advanced_walkforward(
-            strategy_fn=_strategy_callable,
+            strategy_fn=_strategy_callable if strategy_callable is None else strategy_callable,
             data=active_market.frame,
             wf_config=wf_config,
             optimization_config=dict(fields),

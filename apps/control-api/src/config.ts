@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
 import { z } from "zod";
 import { AUTH_MODES } from "./domain";
+import {executionRecipes} from "./research/execution-recipes";
 
 const ServiceOriginSchema = z
   .string()
@@ -137,11 +138,12 @@ const EnvSchema = z.object({
   // lanes, because a WFO run is complete only once its artifact is sealed.
   FEATURE_RESEARCH_WFO_PROFILE: z.enum(["true", "false"]).default("false"),
   FEATURE_RESEARCH_FULL02_PROFILE: z.enum(["true", "false"]).default("false"),
+  FEATURE_RESEARCH_FULL03_PROFILE: z.enum(["true", "false"]).default("false"),
   // One exact owner qualification recipe; never valid outside the isolated local cell.
-  RESEARCH_RECIPE_QUALIFICATION_PROFILE_ID: z.preprocess(v => v === "" ? undefined : v, z.enum([
-    "p10.delta-signal-notional-per-fold-decay.v1",
-    "p10.delta-signal-notional-three-window-optimized.v1",
-  ]).optional()),
+  RESEARCH_RECIPE_QUALIFICATION_PROFILE_ID: z.preprocess(v => v === "" ? undefined : v,
+    z.string().max(191).refine(v=>executionRecipes.some(row=>row.profile_id===v &&
+      (row.feature_flags as readonly string[]).some(flag=>flag==="FEATURE_RESEARCH_FULL02_PROFILE"||flag==="FEATURE_RESEARCH_FULL03_PROFILE")),
+      "One exact installed qualification recipe is required").optional()),
   // Source-qualified FPT observed daily research only; not a generic VN venue.
   FEATURE_RESEARCH_VN_OBSERVED_PROFILE: z.enum(["true", "false"]).default("false"),
   // E17: execute only a digest-bound DRAFT/ACTIVE P07 AlphaVersion through
@@ -529,8 +531,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
   if (config.FEATURE_RESEARCH_FULL02_PROFILE === "true" && config.FEATURE_RESEARCH_WFO_PROFILE !== "true") {
     throw new Error("FEATURE_RESEARCH_FULL02_PROFILE requires the complete WFO retention/read foundation");
   }
+  if (config.FEATURE_RESEARCH_FULL03_PROFILE === "true" && config.FEATURE_RESEARCH_WFO_PROFILE !== "true") {
+    throw new Error("FEATURE_RESEARCH_FULL03_PROFILE requires the complete WFO retention/read foundation");
+  }
   if (config.RESEARCH_RECIPE_QUALIFICATION_PROFILE_ID !== undefined && (
-      config.FEATURE_RESEARCH_FULL02_PROFILE !== "true" || config.PORTAL_ENV !== "local" || config.AUTH_MODE !== "dev")) {
+      config.FEATURE_RESEARCH_FULL02_PROFILE !== "true" && config.FEATURE_RESEARCH_FULL03_PROFILE !== "true"
+      || config.PORTAL_ENV !== "local" || config.AUTH_MODE !== "dev")) {
     throw new Error("Recipe qualification requires one exact local/dev owner cell");
   }
   if (config.FEATURE_RESEARCH_VN_OBSERVED_PROFILE === "true") {

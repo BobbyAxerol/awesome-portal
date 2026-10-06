@@ -149,6 +149,26 @@ export interface components {
                     signal_target: string | null;
                 }[];
             };
+            window_series_metadata?: {
+                is: {
+                    source_observation_count: number;
+                    emitted_point_count: number;
+                    /** @enum {unknown} */
+                    sampling: "FULL" | "MULTI_SERIES_EXTREMA_V1";
+                };
+                oos: {
+                    source_observation_count: number;
+                    emitted_point_count: number;
+                    /** @enum {unknown} */
+                    sampling: "FULL" | "MULTI_SERIES_EXTREMA_V1";
+                };
+                holdout: {
+                    source_observation_count: number;
+                    emitted_point_count: number;
+                    /** @enum {unknown} */
+                    sampling: "FULL" | "MULTI_SERIES_EXTREMA_V1";
+                };
+            };
         };
         EnrichedAnalysis: {
             /** @constant */

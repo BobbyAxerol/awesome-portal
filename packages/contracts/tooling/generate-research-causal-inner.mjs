@@ -5,6 +5,7 @@ import { replaceComponent } from "./generate-research-progress-truth.mjs";
 import { amendVnObservedFixedOpenApi } from "./generate-research-vn-observed-fixed.mjs";
 import { amendW1Presentation } from "./generate-research-w1-presentation.mjs";
 import { amendFull02CurrentSource } from "./generate-research-full02-current-source.mjs";
+import {amendFull03} from "./generate-research-full03.mjs";
 
 const ref = name => ({ $ref: `#/components/schemas/${name}` });
 const obj = properties => ({ type: "object", additionalProperties: false, required: Object.keys(properties), properties });
@@ -156,7 +157,7 @@ function amend(original, file) {
   }
   next = amendVnObservedFixedOpenApi(next, file);
   if (file === "research-current-source") return amendFull02CurrentSource(amendW1Presentation(next, file),file);
-  return file === "research-report" ? amendFull02CurrentSource(next,file) : next;
+  return file === "research-report" ? amendFull02CurrentSource(next,file) : amendFull03(next,file);
 }
 export function amendCausalInnerOpenApi(original, file) { return amend(original, file); }
 

@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { replaceComponent } from "./generate-research-progress-truth.mjs";
 import { selectedTrialPresentation } from "./generate-research-w1-presentation.mjs";
+import {amendFull03} from "./generate-research-full03.mjs";
 
 const ref = name => ({ $ref: `#/components/schemas/${name}` });
 const object = properties => ({ type: "object", additionalProperties: false, required: Object.keys(properties), properties });
@@ -87,7 +88,7 @@ export function amendFull02CurrentSource(original, file = "research-current-sour
     if (schemas[name]) next = replaceComponent(next, name, value, next.indexOf('"schemas": {'));
     else next = next.replace('"schemas": {\n', `"schemas": {\n      "${name}": ${JSON.stringify(value)},\n`);
   }
-  return next;
+  return amendFull03(next,file);
 }
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const only = process.argv.find(arg => arg.startsWith("--only="))?.slice(7);

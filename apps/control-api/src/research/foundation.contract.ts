@@ -449,7 +449,7 @@ export interface ResearchPortalAdmission {
     trial_scope?: "PER_OUTER_FOLD_STUDY";
     max_total_trials?: number;
     inner_constraints?: { fold_bounds: { min: number; max: number }; frequencies: string[]; window_modes: string[]; train_window_pattern: string };
-    dataset_id?: "vn-stock-daily";
+    dataset_id?: "vn-stock-daily" | "crypto-binance-1m";
     symbol?: "FPT";
     source_timezone?: "Asia/Ho_Chi_Minh";
     clock_basis?: "OBSERVED_SOURCE_LOCAL_DATE_V1";

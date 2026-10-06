@@ -76,6 +76,18 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        FixedUtcProvenance: {
+            /** @constant */
+            clock_basis: "UTC_FIXED_INTERVAL_OPEN_TIME_V1";
+            /** @constant */
+            source_timezone: "UTC";
+            metadata_index_revision: string;
+            metadata_index_source_manifest_digest: string;
+            metadata_index_as_of_utc_ms: number;
+            /** @constant */
+            warmup_semantics: "FIXED_INTERVAL_PREDECESSORS_V1";
+            warmup_start_utc_ms: number;
+        };
         RegularSnapshotQuality: {
             rows: number;
             gaps: number;
@@ -252,7 +264,7 @@ export interface components {
             calendar_policy: string;
             /** @enum {unknown} */
             closed_bar_policy: "CLOSED_BARS_ONLY" | "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1";
-            provenance?: components["schemas"]["VnObservedProvenance"];
+            provenance?: components["schemas"]["VnObservedProvenance"] | components["schemas"]["FixedUtcProvenance"];
         } & unknown;
         ResourceEstimate: {
             /** @constant */
@@ -294,7 +306,7 @@ export interface components {
             warmup_bars: number;
             range_start_utc_ms: components["schemas"]["UtcMilliseconds"];
             range_end_exclusive_utc_ms: components["schemas"]["UtcMilliseconds"];
-            provenance?: components["schemas"]["VnObservedProvenance"];
+            provenance?: components["schemas"]["VnObservedProvenance"] | components["schemas"]["FixedUtcProvenance"];
         } & unknown;
         Optimization: {
             mode: string;

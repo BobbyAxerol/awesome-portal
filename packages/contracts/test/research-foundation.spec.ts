@@ -300,7 +300,7 @@ describe("P09 published Research foundation contract", () => {
     const schemas = document.components.schemas;
     expect(schemas.AtlasResponse.oneOf[0].required).toContain("portal_admission");
     expect(schemas.AtlasResponse.oneOf[1].properties.portal_admission).toBeUndefined();
-    expect(schemas.PortalAdmission.properties.profiles.maxItems).toBe(7);
+    expect(schemas.PortalAdmission.properties.profiles.maxItems).toBe(35);
     const current = JSON.parse(readFileSync(join(ROOT, "fixtures", "research-foundation.atlas-current.valid.json"), "utf8")) as Record<string, any>;
     expect(current.atlas.current_release.submission_constraints.profile_id).toBe("p10.fixed-qualification.v1");
     expect(current.portal_admission.profiles).toMatchObject([
@@ -313,9 +313,12 @@ describe("P09 published Research foundation contract", () => {
     const fixture = JSON.parse(readFileSync(admissionFixturePath,"utf8"));
     expect(fixture.profiles).toHaveLength(5);
     const document = JSON.parse(readFileSync(openApiPath,"utf8"));
-    expect(document.components.schemas.PortalAdmission.properties.profiles.items.properties.profile_id.enum)
+    const publishedIds=document.components.schemas.PortalAdmission.properties.profiles.items.properties.profile_id.enum;
+    expect(publishedIds.slice(0,7))
       .toEqual([...fixture.profiles.map((profile: { profile_id: string }) => profile.profile_id),
         "p10.delta-signal-notional-per-fold-decay.v1", "p10.delta-signal-notional-three-window-optimized.v1"]);
+    expect(publishedIds.slice(7)).toHaveLength(28);
+    expect(new Set(publishedIds).size).toBe(publishedIds.length);
     expect(admissionValidator()(fixture)).toBe(true);
     expect(fixture.profiles[3]).toMatchObject({profile_id:"p10.delta-signal-notional-causal-inner.v1",
       optimization_schedule:"per_fold_causal",requested_spec_versions:["research.requested-spec.v2"],

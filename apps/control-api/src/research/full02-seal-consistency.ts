@@ -2,11 +2,11 @@
  * Decay studies use outer OOS; Three Window keeps an independent holdout. */
 import { CurrentSourceFoldPayloadSchema, CurrentSourceSummarySchema } from "./current-source.payload";
 import { ResearchCurrentSourceError } from "./current-source.error";
-import { DELTA_PER_FOLD_DECAY_PROFILE, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE } from "./full02.profiles";
+import { currentSourceRetainedIntervalMs, currentSourceRetainedMethod } from "./current-source-profile";
 import { sha256ResearchJson } from "./preflight.service";
 
 export function assertFull02SealConsistency(
-  input: { profileId: string; tableRows: Record<string, number>; summary: Record<string, unknown> },
+  input: { profileId: string; sourceAdapterId?: string; tableRows: Record<string, number>; summary: Record<string, unknown> },
   rows: Array<{ tableKind: string; sourceOrdinal: number; sourceId: string; payload: Record<string, unknown> }>,
 ): void {
   const fail = (): never => { throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_CONFLICT", "FULL-02 selection, population or protocol does not match its retained source.", 409); };
@@ -20,7 +20,8 @@ export function assertFull02SealConsistency(
   const sameSelection = (selection: Record<string, unknown>, trialId: string, parameters: unknown, objective: unknown) =>
     selection.trial_id === trialId && selection.objective === objective
       && sha256ResearchJson(selection.parameters) === sha256ResearchJson(parameters);
-  if (input.profileId === DELTA_PER_FOLD_DECAY_PROFILE.current_source.profile_id) {
+  const method = currentSourceRetainedMethod(input.profileId,input.sourceAdapterId);
+  if (method === "PER_FOLD_DECAY") {
     if (folds.length < 2 || folds.length > 16 || trials.length !== folds.length * 3
       || summary.data.source_facts?.search.optimization_schedule !== "per_fold_decay"
       || summary.data.source_facts.search.n_studies !== folds.length
@@ -55,7 +56,7 @@ export function assertFull02SealConsistency(
       if (selected.scope !== "LAST_FOLD_DEPLOYMENT" || selected.fold_id !== finalRow.sourceId
         || !sameSelection(selected, final.selected_trial_id, final.parameters, final.objective)) return fail();
     }
-  } else if (input.profileId === DELTA_THREE_WINDOW_OPTIMIZED_PROFILE.current_source.profile_id) {
+  } else if (method === "THREE_WINDOW") {
     if (folds.length !== 1 || trials.length !== 3 || summary.data.selection.scope !== undefined
       || summary.data.source_facts?.search.optimization_schedule !== "global"
       || !summary.data.protocol_disclosure || summary.data.source_facts.claims.oos_used_for_selection !== true) return fail();
@@ -63,11 +64,12 @@ export function assertFull02SealConsistency(
     if (!fold.success || fold.data.causal_selection || fold.data.fold_selection) return fail();
     const selected = summary.data.selection, trial = trials.find(row => row.sourceId === selected.trial_id);
     const protocol = summary.data.protocol_disclosure;
-    if (protocol.independent_holdout.selected_params_digest !== sha256ResearchJson(selected.parameters)
+    const intervalMs = currentSourceRetainedIntervalMs(input.profileId,input.sourceAdapterId);
+    if (intervalMs === null || protocol.independent_holdout.selected_params_digest !== sha256ResearchJson(selected.parameters)
       || fold.data.train_start_utc_ms !== protocol.windows.is.start_utc_ms
-      || fold.data.train_end_utc_ms === null || fold.data.train_end_utc_ms + 3_600_000 !== protocol.windows.is.end_exclusive_utc_ms
+      || fold.data.train_end_utc_ms === null || fold.data.train_end_utc_ms + intervalMs !== protocol.windows.is.end_exclusive_utc_ms
       || fold.data.test_start_utc_ms !== protocol.windows.oos.start_utc_ms
-      || fold.data.test_end_utc_ms === null || fold.data.test_end_utc_ms + 3_600_000 !== protocol.windows.oos.end_exclusive_utc_ms) return fail();
+      || fold.data.test_end_utc_ms === null || fold.data.test_end_utc_ms + intervalMs !== protocol.windows.oos.end_exclusive_utc_ms) return fail();
     if (!trial || trial.payload.state !== "COMPLETE" || !sameSelection(singletons[0]!.payload,
       selected.trial_id!, selected.parameters, selected.objective)
       || sha256ResearchJson(trial.payload.parameters) !== sha256ResearchJson(selected.parameters)) return fail();

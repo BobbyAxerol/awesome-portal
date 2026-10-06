@@ -30,6 +30,8 @@ import { DELTA_CAUSAL_INNER_PROFILE, DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL
 import { DELTA_PER_FOLD_DECAY_PROFILE, DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_DIGEST,
   DELTA_THREE_WINDOW_OPTIMIZED_PROFILE, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST } from "./full02.profiles";
 import { boundWarning, positionPercent, type BoundWarning } from "./bound-warning";
+import { FULL03_DELTA_ADAPTER_CONTRACT_DIGEST, FULL03_DELTA_DECLARED_CONTRACT } from "./full03-delta.binding";
+import { currentSourceExecutionRecipes, currentSourceExecutionPair } from "./current-source-profile";
 
 export interface DeclaredRange {
   minimum: number;
@@ -168,6 +170,18 @@ const THREE_WINDOW_OPTIMIZED_V1: HistoricalProfileBinding = Object.freeze({
   installedInRelease: "research-loop-v1.1/FULL-02",
   retainedLaneProfileIds: Object.freeze([DELTA_THREE_WINDOW_OPTIMIZED_PROFILE.current_source.profile_id]),
 });
+const FULL03_V1: HistoricalParameterBinding = Object.freeze({
+  ...P04_V1, adapterContractDigest:FULL03_DELTA_ADAPTER_CONTRACT_DIGEST,
+  parameterSpace:FULL03_DELTA_DECLARED_CONTRACT.parameter_space, installedInRelease:"research-loop-v2.0/FULL-03",
+});
+const FULL03_PROFILES: readonly HistoricalProfileBinding[] = Object.freeze(currentSourceExecutionRecipes()
+  .filter(row => row.descriptor.adapter_contract_digest === FULL03_DELTA_ADAPTER_CONTRACT_DIGEST && row.profile_digest !== null)
+  .map(row => Object.freeze({
+    ...WFO_V1, profileId:row.profile_id, profileDigest:row.profile_digest!,
+    adapterContractDigest:FULL03_DELTA_ADAPTER_CONTRACT_DIGEST, parameterSpace:FULL03_DELTA_DECLARED_CONTRACT.parameter_space,
+    installedInRelease:"research-loop-v2.0/FULL-03",
+    retainedLaneProfileIds:Object.freeze([currentSourceExecutionPair(row.profile_id,row.profile_digest)!.profile_id]),
+  })));
 
 /**
  * The injectable lookup. Tests construct one with an older binding and a
@@ -179,8 +193,8 @@ export class ResearchParameterBindingRegistry {
   private readonly profiles: ReadonlyMap<string, HistoricalProfileBinding>;
 
   constructor(
-    adapters: readonly HistoricalParameterBinding[] = [P04_V1],
-    profiles: readonly HistoricalProfileBinding[] = [WFO_V1, WFO_V2, CAUSAL_INNER_V1, PER_FOLD_DECAY_V1, THREE_WINDOW_OPTIMIZED_V1],
+    adapters: readonly HistoricalParameterBinding[] = [P04_V1, FULL03_V1],
+    profiles: readonly HistoricalProfileBinding[] = [WFO_V1, WFO_V2, CAUSAL_INNER_V1, PER_FOLD_DECAY_V1, THREE_WINDOW_OPTIMIZED_V1, ...FULL03_PROFILES],
   ) {
     this.adapters = new Map(adapters.map((entry) => [entry.adapterContractDigest, entry]));
     this.profiles = new Map(profiles.map((entry) => [entry.profileDigest, entry]));

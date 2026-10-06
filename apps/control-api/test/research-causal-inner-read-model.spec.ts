@@ -245,10 +245,14 @@ describe("causal-inner private current-source profile boundary", () => {
     const repository = new ResearchReportRepository({ connect: vi.fn().mockResolvedValue(client) } as never);
     await expect(repository.claimMissingWfo(scope, "causal-unit-run", [DELTA_CAUSAL_INNER_PROFILE_ID])).resolves.toBe(true);
     const [sql, values] = client.query.mock.calls.find(([text]) => text.startsWith("INSERT INTO research.run_report_materialization_retries_v1"))! as unknown as [string, unknown[]];
-    expect(sql).toContain("producer.execution_profile_id = $8 AND producer.execution_profile_digest = $9");
+    expect(sql).toContain("jsonb_to_recordset($4::jsonb)");
+    expect(sql).toContain("installed.profile_id=producer.execution_profile_id");
+    expect(sql).toContain("installed.profile_digest=producer.execution_profile_digest");
     expect(sql).toContain("producer.execution_profile_id = ANY($3::text[])");
     expect(values.slice(0, 3)).toEqual([scope.workspaceId, "causal-unit-run", [DELTA_CAUSAL_INNER_PROFILE_ID]]);
-    expect(values.slice(7,9)).toEqual([DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST]);
+    expect(JSON.parse(values[3] as string)).toEqual(expect.arrayContaining([{
+      profile_id: DELTA_CAUSAL_INNER_PROFILE_ID, profile_digest: DELTA_CAUSAL_INNER_PROFILE_DIGEST,
+    }]));
     expect(client.query).toHaveBeenCalledWith("COMMIT");
     expect(client.release).toHaveBeenCalledTimes(1);
   });

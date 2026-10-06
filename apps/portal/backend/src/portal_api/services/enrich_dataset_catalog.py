@@ -24,7 +24,7 @@ import pandas as pd
 
 from portal_api.adapters.market_data import (
     HistoricalMarketDataProvider, MarketDataQuery, VN_STOCK_DAILY_DATASET_ID,
-    VnStockDailyQualificationProvider,
+    VnStockDailyQualificationProvider, canonical_fixed_timeframe,
 )
 from portal_api.domain.errors import DatasetNotFoundError
 from portal_api.domain.research_execution_recipes import EXECUTION_MAX_WARMUP_BARS, EXECUTION_PLANNING_MAX_BARS
@@ -59,6 +59,56 @@ def timeframe_ms(value: str) -> int:
     if result > 31 * 86_400_000:
         raise DatasetIndexError("DATASET_INTERVAL_INVALID")
     return result
+
+
+def _interval_key(row: dict) -> tuple[str, str, int]:
+    return row["dataset_id"], row["symbol"], timeframe_ms(row["index"]["timeframe"])
+
+
+def _indexed_intervals(document: dict | None) -> dict[tuple[str, str, int], dict]:
+    """Resolve aliases without changing a historical document or its hash.
+
+    A duration alias never authorizes another dataset/symbol. Contradictory
+    alias entries are refused rather than picking the first index silently.
+    """
+    result: dict[tuple[str, str, int], dict] = {}
+    for row in document["entries"] if document else ():
+        key = _interval_key(row)
+        index = row["index"]
+        previous = result.get(key)
+        if previous is not None and {k: v for k, v in previous.items() if k != "timeframe"} != {
+            k: v for k, v in index.items() if k != "timeframe"
+        }:
+            raise DatasetIndexError("DATASET_INDEX_INTERVAL_ALIAS_CONFLICT")
+        result[key] = index
+    return result
+
+
+def _find_index(document: dict | None, dataset_id: str, symbol: str, timeframe: str) -> dict | None:
+    return _indexed_intervals(document).get((dataset_id, symbol, timeframe_ms(timeframe)))
+
+
+def discover_indexed_timeframes(provider, store: "DatasetIndexStore", *, dataset_id: str,
+                               symbols: list[str]) -> dict[str, object]:
+    """Bounded explicit operator discovery; never load a market data frame."""
+    if not symbols or len(symbols) > MAX_SYMBOLS or any(not _SYMBOL.fullmatch(s) for s in symbols):
+        raise DatasetIndexError("DATASET_INDEX_SELECTION_NOT_PUBLISHED")
+    catalog = enrich_dataset_catalog(provider, store)
+    dataset = next((row for row in catalog["datasets"] if row["dataset_id"] == dataset_id), None)
+    if dataset is None:
+        raise DatasetIndexError("DATASET_INDEX_SELECTION_NOT_PUBLISHED")
+    listed = {row["symbol"]: row for row in dataset["symbols"]["items"]}
+    return {"dataset_id": dataset_id, "catalog_revision": catalog["catalog_revision"],
+        "source_manifest_digest": source_digest(provider), "as_of_utc_ms": catalog["as_of_utc_ms"],
+        "source_timezone": dataset["source_timezone"],
+        "clock_basis": "OBSERVED_SOURCE_LOCAL_DATE_V1" if dataset_id == VN_STOCK_DAILY_DATASET_ID
+            else "UTC_FIXED_INTERVAL_OPEN_TIME_V1",
+        "published_timeframes": dataset["timeframes"],
+        "symbols": [{"symbol": symbol,
+            "availability": "AVAILABLE" if symbol in listed else "NOT_PUBLISHED",
+            "reason_code": None if symbol in listed else "HMD_SYMBOL_NOT_LISTED",
+            "coverage_by_timeframe": listed.get(symbol, {}).get("coverage_by_timeframe", [])}
+            for symbol in sorted(set(symbols))]}
 
 
 def index_root() -> Path:
@@ -257,6 +307,7 @@ def validate_document(value: object) -> dict:
         if key in keys:
             raise DatasetIndexError("DATASET_INDEX_DOCUMENT_REJECTED")
         keys.add(key)
+    _indexed_intervals(value)
     return value
 
 
@@ -357,14 +408,14 @@ def enrich_dataset_catalog(provider, store: DatasetIndexStore) -> dict[str, obje
         return store.catalog_cache[2]
     catalog = build_research_dataset_catalog(provider)
     clock = document["as_of_utc_ms"] if document else None
-    entries = {(row["dataset_id"], row["symbol"], row["index"]["timeframe"]): row["index"]
-               for row in document["entries"]} if document else {}
+    entries = _indexed_intervals(document)
     datasets = []
     for dataset in catalog["datasets"]:
         items = []
         for symbol in dataset["symbols"]["items"]:
-            coverage = [bar_summary(entries[(dataset["dataset_id"], symbol["symbol"], tf)])
-                for tf in dataset["timeframes"] if (dataset["dataset_id"], symbol["symbol"], tf) in entries]
+            coverage = [{**bar_summary(entries[(dataset["dataset_id"], symbol["symbol"], timeframe_ms(tf))]),
+                "timeframe": tf} for tf in dataset["timeframes"]
+                if (dataset["dataset_id"], symbol["symbol"], timeframe_ms(tf)) in entries]
             items.append({**symbol, "coverage_by_timeframe": coverage,
                 "coverage_availability": {"state": "AVAILABLE" if coverage else "NOT_PUBLISHED",
                     "reason_code": None if coverage else reason or "HMD_SYMBOL_INTERVAL_NOT_INDEXED"},
@@ -402,16 +453,13 @@ def window_metadata(document: dict | None, *, dataset_id: str, symbol: str, time
     step = timeframe_ms(timeframe)
     if dataset_id == VN_STOCK_DAILY_DATASET_ID:
         from portal_api.services.research_observed_daily_index import observed_window_metadata
-        index = next((row["index"] for row in document["entries"]
-            if (row["dataset_id"], row["symbol"], row["index"]["timeframe"])
-            == (dataset_id, symbol, timeframe.lower())), None) if document else None
+        index = _find_index(document, dataset_id, symbol, timeframe)
         if timeframe.lower() != "1d":
             raise DatasetIndexError("DATASET_INTERVAL_INVALID")
         return observed_window_metadata(index, start_ms=start_ms, end_ms=end_ms, warmup_bars=warmup_bars)
     if start_ms % step or end_ms % step:
         raise DatasetIndexError("DATASET_WINDOW_NOT_BAR_ALIGNED")
-    index = next((row["index"] for row in document["entries"]
-        if (row["dataset_id"], row["symbol"], row["index"]["timeframe"]) == (dataset_id, symbol, timeframe.lower())), None) if document else None
+    index = _find_index(document, dataset_id, symbol, timeframe)
     unavailable = {"availability": "NOT_PUBLISHED", "reason_code": "HMD_SYMBOL_INTERVAL_NOT_INDEXED",
         "bars": None, "first_bar_utc_ms": None, "last_bar_utc_ms": None,
         "warmup_bars_required": warmup_bars, "warmup_bars_available_before_start": None,
@@ -512,8 +560,7 @@ def declaration_estimate(document: dict | None, requested: dict, *, warmup_bars:
                     window[field] = None
             windows.append({"window": key.upper(), "start_utc_ms": left, "end_exclusive_utc_ms": right, **window})
         result["planned_folds"] = {**absence, "reason_code": "VN_DAILY_PORTAL_EXECUTION_NOT_QUALIFIED"}
-        index = next((row["index"] for row in document["entries"] if
-            (row["dataset_id"], row["symbol"], row["index"]["timeframe"]) == (dataset, symbol, timeframe)), None) if document else None
+        index = _find_index(document, dataset, symbol, timeframe)
         if index is None:
             return result
         result["earliest_start_utc_ms"] = earliest_start_with_warmup(index, warmup_bars, step)
@@ -573,8 +620,7 @@ def declaration_estimate(document: dict | None, requested: dict, *, warmup_bars:
                 metadata[field] = None
         windows.append({"window": key, "start_utc_ms": left, "end_exclusive_utc_ms": right,
             **metadata})
-    index = next((row["index"] for row in document["entries"] if
-        (row["dataset_id"], row["symbol"], row["index"]["timeframe"]) == (dataset, symbol, timeframe)), None) if document else None
+    index = _find_index(document, dataset, symbol, timeframe)
     if not index:
         return result
     result["earliest_start_utc_ms"] = earliest_start_with_warmup(index, warmup_bars, step)
@@ -619,7 +665,7 @@ def merge_index_documents(previous: dict, incoming: dict) -> dict:
     validate_document(incoming)
     if any(previous[k] != incoming[k] for k in ("source_manifest_digest", "as_of_utc_ms")):
         raise DatasetIndexError("DATASET_INDEX_APPEND_SOURCE_CLOCK_MISMATCH")
-    key = lambda row: (row["dataset_id"], row["symbol"], row["index"]["timeframe"])
+    key = _interval_key
     combined = {key(row): row for row in previous["entries"]}
     combined.update({key(row): row for row in incoming["entries"]})
     result = {**incoming, "entries": [combined[k] for k in sorted(combined)]}
@@ -633,9 +679,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Explicit read-only HMD timestamp-index builder; no backtest.")
     parser.add_argument("--dataset-id", default="crypto-binance-1m")
     parser.add_argument("--symbol", action="append", required=True)
-    parser.add_argument("--timeframe", action="append", required=True)
-    parser.add_argument("--start", required=True)
-    parser.add_argument("--end-exclusive", required=True)
+    parser.add_argument("--timeframe", action="append")
+    parser.add_argument("--start")
+    parser.add_argument("--end-exclusive")
+    parser.add_argument("--discover", action="store_true", help="Metadata-only published/indexed interval discovery; no source price reads or index writes")
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--append", action="store_true", help="Preserve other indexed datasets at the same verified source clock")
     parser.add_argument("--partition-span", action="store_true", help="Clip queries to source-published month partitions; facts still come from actual bars")
@@ -644,6 +691,16 @@ def main() -> None:
     parser.add_argument("--qualification-root", type=Path,
         help="Explicit private index destination for VN source qualification; never an input data root")
     args = parser.parse_args()
+    if args.discover:
+        if args.apply or args.append or args.partition_span or args.source_only_qualification:
+            raise DatasetIndexError("DATASET_DISCOVERY_CANNOT_MUTATE_INDEX")
+        if args.dataset_id == VN_STOCK_DAILY_DATASET_ID:
+            raise DatasetIndexError("VN_OBSERVED_INDEX_REQUIRES_SOURCE_ONLY_QUALIFICATION")
+        print(json.dumps(discover_indexed_timeframes(HistoricalMarketDataProvider(), DatasetIndexStore(),
+            dataset_id=args.dataset_id, symbols=args.symbol), sort_keys=True))
+        return
+    if not args.timeframe or not args.start or not args.end_exclusive:
+        parser.error("index construction requires --timeframe, --start and --end-exclusive")
     if args.dataset_id == VN_STOCK_DAILY_DATASET_ID:
         if not args.source_only_qualification or args.partition_span:
             raise DatasetIndexError("VN_OBSERVED_INDEX_REQUIRES_SOURCE_ONLY_QUALIFICATION")
@@ -700,7 +757,7 @@ def main() -> None:
     if dataset is None:
         raise DatasetIndexError("DATASET_INDEX_SELECTION_NOT_PUBLISHED")
     names = {row["symbol"] for row in dataset["symbols"]["items"]}
-    symbols, timeframes = sorted(set(args.symbol)), sorted(set(x.lower() for x in args.timeframe))
+    symbols, timeframes = sorted(set(args.symbol)), sorted(set(canonical_fixed_timeframe(x) for x in args.timeframe))
     if len(symbols) > MAX_SYMBOLS or len(timeframes) > MAX_TIMEFRAMES or not set(symbols) <= names or not set(timeframes) <= set(dataset["timeframes"]):
         raise DatasetIndexError("DATASET_INDEX_SELECTION_NOT_PUBLISHED")
     def instant(text: str) -> int:

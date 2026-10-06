@@ -2279,3 +2279,33 @@ backend Conditions/admission already resolve exact policy. Take frontend browser
 receipt separately; named backend proof is not visual acceptance. Next backend
 stage FULL-03 remains pending Bobby's instruction, not a FULL-02 source blocker.
 No remote push, dev/main promotion or runtime change.
+
+#### §37 FULL-03 delivery — 2026-10-06
+
+**BACKEND_DELIVERED / 28_EXACT_RECIPES_PRODUCT_RUN_QUALIFIED /
+RESEARCH_PREVIEW_ENABLED**. Bobby named this stage; this dated note supersedes
+the earlier pending instruction. BR-FULL-02 now has seven actually indexed
+BTCUSDT/perpetual intervals, not the nominal menu:1m/5m/15m/30m/1h/4h/1d.
+New immutable AV1.0.1 declares them; AV1.0.0 and protected kernel untouched.
+All four Mode1 method recipes have ordinary product admission/child/retention/
+eight named-read evidence (28 runs/224 HTTP200), exact clocks/warmup, integrity,
+causal scope and workspace/cursor negatives. Only observed qualified source
+pairs open; other source/symbol or future/unindexed ranges stay precisely typed.
+
+Migrations098–100 are additive. Dense1m storage now fits128 parts without
+changing200-row/1MiB wire pages, and Three display declares sampled coverage
+within64KiB core while preserving all raw data and economic/selection facts.
+Preview setup exposes4 qualified profiles at each of7 intervals. Flag-off
+preserves56 retained reads/MATCH and refuses new create;20 prior seals,
+accounts/status/session versions, old AV/pointers and index are unchanged.
+Claude's concurrent frontend rebuild is proven and preserved, not rolled back.
+QA identities revoked and test containers removed; proof volumes retained.
+
+[Full receipt/gates/hashes/known failures and fixes/Claude tasks](./evidence/P10/FULL_03_INDEXED_TIMEFRAMES_2026-10-06.md),
+[immutable real28-run qualification](./evidence/P10/FULL_03_PRODUCT_QUALIFICATION_2026-10-06.md).
+Generated frontend additions: `FixedUtcProvenance` (preflight/dataset-index),
+optional `ProtocolDisclosure.window_series_metadata` (current-source/report).
+Claude consumes dynamic Registry/setup and exact seed/trial policy, keeps old
+clones/AVs unchanged and labels sampled displays; no new UI design is required.
+Browser acceptance is not claimed. FULL04 other modes, FULL05 imported WFO,
+FULL06 other routes remain planned; no push/dev/main/production action.

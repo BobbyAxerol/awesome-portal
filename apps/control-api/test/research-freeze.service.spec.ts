@@ -123,7 +123,8 @@ describe("P16 current-source Freeze / retained integrity authority", () => {
     });
     expect(detail.freeze.frozen_parameters).toEqual([]);
     expect(detail.freeze.integrity.checks[0]).toMatchObject({
-      key: "P04_ADAPTER_CONTRACT", state: "MISMATCH", expected_digest: P04_DELTA_ADAPTER_CONTRACT_DIGEST,
+      key: "P04_ADAPTER_CONTRACT", state: "MISMATCH",
+      expected_digest: P04_DELTA_ADAPTER_CONTRACT_DIGEST, observed_digest: "0".repeat(64),
     });
     await expect(service.verify(scope, "run_p16_mismatch", {})).resolves.toMatchObject({
       result: "BLOCKED",

@@ -41,6 +41,7 @@ from portal_api.services.current_source_artifacts import (
     signal_notional_current_source_admission,
     causal_inner_current_source_admission,
     full02_current_source_admission,
+    recipe_current_source_admission,
 )
 from portal_api.services.research_artifacts import (
     ArtifactFence,
@@ -259,7 +260,8 @@ class ResearchCurrentSourceRetentionClient:
             identity=identity,
             fence=fence,
             # The locked 3, or the preview long WFO's admitted count (flag on only).
-            admission=(full02_current_source_admission(three_window=research.is_three_window_optimized) if research.execution_profile_id in {DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID}
+            admission=(recipe_current_source_admission(research.execution_profile_id,research.execution_profile_digest) if research.is_full03
+                       else full02_current_source_admission(three_window=research.is_three_window_optimized) if research.execution_profile_id in {DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID}
                        else causal_inner_current_source_admission() if research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID
                        else signal_notional_current_source_admission(delta_wfo_admitted_trials(research.requested_spec))),
             fence_validator=fence_validator,
@@ -335,14 +337,14 @@ class ResearchCurrentSourceRetentionClient:
                 for row in batch.rows:
                     state = row.get("payload", {}).get("state")
                     trial_states.append(state if isinstance(state, str) else None)
-                    if research.execution_profile_id in {DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_ID}:
+                    if research.requested_spec.get("optimization_schedule") in {"per_fold_causal", "per_fold_decay"}:
                         payload = row["payload"]
                         facts = payload["trial_facts"]
                         causal_trials.append({"trial_id": payload["trial_id"], "source_trial_id": facts["source_trial_id"],
                                               "study_id": facts["study_id"], "state": state, "objective": payload["objective"]})
-            if batch.table_kind == "FOLD" and research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID:
+            if batch.table_kind == "FOLD" and research.requested_spec.get("optimization_schedule") == "per_fold_causal":
                 causal_fold_selections.extend({"fold_id": row["payload"]["fold_id"], **row["payload"]["causal_selection"]} for row in batch.rows)
-            if batch.table_kind == "FOLD" and research.execution_profile_id == DELTA_PER_FOLD_DECAY_PROFILE_ID:
+            if batch.table_kind == "FOLD" and research.requested_spec.get("optimization_schedule") == "per_fold_decay":
                 causal_fold_selections.extend({"fold_id": row["payload"]["fold_id"], **row["payload"]["fold_selection"]} for row in batch.rows)
             accepted.append({
                 "table_kind": batch.table_kind,

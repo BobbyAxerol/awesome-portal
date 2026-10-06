@@ -399,14 +399,21 @@
               },
               "dataset_id": {
                 "type": "string",
-                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$",
+                "enum": [
+                  "vn-stock-daily",
+                  "crypto-binance-1m"
+                ]
               },
               "symbol": {
                 "type": "string",
                 "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
               },
-          "source_timezone": {
-            "enum": ["UTC", "Asia/Ho_Chi_Minh"]
+              "source_timezone": {
+                "enum": [
+                  "UTC",
+                  "Asia/Ho_Chi_Minh"
+                ]
               },
               "clock_basis": {
                 "type": "string",
@@ -434,7 +441,8 @@
                 "FEATURE_RESEARCH_WFO_PROFILE",
                 "FEATURE_RESEARCH_FULL02_PROFILE",
                 "FEATURE_RESEARCH_IMPORTED_EXECUTION",
-                "FEATURE_RESEARCH_VN_OBSERVED_PROFILE"
+                "FEATURE_RESEARCH_VN_OBSERVED_PROFILE",
+                "FEATURE_RESEARCH_FULL03_PROFILE"
               ]
             },
             "maxItems": 3,
@@ -444,7 +452,8 @@
             "enum": [
               "IMMUTABLE_DELTA_BINDING",
               "IMMUTABLE_IMPORTED_BINDING",
-              "VN_OBSERVED_EXACT_QUALIFICATION"
+              "VN_OBSERVED_EXACT_QUALIFICATION",
+              "FULL03_IMMUTABLE_DELTA_BINDING"
             ]
           },
           "budgets": {
@@ -585,15 +594,25 @@
             "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
           },
           "kind": {
-            "enum": ["LEGACY_COMPATIBILITY_REFERENCE", "CANDIDATE_NOT_QUALIFIED", "PRODUCT_RUN_QUALIFIED"]
+            "enum": [
+              "LEGACY_COMPATIBILITY_REFERENCE",
+              "CANDIDATE_NOT_QUALIFIED",
+              "PRODUCT_RUN_QUALIFIED"
+            ]
           },
           "receipt_path": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "pattern": "^upgrade/research_loop/evidence/[A-Za-z0-9_/.-]+\\.md$",
             "maxLength": 256
           },
           "receipt_sha256": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "pattern": "^[a-f0-9]{64}$"
           },
           "recipe_digest": {
@@ -601,11 +620,37 @@
             "pattern": "^[a-f0-9]{64}$"
           }
         },
-        "allOf": [{
-          "if": {"properties": {"kind": {"const": "CANDIDATE_NOT_QUALIFIED"}}},
-          "then": {"properties": {"receipt_path": {"type": "null"}, "receipt_sha256": {"type": "null"}}},
-          "else": {"properties": {"receipt_path": {"type": "string"}, "receipt_sha256": {"type": "string"}}}
-        }]
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "CANDIDATE_NOT_QUALIFIED"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "receipt_path": {
+                  "type": "null"
+                },
+                "receipt_sha256": {
+                  "type": "null"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "receipt_path": {
+                  "type": "string"
+                },
+                "receipt_sha256": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ]
       }
     },
     "preflight_policy": {

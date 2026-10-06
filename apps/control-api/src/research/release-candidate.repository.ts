@@ -28,8 +28,7 @@ import { verifiedEnriched } from "./enriched-analysis.contract";
 import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
 import { ResearchAllTimeDistributionsSchema } from "./all-time-distributions.contract";
 import { CurrentSourceSummarySchema, CurrentSourceTrialPayloadSchema } from "./current-source.payload";
-import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
-import { DELTA_PER_FOLD_DECAY_PROFILE } from "./full02.profiles";
+import { currentSourceRetainedMethod } from "./current-source-profile";
 import { readPinnedAuditProofs } from "./final-audit.read";
 import type { VerifiedPinnedAudit } from "./final-audit.contract";
 import { memoizedResearchJsonDigest } from "./memoized-json-digest";
@@ -944,8 +943,8 @@ export class ResearchReleaseCandidateRepository {
     client: PoolClient, workspaceId: string, runId: string, lane: ReleaseCandidateRetainedLane | null,
   ): Promise<ReleaseCandidateSource["selectedTrialNativeFacts"]> {
     const seal = lane?.seal;
-    if (!seal || (seal.profileId !== DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id
-      && seal.profileId !== DELTA_PER_FOLD_DECAY_PROFILE.current_source.profile_id)) return undefined;
+    const method = seal && currentSourceRetainedMethod(seal.profileId,seal.sourceAdapterId);
+    if (!seal || (method !== "CAUSAL_INNER" && method !== "PER_FOLD_DECAY")) return undefined;
     const summary = CurrentSourceSummarySchema.safeParse(seal.summary);
     const trialId = summary.success ? summary.data.selection.trial_id : null;
     if (trialId === null) return undefined;

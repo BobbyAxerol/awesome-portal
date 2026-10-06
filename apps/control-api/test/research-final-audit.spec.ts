@@ -8,7 +8,8 @@ import { sha256ResearchJson } from "../src/research/preflight.service";
 import { readPinnedAuditProofs } from "../src/research/final-audit.read";
 import { ResearchFinalAuditController } from "../src/research/final-audit.controller";
 import { sha256 } from "../src/auth/argon";
-import { DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID } from "../src/research/full02.profiles";
+import { DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_DIGEST,
+  DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST } from "../src/research/full02.profiles";
 
 const scope={workspaceId:"ws_audit",actorUserId:"usr_audit"};
 const user={userId:scope.actorUserId,role:"ADMIN",status:"ACTIVE",mustChangePassword:false};
@@ -75,13 +76,28 @@ describe("Pinned final audit contract/private preparation",()=>{
 });
 describe("Final audit actor/idempotency/byte seal boundary",()=>{
   it("refuses exact FULL-02 protocols before calling the run-global Advanced audit adapter",async()=>{
-    for(const profile of [DELTA_PER_FOLD_DECAY_PROFILE_ID,DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID]){
+    for(const [profile,digest] of [[DELTA_PER_FOLD_DECAY_PROFILE_ID,DELTA_PER_FOLD_DECAY_PROFILE_DIGEST],
+      [DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID,DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST]]){
       const x=subject(),parent=await x.repository.parent();
-      x.repository.parent.mockResolvedValue({...parent,executionProfileId:profile} as never);
+      x.repository.parent.mockResolvedValue({...parent,executionProfileId:profile,executionProfileDigest:digest} as never);
       await expect(x.service.read(user as never,scope,auditTarget.parent_run_id))
         .rejects.toMatchObject({code:"RESEARCH_FINAL_AUDIT_NOT_APPLICABLE",status:409});
       await expect(x.service.create(user as never,scope,auditTarget.parent_run_id,
         {client_intent_id:"full02-audit-intent-unit",target_digest:pinnedAuditTargetDigest(auditTarget)},"unit"))
+        .rejects.toMatchObject({code:"RESEARCH_FINAL_AUDIT_NOT_APPLICABLE",status:409});
+      expect(x.client.prepare).not.toHaveBeenCalled();
+      expect(x.repository.admit).not.toHaveBeenCalled();
+    }
+  });
+  it("never dispatches linked audit for a declared producer recipe with a missing or tampered digest",async()=>{
+    for(const digest of [undefined,"0".repeat(64)]){
+      const x=subject(),parent=await x.repository.parent();
+      x.repository.parent.mockResolvedValue({...parent,executionProfileId:DELTA_PER_FOLD_DECAY_PROFILE_ID,
+        executionProfileDigest:digest} as never);
+      await expect(x.service.read(user as never,scope,auditTarget.parent_run_id))
+        .rejects.toMatchObject({code:"RESEARCH_FINAL_AUDIT_NOT_APPLICABLE",status:409});
+      await expect(x.service.create(user as never,scope,auditTarget.parent_run_id,
+        {client_intent_id:"invalid-recipe-audit-intent",target_digest:pinnedAuditTargetDigest(auditTarget)},"unit"))
         .rejects.toMatchObject({code:"RESEARCH_FINAL_AUDIT_NOT_APPLICABLE",status:409});
       expect(x.client.prepare).not.toHaveBeenCalled();
       expect(x.repository.admit).not.toHaveBeenCalled();

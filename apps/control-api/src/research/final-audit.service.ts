@@ -8,7 +8,8 @@ import { ResearchMetadataRepository } from "./repository";
 import type { ResearchScope } from "./contracts";
 import { ResearchFinalAuditClient } from "./final-audit.client";
 import { ResearchFinalAuditRepository, type AdmittedAudit, type AuditParent } from "./final-audit.repository";
-import { DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID } from "./full02.profiles";
+import { currentSourceExecutionPair, currentSourceRetainedMethod, currentSourceRetainedRecipe } from "./current-source-profile";
+import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "./p04-delta.binding";
 import { sha256ResearchJson } from "./preflight.service";
 import { pinnedAuditTargetDigest, PINNED_AUDIT_PROFILE_ID, PINNED_AUDIT_PROFILE_DIGEST,
   ResearchFinalAuditError, ResearchFinalAuditReadSchema, type ResearchFinalAuditRead, type ResearchFinalAuditCreateSchema,
@@ -32,14 +33,23 @@ export class ResearchFinalAuditService {
   private requireLinkedAuditProfile(parent:AuditParent):void{
     // This endpoint is the qualified run-global, Advanced linked-child audit.
     // A per-fold deployment singleton is not a run-global optimizer target.
-    if(parent.executionProfileId===DELTA_PER_FOLD_DECAY_PROFILE_ID)
+    const pair=currentSourceExecutionPair(parent.executionProfileId,parent.executionProfileDigest);
+    if((parent.executionProfileId!==undefined || parent.executionProfileDigest!==undefined) && !pair)
+      throw new ResearchFinalAuditError("RESEARCH_FINAL_AUDIT_NOT_APPLICABLE",
+        "The parent's exact execution recipe is not registered for the linked audit executor.",409);
+    const method=pair && currentSourceRetainedMethod(pair.profile_id,pair.source_adapter_id);
+    if(method==="PER_FOLD_DECAY")
       throw new ResearchFinalAuditError("RESEARCH_FINAL_AUDIT_NOT_APPLICABLE",
         "Run-global selection audit does not apply to per-fold decay. Read the retained per-fold selection and OOS generation evidence.",409);
     // Three Window already retained its independent Holdout against the frozen
     // calibration selection. Do not recast its single calibration fold as WFO.
-    if(parent.executionProfileId===DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID)
+    if(method==="THREE_WINDOW")
       throw new ResearchFinalAuditError("RESEARCH_FINAL_AUDIT_NOT_APPLICABLE",
         "Advanced linked audit does not apply to Three Window. The Report carries its sealed independent Holdout selection proof.",409);
+    const recipe=pair && currentSourceRetainedRecipe(pair.profile_id,pair.source_adapter_id);
+    if(recipe && recipe.descriptor.adapter_contract_digest!==P04_DELTA_ADAPTER_CONTRACT_DIGEST)
+      throw new ResearchFinalAuditError("RESEARCH_FINAL_AUDIT_NOT_APPLICABLE",
+        "The linked audit executor is not qualified for this exact historical Alpha binding. Read the retained native selection and generation evidence.",409);
   }
   async read(user:PortalUser,scope:ResearchScope,runId:string):Promise<ResearchFinalAuditRead>{
     this.requireEnabled();

@@ -40,6 +40,7 @@ from portal_api.services.research_child_audit_companion import (
 
 from portal_api.adapters.quantbt import QUANTBT_ENGINE_VERSION
 from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE
+from portal_api.domain.research_full03_profiles import full03_recipe
 from portal_api.domain.research_delta_wfo_profile import (
     DELTA_WFO_OPTUNA_TRIALS,
     DELTA_WFO_PREVIEW_LONG_MAX_TRIALS,
@@ -82,6 +83,7 @@ def _maximum_optuna_trials() -> int:
 
     return DELTA_WFO_PREVIEW_LONG_MAX_TRIALS if delta_wfo_preview_long_enabled() else MAXIMUM_OPTUNA_TRIALS
 MAXIMUM_TABLE_BATCH_ROWS: Final = 200
+FULL03_STORAGE_BATCH_ROWS: Final = 2048
 MAXIMUM_DERIVED_SERIES_POINTS: Final = 192
 MAXIMUM_PARAMETER_FIELDS: Final = 24
 RETURN_DISTRIBUTION_BUCKETS: Final = 12
@@ -130,8 +132,42 @@ class CurrentSourceAdmission:
     maximum_rss_bytes: int
     maximum_disk_bytes: int
     lease_seconds: int
+    # New source intervals bind to an exact image-owned recipe. Old seals and
+    # admission constructors retain their original defaults and byte identity.
+    execution_profile_id: str | None = None
+    execution_profile_digest: str | None = None
+
+    def recipe(self) -> Mapping[str, Any] | None:
+        if self.execution_profile_id is None and self.execution_profile_digest is None:
+            return None
+        try:
+            row = full03_recipe(self.execution_profile_id, self.execution_profile_digest)
+        except (ValueError, TypeError) as exc:
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_PROFILE_REJECTED", "Current-source custody requires its exact installed recipe digest.") from exc
+        if row["descriptor"]["current_source"]["profile_id"] != self.profile_id:
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_PROFILE_REJECTED", "Current-source lane is outside the exact execution recipe.")
+        return row
+
+    @property
+    def source_adapter_id(self) -> str:
+        row = self.recipe()
+        return row["descriptor"]["current_source"]["source_adapter_id"] if row is not None else _CURRENT_SOURCE_PROFILES[self.profile_id][0]
 
     def validate(self) -> None:
+        row = self.recipe()
+        if row is not None:
+            p, budgets = row["descriptor"], row["budgets"]
+            expected = {
+                "engine_operation": "train_test_split" if row["adapter_kind"] == "DELTA_THREE_WINDOW_OPTIMIZED" else "walk_forward",
+                "target_mode": p["execution_route"], "optimization_mode": p["optimization_mode"],
+                "optimization_schedule": p["optimization_schedule"], "random_seed": p["random_seed"],
+                "optuna_trials": p["trial_count"]["max"], "maximum_runtime_seconds": budgets["wall_seconds"],
+                "maximum_rss_bytes": budgets["memory_bytes"], "maximum_disk_bytes": budgets["scratch_bytes"],
+                "lease_seconds": 30,
+            }
+            if any(type(getattr(self, key)) is not type(value) or getattr(self, key) != value for key, value in expected.items()):
+                raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_PROFILE_REJECTED", "Current-source custody controls do not match the exact immutable recipe.")
+            return
         profile = _CURRENT_SOURCE_PROFILES.get(self.profile_id)
         if profile is None:
             raise CurrentSourceArtifactError(
@@ -179,6 +215,23 @@ class CurrentSourceAdmission:
             raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_PROFILE_REJECTED", "Causal inner custody requires seed 42, three trials per study and the 240-second cap.")
         if self.profile_id in {PER_FOLD_DECAY_CURRENT_SOURCE_PROFILE_ID, THREE_WINDOW_CURRENT_SOURCE_PROFILE_ID} and (self.random_seed != 42 or self.optuna_trials != 3 or self.maximum_runtime_seconds != 240):
             raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_PROFILE_REJECTED", "FULL-02 custody requires its exact seed, trial count and wall cap; preview-long never widens it.")
+
+
+def recipe_current_source_admission(profile_id: str, profile_digest: str) -> CurrentSourceAdmission:
+    """Exact FULL-03 custody binding; never expands a historical recipe."""
+    row = full03_recipe(profile_id,profile_digest)
+    p, budgets = row["descriptor"], row["budgets"]
+    result = CurrentSourceAdmission(
+        profile_id=p["current_source"]["profile_id"],
+        engine_operation="train_test_split" if row["adapter_kind"] == "DELTA_THREE_WINDOW_OPTIMIZED" else "walk_forward",
+        target_mode=p["execution_route"], optimization_mode=p["optimization_mode"],
+        optimization_schedule=p["optimization_schedule"], random_seed=p["random_seed"], optuna_trials=p["trial_count"]["max"],
+        maximum_runtime_seconds=budgets["wall_seconds"], maximum_rss_bytes=budgets["memory_bytes"],
+        maximum_disk_bytes=budgets["scratch_bytes"], lease_seconds=30,
+        execution_profile_id=profile_id, execution_profile_digest=profile_digest,
+    )
+    result.validate()
+    return result
 
 
 @dataclass(frozen=True, slots=True)
@@ -653,10 +706,11 @@ class CurrentSourceArtifactAdapter:
         """
 
         admission.validate()
-        causal = admission.profile_id == CAUSAL_INNER_CURRENT_SOURCE_PROFILE_ID
-        per_fold_decay = admission.profile_id == PER_FOLD_DECAY_CURRENT_SOURCE_PROFILE_ID
-        three_window = admission.profile_id == THREE_WINDOW_CURRENT_SOURCE_PROFILE_ID
-        source_adapter_id = _CURRENT_SOURCE_PROFILES[admission.profile_id][0]
+        recipe = admission.recipe()
+        causal = admission.optimization_schedule == "per_fold_causal"
+        per_fold_decay = admission.optimization_schedule == "per_fold_decay"
+        three_window = admission.engine_operation == "train_test_split"
+        source_adapter_id = admission.source_adapter_id
         if identity.run_id != run_id or fence.run_id != run_id:
             raise CurrentSourceArtifactError(
                 "RESEARCH_CURRENT_SOURCE_FENCE_REJECTED",
@@ -665,6 +719,11 @@ class CurrentSourceArtifactAdapter:
         raw_dir = self._source_artifacts.run_directory(run_id)
         manifest = self._read_json(raw_dir / "manifest.json", "manifest")
         self._require_current_advanced_wfo(manifest, three_window=three_window)
+        if recipe is not None:
+            expected_timeframe = recipe["descriptor"]["timeframe"]
+            aliases = {"1m": "1min", "5m": "5min", "15m": "15min", "30m": "30min", "1d": "1D"}
+            if manifest.get("timeframe") not in {expected_timeframe, aliases.get(expected_timeframe, expected_timeframe)}:
+                raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_PROFILE_REJECTED", "Native source interval differs from the exact admission recipe.")
         config = self._read_json(raw_dir / "config.json", "config")
         self._assert_admission_matches_source(config, admission)
         strategy = self._read_json(raw_dir / "strategy.json", "strategy")
@@ -672,6 +731,8 @@ class CurrentSourceArtifactAdapter:
         selection = self._read_json(raw_dir / "selection" / "selected_params.json", "selection")
 
         observations = self._observation_rows(raw_dir / "series" / "stitched.parquet")
+        if recipe is not None and len(observations) > recipe["budgets"]["planning_max_bars"]:
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_ARTIFACT_BOUNDS_REJECTED", "Native current-source observations exceed the exact recipe's bar budget.")
         # W3: optional QuantBT fact documents written by the runner since
         # CG-P13-07/08. An older source tree simply lacks them; every fact
         # derived from them then stays a typed absence downstream.
@@ -726,7 +787,8 @@ class CurrentSourceArtifactAdapter:
         except (OSError, ValueError, TypeError, KeyError) as exc:
             raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_SAMPLER_TRACE_INVALID", "Sampler source trace is incompatible with this run's retained source.") from exc
         if causal:
-            selection = self._attach_causal_selections(raw_dir, folds=folds, trials=trials, candidates=candidates, config=config, selection=selection)
+            selection = self._attach_causal_selections(raw_dir, folds=folds, trials=trials, candidates=candidates, config=config, selection=selection,
+                constraints=recipe["descriptor"]["inner_constraints"] if recipe is not None else None)
         if per_fold_decay:
             selection = self._attach_per_fold_decay_selections(raw_dir, folds=folds, trials=trials, candidates=candidates, selection=selection)
         selection_rows = [self._selection_row(selection)]
@@ -764,7 +826,8 @@ class CurrentSourceArtifactAdapter:
             selection=selection_rows,
             three_window=three_window,
         )
-        window_replay = self._three_window_replay_rows(raw_dir) if three_window else None
+        window_replay = self._three_window_replay_rows(raw_dir,
+            maximum_rows=recipe["budgets"]["planning_max_bars"] if recipe is not None else 92 * 24) if three_window else None
 
         source_transform_digest = self._source_transform_digest(
             manifest=manifest,
@@ -824,7 +887,8 @@ class CurrentSourceArtifactAdapter:
             summary["source_facts"]["search"]["raw_best_is_objective"] = None
             summary["source_facts"]["search"]["candidate_source_trial_ids"] = sorted(row["candidate_id"] for row in candidates)
         if three_window:
-            summary["protocol_disclosure"] = self._three_window_disclosure(raw_dir, config=config, selection=selection)
+            summary["protocol_disclosure"] = self._three_window_disclosure(raw_dir, config=config, selection=selection,
+                                                                         exact_display_sampling=recipe is not None)
         # The retained table/manifest hashes authenticate the projection,
         # not the source equity file itself. Seal its actual bytes once here.
         series_path = raw_dir / "series" / "stitched.parquet"
@@ -854,7 +918,7 @@ class CurrentSourceArtifactAdapter:
         from portal_api.services.research_enrich_analysis import enrich_retained
         summary["enriched_analysis"] = enrich_retained(run_id=identity.run_id, observations=observations, folds=folds,
             source_windows=source_windows)
-        self._fit_summary_budget(summary, observations)
+        self._fit_summary_budget(summary, observations, exact_display_sampling=recipe is not None)
         writer = self._retained_artifacts.begin_write(
             identity=identity,
             fence=fence,
@@ -862,13 +926,19 @@ class CurrentSourceArtifactAdapter:
             fence_validator=fence_validator,
         )
         try:
-            self._write_rows(writer, registry, "observations", observations)
+            # Keep FULL03's <=100k indexed bars within the existing 128-part
+            # manifest envelope. Storage batching is distinct from the
+            # unchanged 200-row / 1-MiB private import/page boundary. Historical
+            # profiles retain their original part layout and custody bytes.
+            self._write_rows(writer, registry, "observations", observations,
+                             maximum_batch_rows=FULL03_STORAGE_BATCH_ROWS if recipe is not None else MAXIMUM_TABLE_BATCH_ROWS)
             self._write_rows(writer, registry, "folds", folds)
             self._write_rows(writer, registry, "trials", trials)
             self._write_rows(writer, registry, "candidates", candidates)
             self._write_rows(writer, registry, "selection", selection_rows)
             if window_replay is not None:
-                self._write_rows(writer, registry, "three_window_replay", window_replay)
+                self._write_rows(writer, registry, "three_window_replay", window_replay,
+                                 maximum_batch_rows=FULL03_STORAGE_BATCH_ROWS if recipe is not None else MAXIMUM_TABLE_BATCH_ROWS)
             writer.write_small_document("source_manifest", self._document(manifest))
             writer.write_small_document("source_config", self._document(config))
             writer.write_small_document("source_strategy", self._document(strategy))
@@ -1154,6 +1224,7 @@ class CurrentSourceArtifactAdapter:
     def _attach_causal_selections(
         self, raw_dir: Path, *, folds: list[dict[str, Any]], trials: list[dict[str, Any]],
         candidates: list[dict[str, Any]], config: Mapping[str, Any], selection: Mapping[str, Any],
+        constraints: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Join actual nested tables; never reinterpret last-study inner scores as outer scores."""
         def refuse() -> None:
@@ -1183,7 +1254,7 @@ class CurrentSourceArtifactAdapter:
             grouped_inner.setdefault(fold_id, []).append(row)
         calibration = config["calibration"]
         inner_config = {key: calibration.get(key) for key in ("inner_split_frequency", "inner_window_mode", "inner_train_window", "inner_min_folds")}
-        constraints = DELTA_CAUSAL_INNER_PROFILE["inner_constraints"]
+        constraints = constraints if constraints is not None else DELTA_CAUSAL_INNER_PROFILE["inner_constraints"]
         if (inner_config["inner_split_frequency"] not in constraints["frequencies"]
                 or inner_config["inner_window_mode"] not in constraints["window_modes"]
                 or not isinstance(inner_config["inner_train_window"], str)
@@ -1342,7 +1413,8 @@ class CurrentSourceArtifactAdapter:
             refuse()
         return {**selection, "trial_id": last["selected_trial_id"]}
 
-    def _three_window_disclosure(self, raw_dir: Path, *, config: Mapping[str, Any], selection: Mapping[str, Any]) -> dict[str, Any]:
+    def _three_window_disclosure(self, raw_dir: Path, *, config: Mapping[str, Any], selection: Mapping[str, Any],
+                                 exact_display_sampling: bool = False) -> dict[str, Any]:
         roles = self._read_json(raw_dir / "wfo" / "three_window_roles.v1.json", "three-window roles")
         if (roles.get("engine_operation") != "train_test_split" or roles.get("calibration_tape") != ["IS", "OOS"]
                 or roles.get("holdout_used_for_selection") is not False or roles.get("freeze_before_holdout") is not True):
@@ -1353,7 +1425,7 @@ class CurrentSourceArtifactAdapter:
                 or roles.get("frozen_at") != selection.get("frozen_at")
                 or roles.get("selected_params_digest_scope") != "SHA256_SORTED_NUMERIC_PARAMETER_JSON"):
             raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_HOLDOUT_BINDING_REJECTED", "Holdout replay clocks must follow the retained native parameter freeze.")
-        windows, series = {}, {}
+        windows, series, metadata = {}, {}, {}
         params = _decimal_object(selection.get("params"), "Three Window selected parameters")
         digest = hashlib.sha256(self._canonical_json(params).encode()).hexdigest()
         if roles.get("selected_params_digest") != hashlib.sha256(self._canonical_json(selection.get("params")).encode()).hexdigest():
@@ -1366,16 +1438,21 @@ class CurrentSourceArtifactAdapter:
             if any(not bounds["start_utc_ms"] <= row["at_utc_ms"] < bounds["end_exclusive_utc_ms"] for row in rows):
                 raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_HOLDOUT_BINDING_REJECTED", "A replay observation escapes its named window.")
             windows[key] = {**bounds, "bar_count": len(rows)}
-            indexes = sorted({round(i * (len(rows) - 1) / max(1, min(len(rows), 48) - 1)) for i in range(min(len(rows), 48))})
+            indexes = (self._protocol_display_indices(rows, maximum_points=48) if exact_display_sampling else
+                       sorted({round(i * (len(rows) - 1) / max(1, min(len(rows), 48) - 1)) for i in range(min(len(rows), 48))}))
             series[key] = [{name: rows[i][name] for name in ("at_utc_ms", "equity", "return_fraction", "accepted_position", "drawdown_fraction", "signal_target")} for i in indexes]
+            metadata[key] = {"source_observation_count": len(rows), "emitted_point_count": len(indexes),
+                             "sampling": "FULL" if len(rows) == len(indexes) else "MULTI_SERIES_EXTREMA_V1"}
         if windows["is"]["end_exclusive_utc_ms"] != windows["oos"]["start_utc_ms"] or windows["oos"]["end_exclusive_utc_ms"] != windows["holdout"]["start_utc_ms"]:
             raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_HOLDOUT_BINDING_REJECTED", "Three Window replay roles are not contiguous.")
         return {"schema_version": "research.current-source-protocol-disclosure.v1", "protocol": "three_window_decay",
             "engine_operation": "train_test_split", "calibration_scope": "IS_OOS_ONLY", "observation_scope": "OOS_SELECTION_INPUT",
-            "windows": windows, "window_series": series, "independent_holdout": {"state": "AVAILABLE", **windows["holdout"],
+            "windows": windows, "window_series": series,
+            **({"window_series_metadata": metadata} if exact_display_sampling else {}),
+            "independent_holdout": {"state": "AVAILABLE", **windows["holdout"],
                 "holdout_used_for_selection": False, "selected_params_digest": digest, "freeze_before_holdout": True}}
 
-    def _three_window_replay_rows(self, raw_dir: Path) -> list[dict[str, Any]]:
+    def _three_window_replay_rows(self, raw_dir: Path, *, maximum_rows: int = 92 * 24) -> list[dict[str, Any]]:
         """Complete private frozen-parameter replays, not the native study ledger.
 
         The public summary samples these series. All original exact rows have
@@ -1388,8 +1465,8 @@ class CurrentSourceArtifactAdapter:
                 result.append({**row, "source_ordinal": len(result), "window_role": role,
                     "window_source_ordinal": row["source_ordinal"],
                     "window_source_id": f"{role}:{row['source_index_utc']}"})
-        if not 3 <= len(result) <= 92 * 24:
-            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_ARTIFACT_BOUNDS_REJECTED", "Optimized Three Window full replay exceeds its exact 92-day/1h recipe bound.")
+        if type(maximum_rows) is not int or not 3 <= len(result) <= maximum_rows:
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_ARTIFACT_BOUNDS_REJECTED", "Optimized Three Window full replay exceeds its exact admitted bar bound.")
         return result
 
     def _selection_row(self, selection: Mapping[str, Any]) -> dict[str, Any]:
@@ -1787,10 +1864,11 @@ class CurrentSourceArtifactAdapter:
             "candle_overview": self._candle_overview(observations) if has_candle else None,
         }
 
-    def _fit_summary_budget(self, summary: dict[str, Any], observations: list[dict[str, Any]]) -> None:
+    def _fit_summary_budget(self, summary: dict[str, Any], observations: list[dict[str, Any]],
+                            *, exact_display_sampling: bool = False) -> None:
         """Keep separate core/enrichment bounds without removing authority.
 
-        Only the declared OHLC display sampling is coarsened, with all bars
+        Only declared display sampling is coarsened, with all bars
         represented and price extrema preserved. Retained observation rows,
         analytics, selection, child audit and fold facts are never discarded.
         A summary that cannot fit even with one candle still fails closed.
@@ -1820,16 +1898,53 @@ class CurrentSourceArtifactAdapter:
 
         replay = summary.get("replay")
         overview = replay.get("candle_overview") if isinstance(replay, dict) else None
+        protocol = summary.get("protocol_disclosure")
         ceiling = MAXIMUM_CANDLE_OVERVIEW_BUCKETS
+        protocol_ceiling = 48
         while core_size() > 65_536 and isinstance(overview, dict) and ceiling > 1:
+            if (exact_display_sampling and isinstance(protocol, dict)
+                    and isinstance(protocol.get("window_series_metadata"), dict) and protocol_ceiling > 8
+                    and size(protocol["window_series"]) >= size(overview)):
+                protocol_ceiling = max(8, protocol_ceiling // 2)
+                self._coarsen_protocol_display(protocol, maximum_points=protocol_ceiling)
+                continue
             ceiling = max(1, ceiling // 2)
             overview = self._candle_overview(observations, maximum_buckets=ceiling)
             replay["candle_overview"] = overview
+        # FULL03 dense minute replays retain ALL window rows in Parquet. Only
+        # their named display sample is coarsened; keep endpoints and the
+        # global extrema of equity, returns and drawdown, with typed counts.
+        ceiling = protocol_ceiling
+        while (core_size() > 65_536 and exact_display_sampling and isinstance(protocol, dict)
+               and isinstance(protocol.get("window_series_metadata"), dict) and ceiling > 8):
+            ceiling = max(8, ceiling // 2)
+            self._coarsen_protocol_display(protocol, maximum_points=ceiling)
         if core_size() > 65_536:
             raise CurrentSourceArtifactError(
                 "RESEARCH_CURRENT_SOURCE_METADATA_TOO_LARGE",
                 "The current-source summary exceeds the sealed local read-model budget.",
             )
+
+    def _coarsen_protocol_display(self, protocol: dict[str, Any], *, maximum_points: int) -> None:
+        for role in ("is", "oos", "holdout"):
+            points = protocol["window_series"][role]
+            indexes = self._protocol_display_indices(points, maximum_points=maximum_points)
+            protocol["window_series"][role] = [points[index] for index in indexes]
+            meta = protocol["window_series_metadata"][role]
+            meta["emitted_point_count"] = len(indexes)
+            meta["sampling"] = ("FULL" if len(indexes) == meta["source_observation_count"]
+                                else "MULTI_SERIES_EXTREMA_V1")
+
+    @staticmethod
+    def _protocol_display_indices(rows: list[dict[str, Any]], *, maximum_points: int) -> list[int]:
+        if len(rows) <= maximum_points:
+            return list(range(len(rows)))
+        # One union, not three independently presented source histories.
+        # A minimum of two endpoints + six extrema survives every coarsening.
+        maximum_per_series = max(2, maximum_points // 3)
+        return sorted(set().union(*(CurrentSourceArtifactAdapter._extrema_indices(
+            [Decimal(str(row[field])) for row in rows], maximum=maximum_per_series)
+            for field in ("equity", "return_fraction", "drawdown_fraction"))))
 
     def _candle_overview(self, observations: list[dict[str, Any]], *,
                          maximum_buckets: int = MAXIMUM_CANDLE_OVERVIEW_BUCKETS) -> dict[str, Any]:
@@ -2113,9 +2228,9 @@ class CurrentSourceArtifactAdapter:
         source fold end is converted using the source's declared bar interval.
         """
         used = selection.get("oos_used_for_selection")
-        interval = {"1min": 60_000, "5min": 300_000, "15min": 900_000,
-                    "30min": 1_800_000, "1h": 3_600_000, "4h": 14_400_000,
-                    "1D": 86_400_000}.get(manifest.get("timeframe"))
+        interval = {"1m":60_000, "1min": 60_000, "5m":300_000, "5min": 300_000, "15m":900_000, "15min": 900_000,
+                    "30m":1_800_000, "30min": 1_800_000, "1h": 3_600_000, "4h": 14_400_000,
+                    "1d":86_400_000, "1D": 86_400_000}.get(manifest.get("timeframe"))
         if type(used) is not bool or interval is None or not folds:
             return None
         try:
@@ -2543,13 +2658,16 @@ class CurrentSourceArtifactAdapter:
             raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_ARTIFACT_INVALID", f"The source {label} is not a table.")
         return frame
 
-    def _write_rows(self, writer: Any, registry: ArtifactSchemaRegistry, kind: str, rows: Iterable[dict[str, Any]]) -> None:
+    def _write_rows(self, writer: Any, registry: ArtifactSchemaRegistry, kind: str, rows: Iterable[dict[str, Any]],
+                    *, maximum_batch_rows: int = MAXIMUM_TABLE_BATCH_ROWS) -> None:
         schema = registry.require(kind).arrow_schema
         values = list(rows)
         if not values:
             raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_ARTIFACT_INVALID", f"The source {kind} relation is empty.")
-        for start in range(0, len(values), MAXIMUM_TABLE_BATCH_ROWS):
-            batch_rows = values[start : start + MAXIMUM_TABLE_BATCH_ROWS]
+        if maximum_batch_rows not in (MAXIMUM_TABLE_BATCH_ROWS, FULL03_STORAGE_BATCH_ROWS):
+            raise ValueError("retained storage batch must use a bounded compiled size")
+        for start in range(0, len(values), maximum_batch_rows):
+            batch_rows = values[start : start + maximum_batch_rows]
             try:
                 batch = pa.RecordBatch.from_pylist(batch_rows, schema=schema)
             except (pa.ArrowException, ValueError, TypeError) as exc:

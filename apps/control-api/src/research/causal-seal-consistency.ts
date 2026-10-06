@@ -6,7 +6,7 @@ import { sha256ResearchJson } from "./preflight.service";
 export function assertCausalSealConsistency(
   input: { tableRows: Record<string,number>; summary: Record<string,unknown> },
   rows: Array<{ tableKind: string; sourceOrdinal: number; sourceId: string; payload: Record<string,unknown> }>,
-  authority: { requestedSpec: Record<string,unknown>; topology: Record<string,unknown> },
+  authority: { requestedSpec: Record<string,unknown>; topology: Record<string,unknown>; timeframe?: string; intervalMs?: number },
 ): void {
   const fail = () => { throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_CONFLICT", "Causal selections do not match the sealed source relations.",409); };
   const folds = rows.filter(row => row.tableKind === "FOLD").sort((a,b) => a.sourceOrdinal-b.sourceOrdinal);
@@ -16,7 +16,7 @@ export function assertCausalSealConsistency(
   const requestedInner = (authority.requestedSpec.walk_forward as Record<string,unknown> | undefined)?.inner as Record<string,unknown> | undefined;
   const requestedData = authority.requestedSpec.data as Record<string,unknown> | undefined;
   const plannedFolds = authority.topology.folds as Array<Record<string,unknown>> | undefined;
-  if (!requestedInner || requestedData?.timeframe !== "1h" || authority.requestedSpec.schema_version !== "research.requested-spec.v2" ||
+  if (!requestedInner || requestedData?.timeframe !== (authority.timeframe ?? "1h") || authority.requestedSpec.schema_version !== "research.requested-spec.v2" ||
       authority.requestedSpec.optimization_schedule !== "per_fold_causal" ||
       authority.topology.plan_source !== "quantbt.walkforward.WalkForwardEngine.build_folds" ||
       !Array.isArray(plannedFolds) || plannedFolds.length !== folds.length) return fail();
@@ -42,9 +42,9 @@ export function assertCausalSealConsistency(
     const planned = plannedFolds[fold.sourceOrdinal];
     const train = planned?.train as Record<string,unknown> | undefined;
     const outer = planned?.outer_oos as Record<string,unknown> | undefined;
-    // This immutable profile is 1h only. P08 ranges are half-open; the
-    // retained engine ranges end at the final bar's timestamp.
-    const barMs = 3_600_000;
+    // P08 ranges are half-open; native retained ranges end at the last bar.
+    // The exact admission recipe owns the bar interval, never the lane name.
+    const barMs = authority.intervalMs ?? 3_600_000;
     if (fold.sourceOrdinal !== ordinal || !train || !outer ||
         parsed.data.train_start_utc_ms !== train.start_utc_ms ||
         parsed.data.train_end_utc_ms === null || parsed.data.train_end_utc_ms + barMs !== train.end_exclusive_utc_ms ||

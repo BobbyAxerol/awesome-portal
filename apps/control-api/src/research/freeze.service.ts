@@ -19,6 +19,7 @@ import { bytesBlockChain, notYet, type ArtifactByteVerification } from "./artifa
 import { ArtifactVerifyStoreError } from "./artifact-verify.repository";
 import { BYTE_VERIFY_NOT_ENABLED, ResearchArtifactVerifyService } from "./artifact-verify.service";
 import { P04_FIXED_QUALIFICATION_PROFILE_ID } from "./delta-wfo.profile";
+import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "./p04-delta.binding";
 import { VN_OBSERVED_FIXED_PROFILE_ID } from "./vn-observed-fixed.profile";
 import { ResearchSplitSourceSchema, type ResearchSplitSource } from "./progress.contract";
 import {
@@ -479,7 +480,10 @@ export class ResearchFreezeService {
     return [
       // Expected = the registered historical binding for this exact digest.
       // A release that installs a newer binding does not change this answer.
-      check(row.executionProfileId === IMPORTED_ALPHA_PROFILE_ID ? "EXECUTION_ADAPTER_CONTRACT" : "P04_ADAPTER_CONTRACT", binding?.adapterContractDigest ?? this.bindings.newestAdapterDigest(), row.adapterContractDigest),
+      check(row.executionProfileId === IMPORTED_ALPHA_PROFILE_ID ? "EXECUTION_ADAPTER_CONTRACT" : "P04_ADAPTER_CONTRACT",
+        binding?.adapterContractDigest ?? ((row.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID) === P04_FIXED_QUALIFICATION_PROFILE_ID
+          && source.source.execution_adapter_id === "p04.delta-rsi.v1" ? P04_DELTA_ADAPTER_CONTRACT_DIGEST : null),
+        row.adapterContractDigest),
       check("P10_MANIFEST_BINDING", row.manifestDigest, source.source.manifest_digest),
       check(row.executionProfileId === IMPORTED_ALPHA_PROFILE_ID ? "DECLARED_PARAMETER_BUNDLE" : "P04_FIXED_PARAMETER_BUNDLE", binding?.fixedBundleDigest ?? null, source.protocol.selection.parameter_bundle_digest),
     ];

@@ -78,8 +78,7 @@ import {
   type CurrentSourceReplaySummary,
 } from "./current-source.payload";
 import { P04_FIXED_QUALIFICATION_PROFILE_ID, RS02_DELTA_WFO_GLOBAL_PROFILE_ID } from "./delta-wfo.profile";
-import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
-import { DELTA_PER_FOLD_DECAY_PROFILE, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE } from "./full02.profiles";
+import { currentSourceRetainedMethod } from "./current-source-profile";
 import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "./p04-delta.binding";
 import { IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST, IMPORTED_ALPHA_PROFILE_ID } from "./imported-alpha.profile";
 import { VN_OBSERVED_FIXED_PROFILE_ID } from "./vn-observed-fixed.profile";
@@ -190,12 +189,10 @@ export function currentSourceReadRevisions(kinds: readonly string[], seal: Param
 const revision = currentSourceReadRevision;
 
 function isCausalSeal(seal: CurrentSourceSealRow): boolean {
-  return seal.profileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id
-    && seal.sourceAdapterId === DELTA_CAUSAL_INNER_PROFILE.current_source.source_adapter_id;
+  return currentSourceRetainedMethod(seal.profileId,seal.sourceAdapterId) === "CAUSAL_INNER";
 }
 function isDecaySeal(seal: CurrentSourceSealRow): boolean {
-  return seal.profileId === DELTA_PER_FOLD_DECAY_PROFILE.current_source.profile_id
-    && seal.sourceAdapterId === DELTA_PER_FOLD_DECAY_PROFILE.current_source.source_adapter_id;
+  return currentSourceRetainedMethod(seal.profileId,seal.sourceAdapterId) === "PER_FOLD_DECAY";
 }
 function isPerFoldSeal(seal: CurrentSourceSealRow): boolean { return isCausalSeal(seal) || isDecaySeal(seal); }
 function retainedFoldSelection(fold: ReturnType<typeof asFold>) { return fold.fold_selection ?? fold.causal_selection; }
@@ -515,7 +512,7 @@ export class ResearchCurrentSourceService {
             testStartUtcMs: fold.test_start_utc_ms,
             testEndUtcMs: fold.test_end_utc_ms,
             facts: fold.fold_facts,
-            ...(seal.profileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id && fold.causal_selection
+            ...(isCausalSeal(seal) && fold.causal_selection
               ? { selectedParameters: fold.causal_selection.parameters, causalSelection: fold.causal_selection } : {}),
             ...(isDecaySeal(seal) && fold.fold_selection ? { selectedParameters: fold.fold_selection.parameters } : {}),
           };
@@ -584,7 +581,7 @@ export class ResearchCurrentSourceService {
       test_start_utc_ms: fold.test_start_utc_ms,
       test_end_utc_ms: fold.test_end_utc_ms,
     }));
-    const retainedInnerCount = seal.profileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id &&
+    const retainedInnerCount = isCausalSeal(seal) &&
       folds.every(fold => fold.causal_selection !== undefined) && folds.length > 0
       ? folds.reduce((count, fold) => count + fold.causal_selection!.inner_folds.length, 0) : undefined;
     const temporalGuards = splitGuards(summary.source_facts, retainedInnerCount);
@@ -599,7 +596,7 @@ export class ResearchCurrentSourceService {
       fold_plan: {
         state: "AVAILABLE" as const,
         folds,
-        chronology: seal.profileId === DELTA_THREE_WINDOW_OPTIMIZED_PROFILE.current_source.profile_id
+        chronology: currentSourceRetainedMethod(seal.profileId,seal.sourceAdapterId) === "THREE_WINDOW"
           ? "SOURCE_OBSERVED_THREE_WINDOW" as const : "SOURCE_OBSERVED_ADVANCED_WFO" as const,
         availability: available(),
       },

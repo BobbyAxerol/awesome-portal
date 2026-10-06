@@ -27,8 +27,7 @@ import { P11StageEventsSchema, type P11StageEvents } from "./p11-stage-events";
 
 import type { CurrentSourceCausalSelection, CurrentSourceFoldSelection, CurrentSourceFacts } from "./current-source.payload";
 import type { HistoricalProfileBinding } from "./parameter-binding.registry";
-import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
-import { DELTA_PER_FOLD_DECAY_PROFILE } from "./full02.profiles";
+import { currentSourceRetainedMethod } from "./current-source-profile";
 import { sha256ResearchJson } from "./preflight.service";
 
 export const FOLD_ORDERING_RULE = "research.freeze-fold-ordering.v1" as const;
@@ -228,8 +227,9 @@ export function foldOrdering(
 ): FoldOrdering {
   const { scope, verdict, reason } = scopeOf(facts);
   const frozen = quantbtCandidateId(frozenParameters, candidateParameterKinds);
-  const causal = sourceProfileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id && scope === "PER_FOLD";
-  const decay = sourceProfileId === DELTA_PER_FOLD_DECAY_PROFILE.current_source.profile_id && scope === "PER_FOLD";
+  const method = currentSourceRetainedMethod(sourceProfileId);
+  const causal = method === "CAUSAL_INNER" && scope === "PER_FOLD";
+  const decay = method === "PER_FOLD_DECAY" && scope === "PER_FOLD";
   const rows = [...folds]
     .sort((a, b) => a.sourceOrdinal - b.sourceOrdinal)
     .map((fold): FoldOrdering["folds"][number] => {

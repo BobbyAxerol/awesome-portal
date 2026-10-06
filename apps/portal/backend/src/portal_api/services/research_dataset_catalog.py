@@ -13,7 +13,7 @@ from __future__ import annotations
 import re
 from typing import Mapping
 
-from portal_api.adapters.market_data import MarketDataProvider
+from portal_api.adapters.market_data import MarketDataProvider, canonical_fixed_timeframe
 from portal_api.domain.errors import PortalDomainError
 
 DATASET_CATALOG_SCHEMA_VERSION = "research.dataset-catalog.v1"
@@ -46,10 +46,10 @@ def build_research_dataset_catalog(provider: MarketDataProvider) -> dict[str, ob
         # tokens. HMD's pandas-style 1D is the same fixed interval, not a
         # different capability; do not make the browser guess that alias.
         timeframes = list(dict.fromkeys(
-            item.lower() for item in descriptor.supported_timeframes if _TIMEFRAME.fullmatch(item)
+            canonical_fixed_timeframe(item) for item in descriptor.supported_timeframes if _TIMEFRAME.fullmatch(item)
         ))
         if not timeframes and descriptor.timeframe and _TIMEFRAME.fullmatch(descriptor.timeframe):
-            timeframes = [descriptor.timeframe.lower()]
+            timeframes = [canonical_fixed_timeframe(descriptor.timeframe)]
         symbols: dict[str, object]
         if descriptor.availability != "available":
             symbols = {

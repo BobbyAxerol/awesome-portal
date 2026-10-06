@@ -117,11 +117,15 @@ describe("P21 Report companions share CurrentSource immutable verification and s
     const payload = { ...source.rows.TRIAL[0].payload, trial_id: id,
       trial_facts: { ...source.rows.TRIAL[0].payload.trial_facts, study_id: "fold-b", source_trial_id: "0" } };
     source.summary.selection.trial_id = id;
-    const lane = { seal: { ...seal, profileId: DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id, summary: source.summary } };
+    const lane = { seal: { ...seal, profileId: DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id,
+      sourceAdapterId: DELTA_CAUSAL_INNER_PROFILE.current_source.source_adapter_id, summary: source.summary } };
     const client = { query: vi.fn().mockResolvedValue({ rows: [{ payload }], rowCount: 1 }) };
     const repository = new ResearchReleaseCandidateRepository({} as never) as unknown as {
       selectedTrialNativeFacts(client: unknown, workspace: string, run: string, lane: unknown): Promise<unknown>;
     };
+    expect(await repository.selectedTrialNativeFacts(client, workspace, runId,
+      { seal: { ...lane.seal, sourceAdapterId: seal.sourceAdapterId } })).toBeUndefined();
+    expect(client.query).not.toHaveBeenCalled();
     expect(await repository.selectedTrialNativeFacts(client, workspace, runId, lane))
       .toEqual({ trial_id: id, study_id: "fold-b", source_trial_id: "0" });
     expect(client.query.mock.calls[0]![1]).toEqual([workspace, runId, 2, id]);
