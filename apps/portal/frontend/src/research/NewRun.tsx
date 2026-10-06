@@ -54,6 +54,7 @@ import {
   coverageRange,
   coverageWarnings,
   foldPlan,
+  foldCountProblem,
   SCHEDULE_PER_FOLD_CAUSAL,
   admitsSpecV2,
   causalScheduleProfile,
@@ -535,6 +536,9 @@ function ContextStep({
   /* The receipt alphas the platform's own checks register cannot create runs: they are not offered (one the draft already holds stays visible). */
   const alphaIds = [...new Set(registry.map((entry) => entry.alpha_id))].filter((id) => !RECEIPT_ALPHA.test(id) || id === draft.alphaId);
   /* An alpha with one version has nothing to choose: picking it picks the version. */
+  /* An ACTIVE version a later version of the same alpha names as the one it supersedes is shown as replaced (it still runs what it declares). */
+  const supersededBy = (entry: RegistryEntry): string | null =>
+    registry.find((other) => other.alpha_id === entry.alpha_id && other.supersedes === entry.alpha_version_id)?.version_label ?? null;
   const pickAlpha = (alphaId: string) => {
     const versions = registry.filter((entry) => entry.alpha_id === alphaId);
     /* One version is that one; several start on the newest ACTIVE (a later version may declare more timeframes: the label says which). */
@@ -572,7 +576,7 @@ function ContextStep({
           {draft.bound ? (
             <select className={INPUT_CLASS} style={inputStyle()} value={draft.alphaVersionId} onChange={(event) => patch({ alphaVersionId: event.target.value })} aria-label="Alpha version" data-version-selector disabled={registry.length === 0 || !draft.alphaId} title={registry.length === 0 ? "No registry entry is available for the bound declaration." : !draft.alphaId ? "Select an alpha first." : undefined}>
               <option value="">Select a version</option>
-              {registry.filter((entry) => entry.alpha_id === draft.alphaId).sort((a, b) => b.registered_at_utc_ms - a.registered_at_utc_ms).map((entry) => <option key={entry.alpha_version_id} value={entry.alpha_version_id} title={`declares timeframes ${(entry.declaration?.timeframes ?? []).join(", ") || "none"} · source ${entry.source_digest_prefix}`}>{entry.version_label} · {entry.lifecycle_state} · {(entry.declaration?.timeframes ?? []).join(" ") || "no timeframes"}</option>)}
+              {registry.filter((entry) => entry.alpha_id === draft.alphaId).sort((a, b) => b.registered_at_utc_ms - a.registered_at_utc_ms).map((entry) => <option key={entry.alpha_version_id} value={entry.alpha_version_id} title={`declares timeframes ${(entry.declaration?.timeframes ?? []).join(", ") || "none"} · source ${entry.source_digest_prefix}`}>{entry.version_label} · {entry.lifecycle_state} · {(entry.declaration?.timeframes ?? []).join(" ") || "no timeframes"}{supersededBy(entry) !== null ? ` · replaced by ${supersededBy(entry)}` : ""}</option>)}
             </select>
           ) : <input className={INPUT_CLASS} style={inputStyle()} value={draft.alphaVersionId} onChange={(event) => patch({ alphaVersionId: event.target.value })} aria-label="Alpha version" />}
         </Field>
@@ -3319,11 +3323,17 @@ export function NewRun(props: NewRunProps) {
     },
     [patch, step],
   );
+  /* The estimate already knows the fold count: a plan the profile refuses (1 fold where 2–16 are needed) is said before any preflight. */
+  const foldProblem = foldCountProblem(estimate);
   /* A typed refusal in the preflight (may_create_run false with a code) will be refused again at create: no point offering the button. */
   const admissionRefused = canSubmit && !mayCreateRun && Boolean(preflight?.run_admission?.code);
   const blocking = useMemo(
-    () => [...blockingProblems(draft, limits), ...(unopenedCombination !== null ? [{ step: "windows" as const, message: unopenedCombination }] : [])],
-    [draft, limits, unopenedCombination],
+    () => [
+      ...blockingProblems(draft, limits),
+      ...(unopenedCombination !== null ? [{ step: "windows" as const, message: unopenedCombination }] : []),
+      ...(foldProblem !== null && draft.protocol === "advanced" ? [{ step: "windows" as const, message: foldProblem }] : []),
+    ],
+    [draft, limits, unopenedCombination, foldProblem],
   );
   problemsRef.current = { draft, blocking };
   const errorByStep = useMemo(

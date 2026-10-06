@@ -12,6 +12,8 @@ import {
   PREFLIGHT_TRANSPORT_COPY,
   PreflightApiError,
   toPreflightRefusal,
+  previewLimitCopy,
+  PREFLIGHT_QUOTA_GATE,
 } from "./preflightClient";
 
 const SENTINEL = "zq_SERVER_PROSE_SENTINEL alice@example.invalid";
@@ -47,5 +49,20 @@ describe("FG-08 — preflight refusal copy is client-owned", () => {
     const refusal = toPreflightRefusal(new TypeError("Failed to fetch"));
     expect(refusal.copy).toBe(PREFLIGHT_TRANSPORT_COPY);
     expect(refusal.code).toBeNull();
+  });
+});
+
+describe("the active-preview limit is a wait, not a fault in the declaration", () => {
+  it("503 with the quota gate: retryable, says how long, never blames the form", () => {
+    const refusal = toPreflightRefusal(new PreflightApiError("m", 503, "RESEARCH_PREFLIGHT_UNAVAILABLE", "req_9", { gate: PREFLIGHT_QUOTA_GATE, retry_after_seconds: 270 } as never));
+    expect(refusal).toMatchObject({ state: "failed-retryable", mayRetry: true, highlightsInput: false, retryAfterSeconds: 270, gate: PREFLIGHT_QUOTA_GATE });
+    expect(refusal.copy).toBe("Preview limit reached: you hold the maximum number of active previews. A slot frees in about 5 min.");
+  });
+  it("without a wait it still says so; any other 503 keeps the generic sentence", () => {
+    expect(previewLimitCopy(null)).toMatch(/Try again in a few minutes/);
+    expect(previewLimitCopy(20)).toMatch(/about 1 min/);
+    const other = toPreflightRefusal(new PreflightApiError("m", 503, "RESEARCH_PREFLIGHT_UNAVAILABLE", "req_9", null));
+    expect(other.copy).toBe("Preflight is unavailable right now. Try again.");
+    expect(other.retryAfterSeconds).toBeNull();
   });
 });

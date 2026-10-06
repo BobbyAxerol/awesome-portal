@@ -2442,3 +2442,16 @@ Create stays off when the preflight refused with a typed code; the version selec
 | BR-S02-08 | Fold requirement visible before preflight | `profile_folds` (2–16 outer folds) refuses only at preflight although the estimate already knows the fold count | include the same condition, with `field_path`, in `declaration-estimates` `conditions[]` (it lists `profile folds`; confirm it fails there when the plan is 1 fold) |
 | BR-S02-09 | Recipe labels and defaults as data | S02 derives recipe names/summaries from protocol, mode, schedule, trials, seed; the first-choice windows/frequency are a UI heuristic | optional `recipe: {key, family, recommended_rank}` per profile so S02 orders and names them as the owner decides |
 | BR-S02-10 | FULL-06 route families | plan state `PLANNED`; the owner heard it is nearly done | when landed: same acceptance (setup per context, every recipe to preflight at 1280/660) is ready on the FE side; list the new input shapes (sizing, ladders, tapes) so S02 can render them |
+
+#### §38 status after Bobby's "làm luôn" (Claude, 2026-10-06) — checked against the code and the live preview, no backend file touched
+
+Codex's FULL-06 work was in progress in `portal-research-be` (staged: `run-setup.ts`, `run-setup.contract.ts`, `run-admission.service.ts`, `repository.ts`, `config.ts`, `portal-admission.ts`,
+`execution-recipes*`, generated contracts, migrations 106/107). To avoid conflicts nothing in those files was edited; the items were checked first:
+
+| Item | Finding | Done by |
+|---|---|---|
+| BR-S02-07 preflight limit | Already typed: `503 RESEARCH_PREFLIGHT_UNAVAILABLE`, `details.gate = preflight_manifest_quota`, `retry_after_seconds` (`preflight.service.ts:478`). The screen printed the generic sentence | **Frontend**: "Preview limit reached … a slot frees in about N min", retryable, never blames the form |
+| BR-S02-08 fold count before preflight | Already served: `declaration-estimates` `conditions[]` `profile_folds` FAIL `PROFILE_FOLD_COUNT_NOT_ADMITTED` observed 1 / required 2…16 (live probe, quarterly on a recent span) | **Frontend**: Review says "The profile needs 2…16 outer folds; this plan has 1. Use a finer frequency or a longer span." and keeps preflight off |
+| BR-S02-06 what a version runs | Registry carries `declaration.timeframes` and `supersedes` (null in current data) | **Frontend**: version select lists newest first, starts on the newest ACTIVE, shows each version's declared timeframes and "replaced by …" when a later version names it. **Backend still open**: set `supersedes` on 1.0.1/1.0.2 (data) so 1.0.0 reads as replaced |
+| BR-S02-09 recipe names/order as data | Touches `run-setup.ts` / recipe registry that FULL-06 is editing | **Deferred** until FULL-06 lands, then one additive optional `recipe` block per profile |
+| BR-S02-10 FULL-06 input shapes | Not landed | Waiting; the S02 acceptance for new routes is ready to run when it lands |

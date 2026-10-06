@@ -223,6 +223,18 @@ export interface PreflightRefusal extends PreflightRefusalPresentation {
   gate?: string | null;
   /** CG-P08-03: the requested-spec field path at fault (first of a 400's). */
   fieldPath?: readonly string[] | null;
+  /** The active-preview limit: seconds until the oldest of the actor's held previews expires and one slot frees, when the server said. */
+  retryAfterSeconds?: number | null;
+}
+
+/** The gate the server names when the actor already holds the maximum number of active preflights. */
+export const PREFLIGHT_QUOTA_GATE = "preflight_manifest_quota";
+
+/** The one sentence for the preview limit: no fault in the declaration, only a wait. */
+export function previewLimitCopy(retryAfterSeconds: number | null): string {
+  if (retryAfterSeconds === null || retryAfterSeconds <= 0) return "Preview limit reached: you hold the maximum number of active previews. Try again in a few minutes.";
+  const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
+  return `Preview limit reached: you hold the maximum number of active previews. A slot frees in about ${minutes} min.`;
 }
 
 /**
@@ -256,10 +268,15 @@ export function toPreflightRefusal(error: unknown): PreflightRefusal {
      access refusal (e.g. origin not allowed), not a declaration error — it
      reads the one F-04 sentence instead of "fix a field" with nothing to fix. */
   const denied = (error.status === 403 || error.status === 404) && !(fieldPath && fieldPath.length > 0);
+  const details = error instanceof PreflightApiError ? ((error.details ?? null) as { gate?: string; retry_after_seconds?: number } | null) : null;
+  const quota = details?.gate === PREFLIGHT_QUOTA_GATE;
+  const retryAfterSeconds = quota && typeof details?.retry_after_seconds === "number" ? details.retry_after_seconds : null;
   return {
     ...(denied
       ? { ...NO, state: "denied" as const, copy: REFUSAL_COPY.denied }
-      : known ?? {
+      : quota
+        ? { ...NO, state: "failed-retryable" as const, mayRetry: true, copy: previewLimitCopy(retryAfterSeconds) }
+        : known ?? {
       ...NO,
       state: error.status >= 500 ? "unavailable" : "terminal",
       copy: PREFLIGHT_REFUSAL_GENERIC_COPY,
@@ -270,6 +287,7 @@ export function toPreflightRefusal(error: unknown): PreflightRefusal {
     requestId: error.requestId,
     gate: error instanceof PreflightApiError ? (error.details?.gate ?? null) : null,
     fieldPath,
+    retryAfterSeconds,
   };
 }
 

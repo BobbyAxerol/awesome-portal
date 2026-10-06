@@ -12,6 +12,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { ORIGIN, signIn } from "./w1StateRuns";
 
 const DELTA = { alpha: "delta-rsi-polynomial-alpha", version: "av_delta_rsi_polynomial_alpha_1_0_0" };
+const DELTA_FULL = { alpha: "delta-rsi-polynomial-alpha", version: "av_delta_rsi_polynomial_alpha_1_0_1" };
 const IMPORTED = { alpha: "p24-journey-alpha", version: "av_p24_journey_alpha_0_1_0" };
 const CLONE_RUN = "rrun_73bc3a98cb77edfbe2c0cb9597254d93";
 const WIDTHS = [1280, 660] as const;
@@ -171,6 +172,32 @@ for (const width of WIDTHS) {
       expect(await closed.getAttribute("title")).toContain("PROFILE_NOT_OPENED");
       await expect(page.locator('select[aria-label="Optimization mode"] option[value="mode_1_decay"]')).toHaveJSProperty("disabled", false);
       await expect(page.locator("[data-recipe][data-closed]").first()).toBeVisible();
+      expect(counts.preflights + counts.runCreates, "nothing is written").toBe(0);
+      expect(errors).toEqual([]);
+    });
+
+    test("Delta 1.0.1: every opened recipe is offered, v2 recipes arrive with their guards, and a one-fold plan is refused before any preflight", async ({ page }) => {
+      await signIn(page);
+      const { counts, errors } = await watch(page);
+      await toWindows(page, DELTA_FULL);
+      const cards = page.locator("[data-recipe]:not([data-closed])");
+      await expect(cards.first()).toBeVisible({ timeout: 20_000 });
+      expect(await cards.count(), "Three Window optimized + eight Advanced pairs").toBeGreaterThanOrEqual(9);
+      /* a v2-only recipe fills the three temporal guards, so nothing says "is required" */
+      await page.locator('[data-recipe*="mode2-global"]').click();
+      await page.locator('[data-action="suggest-windows"]').click();
+      await expect(page.locator('[data-window-setup][data-suggestion-state="proposal"]')).toBeVisible({ timeout: 20_000 });
+      await page.locator('[data-action="apply-suggestion"]').click();
+      await expect(page.getByLabel("Label horizon (bars)")).toHaveValue("0");
+      const frequency = page.getByLabel("Frequency", { exact: true });
+      await expect(frequency).toHaveValue("weekly");
+      await expect(page.locator('[data-condition="profile_folds"][data-condition-state="PASS"]')).toBeVisible({ timeout: 20_000 });
+      /* quarterly gives one fold on a recent span: the profile needs 2–16 */
+      await frequency.selectOption("quarterly");
+      await expect(page.locator('[data-condition="profile_folds"][data-condition-state="FAIL"]')).toBeVisible({ timeout: 20_000 });
+      await page.locator('[data-step-pill="review"]').click();
+      await expect(page.locator("main")).toContainText("The profile needs 2…16 outer folds; this plan has 1");
+      await expect(page.locator('[data-action="preflight"]')).toBeDisabled();
       expect(counts.preflights + counts.runCreates, "nothing is written").toBe(0);
       expect(errors).toEqual([]);
     });

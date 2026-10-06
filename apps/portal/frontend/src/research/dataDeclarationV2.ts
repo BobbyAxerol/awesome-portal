@@ -1160,3 +1160,15 @@ export function mergeEstimates(preflight: PreflightEstimate | null, metadata: Pr
         : {}),
   };
 }
+
+/**
+ * The outer-fold requirement of the selected profile, judged by the declaration-estimate before any preflight: `profile_folds` FAIL says the
+ * engine-planned plan has too few or too many folds for what the profile admits. A sentence naming both numbers, or null when it holds (or is not served).
+ */
+export function foldCountProblem(estimate: Pick<PreflightEstimate, "conditions"> | null): string | null {
+  const condition = estimate?.conditions?.find((entry) => entry.key === "profile_folds" && entry.state === "FAIL") ?? null;
+  if (condition === null) return null;
+  const observed = condition.observed ?? "?";
+  const required = condition.required ?? "the profile's range";
+  return `The profile needs ${required} outer folds; this plan has ${observed}. Use a finer frequency or a longer span.`;
+}

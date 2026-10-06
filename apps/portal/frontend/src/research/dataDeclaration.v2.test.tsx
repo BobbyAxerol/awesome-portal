@@ -50,6 +50,7 @@ import {
   readSymbolPage,
   seedPinned,
   selectProfile,
+  foldCountProblem,
   sortByExpiry,
   symbolListing,
   timeframeChips,
@@ -924,3 +925,13 @@ describe("the route", () => {
 /* The draft is autosaved for the session: each test starts from a blank one. */
 import { beforeEach as clearDraftBeforeEach } from "vitest";
 clearDraftBeforeEach(() => { window.sessionStorage.clear(); });
+
+describe("foldCountProblem — the fold requirement is said before any preflight", () => {
+  const cond = (state: "PASS" | "FAIL", observed: string) => ({ conditions: [{ key: "profile_folds", state, reasonCode: state === "FAIL" ? "PROFILE_FOLD_COUNT_NOT_ADMITTED" : null, observed, required: "2…16" }] });
+  it("names both numbers when the plan has too few folds; silent when it holds or is not served", () => {
+    expect(foldCountProblem(cond("FAIL", "1"))).toBe("The profile needs 2…16 outer folds; this plan has 1. Use a finer frequency or a longer span.");
+    expect(foldCountProblem(cond("PASS", "5"))).toBeNull();
+    expect(foldCountProblem({ conditions: null })).toBeNull();
+    expect(foldCountProblem(null)).toBeNull();
+  });
+});
