@@ -537,7 +537,9 @@ function ContextStep({
   /* An alpha with one version has nothing to choose: picking it picks the version. */
   const pickAlpha = (alphaId: string) => {
     const versions = registry.filter((entry) => entry.alpha_id === alphaId);
-    patch({ alphaId, alphaVersionId: versions.length === 1 ? versions[0]!.alpha_version_id : "", strategyId: "" });
+    /* One version is that one; several start on the newest ACTIVE (a later version may declare more timeframes: the label says which). */
+    const newestActive = [...versions].filter((entry) => entry.lifecycle_state === "ACTIVE").sort((a, b) => b.registered_at_utc_ms - a.registered_at_utc_ms)[0];
+    patch({ alphaId, alphaVersionId: versions.length === 1 ? versions[0]!.alpha_version_id : (newestActive?.alpha_version_id ?? ""), strategyId: "" });
   };
   /* FG-05: the P22 lookup runs only for a bound version the registry listed. */
   const lookedUp = draft.bound && bound ? bound.alpha_version_id : null;
@@ -570,7 +572,7 @@ function ContextStep({
           {draft.bound ? (
             <select className={INPUT_CLASS} style={inputStyle()} value={draft.alphaVersionId} onChange={(event) => patch({ alphaVersionId: event.target.value })} aria-label="Alpha version" data-version-selector disabled={registry.length === 0 || !draft.alphaId} title={registry.length === 0 ? "No registry entry is available for the bound declaration." : !draft.alphaId ? "Select an alpha first." : undefined}>
               <option value="">Select a version</option>
-              {registry.filter((entry) => entry.alpha_id === draft.alphaId).map((entry) => <option key={entry.alpha_version_id} value={entry.alpha_version_id}>{entry.version_label} · {entry.lifecycle_state} · {entry.source_digest_prefix}</option>)}
+              {registry.filter((entry) => entry.alpha_id === draft.alphaId).sort((a, b) => b.registered_at_utc_ms - a.registered_at_utc_ms).map((entry) => <option key={entry.alpha_version_id} value={entry.alpha_version_id} title={`declares timeframes ${(entry.declaration?.timeframes ?? []).join(", ") || "none"} · source ${entry.source_digest_prefix}`}>{entry.version_label} · {entry.lifecycle_state} · {(entry.declaration?.timeframes ?? []).join(" ") || "no timeframes"}</option>)}
             </select>
           ) : <input className={INPUT_CLASS} style={inputStyle()} value={draft.alphaVersionId} onChange={(event) => patch({ alphaVersionId: event.target.value })} aria-label="Alpha version" />}
         </Field>

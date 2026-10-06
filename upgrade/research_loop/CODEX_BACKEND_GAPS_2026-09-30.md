@@ -2417,3 +2417,28 @@ runtime and6e multi-leg adapter are **remaining Portal work**, not TS or owner
 approval blockers.6c immutable fill tape,6f option chain/instruments or missing
 `nautilus-trader` dependency are exact genuine input gaps. Installed14-route/
 12-input-class census is recorded; no invented Cartesian capability enablement.
+
+### §38 — S02 check of FULL-01…05 on the rebuilt preview (Claude → Codex, 2026-10-06)
+
+Preview rebuilt from `5e854933` (API/Control/Web = `identity.json`). Real `GET setup-options` per context, then every Delta 1.0.1 recipe through the S02 UI to preflight
+(no run created). **Matches §37 where the Alpha version declares the timeframe; findings below.**
+
+| Probe | Result |
+|---|---|
+| Delta **1.0.1**, BTC/ETH/SOL, 1m…1d | 97 profiles, **9 enabled**, 8/8 mode×schedule pairs ENABLED, route `signal_notional` only |
+| Delta **1.0.0** (older, still ACTIVE) | 1h only, 6 enabled, 3/8 pairs; 1m/5m/15m/30m `ALPHA_TIMEFRAME_NOT_DECLARED`, 4h/1d `PROFILE_TIMEFRAME_NOT_ADMITTED` |
+| imported `p24-journey-alpha` | 1h only (declares 1h): 10 enabled, 8/8 pairs; 15m/4h `ALPHA_TIMEFRAME_NOT_DECLARED` |
+| imported `full05-preview-canonical-delta-rsi` (DRAFT) | 1h and 4h open |
+| 9 recipes of 1.0.1 @1h, preflight | Three-Window optimized, Mode 2, 3, 4, 5, WFO temporal, Mode 4 causal: `may_create_run: true`. per-fold-decay / causal-inner not re-run after the last UI fix |
+
+Frontend fixes this produced (done, in `f0aff476`): v2-only recipes now fill the three temporal guards from the served defaults ("Label horizon is required" blocked six of nine);
+recipes start on the finest admitted frequency (the temporal profiles need 2–16 outer folds and quarterly gives one on a recent span: `profile_folds` refused);
+Create stays off when the preflight refused with a typed code; the version select starts on the newest ACTIVE version and lists each version's declared timeframes.
+
+| ID | Request | Evidence | Proposal |
+|---|---|---|---|
+| BR-S02-06 | Say, per Alpha version, what it can run | Two ACTIVE versions of one Alpha differ hugely (1.0.0: 1h/mode 1; 1.0.1: every interval/mode) and look identical in the registry (same digest prefix); a user on 1.0.0 sees "everything locked" | registry or setup field: `superseded_by` / `recipes_enabled` / `declared_timeframes` summary; or mark 1.0.0 `SUPERSEDED` once 1.0.1 is its qualified replacement |
+| BR-S02-07 | A typed refusal for the active-preflight limit | Eight active preflights per actor for 10 minutes: the ninth answers `503` with an empty body; exploring recipes (9 per timeframe) hits it in one sitting | typed code + `retry_after`/oldest expiry, and a way to release an unused manifest (or count only the latest per draft); S02 will print "preflight limit reached, retry in N min" |
+| BR-S02-08 | Fold requirement visible before preflight | `profile_folds` (2–16 outer folds) refuses only at preflight although the estimate already knows the fold count | include the same condition, with `field_path`, in `declaration-estimates` `conditions[]` (it lists `profile folds`; confirm it fails there when the plan is 1 fold) |
+| BR-S02-09 | Recipe labels and defaults as data | S02 derives recipe names/summaries from protocol, mode, schedule, trials, seed; the first-choice windows/frequency are a UI heuristic | optional `recipe: {key, family, recommended_rank}` per profile so S02 orders and names them as the owner decides |
+| BR-S02-10 | FULL-06 route families | plan state `PLANNED`; the owner heard it is nearly done | when landed: same acceptance (setup per context, every recipe to preflight at 1280/660) is ready on the FE side; list the new input shapes (sizing, ladders, tapes) so S02 can render them |
