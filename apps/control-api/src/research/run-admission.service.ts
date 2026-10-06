@@ -10,6 +10,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import {executionRecipe, executionRecipeActivationReason, wfoExecutionRecipe} from "./execution-recipes";
 import { DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_ID } from "./full02.profiles";
 import {isFull03DeltaBinding} from "./full03-delta.binding";
+import {bindImportedSearch,importedSearchRecipe,type ImportedSearchBinding} from "./imported-search.binding";
 
 import { ControlApiConfig } from "../config";
 import { PortalUser } from "../domain";
@@ -67,6 +68,7 @@ export interface ResearchRunAdmission {
     fixedParameters: Readonly<Record<string, number>> | null;
     /** Exact declaration-bound pins for E17; never browser-selected source bytes. */
     importedParameters: Readonly<Record<string, string | number | boolean>> | null;
+    importedSearchBinding?: ImportedSearchBinding;
     sourceDigest: string | null;
     entrypoint: string;
   } | null;
@@ -194,6 +196,20 @@ export class ResearchRunAdmissionService {
       }
       if (eligibility.binding.contractDigest !== IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST || eligibility.sourceDigest === null) {
         return denied("RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE", "The imported AlphaVersion is not bound to the installed restricted adapter contract.");
+      }
+      if(requestedSpec.protocol==="advanced"||requestedSpec.optuna_trials>1){
+        const row=importedSearchRecipe(requestedSpec);
+        if(!row)return denied("RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE","No exact imported search recipe matches this request.");
+        const activation=executionRecipeActivationReason(row,this.config,{engine_release_id:requestedSpec.client.engine_release_id,verified:true});
+        const result=bindImportedSearch(requestedSpec,eligibility.declaredContract,eligibility.sourceDigest,eligibility.entrypoint);
+        if(activation||result.refusal||!result.binding)return denied("RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE",
+          `The imported search recipe is not admitted: ${activation??result.refusal?.reason_code}.`);
+        const reason=this.importedSearchUnsupportedReason(requestedSpec,manifest,row,result.binding);
+        if(reason)return denied("RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE",reason);
+        return {allowed:true,code:null,message:null,manifest,requestedSpec,profile:{id:row.profile_id,digest:row.profile_digest},
+          alpha:{alphaId:eligibility.alphaId,alphaVersionId:eligibility.alphaVersionId,adapterId:eligibility.binding.adapterId,
+            adapterContractDigest:eligibility.binding.contractDigest,fixedParameters:null,importedParameters:null,
+            importedSearchBinding:result.binding,sourceDigest:eligibility.sourceDigest,entrypoint:eligibility.entrypoint}};
       }
       const imported = this.importedUnsupportedReason(requestedSpec, eligibility.declaredContract, eligibility.entrypoint);
       if (imported.reason !== null) {
@@ -356,6 +372,24 @@ export class ResearchRunAdmissionService {
     entrypoint: string,
   ): { reason: string | null; parameters: Readonly<Record<string, string | number | boolean>> | null; refusal?: SetupRefusal } {
     const reject = (reason: string, reason_code: string, field_path: string[]) => ({reason, parameters: null, refusal: {reason_code, field_path}});
+    if(requested.protocol==="advanced"||requested.optuna_trials>1){
+      const row=importedSearchRecipe(requested);
+      if(!row)return reject("No exact imported recipe is opened for this configuration.","PROFILE_NOT_OPENED",["protocol"]);
+      const activation=executionRecipeActivationReason(row,this.config,{engine_release_id:requested.client.engine_release_id,verified:true});
+      if(activation)return reject(`The imported search recipe is not admitted: ${activation}.`,activation,["profile_id"]);
+      const p=row.public_profile;
+      const axis=requested.client.engine_release_id!==p.engine_release_id?["client","engine_release_id"]
+        :requested.execution_route!==p.execution_route?["execution_route"]
+        :requested.data.dataset_id!==row.descriptor.dataset_id?["data","dataset_id"]
+        :requested.optuna_trials!==p.trial_default?["optuna_trials"]
+        :requested.early_stopping!==null?["early_stopping"]
+        :Object.keys(requested.route_params).length?["route_params"]
+        :Object.keys(requested.optimization_config).length?["optimization_config"]:null;
+      if(axis)return reject("The imported request does not match its exact bounded recipe.","IMPORTED_RECIPE_AXIS_NOT_ADMITTED",axis);
+      const result=bindImportedSearch(requested,declaration,"0".repeat(64),entrypoint);
+      if(result.refusal)return reject(`The imported request is refused: ${result.refusal.reason_code}.`,result.refusal.reason_code,result.refusal.field_path);
+      return {reason:null,parameters:null};
+    }
     if (requested.schema_version !== "research.requested-spec.v1") {
       return reject("The installed imported Alpha adapter accepts requested-spec v1 only.", "REQUESTED_SPEC_EXECUTOR_NOT_INSTALLED", ["schema_version"]);
     }
@@ -447,6 +481,32 @@ export class ResearchRunAdmissionService {
       return reject(`The imported Alpha request pins undeclared parameters: ${[...overrides.keys()].sort().join(", ")}.`, "ALPHA_PARAMETER_NOT_DECLARED", ["parameter_space_overrides"]);
     }
     return { reason: null, parameters };
+  }
+
+  private importedSearchUnsupportedReason(spec:ResearchRequestedSpec,manifest:ResearchPreflightManifestRecord,
+    row:ReturnType<typeof executionRecipe>,binding:ImportedSearchBinding):string|null {
+    if(row.adapter_kind!=="IMPORTED_SEARCH")return "The imported search recipe is not installed.";
+    const p=row.public_profile,d=manifest.datasetBinding,prov=FixedUtcProvenanceSchema.safeParse(d.provenance);
+    if(spec.schema_version!==row.descriptor.requested_spec_version||spec.client.engine_release_id!==p.engine_release_id
+      ||spec.execution_route!==p.execution_route||spec.data.dataset_id!==p.dataset_id||spec.optuna_trials!==p.trial_default
+      ||spec.random_seed!==42||spec.early_stopping!==null||Object.keys(spec.route_params).length||Object.keys(spec.optimization_config).length)
+      return "The imported request must match its exact bounded recipe axes and trial budget.";
+    if(!prov.success||d.timezone!=="UTC"||d.closed_bar_policy!=="CLOSED_BARS_ONLY"
+      ||prov.data.metadata_index_source_manifest_digest!==d.source_manifest_digest||prov.data.warmup_start_utc_ms!==d.range_start_utc_ms)
+      return "The imported search requires its verified fixed-UTC closed-bar metadata binding.";
+    const warmup=manifest.snapshot.warmup as {requested_bars?:number;bars?:number}|undefined;
+    if(!warmup||warmup.requested_bars!==binding.declaration.warmup_bars||warmup.bars!==binding.declaration.warmup_bars)
+      return "The imported preflight must retain exactly its declared predecessor warmup.";
+    if(spec.protocol==="advanced"){
+      const wf=spec.walk_forward;
+      if(!wf||spec.windows||!("frequencies"in p)||!("window_modes"in p)||!p.frequencies.some(v=>v===wf.frequency)||!p.window_modes.some(v=>v===wf.window_mode))return "The imported temporal controls do not match the recipe.";
+      const count=advancedFoldCount(manifest.topology,wf.frequency,wf.window_mode),bounds=p.fold_bounds!;
+      if(count===null||count<bounds.min||count>bounds.max||('max_total_trials'in p&&count*p.trial_default>p.max_total_trials))return "The imported engine-planned folds exceed the exact study budget.";
+      if('inner_constraints'in p ? !causalInnerTopologyMatches(wf,manifest.topology) : wf.inner!==undefined)return "The imported inner plan does not match the exact recipe.";
+      if(Date.parse(wf.end_exclusive)-Date.parse(wf.start)>p.max_span_days!*86400000)return "The imported span exceeds the recipe bound.";
+    }else if(!spec.windows||spec.walk_forward||Date.parse(spec.windows.holdout.end_exclusive)-Date.parse(spec.windows.is.start)>p.max_span_days!*86400000)
+      return "The imported Three Window must retain bounded independent windows.";
+    return null;
   }
 
   /** Advisory S02/P08 check reuses the exact imported executor predicate. */

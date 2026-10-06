@@ -49,7 +49,7 @@ export function assertModeTruth(row,record){
     calibration_sample:disclosure.calibration_sample,full_sample_used_for_selection:disclosure.full_sample_used_for_selection,
     oos_used_for_selection:disclosure.oos_used_for_selection,final_audit_status:record.final_audit.status};
 }
-function sealedCosts(runIds){
+export function sealedCosts(runIds){
   const container='portal-research-p23-ol12-portal-api-1';
   const docker=args=>execFileSync('sudo',['-n','docker',...args],{encoding:'utf8',maxBuffer:4*1024*1024});
   assert.equal(docker(['inspect','--format','{{index .Config.Labels "com.docker.compose.project"}}',container]).trim(),'portal-research-p23-ol12');
@@ -70,6 +70,8 @@ for run in json.load(sys.stdin):
  assert len(blob)<=16384 and hashlib.sha256(blob).hexdigest()==digest
  receipt=json.loads(blob); assert receipt['run_id']==run
  out[run]={'bundle_sha256':bundles[0].parent.name,'child_receipt_sha256':digest,'resource':receipt['resource'],'engine':receipt['engine']}
+ if 'imported_search_binding' in receipt:
+  out[run].update(imported_search_binding=receipt['imported_search_binding'],alpha_version_id=receipt['alpha_version_id'],part_hashes=manifest['files'])
 print(json.dumps(out))`],{input:JSON.stringify(runIds),encoding:'utf8',maxBuffer:4*1024*1024}));
 }
 export async function compileFull04(home){

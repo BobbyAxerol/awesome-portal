@@ -203,6 +203,7 @@ interface SealQueryRow {
   bound_requested_spec?: Record<string, unknown> | null;
   alpha_declared_contract?: Record<string, unknown> | null;
   alpha_entrypoint?: string | null;
+  alpha_source_digest?: string | null;
   run_id: string;
   artifact_revision: string | number;
   source_adapter_id: string;
@@ -700,6 +701,7 @@ export class ResearchCurrentSourceRepository {
                 producer.alpha_id AS bound_alpha_id, producer.alpha_version_id AS bound_alpha_version_id,
                 preflight.requested_spec AS bound_requested_spec,
                 version.declared_contract AS alpha_declared_contract, version.entrypoint AS alpha_entrypoint,
+                version.code_digest AS alpha_source_digest,
                 seal.summary, floor(extract(epoch FROM seal.retained_at) * 1000)::bigint AS retained_at_utc_ms,
                 sidecar.retained_import_digest AS sidecar_retained_import_digest,
                 sidecar.source_rows_digest AS sidecar_source_rows_digest,
@@ -740,6 +742,7 @@ export class ResearchCurrentSourceRepository {
         alphaId: row.bound_alpha_id, alphaVersionId: row.bound_alpha_version_id,
         requestedSpec: row.bound_requested_spec, requestedSpecDigest: row.requested_spec_digest,
         declaredContract: row.alpha_declared_contract, entrypoint: row.alpha_entrypoint,
+        sourceDigest: row.alpha_source_digest,
       }, ...(enrichedAnalysis ? { enrichedAnalysis } : {}) };
   }
 

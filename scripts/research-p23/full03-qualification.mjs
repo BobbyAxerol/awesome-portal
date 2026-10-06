@@ -17,10 +17,13 @@ export function assertOrdinaryProductReceipt(row,record){
   assert(record.passed&&record.profile_id===row.profile_id&&record.profile_digest===row.profile_digest,'EXACT_PASSED_RECIPE');
   const run=record.run,spec=run.requested_spec,preflight=run.preflight.body,step=row.descriptor.source_clock.bar_interval_ms;
   const start=Date.parse(spec.walk_forward?.start??spec.windows.is.start),end=Date.parse(spec.walk_forward?.end_exclusive??spec.windows.holdout.end_exclusive);
-  assert.equal(spec.alpha_binding.alpha_version_id,row.descriptor.alpha_binding_requirements.alpha_version_id);
+  const imported=row.source_requirement==='IMPORTED_IMMUTABLE_SEARCH_BINDING';
+  const expectedVersion=imported?record.imported_registration?.registration.alpha_version_id:row.descriptor.alpha_binding_requirements.alpha_version_id;
+  assert.equal(spec.alpha_binding.alpha_version_id,expectedVersion);
   assert.equal(spec.data.dataset_id,row.descriptor.dataset_id);assert.equal(spec.data.timeframe,row.public_profile.timeframe);
-  assert.equal(preflight.snapshot.warmup.bars,300);assert.equal(preflight.snapshot.warmup.requested_bars,300);
-  assert.equal(preflight.snapshot.warmup.start_utc_ms,start-300*step);
+  const warmup=imported?record.imported_registration.declaration.warmup_bars:300;
+  assert.equal(preflight.snapshot.warmup.bars,warmup);assert.equal(preflight.snapshot.warmup.requested_bars,warmup);
+  assert.equal(preflight.snapshot.warmup.start_utc_ms,start-warmup*step);
   assert.equal(preflight.snapshot.warmup.end_exclusive_utc_ms,start);
   assert(preflight.snapshot.row_count<=row.budgets.planning_max_bars&&preflight.snapshot.quality.passed,'ACTUAL_BAR_BUDGET_AND_GAP_SCAN');
   assert(start%step===0&&end%step===0,'SOURCE_ALIGNED_HALF_OPEN_EDGES');
@@ -44,7 +47,8 @@ export function assertOrdinaryProductReceipt(row,record){
     api_image_id:record.identity.images['control-api'].image_id,
     child_image_id:record.identity.images['quant-worker-py'].image_id,
     requested_spec_digest:preflight.requested_spec_digest,
-    retained_manifest_digest:record.reads['current-source/freeze'].body.provenance.manifest_digest};
+    retained_manifest_digest:record.reads['current-source/freeze'].body.integrity.expected_manifest_digest
+      ??record.reads['current-source/freeze'].body.provenance.manifest_digest};
 }
 export async function compileQualification(home){
   home=validateHome(home);assert(home.endsWith('/full03'),'EXACT_FULL03_OWNED_CELL');

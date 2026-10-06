@@ -160,6 +160,16 @@ export function preflightGates(
  * sentence is added without a path, so the two cannot drift silently.
  */
 export const ADMISSION_REASON_FIELD_PATHS: Readonly<Record<string, readonly string[]>> = {
+  "The imported search recipe is not installed.": ["profile_id"],
+  "No exact imported search recipe matches this request.": ["protocol"],
+  "The imported request must match its exact bounded recipe axes and trial budget.": ["optuna_trials"],
+  "The imported search requires its verified fixed-UTC closed-bar metadata binding.": ["data"],
+  "The imported preflight must retain exactly its declared predecessor warmup.": ["alpha_binding"],
+  "The imported temporal controls do not match the recipe.": ["walk_forward"],
+  "The imported engine-planned folds exceed the exact study budget.": ["walk_forward"],
+  "The imported inner plan does not match the exact recipe.": ["walk_forward", "inner"],
+  "The imported span exceeds the recipe bound.": ["walk_forward", "end_exclusive"],
+  "The imported Three Window must retain bounded independent windows.": ["windows"],
   "The indexed recipe requires its exact dataset and immutable AlphaVersion binding.": ["data","dataset_id"],
   "The indexed recipe requires a verified fixed-UTC closed-bar metadata binding.": ["data"],
   "No exact indexed execution recipe matches the requested AlphaVersion and timeframe.": ["data","timeframe"],

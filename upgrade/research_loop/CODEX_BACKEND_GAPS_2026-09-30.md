@@ -2343,3 +2343,34 @@ Legitimate missing native details stay `QUANTBT_MODE_DETAIL_NOT_PUBLISHED`;
 the separate historical linked-audit executor remains exact-binding typed409,
 not broadened by these optimizer reads. No remote push, dev/main or production
 action. FULL05 imported WFO and FULL06 other routes remain unstarted.
+
+#### §37 FULL-05 delivery — 2026-10-06
+
+**BACKEND_DELIVERED /27_EXACT_IMPORTED_RECIPES_PRODUCT_RUN_QUALIFIED /
+RESEARCH_PREVIEW_ENABLED** supersedes the earlier FULL05 unstarted note.
+BR-FULL-07 now runs the real canonical imported Delta/RSI DRAFT source through
+P07→P08→P10→confined QuantBT1.1.1→P05→eight named reads per recipe,9 methods
+×1h/4h/1d. Numeric ranges/steps/categories and PINs preserve immutable source/
+declaration/AV/kinds; no active-version or built-in Delta substitution. Old
+71 recipe/qualification identities remain and27 append via104/105. Native
+centroid/proxy/IS-only/full-sample semantics remain explicit, incompatible
+declaration/route/clock combinations fail typed rather than guessed available.
+Actual maximum17.928CPU/18.233wall seconds/367.391MiBRSS fits unchanged caps.
+
+Final image parity216 retained reads plus aggregate/progress checks; flag-off
+54 retained reads+new create409; preview27 Conditions/three may-create
+preflights and unchanged20 old seals/account/session/AV/index/web custody PASS.
+Mode5 declaration-estimate exposes typed FULL_SAMPLE_CALIBRATION instead of
+misclassifying native identical intervals as broken WFO. All ten new literal
+refusals have field mappings. Grouped regressions/actual DTO fixtures and
+per-recipe immutable proof are in the
+[backend/operations/frontend handoff](./evidence/P10/FULL_05_IMPORTED_ALPHA_2026-10-06.md)
+and [27-run qualification packet](./evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md).
+
+Claude: dynamic S02 `DECLARED_SEARCH_WITH_PINS`; estimator evaluation scope;
+native mode detail/centroid and full-sample metrics; S07 SOURCE_CODE_SHA256
+with typed absence for code-fixed value list; keep DRAFT execution vs ACTIVE
+publication guard. No frontend source changed. Named API/backend acceptance
+does not replace real browser/visual acceptance. Do not relabel nonnumeric
+optimizer parameters/categorical centroids as supported continuous searches.
+FULL06 remains separately unstarted; no remotes/dev/main/production action.

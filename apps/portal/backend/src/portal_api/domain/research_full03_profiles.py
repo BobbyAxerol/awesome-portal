@@ -1,8 +1,8 @@
-"""Exact image-owned FULL-03 Delta recipes, never a timeframe menu authority.
+"""Exact image-owned indexed recipes, never a timeframe menu authority.
 
 The source-controlled registry supplies each admitted interval and its clock.
-This module accepts only the installed Delta kernel's separately bound Alpha
-version; it does not load source, run the engine, or grant create permission.
+Delta recipes require the installed kernel binding. FULL05 recipes require the
+separate immutable imported adapter dependency. Neither grants create authority.
 """
 from __future__ import annotations
 
@@ -21,7 +21,8 @@ _WIDTH = re.compile(r"[1-9][0-9]{0,4}(D|h)")
 
 def is_full03_profile(profile_id: str) -> bool:
     try:
-        return execution_recipe(profile_id)["descriptor"].get("adapter_id") == FULL03_DELTA_ADAPTER_ID
+        row = execution_recipe(profile_id)
+        return row["descriptor"].get("adapter_id") == FULL03_DELTA_ADAPTER_ID or row["source_requirement"] == "IMPORTED_IMMUTABLE_SEARCH_BINDING"
     except ValueError:
         return False
 
@@ -29,6 +30,12 @@ def is_full03_profile(profile_id: str) -> bool:
 def full03_recipe(profile_id: str, profile_digest: object) -> dict[str, Any]:
     row = execution_recipe(profile_id, profile_digest)
     p = row["descriptor"]
+    if row["source_requirement"] == "IMPORTED_IMMUTABLE_SEARCH_BINDING":
+        from .research_imported_alpha_profile import IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST, IMPORTED_ALPHA_ADAPTER_ID
+        if (row["adapter_kind"] != "IMPORTED_SEARCH" or p.get("adapter_id") != IMPORTED_ALPHA_ADAPTER_ID
+                or p.get("adapter_contract_digest") != IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST or row["preview_override"] is not None):
+            raise ValueError("FULL05 imported recipe dependency mismatch")
+        return row
     if (p.get("adapter_id") != FULL03_DELTA_ADAPTER_ID
             or row["adapter_kind"] not in {"DELTA_WFO", "DELTA_THREE_WINDOW_OPTIMIZED"}
             or row["source_requirement"] != "FULL03_IMMUTABLE_DELTA_BINDING"
@@ -56,6 +63,13 @@ def full03_recipe(profile_id: str, profile_digest: object) -> dict[str, Any]:
 
 def full03_profile_enabled(profile_id: str, env: Mapping[str, str] | None = None) -> bool:
     source = os.environ if env is None else env
+    if not is_full03_profile(profile_id):
+        return False
+    if execution_recipe(profile_id)["source_requirement"] == "IMPORTED_IMMUTABLE_SEARCH_BINDING":
+        qualification = execution_recipe_qualification(profile_id)
+        return source.get("PORTAL_FEATURE_RESEARCH_FULL05_PROFILE") == "true" and source.get("PORTAL_FEATURE_RESEARCH_IMPORTED_EXECUTION") == "true" and (
+            qualification["kind"] == "PRODUCT_RUN_QUALIFIED" or qualification["kind"] == "CANDIDATE_NOT_QUALIFIED"
+            and source.get("PORTAL_ENV") == "local" and source.get("PORTAL_RECIPE_QUALIFICATION_PROFILE_ID") == profile_id)
     if not is_full03_profile(profile_id) or source.get("PORTAL_FEATURE_RESEARCH_FULL03_PROFILE", "false") != "true":
         return False
     qualification = execution_recipe_qualification(profile_id)
@@ -72,7 +86,8 @@ def full03_profile_enabled(profile_id: str, env: Mapping[str, str] | None = None
 def full03_execution_binding(row: Mapping[str, Any]) -> dict[str, Any]:
     p = row["descriptor"]
     requirement = p["alpha_binding_requirements"]
-    return {name: requirement[name] for name in ("alpha_id", "alpha_version_id", "adapter_id", "adapter_contract_digest")} | {
+    fields = ("adapter_id", "adapter_contract_digest") if row["source_requirement"] == "IMPORTED_IMMUTABLE_SEARCH_BINDING" else ("alpha_id", "alpha_version_id", "adapter_id", "adapter_contract_digest")
+    return {name: requirement[name] for name in fields} | {
         "timeframe": p["timeframe"], "source_clock": dict(p["source_clock"])}
 
 
@@ -84,7 +99,7 @@ def validate_full03_execution_binding(binding: object, row: Mapping[str, Any]) -
 def full03_controls(spec: Mapping[str, Any], row: Mapping[str, Any]) -> dict[str, Any] | None:
     """Retain global, fold-local decay and causal-inner semantics independently."""
     p = row["descriptor"]
-    if row["adapter_kind"] == "DELTA_THREE_WINDOW_OPTIMIZED":
+    if p["protocol"] == "three_window_decay":
         return None
     wf = spec.get("walk_forward")
     if (spec.get("schema_version") != p["requested_spec_version"] or not isinstance(wf, dict)

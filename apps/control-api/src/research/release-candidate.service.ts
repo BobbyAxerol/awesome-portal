@@ -33,6 +33,7 @@ import { publishBlockedAction } from "./release-candidate-publish-action";
 import { ResearchReportFrozenCoreSchema } from "./report.contract";
 import { memoizedResearchJsonDigest } from "./memoized-json-digest";
 import { ExactJsonCalculationMemo } from "./exact-json-calculation-memo";
+import {importedRetainedBinding} from "./imported-search.read";
 
 type Availability = {
   state: "AVAILABLE" | "NOT_PUBLISHED" | "PARTIAL" | "NOT_APPLICABLE";
@@ -809,8 +810,11 @@ export class ResearchReleaseCandidateService {
     const reproducibility = !sealed ? unsealed(10) : reproducible
       ? complete(at(10).key, 11, at(10).item, at(10).source, lane.seal!.retainedImportDigest, `Retained manifest, recomputed import receipt (MATCH), source transform and ${lane.partDigests.length} sealed P05 part digests are pinned.`)
       : missing(at(10).key, 11, at(10).item, at(10).source, "P21_REPRODUCIBILITY_CHECKSUMS_INCOMPLETE", "A retained manifest, import receipt, transform or P05 part checksum is absent or mismatched.");
-
-    return [at(0), at(1), data, methodology, selection, audit, metrics, at(7), robustness, at(9), reproducibility, at(11)];
+    const importedBinding=importedRetainedBinding(lane.seal?.profileId??"",lane.runDeclarationInputs);
+    const execution=importedBinding && facts.laneConsistent && values.adapterContractDigest===importedBinding.adapterContractDigest
+      ? complete(at(7).key,8,at(7).item,at(7).source,importedBinding.profileDigest,
+        "The immutable admitted imported profile binds signal_notional execution. This is a research assumption, not an Execution deployment or broker acknowledgement.") : at(7);
+    return [at(0), at(1), data, methodology, selection, audit, metrics, execution, robustness, at(9), reproducibility, at(11)];
   }
 
   /** Every present retained identity must be well-formed and agree with its own authority. */

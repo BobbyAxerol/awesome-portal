@@ -121,7 +121,8 @@
               "DELTA_WFO",
               "DELTA_THREE_WINDOW_OPTIMIZED",
               "VN_OBSERVED_FIXED",
-              "IMPORTED_FIXED"
+              "IMPORTED_FIXED",
+              "IMPORTED_SEARCH"
             ]
           },
           "work_schema_version": {
@@ -443,7 +444,8 @@
                 "FEATURE_RESEARCH_IMPORTED_EXECUTION",
                 "FEATURE_RESEARCH_VN_OBSERVED_PROFILE",
                 "FEATURE_RESEARCH_FULL03_PROFILE",
-                "FEATURE_RESEARCH_FULL04_PROFILE"
+                "FEATURE_RESEARCH_FULL04_PROFILE",
+                "FEATURE_RESEARCH_FULL05_PROFILE"
               ]
             },
             "maxItems": 4,
@@ -454,7 +456,8 @@
               "IMMUTABLE_DELTA_BINDING",
               "IMMUTABLE_IMPORTED_BINDING",
               "VN_OBSERVED_EXACT_QUALIFICATION",
-              "FULL03_IMMUTABLE_DELTA_BINDING"
+              "FULL03_IMMUTABLE_DELTA_BINDING",
+              "IMPORTED_IMMUTABLE_SEARCH_BINDING"
             ]
           },
           "budgets": {

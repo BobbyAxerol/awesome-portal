@@ -723,6 +723,11 @@ export interface components {
                         bars: number;
                     };
                 }[];
+                /**
+                 * @description Native Mode5 identical train/evaluation geometry; not an untouched OOS fold.
+                 * @constant
+                 */
+                evaluation_scope?: "FULL_SAMPLE_CALIBRATION";
             };
             earliest_start_utc_ms: number | null;
             /** @enum {unknown} */

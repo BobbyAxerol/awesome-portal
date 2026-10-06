@@ -411,8 +411,9 @@ export function declaredSpace(
   retainedProfileId: string,
   theta: Readonly<Record<string, string>>,
   registry: ResearchParameterBindingRegistry = DEFAULT_PARAMETER_BINDING_REGISTRY,
+  exactBinding?: HistoricalProfileBinding | null,
 ): DeclaredSpace {
-  const binding: HistoricalProfileBinding | null = registry.byRetainedLaneProfile(retainedProfileId);
+  const binding: HistoricalProfileBinding | null = exactBinding === undefined ? registry.byRetainedLaneProfile(retainedProfileId) : exactBinding;
   if (!binding) {
     return {
       schema_version: DECLARED_SPACE_RULE,

@@ -159,7 +159,7 @@ class CurrentSourceAdmission:
         if row is not None:
             p, budgets = row["descriptor"], row["budgets"]
             expected = {
-                "engine_operation": "train_test_split" if row["adapter_kind"] == "DELTA_THREE_WINDOW_OPTIMIZED" else "walk_forward",
+                "engine_operation": "train_test_split" if p["protocol"] == "three_window_decay" else "walk_forward",
                 "target_mode": p["execution_route"], "optimization_mode": p["optimization_mode"],
                 "optimization_schedule": p["optimization_schedule"], "random_seed": p["random_seed"],
                 "optuna_trials": p["trial_count"]["max"], "maximum_runtime_seconds": budgets["wall_seconds"],
@@ -224,7 +224,7 @@ def recipe_current_source_admission(profile_id: str, profile_digest: str) -> Cur
     p, budgets = row["descriptor"], row["budgets"]
     result = CurrentSourceAdmission(
         profile_id=p["current_source"]["profile_id"],
-        engine_operation="train_test_split" if row["adapter_kind"] == "DELTA_THREE_WINDOW_OPTIMIZED" else "walk_forward",
+        engine_operation="train_test_split" if p["protocol"] == "three_window_decay" else "walk_forward",
         target_mode=p["execution_route"], optimization_mode=p["optimization_mode"],
         optimization_schedule=p["optimization_schedule"], random_seed=p["random_seed"], optuna_trials=p["trial_count"]["max"],
         maximum_runtime_seconds=budgets["wall_seconds"], maximum_rss_bytes=budgets["memory_bytes"],
@@ -712,7 +712,10 @@ class CurrentSourceArtifactAdapter:
         admission.validate()
         recipe = admission.recipe()
         causal = admission.optimization_schedule == "per_fold_causal"
-        full04 = recipe is not None and recipe["descriptor"].get("schema_version") == "research.full04-delta-profile.v1"
+        # Native optimizer custody follows the exact mode, not the strategy's
+        # source family. FULL05 imported recipes run these same QuantBT modes;
+        # omitting their disclosure loses centroid/IS-only/full-sample truth.
+        full04 = recipe is not None and admission.optimization_mode != "mode_1_decay"
         mode4_causal = full04 and causal and admission.optimization_mode == "mode_4_is_only_robust"
         nested_causal = causal and not mode4_causal
         per_fold_decay = admission.optimization_schedule == "per_fold_decay"
@@ -1127,7 +1130,7 @@ class CurrentSourceArtifactAdapter:
         if calibration.get("random_seed") != admission.random_seed or calibration.get("optuna_trials") != admission.optuna_trials:
             raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_CONFIG_REJECTED", "The completed source seed/trial budget does not match its admitted profile.")
         recipe = admission.recipe()
-        if recipe is not None and recipe["descriptor"].get("schema_version") == "research.full04-delta-profile.v1":
+        if recipe is not None and admission.optimization_mode != "mode_1_decay":
             settings = recipe["descriptor"]["optimizer_settings"]
             native_settings = calibration.get("optimization")
             if not isinstance(native_settings, Mapping) or any(native_settings.get(key) != value for key, value in settings.items()):

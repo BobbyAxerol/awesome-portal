@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ResearchDatasetIndexClient } from "../src/research/dataset-index.client";
 import { ResearchDatasetIndexController } from "../src/research/dataset-index.controller";
-import { BarMetadataSchema, ResearchDatasetCatalogV2Schema } from "../src/research/dataset-index.contract";
+import { BarMetadataSchema, DeclarationMetadataSchema, ResearchDatasetCatalogV2Schema } from "../src/research/dataset-index.contract";
 import {sha256} from "../src/auth/argon";
 import {sha256ResearchJson} from "../src/research/preflight.service";
 import {P04_DELTA_DECLARED_CONTRACT} from "../src/research/p04-delta.binding";
@@ -23,6 +23,27 @@ const request = { portalUser: { userId: "u1", username: "u1", role: "ADMIN", mus
 const make = (data = fixture(), member = true) => new ResearchDatasetIndexController({ catalog: async () => data } as never, { isMember: async () => member } as never, config, {} as never, {} as never, {} as never);
 afterEach(() => vi.unstubAllGlobals());
 describe("B7 indexed dataset BFF", () => {
+  it("labels native full-sample calibration without weakening WFO chronology or request binding",async()=>{
+    const spec=wfoRequested();spec.optimization_mode="mode_5_full_robust";
+    const metadata=JSON.parse(readFileSync(resolve(root,"fixtures/research-declaration-estimate.v1.available.valid.json"),"utf8")).metadata;
+    const train=metadata.planned_folds.items[0].train;
+    metadata.planned_folds={...metadata.planned_folds,count:1,evaluation_scope:"FULL_SAMPLE_CALIBRATION",
+      items:[{ordinal:1,train,outer_oos:{...train}}]};
+    metadata.requested_spec_digest=sha256ResearchJson(spec);
+    expect(DeclarationMetadataSchema.safeParse(metadata).success).toBe(true);
+    const {evaluation_scope,...unlabelled}=metadata.planned_folds;
+    expect(DeclarationMetadataSchema.safeParse({...metadata,planned_folds:unlabelled}).success).toBe(false);
+    expect(DeclarationMetadataSchema.safeParse({...metadata,planned_folds:{...metadata.planned_folds,
+      items:[{...metadata.planned_folds.items[0],outer_oos:{...train,bars:train.bars+1}}]}}).success).toBe(false);
+    vi.stubGlobal("fetch",vi.fn(async()=>new Response(JSON.stringify(metadata))));
+    const client=new ResearchDatasetIndexClient(config);
+    expect(await client.estimate((request as any).portalUser,spec,256)).toEqual(metadata);
+    const wfo=wfoRequested();metadata.requested_spec_digest=sha256ResearchJson(wfo);
+    await expect(client.estimate((request as any).portalUser,wfo,256)).rejects.toMatchObject({status:502});
+    metadata.requested_spec_digest=sha256ResearchJson(spec);
+    metadata.planned_folds={...unlabelled,items:[]};
+    await expect(client.estimate((request as any).portalUser,spec,256)).rejects.toMatchObject({status:502});
+  });
   it("publishes the exact imported refusal consistently instead of conflicting Conditions",async()=>{
     const spec=wfoRequested(),metadata=JSON.parse(readFileSync(resolve(root,"fixtures/research-declaration-estimate.v1.available.valid.json"),"utf8")).metadata;
     const atlas=JSON.parse(readFileSync(resolve(root,"fixtures/research-foundation.atlas-current.valid.json"),"utf8"));
@@ -35,7 +56,7 @@ describe("B7 indexed dataset BFF", () => {
     const csrf="typed-estimate-csrf",req={...request as any,headers:{origin:"https://portal.test","x-portal-csrf":csrf},cookies:{"__Host-portal_csrf":csrf},portalSession:{csrfSecretHash:sha256(csrf)}};
     const result=await controller.estimate(req as never,{requested_spec:spec});
     for(const key of ["profile","executor_version","imported_executor"])
-      expect(result.conditions.find(row=>row.key===key)).toMatchObject({state:"FAIL",reason_code:"PROFILE_PROTOCOL_NOT_ADMITTED",field_path:["protocol"]});
+      expect(result.conditions.find(row=>row.key===key)).toMatchObject({state:"FAIL",reason_code:"PROFILE_NOT_OPENED",field_path:["protocol"]});
     expect(result.ready_for_preflight).toBe(false);
     const seeded={...version,declaredContract:{...version.declaredContract,determinism:{seed_required:true}}};
     const seededController=new ResearchDatasetIndexController({estimate:async()=>metadata,catalog:async()=>fixture()} as never,{isMember:async()=>true} as never,

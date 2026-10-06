@@ -8,7 +8,7 @@ const intervals: Readonly<Record<string, number>> = {
   "30min": 1_800_000, "1h": 3_600_000, "4h": 14_400_000, "1d": 86_400_000,
 };
 const descriptorPair = (recipe: ExecutionRecipe): CurrentSourcePair | null => {
-  if (recipe.adapter_kind !== "DELTA_WFO" && recipe.adapter_kind !== "DELTA_THREE_WINDOW_OPTIMIZED") return null;
+  if (recipe.adapter_kind !== "DELTA_WFO" && recipe.adapter_kind !== "DELTA_THREE_WINDOW_OPTIMIZED" && recipe.adapter_kind !== "IMPORTED_SEARCH") return null;
   return (recipe.descriptor as { current_source?: CurrentSourcePair }).current_source ?? null;
 };
 export const currentSourceExecutionRecipes = (): readonly ExecutionRecipe[] => executionRecipes.filter(row => descriptorPair(row) !== null);

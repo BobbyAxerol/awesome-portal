@@ -33,7 +33,9 @@ async function admit(row:typeof rows[number],change?:(s:ResearchRequestedSpec)=>
 }
 describe("FULL04 exact native optimizer admission",()=>{
   it("adds five mode/schedule combinations over seven indexed clocks without rewriting old36",()=>{
-    expect(rows).toHaveLength(35);expect(executionRecipes).toHaveLength(71);
+    expect(rows).toHaveLength(35);
+    expect(executionRecipes.filter(r=>r.adapter_kind!=="IMPORTED_SEARCH")).toHaveLength(71);
+    expect(executionRecipes.filter(r=>r.adapter_kind==="IMPORTED_SEARCH")).toHaveLength(27);
     expect(new Set(rows.map(r=>r.public_profile.optimization_mode+":"+r.public_profile.optimization_schedule)).size).toBe(5);
     expect(executionRecipes.filter(r=>r.descriptor.schema_version==="research.full03-delta-profile.v1")).toHaveLength(28);
   });

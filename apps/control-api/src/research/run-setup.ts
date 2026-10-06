@@ -39,6 +39,9 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
   ];
   const profiles: RunSetupProfile[] = admission.profiles.map(row => {
     const recipe = executionRecipe(row.profile_id);
+    const importedSearch=recipe.adapter_kind==="IMPORTED_SEARCH";
+    const nonnumeric=Object.values(declaration.parameter_space).some(p=>p.kind==="fixed"?typeof p.value!=="number"
+      :p.kind==="categorical"?p.values.some(v=>typeof v!=="number"):false);
     const bindingReason = recipe.source_requirement === "FULL03_IMMUTABLE_DELTA_BINDING"
       ? recipe.descriptor.alpha_binding_requirements.alpha_version_id !== version.alphaVersionId
         || recipe.descriptor.adapter_id !== version.binding?.adapterId
@@ -46,7 +49,9 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
       : version.binding?.adapterId === "full03.delta-rsi.v1";
     const temporal = row.protocol === "advanced";
     const optimized = executionRecipe(row.profile_id).adapter_kind === "DELTA_THREE_WINDOW_OPTIMIZED";
-    const refusals = [...common, ...refusal(imported || bindingReason ? "ALPHA_EXECUTOR_MISMATCH" : null, ["alpha_binding"]),
+    const refusals = [...common, ...refusal(importedSearch?!imported?"ALPHA_EXECUTOR_MISMATCH":null:imported || bindingReason ? "ALPHA_EXECUTOR_MISMATCH" : null, ["alpha_binding"]),
+      ...refusal(importedSearch&&declaration.warmup_bars>4096?"IMPORTED_WARMUP_EXCEEDS_EXECUTOR_LIMIT":null,["alpha_binding"]),
+      ...refusal(importedSearch&&nonnumeric?"IMPORTED_NON_NUMERIC_SEARCH_NOT_QUALIFIED":null,["alpha_binding"]),
       ...refusal(row.dataset_id ? row.dataset_id !== context.dataset_id ? "PROFILE_DATASET_NOT_ADMITTED" : null
         : context.dataset_id === "vn-stock-daily" ? "PROFILE_DATASET_NOT_ADMITTED" : null, ["data", "dataset_id"]),
       ...refusal(row.symbol && row.symbol !== context.symbol ? "PROFILE_SYMBOL_NOT_ADMITTED" : null, ["data", "symbol"]),
@@ -65,8 +70,8 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
       max_span_days: row.max_span_days, fold_bounds: row.fold_bounds,
       frequencies: row.frequencies ?? (row.frequency ? [row.frequency] : []),
       window_modes: (row.window_modes ?? (row.window_mode ? [row.window_mode] : [])) as RunSetupProfile["window_modes"],
-      parameter_policy: temporal || optimized ? "DELTA_SEARCH_WITH_QUALIFIED_PINS" : "FIXED_NO_OVERRIDES",
-      allowed_pin_names: (temporal || optimized) && row.optimization_schedule !== "per_fold_decay"
+      parameter_policy: importedSearch?"DECLARED_SEARCH_WITH_PINS":temporal || optimized ? "DELTA_SEARCH_WITH_QUALIFIED_PINS" : "FIXED_NO_OVERRIDES",
+      allowed_pin_names: importedSearch?Object.keys(declaration.parameter_space):(temporal || optimized) && row.optimization_schedule !== "per_fold_decay"
         ? WHATIF_PROFILE.axes.map(axis => axis.parameter) : [],
       inner_validation: row.inner_validation ?? "NOT_APPLICABLE", inner_constraints: row.inner_constraints ?? null,
       temporal_guards: { policy: temporal ? "V1_ABSENT_V2_EXPLICIT" : "NOT_APPLICABLE", defaults: temporal ? guards : null,

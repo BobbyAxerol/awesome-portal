@@ -116,10 +116,11 @@ export class ResearchRunCreateService {
     const commandId = stableId("rcmd", commandDigest);
     const profile = accepted.profile!;
     const recipe=executionRecipe(profile.id,profile.digest);
-    const causal = recipe.adapter_kind==="DELTA_WFO" && recipe.public_profile.optimization_schedule==="per_fold_causal";
-    const wfo = recipe.adapter_kind==="DELTA_WFO";
-    const optimized = recipe.adapter_kind==="DELTA_THREE_WINDOW_OPTIMIZED";
-    const imported = profile.id === IMPORTED_ALPHA_PROFILE_ID;
+    const importedSearch=recipe.adapter_kind==="IMPORTED_SEARCH";
+    const causal = (recipe.adapter_kind==="DELTA_WFO"||importedSearch) && recipe.public_profile.optimization_schedule==="per_fold_causal";
+    const wfo = recipe.adapter_kind==="DELTA_WFO"||importedSearch&&requested.protocol==="advanced";
+    const optimized = recipe.adapter_kind==="DELTA_THREE_WINDOW_OPTIMIZED"||importedSearch&&requested.protocol==="three_window_decay";
+    const imported = profile.id === IMPORTED_ALPHA_PROFILE_ID||importedSearch;
     const vnObserved = profile.id === VN_OBSERVED_FIXED_PROFILE_ID;
     const observation = vnObserved ? VnObservedSourceObservationSchema.safeParse({
       ...(manifest.datasetBinding.provenance as Record<string, unknown>),
@@ -151,7 +152,7 @@ export class ResearchRunCreateService {
       })
       : imported
       ? digest({
-        schema_version: IMPORTED_ALPHA_WORK_SCHEMA_VERSION,
+        schema_version: importedSearch?recipe.work_schema_version:IMPORTED_ALPHA_WORK_SCHEMA_VERSION,
         requested_spec_digest: manifest.requestedSpecDigest,
         effective_spec_digest: manifest.effectiveSpecDigest,
         dataset_binding_digest: manifest.datasetBindingDigest,
@@ -168,6 +169,7 @@ export class ResearchRunCreateService {
           adapter_id: alpha.adapterId,
           adapter_contract_digest: alpha.adapterContractDigest,
           parameters: alpha.importedParameters,
+          ...(importedSearch?{search_binding:alpha.importedSearchBinding}:{}),
         },
         execution_profile: { profile_id: profile.id, profile_digest: profile.digest },
         engine_release_id: requested.client.engine_release_id,
@@ -250,6 +252,7 @@ export class ResearchRunCreateService {
           imported_source_digest: alpha.sourceDigest,
           imported_entrypoint: alpha.entrypoint,
           imported_parameters: alpha.importedParameters,
+          ...(importedSearch?{imported_search_binding:alpha.importedSearchBinding}:{}),
         } : {}),
         work_digest: workDigest,
       },

@@ -14,7 +14,7 @@ type CheckProfile = Pick<ResearchPortalAdmission["profiles"][number],
   inner_validation?: "NOT_APPLICABLE" | "NOT_ADMITTED_GLOBAL_RETENTION_ONLY" | "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY";
   inner_constraints?: ResearchPortalAdmission["profiles"][number]["inner_constraints"] | null;
   trial_scope?: "GLOBAL_STUDY" | "PER_OUTER_FOLD_STUDY";
-  parameter_policy?: "FIXED_NO_OVERRIDES" | "DECLARED_PINS_ONLY" | "DELTA_SEARCH_WITH_QUALIFIED_PINS";
+  parameter_policy?: "FIXED_NO_OVERRIDES" | "DECLARED_PINS_ONLY" | "DELTA_SEARCH_WITH_QUALIFIED_PINS" | "DECLARED_SEARCH_WITH_PINS";
   refusals?: SetupRefusal[];
 };
 
@@ -83,7 +83,7 @@ export function declarationConditions(spec: ResearchRequestedSpec, metadata: z.i
     add("optimizer_overrides", Object.keys(spec.optimization_config).length === 0,
       "PROFILE_OPTIMIZER_OVERRIDES_NOT_ADMITTED", Object.keys(spec.optimization_config).length, "0 overrides");
     if (profile.protocol === "three_window_decay" && profile.parameter_policy !== "DECLARED_PINS_ONLY"
-        && profile.parameter_policy !== "DELTA_SEARCH_WITH_QUALIFIED_PINS") add("parameter_overrides", spec.parameter_space_overrides.length === 0,
+        && profile.parameter_policy !== "DELTA_SEARCH_WITH_QUALIFIED_PINS" && profile.parameter_policy !== "DECLARED_SEARCH_WITH_PINS") add("parameter_overrides", spec.parameter_space_overrides.length === 0,
       "FIXED_PROFILE_PARAMETER_OVERRIDES_NOT_ADMITTED", spec.parameter_space_overrides.length, "0 overrides");
     if (profile.parameter_policy === "DELTA_SEARCH_WITH_QUALIFIED_PINS" && profile.allowed_pin_names) add("parameter_overrides",
       spec.parameter_space_overrides.every(row => row.kind === "pin" && profile.allowed_pin_names!.includes(row.name)),

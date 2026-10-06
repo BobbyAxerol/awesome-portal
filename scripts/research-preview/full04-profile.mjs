@@ -8,6 +8,10 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 const root=resolve(fileURLToPath(new URL('../..',import.meta.url)));
 const project='portal-research-preview',file='/home/bobby/.config/portal-research-preview/preview.env';
+const slice=process.argv.find(a=>a.startsWith('--slice='))?.slice(8)??'full04';
+assert(['full04','full05'].includes(slice),'EXACT_APPROVED_PREVIEW_SLICE');
+const enabled=process.argv.find(a=>a.startsWith('--enabled='))?.slice(10)??'true';
+assert(['true','false'].includes(enabled),'EXPLICIT_ADMISSION_STATE');
 const value=readFileSync(file,'utf8'),stat=lstatSync(file);
 assert(stat.isFile()&&!stat.isSymbolicLink()&&(stat.mode&0o077)===0,'PRIVATE_REGULAR_PREVIEW_INPUT_REQUIRED');
 const env=Object.fromEntries(value.split('\n').filter(s=>/^[A-Z0-9_]+=/.test(s)).map(s=>{const i=s.indexOf('=');return[s.slice(0,i),s.slice(i+1)];}));
@@ -21,8 +25,8 @@ const control=process.argv.find(a=>a.startsWith('--control-image='))?.slice(16);
 const python=process.argv.find(a=>a.startsWith('--python-image='))?.slice(15);
 assert(/^sha256:[a-f0-9]{64}$/.test(control)&&/^sha256:[a-f0-9]{64}$/.test(python),'EXACT_CONTENT_ADDRESSED_IMAGES_REQUIRED');
 const registry=JSON.parse(readFileSync(root+'/apps/portal/registry/research-execution-recipes.v1.json'));
-const rows=registry.recipes.filter(r=>r.descriptor.schema_version==='research.full04-delta-profile.v1');
-assert.equal(rows.length,35);
+const rows=registry.recipes.filter(r=>r.descriptor.schema_version===`research.${slice}-${slice==='full05'?'imported':'delta'}-profile.v1`);
+assert.equal(rows.length,slice==='full05'?27:35);
 for(const row of rows){const ref=registry.qualification_references.find(r=>r.profile_id===row.profile_id);
   assert.equal(ref?.kind,'PRODUCT_RUN_QUALIFIED');
   assert.equal(createHash('sha256').update(readFileSync(root+'/'+ref.receipt_path)).digest('hex'),ref.receipt_sha256);}
@@ -40,13 +44,15 @@ for(const [service,image]of [['control-api',control],['portal-api',python]]){
   assert.equal(docker(['image','inspect','--format','{{.Id}}',image]).trim(),image);
   const old=inspect(project+'-'+service+'-1');
   assert.equal(old.Config.Labels['com.docker.compose.project'],project);
-  docker(['image','tag',old.Image,`local/portal-research-full04-preserved-${service}:${old.Image.slice(7,19)}`]);
+  docker(['image','tag',old.Image,`local/portal-research-${slice}-preserved-${service}:${old.Image.slice(7,19)}`]);
   docker(['image','tag',image,`${env.PORTAL_IMAGE_PREFIX}-${service}:${env.PORTAL_IMAGE_TAG}`]);
 }
 let updated=value;
-for(const key of ['CONTROL_API_FEATURE_RESEARCH_FULL04_PROFILE','PORTAL_FEATURE_RESEARCH_FULL04_PROFILE']){
+if(slice==='full05')for(const key of ['CONTROL_API_FEATURE_RESEARCH_IMPORTED_EXECUTION','PORTAL_FEATURE_RESEARCH_IMPORTED_EXECUTION'])
+  assert.equal(env[key],'true','PRESERVE_EXISTING_IMPORTED_PERMISSION_FENCE');
+for(const key of [`CONTROL_API_FEATURE_RESEARCH_${slice.toUpperCase()}_PROFILE`,`PORTAL_FEATURE_RESEARCH_${slice.toUpperCase()}_PROFILE`]){
   const pattern=new RegExp(`^${key}=.*$`,'m');
-  updated=pattern.test(updated)?updated.replace(pattern,key+'=true'):updated.trimEnd()+'\n'+key+'=true\n';}
+  updated=pattern.test(updated)?updated.replace(pattern,key+'='+enabled):updated.trimEnd()+'\n'+key+'='+enabled+'\n';}
 writeFileSync(file,updated,{mode:0o600});
 const sha=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
 const compose=args=>execFileSync('sudo',['-n','env',`PORTAL_BUILD_COMMIT=${sha}`,'PORTAL_BUILD_DIRTY=true','docker','compose',
@@ -58,4 +64,4 @@ compose(['up','-d','--no-build','--no-deps','--wait','--wait-timeout','150','con
 docker(['exec',oldWeb.Id,'nginx','-t']);docker(['exec',oldWeb.Id,'nginx','-s','reload']);
 assert.equal(inspect(project+'-portal-web-1').Id,oldWeb.Id,'CLAUDE_WEB_CONTAINER_MUST_STAY');
 assert.equal(inspect(project+'-portal-web-1').Image,oldWeb.Image,'CLAUDE_WEB_IMAGE_MUST_STAY');
-console.log(JSON.stringify({passed:true,project,enabled_recipes:35,web_preserved:true,control_image:control,python_image:python}));
+console.log(JSON.stringify({passed:true,project,slice,enabled_recipes:enabled==='true'?rows.length:0,web_preserved:true,control_image:control,python_image:python}));

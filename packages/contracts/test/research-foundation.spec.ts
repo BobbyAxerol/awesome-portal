@@ -300,7 +300,7 @@ describe("P09 published Research foundation contract", () => {
     const schemas = document.components.schemas;
     expect(schemas.AtlasResponse.oneOf[0].required).toContain("portal_admission");
     expect(schemas.AtlasResponse.oneOf[1].properties.portal_admission).toBeUndefined();
-    expect(schemas.PortalAdmission.properties.profiles.maxItems).toBe(70);
+    expect(schemas.PortalAdmission.properties.profiles.maxItems).toBe(97);
     const current = JSON.parse(readFileSync(join(ROOT, "fixtures", "research-foundation.atlas-current.valid.json"), "utf8")) as Record<string, any>;
     expect(current.atlas.current_release.submission_constraints.profile_id).toBe("p10.fixed-qualification.v1");
     expect(current.portal_admission.profiles).toMatchObject([
@@ -320,10 +320,13 @@ describe("P09 published Research foundation contract", () => {
     const registry = JSON.parse(readFileSync(join(ROOT,"../../apps/portal/registry/research-execution-recipes.v1.json"),"utf8"));
     const full03 = registry.recipes.filter((row: any) => row.descriptor.schema_version === "research.full03-delta-profile.v1");
     const full04 = registry.recipes.filter((row: any) => row.descriptor.schema_version === "research.full04-delta-profile.v1");
+    const full05 = registry.recipes.filter((row: any) => row.descriptor.schema_version === "research.full05-imported-profile.v1");
     expect(full03).toHaveLength(28);
     expect(full04).toHaveLength(35);
+    expect(full05).toHaveLength(27);
     expect(publishedIds.slice(7,35)).toEqual(full03.map((row: any) => row.profile_id));
-    expect(publishedIds.slice(35)).toEqual(full04.map((row: any) => row.profile_id));
+    expect(publishedIds.slice(35,70)).toEqual(full04.map((row: any) => row.profile_id));
+    expect(publishedIds.slice(70)).toEqual(full05.map((row: any) => row.profile_id));
     expect(new Set(publishedIds).size).toBe(publishedIds.length);
     expect(admissionValidator()(fixture)).toBe(true);
     expect(fixture.profiles[3]).toMatchObject({profile_id:"p10.delta-signal-notional-causal-inner.v1",

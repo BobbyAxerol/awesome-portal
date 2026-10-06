@@ -3,12 +3,13 @@ import {readFileSync,writeFileSync} from "node:fs";
 import {createHash} from "node:crypto";
 import {fileURLToPath} from "node:url";
 import {replaceComponent} from "./generate-research-progress-truth.mjs";
+import {amendFull05} from "./generate-research-full05-contracts.mjs";
 const root=new URL("../../../",import.meta.url);
 const table=JSON.parse(readFileSync(new URL("apps/portal/registry/research-execution-recipes.v1.json",root)));
 // Applied FULL03 SQL remains reproducible after later recipes reuse its adapter.
 const full=table.recipes.filter(r=>r.descriptor.schema_version==="research.full03-delta-profile.v1");
 const indexed=table.recipes.filter(r=>r.source_requirement==="FULL03_IMMUTABLE_DELTA_BINDING");
-const historicalRecipes=table.recipes.filter(r=>r.descriptor.schema_version!=="research.full04-delta-profile.v1");
+const historicalRecipes=table.recipes.filter(r=>!["research.full04-delta-profile.v1","research.full05-imported-profile.v1"].includes(r.descriptor.schema_version));
 const canonical=v=>Array.isArray(v)?v.map(canonical):v&&typeof v==="object"
   ?Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])])):v;
 const hash=v=>createHash("sha256").update(JSON.stringify(canonical(v))).digest("hex");
@@ -59,13 +60,13 @@ export function amendFull03(original,file){
     }
     if(changed)updates[name]=value;
   }
-  if(file==="research-preflight")return JSON.stringify({...document,components:{...document.components,
-    schemas:{...schemas,...updates}}},null,2)+"\n";
+  if(file==="research-preflight")return amendFull05(JSON.stringify({...document,components:{...document.components,
+    schemas:{...schemas,...updates}}},null,2)+"\n",file);
   let result=original;
   for(const[name,value]of Object.entries(updates))result=schemas[name]
     ?replaceComponent(result,name,value,result.indexOf('"schemas": {'))
     :result.replace('"schemas": {',`"schemas": {\n      "${name}": ${JSON.stringify(value)},`);
-  return result;
+  return amendFull05(result,file);
 }
 const quote=v=>"'"+String(v).replaceAll("'","''")+"'";
 function migration(){

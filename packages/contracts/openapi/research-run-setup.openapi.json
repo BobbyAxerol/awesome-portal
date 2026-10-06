@@ -520,7 +520,8 @@
             "enum": [
               "FIXED_NO_OVERRIDES",
               "DECLARED_PINS_ONLY",
-              "DELTA_SEARCH_WITH_QUALIFIED_PINS"
+              "DELTA_SEARCH_WITH_QUALIFIED_PINS",
+              "DECLARED_SEARCH_WITH_PINS"
             ]
           },
           "allowed_pin_names": {

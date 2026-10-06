@@ -7,6 +7,15 @@ const root = join(__dirname, "..");
 const read = (path: string) => JSON.parse(readFileSync(join(root, path), "utf8"));
 const doc = read("openapi/research-dataset-index.openapi.json");
 describe("B7 named metadata contracts", () => {
+  it("publishes actual native full-sample calibration explicitly, without claiming untouched OOS",()=>{
+    const validate=new Ajv2020({strict:false}).compile(JSON.parse(JSON.stringify({...doc.components.schemas.DeclarationEstimate,$defs:doc.components.schemas}).replaceAll("#/components/schemas/","#/$defs/")));
+    const fixture:components["schemas"]["DeclarationEstimate"]=read("fixtures/research-declaration-estimate.v1.full-sample.valid.json");
+    expect(validate(fixture),JSON.stringify(validate.errors)).toBe(true);
+    const plan=fixture.metadata.planned_folds;
+    expect(plan.evaluation_scope).toBe("FULL_SAMPLE_CALIBRATION");
+    expect(plan.count).toBe(1);expect(plan.items![0].train).toEqual(plan.items![0].outer_oos);
+    expect(validate({...fixture,metadata:{...fixture.metadata,planned_folds:{...plan,evaluation_scope:"UNTOUCHED_OOS"}}})).toBe(false);
+  });
   it("keeps observed date coverage distinct from UTC completeness and session-close facts", () => {
     const validate=new Ajv2020({strict:true}).compile(doc.components.schemas.Coverage);
     const sample:components["schemas"]["Coverage"]=read("fixtures/research-dataset-coverage.observed-local-date.valid.json");

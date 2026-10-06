@@ -45,6 +45,10 @@ export class ResearchDatasetIndexClient {
     const result = await this.read(user, "/internal/research/dataset-declaration-estimate", {}, DeclarationMetadataSchema,
       { requested_spec: requestedSpec, warmup_bars: warmupBars });
     if (result.requested_spec_digest !== sha256ResearchJson(requestedSpec)) throw this.error(502);
+    const calibration = requestedSpec.optimization_mode === "mode_5_full_robust";
+    if (result.planned_folds.evaluation_scope !== undefined && !calibration
+      || calibration && result.planned_folds.availability === "AVAILABLE"
+        && result.planned_folds.evaluation_scope !== "FULL_SAMPLE_CALIBRATION") throw this.error(502);
     return result;
   }
   async suggest(user: PortalUser, body: Record<string, unknown>) {

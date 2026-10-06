@@ -8716,6 +8716,3435 @@ export const EXECUTION_RECIPE_TABLE = {
         "max_warmup_bars": 100000
       },
       "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-wfo-temporal-1h.v1",
+      "profile_digest": "30a040a681faedc107a6d0d93323b64b01344143179dd66cc4fba315aa126383",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-wfo-temporal-1h.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-wfo-temporal-1h.v1",
+          "profile_id": "full05.imported-wfo-temporal-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m"
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-wfo-temporal-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "dataset_id": "crypto-binance-1m"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-causal-inner-1h.v1",
+      "profile_digest": "6a2b467a8236de394b55867ee299af55f0ac78a4614478f1b847bfce274721c3",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-causal-inner-1h.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+        "inner_constraints": {
+          "fold_bounds": {
+            "min": 2,
+            "max": 16
+          },
+          "frequencies": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "window_modes": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"
+        },
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-causal-inner-1h.v1",
+          "profile_id": "full05.imported-causal-inner-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m"
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-causal-inner-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+        "inner_constraints": {
+          "fold_bounds": {
+            "min": 2,
+            "max": 16
+          },
+          "frequencies": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "window_modes": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"
+        },
+        "dataset_id": "crypto-binance-1m"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-per-fold-decay-1h.v1",
+      "profile_digest": "0aa25a01146d8d5a5e96f5b51aa0617a4ac250a669509a288ba68b0af68386a1",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-per-fold-decay-1h.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-per-fold-decay-1h.v1",
+          "profile_id": "full05.imported-per-fold-decay-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m"
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-per-fold-decay-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "dataset_id": "crypto-binance-1m"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-three-window-optimized-1h.v1",
+      "profile_digest": "5b4351c898308841a9c04c95c5f964c8466b2805e66c7410f4e6819e6fe78b46",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-three-window-optimized-1h.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v1",
+        "execution_route": "signal_notional",
+        "protocol": "three_window_decay",
+        "timeframe": "1h",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_span_days": 3650,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "GLOBAL_STUDY",
+        "independent_holdout": true,
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-three-window-optimized-1h.v1",
+          "profile_id": "full05.imported-three-window-optimized-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m"
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-three-window-optimized-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "three_window_decay",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "1h",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "random_seed": 42,
+        "max_span_days": 3650,
+        "fold_bounds": null,
+        "frequency": null,
+        "window_mode": null,
+        "requested_spec_versions": [
+          "research.requested-spec.v1"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "dataset_id": "crypto-binance-1m"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-wfo-temporal-4h.v1",
+      "profile_digest": "516bedfb7b0ab78f7f1b096cf3aa2050b9447e980528a4636039fdfaeaf5f340",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-wfo-temporal-4h.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-wfo-temporal-4h.v1",
+          "profile_id": "full05.imported-wfo-temporal-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m"
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-wfo-temporal-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "dataset_id": "crypto-binance-1m"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-causal-inner-4h.v1",
+      "profile_digest": "dff635880a25cfa25c029c3753871964d9c82288f62d4a4cc347895ecbf3b768",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-causal-inner-4h.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+        "inner_constraints": {
+          "fold_bounds": {
+            "min": 2,
+            "max": 16
+          },
+          "frequencies": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "window_modes": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"
+        },
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-causal-inner-4h.v1",
+          "profile_id": "full05.imported-causal-inner-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m"
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-causal-inner-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+        "inner_constraints": {
+          "fold_bounds": {
+            "min": 2,
+            "max": 16
+          },
+          "frequencies": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "window_modes": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"
+        },
+        "dataset_id": "crypto-binance-1m"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-per-fold-decay-4h.v1",
+      "profile_digest": "1ee30bbe73858b3240b9bdd738bf45038bb61fcd2c97b450e4cf980a7612e288",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-per-fold-decay-4h.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-per-fold-decay-4h.v1",
+          "profile_id": "full05.imported-per-fold-decay-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m"
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-per-fold-decay-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "dataset_id": "crypto-binance-1m"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-three-window-optimized-4h.v1",
+      "profile_digest": "21fe55b875cd682339a402b89ee144cb6a3e98d0a7c0a641636202d679e2bfa1",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-three-window-optimized-4h.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v1",
+        "execution_route": "signal_notional",
+        "protocol": "three_window_decay",
+        "timeframe": "4h",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_span_days": 3650,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "GLOBAL_STUDY",
+        "independent_holdout": true,
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-three-window-optimized-4h.v1",
+          "profile_id": "full05.imported-three-window-optimized-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m"
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-three-window-optimized-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "three_window_decay",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "4h",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "random_seed": 42,
+        "max_span_days": 3650,
+        "fold_bounds": null,
+        "frequency": null,
+        "window_mode": null,
+        "requested_spec_versions": [
+          "research.requested-spec.v1"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "dataset_id": "crypto-binance-1m"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-wfo-temporal-1d.v1",
+      "profile_digest": "4da4171d23820602bbf5a839caf1594fe924a39bf269a6119707dafa71d2363e",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-wfo-temporal-1d.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-wfo-temporal-1d.v1",
+          "profile_id": "full05.imported-wfo-temporal-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m"
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-wfo-temporal-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "dataset_id": "crypto-binance-1m"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-causal-inner-1d.v1",
+      "profile_digest": "bdfe21e16be87de6001d01f8e0baed7ad2ffcdc471828d3334dd2be01170d504",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-causal-inner-1d.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+        "inner_constraints": {
+          "fold_bounds": {
+            "min": 2,
+            "max": 16
+          },
+          "frequencies": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "window_modes": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"
+        },
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-causal-inner-1d.v1",
+          "profile_id": "full05.imported-causal-inner-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m"
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-causal-inner-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+        "inner_constraints": {
+          "fold_bounds": {
+            "min": 2,
+            "max": 16
+          },
+          "frequencies": [
+            "weekly",
+            "monthly",
+            "quarterly"
+          ],
+          "window_modes": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$"
+        },
+        "dataset_id": "crypto-binance-1m"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-per-fold-decay-1d.v1",
+      "profile_digest": "9781d2569998c9234933f5a68b0b77c2c7c2ad8d58281e26d20beea4686c9fd8",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-per-fold-decay-1d.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-per-fold-decay-1d.v1",
+          "profile_id": "full05.imported-per-fold-decay-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m"
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-per-fold-decay-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "dataset_id": "crypto-binance-1m"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-three-window-optimized-1d.v1",
+      "profile_digest": "f92ee58812d46adc9c06022b90b34e50922a5f218fb858cb6e566acd403c02c1",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-three-window-optimized-1d.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v1",
+        "execution_route": "signal_notional",
+        "protocol": "three_window_decay",
+        "timeframe": "1d",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_span_days": 3650,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "GLOBAL_STUDY",
+        "independent_holdout": true,
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-three-window-optimized-1d.v1",
+          "profile_id": "full05.imported-three-window-optimized-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m"
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-three-window-optimized-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "three_window_decay",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "1d",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "random_seed": 42,
+        "max_span_days": 3650,
+        "fold_bounds": null,
+        "frequency": null,
+        "window_mode": null,
+        "requested_spec_versions": [
+          "research.requested-spec.v1"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "dataset_id": "crypto-binance-1m"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-mode3-global-1h.v1",
+      "profile_digest": "63ee66f010532ff4a05a8cbbd4de9a009d5c6ce81b1b70dc747aaa40e965a0a1",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-mode3-global-1h.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-mode3-global-1h.v1",
+          "profile_id": "full05.imported-mode3-global-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "flat_selector": "centroid",
+          "flat_top_fraction": 1,
+          "flat_eps": 1,
+          "flat_min_samples": 2
+        }
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-mode3-global-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 5,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-mode3-global-4h.v1",
+      "profile_digest": "6d809cf090903c854a7a6896fec44296979979d8683d1f8679f45435f1c472ea",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-mode3-global-4h.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-mode3-global-4h.v1",
+          "profile_id": "full05.imported-mode3-global-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "flat_selector": "centroid",
+          "flat_top_fraction": 1,
+          "flat_eps": 1,
+          "flat_min_samples": 2
+        }
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-mode3-global-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 5,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-mode3-global-1d.v1",
+      "profile_digest": "1f53fbd2ec1ca686ab23a2ce7902497792142ab82cd855c42de0180f488c4dc0",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-mode3-global-1d.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-mode3-global-1d.v1",
+          "profile_id": "full05.imported-mode3-global-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "flat_selector": "centroid",
+          "flat_top_fraction": 1,
+          "flat_eps": 1,
+          "flat_min_samples": 2
+        }
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-mode3-global-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 5,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-mode2-global-1h.v1",
+      "profile_digest": "1506aa6b68d9057b6cf25449aab911e3d0641767749193c6708cf1d23c904f45",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-mode2-global-1h.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-mode2-global-1h.v1",
+          "profile_id": "full05.imported-mode2-global-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "scoring_backend": "proxy",
+          "sbb_samples": 32,
+          "sbb_block_length": 20,
+          "sbb_simulation": "stationary",
+          "candidate_selection_metric": "mean_is_sharpe"
+        }
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-mode2-global-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-mode2-global-4h.v1",
+      "profile_digest": "ab815ddf6f75be363d0bde068d4c42cc09fee05193dcf89ac150959f0c84d5d6",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-mode2-global-4h.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-mode2-global-4h.v1",
+          "profile_id": "full05.imported-mode2-global-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "scoring_backend": "proxy",
+          "sbb_samples": 32,
+          "sbb_block_length": 20,
+          "sbb_simulation": "stationary",
+          "candidate_selection_metric": "mean_is_sharpe"
+        }
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-mode2-global-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-mode2-global-1d.v1",
+      "profile_digest": "d4356079a8e1262b540b7a4465c89c3c2ad60cd57a053e6a4128015362166db8",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-mode2-global-1d.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-mode2-global-1d.v1",
+          "profile_id": "full05.imported-mode2-global-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "scoring_backend": "proxy",
+          "sbb_samples": 32,
+          "sbb_block_length": 20,
+          "sbb_simulation": "stationary",
+          "candidate_selection_metric": "mean_is_sharpe"
+        }
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-mode2-global-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-mode4-global-1h.v1",
+      "profile_digest": "3ab15458bb3f6e2021dc1caef72d99e04cb04d5e8657dc7c2b867231947c1fde",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-mode4-global-1h.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-mode4-global-1h.v1",
+          "profile_id": "full05.imported-mode4-global-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-mode4-global-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-mode4-global-4h.v1",
+      "profile_digest": "d13741101a385d15e885f6ac065091d4444b6fb1697013b9867fad143db4165f",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-mode4-global-4h.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-mode4-global-4h.v1",
+          "profile_id": "full05.imported-mode4-global-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-mode4-global-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-mode4-global-1d.v1",
+      "profile_digest": "6ffd40856484a52187dd97c2ae8ddb9c08c35a685e9625aaf114a8ffbd1d587a",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-mode4-global-1d.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-mode4-global-1d.v1",
+          "profile_id": "full05.imported-mode4-global-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-mode4-global-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-mode4-causal-1h.v1",
+      "profile_digest": "04795e9d1e2292e50ffb164503a98ebef6fa3672cfc12b167516f57cfca29450",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-mode4-causal-1h.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-mode4-causal-1h.v1",
+          "profile_id": "full05.imported-mode4-causal-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-mode4-causal-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-mode4-causal-4h.v1",
+      "profile_digest": "e29100ad8e3a890cfbac2ec512c230931e06985387f863c00d3d19ca6ec4c4df",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-mode4-causal-4h.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-mode4-causal-4h.v1",
+          "profile_id": "full05.imported-mode4-causal-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-mode4-causal-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-mode4-causal-1d.v1",
+      "profile_digest": "68671e730fe568327e0e8c5c2a5db7bb971ccacedf36427d1c25eeeccc6c982c",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-mode4-causal-1d.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-mode4-causal-1d.v1",
+          "profile_id": "full05.imported-mode4-causal-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-mode4-causal-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-mode5-global-1h.v1",
+      "profile_digest": "616d1e2844b8a4f794a3336e393c8f5ca5a498a3c74b0750d1d90bfa2c0c1467",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-mode5-global-1h.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-mode5-global-1h.v1",
+          "profile_id": "full05.imported-mode5-global-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "full_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-mode5-global-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-mode5-global-4h.v1",
+      "profile_digest": "1858583ef5ec15c52875f127d550ad4eb75f8953bbfeea7829c817bcc04ce1c9",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-mode5-global-4h.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-mode5-global-4h.v1",
+          "profile_id": "full05.imported-mode5-global-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "full_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-mode5-global-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.imported-mode5-global-1d.v1",
+      "profile_digest": "797de50fe123f8bbe7b607256666f8b07bb30becba51ca07e0dad5184788853e",
+      "descriptor": {
+        "schema_version": "research.full05-imported-profile.v1",
+        "profile_id": "p10.imported-mode5-global-1d.v1",
+        "adapter_id": "p17.imported-signal-notional.v1",
+        "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full05.quantbt-imported-mode5-global-1d.v1",
+          "profile_id": "full05.imported-mode5-global-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "source_contract": "research.alpha-source.v1",
+          "binding_contract": "research.imported-search-binding.v1",
+          "adapter_id": "p17.imported-signal-notional.v1",
+          "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+          "max_warmup_bars": 4096
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "full_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "IMPORTED_SEARCH",
+      "work_schema_version": "research.full05-imported-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.imported-mode5-global-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_IMPORTED_EXECUTION",
+        "FEATURE_RESEARCH_FULL05_PROFILE"
+      ],
+      "source_requirement": "IMPORTED_IMMUTABLE_SEARCH_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 4096
+      },
+      "preview_override": null
     }
   ],
   "qualification_references": [
@@ -9215,6 +12644,195 @@ export const EXECUTION_RECIPE_TABLE = {
       "kind": "PRODUCT_RUN_QUALIFIED",
       "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
       "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.imported-wfo-temporal-1h.v1",
+      "recipe_digest": "52c61c96c615a47536d49587210840169fe854b7abb025d1681eb3285eb5ce1c",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-causal-inner-1h.v1",
+      "recipe_digest": "c5b3ec91a4a882c03f56719bd18afe7762cac7704f1c7d94e52ab87d16676367",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-per-fold-decay-1h.v1",
+      "recipe_digest": "2726d80a4bbec93026d5890dccc7b45b135801f03f4a426934410b212297059c",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-three-window-optimized-1h.v1",
+      "recipe_digest": "5b03521078310aff69ae940a70421913e3e7ddb59ca1aba3483ddc47e4f82b83",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-wfo-temporal-4h.v1",
+      "recipe_digest": "9d2e2790fc888a9df243b4638b6cac2fd3863c840abc0b6672145c6a17ddb30f",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-causal-inner-4h.v1",
+      "recipe_digest": "40d2b8fd1bd33a161aa0e32ea5a5c044ff41eddc5a37189223402a763abbed47",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-per-fold-decay-4h.v1",
+      "recipe_digest": "abe696103916f0b5f055aa70ba91388e7df35f48f53f70b155aa20643f7f6bae",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-three-window-optimized-4h.v1",
+      "recipe_digest": "b83ffa9f82697c90981cafc2af67b3884a4a8bf2a59708a5e7eedde00193e9ac",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-wfo-temporal-1d.v1",
+      "recipe_digest": "39bead10280fb2ab6754039e05de0a2e4f3c24594392103f856939e3233623de",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-causal-inner-1d.v1",
+      "recipe_digest": "2a1c5a472dc7288ec82360d990371453c00b5b8c17f7933f2ac78f2d656a2fd4",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-per-fold-decay-1d.v1",
+      "recipe_digest": "e541ae6e9ed74e349fc06d1be40c9112c6f8338f78a056d1cdf22da3fc10ea9c",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-three-window-optimized-1d.v1",
+      "recipe_digest": "ab111ad986ac3afb6e012893b4c45e80d1383a36f1aa19e83bf3a113665a081b",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-mode3-global-1h.v1",
+      "recipe_digest": "85a7a1cb28eb88233ae57d1c04b0193933b9f6e5b9c766b87775af6a45e69475",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-mode3-global-4h.v1",
+      "recipe_digest": "13388c1cd84fe1dc79648d6be08a56a7a3b95579fcd967cb1b5b611f9995ddec",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-mode3-global-1d.v1",
+      "recipe_digest": "ecc93a5f09fbe01371b9bad242c055ce5368a05a2c3b5432dce217193e674087",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-mode2-global-1h.v1",
+      "recipe_digest": "8f58991e77ab5ac5c84cf8d8021ad2ac71cc5a8d753bb7ece7873694e4c9bc20",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-mode2-global-4h.v1",
+      "recipe_digest": "0836319301aa8f8df9e09836553f1e7df89f5d89810bdbd9cc3720f2fc3432b0",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-mode2-global-1d.v1",
+      "recipe_digest": "23f75cedb5a8f7dc7797b024ef328d969508c5bca8d9168c55b89117bce7424e",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-mode4-global-1h.v1",
+      "recipe_digest": "2babf0abcdd64016579d0eac1da980b011ad99e97d489b2de1df535dd22bee52",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-mode4-global-4h.v1",
+      "recipe_digest": "1a29f39c409ffff87422cb750faad9571bd3a21981aed9b1138af0eded1d8a4c",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-mode4-global-1d.v1",
+      "recipe_digest": "50e359897741b23e6191d4470d4ccd1258eeadd6205430134bc81309841a7763",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-mode4-causal-1h.v1",
+      "recipe_digest": "85f7970557ca3419d2a9293bb6c8e2e1b42d7fda4c054491db054ac0b1114174",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-mode4-causal-4h.v1",
+      "recipe_digest": "dcc431f79e734f5816b0b795049f04d657d38058cd1495e1c83d5231b305caa5",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-mode4-causal-1d.v1",
+      "recipe_digest": "611e711785f9f41e54ea84b1bc7e81a696c2bb99bc33dd2edb03b7b567c46ab0",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-mode5-global-1h.v1",
+      "recipe_digest": "0df2bac883c9911e356e2293a50e715ad46b0b173ce4afd5a78392bba8e5a7fd",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-mode5-global-4h.v1",
+      "recipe_digest": "c175eb3b97fa5997087dad95c84ea3766be78d852d9e704163ca2bcbd781c277",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
+    },
+    {
+      "profile_id": "p10.imported-mode5-global-1d.v1",
+      "recipe_digest": "9ba46ae80ad76ef91e9abe55e88cb04447204187e645b1c7ae01235ba0efe72c",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "89bc582112b4af8e5b140004689fe543d95a289dc4a603e131bffb116602f14e"
     }
   ],
   "preflight_policy": {
@@ -9227,4 +12845,4 @@ export const EXECUTION_RECIPE_TABLE = {
     "maximum_bytes": 1048576
   }
 } as const;
-export const EXECUTION_RECIPE_REVISION = "6352f540470eb8e593cb0ffc9f461ce0eb68d2a7c7c58131d54581e5c290bde5" as const;
+export const EXECUTION_RECIPE_REVISION = "1906970746d5c909d7aaeee36a322fc6684b0169de200ecab8ea91d6117b9737" as const;

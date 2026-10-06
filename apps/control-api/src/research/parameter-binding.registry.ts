@@ -65,6 +65,7 @@ export interface HistoricalParameterBinding {
  * absence and the hash scope is still exact.
  */
 export interface CodeFixedBinding {
+  hashScope?: "ADAPTER_CONTRACT_DIGEST" | "SOURCE_CODE_SHA256";
   state: "AVAILABLE" | "NOT_PUBLISHED";
   reasonCode: string | null;
   values: ReadonlyArray<{ name: string; value: string }>;

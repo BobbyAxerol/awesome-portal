@@ -176,6 +176,7 @@ export const DeclarationMetadataSchema = z.object({
   planned_folds: z.object({ availability: z.enum(["AVAILABLE", "NOT_PUBLISHED"]), reason_code: Reason.nullable(),
     count: z.number().int().min(1).max(128).nullable(), basis: z.literal("P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1"),
     min_train_bars: Count.nullable(), min_oos_bars: Count.nullable(),
+    evaluation_scope: z.literal("FULL_SAMPLE_CALIBRATION").optional(),
     items: z.array(z.object({ ordinal: z.number().int().min(1).max(128),
       train: z.object({ start_utc_ms: Ms, end_exclusive_utc_ms: Ms, bars: Count }).strict(),
       outer_oos: z.object({ start_utc_ms: Ms, end_exclusive_utc_ms: Ms, bars: Count }).strict(),
@@ -183,11 +184,17 @@ export const DeclarationMetadataSchema = z.object({
   earliest_start_utc_ms: Ms.nullable(), earliest_start_basis: z.enum(["CONTIGUOUS_INDEXED_WARMUP_BARS_V1", "OBSERVED_INDEXED_WARMUP_BARS_V1"]),
 }).strict().superRefine((v, ctx) => {
   const plan = v.planned_folds;
+  const calibration = plan.evaluation_scope === "FULL_SAMPLE_CALIBRATION";
+  if (calibration && (plan.availability !== "AVAILABLE" || plan.count !== 1 || plan.items?.length !== 1))
+    ctx.addIssue({code: z.ZodIssueCode.custom, message: "Full-sample calibration requires one published native fold"});
   if (plan.items && (plan.availability !== "AVAILABLE" || plan.items.length !== plan.count
     || plan.items.some((fold, i) => fold.ordinal !== i + 1
       || fold.train.start_utc_ms >= fold.train.end_exclusive_utc_ms
       || fold.outer_oos.start_utc_ms >= fold.outer_oos.end_exclusive_utc_ms
-      || fold.train.end_exclusive_utc_ms > fold.outer_oos.start_utc_ms)))
+      || (calibration ? fold.train.start_utc_ms !== fold.outer_oos.start_utc_ms
+        || fold.train.end_exclusive_utc_ms !== fold.outer_oos.end_exclusive_utc_ms
+        || fold.train.bars !== fold.outer_oos.bars
+        : fold.train.end_exclusive_utc_ms > fold.outer_oos.start_utc_ms))))
     ctx.addIssue({code: z.ZodIssueCode.custom, message: "Inconsistent engine fold geometry"});
   for (const row of [v.planned_folds, ...v.windows]) {
     if ((row.availability === "AVAILABLE") !== (row.reason_code === null)

@@ -174,6 +174,7 @@ class AdvancedWalkForwardRunner:
         target_mode: Literal["pct_equity", "signal_notional"] = "pct_equity",
         strategy_callable: Callable[..., Any] | None = None,
         retain_mode_evidence: bool = False,
+        strategy_specification: Any | None = None,
     ) -> dict[str, Any]:
         if request.protocol != RunProtocol.ADVANCED_WALK_FORWARD:
             raise AdvancedWalkForwardError("AdvancedWalkForwardRunner requires protocol=advanced_walk_forward")
@@ -306,7 +307,9 @@ class AdvancedWalkForwardRunner:
         )
         # Parity with the three-window runner: strategy.json feeds the audit
         # endpoint, which 404s without it (v0.1.1 bugfix).
-        spec = StrategyRegistry().get(request.strategy_id).specification
+        if strategy_specification is not None and (strategy_callable is None or strategy_specification.strategy_id != request.strategy_id):
+            raise AdvancedWalkForwardError("Imported strategy specification requires its confined callable and exact identity")
+        spec = strategy_specification if strategy_specification is not None else StrategyRegistry().get(request.strategy_id).specification
         self._artifacts.write_json(
             run_id,
             "strategy.json",

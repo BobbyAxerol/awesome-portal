@@ -1296,12 +1296,14 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
     )
     if is_full03_profile(receipt.get("execution_profile_id")):
         row = full03_recipe(receipt["execution_profile_id"], receipt.get("execution_profile_digest"))
-        if row["adapter_kind"] != "DELTA_WFO" or receipt.get("task") != "P10_DELTA_WFO":
+        if row["descriptor"]["protocol"] != "advanced" or receipt.get("task") != "P10_DELTA_WFO":
             raise ValueError("FULL-03 child task does not match its exact Advanced recipe")
         required = {"schema_version", "task", "job_id", "run_id", "worker_attempt_id", "lease_epoch",
             "market_path", "artifact_root", "output_root", "execution_profile_id", "execution_profile_digest",
             "dataset_id", "symbol", "data_start_utc_ms", "data_end_exclusive_utc_ms", "first_oos_utc_ms", "execution_binding"}
         controls_key = "causal_inner_controls" if row["descriptor"]["optimization_schedule"] == "per_fold_causal" else "temporal_controls"
+        if row["source_requirement"] == "IMPORTED_IMMUTABLE_SEARCH_BINDING":
+            required.add("imported_source")
         if not (required | {controls_key}) <= set(receipt) or set(receipt) - required - {controls_key, "pinned_parameters"}:
             raise ValueError("FULL-03 Advanced child requires exactly its bounded task fields")
         validate_full03_execution_binding(receipt.get("execution_binding"), row)
@@ -1454,6 +1456,8 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
     )
     if exact_recipe is not None:
         _validate_full03_market(market.frame, receipt, exact_recipe)
+    imported = receipt.get("imported_source")
+    strategy_fn, strategy_specification, imported_space = _full05_child_strategy(receipt, market.frame) if imported is not None else (None, None, None)
     start = pd.Timestamp(start_ms, unit="ms", tz="UTC")
     end = pd.Timestamp(end_ms, unit="ms", tz="UTC")
     split = pd.Timestamp(split_ms, unit="ms", tz="UTC")
@@ -1467,12 +1471,12 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
         if not outer["min"] <= len(plan) <= outer["max"] or (causal_inner and any(not inner["min"] <= len(fold["inner"] or []) <= inner["max"] for fold in plan)):
             raise ValueError("per-fold plan exceeds its admitted 2..16 outer/inner fold bounds")
     request = PortalRunRequest(
-        strategy_id="delta-rsi-polynomial-alpha",
+        strategy_id=imported["alpha_id"] if imported is not None else "delta-rsi-polynomial-alpha",
         dataset_id=dataset_id,
         symbol=symbol,
         timeframe=profile["timeframe"],
         protocol="advanced_walk_forward",
-        parameter_space=ParameterSpaceConfig({
+        parameter_space=imported_space if imported_space is not None else ParameterSpaceConfig({
             # W5a: a what-if sibling pins its two axes; everything else is searched.
             key: ParameterSpec(kind="fixed", value=pins[key]) if key in pins else ParameterSpec(
                 kind="float_range" if isinstance(low, float) else "int_range",
@@ -1519,8 +1523,9 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
             gateway=QuantBTGateway(),
             artifacts=ArtifactRepository(output_root),
         ).run(request, market, run_id, target_mode=profile["execution_route"],
-            **({"strategy_callable": _full03_strategy_callable(market.frame)} if exact_recipe is not None else {}),
-            **({"retain_mode_evidence": True} if profile.get("schema_version") == "research.full04-delta-profile.v1" else {}))
+            **({"strategy_callable": strategy_fn, "strategy_specification": strategy_specification} if imported is not None
+               else {"strategy_callable": _full03_strategy_callable(market.frame)} if exact_recipe is not None else {}),
+            **({"retain_mode_evidence": True} if profile.get("optimization_mode") != "mode_1_decay" and exact_recipe is not None else {}))
     finally:
         restore()
         writer.close()
@@ -1579,10 +1584,12 @@ def _run_p10_delta_three_window_optimized(receipt: dict[str, Any], output_root: 
         "dataset_id", "symbol", "data_start_utc_ms", "data_end_exclusive_utc_ms", "first_oos_utc_ms", "holdout_start_utc_ms"}
     if full03:
         required.add("execution_binding")
+        if row["source_requirement"] == "IMPORTED_IMMUTABLE_SEARCH_BINDING":
+            required.add("imported_source")
     if not required <= set(receipt) or set(receipt) - required - {"pinned_parameters"}:
         raise ValueError("optimized Three Window child requires exactly its bounded task fields")
     if full03:
-        if row["adapter_kind"] != "DELTA_THREE_WINDOW_OPTIMIZED" or receipt["task"] != "P10_DELTA_THREE_WINDOW_OPTIMIZED":
+        if row["descriptor"]["protocol"] != "three_window_decay" or receipt["task"] != "P10_DELTA_THREE_WINDOW_OPTIMIZED":
             raise ValueError("FULL-03 Three Window child requires its exact installed recipe")
         validate_full03_execution_binding(receipt["execution_binding"], row)
     elif (receipt["task"], receipt["execution_profile_id"], receipt["execution_profile_digest"]) != (
@@ -1613,13 +1620,15 @@ def _run_p10_delta_three_window_optimized(receipt: dict[str, Any], output_root: 
         DatasetDescriptor(dataset_id=dataset_id, symbol=symbol, venue="BINANCE", timeframe=profile["timeframe"]))
     if full03:
         _validate_full03_market(market.frame, receipt, row)
+    imported = receipt.get("imported_source")
+    strategy_fn, strategy_specification, imported_space = _full05_child_strategy(receipt, market.frame) if imported is not None else (None, None, None)
     if len(market.frame) > 100_000:
         raise ValueError("optimized Three Window tape exceeds its admitted bar budget")
     timestamps = [pd.Timestamp(value, unit="ms", tz="UTC").to_pydatetime() for value in (start_ms, split_ms, holdout_ms, end_ms)]
     start, split, holdout, end = timestamps
-    request = PortalRunRequest(strategy_id="delta-rsi-polynomial-alpha", dataset_id=dataset_id, symbol=symbol,
+    request = PortalRunRequest(strategy_id=imported["alpha_id"] if imported is not None else "delta-rsi-polynomial-alpha", dataset_id=dataset_id, symbol=symbol,
         timeframe=profile["timeframe"], protocol="three_window_decay",
-        parameter_space=ParameterSpaceConfig({key: ParameterSpec(kind="fixed", value=pins[key]) if key in pins else ParameterSpec(
+        parameter_space=imported_space if imported_space is not None else ParameterSpaceConfig({key: ParameterSpec(kind="fixed", value=pins[key]) if key in pins else ParameterSpec(
             kind="float_range" if isinstance(low, float) else "int_range", low=low, high=high, step=step)
             for key, (low, high, step) in DELTA_RSI_SPECIFICATION.parameter_space.items()}),
         account=AccountConfig(initial_capital=20_000, leverage=3, alloc_per_trade=2_000,
@@ -1634,8 +1643,10 @@ def _run_p10_delta_three_window_optimized(receipt: dict[str, Any], output_root: 
     trace = SamplerPublicTrace(run_id=run_id, engine_version=gateway.version())
     restore = _observe_optuna_trials(writer, sampler_trace=trace)
     try:
-        ThreeWindowRunner(gateway=gateway, strategies=StrategyRegistry(), artifacts=artifacts).run(request, market, run_id,
-            **({"strategy_callable": _full03_strategy_callable(market.frame)} if full03 else {}))
+        from portal_api.services.research_imported_search import ImportedStrategyRegistry
+        strategies = ImportedStrategyRegistry(strategy_specification, imported_space) if imported is not None else StrategyRegistry()
+        ThreeWindowRunner(gateway=gateway, strategies=strategies, artifacts=artifacts).run(request, market, run_id,
+            **({"strategy_callable": strategy_fn} if imported is not None else {"strategy_callable": _full03_strategy_callable(market.frame)} if full03 else {}))
     finally:
         restore()
         writer.close()
@@ -1692,12 +1703,22 @@ def _validate_full03_market(frame: Any, receipt: dict[str, Any], row: dict[str, 
             or index.has_duplicates or bool((index.asi8 % interval_ns != 0).any())):
         raise ValueError("FULL-03 tape does not follow its exact UTC source clock")
     start_ms, end_ms = (_utc_ms_field(receipt, name) for name in ("data_start_utc_ms", "data_end_exclusive_utc_ms"))
-    if int((index.asi8 < start_ms * 1_000_000).sum()) != profile["alpha_binding_requirements"]["warmup_bars"]:
+    warmup = receipt["imported_source"]["binding"]["declaration"]["warmup_bars"] if row["source_requirement"] == "IMPORTED_IMMUTABLE_SEARCH_BINDING" else profile["alpha_binding_requirements"]["warmup_bars"]
+    if int((index.asi8 < start_ms * 1_000_000).sum()) != warmup:
         raise ValueError("FULL-03 tape requires exactly 300 observed predecessor warmup bars")
-    if int(index.asi8[0]) < start_ms * 1_000_000 - 300 * interval_ns:
+    if int(index.asi8[0]) < start_ms * 1_000_000 - warmup * interval_ns:
         raise ValueError("FULL-03 warmup leaves its fixed target-bar predecessor interval")
     if int(index.asi8[-1]) + interval_ns > min(end_ms * 1_000_000, pd.Timestamp.now(tz="UTC").value):
         raise ValueError("FULL-03 tape contains a future or unclosed/out-of-window bar")
+
+
+def _full05_child_strategy(receipt: dict[str, Any], history: Any) -> tuple[Any, Any, Any]:
+    from portal_api.services.research_imported_search import imported_strategy
+    raw = receipt.get("imported_source")
+    if not isinstance(raw, dict) or set(raw) != {"binding", "source_path", "alpha_id", "alpha_version_id"}:
+        raise ValueError("FULL05 source custody is absent")
+    return imported_strategy(_safe_imported_source_path(raw["source_path"]).read_bytes(), raw["binding"], history,
+        alpha_id=raw["alpha_id"], alpha_version_id=raw["alpha_version_id"])
 
 
 def _engine_value(value: str, *, kind: type) -> int | float:

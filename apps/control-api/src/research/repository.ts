@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import {FULL03_DELTA_BINDING} from "./full03-delta.binding";
-import {recipeDigest as sha256ResearchJson,executionRecipe} from "./execution-recipes";
+import {recipeDigest as sha256ResearchJson,executionRecipe,executionRecipes} from "./execution-recipes";
 import { createHash } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 
@@ -1564,13 +1564,14 @@ export class ResearchMetadataRepository {
             AND producer.actor_user_id = $2
             AND producer.run_id = $3
             AND producer.execution_adapter_id = 'p17.imported-signal-notional.v1'
-            AND producer.execution_profile_id = 'p17.imported-signal-notional.v1'
+            AND producer.execution_profile_id = ANY($6::text[])
             AND binding.adapter_id = producer.execution_adapter_id
             AND binding.contract_digest = producer.adapter_contract_digest
             AND version.code_digest = $4
             AND source.source_digest = $4
             AND version.entrypoint = $5`,
-        [scope.workspaceId, scope.actorUserId, input.runId, input.sourceDigest, input.entrypoint],
+        [scope.workspaceId, scope.actorUserId, input.runId, input.sourceDigest, input.entrypoint,
+          [IMPORTED_ALPHA_PROFILE_ID,...executionRecipes.filter(row=>row.source_requirement==="IMPORTED_IMMUTABLE_SEARCH_BINDING").map(row=>row.profile_id)]],
       );
       const row = result.rows[0];
       if (!row || row.source_digest !== input.sourceDigest || row.entrypoint !== input.entrypoint) {
@@ -4888,7 +4889,8 @@ export class ResearchMetadataRepository {
     );
     const imported = input.executionAdapterId === IMPORTED_ALPHA_ADAPTER_ID &&
       input.adapterContractDigest === IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST &&
-      profileId === IMPORTED_ALPHA_PROFILE_ID && profileDigest === IMPORTED_ALPHA_PROFILE_DIGEST;
+      (profileId === IMPORTED_ALPHA_PROFILE_ID && profileDigest === IMPORTED_ALPHA_PROFILE_DIGEST
+        || executionRecipes.some(row=>row.profile_id===profileId&&row.profile_digest===profileDigest&&row.source_requirement==="IMPORTED_IMMUTABLE_SEARCH_BINDING"));
     const vnObserved = input.executionAdapterId === VN_OBSERVED_FIXED_PROFILE.adapter_id &&
       input.adapterContractDigest === VN_OBSERVED_FIXED_PROFILE.adapter_contract_digest &&
       isVnObservedFixedProfile(profileId, profileDigest);

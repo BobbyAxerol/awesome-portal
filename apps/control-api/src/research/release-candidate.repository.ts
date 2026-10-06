@@ -199,6 +199,7 @@ interface SourceRow {
   entrypoint: string | null;
   lifecycle_state: ReleaseCandidateSource["alpha"]["lifecycleState"];
   declared_contract: JsonColumn;
+  bound_requested_spec?: unknown;
   adapter_contract_digest: string | null;
   producer_manifest_digest: string | null;
   producer_source_transform_digest: string | null;
@@ -633,6 +634,7 @@ export class ResearchReleaseCandidateRepository {
              run.dataset_binding_digest, run.engine_release_id, run.artifact_revision,
              version.alpha_id, alpha.name AS alpha_name, version.alpha_version_id, version.code_digest,
              version.entrypoint, version.lifecycle_state, version.declared_contract,
+             preflight.requested_spec AS bound_requested_spec,
              producer.adapter_contract_digest, producer.manifest_digest AS producer_manifest_digest,
              NULL::text AS producer_source_transform_digest,
              selection.selection_id, selection.selected_trial_id, selection.parameter_bundle_digest,
@@ -674,6 +676,9 @@ export class ResearchReleaseCandidateRepository {
           ON alpha.workspace_id = version.workspace_id AND alpha.alpha_id = version.alpha_id
         LEFT JOIN research.run_producers producer
           ON producer.workspace_id = run.workspace_id AND producer.run_id = run.run_id
+        LEFT JOIN research.preflight_manifests preflight
+          ON preflight.workspace_id=producer.workspace_id AND preflight.preflight_token=producer.preflight_token
+         AND preflight.actor_user_id=producer.actor_user_id AND preflight.requested_spec_digest=producer.requested_spec_digest
         LEFT JOIN research.jobs job
           ON job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
         LEFT JOIN research.selection_records selection
@@ -814,6 +819,8 @@ export class ResearchReleaseCandidateRepository {
       producerDatasetBindingDigest: row.producer_dataset_binding_digest,
       claimState: claim.state,
       handoffParamsDigest: claim.handoffParamsDigest,
+      runDeclarationInputs: {alphaId:row.alpha_id,alphaVersionId:row.alpha_version_id,requestedSpec:row.bound_requested_spec,
+        requestedSpecDigest:row.request_spec_digest,declaredContract:row.declared_contract,entrypoint:row.entrypoint,sourceDigest:row.code_digest},
     };
     if (row.current_artifact_revision === null) {
       return { ...base, seal: null, sealedArtifactId: null, partDigests: [], observedImportDigest: null, folds: [] };

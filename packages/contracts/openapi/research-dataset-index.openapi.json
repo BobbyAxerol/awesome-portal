@@ -4391,6 +4391,10 @@
                     }
                   }
                 }
+              },
+              "evaluation_scope": {
+                "const": "FULL_SAMPLE_CALIBRATION",
+                "description": "Native Mode5 identical train/evaluation geometry; not an untouched OOS fold."
               }
             }
           },

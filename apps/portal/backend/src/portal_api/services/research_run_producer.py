@@ -359,8 +359,9 @@ class ResearchRunProducerExecutor:
         end = _utc_timestamp(wf["end_exclusive"], label="walk-forward end")
         if row:
             interval = pd.Timedelta(milliseconds=row["descriptor"]["source_clock"]["bar_interval_ms"])
-            warmup = index[(index >= start - 300 * interval) & (index < start)]
-            if len(warmup) != 300 or len(index[(index >= start - 300 * interval) & (index < end)]) > row["budgets"]["planning_max_bars"]:
+            warmup_count = research.imported_search_binding["declaration"]["warmup_bars"] if research.is_imported_search else 300
+            warmup = index[(index >= start - warmup_count * interval) & (index < start)]
+            if len(warmup) != warmup_count or len(index[(index >= start - warmup_count * interval) & (index < end)]) > row["budgets"]["planning_max_bars"]:
                 raise ResearchRunProducerError("FULL-03 immutable snapshot lacks 300 target-bar predecessors or exceeds its bar budget")
         controls = full03_controls(research.requested_spec, row) if row else per_fold_decay_controls(research.requested_spec) if decay else causal_inner_controls(research.requested_spec)
         trial_count = row["public_profile"]["trial_default"] if row else 3
@@ -978,6 +979,8 @@ class ResearchRunProducerExecutor:
             shutil.rmtree(job_directory)
         job_directory.mkdir(mode=0o700, parents=True)
         source_root = artifact_root / WFO_SOURCE_DIRNAME
+        warmup_count = research.imported_search_binding["declaration"]["warmup_bars"] if research.is_imported_search else 300
+        imported_source = None
         holdout_bars: int | None = None
         try:
             tape_counts = self._write_is_oos_tape(
@@ -986,10 +989,22 @@ class ResearchRunProducerExecutor:
                 is_start=span_start,
                 oos_start=first_oos,
                 oos_end=span_end,
-                warmup_lower_bound=span_start - pd.Timedelta(milliseconds=300 * row["descriptor"]["source_clock"]["bar_interval_ms"]) if row else None,
+                warmup_lower_bound=span_start - pd.Timedelta(milliseconds=warmup_count * row["descriptor"]["source_clock"]["bar_interval_ms"]) if row else None,
             )
-            if row and (tape_counts.warmup_bars != 300 or tape_counts.total_bars > row["budgets"]["planning_max_bars"]):
+            if row and (tape_counts.warmup_bars != warmup_count or tape_counts.total_bars > row["budgets"]["planning_max_bars"]):
                 raise ResearchRunProducerError("FULL-03 immutable snapshot lacks 300 target-bar predecessors or exceeds its bar budget")
+            if research.is_imported_search:
+                if self.imported_source_client is None:
+                    raise ResearchRunProducerError("FULL05 imported source custody is unavailable", code="CAPABILITY_MISMATCH")
+                try:
+                    source = self.imported_source_client.fetch(request)
+                except ResearchImportedSourceError as exc:
+                    raise ResearchRunProducerError(str(exc), code=exc.code) from exc
+                source_path = job_directory / "imported_alpha.py"
+                source_path.write_bytes(source.source_bytes)
+                os.chmod(source_path, 0o600)
+                imported_source = {"binding": research.imported_search_binding, "source_path": str(source_path),
+                    "alpha_id": research.alpha_id, "alpha_version_id": research.alpha_version_id}
             if tape_counts.is_bars < 1 or tape_counts.outer_oos_bars < 1:
                 raise ResearchRunProducerError("P10 immutable snapshot cannot form a bounded walk-forward tape")
             if three_window:
@@ -1020,7 +1035,7 @@ class ResearchRunProducerExecutor:
                 task="P16_DELTA_WHATIF_GRID" if whatif is not None else "P10_DELTA_THREE_WINDOW_OPTIMIZED" if three_window else "P10_DELTA_WFO",
                 # A what-if diagnostic scores full configurations, so it never
                 # carries its parent's pins; a sibling WFO run does.
-                pinned_parameters=() if whatif is not None else tuple(
+                pinned_parameters=() if whatif is not None or research.is_imported_search else tuple(
                     (name, format(Decimal(str(value)).normalize(), "f"))
                     for name, value in sorted(sibling_pins(research.requested_spec).items())
                 ),
@@ -1034,6 +1049,7 @@ class ResearchRunProducerExecutor:
                 causal_inner_controls=controls if row and row["descriptor"]["optimization_schedule"] == "per_fold_causal" else causal_inner_controls(research.requested_spec) if research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID else None,
                 holdout_start_utc_ms=int(_utc_timestamp(windows["holdout"]["start"], label="holdout start").value // 1_000_000) if three_window else None,
                 execution_binding=full03_execution_binding(row) if row else None,
+                imported_source=imported_source,
             )
             progress("stage_completed", {"stage": "S2"})
             progress("stage_started", {"stage": "S3"})
@@ -1103,6 +1119,8 @@ class ResearchRunProducerExecutor:
             "manifest_digest": research.manifest_digest,
             "input_scope": "P08_OPTIONAL_WARMUP_PLUS_INDEPENDENT_THREE_WINDOWS" if three_window else "P08_OPTIONAL_WARMUP_PLUS_WFO_SPAN",
         }
+        if research.is_imported_search:
+            public_config["imported_search_binding"] = research.imported_search_binding
         request_path = engine_directory / "config" / "request.json"
         request_path.write_text(
             json.dumps(canonicalize(public_config), sort_keys=True, indent=2) + "\n",
@@ -1140,6 +1158,9 @@ class ResearchRunProducerExecutor:
                 "enforced_limits": child.enforced_limits,
             },
         }
+        if research.is_imported_search:
+            receipt_document["imported_search_binding"] = research.imported_search_binding
+            receipt_document["alpha_version_id"] = research.alpha_version_id
         if whatif is not None:
             receipt_document["whatif"] = {
                 "parent_run_id": whatif.parent_run_id,

@@ -366,7 +366,7 @@ export function parameterAuthority(input: {
       state: fixed?.state ?? "NOT_PUBLISHED",
       reason_code: fixed ? fixed.reasonCode : STAGE4_REASONS.bindingNotRegistered,
       values: fixed ? fixed.values.map((value) => ({ ...value })) : [],
-      hash_scope: "ADAPTER_CONTRACT_DIGEST",
+      hash_scope: fixed?.hashScope ?? "ADAPTER_CONTRACT_DIGEST",
       code_digest: fixed?.codeDigest ?? null,
       specification_digest: fixed?.specificationDigest ?? null,
       adapter_contract_digest: input.adapterContractDigest,

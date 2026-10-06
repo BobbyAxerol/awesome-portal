@@ -83,7 +83,7 @@ describe("S02 Alpha-bound setup without admission widening",()=>{
     const unknown=p04Requested({random_seed:42,parameter_space_overrides:[{name:"unknown",kind:"pin",value:1}]});
     expect(declaredOptimizationRefusal(v,unknown)).toMatchObject({reason_code:"ALPHA_PARAMETER_NOT_DECLARED",field_path:["parameter_space_overrides","0","name"]});
     expect(admissionService.importedConfigurationRefusal({...missing,random_seed:42,protocol:"advanced",windows:null} as never,v.declaredContract,v.entrypoint))
-      .toEqual({reason_code:"PROFILE_PROTOCOL_NOT_ADMITTED",field_path:["protocol"]});
+      .toEqual({reason_code:"PROFILE_NOT_OPENED",field_path:["protocol"]});
   });
   it("gives imported DRAFT its own pins-only recipe, not Delta WFO",()=>{
     const declaration={...P04_DELTA_DECLARED_CONTRACT,schema_version:"research.alpha-source.v1",determinism:{seed_required:true}};

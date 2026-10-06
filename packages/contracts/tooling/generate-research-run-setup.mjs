@@ -30,7 +30,7 @@ const profile=obj({profile_id:id,state:en("ENABLED","DISABLED"),reason_code:null
   trial_count:bounds,trial_default:{...count,minimum:1},trial_scope:en("GLOBAL_STUDY","PER_OUTER_FOLD_STUDY"),max_total_trials:nullable({...count,minimum:1}),
   seed_policy:en("LOCKED","FORBIDDEN","REQUIRED","OPTIONAL"),random_seed:nullable({type:"integer",minimum:0}),max_span_days:nullable({...count,minimum:1}),fold_bounds:nullable(bounds),
   frequencies:array(id,8),window_modes:array(en("expanding","rolling"),2),
-  parameter_policy:en("FIXED_NO_OVERRIDES","DECLARED_PINS_ONLY","DELTA_SEARCH_WITH_QUALIFIED_PINS"),
+  parameter_policy:en("FIXED_NO_OVERRIDES","DECLARED_PINS_ONLY","DELTA_SEARCH_WITH_QUALIFIED_PINS","DECLARED_SEARCH_WITH_PINS"),
   allowed_pin_names:array({...str,pattern:"^[A-Za-z][A-Za-z0-9_]{0,63}$"},12),
   inner_validation:en("NOT_APPLICABLE","NOT_ADMITTED_GLOBAL_RETENTION_ONLY","REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY"),
   inner_constraints:nullable(obj({fold_bounds:bounds,frequencies:array(id,8),window_modes:array(id,2),train_window_pattern:{...str,maxLength:160}})),

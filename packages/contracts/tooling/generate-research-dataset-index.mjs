@@ -78,6 +78,8 @@ const declarationMetadata = obj({schema_version:{const:"research.declaration-met
 const foldSpan = obj({start_utc_ms:ms,end_exclusive_utc_ms:ms,bars:count});
 declarationMetadata.properties.planned_folds.properties.items = {type:"array",maxItems:128,
   items:obj({ordinal:{type:"integer",minimum:1,maximum:128},train:foldSpan,outer_oos:foldSpan})};
+declarationMetadata.properties.planned_folds.properties.evaluation_scope = {const:"FULL_SAMPLE_CALIBRATION",
+  description:"Native Mode5 identical train/evaluation geometry; not an untouched OOS fold."};
 const condition = obj({key:{type:"string",pattern:"^[a-z][a-z0-9_.]{0,63}$"},state:{enum:["PASS","FAIL","NOT_PUBLISHED"]},reason_code:nullable(reason),
   observed:nullable({type:"string",maxLength:200}),required:{type:"string",maxLength:200}});
 condition.properties.field_path={type:"array",minItems:1,maxItems:8,items:{type:"string",pattern:"^[A-Za-z_][A-Za-z0-9_]*$|^[0-9]+$"}};

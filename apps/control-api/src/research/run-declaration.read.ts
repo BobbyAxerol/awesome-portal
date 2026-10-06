@@ -11,6 +11,8 @@ export interface RunDeclarationInputs {
   requestedSpecDigest?: string | null;
   declaredContract?: unknown;
   entrypoint?: string | null;
+  /** Exact immutable version bytes, never the active-version pointer. */
+  sourceDigest?: string | null;
 }
 export function readRunDeclaration(input: RunDeclarationInputs): ResearchRunDeclaration {
   const source = "IMMUTABLE_RUN_REQUEST_AND_ALPHA_VERSION_DECLARATION_V1";

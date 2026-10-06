@@ -317,6 +317,7 @@ class DeltaWfoChildReceipt:
     # New recipes alone carry the separately immutable Alpha + source clock.
     # None leaves every historical launch payload byte-for-byte unchanged.
     execution_binding: dict[str, Any] | None = None
+    imported_source: dict[str, Any] | None = None
 
     def as_payload(self, *, output_root: Path) -> dict[str, Any]:
         if self.task not in {"P10_DELTA_WFO", "P16_DELTA_WHATIF_GRID", "P10_DELTA_THREE_WINDOW_OPTIMIZED"}:
@@ -349,11 +350,19 @@ class DeltaWfoChildReceipt:
                 if self.optuna_trials is not None or self.whatif_grid_key is not None or self.whatif_evaluations:
                     raise ValueError("FULL-03 cannot inherit preview/what-if study controls")
                 payload["execution_binding"] = self.execution_binding
+                if row["source_requirement"] == "IMPORTED_IMMUTABLE_SEARCH_BINDING":
+                    from portal_api.domain.research_imported_search import validate_imported_search_binding
+                    if not isinstance(self.imported_source, dict) or set(self.imported_source) != {"binding", "source_path", "alpha_id", "alpha_version_id"}:
+                        raise ValueError("FULL05 child requires exact immutable source custody")
+                    validate_imported_search_binding(self.imported_source["binding"])
+                    payload["imported_source"] = self.imported_source
+                elif self.imported_source is not None:
+                    raise ValueError("Imported source cannot enter a Delta child")
                 if self.pinned_parameters:
                     if len(dict(self.pinned_parameters)) != len(self.pinned_parameters):
                         raise ValueError("FULL-03 pins must name distinct declared axes")
                     payload["pinned_parameters"] = dict(self.pinned_parameters)
-                if row["adapter_kind"] == "DELTA_THREE_WINDOW_OPTIMIZED":
+                if row["descriptor"]["protocol"] == "three_window_decay":
                     if (self.task != "P10_DELTA_THREE_WINDOW_OPTIMIZED"
                             or type(self.holdout_start_utc_ms) is not int
                             or not self.data_start_utc_ms < self.first_oos_utc_ms < self.holdout_start_utc_ms < self.data_end_exclusive_utc_ms
@@ -947,6 +956,10 @@ class IsolatedResearchSupervisor:
         )
         self._approved_market_input(receipt.market_path)
         self._assert_artifact_root(receipt.artifact_root)
+        if full03_row is not None and full03_row["source_requirement"] == "IMPORTED_IMMUTABLE_SEARCH_BINDING":
+            if not isinstance(receipt.imported_source, dict):
+                raise ResearchSupervisorError("FULL05 child source is absent")
+            self._approved_imported_source(Path(receipt.imported_source["source_path"]), receipt.imported_source["binding"]["source_digest"])
         output_holder: dict[str, Path] = {}
 
         def payload_for(work: Path) -> dict[str, Any]:

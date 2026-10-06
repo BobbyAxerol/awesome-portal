@@ -656,6 +656,14 @@ def declaration_estimate(document: dict | None, requested: dict, *, warmup_bars:
     result["planned_folds"] = {**absence, "availability": "AVAILABLE", "reason_code": None,
         "count": len(folds), "min_train_bars": min(f["train"]["bars"] for f in folds),
         "min_oos_bars": min(f["outer_oos"]["bars"] for f in folds), "items": _fold_geometry(folds)}
+    if requested.get("optimization_mode") == "mode_5_full_robust":
+        # The native Mode5 plan is a full-sample calibration, never untouched
+        # OOS. Preserve its actual geometry and label the legacy interval keys.
+        items = result["planned_folds"]["items"]
+        if len(items) != 1 or items[0]["train"] != items[0]["outer_oos"]:
+            result["planned_folds"] = {**absence, "reason_code": "MODE5_NATIVE_CALIBRATION_GEOMETRY_NOT_PUBLISHED"}
+        else:
+            result["planned_folds"]["evaluation_scope"] = "FULL_SAMPLE_CALIBRATION"
     return result
 
 

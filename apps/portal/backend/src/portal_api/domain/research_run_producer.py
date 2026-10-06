@@ -43,7 +43,7 @@ from .research_full02_profiles import (
     DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE,
     per_fold_decay_controls,
 )
-from .research_execution_recipes import execution_recipe
+from .research_execution_recipes import execution_recipe, recipe_digest
 from .research_full03_profiles import full03_recipe, full03_controls, is_full03_profile
 from .research_whatif_profile import WHATIF_MAX_EVALUATIONS, WHATIF_PROFILE_DIGEST, WHATIF_PROFILE_ID
 from .research_final_audit import (
@@ -152,6 +152,7 @@ class ResearchRunProducerEnvelope(PortalModel):
     imported_parameters: Annotated[
         dict[str, str | int | float | bool], Field(max_length=12)
     ] | None = None
+    imported_search_binding: dict[str, Any] | None = Field(default=None, max_length=7)
     work_digest: str = Field(pattern=_DIGEST)
     whatif: WhatIfJob | None = None
     final_audit_target: PinnedSelectionAuditTarget | None = None
@@ -170,7 +171,7 @@ class ResearchRunProducerEnvelope(PortalModel):
     @property
     def is_three_window_optimized(self) -> bool:
         return self.execution_profile_id == DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID or (
-            self.is_full03 and execution_recipe(self.execution_profile_id)["adapter_kind"] == "DELTA_THREE_WINDOW_OPTIMIZED")
+            self.is_full03 and execution_recipe(self.execution_profile_id)["descriptor"]["protocol"] == "three_window_decay")
 
     @property
     def is_full03(self) -> bool:
@@ -186,7 +187,14 @@ class ResearchRunProducerEnvelope(PortalModel):
 
     @property
     def is_imported_alpha(self) -> bool:
-        return self.execution_profile_id == IMPORTED_ALPHA_PROFILE_ID
+        return self.execution_profile_id == IMPORTED_ALPHA_PROFILE_ID or self.is_imported_search
+
+    @property
+    def is_imported_search(self) -> bool:
+        try:
+            return execution_recipe(self.execution_profile_id)["source_requirement"] == "IMPORTED_IMMUTABLE_SEARCH_BINDING"
+        except ValueError:
+            return False
 
     @model_serializer(mode="wrap")
     def _serialize_without_p04_profile_fields(self, handler: Any) -> dict[str, Any]:
@@ -210,6 +218,8 @@ class ResearchRunProducerEnvelope(PortalModel):
             data.pop("imported_entrypoint", None)
         if self.imported_parameters is None:
             data.pop("imported_parameters", None)
+        if self.imported_search_binding is None:
+            data.pop("imported_search_binding", None)
         if self.qualification_binding is None:
             data.pop("qualification_binding", None)
         return data
@@ -295,8 +305,11 @@ class ResearchRunProducerEnvelope(PortalModel):
             raise ValueError("only the what-if profile is a DIAGNOSTIC intent with evaluations")
         if self.is_full03:
             self._validate_full03_spec()
-            self._validate_full02_work(encoded)
+            if not self.is_imported_search:
+                self._validate_full02_work(encoded)
             return self
+        if self.imported_search_binding is not None:
+            raise ValueError("FULL05 declaration cannot enter another execution profile")
         if self.execution_profile_id == DELTA_WFO_PROFILE_ID:
             self._validate_delta_wfo_profile()
             return self
@@ -473,6 +486,9 @@ class ResearchRunProducerEnvelope(PortalModel):
 
     def _validate_full03_spec(self) -> None:
         row = full03_recipe(self.execution_profile_id, self.execution_profile_digest)
+        if self.is_imported_search:
+            self._validate_imported_search_spec(row)
+            return
         p, spec = row["descriptor"], self.requested_spec
         requirement = p["alpha_binding_requirements"]
         client = spec.get("client")
@@ -513,6 +529,56 @@ class ResearchRunProducerEnvelope(PortalModel):
         split = _utc_instant(wf.get("split_mode"), "walk_forward split_mode")
         if not start < split < end or (end - start).total_seconds() > p["max_span_days"] * 86_400:
             raise ValueError("FULL-03 span is outside its exact recipe range")
+
+    def _validate_imported_search_spec(self, row: dict[str, Any]) -> None:
+        from .research_imported_search import validate_imported_search_binding
+        binding = validate_imported_search_binding(self.imported_search_binding, spec=self.requested_spec)
+        p, spec = row["descriptor"], self.requested_spec
+        if (self.execution_adapter_id != p["adapter_id"] or self.adapter_contract_digest != p["adapter_contract_digest"]
+                or self.imported_source_digest != binding["source_digest"] or self.imported_entrypoint != binding["entrypoint"]
+                or self.imported_parameters is not None or self.p04_parameters is not None or self.qualification_binding is not None
+                or spec.get("schema_version") != p["requested_spec_version"] or spec.get("protocol") != p["protocol"]
+                or spec.get("execution_route") != p["execution_route"] or spec.get("optimization_mode") != p["optimization_mode"]
+                or spec.get("optimization_schedule") != p["optimization_schedule"]
+                or spec.get("optuna_trials") != row["public_profile"]["trial_default"] or spec.get("random_seed") != 42
+                or spec.get("early_stopping") is not None or spec.get("optimization_config") or spec.get("route_params")
+                or spec.get("client", {}).get("engine_release_id") != p["engine_release_id"]
+                or spec.get("data", {}).get("dataset_id") != p["dataset_id"] or spec.get("data", {}).get("timeframe") != p["timeframe"]
+                or spec.get("alpha_binding") != {"alpha_id": self.alpha_id, "alpha_version_id": self.alpha_version_id}
+                or spec.get("strategy_id") != self.alpha_id):
+            raise ValueError("FULL05 spec does not match its immutable source/recipe binding")
+        if p["protocol"] == "advanced":
+            if "windows" in spec:
+                raise ValueError("FULL05 advanced forbids independent Holdout")
+            full03_controls(spec, row)
+            wf = spec["walk_forward"]
+            start, split, end = (_utc_instant(wf[key], key) for key in ("start", "split_mode", "end_exclusive"))
+        else:
+            if spec.get("walk_forward") is not None or not isinstance(spec.get("windows"), dict):
+                raise ValueError("FULL05 Three Window requires its independent windows")
+            windows = spec["windows"]
+            start = _utc_instant(windows["is"]["start"], "IS")
+            split = _utc_instant(windows["oos"]["start"], "OOS")
+            holdout = _utc_instant(windows["holdout"]["start"], "Holdout")
+            end = _utc_instant(windows["holdout"]["end_exclusive"], "end")
+            if not split < holdout < end or windows["is"]["end_exclusive"] != windows["oos"]["start"] or windows["oos"]["end_exclusive"] != windows["holdout"]["start"]:
+                raise ValueError("FULL05 windows must be contiguous and ordered")
+        if not start < split < end or (end-start).total_seconds() > p["max_span_days"]*86400:
+            raise ValueError("FULL05 range exceeds its exact recipe")
+        if recipe_digest(spec) != self.requested_spec_digest:
+            raise ValueError("FULL05 requested spec bytes changed")
+        work = {"schema_version": row["work_schema_version"], "requested_spec_digest": self.requested_spec_digest,
+            "effective_spec_digest": self.effective_spec_digest, "dataset_binding_digest": self.dataset_binding_digest,
+            "manifest_digest": self.manifest_digest,
+            "snapshot": {"snapshot_id": self.snapshot_id, "snapshot_content_hash": self.snapshot_content_hash},
+            "alpha": {"alpha_id": self.alpha_id, "alpha_version_id": self.alpha_version_id,
+                "source_digest": self.imported_source_digest, "entrypoint": self.imported_entrypoint,
+                "adapter_id": self.execution_adapter_id, "adapter_contract_digest": self.adapter_contract_digest,
+                "parameters": None, "search_binding": binding},
+            "execution_profile": {"profile_id": self.execution_profile_id, "profile_digest": self.execution_profile_digest},
+            "engine_release_id": spec["client"]["engine_release_id"], "requested_spec": spec}
+        if recipe_digest(work) != self.work_digest:
+            raise ValueError("FULL05 work digest changed its source/declaration dependency")
 
     def _validate_three_window_optimized(self, *, profile: dict[str, Any] | None = None, full03: bool = False) -> None:
         """A new immutable search recipe, never a widening of the fixed P04 wire."""

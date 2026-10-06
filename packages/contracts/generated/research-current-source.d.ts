@@ -1592,9 +1592,9 @@ export interface components {
         /** @description Exact historical/global/causal custody pair; mixing is refused. */
         Provenance: {
             /** @enum {unknown} */
-            source_adapter_id: "rs02.quantbt-advanced-wfo.v1" | "rs02.quantbt-signal-notional-wfo.v1" | "rs02.quantbt-signal-notional-causal-inner.v1" | "full02.quantbt-signal-notional-per-fold-decay.v1" | "full02.quantbt-signal-notional-three-window.v1" | "full03.quantbt-signal-notional-wfo-temporal-1m.v1" | "full03.quantbt-signal-notional-causal-inner-1m.v1" | "full03.quantbt-signal-notional-per-fold-decay-1m.v1" | "full03.quantbt-signal-notional-three-window-optimized-1m.v1" | "full03.quantbt-signal-notional-wfo-temporal-5m.v1" | "full03.quantbt-signal-notional-causal-inner-5m.v1" | "full03.quantbt-signal-notional-per-fold-decay-5m.v1" | "full03.quantbt-signal-notional-three-window-optimized-5m.v1" | "full03.quantbt-signal-notional-wfo-temporal-15m.v1" | "full03.quantbt-signal-notional-causal-inner-15m.v1" | "full03.quantbt-signal-notional-per-fold-decay-15m.v1" | "full03.quantbt-signal-notional-three-window-optimized-15m.v1" | "full03.quantbt-signal-notional-wfo-temporal-30m.v1" | "full03.quantbt-signal-notional-causal-inner-30m.v1" | "full03.quantbt-signal-notional-per-fold-decay-30m.v1" | "full03.quantbt-signal-notional-three-window-optimized-30m.v1" | "full03.quantbt-signal-notional-wfo-temporal-1h.v1" | "full03.quantbt-signal-notional-causal-inner-1h.v1" | "full03.quantbt-signal-notional-per-fold-decay-1h.v1" | "full03.quantbt-signal-notional-three-window-optimized-1h.v1" | "full03.quantbt-signal-notional-wfo-temporal-4h.v1" | "full03.quantbt-signal-notional-causal-inner-4h.v1" | "full03.quantbt-signal-notional-per-fold-decay-4h.v1" | "full03.quantbt-signal-notional-three-window-optimized-4h.v1" | "full03.quantbt-signal-notional-wfo-temporal-1d.v1" | "full03.quantbt-signal-notional-causal-inner-1d.v1" | "full03.quantbt-signal-notional-per-fold-decay-1d.v1" | "full03.quantbt-signal-notional-three-window-optimized-1d.v1" | "full04.quantbt-signal-notional-mode3-global-1h.v1" | "full04.quantbt-signal-notional-mode3-global-1m.v1" | "full04.quantbt-signal-notional-mode3-global-5m.v1" | "full04.quantbt-signal-notional-mode3-global-15m.v1" | "full04.quantbt-signal-notional-mode3-global-30m.v1" | "full04.quantbt-signal-notional-mode3-global-4h.v1" | "full04.quantbt-signal-notional-mode3-global-1d.v1" | "full04.quantbt-signal-notional-mode2-global-1h.v1" | "full04.quantbt-signal-notional-mode2-global-1m.v1" | "full04.quantbt-signal-notional-mode2-global-5m.v1" | "full04.quantbt-signal-notional-mode2-global-15m.v1" | "full04.quantbt-signal-notional-mode2-global-30m.v1" | "full04.quantbt-signal-notional-mode2-global-4h.v1" | "full04.quantbt-signal-notional-mode2-global-1d.v1" | "full04.quantbt-signal-notional-mode4-global-1h.v1" | "full04.quantbt-signal-notional-mode4-global-1m.v1" | "full04.quantbt-signal-notional-mode4-global-5m.v1" | "full04.quantbt-signal-notional-mode4-global-15m.v1" | "full04.quantbt-signal-notional-mode4-global-30m.v1" | "full04.quantbt-signal-notional-mode4-global-4h.v1" | "full04.quantbt-signal-notional-mode4-global-1d.v1" | "full04.quantbt-signal-notional-mode4-causal-1h.v1" | "full04.quantbt-signal-notional-mode4-causal-1m.v1" | "full04.quantbt-signal-notional-mode4-causal-5m.v1" | "full04.quantbt-signal-notional-mode4-causal-15m.v1" | "full04.quantbt-signal-notional-mode4-causal-30m.v1" | "full04.quantbt-signal-notional-mode4-causal-4h.v1" | "full04.quantbt-signal-notional-mode4-causal-1d.v1" | "full04.quantbt-signal-notional-mode5-global-1h.v1" | "full04.quantbt-signal-notional-mode5-global-1m.v1" | "full04.quantbt-signal-notional-mode5-global-5m.v1" | "full04.quantbt-signal-notional-mode5-global-15m.v1" | "full04.quantbt-signal-notional-mode5-global-30m.v1" | "full04.quantbt-signal-notional-mode5-global-4h.v1" | "full04.quantbt-signal-notional-mode5-global-1d.v1";
+            source_adapter_id: "rs02.quantbt-advanced-wfo.v1" | "rs02.quantbt-signal-notional-wfo.v1" | "rs02.quantbt-signal-notional-causal-inner.v1" | "full02.quantbt-signal-notional-per-fold-decay.v1" | "full02.quantbt-signal-notional-three-window.v1" | "full03.quantbt-signal-notional-wfo-temporal-1m.v1" | "full03.quantbt-signal-notional-causal-inner-1m.v1" | "full03.quantbt-signal-notional-per-fold-decay-1m.v1" | "full03.quantbt-signal-notional-three-window-optimized-1m.v1" | "full03.quantbt-signal-notional-wfo-temporal-5m.v1" | "full03.quantbt-signal-notional-causal-inner-5m.v1" | "full03.quantbt-signal-notional-per-fold-decay-5m.v1" | "full03.quantbt-signal-notional-three-window-optimized-5m.v1" | "full03.quantbt-signal-notional-wfo-temporal-15m.v1" | "full03.quantbt-signal-notional-causal-inner-15m.v1" | "full03.quantbt-signal-notional-per-fold-decay-15m.v1" | "full03.quantbt-signal-notional-three-window-optimized-15m.v1" | "full03.quantbt-signal-notional-wfo-temporal-30m.v1" | "full03.quantbt-signal-notional-causal-inner-30m.v1" | "full03.quantbt-signal-notional-per-fold-decay-30m.v1" | "full03.quantbt-signal-notional-three-window-optimized-30m.v1" | "full03.quantbt-signal-notional-wfo-temporal-1h.v1" | "full03.quantbt-signal-notional-causal-inner-1h.v1" | "full03.quantbt-signal-notional-per-fold-decay-1h.v1" | "full03.quantbt-signal-notional-three-window-optimized-1h.v1" | "full03.quantbt-signal-notional-wfo-temporal-4h.v1" | "full03.quantbt-signal-notional-causal-inner-4h.v1" | "full03.quantbt-signal-notional-per-fold-decay-4h.v1" | "full03.quantbt-signal-notional-three-window-optimized-4h.v1" | "full03.quantbt-signal-notional-wfo-temporal-1d.v1" | "full03.quantbt-signal-notional-causal-inner-1d.v1" | "full03.quantbt-signal-notional-per-fold-decay-1d.v1" | "full03.quantbt-signal-notional-three-window-optimized-1d.v1" | "full04.quantbt-signal-notional-mode3-global-1h.v1" | "full04.quantbt-signal-notional-mode3-global-1m.v1" | "full04.quantbt-signal-notional-mode3-global-5m.v1" | "full04.quantbt-signal-notional-mode3-global-15m.v1" | "full04.quantbt-signal-notional-mode3-global-30m.v1" | "full04.quantbt-signal-notional-mode3-global-4h.v1" | "full04.quantbt-signal-notional-mode3-global-1d.v1" | "full04.quantbt-signal-notional-mode2-global-1h.v1" | "full04.quantbt-signal-notional-mode2-global-1m.v1" | "full04.quantbt-signal-notional-mode2-global-5m.v1" | "full04.quantbt-signal-notional-mode2-global-15m.v1" | "full04.quantbt-signal-notional-mode2-global-30m.v1" | "full04.quantbt-signal-notional-mode2-global-4h.v1" | "full04.quantbt-signal-notional-mode2-global-1d.v1" | "full04.quantbt-signal-notional-mode4-global-1h.v1" | "full04.quantbt-signal-notional-mode4-global-1m.v1" | "full04.quantbt-signal-notional-mode4-global-5m.v1" | "full04.quantbt-signal-notional-mode4-global-15m.v1" | "full04.quantbt-signal-notional-mode4-global-30m.v1" | "full04.quantbt-signal-notional-mode4-global-4h.v1" | "full04.quantbt-signal-notional-mode4-global-1d.v1" | "full04.quantbt-signal-notional-mode4-causal-1h.v1" | "full04.quantbt-signal-notional-mode4-causal-1m.v1" | "full04.quantbt-signal-notional-mode4-causal-5m.v1" | "full04.quantbt-signal-notional-mode4-causal-15m.v1" | "full04.quantbt-signal-notional-mode4-causal-30m.v1" | "full04.quantbt-signal-notional-mode4-causal-4h.v1" | "full04.quantbt-signal-notional-mode4-causal-1d.v1" | "full04.quantbt-signal-notional-mode5-global-1h.v1" | "full04.quantbt-signal-notional-mode5-global-1m.v1" | "full04.quantbt-signal-notional-mode5-global-5m.v1" | "full04.quantbt-signal-notional-mode5-global-15m.v1" | "full04.quantbt-signal-notional-mode5-global-30m.v1" | "full04.quantbt-signal-notional-mode5-global-4h.v1" | "full04.quantbt-signal-notional-mode5-global-1d.v1" | "full05.quantbt-imported-wfo-temporal-1h.v1" | "full05.quantbt-imported-causal-inner-1h.v1" | "full05.quantbt-imported-per-fold-decay-1h.v1" | "full05.quantbt-imported-three-window-optimized-1h.v1" | "full05.quantbt-imported-wfo-temporal-4h.v1" | "full05.quantbt-imported-causal-inner-4h.v1" | "full05.quantbt-imported-per-fold-decay-4h.v1" | "full05.quantbt-imported-three-window-optimized-4h.v1" | "full05.quantbt-imported-wfo-temporal-1d.v1" | "full05.quantbt-imported-causal-inner-1d.v1" | "full05.quantbt-imported-per-fold-decay-1d.v1" | "full05.quantbt-imported-three-window-optimized-1d.v1" | "full05.quantbt-imported-mode3-global-1h.v1" | "full05.quantbt-imported-mode3-global-4h.v1" | "full05.quantbt-imported-mode3-global-1d.v1" | "full05.quantbt-imported-mode2-global-1h.v1" | "full05.quantbt-imported-mode2-global-4h.v1" | "full05.quantbt-imported-mode2-global-1d.v1" | "full05.quantbt-imported-mode4-global-1h.v1" | "full05.quantbt-imported-mode4-global-4h.v1" | "full05.quantbt-imported-mode4-global-1d.v1" | "full05.quantbt-imported-mode4-causal-1h.v1" | "full05.quantbt-imported-mode4-causal-4h.v1" | "full05.quantbt-imported-mode4-causal-1d.v1" | "full05.quantbt-imported-mode5-global-1h.v1" | "full05.quantbt-imported-mode5-global-4h.v1" | "full05.quantbt-imported-mode5-global-1d.v1";
             /** @enum {unknown} */
-            profile_id: "rs02.delta-wfo-global.v1" | "rs02.delta-signal-notional-wfo.v1" | "rs02.delta-signal-notional-causal-inner.v1" | "full02.delta-signal-notional-per-fold-decay.v1" | "full02.delta-signal-notional-three-window.v1" | "full03.delta-signal-notional-wfo-temporal-1m.v1" | "full03.delta-signal-notional-causal-inner-1m.v1" | "full03.delta-signal-notional-per-fold-decay-1m.v1" | "full03.delta-signal-notional-three-window-optimized-1m.v1" | "full03.delta-signal-notional-wfo-temporal-5m.v1" | "full03.delta-signal-notional-causal-inner-5m.v1" | "full03.delta-signal-notional-per-fold-decay-5m.v1" | "full03.delta-signal-notional-three-window-optimized-5m.v1" | "full03.delta-signal-notional-wfo-temporal-15m.v1" | "full03.delta-signal-notional-causal-inner-15m.v1" | "full03.delta-signal-notional-per-fold-decay-15m.v1" | "full03.delta-signal-notional-three-window-optimized-15m.v1" | "full03.delta-signal-notional-wfo-temporal-30m.v1" | "full03.delta-signal-notional-causal-inner-30m.v1" | "full03.delta-signal-notional-per-fold-decay-30m.v1" | "full03.delta-signal-notional-three-window-optimized-30m.v1" | "full03.delta-signal-notional-wfo-temporal-1h.v1" | "full03.delta-signal-notional-causal-inner-1h.v1" | "full03.delta-signal-notional-per-fold-decay-1h.v1" | "full03.delta-signal-notional-three-window-optimized-1h.v1" | "full03.delta-signal-notional-wfo-temporal-4h.v1" | "full03.delta-signal-notional-causal-inner-4h.v1" | "full03.delta-signal-notional-per-fold-decay-4h.v1" | "full03.delta-signal-notional-three-window-optimized-4h.v1" | "full03.delta-signal-notional-wfo-temporal-1d.v1" | "full03.delta-signal-notional-causal-inner-1d.v1" | "full03.delta-signal-notional-per-fold-decay-1d.v1" | "full03.delta-signal-notional-three-window-optimized-1d.v1" | "full04.delta-signal-notional-mode3-global-1h.v1" | "full04.delta-signal-notional-mode3-global-1m.v1" | "full04.delta-signal-notional-mode3-global-5m.v1" | "full04.delta-signal-notional-mode3-global-15m.v1" | "full04.delta-signal-notional-mode3-global-30m.v1" | "full04.delta-signal-notional-mode3-global-4h.v1" | "full04.delta-signal-notional-mode3-global-1d.v1" | "full04.delta-signal-notional-mode2-global-1h.v1" | "full04.delta-signal-notional-mode2-global-1m.v1" | "full04.delta-signal-notional-mode2-global-5m.v1" | "full04.delta-signal-notional-mode2-global-15m.v1" | "full04.delta-signal-notional-mode2-global-30m.v1" | "full04.delta-signal-notional-mode2-global-4h.v1" | "full04.delta-signal-notional-mode2-global-1d.v1" | "full04.delta-signal-notional-mode4-global-1h.v1" | "full04.delta-signal-notional-mode4-global-1m.v1" | "full04.delta-signal-notional-mode4-global-5m.v1" | "full04.delta-signal-notional-mode4-global-15m.v1" | "full04.delta-signal-notional-mode4-global-30m.v1" | "full04.delta-signal-notional-mode4-global-4h.v1" | "full04.delta-signal-notional-mode4-global-1d.v1" | "full04.delta-signal-notional-mode4-causal-1h.v1" | "full04.delta-signal-notional-mode4-causal-1m.v1" | "full04.delta-signal-notional-mode4-causal-5m.v1" | "full04.delta-signal-notional-mode4-causal-15m.v1" | "full04.delta-signal-notional-mode4-causal-30m.v1" | "full04.delta-signal-notional-mode4-causal-4h.v1" | "full04.delta-signal-notional-mode4-causal-1d.v1" | "full04.delta-signal-notional-mode5-global-1h.v1" | "full04.delta-signal-notional-mode5-global-1m.v1" | "full04.delta-signal-notional-mode5-global-5m.v1" | "full04.delta-signal-notional-mode5-global-15m.v1" | "full04.delta-signal-notional-mode5-global-30m.v1" | "full04.delta-signal-notional-mode5-global-4h.v1" | "full04.delta-signal-notional-mode5-global-1d.v1";
+            profile_id: "rs02.delta-wfo-global.v1" | "rs02.delta-signal-notional-wfo.v1" | "rs02.delta-signal-notional-causal-inner.v1" | "full02.delta-signal-notional-per-fold-decay.v1" | "full02.delta-signal-notional-three-window.v1" | "full03.delta-signal-notional-wfo-temporal-1m.v1" | "full03.delta-signal-notional-causal-inner-1m.v1" | "full03.delta-signal-notional-per-fold-decay-1m.v1" | "full03.delta-signal-notional-three-window-optimized-1m.v1" | "full03.delta-signal-notional-wfo-temporal-5m.v1" | "full03.delta-signal-notional-causal-inner-5m.v1" | "full03.delta-signal-notional-per-fold-decay-5m.v1" | "full03.delta-signal-notional-three-window-optimized-5m.v1" | "full03.delta-signal-notional-wfo-temporal-15m.v1" | "full03.delta-signal-notional-causal-inner-15m.v1" | "full03.delta-signal-notional-per-fold-decay-15m.v1" | "full03.delta-signal-notional-three-window-optimized-15m.v1" | "full03.delta-signal-notional-wfo-temporal-30m.v1" | "full03.delta-signal-notional-causal-inner-30m.v1" | "full03.delta-signal-notional-per-fold-decay-30m.v1" | "full03.delta-signal-notional-three-window-optimized-30m.v1" | "full03.delta-signal-notional-wfo-temporal-1h.v1" | "full03.delta-signal-notional-causal-inner-1h.v1" | "full03.delta-signal-notional-per-fold-decay-1h.v1" | "full03.delta-signal-notional-three-window-optimized-1h.v1" | "full03.delta-signal-notional-wfo-temporal-4h.v1" | "full03.delta-signal-notional-causal-inner-4h.v1" | "full03.delta-signal-notional-per-fold-decay-4h.v1" | "full03.delta-signal-notional-three-window-optimized-4h.v1" | "full03.delta-signal-notional-wfo-temporal-1d.v1" | "full03.delta-signal-notional-causal-inner-1d.v1" | "full03.delta-signal-notional-per-fold-decay-1d.v1" | "full03.delta-signal-notional-three-window-optimized-1d.v1" | "full04.delta-signal-notional-mode3-global-1h.v1" | "full04.delta-signal-notional-mode3-global-1m.v1" | "full04.delta-signal-notional-mode3-global-5m.v1" | "full04.delta-signal-notional-mode3-global-15m.v1" | "full04.delta-signal-notional-mode3-global-30m.v1" | "full04.delta-signal-notional-mode3-global-4h.v1" | "full04.delta-signal-notional-mode3-global-1d.v1" | "full04.delta-signal-notional-mode2-global-1h.v1" | "full04.delta-signal-notional-mode2-global-1m.v1" | "full04.delta-signal-notional-mode2-global-5m.v1" | "full04.delta-signal-notional-mode2-global-15m.v1" | "full04.delta-signal-notional-mode2-global-30m.v1" | "full04.delta-signal-notional-mode2-global-4h.v1" | "full04.delta-signal-notional-mode2-global-1d.v1" | "full04.delta-signal-notional-mode4-global-1h.v1" | "full04.delta-signal-notional-mode4-global-1m.v1" | "full04.delta-signal-notional-mode4-global-5m.v1" | "full04.delta-signal-notional-mode4-global-15m.v1" | "full04.delta-signal-notional-mode4-global-30m.v1" | "full04.delta-signal-notional-mode4-global-4h.v1" | "full04.delta-signal-notional-mode4-global-1d.v1" | "full04.delta-signal-notional-mode4-causal-1h.v1" | "full04.delta-signal-notional-mode4-causal-1m.v1" | "full04.delta-signal-notional-mode4-causal-5m.v1" | "full04.delta-signal-notional-mode4-causal-15m.v1" | "full04.delta-signal-notional-mode4-causal-30m.v1" | "full04.delta-signal-notional-mode4-causal-4h.v1" | "full04.delta-signal-notional-mode4-causal-1d.v1" | "full04.delta-signal-notional-mode5-global-1h.v1" | "full04.delta-signal-notional-mode5-global-1m.v1" | "full04.delta-signal-notional-mode5-global-5m.v1" | "full04.delta-signal-notional-mode5-global-15m.v1" | "full04.delta-signal-notional-mode5-global-30m.v1" | "full04.delta-signal-notional-mode5-global-4h.v1" | "full04.delta-signal-notional-mode5-global-1d.v1" | "full05.imported-wfo-temporal-1h.v1" | "full05.imported-causal-inner-1h.v1" | "full05.imported-per-fold-decay-1h.v1" | "full05.imported-three-window-optimized-1h.v1" | "full05.imported-wfo-temporal-4h.v1" | "full05.imported-causal-inner-4h.v1" | "full05.imported-per-fold-decay-4h.v1" | "full05.imported-three-window-optimized-4h.v1" | "full05.imported-wfo-temporal-1d.v1" | "full05.imported-causal-inner-1d.v1" | "full05.imported-per-fold-decay-1d.v1" | "full05.imported-three-window-optimized-1d.v1" | "full05.imported-mode3-global-1h.v1" | "full05.imported-mode3-global-4h.v1" | "full05.imported-mode3-global-1d.v1" | "full05.imported-mode2-global-1h.v1" | "full05.imported-mode2-global-4h.v1" | "full05.imported-mode2-global-1d.v1" | "full05.imported-mode4-global-1h.v1" | "full05.imported-mode4-global-4h.v1" | "full05.imported-mode4-global-1d.v1" | "full05.imported-mode4-causal-1h.v1" | "full05.imported-mode4-causal-4h.v1" | "full05.imported-mode4-causal-1d.v1" | "full05.imported-mode5-global-1h.v1" | "full05.imported-mode5-global-4h.v1" | "full05.imported-mode5-global-1d.v1";
             /** @constant */
             engine_version: "1.1.1";
             source_manifest_digest: components["schemas"]["Digest"];
@@ -1944,6 +1944,141 @@ export interface components {
             source_adapter_id?: "full04.quantbt-signal-notional-mode5-global-1d.v1";
             /** @constant */
             profile_id?: "full04.delta-signal-notional-mode5-global-1d.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-wfo-temporal-1h.v1";
+            /** @constant */
+            profile_id?: "full05.imported-wfo-temporal-1h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-causal-inner-1h.v1";
+            /** @constant */
+            profile_id?: "full05.imported-causal-inner-1h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-per-fold-decay-1h.v1";
+            /** @constant */
+            profile_id?: "full05.imported-per-fold-decay-1h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-three-window-optimized-1h.v1";
+            /** @constant */
+            profile_id?: "full05.imported-three-window-optimized-1h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-wfo-temporal-4h.v1";
+            /** @constant */
+            profile_id?: "full05.imported-wfo-temporal-4h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-causal-inner-4h.v1";
+            /** @constant */
+            profile_id?: "full05.imported-causal-inner-4h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-per-fold-decay-4h.v1";
+            /** @constant */
+            profile_id?: "full05.imported-per-fold-decay-4h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-three-window-optimized-4h.v1";
+            /** @constant */
+            profile_id?: "full05.imported-three-window-optimized-4h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-wfo-temporal-1d.v1";
+            /** @constant */
+            profile_id?: "full05.imported-wfo-temporal-1d.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-causal-inner-1d.v1";
+            /** @constant */
+            profile_id?: "full05.imported-causal-inner-1d.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-per-fold-decay-1d.v1";
+            /** @constant */
+            profile_id?: "full05.imported-per-fold-decay-1d.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-three-window-optimized-1d.v1";
+            /** @constant */
+            profile_id?: "full05.imported-three-window-optimized-1d.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode3-global-1h.v1";
+            /** @constant */
+            profile_id?: "full05.imported-mode3-global-1h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode3-global-4h.v1";
+            /** @constant */
+            profile_id?: "full05.imported-mode3-global-4h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode3-global-1d.v1";
+            /** @constant */
+            profile_id?: "full05.imported-mode3-global-1d.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode2-global-1h.v1";
+            /** @constant */
+            profile_id?: "full05.imported-mode2-global-1h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode2-global-4h.v1";
+            /** @constant */
+            profile_id?: "full05.imported-mode2-global-4h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode2-global-1d.v1";
+            /** @constant */
+            profile_id?: "full05.imported-mode2-global-1d.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode4-global-1h.v1";
+            /** @constant */
+            profile_id?: "full05.imported-mode4-global-1h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode4-global-4h.v1";
+            /** @constant */
+            profile_id?: "full05.imported-mode4-global-4h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode4-global-1d.v1";
+            /** @constant */
+            profile_id?: "full05.imported-mode4-global-1d.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode4-causal-1h.v1";
+            /** @constant */
+            profile_id?: "full05.imported-mode4-causal-1h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode4-causal-4h.v1";
+            /** @constant */
+            profile_id?: "full05.imported-mode4-causal-4h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode4-causal-1d.v1";
+            /** @constant */
+            profile_id?: "full05.imported-mode4-causal-1d.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode5-global-1h.v1";
+            /** @constant */
+            profile_id?: "full05.imported-mode5-global-1h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode5-global-4h.v1";
+            /** @constant */
+            profile_id?: "full05.imported-mode5-global-4h.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode5-global-1d.v1";
+            /** @constant */
+            profile_id?: "full05.imported-mode5-global-1d.v1";
         });
         Common: {
             /** @constant */

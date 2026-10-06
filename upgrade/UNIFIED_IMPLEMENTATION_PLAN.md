@@ -8078,7 +8078,7 @@ S02 calendar/presets and Claude receipts preserved, not retaken by this plan.
 | FULL-02 | Mode 1 missing schedule + optimized Three Window/global, full retained/read chain | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-02) · BACKEND_DELIVERED / TWO_EXACT_RECIPES_PRODUCT_RUN_QUALIFIED / RESEARCH_PREVIEW_ENABLED · [Proof, rollback, cleanup and Claude handoff](./research_loop/evidence/P10/FULL_02_MODE1_VERTICAL_2026-10-06.md) |
 | FULL-03 | All actual indexed timeframes, source clocks/warmup and immutable Delta declaration extension | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-03) · BACKEND_DELIVERED / 28_EXACT_RECIPES_PRODUCT_RUN_QUALIFIED / RESEARCH_PREVIEW_ENABLED · [Delivery/rollback/custody/cleanup/Claude handoff](./research_loop/evidence/P10/FULL_03_INDEXED_TIMEFRAMES_2026-10-06.md), [immutable product proof](./research_loop/evidence/P10/FULL_03_PRODUCT_QUALIFICATION_2026-10-06.md) |
 | FULL-04 | All other valid optimizer pairs, mode-native readers and measured slow-mode limits | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-04) · BACKEND_DELIVERED /35_EXACT_RECIPES_PRODUCT_RUN_QUALIFIED /RESEARCH_PREVIEW_ENABLED · [Implementation, tests, activation/rollback/C4 and Claude handoff](./research_loop/evidence/P10/FULL_04_OTHER_MODES_2026-10-06.md), [immutable35-run proof](./research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md) |
-| FULL-05 | Confined imported Alpha execution on compatible qualified recipes | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-05) · PLANNED |
+| FULL-05 | Confined imported Alpha execution on compatible qualified recipes | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-05) · BACKEND_DELIVERED /27_PRODUCT_RUN_QUALIFIED /RESEARCH_PREVIEW_ENABLED · [Implementation/test/consumer ledger](./research_loop/evidence/P10/FULL_05_IMPORTED_ALPHA_2026-10-06.md) · FE/browser acceptance remains Claude-owned |
 | FULL-06 | Remaining route families with exact inputs/cost/claims; staged batch order, no Cartesian mode/route invention | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-06) · PLANNED |
 
 Exact target: five published modes / eight valid Advanced pairs. Current Three
@@ -8158,3 +8158,26 @@ with real browser/native-detail rendering explicitly handed off rather than
 called a backend acceptance result. [Full gate/contract/cleanup handoff](./research_loop/evidence/P10/FULL_04_OTHER_MODES_2026-10-06.md),
 [immutable35-run proof](./research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md).
 Next proposed backend: FULL-05; not started without Bobby's named instruction.
+
+FULL-05 addendum,2026-10-06 (Bobby approved): **BACKEND_DELIVERED /
+27_EXACT_IMPORTED_RECIPES_PRODUCT_RUN_QUALIFIED /RESEARCH_PREVIEW_ENABLED**
+supersedes the preceding proposed-next note. Canonical purpose-separated
+Delta/RSI source was actually imported as immutable DRAFT and executed through
+P07→P08→P10→confined QuantBT1.1.1→P05→216 named reads, not replaced by native
+Delta. Nine method recipes at each declared/indexed1h/4h/1d now open using
+source-bound numeric ranges/steps/categories and search+PIN. Historical fixed
+import, DRAFT-vs-publication authority, restricted AST/no-IO, lease/fencing,
+old71 recipe identities and protected strategy bytes are preserved. Append104/
+105 bind27 independent proof references in the98-row table. Native centroid,
+IS-only/proxy/full-sample scope and typed incompatibilities remain truthful.
+Measured17.928CPU/18.233wall seconds/367.391MiBRSS fits unchanged caps.
+Final retained-read parity, flag-off54 reads+create409, preview27 Conditions/
+three actual may-create preflights and old20 seal/user/AV/index/web custody
+PASS; no frontend replacement or production/Execution action. The Mode5
+estimator scope fix is explicitly typed and does not relax WFO chronology.
+[Full gates, failure ledger, operations and exact frontend handoff](./research_loop/evidence/P10/FULL_05_IMPORTED_ALPHA_2026-10-06.md),
+[immutable27 imported-run proof](./research_loop/evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md).
+Claude consumes `DECLARED_SEARCH_WITH_PINS`, native mode truth,
+`SOURCE_CODE_SHA256` and typed full-sample geometry; browser acceptance is not
+claimed here. No remotes/dev/main/prod. Next proposed backend FULL06 remains
+unstarted until Bobby names it; no new campaign is invented.

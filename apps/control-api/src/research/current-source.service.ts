@@ -92,6 +92,7 @@ import { declaredSpace, runGlobalCausalSurface, searchStudySurfaces, searchSurfa
 import { candidateDrawdown, searchPool } from "./current-source-pool";
 import { parameterAuthority, retainedStage4Binding } from "./stage4-binding";
 import { DEFAULT_PARAMETER_BINDING_REGISTRY } from "./parameter-binding.registry";
+import { importedRetainedBinding } from "./imported-search.read";
 import type { WhatIf } from "./whatif.contract";
 import { ArtifactVerifyStoreError } from "./artifact-verify.repository";
 import { BYTE_VERIFY_NOT_ENABLED, ResearchArtifactVerifyService } from "./artifact-verify.service";
@@ -680,7 +681,8 @@ export class ResearchCurrentSourceService {
     }
     // X2 · B3: the surface is every retained trial (≤ 64), whatever page the ledger shows.
     const allTrials = inputs.trials;
-    let space = declaredSpace(seal.profileId, summary.selection.parameters);
+    let space = declaredSpace(seal.profileId, summary.selection.parameters, DEFAULT_PARAMETER_BINDING_REGISTRY,
+      importedRetainedBinding(seal.profileId,seal.runDeclarationInputs) ?? undefined);
     const roles = selectionRoles(facts, summary.selection,summary.optimizer_disclosure);
     const surfaceTrials: SurfaceTrial[] = allTrials.map((row) => {
       const trial = asTrial(row);
@@ -855,8 +857,9 @@ export class ResearchCurrentSourceService {
     // A10c: exact existing evaluations around θ*; nothing is evaluated here.
     const whatIf = await this.whatIfFor(scope, await this.basisFrom(scope, runId, seal, summary, byteVerification, signal));
     const common = this.common("freeze", seal);
-    let space = declaredSpace(seal.profileId, summary.selection.parameters);
-    const binding = DEFAULT_PARAMETER_BINDING_REGISTRY.byRetainedLaneProfile(seal.profileId);
+    const binding = importedRetainedBinding(seal.profileId,seal.runDeclarationInputs)
+      ?? DEFAULT_PARAMETER_BINDING_REGISTRY.byRetainedLaneProfile(seal.profileId);
+    let space = declaredSpace(seal.profileId, summary.selection.parameters, DEFAULT_PARAMETER_BINDING_REGISTRY,binding);
     // P16-T02/T11: per-fold ordering from the sealed FOLD rows (immutable
     // under the seal revision, so it cannot move the ETag on its own).
     const foldRows = (await this.boundedRows(scope, runId, seal, "FOLD", 256, signal)).map((row) => ({ row, fold: asFold(row) }));

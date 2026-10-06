@@ -293,6 +293,18 @@ restricted child negatives, idempotent intake and per-recipe real P05/named
 read receipt. Incompatible strategy output stays `ALPHA_*`/typed input refusal,
 not falsely enabled because Delta supports the same route.
 
+Delivery2026-10-06: **BACKEND_DELIVERED /27_PRODUCT_RUN_QUALIFIED /
+RESEARCH_PREVIEW_ENABLED**. Nine exact imported method recipes × declared/
+indexed1h/4h/1d passed actual source callback, P05 and216 named screen reads.
+Immutable DRAFT/source/declaration authority and historical fixed importer
+remain distinct. Native mode/centroid/full-sample truth, numeric search/PIN,
+typed incompatible declaration kinds, bounded costs, rollback and old data/
+Claude web custody are recorded in the
+[implementation/tests/operations/consumer packet](evidence/P10/FULL_05_IMPORTED_ALPHA_2026-10-06.md)
+and [immutable27-run qualification](evidence/P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md).
+No frontend implementation/baseline edit; independent browser acceptance is
+Claude's next consumer task. No push/dev/main/production/Execution action.
+
 <a id="full-06"></a>
 ### FULL-06 — Remaining route families, exact-input qualification
 
@@ -370,7 +382,7 @@ alter the approved design. Existing accepted S02 calendar/presets stay intact.
 | BR-FULL-04 | Each vertical stage, especially FULL-02/04 | Exact FULL02/03/04 native retained/read chains DELIVERED; centroid/IS-only/full-sample scopes truthful; separate historical linked-audit executor fence unchanged |
 | BR-FULL-05 | FULL-01 + measured per-mode FULL-04 | Shared caps/quota and real per-mode resource proof DELIVERED at unchanged120CPU/240wall ceilings; no preview-long inheritance |
 | BR-FULL-06 | FULL-06 batches 6a–6f | PLANNED, no route opened |
-| BR-FULL-07 | FULL-05 + compatible FULL-06 inputs | PLANNED, imported fixed path unchanged |
+| BR-FULL-07 | FULL-05 + compatible FULL-06 inputs | FULL05 DELIVERED:27 exact imported signal-notional recipes; other route/input kinds remain FULL06; imported fixed path unchanged |
 
-Next proposed implementation: **FULL-05**. FULL-01–04 deliveries are linked above;
+Next proposed implementation: **FULL-06**, awaiting Bobby's named instruction. FULL-01–05 deliveries are linked above;
 the remaining staged response is not a passing qualification or a Portal release.

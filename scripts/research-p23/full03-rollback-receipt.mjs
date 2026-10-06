@@ -8,7 +8,7 @@ import {validateHome} from './cell.mjs';
 import {loadSessions,makeClient,privateJson,savePrivate} from './api-client.mjs';
 const home=validateHome(process.argv.find(a=>a.startsWith('--home='))?.slice(7));
 const slice=process.argv.find(a=>a.startsWith('--slice='))?.slice(8)??'full03';
-assert(['full03','full04'].includes(slice)&&home.endsWith('/'+slice),'EXACT_RECIPE_CELL');
+assert(['full03','full04','full05'].includes(slice)&&home.endsWith('/'+slice),'EXACT_RECIPE_CELL');
 const target=join(home,'flag-off-retained-read-receipt.json');
 assert(!existsSync(target),'IMMUTABLE_ROLLBACK_RECEIPT');
 const facts=privateJson(join(home,'qualified-products-summary.json')).facts;
@@ -22,13 +22,15 @@ try{
       const result=await client.call('GET',`/api/v1/quantbt/runs/${fact.run_id}/current-source/${route}`);
       assert.equal(result.body.availability.state,'AVAILABLE');
       assert.equal(result.body.provenance.profile_id,fact.source_profile_id);
-      assert.equal(result.body.provenance.manifest_digest,fact.retained_manifest_digest);
+      const expected=fact.retained_manifest_digest??privateJson(join(home,fact.private_receipt))
+        .reads['current-source/freeze'].body.integrity.expected_manifest_digest;
+      assert.equal(result.body.integrity?.expected_manifest_digest??result.body.provenance.source_manifest_digest,expected);
       if(route==='freeze')assert.equal(result.body.integrity.state,'MATCH');
       record.reads.push({run_id:fact.run_id,route,status:result.status,manifest_digest:fact.retained_manifest_digest,
         body_sha256:createHash('sha256').update(JSON.stringify(result.body)).digest('hex')});
     }
   }
-  const fact=facts.find(f=>f.profile_id===(slice==='full04'?'p10.delta-mode4-causal-4h.v1':'p10.delta-wfo-temporal-4h.v1'));
+  const fact=facts.find(f=>f.profile_id===(slice==='full05'?'p10.imported-mode4-causal-4h.v1':slice==='full04'?'p10.delta-mode4-causal-4h.v1':'p10.delta-wfo-temporal-4h.v1'));
   assert(fact,'EXACT_FLAG_OFF_RECIPE_REQUIRED');
   const spec=privateJson(join(home,fact.private_receipt)).run.requested_spec;
   const preflight=await client.call('POST','/api/v1/research/preflights',{requested_spec:spec},[201]);

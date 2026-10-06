@@ -6,6 +6,7 @@ import { FastifyRequest } from "fastify";
 import { PrincipalService } from "../auth/principal";
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
+import {executionRecipe} from "./execution-recipes";
 import {
   RESEARCH_CURRENT_SOURCE_INGEST_MAX_BODY_BYTES,
   ResearchArtifactReserveIngressSchema,
@@ -155,7 +156,8 @@ export class ResearchProgressIngressController {
       throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Imported Alpha source request is invalid.", 400);
     }
     const lease = await this.progress.resolveIngress(parsed.data);
-    if (lease.executionProfileId !== "p17.imported-signal-notional.v1") {
+    const importedSearch=lease.executionProfileId&&executionRecipe(lease.executionProfileId).source_requirement==="IMPORTED_IMMUTABLE_SEARCH_BINDING";
+    if (lease.executionProfileId !== "p17.imported-signal-notional.v1"&&!importedSearch) {
       throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Only an imported Alpha run may resolve imported source bytes.", 409);
     }
     const source = await this.metadata.loadImportedExecutionSource(

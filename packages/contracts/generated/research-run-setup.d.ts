@@ -81,7 +81,7 @@ export interface components {
             frequencies: string[];
             window_modes: ("expanding" | "rolling")[];
             /** @enum {unknown} */
-            parameter_policy: "FIXED_NO_OVERRIDES" | "DECLARED_PINS_ONLY" | "DELTA_SEARCH_WITH_QUALIFIED_PINS";
+            parameter_policy: "FIXED_NO_OVERRIDES" | "DECLARED_PINS_ONLY" | "DELTA_SEARCH_WITH_QUALIFIED_PINS" | "DECLARED_SEARCH_WITH_PINS";
             allowed_pin_names: string[];
             /** @enum {unknown} */
             inner_validation: "NOT_APPLICABLE" | "NOT_ADMITTED_GLOBAL_RETENTION_ONLY" | "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY";

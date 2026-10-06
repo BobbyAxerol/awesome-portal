@@ -280,6 +280,33 @@ def test_range_budget_refuses_before_loading():
         start_ms=BASE, end_ms=BASE + 5000 * DAY, as_of_ms=BASE + 5000 * DAY)
     assert provider.calls == []
 
+@pytest.mark.parametrize("matching", [True, False])
+def test_mode5_estimate_labels_only_native_identical_calibration_geometry(monkeypatch, matching):
+    from portal_api.services import research_preflight_snapshot as planner
+    start = pd.Timestamp(BASE, unit="ms", tz="UTC").isoformat()
+    end = pd.Timestamp(BASE + 10 * HOUR, unit="ms", tz="UTC").isoformat()
+    interval = {"start_utc": start, "end_exclusive_utc": end, "bars": 10}
+    evaluation = dict(interval)
+    if not matching:
+        evaluation["bars"] = 9
+    monkeypatch.setattr(planner, "_v2_walk_forward_fields", lambda _: {})
+    monkeypatch.setattr(planner, "_engine_advanced_topology", lambda *a, **k:
+        (None, None, {"folds": [{"train": interval, "outer_oos": evaluation}]}))
+    requested = {"schema_version": "research.requested-spec.v2", "protocol": "advanced_walk_forward",
+        "optimization_mode": "mode_5_full_robust", "optuna_trials": 3,
+        "data": {"dataset_id": "crypto-binance-1m", "symbol": "BTCUSDT", "timeframe": "1h"},
+        "walk_forward": {"start": start, "end_exclusive": end}}
+    result = declaration_estimate(document(indexed(Provider(missing=()))), requested, warmup_bars=0,
+        engine_catalog=SimpleNamespace(walk_forward_options=lambda: None))
+    plan = result["planned_folds"]
+    if matching:
+        assert plan["evaluation_scope"] == "FULL_SAMPLE_CALIBRATION"
+        assert plan["items"][0]["train"] == plan["items"][0]["outer_oos"]
+    else:
+        assert plan["availability"] == "NOT_PUBLISHED"
+        assert plan["reason_code"] == "MODE5_NATIVE_CALIBRATION_GEOMETRY_NOT_PUBLISHED"
+        assert "evaluation_scope" not in plan
+
 def test_one_minute_source_pass_bins_all_timeframes_without_fabricating_constituents():
     class MinuteProvider(Provider):
         def load(self, query):

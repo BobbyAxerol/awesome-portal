@@ -35,6 +35,8 @@ import { currentSourceExecutionPair, currentSourceRetainedMethod, isCurrentSourc
 import { canonicalResearchJson } from "./preflight.service";
 import { DEFAULT_PARAMETER_BINDING_REGISTRY } from "./parameter-binding.registry";
 import { ExactJsonCalculationMemo } from "./exact-json-calculation-memo";
+import { importedRetainedBinding } from "./imported-search.read";
+import type {RunDeclarationInputs} from "./run-declaration.read";
 
 const DIGEST = /^[0-9a-f]{64}$/;
 
@@ -65,6 +67,7 @@ export interface ReleaseCandidateRetainedSeal {
 
 /** The retained-lane facts of one run; `null` on a ReleaseCandidateSource means the P04 lane. */
 export interface ReleaseCandidateRetainedLane {
+  runDeclarationInputs?: RunDeclarationInputs;
   executionProfileId: string;
   executionProfileDigest: string | null;
   producerDatasetBindingDigest: string | null;
@@ -151,7 +154,8 @@ function calculateRetainedLaneFacts(lane: ReleaseCandidateRetainedLane): Retaine
         ...(mode4 ? { mode4Selection: data?.mode4_selection } : {}),
       };
     }), parsed.source_facts, selection.parameters,
-    DEFAULT_PARAMETER_BINDING_REGISTRY.byProfileDigest(lane.executionProfileDigest)?.candidateParameterKinds,
+    (importedRetainedBinding(seal?.profileId??"",lane.runDeclarationInputs)
+      ?? DEFAULT_PARAMETER_BINDING_REGISTRY.byProfileDigest(lane.executionProfileDigest))?.candidateParameterKinds,
     undefined, seal?.profileId)
     : null;
   const pair = currentSourceExecutionPair(lane.executionProfileId, lane.executionProfileDigest);

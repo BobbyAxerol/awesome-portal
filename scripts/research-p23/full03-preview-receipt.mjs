@@ -33,6 +33,7 @@ const {Pool}=require('pg'),p=new Pool({connectionString:process.env.DATABASE_URL
   const web=docker(['inspect','--format','{{.Image}}',PROJECT+'-portal-web-1']).trim();
   return {recorded_at_utc:new Date().toISOString(),project:PROJECT,...value,index,web_image_id:web};
 }
+export {snapshot as previewCustodySnapshot};
 async function previewProbe(enabled,slice='full03',home){
   // Keep the connection loopback-only, but use the deployment-bound public
   // Origin for CSRF. The served preview is no longer configured as localhost;

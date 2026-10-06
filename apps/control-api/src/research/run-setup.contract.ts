@@ -47,7 +47,7 @@ export const RunSetupProfileSchema = z.object({
   seed_policy: z.enum(["LOCKED", "FORBIDDEN", "REQUIRED", "OPTIONAL"]), random_seed: z.number().int().nonnegative().nullable(),
   max_span_days: z.number().int().positive().nullable(), fold_bounds: Bounds.nullable(),
   frequencies: z.array(Id).max(8), window_modes: z.array(z.enum(["expanding", "rolling"])).max(2),
-  parameter_policy: z.enum(["FIXED_NO_OVERRIDES", "DECLARED_PINS_ONLY", "DELTA_SEARCH_WITH_QUALIFIED_PINS"]),
+  parameter_policy: z.enum(["FIXED_NO_OVERRIDES", "DECLARED_PINS_ONLY", "DELTA_SEARCH_WITH_QUALIFIED_PINS", "DECLARED_SEARCH_WITH_PINS"]),
   allowed_pin_names: z.array(z.string().regex(/^[A-Za-z][A-Za-z0-9_]{0,63}$/)).max(12),
   inner_validation: z.enum(["NOT_APPLICABLE", "NOT_ADMITTED_GLOBAL_RETENTION_ONLY", "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY"]),
   inner_constraints: z.object({ fold_bounds: Bounds, frequencies: z.array(Id).max(8), window_modes: z.array(Id).max(2), train_window_pattern: z.string().max(160) }).strict().nullable(),
