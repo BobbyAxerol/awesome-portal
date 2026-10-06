@@ -7,6 +7,7 @@ import type { ResearchScope } from "./contracts";
 import { P04_DELTA_BINDING } from "./p04-delta.binding";
 import {FULL03_DELTA_BINDING} from "./full03-delta.binding";
 import {FULL06_DELTA_BINDING} from "./full06-delta.binding";
+import {NATIVE_DELTA_BINDINGS} from './native-delta.binding';
 import { ResearchMetadataRepository } from "./repository";
 import { ResearchRunCreateError } from "./run-create.error";
 
@@ -43,7 +44,8 @@ export class ResearchP04DeltaBindingService {
     }
     const installed = await this.repository.ensureP04DeltaBinding(scope, P04_DELTA_BINDING);
     if(installFull03)await this.repository.ensureP04DeltaBinding(scope,FULL03_DELTA_BINDING);
-    if(installFull06)await this.repository.ensureP04DeltaBinding(scope,FULL06_DELTA_BINDING);
+    if(installFull06){await this.repository.ensureP04DeltaBinding(scope,FULL06_DELTA_BINDING);
+      for(const binding of NATIVE_DELTA_BINDINGS)await this.repository.ensureP04DeltaBinding(scope,binding);}
     return {
       schema_version: "research.p04-delta-binding.v1",
       alpha_id: installed.alphaId,

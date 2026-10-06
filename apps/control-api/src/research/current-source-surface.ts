@@ -23,6 +23,7 @@ import { z } from "zod";
 
 import { BoundWarningSchema, positionPercent } from "./bound-warning";
 import { CurrentSourceParameterMapSchema } from "./current-source.payload";
+import { currentSourceRetainedRecipe } from "./current-source-profile";
 import {
   DEFAULT_PARAMETER_BINDING_REGISTRY,
   declaredParameterRows,
@@ -226,10 +227,10 @@ export const SearchStudySurfaceSchema = z.object({
   fold_id: TrialId,
   study_id: TrialId,
   surface: SearchSurfaceSchema.extend({
-    source_trial_count: z.literal(3),
-    complete_trial_count: z.number().int().nonnegative().max(3),
-    emitted_point_count: z.number().int().nonnegative().max(3),
-    points: z.array(SurfacePointSchema).max(3),
+    source_trial_count: z.number().int().min(2).max(400),
+    complete_trial_count: z.number().int().nonnegative().max(400),
+    emitted_point_count: z.number().int().nonnegative().max(400),
+    points: z.array(SurfacePointSchema).max(400),
   }),
 }).strict();
 export type SearchStudySurface = z.infer<typeof SearchStudySurfaceSchema>;
@@ -508,7 +509,7 @@ function emptySurface(reason: string, sourceTrials: number): SearchSurface {
 
 /** The causal profile has no comparable run-global objective or parameter set. */
 export function runGlobalCausalSurface(sourceTrials: number, completeTrials: number): SearchSurface {
-  if (!Number.isSafeInteger(sourceTrials) || sourceTrials < 6 || sourceTrials > 48 || sourceTrials % 3 !== 0
+  if (!Number.isSafeInteger(sourceTrials) || sourceTrials < 4 || sourceTrials > 6400
     || !Number.isSafeInteger(completeTrials) || completeTrials < 0 || completeTrials > sourceTrials) {
     throw new RangeError("Causal trial population is outside the immutable profile bound.");
   }
@@ -537,10 +538,14 @@ export function searchStudySurfaces(
   scope: "INNER_VALIDATION_OUTER_STUDY" | "OUTER_FOLD_DECAY_STUDY" | "IS_ONLY_OUTER_STUDY" = "INNER_VALIDATION_OUTER_STUDY",
 ): SearchStudySurface[] {
   if (studies.length < 2 || studies.length > 16) throw new RangeError("Causal study count is outside the immutable profile bound.");
+  const range = currentSourceRetainedRecipe(retainedProfileId)?.public_profile.trial_count ?? { min: 3, max: 3 };
+  const population = studies[0]!.trials.length;
+  const pointBudget = Math.floor(SURFACE_POINT_LIMIT / studies.length);
   const foldIds = new Set<string>(), studyIds = new Set<string>(), trialIds = new Set<string>();
   return studies.map((study) => {
     if (!TrialId.safeParse(study.foldId).success || !TrialId.safeParse(study.studyId).success
-      || foldIds.has(study.foldId) || studyIds.has(study.studyId) || study.trials.length !== 3) {
+      || foldIds.has(study.foldId) || studyIds.has(study.studyId) || study.trials.length !== population
+      || population < range.min || population > range.max) {
       throw new RangeError("Causal surface must have one exact bounded population per outer study.");
     }
     foldIds.add(study.foldId); studyIds.add(study.studyId);
@@ -566,7 +571,7 @@ export function searchStudySurfaces(
     return SearchStudySurfaceSchema.parse({
       scope, fold_id: study.foldId, study_id: study.studyId,
       surface: searchSurface({ trials: study.trials, space: declaredSpace(retainedProfileId, study.selectedParameters),
-        selectedTrialId: study.selectedTrialId, bestIsTrialId: bestIs?.trialId ?? null, objectiveKind: "IS_MEAN_SHARPE" }),
+        selectedTrialId: study.selectedTrialId, bestIsTrialId: bestIs?.trialId ?? null, objectiveKind: "IS_MEAN_SHARPE", pointBudget }),
     });
   });
 }
@@ -576,11 +581,16 @@ export function searchStudySurfaces(
  * (spec 06 pitfall 6). With the RS-02 bound (≤ 64 trials) it never samples;
  * the branch exists so the 600 bound is a rule, not an accident.
  */
-function sample<T extends { trialId: string }>(rows: readonly T[], keep: ReadonlySet<string>): { rows: T[]; sampled: boolean } {
-  if (rows.length <= SURFACE_POINT_LIMIT) return { rows: [...rows], sampled: false };
-  const budget = SURFACE_POINT_LIMIT - keep.size;
+function sample<T extends { trialId: string }>(rows: readonly T[], keep: ReadonlySet<string>, limit = SURFACE_POINT_LIMIT): { rows: T[]; sampled: boolean } {
+  if (!Number.isSafeInteger(limit) || limit < 2 || limit > SURFACE_POINT_LIMIT) throw new RangeError("Surface point budget is invalid.");
+  if (rows.length <= limit) return { rows: [...rows], sampled: false };
+  const budget = limit - keep.size;
   const stride = Math.ceil(rows.length / Math.max(1, budget));
-  const chosen = rows.filter((row, index) => keep.has(row.trialId) || index % stride === 0).slice(0, SURFACE_POINT_LIMIT);
+  // Reserve protected identities before sampling. Slicing a union could drop
+  // the selected/best point when either occurs at the end of a large study.
+  const chosenIds = new Set(rows.filter(row => keep.has(row.trialId)).map(row => row.trialId));
+  for (let index = 0; index < rows.length && chosenIds.size < limit; index += stride) chosenIds.add(rows[index]!.trialId);
+  const chosen = rows.filter(row => chosenIds.has(row.trialId));
   return { rows: chosen, sampled: true };
 }
 
@@ -590,6 +600,7 @@ export function searchSurface(input: {
   selectedTrialId: string | null;
   bestIsTrialId: string | null;
   objectiveKind: import("./current-source.payload").CurrentSourceTrialFacts["objective_kind"];
+  pointBudget?: number;
 }): SearchSurface {
   const { trials, space } = input;
   if (space.state !== "AVAILABLE") return emptySurface(space.reason_code ?? SURFACE_REASONS.bindingNotRegistered, trials.length);
@@ -635,7 +646,7 @@ export function searchSurface(input: {
       },
     };
   });
-  const sampled = sample(points, keep);
+  const sampled = sample(points, keep, input.pointBudget);
 
   const distributions = space.parameters.map((parameter) => {
     const lo = exact(parameter.minimum)!;

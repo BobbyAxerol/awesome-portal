@@ -14,7 +14,7 @@ const q=s=>"'"+s.replaceAll("'","''")+"'";
 const ids=rows.map(r=>q(r.profile_id)).join(',');
 const oldIds=previous.match(/run_producers_execution_profile_id_check CHECK\(execution_profile_id IN\(([^\n]+?)\)\),/)[1];
 const oldDigest=previous.match(/ADD CONSTRAINT run_producers_execution_profile_digest_check CHECK\(([\s\S]+?)\),\n ADD CONSTRAINT run_producers_full03_exact_check/)[1];
-const full03=table.recipes.filter(r=>r.descriptor.adapter_id==='full03.delta-rsi.v1'&&r.descriptor.schema_version!=='research.full06-delta-profile.v1');
+const full03=table.recipes.filter(r=>r.descriptor.adapter_id==='full03.delta-rsi.v1'&&!['research.full06-delta-profile.v1','research.expanded-trial-profile.v1'].includes(r.descriptor.schema_version));
 const oldPairs=previous.match(/current_source_seals_v1_source_profile_pair_check CHECK\(([\s\S]+?)\);/)[1];
 const display=previous.slice(previous.indexOf('CREATE OR REPLACE FUNCTION research.run_library_display_kind'))
   .replace(' END; $$;',()=>rows.map(r=>` WHEN ${q(r.profile_id)} THEN 'WFO'`).join('\n')+'\n END; $$;');

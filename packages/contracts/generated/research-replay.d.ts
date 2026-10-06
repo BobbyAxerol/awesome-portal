@@ -203,16 +203,16 @@ export interface components {
             readiness: "PARTIAL" | "NOT_READY";
             as_of_utc_ms: components["schemas"]["UtcMilliseconds"];
             provenance: {
-                source_adapter_id: ("p04.delta-rsi.v1" | "p17.imported-signal-notional.v1") | null;
+                source_adapter_id: ("p04.delta-rsi.v1" | "p17.imported-signal-notional.v1" | "full03.delta-rsi.v1") | null;
                 evidence_revision: string | null;
                 source_transform_digest: string | null;
                 input_scope: "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY" | null;
             };
             route: {
-                id: "signal_notional" | null;
+                id: ("signal_notional" | "intrabar_bracket" | "reactive" | "event_driven") | null;
                 /** @enum {unknown} */
                 state: "RETROSPECTIVE_EQUITY_ONLY" | "PENDING_SOURCE_CALLBACK" | "LEGACY_METADATA_ONLY" | "NOT_PUBLISHED";
-                replay_contract: ("P17_CURRENT_P04_EQUITY_SAMPLE_V1" | "P17_IMPORTED_FIXED_EQUITY_SAMPLE_V1") | null;
+                replay_contract: ("P17_CURRENT_P04_EQUITY_SAMPLE_V1" | "P17_IMPORTED_FIXED_EQUITY_SAMPLE_V1" | "P17_NATIVE_FIXED_EQUITY_SAMPLE_V1") | null;
                 availability: components["schemas"]["Availability"];
             };
             equity_replay: components["schemas"]["ReplayWindow"];

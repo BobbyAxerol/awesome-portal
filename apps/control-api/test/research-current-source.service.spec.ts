@@ -6,6 +6,7 @@ import { ResearchCurrentSourceService, currentSourceReadRevision, currentSourceS
 import { mockSearchRepository } from "./research-search-inputs.fixture";
 import { wfoRequested } from "./research-w1-wfo.fixture";
 import { P04_DELTA_BINDING } from "../src/research/p04-delta.binding";
+import { executionRecipes } from "../src/research/execution-recipes";
 import { sha256ResearchJson } from "../src/research/preflight.service";
 import type { ResearchCurrentSourceNotApplicableResponse } from "../src/research/current-source.contract";
 import { p11StageEvents, POOL_FREEZE_CLOCK_ABSENT } from "../src/research/p11-stage-events";
@@ -120,6 +121,21 @@ function service(repository: Record<string, unknown>) {
 }
 
 describe("RS-02 retained current-source named read models", () => {
+  it("Evidence reads a complete expanded candidate pool beyond64 without widening old seal bounds", async () => {
+    const recipe = executionRecipes.find(r => r.descriptor.schema_version === "research.expanded-trial-profile.v1"
+      && r.public_profile.optimization_mode === "mode_5_full_robust" && r.public_profile.timeframe === "1h")!;
+    const pair = (recipe.descriptor as {current_source: {profile_id: string; source_adapter_id: string}}).current_source;
+    const source = {...seal, profileId: pair.profile_id, sourceAdapterId: pair.source_adapter_id,
+      tableRows: {...seal.tableRows, CANDIDATE: 100}, totalRows: seal.totalRows + 99};
+    const pool = Array.from({length: 100}, (_, n) => ({...candidates[0]!, sourceOrdinal: n,
+      sourceId: `candidate-${n}`, payload: {...candidates[0]!.payload, candidate_id: `candidate-${n}`}}));
+    const rows = vi.fn().mockImplementation((_s, _r, _v, kind) => page(kind === "FOLD" ? folds : pool));
+    const result = sealed(await service({sealForRead: vi.fn().mockResolvedValue(source), rows}).evidence(scope, source.runId));
+    expect(result.passport.artifact_table_rows.candidates).toBe(100);
+    expect(rows.mock.calls.find(call => call[3] === "CANDIDATE")![4]).toEqual({limit: 400});
+    await expect(service({sealForRead: vi.fn().mockResolvedValue({...source,
+      profileId: seal.profileId, sourceAdapterId: seal.sourceAdapterId}), rows}).evidence(scope, source.runId)).rejects.toMatchObject({status: 503});
+  });
   it("P24 discloses immutable parameters without repinning seal/cursors or fabricating sampler trace", async () => {
     const requested = wfoRequested();
     const source = { ...seal, requestedSpecDigest: sha256ResearchJson(requested) };

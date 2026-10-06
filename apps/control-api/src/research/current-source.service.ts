@@ -4,6 +4,7 @@ import { Buffer } from "node:buffer";
 import { selectedTrialPresentation } from "./selected-trial-presentation";
 import { replayNavigation, replayRequestedIdentity } from "./replay-navigation";
 import { Inject, Injectable, Optional } from "@nestjs/common";
+import { isCausalStageATrial } from "./causal-seal-consistency";
 import { readRunDeclaration } from "./run-declaration.read";
 import { readSamplerEvidence } from "./sampler-evidence.read";
 import { enrichedAvailability } from "./enriched-analysis.contract";
@@ -79,7 +80,8 @@ import {
   type CurrentSourceReplaySummary,
 } from "./current-source.payload";
 import { P04_FIXED_QUALIFICATION_PROFILE_ID, RS02_DELTA_WFO_GLOBAL_PROFILE_ID } from "./delta-wfo.profile";
-import { currentSourceRetainedMethod } from "./current-source-profile";
+import { currentSourceRetainedMethod, currentSourceRetainedRecipe, currentSourceStudyTrialCount, currentSourceRetainedRowBounds } from "./current-source-profile";
+import { isNativeReadBinding } from "./native-delta.binding";
 import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "./p04-delta.binding";
 import { IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST, IMPORTED_ALPHA_PROFILE_ID } from "./imported-alpha.profile";
 import { VN_OBSERVED_FIXED_PROFILE_ID } from "./vn-observed-fixed.profile";
@@ -107,7 +109,7 @@ const RESPONSE_MAX_BYTES = 1_048_576;
  * an extrema-preserving bucket sample with a whole-relation envelope.
  */
 const OBSERVATION_SERIES_LIMIT = 2_000;
-/** The read bound on trial rows (`current-source.contract.ts`): 64 sealed by RS-02, 400 by the preview long WFO. */
+/** Exact seal bounds: up to 400/study and 6400 across bounded fold-local studies. */
 const MAXIMUM_TRIAL_ROWS = CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS;
 
 type Availability = {
@@ -460,7 +462,8 @@ export class ResearchCurrentSourceService {
     const summary = parseSummary(seal);
     const facts = summary.source_facts;
     const foldRows = await this.boundedRows(scope, runId, seal, "FOLD", 256, signal);
-    const candidateRows = await this.boundedRows(scope, runId, seal, "CANDIDATE", 64, signal);
+    const candidateRows = await this.boundedRows(scope, runId, seal, "CANDIDATE",
+      currentSourceRetainedRowBounds(seal.profileId, seal.sourceAdapterId).candidates, signal);
     const selectedCandidate = candidateRows.map(asCandidate).find((candidate) =>
       candidate.trial_facts?.source_trial_id === summary.selection.trial_id
       && candidate.objective === summary.selection.objective) ?? null;
@@ -700,7 +703,9 @@ export class ResearchCurrentSourceService {
       // source study_id AND outer fold_id, never parse a qualified display id.
       const outer = [...inputs.folds].sort((left, right) => left.sourceOrdinal - right.sourceOrdinal).map(asFold);
       const last = outer.at(-1);
-      if (outer.length < 2 || outer.length > 16 || allTrials.length !== outer.length * 3
+      const configuredTrials = currentSourceStudyTrialCount(currentSourceRetainedRecipe(seal.profileId,seal.sourceAdapterId),
+        facts?.search.optuna_trials_per_study);
+      if (configuredTrials === null || outer.length < 2 || outer.length > 16 || allTrials.length !== outer.length * configuredTrials
         || summary.selection.scope !== "LAST_FOLD_DEPLOYMENT" || !last || !retainedFoldSelection(last)
         || summary.selection.fold_id !== last.fold_id) {
         throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Causal study populations or last-fold deployment were not retained exactly.", 503);
@@ -713,7 +718,7 @@ export class ResearchCurrentSourceService {
             const trial = asTrial(row), trialFacts = trial.trial_facts;
             if (trialFacts?.study_id !== selected.study_id || trialFacts.fold_scope.fold_id !== outerFold.fold_id) return [];
             if (!["FOLD", "PER_FOLD_STUDY"].includes(trialFacts.fold_scope.kind)
-              || trialFacts.stage !== "is_search" || trialFacts.objective_kind !== "IS_MEAN_SHARPE") {
+              || !isCausalStageATrial(trial)) {
               throw new RangeError("Causal surface requires the study's actual Stage-A IS ledger.");
             }
             return [surfaceTrials[index]!];
@@ -1403,8 +1408,9 @@ export class ResearchCurrentSourceService {
       adapterContractDigest === P04_DELTA_ADAPTER_CONTRACT_DIGEST;
     const vnObserved = executionProfileId === VN_OBSERVED_FIXED_PROFILE_ID &&
       adapterContractDigest === P04_DELTA_ADAPTER_CONTRACT_DIGEST;
-    if (!p04 && !imported && !vnObserved) return null;
-    const reason = imported
+    const native = isNativeReadBinding(executionProfileId, adapterContractDigest);
+    if (!p04 && !imported && !vnObserved && !native) return null;
+    const reason = native ? "RS02_RETAINED_WFO_LANE_NOT_APPLICABLE_TO_NATIVE_FIXED_QUALIFICATION" : imported
       ? "RS02_RETAINED_WFO_LANE_NOT_APPLICABLE_TO_IMPORTED_FIXED_QUALIFICATION"
       : vnObserved ? "RS02_RETAINED_WFO_LANE_NOT_APPLICABLE_TO_VN_OBSERVED_FIXED_QUALIFICATION"
       : P04_FIXED_PROFILE_NOT_RETAINABLE_REASON;
@@ -1425,7 +1431,7 @@ export class ResearchCurrentSourceService {
       lane: {
         state: "NOT_APPLICABLE",
         operation,
-        run_profile: imported ? "IMPORTED_FIXED_QUALIFICATION" : vnObserved ? "VN_OBSERVED_FIXED_QUALIFICATION" : "P04_FIXED_QUALIFICATION",
+        run_profile: native ? "NATIVE_FIXED_QUALIFICATION" : imported ? "IMPORTED_FIXED_QUALIFICATION" : vnObserved ? "VN_OBSERVED_FIXED_QUALIFICATION" : "P04_FIXED_QUALIFICATION",
         run_adapter_contract_digest: adapterContractDigest,
         // Byte-stable: P04 N/A keeps naming the original Advanced-WFO lane.
         retainable_profile_id: RS02_DELTA_WFO_GLOBAL_PROFILE_ID,
@@ -1645,7 +1651,7 @@ export class ResearchCurrentSourceService {
     };
   }
 
-  /** A whole bounded relation (FOLD ≤ 256, TRIAL/CANDIDATE ≤ 64) that must match its sealed count. */
+  /** A finite internal relation that must match both its exact recipe and sealed count. */
   private async boundedRows(
     scope: ResearchScope,
     runId: string,
@@ -1654,6 +1660,12 @@ export class ResearchCurrentSourceService {
     limit: number,
     signal?: AbortSignal,
   ): Promise<CurrentSourceStoredRow[]> {
+    const bounds = currentSourceRetainedRowBounds(seal.profileId, seal.sourceAdapterId);
+    const maximum = tableKind === "FOLD" ? 256 : tableKind === "TRIAL" ? bounds.trials : bounds.candidates;
+    if (seal.tableRows[tableKind] > maximum) {
+      throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained relation exceeds its exact recipe bound.", 503);
+    }
+    limit = Math.min(limit, maximum);
     const page = await this.repository.rows(scope, runId, seal.artifactRevision, tableKind, { limit }, signal);
     if (page.totalRows !== seal.tableRows[tableKind] || page.hasMore || page.hasPrevious) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", `Retained ${tableKind.toLowerCase()} relation exceeds its admitted bound.`, 503);

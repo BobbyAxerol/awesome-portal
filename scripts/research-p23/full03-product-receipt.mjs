@@ -7,7 +7,7 @@ import {execFileSync} from 'node:child_process';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {validateHome} from './cell.mjs';
-import {loadSessions,makeClient,privateJson,savePrivate} from './api-client.mjs';
+import {loadSessions,makeClient,privateJson,savePrivate,ensureOwnedOperatorSession,withOwnedReadSessionRenewal} from './api-client.mjs';
 import {admitRealRun,waitForRun,requestedSpec} from './real-run.mjs';
 const ROOT=resolve(fileURLToPath(new URL('../..',import.meta.url)));
 const table=JSON.parse(readFileSync(join(ROOT,'apps/portal/registry/research-execution-recipes.v1.json')));
@@ -15,13 +15,14 @@ const binding=JSON.parse(readFileSync(join(ROOT,'apps/portal/registry/research-f
 const percentBinding=JSON.parse(readFileSync(join(ROOT,'apps/portal/registry/research-full06-delta-binding.v1.json')));
 const routes=['evidence','current-source/evidence','current-source/split','current-source/search',
   'current-source/freeze','current-source/replay','report','release-candidate'];
-function productSpec(_oldBinding,release,row,alphaBinding=binding){
+export function productSpec(_oldBinding,release,row,alphaBinding=binding,variant={}){
   const three=row.descriptor.protocol==='three_window_decay',schedule=row.public_profile.optimization_schedule;
   const kind=three?'three-window-optimized':schedule==='per_fold_causal'?'wfo-causal-inner':schedule==='per_fold_decay'?'wfo-per-fold-decay':'wfo-v2';
   const spec=requestedSpec({alpha_id:alphaBinding.alpha_id,alpha_version_id:alphaBinding.alpha_version_id},release,kind);
   spec.optimization_mode=row.public_profile.optimization_mode;
   spec.execution_route=row.descriptor.execution_route;
-  spec.optuna_trials=row.public_profile.trial_default;
+  spec.optuna_trials=variant.trials??row.public_profile.trial_default;
+  if(variant.symbol)spec.data.symbol=variant.symbol;
   spec.data.timeframe=row.public_profile.timeframe;
   const daily=spec.data.timeframe==='1d';
   if(three){
@@ -41,32 +42,64 @@ function productSpec(_oldBinding,release,row,alphaBinding=binding){
     };
     if(!row.descriptor.inner_constraints)delete spec.walk_forward.inner;
     delete spec.walk_forward.train_window;
+    // Named owned-cell stress ranges still pass normal P08/admission. No
+    // production defaults or source bounds are changed by these receipts.
+    if(variant.walk_forward)Object.assign(spec.walk_forward,variant.walk_forward);
   }
   return spec;
 }
 export function selectExactCandidate(home,id,slice='full03'){
-  assert(['full03','full04','full05','full06'].includes(slice),'KNOWN_EXACT_QUALIFICATION_SLICE');
+  assert(['full03','full04','full05','full06','expanded'].includes(slice),'KNOWN_EXACT_QUALIFICATION_SLICE');
   home=validateHome(home);assert(home.endsWith('/'+slice),'EXACT_PRIVATE_CELL');
-  const row=table.recipes.find(r=>r.profile_id===id&&r.descriptor.schema_version===`research.${slice}-${slice==='full05'?'imported':'delta'}-profile.v1`);
+  const row=table.recipes.find(r=>r.profile_id===id&&(r.descriptor.schema_version===
+    (slice==='expanded'?'research.expanded-trial-profile.v1':`research.${slice}-${slice==='full05'?'imported':'delta'}-profile.v1`)
+    ||slice==='expanded'&&r.descriptor.schema_version==='research.native-route-profile.v1'));
   assert(row,'EXACT_FULL03_RECIPE');
   const file=join(home,'preview.env'),stat=lstatSync(file);
   assert(stat.isFile()&&!stat.isSymbolicLink()&&(stat.mode&0o077)===0,'PRIVATE_REGULAR_ENV_REQUIRED');
   let value=readFileSync(file,'utf8');
-  for(const key of ['CONTROL_API_RESEARCH_RECIPE_QUALIFICATION_PROFILE_ID','PORTAL_RECIPE_QUALIFICATION_PROFILE_ID']){
+  const keys=['CONTROL_API_RESEARCH_RECIPE_QUALIFICATION_PROFILE_ID','PORTAL_RECIPE_QUALIFICATION_PROFILE_ID'];
+  const unchanged=keys.every(key=>value.match(new RegExp(`^${key}=(.*)$`,'m'))?.[1]===id);
+  // Reuse a selector only while every recorded container AND its desired
+  // content-addressed image still match. A rebuild or another selector must
+  // use the normal scoped Compose transition; no blind cached identity.
+  let stableImages=false;
+  if(existsSync(join(home,'identity.json'))){
+    const identity=privateJson(join(home,'identity.json'));
+    {
+      try{
+        const entries=Object.entries(identity.images),names=entries.map(([service])=>`portal-research-p23-ol12-${service}-1`);
+        const actual=execFileSync('sudo',['-n','docker','inspect','--format','{{.Id}} {{.Image}} {{.State.Running}} {{.Config.Image}}',...names],{encoding:'utf8'}).trim().split('\n').map(line=>line.split(' '));
+        const desired=execFileSync('sudo',['-n','docker','image','inspect','--format','{{.Id}}',...actual.map(r=>r[3])],{encoding:'utf8'}).trim().split('\n');
+        stableImages=actual.length===entries.length&&actual.every((r,n)=>r[0]===entries[n][1].container_id
+          &&r[1]===entries[n][1].image_id&&r[2]==='true'&&r[1]===desired[n]);
+        if(unchanged&&identity.qualification_profile_id===id&&stableImages)return row;
+      }catch{/* Missing/drifted images follow the normal fail-closed transition. */}
+    }
+  }
+  const inFlight=execFileSync('sudo',['-n','docker','exec','portal-research-p23-ol12-control-api-1','node','-e',`
+const {Pool}=require('pg'),pool=new Pool({connectionString:process.env.DATABASE_URL,max:1});
+pool.query("SELECT count(*)::int AS n FROM research.runs WHERE state IN ('QUEUED','RUNNING','SEALING')")
+ .then(r=>process.stdout.write(String(r.rows[0].n))).finally(()=>pool.end()).catch(()=>{process.exitCode=1});`],
+   {encoding:'utf8',maxBuffer:16384,timeout:15000}).trim();
+  assert.equal(inFlight,'0','CANDIDATE_TRANSITION_MUST_NOT_RESTART_IN_FLIGHT_CHILD');
+  for(const key of keys){
     assert(value.match(new RegExp(`^${key}=.*$`,'m')),'EXACT_CANDIDATE_SELECTOR_REQUIRED');
     value=value.replace(new RegExp(`^${key}=.*$`,'m'),`${key}=${id}`);
   }
   writeFileSync(file,value,{mode:0o600});
-  execFileSync('node',[join(ROOT,'scripts/research-p23/cell.mjs'),'up',`--home=${home}`],
+  execFileSync('node',[join(ROOT,'scripts/research-p23/cell.mjs'),'up',`--home=${home}`,
+    ...(slice==='expanded'&&stableImages?['--selector-only']:[])],
     {cwd:ROOT,stdio:'pipe',timeout:240000,maxBuffer:4*1024*1024});
   return row;
 }
-export async function full03Receipt(home,id,attempt=1,slice='full03'){
-  assert(['full03','full04','full05','full06'].includes(slice),'KNOWN_EXACT_QUALIFICATION_SLICE');
+export async function full03Receipt(home,id,attempt=1,slice='full03',variant={}){
+  assert(['full03','full04','full05','full06','expanded'].includes(slice),'KNOWN_EXACT_QUALIFICATION_SLICE');
   home=validateHome(home);assert(home.endsWith('/'+slice),'EXACT_PRIVATE_CELL');
   assert(Number.isInteger(attempt)&&attempt>=1&&attempt<=5,'BOUNDED_ATTEMPTS');
   const row=selectExactCandidate(home,id,slice);
-  const baseLabel=id.replace(/^p10\./,'').replace(/\.v1$/,'').replaceAll('.','-');
+  const baseLabel=id.replace(/^p10\./,'').replace(/\.v[12]$/,'').replaceAll('.','-')
+    +(slice==='expanded'?`-${(variant.symbol??'BTCUSDT').toLowerCase()}-${variant.trials??row.public_profile.trial_default}`:'');
   const label=baseLabel+(attempt>1?`-${attempt}`:'');
   const originalRun=join(home,`run-${baseLabel}.json`);
   const workerImage=privateJson(join(home,'identity.json')).images['quant-worker-py'].image_id;
@@ -85,31 +118,26 @@ export async function full03Receipt(home,id,attempt=1,slice='full03'){
   // This cell deliberately replaces its gateway between exact candidates.
   // Don't reuse a pooled connection to the previous container generation.
   const user=loadSessions(home).identities.find(u=>u.username==='p23-owner');
-  const client=makeClient(user,{connectionClose:true});
+  const client=withOwnedReadSessionRenewal(makeClient(user,{connectionClose:true}),home);
   // Compose just replaced this owned gateway. A pooled socket from session
   // renewal can close during replacement: retry only this idempotent GET,
   // never a preflight/create POST or an authorization refusal.
-  let context;
-  for(let retry=0;retry<3;retry++){
-    try{context=(await client.call('GET','/api/auth/context')).body;break;}
-    catch(error){
-      if(retry===2 || error.message!=='fetch failed')throw error;
-      await new Promise(resolve=>setTimeout(resolve,250));
-    }
-  }
+  const context=await ensureOwnedOperatorSession(client,home);
   assert(context.state==='AUTHENTICATED'&&context.principal.principalId===user.id,'EXACT_OWNED_OWNER_REQUIRED');
   const record={schema_version:`research.${slice}-product-receipt.v1`,profile_id:id,profile_digest:row.profile_digest,
-    identity:privateJson(join(home,'identity.json')),started_at_utc:new Date().toISOString(),reads:{},passed:false};
+    identity:privateJson(join(home,'identity.json')),started_at_utc:new Date().toISOString(),reads:{},passed:false,
+    session_renewals:client.sessionRenewals};
   record.source_diff_sha256=createHash('sha256').update(execFileSync('git',['diff','HEAD'],{cwd:ROOT,maxBuffer:16*1024*1024})).digest('hex');
   record.added_source_sha256=Object.fromEntries(execFileSync('git',['ls-files','--others','--exclude-standard'],{cwd:ROOT,encoding:'utf8'})
     .trim().split('\n').filter(Boolean).sort().map(file=>[file,createHash('sha256').update(readFileSync(join(ROOT,file))).digest('hex')]));
   const save=()=>savePrivate(path,record);
   try{
     record.atlas=await client.call('GET','/api/v1/research/quantbt/atlas');
-    const imported=slice==='full05'?privateJson(join(home,'imported-registration.json')):null;
+    const imported=row.adapter_kind==='IMPORTED_SEARCH'?privateJson(join(home,'imported-registration.json')):null;
     if(imported){record.imported_registration=imported;assert.equal(imported.registration.lifecycle_state,'DRAFT');}
     const admitted=await admitRealRun(home,row.descriptor.protocol==='three_window_decay'?'three-window-optimized':'wfo-v2',
-      runLabel,'p23-owner',client,(_binding,release)=>productSpec(_binding,release,row,imported?.registration??(slice==='full06'?percentBinding:binding)));
+      runLabel,'p23-owner',client,(_binding,release)=>productSpec(_binding,release,row,
+        imported?.registration??(row.descriptor.execution_route==='pct_equity'?percentBinding:binding),variant));
     if(imported&&Date.now()-Date.parse(admitted.receipt.created_at_utc)<120000){
       record.idempotent_create=await client.call('POST','/api/v1/research/runs',{
         schema_version:'research.run-create.v1',client_intent_id:admitted.receipt.client_intent_id,
@@ -117,7 +145,8 @@ export async function full03Receipt(home,id,attempt=1,slice='full03'){
       },[202]);
       assert.equal(record.idempotent_create.body.run_id,admitted.receipt.run_id,'IDEMPOTENT_IMPORTED_INTAKE');
     }
-    record.run=await waitForRun(client,admitted.path,admitted.receipt);save();
+    record.run=await waitForRun(client,admitted.path,admitted.receipt,
+      Math.min(2_520_000,Math.max(480_000,row.budgets.wall_seconds*1000+120_000)));save();
     assert.equal(record.run.final.body.current.effective_status,'COMPLETED','PRODUCT_CHILD_COMPLETED');
     for(const route of routes){
       const url=`/api/v1/quantbt/runs/${record.run.run_id}/${route}`;
@@ -144,7 +173,7 @@ export async function full03Receipt(home,id,attempt=1,slice='full03'){
       split=record.reads['current-source/split'].body;
     assert.equal(freeze.integrity.state,'MATCH','REAL_RETAINED_BYTE_CUSTODY');
     assert.deepEqual(freeze.stage4_binding.pairs,{params:'MATCH',bundle:'MATCH'},'ACTUAL_STAGE4_BINDING');
-    assert.equal(search.search_contract.optuna_trials_per_study,row.public_profile.trial_default,'NATIVE_MULTI_TRIAL');
+    assert.equal(search.search_contract.optuna_trials_per_study,record.run.requested_spec.optuna_trials,'NATIVE_MULTI_TRIAL');
     assert.equal(record.reads['release-candidate'].body.pack_counts.missing,0,'RC_READ_CHAIN');
     const spec=record.run.requested_spec,step=row.descriptor.source_clock.bar_interval_ms;
     const start=Date.parse(spec.walk_forward?.start??spec.windows.is.start);
@@ -159,7 +188,7 @@ export async function full03Receipt(home,id,attempt=1,slice='full03'){
       assert.equal(record.run.final.body.progress.claim.handoff_cursor.params_digest,freeze.stage4_binding.sealed_params_sha256);
     else assert(row.public_profile.optimization_mode==='mode_3_flat_minima'&&freeze.frozen_selection.selected_trial_id===null,
       'ONLY_REAL_CENTROID_HAS_NO_TRIAL_CURSOR');
-    if(slice==='full04'||slice==='full05'||slice==='full06'){
+    if(slice==='full04'||slice==='full05'||slice==='full06'||slice==='expanded'){
       record.final_audit=await client.call('GET',`/api/v1/quantbt/runs/${record.run.run_id}/final-audit`,undefined,[200,409]);
       if(record.final_audit.status===409)assert.equal(record.final_audit.body.error.code,'RESEARCH_FINAL_AUDIT_NOT_APPLICABLE');
       if(row.public_profile.optimization_mode==='mode_5_full_robust')assert.equal(record.reads.report.body.final_audit_applicable,false);

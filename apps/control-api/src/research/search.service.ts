@@ -17,6 +17,7 @@ import { levelsOf } from "./current-source-surface";
 import { sha256ResearchJson } from "./preflight.service";
 import { P04_FIXED_QUALIFICATION_PROFILE_ID } from "./delta-wfo.profile";
 import { VN_OBSERVED_FIXED_PROFILE_ID } from "./vn-observed-fixed.profile";
+import { isNativeReadBinding } from "./native-delta.binding";
 import { ResearchSplitSourceSchema, type ResearchSplitSource } from "./progress.contract";
 import { ResearchSearchResponseSchema, type ResearchSearchResponse } from "./search.contract";
 import { ResearchSearchError } from "./search.error";
@@ -316,8 +317,10 @@ export class ResearchSearchService {
     // W1: gate on the immutable execution profile too; the Delta WFO profile
     // shares the P04 executor digest but is not the fixed qualification.
     const vnObserved = row.executionProfileId === VN_OBSERVED_FIXED_PROFILE_ID;
-    const compatible = (imported !== null || vnObserved || (row.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID) === P04_FIXED_QUALIFICATION_PROFILE_ID)
+    const native = isNativeReadBinding(row.executionProfileId, row.adapterContractDigest);
+    const compatible = (imported !== null || vnObserved || native || (row.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID) === P04_FIXED_QUALIFICATION_PROFILE_ID)
       && binding !== null
+      && (!native || source.source.execution_adapter_id === 'full03.delta-rsi.v1')
       && (imported === null || source.source.execution_adapter_id === "p17.imported-signal-notional.v1")
       && source.protocol.selection.state === "FIXED_PROFILE_NO_SEARCH"
       && source.protocol.selection.parameter_bundle_digest === binding.fixedBundleDigest;

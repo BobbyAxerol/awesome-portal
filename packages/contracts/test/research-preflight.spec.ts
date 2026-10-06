@@ -31,8 +31,11 @@ describe("P08 published Research preflight contract", () => {
     expect(validate({...fixture,details:{...fixture.details,retry_after_seconds:0}})).toBe(false);
     expect(validate({...fixture,details:{...fixture.details,retry_after_seconds:3601}})).toBe(false);
   });
-  it("packages the P02 frozen requested_spec schema without a divergent copy", () => {
-    expect(JSON.parse(readFileSync(packagedRequestedSpecPath, "utf8"))).toEqual(
+  it("preserves the frozen P02 schema with only exact native edition exceptions", () => {
+    const packaged=JSON.parse(readFileSync(packagedRequestedSpecPath, "utf8"));
+    packaged.allOf=packaged.allOf.filter((c:any)=>!c.if?.properties?.alpha_binding?.properties?.alpha_version_id)
+      .map((c:any)=>{if(c.if?.not)delete c.if.not;return c;});
+    expect(packaged).toEqual(
       JSON.parse(readFileSync(p02FrozenRequestedSpecPath, "utf8")),
     );
   });

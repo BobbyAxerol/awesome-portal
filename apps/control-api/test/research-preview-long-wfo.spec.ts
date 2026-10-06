@@ -246,8 +246,11 @@ describe("LW-01 preview long-WFO Search response", () => {
       ...point, source_ordinal: ordinal, trial_id: String(ordinal),
       parameters: { ...trial.parameters, rvol: "2.4000000000000004" },
     }));
-    source.diagnostics.probe.objective_rows = CURRENT_SOURCE_MAXIMUM_OBJECTIVE_ROWS;
-    source.diagnostics.probe.objective_rows_recomposed = CURRENT_SOURCE_MAXIMUM_OBJECTIVE_ROWS;
+    // This legacy probe has 400 actual trials +64 candidates. The expanded
+    // fold-local lane's higher ceiling must not inflate this population.
+    const objectiveRows = 400 + 64;
+    source.diagnostics.probe.objective_rows = objectiveRows;
+    source.diagnostics.probe.objective_rows_recomposed = objectiveRows;
     const openapiPath = resolve(
       process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts"),
       "openapi/research-current-source.openapi.json",
@@ -257,9 +260,10 @@ describe("LW-01 preview long-WFO Search response", () => {
     expect(probe.objective_rows.maximum).toBe(CURRENT_SOURCE_MAXIMUM_OBJECTIVE_ROWS);
     expect(probe.objective_rows_recomposed.maximum).toBe(CURRENT_SOURCE_MAXIMUM_OBJECTIVE_ROWS);
     expect(source.diagnostics.probe.objective_rows_recomposed).toBe(464);
+    expect(objectiveRows).toBeLessThanOrEqual(CURRENT_SOURCE_MAXIMUM_OBJECTIVE_ROWS);
     expect(Buffer.byteLength(JSON.stringify(source))).toBeLessThan(1_048_576);
     expect(ResearchCurrentSourceSearchResponseSchema.safeParse(source).success).toBe(true);
-    source.diagnostics.probe.objective_rows += 1;
+    source.diagnostics.probe.objective_rows = CURRENT_SOURCE_MAXIMUM_OBJECTIVE_ROWS + 1;
     expect(ResearchCurrentSourceSearchResponseSchema.safeParse(source).success).toBe(false);
   });
 });

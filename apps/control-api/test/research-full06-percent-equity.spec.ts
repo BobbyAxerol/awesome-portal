@@ -33,7 +33,11 @@ describe("FULL06 exact percent-equity identity, units and bounded activation",()
       const spec={schema_version:row.descriptor.requested_spec_version,optimization_mode:row.public_profile.optimization_mode,
         optimization_schedule:row.public_profile.optimization_schedule,execution_route:"pct_equity",
         data:{timeframe:row.public_profile.timeframe},alpha_binding:{alpha_version_id:FULL06_DELTA_BINDING.alphaVersionId}};
-      expect(wfoExecutionRecipe(spec)?.profile_id).toBe(row.profile_id);
+      expect(executionRecipe(row.profile_id,row.profile_digest)).toBe(row);
+      const successor=executionRecipe(row.profile_id.replace(/\.v1$/,".v2"));
+      expect(successor.descriptor).toHaveProperty("predecessor_profile_id",row.profile_id);
+      expect(executionRecipeQualification(successor.profile_id).kind).toBe("PRODUCT_RUN_QUALIFIED");
+      expect(wfoExecutionRecipe(spec)?.profile_id).toBe(successor.profile_id);
       expect(wfoExecutionRecipe({...spec,execution_route:"signal_notional"})).toBeNull();
       expect(wfoExecutionRecipe({...spec,alpha_binding:{alpha_version_id:FULL03_DELTA_BINDING.alphaVersionId}})).toBeNull();
     }

@@ -20,6 +20,10 @@ _P04_PROFILE = "p04.fixed-qualification.v1"
 
 def fixed_replay_profile(research: Any) -> tuple[str, str | None]:
     profile_id, profile_digest = research.execution_profile_id, research.execution_profile_digest
+    from portal_api.domain.research_native_profile import is_native_profile, native_profile
+    if is_native_profile(profile_id):
+        native_profile(profile_id, profile_digest)  # exact installed digest, not a route-name grant
+        return profile_id, profile_digest
     if (profile_id, profile_digest) not in {(_P04_PROFILE, None), (IMPORTED_ALPHA_PROFILE_ID, IMPORTED_ALPHA_PROFILE_DIGEST),
             (VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST)}:
         raise ValueError("fixed replay requires an admitted digest-pinned fixed profile")

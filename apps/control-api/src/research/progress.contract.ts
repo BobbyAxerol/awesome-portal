@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import {ResearchNativeRouteResultSchema} from './native-route.contract';
 import { ResearchEnrichedAnalysisSchema } from "./enriched-analysis.contract";
 import { currentSourceExecutionPair, currentSourceRetainedMethod } from "./current-source-profile";
 import { executionRecipe } from "./execution-recipes";
@@ -316,6 +317,7 @@ export const ResearchEvidenceSourceSchema = z.object({
     // Additive correction marker.  Its absence denotes an immutable R1
     // receipt; it is never inferred from values during a read.
     evidence_transform_revision: z.literal("P13_SOURCE_R2").optional(),
+    native_execution:ResearchNativeRouteResultSchema.optional(),
     /** R2 makes mixed metric population explicit instead of one broad label. */
     direct_metric_scopes: z.object({
       initial_equity: z.literal("OOS_EQUITY_SERIES"),

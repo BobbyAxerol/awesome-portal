@@ -15,6 +15,7 @@ import {
 import { DELTA_WFO_PROFILE_ID, DELTA_WFO_PROFILE_DIGEST } from "../src/research/delta-wfo.profile";
 import { DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST } from "../src/research/delta-wfo-v2.profile";
 import { p11StageEvents, P11_STAGE_BINDING_ABSENT } from "../src/research/p11-stage-events";
+import { executionRecipes } from "../src/research/execution-recipes";
 
 const scope = { workspaceId: "rs02-workspace", actorUserId: "rs02-user" };
 const digest = (character: string) => character.repeat(64);
@@ -132,7 +133,7 @@ describe("RS-02 retained-current-source custody writes", () => {
       stageEvents: { s3_completed_utc_ms: 10, s4_started_utc_ms: 11, s4_completed_utc_ms: 42 }, requestedSpec: { random_seed: 42 } });
     expect(calls.filter(({ sql }) => sql.startsWith("BEGIN"))).toHaveLength(1);
     expect(calls.filter(({ sql }) => sql.includes("FROM workspace_members"))).toHaveLength(1);
-    expect(calls.find(({ sql }) => sql.includes("WITH bounds"))!.params).toEqual([scope.workspaceId, seal.runId, 1, 64]);
+    expect(calls.find(({ sql }) => sql.includes("WITH bounds"))!.params).toEqual([scope.workspaceId, seal.runId, 1, 64, 64]);
     expect(calls.find(({ sql }) => sql === CURRENT_SOURCE_STAGE_EVENTS_SQL)!.params).toEqual([
       scope.workspaceId, seal.runId, seal.artifactRevision, seal.manifestDigest,
       seal.requestedSpecDigest, seal.effectiveSpecDigest, seal.datasetBindingDigest,
@@ -158,14 +159,31 @@ describe("RS-02 retained-current-source custody writes", () => {
       ? { rowCount: 1, rows: [{}] } : sql.includes("WITH bounds") ? { rows: kindRows }
         : sql === CURRENT_SOURCE_STAGE_EVENTS_SQL ? { rows: [stageRow()] } : {});
     expect((await repository.searchInputs(scope, seal)).trials).toHaveLength(400);
-    expect(calls.find(({ sql }) => sql.includes("WITH bounds"))!.params.at(-1)).toBe(400);
+    expect(calls.find(({ sql }) => sql.includes("WITH bounds"))!.params.slice(-2)).toEqual([400, 64]);
     expect(calls.some(({ sql }) => /INSERT|UPDATE|DELETE/.test(sql))).toBe(false);
     // The reader correction must not qualify a new long optimizer seal.
     await expect(repository.seal(scope, seal)).rejects.toMatchObject({ code: "RESEARCH_CURRENT_SOURCE_INVALID" });
     expect(calls.some(({ sql }) => /INSERT|UPDATE|DELETE/.test(sql))).toBe(false);
     const excess = { ...seal, tableRows: { ...seal.tableRows, TRIAL: 401 } };
     await expect(repository.searchInputs(scope, excess)).rejects.toMatchObject({ code: "RESEARCH_CURRENT_SOURCE_UNAVAILABLE" });
-    expect(calls.filter(({ sql }) => sql.includes("WITH bounds")).at(-1)!.params.at(-1)).toBe(400);
+    expect(calls.filter(({ sql }) => sql.includes("WITH bounds")).at(-1)!.params.slice(-2)).toEqual([400, 64]);
+  });
+  it("keeps exact expanded fold-local and candidate census readable without widening legacy or foreign pairs", async () => {
+    const recipe = executionRecipes.find(r => r.descriptor.schema_version === "research.expanded-trial-profile.v1"
+      && "max_total_trials" in r.public_profile && r.public_profile.max_total_trials === 6400)!;
+    const pair = (recipe.descriptor as {current_source: {profile_id: string; source_adapter_id: string}}).current_source;
+    const seal = { ...sealInput(), profileId: pair.profile_id, sourceAdapterId: pair.source_adapter_id,
+      retainedImportDigest: digest("f"), retainedAtUtcMs: 100,
+      tableRows: { OBSERVATION: 1, FOLD: 16, TRIAL: 6400, CANDIDATE: 400, SELECTION: 1 }, totalRows: 6818 };
+    const rows = Object.entries({TRIAL: 6400, CANDIDATE: 400, FOLD: 16}).flatMap(([kind, count]) =>
+      Array.from({length: count}, (_, n) => ({table_kind: kind, source_ordinal: n, source_id: `${kind}-${n}`, occurred_at_utc_ms: null, payload: {}})));
+    const {repository, calls} = fakeRepository(sql => sql.includes("FROM workspace_members") ? {rowCount: 1, rows: [{}]}
+      : sql.includes("WITH bounds") ? {rows} : {});
+    expect((await repository.searchInputs(scope, seal)).trials).toHaveLength(6400);
+    expect(calls.find(r => r.sql.includes("WITH bounds"))!.params.slice(-2)).toEqual([6400, 400]);
+    await expect(repository.searchInputs(scope, {...seal, sourceAdapterId: "foreign.v2"})).rejects.toMatchObject({status: 503});
+    await expect(repository.searchInputs(scope, {...seal, tableRows: {...seal.tableRows, TRIAL: 6401}})).rejects.toMatchObject({status: 503});
+    expect(calls.some(r => /INSERT|UPDATE|DELETE/.test(r.sql))).toBe(false);
   });
   it("binds P11 clocks to the exact SEALED artifact attempt, lease, request/effective/data and historical profile", async () => {
     const seal = { ...sealInput(), retainedImportDigest: digest("f"), retainedAtUtcMs: 100 };

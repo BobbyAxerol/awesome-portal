@@ -94,9 +94,10 @@ cp -a \
   "${ROOT_DIR}/apps/control-api/src/operations/catalog.generated.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/operations/"
 # Verify image-owned TS/Python views and every exact checked-in receipt
-# reference (legacy/FULL02/FULL03/FULL04/FULL05/FULL06). No private runtime inputs are staged.
+# reference (legacy/FULL02–06/expanded/native). No private runtime inputs are staged.
 cp -a "${ROOT_DIR}/apps/portal/registry/research-execution-recipes.v1.json" \
   "${ROOT_DIR}/apps/portal/registry/research-execution-recipes.v1.schema.json" \
+  "${ROOT_DIR}/apps/portal/registry/research-native-delta-bindings.v1.json" \
   "${WORKSPACE_DIR}/apps/portal/registry/"
 cp -a "${ROOT_DIR}/apps/control-api/src/research/execution-recipes.generated.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/research/"
@@ -113,7 +114,9 @@ for receipt in \
   P10/FULL_03_PRODUCT_QUALIFICATION_2026-10-06.md \
   P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md \
   P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md \
-  P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md; do
+  P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md \
+  P10/EXPANDED_TRIAL_PRODUCT_QUALIFICATION_2026-10-06.md \
+  P10/NATIVE_ROUTE_PRODUCT_QUALIFICATION_2026-10-06.md; do
   mkdir -p "${WORKSPACE_DIR}/upgrade/research_loop/evidence/${receipt%/*}"
   cp -a "${ROOT_DIR}/upgrade/research_loop/evidence/${receipt}" \
     "${WORKSPACE_DIR}/upgrade/research_loop/evidence/${receipt}"

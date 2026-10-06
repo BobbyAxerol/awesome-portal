@@ -1,6 +1,10 @@
 # S02 §37 — Full current-engine support, staged backend plan
 
-Status: **PLAN_READY_FOR_BOBBY_REVIEW — NO_RECIPE_OPENED**.
+Historical planning baseline: **PLAN_READY_FOR_BOBBY_REVIEW — NO_RECIPE_OPENED**.
+Current delivery is tracked in the [Unified index](../UNIFIED_IMPLEMENTATION_PLAN.md#s02-full-support)
+and [approved expansion closeout](./evidence/P10/FULL_06_APPROVED_EXPANSION_2026-10-06.md).
+Later delivery addenda supersede the baseline's unstarted/open-order notes;
+the original plan below is preserved, not rewritten as past evidence.
 Owner direction: Bobby, 2026-10-05, “mở full, support full”. This supersedes
 the earlier request to wait for a list of modes/timeframes, not the requirement
 to qualify each recipe before offering it on the shared preview.

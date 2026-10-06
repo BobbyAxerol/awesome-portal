@@ -29,6 +29,13 @@ export function currentSourceRetainedRecipe(profileId: string | null | undefined
       || row.public_profile.timeframe !== first.public_profile.timeframe)) throw new Error("Ambiguous retained source semantics");
   return first;
 }
+/** Finite internal materialization; public ledger pages remain <=200. */
+export function currentSourceRetainedRowBounds(profileId: string, sourceAdapterId: string) {
+  const recipe = currentSourceRetainedRecipe(profileId, sourceAdapterId);
+  const expanded = recipe?.descriptor.schema_version === "research.expanded-trial-profile.v1";
+  const maximum = expanded && "max_total_trials" in recipe.public_profile ? recipe.public_profile.max_total_trials : 400;
+  return {trials: maximum, candidates: expanded ? maximum : 64};
+}
 export function currentSourceRetainedMethod(profileId: string | null | undefined, sourceAdapterId?: string): CurrentSourceMethod | null {
   const row = currentSourceRetainedRecipe(profileId, sourceAdapterId);
   if (row?.public_profile.protocol === "three_window_decay") return "THREE_WINDOW";
@@ -41,6 +48,14 @@ export function currentSourceRetainedMethod(profileId: string | null | undefined
   // RS-02 pct-stop historical seals predate the shared execution recipe table.
   if (profileId === "rs02.delta-wfo-global.v1" && (sourceAdapterId === undefined || sourceAdapterId === "rs02.quantbt-advanced-wfo.v1")) return "GLOBAL_WFO";
   return null;
+}
+
+/** Intake ranges never replace the actual count sealed by the child. */
+export function currentSourceStudyTrialCount(recipe: ExecutionRecipe | null, published: unknown): number | null {
+  const range = recipe?.public_profile.trial_count ?? { min: 3, max: 3 };
+  const expanded = recipe?.descriptor.schema_version === "research.expanded-trial-profile.v1";
+  const count = published ?? (expanded ? null : recipe?.public_profile.trial_default ?? 3);
+  return typeof count === "number" && Number.isSafeInteger(count) && count >= range.min && count <= range.max ? count : null;
 }
 export function currentSourceRetainedIntervalMs(profileId: string, sourceAdapterId?: string): number | null {
   const row = currentSourceRetainedRecipe(profileId,sourceAdapterId);

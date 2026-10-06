@@ -65,6 +65,61 @@ export function loadSessions(home = DEFAULT_HOME) {
   assert(result.project === PROJECT && result.base_url === BASE_URL, 'FOREIGN_SESSION_FILE');
   return result;
 }
+/** An expired owned test session may interrupt a long read matrix. Retry only
+ * the refused GET after normal same-principal authentication; never replay
+ * intake POSTs or suppress any other authentication/authorization refusal.
+ */
+export function withOwnedReadSessionRenewal(client, home) {
+  home = validateHome(home);
+  assert(TEST_USERS.some(user => user.username === client.user.username), 'OWNED_TEST_PRINCIPAL_ONLY');
+  const sessionRenewals = [];
+  return {
+    ...client, sessionRenewals,
+    async call(method, path, body, statuses = [200]) {
+      try { return await client.call(method, path, body, statuses); }
+      catch (error) {
+        if (method !== 'GET' || path.startsWith('/api/auth/') ||
+            error.message !== `P23_API:GET:${path}:401:SESSION_REQUIRED`) throw error;
+        await ensureOwnedTestSession(client, home);
+        sessionRenewals.push({ path, at_utc: new Date().toISOString(), refusal: 'SESSION_REQUIRED' });
+        return client.call(method, path, body, statuses);
+      }
+    },
+  };
+}
+/** Long serial matrices may outlive a test session. Renew only that owned
+ * principal through normal password login, never resetting its credentials.
+ * Gateway replacement retries are GET-only; admission POSTs are not replayed.
+ */
+export async function ensureOwnedOperatorSession(client, home) {
+  assert(['p23-owner','p23-approver'].includes(client.user.username),'OWNED_OPERATOR_ONLY');
+  return ensureOwnedTestSession(client, home);
+}
+export async function ensureOwnedTestSession(client, home) {
+  assert(TEST_USERS.some(user=>user.username===client.user.username),'OWNED_TEST_PRINCIPAL_ONLY');
+  let context;
+  for(let retry=0;retry<3;retry++)try {
+    context=(await client.call('GET','/api/auth/context')).body;break;
+  } catch(error) {
+    if(retry===2||error.message!=='fetch failed')throw error;
+    await new Promise(resolve=>setTimeout(resolve,250));
+  }
+  if(context.state==='APP_LOGIN_REQUIRED') {
+    const login=await client.call('POST','/api/auth/login',{
+      username:client.user.username,credential:client.user.password},[201]);
+    context=(await client.call('GET','/api/auth/context')).body;
+    assert(context.state==='AUTHENTICATED'&&context.principal.principalId===client.user.id,
+      'NORMAL_LOGIN_MUST_RETAIN_TEST_IDENTITY');
+    const sessions=loadSessions(home),saved=sessions.identities.find(u=>u.id===client.user.id);
+    assert(saved?.username===client.user.username,'EXACT_SAVED_TEST_IDENTITY_REQUIRED');
+    Object.assign(saved,{cookies:client.user.cookies,absolute_expires_at:login.body.absolute_expires_at,
+      refreshed_at_utc:new Date().toISOString()});
+    savePrivate(join(validateHome(home),'sessions.json'),sessions);
+  }
+  assert(context.state==='AUTHENTICATED'&&context.principal.principalId===client.user.id,
+    'EXACT_OWNED_TEST_PRINCIPAL_REQUIRED');
+  return context;
+}
 export async function prepareSessions(home = DEFAULT_HOME) {
   home = validateHome(home);
   const target = join(home, 'sessions.json');

@@ -94,7 +94,7 @@ const sampler = {
       reason_code: { const: "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_SAMPLER_INTERNAL_TRACE" }, source_ref: { const: "QUANTBT_1_1_1_RETAINED_NATIVE_WFO_RESULT_V2" } }),
     observed_trials: object({ state: { const: "AVAILABLE" },
       scope: { const: "RETAINED_SOURCE_TRIAL_ROWS_NOT_SAMPLER_INTERNAL_TRACE" }, source_ref: { const: "SEALED_RETAINED_TRIAL_LEDGER_V1" },
-      source_trial_count: { type: "integer", minimum: 0, maximum: 4096 } }),
+      source_trial_count: { type: "integer", minimum: 0, maximum: 6400 } }),
     execution_trace: executionTrace,
   }),
 };

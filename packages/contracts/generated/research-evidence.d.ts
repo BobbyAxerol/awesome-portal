@@ -1059,7 +1059,7 @@ export interface components {
             /** @enum {unknown} */
             metric_registry_version: "research.metric-registry.v1" | "research.metric-registry.v2";
             core: {
-                source_adapter_id: ("p04.delta-rsi.v1" | "p17.imported-signal-notional.v1") | null;
+                source_adapter_id: ("p04.delta-rsi.v1" | "p17.imported-signal-notional.v1" | "full03.delta-rsi.v1") | null;
                 engine_version: ("1.1.0" | "1.1.1") | null;
                 input_scope: "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY" | null;
                 source_transform_digest: components["schemas"]["Digest"] | null;
@@ -1083,6 +1083,81 @@ export interface components {
                 fold_navigation?: components["schemas"]["FoldNavigation"];
                 /** @description Optional during a bounded rolling deployment; legacy P04 runs return the documented typed absence. */
                 market_overview?: components["schemas"]["MarketOverview"];
+                native_execution?: {
+                    /** @constant */
+                    schema_version: "research.native-route-result.v1";
+                    /** @enum {unknown} */
+                    execution_route: "intrabar_bracket" | "reactive" | "event_driven";
+                    /** @constant */
+                    authority: "PINNED_QUANTBT_ACCOUNTING_NOT_PORTAL_PNL";
+                    /** @enum {unknown} */
+                    input_protocol: "DELTA_CLOSE_BRACKET_INTENTS_V1" | "DELTA_CLOSE_STATEFUL_CALLBACK_V1" | "DELTA_CLOSE_ORDER_COMMANDS_V1";
+                    /** @enum {unknown} */
+                    clock: "KNOWN_CLOSE_NEXT_BAR_INTRABAR" | "KNOWN_CLOSE_NEXT_BAR_CLOSE";
+                    /** @constant */
+                    position_unit: "CONTRACT_QUANTITY";
+                    /** @constant */
+                    target_notional: "2000";
+                    fees: {
+                        /** @enum {unknown} */
+                        state: "AVAILABLE" | "NOT_PUBLISHED";
+                        total: string | null;
+                        reason_code: "NATIVE_RESULT_SERIES_NOT_PUBLISHED" | null;
+                    } & ({
+                        /** @constant */
+                        state?: "AVAILABLE";
+                        total?: string;
+                        reason_code?: null;
+                    } | {
+                        /** @constant */
+                        state?: "NOT_PUBLISHED";
+                        total?: null;
+                        reason_code?: string;
+                    });
+                    funding: {
+                        /** @enum {unknown} */
+                        state: "AVAILABLE" | "NOT_PUBLISHED";
+                        total: string | null;
+                        reason_code: "NATIVE_RESULT_SERIES_NOT_PUBLISHED" | null;
+                    } & ({
+                        /** @constant */
+                        state?: "AVAILABLE";
+                        total?: string;
+                        reason_code?: null;
+                    } | {
+                        /** @constant */
+                        state?: "NOT_PUBLISHED";
+                        total?: null;
+                        reason_code?: string;
+                    });
+                    /** @constant */
+                    cost_scope: "FULL_CHILD_TAPE";
+                    fills_count: number;
+                    orders_count: number | null;
+                    /** @constant */
+                    replay_authority: "RETAINED_ENGINE_AUDIT_ONLY_NOT_BROKER_EVENTS";
+                } & ({
+                    /** @constant */
+                    execution_route?: "intrabar_bracket";
+                    /** @constant */
+                    input_protocol?: "DELTA_CLOSE_BRACKET_INTENTS_V1";
+                    /** @constant */
+                    clock?: "KNOWN_CLOSE_NEXT_BAR_INTRABAR";
+                } | {
+                    /** @constant */
+                    execution_route?: "reactive";
+                    /** @constant */
+                    input_protocol?: "DELTA_CLOSE_STATEFUL_CALLBACK_V1";
+                    /** @constant */
+                    clock?: "KNOWN_CLOSE_NEXT_BAR_CLOSE";
+                } | {
+                    /** @constant */
+                    execution_route?: "event_driven";
+                    /** @constant */
+                    input_protocol?: "DELTA_CLOSE_ORDER_COMMANDS_V1";
+                    /** @constant */
+                    clock?: "KNOWN_CLOSE_NEXT_BAR_CLOSE";
+                });
             };
             metrics: components["schemas"]["Metric"][];
             oos_performance?: components["schemas"]["OosPerformance"];

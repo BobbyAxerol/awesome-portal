@@ -5,6 +5,7 @@ import { ResearchFixedReplayCompanionRepository } from "../src/research/fixed-re
 import { FixedReplayCompanionQuerySchema } from "../src/research/fixed-replay-companion.contract";
 import { sha256ResearchJson } from "../src/research/preflight.service";
 import { VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST } from "../src/research/vn-observed-fixed.profile";
+import { executionRecipes } from "../src/research/execution-recipes";
 import { replayBatch,replayBinding,replayParts,replayRow,replayScope,replaySeal } from "./research-fixed-replay-companion.fixture";
 const result=(rows:any[])=>({rows,rowCount:rows.length});
 function privateHarness(rows=Array.from({length:201},(_,i)=>replayRow(i)),absent=false) {
@@ -50,6 +51,34 @@ function publicHarness(rows=Array.from({length:201},(_,i)=>replayRow(i))) {
   return {repository:new ResearchFixedReplayCompanionRepository(pool as never),client,state,seal};
 }
 describe("transactional P05-bound fixed replay custody",()=>{
+  it("admits each exact native route/edition and refuses wrong route, clock, edition or digest without weakening legacy custody",async()=>{
+    const native=executionRecipes.filter(row=>row.descriptor.schema_version==='research.native-route-profile.v1');
+    // All three append-only editions remain readable by their exact binding;
+    // only the last edition is intake-qualified by the separate policy gate.
+    expect(native).toHaveLength(9);
+    for(const profile of native)for(const mutation of ['none','route','timeframe','edition','digest']){
+      const h=privateHarness([],true),hash=(s:string)=>createHash('sha256').update(s).digest('hex');
+      const receipt={...JSON.parse(h.seal.run_receipt_json),execution_profile_id:profile.profile_id,
+        execution_profile_digest:profile.profile_digest};
+      const run_receipt_json=JSON.stringify(receipt),artifact=JSON.parse(h.seal.artifact_manifest_json);
+      Object.assign(artifact.documents[0],{sha256:hash(run_receipt_json),bytes:Buffer.byteLength(run_receipt_json)});
+      const artifact_manifest_json=JSON.stringify(artifact),manifest_digest=hash(artifact_manifest_json);
+      const manifest={...h.seal.manifest,manifest_digest,execution_profile_id:profile.profile_id,
+        execution_profile_digest:profile.profile_digest};
+      const seal={...h.seal,manifest_digest,manifest,companion_digest:sha256ResearchJson(manifest),artifact_manifest_json,run_receipt_json};
+      h.state.binding={...manifest,requested_spec:{protocol:'three_window_decay',execution_route:profile.descriptor.execution_route,
+        data:{dataset_id:'crypto-binance-1m',symbol:manifest.market_symbol,timeframe:'1h'},
+        alpha_binding:{alpha_version_id:profile.descriptor.alpha_binding_requirements.alpha_version_id},
+        windows:{oos:{start:new Date(manifest.source.oos_start_utc_ms).toISOString(),
+          end_exclusive:new Date(manifest.source.oos_end_exclusive_utc_ms).toISOString()}}}} as any;
+      if(mutation==='route')h.state.binding.requested_spec.execution_route='signal_notional';
+      if(mutation==='timeframe')h.state.binding.requested_spec.data.timeframe='4h';
+      if(mutation==='edition')h.state.binding.requested_spec.alpha_binding.alpha_version_id='av_delta_rsi_polynomial_alpha_1_0_1';
+      if(mutation==='digest')h.state.binding.execution_profile_digest='0'.repeat(64);
+      if(mutation==='none')expect(await h.repository.seal(replayScope,seal)).toEqual({replayed:false});
+      else await expect(h.repository.seal(replayScope,seal)).rejects.toMatchObject({status:409});
+    }
+  });
   it("binds source-local VN OOS naive/+07/UTC instants without changing legacy UTC parsing",async()=>{
     for(const [start,end,accepted] of [
       ["2025-04-01","2025-07-01",true],

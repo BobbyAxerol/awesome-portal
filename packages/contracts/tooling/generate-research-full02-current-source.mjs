@@ -19,7 +19,7 @@ export const full02FoldSelection = object({
   study_id: token, selected_trial_id: token, parameters: params, objective: nullable(decimal),
   objective_kind: { const: "OUTER_FOLD_DECAY_J" }, candidate_is_metric: nullable(decimal),
   candidate_oos_metric: nullable(decimal), candidate_decay: nullable(decimal),
-  candidate_count: { type: "integer", minimum: 1, maximum: 3 }, study_trial_rows: { const: 3 },
+  candidate_count: { type: "integer", minimum: 1, maximum: 400 }, study_trial_rows: { type: "integer", minimum: 2, maximum: 400 },
   outer_oos_used_for_selection: { const: true }, params_digest: digest,
   selection_sequence: { type: "integer", minimum: 0, maximum: 15 }, params_frozen_at_utc_ms: nullable(ms),
 });

@@ -27,7 +27,8 @@ describe("FULL-02 named retained transport (synthetic fixtures)", () => {
     expect(c.valid("DisplayFoldSelection",selection)).toBe(true);
     expect(c.valid("DisplayFoldSelection",{ ...selection,outer_oos_used_for_selection: false })).toBe(false);
     expect(c.valid("DisplayFoldSelection",{ ...selection,objective_kind: "INNER_VALIDATION_DECAY_J" })).toBe(false);
-    expect(c.valid("DisplayFoldSelection",{ ...selection,study_trial_rows: 400 })).toBe(false);
+    expect(c.valid("DisplayFoldSelection",{ ...selection,study_trial_rows: 400 })).toBe(true);
+    expect(c.valid("DisplayFoldSelection",{ ...selection,study_trial_rows: 401 })).toBe(false);
     expect(c.valid("CausalSelection",selection)).toBe(false);
   });
   it("publishes Three Window independent holdout separately from calibration OOS", () => {

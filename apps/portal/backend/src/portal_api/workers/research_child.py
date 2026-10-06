@@ -574,6 +574,7 @@ def _p13_evidence_source(
     run_id: str | None = None,
     source_windows: dict[str, Any] | None = None,
     engine_version: str | None = None,
+    native_execution: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the bounded evidence passport from the actual QuantBT result.
 
@@ -691,6 +692,8 @@ def _p13_evidence_source(
             "per_fold_metrics": {"state": "NOT_APPLICABLE", "reason_code": "P04_SINGLE_WINDOW_HAS_NO_PER_FOLD_METRICS"},
         },
     }
+    if native_execution is not None:
+        receipt['source']['native_execution']=native_execution
     from portal_api.services.research_retained_analytics import retained_analytics
     receipt["summary_analytics"] = retained_analytics(
         result=result, mode="FIXED", is_start_utc_ms=is_start_utc_ms,
@@ -865,14 +868,22 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
         confined_child=True)
     gateway = QuantBTGateway(expected_version=engine_version, confined_qualification_child=qualification_binding is not None)
 
-    vn_observed = receipt.get("execution_profile_id") is not None
+    from portal_api.domain.research_native_profile import is_native_profile, native_profile
+    native = is_native_profile(receipt.get('execution_profile_id',''))
+    native_row = native_profile(receipt['execution_profile_id'],receipt.get('execution_profile_digest')) if native else None
+    if native:
+        from portal_api.adapters import research_native_routes
+        actual_hash=hashlib.sha256(Path(research_native_routes.__file__).read_bytes()).hexdigest()
+        if qualification_binding is not None or native_row['descriptor']['native_input']['adapter_sha256'] != actual_hash:
+            raise ValueError('native implementation/release differs from its immutable declaration')
+    vn_observed = receipt.get("execution_profile_id") is not None and not native
     if vn_observed:
         from portal_api.domain.research_vn_observed_fixed_profile import VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST
         from portal_api.domain.research_run_producer import VnSourceObservation
         if (receipt.get("execution_profile_id"), receipt.get("execution_profile_digest")) != (VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST):
             raise ValueError("fixed child execution profile does not match its installed source tuple")
         observation = VnSourceObservation.model_validate(receipt.get("source_observation"))
-    elif receipt.get("execution_profile_digest") is not None or receipt.get("source_observation") is not None:
+    elif not native and (receipt.get("execution_profile_digest") is not None or receipt.get("source_observation") is not None):
         raise ValueError("legacy fixed child cannot carry another source profile's fields")
 
     parameters = receipt.get("p04_parameters", _P04_DELTA_PARAMS)
@@ -884,6 +895,11 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
             raise ValueError("P04 child receipt parameter map does not match installed profile")
     market_path = _safe_path(str(receipt["market_path"]), label="market_path")
     market = pd.read_parquet(market_path)
+    if native:
+        index=pd.DatetimeIndex(market.index)
+        start=receipt.get('is_start_utc_ms')
+        if type(start) is not int or len(index[index < pd.Timestamp(start,unit='ms',tz='UTC')]) != 300:
+            raise ValueError('native child requires the exact 300-bar P08 predecessor tape')
     if vn_observed:
         index = pd.DatetimeIndex(market.index)
         local = index.tz_convert("Asia/Ho_Chi_Minh") if index.tz is not None else None
@@ -901,7 +917,17 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
         fee_rate=0.0005,
         use_funding=False,
     )
-    result = endpoint.backtest(data=market, signal=signal, **({"symbols": ["FPT"]} if vn_observed else {}))
+    if native:
+        from portal_api.adapters.research_native_routes import run_native_delta,native_result_facts
+        # The source pair travels inside a digest-bound native receipt, not a
+        # browser-selected callable or order tape. Symbol is derived from P08.
+        symbol=receipt.get('native_symbol')
+        if symbol not in {'BTCUSDT','ETHUSDT','SOLUSDT'}:
+            raise ValueError('native child requires exact P08 source symbol')
+        result=run_native_delta(route=native_row['descriptor']['execution_route'],market=market,
+            symbol=symbol,parameters=dict(parameters),gateway=gateway)
+    else:
+        result = endpoint.backtest(data=market, signal=signal, **({"symbols": ["FPT"]} if vn_observed else {}))
     report = result.full_report()
     output = {
         "task": "P04_DELTA_SMOKE",
@@ -915,6 +941,9 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
     if vn_observed:
         output.update(execution_profile_id=receipt["execution_profile_id"],
             execution_profile_digest=receipt["execution_profile_digest"], source_observation=observation.model_dump(mode="json"))
+    if native:
+        output.update(execution_profile_id=native_row['profile_id'],execution_profile_digest=native_row['profile_digest'],
+            native_execution=native_result_facts(route=native_row['descriptor']['execution_route'],result=result))
     oos_start_utc_ms = receipt.get("oos_start_utc_ms")
     # Older P06 test receipts are intentionally still executable; P13 only
     # receives an evidence document when P10 supplied the immutable boundary.
@@ -928,6 +957,8 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
             run_id=receipt.get("run_id"),
             source_windows=receipt.get("source_windows"),
             engine_version=gateway.version(),
+            execution_adapter_id='full03.delta-rsi.v1' if native else 'p04.delta-rsi.v1',
+            native_execution=output.get('native_execution'),
         )
     _capture_fixed_replay_source(receipt=receipt, receipt_dir=receipt_dir, market=market, result=result, output=output)
     _capture_is_qualification_source(receipt=receipt, receipt_dir=receipt_dir, market=market, result=result, output=output)
@@ -1305,12 +1336,15 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
         controls_key = "causal_inner_controls" if row["descriptor"]["optimization_schedule"] == "per_fold_causal" else "temporal_controls"
         if row["source_requirement"] == "IMPORTED_IMMUTABLE_SEARCH_BINDING":
             required.add("imported_source")
+        from portal_api.domain.research_trial_budget import child_study_trials, expanded_trials
+        if expanded_trials(row):
+            required.add('optuna_trials')
         if not (required | {controls_key}) <= set(receipt) or set(receipt) - required - {controls_key, "pinned_parameters"}:
             raise ValueError("FULL-03 Advanced child requires exactly its bounded task fields")
         validate_full03_execution_binding(receipt.get("execution_binding"), row)
         controls = full03_controls_from_receipt(receipt, row)
         nested = row["descriptor"]["optimization_schedule"] == "per_fold_causal" and "inner_constraints" in row["descriptor"]
-        return _run_delta_wfo_study(receipt, output_root, optuna_trials=row["public_profile"]["trial_default"],
+        return _run_delta_wfo_study(receipt, output_root, optuna_trials=child_study_trials(row,receipt),
             temporal_controls=controls, profile_digest=row["profile_digest"],
             causal_inner=nested,
             per_fold_decay=row["descriptor"]["optimization_schedule"] == "per_fold_decay", exact_recipe=row)
@@ -1435,7 +1469,7 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
         raise ValueError("one child cannot combine causal and decay selection contracts")
     profile = exact_recipe["descriptor"] if exact_recipe is not None else DELTA_PER_FOLD_DECAY_PROFILE if per_fold_decay else DELTA_CAUSAL_INNER_PROFILE if causal_inner else DELTA_WFO_PROFILE
     per_fold = profile["optimization_schedule"] != "global"
-    if per_fold and optuna_trials != 3:
+    if per_fold and exact_recipe is None and optuna_trials != 3:
         raise ValueError("per-fold execution runs exactly 3 trials per outer study")
     run_id = receipt.get("run_id")
     dataset_id = receipt.get("dataset_id")
@@ -1465,12 +1499,15 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
     temporal = temporal_controls or {}
     if per_fold:
         plan = QuantBTGateway().walk_forward_fold_plan(index=market.frame.index[(market.frame.index >= start) & (market.frame.index < end)], config_fields={
-            **temporal, "split_mode": split.isoformat(), "optimization_mode": profile["optimization_mode"], "optimization_schedule": profile["optimization_schedule"], "optuna_trials": 3,
+            **temporal, "split_mode": split.isoformat(), "optimization_mode": profile["optimization_mode"], "optimization_schedule": profile["optimization_schedule"], "optuna_trials": optuna_trials,
             **profile.get("optimizer_settings", {})})
         outer = profile["fold_bounds"]
         inner = profile.get("inner_constraints", {}).get("fold_bounds", {"min": 2, "max": 16})
         if not outer["min"] <= len(plan) <= outer["max"] or (causal_inner and any(not inner["min"] <= len(fold["inner"] or []) <= inner["max"] for fold in plan)):
             raise ValueError("per-fold plan exceeds its admitted 2..16 outer/inner fold bounds")
+        if exact_recipe is not None:
+            from portal_api.domain.research_trial_budget import admitted_total_trials
+            admitted_total_trials(exact_recipe,optuna_trials,len(plan))
     request = PortalRunRequest(
         strategy_id=imported["alpha_id"] if imported is not None else "delta-rsi-polynomial-alpha",
         dataset_id=dataset_id,
@@ -1534,8 +1571,8 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
         raise ValueError("P10 WFO did not publish exactly the admitted trial count")
     if per_fold:
         trials = pd.read_parquet(trials_path)
-        if "study_id" not in trials or len(trials.groupby("study_id")) != n_folds or not trials.groupby("study_id").size().eq(3).all():
-            raise ValueError("per-fold source did not publish exactly 3 trials for every outer study")
+        if "study_id" not in trials or len(trials.groupby("study_id")) != n_folds or not trials.groupby("study_id").size().eq(optuna_trials).all():
+            raise ValueError("per-fold source did not publish the admitted trials for every outer study")
     trace.write(artifacts=ArtifactRepository(output_root), run_id=run_id)
     return {
         "task": "P10_DELTA_WFO",
@@ -1579,6 +1616,9 @@ def _run_p10_delta_three_window_optimized(receipt: dict[str, Any], output_root: 
         "dataset_id", "symbol", "data_start_utc_ms", "data_end_exclusive_utc_ms", "first_oos_utc_ms", "holdout_start_utc_ms"}
     if full03:
         required.add("execution_binding")
+        from portal_api.domain.research_trial_budget import child_study_trials, expanded_trials
+        if expanded_trials(row):
+            required.add('optuna_trials')
         if row["source_requirement"] == "IMPORTED_IMMUTABLE_SEARCH_BINDING":
             required.add("imported_source")
     if not required <= set(receipt) or set(receipt) - required - {"pinned_parameters"}:
@@ -1591,6 +1631,7 @@ def _run_p10_delta_three_window_optimized(receipt: dict[str, Any], output_root: 
         "P10_DELTA_THREE_WINDOW_OPTIMIZED", DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST):
         raise ValueError("optimized Three Window child requires its exact installed profile")
     profile = row["descriptor"] if full03 else DELTA_THREE_WINDOW_OPTIMIZED_PROFILE
+    trials_admitted=child_study_trials(row,receipt) if full03 else 3
     run_id, dataset_id, symbol = (receipt.get(name) for name in ("run_id", "dataset_id", "symbol"))
     if not all(isinstance(value, str) and value for value in (run_id, dataset_id, symbol)):
         raise ValueError("optimized Three Window child identity is invalid")
@@ -1630,7 +1671,7 @@ def _run_p10_delta_three_window_optimized(receipt: dict[str, Any], output_root: 
         execution=ExecutionConfig(target_mode=profile["execution_route"], **indexed_execution_kwargs(row)),
         calibration=ThreeWindowConfig(is_start=start, is_end_exclusive=split, oos_start=split,
             oos_end_exclusive=holdout, holdout_start=holdout, holdout_end_exclusive=end,
-            optuna_trials=3, optuna_early_stopping=None, random_seed=profile["random_seed"],
+            optuna_trials=trials_admitted, optuna_early_stopping=None, random_seed=profile["random_seed"],
             optimization=OptimizationConfig(min_trades_per_year=50.0, trade_penalty_factor=0.5)))
     gateway, artifacts = QuantBTGateway(), ArtifactRepository(output_root)
     writer = _ChildProgressWriter(output_root.parent / CHILD_PROGRESS_FILENAME)
@@ -1646,8 +1687,8 @@ def _run_p10_delta_three_window_optimized(receipt: dict[str, Any], output_root: 
         restore()
         writer.close()
     trials = pd.read_parquet(output_root / run_id / "wfo" / "trials.parquet")
-    if len(trials) != 3:
-        raise ValueError("optimized Three Window did not publish exactly three admitted trials")
+    if len(trials) != trials_admitted:
+        raise ValueError("optimized Three Window did not publish the exact admitted trials")
     trace.write(artifacts=artifacts, run_id=run_id)
     return {"task": "P10_DELTA_THREE_WINDOW_OPTIMIZED", "engine_version": gateway.version(),
         "bars": len(market.frame), "n_folds": 1, "trial_rows": len(trials),
@@ -1898,6 +1939,7 @@ def execute_receipt(receipt: dict[str, Any], *, receipt_dir: Path | None = None)
             "network_namespace": _network_namespace(),
             "credential_environment_clean": True,
             "enforced_limits": _enforced_limits(),
+            "peak_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024,
         }
     )
     return result

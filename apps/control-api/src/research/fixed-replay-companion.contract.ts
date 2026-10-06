@@ -5,6 +5,7 @@ import { P04_FIXED_QUALIFICATION_PROFILE_ID } from "./delta-wfo.profile";
 import { IMPORTED_ALPHA_PROFILE_ID, IMPORTED_ALPHA_PROFILE_DIGEST } from "./imported-alpha.profile";
 import { isVnObservedFixedProfile } from "./vn-observed-fixed.profile";
 import { sha256ResearchJson } from "./preflight.service";
+import {executionRecipes} from './execution-recipes';
 
 const Id = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$/);
 const Digest = z.string().regex(/^[a-f0-9]{64}$/);
@@ -24,7 +25,9 @@ export const FIXED_REPLAY_SCOPE = "FIXED_OOS_RETAINED_MARKET_AND_ACCOUNT_NOT_EXE
 export function isFixedReplayProfile(id: string, digest: string | null) {
   return id === P04_FIXED_QUALIFICATION_PROFILE_ID && digest === null
     || id === IMPORTED_ALPHA_PROFILE_ID && digest === IMPORTED_ALPHA_PROFILE_DIGEST
-    || isVnObservedFixedProfile(id, digest);
+    || isVnObservedFixedProfile(id, digest)
+    || executionRecipes.some(row=>row.descriptor.schema_version==='research.native-route-profile.v1'
+      &&row.profile_id===id&&row.profile_digest===digest&&digest!==null);
 }
 export const FixedReplayCompanionRowSchema = z.object({
   source_ordinal:z.number().int().min(0).max(FIXED_REPLAY_MAX_ROWS-1), at_utc_ms:Utc,

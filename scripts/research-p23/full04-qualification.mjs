@@ -24,7 +24,8 @@ export function assertModeTruth(row,record){
   assert.equal(disclosure.optimization_schedule,row.descriptor.optimization_schedule);
   assert.equal(disclosure.mode_evidence.kind,{mode_2_sbb:'BOOTSTRAP_PROXY',mode_3_flat_minima:'PLATEAU',
     mode_4_is_only_robust:'IS_ONLY_DISPERSION',mode_5_full_robust:'FULL_SAMPLE_ROBUST'}[row.descriptor.optimization_mode]);
-  assert.equal(search.search_contract.optuna_trials_per_study,row.public_profile.trial_default);
+  assert.equal(search.search_contract.optuna_trials_per_study,row.descriptor.schema_version==='research.expanded-trial-profile.v1'
+    ?record.run.requested_spec.optuna_trials:row.public_profile.trial_default);
   if(disclosure.selection_target.kind==='SYNTHETIC_CENTROID'){
     assert.equal(disclosure.selection_target.trial_id,null);assert.equal(freeze.frozen_selection.selected_trial_id,null);
     assert.equal(freeze.frozen_selection.selected_trial_ordinal,null);assert(disclosure.centroid?.state==='AVAILABLE');
@@ -66,10 +67,17 @@ for run in json.load(sys.stdin):
  assert hashlib.sha256(raw).hexdigest()==bundles[0].parent.name
  hashes={digest for name,digest in manifest['files'].items() if name=='research/p10-receipt.json' or name.endswith('/research/p10-receipt.json')}
  assert len(hashes)==1, 'EXACT_CHILD_RECEIPT:'+run
- digest=next(iter(hashes)); blob=(root/'blobs'/digest).read_bytes()
- assert len(blob)<=16384 and hashlib.sha256(blob).hexdigest()==digest
+ digest=next(iter(hashes)); path=root/'blobs'/digest
+ # Native fixed receipts embed their bounded Evidence/Split source (not only
+ # WFO locators). Keep an explicit one-MiB ceiling before reading; never
+ # weaken byte custody or the legacy locator-only16KiB receipt bound.
+ assert path.stat().st_size<=1048576, 'BOUNDED_CHILD_RECEIPT:'+run
+ blob=path.read_bytes(); assert hashlib.sha256(blob).hexdigest()==digest
  receipt=json.loads(blob); assert receipt['run_id']==run
+ assert len(blob)<=(1048576 if 'native_execution' in receipt else 16384), 'EXACT_RECEIPT_KIND_BOUND:'+run
  out[run]={'bundle_sha256':bundles[0].parent.name,'child_receipt_sha256':digest,'resource':receipt['resource'],'engine':receipt['engine']}
+ if 'native_execution' in receipt:
+  out[run]['native_execution']=receipt['native_execution']
  if 'imported_search_binding' in receipt:
   out[run].update(imported_search_binding=receipt['imported_search_binding'],alpha_version_id=receipt['alpha_version_id'],part_hashes=manifest['files'])
 print(json.dumps(out))`],{input:JSON.stringify(runIds),encoding:'utf8',maxBuffer:4*1024*1024}));

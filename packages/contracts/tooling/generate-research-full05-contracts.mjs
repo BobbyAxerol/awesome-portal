@@ -4,7 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {replaceComponent} from './generate-research-progress-truth.mjs';
 const root=new URL('../../../',import.meta.url);
 const table=JSON.parse(readFileSync(new URL('apps/portal/registry/research-execution-recipes.v1.json',root)));
-const rows=table.recipes.filter(r=>r.source_requirement==='IMPORTED_IMMUTABLE_SEARCH_BINDING'||r.descriptor.schema_version==='research.full06-delta-profile.v1');
+const rows=table.recipes.filter(r=>r.source_requirement==='IMPORTED_IMMUTABLE_SEARCH_BINDING'||['research.full06-delta-profile.v1','research.expanded-trial-profile.v1'].includes(r.descriptor.schema_version));
 export function amendFull05(original,file){
   const document=JSON.parse(original),schemas=document.components.schemas;let next=original;
   for(const [name,raw]of Object.entries(schemas)){

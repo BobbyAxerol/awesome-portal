@@ -344,6 +344,10 @@ class ResearchRunProducerExecutor:
         """Plan against the exact immutable snapshot before opening P11."""
         from portal_api.adapters.quantbt import QuantBTGateway
         research = request.research
+        from portal_api.domain.research_native_profile import native_enabled, native_profile
+        native = research.is_native_fixed
+        if native and not native_enabled(research.execution_profile_id, dict(os.environ)):
+            raise ResearchRunProducerError('native fixed recipe is not enabled', code='CAPABILITY_MISMATCH')
         row = full03_recipe(research.execution_profile_id, research.execution_profile_digest) if research.is_full03 else None
         decay = row["descriptor"]["optimization_schedule"] == "per_fold_decay" if row else research.execution_profile_id == DELTA_PER_FOLD_DECAY_PROFILE_ID
         if (row and row["descriptor"]["optimization_schedule"] not in {"per_fold_decay", "per_fold_causal"}) or (not row and research.execution_profile_id not in {DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_ID}):
@@ -364,7 +368,8 @@ class ResearchRunProducerExecutor:
             if len(warmup) != warmup_count or len(index[(index >= start - warmup_count * interval) & (index < end)]) > row["budgets"]["planning_max_bars"]:
                 raise ResearchRunProducerError("FULL-03 immutable snapshot lacks 300 target-bar predecessors or exceeds its bar budget")
         controls = full03_controls(research.requested_spec, row) if row else per_fold_decay_controls(research.requested_spec) if decay else causal_inner_controls(research.requested_spec)
-        trial_count = row["public_profile"]["trial_default"] if row else 3
+        from portal_api.domain.research_trial_budget import admitted_study_trials
+        trial_count = admitted_study_trials(row, research.requested_spec['optuna_trials']) if row else 3
         plan = QuantBTGateway().walk_forward_fold_plan(index=index[(index >= start) & (index < end)], config_fields={
             **controls, "split_mode": wf["split_mode"],
             "optimization_mode": row["descriptor"]["optimization_mode"] if row else "mode_1_decay", "optimization_schedule": "per_fold_decay" if decay else "per_fold_causal", "optuna_trials": trial_count})
@@ -461,6 +466,8 @@ class ResearchRunProducerExecutor:
         research = request.research
         imported = research.is_imported_alpha
         vn_observed = research.is_vn_observed_fixed
+        from portal_api.domain.research_native_profile import native_profile
+        native = research.is_native_fixed
         if vn_observed and not vn_observed_fixed_enabled():
             raise ResearchRunProducerError("VN observed fixed profile is not enabled", code="CAPABILITY_MISMATCH")
         progress("stage_started", {"stage": "S1"})
@@ -586,6 +593,8 @@ class ResearchRunProducerExecutor:
                     **({"execution_profile_id": research.execution_profile_id,
                         "execution_profile_digest": research.execution_profile_digest,
                         "source_observation": research.source_observation.model_dump(mode="json")} if vn_observed else {}),
+                    **({'execution_profile_id':research.execution_profile_id,'execution_profile_digest':research.execution_profile_digest,
+                        'native_symbol':research.requested_spec['data']['symbol']} if native else {}),
                 )
             # P10 has one server-installed fixed qualification, not a generic
             # optimizer.  S2 therefore records preparation of that exact one
@@ -600,6 +609,10 @@ class ResearchRunProducerExecutor:
             # not observable from this parent callback while the child runs;
             # the measured value is published immediately after its receipt.
             limits = self.imported_child_limits if imported else self.child_limits
+            if native:
+                limits = ResearchChildLimits(**{key:value for key,value in native_profile(
+                    research.execution_profile_id,research.execution_profile_digest)['budgets'].items()
+                    if key in ResearchChildLimits.__dataclass_fields__})
             progress("budget_tick", _cpu_budget_tick_payload(0, limits.cpu_seconds))
             if imported:
                 assert isinstance(receipt, ImportedAlphaChildReceipt)
@@ -689,6 +702,9 @@ class ResearchRunProducerExecutor:
             if vn_observed else {})
         if research.qualification_binding is not None:
             provenance["qualification_binding"] = research.qualification_binding
+        if native:
+            provenance.update(execution_profile_id=research.execution_profile_id,
+                execution_profile_digest=research.execution_profile_digest,native_execution=child.native_execution)
         public_config = {
             "schema_version": "research.p17.imported-run-config.v1" if imported else "research.p10.run-config.v1",
             "run_id": request.run_id,
@@ -937,7 +953,7 @@ class ResearchRunProducerExecutor:
         try:
             preview_long = whatif is None and not row and not full02 and research.execution_profile_id != DELTA_CAUSAL_INNER_PROFILE_ID and delta_wfo_preview_long_enabled()
             study_trials = (
-                row["public_profile"]["trial_default"] if row else delta_wfo_admitted_trials(research.requested_spec) if preview_long else DELTA_WFO_OPTUNA_TRIALS
+                research.requested_spec['optuna_trials'] if row else delta_wfo_admitted_trials(research.requested_spec) if preview_long else DELTA_WFO_OPTUNA_TRIALS
             )
         except (DeltaWfoPreviewLongMisconfigured, ValueError) as exc:
             raise ResearchRunProducerError(str(exc), code="CAPABILITY_MISMATCH") from exc
@@ -947,7 +963,12 @@ class ResearchRunProducerExecutor:
             else self.wfo_child_limits
         )
         if row:
-            child_limits = ResearchChildLimits(**{name: min(getattr(self.wfo_child_limits, name), row["budgets"][name])
+            from portal_api.domain.research_trial_budget import expanded_trials, admitted_study_trials
+            study_trials=admitted_study_trials(row,study_trials)
+            # New descriptor owns the raised limits. Caller-supplied narrower
+            # confinement still wins; historical default limits stay unchanged.
+            base=row['budgets'] if expanded_trials(row) and self.wfo_child_limits is DELTA_WFO_CHILD_LIMITS else None
+            child_limits = ResearchChildLimits(**{name: row['budgets'][name] if base is not None else min(getattr(self.wfo_child_limits, name), row["budgets"][name])
                 for name in ("memory_bytes", "cpu_seconds", "wall_seconds", "scratch_bytes", "file_bytes", "fd_limit")})
         progress("stage_started", {"stage": "S1"})
         try:
@@ -1044,7 +1065,7 @@ class ResearchRunProducerExecutor:
                     {"evaluation_key": entry.evaluation_key, "parameters": dict(entry.parameters)}
                     for entry in whatif.evaluations
                 ) if whatif is not None else (),
-                optuna_trials=study_trials if preview_long else None,
+                optuna_trials=study_trials if preview_long or row and expanded_trials(row) else None,
                 temporal_controls=controls if row and row["descriptor"]["optimization_schedule"] != "per_fold_causal" else per_fold_decay_controls(research.requested_spec) if research.execution_profile_id == DELTA_PER_FOLD_DECAY_PROFILE_ID else temporal_controls(research.requested_spec) if research.execution_profile_id == DELTA_WFO_V2_PROFILE_ID else None,
                 causal_inner_controls=controls if row and row["descriptor"]["optimization_schedule"] == "per_fold_causal" else causal_inner_controls(research.requested_spec) if research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID else None,
                 holdout_start_utc_ms=int(_utc_timestamp(windows["holdout"]["start"], label="holdout start").value // 1_000_000) if three_window else None,

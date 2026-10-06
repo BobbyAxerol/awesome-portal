@@ -179,7 +179,7 @@
         "source_trial_count": {
           "type": "integer",
           "minimum": 0,
-          "maximum": 4096
+          "maximum": 6400
         }
       }
     },

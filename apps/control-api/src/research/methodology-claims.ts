@@ -8,6 +8,7 @@ import { CurrentSourceFactsSchema } from "./current-source.payload";
 import { ResearchCurrentSourceRepository } from "./current-source.repository";
 import type { ResearchEngineAtlasPrivate } from "./foundation.contract";
 import { ResearchFoundationAtlasClient } from "./foundation.client";
+import {executionRecipes} from './execution-recipes';
 
 const ClaimKindSchema = z.enum(["VALIDATION", "CHRONOLOGY", "CAUSALITY", "OOS_SELECTION", "HOLDOUT_STATE", "EXECUTION_CONTRACT", "RUNTIME_AUTHORITY"]);
 export const MethodologyClaimSchema = z.discriminatedUnion("state", [
@@ -25,7 +26,8 @@ export type MethodologyClaim = z.infer<typeof MethodologyClaimSchema>;
 const KINDS = ["VALIDATION", "CHRONOLOGY", "CAUSALITY", "OOS_SELECTION"] as const;
 type Kind = typeof KINDS[number];
 type ClaimText = Partial<Record<Kind, string>>;
-type ClaimIdentity = { releaseId: string | null; mode: string | null; schedule: string | null; routeId?: string | null };
+type ClaimIdentity = { releaseId: string | null; mode: string | null; schedule: string | null;
+  routeId?: string | null; executionProfileId?: string | null };
 
 /** Exact catalog pair only. A current catalog must never describe a historical engine run. */
 function forecast(atlas: ResearchEngineAtlasPrivate | null, releaseId: string | null, mode: string | null, schedule: string | null): ClaimText {
@@ -58,6 +60,14 @@ export function projectMethodologyClaims(
   summary: Record<string, unknown> | null,
   identity: ClaimIdentity,
 ): MethodologyClaim[] {
+  // Mode1 is a transport compatibility field on a fixed native execution,
+  // not evidence that this run optimized or performed walk-forward selection.
+  if (executionRecipes.some(row => row.profile_id === identity.executionProfileId
+      && row.descriptor.schema_version === 'research.native-route-profile.v1')) {
+    return KINDS.map(kind => ({kind, state: kind === 'OOS_SELECTION' ? 'NOT_APPLICABLE' : 'NOT_PUBLISHED',
+      text: null, reason_code: kind === 'OOS_SELECTION' ? 'NATIVE_FIXED_EXECUTION_HAS_NO_OPTIMIZER_SELECTION'
+        : 'NATIVE_FIXED_METHODOLOGY_CLAIM_NOT_PUBLISHED', source: null}));
+  }
   const forecasts = forecast(atlas, identity.releaseId, identity.mode, identity.schedule);
   const issuedFacts = issued(summary);
   return KINDS.map((kind) => {

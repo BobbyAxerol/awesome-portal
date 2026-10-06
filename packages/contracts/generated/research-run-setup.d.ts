@@ -112,6 +112,7 @@ export interface components {
             /** @constant */
             account_model?: "QUANTBT_PERCENT_EQUITY_V1";
             account?: components["schemas"]["PercentEquityAccount"];
+            native_input?: components["schemas"]["NativeDeltaInput"];
         } & (unknown & unknown & unknown);
         SetupOptions: {
             /** @constant */
@@ -194,8 +195,8 @@ export interface components {
             io_bytes: number;
             file_bytes: number;
             fd_limit: number;
-            /** @constant */
-            planning_max_bars: 100000;
+            /** @enum {unknown} */
+            planning_max_bars: 20000 | 100000;
             max_warmup_bars: number;
             /** @enum {unknown} */
             queue_class: "HEAVY" | "INTERACTIVE";
@@ -219,6 +220,41 @@ export interface components {
             funding_enabled: false;
             /** @constant */
             sizing_authority: "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1";
+        };
+        NativeDeltaInput: {
+            /** @constant */
+            schema_version: "research.native-delta-input.v1";
+            adapter_sha256: string;
+            /** @constant */
+            symbol_policy: "BTC_ETH_SOL_SINGLE_SYMBOL";
+            /** @constant */
+            signal_authority: "PROTECTED_DELTA_CLOSE_ONLY";
+            /** @constant */
+            target_notional: "2000";
+            /** @constant */
+            position_unit: "CONTRACT_QUANTITY";
+            /** @enum {unknown} */
+            execution_clock: "KNOWN_CLOSE_NEXT_BAR_INTRABAR" | "KNOWN_CLOSE_NEXT_BAR_CLOSE";
+            bracket: {
+                /** @constant */
+                stop_fraction: "0.013";
+                /** @constant */
+                take_profit_fraction: "0.026";
+                /** @constant */
+                level_mode: "percent_distance";
+            } | null;
+            account: {
+                /** @constant */
+                initial_capital: "20000";
+                /** @constant */
+                leverage: "3";
+                /** @constant */
+                one_way_fee_rate: "0.0005";
+                /** @constant */
+                funding_enabled: false;
+            };
+            /** @constant */
+            optimizer: "NOT_APPLICABLE_FIXED_DELTA_INPUT_NOT_SCALAR_OPTIMIZER";
         };
         WindowPatch: {
             /** @constant */

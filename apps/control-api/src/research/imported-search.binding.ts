@@ -1,5 +1,5 @@
 /** FULL-05: immutable declaration + narrowed search space, never active-version lookup. */
-import {recipeDigest, executionRecipes, type ExecutionRecipe} from "./execution-recipes";
+import {recipeDigest, executionRecipes, preferredIntakeRecipes, type ExecutionRecipe, type RecipeFlags} from "./execution-recipes";
 import {IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST, IMPORTED_ALPHA_ADAPTER_ID} from "./imported-alpha.profile";
 import type {ResearchRequestedSpec} from "./preflight.contract";
 import type {SetupRefusal} from "./run-setup.contract";
@@ -10,14 +10,15 @@ type Parameter = {kind:"fixed";value:Scalar}|{kind:"categorical";values:Scalar[]
 export type ImportedSearchBinding = {schema_version:"research.imported-search-binding.v1";
   source_digest:string;entrypoint:string;declaration:Record<string,unknown>;
   declaration_digest:string;parameter_space:Record<string,Parameter>;parameter_space_digest:string};
-export function importedSearchRecipe(spec:ResearchRequestedSpec):Extract<ExecutionRecipe,{adapter_kind:"IMPORTED_SEARCH"}>|null {
+export function importedSearchRecipe(spec:ResearchRequestedSpec,flags:RecipeFlags={}):Extract<ExecutionRecipe,{adapter_kind:"IMPORTED_SEARCH"}>|null {
   const rows=executionRecipes.filter((row):row is Extract<ExecutionRecipe,{adapter_kind:"IMPORTED_SEARCH"}>=>row.adapter_kind==="IMPORTED_SEARCH"
     && row.public_profile.timeframe===spec.data.timeframe && row.public_profile.protocol===spec.protocol
     && row.public_profile.optimization_mode===spec.optimization_mode
     && row.public_profile.optimization_schedule===spec.optimization_schedule
     && row.descriptor.requested_spec_version===spec.schema_version);
-  if(rows.length>1)throw new Error("Ambiguous imported search recipe");
-  return rows[0]??null;
+  const current=preferredIntakeRecipes(rows,spec.optuna_trials,flags);
+  if(current.length>1)throw new Error("Ambiguous imported search recipe");
+  return current[0]??null;
 }
 export function bindImportedSearch(spec:ResearchRequestedSpec,declaration:Record<string,unknown>,sourceDigest:string,
   entrypoint:string):{binding:ImportedSearchBinding|null;refusal:SetupRefusal|null} {

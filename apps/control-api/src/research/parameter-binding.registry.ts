@@ -32,6 +32,7 @@ import { DELTA_PER_FOLD_DECAY_PROFILE, DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_PE
 import { boundWarning, positionPercent, type BoundWarning } from "./bound-warning";
 import { FULL03_DELTA_ADAPTER_CONTRACT_DIGEST, FULL03_DELTA_DECLARED_CONTRACT } from "./full03-delta.binding";
 import {FULL06_DELTA_BINDING, FULL06_DELTA_DECLARED_CONTRACT} from "./full06-delta.binding";
+import {NATIVE_DELTA_BINDINGS} from './native-delta.binding';
 import { currentSourceExecutionRecipes, currentSourceExecutionPair } from "./current-source-profile";
 
 export interface DeclaredRange {
@@ -204,7 +205,9 @@ export class ResearchParameterBindingRegistry {
   private readonly profiles: ReadonlyMap<string, HistoricalProfileBinding>;
 
   constructor(
-    adapters: readonly HistoricalParameterBinding[] = [P04_V1, FULL03_V1, FULL06_V1],
+    adapters: readonly HistoricalParameterBinding[] = [P04_V1, FULL03_V1, FULL06_V1,
+      ...NATIVE_DELTA_BINDINGS.map(b=>({...P04_V1,adapterContractDigest:b.adapterContractDigest,
+        parameterSpace:b.declaredContract.parameter_space,installedInRelease:'research-loop-v2.0/NATIVE'}))],
     profiles: readonly HistoricalProfileBinding[] = [WFO_V1, WFO_V2, CAUSAL_INNER_V1, PER_FOLD_DECAY_V1, THREE_WINDOW_OPTIMIZED_V1, ...FULL03_PROFILES, ...FULL06_PROFILES],
   ) {
     this.adapters = new Map(adapters.map((entry) => [entry.adapterContractDigest, entry]));

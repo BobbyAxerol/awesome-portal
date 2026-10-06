@@ -25,6 +25,13 @@ export const PercentEquityAccountSchema = z.object({initial_capital:z.literal(20
   alloc_per_trade:z.literal(0.1),allocation_unit:z.literal("EQUITY_FRACTION"),canonical_one_way_fee_rate:z.literal(0.0005),
   slippage:z.literal(0),funding_enabled:z.literal(false),
   sizing_authority:z.literal("QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1")}).strict();
+export const NativeDeltaInputSchema=z.object({schema_version:z.literal('research.native-delta-input.v1'),
+  adapter_sha256:Digest,symbol_policy:z.literal('BTC_ETH_SOL_SINGLE_SYMBOL'),signal_authority:z.literal('PROTECTED_DELTA_CLOSE_ONLY'),
+  target_notional:z.literal('2000'),position_unit:z.literal('CONTRACT_QUANTITY'),
+  execution_clock:z.enum(['KNOWN_CLOSE_NEXT_BAR_INTRABAR','KNOWN_CLOSE_NEXT_BAR_CLOSE']),
+  bracket:z.object({stop_fraction:z.literal('0.013'),take_profit_fraction:z.literal('0.026'),level_mode:z.literal('percent_distance')}).strict().nullable(),
+  account:z.object({initial_capital:z.literal('20000'),leverage:z.literal('3'),one_way_fee_rate:z.literal('0.0005'),funding_enabled:z.literal(false)}).strict(),
+  optimizer:z.literal('NOT_APPLICABLE_FIXED_DELTA_INPUT_NOT_SCALAR_OPTIMIZER')}).strict();
 export const RunSetupBudgetSchema = z.object({
   scope: z.literal("DECLARED_CAPS_NOT_RESERVATION_OR_ESTIMATE"), recipe_digest: Digest,
   profile_digest: Digest.nullable(), qualification: z.enum(["LEGACY_EXACT_BINDING", "CANDIDATE_NOT_QUALIFIED", "PRODUCT_RUN_QUALIFIED"]),
@@ -32,7 +39,7 @@ export const RunSetupBudgetSchema = z.object({
   cpu_seconds: z.number().int().min(1).max(1_800), wall_seconds: z.number().int().min(1).max(3_600),
   scratch_bytes: z.number().int().min(1).max(536_870_912), io_bytes: z.number().int().min(1).max(1_073_741_824),
   file_bytes: z.number().int().min(1).max(16_777_216), fd_limit: z.number().int().min(32).max(512),
-  planning_max_bars: z.literal(100_000), max_warmup_bars: z.number().int().min(0).max(100_000),
+  planning_max_bars: z.union([z.literal(20_000),z.literal(100_000)]), max_warmup_bars: z.number().int().min(0).max(100_000),
   queue_class: z.enum(["HEAVY", "INTERACTIVE"]), resource_class: Id, preview_override: z.boolean(),
 }).strict();
 export const RunSetupContextSchema = z.object({
@@ -65,6 +72,7 @@ export const RunSetupProfileSchema = z.object({
   budget: RunSetupBudgetSchema.optional(),
   account_model: z.literal("QUANTBT_PERCENT_EQUITY_V1").optional(),
   account: PercentEquityAccountSchema.optional(),
+  native_input:NativeDeltaInputSchema.optional(),
 }).strict().refine(v => (v.state === "ENABLED") === (v.reason_code === null)
   && (v.account_model === undefined) === (v.account === undefined)
   && (v.account_model === undefined || v.execution_route === "pct_equity")

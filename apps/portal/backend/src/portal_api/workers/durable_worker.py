@@ -33,7 +33,7 @@ from portal_api.domain.research_delta_wfo_profile import (
     delta_wfo_admitted_trials,
     delta_wfo_child_cpu_seconds,
 )
-from portal_api.domain.research_run_producer import ResearchRunProducerRequest
+from portal_api.domain.research_run_producer import ResearchRunProducerEnvelope, ResearchRunProducerRequest
 from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE_ID
 from portal_api.domain.research_full02_profiles import DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, full02_profile_enabled
 from portal_api.domain.research_full03_profiles import full03_recipe, full03_profile_enabled
@@ -73,6 +73,24 @@ from portal_api.services.research_whatif_retention import (
 logger = logging.getLogger("portal_api.durable_worker")
 
 RunExecutor = Callable[[dict[str, Any], str, Path], Awaitable[dict[str, Any]]]
+
+
+def _p11_cpu_cap(research: ResearchRunProducerEnvelope, wfo_cpu_cap: int) -> int:
+    """Use the admitted child cap for both journal and terminal measurement.
+
+    Imported optimizer work is also WFO work; the older imported fixed cap
+    must not win just because its strategy came from an imported declaration.
+    """
+    if research.is_final_audit:
+        return 120
+    if research.is_whatif:
+        return WHATIF_CPU_SECONDS
+    if research.is_delta_wfo:
+        return wfo_cpu_cap
+    if research.is_native_fixed:
+        from portal_api.domain.research_execution_recipes import execution_recipe
+        return execution_recipe(research.execution_profile_id, research.execution_profile_digest)["budgets"]["cpu_seconds"]
+    return IMPORTED_ALPHA_CPU_SECONDS if research.is_imported_alpha else 45
 
 
 async def _joined_retention_thread(
@@ -349,7 +367,7 @@ class DurableQuantWorker:
                         from portal_api.domain.research_execution_recipes import execution_recipe
                         wfo_cpu_cap = execution_recipe(research_request.research.execution_profile_id)["budgets"]["cpu_seconds"]
                     elif full03_row:
-                        wfo_trials = full03_row["public_profile"]["trial_default"]
+                        wfo_trials = research_request.research.requested_spec['optuna_trials']
                         wfo_cpu_cap = full03_row["budgets"]["cpu_seconds"]
                     elif research_request.research.is_three_window_optimized:
                         from portal_api.domain.research_execution_recipes import execution_recipe
@@ -365,6 +383,7 @@ class DurableQuantWorker:
                 is_research_producer
                 and os.getenv("PORTAL_FEATURE_RESEARCH_PROGRESS", "false").strip().lower() == "true"
             )
+            progress_cpu_cap = _p11_cpu_cap(research_request.research, wfo_cpu_cap) if is_research_producer else 45
             if progress_enabled:
                 # The journal sits beside the already-durable attempt ledger,
                 # never in ephemeral P10 scratch.  It is written before the
@@ -378,15 +397,16 @@ class DurableQuantWorker:
                         0 if is_final_audit else len(whatif_job.evaluations) if whatif_job is not None
                         else wfo_trials if is_delta_wfo else 1
                     ),
-                    cpu_cap_seconds=(
-                        120 if is_final_audit else WHATIF_CPU_SECONDS if is_whatif else IMPORTED_ALPHA_CPU_SECONDS
-                        if is_imported_alpha else wfo_cpu_cap if is_delta_wfo else 45
-                    ),
+                    cpu_cap_seconds=progress_cpu_cap,
                     profile=(
                         "PINNED_FINAL_AUDIT" if is_final_audit else "DELTA_WHATIF" if is_whatif else "IMPORTED_ALPHA"
                         if is_imported_alpha else "DELTA_THREE_WINDOW" if research_request.research.is_three_window_optimized
                         else "DELTA_WFO" if is_delta_wfo else "P04_FIXED"
                     ),
+                    execution_profile_id=research_request.research.execution_profile_id
+                        if full03_row or research_request.research.is_native_fixed else None,
+                    execution_profile_digest=research_request.research.execution_profile_digest
+                        if full03_row or research_request.research.is_native_fixed else None,
                 )
                 try:
                     progress_relay = ResearchProgressRelay.from_environment(
@@ -706,7 +726,7 @@ class DurableQuantWorker:
                     # (CG-P11-09), never a zero that reads as a measurement.
                     "usage": self._p11_usage(
                         result,
-                        cpu_cap_seconds=120 if is_final_audit else WHATIF_CPU_SECONDS if is_whatif else wfo_cpu_cap if is_delta_wfo else 45,
+                        cpu_cap_seconds=progress_cpu_cap,
                     ),
                 }
                 if evidence_digest is not None:
@@ -1158,7 +1178,12 @@ class DurableQuantWorker:
         if getattr(retention, "causal_fold_selections", ()):
             trials = list(retention.causal_trials)
             folds = list(retention.causal_fold_selections)
-            if len(trials) != total or len(folds) != retention.table_rows["FOLD"] or total != 3 * len(folds):
+            study_counts = {}
+            for trial in trials:
+                study_counts[trial['study_id']]=study_counts.get(trial['study_id'],0)+1
+            if (len(trials) != total or len(folds) != retention.table_rows["FOLD"]
+                    or len(study_counts)!=len(folds) or len(set(study_counts.values()))!=1
+                    or not all(1<=count<=400 for count in study_counts.values())):
                 raise DurableRunError("P11 retained per-fold study counts do not match")
             for index in range(live + 1, total + 1):
                 source = trials[index - 1]

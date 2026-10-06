@@ -65,6 +65,23 @@ export function executionRecipeTrialCount(row: ExecutionRecipe, flags: RecipeFla
   return row.preview_override !== null && flags[row.preview_override.flag] === "true"
     ? {min:row.preview_override.min_trials, max:row.preview_override.max_trials} : {...row.public_profile.trial_count};
 }
+/** Intake supersession never changes historical lookup or an already queued job. */
+export function preferredIntakeRecipes<T extends ExecutionRecipe>(rows: readonly T[], requestedTrials?: number, flags: RecipeFlags={}): T[] {
+  const predecessors = new Set<string>();
+  for (const row of rows) if ("predecessor_profile_id" in row.descriptor) {
+    const predecessor=row.descriptor.predecessor_profile_id;
+    if (executionRecipeQualification(row.profile_id).kind === "PRODUCT_RUN_QUALIFIED" ||
+       flags.RESEARCH_RECIPE_QUALIFICATION_PROFILE_ID === row.profile_id && flags.PORTAL_ENV === 'local' && flags.AUTH_MODE === 'dev' ||
+       requestedTrials !== undefined && rows.some(old => old.profile_id === predecessor
+         && requestedTrials > old.public_profile.trial_count.max)) predecessors.add(predecessor);
+  }
+  return rows.filter(row => !predecessors.has(row.profile_id) &&
+    (!("predecessor_profile_id" in row.descriptor) || predecessors.has(row.descriptor.predecessor_profile_id)));
+}
+export function recipeTrialCountAdmitted(row: ExecutionRecipe, trials: number, flags: RecipeFlags): boolean {
+  const bounds=executionRecipeTrialCount(row,flags);
+  return Number.isSafeInteger(trials)&&trials>=bounds.min&&trials<=bounds.max;
+}
 export function executionRecipeResources(row: ExecutionRecipe, flags: RecipeFlags) {
   const b = executionRecipeBudgets(row, flags);
   return {memoryBytes:b.memory_bytes, cpuSeconds:b.cpu_seconds, scratchBytes:b.scratch_bytes, ioBytes:b.io_bytes};
@@ -86,7 +103,7 @@ export function executionRecipeActivationReason(row: ExecutionRecipe, flags: Rec
 }
 /** Exact family selection; numerical topology/declared pins stay in named adapters. */
 export function wfoExecutionRecipe(spec: {schema_version:string; optimization_schedule:string; optimization_mode?:string; execution_route?:string;
-  data?:{timeframe:string};alpha_binding?:{alpha_version_id:string}|null}): Extract<ExecutionRecipe,{adapter_kind:"DELTA_WFO"}> | null {
+  data?:{timeframe:string};alpha_binding?:{alpha_version_id:string}|null;optuna_trials?:number}, flags:RecipeFlags={}): Extract<ExecutionRecipe,{adapter_kind:"DELTA_WFO"}> | null {
   const matches = executionRecipes.filter((row): row is Extract<ExecutionRecipe,{adapter_kind:"DELTA_WFO"}> => row.adapter_kind === "DELTA_WFO"
     && (row.public_profile.requested_spec_versions as readonly string[]).includes(spec.schema_version)
     && row.public_profile.optimization_schedule === spec.optimization_schedule
@@ -96,6 +113,7 @@ export function wfoExecutionRecipe(spec: {schema_version:string; optimization_sc
     && (row.source_requirement === "FULL03_IMMUTABLE_DELTA_BINDING"
       ? row.descriptor.alpha_binding_requirements.alpha_version_id === spec.alpha_binding?.alpha_version_id
       : !["av_delta_rsi_polynomial_alpha_1_0_1","av_delta_rsi_polynomial_alpha_1_0_2"].includes(spec.alpha_binding?.alpha_version_id ?? "")));
-  if (matches.length > 1) throw new Error("Ambiguous WFO execution recipe");
-  return matches[0] ?? null;
+  const current=preferredIntakeRecipes(matches,spec.optuna_trials,flags);
+  if (current.length > 1) throw new Error("Ambiguous WFO execution recipe");
+  return current[0] ?? null;
 }

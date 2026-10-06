@@ -103,6 +103,51 @@ export interface components {
             execution_profile_id?: "p10.vn-stock-daily-observed-fixed.v1";
             /** @constant */
             execution_profile_digest?: "acb6566ebae23bcf77c77974136c9d083a95f0967260b1332530f600f5abe00e";
+        } | {
+            /** @constant */
+            execution_profile_id?: "p10.delta-intrabar-bracket-fixed-1h.v1";
+            /** @constant */
+            execution_profile_digest?: "908b9575d8bccea1fe5ec0d9cbf09a3c4869b737f7a58442ca911912b5139696";
+        } | {
+            /** @constant */
+            execution_profile_id?: "p10.delta-reactive-fixed-1h.v1";
+            /** @constant */
+            execution_profile_digest?: "d056481f9e8f10facf879aa34830cf38b1fe2c62a5c5c23f44fa3f0b155475c8";
+        } | {
+            /** @constant */
+            execution_profile_id?: "p10.delta-event-driven-fixed-1h.v1";
+            /** @constant */
+            execution_profile_digest?: "54ad302f5564bd5d3eb39773b706a7d0e28ff7a4fbfa499f85baaa392ec78124";
+        } | {
+            /** @constant */
+            execution_profile_id?: "p10.delta-intrabar-bracket-fixed-1h.v2";
+            /** @constant */
+            execution_profile_digest?: "f82c039bb1398091dcc2196dbaec059ba049be0d79e0ac82600b06299a741a79";
+        } | {
+            /** @constant */
+            execution_profile_id?: "p10.delta-reactive-fixed-1h.v2";
+            /** @constant */
+            execution_profile_digest?: "11e57592e894835b1136cb608d0bd548625476f480a0d54cf03417963aa17352";
+        } | {
+            /** @constant */
+            execution_profile_id?: "p10.delta-event-driven-fixed-1h.v2";
+            /** @constant */
+            execution_profile_digest?: "3551a92a0f78196c878c73815caa8134cdcd43bdc36714da122754a19381af27";
+        } | {
+            /** @constant */
+            execution_profile_id?: "p10.delta-intrabar-bracket-fixed-1h.v3";
+            /** @constant */
+            execution_profile_digest?: "436bb6e861f24c6d68b6c760109fcca13d9d4061240cc725b9197c0435e17cad";
+        } | {
+            /** @constant */
+            execution_profile_id?: "p10.delta-reactive-fixed-1h.v3";
+            /** @constant */
+            execution_profile_digest?: "be36b785d292b5e360bc36ba9c683367792417ea592d2b9379279bcdeb6fc226";
+        } | {
+            /** @constant */
+            execution_profile_id?: "p10.delta-event-driven-fixed-1h.v3";
+            /** @constant */
+            execution_profile_digest?: "5404ead81e967be03a5347d3c1f20774699fe808a29ed6c334d186be4b68cb88";
         });
         /** @description Complete source population is at most 20,000 retained rows; each response is at most 200 rows/1 MiB. Opaque renewable cursor binds workspace, actor, run, immutable revision and limit. Exact source_ordinal playhead is mutually exclusive with cursor. No rows or fake folds/orders/fills/trades/holdout are synthesized. NOT_RECORDED conservatively covers old or fresh unrecorded custody; it does not infer a historical run from absent parts. */
         FixedReplayPage: {

@@ -18,11 +18,15 @@ describe('FULL05 imported public typed contracts',()=>{
     expect(value.profile.parameter_policy).toBe('DECLARED_SEARCH_WITH_PINS');
     expect(valid({...value.profile,parameter_policy:'ARBITRARY_PYTHON_EXECUTION'})).toBe(false);
   });
-  it('binds all 27 exact imported profile/source pairs and refuses invented pairs',()=>{
+  it('binds both append-only sets of 27 imported profile/source pairs and refuses invented pairs',()=>{
     const table=JSON.parse(readFileSync(join(root,'../../apps/portal/registry/research-execution-recipes.v1.json'),'utf8'));
-    const rows=table.recipes.filter((r:any)=>r.adapter_kind==='IMPORTED_SEARCH');expect(rows).toHaveLength(27);
+    const rows=table.recipes.filter((r:any)=>r.adapter_kind==='IMPORTED_SEARCH');expect(rows).toHaveLength(54);
+    expect(rows.filter((r:any)=>r.descriptor.schema_version==='research.full05-imported-profile.v1')).toHaveLength(27);
+    expect(rows.filter((r:any)=>r.descriptor.schema_version==='research.expanded-trial-profile.v1')).toHaveLength(27);
     const valid=validator('research-current-source','Provenance');
     for(const row of rows)expect(valid({...value.provenance,...row.descriptor.current_source}),JSON.stringify(valid.errors)).toBe(true);
+    expect(valid({...value.provenance,...rows[0].descriptor.current_source,
+      profile_id:rows[27].descriptor.current_source.profile_id})).toBe(false);
     expect(valid({...value.provenance,profile_id:'full05.guessed.v1'})).toBe(false);
   });
   it('labels a source-code digest as source bytes, not as an adapter digest or parameter list',()=>{

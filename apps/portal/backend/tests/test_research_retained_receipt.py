@@ -21,6 +21,8 @@ def _request():
         worker_attempt_id="rwa_p05",
         lease_epoch=1,
         research=SimpleNamespace(
+            is_final_audit=False,
+            qualification_binding=None,
             alpha_version_id="av_delta_1_0_0",
             adapter_contract_digest="a" * 64,
             requested_spec_digest="b" * 64,

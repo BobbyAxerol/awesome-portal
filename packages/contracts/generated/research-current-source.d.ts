@@ -870,8 +870,7 @@ export interface components {
             objective_kind: "IS_MEAN_SHARPE" | "IS_ONLY_ROBUST_J";
             candidate_is_metric: string | null;
             candidate_count: number;
-            /** @constant */
-            study_trial_rows: 3;
+            study_trial_rows: number;
             /** @constant */
             outer_oos_used_for_selection: false;
             /** @constant */
@@ -900,8 +899,7 @@ export interface components {
             objective_kind: "IS_MEAN_SHARPE" | "IS_ONLY_ROBUST_J";
             candidate_is_metric: string | null;
             candidate_count: number;
-            /** @constant */
-            study_trial_rows: 3;
+            study_trial_rows: number;
             /** @constant */
             outer_oos_used_for_selection: false;
             /** @constant */
@@ -1011,8 +1009,7 @@ export interface components {
             candidate_oos_metric: string | null;
             candidate_decay: string | null;
             candidate_count: number;
-            /** @constant */
-            study_trial_rows: 3;
+            study_trial_rows: number;
             /** @constant */
             outer_oos_used_for_selection: true;
             params_digest: string;
@@ -1039,8 +1036,7 @@ export interface components {
             candidate_oos_metric: string | null;
             candidate_decay: string | null;
             candidate_count: number;
-            /** @constant */
-            study_trial_rows: 3;
+            study_trial_rows: number;
             /** @constant */
             outer_oos_used_for_selection: true;
             params_digest: string;
@@ -1430,8 +1426,7 @@ export interface components {
             /** @constant */
             candidate_decay_scope: "INNER_IS_MEAN_MINUS_OUTER_OOS";
             candidate_count: number;
-            /** @constant */
-            study_trial_rows: 3;
+            study_trial_rows: number;
             /** @constant */
             outer_oos_used_for_selection: false;
             /** @constant */
@@ -1464,8 +1459,7 @@ export interface components {
             fold_id: string;
             study_id: string;
             surface: components["schemas"]["SearchSurface"] & {
-                /** @constant */
-                source_trial_count?: 3;
+                source_trial_count?: number;
                 complete_trial_count?: number;
                 emitted_point_count?: number;
                 points?: unknown[];
@@ -1498,8 +1492,7 @@ export interface components {
             /** @constant */
             candidate_decay_scope: "INNER_IS_MEAN_MINUS_OUTER_OOS";
             candidate_count: number;
-            /** @constant */
-            study_trial_rows: 3;
+            study_trial_rows: number;
             /** @constant */
             outer_oos_used_for_selection: false;
             /** @constant */
@@ -1592,9 +1585,9 @@ export interface components {
         /** @description Exact historical/global/causal custody pair; mixing is refused. */
         Provenance: {
             /** @enum {unknown} */
-            source_adapter_id: "rs02.quantbt-advanced-wfo.v1" | "rs02.quantbt-signal-notional-wfo.v1" | "rs02.quantbt-signal-notional-causal-inner.v1" | "full02.quantbt-signal-notional-per-fold-decay.v1" | "full02.quantbt-signal-notional-three-window.v1" | "full03.quantbt-signal-notional-wfo-temporal-1m.v1" | "full03.quantbt-signal-notional-causal-inner-1m.v1" | "full03.quantbt-signal-notional-per-fold-decay-1m.v1" | "full03.quantbt-signal-notional-three-window-optimized-1m.v1" | "full03.quantbt-signal-notional-wfo-temporal-5m.v1" | "full03.quantbt-signal-notional-causal-inner-5m.v1" | "full03.quantbt-signal-notional-per-fold-decay-5m.v1" | "full03.quantbt-signal-notional-three-window-optimized-5m.v1" | "full03.quantbt-signal-notional-wfo-temporal-15m.v1" | "full03.quantbt-signal-notional-causal-inner-15m.v1" | "full03.quantbt-signal-notional-per-fold-decay-15m.v1" | "full03.quantbt-signal-notional-three-window-optimized-15m.v1" | "full03.quantbt-signal-notional-wfo-temporal-30m.v1" | "full03.quantbt-signal-notional-causal-inner-30m.v1" | "full03.quantbt-signal-notional-per-fold-decay-30m.v1" | "full03.quantbt-signal-notional-three-window-optimized-30m.v1" | "full03.quantbt-signal-notional-wfo-temporal-1h.v1" | "full03.quantbt-signal-notional-causal-inner-1h.v1" | "full03.quantbt-signal-notional-per-fold-decay-1h.v1" | "full03.quantbt-signal-notional-three-window-optimized-1h.v1" | "full03.quantbt-signal-notional-wfo-temporal-4h.v1" | "full03.quantbt-signal-notional-causal-inner-4h.v1" | "full03.quantbt-signal-notional-per-fold-decay-4h.v1" | "full03.quantbt-signal-notional-three-window-optimized-4h.v1" | "full03.quantbt-signal-notional-wfo-temporal-1d.v1" | "full03.quantbt-signal-notional-causal-inner-1d.v1" | "full03.quantbt-signal-notional-per-fold-decay-1d.v1" | "full03.quantbt-signal-notional-three-window-optimized-1d.v1" | "full04.quantbt-signal-notional-mode3-global-1h.v1" | "full04.quantbt-signal-notional-mode3-global-1m.v1" | "full04.quantbt-signal-notional-mode3-global-5m.v1" | "full04.quantbt-signal-notional-mode3-global-15m.v1" | "full04.quantbt-signal-notional-mode3-global-30m.v1" | "full04.quantbt-signal-notional-mode3-global-4h.v1" | "full04.quantbt-signal-notional-mode3-global-1d.v1" | "full04.quantbt-signal-notional-mode2-global-1h.v1" | "full04.quantbt-signal-notional-mode2-global-1m.v1" | "full04.quantbt-signal-notional-mode2-global-5m.v1" | "full04.quantbt-signal-notional-mode2-global-15m.v1" | "full04.quantbt-signal-notional-mode2-global-30m.v1" | "full04.quantbt-signal-notional-mode2-global-4h.v1" | "full04.quantbt-signal-notional-mode2-global-1d.v1" | "full04.quantbt-signal-notional-mode4-global-1h.v1" | "full04.quantbt-signal-notional-mode4-global-1m.v1" | "full04.quantbt-signal-notional-mode4-global-5m.v1" | "full04.quantbt-signal-notional-mode4-global-15m.v1" | "full04.quantbt-signal-notional-mode4-global-30m.v1" | "full04.quantbt-signal-notional-mode4-global-4h.v1" | "full04.quantbt-signal-notional-mode4-global-1d.v1" | "full04.quantbt-signal-notional-mode4-causal-1h.v1" | "full04.quantbt-signal-notional-mode4-causal-1m.v1" | "full04.quantbt-signal-notional-mode4-causal-5m.v1" | "full04.quantbt-signal-notional-mode4-causal-15m.v1" | "full04.quantbt-signal-notional-mode4-causal-30m.v1" | "full04.quantbt-signal-notional-mode4-causal-4h.v1" | "full04.quantbt-signal-notional-mode4-causal-1d.v1" | "full04.quantbt-signal-notional-mode5-global-1h.v1" | "full04.quantbt-signal-notional-mode5-global-1m.v1" | "full04.quantbt-signal-notional-mode5-global-5m.v1" | "full04.quantbt-signal-notional-mode5-global-15m.v1" | "full04.quantbt-signal-notional-mode5-global-30m.v1" | "full04.quantbt-signal-notional-mode5-global-4h.v1" | "full04.quantbt-signal-notional-mode5-global-1d.v1" | "full05.quantbt-imported-wfo-temporal-1h.v1" | "full05.quantbt-imported-causal-inner-1h.v1" | "full05.quantbt-imported-per-fold-decay-1h.v1" | "full05.quantbt-imported-three-window-optimized-1h.v1" | "full05.quantbt-imported-wfo-temporal-4h.v1" | "full05.quantbt-imported-causal-inner-4h.v1" | "full05.quantbt-imported-per-fold-decay-4h.v1" | "full05.quantbt-imported-three-window-optimized-4h.v1" | "full05.quantbt-imported-wfo-temporal-1d.v1" | "full05.quantbt-imported-causal-inner-1d.v1" | "full05.quantbt-imported-per-fold-decay-1d.v1" | "full05.quantbt-imported-three-window-optimized-1d.v1" | "full05.quantbt-imported-mode3-global-1h.v1" | "full05.quantbt-imported-mode3-global-4h.v1" | "full05.quantbt-imported-mode3-global-1d.v1" | "full05.quantbt-imported-mode2-global-1h.v1" | "full05.quantbt-imported-mode2-global-4h.v1" | "full05.quantbt-imported-mode2-global-1d.v1" | "full05.quantbt-imported-mode4-global-1h.v1" | "full05.quantbt-imported-mode4-global-4h.v1" | "full05.quantbt-imported-mode4-global-1d.v1" | "full05.quantbt-imported-mode4-causal-1h.v1" | "full05.quantbt-imported-mode4-causal-4h.v1" | "full05.quantbt-imported-mode4-causal-1d.v1" | "full05.quantbt-imported-mode5-global-1h.v1" | "full05.quantbt-imported-mode5-global-4h.v1" | "full05.quantbt-imported-mode5-global-1d.v1" | "full06.quantbt-pct-equity-wfo-temporal-1m.v1" | "full06.quantbt-pct-equity-causal-inner-1m.v1" | "full06.quantbt-pct-equity-per-fold-decay-1m.v1" | "full06.quantbt-pct-equity-three-window-optimized-1m.v1" | "full06.quantbt-pct-equity-wfo-temporal-5m.v1" | "full06.quantbt-pct-equity-causal-inner-5m.v1" | "full06.quantbt-pct-equity-per-fold-decay-5m.v1" | "full06.quantbt-pct-equity-three-window-optimized-5m.v1" | "full06.quantbt-pct-equity-wfo-temporal-15m.v1" | "full06.quantbt-pct-equity-causal-inner-15m.v1" | "full06.quantbt-pct-equity-per-fold-decay-15m.v1" | "full06.quantbt-pct-equity-three-window-optimized-15m.v1" | "full06.quantbt-pct-equity-wfo-temporal-30m.v1" | "full06.quantbt-pct-equity-causal-inner-30m.v1" | "full06.quantbt-pct-equity-per-fold-decay-30m.v1" | "full06.quantbt-pct-equity-three-window-optimized-30m.v1" | "full06.quantbt-pct-equity-wfo-temporal-1h.v1" | "full06.quantbt-pct-equity-causal-inner-1h.v1" | "full06.quantbt-pct-equity-per-fold-decay-1h.v1" | "full06.quantbt-pct-equity-three-window-optimized-1h.v1" | "full06.quantbt-pct-equity-wfo-temporal-4h.v1" | "full06.quantbt-pct-equity-causal-inner-4h.v1" | "full06.quantbt-pct-equity-per-fold-decay-4h.v1" | "full06.quantbt-pct-equity-three-window-optimized-4h.v1" | "full06.quantbt-pct-equity-wfo-temporal-1d.v1" | "full06.quantbt-pct-equity-causal-inner-1d.v1" | "full06.quantbt-pct-equity-per-fold-decay-1d.v1" | "full06.quantbt-pct-equity-three-window-optimized-1d.v1" | "full06.quantbt-pct-equity-mode3-global-1h.v1" | "full06.quantbt-pct-equity-mode3-global-1m.v1" | "full06.quantbt-pct-equity-mode3-global-5m.v1" | "full06.quantbt-pct-equity-mode3-global-15m.v1" | "full06.quantbt-pct-equity-mode3-global-30m.v1" | "full06.quantbt-pct-equity-mode3-global-4h.v1" | "full06.quantbt-pct-equity-mode3-global-1d.v1" | "full06.quantbt-pct-equity-mode2-global-1h.v1" | "full06.quantbt-pct-equity-mode2-global-1m.v1" | "full06.quantbt-pct-equity-mode2-global-5m.v1" | "full06.quantbt-pct-equity-mode2-global-15m.v1" | "full06.quantbt-pct-equity-mode2-global-30m.v1" | "full06.quantbt-pct-equity-mode2-global-4h.v1" | "full06.quantbt-pct-equity-mode2-global-1d.v1" | "full06.quantbt-pct-equity-mode4-global-1h.v1" | "full06.quantbt-pct-equity-mode4-global-1m.v1" | "full06.quantbt-pct-equity-mode4-global-5m.v1" | "full06.quantbt-pct-equity-mode4-global-15m.v1" | "full06.quantbt-pct-equity-mode4-global-30m.v1" | "full06.quantbt-pct-equity-mode4-global-4h.v1" | "full06.quantbt-pct-equity-mode4-global-1d.v1" | "full06.quantbt-pct-equity-mode4-causal-1h.v1" | "full06.quantbt-pct-equity-mode4-causal-1m.v1" | "full06.quantbt-pct-equity-mode4-causal-5m.v1" | "full06.quantbt-pct-equity-mode4-causal-15m.v1" | "full06.quantbt-pct-equity-mode4-causal-30m.v1" | "full06.quantbt-pct-equity-mode4-causal-4h.v1" | "full06.quantbt-pct-equity-mode4-causal-1d.v1" | "full06.quantbt-pct-equity-mode5-global-1h.v1" | "full06.quantbt-pct-equity-mode5-global-1m.v1" | "full06.quantbt-pct-equity-mode5-global-5m.v1" | "full06.quantbt-pct-equity-mode5-global-15m.v1" | "full06.quantbt-pct-equity-mode5-global-30m.v1" | "full06.quantbt-pct-equity-mode5-global-4h.v1" | "full06.quantbt-pct-equity-mode5-global-1d.v1";
+            source_adapter_id: "rs02.quantbt-advanced-wfo.v1" | "rs02.quantbt-signal-notional-wfo.v1" | "rs02.quantbt-signal-notional-causal-inner.v1" | "full02.quantbt-signal-notional-per-fold-decay.v1" | "full02.quantbt-signal-notional-three-window.v1" | "full03.quantbt-signal-notional-wfo-temporal-1m.v1" | "full03.quantbt-signal-notional-causal-inner-1m.v1" | "full03.quantbt-signal-notional-per-fold-decay-1m.v1" | "full03.quantbt-signal-notional-three-window-optimized-1m.v1" | "full03.quantbt-signal-notional-wfo-temporal-5m.v1" | "full03.quantbt-signal-notional-causal-inner-5m.v1" | "full03.quantbt-signal-notional-per-fold-decay-5m.v1" | "full03.quantbt-signal-notional-three-window-optimized-5m.v1" | "full03.quantbt-signal-notional-wfo-temporal-15m.v1" | "full03.quantbt-signal-notional-causal-inner-15m.v1" | "full03.quantbt-signal-notional-per-fold-decay-15m.v1" | "full03.quantbt-signal-notional-three-window-optimized-15m.v1" | "full03.quantbt-signal-notional-wfo-temporal-30m.v1" | "full03.quantbt-signal-notional-causal-inner-30m.v1" | "full03.quantbt-signal-notional-per-fold-decay-30m.v1" | "full03.quantbt-signal-notional-three-window-optimized-30m.v1" | "full03.quantbt-signal-notional-wfo-temporal-1h.v1" | "full03.quantbt-signal-notional-causal-inner-1h.v1" | "full03.quantbt-signal-notional-per-fold-decay-1h.v1" | "full03.quantbt-signal-notional-three-window-optimized-1h.v1" | "full03.quantbt-signal-notional-wfo-temporal-4h.v1" | "full03.quantbt-signal-notional-causal-inner-4h.v1" | "full03.quantbt-signal-notional-per-fold-decay-4h.v1" | "full03.quantbt-signal-notional-three-window-optimized-4h.v1" | "full03.quantbt-signal-notional-wfo-temporal-1d.v1" | "full03.quantbt-signal-notional-causal-inner-1d.v1" | "full03.quantbt-signal-notional-per-fold-decay-1d.v1" | "full03.quantbt-signal-notional-three-window-optimized-1d.v1" | "full04.quantbt-signal-notional-mode3-global-1h.v1" | "full04.quantbt-signal-notional-mode3-global-1m.v1" | "full04.quantbt-signal-notional-mode3-global-5m.v1" | "full04.quantbt-signal-notional-mode3-global-15m.v1" | "full04.quantbt-signal-notional-mode3-global-30m.v1" | "full04.quantbt-signal-notional-mode3-global-4h.v1" | "full04.quantbt-signal-notional-mode3-global-1d.v1" | "full04.quantbt-signal-notional-mode2-global-1h.v1" | "full04.quantbt-signal-notional-mode2-global-1m.v1" | "full04.quantbt-signal-notional-mode2-global-5m.v1" | "full04.quantbt-signal-notional-mode2-global-15m.v1" | "full04.quantbt-signal-notional-mode2-global-30m.v1" | "full04.quantbt-signal-notional-mode2-global-4h.v1" | "full04.quantbt-signal-notional-mode2-global-1d.v1" | "full04.quantbt-signal-notional-mode4-global-1h.v1" | "full04.quantbt-signal-notional-mode4-global-1m.v1" | "full04.quantbt-signal-notional-mode4-global-5m.v1" | "full04.quantbt-signal-notional-mode4-global-15m.v1" | "full04.quantbt-signal-notional-mode4-global-30m.v1" | "full04.quantbt-signal-notional-mode4-global-4h.v1" | "full04.quantbt-signal-notional-mode4-global-1d.v1" | "full04.quantbt-signal-notional-mode4-causal-1h.v1" | "full04.quantbt-signal-notional-mode4-causal-1m.v1" | "full04.quantbt-signal-notional-mode4-causal-5m.v1" | "full04.quantbt-signal-notional-mode4-causal-15m.v1" | "full04.quantbt-signal-notional-mode4-causal-30m.v1" | "full04.quantbt-signal-notional-mode4-causal-4h.v1" | "full04.quantbt-signal-notional-mode4-causal-1d.v1" | "full04.quantbt-signal-notional-mode5-global-1h.v1" | "full04.quantbt-signal-notional-mode5-global-1m.v1" | "full04.quantbt-signal-notional-mode5-global-5m.v1" | "full04.quantbt-signal-notional-mode5-global-15m.v1" | "full04.quantbt-signal-notional-mode5-global-30m.v1" | "full04.quantbt-signal-notional-mode5-global-4h.v1" | "full04.quantbt-signal-notional-mode5-global-1d.v1" | "full05.quantbt-imported-wfo-temporal-1h.v1" | "full05.quantbt-imported-causal-inner-1h.v1" | "full05.quantbt-imported-per-fold-decay-1h.v1" | "full05.quantbt-imported-three-window-optimized-1h.v1" | "full05.quantbt-imported-wfo-temporal-4h.v1" | "full05.quantbt-imported-causal-inner-4h.v1" | "full05.quantbt-imported-per-fold-decay-4h.v1" | "full05.quantbt-imported-three-window-optimized-4h.v1" | "full05.quantbt-imported-wfo-temporal-1d.v1" | "full05.quantbt-imported-causal-inner-1d.v1" | "full05.quantbt-imported-per-fold-decay-1d.v1" | "full05.quantbt-imported-three-window-optimized-1d.v1" | "full05.quantbt-imported-mode3-global-1h.v1" | "full05.quantbt-imported-mode3-global-4h.v1" | "full05.quantbt-imported-mode3-global-1d.v1" | "full05.quantbt-imported-mode2-global-1h.v1" | "full05.quantbt-imported-mode2-global-4h.v1" | "full05.quantbt-imported-mode2-global-1d.v1" | "full05.quantbt-imported-mode4-global-1h.v1" | "full05.quantbt-imported-mode4-global-4h.v1" | "full05.quantbt-imported-mode4-global-1d.v1" | "full05.quantbt-imported-mode4-causal-1h.v1" | "full05.quantbt-imported-mode4-causal-4h.v1" | "full05.quantbt-imported-mode4-causal-1d.v1" | "full05.quantbt-imported-mode5-global-1h.v1" | "full05.quantbt-imported-mode5-global-4h.v1" | "full05.quantbt-imported-mode5-global-1d.v1" | "full06.quantbt-pct-equity-wfo-temporal-1m.v1" | "full06.quantbt-pct-equity-causal-inner-1m.v1" | "full06.quantbt-pct-equity-per-fold-decay-1m.v1" | "full06.quantbt-pct-equity-three-window-optimized-1m.v1" | "full06.quantbt-pct-equity-wfo-temporal-5m.v1" | "full06.quantbt-pct-equity-causal-inner-5m.v1" | "full06.quantbt-pct-equity-per-fold-decay-5m.v1" | "full06.quantbt-pct-equity-three-window-optimized-5m.v1" | "full06.quantbt-pct-equity-wfo-temporal-15m.v1" | "full06.quantbt-pct-equity-causal-inner-15m.v1" | "full06.quantbt-pct-equity-per-fold-decay-15m.v1" | "full06.quantbt-pct-equity-three-window-optimized-15m.v1" | "full06.quantbt-pct-equity-wfo-temporal-30m.v1" | "full06.quantbt-pct-equity-causal-inner-30m.v1" | "full06.quantbt-pct-equity-per-fold-decay-30m.v1" | "full06.quantbt-pct-equity-three-window-optimized-30m.v1" | "full06.quantbt-pct-equity-wfo-temporal-1h.v1" | "full06.quantbt-pct-equity-causal-inner-1h.v1" | "full06.quantbt-pct-equity-per-fold-decay-1h.v1" | "full06.quantbt-pct-equity-three-window-optimized-1h.v1" | "full06.quantbt-pct-equity-wfo-temporal-4h.v1" | "full06.quantbt-pct-equity-causal-inner-4h.v1" | "full06.quantbt-pct-equity-per-fold-decay-4h.v1" | "full06.quantbt-pct-equity-three-window-optimized-4h.v1" | "full06.quantbt-pct-equity-wfo-temporal-1d.v1" | "full06.quantbt-pct-equity-causal-inner-1d.v1" | "full06.quantbt-pct-equity-per-fold-decay-1d.v1" | "full06.quantbt-pct-equity-three-window-optimized-1d.v1" | "full06.quantbt-pct-equity-mode3-global-1h.v1" | "full06.quantbt-pct-equity-mode3-global-1m.v1" | "full06.quantbt-pct-equity-mode3-global-5m.v1" | "full06.quantbt-pct-equity-mode3-global-15m.v1" | "full06.quantbt-pct-equity-mode3-global-30m.v1" | "full06.quantbt-pct-equity-mode3-global-4h.v1" | "full06.quantbt-pct-equity-mode3-global-1d.v1" | "full06.quantbt-pct-equity-mode2-global-1h.v1" | "full06.quantbt-pct-equity-mode2-global-1m.v1" | "full06.quantbt-pct-equity-mode2-global-5m.v1" | "full06.quantbt-pct-equity-mode2-global-15m.v1" | "full06.quantbt-pct-equity-mode2-global-30m.v1" | "full06.quantbt-pct-equity-mode2-global-4h.v1" | "full06.quantbt-pct-equity-mode2-global-1d.v1" | "full06.quantbt-pct-equity-mode4-global-1h.v1" | "full06.quantbt-pct-equity-mode4-global-1m.v1" | "full06.quantbt-pct-equity-mode4-global-5m.v1" | "full06.quantbt-pct-equity-mode4-global-15m.v1" | "full06.quantbt-pct-equity-mode4-global-30m.v1" | "full06.quantbt-pct-equity-mode4-global-4h.v1" | "full06.quantbt-pct-equity-mode4-global-1d.v1" | "full06.quantbt-pct-equity-mode4-causal-1h.v1" | "full06.quantbt-pct-equity-mode4-causal-1m.v1" | "full06.quantbt-pct-equity-mode4-causal-5m.v1" | "full06.quantbt-pct-equity-mode4-causal-15m.v1" | "full06.quantbt-pct-equity-mode4-causal-30m.v1" | "full06.quantbt-pct-equity-mode4-causal-4h.v1" | "full06.quantbt-pct-equity-mode4-causal-1d.v1" | "full06.quantbt-pct-equity-mode5-global-1h.v1" | "full06.quantbt-pct-equity-mode5-global-1m.v1" | "full06.quantbt-pct-equity-mode5-global-5m.v1" | "full06.quantbt-pct-equity-mode5-global-15m.v1" | "full06.quantbt-pct-equity-mode5-global-30m.v1" | "full06.quantbt-pct-equity-mode5-global-4h.v1" | "full06.quantbt-pct-equity-mode5-global-1d.v1" | "full03.quantbt-signal-notional-wfo-temporal-1m.v2" | "full03.quantbt-signal-notional-causal-inner-1m.v2" | "full03.quantbt-signal-notional-per-fold-decay-1m.v2" | "full03.quantbt-signal-notional-three-window-optimized-1m.v2" | "full03.quantbt-signal-notional-wfo-temporal-5m.v2" | "full03.quantbt-signal-notional-causal-inner-5m.v2" | "full03.quantbt-signal-notional-per-fold-decay-5m.v2" | "full03.quantbt-signal-notional-three-window-optimized-5m.v2" | "full03.quantbt-signal-notional-wfo-temporal-15m.v2" | "full03.quantbt-signal-notional-causal-inner-15m.v2" | "full03.quantbt-signal-notional-per-fold-decay-15m.v2" | "full03.quantbt-signal-notional-three-window-optimized-15m.v2" | "full03.quantbt-signal-notional-wfo-temporal-30m.v2" | "full03.quantbt-signal-notional-causal-inner-30m.v2" | "full03.quantbt-signal-notional-per-fold-decay-30m.v2" | "full03.quantbt-signal-notional-three-window-optimized-30m.v2" | "full03.quantbt-signal-notional-wfo-temporal-1h.v2" | "full03.quantbt-signal-notional-causal-inner-1h.v2" | "full03.quantbt-signal-notional-per-fold-decay-1h.v2" | "full03.quantbt-signal-notional-three-window-optimized-1h.v2" | "full03.quantbt-signal-notional-wfo-temporal-4h.v2" | "full03.quantbt-signal-notional-causal-inner-4h.v2" | "full03.quantbt-signal-notional-per-fold-decay-4h.v2" | "full03.quantbt-signal-notional-three-window-optimized-4h.v2" | "full03.quantbt-signal-notional-wfo-temporal-1d.v2" | "full03.quantbt-signal-notional-causal-inner-1d.v2" | "full03.quantbt-signal-notional-per-fold-decay-1d.v2" | "full03.quantbt-signal-notional-three-window-optimized-1d.v2" | "full04.quantbt-signal-notional-mode3-global-1h.v2" | "full04.quantbt-signal-notional-mode3-global-1m.v2" | "full04.quantbt-signal-notional-mode3-global-5m.v2" | "full04.quantbt-signal-notional-mode3-global-15m.v2" | "full04.quantbt-signal-notional-mode3-global-30m.v2" | "full04.quantbt-signal-notional-mode3-global-4h.v2" | "full04.quantbt-signal-notional-mode3-global-1d.v2" | "full04.quantbt-signal-notional-mode2-global-1h.v2" | "full04.quantbt-signal-notional-mode2-global-1m.v2" | "full04.quantbt-signal-notional-mode2-global-5m.v2" | "full04.quantbt-signal-notional-mode2-global-15m.v2" | "full04.quantbt-signal-notional-mode2-global-30m.v2" | "full04.quantbt-signal-notional-mode2-global-4h.v2" | "full04.quantbt-signal-notional-mode2-global-1d.v2" | "full04.quantbt-signal-notional-mode4-global-1h.v2" | "full04.quantbt-signal-notional-mode4-global-1m.v2" | "full04.quantbt-signal-notional-mode4-global-5m.v2" | "full04.quantbt-signal-notional-mode4-global-15m.v2" | "full04.quantbt-signal-notional-mode4-global-30m.v2" | "full04.quantbt-signal-notional-mode4-global-4h.v2" | "full04.quantbt-signal-notional-mode4-global-1d.v2" | "full04.quantbt-signal-notional-mode4-causal-1h.v2" | "full04.quantbt-signal-notional-mode4-causal-1m.v2" | "full04.quantbt-signal-notional-mode4-causal-5m.v2" | "full04.quantbt-signal-notional-mode4-causal-15m.v2" | "full04.quantbt-signal-notional-mode4-causal-30m.v2" | "full04.quantbt-signal-notional-mode4-causal-4h.v2" | "full04.quantbt-signal-notional-mode4-causal-1d.v2" | "full04.quantbt-signal-notional-mode5-global-1h.v2" | "full04.quantbt-signal-notional-mode5-global-1m.v2" | "full04.quantbt-signal-notional-mode5-global-5m.v2" | "full04.quantbt-signal-notional-mode5-global-15m.v2" | "full04.quantbt-signal-notional-mode5-global-30m.v2" | "full04.quantbt-signal-notional-mode5-global-4h.v2" | "full04.quantbt-signal-notional-mode5-global-1d.v2" | "full05.quantbt-imported-wfo-temporal-1h.v2" | "full05.quantbt-imported-causal-inner-1h.v2" | "full05.quantbt-imported-per-fold-decay-1h.v2" | "full05.quantbt-imported-three-window-optimized-1h.v2" | "full05.quantbt-imported-wfo-temporal-4h.v2" | "full05.quantbt-imported-causal-inner-4h.v2" | "full05.quantbt-imported-per-fold-decay-4h.v2" | "full05.quantbt-imported-three-window-optimized-4h.v2" | "full05.quantbt-imported-wfo-temporal-1d.v2" | "full05.quantbt-imported-causal-inner-1d.v2" | "full05.quantbt-imported-per-fold-decay-1d.v2" | "full05.quantbt-imported-three-window-optimized-1d.v2" | "full05.quantbt-imported-mode3-global-1h.v2" | "full05.quantbt-imported-mode3-global-4h.v2" | "full05.quantbt-imported-mode3-global-1d.v2" | "full05.quantbt-imported-mode2-global-1h.v2" | "full05.quantbt-imported-mode2-global-4h.v2" | "full05.quantbt-imported-mode2-global-1d.v2" | "full05.quantbt-imported-mode4-global-1h.v2" | "full05.quantbt-imported-mode4-global-4h.v2" | "full05.quantbt-imported-mode4-global-1d.v2" | "full05.quantbt-imported-mode4-causal-1h.v2" | "full05.quantbt-imported-mode4-causal-4h.v2" | "full05.quantbt-imported-mode4-causal-1d.v2" | "full05.quantbt-imported-mode5-global-1h.v2" | "full05.quantbt-imported-mode5-global-4h.v2" | "full05.quantbt-imported-mode5-global-1d.v2" | "full06.quantbt-pct-equity-wfo-temporal-1m.v2" | "full06.quantbt-pct-equity-causal-inner-1m.v2" | "full06.quantbt-pct-equity-per-fold-decay-1m.v2" | "full06.quantbt-pct-equity-three-window-optimized-1m.v2" | "full06.quantbt-pct-equity-wfo-temporal-5m.v2" | "full06.quantbt-pct-equity-causal-inner-5m.v2" | "full06.quantbt-pct-equity-per-fold-decay-5m.v2" | "full06.quantbt-pct-equity-three-window-optimized-5m.v2" | "full06.quantbt-pct-equity-wfo-temporal-15m.v2" | "full06.quantbt-pct-equity-causal-inner-15m.v2" | "full06.quantbt-pct-equity-per-fold-decay-15m.v2" | "full06.quantbt-pct-equity-three-window-optimized-15m.v2" | "full06.quantbt-pct-equity-wfo-temporal-30m.v2" | "full06.quantbt-pct-equity-causal-inner-30m.v2" | "full06.quantbt-pct-equity-per-fold-decay-30m.v2" | "full06.quantbt-pct-equity-three-window-optimized-30m.v2" | "full06.quantbt-pct-equity-wfo-temporal-1h.v2" | "full06.quantbt-pct-equity-causal-inner-1h.v2" | "full06.quantbt-pct-equity-per-fold-decay-1h.v2" | "full06.quantbt-pct-equity-three-window-optimized-1h.v2" | "full06.quantbt-pct-equity-wfo-temporal-4h.v2" | "full06.quantbt-pct-equity-causal-inner-4h.v2" | "full06.quantbt-pct-equity-per-fold-decay-4h.v2" | "full06.quantbt-pct-equity-three-window-optimized-4h.v2" | "full06.quantbt-pct-equity-wfo-temporal-1d.v2" | "full06.quantbt-pct-equity-causal-inner-1d.v2" | "full06.quantbt-pct-equity-per-fold-decay-1d.v2" | "full06.quantbt-pct-equity-three-window-optimized-1d.v2" | "full06.quantbt-pct-equity-mode3-global-1h.v2" | "full06.quantbt-pct-equity-mode3-global-1m.v2" | "full06.quantbt-pct-equity-mode3-global-5m.v2" | "full06.quantbt-pct-equity-mode3-global-15m.v2" | "full06.quantbt-pct-equity-mode3-global-30m.v2" | "full06.quantbt-pct-equity-mode3-global-4h.v2" | "full06.quantbt-pct-equity-mode3-global-1d.v2" | "full06.quantbt-pct-equity-mode2-global-1h.v2" | "full06.quantbt-pct-equity-mode2-global-1m.v2" | "full06.quantbt-pct-equity-mode2-global-5m.v2" | "full06.quantbt-pct-equity-mode2-global-15m.v2" | "full06.quantbt-pct-equity-mode2-global-30m.v2" | "full06.quantbt-pct-equity-mode2-global-4h.v2" | "full06.quantbt-pct-equity-mode2-global-1d.v2" | "full06.quantbt-pct-equity-mode4-global-1h.v2" | "full06.quantbt-pct-equity-mode4-global-1m.v2" | "full06.quantbt-pct-equity-mode4-global-5m.v2" | "full06.quantbt-pct-equity-mode4-global-15m.v2" | "full06.quantbt-pct-equity-mode4-global-30m.v2" | "full06.quantbt-pct-equity-mode4-global-4h.v2" | "full06.quantbt-pct-equity-mode4-global-1d.v2" | "full06.quantbt-pct-equity-mode4-causal-1h.v2" | "full06.quantbt-pct-equity-mode4-causal-1m.v2" | "full06.quantbt-pct-equity-mode4-causal-5m.v2" | "full06.quantbt-pct-equity-mode4-causal-15m.v2" | "full06.quantbt-pct-equity-mode4-causal-30m.v2" | "full06.quantbt-pct-equity-mode4-causal-4h.v2" | "full06.quantbt-pct-equity-mode4-causal-1d.v2" | "full06.quantbt-pct-equity-mode5-global-1h.v2" | "full06.quantbt-pct-equity-mode5-global-1m.v2" | "full06.quantbt-pct-equity-mode5-global-5m.v2" | "full06.quantbt-pct-equity-mode5-global-15m.v2" | "full06.quantbt-pct-equity-mode5-global-30m.v2" | "full06.quantbt-pct-equity-mode5-global-4h.v2" | "full06.quantbt-pct-equity-mode5-global-1d.v2";
             /** @enum {unknown} */
-            profile_id: "rs02.delta-wfo-global.v1" | "rs02.delta-signal-notional-wfo.v1" | "rs02.delta-signal-notional-causal-inner.v1" | "full02.delta-signal-notional-per-fold-decay.v1" | "full02.delta-signal-notional-three-window.v1" | "full03.delta-signal-notional-wfo-temporal-1m.v1" | "full03.delta-signal-notional-causal-inner-1m.v1" | "full03.delta-signal-notional-per-fold-decay-1m.v1" | "full03.delta-signal-notional-three-window-optimized-1m.v1" | "full03.delta-signal-notional-wfo-temporal-5m.v1" | "full03.delta-signal-notional-causal-inner-5m.v1" | "full03.delta-signal-notional-per-fold-decay-5m.v1" | "full03.delta-signal-notional-three-window-optimized-5m.v1" | "full03.delta-signal-notional-wfo-temporal-15m.v1" | "full03.delta-signal-notional-causal-inner-15m.v1" | "full03.delta-signal-notional-per-fold-decay-15m.v1" | "full03.delta-signal-notional-three-window-optimized-15m.v1" | "full03.delta-signal-notional-wfo-temporal-30m.v1" | "full03.delta-signal-notional-causal-inner-30m.v1" | "full03.delta-signal-notional-per-fold-decay-30m.v1" | "full03.delta-signal-notional-three-window-optimized-30m.v1" | "full03.delta-signal-notional-wfo-temporal-1h.v1" | "full03.delta-signal-notional-causal-inner-1h.v1" | "full03.delta-signal-notional-per-fold-decay-1h.v1" | "full03.delta-signal-notional-three-window-optimized-1h.v1" | "full03.delta-signal-notional-wfo-temporal-4h.v1" | "full03.delta-signal-notional-causal-inner-4h.v1" | "full03.delta-signal-notional-per-fold-decay-4h.v1" | "full03.delta-signal-notional-three-window-optimized-4h.v1" | "full03.delta-signal-notional-wfo-temporal-1d.v1" | "full03.delta-signal-notional-causal-inner-1d.v1" | "full03.delta-signal-notional-per-fold-decay-1d.v1" | "full03.delta-signal-notional-three-window-optimized-1d.v1" | "full04.delta-signal-notional-mode3-global-1h.v1" | "full04.delta-signal-notional-mode3-global-1m.v1" | "full04.delta-signal-notional-mode3-global-5m.v1" | "full04.delta-signal-notional-mode3-global-15m.v1" | "full04.delta-signal-notional-mode3-global-30m.v1" | "full04.delta-signal-notional-mode3-global-4h.v1" | "full04.delta-signal-notional-mode3-global-1d.v1" | "full04.delta-signal-notional-mode2-global-1h.v1" | "full04.delta-signal-notional-mode2-global-1m.v1" | "full04.delta-signal-notional-mode2-global-5m.v1" | "full04.delta-signal-notional-mode2-global-15m.v1" | "full04.delta-signal-notional-mode2-global-30m.v1" | "full04.delta-signal-notional-mode2-global-4h.v1" | "full04.delta-signal-notional-mode2-global-1d.v1" | "full04.delta-signal-notional-mode4-global-1h.v1" | "full04.delta-signal-notional-mode4-global-1m.v1" | "full04.delta-signal-notional-mode4-global-5m.v1" | "full04.delta-signal-notional-mode4-global-15m.v1" | "full04.delta-signal-notional-mode4-global-30m.v1" | "full04.delta-signal-notional-mode4-global-4h.v1" | "full04.delta-signal-notional-mode4-global-1d.v1" | "full04.delta-signal-notional-mode4-causal-1h.v1" | "full04.delta-signal-notional-mode4-causal-1m.v1" | "full04.delta-signal-notional-mode4-causal-5m.v1" | "full04.delta-signal-notional-mode4-causal-15m.v1" | "full04.delta-signal-notional-mode4-causal-30m.v1" | "full04.delta-signal-notional-mode4-causal-4h.v1" | "full04.delta-signal-notional-mode4-causal-1d.v1" | "full04.delta-signal-notional-mode5-global-1h.v1" | "full04.delta-signal-notional-mode5-global-1m.v1" | "full04.delta-signal-notional-mode5-global-5m.v1" | "full04.delta-signal-notional-mode5-global-15m.v1" | "full04.delta-signal-notional-mode5-global-30m.v1" | "full04.delta-signal-notional-mode5-global-4h.v1" | "full04.delta-signal-notional-mode5-global-1d.v1" | "full05.imported-wfo-temporal-1h.v1" | "full05.imported-causal-inner-1h.v1" | "full05.imported-per-fold-decay-1h.v1" | "full05.imported-three-window-optimized-1h.v1" | "full05.imported-wfo-temporal-4h.v1" | "full05.imported-causal-inner-4h.v1" | "full05.imported-per-fold-decay-4h.v1" | "full05.imported-three-window-optimized-4h.v1" | "full05.imported-wfo-temporal-1d.v1" | "full05.imported-causal-inner-1d.v1" | "full05.imported-per-fold-decay-1d.v1" | "full05.imported-three-window-optimized-1d.v1" | "full05.imported-mode3-global-1h.v1" | "full05.imported-mode3-global-4h.v1" | "full05.imported-mode3-global-1d.v1" | "full05.imported-mode2-global-1h.v1" | "full05.imported-mode2-global-4h.v1" | "full05.imported-mode2-global-1d.v1" | "full05.imported-mode4-global-1h.v1" | "full05.imported-mode4-global-4h.v1" | "full05.imported-mode4-global-1d.v1" | "full05.imported-mode4-causal-1h.v1" | "full05.imported-mode4-causal-4h.v1" | "full05.imported-mode4-causal-1d.v1" | "full05.imported-mode5-global-1h.v1" | "full05.imported-mode5-global-4h.v1" | "full05.imported-mode5-global-1d.v1" | "full06.delta-pct-equity-wfo-temporal-1m.v1" | "full06.delta-pct-equity-causal-inner-1m.v1" | "full06.delta-pct-equity-per-fold-decay-1m.v1" | "full06.delta-pct-equity-three-window-optimized-1m.v1" | "full06.delta-pct-equity-wfo-temporal-5m.v1" | "full06.delta-pct-equity-causal-inner-5m.v1" | "full06.delta-pct-equity-per-fold-decay-5m.v1" | "full06.delta-pct-equity-three-window-optimized-5m.v1" | "full06.delta-pct-equity-wfo-temporal-15m.v1" | "full06.delta-pct-equity-causal-inner-15m.v1" | "full06.delta-pct-equity-per-fold-decay-15m.v1" | "full06.delta-pct-equity-three-window-optimized-15m.v1" | "full06.delta-pct-equity-wfo-temporal-30m.v1" | "full06.delta-pct-equity-causal-inner-30m.v1" | "full06.delta-pct-equity-per-fold-decay-30m.v1" | "full06.delta-pct-equity-three-window-optimized-30m.v1" | "full06.delta-pct-equity-wfo-temporal-1h.v1" | "full06.delta-pct-equity-causal-inner-1h.v1" | "full06.delta-pct-equity-per-fold-decay-1h.v1" | "full06.delta-pct-equity-three-window-optimized-1h.v1" | "full06.delta-pct-equity-wfo-temporal-4h.v1" | "full06.delta-pct-equity-causal-inner-4h.v1" | "full06.delta-pct-equity-per-fold-decay-4h.v1" | "full06.delta-pct-equity-three-window-optimized-4h.v1" | "full06.delta-pct-equity-wfo-temporal-1d.v1" | "full06.delta-pct-equity-causal-inner-1d.v1" | "full06.delta-pct-equity-per-fold-decay-1d.v1" | "full06.delta-pct-equity-three-window-optimized-1d.v1" | "full06.delta-pct-equity-mode3-global-1h.v1" | "full06.delta-pct-equity-mode3-global-1m.v1" | "full06.delta-pct-equity-mode3-global-5m.v1" | "full06.delta-pct-equity-mode3-global-15m.v1" | "full06.delta-pct-equity-mode3-global-30m.v1" | "full06.delta-pct-equity-mode3-global-4h.v1" | "full06.delta-pct-equity-mode3-global-1d.v1" | "full06.delta-pct-equity-mode2-global-1h.v1" | "full06.delta-pct-equity-mode2-global-1m.v1" | "full06.delta-pct-equity-mode2-global-5m.v1" | "full06.delta-pct-equity-mode2-global-15m.v1" | "full06.delta-pct-equity-mode2-global-30m.v1" | "full06.delta-pct-equity-mode2-global-4h.v1" | "full06.delta-pct-equity-mode2-global-1d.v1" | "full06.delta-pct-equity-mode4-global-1h.v1" | "full06.delta-pct-equity-mode4-global-1m.v1" | "full06.delta-pct-equity-mode4-global-5m.v1" | "full06.delta-pct-equity-mode4-global-15m.v1" | "full06.delta-pct-equity-mode4-global-30m.v1" | "full06.delta-pct-equity-mode4-global-4h.v1" | "full06.delta-pct-equity-mode4-global-1d.v1" | "full06.delta-pct-equity-mode4-causal-1h.v1" | "full06.delta-pct-equity-mode4-causal-1m.v1" | "full06.delta-pct-equity-mode4-causal-5m.v1" | "full06.delta-pct-equity-mode4-causal-15m.v1" | "full06.delta-pct-equity-mode4-causal-30m.v1" | "full06.delta-pct-equity-mode4-causal-4h.v1" | "full06.delta-pct-equity-mode4-causal-1d.v1" | "full06.delta-pct-equity-mode5-global-1h.v1" | "full06.delta-pct-equity-mode5-global-1m.v1" | "full06.delta-pct-equity-mode5-global-5m.v1" | "full06.delta-pct-equity-mode5-global-15m.v1" | "full06.delta-pct-equity-mode5-global-30m.v1" | "full06.delta-pct-equity-mode5-global-4h.v1" | "full06.delta-pct-equity-mode5-global-1d.v1";
+            profile_id: "rs02.delta-wfo-global.v1" | "rs02.delta-signal-notional-wfo.v1" | "rs02.delta-signal-notional-causal-inner.v1" | "full02.delta-signal-notional-per-fold-decay.v1" | "full02.delta-signal-notional-three-window.v1" | "full03.delta-signal-notional-wfo-temporal-1m.v1" | "full03.delta-signal-notional-causal-inner-1m.v1" | "full03.delta-signal-notional-per-fold-decay-1m.v1" | "full03.delta-signal-notional-three-window-optimized-1m.v1" | "full03.delta-signal-notional-wfo-temporal-5m.v1" | "full03.delta-signal-notional-causal-inner-5m.v1" | "full03.delta-signal-notional-per-fold-decay-5m.v1" | "full03.delta-signal-notional-three-window-optimized-5m.v1" | "full03.delta-signal-notional-wfo-temporal-15m.v1" | "full03.delta-signal-notional-causal-inner-15m.v1" | "full03.delta-signal-notional-per-fold-decay-15m.v1" | "full03.delta-signal-notional-three-window-optimized-15m.v1" | "full03.delta-signal-notional-wfo-temporal-30m.v1" | "full03.delta-signal-notional-causal-inner-30m.v1" | "full03.delta-signal-notional-per-fold-decay-30m.v1" | "full03.delta-signal-notional-three-window-optimized-30m.v1" | "full03.delta-signal-notional-wfo-temporal-1h.v1" | "full03.delta-signal-notional-causal-inner-1h.v1" | "full03.delta-signal-notional-per-fold-decay-1h.v1" | "full03.delta-signal-notional-three-window-optimized-1h.v1" | "full03.delta-signal-notional-wfo-temporal-4h.v1" | "full03.delta-signal-notional-causal-inner-4h.v1" | "full03.delta-signal-notional-per-fold-decay-4h.v1" | "full03.delta-signal-notional-three-window-optimized-4h.v1" | "full03.delta-signal-notional-wfo-temporal-1d.v1" | "full03.delta-signal-notional-causal-inner-1d.v1" | "full03.delta-signal-notional-per-fold-decay-1d.v1" | "full03.delta-signal-notional-three-window-optimized-1d.v1" | "full04.delta-signal-notional-mode3-global-1h.v1" | "full04.delta-signal-notional-mode3-global-1m.v1" | "full04.delta-signal-notional-mode3-global-5m.v1" | "full04.delta-signal-notional-mode3-global-15m.v1" | "full04.delta-signal-notional-mode3-global-30m.v1" | "full04.delta-signal-notional-mode3-global-4h.v1" | "full04.delta-signal-notional-mode3-global-1d.v1" | "full04.delta-signal-notional-mode2-global-1h.v1" | "full04.delta-signal-notional-mode2-global-1m.v1" | "full04.delta-signal-notional-mode2-global-5m.v1" | "full04.delta-signal-notional-mode2-global-15m.v1" | "full04.delta-signal-notional-mode2-global-30m.v1" | "full04.delta-signal-notional-mode2-global-4h.v1" | "full04.delta-signal-notional-mode2-global-1d.v1" | "full04.delta-signal-notional-mode4-global-1h.v1" | "full04.delta-signal-notional-mode4-global-1m.v1" | "full04.delta-signal-notional-mode4-global-5m.v1" | "full04.delta-signal-notional-mode4-global-15m.v1" | "full04.delta-signal-notional-mode4-global-30m.v1" | "full04.delta-signal-notional-mode4-global-4h.v1" | "full04.delta-signal-notional-mode4-global-1d.v1" | "full04.delta-signal-notional-mode4-causal-1h.v1" | "full04.delta-signal-notional-mode4-causal-1m.v1" | "full04.delta-signal-notional-mode4-causal-5m.v1" | "full04.delta-signal-notional-mode4-causal-15m.v1" | "full04.delta-signal-notional-mode4-causal-30m.v1" | "full04.delta-signal-notional-mode4-causal-4h.v1" | "full04.delta-signal-notional-mode4-causal-1d.v1" | "full04.delta-signal-notional-mode5-global-1h.v1" | "full04.delta-signal-notional-mode5-global-1m.v1" | "full04.delta-signal-notional-mode5-global-5m.v1" | "full04.delta-signal-notional-mode5-global-15m.v1" | "full04.delta-signal-notional-mode5-global-30m.v1" | "full04.delta-signal-notional-mode5-global-4h.v1" | "full04.delta-signal-notional-mode5-global-1d.v1" | "full05.imported-wfo-temporal-1h.v1" | "full05.imported-causal-inner-1h.v1" | "full05.imported-per-fold-decay-1h.v1" | "full05.imported-three-window-optimized-1h.v1" | "full05.imported-wfo-temporal-4h.v1" | "full05.imported-causal-inner-4h.v1" | "full05.imported-per-fold-decay-4h.v1" | "full05.imported-three-window-optimized-4h.v1" | "full05.imported-wfo-temporal-1d.v1" | "full05.imported-causal-inner-1d.v1" | "full05.imported-per-fold-decay-1d.v1" | "full05.imported-three-window-optimized-1d.v1" | "full05.imported-mode3-global-1h.v1" | "full05.imported-mode3-global-4h.v1" | "full05.imported-mode3-global-1d.v1" | "full05.imported-mode2-global-1h.v1" | "full05.imported-mode2-global-4h.v1" | "full05.imported-mode2-global-1d.v1" | "full05.imported-mode4-global-1h.v1" | "full05.imported-mode4-global-4h.v1" | "full05.imported-mode4-global-1d.v1" | "full05.imported-mode4-causal-1h.v1" | "full05.imported-mode4-causal-4h.v1" | "full05.imported-mode4-causal-1d.v1" | "full05.imported-mode5-global-1h.v1" | "full05.imported-mode5-global-4h.v1" | "full05.imported-mode5-global-1d.v1" | "full06.delta-pct-equity-wfo-temporal-1m.v1" | "full06.delta-pct-equity-causal-inner-1m.v1" | "full06.delta-pct-equity-per-fold-decay-1m.v1" | "full06.delta-pct-equity-three-window-optimized-1m.v1" | "full06.delta-pct-equity-wfo-temporal-5m.v1" | "full06.delta-pct-equity-causal-inner-5m.v1" | "full06.delta-pct-equity-per-fold-decay-5m.v1" | "full06.delta-pct-equity-three-window-optimized-5m.v1" | "full06.delta-pct-equity-wfo-temporal-15m.v1" | "full06.delta-pct-equity-causal-inner-15m.v1" | "full06.delta-pct-equity-per-fold-decay-15m.v1" | "full06.delta-pct-equity-three-window-optimized-15m.v1" | "full06.delta-pct-equity-wfo-temporal-30m.v1" | "full06.delta-pct-equity-causal-inner-30m.v1" | "full06.delta-pct-equity-per-fold-decay-30m.v1" | "full06.delta-pct-equity-three-window-optimized-30m.v1" | "full06.delta-pct-equity-wfo-temporal-1h.v1" | "full06.delta-pct-equity-causal-inner-1h.v1" | "full06.delta-pct-equity-per-fold-decay-1h.v1" | "full06.delta-pct-equity-three-window-optimized-1h.v1" | "full06.delta-pct-equity-wfo-temporal-4h.v1" | "full06.delta-pct-equity-causal-inner-4h.v1" | "full06.delta-pct-equity-per-fold-decay-4h.v1" | "full06.delta-pct-equity-three-window-optimized-4h.v1" | "full06.delta-pct-equity-wfo-temporal-1d.v1" | "full06.delta-pct-equity-causal-inner-1d.v1" | "full06.delta-pct-equity-per-fold-decay-1d.v1" | "full06.delta-pct-equity-three-window-optimized-1d.v1" | "full06.delta-pct-equity-mode3-global-1h.v1" | "full06.delta-pct-equity-mode3-global-1m.v1" | "full06.delta-pct-equity-mode3-global-5m.v1" | "full06.delta-pct-equity-mode3-global-15m.v1" | "full06.delta-pct-equity-mode3-global-30m.v1" | "full06.delta-pct-equity-mode3-global-4h.v1" | "full06.delta-pct-equity-mode3-global-1d.v1" | "full06.delta-pct-equity-mode2-global-1h.v1" | "full06.delta-pct-equity-mode2-global-1m.v1" | "full06.delta-pct-equity-mode2-global-5m.v1" | "full06.delta-pct-equity-mode2-global-15m.v1" | "full06.delta-pct-equity-mode2-global-30m.v1" | "full06.delta-pct-equity-mode2-global-4h.v1" | "full06.delta-pct-equity-mode2-global-1d.v1" | "full06.delta-pct-equity-mode4-global-1h.v1" | "full06.delta-pct-equity-mode4-global-1m.v1" | "full06.delta-pct-equity-mode4-global-5m.v1" | "full06.delta-pct-equity-mode4-global-15m.v1" | "full06.delta-pct-equity-mode4-global-30m.v1" | "full06.delta-pct-equity-mode4-global-4h.v1" | "full06.delta-pct-equity-mode4-global-1d.v1" | "full06.delta-pct-equity-mode4-causal-1h.v1" | "full06.delta-pct-equity-mode4-causal-1m.v1" | "full06.delta-pct-equity-mode4-causal-5m.v1" | "full06.delta-pct-equity-mode4-causal-15m.v1" | "full06.delta-pct-equity-mode4-causal-30m.v1" | "full06.delta-pct-equity-mode4-causal-4h.v1" | "full06.delta-pct-equity-mode4-causal-1d.v1" | "full06.delta-pct-equity-mode5-global-1h.v1" | "full06.delta-pct-equity-mode5-global-1m.v1" | "full06.delta-pct-equity-mode5-global-5m.v1" | "full06.delta-pct-equity-mode5-global-15m.v1" | "full06.delta-pct-equity-mode5-global-30m.v1" | "full06.delta-pct-equity-mode5-global-4h.v1" | "full06.delta-pct-equity-mode5-global-1d.v1" | "full03.delta-signal-notional-wfo-temporal-1m.v2" | "full03.delta-signal-notional-causal-inner-1m.v2" | "full03.delta-signal-notional-per-fold-decay-1m.v2" | "full03.delta-signal-notional-three-window-optimized-1m.v2" | "full03.delta-signal-notional-wfo-temporal-5m.v2" | "full03.delta-signal-notional-causal-inner-5m.v2" | "full03.delta-signal-notional-per-fold-decay-5m.v2" | "full03.delta-signal-notional-three-window-optimized-5m.v2" | "full03.delta-signal-notional-wfo-temporal-15m.v2" | "full03.delta-signal-notional-causal-inner-15m.v2" | "full03.delta-signal-notional-per-fold-decay-15m.v2" | "full03.delta-signal-notional-three-window-optimized-15m.v2" | "full03.delta-signal-notional-wfo-temporal-30m.v2" | "full03.delta-signal-notional-causal-inner-30m.v2" | "full03.delta-signal-notional-per-fold-decay-30m.v2" | "full03.delta-signal-notional-three-window-optimized-30m.v2" | "full03.delta-signal-notional-wfo-temporal-1h.v2" | "full03.delta-signal-notional-causal-inner-1h.v2" | "full03.delta-signal-notional-per-fold-decay-1h.v2" | "full03.delta-signal-notional-three-window-optimized-1h.v2" | "full03.delta-signal-notional-wfo-temporal-4h.v2" | "full03.delta-signal-notional-causal-inner-4h.v2" | "full03.delta-signal-notional-per-fold-decay-4h.v2" | "full03.delta-signal-notional-three-window-optimized-4h.v2" | "full03.delta-signal-notional-wfo-temporal-1d.v2" | "full03.delta-signal-notional-causal-inner-1d.v2" | "full03.delta-signal-notional-per-fold-decay-1d.v2" | "full03.delta-signal-notional-three-window-optimized-1d.v2" | "full04.delta-signal-notional-mode3-global-1h.v2" | "full04.delta-signal-notional-mode3-global-1m.v2" | "full04.delta-signal-notional-mode3-global-5m.v2" | "full04.delta-signal-notional-mode3-global-15m.v2" | "full04.delta-signal-notional-mode3-global-30m.v2" | "full04.delta-signal-notional-mode3-global-4h.v2" | "full04.delta-signal-notional-mode3-global-1d.v2" | "full04.delta-signal-notional-mode2-global-1h.v2" | "full04.delta-signal-notional-mode2-global-1m.v2" | "full04.delta-signal-notional-mode2-global-5m.v2" | "full04.delta-signal-notional-mode2-global-15m.v2" | "full04.delta-signal-notional-mode2-global-30m.v2" | "full04.delta-signal-notional-mode2-global-4h.v2" | "full04.delta-signal-notional-mode2-global-1d.v2" | "full04.delta-signal-notional-mode4-global-1h.v2" | "full04.delta-signal-notional-mode4-global-1m.v2" | "full04.delta-signal-notional-mode4-global-5m.v2" | "full04.delta-signal-notional-mode4-global-15m.v2" | "full04.delta-signal-notional-mode4-global-30m.v2" | "full04.delta-signal-notional-mode4-global-4h.v2" | "full04.delta-signal-notional-mode4-global-1d.v2" | "full04.delta-signal-notional-mode4-causal-1h.v2" | "full04.delta-signal-notional-mode4-causal-1m.v2" | "full04.delta-signal-notional-mode4-causal-5m.v2" | "full04.delta-signal-notional-mode4-causal-15m.v2" | "full04.delta-signal-notional-mode4-causal-30m.v2" | "full04.delta-signal-notional-mode4-causal-4h.v2" | "full04.delta-signal-notional-mode4-causal-1d.v2" | "full04.delta-signal-notional-mode5-global-1h.v2" | "full04.delta-signal-notional-mode5-global-1m.v2" | "full04.delta-signal-notional-mode5-global-5m.v2" | "full04.delta-signal-notional-mode5-global-15m.v2" | "full04.delta-signal-notional-mode5-global-30m.v2" | "full04.delta-signal-notional-mode5-global-4h.v2" | "full04.delta-signal-notional-mode5-global-1d.v2" | "full05.imported-wfo-temporal-1h.v2" | "full05.imported-causal-inner-1h.v2" | "full05.imported-per-fold-decay-1h.v2" | "full05.imported-three-window-optimized-1h.v2" | "full05.imported-wfo-temporal-4h.v2" | "full05.imported-causal-inner-4h.v2" | "full05.imported-per-fold-decay-4h.v2" | "full05.imported-three-window-optimized-4h.v2" | "full05.imported-wfo-temporal-1d.v2" | "full05.imported-causal-inner-1d.v2" | "full05.imported-per-fold-decay-1d.v2" | "full05.imported-three-window-optimized-1d.v2" | "full05.imported-mode3-global-1h.v2" | "full05.imported-mode3-global-4h.v2" | "full05.imported-mode3-global-1d.v2" | "full05.imported-mode2-global-1h.v2" | "full05.imported-mode2-global-4h.v2" | "full05.imported-mode2-global-1d.v2" | "full05.imported-mode4-global-1h.v2" | "full05.imported-mode4-global-4h.v2" | "full05.imported-mode4-global-1d.v2" | "full05.imported-mode4-causal-1h.v2" | "full05.imported-mode4-causal-4h.v2" | "full05.imported-mode4-causal-1d.v2" | "full05.imported-mode5-global-1h.v2" | "full05.imported-mode5-global-4h.v2" | "full05.imported-mode5-global-1d.v2" | "full06.delta-pct-equity-wfo-temporal-1m.v2" | "full06.delta-pct-equity-causal-inner-1m.v2" | "full06.delta-pct-equity-per-fold-decay-1m.v2" | "full06.delta-pct-equity-three-window-optimized-1m.v2" | "full06.delta-pct-equity-wfo-temporal-5m.v2" | "full06.delta-pct-equity-causal-inner-5m.v2" | "full06.delta-pct-equity-per-fold-decay-5m.v2" | "full06.delta-pct-equity-three-window-optimized-5m.v2" | "full06.delta-pct-equity-wfo-temporal-15m.v2" | "full06.delta-pct-equity-causal-inner-15m.v2" | "full06.delta-pct-equity-per-fold-decay-15m.v2" | "full06.delta-pct-equity-three-window-optimized-15m.v2" | "full06.delta-pct-equity-wfo-temporal-30m.v2" | "full06.delta-pct-equity-causal-inner-30m.v2" | "full06.delta-pct-equity-per-fold-decay-30m.v2" | "full06.delta-pct-equity-three-window-optimized-30m.v2" | "full06.delta-pct-equity-wfo-temporal-1h.v2" | "full06.delta-pct-equity-causal-inner-1h.v2" | "full06.delta-pct-equity-per-fold-decay-1h.v2" | "full06.delta-pct-equity-three-window-optimized-1h.v2" | "full06.delta-pct-equity-wfo-temporal-4h.v2" | "full06.delta-pct-equity-causal-inner-4h.v2" | "full06.delta-pct-equity-per-fold-decay-4h.v2" | "full06.delta-pct-equity-three-window-optimized-4h.v2" | "full06.delta-pct-equity-wfo-temporal-1d.v2" | "full06.delta-pct-equity-causal-inner-1d.v2" | "full06.delta-pct-equity-per-fold-decay-1d.v2" | "full06.delta-pct-equity-three-window-optimized-1d.v2" | "full06.delta-pct-equity-mode3-global-1h.v2" | "full06.delta-pct-equity-mode3-global-1m.v2" | "full06.delta-pct-equity-mode3-global-5m.v2" | "full06.delta-pct-equity-mode3-global-15m.v2" | "full06.delta-pct-equity-mode3-global-30m.v2" | "full06.delta-pct-equity-mode3-global-4h.v2" | "full06.delta-pct-equity-mode3-global-1d.v2" | "full06.delta-pct-equity-mode2-global-1h.v2" | "full06.delta-pct-equity-mode2-global-1m.v2" | "full06.delta-pct-equity-mode2-global-5m.v2" | "full06.delta-pct-equity-mode2-global-15m.v2" | "full06.delta-pct-equity-mode2-global-30m.v2" | "full06.delta-pct-equity-mode2-global-4h.v2" | "full06.delta-pct-equity-mode2-global-1d.v2" | "full06.delta-pct-equity-mode4-global-1h.v2" | "full06.delta-pct-equity-mode4-global-1m.v2" | "full06.delta-pct-equity-mode4-global-5m.v2" | "full06.delta-pct-equity-mode4-global-15m.v2" | "full06.delta-pct-equity-mode4-global-30m.v2" | "full06.delta-pct-equity-mode4-global-4h.v2" | "full06.delta-pct-equity-mode4-global-1d.v2" | "full06.delta-pct-equity-mode4-causal-1h.v2" | "full06.delta-pct-equity-mode4-causal-1m.v2" | "full06.delta-pct-equity-mode4-causal-5m.v2" | "full06.delta-pct-equity-mode4-causal-15m.v2" | "full06.delta-pct-equity-mode4-causal-30m.v2" | "full06.delta-pct-equity-mode4-causal-4h.v2" | "full06.delta-pct-equity-mode4-causal-1d.v2" | "full06.delta-pct-equity-mode5-global-1h.v2" | "full06.delta-pct-equity-mode5-global-1m.v2" | "full06.delta-pct-equity-mode5-global-5m.v2" | "full06.delta-pct-equity-mode5-global-15m.v2" | "full06.delta-pct-equity-mode5-global-30m.v2" | "full06.delta-pct-equity-mode5-global-4h.v2" | "full06.delta-pct-equity-mode5-global-1d.v2";
             /** @constant */
             engine_version: "1.1.1";
             source_manifest_digest: components["schemas"]["Digest"];
@@ -2394,6 +2387,771 @@ export interface components {
             source_adapter_id?: "full06.quantbt-pct-equity-mode5-global-1d.v1";
             /** @constant */
             profile_id?: "full06.delta-pct-equity-mode5-global-1d.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-wfo-temporal-1m.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-wfo-temporal-1m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-causal-inner-1m.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-causal-inner-1m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-per-fold-decay-1m.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-per-fold-decay-1m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-three-window-optimized-1m.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-three-window-optimized-1m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-wfo-temporal-5m.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-wfo-temporal-5m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-causal-inner-5m.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-causal-inner-5m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-per-fold-decay-5m.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-per-fold-decay-5m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-three-window-optimized-5m.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-three-window-optimized-5m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-wfo-temporal-15m.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-wfo-temporal-15m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-causal-inner-15m.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-causal-inner-15m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-per-fold-decay-15m.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-per-fold-decay-15m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-three-window-optimized-15m.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-three-window-optimized-15m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-wfo-temporal-30m.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-wfo-temporal-30m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-causal-inner-30m.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-causal-inner-30m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-per-fold-decay-30m.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-per-fold-decay-30m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-three-window-optimized-30m.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-three-window-optimized-30m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-wfo-temporal-1h.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-wfo-temporal-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-causal-inner-1h.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-causal-inner-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-per-fold-decay-1h.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-per-fold-decay-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-three-window-optimized-1h.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-three-window-optimized-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-wfo-temporal-4h.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-wfo-temporal-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-causal-inner-4h.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-causal-inner-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-per-fold-decay-4h.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-per-fold-decay-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-three-window-optimized-4h.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-three-window-optimized-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-wfo-temporal-1d.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-wfo-temporal-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-causal-inner-1d.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-causal-inner-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-per-fold-decay-1d.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-per-fold-decay-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full03.quantbt-signal-notional-three-window-optimized-1d.v2";
+            /** @constant */
+            profile_id?: "full03.delta-signal-notional-three-window-optimized-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode3-global-1h.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode3-global-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode3-global-1m.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode3-global-1m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode3-global-5m.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode3-global-5m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode3-global-15m.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode3-global-15m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode3-global-30m.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode3-global-30m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode3-global-4h.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode3-global-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode3-global-1d.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode3-global-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode2-global-1h.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode2-global-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode2-global-1m.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode2-global-1m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode2-global-5m.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode2-global-5m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode2-global-15m.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode2-global-15m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode2-global-30m.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode2-global-30m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode2-global-4h.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode2-global-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode2-global-1d.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode2-global-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode4-global-1h.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode4-global-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode4-global-1m.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode4-global-1m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode4-global-5m.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode4-global-5m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode4-global-15m.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode4-global-15m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode4-global-30m.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode4-global-30m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode4-global-4h.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode4-global-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode4-global-1d.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode4-global-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode4-causal-1h.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode4-causal-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode4-causal-1m.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode4-causal-1m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode4-causal-5m.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode4-causal-5m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode4-causal-15m.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode4-causal-15m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode4-causal-30m.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode4-causal-30m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode4-causal-4h.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode4-causal-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode4-causal-1d.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode4-causal-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode5-global-1h.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode5-global-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode5-global-1m.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode5-global-1m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode5-global-5m.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode5-global-5m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode5-global-15m.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode5-global-15m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode5-global-30m.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode5-global-30m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode5-global-4h.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode5-global-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full04.quantbt-signal-notional-mode5-global-1d.v2";
+            /** @constant */
+            profile_id?: "full04.delta-signal-notional-mode5-global-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-wfo-temporal-1h.v2";
+            /** @constant */
+            profile_id?: "full05.imported-wfo-temporal-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-causal-inner-1h.v2";
+            /** @constant */
+            profile_id?: "full05.imported-causal-inner-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-per-fold-decay-1h.v2";
+            /** @constant */
+            profile_id?: "full05.imported-per-fold-decay-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-three-window-optimized-1h.v2";
+            /** @constant */
+            profile_id?: "full05.imported-three-window-optimized-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-wfo-temporal-4h.v2";
+            /** @constant */
+            profile_id?: "full05.imported-wfo-temporal-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-causal-inner-4h.v2";
+            /** @constant */
+            profile_id?: "full05.imported-causal-inner-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-per-fold-decay-4h.v2";
+            /** @constant */
+            profile_id?: "full05.imported-per-fold-decay-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-three-window-optimized-4h.v2";
+            /** @constant */
+            profile_id?: "full05.imported-three-window-optimized-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-wfo-temporal-1d.v2";
+            /** @constant */
+            profile_id?: "full05.imported-wfo-temporal-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-causal-inner-1d.v2";
+            /** @constant */
+            profile_id?: "full05.imported-causal-inner-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-per-fold-decay-1d.v2";
+            /** @constant */
+            profile_id?: "full05.imported-per-fold-decay-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-three-window-optimized-1d.v2";
+            /** @constant */
+            profile_id?: "full05.imported-three-window-optimized-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode3-global-1h.v2";
+            /** @constant */
+            profile_id?: "full05.imported-mode3-global-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode3-global-4h.v2";
+            /** @constant */
+            profile_id?: "full05.imported-mode3-global-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode3-global-1d.v2";
+            /** @constant */
+            profile_id?: "full05.imported-mode3-global-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode2-global-1h.v2";
+            /** @constant */
+            profile_id?: "full05.imported-mode2-global-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode2-global-4h.v2";
+            /** @constant */
+            profile_id?: "full05.imported-mode2-global-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode2-global-1d.v2";
+            /** @constant */
+            profile_id?: "full05.imported-mode2-global-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode4-global-1h.v2";
+            /** @constant */
+            profile_id?: "full05.imported-mode4-global-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode4-global-4h.v2";
+            /** @constant */
+            profile_id?: "full05.imported-mode4-global-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode4-global-1d.v2";
+            /** @constant */
+            profile_id?: "full05.imported-mode4-global-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode4-causal-1h.v2";
+            /** @constant */
+            profile_id?: "full05.imported-mode4-causal-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode4-causal-4h.v2";
+            /** @constant */
+            profile_id?: "full05.imported-mode4-causal-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode4-causal-1d.v2";
+            /** @constant */
+            profile_id?: "full05.imported-mode4-causal-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode5-global-1h.v2";
+            /** @constant */
+            profile_id?: "full05.imported-mode5-global-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode5-global-4h.v2";
+            /** @constant */
+            profile_id?: "full05.imported-mode5-global-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full05.quantbt-imported-mode5-global-1d.v2";
+            /** @constant */
+            profile_id?: "full05.imported-mode5-global-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-wfo-temporal-1m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-wfo-temporal-1m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-causal-inner-1m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-causal-inner-1m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-per-fold-decay-1m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-per-fold-decay-1m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-three-window-optimized-1m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-three-window-optimized-1m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-wfo-temporal-5m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-wfo-temporal-5m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-causal-inner-5m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-causal-inner-5m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-per-fold-decay-5m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-per-fold-decay-5m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-three-window-optimized-5m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-three-window-optimized-5m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-wfo-temporal-15m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-wfo-temporal-15m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-causal-inner-15m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-causal-inner-15m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-per-fold-decay-15m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-per-fold-decay-15m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-three-window-optimized-15m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-three-window-optimized-15m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-wfo-temporal-30m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-wfo-temporal-30m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-causal-inner-30m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-causal-inner-30m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-per-fold-decay-30m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-per-fold-decay-30m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-three-window-optimized-30m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-three-window-optimized-30m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-wfo-temporal-1h.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-wfo-temporal-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-causal-inner-1h.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-causal-inner-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-per-fold-decay-1h.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-per-fold-decay-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-three-window-optimized-1h.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-three-window-optimized-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-wfo-temporal-4h.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-wfo-temporal-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-causal-inner-4h.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-causal-inner-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-per-fold-decay-4h.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-per-fold-decay-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-three-window-optimized-4h.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-three-window-optimized-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-wfo-temporal-1d.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-wfo-temporal-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-causal-inner-1d.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-causal-inner-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-per-fold-decay-1d.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-per-fold-decay-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-three-window-optimized-1d.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-three-window-optimized-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode3-global-1h.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode3-global-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode3-global-1m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode3-global-1m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode3-global-5m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode3-global-5m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode3-global-15m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode3-global-15m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode3-global-30m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode3-global-30m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode3-global-4h.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode3-global-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode3-global-1d.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode3-global-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode2-global-1h.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode2-global-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode2-global-1m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode2-global-1m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode2-global-5m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode2-global-5m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode2-global-15m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode2-global-15m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode2-global-30m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode2-global-30m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode2-global-4h.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode2-global-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode2-global-1d.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode2-global-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode4-global-1h.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode4-global-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode4-global-1m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode4-global-1m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode4-global-5m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode4-global-5m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode4-global-15m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode4-global-15m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode4-global-30m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode4-global-30m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode4-global-4h.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode4-global-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode4-global-1d.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode4-global-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode4-causal-1h.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode4-causal-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode4-causal-1m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode4-causal-1m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode4-causal-5m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode4-causal-5m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode4-causal-15m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode4-causal-15m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode4-causal-30m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode4-causal-30m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode4-causal-4h.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode4-causal-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode4-causal-1d.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode4-causal-1d.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode5-global-1h.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode5-global-1h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode5-global-1m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode5-global-1m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode5-global-5m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode5-global-5m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode5-global-15m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode5-global-15m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode5-global-30m.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode5-global-30m.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode5-global-4h.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode5-global-4h.v2";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full06.quantbt-pct-equity-mode5-global-1d.v2";
+            /** @constant */
+            profile_id?: "full06.delta-pct-equity-mode5-global-1d.v2";
         });
         Common: {
             /** @constant */
@@ -2665,7 +3423,7 @@ export interface components {
             schema_version: "research.current-source-search.v1";
             selection: components["schemas"]["Selection"];
             ledger: {
-                /** @description Retained TRIAL rows. The RS-02 seal admits at most 64; only the research-preview long WFO (PORTAL_ENV=local) seals up to 400. */
+                /** @description Complete retained TRIAL rows; exact immutable recipe allows at most 400 per study and 6400 across bounded fold-local studies. Ledger pages remain at most 200 rows. */
                 source_trial_count: number;
                 returned_rows: number;
                 trials: components["schemas"]["Trial"][];
@@ -3431,7 +4189,7 @@ export interface components {
                 /** @enum {unknown} */
                 operation: "evidence" | "evidence_series" | "split" | "search" | "freeze" | "replay" | "replay_transitions" | "replay_child_audit";
                 /** @enum {unknown} */
-                run_profile: "P04_FIXED_QUALIFICATION" | "IMPORTED_FIXED_QUALIFICATION" | "VN_OBSERVED_FIXED_QUALIFICATION";
+                run_profile: "P04_FIXED_QUALIFICATION" | "IMPORTED_FIXED_QUALIFICATION" | "VN_OBSERVED_FIXED_QUALIFICATION" | "NATIVE_FIXED_QUALIFICATION";
                 run_adapter_contract_digest: components["schemas"]["Digest"];
                 /**
                  * @description The P04 fixed qualification always emits rs02.delta-wfo-global.v1 (byte-stable).

@@ -207,6 +207,41 @@ def _snapshot(tmp_path: Path):
     return store, identity
 
 
+def test_native_producer_reaches_confined_launch_with_exact_recipe_caps(tmp_path: Path):
+    """Wiring regression, not a product/engine receipt."""
+    from types import SimpleNamespace
+    from portal_api.domain.research_execution_recipes import execution_recipe
+    from portal_api.domain.research_native_profile import native_work_digest
+    snapshots, identity = _snapshot(tmp_path)
+    payload = _request(snapshot_id=identity.snapshot_id, snapshot_content_hash=identity.content_hash)
+    row = execution_recipe("p10.delta-intrabar-bracket-fixed-1h.v1")
+    research = payload["research"]
+    binding = row["descriptor"]["alpha_binding_requirements"]
+    research.update(execution_profile_id=row["profile_id"], execution_profile_digest=row["profile_digest"],
+                    alpha_version_id=binding["alpha_version_id"], execution_adapter_id=binding["adapter_id"],
+                    adapter_contract_digest=binding["adapter_contract_digest"])
+    spec = research["requested_spec"]
+    spec["execution_route"] = "intrabar_bracket"
+    spec["alpha_binding"]["alpha_version_id"] = binding["alpha_version_id"]
+    research["requested_spec_digest"] = hashlib.sha256(json.dumps(spec, sort_keys=True,
+                                          separators=(",", ":")).encode()).hexdigest()
+    research["work_digest"] = native_work_digest(SimpleNamespace(**research))
+    request = ResearchRunProducerRequest.model_validate(payload)
+    class Supervisor:
+        def run_p04_delta_qualification(self, receipt, *, limits, **kwargs):
+            assert receipt.as_payload()["execution_profile_id"] == row["profile_id"]
+            assert receipt.native_symbol == "BTCUSDT"
+            assert limits.cpu_seconds == row["budgets"]["cpu_seconds"]
+            assert limits.wall_seconds == row["budgets"]["wall_seconds"]
+            raise RuntimeError("NATIVE_LAUNCH_REACHED")
+    market_root = tmp_path / "native-market"
+    market_root.mkdir(mode=0o700)
+    executor = ResearchRunProducerExecutor(snapshots=snapshots, supervisor=Supervisor(), market_root=market_root)
+    with pytest.raises(RuntimeError, match="NATIVE_LAUNCH_REACHED"):
+        executor._execute_sync(request, tmp_path / "native-output", None)
+    assert not (market_root / request.job_id / request.worker_attempt_id).exists()
+
+
 def test_p10_t04_t13_real_snapshot_to_isolated_delta_to_receipt_has_no_holdout_or_scratch_leak(
     tmp_path: Path,
 ) -> None:

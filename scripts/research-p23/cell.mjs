@@ -27,6 +27,14 @@ export function imageReplacements(rows) {
     && /^sha256:[a-f0-9]{64}$/.test(row.actual) && /^sha256:[a-f0-9]{64}$/.test(row.desired)), 'VALID_OWNED_IMAGE_INVENTORY_REQUIRED');
   return rows.filter(row=>row.actual!==row.desired).map(row=>row.service);
 }
+export function selectorTransitionServices(slice, rows) {
+  assert(slice==='expanded' && rows.length===RUNTIME_SERVICES.length
+    && new Set(rows.map(row=>row.service)).size===RUNTIME_SERVICES.length
+    && RUNTIME_SERVICES.every(service=>rows.some(row=>row.service===service)),
+    'EXACT_EXISTING_EXPANDED_CELL_REQUIRED');
+  assert.equal(imageReplacements(rows).length,0,'SELECTOR_TRANSITION_CANNOT_SKIP_IMAGE_MIGRATION');
+  return ['control-api','portal-api','quant-worker-py'];
+}
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const STATE_ROOT = '/home/bobby/.local/state/portal-research-p23';
 
@@ -61,7 +69,7 @@ function dockerPrefix() {
 }
 
 export function composeArguments(envFile, qualificationSlice = undefined) {
-  assert(qualificationSlice === undefined || ['full02','full03','full04','full05','full06'].includes(qualificationSlice), 'P23_UNKNOWN_QUALIFICATION_SLICE');
+  assert(qualificationSlice === undefined || ['full02','full03','full04','full05','full06','expanded'].includes(qualificationSlice), 'P23_UNKNOWN_QUALIFICATION_SLICE');
   return ['compose', '-p', PROJECT, '--project-directory', ROOT, '--env-file', envFile,
     ...['compose.yaml', 'deploy/compose.research-progress.yaml',
       'deploy/research-preview/compose.research-p23-activation.yaml',
@@ -71,6 +79,7 @@ export function composeArguments(envFile, qualificationSlice = undefined) {
       ...(qualificationSlice === 'full04' ? ['deploy/research-preview/compose.research-full04-cell.yaml'] : []),
       ...(qualificationSlice === 'full05' ? ['deploy/research-preview/compose.research-full05-cell.yaml'] : []),
       ...(qualificationSlice === 'full06' ? ['deploy/research-preview/compose.research-full06-cell.yaml'] : []),
+      ...(qualificationSlice === 'expanded' ? ['deploy/research-preview/compose.research-expanded-cell.yaml'] : []),
     ].flatMap(file => ['-f', join(ROOT, file)])];
 }
 
@@ -135,7 +144,7 @@ async function main() {
   }
   const settings = parseEnv(readPrivate(envFile));
   const qualificationSlice = settings.P23_QUALIFICATION_SLICE;
-  assert(qualificationSlice === undefined || (['full02','full03','full04','full05','full06'].includes(qualificationSlice) && home.endsWith('/'+qualificationSlice)),
+  assert(qualificationSlice === undefined || (['full02','full03','full04','full05','full06','expanded'].includes(qualificationSlice) && home.endsWith('/'+qualificationSlice)),
     'P23_EXACT_FULL02_STATE_REQUIRED');
   assert(settings.PORTAL_STACK_NAME === PROJECT && settings.PORTAL_HTTP_PORT === '8096'
     && settings.PORTAL_PUBLIC_ORIGIN === BASE_URL && settings.PREVIEW_AUTO_LOGIN_USERNAME === '',
@@ -169,13 +178,33 @@ async function main() {
     // `sudo docker` strips shell env; pass the UI compile gate literally.
     // This grants no Execution API or command authority.
     const webPreviewArg = executionPreviewBuildArg(process.env.PORTAL_EXECUTION_PREVIEW_ENABLED);
+    const requestedServices=process.argv.find(arg=>arg.startsWith('--services='))?.slice(11).split(',');
+    const buildServices=requestedServices??['portal-api','control-api','portal-web','roadmap-task-board-api'];
+    assert(buildServices.length>0&&new Set(buildServices).size===buildServices.length&&
+      buildServices.every(service=>['portal-api','control-api','portal-web','roadmap-task-board-api'].includes(service)),
+      'P23_EXACT_BUILD_SERVICES_REQUIRED');
     compose(['build', '--build-arg', 'PORTAL_HMD_READER_REQUIRED=true',
       '--build-arg', webPreviewArg,
-      'portal-api', 'control-api', 'portal-web', 'roadmap-task-board-api']);
+      ...buildServices]);
   } else if (command === 'up') {
     const previousControl = docker(['ps', '-a', '-q', '--filter', `label=com.docker.compose.project=${PROJECT}`,
       '--filter', 'label=com.docker.compose.service=control-api']).trim();
-    compose(['up', '-d', '--no-build', '--wait', '--wait-timeout', '150', 'portal-web', 'quant-worker-py']);
+    const selectorOnly=process.argv.includes('--selector-only');
+    if(selectorOnly){
+      const active=docker(['exec',PROJECT+'-control-api-1','node','-e',`
+const {Pool}=require('pg'),pool=new Pool({connectionString:process.env.DATABASE_URL,max:1});
+pool.query("SELECT count(*)::int AS n FROM research.runs WHERE state IN ('QUEUED','RUNNING','SEALING')")
+ .then(r=>process.stdout.write(String(r.rows[0].n))).finally(()=>pool.end()).catch(()=>{process.exitCode=1});`]).trim();
+      assert.equal(active,'0','SELECTOR_TRANSITION_MUST_NOT_RESTART_ACTIVE_CHILD');
+      const ids=docker(['ps','-q','--filter',`label=com.docker.compose.project=${PROJECT}`]).trim().split('\n').filter(Boolean);
+      const rows=ids.map(id=>{
+        const c=JSON.parse(docker(['inspect','--format','{{json .}}',id]));
+        return {service:c.Config.Labels['com.docker.compose.service'],actual:c.Image,
+          desired:docker(['image','inspect','--format','{{.Id}}',c.Config.Image]).trim()};
+      });
+      compose(['up','-d','--no-build','--no-deps','--wait','--wait-timeout','150',
+        ...selectorTransitionServices(qualificationSlice,rows)]);
+    }else compose(['up', '-d', '--no-build', '--wait', '--wait-timeout', '150', 'portal-web', 'quant-worker-py']);
     const inventory=docker(['ps','-q','--filter',`label=com.docker.compose.project=${PROJECT}`]).trim().split('\n').filter(Boolean)
       .map(id=>{
         const current=JSON.parse(docker(['inspect','--format','{{json .}}',id]));
@@ -193,7 +222,10 @@ async function main() {
     // replaced the API container/IP, refresh only this cell's gateway; no
     // shared nginx edit/reload and no unrelated service restart.
     if (previousControl && previousControl !== currentControl) {
-      compose(['up', '-d', '--no-build', '--no-deps', '--force-recreate', '--wait', '--wait-timeout', '90', 'portal-web']);
+      if(selectorOnly){
+        docker(['exec',PROJECT+'-portal-web-1','nginx','-t']);
+        docker(['exec',PROJECT+'-portal-web-1','nginx','-s','reload']);
+      }else compose(['up', '-d', '--no-build', '--no-deps', '--force-recreate', '--wait', '--wait-timeout', '90', 'portal-web']);
     }
     const ids = docker(['ps', '-q', '--filter', `label=com.docker.compose.project=${PROJECT}`]).trim().split('\n').filter(Boolean);
     const images = Object.fromEntries(ids.map(id => {
@@ -207,6 +239,7 @@ async function main() {
     }));
     writePrivate(join(home, 'identity.json'), JSON.stringify({ schema_version: 'research.p23-cell-identity.v1',
       project: PROJECT, base_url: BASE_URL, candidate_source_sha: sha, dirty,
+      qualification_profile_id: settings.CONTROL_API_RESEARCH_RECIPE_QUALIFICATION_PROFILE_ID ?? null,
       recorded_at_utc: new Date().toISOString(), images }, null, 2) + '\n');
     console.log('P23 runtime identity recorded; source dirty:', dirty);
   } else if (command === 'credentials') {

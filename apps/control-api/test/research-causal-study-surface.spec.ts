@@ -13,6 +13,7 @@ import { DELTA_CAUSAL_INNER_PROFILE } from "../src/research/delta-causal-inner.p
 import { DELTA_WFO_PROFILE } from "../src/research/delta-wfo.profile";
 import { CurrentSourceCausalSelectionSchema } from "../src/research/current-source.payload";
 import { p11StageEvents } from "../src/research/p11-stage-events";
+import { executionRecipe } from "../src/research/execution-recipes";
 
 const original = JSON.parse(gunzipSync(readFileSync(join(__dirname, "research-w5b-real-replay.fixture.json.gz"))).toString("utf8"));
 const lane = DELTA_CAUSAL_INNER_PROFILE.current_source;
@@ -86,7 +87,8 @@ describe("bounded causal study surfaces", () => {
     expect(value).toMatchObject({ state: "NOT_APPLICABLE", reason_code: SURFACE_REASONS.noRunGlobalSurface,
       source_trial_count: 6, complete_trial_count: 6, points: [], selected_trial_id: null, best_is_trial_id: null,
       objective_ramp: { minimum: null, maximum: null }, parameter_frequency: { parameters: [] }, importance: { parameters: [] } });
-    expect(() => runGlobalCausalSurface(49, 6)).toThrow(RangeError);
+    expect(runGlobalCausalSurface(6400, 6000).source_trial_count).toBe(6400);
+    expect(() => runGlobalCausalSurface(6401, 6)).toThrow(RangeError);
     expect(() => runGlobalCausalSurface(6, 7)).toThrow(RangeError);
   });
   it("keeps repeated local IDs, best-so-far, best IS, theta frequencies and distributions inside each own study", () => {
@@ -120,6 +122,26 @@ describe("bounded causal study surfaces", () => {
     const parameters = studies(); parameters[0]!.selectedParameters = parameters[1]!.selectedParameters;
     expect(() => searchStudySurfaces(lane.profile_id, parameters)).toThrow(RangeError);
   });
+  it("keeps 16 × 400 trials complete while bounding charts to 600 points and preserving each selection", () => {
+    const profile = executionRecipe("p10.delta-causal-inner-1h.v2").descriptor as any;
+    const populations = studies(16).map((study, index) => {
+      const trials = Array.from({ length: 400 }, (_, local) => ({
+        ...study.trials[0]!, sourceOrdinal: index * 400 + local,
+        trialId: `study_${index}.trial_${local}`, objective: String(local),
+      }));
+      return { ...study, trials, selectedTrialId: trials[342]!.trialId,
+        selectedParameters: trials[342]!.parameters };
+    });
+    const result = searchStudySurfaces(profile.current_source.profile_id, populations);
+    expect(result.reduce((sum, study) => sum + study.surface.points.length, 0)).toBeLessThanOrEqual(600);
+    expect(Buffer.byteLength(JSON.stringify(result))).toBeLessThan(1024 * 1024);
+    result.forEach((study, index) => {
+      expect(study.surface.source_trial_count).toBe(400);
+      expect(study.surface.complete_trial_count).toBe(400);
+      expect(study.surface.points.some(point => point.trial_id === populations[index]!.selectedTrialId)).toBe(true);
+      expect(study.surface.points.some(point => point.trial_id === `study_${index}.trial_399`)).toBe(true);
+    });
+  });
   it("integrates only the exact causal pair, independent of ledger paging/filter, with explicit final deployment declaration", async () => {
     const source = fixture(), service = reader(source);
     const full = await service.search(scope, source.run_id, { limit: 1 }) as any;
@@ -151,5 +173,19 @@ describe("bounded causal study surfaces", () => {
     if (kind === "selection") source.rows.FOLD[0].payload.causal_selection.selected_trial_id = "study_1.trial_1";
     if (kind === "population") source.rows.TRIAL.pop();
     await expect(reader(source).search(scope, source.run_id, { limit: 1 })).rejects.toMatchObject({ status: 503 });
+  });
+  it("keeps an early-pruned member without fabricating a scored chart point", async()=>{
+    const source=fixture(),trial=source.rows.TRIAL[0].payload;
+    Object.assign(trial,{state:"PRUNED",objective:null});
+    Object.assign(trial.trial_facts,{stage:null,objective_kind:"NOT_PUBLISHED",pruned:true,
+      objective_components:{state:"NOT_PUBLISHED",reason_code:"QUANTBT_TRIAL_ROW_HAS_NO_OBJECTIVE",formula:null,terms:[]}});
+    trial.trial_facts.metrics.oos_reason_code="QUANTBT_TRIAL_ROW_DID_NOT_PUBLISH_ITS_STAGE";
+    const result=await reader(source).search(scope,source.run_id,{limit:1}) as any;
+    expect(result.surfaces_by_study[0].surface.source_trial_count).toBe(3);
+    expect(result.surfaces_by_study[0].surface.complete_trial_count).toBe(2);
+    expect(result.surfaces_by_study[0].surface.points.find((p:any)=>p.trial_id===trial.trial_id))
+      .toMatchObject({state:"PRUNED",objective:null,best_so_far:null});
+    trial.state="COMPLETE";
+    await expect(reader(source).search(scope,source.run_id,{limit:1})).rejects.toMatchObject({status:503});
   });
 });

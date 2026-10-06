@@ -25,14 +25,16 @@ async function admit(change?:(s:ReturnType<typeof wfoRequested>)=>void,flags={})
 }
 describe("FULL05 imported admission",()=>{
   it("binds a DRAFT immutable source without using the built-in Delta binding",async()=>{
-    const r=await admit();expect(r.profile?.id).toBe("p10.imported-wfo-temporal-1h.v1");
+    const r=await admit();expect(r.profile).toEqual({id:"p10.imported-wfo-temporal-1h.v2",
+      digest:executionRecipe("p10.imported-wfo-temporal-1h.v2").profile_digest});
+    expect(executionRecipe("p10.imported-wfo-temporal-1h.v1").public_profile.trial_count).toEqual({min:3,max:3});
     expect(r.alpha?.importedSearchBinding?.source_digest).toBe("a".repeat(64));expect(r.alpha?.importedParameters).toBeNull();
   });
   it.each([
     (s:ReturnType<typeof wfoRequested>)=>{s.random_seed=null;},
     (s:ReturnType<typeof wfoRequested>)=>{s.execution_route="target_weight" as never;},
     (s:ReturnType<typeof wfoRequested>)=>{s.data.timeframe="5m";},
-    (s:ReturnType<typeof wfoRequested>)=>{s.optuna_trials=400;},
+    (s:ReturnType<typeof wfoRequested>)=>{s.optuna_trials=401;},
     (s:ReturnType<typeof wfoRequested>)=>{s.parameter_space_overrides=[{name:"length",kind:"pin",value:3}];},
     (s:ReturnType<typeof wfoRequested>)=>{s.parameter_space_overrides=[{name:"unknown",kind:"pin",value:2}];},
   ])("refuses changed exact axes/declaration",async change=>{

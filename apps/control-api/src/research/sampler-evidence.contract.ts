@@ -97,7 +97,7 @@ export const ResearchSamplerEvidenceSchema = z.object({
     state: z.literal("AVAILABLE"),
     scope: z.literal("RETAINED_SOURCE_TRIAL_ROWS_NOT_SAMPLER_INTERNAL_TRACE"),
     source_ref: z.literal("SEALED_RETAINED_TRIAL_LEDGER_V1"),
-    source_trial_count: z.number().int().nonnegative().max(4096),
+    source_trial_count: z.number().int().nonnegative().max(6400),
   }).strict(),
   execution_trace: ResearchSamplerExecutionTraceSchema.optional(),
 }).strict().superRefine((value, context) => {

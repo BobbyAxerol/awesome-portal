@@ -7,6 +7,7 @@
  */
 
 import { z } from "zod";
+import {ResearchNativeRouteResultSchema} from './native-route.contract';
 import { ResearchRunDeclarationSchema } from "./run-declaration.contract";
 import { ResearchEnrichedAnalysisSchema, ResearchEnrichedAvailabilitySchema } from "./enriched-analysis.contract";
 import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
@@ -568,7 +569,8 @@ export const ResearchEvidenceHubResponseSchema = z.object({
   as_of_utc_ms: UtcMsSchema,
   metric_registry_version: z.enum(["research.metric-registry.v1", "research.metric-registry.v2"]),
   core: z.object({
-    source_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]).nullable(),
+    source_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1", "full03.delta-rsi.v1"]).nullable(),
+    native_execution:ResearchNativeRouteResultSchema.optional(),
     engine_version: z.enum(["1.1.0", "1.1.1"]).nullable(),
     input_scope: z.literal("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY").nullable(),
     source_transform_digest: DigestSchema.nullable(),

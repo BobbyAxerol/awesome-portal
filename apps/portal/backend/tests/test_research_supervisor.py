@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import os
+import resource
+from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -13,11 +16,19 @@ from portal_api.services.research_supervisor import (
     ResearchChildReceipt,
     ResearchSupervisorError,
     _child_resource_exhausted,
+    _child_peak_rss,
 )
 
 
 BACKEND_ROOT = Path(__file__).parents[1]
 MARKET_PATH = BACKEND_ROOT / "tests" / "fixtures" / "golden_market.parquet"
+
+
+@pytest.mark.parametrize("value", (None, 0, -1, True, 1.5, "1024", 4097))
+def test_peak_rss_requires_actual_positive_child_measurement(value: object) -> None:
+    with pytest.raises(ResearchSupervisorError, match="bounded peak RSS"):
+        _child_peak_rss({"peak_rss_bytes": value}, 4096)
+    assert _child_peak_rss({"peak_rss_bytes": 4096}, 4096) == 4096
 
 
 @pytest.mark.parametrize("errno", (28, 122))
@@ -43,6 +54,18 @@ def _receipt(tmp_path: Path, suffix: str = "one") -> ResearchChildReceipt:
     )
 
 
+@pytest.mark.parametrize("field,value", (("memory_bytes", 8 * 1024 ** 3),
+    ("cpu_seconds",91),("wall_seconds",181),("scratch_bytes",65 * 1024 ** 2),
+    ("file_bytes",17 * 1024 ** 2),("fd_limit",129)))
+def test_native_fixed_child_cannot_widen_any_admitted_resource_cap(tmp_path: Path, field: str, value: int) -> None:
+    from portal_api.domain.research_execution_recipes import execution_recipe
+    row=execution_recipe('p10.delta-reactive-fixed-1h.v3')
+    receipt=replace(_receipt(tmp_path),execution_profile_id=row['profile_id'],execution_profile_digest=row['profile_digest'])
+    supervisor=IsolatedResearchSupervisor(tmp_path/'scratch',allowed_market_root=MARKET_PATH.parent)
+    with pytest.raises(ResearchSupervisorError,match='admitted recipe resource caps|bounded child range'):
+        supervisor.run_p04_delta_qualification(receipt,limits=replace(ResearchChildLimits(),**{field:value}))
+
+
 def test_p06_t05_t08_actual_quantbt_child_is_separate_network_pid_and_resource_bounded(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The P06 child is a process namespace, not `asyncio.to_thread` theatre."""
 
@@ -52,6 +75,16 @@ def test_p06_t05_t08_actual_quantbt_child_is_separate_network_pid_and_resource_b
     # A legacy scalar P06 receipt has no admitted windows: even an operator's
     # fixed qualification opt-in must not expand that child's environment.
     monkeypatch.setenv("RESEARCH_IS_QUALIFICATION_CAPTURE", "true")
+    actual_usage = resource.getrusage
+    # A previous larger child has raised the parent's lifetime high-water
+    # mark. The next real child's RSS must still be positive and independent.
+    def parent_high_water(who: int):
+        usage = actual_usage(who)
+        if who == resource.RUSAGE_CHILDREN:
+            return SimpleNamespace(ru_maxrss=8 * 1024 * 1024,
+                                   ru_utime=usage.ru_utime, ru_stime=usage.ru_stime)
+        return usage
+    monkeypatch.setattr(resource, "getrusage", parent_high_water)
     supervisor = IsolatedResearchSupervisor(tmp_path / "scratch", allowed_market_root=MARKET_PATH.parent)
     parent_network_namespace = os.readlink("/proc/self/ns/net")
     result = supervisor.run_p04_delta_qualification(
@@ -69,6 +102,7 @@ def test_p06_t05_t08_actual_quantbt_child_is_separate_network_pid_and_resource_b
     assert result.is_qualification_source is None and result.is_qualification_path is None
     assert result.final_equity == pytest.approx(20_589.74597203475)
     assert result.elapsed_seconds > 0
+    assert 50 * 1024 * 1024 < result.peak_rss_bytes <= 4 * 1024 ** 3
     assert result.enforced_limits == {
         "address_space_bytes": 4 * 1024 * 1024 * 1024,
         "cpu_seconds": 45,

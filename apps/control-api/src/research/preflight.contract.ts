@@ -1,4 +1,5 @@
 import { z } from "zod";
+import {NATIVE_DELTA_BINDING_TABLE} from './native-delta-bindings.generated';
 
 const Identifier = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/).max(191);
 const OpaqueId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$/).max(160);
@@ -92,7 +93,12 @@ export const ResearchRequestedSpecSchema = z.object({
   const expected: Record<string, "intrabar" | "portfolio" | "reactive" | "dca" | undefined> = {
     intrabar_bracket: "intrabar", portfolio: "portfolio", reactive: "reactive", dca_ladder: "dca",
   };
-  const selected = expected[value.execution_route];
+  // New immutable native editions carry server-owned input contracts. They
+  // do not reinterpret legacy tick/runtime knobs, which remain unchanged.
+  const nativeRoute:Record<string,string>=Object.fromEntries(NATIVE_DELTA_BINDING_TABLE.map(binding=>
+    [binding.alpha_version_id,binding.declared_contract.execution.execution_route]));
+  const native=value.alpha_binding!==null&&nativeRoute[value.alpha_binding.alpha_version_id]===value.execution_route;
+  const selected = native ? undefined : expected[value.execution_route];
   const supplied = Object.keys(value.route_params);
   if (selected ? supplied.length !== 1 || supplied[0] !== selected : supplied.length !== 0) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["route_params"], message: "route_params does not match execution_route." });

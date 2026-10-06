@@ -2,7 +2,7 @@
  * Decay studies use outer OOS; Three Window keeps an independent holdout. */
 import { CurrentSourceFoldPayloadSchema, CurrentSourceSummarySchema } from "./current-source.payload";
 import { ResearchCurrentSourceError } from "./current-source.error";
-import { currentSourceRetainedIntervalMs, currentSourceRetainedMethod } from "./current-source-profile";
+import { currentSourceRetainedIntervalMs, currentSourceRetainedMethod, currentSourceRetainedRecipe, currentSourceStudyTrialCount } from "./current-source-profile";
 import { sha256ResearchJson } from "./preflight.service";
 
 export function assertFull02SealConsistency(
@@ -15,14 +15,18 @@ export function assertFull02SealConsistency(
   const folds = rows.filter(row => row.tableKind === "FOLD").sort((a,b) => a.sourceOrdinal - b.sourceOrdinal);
   const trials = rows.filter(row => row.tableKind === "TRIAL"), candidates = rows.filter(row => row.tableKind === "CANDIDATE");
   const singletons = rows.filter(row => row.tableKind === "SELECTION");
+  const configuredTrials = currentSourceStudyTrialCount(currentSourceRetainedRecipe(input.profileId,input.sourceAdapterId),
+    summary.data.source_facts?.search.optuna_trials_per_study);
+  if (configuredTrials === null) return fail();
   if (folds.length !== input.tableRows.FOLD || trials.length !== input.tableRows.TRIAL
-    || candidates.length !== input.tableRows.CANDIDATE || singletons.length !== 1 || rows.length > 113) return fail();
+    || candidates.length !== input.tableRows.CANDIDATE || singletons.length !== 1
+    || rows.length > 2*configuredTrials*folds.length+folds.length+1) return fail();
   const sameSelection = (selection: Record<string, unknown>, trialId: string, parameters: unknown, objective: unknown) =>
     selection.trial_id === trialId && selection.objective === objective
       && sha256ResearchJson(selection.parameters) === sha256ResearchJson(parameters);
   const method = currentSourceRetainedMethod(input.profileId,input.sourceAdapterId);
   if (method === "PER_FOLD_DECAY") {
-    if (folds.length < 2 || folds.length > 16 || trials.length !== folds.length * 3
+    if (folds.length < 2 || folds.length > 16 || trials.length !== folds.length * configuredTrials
       || summary.data.source_facts?.search.optimization_schedule !== "per_fold_decay"
       || summary.data.source_facts.search.n_studies !== folds.length
       || summary.data.source_facts.claims.oos_used_for_selection !== true) return fail();
@@ -38,7 +42,8 @@ export function assertFull02SealConsistency(
       const members = (source: typeof rows) => source.filter(member =>
         (member.payload.trial_facts as Record<string, unknown> | undefined)?.study_id === selected.study_id);
       const trialMembers = members(trials), candidateMembers = members(candidates);
-      if (trialMembers.length !== 3 || candidateMembers.length !== selected.candidate_count
+      if (trialMembers.length !== configuredTrials || selected.study_trial_rows !== configuredTrials
+        || candidateMembers.length !== selected.candidate_count || candidateMembers.length > configuredTrials
         || [...trialMembers, ...candidateMembers].some(member => {
           const scope = (member.payload.trial_facts as Record<string, unknown> | undefined)?.fold_scope as Record<string, unknown> | undefined;
           return !scope || !["FOLD", "PER_FOLD_STUDY"].includes(String(scope.kind)) || scope.fold_id !== row.sourceId;
@@ -57,7 +62,7 @@ export function assertFull02SealConsistency(
         || !sameSelection(selected, final.selected_trial_id, final.parameters, final.objective)) return fail();
     }
   } else if (method === "THREE_WINDOW") {
-    if (folds.length !== 1 || trials.length !== 3 || summary.data.selection.scope !== undefined
+    if (folds.length !== 1 || trials.length !== configuredTrials || summary.data.selection.scope !== undefined
       || summary.data.source_facts?.search.optimization_schedule !== "global"
       || !summary.data.protocol_disclosure || summary.data.source_facts.claims.oos_used_for_selection !== true) return fail();
     const fold = CurrentSourceFoldPayloadSchema.safeParse(folds[0]!.payload);

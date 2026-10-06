@@ -66,6 +66,14 @@ def _child_resource_exhausted(stderr_tail: str) -> bool:
     return bool(re.search(r"(?:OSError|PermissionError): \[Errno (?:28|122)\]", stderr_tail))
 
 
+def _child_peak_rss(payload: dict[str, Any], memory_limit: int) -> int:
+    """Per-process Linux high-water mark, never a parent's cumulative delta."""
+    value = payload.get("peak_rss_bytes")
+    if type(value) is not int or not 0 < value <= memory_limit:
+        raise ResearchSupervisorError("P06 child did not report a valid bounded peak RSS")
+    return value
+
+
 class SourceWindowMetadata(TypedDict):
     start_ms: int
     end_ms: int
@@ -101,10 +109,17 @@ class ResearchChildLimits:
     fd_limit: int = _FIXED_BUDGET["fd_limit"]
     wall_seconds: int = _FIXED_BUDGET["wall_seconds"]
 
-    def validate(self) -> None:
+    def validate(self, *, recipe_profile_id: str | None = None) -> None:
+        expanded_budget = False
+        if recipe_profile_id is not None:
+            from portal_api.domain.research_execution_recipes import execution_recipe
+            from portal_api.domain.research_trial_budget import expanded_trials
+            row=execution_recipe(recipe_profile_id)
+            expanded_budget=expanded_trials(row) and all(getattr(self,k)<=row['budgets'][k]
+                for k in ('memory_bytes','cpu_seconds','wall_seconds','scratch_bytes','file_bytes','fd_limit'))
         if not (2 * 1024 * 1024 * 1024 <= self.memory_bytes <= 8 * 1024 * 1024 * 1024):
             raise ResearchSupervisorError("memory_bytes is outside P06's bounded child range")
-        if not (1 <= self.cpu_seconds <= 300 and 1 <= self.wall_seconds <= 600) and not (
+        if not (1 <= self.cpu_seconds <= 300 and 1 <= self.wall_seconds <= 600) and not expanded_budget and not (
             # Research preview only: the long WFO child's own ceiling.
             delta_wfo_preview_long_enabled()
             and 1 <= self.cpu_seconds <= DELTA_WFO_PREVIEW_LONG_CPU_SECONDS
@@ -141,6 +156,7 @@ class ResearchChildReceipt:
     execution_profile_digest: str | None = None
     source_observation: dict[str, Any] | None = None
     qualification_binding: dict[str, Any] | None = None
+    native_symbol: str | None = None
 
     def as_payload(self) -> dict[str, Any]:
         payload = {
@@ -164,13 +180,22 @@ class ResearchChildReceipt:
         if self.source_windows is not None:
             payload["source_windows"] = _source_windows_payload(self.source_windows)
         if self.execution_profile_id is not None:
+            from portal_api.domain.research_native_profile import is_native_profile, native_profile
+            if is_native_profile(self.execution_profile_id):
+                row = native_profile(self.execution_profile_id, self.execution_profile_digest)
+                if self.source_observation is not None or self.qualification_binding is not None:
+                    raise ResearchSupervisorError('native fixed child cannot carry another source/release binding')
+                if self.native_symbol not in {'BTCUSDT','ETHUSDT','SOLUSDT'}:
+                    raise ResearchSupervisorError('native fixed child must carry exact P08 symbol')
+                payload.update(execution_profile_id=row['profile_id'], execution_profile_digest=row['profile_digest'],native_symbol=self.native_symbol)
+                return payload
             from portal_api.domain.research_vn_observed_fixed_profile import VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST
             from portal_api.domain.research_run_producer import VnSourceObservation
             if (self.execution_profile_id, self.execution_profile_digest) != (VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST) or self.source_observation is None:
                 raise ResearchSupervisorError("fixed child requires its exact observed-date profile and provenance")
             payload.update(execution_profile_id=self.execution_profile_id, execution_profile_digest=self.execution_profile_digest,
                 source_observation=VnSourceObservation.model_validate(self.source_observation).model_dump(mode="json"))
-        elif self.execution_profile_digest is not None or self.source_observation is not None:
+        elif self.execution_profile_digest is not None or self.source_observation is not None or self.native_symbol is not None:
             raise ResearchSupervisorError("legacy fixed child cannot carry another profile's provenance")
         if self.qualification_binding is not None:
             from portal_api.domain.research_engine_qualification import validate_engine_qualification_binding
@@ -202,6 +227,7 @@ class ResearchChildResult:
     # supervisor-derived, and never serialized into a public run receipt.
     fixed_replay_source: dict[str, Any] | None = None
     fixed_replay_path: Path | None = None
+    native_execution: dict[str, Any] | None = None
     # Opt-in operator qualification only; these fields never enter the
     # public evidence receipt, engine bundle or P05 manifest.
     is_qualification_source: dict[str, Any] | None = None
@@ -347,8 +373,14 @@ class DeltaWfoChildReceipt:
             try:
                 row = full03_recipe(self.execution_profile_id, self.execution_profile_digest)
                 validate_full03_execution_binding(self.execution_binding, row)
-                if self.optuna_trials is not None or self.whatif_grid_key is not None or self.whatif_evaluations:
+                from portal_api.domain.research_trial_budget import child_study_trials, expanded_trials
+                if self.whatif_grid_key is not None or self.whatif_evaluations:
                     raise ValueError("FULL-03 cannot inherit preview/what-if study controls")
+                if expanded_trials(row):
+                    payload['optuna_trials']=self.optuna_trials
+                elif self.optuna_trials is not None:
+                    raise ValueError('historical recipe forbids a trial override')
+                child_study_trials(row,payload)
                 payload["execution_binding"] = self.execution_binding
                 if row["source_requirement"] == "IMPORTED_IMMUTABLE_SEARCH_BINDING":
                     from portal_api.domain.research_imported_search import validate_imported_search_binding
@@ -720,8 +752,12 @@ class IsolatedResearchSupervisor:
         on_child_alive: Callable[[], None] | None = None,
     ) -> ResearchChildResult:
         limits.validate()
-        if receipt.execution_profile_id is not None and (limits.cpu_seconds > 45 or limits.wall_seconds > 90):
-            raise ResearchSupervisorError("observed fixed child cannot widen its 45 CPU/90 wall-second profile caps")
+        from portal_api.domain.research_native_profile import is_native_profile, native_profile
+        native = receipt.execution_profile_id is not None and is_native_profile(receipt.execution_profile_id)
+        cap = native_profile(receipt.execution_profile_id,receipt.execution_profile_digest)['budgets'] if native else {'cpu_seconds':45,'wall_seconds':90}
+        fields = ('memory_bytes','cpu_seconds','wall_seconds','scratch_bytes','file_bytes','fd_limit') if native else ('cpu_seconds','wall_seconds')
+        if receipt.execution_profile_id is not None and any(getattr(limits, field) > cap[field] for field in fields):
+            raise ResearchSupervisorError("observed fixed child cannot widen its admitted recipe resource caps")
         self._validate_launch_identity(
             job_id=receipt.job_id,
             run_id=receipt.run_id,
@@ -740,6 +776,11 @@ class IsolatedResearchSupervisor:
             on_child_alive=on_child_alive,
         )
         payload = launch.payload
+        if native:
+            facts = payload.get('native_execution')
+            if (not isinstance(facts, dict) or facts.get('execution_route') != native_profile(receipt.execution_profile_id,receipt.execution_profile_digest)['descriptor']['execution_route']
+                    or facts != payload.get('evidence_source',{}).get('source',{}).get('native_execution')):
+                raise ResearchSupervisorError('native route result must match its exact retained child source')
         if receipt.execution_profile_id is not None:
             if (payload.get("execution_profile_id") != receipt.execution_profile_id
                     or payload.get("execution_profile_digest") != receipt.execution_profile_digest
@@ -757,7 +798,8 @@ class IsolatedResearchSupervisor:
         if engine_version != expected_engine_version or payload.get("qualification_binding") != receipt.qualification_binding:
             raise ResearchSupervisorError("fixed child engine/binding differs from the immutable launch pin")
         if evidence_source is not None:
-            self._validate_evidence_source(evidence_source, expected_engine_version=expected_engine_version)
+            self._validate_evidence_source(evidence_source, expected_engine_version=expected_engine_version,
+                expected_adapter_id='full03.delta-rsi.v1' if native else 'p04.delta-rsi.v1')
         fixed_replay_source, fixed_replay_path = self._validated_fixed_replay(payload, receipt)
         is_qualification_source, is_qualification_path = self._validated_is_qualification(payload, receipt)
         return ResearchChildResult(
@@ -773,6 +815,7 @@ class IsolatedResearchSupervisor:
             cpu_seconds=launch.cpu_seconds,
             enforced_limits=launch.enforced_limits,
             evidence_source=evidence_source if isinstance(evidence_source, dict) else None,
+            native_execution=payload.get('native_execution') if native else None,
             fixed_replay_source=fixed_replay_source,
             fixed_replay_path=fixed_replay_path,
             is_qualification_source=is_qualification_source,
@@ -929,8 +972,8 @@ class IsolatedResearchSupervisor:
         beyond ``64`` files / ``64 MiB`` before a caller may read it.
         """
 
-        limits.validate()
         full03_row = full03_recipe(receipt.execution_profile_id, receipt.execution_profile_digest) if is_full03_profile(receipt.execution_profile_id) else None
+        limits.validate(recipe_profile_id=receipt.execution_profile_id if full03_row else None)
         if full03_row is not None and any(getattr(limits, field) > full03_row["budgets"][field]
                 for field in ("memory_bytes", "cpu_seconds", "wall_seconds", "scratch_bytes", "file_bytes", "fd_limit")):
             raise ResearchSupervisorError("FULL-03 child cannot widen its exact recipe resource caps")
@@ -987,22 +1030,15 @@ class IsolatedResearchSupervisor:
                 profile_digest = str(payload["execution_profile_digest"])
             except (KeyError, TypeError, ValueError) as error:
                 raise ResearchSupervisorError("P06 child returned an invalid bounded receipt") from error
-            # CG-P11-09: the child reports its own peak RSS. The parent's
-            # RUSAGE_CHILDREN delta cannot see a child smaller than an earlier
-            # one in this process, so it is only the fallback.
-            child_rss = payload.get("peak_rss_bytes")
-            peak_rss_bytes = (
-                child_rss
-                if isinstance(child_rss, int) and not isinstance(child_rss, bool) and 0 < child_rss <= 16 * 1024 ** 3
-                else launch.peak_rss_bytes
-            )
+            peak_rss_bytes = launch.peak_rss_bytes
             if profile_digest != receipt.execution_profile_digest:
                 raise ResearchSupervisorError("P06 WFO child did not run the admitted execution profile")
             if full03_row is not None:
                 profile = full03_row["descriptor"]
                 bounds = profile.get("fold_bounds") or {"min": 1, "max": 1}
-                expected_trials = full03_row["public_profile"]["trial_default"] * (
-                    n_folds if profile["optimization_schedule"] != "global" else 1)
+                from portal_api.domain.research_trial_budget import child_study_trials, admitted_total_trials
+                expected_trials = admitted_total_trials(full03_row, child_study_trials(
+                    full03_row, receipt.as_payload(output_root=output_holder["output"])), n_folds)
                 if (engine_version != "1.1.1" or not bounds["min"] <= n_folds <= bounds["max"]
                         or not 0 < bars <= full03_row["budgets"]["planning_max_bars"] or trial_rows != expected_trials):
                     raise ResearchSupervisorError("FULL-03 child returned incompatible exact recipe counts or engine")
@@ -1274,7 +1310,10 @@ class IsolatedResearchSupervisor:
             network_namespace=network_namespace,
             payload=payload,
             elapsed_seconds=elapsed,
-            peak_rss_bytes=max(0, int(after.ru_maxrss - before.ru_maxrss)) * 1024,
+            # ru_maxrss for RUSAGE_CHILDREN is a lifetime maximum, not an
+            # additive counter. Subtracting it reports zero for later smaller
+            # jobs. Every allowlisted task attests its own RUSAGE_SELF value.
+            peak_rss_bytes=_child_peak_rss(payload, limits.memory_bytes),
             cpu_seconds=max(0.0, (after.ru_utime + after.ru_stime) - (before.ru_utime + before.ru_stime)),
             enforced_limits=enforced_limits,
         )

@@ -45,7 +45,8 @@ def capture(tmp_path, count=408):
 def request():
     return SimpleNamespace(workspace_id="ws_fixed", run_id="rrun_fixed", job_id="rjob_fixed",
         worker_attempt_id="rwa_fixed", lease_epoch=3,
-        research=SimpleNamespace(alpha_version_id="av_fixed", adapter_contract_digest="a" * 64,
+        research=SimpleNamespace(is_final_audit=False, qualification_binding=None,
+            alpha_version_id="av_fixed", adapter_contract_digest="a" * 64,
             requested_spec_digest="b" * 64, effective_spec_digest="c" * 64, dataset_binding_digest="d" * 64,
             requested_spec={"data": {"symbol": "BTCUSDT"}},
             execution_profile_id="p04.fixed-qualification.v1", execution_profile_digest=None))
@@ -293,6 +294,19 @@ def test_pinned_fixed_profile_manifest_exactly_binds_private_ingress(tmp_path, m
     assert calls[-1][1]["manifest"]["execution_profile_id"] == profile
     assert calls[-1][1]["manifest"]["execution_profile_digest"] == req.research.execution_profile_digest
     assert calls[-1][1]["manifest"]["market_symbol"] == req.research.requested_spec["data"]["symbol"]
+
+
+def test_native_fixed_replay_retention_requires_exact_installed_profile_digest():
+    from portal_api.domain.research_execution_recipes import execution_recipe
+    from portal_api.services.research_fixed_replay_retention import fixed_replay_profile
+    from types import SimpleNamespace
+    row = execution_recipe('p10.delta-intrabar-bracket-fixed-1h.v1')
+    native = SimpleNamespace(execution_profile_id=row['profile_id'], execution_profile_digest=row['profile_digest'])
+    assert fixed_replay_profile(native) == (row['profile_id'], row['profile_digest'])
+    for digest in (None, 'a' * 64):
+        native.execution_profile_digest = digest
+        with pytest.raises(ValueError):
+            fixed_replay_profile(native)
 
 
 @pytest.mark.parametrize("ack", ["batch", "seal"])

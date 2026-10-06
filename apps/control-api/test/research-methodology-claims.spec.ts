@@ -15,6 +15,12 @@ const sealFixture = JSON.parse(readFileSync(new URL("./research-w3-real-hmd-seal
 const identity = { releaseId: "er_quantbt_111", mode: "mode_1_decay", schedule: "global" };
 
 describe("CG-FG-S03-02/S04-01 shared methodology claim projection", () => {
+  it('never forecasts WFO optimization from a fixed native compatibility mode',()=>{
+    const claims=projectMethodologyClaims(atlas,null,{...identity,executionProfileId:'p10.delta-reactive-fixed-1h.v1'});
+    expect(claims.map(c=>c.state)).toEqual(['NOT_PUBLISHED','NOT_PUBLISHED','NOT_PUBLISHED','NOT_APPLICABLE']);
+    expect(claims.every(c=>c.text===null)).toBe(true);
+    expect(MethodologyClaimSchema.array().parse(claims)).toHaveLength(4);
+  });
   it("shows four Atlas forecasts before a source seal, never four invented issued claims", () => {
     const claims = projectMethodologyClaims(atlas, null, identity);
     expect(MethodologyClaimSchema.array().length(4).safeParse(claims).success).toBe(true);

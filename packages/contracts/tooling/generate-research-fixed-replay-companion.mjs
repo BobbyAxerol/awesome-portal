@@ -32,6 +32,9 @@ export function buildFixedReplayCompanionOpenApi() {
   manifest.allOf=[{anyOf:[{properties:{execution_profile_id:{const:"p04.fixed-qualification.v1"},execution_profile_digest:{type:"null"}}},
     {properties:{execution_profile_id:{const:"p17.imported-signal-notional.v1"},execution_profile_digest:{const:"f1ed5dbccdd90ca7dd35be2755f3b3b5f7e9a29b1641beb08bd0136783c0f298"}}},
     {properties:{execution_profile_id:{const:"p10.vn-stock-daily-observed-fixed.v1"},execution_profile_digest:{const:"acb6566ebae23bcf77c77974136c9d083a95f0967260b1332530f600f5abe00e"}}}]}];
+  const recipes=JSON.parse(readFileSync(new URL('../../../apps/portal/registry/research-execution-recipes.v1.json',import.meta.url)));
+  manifest.allOf[0].anyOf.push(...recipes.recipes.filter(r=>r.descriptor.schema_version==='research.native-route-profile.v1')
+    .map(r=>({properties:{execution_profile_id:{const:r.profile_id},execution_profile_digest:{const:r.profile_digest}}})));
   const page=object({schema_version:{const:"research.fixed-replay-companion-page.v1"},run_id:id,
     availability:object({state:{enum:["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},reason_code:nullable({enum:[...absence,
       "FIXED_OOS_CUSTODY_NOT_RECORDED","FIXED_OOS_RETENTION_NOT_FINALIZED","EXECUTION_PROFILE_NOT_FIXED"]})}),

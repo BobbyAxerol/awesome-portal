@@ -369,6 +369,24 @@ def _route_capability(
             gate="mode_schedule_admitted",
         ) from exc
     axes = route.axes
+    # Native editions bind their own server-owned input adapter and retained
+    # result chain. Do not open the generic legacy route/knob surface merely
+    # because a constructor exists in the broad engine catalogue.
+    from portal_api.domain.research_native_profile import native_enabled,validate_native_spec
+    from portal_api.domain.research_execution_recipes_generated import EXECUTION_RECIPE_TABLE
+    import os
+    binding=requested.get('alpha_binding')
+    version=binding.get('alpha_version_id') if isinstance(binding,dict) else None
+    native=next((r for r in EXECUTION_RECIPE_TABLE['recipes']
+        if r['descriptor']['schema_version']=='research.native-route-profile.v1'
+        and r['descriptor']['execution_route']==route_id
+        and r['descriptor']['alpha_binding_requirements']['alpha_version_id']==version),None)
+    if native is not None and native_enabled(native['profile_id'],dict(os.environ)):
+        try:
+            validate_native_spec(dict(requested),native)
+        except ValueError as exc:
+            raise ResearchPreflightSnapshotError('RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED',str(exc)) from exc
+        axes=axes.model_copy(update={'integration':'ADAPTER_AVAILABLE','evidence':'EVIDENCE_MAPPED','admission':'P04_BASELINE_ONLY'})
     # P08 may only create an executable-input manifest for a route whose
     # adapter and evidence surface are published. "P04_BASELINE_ONLY" means
     # preflight is allowed; it does *not* imply a worker/job is admitted.

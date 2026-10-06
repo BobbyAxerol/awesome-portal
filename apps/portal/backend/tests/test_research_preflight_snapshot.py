@@ -180,6 +180,37 @@ def error_code(callable_):
     return raised.value.code
 
 
+@pytest.mark.parametrize("route,edition", [
+    ("intrabar_bracket", "1_0_3"), ("reactive", "1_0_4"), ("event_driven", "1_0_5"),
+])
+def test_native_preflight_admits_only_exact_server_owned_binding(monkeypatch, route, edition):
+    from portal_api.services.research_preflight_snapshot import _route_capability
+    profile_id = f"p10.delta-{route.replace('_', '-')}-fixed-1h.v1"
+    monkeypatch.setenv("PORTAL_ENV", "local")
+    monkeypatch.setenv("PORTAL_FEATURE_RESEARCH_FULL06_PROFILE", "true")
+    monkeypatch.setenv("PORTAL_RECIPE_QUALIFICATION_PROFILE_ID", profile_id)
+    spec = requested(trials=1)
+    spec.update(execution_route=route, random_seed=None,
+                alpha_binding={"alpha_version_id": f"av_delta_rsi_polynomial_alpha_{edition}"})
+    for window in spec["windows"].values():
+        for key in ("start", "end_exclusive"):
+            window[key] += "Z"
+    catalog = ResearchEngineCatalogService(REGISTRY_ROOT)
+    result = _route_capability(catalog, spec)
+    assert result["route_axes"]["integration"] == "ADAPTER_AVAILABLE"
+    assert result["preflight_admission"] == "PREFLIGHT_ONLY"
+    assert result["execution_route"] == route
+    # The exact edition does not open legacy knobs or any other version.
+    invalid = copy.deepcopy(spec)
+    invalid["route_params"] = {"execution_clock": "caller-owned"}
+    assert error_code(lambda: _route_capability(catalog, invalid)) == "RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED"
+    invalid = copy.deepcopy(spec)
+    invalid["alpha_binding"]["alpha_version_id"] = "av_delta_rsi_polynomial_alpha_1_0_1"
+    assert error_code(lambda: _route_capability(catalog, invalid)) == "RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED"
+    monkeypatch.setenv("PORTAL_FEATURE_RESEARCH_FULL06_PROFILE", "false")
+    assert error_code(lambda: _route_capability(catalog, spec)) == "RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED"
+
+
 def test_p08_t01_snapshot_is_content_addressed_and_survives_source_mutation(service) -> None:
     authority, provider = service
     first = authority.build(payload(requested()))

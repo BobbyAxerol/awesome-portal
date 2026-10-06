@@ -11,6 +11,7 @@ import { ResearchMetadataError } from "./contracts";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { sha256ResearchJson } from "./preflight.service";
 import {executionRecipe, executionRecipeResources} from "./execution-recipes";
+import {isNativeRecipe} from './native-delta.binding';
 import { ResearchMetadataRepository } from "./repository";
 import {
   ResearchRunCreateResponseSchema,
@@ -116,6 +117,7 @@ export class ResearchRunCreateService {
     const commandId = stableId("rcmd", commandDigest);
     const profile = accepted.profile!;
     const recipe=executionRecipe(profile.id,profile.digest);
+    const native=isNativeRecipe(recipe);
     const importedSearch=recipe.adapter_kind==="IMPORTED_SEARCH";
     const causal = (recipe.adapter_kind==="DELTA_WFO"||importedSearch) && recipe.public_profile.optimization_schedule==="per_fold_causal";
     const wfo = recipe.adapter_kind==="DELTA_WFO"||importedSearch&&requested.protocol==="advanced";
@@ -138,7 +140,14 @@ export class ResearchRunCreateService {
     // The P04 branch below is byte-for-byte the pre-W1 construction (golden
     // tests pin both digests). The WFO branch is a separate versioned shape:
     // it carries the pinned profile identity and never a P04 parameter map.
-    const workDigest = vnObserved
+    const workDigest = native ? digest({schema_version:'research.native-fixed-work.v1',
+        requested_spec_digest:manifest.requestedSpecDigest,effective_spec_digest:manifest.effectiveSpecDigest,
+        dataset_binding_digest:manifest.datasetBindingDigest,manifest_digest:manifest.manifestDigest,
+        snapshot:{snapshot_id:this.stringFact(manifest.snapshot,'snapshot_id'),snapshot_content_hash:this.stringFact(manifest.snapshot,'snapshot_content_hash')},
+        alpha:{alpha_id:alpha.alphaId,alpha_version_id:alpha.alphaVersionId,adapter_id:alpha.adapterId,
+          adapter_contract_digest:alpha.adapterContractDigest,fixed_parameters:alpha.fixedParameters},
+        execution_profile:{profile_id:profile.id,profile_digest:profile.digest},
+        engine_release_id:requested.client.engine_release_id,requested_spec:requested}) : vnObserved
       ? digest({
         schema_version: VN_OBSERVED_FIXED_WORK_SCHEMA_VERSION,
         requested_spec_digest: manifest.requestedSpecDigest, effective_spec_digest: manifest.effectiveSpecDigest,
@@ -289,6 +298,7 @@ export class ResearchRunCreateService {
         } : {}),
         ...(vnObserved ? { execution_profile_id: profile.id, execution_profile_digest: profile.digest,
           source_observation: sourceObservation } : {}),
+        ...(native ? {execution_profile_id:profile.id,execution_profile_digest:profile.digest} : {}),
         work_digest: workDigest,
       },
     };

@@ -32,7 +32,8 @@ assert_execution_recipe_table(EXECUTION_RECIPE_TABLE, EXECUTION_RECIPE_REVISION)
 _RECIPES = {r["profile_id"]: json.dumps(r, sort_keys=True, separators=(",", ":")) for r in EXECUTION_RECIPE_TABLE["recipes"]}
 _QUALIFICATIONS = {r["profile_id"]: json.dumps(r, sort_keys=True, separators=(",", ":")) for r in EXECUTION_RECIPE_TABLE["qualification_references"]}
 EXECUTION_MAX_WARMUP_BARS = max(r["budgets"]["max_warmup_bars"] for r in EXECUTION_RECIPE_TABLE["recipes"])
-EXECUTION_PLANNING_MAX_BARS = min(r["budgets"]["planning_max_bars"] for r in EXECUTION_RECIPE_TABLE["recipes"])
+EXECUTION_PLANNING_MAX_BARS = max(r["budgets"]["planning_max_bars"] for r in EXECUTION_RECIPE_TABLE["recipes"])
+EXECUTION_MAX_CPU_SECONDS = max(r["budgets"]["cpu_seconds"] for r in EXECUTION_RECIPE_TABLE["recipes"])
 del EXECUTION_RECIPE_TABLE
 _UNSPECIFIED = object()
 

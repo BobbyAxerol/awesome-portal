@@ -17,7 +17,7 @@
     "recipes": {
       "type": "array",
       "minItems": 6,
-      "maxItems": 256,
+      "maxItems": 512,
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -512,7 +512,7 @@
                 "maximum": 512
               },
               "planning_max_bars": {
-                "const": 100000
+                "enum": [20000, 100000]
               },
               "max_warmup_bars": {
                 "type": "integer",
@@ -582,7 +582,7 @@
     "qualification_references": {
       "type": "array",
       "minItems": 6,
-      "maxItems": 256,
+      "maxItems": 512,
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -687,7 +687,7 @@
       ],
       "properties": {
         "maximum_profiles": {
-          "const": 256
+          "const": 512
         },
         "maximum_bytes": {
           "const": 1048576

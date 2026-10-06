@@ -11,6 +11,13 @@ const digest={...str,pattern:"^[a-f0-9]{64}$"},reason={...str,pattern:"^[A-Z][A-
 const array=(items,maxItems,minItems=0)=>({type:"array",items,maxItems,minItems});
 const en=(...values)=>({enum:values});
 const bounds=obj({min:count,max:count});
+const nativeInput=obj({schema_version:{const:'research.native-delta-input.v1'},adapter_sha256:digest,
+  symbol_policy:{const:'BTC_ETH_SOL_SINGLE_SYMBOL'},signal_authority:{const:'PROTECTED_DELTA_CLOSE_ONLY'},
+  target_notional:{const:'2000'},position_unit:{const:'CONTRACT_QUANTITY'},
+  execution_clock:en('KNOWN_CLOSE_NEXT_BAR_INTRABAR','KNOWN_CLOSE_NEXT_BAR_CLOSE'),
+  bracket:nullable(obj({stop_fraction:{const:'0.013'},take_profit_fraction:{const:'0.026'},level_mode:{const:'percent_distance'}})),
+  account:obj({initial_capital:{const:'20000'},leverage:{const:'3'},one_way_fee_rate:{const:'0.0005'},funding_enabled:{const:false}}),
+  optimizer:{const:'NOT_APPLICABLE_FIXED_DELTA_INPUT_NOT_SCALAR_OPTIMIZER'}});
 const fieldPath={type:"array",minItems:1,maxItems:8,items:{type:"string",pattern:"^[A-Za-z_][A-Za-z0-9_]*$|^[0-9]+$"}};
 const refusal=obj({reason_code:reason,field_path:fieldPath});
 const recipeTable=JSON.parse(readFileSync(new URL("../../apps/portal/registry/research-execution-recipes.v1.json",root)));
@@ -44,11 +51,12 @@ const budget=obj({scope:{const:"DECLARED_CAPS_NOT_RESERVATION_OR_ESTIMATE"},reci
   cpu_seconds:{type:"integer",minimum:1,maximum:1800},wall_seconds:{type:"integer",minimum:1,maximum:3600},
   scratch_bytes:{type:"integer",minimum:1,maximum:536870912},io_bytes:{type:"integer",minimum:1,maximum:1073741824},
   file_bytes:{type:"integer",minimum:1,maximum:16777216},fd_limit:{type:"integer",minimum:32,maximum:512},
-  planning_max_bars:{const:100000},max_warmup_bars:count,queue_class:en("HEAVY","INTERACTIVE"),resource_class:id,preview_override:{type:"boolean"}});
+  planning_max_bars:en(20000,100000),max_warmup_bars:count,queue_class:en("HEAVY","INTERACTIVE"),resource_class:id,preview_override:{type:"boolean"}});
 profile.properties.budget=ref("Budget");
 const percentAccount=obj(Object.fromEntries(Object.entries(recipeTable.recipes.find(r=>r.descriptor.schema_version==='research.full06-delta-profile.v1').descriptor.account).map(([key,value])=>[key,{const:value}])));
 profile.properties.account_model={const:'QUANTBT_PERCENT_EQUITY_V1'};
 profile.properties.account=ref('PercentEquityAccount');
+profile.properties.native_input=ref('NativeDeltaInput');
 profile.dependentRequired={account_model:['account'],account:['account_model']};
 profile.allOf.push({if:{required:['account_model']},then:{properties:{execution_route:{const:'pct_equity'}}}});
 profile.allOf.push({if:{required:['execution_route'],properties:{execution_route:{const:'pct_equity'}}},
@@ -85,7 +93,7 @@ const doc={openapi:"3.1.0",info:{title:"Research New Run setup",version:"1.0.0",
       requestBody:{required:true,content:{"application/json":{schema:ref("SuggestionRequest")}}},responses:responses("WindowSuggestion")}}},
   components:{securitySchemes:{portalSession:{type:"apiKey",in:"cookie",name:"portal_session"}},schemas:{Context:context,Profile:profile,SetupOptions:options,
     SetupRefusal:refusal,EngineOptions:engineOptions,
-    Budget:budget,PercentEquityAccount:percentAccount,
+    Budget:budget,PercentEquityAccount:percentAccount,NativeDeltaInput:nativeInput,
     WindowPatch:patch,SuggestionMetadata:metadata,SuggestionRequest:request,WindowSuggestion:suggestion,
     FieldPath:old.components.schemas.FieldPath,Problem:problem}}};
 function emit(path,value){const next=JSON.stringify(value,null,2)+"\n",url=new URL(path,root);if(check){if(readFileSync(url,"utf8")!==next)throw new Error(`${path} drift`);}else writeFileSync(url,next);}

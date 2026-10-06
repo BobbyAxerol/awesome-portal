@@ -23,7 +23,7 @@ describe("S02 named setup contract and safe canonical examples",()=>{
     expect(fixture.engine_options?.optimization_pairs.find(row=>row.optimization_mode==="mode_2_sbb")).toMatchObject({state:"DISABLED",reason_code:"PROFILE_NOT_OPENED",profile_ids:[]});
     expect(fixture.profiles[0].budget).toMatchObject({cpu_seconds:45,wall_seconds:90,qualification:"LEGACY_EXACT_BINDING",preview_override:false});
     expect(fixture.preflight_policy).toMatchObject({maximum_active_unbound_per_actor:8,ttl_seconds:600,expiry_extension:false});
-    expect(validate({...fixture,profiles:Array.from({length:257},()=>fixture.profiles[0])})).toBe(false);
+    expect(validate({...fixture,profiles:Array.from({length:doc.components.schemas.SetupOptions.properties.profiles.maxItems+1},()=>fixture.profiles[0])})).toBe(false);
     expect(validate({...fixture,profiles:[{...fixture.profiles[0],budget:{...fixture.profiles[0].budget,cpu_seconds:9999}}]})).toBe(false);
     const invalid=structuredClone(fixture);invalid.engine_options!.execution_routes.find(row=>row.value==="portfolio")!.state="ENABLED";
     expect(validate(invalid)).toBe(false);

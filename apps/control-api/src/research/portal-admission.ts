@@ -1,7 +1,7 @@
 import type { ControlApiConfig } from "../config";
 import type { ResearchPortalAdmission, ResearchEngineAtlasPrivate } from "./foundation.contract";
 import { VN_OBSERVED_FIXED_PROFILE, VN_OBSERVED_FIXED_PROFILE_DIGEST } from "./vn-observed-fixed.profile";
-import { executionRecipes, executionRecipeActivationReason, executionRecipeTrialCount } from "./execution-recipes";
+import { executionRecipes, executionRecipeActivationReason, executionRecipeTrialCount, preferredIntakeRecipes } from "./execution-recipes";
 
 type AdmissionFlags = Pick<ControlApiConfig,
   "FEATURE_RESEARCH_RUN_PRODUCER" | "FEATURE_RESEARCH_WFO_PROFILE" | "FEATURE_RESEARCH_PREVIEW_LONG_WFO">
@@ -20,7 +20,7 @@ export function researchPortalAdmission(
     && typeof q.index_revision === "string" && /^[a-f0-9]{64}$/.test(q.index_revision);
   return {
     schema_version: "research.portal-admission.v1",
-    profiles: executionRecipes.filter(row => row.adapter_kind !== "IMPORTED_FIXED"
+    profiles: preferredIntakeRecipes(executionRecipes,undefined,config).filter(row => row.adapter_kind !== "IMPORTED_FIXED"
       && (row.adapter_kind!=="IMPORTED_SEARCH"||config.FEATURE_RESEARCH_FULL05_PROFILE==="true")
       && (!(row.feature_flags as readonly string[]).includes("FEATURE_RESEARCH_FULL02_PROFILE")
         || config.FEATURE_RESEARCH_FULL02_PROFILE === "true")

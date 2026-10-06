@@ -27,7 +27,7 @@ import { ResearchAllTimeDistributionsSchema, type ResearchAllTimeDistributions }
 import { assertCausalSealConsistency } from "./causal-seal-consistency";
 import { assertFull02SealConsistency } from "./full02-seal-consistency";
 import { assertFull04SealConsistency } from "./full04-seal-consistency";
-import { currentSourceRetainedIntervalMs, currentSourceRetainedMethod, currentSourceRetainedRecipe,
+import { currentSourceRetainedIntervalMs, currentSourceRetainedMethod, currentSourceRetainedRecipe, currentSourceRetainedRowBounds,
   isCurrentSourceRetainedPair, isCurrentSourceExecutionProfile } from "./current-source-profile";
 import { MAXIMUM_GUARD_ENDPOINTS, type GuardIndexWitness } from "./applied-temporal-guards";
 import {
@@ -556,6 +556,10 @@ export class ResearchCurrentSourceRepository {
         throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source retained import digest does not match the accepted batch receipts.", 400);
       }
       const method = currentSourceRetainedMethod(input.profileId,input.sourceAdapterId);
+      const sealRecipe = currentSourceRetainedRecipe(input.profileId,input.sourceAdapterId);
+      const sealMaximumTrials = sealRecipe && "max_total_trials" in sealRecipe.public_profile
+        ? sealRecipe.public_profile.max_total_trials : sealRecipe?.public_profile.trial_count.max ?? 64;
+      const sealRelationLimit = 2 * sealMaximumTrials + 18;
       if (method === "CAUSAL_INNER") {
         const recipe = currentSourceRetainedRecipe(input.profileId,input.sourceAdapterId)!;
         const pin = await client.query<{ requested_spec: JsonColumn; topology: JsonColumn }>(
@@ -575,7 +579,7 @@ export class ResearchCurrentSourceRepository {
           `SELECT table_kind, source_ordinal, source_id, payload FROM research.current_source_rows_v1
             WHERE workspace_id=$1 AND run_id=$2 AND artifact_revision=$3
               AND table_kind IN ('FOLD','TRIAL','CANDIDATE','SELECTION')
-            ORDER BY table_kind, source_ordinal LIMIT 114`, [scope.workspaceId,input.runId,input.artifactRevision]);
+            ORDER BY table_kind, source_ordinal LIMIT $4`, [scope.workspaceId,input.runId,input.artifactRevision,sealRelationLimit]);
         assertCausalSealConsistency(input, retained.rows.map(row => ({ tableKind: row.table_kind,
           sourceOrdinal: asSafeNonNegative(row.source_ordinal,"causal source ordinal"), sourceId: row.source_id,
           payload: asJsonRecord(row.payload,"causal source payload") })), {
@@ -583,6 +587,7 @@ export class ResearchCurrentSourceRepository {
           topology: asJsonRecord(pin.rows[0]!.topology,"causal admitted topology"),
           timeframe: recipe.public_profile.timeframe,
           intervalMs: currentSourceRetainedIntervalMs(input.profileId,input.sourceAdapterId)!,
+          trialCount: recipe.public_profile.trial_count,
         });
       }
       if (method === "PER_FOLD_DECAY" || method === "THREE_WINDOW") {
@@ -590,17 +595,17 @@ export class ResearchCurrentSourceRepository {
           `SELECT table_kind, source_ordinal, source_id, payload FROM research.current_source_rows_v1
             WHERE workspace_id=$1 AND run_id=$2 AND artifact_revision=$3
               AND table_kind IN ('FOLD','TRIAL','CANDIDATE','SELECTION')
-            ORDER BY table_kind, source_ordinal LIMIT 114`, [scope.workspaceId,input.runId,input.artifactRevision]);
+            ORDER BY table_kind, source_ordinal LIMIT $4`, [scope.workspaceId,input.runId,input.artifactRevision,sealRelationLimit]);
         assertFull02SealConsistency(input, retained.rows.map(row => ({ tableKind: row.table_kind,
           sourceOrdinal: asSafeNonNegative(row.source_ordinal,"FULL02 source ordinal"), sourceId: row.source_id,
           payload: asJsonRecord(row.payload,"FULL02 source payload") })));
       }
-      if (currentSourceRetainedRecipe(input.profileId,input.sourceAdapterId)?.descriptor.schema_version === "research.full04-delta-profile.v1") {
+      if (sealRecipe && sealRecipe.public_profile.optimization_mode !== "mode_1_decay") {
         const retained = await client.query<{table_kind:string;source_ordinal:string|number;source_id:string;payload:JsonColumn}>(
           `SELECT table_kind,source_ordinal,source_id,payload FROM research.current_source_rows_v1
             WHERE workspace_id=$1 AND run_id=$2 AND artifact_revision=$3
-              AND table_kind IN ('FOLD','TRIAL','CANDIDATE','SELECTION') ORDER BY table_kind,source_ordinal LIMIT 114`,
-          [scope.workspaceId,input.runId,input.artifactRevision]);
+              AND table_kind IN ('FOLD','TRIAL','CANDIDATE','SELECTION') ORDER BY table_kind,source_ordinal LIMIT $4`,
+          [scope.workspaceId,input.runId,input.artifactRevision,sealRelationLimit]);
         assertFull04SealConsistency(input,retained.rows.map(row=>({tableKind:row.table_kind,sourceOrdinal:asSafeNonNegative(row.source_ordinal,"optimizer source ordinal"),
           sourceId:row.source_id,payload:asJsonRecord(row.payload,"optimizer source payload")})));
       }
@@ -880,19 +885,21 @@ export class ResearchCurrentSourceRepository {
   private async readSearchInputs(client: PoolClient, scope: ResearchScope, seal: CurrentSourceSealRow): Promise<CurrentSourceSearchInputs> {
       // A sealed, qualified historical run remains readable when its producer
       // profile is disabled. The immutable census controls this bounded read,
-      // not a flag that admits NEW long-running optimizer jobs. Keep the same
-      // absolute 400-row reader ceiling; assertSeal/admission stay flag-gated.
-      const trialLimit = Math.min(DELTA_WFO_PREVIEW_LONG_LIMITS.max_trials, Math.max(64, seal.tableRows.TRIAL));
-      const limits = { TRIAL: trialLimit, CANDIDATE: 64, FOLD: 256 };
+      // not a flag that admits NEW long-running optimizer jobs. Only an exact
+      // expanded retained pair can widen the historical 400/64 ceilings.
+      const bounds = currentSourceRetainedRowBounds(seal.profileId, seal.sourceAdapterId);
+      const trialLimit = Math.min(bounds.trials, Math.max(64, seal.tableRows.TRIAL));
+      const candidateLimit = Math.min(bounds.candidates, Math.max(64, seal.tableRows.CANDIDATE));
+      const limits = { TRIAL: trialLimit, CANDIDATE: candidateLimit, FOLD: 256 };
       const rows = await client.query<SourceRowQueryRow & { table_kind: keyof typeof limits }>(
-        `WITH bounds(table_kind, row_limit) AS (VALUES ('TRIAL', $4::int), ('CANDIDATE', 64), ('FOLD', 256))
+        `WITH bounds(table_kind, row_limit) AS (VALUES ('TRIAL', $4::int), ('CANDIDATE', $5::int), ('FOLD', 256))
          SELECT bounded.* FROM bounds CROSS JOIN LATERAL (
            SELECT table_kind, source_ordinal, source_id, occurred_at_utc_ms, payload
              FROM research.current_source_rows_v1
             WHERE workspace_id=$1 AND run_id=$2 AND artifact_revision=$3 AND table_kind=bounds.table_kind
             ORDER BY source_ordinal ASC LIMIT bounds.row_limit + 1
          ) bounded ORDER BY table_kind, source_ordinal`,
-        [scope.workspaceId, seal.runId, seal.artifactRevision, trialLimit],
+        [scope.workspaceId, seal.runId, seal.artifactRevision, trialLimit, candidateLimit],
       );
       const relations: Record<keyof typeof limits, CurrentSourceStoredRow[]> = { TRIAL: [], CANDIDATE: [], FOLD: [] };
       for (const row of rows.rows) {
@@ -1194,7 +1201,7 @@ export class ResearchCurrentSourceRepository {
     const method = currentSourceRetainedMethod(input.profileId,input.sourceAdapterId);
     const causal = method === "CAUSAL_INNER", decay = method === "PER_FOLD_DECAY", three = method === "THREE_WINDOW";
     const recipe = currentSourceRetainedRecipe(input.profileId,input.sourceAdapterId);
-    const full03 = recipe?.source_requirement === "FULL03_IMMUTABLE_DELTA_BINDING";
+    const full03 = recipe?.source_requirement === "FULL03_IMMUTABLE_DELTA_BINDING" || recipe?.source_requirement === "IMPORTED_IMMUTABLE_SEARCH_BINDING";
     const foldBounds = recipe?.public_profile.fold_bounds ?? (three ? {min:1,max:1} : null);
     const maximumTrials = full03 ? "max_total_trials" in recipe.public_profile ? recipe.public_profile.max_total_trials : recipe.public_profile.trial_count.max
       : causal || decay ? 48 : three ? 3 : deltaWfoPreviewLongEnabled(this.config) ? DELTA_WFO_PREVIEW_LONG_LIMITS.max_trials : 64;

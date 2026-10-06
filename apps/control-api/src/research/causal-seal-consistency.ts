@@ -3,10 +3,26 @@ import { CurrentSourceFoldPayloadSchema, CurrentSourceSummarySchema } from "./cu
 import { ResearchCurrentSourceError } from "./current-source.error";
 import { sha256ResearchJson } from "./preflight.service";
 
+/** QuantBT may prune before publishing Stage-A/objective metadata. Keep that
+ * absence, without admitting a scored row from a different objective domain. */
+export function isCausalStageATrial(payload: Record<string, unknown>): boolean {
+  const fact = payload.trial_facts as Record<string, unknown> | undefined;
+  if (fact?.stage === "is_search" && fact.objective_kind === "IS_MEAN_SHARPE") return true;
+  const metrics = fact?.metrics as Record<string, unknown> | undefined;
+  const components = fact?.objective_components as Record<string, unknown> | undefined;
+  return payload.state === "PRUNED" && payload.objective === null && fact?.pruned === true
+    && fact.stage === null && fact.objective_kind === "NOT_PUBLISHED"
+    && metrics?.oos_reason_code === "QUANTBT_TRIAL_ROW_DID_NOT_PUBLISH_ITS_STAGE"
+    && components?.state === "NOT_PUBLISHED"
+    && components.reason_code === "QUANTBT_TRIAL_ROW_HAS_NO_OBJECTIVE"
+    && components.formula === null && Array.isArray(components.terms) && components.terms.length === 0;
+}
+
 export function assertCausalSealConsistency(
   input: { tableRows: Record<string,number>; summary: Record<string,unknown> },
   rows: Array<{ tableKind: string; sourceOrdinal: number; sourceId: string; payload: Record<string,unknown> }>,
-  authority: { requestedSpec: Record<string,unknown>; topology: Record<string,unknown>; timeframe?: string; intervalMs?: number },
+  authority: { requestedSpec: Record<string,unknown>; topology: Record<string,unknown>; timeframe?: string; intervalMs?: number;
+    trialCount?: { min: number; max: number } },
 ): void {
   const fail = () => { throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_CONFLICT", "Causal selections do not match the sealed source relations.",409); };
   const folds = rows.filter(row => row.tableKind === "FOLD").sort((a,b) => a.sourceOrdinal-b.sourceOrdinal);
@@ -16,19 +32,20 @@ export function assertCausalSealConsistency(
   const requestedInner = (authority.requestedSpec.walk_forward as Record<string,unknown> | undefined)?.inner as Record<string,unknown> | undefined;
   const requestedData = authority.requestedSpec.data as Record<string,unknown> | undefined;
   const plannedFolds = authority.topology.folds as Array<Record<string,unknown>> | undefined;
+  const range = authority.trialCount ?? { min: 3, max: 3 };
+  const configuredTrials = authority.requestedSpec.optuna_trials ?? (range.min === range.max ? range.min : null);
+  if (typeof configuredTrials !== "number" || !Number.isSafeInteger(configuredTrials)
+    || configuredTrials < range.min || configuredTrials > range.max) return fail();
   if (!requestedInner || requestedData?.timeframe !== (authority.timeframe ?? "1h") || authority.requestedSpec.schema_version !== "research.requested-spec.v2" ||
       authority.requestedSpec.optimization_schedule !== "per_fold_causal" ||
       authority.topology.plan_source !== "quantbt.walkforward.WalkForwardEngine.build_folds" ||
       !Array.isArray(plannedFolds) || plannedFolds.length !== folds.length) return fail();
-  if (rows.length > 113 || folds.length < 2 || folds.length > 16 || trials.length !== folds.length*3 ||
+  if (rows.length > 2*configuredTrials*folds.length+folds.length+1 || folds.length < 2 || folds.length > 16 || trials.length !== folds.length*configuredTrials ||
       !summary.success || selection.length !== 1 || folds.length !== input.tableRows.FOLD ||
       trials.length !== input.tableRows.TRIAL || candidates.length !== input.tableRows.CANDIDATE) return fail();
   // Every retained member must stay in its native objective domain, not only
   // the winner. Nonselected Stage-A trials may still legitimately be pruned.
-  if (trials.some(row => {
-    const fact = row.payload.trial_facts as Record<string,unknown> | undefined;
-    return fact?.stage !== "is_search" || fact.objective_kind !== "IS_MEAN_SHARPE";
-  }) || candidates.some(row => {
+  if (trials.some(row => !isCausalStageATrial(row.payload)) || candidates.some(row => {
     const fact = row.payload.trial_facts as Record<string,unknown> | undefined;
     return fact?.stage !== "oos_candidate_selection" || fact.objective_kind !== "MODE_1_DECAY_J";
   })) return fail();
@@ -60,8 +77,8 @@ export function assertCausalSealConsistency(
     studies.add(fact.study_id); innerCount += fact.inner_folds.length;
     const studyTrials = trials.filter(row => (row.payload.trial_facts as Record<string,unknown> | undefined)?.study_id === fact.study_id);
     const studyCandidates = candidates.filter(row => (row.payload.trial_facts as Record<string,unknown> | undefined)?.study_id === fact.study_id);
-    if (studyTrials.length !== 3) return fail();
-    if (studyCandidates.length !== fact.candidate_count || studyCandidates.length > 3 || [...studyTrials,...studyCandidates].some(row => {
+    if (studyTrials.length !== configuredTrials || fact.study_trial_rows !== configuredTrials) return fail();
+    if (studyCandidates.length !== fact.candidate_count || studyCandidates.length > configuredTrials || [...studyTrials,...studyCandidates].some(row => {
       const trialFact = row.payload.trial_facts as Record<string,unknown>;
       const scope = trialFact.fold_scope as Record<string,unknown> | undefined;
       return !scope || !["FOLD","PER_FOLD_STUDY"].includes(String(scope.kind)) || scope.fold_id !== parsed.data.fold_id;

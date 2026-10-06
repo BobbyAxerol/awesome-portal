@@ -353,6 +353,7 @@ export class ResearchProgressService {
     if (this.methodologyClaims) {
       response.claims = await this.methodologyClaims.read(user, scope, runId, {
         releaseId: identity?.engineReleaseId ?? null, mode: identity?.mode ?? null, schedule: identity?.schedule ?? null,
+        executionProfileId: identity?.executionProfileId ?? null,
       }, response.current.effective_status === "COMPLETED");
     }
     return response;
@@ -883,14 +884,16 @@ export class ResearchProgressService {
     const causal = scope.executionProfileId === DELTA_CAUSAL_INNER_PROFILE_ID;
     const full02 = scope.executionProfileId === DELTA_PER_FOLD_DECAY_PROFILE_ID || scope.executionProfileId === DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID;
     const recipe = (() => { try { return scope.executionProfileId ? executionRecipe(scope.executionProfileId) : null; } catch { return null; } })();
-    const isFull03 = recipe?.source_requirement === "FULL03_IMMUTABLE_DELTA_BINDING";
+    const native = recipe?.descriptor.schema_version==='research.native-route-profile.v1';
+    const isFull03 = !native && recipe?.source_requirement === "FULL03_IMMUTABLE_DELTA_BINDING"
+      || recipe?.source_requirement === "IMPORTED_IMMUTABLE_SEARCH_BINDING";
     if (isFull03 && !currentSourceExecutionPair(scope.executionProfileId,scope.executionProfileDigest))
       throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Research progress recipe digest differs from its immutable producer.",400);
     const wfo = scope.executionProfileId === DELTA_WFO_PROFILE_ID || scope.executionProfileId === DELTA_WFO_V2_PROFILE_ID || causal || whatIf || full02 || isFull03;
     const usage = input.event.payload.usage;
     if (usage && typeof usage === "object" && !Array.isArray(usage)) {
       const cpu = (usage as Record<string, unknown>).cpu_seconds;
-      const cap = isFull03 ? executionRecipeBudgets(recipe!,this.config as unknown as Record<string,unknown>).cpu_seconds
+      const cap = isFull03 || native ? executionRecipeBudgets(recipe!,this.config as unknown as Record<string,unknown>).cpu_seconds
         : pinnedAudit ? PINNED_AUDIT_PROFILE.cpu_seconds : whatIf
         ? WHATIF_PROFILE.child_limits.cpu_seconds
         : causal ? DELTA_CAUSAL_INNER_PROFILE.child_limits.cpu_seconds

@@ -28,7 +28,8 @@ describe('FULL06 exact percent-equity public contracts',()=>{
   it('binds all 63 exact route/source pairs without changing the old notional source pairs',()=>{
     const table=JSON.parse(readFileSync(join(root,'../../apps/portal/registry/research-execution-recipes.v1.json'),'utf8'));
     const rows=table.recipes.filter((r:any)=>r.descriptor.schema_version==='research.full06-delta-profile.v1');
-    expect(rows).toHaveLength(63);expect(table.recipes).toHaveLength(161);
+    expect(rows).toHaveLength(63);
+    expect(table.recipes.filter((r:any)=>!['research.expanded-trial-profile.v1','research.native-route-profile.v1'].includes(r.descriptor.schema_version))).toHaveLength(161);
     const valid=validator('research-current-source','Provenance');
     for(const row of rows)expect(valid({...fixture.provenance,...row.descriptor.current_source}),JSON.stringify(valid.errors)).toBe(true);
     expect(valid({...fixture.provenance,profile_id:'full06.guessed.v1'})).toBe(false);

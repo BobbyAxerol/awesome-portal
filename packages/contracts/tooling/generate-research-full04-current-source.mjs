@@ -54,7 +54,7 @@ export const full04Mode4Selection=obj({schema_version:{const:"research.current-s
   scope:{const:"OUTER_FOLD_SELECTION"},study_id:token,fold_seed:{type:"integer",minimum:1,maximum:Number.MAX_SAFE_INTEGER},
   source_trial_id:token,selected_trial_id:token,parameters:params,objective:nullable(dec),
   objective_kind:{enum:["IS_MEAN_SHARPE","IS_ONLY_ROBUST_J"]},candidate_is_metric:nullable(dec),
-  candidate_count:{type:"integer",minimum:1,maximum:3},study_trial_rows:{const:3},outer_oos_used_for_selection:{const:false},
+  candidate_count:{type:"integer",minimum:1,maximum:400},study_trial_rows:{type:"integer",minimum:2,maximum:400},outer_oos_used_for_selection:{const:false},
   causality_claim:{const:"strict_fold_local_retraining"},params_digest:digest,
   selection_sequence:{type:"integer",minimum:0,maximum:15},params_frozen_at_utc_ms:nullable({type:"integer",minimum:0,maximum:Number.MAX_SAFE_INTEGER})});
 export function amendFull04CurrentSource(original,file="research-current-source"){

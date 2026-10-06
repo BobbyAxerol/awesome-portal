@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { FixedReplayCompanionRowSchema,FixedReplayCompanionBatchIngressSchema,FixedReplayCompanionSealIngressSchema,
   FixedReplayCompanionQuerySchema,FixedReplayCompanionManifestSchema,fixedReplayCustodyProof,isFixedReplayProfile } from "../src/research/fixed-replay-companion.contract";
 import { IMPORTED_ALPHA_PROFILE_ID,IMPORTED_ALPHA_PROFILE_DIGEST } from "../src/research/imported-alpha.profile";
+import {executionRecipes} from '../src/research/execution-recipes';
 import { sha256ResearchJson } from "../src/research/preflight.service";
 import { replayRow,replayBatch,replaySeal } from "./research-fixed-replay-companion.fixture";
 describe("bounded fixed OOS custody contract",()=>{
@@ -29,6 +30,11 @@ describe("bounded fixed OOS custody contract",()=>{
     expect(isFixedReplayProfile("p04.fixed-qualification.v1","a".repeat(64))).toBe(false);
     expect(isFixedReplayProfile(IMPORTED_ALPHA_PROFILE_ID,IMPORTED_ALPHA_PROFILE_DIGEST)).toBe(true);
     expect(isFixedReplayProfile("p17.delta-signal-notional-wfo.v1",null)).toBe(false);
+    for(const row of executionRecipes.filter(r=>r.descriptor.schema_version==='research.native-route-profile.v1')){
+      expect(isFixedReplayProfile(row.profile_id,row.profile_digest)).toBe(true);
+      expect(isFixedReplayProfile(row.profile_id,null)).toBe(false);
+      expect(isFixedReplayProfile(row.profile_id,'a'.repeat(64))).toBe(false);
+    }
     const absent=replaySeal([],true);expect(FixedReplayCompanionSealIngressSchema.parse(absent)).toEqual(absent);
     expect(FixedReplayCompanionManifestSchema.safeParse({...absent.manifest,source:{...absent.manifest.source,row_count:0}}).success).toBe(false);
   });

@@ -5,6 +5,8 @@ import { readRunDeclaration } from "./run-declaration.read";
 import { failedAt } from "./run-state";
 import { enrichedAvailability } from "./enriched-analysis.contract";
 import { z } from "zod";
+import {ResearchNativeRouteResultSchema} from './native-route.contract';
+import {nativeDeltaRecipe} from './native-delta.binding';
 import { ResearchRetainedAnalyticsSchema, type ResearchRetainedAnalytics } from "./retained-analytics.contract";
 import { ResearchRetainedAnalyticsV2Schema, type ResearchRetainedAnalyticsV2 } from "./retained-analytics-v2.contract";
 
@@ -200,7 +202,8 @@ const StoredIdentitySchema = (sampling: z.ZodTypeAny) => z.object({
 const StoredProjectionSchema = z.object({
   schema_version: z.literal("research.evidence-projection.v1"),
   source: z.object({
-    execution_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]),
+    execution_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1", "full03.delta-rsi.v1"]),
+    native_execution:ResearchNativeRouteResultSchema.optional(),
     engine_version: z.enum(["1.1.0", "1.1.1"]),
     input_scope: z.literal("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY"),
     oos_observation_count: z.number().int().positive().max(2_000_000),
@@ -390,6 +393,7 @@ export class ResearchEvidenceService {
       mode: requested.success ? requested.data.optimization_mode : null,
       schedule: requested.success ? requested.data.optimization_schedule : null,
       routeId: requested.success ? requested.data.execution_route : null,
+      executionProfileId: requested.success ? nativeDeltaRecipe(requested.data)?.profile_id ?? null : null,
     }, row.runState === "READY" || row.jobState === "SUCCEEDED", "EVIDENCE") : undefined;
     const response = this.mapHub(row, claims);
     const parsed = ResearchEvidenceHubResponseSchema.safeParse(response);
@@ -776,6 +780,7 @@ export class ResearchEvidenceService {
       metric_registry_version: metricRegistryVersion,
       core: {
         source_adapter_id: projection?.source.execution_adapter_id ?? null,
+        ...(projection?.source.native_execution?{native_execution:projection.source.native_execution}:{}),
         engine_version: projection?.source.engine_version ?? null,
         input_scope: projection?.source.input_scope ?? null,
         source_transform_digest: projection?.source.source_transform_digest ?? null,

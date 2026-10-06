@@ -1,0 +1,25 @@
+/** Additive reader bounds; the exact seal/admission still owns each count. */
+import {readFileSync,writeFileSync} from 'node:fs';
+import {replaceComponent} from './generate-research-progress-truth.mjs';
+const path=new URL('../openapi/research-current-source.openapi.json',import.meta.url);
+const original=readFileSync(path,'utf8');
+const document=JSON.parse(original);
+const schemas=document.components.schemas;
+const evidence=schemas.Evidence?.allOf?.find(s=>s.properties?.passport)?.properties;
+const search=schemas.Search?.allOf?.find(s=>s.properties?.ledger)?.properties;
+if(!evidence||!search)throw Error('NAMED_CURRENT_SOURCE_READER_SCHEMAS_REQUIRED');
+evidence.passport.properties.artifact_table_rows.properties.trials.maximum=6400;
+evidence.passport.properties.artifact_table_rows.properties.candidates.maximum=6400;
+schemas.Selection.properties.roles.properties.candidate_source_trial_ids.maxItems=6400;
+search.ledger.properties.source_trial_count.maximum=6400;
+search.ledger.properties.fold_filter.properties.matched_rows.maximum=6400;
+search.candidates.properties.source_candidate_count.maximum=6400;
+search.candidates.properties.rows.maxItems=6400;
+const probe=search.diagnostics.properties.probe.properties;
+probe.objective_rows.maximum=12800;
+probe.objective_rows_recomposed.maximum=12800;
+probe.pruned_trial_count.anyOf.find(s=>s.type==='integer').maximum=6400;
+search.ledger.properties.source_trial_count.description='Complete retained TRIAL rows; exact immutable recipe allows at most 400 per study and 6400 across bounded fold-local studies. Ledger pages remain at most 200 rows.';
+let next=original;
+for(const name of ['Evidence','Selection','Search'])next=replaceComponent(next,name,schemas[name],next.indexOf('"schemas": {'));
+if(next!==original)writeFileSync(path,next);

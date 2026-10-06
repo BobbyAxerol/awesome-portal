@@ -60,13 +60,13 @@ const DisplayMode4SelectionSchema = CurrentSourceMode4SelectionSchema.extend(Sel
  * (FEATURE_RESEARCH_PREVIEW_LONG_WFO, AUTH_MODE=dev + PORTAL_ENV=local) seals
  * up to 400. A sealed artifact never exceeds what its own seal admitted.
  */
-export const CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS = 400;
+export const CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS = 6400;
 /**
  * Every admitted preview search trial may publish one objective probe, and
  * each retained candidate (at most 64) may publish one more. The seal guards
  * both cardinalities before any read reaches this response contract.
  */
-export const CURRENT_SOURCE_MAXIMUM_OBJECTIVE_ROWS = CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS + 64;
+export const CURRENT_SOURCE_MAXIMUM_OBJECTIVE_ROWS = CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS * 2;
 
 export const ResearchCurrentSourceAvailabilitySchema = z.object({
   state: z.enum([
@@ -471,7 +471,7 @@ export const ResearchCurrentSourceEvidenceResponseSchema = CommonSchema.extend({
       observations: z.number().int().positive().max(2_000_000),
       folds: z.number().int().positive().max(256),
       trials: z.number().int().min(2).max(CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS),
-      candidates: z.number().int().positive().max(64),
+      candidates: z.number().int().positive().max(CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS),
       selection: z.literal(1),
     }).strict(),
     initial_equity: DecimalSchema,
@@ -872,7 +872,7 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
       selected: SelectionRoleSchema,
       centroid: SelectionRoleSchema,
       raw_best_is_equals_selected: z.boolean().nullable(),
-      candidate_source_trial_ids: z.array(SourceIdentifierSchema).max(64),
+      candidate_source_trial_ids: z.array(SourceIdentifierSchema).max(CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS),
     }).strict(),
   }).strict(),
   /** W3: how the source searched (scope of trials, studies, ledger mode). */
@@ -919,8 +919,8 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
     }).strict(),
   }).strict(),
   candidates: z.object({
-    source_candidate_count: z.number().int().min(1).max(64),
-    rows: z.array(CandidateSchema).min(1).max(64),
+    source_candidate_count: z.number().int().min(1).max(CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS),
+    rows: z.array(CandidateSchema).min(1).max(CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS),
     availability: ResearchCurrentSourceAvailabilitySchema,
   }).strict(),
   diagnostics: z.object({
@@ -1184,7 +1184,7 @@ export const ResearchCurrentSourceNotApplicableResponseSchema = z.object({
   lane: z.object({
     state: z.literal("NOT_APPLICABLE"),
     operation: ResearchCurrentSourceOperationSchema,
-    run_profile: z.enum(["P04_FIXED_QUALIFICATION", "IMPORTED_FIXED_QUALIFICATION", "VN_OBSERVED_FIXED_QUALIFICATION"]),
+    run_profile: z.enum(["P04_FIXED_QUALIFICATION", "IMPORTED_FIXED_QUALIFICATION", "VN_OBSERVED_FIXED_QUALIFICATION", "NATIVE_FIXED_QUALIFICATION"]),
     run_adapter_contract_digest: DigestSchema,
     // Enum of both RS-02 profiles for forward compatibility; the P04 fixed
     // qualification keeps emitting rs02.delta-wfo-global.v1 byte-for-byte.

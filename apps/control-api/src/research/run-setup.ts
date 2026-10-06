@@ -55,6 +55,7 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
       ...refusal(row.dataset_id ? row.dataset_id !== context.dataset_id ? "PROFILE_DATASET_NOT_ADMITTED" : null
         : context.dataset_id === "vn-stock-daily" ? "PROFILE_DATASET_NOT_ADMITTED" : null, ["data", "dataset_id"]),
       ...refusal(row.symbol && row.symbol !== context.symbol ? "PROFILE_SYMBOL_NOT_ADMITTED" : null, ["data", "symbol"]),
+      ...refusal("native_input" in recipe.descriptor&&!['BTCUSDT','ETHUSDT','SOLUSDT'].includes(context.symbol)?'PROFILE_SYMBOL_NOT_ADMITTED':null,['data','symbol']),
       ...refusal(row.timeframe !== context.timeframe ? "PROFILE_TIMEFRAME_NOT_ADMITTED" : null, ["data", "timeframe"]),
       ...refusal(row.reason ?? (row.state === "DISABLED" ? "PROFILE_NOT_ENABLED" : null), ["profile_id"])];
     const reason = refusals[0]?.reason_code ?? null;
@@ -77,6 +78,7 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
       temporal_guards: { policy: temporal ? "V1_ABSENT_V2_EXPLICIT" : "NOT_APPLICABLE", defaults: temporal ? guards : null,
         max_bars: temporal ? 10_000 : null, zero_semantics: "ZERO_APPLIES_NO_TEMPORAL_GUARD" },
       independent_holdout: !temporal,
+      ...("native_input" in recipe.descriptor ? {native_input:recipe.descriptor.native_input}:{}),
       ...("account" in recipe.descriptor ? {account_model:"QUANTBT_PERCENT_EQUITY_V1" as const,account:recipe.descriptor.account}:{}),
     };
   });

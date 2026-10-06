@@ -300,7 +300,7 @@ describe("P09 published Research foundation contract", () => {
     const schemas = document.components.schemas;
     expect(schemas.AtlasResponse.oneOf[0].required).toContain("portal_admission");
     expect(schemas.AtlasResponse.oneOf[1].properties.portal_admission).toBeUndefined();
-    expect(schemas.PortalAdmission.properties.profiles.maxItems).toBe(160);
+    expect(schemas.PortalAdmission.properties.profiles.maxItems).toBe(322);
     const current = JSON.parse(readFileSync(join(ROOT, "fixtures", "research-foundation.atlas-current.valid.json"), "utf8")) as Record<string, any>;
     expect(current.atlas.current_release.submission_constraints.profile_id).toBe("p10.fixed-qualification.v1");
     expect(current.portal_admission.profiles).toMatchObject([
@@ -329,7 +329,11 @@ describe("P09 published Research foundation contract", () => {
     expect(publishedIds.slice(70,97)).toEqual(full05.map((row: any) => row.profile_id));
     const full06 = registry.recipes.filter((row: any) => row.descriptor.schema_version === "research.full06-delta-profile.v1");
     expect(full06).toHaveLength(63);
-    expect(publishedIds.slice(97)).toEqual(full06.map((row: any) => row.profile_id));
+    expect(publishedIds.slice(97,160)).toEqual(full06.map((row: any) => row.profile_id));
+    const expanded=registry.recipes.filter((row:any)=>row.descriptor.schema_version==='research.expanded-trial-profile.v1');
+    const native=registry.recipes.filter((row:any)=>row.descriptor.schema_version==='research.native-route-profile.v1');
+    expect(expanded).toHaveLength(153);expect(native).toHaveLength(9);
+    expect(publishedIds.slice(160)).toEqual([...expanded,...native].map((row:any)=>row.profile_id));
     expect(new Set(publishedIds).size).toBe(publishedIds.length);
     expect(admissionValidator()(fixture)).toBe(true);
     expect(fixture.profiles[3]).toMatchObject({profile_id:"p10.delta-signal-notional-causal-inner.v1",

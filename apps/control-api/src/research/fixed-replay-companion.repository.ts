@@ -8,6 +8,7 @@ import { ResearchCurrentSourceError } from "./current-source.error";
 import { ResearchReplayError } from "./replay.error";
 import { retainedExposureAuthority } from "./retained-exposure";
 import { sha256ResearchJson } from "./preflight.service";
+import { executionRecipes } from "./execution-recipes";
 import { isVnObservedFixedProfile, vnObservedSourceDateMs } from "./vn-observed-fixed.profile";
 import { FixedReplayCompanionBatchIngressSchema, FixedReplayCompanionSealIngressSchema,
   FixedReplayCompanionManifestSchema, FixedReplayCompanionRowSchema, fixedReplayCustodyProof, isFixedReplayProfile,
@@ -195,9 +196,14 @@ export class ResearchFixedReplayCompanionRepository {
       || keys.some(k=>binding[k]!==manifest[k])) throw conflict();
     const spec=object(binding.requested_spec) as any;
     const vnObserved=isVnObservedFixedProfile(binding.execution_profile_id,binding.execution_profile_digest);
+    const native=executionRecipes.find(row=>row.descriptor.schema_version==='research.native-route-profile.v1'
+      &&row.profile_id===binding.execution_profile_id&&row.profile_digest===binding.execution_profile_digest);
     const sourceDate=(value:unknown)=>vnObserved ? vnObservedSourceDateMs(value) : Date.parse(value as string);
-    if(spec?.protocol!=="three_window_decay" || spec.execution_route!=="signal_notional" || typeof spec.data?.symbol!=="string"
+    if(spec?.protocol!=="three_window_decay" || spec.execution_route!==(native?.descriptor.execution_route??"signal_notional") || typeof spec.data?.symbol!=="string"
       || spec.data.symbol!==manifest.market_symbol
+      || native?.descriptor.schema_version==='research.native-route-profile.v1' && (spec.data.dataset_id!=='crypto-binance-1m'||spec.data.timeframe!=='1h'
+        ||!['BTCUSDT','ETHUSDT','SOLUSDT'].includes(spec.data.symbol)
+        ||spec.alpha_binding?.alpha_version_id!==native.descriptor.alpha_binding_requirements.alpha_version_id)
       || vnObserved && (spec.data.dataset_id!=="vn-stock-daily" || spec.data.symbol!=="FPT" || spec.data.timeframe!=="1d")
       || sourceDate(spec.windows?.oos?.start)!==manifest.source.oos_start_utc_ms
       || sourceDate(spec.windows?.oos?.end_exclusive)!==manifest.source.oos_end_exclusive_utc_ms) throw conflict();

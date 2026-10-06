@@ -8181,3 +8181,38 @@ Claude consumes `DECLARED_SEARCH_WITH_PINS`, native mode truth,
 `SOURCE_CODE_SHA256` and typed full-sample geometry; browser acceptance is not
 claimed here. No remotes/dev/main/prod. Next proposed backend FULL06 remains
 unstarted until Bobby names it; no new campaign is invented.
+
+### FULL support owner expansion — 2026-10-06
+
+Bobby now approves widening the new recipes beyond fixed 3/5 trials,
+qualification for ETHUSDT/SOLUSDT, compatible imported Alpha expansion and
+the required `intrabar_bracket`, `reactive`, `event_driven` adapters. DCA,
+portfolio/basket, arbitrage and options are not needed in this version; this
+addendum supersedes their delivery order, without deleting the old inventory.
+Current gate **BACKEND_DELIVERED /156_NEW_EXACT_RECIPES_PRODUCT_RUN_QUALIFIED /
+RESEARCH_PREVIEW_ENABLED**:
+153 expanded exact recipes/215 accepted product runs plus3 nativev3 recipes/
+9 accepted runs (224 total), through ordinary P08→P10→QuantBT1.1.1→P05→named
+reads. New 2–400 ranges (Mode3 min5) and exact total-work/resource caps are
+versioned successors; every161 old descriptor/proof stays byte-identical.
+Native bracket/reactive/event-driven delivery is **fixed Three Window/1h/
+one execution**, not native WFO, arbitrary command tapes or a Cartesian
+mode×route promise. DCA/portfolio/arb/options remain owner-deferred.
+
+Final backend images passed1,783 retained reads without rerunning children;
+flag-off rollback312 reads/7 intake negatives PASS. Research preview backend
+is rolled out with candidate selectors empty; its28 setup combinations and
+eight unique-family positive preflights PASS after normal token quota expiry,
+without increasing quota or starting children. Twenty-two
+old preview seal identities, users/AV/pointers/HMD index and Claude web
+custody PASS. Test cell down,22 sessions revoked/21 temporary users disabled,
+four proof volumes retained. C4 quiet cache maintenance is required before
+the next heavy build; no broad prune in this slice.
+
+Claude's accepted frontend remains protected. Percent-equity source-absent
+costs stay typed absence; native input/result and route-aware immutable AV
+selection/browser acceptance are explicit consumer handoff, not UI completion.
+No remote push, dev/main/Production/Execution change. This latest addendum
+supersedes older stage-not-started and6b–6f ordering notes only within the
+approved three native families and trial expansion, not the deferred routes.
+[Exact scope, sequencing, tests, activation, custody and delivery journal](./research_loop/evidence/P10/FULL_06_APPROVED_EXPANSION_2026-10-06.md).

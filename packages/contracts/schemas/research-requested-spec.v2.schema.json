@@ -648,7 +648,29 @@
         },
         "required": [
           "execution_route"
-        ]
+        ],
+        "not": {
+          "properties": {
+            "alpha_binding": {
+              "type": "object",
+              "required": [
+                "alpha_version_id"
+              ],
+              "properties": {
+                "alpha_version_id": {
+                  "enum": [
+                    "av_delta_rsi_polynomial_alpha_1_0_3",
+                    "av_delta_rsi_polynomial_alpha_1_0_6",
+                    "av_delta_rsi_polynomial_alpha_1_0_9"
+                  ]
+                }
+              }
+            }
+          },
+          "required": [
+            "alpha_binding"
+          ]
+        }
       },
       "then": {
         "properties": {
@@ -728,7 +750,29 @@
         },
         "required": [
           "execution_route"
-        ]
+        ],
+        "not": {
+          "properties": {
+            "alpha_binding": {
+              "type": "object",
+              "required": [
+                "alpha_version_id"
+              ],
+              "properties": {
+                "alpha_version_id": {
+                  "enum": [
+                    "av_delta_rsi_polynomial_alpha_1_0_4",
+                    "av_delta_rsi_polynomial_alpha_1_0_7",
+                    "av_delta_rsi_polynomial_alpha_1_0_10"
+                  ]
+                }
+              }
+            }
+          },
+          "required": [
+            "alpha_binding"
+          ]
+        }
       },
       "then": {
         "properties": {
@@ -824,6 +868,285 @@
       "then": {
         "properties": {
           "route_params": {
+            "maxProperties": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "alpha_binding"
+        ],
+        "properties": {
+          "alpha_binding": {
+            "type": "object",
+            "required": [
+              "alpha_version_id"
+            ],
+            "properties": {
+              "alpha_version_id": {
+                "const": "av_delta_rsi_polynomial_alpha_1_0_3"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "execution_route": {
+            "const": "intrabar_bracket"
+          },
+          "route_params": {
+            "type": "object",
+            "maxProperties": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "alpha_binding"
+        ],
+        "properties": {
+          "alpha_binding": {
+            "type": "object",
+            "required": [
+              "alpha_version_id"
+            ],
+            "properties": {
+              "alpha_version_id": {
+                "const": "av_delta_rsi_polynomial_alpha_1_0_4"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "execution_route": {
+            "const": "reactive"
+          },
+          "route_params": {
+            "type": "object",
+            "maxProperties": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "alpha_binding"
+        ],
+        "properties": {
+          "alpha_binding": {
+            "type": "object",
+            "required": [
+              "alpha_version_id"
+            ],
+            "properties": {
+              "alpha_version_id": {
+                "const": "av_delta_rsi_polynomial_alpha_1_0_5"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "execution_route": {
+            "const": "event_driven"
+          },
+          "route_params": {
+            "type": "object",
+            "maxProperties": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "alpha_binding"
+        ],
+        "properties": {
+          "alpha_binding": {
+            "type": "object",
+            "required": [
+              "alpha_version_id"
+            ],
+            "properties": {
+              "alpha_version_id": {
+                "const": "av_delta_rsi_polynomial_alpha_1_0_6"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "execution_route": {
+            "const": "intrabar_bracket"
+          },
+          "route_params": {
+            "type": "object",
+            "maxProperties": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "alpha_binding"
+        ],
+        "properties": {
+          "alpha_binding": {
+            "type": "object",
+            "required": [
+              "alpha_version_id"
+            ],
+            "properties": {
+              "alpha_version_id": {
+                "const": "av_delta_rsi_polynomial_alpha_1_0_7"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "execution_route": {
+            "const": "reactive"
+          },
+          "route_params": {
+            "type": "object",
+            "maxProperties": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "alpha_binding"
+        ],
+        "properties": {
+          "alpha_binding": {
+            "type": "object",
+            "required": [
+              "alpha_version_id"
+            ],
+            "properties": {
+              "alpha_version_id": {
+                "const": "av_delta_rsi_polynomial_alpha_1_0_8"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "execution_route": {
+            "const": "event_driven"
+          },
+          "route_params": {
+            "type": "object",
+            "maxProperties": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "alpha_binding"
+        ],
+        "properties": {
+          "alpha_binding": {
+            "type": "object",
+            "required": [
+              "alpha_version_id"
+            ],
+            "properties": {
+              "alpha_version_id": {
+                "const": "av_delta_rsi_polynomial_alpha_1_0_9"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "execution_route": {
+            "const": "intrabar_bracket"
+          },
+          "route_params": {
+            "type": "object",
+            "maxProperties": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "alpha_binding"
+        ],
+        "properties": {
+          "alpha_binding": {
+            "type": "object",
+            "required": [
+              "alpha_version_id"
+            ],
+            "properties": {
+              "alpha_version_id": {
+                "const": "av_delta_rsi_polynomial_alpha_1_0_10"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "execution_route": {
+            "const": "reactive"
+          },
+          "route_params": {
+            "type": "object",
+            "maxProperties": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "alpha_binding"
+        ],
+        "properties": {
+          "alpha_binding": {
+            "type": "object",
+            "required": [
+              "alpha_version_id"
+            ],
+            "properties": {
+              "alpha_version_id": {
+                "const": "av_delta_rsi_polynomial_alpha_1_0_11"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "execution_route": {
+            "const": "event_driven"
+          },
+          "route_params": {
+            "type": "object",
             "maxProperties": 0
           }
         }

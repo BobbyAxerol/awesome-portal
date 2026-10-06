@@ -11,6 +11,7 @@ import re
 from typing import Any, Mapping
 
 from .research_execution_recipes import execution_recipe, execution_recipe_qualification
+from .research_trial_budget import child_study_trials
 
 FULL03_DELTA_ADAPTER_ID = "full03.delta-rsi.v1"
 FULL03_DELTA_ALPHA_ID = "delta-rsi-polynomial-alpha"
@@ -30,7 +31,8 @@ _WIDTH = re.compile(r"[1-9][0-9]{0,4}(D|h)")
 def is_full03_profile(profile_id: str) -> bool:
     try:
         row = execution_recipe(profile_id)
-        return row["descriptor"].get("adapter_id") == FULL03_DELTA_ADAPTER_ID or row["source_requirement"] == "IMPORTED_IMMUTABLE_SEARCH_BINDING"
+        return (row["descriptor"].get("adapter_id") == FULL03_DELTA_ADAPTER_ID
+                and row["adapter_kind"] in {"DELTA_WFO", "DELTA_THREE_WINDOW_OPTIMIZED"}) or row["source_requirement"] == "IMPORTED_IMMUTABLE_SEARCH_BINDING"
     except ValueError:
         return False
 
@@ -50,7 +52,7 @@ def full03_recipe(profile_id: str, profile_digest: object) -> dict[str, Any]:
             or row["preview_override"] is not None):
         raise ValueError("FULL-03 requires its exact installed Delta recipe")
     requirement, clock = p.get("alpha_binding_requirements"), p.get("source_clock")
-    percent = p.get("schema_version") == "research.full06-delta-profile.v1"
+    percent = p.get("execution_route") == "pct_equity"
     expected_av = FULL06_DELTA_ALPHA_VERSION_ID if percent else FULL03_DELTA_ALPHA_VERSION_ID
     expected_digest = FULL06_DELTA_ADAPTER_CONTRACT_DIGEST if percent else FULL03_DELTA_ADAPTER_CONTRACT_DIGEST
     if percent and (p.get("execution_route") != "pct_equity" or p.get("account") != FULL06_PERCENT_ACCOUNT
@@ -86,7 +88,7 @@ def full03_profile_enabled(profile_id: str, env: Mapping[str, str] | None = None
         return source.get("PORTAL_FEATURE_RESEARCH_FULL05_PROFILE") == "true" and source.get("PORTAL_FEATURE_RESEARCH_IMPORTED_EXECUTION") == "true" and (
             qualification["kind"] == "PRODUCT_RUN_QUALIFIED" or qualification["kind"] == "CANDIDATE_NOT_QUALIFIED"
             and source.get("PORTAL_ENV") == "local" and source.get("PORTAL_RECIPE_QUALIFICATION_PROFILE_ID") == profile_id)
-    percent = execution_recipe(profile_id)["descriptor"]["schema_version"] == "research.full06-delta-profile.v1"
+    percent = execution_recipe(profile_id)["descriptor"].get("execution_route") == "pct_equity"
     flag = "PORTAL_FEATURE_RESEARCH_FULL06_PROFILE" if percent else "PORTAL_FEATURE_RESEARCH_FULL03_PROFILE"
     if source.get(flag, "false") != "true":
         return False
@@ -190,7 +192,8 @@ def full03_controls_from_receipt(receipt: Mapping[str, Any], row: Mapping[str, A
     causal = p["optimization_schedule"] == "per_fold_causal"
     key = "causal_inner_controls" if causal else "temporal_controls"
     other = "temporal_controls" if causal else "causal_inner_controls"
-    if "optuna_trials" in receipt or other in receipt:
+    child_study_trials(row, receipt)
+    if other in receipt:
         raise ValueError("FULL-03 recipes forbid preview trial overrides and foreign controls")
     raw = receipt.get(key)
     fields = {"split_frequency", "window_mode", "train_window", "label_horizon_bars", "purge_bars", "embargo_bars"}

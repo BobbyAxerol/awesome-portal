@@ -17,6 +17,8 @@ import { ifNoneMatchWeakly } from "../src/research/etag";
 import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "../src/research/p04-delta.binding";
 import { IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST, IMPORTED_ALPHA_PROFILE_ID } from "../src/research/imported-alpha.profile";
 import { mockSearchRepository } from "./research-search-inputs.fixture";
+import { NATIVE_DELTA_BINDINGS } from "../src/research/native-delta.binding";
+import { executionRecipes } from "../src/research/execution-recipes";
 
 const scope = { workspaceId: "rf05-workspace", actorUserId: "rf05-user" };
 const config = {
@@ -63,6 +65,19 @@ const operations = [
 ] as const;
 
 describe("RF-05 CG-P13-09 · P04 fixed profile is NOT_APPLICABLE, answered as a typed 200", () => {
+  it("native fixed routes never claim pending WFO output; both immutable profile and contract digest are required", async () => {
+    for (const row of executionRecipes.filter(r => r.descriptor.schema_version === "research.native-route-profile.v1")) {
+      const binding = NATIVE_DELTA_BINDINGS.find(b => b.adapterContractDigest === row.descriptor.adapter_contract_digest)!;
+      expect(binding).toBeTruthy();
+      const {service, repository} = build({status: "COMPLETED", executionProfileId: row.profile_id,
+        adapterContractDigest: binding.adapterContractDigest});
+      for (const [, read] of operations) expect(await read(service)).toMatchObject({availability: {state: "NOT_APPLICABLE"},
+        lane: {run_profile: "NATIVE_FIXED_QUALIFICATION", reason_code: "RS02_RETAINED_WFO_LANE_NOT_APPLICABLE_TO_NATIVE_FIXED_QUALIFICATION"}});
+      expect(repository.rows).not.toHaveBeenCalled();
+      const wrong = build({status: "COMPLETED", executionProfileId: row.profile_id, adapterContractDigest: "0".repeat(64)});
+      await expect(wrong.service.search(scope, "run_p04", {limit: 100})).rejects.toMatchObject({status: 409});
+    }
+  });
   it("E17 fixed runs never claim pending WFO retention, including after completion", async () => {
     for (const status of ["COMPLETED", "RUNNING"]) {
       const { service, repository } = build({ status, executionProfileId: IMPORTED_ALPHA_PROFILE_ID,

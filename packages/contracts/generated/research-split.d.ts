@@ -227,7 +227,7 @@ export interface components {
             as_of_basis: "P14_PROJECTION_RECEIVED_AT" | "RUN_STATE_UPDATED_AT" | "LEGACY_READ_MODEL_UPDATED_AT";
             dataset: components["schemas"]["DatasetFact"];
             provenance: {
-                source_adapter_id: ("p04.delta-rsi.v1" | "p17.imported-signal-notional.v1") | null;
+                source_adapter_id: ("p04.delta-rsi.v1" | "p17.imported-signal-notional.v1" | "full03.delta-rsi.v1") | null;
                 engine_version: ("1.1.0" | "1.1.1") | null;
                 input_scope: "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY" | null;
                 source_transform_digest: components["schemas"]["Digest"] | null;

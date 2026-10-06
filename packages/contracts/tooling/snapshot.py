@@ -20,6 +20,15 @@ from typing import Any
 CONTRACTS_ROOT = Path(__file__).resolve().parents[1]
 
 TRACKED = (
+    "fixtures/research-native-route-result.valid.json",
+    "tooling/append-research-expanded-trial-recipes.mjs",
+    "tooling/append-research-native-route-recipes.mjs",
+    "tooling/generate-research-expanded-trial-contracts.mjs",
+    "tooling/generate-research-expanded-trial-migration.mjs",
+    "tooling/generate-research-native-contracts.mjs",
+    "tooling/generate-research-native-migration.mjs",
+    "tooling/generate-research-expanded-native.mjs",
+    "tooling/generate-research-expanded-native-qualification.mjs",
     "fixtures/research-preflight.quota.valid.json",
     "tooling/generate-research-execution-recipes.mjs",
     "openapi/research-run-setup.openapi.json",

@@ -1,7 +1,7 @@
 /** Predicate/contract tests, distinct from ordinary real-source product proof. */
 import {describe,it,expect} from "vitest";
 import {executionRecipes,executionRecipe,executionRecipeActivationReason,executionRecipeBudgets,
-  recipeDigest,wfoExecutionRecipe,currentSourceRecipePairs} from "../src/research/execution-recipes";
+  recipeDigest,wfoExecutionRecipe,currentSourceRecipePairs,executionRecipeQualification} from "../src/research/execution-recipes";
 import {FULL03_DELTA_BINDING,FULL03_DELTA_ADAPTER_CONTRACT_DIGEST} from "../src/research/full03-delta.binding";
 import {P04_DELTA_BINDING} from "../src/research/p04-delta.binding";
 import {ResearchRequestedSpecSchema,type ResearchRequestedSpec} from "../src/research/preflight.contract";
@@ -10,6 +10,12 @@ import {researchPortalAdmission} from "../src/research/portal-admission";
 import {admissionRepository,flagConfig,manifestFor,w1Admin,w1Scope,wfoRequested,p04Requested} from "./research-w1-wfo.fixture";
 import {ResearchCurrentSourceSealIngressSchema} from "../src/research/artifact-ingress.contract";
 const rows=executionRecipes.filter(r=>r.descriptor.schema_version==="research.full03-delta-profile.v1");
+function qualifiedSuccessor(row:typeof rows[number]) {
+  const successor=executionRecipe(row.profile_id.replace(/\.v1$/,".v2"));
+  expect(successor.descriptor).toHaveProperty("predecessor_profile_id",row.profile_id);
+  expect(executionRecipeQualification(successor.profile_id).kind).toBe("PRODUCT_RUN_QUALIFIED");
+  return successor;
+}
 function specFor(row:typeof rows[number]):ResearchRequestedSpec {
   const three=row.adapter_kind==="DELTA_THREE_WINDOW_OPTIMIZED",causal=row.public_profile.optimization_schedule==="per_fold_causal";
   const value=three?p04Requested({optuna_trials:3,random_seed:42}):wfoRequested({schema_version:"research.requested-spec.v2",
@@ -62,10 +68,14 @@ describe("FULL03 immutable indexed profile authority",()=>{
       PORTAL_ENV:"local",AUTH_MODE:"dev",RESEARCH_RECIPE_QUALIFICATION_PROFILE_ID:row.profile_id};
     expect(executionRecipeActivationReason(row,flags,source)).toBeNull();
     expect(executionRecipeActivationReason(row,{...flags,FEATURE_RESEARCH_FULL03_PROFILE:"false"},source)).toBe("PROFILE_FLAG_OFF");
-    if(row.adapter_kind==="DELTA_WFO")expect(wfoExecutionRecipe(specFor(row))?.profile_id).toBe(row.profile_id);
+    // Historical lookup and activation keep v1 bytes/caps. Fresh intake must
+    // use its exact qualified successor, never mutate the historical row.
+    expect(executionRecipe(row.profile_id,row.profile_digest)).toBe(row);
+    if(row.adapter_kind==="DELTA_WFO")expect(wfoExecutionRecipe(specFor(row))?.profile_id).toBe(qualifiedSuccessor(row).profile_id);
   });
   it.each(rows)("admits only its own pinned $profile_id",async row=>{
-    const result=await facts(row);expect(result.profile).toEqual({id:row.profile_id,digest:row.profile_digest});
+    const successor=qualifiedSuccessor(row);
+    const result=await facts(row);expect(result.profile).toEqual({id:successor.profile_id,digest:successor.profile_digest});
     expect(result.alpha?.adapterId).toBe(FULL03_DELTA_BINDING.adapterId);
     await expect(facts(row,s=>{s.data.dataset_id="crypto-binance-spot-1m";})).rejects.toMatchObject({code:"RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE"});
   });
@@ -73,6 +83,7 @@ describe("FULL03 immutable indexed profile authority",()=>{
     const off=researchPortalAdmission(flagConfig(true) as never,{release_id:"er_quantbt_111",verified:true});
     expect(off.profiles).toHaveLength(5);
     expect(off.profiles.some(r=>r.profile_id.includes("delta-wfo-temporal-"))).toBe(false);
-    expect(currentSourceRecipePairs.filter(p=>p.source_adapter_id.startsWith("full03."))).toHaveLength(28);
+    expect(currentSourceRecipePairs.filter(p=>p.source_adapter_id.startsWith("full03.")&&p.source_adapter_id.endsWith(".v1"))).toHaveLength(28);
+    expect(currentSourceRecipePairs.filter(p=>p.source_adapter_id.startsWith("full03.")&&p.source_adapter_id.endsWith(".v2"))).toHaveLength(28);
   });
 });

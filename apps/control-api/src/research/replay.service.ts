@@ -161,9 +161,14 @@ export class ResearchReplayService {
     const sourceAvailability = responseAvailability(series.availability);
     const sourceAdapterId = hub.core.source_adapter_id;
     const sourceIsCurrentP04 = sourceAdapterId === "p04.delta-rsi.v1";
+    // FULL native fixed routes retain the same sealed OOS equity contract,
+    // not the scalar WFO ledger. Require the additive, validated route fact;
+    // the adapter name alone must not admit a different FULL lane.
+    const native = sourceAdapterId === "full03.delta-rsi.v1" ? hub.core.native_execution : undefined;
     const sourceReason = (reason: string) => sourceAdapterId === "p17.imported-signal-notional.v1"
-      ? reason.replace(/^P04_SOURCE_/, "E17_IMPORTED_SOURCE_") : reason;
-    const sourceIsSupported = sourceIsCurrentP04 || sourceAdapterId === "p17.imported-signal-notional.v1";
+      ? reason.replace(/^P04_SOURCE_/, "E17_IMPORTED_SOURCE_")
+      : native ? reason.replace(/^P04_SOURCE_/, "NATIVE_SOURCE_") : reason;
+    const sourceIsSupported = sourceIsCurrentP04 || sourceAdapterId === "p17.imported-signal-notional.v1" || native !== undefined;
     const sourceIsAvailable = sourceIsSupported && series.availability.state === "AVAILABLE";
     // A persisted series may be individually available while its adapter is
     // outside this deliberately narrow P17 reader. Do not surface that as an
@@ -301,9 +306,10 @@ export class ResearchReplayService {
         input_scope: hub.core.input_scope,
       },
       route: {
-        id: sourceIsSupported ? "signal_notional" : null,
+        id: native?.execution_route ?? (sourceIsSupported ? "signal_notional" : null),
         state: routeState,
-        replay_contract: sourceIsAvailable ? (sourceIsCurrentP04 ? "P17_CURRENT_P04_EQUITY_SAMPLE_V1" : "P17_IMPORTED_FIXED_EQUITY_SAMPLE_V1") : null,
+        replay_contract: sourceIsAvailable ? (native ? "P17_NATIVE_FIXED_EQUITY_SAMPLE_V1"
+          : sourceIsCurrentP04 ? "P17_CURRENT_P04_EQUITY_SAMPLE_V1" : "P17_IMPORTED_FIXED_EQUITY_SAMPLE_V1") : null,
         availability: routeAvailability,
       },
       equity_replay: window,

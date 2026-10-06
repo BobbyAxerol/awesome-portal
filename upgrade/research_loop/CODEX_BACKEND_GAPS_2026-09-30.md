@@ -2455,3 +2455,42 @@ Codex's FULL-06 work was in progress in `portal-research-be` (staged: `run-setup
 | BR-S02-06 what a version runs | Registry carries `declaration.timeframes` and `supersedes` (null in current data) | **Frontend**: version select lists newest first, starts on the newest ACTIVE, shows each version's declared timeframes and "replaced by …" when a later version names it. **Backend still open**: set `supersedes` on 1.0.1/1.0.2 (data) so 1.0.0 reads as replaced |
 | BR-S02-09 recipe names/order as data | Touches `run-setup.ts` / recipe registry that FULL-06 is editing | **Deferred** until FULL-06 lands, then one additive optional `recipe` block per profile |
 | BR-S02-10 FULL-06 input shapes | Not landed | Waiting; the S02 acceptance for new routes is ready to run when it lands |
+
+#### §37 approved expansion delivery — 2026-10-06 (Codex)
+
+Bobby's later scope opens bounded2–400-trial recipe successors (Mode3≥5),
+BTC/ETH/SOL1h qualification, compatible imported optimization and native
+`intrabar_bracket`/`reactive`/`event_driven`. DCA, portfolio/basket, arbitrage
+and options are explicitly deferred; the preceding6b–6f order is historical,
+not an instruction to implement them now.
+
+Gate **BACKEND_DELIVERED /156_NEW_EXACT_RECIPES_PRODUCT_RUN_QUALIFIED /
+RESEARCH_PREVIEW_ENABLED**:
+153 expanded exact recipes/215 accepted product runs;3 nativev3 recipes/9
+accepted products. Native scope is fixed Three Window/1h/one execution,
+native engine clock/accounting, not scalar WFO or broker lifecycle replay.
+Final-image1,783 reads, rollback312 reads/7 negative intakes PASS. Append-only
+108/109/112/113 candidates and114/115 proof never rewrite the161 historical
+descriptors/proofs or seals. All generated OpenAPI/schema/client additions
+are tested; original pinned P02 source stays frozen.
+
+[Actual scope, hashes, failed-attempt transparency, grouped tests, C4 and
+Claude consumer tasks](./evidence/P10/FULL_06_APPROVED_EXPANSION_2026-10-06.md).
+Frontend consumes `RunSetupProfile.trial_count`, inline `NativeDeltaInput`,
+`EvidenceHub.core.native_execution` (`ResearchNativeRouteResultSchema` server)
+and typed native replay/method NOT_APPLICABLE. Select immutable AV by route:
+native1.0.9/1.0.10/1.0.11 cannot stand in for scalar1.0.1 or pct1.0.2.
+An imported scalar declaration does not authorize an incompatible native tape.
+Do not reset costs to0, turn PRUNED into COMPLETE or claim800/6400 work is
+one study. Existing FE layout/calendar/account work is not edited here.
+
+Preview backend activated,28 setup combinations and22 old seals/account/AV/
+HMD/web custody PASS; eight unique-family may-create preflights PASS after
+normal quota expiry, without deleting tokens/raising quotas or extra children.
+BR-S02-07 quota response is already typed and respected by this proof;
+BR-S02-10 exact native input/result/clock shapes are published above. Different
+native/scalar/pct versions are not universal supersession (BR-S02-06);
+optional recipe-label/ranking metadata (BR-S02-09) remains a separate
+consumer refinement, not an enabled input with a missing executor.
+No extra engine run is needed. Backend API proof does not close
+browser/visual consumer acceptance. No push/dev/main/Production action.

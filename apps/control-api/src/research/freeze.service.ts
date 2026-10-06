@@ -21,6 +21,7 @@ import { BYTE_VERIFY_NOT_ENABLED, ResearchArtifactVerifyService } from "./artifa
 import { P04_FIXED_QUALIFICATION_PROFILE_ID } from "./delta-wfo.profile";
 import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "./p04-delta.binding";
 import { VN_OBSERVED_FIXED_PROFILE_ID } from "./vn-observed-fixed.profile";
+import { isNativeReadBinding } from "./native-delta.binding";
 import { ResearchSplitSourceSchema, type ResearchSplitSource } from "./progress.contract";
 import {
   ResearchFreezeResponseSchema,
@@ -231,7 +232,8 @@ export class ResearchFreezeService {
   }
 
   private mapDetail(row: SplitHubRow, requestedFold: number | null, bytes: ArtifactByteVerification): unknown {
-    if (row.kind === "DURABLE" && (row.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID) !== P04_FIXED_QUALIFICATION_PROFILE_ID && row.executionProfileId !== IMPORTED_ALPHA_PROFILE_ID && row.executionProfileId !== VN_OBSERVED_FIXED_PROFILE_ID) {
+    const native = isNativeReadBinding(row.executionProfileId, row.adapterContractDigest);
+    if (row.kind === "DURABLE" && !native && (row.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID) !== P04_FIXED_QUALIFICATION_PROFILE_ID && row.executionProfileId !== IMPORTED_ALPHA_PROFILE_ID && row.executionProfileId !== VN_OBSERVED_FIXED_PROFILE_ID) {
       // W1: a Delta WFO run shares the P04 executor digest but has no P04
       // fixed-parameter bundle to verify; its freeze truth is the retained
       // RS-02 current-source lane. Answer the existing typed absence.

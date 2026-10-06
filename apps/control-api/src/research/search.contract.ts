@@ -210,7 +210,7 @@ export const ResearchSearchResponseSchema = z.object({
   as_of_utc_ms: UtcMsSchema,
   as_of_basis: z.enum(["P14_PROJECTION_RECEIVED_AT", "RUN_STATE_UPDATED_AT", "LEGACY_READ_MODEL_UPDATED_AT"]),
   provenance: z.object({
-    source_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]).nullable(),
+    source_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1", "full03.delta-rsi.v1"]).nullable(),
     adapter_contract_digest: DigestSchema.nullable(),
     engine_version: z.enum(["1.1.0", "1.1.1"]).nullable(),
     input_scope: z.literal("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY").nullable(),

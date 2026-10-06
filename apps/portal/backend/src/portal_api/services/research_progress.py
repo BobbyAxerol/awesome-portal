@@ -29,7 +29,7 @@ from portal_api.domain.research_delta_wfo_profile import (
     delta_wfo_preview_long_enabled,
 )
 from portal_api.serialization import canonicalize
-from portal_api.domain.research_execution_recipes import execution_recipe
+from portal_api.domain.research_execution_recipes import EXECUTION_MAX_CPU_SECONDS, execution_recipe
 
 
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$")
@@ -530,7 +530,9 @@ def _valid_usage(value: object) -> None:
         raise ResearchProgressError("P11 terminal usage is invalid")
     for key, maximum in _USAGE_MAXIMA.items():
         if key == "cpu_seconds":
-            maximum = _max_profile_cpu_seconds()
+            # Wire ceiling only. Each journal and Control API ingress still
+            # bind usage to the immutable run's exact recipe budget.
+            maximum = max(EXECUTION_MAX_CPU_SECONDS, _max_profile_cpu_seconds())
         item = value.get(key)
         if item is None:
             continue
@@ -557,6 +559,8 @@ class ResearchProgressJournal:
         planned_trials: int = 1,
         cpu_cap_seconds: int = _P04_CPU_SECONDS,
         profile: str = "P04_FIXED",
+        execution_profile_id: str | None = None,
+        execution_profile_digest: str | None = None,
     ) -> None:
         self.run_id = _identifier(run_id, "run id")
         self.attempt_id = _identifier(attempt_id, "attempt id")
@@ -567,9 +571,18 @@ class ResearchProgressJournal:
             raise ResearchProgressError("P11 planned trial count is invalid")
         if profile == "PINNED_FINAL_AUDIT" and planned_trials != 0:
             raise ResearchProgressError("P11 pinned audit must report zero optimizer trials")
+        cpu_ceiling = _max_profile_cpu_seconds()
+        if execution_profile_id is not None:
+            try:
+                recipe = execution_recipe(execution_profile_id, execution_profile_digest)
+            except ValueError as exc:
+                raise ResearchProgressError("P11 immutable recipe is invalid") from exc
+            cpu_ceiling = recipe["budgets"]["cpu_seconds"]
+        elif execution_profile_digest is not None:
+            raise ResearchProgressError("P11 recipe digest requires its profile")
         if (
             not isinstance(cpu_cap_seconds, int) or isinstance(cpu_cap_seconds, bool)
-            or not 1 <= cpu_cap_seconds <= _max_profile_cpu_seconds()
+            or not 1 <= cpu_cap_seconds <= cpu_ceiling
         ):
             raise ResearchProgressError("P11 CPU cap is invalid")
         if profile not in _PROFILE_COPY:

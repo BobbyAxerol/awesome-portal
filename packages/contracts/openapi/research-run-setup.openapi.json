@@ -686,6 +686,9 @@
           },
           "account": {
             "$ref": "#/components/schemas/PercentEquityAccount"
+          },
+          "native_input": {
+            "$ref": "#/components/schemas/NativeDeltaInput"
           }
         },
         "allOf": [
@@ -829,7 +832,7 @@
             "items": {
               "$ref": "#/components/schemas/Profile"
             },
-            "maxItems": 256,
+            "maxItems": 512,
             "minItems": 0
           },
           "preflight_required": {
@@ -958,7 +961,7 @@
                     "type": "string",
                     "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
                   },
-                  "maxItems": 256,
+                  "maxItems": 512,
                   "minItems": 0
                 }
               },
@@ -1071,7 +1074,7 @@
                     "type": "string",
                     "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
                   },
-                  "maxItems": 256,
+                  "maxItems": 512,
                   "minItems": 0
                 }
               },
@@ -1179,7 +1182,7 @@
                     "type": "string",
                     "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
                   },
-                  "maxItems": 256,
+                  "maxItems": 512,
                   "minItems": 0
                 }
               },
@@ -1287,7 +1290,7 @@
                     "type": "string",
                     "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
                   },
-                  "maxItems": 256,
+                  "maxItems": 512,
                   "minItems": 0
                 }
               },
@@ -1431,7 +1434,10 @@
             "maximum": 512
           },
           "planning_max_bars": {
-            "const": 100000
+            "enum": [
+              20000,
+              100000
+            ]
           },
           "max_warmup_bars": {
             "type": "integer",
@@ -1490,6 +1496,103 @@
           },
           "sizing_authority": {
             "const": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+          }
+        }
+      },
+      "NativeDeltaInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "adapter_sha256",
+          "symbol_policy",
+          "signal_authority",
+          "target_notional",
+          "position_unit",
+          "execution_clock",
+          "bracket",
+          "account",
+          "optimizer"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.native-delta-input.v1"
+          },
+          "adapter_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "symbol_policy": {
+            "const": "BTC_ETH_SOL_SINGLE_SYMBOL"
+          },
+          "signal_authority": {
+            "const": "PROTECTED_DELTA_CLOSE_ONLY"
+          },
+          "target_notional": {
+            "const": "2000"
+          },
+          "position_unit": {
+            "const": "CONTRACT_QUANTITY"
+          },
+          "execution_clock": {
+            "enum": [
+              "KNOWN_CLOSE_NEXT_BAR_INTRABAR",
+              "KNOWN_CLOSE_NEXT_BAR_CLOSE"
+            ]
+          },
+          "bracket": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "stop_fraction",
+                  "take_profit_fraction",
+                  "level_mode"
+                ],
+                "properties": {
+                  "stop_fraction": {
+                    "const": "0.013"
+                  },
+                  "take_profit_fraction": {
+                    "const": "0.026"
+                  },
+                  "level_mode": {
+                    "const": "percent_distance"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "account": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "initial_capital",
+              "leverage",
+              "one_way_fee_rate",
+              "funding_enabled"
+            ],
+            "properties": {
+              "initial_capital": {
+                "const": "20000"
+              },
+              "leverage": {
+                "const": "3"
+              },
+              "one_way_fee_rate": {
+                "const": "0.0005"
+              },
+              "funding_enabled": {
+                "const": false
+              }
+            }
+          },
+          "optimizer": {
+            "const": "NOT_APPLICABLE_FIXED_DELTA_INPUT_NOT_SCALAR_OPTIMIZER"
           }
         }
       },

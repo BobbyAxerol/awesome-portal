@@ -6,7 +6,7 @@ const root=new URL('../../../',import.meta.url),check=process.argv.includes('--c
 const table=JSON.parse(readFileSync(new URL('apps/portal/registry/research-execution-recipes.v1.json',root)));
 const binding=JSON.parse(readFileSync(new URL('apps/portal/registry/research-full06-delta-binding.v1.json',root)));
 const rows=table.recipes.filter(r=>r.descriptor.schema_version==='research.full06-delta-profile.v1');assert.equal(rows.length,63);
-const indexed=table.recipes.filter(r=>r.source_requirement==='FULL03_IMMUTABLE_DELTA_BINDING');
+const indexed=table.recipes.filter(r=>r.source_requirement==='FULL03_IMMUTABLE_DELTA_BINDING'&&!['research.expanded-trial-profile.v1','research.native-route-profile.v1'].includes(r.descriptor.schema_version));
 const old=readFileSync(new URL('apps/control-api/migrations/1723680000104_research-full05-imported-search.sql',root),'utf8');
 const canonical=v=>Array.isArray(v)?v.map(canonical):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])])):v;
 const hash=v=>createHash('sha256').update(JSON.stringify(canonical(v))).digest('hex'),q=v=>"'"+v.replaceAll("'","''")+"'";

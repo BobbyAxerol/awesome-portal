@@ -1,11 +1,17 @@
 /** Exact predicate tests, not ordinary product qualification evidence. */
 import {describe,it,expect} from "vitest";
-import {executionRecipes,recipeDigest,wfoExecutionRecipe,executionRecipeActivationReason} from "../src/research/execution-recipes";
+import {executionRecipes,executionRecipe,executionRecipeQualification,recipeDigest,wfoExecutionRecipe,executionRecipeActivationReason} from "../src/research/execution-recipes";
 import {FULL03_DELTA_BINDING,FULL03_DELTA_ADAPTER_CONTRACT_DIGEST} from "../src/research/full03-delta.binding";
 import {ResearchRequestedSpecSchema,type ResearchRequestedSpec} from "../src/research/preflight.contract";
 import {ResearchRunAdmissionService} from "../src/research/run-admission.service";
 import {admissionRepository,flagConfig,manifestFor,w1Admin,w1Scope,wfoRequested} from "./research-w1-wfo.fixture";
 const rows=executionRecipes.filter(r=>r.descriptor.schema_version==="research.full04-delta-profile.v1");
+function qualifiedSuccessor(row:typeof rows[number]) {
+  const successor=executionRecipe(row.profile_id.replace(/\.v1$/,".v2"));
+  expect(successor.descriptor).toHaveProperty("predecessor_profile_id",row.profile_id);
+  expect(executionRecipeQualification(successor.profile_id).kind).toBe("PRODUCT_RUN_QUALIFIED");
+  return successor;
+}
 function specFor(row:typeof rows[number]):ResearchRequestedSpec{
   const spec=wfoRequested({schema_version:"research.requested-spec.v2",optimization_mode:row.public_profile.optimization_mode,
     optimization_schedule:row.public_profile.optimization_schedule,optuna_trials:row.public_profile.trial_default},
@@ -37,16 +43,23 @@ describe("FULL04 exact native optimizer admission",()=>{
     // FULL06 appends a distinct account route; this assertion protects the
     // accepted FULL04/FULL05 predecessor set, not the global catalogue ceiling.
     expect(executionRecipes.filter(r=>r.adapter_kind!=="IMPORTED_SEARCH"
-      && r.descriptor.schema_version!=="research.full06-delta-profile.v1")).toHaveLength(71);
-    expect(executionRecipes.filter(r=>r.adapter_kind==="IMPORTED_SEARCH")).toHaveLength(27);
+      && r.descriptor.schema_version!=="research.full06-delta-profile.v1"
+      && r.descriptor.schema_version!=="research.expanded-trial-profile.v1"
+      && r.descriptor.schema_version!=="research.native-route-profile.v1")).toHaveLength(71);
+    expect(executionRecipes.filter(r=>r.descriptor.schema_version==="research.full05-imported-profile.v1")).toHaveLength(27);
+    expect(executionRecipes.filter(r=>"predecessor_profile_id" in r.descriptor
+      && rows.some(old=>old.profile_id===r.descriptor.predecessor_profile_id))).toHaveLength(35);
     expect(new Set(rows.map(r=>r.public_profile.optimization_mode+":"+r.public_profile.optimization_schedule)).size).toBe(5);
     expect(executionRecipes.filter(r=>r.descriptor.schema_version==="research.full03-delta-profile.v1")).toHaveLength(28);
   });
   it.each(rows)("admits only exact mode and bounded clock $profile_id",async row=>{
     expect(recipeDigest(row.descriptor)).toBe(row.profile_digest);
-    expect(wfoExecutionRecipe(specFor(row))?.profile_id).toBe(row.profile_id);
-    expect((await admit(row)).profile).toEqual({id:row.profile_id,digest:row.profile_digest});
-    await expect(admit(row,s=>{s.optuna_trials=400;})).rejects.toMatchObject({code:"RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE"});
+    expect(executionRecipe(row.profile_id,row.profile_digest)).toBe(row);
+    const successor=qualifiedSuccessor(row);
+    expect(wfoExecutionRecipe(specFor(row))?.profile_id).toBe(successor.profile_id);
+    expect((await admit(row)).profile).toEqual({id:successor.profile_id,digest:successor.profile_digest});
+    expect(successor.public_profile.trial_count).toEqual({min:row.public_profile.optimization_mode==="mode_3_flat_minima"?5:2,max:400});
+    await expect(admit(row,s=>{s.optuna_trials=401;})).rejects.toMatchObject({code:"RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE"});
     await expect(admit(row,s=>{s.optimization_config={scoring_backend:"proxy"};})).rejects.toMatchObject({code:"RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE"});
     if (row.public_profile.optimization_mode === "mode_4_is_only_robust")
       await expect(admit(row,s=>{s.walk_forward!.inner={split_frequency:"weekly",window_mode:"expanding",train_window:"7D",min_folds:2};}))

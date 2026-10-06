@@ -7,7 +7,7 @@ import { assertCausalSealConsistency } from "../src/research/causal-seal-consist
 import { CurrentSourceFoldPayloadSchema } from "../src/research/current-source.payload";
 
 const historical = JSON.parse(gunzipSync(readFileSync(join(__dirname,"research-w5b-real-replay.fixture.json.gz"))).toString("utf8"));
-function graph(candidateCount=1) {
+function graph(candidateCount=1,configuredTrials=3) {
   const summary = structuredClone(historical.summary);
   const folds = historical.rows.FOLD.map((row: any,index: number) => {
     const payload = structuredClone(row.payload), start = payload.train_start_utc_ms;
@@ -15,7 +15,7 @@ function graph(candidateCount=1) {
     payload.causal_selection = { schema_version:"research.current-source-causal-selection.v1",scope:"OUTER_FOLD_SELECTION",
       study_id:String(index),fold_seed:42+index,selected_trial_id:`${index}.trial_0`,parameters:{...summary.selection.parameters,window:String(34+index)},
       objective:"0.5",objective_kind:"INNER_VALIDATION_DECAY_J",candidate_is_metric:"0.8",candidate_oos_metric:"0.6",candidate_decay:"0.2",
-      candidate_metrics_scope:"OUTER_FOLD_POST_SELECTION",candidate_count:candidateCount,study_trial_rows:3,outer_oos_used_for_selection:false,
+      candidate_metrics_scope:"OUTER_FOLD_POST_SELECTION",candidate_count:candidateCount,study_trial_rows:configuredTrials,outer_oos_used_for_selection:false,
       candidate_is_scope:"INNER_VALIDATION_IS_MEAN",candidate_oos_scope:"OUTER_FOLD_OOS",candidate_decay_scope:"INNER_IS_MEAN_MINUS_OUTER_OOS",
       causality_claim:"strict_nested_fold_local_retraining",inner_fold_count:2,
       inner_validation:{inner_split_frequency:"weekly",inner_window_mode:"expanding",inner_train_window:"7D",inner_min_folds:2},
@@ -25,7 +25,7 @@ function graph(candidateCount=1) {
     CurrentSourceFoldPayloadSchema.parse(payload);
     return { tableKind:"FOLD",sourceOrdinal:index,sourceId:payload.fold_id,payload };
   });
-  const trials=folds.flatMap((fold: any,index: number) => [0,1,2].map(local=>({tableKind:"TRIAL",sourceOrdinal:index*3+local,
+  const trials=folds.flatMap((fold: any,index: number) => Array.from({length:configuredTrials},(_,local)=>({tableKind:"TRIAL",sourceOrdinal:index*configuredTrials+local,
     sourceId:`${index}.trial_${local}`,payload:{state:"COMPLETE",parameters:fold.payload.causal_selection.parameters,objective:"0.9",
       trial_facts:{stage:"is_search",objective_kind:"IS_MEAN_SHARPE",pruned:false,study_id:String(index),source_trial_id:String(local),fold_scope:{kind:"FOLD",fold_id:fold.sourceId,reason_code:null}}}})));
   const candidates=trials.filter((row: any)=>Number(row.payload.trial_facts.source_trial_id)<candidateCount).map((row: any,index: number)=>({...row,tableKind:"CANDIDATE",sourceOrdinal:index,
@@ -50,12 +50,34 @@ describe("causal seal relation binding",()=>{
   it("accepts exactly bounded own-study sources and final-fold deployment",()=>{
     const g=graph();expect(()=>assertCausalSealConsistency(g.input,g.rows,g.authority)).not.toThrow();
   });
+  it("binds expanded populations to the immutable requested count, not the range maximum",()=>{
+    const g=graph(2,100);
+    const authority={...g.authority,trialCount:{min:2,max:400},requestedSpec:{...g.authority.requestedSpec,optuna_trials:100}};
+    expect(()=>assertCausalSealConsistency(g.input,g.rows,authority)).not.toThrow();
+    expect(()=>assertCausalSealConsistency(g.input,g.rows,{...authority,requestedSpec:{...authority.requestedSpec,optuna_trials:400}})).toThrow();
+    expect(()=>assertCausalSealConsistency(g.input,g.rows,g.authority)).toThrow();
+  });
   it("accepts correctly scoped nonselected candidates and legitimately pruned nonselected Stage-A trials",()=>{
     const multiple=graph(2);expect(()=>assertCausalSealConsistency(multiple.input,multiple.rows,multiple.authority)).not.toThrow();
     const g=graph(),pruned=g.rows.find(row=>row.tableKind==="TRIAL" && (row.payload as any).trial_facts.source_trial_id==="1")!;
     Object.assign(pruned.payload,{state:"PRUNED",objective:null});
     (pruned.payload as any).trial_facts.pruned=true;
     expect(()=>assertCausalSealConsistency(g.input,g.rows,g.authority)).not.toThrow();
+  });
+  it("keeps an early-pruned source row with unpublished objective, never a scored/selected substitute",()=>{
+    const g=graph(2,400),row=g.rows.find(row=>row.tableKind==="TRIAL" && (row.payload as any).trial_facts.source_trial_id==="151")!;
+    Object.assign(row.payload,{state:"PRUNED",objective:null});
+    Object.assign((row.payload as any).trial_facts,{stage:null,objective_kind:"NOT_PUBLISHED",pruned:true,
+      metrics:{oos_reason_code:"QUANTBT_TRIAL_ROW_DID_NOT_PUBLISH_ITS_STAGE"},
+      objective_components:{state:"NOT_PUBLISHED",reason_code:"QUANTBT_TRIAL_ROW_HAS_NO_OBJECTIVE",formula:null,terms:[]}});
+    const authority={...g.authority,trialCount:{min:2,max:400},requestedSpec:{...g.authority.requestedSpec,optuna_trials:400}};
+    expect(()=>assertCausalSealConsistency(g.input,g.rows,authority)).not.toThrow();
+    for(const change of [{state:"COMPLETE"},{objective:"0.9"}]) {
+      const wrong=structuredClone(g);Object.assign(wrong.rows.find(r=>r===row || (r.tableKind===row.tableKind&&r.sourceId===row.sourceId))!.payload,change);
+      expect(()=>assertCausalSealConsistency(wrong.input,wrong.rows,authority)).toThrow();
+    }
+    (row.payload as any).trial_facts.pruned=false;
+    expect(()=>assertCausalSealConsistency(g.input,g.rows,authority)).toThrow();
   });
   it.each([
     ["TRIAL","stage","oos_candidate_selection"],

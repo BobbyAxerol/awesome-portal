@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 const root=new URL('../../../',import.meta.url),check=process.argv.includes('--check');
 const table=JSON.parse(readFileSync(new URL('apps/portal/registry/research-execution-recipes.v1.json',root)));
 const old=readFileSync(new URL('apps/control-api/migrations/1723680000101_research-full04-mode-recipes.sql',root),'utf8');
-const rows=table.recipes.filter(r=>r.source_requirement==='IMPORTED_IMMUTABLE_SEARCH_BINDING');assert.equal(rows.length,27);
+const rows=table.recipes.filter(r=>r.descriptor.schema_version==='research.full05-imported-profile.v1');assert.equal(rows.length,27);
 const q=v=>"'"+v.replaceAll("'","''")+"'";
 const normalize=v=>Array.isArray(v)?v.map(normalize):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,normalize(v[k])])):v;
 const hash=v=>createHash('sha256').update(JSON.stringify(normalize(v))).digest('hex');

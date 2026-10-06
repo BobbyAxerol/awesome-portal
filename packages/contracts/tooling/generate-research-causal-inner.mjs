@@ -26,8 +26,8 @@ export const causalSelectionSchema = {
     candidate_oos_metric: nullable(decimal), candidate_decay: nullable(decimal),
     candidate_metrics_scope: { const: "OUTER_FOLD_POST_SELECTION" },
     candidate_is_scope: { const: "INNER_VALIDATION_IS_MEAN" }, candidate_oos_scope: { const: "OUTER_FOLD_OOS" },
-    candidate_decay_scope: { const: "INNER_IS_MEAN_MINUS_OUTER_OOS" }, candidate_count: { type: "integer", minimum: 1, maximum: 64 },
-    study_trial_rows: { const: 3 }, outer_oos_used_for_selection: { const: false }, causality_claim: { const: "strict_nested_fold_local_retraining" },
+    candidate_decay_scope: { const: "INNER_IS_MEAN_MINUS_OUTER_OOS" }, candidate_count: { type: "integer", minimum: 1, maximum: 400 },
+    study_trial_rows: { type: "integer", minimum: 2, maximum: 400 }, outer_oos_used_for_selection: { const: false }, causality_claim: { const: "strict_nested_fold_local_retraining" },
     inner_fold_count: innerBounds,
     inner_validation: obj({ inner_split_frequency: frequency, inner_window_mode: windowMode,
       inner_train_window: { type: "string", pattern: "^[1-9][0-9]{0,4}(D|h)$", maxLength: 8 }, inner_min_folds: innerBounds }),
@@ -55,7 +55,15 @@ function amend(original, file) {
     p.profile_id.enum = [...admissionProfileIds];
     p.inner_validation = { enum: ["NOT_ADMITTED_GLOBAL_RETENTION_ONLY", "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY"] };
     p.trial_scope = { const: "PER_OUTER_FOLD_STUDY" };
-    p.max_total_trials = { type: "integer", minimum: 1, maximum: 48 };
+    p.max_total_trials = { type: "integer", minimum: 1, maximum: 6400 };
+    // A wider transport ceiling does not widen the old fixed-three causal
+    // profile. New editions have their own immutable recipe bounds.
+    const legacyCausalId="p10.delta-signal-notional-causal-inner.v1";
+    const item=profiles.items;
+    item.allOf ??=[];
+    if(!item.allOf.some(rule=>rule.if?.properties?.profile_id?.const===legacyCausalId))
+      item.allOf.push({if:{required:["profile_id"],properties:{profile_id:{const:legacyCausalId}}},
+        then:{properties:{max_total_trials:{maximum:48},trial_count:{properties:{min:{const:3},max:{const:3}}}}}});
     p.inner_constraints = obj({ fold_bounds: obj({ min: innerBounds, max: innerBounds }),
       frequencies: { type: "array", minItems: 1, maxItems: 3, items: frequency },
       window_modes: { type: "array", minItems: 1, maxItems: 2, items: windowMode }, train_window_pattern: { type: "string", maxLength: 64 } });
@@ -113,8 +121,8 @@ function amend(original, file) {
     addEnum(edit("SearchSurface").properties.state, "NOT_APPLICABLE");
     updates.SearchStudySurface = obj({ scope: { const: "INNER_VALIDATION_OUTER_STUDY" },
       fold_id: token, study_id: token, surface: { allOf: [ref("SearchSurface"), { type: "object", properties: {
-        source_trial_count: { const: 3 }, complete_trial_count: { type: "integer", minimum: 0, maximum: 3 },
-        emitted_point_count: { type: "integer", minimum: 0, maximum: 3 }, points: { type: "array", maxItems: 3 },
+        source_trial_count: { type: "integer", minimum: 2, maximum: 400 }, complete_trial_count: { type: "integer", minimum: 0, maximum: 400 },
+        emitted_point_count: { type: "integer", minimum: 0, maximum: 400 }, points: { type: "array", maxItems: 400 },
       } }] } });
     edit("Search").allOf[1].properties.surfaces_by_study = {
       type: "array", minItems: 2, maxItems: 16, items: ref("SearchStudySurface"),

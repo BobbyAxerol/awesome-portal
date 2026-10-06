@@ -1,7 +1,7 @@
 import {describe,it,expect} from "vitest";
 import {bindImportedSearch,importedSearchRecipe} from "../src/research/imported-search.binding";
 import type {ResearchRequestedSpec} from "../src/research/preflight.contract";
-import {executionRecipes,executionRecipeActivationReason,executionRecipeQualification} from "../src/research/execution-recipes";
+import {executionRecipes,executionRecipe,executionRecipeActivationReason,executionRecipeQualification} from "../src/research/execution-recipes";
 import {currentSourceExecutionPair,currentSourceRetainedMethod} from "../src/research/current-source-profile";
 import {importedRetainedBinding} from "../src/research/imported-search.read";
 import {recipeDigest} from "../src/research/execution-recipes";
@@ -37,11 +37,12 @@ describe("FULL05 confined imported search custody",()=>{
   it("binds declaration/timeframe/seed and exact recipe separately",()=>{
     expect(bind({data:{timeframe:"5m"}}).refusal?.reason_code).toBe("ALPHA_TIMEFRAME_NOT_DECLARED");
     expect(bind({random_seed:null}).refusal?.field_path).toEqual(["random_seed"]);
-    expect(importedSearchRecipe(spec())?.profile_id).toBe("p10.imported-wfo-temporal-1h.v1");
+    expect(importedSearchRecipe(spec())?.profile_id).toBe("p10.imported-wfo-temporal-1h.v2");
+    expect(executionRecipe("p10.imported-wfo-temporal-1h.v1").public_profile.trial_count).toEqual({min:3,max:3});
     expect(importedSearchRecipe(spec({optimization_mode:"mode_2_sbb",optimization_schedule:"per_fold_causal"}))).toBeNull();
   });
   it("never inherits built-in Delta qualification or preview-long limits",()=>{
-    const rows=executionRecipes.filter(row=>row.adapter_kind==="IMPORTED_SEARCH");expect(rows).toHaveLength(27);
+    const rows=executionRecipes.filter(row=>row.descriptor.schema_version==="research.full05-imported-profile.v1");expect(rows).toHaveLength(27);
     for(const row of rows){
       expect(row.preview_override).toBeNull();expect(row.budgets).toMatchObject({cpu_seconds:120,wall_seconds:240,max_warmup_bars:4096});
       expect(currentSourceExecutionPair(row.profile_id,row.profile_digest)).toEqual(row.descriptor.current_source);
@@ -58,6 +59,23 @@ describe("FULL05 confined imported search custody",()=>{
         .toBe(proof.kind==="PRODUCT_RUN_QUALIFIED"?null:"RECIPE_NOT_QUALIFIED");
       expect(executionRecipeActivationReason(row,{...flags,FEATURE_RESEARCH_FULL05_PROFILE:"false"},
         {engine_release_id:"er_quantbt_111",verified:true})).toBe("PROFILE_FLAG_OFF");
+    }
+  });
+  it("qualifies expanded imported recipes with their own budgets and product receipts, not predecessor proof",()=>{
+    const rows=executionRecipes.filter(row=>row.adapter_kind==="IMPORTED_SEARCH"
+      && row.descriptor.schema_version==="research.expanded-trial-profile.v1");
+    expect(rows).toHaveLength(27);
+    for(const row of rows){
+      const old=executionRecipe(row.descriptor.predecessor_profile_id);
+      expect(old.descriptor.schema_version).toBe("research.full05-imported-profile.v1");
+      expect(row.preview_override).toBeNull();
+      expect(row.public_profile.trial_count).toEqual({min:row.public_profile.optimization_mode==="mode_3_flat_minima"?5:2,max:400});
+      expect(row.budgets).toMatchObject({cpu_seconds:1800,wall_seconds:2400,max_warmup_bars:4096});
+      expect(executionRecipeQualification(row.profile_id)).toMatchObject({kind:"PRODUCT_RUN_QUALIFIED",
+        receipt_path:"upgrade/research_loop/evidence/P10/EXPANDED_TRIAL_PRODUCT_QUALIFICATION_2026-10-06.md",
+        receipt_sha256:expect.stringMatching(/^[a-f0-9]{64}$/)});
+      expect(currentSourceExecutionPair(row.profile_id,row.profile_digest)).toEqual(row.descriptor.current_source);
+      expect(currentSourceExecutionPair(row.profile_id,old.profile_digest)).toBeNull();
     }
   });
   it("refuses nonnumeric retained parameters and categorical centroids explicitly",()=>{

@@ -260,7 +260,8 @@ class ResearchCurrentSourceRetentionClient:
             identity=identity,
             fence=fence,
             # The locked 3, or the preview long WFO's admitted count (flag on only).
-            admission=(recipe_current_source_admission(research.execution_profile_id,research.execution_profile_digest) if research.is_full03
+            admission=(recipe_current_source_admission(research.execution_profile_id,research.execution_profile_digest,
+                           optuna_trials=research.requested_spec["optuna_trials"]) if research.is_full03
                        else full02_current_source_admission(three_window=research.is_three_window_optimized) if research.execution_profile_id in {DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID}
                        else causal_inner_current_source_admission() if research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID
                        else signal_notional_current_source_admission(delta_wfo_admitted_trials(research.requested_spec))),

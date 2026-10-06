@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 
 import { ResearchReplayService } from "../src/research/replay.service";
 
@@ -186,6 +188,28 @@ describe("P17 route-aware, current-source replay authority", () => {
     expect(result.equity_replay.items).toHaveLength(2);
     expect(result.execution).toBeUndefined();
     expect(result.equity_replay.page.next_cursor).toEqual(expect.any(String));
+  });
+  it("publishes all native fixed routes as sealed equity-only replay without inventing execution ledgers", async () => {
+    const contractsRoot = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
+    const native = JSON.parse(readFileSync(join(contractsRoot, "fixtures/research-native-route-result.valid.json"), "utf8"));
+    for (const route of ["intrabar_bracket", "reactive", "event_driven"] as const) {
+      const fixture = evidenceFixture(3);
+      const bound = {...fixture, hub: {...fixture.hub, core: {...fixture.hub.core,
+        source_adapter_id: "full03.delta-rsi.v1", native_execution: {...native, execution_route: route}}}};
+      const service = new ResearchReplayService(evidenceReader(bound) as never, enabledConfig() as never);
+      const first = await service.detail(scope, "run_p17", {limit: 2});
+      expect(first).toMatchObject({availability: {state: "AVAILABLE"}, revision: expect.any(String),
+        route: {id: route, state: "RETROSPECTIVE_EQUITY_ONLY", replay_contract: "P17_NATIVE_FIXED_EQUITY_SAMPLE_V1"},
+        equity_replay: {state: "AVAILABLE", items: [{equity: "100"}, {equity: "101"}]},
+        route_capabilities: {fills: {state: "NOT_PUBLISHED", reason_code: "NATIVE_SOURCE_DID_NOT_PUBLISH_AUDITED_FILLS"}}});
+      expect(first.execution).toBeUndefined();
+      const next = await service.detail(scope, "run_p17", {limit: 2, cursor: first.equity_replay.page.next_cursor!});
+      expect(next.equity_replay.items).toHaveLength(1);
+      const missing = new ResearchReplayService(evidenceReader({...bound, hub: {...bound.hub,
+        core: {...fixture.hub.core, source_adapter_id: "full03.delta-rsi.v1"}}}) as never, enabledConfig() as never);
+      await expect(missing.detail(scope, "run_p17", {limit: 2})).resolves.toMatchObject({revision: null,
+        availability: {state: "NOT_PUBLISHED", reason_code: "P17_SOURCE_ADAPTER_NOT_SUPPORTED"}});
+    }
   });
   it("preserves exact source sample order and supports a direct late seek without compute, ledger synthesis or source-path access", async () => {
     const fixture = evidenceFixture(120, { marketOverview: true });

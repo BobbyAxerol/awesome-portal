@@ -184,7 +184,7 @@ export const ResearchFreezeResponseSchema = z.object({
   readiness: z.enum(["PARTIAL", "NOT_READY"]),
   as_of_utc_ms: UtcMsSchema,
   provenance: z.object({
-    source_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]).nullable(),
+    source_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1", "full03.delta-rsi.v1"]).nullable(),
     adapter_contract_digest: DigestSchema.nullable(),
     p14_split_revision: z.string().regex(/^p14r1_[0-9a-f]{64}$/).nullable(),
     source_split_digest: DigestSchema.nullable(),

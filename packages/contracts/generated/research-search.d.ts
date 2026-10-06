@@ -169,7 +169,7 @@ export interface components {
             interactions: components["schemas"]["SourceGap"];
         };
         Provenance: {
-            source_adapter_id: ("p04.delta-rsi.v1" | "p17.imported-signal-notional.v1") | null;
+            source_adapter_id: ("p04.delta-rsi.v1" | "p17.imported-signal-notional.v1" | "full03.delta-rsi.v1") | null;
             adapter_contract_digest: components["schemas"]["Digest"] | null;
             engine_version: ("1.1.0" | "1.1.1") | null;
             input_scope: "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY" | null;

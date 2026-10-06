@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {validateHome} from './cell.mjs';
 const home=validateHome(process.argv.find(a=>a.startsWith('--home='))?.slice(7));
-const slice=home.endsWith('/full06')?'full06':'full05';
+const slice=home.endsWith('/expanded')?'expanded':home.endsWith('/full06')?'full06':'full05';
 assert(home.endsWith('/'+slice),'EXACT_FULL05_OR_FULL06_HOME');
 const file=join(home,'preview.env'),stat=lstatSync(file);
 assert(stat.isFile()&&!stat.isSymbolicLink()&&(stat.mode&0o077)===0,'PRIVATE_ENV_REQUIRED');
@@ -28,6 +28,12 @@ if(process.argv.includes('--install-index')){
     CONTROL_API_FEATURE_RESEARCH_PREVIEW_LONG_WFO:'false',PORTAL_FEATURE_RESEARCH_PREVIEW_LONG_WFO:'false'});
   if(slice==='full06')Object.assign(env,{CONTROL_API_FEATURE_RESEARCH_FULL06_PROFILE:'true',PORTAL_FEATURE_RESEARCH_FULL06_PROFILE:'true',
     CONTROL_API_RESEARCH_RECIPE_QUALIFICATION_PROFILE_ID:'p10.delta-pct-equity-wfo-temporal-1h.v1',PORTAL_RECIPE_QUALIFICATION_PROFILE_ID:'p10.delta-pct-equity-wfo-temporal-1h.v1'});
+  if(slice==='expanded'){
+    for(const stage of ['FULL02','FULL03','FULL04','FULL05','FULL06'])Object.assign(env,{
+      [`CONTROL_API_FEATURE_RESEARCH_${stage}_PROFILE`]:'true',[`PORTAL_FEATURE_RESEARCH_${stage}_PROFILE`]:'true'});
+    Object.assign(env,{CONTROL_API_RESEARCH_RECIPE_QUALIFICATION_PROFILE_ID:'p10.delta-wfo-temporal-1h.v2',
+      PORTAL_RECIPE_QUALIFICATION_PROFILE_ID:'p10.delta-wfo-temporal-1h.v2'});
+  }
   writeFileSync(file,'# Private FULL05 owned inputs. Never print or commit.\n'+Object.entries(env).map(([k,v])=>`${k}=${v}`).join('\n')+'\n',{mode:0o600});chmodSync(file,0o600);
   for(const service of ['portal-web','roadmap-task-board-api']){
     const id=service==='roadmap-task-board-api'?docker(['image','inspect','--format','{{.Id}}','local/portal-research-p23-roadmap-task-board-api:qualification']).trim()

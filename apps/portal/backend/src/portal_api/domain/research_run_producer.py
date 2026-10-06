@@ -45,6 +45,7 @@ from .research_full02_profiles import (
 )
 from .research_execution_recipes import execution_recipe, recipe_digest
 from .research_full03_profiles import full03_recipe, full03_controls, is_full03_profile
+from .research_native_profile import is_native_profile, native_profile, validate_native_spec, native_work_digest
 from .research_whatif_profile import WHATIF_MAX_EVALUATIONS, WHATIF_PROFILE_DIGEST, WHATIF_PROFILE_ID
 from .research_final_audit import (
     PinnedSelectionAuditTarget, PINNED_FINAL_AUDIT_PROFILE_ID,
@@ -162,6 +163,10 @@ class ResearchRunProducerEnvelope(PortalModel):
     @property
     def is_vn_observed_fixed(self) -> bool:
         return self.execution_profile_id == VN_OBSERVED_FIXED_PROFILE_ID
+
+    @property
+    def is_native_fixed(self) -> bool:
+        return is_native_profile(self.execution_profile_id)
 
     @property
     def is_delta_wfo(self) -> bool:
@@ -303,6 +308,20 @@ class ResearchRunProducerEnvelope(PortalModel):
             return self
         if self.intent_kind != "NEW" or self.whatif is not None:
             raise ValueError("only the what-if profile is a DIAGNOSTIC intent with evaluations")
+        if self.is_native_fixed:
+            row = native_profile(self.execution_profile_id, self.execution_profile_digest)
+            validate_native_spec(self.requested_spec, row)
+            p = row['descriptor']['alpha_binding_requirements']
+            if (self.alpha_id != p['alpha_id'] or self.alpha_version_id != p['alpha_version_id']
+                    or self.execution_adapter_id != p['adapter_id'] or self.adapter_contract_digest != p['adapter_contract_digest']
+                    or self.p04_parameters != _P04_DELTA_FIXED_PARAMETERS
+                    or any(value is not None for value in (self.qualification_binding, self.imported_source_digest,
+                        self.imported_entrypoint, self.imported_parameters, self.imported_search_binding))
+                    or any(type(v) not in (int, float) for v in (self.p04_parameters or {}).values())
+                    or hashlib.sha256(encoded).hexdigest() != self.requested_spec_digest
+                    or native_work_digest(self) != self.work_digest):
+                raise ValueError('native producer must carry exact installed Delta parameters and immutable work/profile pins')
+            return self
         if self.is_full03:
             self._validate_full03_spec()
             if not self.is_imported_search:
@@ -502,7 +521,7 @@ class ResearchRunProducerEnvelope(PortalModel):
                 or spec.get("optimization_mode") != p["optimization_mode"]
                 or spec.get("optimization_schedule") != p["optimization_schedule"]
                 or type(spec.get("optuna_trials")) is not int
-                or spec["optuna_trials"] != row["public_profile"]["trial_default"]
+                or not row["public_profile"]["trial_count"]["min"] <= spec["optuna_trials"] <= row["public_profile"]["trial_count"]["max"]
                 or type(spec.get("random_seed")) is not int or spec["random_seed"] != p["random_seed"]
                 or spec.get("early_stopping") is not None or spec.get("optimization_config") or spec.get("route_params")
                 or not isinstance(client, dict) or client.get("engine_release_id") != p["engine_release_id"]):
@@ -540,7 +559,8 @@ class ResearchRunProducerEnvelope(PortalModel):
                 or spec.get("schema_version") != p["requested_spec_version"] or spec.get("protocol") != p["protocol"]
                 or spec.get("execution_route") != p["execution_route"] or spec.get("optimization_mode") != p["optimization_mode"]
                 or spec.get("optimization_schedule") != p["optimization_schedule"]
-                or spec.get("optuna_trials") != row["public_profile"]["trial_default"] or spec.get("random_seed") != 42
+                or type(spec.get("optuna_trials")) is not int
+                or not row["public_profile"]["trial_count"]["min"] <= spec["optuna_trials"] <= row["public_profile"]["trial_count"]["max"] or spec.get("random_seed") != 42
                 or spec.get("early_stopping") is not None or spec.get("optimization_config") or spec.get("route_params")
                 or spec.get("client", {}).get("engine_release_id") != p["engine_release_id"]
                 or spec.get("data", {}).get("dataset_id") != p["dataset_id"] or spec.get("data", {}).get("timeframe") != p["timeframe"]

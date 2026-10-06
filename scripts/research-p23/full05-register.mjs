@@ -8,7 +8,7 @@ import {execFileSync} from 'node:child_process';
 import {validateHome} from './cell.mjs';
 import {operatorClient,savePrivate,privateJson} from './api-client.mjs';
 const home=validateHome(process.argv.find(a=>a.startsWith('--home='))?.slice(7));
-assert(home.endsWith('/full05'),'EXACT_FULL05_HOME');
+assert(home.endsWith('/full05')||home.endsWith('/expanded'),'EXACT_IMPORTED_QUALIFICATION_HOME');
 const path=join(home,'imported-registration.json');
 const source=readFileSync(new URL('../../apps/portal/frontend/src/research/samples/deltaRsiReference.py',import.meta.url),'utf8');
 const sha=createHash('sha256').update(source).digest('hex');

@@ -8,7 +8,7 @@ import {validateHome,TEST_USERS} from './cell.mjs';
 import {loadSessions,savePrivate} from './api-client.mjs';
 const home=validateHome(process.argv.find(a=>a.startsWith('--home='))?.slice(7));
 const slice=process.argv.find(a=>a.startsWith('--slice='))?.slice(8)??'full04';
-assert(['full04','full05','full06'].includes(slice)&&home.endsWith('/'+slice),'EXACT_APPROVED_OWNED_HOME');
+assert(['full04','full05','full06','expanded'].includes(slice)&&home.endsWith('/'+slice),'EXACT_APPROVED_OWNED_HOME');
 const settings=Object.fromEntries(readFileSync(join(home,'preview.env'),'utf8').split('\n').filter(s=>/^[A-Z0-9_]+=/.test(s))
   .map(s=>{const i=s.indexOf('=');return[s.slice(0,i),s.slice(i+1)];}));
 assert(settings.PORTAL_STACK_NAME==='portal-research-p23-ol12'&&settings.PORTAL_HTTP_PORT==='8096','EXACT_OWNED_CELL');
@@ -23,7 +23,7 @@ const {loadConfig}=require('./dist/config'),{AuthService}=require('./dist/auth/a
  {Argon2CredentialService}=require('./dist/auth/argon'),{AdminService}=require('./dist/admin/admin.service');
 const inputs=JSON.parse(fs.readFileSync(0,'utf8')),c=loadConfig(),p=new Pool({connectionString:c.DATABASE_URL,max:1});
 (async()=>{assert(c.PORTAL_ENV==='local'&&c.AUTH_MODE==='dev');
- const busy=await p.query("SELECT count(*)::int n FROM research.runs WHERE state IN ('RUNNING','SEALING')");
+ const busy=await p.query("SELECT count(*)::int n FROM research.runs WHERE state IN ('QUEUED','RUNNING','SEALING')");
  assert.equal(busy.rows[0].n,0,'OWNED_CHILD_IN_FLIGHT');
  const anchor=(await p.query('SELECT user_id FROM portal_owner_anchor LIMIT 1')).rows[0]?.user_id;
  const auth=new AuthService(p,c,new Argon2CredentialService({memoryKib:c.ARGON2_MEMORY_KIB,iterations:c.ARGON2_ITERATIONS,parallelism:c.ARGON2_PARALLELISM}));
