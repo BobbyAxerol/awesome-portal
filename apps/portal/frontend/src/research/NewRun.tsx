@@ -3317,6 +3317,8 @@ export function NewRun(props: NewRunProps) {
     },
     [patch, step],
   );
+  /* A typed refusal in the preflight (may_create_run false with a code) will be refused again at create: no point offering the button. */
+  const admissionRefused = canSubmit && !mayCreateRun && Boolean(preflight?.run_admission?.code);
   const blocking = useMemo(
     () => [...blockingProblems(draft, limits), ...(unopenedCombination !== null ? [{ step: "windows" as const, message: unopenedCombination }] : [])],
     [draft, limits, unopenedCombination],
@@ -3727,9 +3729,9 @@ export function NewRun(props: NewRunProps) {
                   className="btn-primary mono text-[10px]"
                   data-action="create-run"
                   onClick={onSubmit}
-                  disabled={!canSubmit}
-                  style={!canSubmit ? { opacity: 0.4, cursor: "not-allowed" } : undefined}
-                  title={!canSubmit ? (unopenedCombination ?? "Run preflight first.") : undefined}
+                  disabled={!canSubmit || admissionRefused}
+                  style={!canSubmit || admissionRefused ? { opacity: 0.4, cursor: "not-allowed" } : undefined}
+                  title={!canSubmit ? (unopenedCombination ?? "Run preflight first.") : admissionRefused ? `${preflight?.run_admission?.code}: change the declaration, then run preflight again.` : undefined}
                 >
                   Create run
                 </button>
@@ -3738,8 +3740,8 @@ export function NewRun(props: NewRunProps) {
                     {preflight?.run_admission?.message ? (
                       <>
                         <span className="mono text-[9.5px] font-bold">{preflight.run_admission.code}</span>{" "}
-                        {preflight.run_admission.message} Submitting is still allowed — admission is decided
-                        again when the request arrives.
+                        {preflight.run_admission.message} Change the declaration and run preflight again; the server
+                        decides again when a run is requested.
                       </>
                     ) : (
                       <>

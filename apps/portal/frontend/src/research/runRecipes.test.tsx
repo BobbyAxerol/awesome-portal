@@ -89,16 +89,28 @@ describe("applyRecipe", () => {
     const patch = applyRecipe(by([FIXED], FIXED.profile_id), { ...base, randomSeed: "7" });
     expect(patch).toEqual({ protocol: "three_window_decay", optimizationMode: "mode_1_decay", optimizationSchedule: "global", optunaTrials: "1", randomSeed: "" });
   });
-  it("advanced: locked seed, trial default, release default frequency when admitted else the first, never windows", () => {
+  it("advanced: locked seed, trial default, the finest admitted frequency (a short recent span needs 2+ folds), never windows", () => {
     const draft = { ...base, walkForward: { ...base.walkForward, declaredV2: true, frequency: "", windowMode: "" } };
     const patch = applyRecipe(by([WFO], "wfo.v1", { frequencyDefault: "monthly", windowModeDefault: "daily" }), draft);
     expect(patch).toMatchObject({ protocol: "advanced", optunaTrials: "10", randomSeed: "42" });
-    expect(patch.walkForward).toMatchObject({ frequency: "monthly", windowMode: "expanding" });
+    expect(patch.walkForward).toMatchObject({ frequency: "weekly", windowMode: "expanding" });
     expect(patch.walkForward!.declaredV2).toBeUndefined();
     expect(Object.keys(patch)).not.toEqual(expect.arrayContaining(["windows", "datasetId", "symbol", "parameters"]));
   });
   it("v2-only profile declares v2", () => {
     expect(applyRecipe(by([WFO_V2_TWIN], "wfo.v2"), base).walkForward!.declaredV2).toBe(true);
+  });
+  it("a v2-only recipe fills the EMPTY temporal guards with the served defaults and keeps typed ones; a v1 recipe sets none", () => {
+    const guarded = variant({
+      ...WFO, profile_id: "wfo.v2g", requested_spec_versions: ["research.requested-spec.v2"],
+      temporal_guards: { policy: "V1_ABSENT_V2_EXPLICIT", defaults: { label_horizon_bars: 3, purge_bars: 2, embargo_bars: 1 }, max_bars: 10000, zero_semantics: "ZERO_APPLIES_NO_TEMPORAL_GUARD" },
+    } as Partial<SetupProfile>);
+    const empty = applyRecipe(by([guarded], "wfo.v2g"), base).walkForward!;
+    expect([empty.labelHorizonBars, empty.purgeBars, empty.embargoBars]).toEqual(["3", "2", "1"]);
+    const typed = applyRecipe(by([guarded], "wfo.v2g"), { ...base, walkForward: { ...base.walkForward, purgeBars: "7" } }).walkForward!;
+    expect([typed.labelHorizonBars, typed.purgeBars, typed.embargoBars]).toEqual(["3", "7", "1"]);
+    const v1 = applyRecipe(by([WFO], "wfo.v1"), base).walkForward!;
+    expect([v1.labelHorizonBars, v1.purgeBars, v1.embargoBars]).toEqual([undefined, undefined, undefined]);
   });
   it("required seed is left to the user; causal sets only published inner defaults", () => {
     const draft = { ...base, randomSeed: "9", walkForward: { ...base.walkForward, inner: { splitFrequency: "", windowMode: "rolling", trainWindow: "90D", minFolds: "3" } } };

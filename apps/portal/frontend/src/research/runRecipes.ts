@@ -111,10 +111,20 @@ function pick(list: readonly string[] | null, preferred: string | null): string 
   return preferred !== null && list.includes(preferred) ? preferred : list[0]!;
 }
 
+/**
+ * The finest fold frequency the profile admits. The release default (quarterly) suits a multi-year span; a recipe starts on a short
+ * recent span (a month or three), where only a fine frequency gives the 2+ outer folds the temporal profiles require.
+ */
+const FINEST_FIRST = ["weekly", "monthly", "quarterly", "semi_yearly", "yearly", "single"] as const;
+function pickFrequency(list: readonly string[] | null): string | null {
+  if (list === null || list.length === 0) return null;
+  return FINEST_FIRST.find((value) => list.includes(value)) ?? list[0]!;
+}
+
 function summaryOf(profile: ProfilePins, ctx: RecipeContext): string {
   const parts: (string | null)[] = [trialsWord(profile), seedWord(profile)];
   if (profile.protocol === "advanced") {
-    parts.push(pick(profile.windowModes, ctx.windowModeDefault ?? null), pick(profile.frequencies, ctx.frequencyDefault ?? null));
+    parts.push(pick(profile.windowModes, ctx.windowModeDefault ?? null), pickFrequency(profile.frequencies));
   }
   return parts.filter((part): part is string => part !== null).join(" · ");
 }
@@ -145,12 +155,21 @@ function applyToDraft(recipe: Recipe, draft: RunDraft): Partial<RunDraft> {
   const walkForward: RunDraft["walkForward"] = { ...draft.walkForward };
   let touched = false;
   if (recipe.protocol === "advanced") {
-    const frequency = pick(profile.frequencies, recipe.frequencyDefault);
+    const frequency = pickFrequency(profile.frequencies);
     const windowMode = pick(profile.windowModes, recipe.windowModeDefault);
     if (frequency !== null) walkForward.frequency = frequency;
     if (windowMode !== null) walkForward.windowMode = windowMode;
-    if (recipe.v2Only) walkForward.declaredV2 = true;
-    else delete walkForward.declaredV2;
+    if (recipe.v2Only) {
+      walkForward.declaredV2 = true;
+      /* A v2-only recipe requires the three temporal guards: the served defaults go into the EMPTY ones (a zero applies no guard), typed values stay. */
+      const guards = profile.temporalGuards?.defaults ?? null;
+      if (guards !== null) {
+        const fill = (current: string | undefined, value: number) => (current === undefined || current.trim() === "" ? String(value) : current);
+        walkForward.labelHorizonBars = fill(walkForward.labelHorizonBars, guards.labelHorizonBars);
+        walkForward.purgeBars = fill(walkForward.purgeBars, guards.purgeBars);
+        walkForward.embargoBars = fill(walkForward.embargoBars, guards.embargoBars);
+      }
+    } else delete walkForward.declaredV2;
     touched = true;
   }
   const inner = profile.innerConstraints;
