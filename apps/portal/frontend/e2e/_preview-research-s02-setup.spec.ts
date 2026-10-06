@@ -73,7 +73,7 @@ async function toWindows(page: Page, alpha: { alpha: string; version: string }):
   await page.locator('[data-step-pill="windows"]').click();
 }
 
-const edges = (page: Page) => page.locator("[data-calendar-edge] input[type=datetime-local]");
+const edges = (page: Page) => page.locator("[data-calendar-edge] input[type=date]");
 const noHorizontalScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1);
 
 for (const width of WIDTHS) {
@@ -89,11 +89,9 @@ for (const width of WIDTHS) {
       await toWindows(page, DELTA);
       await expect(edges(page).nth(0)).not.toHaveValue("", { timeout: 20_000 });
       const [a, b, c, d] = await edges(page).evaluateAll((nodes) => nodes.map((node) => (node as HTMLInputElement).value));
-      expect(new Date(`${a}Z`).getTime()).toBeLessThan(new Date(`${b}Z`).getTime());
-      expect(new Date(`${b}Z`).getTime()).toBeLessThan(new Date(`${c}Z`).getTime());
-      expect(new Date(`${c}Z`).getTime()).toBeLessThan(new Date(`${d}Z`).getTime());
+      expect(a < b && b < c && c < d, "whole days in order").toBe(true);
       /* The suggestion states its three window sizes and that boundaries are end-exclusive UTC. */
-      await expect(page.locator("[data-linked-window-calendar]")).toContainText(/IS [\d,]+ bars/);
+      await expect(page.locator("[data-linked-window-calendar]")).toContainText(/IS \d+ d/);
       await expect(page.locator("[data-linked-window-calendar]")).toContainText("UTC · end exclusive");
       expect(counts.setup).toBe(1);
       expect(counts.suggestions).toBe(1);
@@ -104,7 +102,7 @@ for (const width of WIDTHS) {
       await handle.focus();
       await page.keyboard.press("ArrowRight");
       const moved = await edges(page).nth(1).inputValue();
-      expect(new Date(`${moved}Z`).getTime() - new Date(`${b}Z`).getTime()).toBe(3_600_000);
+      expect(new Date(`${moved}T00:00Z`).getTime() - new Date(`${b}T00:00Z`).getTime(), "one day").toBe(86_400_000);
       expect(await edges(page).nth(0).inputValue()).toBe(a);
       expect(await edges(page).nth(2).inputValue()).toBe(c);
       expect(counts.suggestions, "moving a boundary asks for no new suggestion").toBe(1);
@@ -141,13 +139,13 @@ for (const width of WIDTHS) {
       await toWindows(page, DELTA);
       await expect(edges(page).nth(0)).not.toHaveValue("", { timeout: 20_000 });
       const read = () => edges(page).evaluateAll((nodes) => nodes.map((node) => (node as HTMLInputElement).value));
-      const [, , , verifiedEnd] = await read();
+      const verified = (await page.locator("[data-calendar-verified]").innerText()).match(/\d{4}-\d{2}-\d{2}/)![0];
       const suggestions = counts.suggestions;
-      await page.getByRole("button", { name: "Last 30d" }).click();
+      await page.getByRole("button", { name: "Last 30 days" }).click();
       const [a30, , , d30] = await read();
-      expect(d30, "ends at the last verified bar, never in the future").toBe(verifiedEnd);
-      expect((new Date(`${d30}Z`).getTime() - new Date(`${a30}Z`).getTime()) / 86_400_000).toBe(30);
-      await page.getByRole("button", { name: "70/20/10" }).click();
+      expect(d30, "ends at the last full verified day, never in the future").toBe(verified);
+      expect((new Date(`${d30}T00:00Z`).getTime() - new Date(`${a30}T00:00Z`).getTime()) / 86_400_000).toBe(30);
+      await page.getByRole("button", { name: "70 / 20 / 10" }).click();
       const before = await read();
       const handle = page.getByRole("slider", { name: /IS end · OOS start \(B\) handle/ });
       const box = (await handle.boundingBox())!;
@@ -163,17 +161,16 @@ for (const width of WIDTHS) {
       expect(errors).toEqual([]);
     });
 
-    test("a mode x schedule no profile opens is shown closed with the server's reason, before any choice", async ({ page }) => {
+    test("a mode no profile opens is shown closed with the server's reason, before any choice", async ({ page }) => {
       await signIn(page);
       const { counts, errors } = await watch(page);
       await toWindows(page, DELTA);
-      await page.getByRole("button", { name: /Advanced Walk-Forward/ }).click();
-      await page.locator('select[aria-label="Optimization mode"]').selectOption("mode_1_decay");
-      const closed = page.locator('select[aria-label="Optimization schedule"] option[value="per_fold_decay"]');
+      const closed = page.locator('select[aria-label="Optimization mode"] option[value="mode_2_sbb"]');
       await expect(closed).toHaveJSProperty("disabled", true);
       await expect(closed).toContainText("not opened");
-      expect(await closed.getAttribute("title")).toBe("PROFILE_NOT_OPENED");
-      await expect(page.locator('select[aria-label="Optimization schedule"] option[value="global"]')).toHaveJSProperty("disabled", false);
+      expect(await closed.getAttribute("title")).toContain("PROFILE_NOT_OPENED");
+      await expect(page.locator('select[aria-label="Optimization mode"] option[value="mode_1_decay"]')).toHaveJSProperty("disabled", false);
+      await expect(page.locator("[data-recipe][data-closed]").first()).toBeVisible();
       expect(counts.preflights + counts.runCreates, "nothing is written").toBe(0);
       expect(errors).toEqual([]);
     });
@@ -240,7 +237,7 @@ for (const width of WIDTHS) {
       expect(sent[0]).not.toMatch(/purge_bars|embargo_bars|label_horizon_bars/);
       /* Any edit retires the token: Run stays off until a new preflight. */
       await page.locator('[data-step-pill="windows"]').click();
-      await start.fill(new Date(new Date(`${before}Z`).getTime() + 3_600_000).toISOString().slice(0, 16));
+      await start.fill(new Date(new Date(`${before}T00:00Z`).getTime() + 86_400_000).toISOString().slice(0, 10));
       await page.locator('[data-step-pill="review"]').click();
       await expect(create).toBeDisabled();
       await expect(page.locator("main")).toContainText(/run preflight again/i);

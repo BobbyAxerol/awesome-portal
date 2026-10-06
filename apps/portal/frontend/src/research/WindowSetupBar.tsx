@@ -13,7 +13,8 @@ import { humaniseTokens } from "./humanise";
 import type { RunDraft } from "./runDraft";
 import type { RunSetupState } from "./useRunSetup";
 import { setupContextFrom } from "./useRunSetup";
-import { autoApplyAllowed, suggestionToDraftPatch, useWindowSuggestion, type DraftWindowPatch } from "./useWindowSuggestion";
+import type { WindowSuggestion } from "./setupClient";
+import { autoApplyAllowed, suggestionToDayEdges, suggestionToDraftPatch, useWindowSuggestion, type DraftWindowPatch } from "./useWindowSuggestion";
 
 function utcLabel(ms: number): string {
   return `${new Date(ms).toISOString().slice(0, 16).replace("T", " ")} UTC`;
@@ -26,6 +27,8 @@ export function WindowSetupBar({
   profileId,
   unavailableReason = null,
   workspaceId,
+  range = null,
+  onProposal,
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
@@ -35,6 +38,10 @@ export function WindowSetupBar({
   /** The server's typed reason when every profile of this protocol is disabled for this Alpha. */
   unavailableReason?: string | null;
   workspaceId?: string;
+  /** The verified range (epoch ms): the suggestion is snapped to whole UTC days inside it. */
+  range?: { from: number; to: number } | null;
+  /** Hands the served suggestion up, so the calendar can offer it as its "Recommended" chip. */
+  onProposal?: (proposal: WindowSuggestion | null) => void;
 }) {
   const context = setupContextFrom(draft, workspaceId);
   const options = setup.status === "served" ? setup.options : null;
@@ -44,6 +51,7 @@ export function WindowSetupBar({
     options,
     profileId,
     draft,
+    days: true,
     onStale: setup.invalidate,
     onAutoApply: (change: DraftWindowPatch) => patch(change),
   });
@@ -57,10 +65,17 @@ export function WindowSetupBar({
     suggestion.suggest();
   }, [scope, state.kind, draft, suggestion]);
 
+  const served = suggestion.proposal;
+  useEffect(() => {
+    onProposal?.(served);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [served]);
+
   if (setup.status === "absent" || (setup.status === "idle" && context === null)) return null;
 
   const proposal = suggestion.proposal;
-  const preview = proposal !== null ? suggestionToDraftPatch(proposal, draft) : null;
+  const preview = proposal !== null ? suggestionToDraftPatch(proposal, draft, { days: true, range }) : null;
+  const dayEdges = proposal !== null ? suggestionToDayEdges(proposal, range) : null;
   const available = proposal?.metadata.state === "AVAILABLE" ? proposal.metadata : null;
   const patchWindow = available?.patch ?? null;
   const span =
@@ -94,7 +109,7 @@ export function WindowSetupBar({
                 ? { text: humaniseTokens(String(state.reason)), tone: "soft" }
                 : span !== null
                   ? {
-                      text: `${utcLabel(span.from)} → ${utcLabel(span.to)}`,
+                      text: dayEdges !== null ? `${dayEdges.a.slice(0, 10)} → ${dayEdges.d.slice(0, 10)} UTC` : `${utcLabel(span.from)} → ${utcLabel(span.to)}`,
                       title: "An editable hint from the indexed bars (70/20/10 by observed bar rank, or half the initial IS for Advanced). Not an optimum, not a preflight; the preflight decides.",
                       tone: "soft",
                     }

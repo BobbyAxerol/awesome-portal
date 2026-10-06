@@ -76,11 +76,16 @@ import {
 } from "./dataDeclaration";
 import { ConditionsChecklist, EarliestStartOffer, PlannedFolds, WarmupChip, WindowBars, WindowBarsLine, hasEstimateStrip } from "./EstimateParts";
 import { EstimateFieldRefusal, EstimateStatusLine, refusedAt } from "./EstimateStatus";
-import { InstantInput as DateTimeInput, datetimeInputValue } from "./InstantInput";
+import { datetimeInputValue } from "./InstantInput";
 import { FoldTimeline, foldsFromPlanned } from "./FoldTimeline";
 import { humaniseTokens } from "./humanise";
 import { LinkedWindowCalendar } from "./LinkedWindowCalendar";
 import { WindowSetupBar } from "./WindowSetupBar";
+import { DateInput } from "./DateInput";
+import { RecipePicker } from "./RecipePicker";
+import { applyRecipe, recipesFromSetup } from "./runRecipes";
+import { suggestionToDayEdges } from "./useWindowSuggestion";
+import type { WindowSuggestion } from "./setupClient";
 import { contextClosure, engineModeClosed, engineOptionPair, setupProfilesOr, type RunSetupState } from "./useRunSetup";
 import { edgesOf, windowsFromEdges } from "./useWindowSuggestion";
 import { timeframeBarMs } from "./windowGeometry";
@@ -1523,7 +1528,46 @@ function WindowsStep({
      (the mode and schedule selects sit below the windows, so a fixed protocol has its single profile before they are chosen). */
   /* The step error reddens the edges only when it is about the windows (a missing mode is not an edge's fault). */
   const windowsFlagged = Boolean(error) && validateWindows(draft) !== null;
-  const suggestionProfile = profile?.enabled ? profile : family.length === 1 ? family[0]! : null;
+  const recipes = useMemo(
+    () =>
+      recipesFromSetup(setup.options, {
+        atlasModes: atlas?.modes,
+        executionRoute: draft.executionRoute,
+        frequencyDefault: atlas?.current_release.walk_forward_options?.frequency_default,
+        windowModeDefault: atlas?.current_release.walk_forward_options?.window_mode_default,
+      }),
+    [setup.options, atlas, draft.executionRoute],
+  );
+  /* The recipe a fresh declaration of this protocol starts from: the first enabled one the setup serves (Quick check for Three Window). */
+  const defaultRecipe = recipes.find((recipe) => recipe.enabled && recipe.protocol === draft.protocol) ?? null;
+  const suggestionProfile = profile?.enabled ? profile : (defaultRecipe?.profile ?? (family.length === 1 ? family[0]! : null));
+  /* A draft with no mode and schedule yet starts on that recipe, once per protocol: a default the reader sees and can change, never an overwrite. */
+  const recipeAdopted = useRef<string | null>(null);
+  useEffect(() => {
+    if (setup.status !== "served" || defaultRecipe === null || draft.optimizationMode !== "" || draft.optimizationSchedule !== "") return;
+    const key = `${draft.protocol}|${defaultRecipe.id}`;
+    if (recipeAdopted.current === key) return;
+    recipeAdopted.current = key;
+    adopt(applyRecipe(defaultRecipe, draft));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setup.status, defaultRecipe, draft.optimizationMode, draft.optimizationSchedule, draft.protocol]);
+  /* Switching protocol moves to that protocol's default recipe (its trials, seed, frequency and window mode), so nothing stays from the other one. */
+  const switchProtocol = (change: Partial<RunDraft>) => {
+    const next = change.protocol;
+    const target = next !== undefined && next !== draft.protocol ? recipes.find((recipe) => recipe.enabled && recipe.protocol === next) : undefined;
+    patch(target ? { ...change, ...applyRecipe(target, { ...draft, protocol: next! }) } : change);
+  };
+
+  /* The verified range: from the served coverage's first bar to the end of the last bar the index verified (its as-of, floored to a bar).
+     Month-partition coverage says "to the end of the month", which can lie in the future: not a verified end, so no range then. */
+  const verifiedRange = (() => {
+    const served = coverageRange(prefillPlan);
+    const barMs = timeframeBarMs(timeframe);
+    const asOf = setup.options?.as_of_utc_ms ?? null;
+    return served && barMs !== null && asOf !== null ? { from: served.from, to: Math.min(Math.floor(asOf / barMs) * barMs, served.to) } : null;
+  })();
+  const [proposal, setProposal] = useState<WindowSuggestion | null>(null);
+  const recommended = proposal !== null ? suggestionToDayEdges(proposal, verifiedRange) : null;
   /* Every profile of this protocol and route is disabled for this Alpha: the server's typed reason, said where Suggest would be. */
   const unavailableReason =
     suggestionProfile === null && family.length === 0
@@ -1569,11 +1613,14 @@ function WindowsStep({
 
   return (
     <Card title="Walk-forward">
-      <ProtocolToggle draft={draft} patch={patch} />
+      {setup.status === "served" ? (
+        <RecipePicker recipes={recipes} draft={draft} onPick={patch} disabledReason={contextClosure(setup.options) !== null ? `${humaniseTokens(contextClosure(setup.options)!.reasonCode)}` : null} />
+      ) : null}
+      <ProtocolToggle draft={draft} patch={setup.status === "served" ? switchProtocol : patch} />
       {setup.status !== "served" ? <WindowPrefillNote draft={draft} plan={prefillPlan} warmupBars={warmupBars} /> : null}
       {draft.protocol === "three_window_decay" ? (
         <div className="flex flex-col gap-2" data-three-window>
-          <WindowSetupBar draft={draft} patch={patch} setup={setup} profileId={suggestionProfile?.profileId ?? null} unavailableReason={unavailableReason} workspaceId={workspaceId} />
+          <WindowSetupBar draft={draft} patch={patch} setup={setup} profileId={suggestionProfile?.profileId ?? null} unavailableReason={unavailableReason} workspaceId={workspaceId} range={verifiedRange} onProposal={setProposal} />
           <LinkedWindowCalendar
             idPrefix="s02-windows"
             edges={{ a: draft.windows.is.start, b: draft.windows.is.endExclusive, c: draft.windows.oos.endExclusive, d: draft.windows.holdout.endExclusive }}
@@ -1597,14 +1644,8 @@ function WindowsStep({
               });
             }}
             barMs={timeframeBarMs(timeframe)}
-            range={(() => {
-              /* The verified range: from the served coverage's first bar to the end of the last bar the index verified (its as-of, floored to a bar).
-                 Month-partition coverage says "to the end of the month", which can lie in the future: not a verified end, so no range then. */
-              const served = coverageRange(prefillPlan);
-              const barMs = timeframeBarMs(timeframe);
-              const asOf = setup.options?.as_of_utc_ms ?? null;
-              return served && barMs !== null && asOf !== null ? { from: served.from, to: Math.min(Math.floor(asOf / barMs) * barMs, served.to) } : null;
-            })()}
+            range={verifiedRange}
+            recommended={recommended}
             warmupBars={warmupBars}
             maxSpanMs={profile?.enabled && profile.maxSpanDays !== null ? profile.maxSpanDays * 86_400_000 : null}
             invalid={{
@@ -1619,9 +1660,9 @@ function WindowsStep({
         </div>
       ) : (
         <div className="flex flex-wrap gap-2.5" data-advanced-window>
-          <div className="w-full"><WindowSetupBar draft={draft} patch={patch} setup={setup} profileId={suggestionProfile?.profileId ?? null} unavailableReason={unavailableReason} workspaceId={workspaceId} /></div>
+          <div className="w-full"><WindowSetupBar draft={draft} patch={patch} setup={setup} profileId={suggestionProfile?.profileId ?? null} unavailableReason={unavailableReason} workspaceId={workspaceId} range={verifiedRange} onProposal={setProposal} /></div>
           <Field minWidth={INSTANT_FIELD_WIDTH} label="Analysis start" hint={prefillHint(draft, "walkForward.start")}>
-            <DateTimeInput
+            <DateInput
               style={inputStyle(refusedAt(estimateStatus, "walk_forward", "start"))}
               value={draft.walkForward.start}
               onChange={(value) =>
@@ -1634,7 +1675,7 @@ function WindowsStep({
             />
           </Field>
           <Field minWidth={INSTANT_FIELD_WIDTH} label="End exclusive" hint={prefillHint(draft, "walkForward.endExclusive")}>
-            <DateTimeInput
+            <DateInput
               style={inputStyle(refusedAt(estimateStatus, "walk_forward", "end_exclusive"))}
               value={draft.walkForward.endExclusive}
               onChange={(value) =>
@@ -1647,7 +1688,7 @@ function WindowsStep({
             />
           </Field>
           <Field minWidth={INSTANT_FIELD_WIDTH} label="First OOS instant" title={options?.split_mode_rule}>
-            <DateTimeInput
+            <DateInput
               style={inputStyle(refusedAt(estimateStatus, "walk_forward", "split_mode"))}
               value={draft.walkForward.splitMode}
               onChange={(value) => patch({ walkForward: { ...draft.walkForward, splitMode: value } })}
@@ -3210,8 +3251,8 @@ export function NewRun(props: NewRunProps) {
   /* Two advanced profiles can be enabled (v1 and v2): the one whose requested-spec version the draft serializes as. */
   const v2 = usesSpecV2(draft);
   const profile = useMemo(
-    () => selectProfile(profiles, { protocol: draft.protocol, executionRoute: draft.executionRoute, optimizationMode: draft.optimizationMode, optimizationSchedule: draft.optimizationSchedule, specVersion: specVersionOf(v2) }),
-    [profiles, draft.protocol, draft.executionRoute, draft.optimizationMode, draft.optimizationSchedule, v2],
+    () => selectProfile(profiles, { protocol: draft.protocol, executionRoute: draft.executionRoute, optimizationMode: draft.optimizationMode, optimizationSchedule: draft.optimizationSchedule, trials: draft.optunaTrials, specVersion: specVersionOf(v2) }),
+    [profiles, draft.protocol, draft.executionRoute, draft.optimizationMode, draft.optimizationSchedule, draft.optunaTrials, v2],
   );
   const family = useMemo(
     () => profileFamily(profiles, { protocol: draft.protocol, executionRoute: draft.executionRoute, optimizationMode: draft.optimizationMode }).filter((entry) => entry.enabled),

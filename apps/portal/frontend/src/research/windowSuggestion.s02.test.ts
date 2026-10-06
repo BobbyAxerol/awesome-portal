@@ -18,6 +18,7 @@ import {
   buildSuggestionRequest,
   edgesOf,
   formatDraftInstant,
+  suggestionToDayEdges,
   suggestionToDraftPatch,
   useWindowSuggestion,
   userOuterBounds,
@@ -331,5 +332,58 @@ describe("useWindowSuggestion", () => {
     act(() => second.result.current.suggest());
     await waitFor(() => expect(second.result.current.state.kind).toBe("proposal"));
     expect(edited).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("suggestion -> whole UTC days", () => {
+  const DAY = 86_400_000;
+  const ms = (iso: string) => Date.parse(`${iso}Z`);
+  function three(a: string, b: string, c: string, d: string): WindowSuggestion {
+    const s = structuredClone(THREE);
+    const patch = (s.metadata as { patch: { windows: Record<string, { start_utc_ms: number; end_exclusive_utc_ms: number }> } }).patch;
+    patch.windows.is = { start_utc_ms: ms(a), end_exclusive_utc_ms: ms(b) };
+    patch.windows.oos = { start_utc_ms: ms(b), end_exclusive_utc_ms: ms(c) };
+    patch.windows.holdout = { start_utc_ms: ms(c), end_exclusive_utc_ms: ms(d) };
+    return s;
+  }
+
+  it("a 23:00 end goes to the previous midnight, A rounds up, B and C to the nearest midnight", () => {
+    const edges = suggestionToDayEdges(three("2026-08-02T23:00", "2026-09-13T23:00", "2026-09-25T10:00", "2026-10-01T23:00"));
+    expect(edges).toEqual({ a: "2026-08-03T00:00", b: "2026-09-14T00:00", c: "2026-09-25T00:00", d: "2026-10-01T00:00" });
+  });
+
+  it("the end never passes the last full day of the range", () => {
+    const range = { from: ms("2026-01-01T00:00"), to: ms("2026-09-29T13:00") };
+    const edges = suggestionToDayEdges(three("2026-08-01T00:00", "2026-09-10T00:00", "2026-09-20T00:00", "2026-10-01T00:00"), range);
+    expect(edges?.d).toBe("2026-09-29T00:00");
+  });
+
+  it("keeps every window at least one day when rounding would collapse them", () => {
+    const edges = suggestionToDayEdges(three("2026-06-01T00:00", "2026-06-03T22:00", "2026-06-04T18:00", "2026-06-05T04:00"));
+    expect(edges).toEqual({ a: "2026-06-01T00:00", b: "2026-06-03T00:00", c: "2026-06-04T00:00", d: "2026-06-05T00:00" });
+    const parts = Object.values(edges!).map((v) => Date.parse(`${v}:00Z`));
+    for (let i = 1; i < 4; i += 1) expect(parts[i]! - parts[i - 1]!).toBeGreaterThanOrEqual(DAY);
+  });
+
+  it("is null for a span under three whole days, for Advanced and for an unpublished suggestion", () => {
+    expect(suggestionToDayEdges(three("2026-06-01T00:00", "2026-06-01T12:00", "2026-06-02T00:00", "2026-06-02T20:00"))).toBeNull();
+    expect(suggestionToDayEdges(ADVANCED)).toBeNull();
+    expect(suggestionToDayEdges(UNAVAILABLE)).toBeNull();
+  });
+
+  it("suggestionToDraftPatch applies the snapping only with { days: true }", () => {
+    const proposal = three("2026-08-02T23:00", "2026-09-13T23:00", "2026-09-25T10:00", "2026-10-01T23:00");
+    const plain = suggestionToDraftPatch(proposal, base());
+    expect(plain.state === "patch" && plain.patch.windows?.is.start).toBe("2026-08-02T23:00");
+    const snapped = suggestionToDraftPatch(proposal, base(), { days: true });
+    expect(snapped.state === "patch" && snapped.patch.windows).toEqual({
+      is: { start: "2026-08-03T00:00", endExclusive: "2026-09-14T00:00" },
+      oos: { start: "2026-09-14T00:00", endExclusive: "2026-09-25T00:00" },
+      holdout: { start: "2026-09-25T00:00", endExclusive: "2026-10-01T00:00" },
+    });
+    expect(suggestionToDraftPatch(three("2026-06-01T00:00", "2026-06-01T12:00", "2026-06-02T00:00", "2026-06-02T20:00"), base(), { days: true })).toEqual({ state: "none", reasonCode: "WINDOW_TOO_SHORT_FOR_DAYS" });
+    const adv = suggestionToDraftPatch(ADVANCED, advanced(), { days: true });
+    expect(adv.state === "patch" && adv.patch.walkForward).toMatchObject({ start: "2026-06-01T00:00", endExclusive: "2026-06-05T00:00", splitMode: "2026-06-03T00:00" });
   });
 });

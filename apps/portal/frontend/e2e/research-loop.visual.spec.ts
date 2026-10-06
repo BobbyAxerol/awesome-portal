@@ -101,8 +101,8 @@ async function openLinkedWindows(page: Page): Promise<void> {
   await alpha.selectOption({ index: 1 });
   await page.getByLabel("Alpha version", { exact: true }).selectOption({ index: 1 });
   await page.locator("[data-step-pill='windows']").click();
-  const edges = ["2026-05-01T00:00", "2026-07-01T00:00", "2026-08-01T00:00", "2026-08-15T00:00"];
-  const inputs = page.locator("[data-calendar-edge] input[type=datetime-local]");
+  const edges = ["2026-05-01", "2026-07-01", "2026-08-01", "2026-08-15"];
+  const inputs = page.locator("[data-calendar-edge] input[type=date]");
   for (const [index, value] of edges.entries()) await inputs.nth(index).fill(value);
   await expect(page.locator("[data-linked-window-calendar]")).toBeVisible();
 }

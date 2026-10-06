@@ -200,11 +200,13 @@ describe("U01 — the served earliest start is offered, never computed", () => {
 /* ------------------------------------------------------------------------ RG1 · date input width */
 
 describe("RG1 — the date inputs keep room for their time and the UTC suffix", () => {
-  it("every datetime field of the advanced row holds at least 232 px before the row wraps", () => {
+  /* The advanced instants are whole-UTC-day date inputs now (no hour, no minute); each still sits in the same Field with the minWidth that leaves room for the date and the UTC suffix. */
+  it("every date field of the advanced row holds at least 232 px before the row wraps", () => {
     mount({ draft: draft({ protocol: "advanced", walkForward: { start: "2026-07-01T00:00", endExclusive: "2026-07-03T00:00", splitMode: "2026-07-02T00:00", frequency: "weekly", windowMode: "expanding" } }) });
     go("windows");
-    const labels = qa("[data-advanced-window] label").filter((label) => label.querySelector("input[type=datetime-local]"));
+    const labels = qa("[data-advanced-window] label").filter((label) => label.querySelector("input[type=date]"));
     expect(labels.length).toBe(3);
+    for (const label of labels) expect(label.querySelector("[data-utc-suffix]")).not.toBeNull();
     for (const label of labels) expect(parseInt((label as HTMLElement).style.minWidth, 10)).toBeGreaterThanOrEqual(232);
   });
 });

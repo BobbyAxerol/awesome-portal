@@ -22,6 +22,25 @@ export interface Axis {
 }
 
 const MINUTE_MS = 60_000;
+export const DAY_MS = 86_400_000;
+
+/** `ms` rounded down / up / to nearest UTC midnight. */
+export const floorDay = (ms: number): number => Math.floor(ms / DAY_MS) * DAY_MS;
+export const ceilDay = (ms: number): number => Math.ceil(ms / DAY_MS) * DAY_MS;
+export const roundDay = (ms: number): number => Math.round(ms / DAY_MS) * DAY_MS;
+
+/** The step of whole-day mode: one bar when a bar is longer than a day, else one day. */
+export function dayUnit(barMs: number | null): number {
+  return barMs !== null && barMs > DAY_MS ? barMs : DAY_MS;
+}
+
+/** A closed limit interval pulled inside to UTC midnights; null when no midnight is left in it. */
+export function dayLimits(lim: { min: number; max: number } | null): { min: number; max: number } | null {
+  if (!lim) return null;
+  const min = Number.isFinite(lim.min) ? ceilDay(lim.min) : lim.min;
+  const max = Number.isFinite(lim.max) ? floorDay(lim.max) : lim.max;
+  return min <= max ? { min, max } : null;
+}
 
 export function parseEdges(edges: EdgeStrings): EdgeMs {
   return { a: utcMs(edges.a), b: utcMs(edges.b), c: utcMs(edges.c), d: utcMs(edges.d) };
@@ -48,7 +67,8 @@ export function utcLabel(ms: number): string {
 }
 
 /** The smallest step between two edges: one bar, else one minute (the finest the inputs can type). */
-function gap(barMs: number | null): number {
+function gap(barMs: number | null, unitMs?: number | null): number {
+  if (unitMs !== undefined && unitMs !== null && unitMs > 0) return unitMs;
   return barMs !== null && barMs > 0 ? barMs : MINUTE_MS;
 }
 
@@ -69,8 +89,9 @@ export function edgeLimits(
   ordered: { a: number; b: number; c: number; d: number },
   barMs: number | null,
   bounds: EdgeBounds = {},
+  unitMs?: number | null,
 ): { min: number; max: number } | null {
-  const step = gap(barMs);
+  const step = gap(barMs, unitMs);
   const maxSpan = bounds.maxSpanMs !== null && bounds.maxSpanMs !== undefined && bounds.maxSpanMs > 0 ? bounds.maxSpanMs : null;
   let min: number;
   let max: number;
@@ -126,8 +147,8 @@ export function clamp(value: number, min: number, max: number): number {
  * `value` snapped to the bar grid of `origin` (the edge's own value when the gesture began, so a server-aligned
  * edge keeps its phase) and clamped into `limits`. Without a bar size the value is rounded to a whole minute.
  */
-export function snapEdge(value: number, origin: number, barMs: number | null, limits: { min: number; max: number }): number {
-  const step = barMs !== null && barMs > 0 ? barMs : MINUTE_MS;
+export function snapEdge(value: number, origin: number, barMs: number | null, limits: { min: number; max: number }, unitMs?: number | null): number {
+  const step = gap(barMs, unitMs);
   const snapped = origin + Math.round((value - origin) / step) * step;
   /* Clamping may leave the grid when a limit is off it; the limits are themselves one bar from an on-grid edge. */
   return clamp(snapped, limits.min, limits.max);
@@ -170,8 +191,8 @@ export function barCount(from: number, to: number, barMs: number | null): number
 export type StepKey = "ArrowLeft" | "ArrowRight" | "PageUp" | "PageDown" | "Home" | "End";
 
 /** The large step: 10% of the A..D span, whole bars (whole minutes without a bar size), never under one step. */
-export function largeStep(span: number, barMs: number | null): number {
-  const unit = gap(barMs);
+export function largeStep(span: number, barMs: number | null, unitMs?: number | null): number {
+  const unit = gap(barMs, unitMs);
   return Math.max(unit, Math.round((span * 0.1) / unit) * unit);
 }
 
@@ -187,9 +208,10 @@ export function stepEdge(
   span: number,
   barMs: number | null,
   limits: { min: number; max: number },
+  unitMs?: number | null,
 ): number | null {
-  const small = gap(barMs);
-  const large = largeStep(span, barMs);
+  const small = gap(barMs, unitMs);
+  const large = largeStep(span, barMs, unitMs);
   let next: number;
   if (key === "ArrowLeft") next = value - (shift ? large : small);
   else if (key === "ArrowRight") next = value + (shift ? large : small);
@@ -207,4 +229,46 @@ export function timeframeBarMs(timeframe: string): number | null {
   if (match === null) return null;
   const unit = match[2] === "d" ? 86_400_000 : match[2] === "h" ? 3_600_000 : 60_000;
   return Number(match[1]) * unit;
+}
+
+/** B and C of a whole-day split of [a, d) by the shares `isShare` / `oosShare` (holdout = the rest); null unless each window keeps at least one day. */
+export function splitByDays(a: number, d: number, isShare: number, oosShare: number): { b: number; c: number } | null {
+  if (d <= a) return null;
+  const b = roundDay(a + (d - a) * isShare);
+  const c = roundDay(a + (d - a) * (isShare + oosShare));
+  return b - a >= DAY_MS && c - b >= DAY_MS && d - c >= DAY_MS ? { b, c } : null;
+}
+
+/** The quick-pick splits, IS / OOS / Holdout in percent. */
+export const DAY_SPLITS = [
+  { key: "70-20-10", label: "70 / 20 / 10", is: 70, oos: 20 },
+  { key: "60-20-20", label: "60 / 20 / 20", is: 60, oos: 20 },
+  { key: "80-10-10", label: "80 / 10 / 10", is: 80, oos: 10 },
+  { key: "50-25-25", label: "50 / 25 / 25", is: 50, oos: 25 },
+] as const;
+
+export function splitOfDays(a: number, d: number, split: (typeof DAY_SPLITS)[number]): { b: number; c: number } | null {
+  return splitByDays(a, d, split.is / 100, split.oos / 100);
+}
+
+/**
+ * Epoch ms values in order (first = range start, last = range end, the rest boundaries) snapped to UTC midnights: the first rounded UP,
+ * the last rounded DOWN (and never above the last full day of `range`), the boundaries to the nearest midnight, each at least one day
+ * after the one before. Null when fewer days remain than windows.
+ */
+export function snapToDays(values: readonly number[], range?: { to: number } | null): number[] | null {
+  const n = values.length;
+  if (n < 2) return null;
+  const first = ceilDay(values[0]!);
+  let last = floorDay(values[n - 1]!);
+  if (range && Number.isFinite(range.to)) last = Math.min(last, floorDay(range.to));
+  if (last - first < (n - 1) * DAY_MS) return null;
+  const out = [first];
+  for (let i = 1; i < n - 1; i += 1) {
+    const lo = out[i - 1]! + DAY_MS;
+    const hi = last - (n - 1 - i) * DAY_MS;
+    out.push(clamp(roundDay(values[i]!), lo, hi));
+  }
+  out.push(last);
+  return out;
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { splitSeventyTwentyTen, trackAxis, axisOf, barCount, edgeLimits, largeStep, msToInstant, orderedEdges, parseEdges, percentOn, snapEdge, spanOn, stepEdge, utcLabel } from "./windowGeometry";
+import { DAY_MS, dayLimits, dayUnit, floorDay, ceilDay, snapToDays, splitByDays, splitSeventyTwentyTen, trackAxis, axisOf, barCount, edgeLimits, largeStep, msToInstant, orderedEdges, parseEdges, percentOn, snapEdge, spanOn, stepEdge, utcLabel } from "./windowGeometry";
 
 const H = 3_600_000;
 const A = Date.UTC(2026, 7, 2, 23);
@@ -80,5 +80,36 @@ describe("windowGeometry", () => {
     expect(trackAxis({ from: 0, to: 100 }, null, null)).toEqual({ from: -25, to: 125 });
     expect(trackAxis(null, { from: 0, to: 100 }, null)).toEqual({ from: -1, to: 101 });
     expect(trackAxis(null, null, null)).toBeNull();
+  });
+});
+
+describe("whole-day geometry", () => {
+  const DAY0 = Date.parse("2026-09-01T00:00:00Z");
+  it("unit: one day, or one bar when a bar is longer", () => {
+    expect(dayUnit(H)).toBe(DAY_MS);
+    expect(dayUnit(null)).toBe(DAY_MS);
+    expect(dayUnit(7 * DAY_MS)).toBe(7 * DAY_MS);
+    expect(floorDay(DAY0 + 23 * H)).toBe(DAY0);
+    expect(ceilDay(DAY0 + 1)).toBe(DAY0 + DAY_MS);
+  });
+  it("unitMs overrides the gap in limits, snap and step; the default is unchanged", () => {
+    const o = { a: DAY0, b: DAY0 + 10 * DAY_MS, c: DAY0 + 20 * DAY_MS, d: DAY0 + 30 * DAY_MS };
+    expect(edgeLimits("b", o, H, {}, DAY_MS)).toEqual({ min: o.a + DAY_MS, max: o.c - DAY_MS });
+    expect(edgeLimits("b", o, H)).toEqual({ min: o.a + H, max: o.c - H });
+    const lim = { min: o.a + DAY_MS, max: o.c - DAY_MS };
+    expect(snapEdge(o.b + 0.6 * DAY_MS, o.b, H, lim, DAY_MS)).toBe(o.b + DAY_MS);
+    expect(stepEdge("ArrowRight", false, o.b, 30 * DAY_MS, H, lim, DAY_MS)).toBe(o.b + DAY_MS);
+    expect(stepEdge("PageUp", false, o.b, 30 * DAY_MS, H, lim, DAY_MS)).toBe(o.b + 3 * DAY_MS);
+    expect(largeStep(1 * DAY_MS, H, DAY_MS)).toBe(DAY_MS);
+  });
+  it("dayLimits pulls a limit inside to midnights", () => {
+    expect(dayLimits({ min: DAY0 + H, max: DAY0 + 3 * DAY_MS + H })).toEqual({ min: DAY0 + DAY_MS, max: DAY0 + 3 * DAY_MS });
+    expect(dayLimits({ min: DAY0 + H, max: DAY0 + 2 * H })).toBeNull();
+  });
+  it("splitByDays and snapToDays", () => {
+    expect(splitByDays(DAY0, DAY0 + 100 * DAY_MS, 0.7, 0.2)).toEqual({ b: DAY0 + 70 * DAY_MS, c: DAY0 + 90 * DAY_MS });
+    expect(splitByDays(DAY0, DAY0 + 4 * DAY_MS, 0.7, 0.2)).toBeNull();
+    expect(snapToDays([DAY0 + H, DAY0 + 10 * DAY_MS + 5 * H, DAY0 + 20 * DAY_MS - H, DAY0 + 30 * DAY_MS + 23 * H])).toEqual([DAY0 + DAY_MS, DAY0 + 10 * DAY_MS, DAY0 + 20 * DAY_MS, DAY0 + 30 * DAY_MS]);
+    expect(snapToDays([DAY0, DAY0 + 1, DAY0 + 2, DAY0 + 2 * DAY_MS])).toBeNull();
   });
 });

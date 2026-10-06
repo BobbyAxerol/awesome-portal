@@ -380,6 +380,8 @@ async function mountRoute(step: "data" | "windows", options?: Parameters<typeof 
 
 const field = (label: string) => screen.getByLabelText(label) as HTMLInputElement;
 const windowValues = () => WINDOW_LABELS.map((label) => field(label).value);
+/* The window inputs are whole UTC-day date inputs: they show the DATE of a draft instant (the draft keeps its time). */
+const day = (instant: string) => instant.slice(0, 10);
 const goTo = (step: string) => { fireEvent.click(document.querySelector(`[data-step-pill="${step}"]`) as HTMLElement); };
 const choose = (dataset: string, symbol: string) => {
   fireEvent.change(field("Dataset"), { target: { value: dataset } });
@@ -409,7 +411,7 @@ describe("D4 — Screen 02, real route and hook", () => {
     expect(document.querySelector("[data-window-prefill-status]")).toBeNull();
 
     goTo("windows");
-    expect(windowValues()).toEqual([BTC.lower, "", "", BTC.upper]);
+    expect(windowValues()).toEqual([day(BTC.lower), "", "", day(BTC.upper)]);
     /* The per-edge captions went with the six-row layout; the one source line says it. */
     expect(document.querySelector("[data-prefill-caption]")).toBeNull();
     expect(text("[data-prefill-source]")).toBe("Prefilled from crypto-binance-1m · BTCUSDT · 2020-01 → 2026-09 · 81 months");
@@ -429,8 +431,8 @@ describe("D4 — Screen 02, real route and hook", () => {
     choose(BTC.dataset, BTC.symbol);
     await settleSetup();
     goTo("windows");
-    fireEvent.change(field("IS start (A)"), { target: { value: "2021-03-04T05:00" } });
-    expect(field("IS start (A)").value).toBe("2021-03-04T05:00");
+    fireEvent.change(field("IS start (A)"), { target: { value: "2021-03-04" } });
+    expect(field("IS start (A)").value).toBe("2021-03-04");
     /* The untouched end is still a prefill, so the one source line stays (there are no per-edge captions any more). */
     expect(document.querySelector("[data-prefill-caption]")).toBeNull();
     expect(text("[data-prefill-source]")).toContain("Prefilled from crypto-binance-1m · BTCUSDT");
@@ -444,15 +446,15 @@ describe("D4 — Screen 02, real route and hook", () => {
     goTo("review");
     goTo("windows");
     await settle();
-    expect(field("IS start (A)").value).toBe("2021-03-04T05:00");
-    expect(field("Holdout end exclusive (D)").value).toBe(BTC.upper);
+    expect(field("IS start (A)").value).toBe("2021-03-04");
+    expect(field("Holdout end exclusive (D)").value).toBe(day(BTC.upper));
 
     /* A later pick with a different coverage: the edit stays, the prefill moves. */
     goTo("data");
     fireEvent.change(field("Symbol"), { target: { value: QUARTERLY.symbol } });
     await settleSetup();
     goTo("windows");
-    expect(windowValues()).toEqual(["2021-03-04T05:00", "", "", QUARTERLY.upper]);
+    expect(windowValues()).toEqual(["2021-03-04", "", "", day(QUARTERLY.upper)]);
     expect(text("[data-prefill-source]")).toContain("BTCUSDT_260327 · 2025-09 → 2026-04 · 8 months");
   });
 
@@ -461,13 +463,13 @@ describe("D4 — Screen 02, real route and hook", () => {
     choose(BTC.dataset, BTC.symbol);
     await settleSetup();
     goTo("windows");
-    expect(windowValues()[0]).toBe(BTC.lower);
+    expect(windowValues()[0]).toBe(day(BTC.lower));
 
     goTo("data");
     fireEvent.change(field("Dataset"), { target: { value: BTC_BYBIT.dataset } });
     await settleSetup();
     goTo("windows");
-    expect(windowValues()).toEqual([BTC_BYBIT.lower, "", "", BTC_BYBIT.upper]);
+    expect(windowValues()).toEqual([day(BTC_BYBIT.lower), "", "", day(BTC_BYBIT.upper)]);
     expect(text("[data-prefill-source]")).toContain("fixture-bybit-1h · BTCUSDT · 2022-05 → 2025-11 · 43 months");
 
     /* A dataset that does not list the symbol takes the bounds away rather than keeping the old ones. */
@@ -516,8 +518,8 @@ describe("D4 — Screen 02, real route and hook", () => {
     goTo("windows");
     /* The interior boundaries are the reader's to choose. */
     /* B is the IS end and the OOS start in one edit; C is the OOS end and the Holdout start. */
-    fireEvent.change(field("IS end · OOS start (B)"), { target: { value: "2024-01-01T00:00" } });
-    fireEvent.change(field("OOS end · Holdout start (C)"), { target: { value: "2025-01-01T00:00" } });
+    fireEvent.change(field("IS end · OOS start (B)"), { target: { value: "2024-01-01" } });
+    fireEvent.change(field("OOS end · Holdout start (C)"), { target: { value: "2025-01-01" } });
     /* The mode is the reader's to choose: the Walk-forward step asks for it, and Review would list it as missing. */
     fireEvent.change(field("Optimization mode"), { target: { value: "mode_1_decay" } });
     goTo("optimization");
@@ -598,15 +600,15 @@ describe("D4 — the advanced protocol fills its own outer bounds and leaves the
     render(<Harness initial={{ ...emptyDraft(), protocol: "advanced" }} step="data" />);
     choose(BTC.dataset, BTC.symbol);
     goTo("windows");
-    expect(field("Analysis start").value).toBe(BTC.lower);
-    expect(field("Analysis end exclusive").value).toBe(BTC.upper);
+    expect(field("Analysis start").value).toBe(day(BTC.lower));
+    expect(field("Analysis end exclusive").value).toBe(day(BTC.upper));
     expect(field("First OOS instant").value).toBe("");
     expect(text('[data-prefill-caption="walkForward.start"]')).toBe("prefilled · first day of 2020-01");
     expect(tip("[data-prefill-source]")).toContain("First OOS instant is left empty: the release publishes no default for it.");
     expect(tip("[data-prefill-source]")).toContain("must fit before the analysis start.");
 
-    fireEvent.change(field("Analysis end exclusive"), { target: { value: "2020-06-01T00:00" } });
-    expect(field("Analysis end exclusive").value).toBe("2020-06-01T00:00");
+    fireEvent.change(field("Analysis end exclusive"), { target: { value: "2020-06-01" } });
+    expect(field("Analysis end exclusive").value).toBe("2020-06-01");
     expect(document.querySelector('[data-prefill-caption="walkForward.endExclusive"]')).toBeNull();
     expect(document.querySelector('[data-prefill-caption="walkForward.start"]')).not.toBeNull();
   });
@@ -615,7 +617,7 @@ describe("D4 — the advanced protocol fills its own outer bounds and leaves the
     render(<Harness initial={emptyDraft()} step="data" />);
     choose(BTC.dataset, BTC.symbol);
     goTo("windows");
-    expect(windowValues()).toEqual([BTC.lower, "", "", BTC.upper]);
+    expect(windowValues()).toEqual([day(BTC.lower), "", "", day(BTC.upper)]);
   });
 });
 
@@ -625,7 +627,7 @@ describe("D4 — the caption tells the truth about the coverage it came from", (
     choose(BTC_BYBIT.dataset, "ETHUSDT");
     goTo("windows");
     expect(text("[data-prefill-source]")).toBe("Prefilled from fixture-bybit-1h · ETHUSDT · 2022-05 → 2025-11 · 40 of 43 months present");
-    expect(field("IS start (A)").value).toBe("2022-05-01T00:00");
+    expect(field("IS start (A)").value).toBe("2022-05-01");
   });
 
   it("keeps a bound the reader cleared cleared, and a bound they retyped theirs, through the next pick", () => {
@@ -636,14 +638,14 @@ describe("D4 — the caption tells the truth about the coverage it came from", (
     fireEvent.change(field("Holdout end exclusive (D)"), { target: { value: "" } });
     expect(field("Holdout end exclusive (D)").value).toBe("");
     /* Retyped to the very value the coverage had put there: it is theirs from that keystroke. */
-    fireEvent.change(field("IS start (A)"), { target: { value: "2020-02-02T00:00" } });
-    fireEvent.change(field("IS start (A)"), { target: { value: BTC.lower } });
+    fireEvent.change(field("IS start (A)"), { target: { value: "2020-02-02" } });
+    fireEvent.change(field("IS start (A)"), { target: { value: day(BTC.lower) } });
     /* Both bounds are the reader's now: the source line is replaced by the "kept" reason after the next pick. */
 
     goTo("data");
     fireEvent.change(field("Symbol"), { target: { value: "SOLUSDT" } });
     goTo("windows");
-    expect(field("IS start (A)").value).toBe(BTC.lower);
+    expect(field("IS start (A)").value).toBe(day(BTC.lower));
     expect(field("Holdout end exclusive (D)").value).toBe("");
     /* Nothing of the coverage is left to caption: both bounds are the reader's. */
     expect(document.querySelector("[data-prefill-caption]")).toBeNull();
@@ -673,13 +675,13 @@ describe("D4 — the caption tells the truth about the coverage it came from", (
 
   it("does not say a coverage filled anything once every outer bound is the reader's own", () => {
     render(<Harness initial={emptyDraft()} step="windows" />);
-    fireEvent.change(field("IS start (A)"), { target: { value: "2021-01-01T00:00" } });
-    fireEvent.change(field("Holdout end exclusive (D)"), { target: { value: "2025-01-01T00:00" } });
+    fireEvent.change(field("IS start (A)"), { target: { value: "2021-01-01" } });
+    fireEvent.change(field("Holdout end exclusive (D)"), { target: { value: "2025-01-01" } });
     goTo("data");
     choose(BTC.dataset, BTC.symbol);
     expect(document.querySelector("[data-window-prefill-status]")).toBeNull();
     goTo("windows");
-    expect(windowValues()).toEqual(["2021-01-01T00:00", "", "", "2025-01-01T00:00"]);
+    expect(windowValues()).toEqual(["2021-01-01", "", "", "2025-01-01"]);
     expect(text("[data-prefill-reason]")).toBe("Your bounds kept · coverage 2020-01 → 2026-09 · 81 months");
     expect(tip("[data-prefill-reason]")).toContain("nothing was prefilled.");
     expect(document.querySelector("[data-prefill-caption]")).toBeNull();

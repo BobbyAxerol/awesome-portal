@@ -287,9 +287,9 @@ describe("400-trial audit — a copied run's instants are shown, not blanked", (
     const copied = advanced();
     mount({ draft: copied, patch });
     go("windows");
-    expect((screen.getByLabelText("Analysis start") as HTMLInputElement).value).toBe("2026-05-01T00:00");
-    expect((screen.getByLabelText("Analysis end exclusive") as HTMLInputElement).value).toBe("2026-07-31T00:00");
-    expect((screen.getByLabelText("First OOS instant") as HTMLInputElement).value).toBe("2026-06-01T00:00");
+    expect((screen.getByLabelText("Analysis start") as HTMLInputElement).value).toBe("2026-05-01");
+    expect((screen.getByLabelText("Analysis end exclusive") as HTMLInputElement).value).toBe("2026-07-31");
+    expect((screen.getByLabelText("First OOS instant") as HTMLInputElement).value).toBe("2026-06-01");
     expect(patch).not.toHaveBeenCalled();
     expect(document.querySelector("[data-instant-unshown]")).toBeNull();
   });
@@ -323,7 +323,7 @@ describe("400-trial audit — a copied run's instants are shown, not blanked", (
       } }),
     });
     go("windows");
-    expect((screen.getByLabelText("IS start (A)") as HTMLInputElement).value).toBe("2022-01-01T00:00");
+    expect((screen.getByLabelText("IS start (A)") as HTMLInputElement).value).toBe("2022-01-01");
   });
 });
 
@@ -424,9 +424,9 @@ describe("400-trial audit — ?from=<400-trial run> copies the run's own values"
   it("shows the copied walk-forward instants in their inputs", async () => {
     await mountClone("ok");
     go("windows");
-    expect((screen.getByLabelText("Analysis start") as HTMLInputElement).value).toBe("2026-05-01T00:00");
-    expect((screen.getByLabelText("Analysis end exclusive") as HTMLInputElement).value).toBe("2026-07-31T00:00");
-    expect((screen.getByLabelText("First OOS instant") as HTMLInputElement).value).toBe("2026-06-01T00:00");
+    expect((screen.getByLabelText("Analysis start") as HTMLInputElement).value).toBe("2026-05-01");
+    expect((screen.getByLabelText("Analysis end exclusive") as HTMLInputElement).value).toBe("2026-07-31");
+    expect((screen.getByLabelText("First OOS instant") as HTMLInputElement).value).toBe("2026-06-01");
   });
 
   it("a copy that could not be read still gets the profile's default — the default is only a fallback", async () => {

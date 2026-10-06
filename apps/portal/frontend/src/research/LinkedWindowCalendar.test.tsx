@@ -11,7 +11,7 @@ const A = Date.parse("2026-08-02T23:00:00Z");
 
 function setup(over: Partial<LinkedWindowCalendarProps> = {}) {
   const onChange = vi.fn();
-  const utils = render(<LinkedWindowCalendar edges={EDGES} onChange={onChange} barMs={H} idPrefix="t" {...over} />);
+  const utils = render(<LinkedWindowCalendar edges={EDGES} onChange={onChange} barMs={H} idPrefix="t" granularity="exact" {...over} />);
   return { onChange, ...utils };
 }
 const NAMES = { a: "IS start (A) handle", b: "IS end · OOS start (B) handle", c: "OOS end · Holdout start (C) handle", d: "Holdout end exclusive (D) handle" };
@@ -302,12 +302,226 @@ describe("presets", () => {
   });
 });
 
+const DAY = 86_400_000;
+const DEDGES = { a: "2026-08-01T00:00", b: "2026-09-01T00:00", c: "2026-09-20T00:00", d: "2026-10-01T00:00" };
+const LAST = Date.parse("2026-10-01T00:00:00Z");
+const DRANGE = { from: Date.parse("2026-01-01T00:00:00Z"), to: Date.parse("2026-10-01T23:00:00Z") };
+function dsetup(over: Partial<LinkedWindowCalendarProps> = {}) {
+  const onChange = vi.fn();
+  const utils = render(<LinkedWindowCalendar edges={DEDGES} onChange={onChange} barMs={H} idPrefix="d" {...over} />);
+  return { onChange, ...utils };
+}
+const pick = (k: string) => document.querySelector(`[data-calendar-preset='${k}']`) as HTMLButtonElement;
+const day = (ms: number) => iso(ms);
+
+describe("day mode (default)", () => {
+  it("edge inputs are date inputs with the same labels and wrappers", () => {
+    dsetup();
+    for (const [k, name] of [["a", "IS start (A)"], ["b", "IS end · OOS start (B)"], ["c", "OOS end · Holdout start (C)"], ["d", "Holdout end exclusive (D)"]] as const) {
+      const input = screen.getByLabelText(name, { selector: "input" }) as HTMLInputElement;
+      expect(input.type).toBe("date");
+      expect(input.value).toBe(DEDGES[k].slice(0, 10));
+      expect(document.querySelector(`[data-calendar-edge=${k}]`)).not.toBeNull();
+    }
+    expect(document.querySelector("input[type=datetime-local]")).toBeNull();
+    expect(screen.getAllByText("UTC · end exclusive")).toHaveLength(1);
+  });
+
+  it("typing a date is one patch at midnight; clearing patches empty", () => {
+    const { onChange } = dsetup();
+    fireEvent.change(screen.getByLabelText("IS end · OOS start (B)", { selector: "input" }), { target: { value: "2026-09-05" } });
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith({ b: "2026-09-05T00:00" });
+    fireEvent.change(screen.getByLabelText("IS end · OOS start (B)", { selector: "input" }), { target: { value: "" } });
+    expect(onChange).toHaveBeenLastCalledWith({ b: "" });
+  });
+
+  it("arrow is one day, shift is ~10% in whole days, Home/End stop at neighbours; never an off-midnight value", () => {
+    const { onChange } = dsetup();
+    fireEvent.keyDown(handle("b"), { key: "ArrowRight" });
+    expect(onChange).toHaveBeenLastCalledWith({ b: "2026-09-02T00:00" });
+    fireEvent.keyDown(handle("b"), { key: "ArrowLeft" });
+    expect(onChange).toHaveBeenLastCalledWith({ b: "2026-08-31T00:00" });
+    /* 61 days -> 6 days. */
+    fireEvent.keyDown(handle("b"), { key: "ArrowLeft", shiftKey: true });
+    expect(onChange).toHaveBeenLastCalledWith({ b: "2026-08-26T00:00" });
+    fireEvent.keyDown(handle("b"), { key: "Home" });
+    expect(onChange).toHaveBeenLastCalledWith({ b: "2026-08-02T00:00" });
+    fireEvent.keyDown(handle("b"), { key: "End" });
+    expect(onChange).toHaveBeenLastCalledWith({ b: "2026-09-19T00:00" });
+    for (const [args] of onChange.mock.calls) expect(args.b.endsWith("T00:00")).toBe(true);
+  });
+
+  it("an off-midnight edge moves to the nearest midnight in the key's direction", () => {
+    const { onChange } = dsetup({ edges: { ...DEDGES, b: "2026-09-01T07:00" } });
+    fireEvent.keyDown(handle("b"), { key: "ArrowRight" });
+    expect(onChange).toHaveBeenLastCalledWith({ b: "2026-09-02T00:00" });
+    fireEvent.keyDown(handle("b"), { key: "ArrowLeft" });
+    expect(onChange).toHaveBeenLastCalledWith({ b: "2026-09-01T00:00" });
+  });
+
+  it("a drag snaps to a UTC midnight and commits once", () => {
+    const { onChange } = dsetup();
+    sizeTrack(1000);
+    pointer("pointerdown", handle("b"), 0);
+    pointer("pointermove", handle("b"), 480);
+    pointer("pointerup", handle("b"), 480);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const b = (onChange.mock.calls[0]![0] as { b: string }).b;
+    expect(b).toMatch(/T00:00$/);
+    expect(Object.keys(onChange.mock.calls[0]![0])).toEqual(["b"]);
+  });
+
+  it("D stops at the last full verified day", () => {
+    const { onChange } = dsetup({ range: DRANGE, edges: { ...DEDGES, d: "2026-09-28T00:00" } });
+    fireEvent.keyDown(handle("d"), { key: "End" });
+    expect(onChange).toHaveBeenLastCalledWith({ d: day(LAST) });
+    expect(document.querySelector("[data-calendar-verified]")!.textContent).toBe("data verified through 2026-10-01 (last full day)");
+  });
+
+  it("legend shows days first, bars in parentheses only with a bar size", () => {
+    const { unmount } = dsetup();
+    expect(document.querySelector("[data-calendar-role=is]")!.textContent).toBe("IS 31 d (744 bars)");
+    expect(document.querySelector("[data-calendar-role=oos]")!.textContent).toBe("OOS 19 d (456 bars)");
+    expect(document.querySelector("[data-calendar-role=holdout]")!.textContent).toBe("Holdout 11 d (264 bars)");
+    unmount();
+    dsetup({ barMs: null });
+    expect(document.querySelector("[data-calendar-role=is]")!.textContent).toBe("IS 31 d");
+    cleanup();
+    dsetup({ barMs: DAY });
+    expect(document.querySelector("[data-calendar-role=is]")!.textContent).toBe("IS 31 d");
+  });
+
+  it("nothing is patched on mount", () => {
+    const { onChange } = dsetup({ range: DRANGE, recommended: DEDGES });
+    expect(onChange).not.toHaveBeenCalled();
+  });
+});
+
+describe("day mode quick picks", () => {
+  it("Last N days sets A..D from the last full day and keeps the current split", () => {
+    /* DEDGES is not a named split: the 70/20/10 default applies. */
+    const { onChange } = dsetup({ range: DRANGE });
+    fireEvent.click(pick("last-30d"));
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith({ a: day(LAST - 30 * DAY), b: day(LAST - 9 * DAY), c: day(LAST - 3 * DAY), d: day(LAST) });
+    fireEvent.click(pick("last-90d"));
+    expect(onChange).toHaveBeenLastCalledWith({ a: day(LAST - 90 * DAY), b: day(LAST - 27 * DAY), c: day(LAST - 9 * DAY), d: day(LAST) });
+  });
+
+  it("a range chip keeps the matching split", () => {
+    /* 60/20/20 over 10 days. */
+    const { onChange } = dsetup({ range: DRANGE, edges: { a: "2026-09-21T00:00", b: "2026-09-27T00:00", c: "2026-09-29T00:00", d: "2026-10-01T00:00" } });
+    expect(pick("split-60-20-20").getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(pick("last-30d"));
+    expect(onChange).toHaveBeenCalledWith({ a: day(LAST - 30 * DAY), b: day(LAST - 12 * DAY), c: day(LAST - 6 * DAY), d: day(LAST) });
+  });
+
+  it("Max is as long as the range and the max span allow", () => {
+    const { onChange, unmount } = dsetup({ range: { from: LAST - 100 * DAY, to: LAST + 5 * H } });
+    fireEvent.click(pick("max"));
+    expect(onChange).toHaveBeenCalledWith({ a: day(LAST - 100 * DAY), b: day(LAST - 30 * DAY), c: day(LAST - 10 * DAY), d: day(LAST) });
+    unmount();
+    const capped = dsetup({ range: { from: LAST - 100 * DAY, to: LAST }, maxSpanMs: 50 * DAY });
+    fireEvent.click(pick("max"));
+    expect(capped.onChange).toHaveBeenCalledWith({ a: day(LAST - 50 * DAY), b: day(LAST - 15 * DAY), c: day(LAST - 5 * DAY), d: day(LAST) });
+  });
+
+  it("range chips are disabled with a reason: no range, over max span, range too short", () => {
+    dsetup();
+    expect(pick("last-30d").disabled).toBe(true);
+    expect(pick("last-30d").title).toBe("Needs a verified data range.");
+    expect(pick("max").disabled).toBe(true);
+    cleanup();
+    dsetup({ range: { from: LAST - 200 * DAY, to: LAST }, maxSpanMs: 45 * DAY });
+    expect(pick("last-30d").disabled).toBe(false);
+    expect(pick("last-60d").disabled).toBe(true);
+    expect(pick("last-60d").title).toContain("exceeds the profile's maximum span (45 d)");
+    cleanup();
+    dsetup({ range: { from: LAST - 40 * DAY, to: LAST } });
+    expect(pick("last-60d").disabled).toBe(true);
+    expect(pick("last-60d").title).toBe("The verified range is shorter than 60 days.");
+    expect(pick("last-30d").disabled).toBe(false);
+  });
+
+  it("Recommended exists only with a recommendation, applies exactly its four edges, and shows selected when current", () => {
+    dsetup({ range: DRANGE });
+    expect(pick("recommended")).toBeNull();
+    cleanup();
+    const rec = { a: "2026-07-01T00:00", b: "2026-08-20T00:00", c: "2026-09-10T00:00", d: "2026-10-01T00:00" };
+    const { onChange } = dsetup({ range: DRANGE, recommended: rec });
+    expect(pick("recommended").getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(pick("recommended"));
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(rec);
+    cleanup();
+    dsetup({ range: DRANGE, recommended: DEDGES });
+    expect(pick("recommended").getAttribute("aria-pressed")).toBe("true");
+    expect(pick("recommended").style.borderColor).toBe("var(--accent)");
+  });
+
+  it("split chips re-split A..D by whole days at midnight in one patch", () => {
+    const { onChange } = dsetup({ edges: { a: "2026-08-01T00:00", b: "2026-08-20T00:00", c: "2026-09-01T00:00", d: "2026-10-01T00:00" } });
+    /* 61 days. */
+    for (const [k, b, c] of [["split-70-20-10", "2026-09-13", "2026-09-25"], ["split-60-20-20", "2026-09-07", "2026-09-19"], ["split-80-10-10", "2026-09-18", "2026-09-25"], ["split-50-25-25", "2026-08-31", "2026-09-15"]] as const) {
+      onChange.mockClear();
+      fireEvent.click(pick(k));
+      expect(onChange).toHaveBeenCalledTimes(1);
+      const patch = onChange.mock.calls[0]![0] as Record<string, string>;
+      expect(Object.keys(patch).sort()).toEqual(["a", "b", "c", "d"]);
+      expect(patch.a).toBe("2026-08-01T00:00");
+      expect(patch.d).toBe("2026-10-01T00:00");
+      expect(patch.b.endsWith("T00:00") && patch.c.endsWith("T00:00")).toBe(true);
+      /* Start of the month + 61 days: spot-check the first split, check ordering for all. */
+      if (k === "split-70-20-10") expect([patch.b.slice(0, 10), patch.c.slice(0, 10)]).toEqual([b, c]);
+      expect(patch.a < patch.b && patch.b < patch.c && patch.c < patch.d).toBe(true);
+    }
+  });
+
+  it("the split that matches the edges is pressed; none otherwise", () => {
+    dsetup({ edges: { a: "2026-08-01T00:00", b: "2026-09-13T00:00", c: "2026-09-25T00:00", d: "2026-10-01T00:00" } });
+    expect(pick("split-70-20-10").getAttribute("aria-pressed")).toBe("true");
+    expect(pick("split-60-20-20").getAttribute("aria-pressed")).toBe("false");
+    cleanup();
+    dsetup();
+    for (const k of ["70-20-10", "60-20-20", "80-10-10", "50-25-25"]) expect(pick(`split-${k}`).getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("split chips are disabled with a reason when A..D has too few days or is invalid", () => {
+    dsetup({ edges: { a: "2026-09-27T00:00", b: "2026-09-28T00:00", c: "2026-09-29T00:00", d: "2026-10-01T00:00" } });
+    /* 4 days: 70/20/10 would leave a window under a day. */
+    expect(pick("split-70-20-10").disabled).toBe(true);
+    expect(pick("split-70-20-10").title).toBe("A..D has too few days for this split.");
+    cleanup();
+    dsetup({ edges: { ...DEDGES, d: "" } });
+    expect(pick("split-70-20-10").disabled).toBe(true);
+    expect(pick("split-70-20-10").title).toBe("Needs a valid A and D.");
+  });
+
+  it("the range chip that matches A and D is pressed; chips are blocked while disabled", () => {
+    dsetup({ range: DRANGE, edges: { a: day(LAST - 30 * DAY), b: day(LAST - 9 * DAY), c: day(LAST - 3 * DAY), d: day(LAST) } });
+    expect(pick("last-30d").getAttribute("aria-pressed")).toBe("true");
+    expect(pick("last-60d").getAttribute("aria-pressed")).toBe("false");
+    cleanup();
+    dsetup({ range: DRANGE, disabled: true });
+    expect(pick("last-30d").disabled).toBe(true);
+    expect(pick("split-70-20-10").disabled).toBe(true);
+  });
+
+  it("a day-mode axe pass", async () => {
+    const axe = (await import("axe-core")).default;
+    const { container } = render(<main><LinkedWindowCalendar edges={DEDGES} onChange={() => undefined} barMs={H} idPrefix="ax2" range={DRANGE} recommended={DEDGES} /></main>);
+    const result = await axe.run(container, { rules: { "color-contrast": { enabled: false }, region: { enabled: false } } });
+    expect(result.violations.map((v) => v.id)).toEqual([]);
+  });
+});
+
 describe("axe", () => {
   it("has no axe violations (calendar and fold timeline)", async () => {
     const axe = (await import("axe-core")).default;
     const { container } = render(
       <main>
-        <LinkedWindowCalendar edges={EDGES} onChange={() => undefined} barMs={H} idPrefix="ax" errors={{ b: "bad" }} />
+        <LinkedWindowCalendar edges={EDGES} onChange={() => undefined} barMs={H} idPrefix="ax" granularity="exact" errors={{ b: "bad" }} />
       </main>,
     );
     const result = await axe.run(container, { rules: { "color-contrast": { enabled: false }, region: { enabled: false } } });

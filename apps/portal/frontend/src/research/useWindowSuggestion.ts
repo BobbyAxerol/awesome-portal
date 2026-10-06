@@ -30,6 +30,7 @@ import {
 } from "./setupClient";
 import { type CoveragePrefill, type PrefillField, type RunDraft, type WindowDraft, utcMs } from "./runDraft";
 import { setupContextKey } from "./useRunSetup";
+import { snapToDays } from "./windowGeometry";
 
 /* --------------------------------------------------------- pure helpers */
 
@@ -203,12 +204,30 @@ function touchedOuter(draft: Pick<RunDraft, "coveragePrefill">, fields: readonly
 }
 
 /**
+ * The server's Three Window edges as whole UTC days (`YYYY-MM-DDT00:00`): A rounded up to a midnight, D down to a midnight (never above
+ * the last full day of `range`), B and C to the nearest midnight, every window at least one day. Null for anything that is not an
+ * AVAILABLE Three Window patch in UTC, or when fewer than three whole days remain.
+ */
+export function suggestionToDayEdges(proposal: WindowSuggestion, range?: { from: number; to: number } | null): { a: string; b: string; c: string; d: string } | null {
+  const metadata = proposal.metadata;
+  const patch: WindowPatch | null = metadata.state === "AVAILABLE" ? metadata.patch : null;
+  if (patch === null || metadata.source_timezone !== "UTC" || patch.protocol !== "three_window_decay") return null;
+  const { is, oos, holdout } = patch.windows;
+  const days = snapToDays([is.start_utc_ms, is.end_exclusive_utc_ms, oos.end_exclusive_utc_ms, holdout.end_exclusive_utc_ms], range);
+  return days === null ? null : { a: formatDraftInstant(days[0]!), b: formatDraftInstant(days[1]!), c: formatDraftInstant(days[2]!), d: formatDraftInstant(days[3]!) };
+}
+
+/**
  * The draft patch of a served suggestion. Three Window writes the six window strings (B and C shared);
  * Advanced writes the analysis start, end and first OOS instant only (the reader's frequency, window mode
  * and widths are preferences it was asked with, not its answer). A `NOT_PUBLISHED` suggestion has no patch.
  * Written as UTC `YYYY-MM-DDTHH:mm`; a source clock that is not UTC is not written (the draft reads UTC).
  */
-export function suggestionToDraftPatch(proposal: WindowSuggestion, draft: Pick<RunDraft, "protocol" | "windows" | "walkForward" | "coveragePrefill">): SuggestionPatchResult {
+export function suggestionToDraftPatch(
+  proposal: WindowSuggestion,
+  draft: Pick<RunDraft, "protocol" | "windows" | "walkForward" | "coveragePrefill">,
+  options: { days?: boolean; range?: { from: number; to: number } | null } = {},
+): SuggestionPatchResult {
   const metadata = proposal.metadata;
   const patch: WindowPatch | null = metadata.state === "AVAILABLE" ? metadata.patch : null;
   if (patch === null) return { state: "none", reasonCode: metadata.reason_code };
@@ -216,6 +235,11 @@ export function suggestionToDraftPatch(proposal: WindowSuggestion, draft: Pick<R
   if (patch.protocol !== draft.protocol) return { state: "none", reasonCode: "PROTOCOL_MISMATCH" };
   if (patch.protocol === "three_window_decay") {
     const { is, oos, holdout } = patch.windows;
+    if (options.days) {
+      const edges = suggestionToDayEdges(proposal, options.range);
+      if (edges === null) return { state: "none", reasonCode: "WINDOW_TOO_SHORT_FOR_DAYS" };
+      return { state: "patch", patch: { windows: windowsFromEdges(edges), coveragePrefill: touchedOuter(draft, ["is.start", "holdout.endExclusive"]) } };
+    }
     const windows = windowsFromEdges({
       a: formatDraftInstant(is.start_utc_ms),
       b: formatDraftInstant(is.end_exclusive_utc_ms),
@@ -225,6 +249,17 @@ export function suggestionToDraftPatch(proposal: WindowSuggestion, draft: Pick<R
     return { state: "patch", patch: { windows, coveragePrefill: touchedOuter(draft, ["is.start", "holdout.endExclusive"]) } };
   }
   const wf = patch.walk_forward;
+  if (options.days) {
+    const days = snapToDays([wf.start_utc_ms, wf.first_oos_utc_ms, wf.end_exclusive_utc_ms], options.range);
+    if (days === null) return { state: "none", reasonCode: "WINDOW_TOO_SHORT_FOR_DAYS" };
+    return {
+      state: "patch",
+      patch: {
+        walkForward: { ...draft.walkForward, start: formatDraftInstant(days[0]!), endExclusive: formatDraftInstant(days[2]!), splitMode: formatDraftInstant(days[1]!) },
+        coveragePrefill: touchedOuter(draft, ["walkForward.start", "walkForward.endExclusive"]),
+      },
+    };
+  }
   return {
     state: "patch",
     patch: {
@@ -291,6 +326,8 @@ export interface WindowSuggestionInput {
   onStale?: (revision: string) => void;
   /** Called once with the patch when a served suggestion arrives and `autoApplyAllowed(draft)` holds. Never for an edited draft. */
   onAutoApply?: (patch: DraftWindowPatch) => void;
+  /** Snap an applied or auto-applied suggestion to whole UTC days (`suggestionToDraftPatch(..., { days: true })`). Default false. */
+  days?: boolean;
   post?: (request: SuggestionRequest, signal?: AbortSignal) => Promise<WindowSuggestionResult>;
 }
 
@@ -322,15 +359,15 @@ function sameContext(suggestion: WindowSuggestion, context: SetupQuery): boolean
 }
 
 export function useWindowSuggestion(input: WindowSuggestionInput): WindowSuggestionController {
-  const { context, options, profileId, draft, onStale, onAutoApply, post = postWindowSuggestion } = input;
+  const { context, options, profileId, draft, onStale, onAutoApply, days = false, post = postWindowSuggestion } = input;
   /* What a suggestion is for: context, options snapshot and profile. Any change discards the proposal. */
   const scope = context === null || options === null || profileId === null ? null : `${setupContextKey(context)}|${options.source_revision}|${profileId}`;
   const [answer, setAnswer] = useState<{ scope: string; state: SuggestionState } | null>(null);
   const [pendingScope, setPendingScope] = useState<string | null>(null);
   const [baseline, setBaseline] = useState<{ scope: string; before: PreApply } | null>(null);
 
-  const latest = useRef({ draft, context, options, profileId, scope, onStale, onAutoApply, post });
-  latest.current = { draft, context, options, profileId, scope, onStale, onAutoApply, post };
+  const latest = useRef({ draft, context, options, profileId, scope, onStale, onAutoApply, days, post });
+  latest.current = { draft, context, options, profileId, scope, onStale, onAutoApply, days, post };
   const controller = useRef<AbortController | null>(null);
 
   /* A new scope aborts what is in flight; nothing is asked on mount. */
@@ -392,7 +429,7 @@ export function useWindowSuggestion(input: WindowSuggestionInput): WindowSuggest
         }
         setAnswer({ scope: scopeAtAsk, state });
         if (state.kind === "proposal" && latest.current.onAutoApply && autoApplyAllowed(latest.current.draft)) {
-          const patch = suggestionToDraftPatch(state.suggestion, latest.current.draft);
+          const patch = suggestionToDraftPatch(state.suggestion, latest.current.draft, { days: latest.current.days });
           if (patch.state === "patch") {
             /* Read the draft now: a state updater runs at the next render, by which time the patch below has already landed. */
             const before = preApplyOf(latest.current.draft);
@@ -419,7 +456,7 @@ export function useWindowSuggestion(input: WindowSuggestionInput): WindowSuggest
   const apply = useCallback((): DraftWindowPatch | null => {
     const now = latest.current;
     if (now.scope === null || state.kind !== "proposal") return null;
-    const result = suggestionToDraftPatch(state.suggestion, now.draft);
+    const result = suggestionToDraftPatch(state.suggestion, now.draft, { days: now.days });
     if (result.state !== "patch") return null;
     const scopeAtApply = now.scope;
     /* The first apply fixes what reset returns to; a second apply does not move it. */

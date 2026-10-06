@@ -12,10 +12,18 @@
  */
 import { useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 
+import { DateInput } from "./DateInput";
 import { InstantInput, inputStyle } from "./InstantInput";
 import {
   barCount,
+  ceilDay,
+  DAY_MS,
+  DAY_SPLITS,
+  dayLimits,
+  dayUnit,
   edgeLimits,
+  floorDay,
+  splitOfDays,
   EDGE_KEYS,
   msAt,
   msToInstant,
@@ -55,6 +63,13 @@ export interface LinkedWindowCalendarProps {
   fieldRefusals?: Partial<Record<EdgeKey, ReactNode>>;
   /** Prefix for element ids. */
   idPrefix: string;
+  /**
+   * "day" (default): whole UTC days. Date inputs, one-day steps, drags snap to UTC midnight, quick picks.
+   * "exact": the datetime-local inputs, bar/minute steps and the 70/20/10 + Last N d presets as before.
+   */
+  granularity?: "day" | "exact";
+  /** Day mode: the server's suggestion as day edges (`suggestionToDayEdges`); a `Recommended` chip applies exactly these four edges. */
+  recommended?: Record<EdgeKey, string> | null;
 }
 
 const LABEL: Record<EdgeKey, string> = {
@@ -70,7 +85,6 @@ const ROLES = [
 ] as const;
 /** WCAG 2.5.8 target size. */
 const HANDLE = 24;
-const DAY_MS = 86_400_000;
 
 function days(ms: number): string {
   return `${Math.round((ms / DAY_MS) * 10) / 10} d`;
@@ -95,7 +109,11 @@ export function LinkedWindowCalendar({
   disabled = false,
   fieldRefusals = {},
   idPrefix,
+  granularity = "day",
+  recommended = null,
 }: LinkedWindowCalendarProps) {
+  const day = granularity === "day";
+  const unit = day ? dayUnit(barMs) : null;
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   const dragRef = useRef<Drag | null>(null);
@@ -114,10 +132,16 @@ export function LinkedWindowCalendar({
   const known = EDGE_KEYS.flatMap((key) => (ms[key] !== null ? [ms[key]!] : []));
   const drawn = known.length > 0 ? { from: Math.min(...known), to: Math.max(...known) } : null;
   const axis = trackAxis(drawn, range, coverage);
-  const bounds = { range, maxSpanMs };
-  const limits = ordered
-    ? { a: edgeLimits("a", ordered, barMs, bounds), b: edgeLimits("b", ordered, barMs, bounds), c: edgeLimits("c", ordered, barMs, bounds), d: edgeLimits("d", ordered, barMs, bounds) }
-    : null;
+  /* Day mode: the last full verified day is the D ceiling and the first midnight the A floor; a span cap is whole days. */
+  const lastDay = range ? floorDay(range.to) : null;
+  const bounds = day
+    ? { range: range ? { from: ceilDay(range.from), to: floorDay(range.to) } : null, maxSpanMs: maxSpanMs !== null && maxSpanMs > 0 ? floorDay(maxSpanMs) : maxSpanMs }
+    : { range, maxSpanMs };
+  const limitOf = (edge: EdgeKey, o: { a: number; b: number; c: number; d: number }) => {
+    const lim = edgeLimits(edge, o, barMs, bounds, unit);
+    return day ? dayLimits(lim) : lim;
+  };
+  const limits = ordered ? { a: limitOf("a", ordered), b: limitOf("b", ordered), c: limitOf("c", ordered), d: limitOf("d", ordered) } : null;
   const span = ordered ? ordered.d - ordered.a : 0;
 
   /* Percent position of a pointer on the track -> an instant. */
@@ -137,7 +161,7 @@ export function LinkedWindowCalendar({
     if (!cur || !lim) return;
     const at = instantAtPointer(event);
     if (at === null) return;
-    const now = snapEdge(at, cur.origin, barMs, lim);
+    const now = snapEdge(at, day ? floorDay(cur.origin) : cur.origin, barMs, lim, unit);
     if (now !== cur.now) setDragged({ ...cur, now });
   };
   const release = (event: PointerEvent<HTMLElement>) => {
@@ -159,14 +183,20 @@ export function LinkedWindowCalendar({
     }
     const lim = limits?.[edge];
     if (disabled || !ordered || !lim) return;
-    const next = stepEdge(event.key, event.shiftKey, ordered[edge], span, barMs, lim);
+    let from = ordered[edge];
+    /* An edge that is off midnight (a copied value) first moves to the nearest midnight in the key's direction. */
+    if (day && from % DAY_MS !== 0) {
+      if (["ArrowRight", "PageUp"].includes(event.key)) from = ceilDay(from) - DAY_MS;
+      else if (["ArrowLeft", "PageDown"].includes(event.key)) from = floorDay(from) + DAY_MS;
+    }
+    const next = stepEdge(event.key, event.shiftKey, from, span, barMs, lim, unit);
     if (next === null) return;
     event.preventDefault();
     if (next !== ordered[edge]) onChange({ [edge]: msToInstant(next) });
   };
 
   const asStrings = (e: { a: number; b: number; c: number; d: number }) => ({ a: msToInstant(e.a), b: msToInstant(e.b), c: msToInstant(e.c), d: msToInstant(e.d) });
-  const presets: readonly Preset[] = [
+  const presets: readonly Preset[] = day ? [] : [
     (() => {
       const title = "Re-split A..D by observed bar count: IS 70%, OOS 20%, Holdout 10%, snapped to the bar grid.";
       const split = ms.a !== null && ms.d !== null ? splitSeventyTwentyTen(ms.a, ms.d, barMs) : null;
@@ -189,25 +219,117 @@ export function LinkedWindowCalendar({
     }),
   ];
 
+  /* ---- Day mode quick picks: one click = one onChange with all four edges. ---- */
+  const dayStrings = (a: number, b: number, c: number, d: number): Record<EdgeKey, string> => ({ a: msToInstant(a), b: msToInstant(b), c: msToInstant(c), d: msToInstant(d) });
+  const currentSplit = ms.a !== null && ms.b !== null && ms.c !== null && ms.d !== null
+    ? DAY_SPLITS.find((sp) => {
+        const got = splitOfDays(ms.a!, ms.d!, sp);
+        return got !== null && got.b === ms.b && got.c === ms.c;
+      }) ?? null
+    : null;
+  const ratio = currentSplit ?? DAY_SPLITS[0];
+  const maxLen = (() => {
+    if (lastDay === null || range === null) return null;
+    const room = Math.floor((lastDay - ceilDay(range.from)) / DAY_MS);
+    const cap = maxSpanMs !== null && maxSpanMs > 0 ? Math.floor(maxSpanMs / DAY_MS) : Infinity;
+    return Math.min(room, cap);
+  })();
+  const rangePick = (key: string, label: string, n: number | null, title: string, reasonOverride: string | null): QuickPick => {
+    const reason =
+      range === null || lastDay === null ? "Needs a verified data range."
+      : reasonOverride !== null ? reasonOverride
+      : n === null ? null
+      : maxSpanMs !== null && maxSpanMs > 0 && n * DAY_MS > maxSpanMs ? `${n} days exceeds the profile's maximum span (${days(maxSpanMs)}).`
+      : lastDay - range.from < n * DAY_MS ? `The verified range is shorter than ${n} days.`
+      : null;
+    const a = lastDay !== null && n !== null ? lastDay - n * DAY_MS : null;
+    const split = a !== null && lastDay !== null ? splitOfDays(a, lastDay, ratio) : null;
+    const out = reason === null && a !== null && lastDay !== null && split !== null ? dayStrings(a, split.b, split.c, lastDay) : null;
+    return { key, label, title, reason: reason ?? (out === null ? "Too short to split." : null), edges: out, selected: a !== null && lastDay !== null && ms.a === a && ms.d === lastDay };
+  };
+  const rangePicks: readonly QuickPick[] = [
+    ...(recommended
+      ? [(() => {
+          const r = parseEdges(recommended);
+          const same = EDGE_KEYS.every((k) => r[k] !== null && r[k] === ms[k]);
+          return { key: "recommended", label: "Recommended", title: "The suggested windows, in whole days.", reason: null, edges: recommended, selected: same } satisfies QuickPick;
+        })()]
+      : []),
+    ...([30, 60, 90] as const).map((n) => rangePick(`last-${n}d`, `Last ${n} days`, n, `Set A..D to the last ${n} days of the verified range, keeping the current split.`, null)),
+    (() => {
+      const n = maxLen !== null && maxLen >= 3 ? maxLen : null;
+      const pick = rangePick("max", "Max", n, `The longest range the verified data${maxSpanMs !== null && maxSpanMs > 0 ? " and the profile's maximum span" : ""} allow, keeping the current split.`, range !== null && n === null ? "The verified range is too short." : null);
+      return n === null ? pick : { ...pick, title: `${pick.title} (${n} days)` };
+    })(),
+  ];
+  const splitPicks: readonly QuickPick[] = DAY_SPLITS.map((sp) => {
+    const got = ms.a !== null && ms.d !== null ? splitOfDays(ms.a, ms.d, sp) : null;
+    const reason = ms.a === null || ms.d === null || ms.d <= ms.a ? "Needs a valid A and D." : got === null ? "A..D has too few days for this split." : null;
+    return {
+      key: `split-${sp.key}`,
+      label: sp.label,
+      title: `Re-split A..D as IS ${sp.is}% / OOS ${sp.oos}% / Holdout ${100 - sp.is - sp.oos}%, by whole days.`,
+      reason,
+      edges: got && ms.a !== null && ms.d !== null ? dayStrings(ms.a, got.b, got.c, ms.d) : null,
+      selected: currentSplit?.key === sp.key,
+    };
+  });
+
   const errorId = (k: EdgeKey) => `${idPrefix}-err-${k}`;
   const barsOf = (from: EdgeKey, to: EdgeKey): number | null => (preview ? barCount(preview[from], preview[to], barMs) : null);
   const overMax = maxSpanMs !== null && maxSpanMs > 0 && span > maxSpanMs;
 
   return (
     <div className="flex flex-col gap-2" data-linked-window-calendar>
+      {day ? (
+        <div className="flex flex-col gap-1" data-calendar-quick-picks>
+          {([["Range", "Range quick picks", rangePicks, "data-calendar-presets"], ["Split", "Split quick picks", splitPicks, "data-calendar-splits"]] as const).map(([name, aria, picks, attr]) => (
+            <div key={name} className="flex flex-wrap items-center gap-1.5" role="group" aria-label={aria} {...{ [attr]: "" }}>
+              <span className="mono w-[44px] text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>{name}</span>
+              {picks.map((pick) => (
+                <button
+                  key={pick.key}
+                  type="button"
+                  className="btn-ghost mono text-[10px]"
+                  disabled={disabled || pick.reason !== null}
+                  title={pick.reason ?? pick.title}
+                  aria-pressed={pick.selected}
+                  style={pick.selected ? { borderColor: "var(--accent)" } : undefined}
+                  onClick={() => pick.edges && onChange(pick.edges)}
+                  data-calendar-preset={pick.key}
+                >
+                  {pick.label}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      ) : null}
       <div className="grid grid-cols-1 gap-2.5 min-[560px]:grid-cols-2" data-calendar-inputs>
         {EDGE_KEYS.map((k) => (
           <label key={k} className="flex min-w-0 flex-col gap-1" data-calendar-edge={k}>
             <span className="mono text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>{LABEL[k]}</span>
-            <InstantInput
-              style={inputStyle(Boolean(errors[k]) || invalid[k] === true)}
-              value={shownEdge(k)}
-              onChange={(value) => onChange({ [k]: value })}
-              label={LABEL[k]}
-              describedBy={errors[k] ? errorId(k) : undefined}
-              invalid={Boolean(errors[k]) || invalid[k] === true}
-              disabled={disabled}
-            />
+            {day ? (
+              <DateInput
+                style={inputStyle(Boolean(errors[k]) || invalid[k] === true)}
+                value={shownEdge(k)}
+                onChange={(value) => onChange({ [k]: value })}
+                label={LABEL[k]}
+                describedBy={errors[k] ? errorId(k) : undefined}
+                invalid={Boolean(errors[k]) || invalid[k] === true}
+                disabled={disabled}
+              />
+            ) : (
+              <InstantInput
+                style={inputStyle(Boolean(errors[k]) || invalid[k] === true)}
+                value={shownEdge(k)}
+                onChange={(value) => onChange({ [k]: value })}
+                label={LABEL[k]}
+                describedBy={errors[k] ? errorId(k) : undefined}
+                invalid={Boolean(errors[k]) || invalid[k] === true}
+                disabled={disabled}
+              />
+            )}
             {errors[k] ? (
               <span id={errorId(k)} className="text-[9.5px]" style={{ color: "var(--bad)" }} data-edge-error={k}>{errors[k]}</span>
             ) : null}
@@ -216,7 +338,7 @@ export function LinkedWindowCalendar({
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Window presets" data-calendar-presets>
+      {day ? null : <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Window presets" data-calendar-presets>
         {presets.map((preset) => (
           <button
             key={preset.key}
@@ -230,7 +352,7 @@ export function LinkedWindowCalendar({
             {preset.label}
           </button>
         ))}
-      </div>
+      </div>}
 
       <div className="flex flex-col gap-1" data-calendar-track-block>
         <div
@@ -280,7 +402,7 @@ export function LinkedWindowCalendar({
                     aria-valuemin={Number.isFinite(lim.min) ? lim.min : Math.min(axis.from, at)}
                     aria-valuemax={Number.isFinite(lim.max) ? lim.max : Math.max(axis.to, at)}
                     aria-valuenow={at}
-                    aria-valuetext={`${utcLabel(at)}, end exclusive`}
+                    aria-valuetext={`${day && at % DAY_MS === 0 ? `${utcLabel(at).slice(0, 10)} UTC` : utcLabel(at)}, end exclusive`}
                     aria-disabled={disabled || undefined}
                     className="absolute top-0 flex cursor-ew-resize items-center justify-center rounded-[4px] outline-offset-1 focus-visible:outline focus-visible:outline-1"
                     style={{ left: `${percentOn(at, axis)}%`, width: HANDLE, height: HANDLE, marginLeft: -HANDLE / 2, touchAction: "none", outlineColor: "var(--accent)", cursor: disabled ? "default" : undefined }}
@@ -302,14 +424,25 @@ export function LinkedWindowCalendar({
         <div className="mono flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-[9.5px]" data-calendar-legend>
           {ROLES.map((role) => {
             const bars = barsOf(role.from, role.to);
+            const whole = preview ? days(preview[role.to] - preview[role.from]) : null;
+            /* A one-day bar says the same thing as the day count: print it once. */
+            const barsText = bars !== null ? `${bars.toLocaleString("en-US")} bars` : null;
             return (
               <span key={role.key} data-calendar-role={role.key}>
                 <span style={{ color: role.key === "is" ? "var(--ink-faint)" : role.tone }}>{role.label}</span>
-                {bars !== null ? <span style={{ color: "var(--ink-soft)" }}> {bars.toLocaleString("en-US")} bars</span> : null}
+                {day ? (
+                  <span style={{ color: "var(--ink-soft)" }}>
+                    {whole !== null ? ` ${whole}` : ""}
+                    {barsText !== null && barMs !== DAY_MS ? ` (${barsText})` : ""}
+                  </span>
+                ) : barsText !== null ? <span style={{ color: "var(--ink-soft)" }}> {barsText}</span> : null}
               </span>
             );
           })}
           <span style={{ color: "var(--ink-faint)" }} data-calendar-utc>UTC · end exclusive</span>
+          {day && lastDay !== null ? (
+            <span style={{ color: "var(--ink-faint)" }} data-calendar-verified>data verified through {new Date(lastDay).toISOString().slice(0, 10)} (last full day)</span>
+          ) : null}
           {warmupBars !== null ? <span style={{ color: "var(--ink-faint)" }} data-calendar-warmup>warmup {warmupBars.toLocaleString("en-US")} bars before A</span> : null}
           {ordered && maxSpanMs !== null && maxSpanMs > 0 ? (
             <span style={{ color: overMax ? "var(--bad)" : "var(--ink-faint)" }} data-calendar-span={overMax ? "over" : "ok"}>
@@ -325,6 +458,15 @@ export function LinkedWindowCalendar({
       </div>
     </div>
   );
+}
+
+interface QuickPick {
+  key: string;
+  label: string;
+  title: string;
+  reason: string | null;
+  edges: Record<EdgeKey, string> | null;
+  selected: boolean;
 }
 
 interface Preset {

@@ -213,6 +213,8 @@ function Harness({ catalog, limits = LIMITS, step = "data" }: { catalog: Dataset
 const WINDOW_LABELS = ["IS start (A)", "IS end · OOS start (B)", "OOS end · Holdout start (C)", "Holdout end exclusive (D)"];
 const field = (label: string) => screen.getByLabelText(label) as HTMLInputElement;
 const windowValues = () => WINDOW_LABELS.map((label) => field(label).value);
+/* The window inputs are whole UTC-day date inputs: they show the DATE of a draft instant (the draft keeps its time). */
+const day = (instant: string) => instant.slice(0, 10);
 const goTo = (step: string) => { fireEvent.click(document.querySelector(`[data-step-pill="${step}"]`) as HTMLElement); };
 const text = (selector: string) => document.querySelector(selector)?.textContent ?? null;
 const tip = (selector: string) => document.querySelector(selector)?.getAttribute("title") ?? null;
@@ -229,7 +231,7 @@ describe("S02_PREFILL — Screen 02", () => {
     choose(DS, "BTCUSDT");
     fireEvent.click(chip("1h"));
     goTo("windows");
-    expect(windowValues()).toEqual([H1.lower, "", "", H1.upper]);
+    expect(windowValues()).toEqual([day(H1.lower), "", "", day(H1.upper)]);
     expect(text("[data-prefill-source]")).toBe("Prefilled from crypto-binance-1m · BTCUSDT · 2026-07-01 00:00 → 2026-07-02 23:00 (1h)");
     /* The per-edge captions are gone with the six-row layout: the one source line above says it. */
     expect(document.querySelector("[data-prefill-caption]")).toBeNull();
@@ -244,11 +246,11 @@ describe("S02_PREFILL — Screen 02", () => {
     choose(DS, "BTCUSDT");
     fireEvent.click(chip("1h"));
     goTo("windows");
-    fireEvent.change(field("IS start (A)"), { target: { value: "2026-07-01T06:00" } });
+    fireEvent.change(field("IS start (A)"), { target: { value: "2026-06-30" } });
     goTo("data");
     fireEvent.click(chip("4h"));
     goTo("windows");
-    expect(windowValues()).toEqual(["2026-07-01T06:00", "", "", "2026-07-02T20:00"]);
+    expect(windowValues()).toEqual(["2026-06-30", "", "", "2026-07-02"]);
     expect(text("[data-prefill-source]")).toBe("Prefilled from crypto-binance-1m · BTCUSDT · 2026-07-02 00:00 → 2026-07-02 16:00 (4h)");
   });
 
@@ -257,7 +259,7 @@ describe("S02_PREFILL — Screen 02", () => {
     choose(DS, "BTCUSDT");
     fireEvent.click(chip("1h"));
     goTo("windows");
-    expect(windowValues()).toEqual([MONTH.lower, "", "", MONTH.upper]);
+    expect(windowValues()).toEqual([day(MONTH.lower), "", "", day(MONTH.upper)]);
     expect(text("[data-prefill-source]")).toBe("Prefilled from crypto-binance-1m · BTCUSDT · 2020-01 → 2026-09 · 81 months");
     expect(tip("[data-prefill-source]")).toContain("Month edges, not bar times");
   });
@@ -267,7 +269,7 @@ describe("S02_PREFILL — Screen 02", () => {
     choose(DS, "BTCUSDT");
     fireEvent.click(chip("4h"));
     goTo("windows");
-    expect(windowValues()).toEqual([MONTH.lower, "", "", MONTH.upper]);
+    expect(windowValues()).toEqual([day(MONTH.lower), "", "", day(MONTH.upper)]);
     expect(text("[data-prefill-source]")).toContain("2020-01 → 2026-09 · 81 months");
   });
 });
@@ -297,7 +299,7 @@ describe("S02_PREFILL — the route", () => {
     choose(DS, "BTCUSDT");
     goTo("windows");
     /* The version declares 1h, the route adopted it, and the symbol's 1h entry is served. */
-    expect(windowValues()).toEqual([H1.lower, "", "", H1.upper]);
+    expect(windowValues()).toEqual([day(H1.lower), "", "", day(H1.upper)]);
     expect(text("[data-prefill-source]")).toBe("Prefilled from crypto-binance-1m · BTCUSDT · 2026-07-01 00:00 → 2026-07-02 23:00 (1h)");
   });
 });

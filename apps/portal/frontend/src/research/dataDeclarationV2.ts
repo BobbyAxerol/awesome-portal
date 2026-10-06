@@ -809,7 +809,7 @@ export function readProfiles(admission: unknown): readonly ProfilePins[] | null 
  */
 export function selectProfile(
   profiles: readonly ProfilePins[] | null,
-  draft: { protocol: string; executionRoute: string; optimizationMode: string; specVersion?: string; optimizationSchedule?: string },
+  draft: { protocol: string; executionRoute: string; optimizationMode: string; specVersion?: string; optimizationSchedule?: string; trials?: string | number | null },
 ): ProfilePins | null {
   if (profiles === null) return null;
   const family = profileFamily(profiles, draft).filter(
@@ -824,7 +824,13 @@ export function selectProfile(
   /* The Alpha-bound setup also lists the profiles disabled for this Alpha (e.g. the VN fixed one beside the Delta fixed one):
      among several candidates the one enabled for it is the declaration's profile. */
   const enabled = matches.filter((profile) => profile.enabled);
-  return enabled.length === 1 ? enabled[0]! : null;
+  if (enabled.length === 1) return enabled[0]!;
+  /* Several enabled profiles of one protocol, mode and schedule differ by what they admit (a fixed one-trial check beside a 3+ trial
+     search): the trial count the draft declares names the one whose range holds it. No count yet is "not identified". */
+  const declared = draft.trials === undefined || draft.trials === null || String(draft.trials).trim() === "" ? null : Number(draft.trials);
+  if (declared === null || !Number.isInteger(declared)) return null;
+  const holding = enabled.filter((profile) => profile.trials !== null && declared >= profile.trials.min && declared <= profile.trials.max);
+  return holding.length === 1 ? holding[0]! : null;
 }
 
 /** Every profile that fits protocol, route and mode, whatever requested-spec version it admits. */

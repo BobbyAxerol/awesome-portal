@@ -732,10 +732,11 @@ describe("the route", () => {
     fireEvent.change(screen.getByLabelText("Symbol"), { target: { value: "BTCUSDT" } });
     fireEvent.click(document.querySelector('[data-step-pill="windows"]') as HTMLElement);
     const set = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
-    set("IS start (A)", "2026-07-01T00:00");
-    set("IS end · OOS start (B)", "2026-07-01T12:00");
-    set("OOS end · Holdout start (C)", "2026-07-02T00:00");
-    set("Holdout end exclusive (D)", "2026-07-03T00:00");
+    /* Whole UTC days (date inputs, no hour): three one-day windows, midnight-aligned, so the 12:00 split of the old test is a day boundary. */
+    set("IS start (A)", "2026-07-01");
+    set("IS end · OOS start (B)", "2026-07-02");
+    set("OOS end · Holdout start (C)", "2026-07-03");
+    set("Holdout end exclusive (D)", "2026-07-04");
     /* The estimate is asked only once the mode and schedule are declared too. */
     fireEvent.change(screen.getByLabelText("Optimization mode"), { target: { value: "mode_1_decay" } });
     fireEvent.change(screen.getByLabelText("Optimization schedule"), { target: { value: "global" } });
@@ -750,7 +751,7 @@ describe("the route", () => {
     expect(posts.length).toBe(1);
     const body = JSON.parse((posts[0]![1] as RequestInit).body as string);
     expect(body.requested_spec.data).toMatchObject({ symbol: "BTCUSDT", timeframe: "1h" });
-    expect(body.requested_spec.windows.holdout.end_exclusive).toBe("2026-07-03T00:00");
+    expect(body.requested_spec.windows.holdout.end_exclusive).toBe("2026-07-04T00:00");
     expect(fetchMock.mock.calls.some(([input]) => String(input).includes("bar-metadata"))).toBe(false);
   });
 
