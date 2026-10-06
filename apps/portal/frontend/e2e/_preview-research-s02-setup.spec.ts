@@ -13,6 +13,7 @@ import { ORIGIN, signIn } from "./w1StateRuns";
 
 const DELTA = { alpha: "delta-rsi-polynomial-alpha", version: "av_delta_rsi_polynomial_alpha_1_0_0" };
 const DELTA_FULL = { alpha: "delta-rsi-polynomial-alpha", version: "av_delta_rsi_polynomial_alpha_1_0_1" };
+const DELTA_PCT = { alpha: "delta-rsi-polynomial-alpha", version: "av_delta_rsi_polynomial_alpha_1_0_2" };
 const IMPORTED = { alpha: "p24-journey-alpha", version: "av_p24_journey_alpha_0_1_0" };
 const CLONE_RUN = "rrun_73bc3a98cb77edfbe2c0cb9597254d93";
 const WIDTHS = [1280, 660] as const;
@@ -199,6 +200,25 @@ for (const width of WIDTHS) {
       await expect(page.locator("main")).toContainText("The profile needs 2…16 outer folds; this plan has 1");
       await expect(page.locator('[data-action="preflight"]')).toBeDisabled();
       expect(counts.preflights + counts.runCreates, "nothing is written").toBe(0);
+      expect(errors).toEqual([]);
+    });
+
+    test("Delta 1.0.2 (percent-equity): the draft follows the version to its route, the account is disclosed as a fraction of equity, preflight passes", async ({ page }) => {
+      await signIn(page);
+      const { counts, errors } = await watch(page);
+      await toWindows(page, DELTA_PCT);
+      const cards = page.locator("[data-recipe]:not([data-closed])");
+      await expect(cards.first()).toBeVisible({ timeout: 20_000 });
+      expect(await cards.count()).toBeGreaterThanOrEqual(9);
+      await expect(cards.first()).toContainText("10% of equity");
+      await expect(page.locator("[data-account-facts]").first()).toContainText("10% of live equity on each signal change");
+      await expect(page.locator("[data-account-facts]").first()).toContainText("leverage 3×");
+      await expect(edges(page).nth(0)).not.toHaveValue("", { timeout: 20_000 });
+      await page.locator('[data-step-pill="review"]').click();
+      await expect(page.locator("[data-account-facts]").first()).toBeVisible();
+      await page.locator('[data-action="preflight"]').click();
+      await expect(page.locator('[data-action="create-run"]')).toBeEnabled({ timeout: 30_000 });
+      expect(counts.runCreates, "no run is created by this acceptance").toBe(0);
       expect(errors).toEqual([]);
     });
 

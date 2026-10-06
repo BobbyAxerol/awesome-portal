@@ -83,6 +83,7 @@ import { humaniseTokens } from "./humanise";
 import { LinkedWindowCalendar } from "./LinkedWindowCalendar";
 import { WindowSetupBar } from "./WindowSetupBar";
 import { DateInput } from "./DateInput";
+import { AccountFacts } from "./AccountFacts";
 import { RecipePicker } from "./RecipePicker";
 import { applyRecipe, recipesFromSetup } from "./runRecipes";
 import { suggestionToDayEdges } from "./useWindowSuggestion";
@@ -1538,25 +1539,30 @@ function WindowsStep({
     () =>
       recipesFromSetup(setup.options, {
         atlasModes: atlas?.modes,
-        executionRoute: draft.executionRoute,
         frequencyDefault: atlas?.current_release.walk_forward_options?.frequency_default,
         windowModeDefault: atlas?.current_release.walk_forward_options?.window_mode_default,
       }),
-    [setup.options, atlas, draft.executionRoute],
+    [setup.options, atlas],
   );
   /* The recipe a fresh declaration of this protocol starts from: the first enabled one the setup serves (Quick check for Three Window). */
-  const defaultRecipe = recipes.find((recipe) => recipe.enabled && recipe.protocol === draft.protocol) ?? null;
+  const defaultRecipe = recipes.find((recipe) => recipe.enabled && recipe.protocol === draft.protocol && recipe.executionRoute === draft.executionRoute)
+    ?? recipes.find((recipe) => recipe.enabled && recipe.protocol === draft.protocol)
+    ?? null;
   const suggestionProfile = profile?.enabled ? profile : (defaultRecipe?.profile ?? (family.length === 1 ? family[0]! : null));
   /* A draft with no mode and schedule yet starts on that recipe, once per protocol: a default the reader sees and can change, never an overwrite. */
   const recipeAdopted = useRef<string | null>(null);
   useEffect(() => {
-    if (setup.status !== "served" || defaultRecipe === null || draft.optimizationMode !== "" || draft.optimizationSchedule !== "") return;
+    if (setup.status !== "served" || defaultRecipe === null) return;
+    /* A version serves the recipes of ONE route (1.0.1 notional, 1.0.2 percent-equity): when the draft's route has none, the draft follows the
+       version to its default recipe, switching the route with it. Otherwise only an empty mode and schedule start on the default. */
+    const routeServed = recipes.some((recipe) => recipe.enabled && recipe.executionRoute === draft.executionRoute);
+    if (routeServed && (draft.optimizationMode !== "" || draft.optimizationSchedule !== "")) return;
     const key = `${draft.protocol}|${defaultRecipe.id}`;
     if (recipeAdopted.current === key) return;
     recipeAdopted.current = key;
     adopt(applyRecipe(defaultRecipe, draft));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setup.status, defaultRecipe, draft.optimizationMode, draft.optimizationSchedule, draft.protocol]);
+  }, [setup.status, defaultRecipe, recipes, draft.optimizationMode, draft.optimizationSchedule, draft.protocol, draft.executionRoute]);
   /* Switching protocol moves to that protocol's default recipe (its trials, seed, frequency and window mode), so nothing stays from the other one. */
   const switchProtocol = (change: Partial<RunDraft>) => {
     const next = change.protocol;
@@ -1620,7 +1626,10 @@ function WindowsStep({
   return (
     <Card title="Walk-forward">
       {setup.status === "served" ? (
-        <RecipePicker recipes={recipes} draft={draft} onPick={patch} disabledReason={contextClosure(setup.options) !== null ? `${humaniseTokens(contextClosure(setup.options)!.reasonCode)}` : null} />
+        <>
+          <RecipePicker recipes={recipes} draft={draft} onPick={patch} disabledReason={contextClosure(setup.options) !== null ? `${humaniseTokens(contextClosure(setup.options)!.reasonCode)}` : null} />
+          <AccountFacts account={(profile?.enabled ? profile : defaultRecipe?.profile)?.account} />
+        </>
       ) : null}
       <ProtocolToggle draft={draft} patch={setup.status === "served" ? switchProtocol : patch} />
       {setup.status !== "served" ? <WindowPrefillNote draft={draft} plan={prefillPlan} warmupBars={warmupBars} /> : null}
@@ -3614,6 +3623,7 @@ export function NewRun(props: NewRunProps) {
                   timeline and the forecast. */}
               <Card title="Review &amp; run">
                 <ReviewRows draft={draft} sweepCeiling={sweepCeiling} usesV2={v2} registry={registry} labelWidth={150} withWindows versionDeclared={declarationBound ?? false} />
+                <AccountFacts account={profile?.account} />
               </Card>
               {clearedBecause && preflight === null ? (
                 <p role="status" className="text-[11px]" style={{ color: "var(--role-holdout)" }} data-cleared-note>

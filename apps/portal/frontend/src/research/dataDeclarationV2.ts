@@ -598,6 +598,18 @@ function publishedRemediation(body: Bag): Pick<BarMetadata, "verifiedRange" | "e
 
 /* ------------------------------------------------------- profiles (LW-07) */
 
+/** The served account of a percent-equity profile: allocation is a FRACTION OF LIVE EQUITY, not currency units. */
+export interface ProfileAccount {
+  initialCapital: number;
+  leverage: number;
+  allocPerTrade: number;
+  allocationUnit: string;
+  oneWayFeeRate: number;
+  slippage: number;
+  fundingEnabled: boolean;
+  sizingAuthority: string;
+}
+
 export interface ProfilePins {
   profileId: string;
   enabled: boolean;
@@ -652,6 +664,9 @@ export interface ProfilePins {
   temporalGuards?: ProfileTemporalGuards | null;
   /** The protocol has a separate holdout (Fixed); false for Advanced. Not whether a sealed holdout was evaluated. */
   independentHoldout?: boolean | null;
+  /** `account_model` / `account` of a percent-equity recipe: the engine's account inputs, exactly as served (never defaulted). */
+  accountModel?: string | null;
+  account?: ProfileAccount | null;
 }
 
 /** `V1_ABSENT_V2_EXPLICIT`: v1 carries no guard; a v2 declaration may adopt the published defaults. `NOT_APPLICABLE`: no guards. */

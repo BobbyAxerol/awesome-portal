@@ -220,6 +220,19 @@ export function profilePinsFromSetup(profile: SetupProfile): ProfilePins {
     parameterPolicy: profile.parameter_policy,
     temporalGuards,
     independentHoldout: profile.independent_holdout,
+    accountModel: profile.account_model ?? null,
+    account: profile.account
+      ? {
+          initialCapital: profile.account.initial_capital,
+          leverage: profile.account.leverage,
+          allocPerTrade: profile.account.alloc_per_trade,
+          allocationUnit: profile.account.allocation_unit,
+          oneWayFeeRate: profile.account.canonical_one_way_fee_rate,
+          slippage: profile.account.slippage,
+          fundingEnabled: profile.account.funding_enabled,
+          sizingAuthority: profile.account.sizing_authority,
+        }
+      : null,
   };
 }
 

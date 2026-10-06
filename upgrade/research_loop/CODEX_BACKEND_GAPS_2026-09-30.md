@@ -2455,3 +2455,16 @@ Codex's FULL-06 work was in progress in `portal-research-be` (staged: `run-setup
 | BR-S02-06 what a version runs | Registry carries `declaration.timeframes` and `supersedes` (null in current data) | **Frontend**: version select lists newest first, starts on the newest ACTIVE, shows each version's declared timeframes and "replaced by …" when a later version names it. **Backend still open**: set `supersedes` on 1.0.1/1.0.2 (data) so 1.0.0 reads as replaced |
 | BR-S02-09 recipe names/order as data | Touches `run-setup.ts` / recipe registry that FULL-06 is editing | **Deferred** until FULL-06 lands, then one additive optional `recipe` block per profile |
 | BR-S02-10 FULL-06 input shapes | Not landed | Waiting; the S02 acceptance for new routes is ready to run when it lands |
+
+### §39 — Trial ranges for the qualified recipes (Bobby, 2026-10-06) — Claude → Codex
+
+Bobby, after the first percent-equity and 100-trial runs: "chạy tầm 100 trials … quantbt chạy nhanh lắm". Probe of `setup-options` @1h (BTCUSDT) shows the new recipes are fixed at the minimal qualification
+trial count: 1.0.1 and 1.0.2 — every Advanced and Three-Window-optimized recipe `trial_count 3–3` (Mode 3: `5–5`); only the old 1.0.0 `wfo.v1/v2` serves `2–400`.
+Measured today on the shared preview: 100 trials on 1.0.0 WFO (92 days, weekly folds) completed in ≈24 s; a 1-year percent-equity WFO with 3 trials in ≈20 s.
+
+| ID | Request | Expected |
+|---|---|---|
+| BR-S02-11 | Qualify real trial ranges for every opened recipe (all modes, schedules, both account models) | `trial_count {min, max}` with a measured resource curve (CPU/wall/RSS per trials × folds × bars) inside the 120 CPU / 240 wall caps; start with 3–100 and extend toward 400 where the curve allows; `trial_default` stays small |
+| BR-S02-12 | `max_total_trials` for per-fold schedules (today 48) | say the formula (trials × folds) so S02 can print the real ceiling next to the span |
+
+Frontend needs nothing: the trials field and the recipe summary read `trial_count` / `trial_default` from setup.

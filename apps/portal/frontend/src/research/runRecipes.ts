@@ -121,8 +121,13 @@ function pickFrequency(list: readonly string[] | null): string | null {
   return FINEST_FIRST.find((value) => list.includes(value)) ?? list[0]!;
 }
 
+/** `0.1` → `10%` (an exact fraction, no rounding beyond float noise). */
+function pctWord(fraction: number): string {
+  return `${Number((fraction * 100).toPrecision(6))}%`;
+}
+
 function summaryOf(profile: ProfilePins, ctx: RecipeContext): string {
-  const parts: (string | null)[] = [trialsWord(profile), seedWord(profile)];
+  const parts: (string | null)[] = [profile.account ? `${pctWord(profile.account.allocPerTrade)} of equity` : null, trialsWord(profile), seedWord(profile)];
   if (profile.protocol === "advanced") {
     parts.push(pick(profile.windowModes, ctx.windowModeDefault ?? null), pickFrequency(profile.frequencies));
   }
