@@ -15,8 +15,9 @@ const validate = new Ajv({allErrors:true, strict:false}).compile(schema);
 if (!validate(table)) throw new Error(JSON.stringify(validate.errors));
 const refs = new Map();
 for (const ref of table.qualification_references) {
-  if (refs.has(ref.profile_id) || ref.receipt_path.split("/").includes("..")) throw new Error("Duplicate/unsafe qualification binding");
-  if (bytesHash(readFileSync(new URL(ref.receipt_path, root))) !== ref.receipt_sha256) throw new Error(`Receipt drift: ${ref.profile_id}`);
+  if (refs.has(ref.profile_id) || ref.receipt_path?.split("/").includes("..")) throw new Error("Duplicate/unsafe qualification binding");
+  if (ref.kind !== "CANDIDATE_NOT_QUALIFIED"
+      && bytesHash(readFileSync(new URL(ref.receipt_path, root))) !== ref.receipt_sha256) throw new Error(`Receipt drift: ${ref.profile_id}`);
   refs.set(ref.profile_id, ref);
 }
 const ids = new Set();
@@ -56,4 +57,4 @@ emit("apps/control-api/src/research/execution-recipes.generated.ts",
   `// Generated from ${sourcePath}; do not hand-edit.\nexport const EXECUTION_RECIPE_TABLE = ${JSON.stringify(table, null, 2)} as const;\nexport const EXECUTION_RECIPE_REVISION = "${revision}" as const;\n`);
 emit("apps/portal/backend/src/portal_api/domain/research_execution_recipes_generated.py",
   `"""Generated from ${sourcePath}; no engine/data/IO imports."""\nimport json\n\nEXECUTION_RECIPE_TABLE = json.loads(r'''${JSON.stringify(table, null, 2)}''')\nEXECUTION_RECIPE_REVISION = "${revision}"\n`);
-console.log(`Research execution recipes: ${table.recipes.length} exact legacy bindings, revision ${revision}; ${check ? "verified" : "generated"}.`);
+console.log(`Research execution recipes: ${table.recipes.length} exact recipe bindings, revision ${revision}; ${check ? "verified" : "generated"}.`);

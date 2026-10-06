@@ -554,6 +554,194 @@
         "max_warmup_bars": 4096
       },
       "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-signal-notional-per-fold-decay.v1",
+      "profile_digest": "60ae004f65b0eba83ce12089b0224ab467b30a9acc4161ad0787108344cd134e",
+      "descriptor": {
+        "schema_version": "research.p10.delta-per-fold-decay-profile.v1",
+        "profile_id": "p10.delta-signal-notional-per-fold-decay.v1",
+        "adapter_id": "p04.delta-rsi.v1",
+        "adapter_contract_digest": "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 92,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full02.quantbt-signal-notional-per-fold-decay.v1",
+          "profile_id": "full02.delta-signal-notional-per-fold-decay.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.p10.delta-per-fold-decay-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-signal-notional-per-fold-decay.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "per_fold_decay",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 92,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL02_PROFILE"
+      ],
+      "source_requirement": "IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-signal-notional-three-window-optimized.v1",
+      "profile_digest": "0e210afa7c891cfb93e78126a4ca86fb6c1a25d3bcb4d8d81a5534accb5ee3c9",
+      "descriptor": {
+        "schema_version": "research.p10.delta-three-window-optimized-profile.v1",
+        "profile_id": "p10.delta-signal-notional-three-window-optimized.v1",
+        "adapter_id": "p04.delta-rsi.v1",
+        "adapter_contract_digest": "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v1",
+        "execution_route": "signal_notional",
+        "protocol": "three_window_decay",
+        "timeframe": "1h",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_span_days": 92,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "trial_scope": "GLOBAL_STUDY",
+        "independent_holdout": true,
+        "current_source": {
+          "source_adapter_id": "full02.quantbt-signal-notional-three-window.v1",
+          "profile_id": "full02.delta-signal-notional-three-window.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        }
+      },
+      "adapter_kind": "DELTA_THREE_WINDOW_OPTIMIZED",
+      "work_schema_version": "research.p10.delta-three-window-optimized-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-signal-notional-three-window-optimized.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "three_window_decay",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "1h",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "random_seed": 42,
+        "max_span_days": 92,
+        "fold_bounds": null,
+        "frequency": null,
+        "window_mode": null,
+        "requested_spec_versions": [
+          "research.requested-spec.v1"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL02_PROFILE"
+      ],
+      "source_requirement": "IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
     }
   ],
   "qualification_references": [
@@ -598,6 +786,20 @@
       "receipt_path": "upgrade/research_loop/evidence/P10/E17_IMPORTED_DRAFT_EXECUTION_BACKEND_RECEIPT_2026-09-27.md",
       "receipt_sha256": "71a4ff87498f181a966097ad4fbce90920262e5d2934f2470e1f7fdab057145a",
       "recipe_digest": "196b770bcc1197e9f6b4417756b3a6106bfea3c3a62afca279788cf3fdd19f0c"
+    },
+    {
+      "profile_id": "p10.delta-signal-notional-per-fold-decay.v1",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_02_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "aa66781df94bd4dcb9567a1fc3c856586e36c4f42b0be7969b1df1859d406859",
+      "recipe_digest": "7a208ce129e15bd1fdb6f4d411b2061ae8a1e54ab6a421a19b6e09e5e7e79716"
+    },
+    {
+      "profile_id": "p10.delta-signal-notional-three-window-optimized.v1",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_02_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "aa66781df94bd4dcb9567a1fc3c856586e36c4f42b0be7969b1df1859d406859",
+      "recipe_digest": "b1c678862ac808ad159dfe552d4b4c7c200aeb0016efca03b33765042f93b993"
     }
   ],
   "preflight_policy": {

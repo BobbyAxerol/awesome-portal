@@ -23,7 +23,7 @@ const EngineOptions = z.object({
 const Bounds = z.object({ min: z.number().int().nonnegative(), max: z.number().int().nonnegative() }).strict();
 export const RunSetupBudgetSchema = z.object({
   scope: z.literal("DECLARED_CAPS_NOT_RESERVATION_OR_ESTIMATE"), recipe_digest: Digest,
-  profile_digest: Digest.nullable(), qualification: z.literal("LEGACY_EXACT_BINDING"),
+  profile_digest: Digest.nullable(), qualification: z.enum(["LEGACY_EXACT_BINDING", "CANDIDATE_NOT_QUALIFIED", "PRODUCT_RUN_QUALIFIED"]),
   memory_bytes: z.number().int().min(2_147_483_648).max(8_589_934_592),
   cpu_seconds: z.number().int().min(1).max(1_800), wall_seconds: z.number().int().min(1).max(3_600),
   scratch_bytes: z.number().int().min(1).max(536_870_912), io_bytes: z.number().int().min(1).max(1_073_741_824),

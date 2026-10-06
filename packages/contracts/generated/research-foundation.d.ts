@@ -447,11 +447,11 @@ export interface components {
             schema_version: "research.portal-admission.v1";
             profiles: {
                 /** @enum {string} */
-                profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p10.delta-signal-notional-wfo.v2" | "p10.delta-signal-notional-causal-inner.v1" | "p10.vn-stock-daily-observed-fixed.v1";
+                profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p10.delta-signal-notional-wfo.v2" | "p10.delta-signal-notional-causal-inner.v1" | "p10.vn-stock-daily-observed-fixed.v1" | "p10.delta-signal-notional-per-fold-decay.v1" | "p10.delta-signal-notional-three-window-optimized.v1";
                 /** @enum {unknown} */
                 state: "ENABLED" | "DISABLED";
                 /** @enum {unknown} */
-                reason: "PROFILE_FLAG_OFF" | "RUN_PRODUCER_OFF" | "ENGINE_RELEASE_MISMATCH" | "SOURCE_RELEASE_UNVERIFIED" | null | "SOURCE_PROFILE_UNQUALIFIED";
+                reason: "PROFILE_FLAG_OFF" | "RUN_PRODUCER_OFF" | "ENGINE_RELEASE_MISMATCH" | "SOURCE_RELEASE_UNVERIFIED" | null | "SOURCE_PROFILE_UNQUALIFIED" | "RECIPE_NOT_QUALIFIED";
                 engine_release_id: components["schemas"]["Identifier"];
                 execution_route: string;
                 protocol: string;
@@ -506,7 +506,7 @@ export interface components {
                 warmup_semantics?: "LAST_N_OBSERVED_PREDECESSORS_V1";
                 /** @constant */
                 account_model?: "GENERIC_SIGNAL_NOTIONAL_RESEARCH_NOT_VN_VENUE";
-            }[] & (unknown & unknown & unknown & unknown & unknown);
+            }[] & (unknown & unknown & unknown & unknown & unknown & unknown & unknown);
             /** @constant */
             note: "PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE";
         };

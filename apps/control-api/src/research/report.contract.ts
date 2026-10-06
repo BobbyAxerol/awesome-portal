@@ -10,6 +10,7 @@
 import { z } from "zod";
 import { ResearchEnrichedAnalysisSchema, ResearchEnrichedAvailabilitySchema } from "./enriched-analysis.contract";
 import { VerifiedPinnedAuditSchema } from "./final-audit.contract";
+import { CurrentSourceProtocolDisclosureSchema } from "./current-source.payload";
 
 export const ResearchReportRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 export const ResearchReportExportJobIdSchema = z.string().regex(/^rpex_[0-9A-HJKMNP-TV-Z]{26}$/);
@@ -217,6 +218,8 @@ const EquityV2Schema = z.object({
     "P13_OOS_EQUITY",
     "RS02_STITCHED_OUTER_TEST_WINDOWS",
     "RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST",
+    "THREE_WINDOW_CALIBRATION_OOS",
+    "THREE_WINDOW_CALIBRATION_IS",
     "NOT_PUBLISHED",
   ]),
   source_observation_count: z.number().int().nonnegative().max(2_000_000).nullable(),
@@ -226,7 +229,7 @@ const EquityV2Schema = z.object({
   points: z.array(EquityPointSchema).max(600),
   /** Digest of full source Parquet bytes, not sampled OOS chart points. */
   digest: DigestSchema.nullable().optional(),
-  digest_scope: z.literal("FULL_STITCHED_SOURCE_SERIES").nullable().optional(),
+  digest_scope: z.enum(["FULL_STITCHED_SOURCE_SERIES", "OOS_CALIBRATION_REPLAY_SERIES"]).nullable().optional(),
   logical_name: z.literal("series/stitched.parquet").nullable().optional(),
   digest_availability: AvailabilitySchema.optional(),
   availability: AvailabilitySchema,
@@ -341,6 +344,7 @@ export const ReportFinalAuditSchema = z.object({
 }).strict();
 
 export const ResearchReportFrozenCoreV2Schema = z.object({
+  protocol_disclosure: CurrentSourceProtocolDisclosureSchema.optional(),
   schema_version: z.literal("research.report-frozen-core.v2"),
   report_source: z.enum(["P13_P17_FIXED_PROFILE", "RS02_RETAINED_CURRENT_SOURCE"]),
   source_revisions: z.object({

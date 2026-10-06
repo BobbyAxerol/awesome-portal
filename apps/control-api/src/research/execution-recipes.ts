@@ -41,7 +41,12 @@ export function executionRecipe(id: string, digest?: string | null): ExecutionRe
   if (!row || (digest !== undefined && row.profile_digest !== digest)) throw new Error("Unknown or tampered execution recipe");
   return row;
 }
-export function executionRecipeQualification(id: string) {
+export type ExecutionRecipeQualification = {
+  profile_id: string; recipe_digest: string;
+  kind: "LEGACY_COMPATIBILITY_REFERENCE" | "CANDIDATE_NOT_QUALIFIED" | "PRODUCT_RUN_QUALIFIED";
+  receipt_path: string | null; receipt_sha256: string | null;
+};
+export function executionRecipeQualification(id: string): ExecutionRecipeQualification {
   executionRecipe(id);
   return EXECUTION_RECIPE_TABLE.qualification_references.find(row => row.profile_id === id)!;
 }
@@ -62,15 +67,17 @@ export function executionRecipeResources(row: ExecutionRecipe, flags: RecipeFlag
   const b = executionRecipeBudgets(row, flags);
   return {memoryBytes:b.memory_bytes, cpuSeconds:b.cpu_seconds, scratchBytes:b.scratch_bytes, ioBytes:b.io_bytes};
 }
-/** Activation is separate from descriptor/qualification custody. No new flags. */
+/** Activation is separate from descriptor/qualification custody. */
 export function executionRecipeActivationReason(row: ExecutionRecipe, flags: RecipeFlags,
   source: {engine_release_id:string; verified:boolean; context_qualified?:boolean}):
-    "ENGINE_RELEASE_MISMATCH" | "SOURCE_RELEASE_UNVERIFIED" | "RUN_PRODUCER_OFF" | "PROFILE_FLAG_OFF" | "SOURCE_PROFILE_UNQUALIFIED" | null {
-  executionRecipeQualification(row.profile_id);
+    "ENGINE_RELEASE_MISMATCH" | "SOURCE_RELEASE_UNVERIFIED" | "RUN_PRODUCER_OFF" | "PROFILE_FLAG_OFF" | "SOURCE_PROFILE_UNQUALIFIED" | "RECIPE_NOT_QUALIFIED" | null {
+  const qualification = executionRecipeQualification(row.profile_id);
   if (source.engine_release_id !== row.descriptor.engine_release_id) return "ENGINE_RELEASE_MISMATCH";
   if (!source.verified) return "SOURCE_RELEASE_UNVERIFIED";
   for (const flag of row.feature_flags) if (flags[flag] !== "true")
     return flag === "FEATURE_RESEARCH_RUN_PRODUCER" ? "RUN_PRODUCER_OFF" : "PROFILE_FLAG_OFF";
+  if (qualification.kind === "CANDIDATE_NOT_QUALIFIED" && !(flags.RESEARCH_RECIPE_QUALIFICATION_PROFILE_ID === row.profile_id
+      && flags.PORTAL_ENV === "local" && flags.AUTH_MODE === "dev")) return "RECIPE_NOT_QUALIFIED";
   if (row.source_requirement === "VN_OBSERVED_EXACT_QUALIFICATION" && !source.context_qualified)
     return "SOURCE_PROFILE_UNQUALIFIED";
   return null;

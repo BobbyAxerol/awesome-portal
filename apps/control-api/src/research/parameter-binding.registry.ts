@@ -27,6 +27,8 @@ import {
 import { DELTA_WFO_PROFILE, DELTA_WFO_PROFILE_DIGEST, RS02_SIGNAL_NOTIONAL_PROFILE_ID } from "./delta-wfo.profile";
 import { DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST } from "./delta-wfo-v2.profile";
 import { DELTA_CAUSAL_INNER_PROFILE, DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST } from "./delta-causal-inner.profile";
+import { DELTA_PER_FOLD_DECAY_PROFILE, DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_DIGEST,
+  DELTA_THREE_WINDOW_OPTIMIZED_PROFILE, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST } from "./full02.profiles";
 import { boundWarning, positionPercent, type BoundWarning } from "./bound-warning";
 
 export interface DeclaredRange {
@@ -156,6 +158,16 @@ const CAUSAL_INNER_V1: HistoricalProfileBinding = Object.freeze({
   installedInRelease: "research-loop-v1.1/B8-causal-inner",
   retainedLaneProfileIds: Object.freeze([DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id]),
 });
+const PER_FOLD_DECAY_V1: HistoricalProfileBinding = Object.freeze({
+  ...WFO_V1, profileId: DELTA_PER_FOLD_DECAY_PROFILE_ID, profileDigest: DELTA_PER_FOLD_DECAY_PROFILE_DIGEST,
+  installedInRelease: "research-loop-v1.1/FULL-02",
+  retainedLaneProfileIds: Object.freeze([DELTA_PER_FOLD_DECAY_PROFILE.current_source.profile_id]),
+});
+const THREE_WINDOW_OPTIMIZED_V1: HistoricalProfileBinding = Object.freeze({
+  ...WFO_V1, profileId: DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, profileDigest: DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST,
+  installedInRelease: "research-loop-v1.1/FULL-02",
+  retainedLaneProfileIds: Object.freeze([DELTA_THREE_WINDOW_OPTIMIZED_PROFILE.current_source.profile_id]),
+});
 
 /**
  * The injectable lookup. Tests construct one with an older binding and a
@@ -168,7 +180,7 @@ export class ResearchParameterBindingRegistry {
 
   constructor(
     adapters: readonly HistoricalParameterBinding[] = [P04_V1],
-    profiles: readonly HistoricalProfileBinding[] = [WFO_V1, WFO_V2, CAUSAL_INNER_V1],
+    profiles: readonly HistoricalProfileBinding[] = [WFO_V1, WFO_V2, CAUSAL_INNER_V1, PER_FOLD_DECAY_V1, THREE_WINDOW_OPTIMIZED_V1],
   ) {
     this.adapters = new Map(adapters.map((entry) => [entry.adapterContractDigest, entry]));
     this.profiles = new Map(profiles.map((entry) => [entry.profileDigest, entry]));

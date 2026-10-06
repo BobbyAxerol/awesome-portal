@@ -1125,6 +1125,17 @@ function delegatedView(ordering: unknown) {
 }
 
 describe("W5a · P16-T02 — the causal boundary per fold, on two axes", () => {
+  it("keeps the outer-OOS selection verdict distinct from causal and global selection", () => {
+    const ordering = foldOrderingFixture();
+    ordering.selection_scope = "PER_FOLD";
+    ordering.optimization_schedule = "per_fold_decay";
+    ordering.folds = ordering.folds.map((fold) => ({ ...fold,
+      verdict: "NOT_CAUSAL_OUTER_OOS_SELECTION", reason_code: "OUTER_OOS_USED_FOR_SELECTION" }));
+    const { container } = delegatedView(ordering);
+    const words = [...container.querySelectorAll("[data-fold-row] [data-verdict-words]")].map(node => node.textContent);
+    expect(words).toEqual(["not causal · outer OOS used for selection", "not causal · outer OOS used for selection"]);
+  });
+
   it("draws DATA TIME and WALL CLOCK as two separate axes, with one row per retained fold", () => {
     const { container } = delegatedView(foldOrderingFixture());
     const panel = container.querySelector("[data-panel='ordering']") as HTMLElement;

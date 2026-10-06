@@ -8,7 +8,7 @@ import {VN_OBSERVED_FIXED_PROFILE as vn,VN_OBSERVED_FIXED_PROFILE_DIGEST} from "
 
 describe("FULL-01 exact historical recipe authority",()=>{
   it("keeps all six profile IDs/digests and independently hashes each old descriptor",()=>{
-    expect(executionRecipes.map(r=>r.profile_digest)).toEqual([null,
+    expect(executionRecipes.slice(0,6).map(r=>r.profile_digest)).toEqual([null,
       "b86c66fa68c41e76c6106bd06a48b5ba1281bc4b168a915ec2fa7e34ec2a6cca",
       "d65291f776dce1fef162da9eb6505ba63fc6e3ae0f55679fe12dece3858c7fa0",
       "60a041b373808405f8896aee0a3421d41cc2199d516dadc9f40e1187e2fefdd1",
@@ -43,11 +43,11 @@ describe("FULL-01 exact historical recipe authority",()=>{
     expect(()=>executionRecipeBudgets(global,{...preview,AUTH_MODE:"cookie"})).toThrow();
     expect(executionRecipeResources(causal,preview)).toEqual({memoryBytes:4294967296,cpuSeconds:120,scratchBytes:134217728,ioBytes:536870912});
   });
-  it("keeps exact requested-spec/schedule family selection with no new recipe",()=>{
+  it("keeps exact historical requested-spec/schedule family selection",()=>{
     expect(wfoExecutionRecipe({schema_version:"research.requested-spec.v1",optimization_schedule:"global"})?.profile_id).toBe("p10.delta-signal-notional-wfo.v1");
     expect(wfoExecutionRecipe({schema_version:"research.requested-spec.v2",optimization_schedule:"per_fold_causal"})?.profile_id).toBe("p10.delta-signal-notional-causal-inner.v1");
     expect(wfoExecutionRecipe({schema_version:"research.requested-spec.v1",optimization_schedule:"per_fold_causal"})).toBeNull();
-    expect(wfoExecutionRecipe({schema_version:"research.requested-spec.v2",optimization_schedule:"per_fold_decay"})).toBeNull();
+    expect(wfoExecutionRecipe({schema_version:"research.requested-spec.v2",optimization_schedule:"per_fold_decay"})?.profile_id).toBe("p10.delta-signal-notional-per-fold-decay.v1");
     expect(executionRecipeActivationReason(executionRecipe(vn.profile_id),{FEATURE_RESEARCH_RUN_PRODUCER:"true",FEATURE_RESEARCH_VN_OBSERVED_PROFILE:"true"},
       {engine_release_id:"er_quantbt_111",verified:true,context_qualified:false})).toBe("SOURCE_PROFILE_UNQUALIFIED");
   });

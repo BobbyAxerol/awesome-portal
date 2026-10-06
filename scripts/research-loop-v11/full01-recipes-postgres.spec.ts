@@ -22,7 +22,8 @@ describe("FULL-01 append-only 094→095 compatibility and custody",()=>{
     admin=new Pool({connectionString:sourceUrl});
     await admin.query("CREATE DATABASE full01_recipe_old_test");
     const url=new URL(sourceUrl);url.pathname="/full01_recipe_old_test";
-    const count=readdirSync(migrationPath).filter(p=>p.endsWith(".sql")).length-1;
+    const count=readdirSync(migrationPath).filter(p=>p.endsWith(".sql")).sort()
+      .findIndex(p=>p.includes("0095_research-execution-recipes"));
     await migrate({databaseUrl:url.href,dir:migrationPath,direction:"up",migrationsTable:"pgmigrations",count,noLock:true,log:()=>{}});
     old=new Pool({connectionString:url.href});repository=new ResearchMetadataRepository(old);
     expect((await old.query("SELECT to_regclass('research.execution_recipe_descriptors_v1') AS t")).rows[0].t).toBeNull();
@@ -48,7 +49,7 @@ describe("FULL-01 append-only 094→095 compatibility and custody",()=>{
   });
 
   it("mirrors exactly six qualified old recipe revisions without granting runtime mutation",async()=>{
-    const rows=(await old.query("SELECT d.profile_id,d.profile_digest,d.recipe_digest,q.state,q.scope FROM research.execution_recipe_descriptors_v1 d JOIN research.execution_recipe_qualifications_v1 q USING(recipe_digest) ORDER BY profile_id")).rows;
+    const rows=(await old.query("SELECT d.profile_id,d.profile_digest,d.recipe_digest,q.state,q.scope FROM research.execution_recipe_descriptors_v1 d JOIN research.execution_recipe_qualifications_v1 q USING(recipe_digest) WHERE q.kind='LEGACY_COMPATIBILITY_REFERENCE' ORDER BY profile_id")).rows;
     expect(rows).toHaveLength(6);
     rows.forEach(row=>{const expected=executionRecipes.find(r=>r.profile_id===row.profile_id)!;
       expect(row.profile_digest).toBe(expected.profile_digest);

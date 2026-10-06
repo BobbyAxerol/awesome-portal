@@ -3,7 +3,32 @@ import { ResearchChildAuditCompanionIngestService } from "../src/research/child-
 import { auditAuthority, auditBatch, auditLease, auditRow, auditSeal } from "./research-child-audit-companion.fixture";
 import { DELTA_CAUSAL_INNER_PROFILE, DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST } from "../src/research/delta-causal-inner.profile";
 import { sha256ResearchJson } from "../src/research/preflight.service";
+import { DELTA_PER_FOLD_DECAY_PROFILE,DELTA_PER_FOLD_DECAY_PROFILE_ID,DELTA_PER_FOLD_DECAY_PROFILE_DIGEST,
+  DELTA_THREE_WINDOW_OPTIMIZED_PROFILE,DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID,DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST } from "../src/research/full02.profiles";
 describe("private full audit ingress",()=>{
+  it("retains both exact FULL-02 native audit populations without treating Three Window as WFO",async()=>{
+    for(const [id,digest,pair] of [
+      [DELTA_PER_FOLD_DECAY_PROFILE_ID,DELTA_PER_FOLD_DECAY_PROFILE_DIGEST,DELTA_PER_FOLD_DECAY_PROFILE.current_source],
+      [DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID,DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST,DELTA_THREE_WINDOW_OPTIMIZED_PROFILE.current_source],
+    ] as const){
+      const input=auditBatch([auditRow(0)]);
+      Object.assign(input.manifest,{execution_profile_id:id,execution_profile_digest:digest,...pair});
+      input.companion_digest=sha256ResearchJson(input.manifest);
+      const source={ingestAuthority:vi.fn().mockResolvedValue(auditAuthority(input.manifest))};
+      const repository={append:vi.fn().mockResolvedValue({replayed:false}),seal:vi.fn().mockResolvedValue({replayed:false})};
+      const service=new ResearchChildAuditCompanionIngestService(repository as never,source as never);
+      await expect(service.appendBatch(auditLease,input)).resolves.toMatchObject({accepted:true});
+      const {batch_ordinal:_ordinal,batch_digest:_digest,rows:_rows,...envelope}=input;
+      await expect(service.seal(auditLease,{...envelope,schema_version:"research.child-audit-companion-seal.v1"}))
+        .resolves.toMatchObject({sealed:true});
+      input.manifest.execution_profile_digest="0".repeat(64);
+      input.companion_digest=sha256ResearchJson(input.manifest);
+      source.ingestAuthority.mockResolvedValue(auditAuthority(input.manifest));
+      await expect(service.appendBatch(auditLease,input)).rejects.toMatchObject({status:409});
+      expect(repository.append).toHaveBeenCalledTimes(1);
+      expect(repository.seal).toHaveBeenCalledTimes(1);
+    }
+  });
   it("requires the same live job/attempt/epoch and exact admitted P05/profile before append or seal",async()=>{
     const input=auditBatch([auditRow(0)]), repository={append:vi.fn().mockResolvedValue({replayed:false}),seal:vi.fn().mockResolvedValue({replayed:false})};
     const authority=auditAuthority(input.manifest), source={ingestAuthority:vi.fn().mockResolvedValue(authority)};

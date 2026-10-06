@@ -6,6 +6,8 @@ import { newUlid } from "../id";
 import { CONTROL_API_POOL } from "../tokens";
 import { DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST } from "./delta-wfo-v2.profile";
 import { DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST } from "./delta-causal-inner.profile";
+import { DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_DIGEST,
+  DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST } from "./full02.profiles";
 import { isVnObservedFixedProfile, VN_OBSERVED_FIXED_PROFILE } from "./vn-observed-fixed.profile";
 import {
   RESEARCH_DB_BUDGET,
@@ -222,7 +224,7 @@ interface RunProducerRow {
   worker_attempt_id: string | null;
   lease_epoch: string | number | null;
   portal_receipt: Record<string, unknown> | string | null;
-  execution_profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p10.delta-signal-notional-wfo.v2" | "p10.delta-signal-notional-causal-inner.v1" | "p16.delta-whatif-grid.v1" | "p17.imported-signal-notional.v1" | "p10.vn-stock-daily-observed-fixed.v1";
+  execution_profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p10.delta-signal-notional-wfo.v2" | "p10.delta-signal-notional-causal-inner.v1" | "p16.delta-whatif-grid.v1" | "p17.imported-signal-notional.v1" | "p10.vn-stock-daily-observed-fixed.v1" | "p10.delta-signal-notional-per-fold-decay.v1" | "p10.delta-signal-notional-three-window-optimized.v1";
   execution_profile_digest: string | null;
 }
 
@@ -4874,7 +4876,9 @@ export class ResearchMetadataRepository {
       (profileId === P04_FIXED_QUALIFICATION_PROFILE_ID && profileDigest === null) ||
       (profileId === DELTA_WFO_PROFILE_ID && profileDigest === DELTA_WFO_PROFILE_DIGEST) ||
       (profileId === DELTA_WFO_V2_PROFILE_ID && profileDigest === DELTA_WFO_V2_PROFILE_DIGEST) ||
-      (profileId === DELTA_CAUSAL_INNER_PROFILE_ID && profileDigest === DELTA_CAUSAL_INNER_PROFILE_DIGEST)
+      (profileId === DELTA_CAUSAL_INNER_PROFILE_ID && profileDigest === DELTA_CAUSAL_INNER_PROFILE_DIGEST) ||
+      (profileId === DELTA_PER_FOLD_DECAY_PROFILE_ID && profileDigest === DELTA_PER_FOLD_DECAY_PROFILE_DIGEST) ||
+      (profileId === DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID && profileDigest === DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST)
     );
     const imported = input.executionAdapterId === IMPORTED_ALPHA_ADAPTER_ID &&
       input.adapterContractDigest === IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST &&

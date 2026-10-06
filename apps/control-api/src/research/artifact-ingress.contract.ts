@@ -104,8 +104,10 @@ const TableRows = z.object({
 export const ResearchCurrentSourceSealIngressSchema = Identity.extend({
   schema_version: z.literal("research.current-source-seal.v1"),
   artifact_revision: z.number().int().positive().max(2_147_483_647),
-  source_adapter_id: z.enum(["rs02.quantbt-signal-notional-wfo.v1", "rs02.quantbt-signal-notional-causal-inner.v1"]),
-  profile_id: z.enum(["rs02.delta-signal-notional-wfo.v1", "rs02.delta-signal-notional-causal-inner.v1"]),
+  source_adapter_id: z.enum(["rs02.quantbt-signal-notional-wfo.v1", "rs02.quantbt-signal-notional-causal-inner.v1",
+    "full02.quantbt-signal-notional-per-fold-decay.v1", "full02.quantbt-signal-notional-three-window.v1"]),
+  profile_id: z.enum(["rs02.delta-signal-notional-wfo.v1", "rs02.delta-signal-notional-causal-inner.v1",
+    "full02.delta-signal-notional-per-fold-decay.v1", "full02.delta-signal-notional-three-window.v1"]),
   manifest_digest: Digest,
   source_transform_digest: Digest,
   retained_import_digest: Digest,
@@ -113,8 +115,13 @@ export const ResearchCurrentSourceSealIngressSchema = Identity.extend({
   total_rows: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
   summary: z.record(z.string(), z.unknown()),
 }).strict().superRefine((value, context) => {
-  const causal = value.source_adapter_id === "rs02.quantbt-signal-notional-causal-inner.v1";
-  if (causal !== (value.profile_id === "rs02.delta-signal-notional-causal-inner.v1")) {
+  const pairs = {
+    "rs02.quantbt-signal-notional-wfo.v1": "rs02.delta-signal-notional-wfo.v1",
+    "rs02.quantbt-signal-notional-causal-inner.v1": "rs02.delta-signal-notional-causal-inner.v1",
+    "full02.quantbt-signal-notional-per-fold-decay.v1": "full02.delta-signal-notional-per-fold-decay.v1",
+    "full02.quantbt-signal-notional-three-window.v1": "full02.delta-signal-notional-three-window.v1",
+  } as const;
+  if (pairs[value.source_adapter_id] !== value.profile_id) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["profile_id"], message: "current-source custody pair is mismatched" });
   }
 });

@@ -40,7 +40,7 @@ const profile=obj({profile_id:id,state:en("ENABLED","DISABLED"),reason_code:null
 profile.allOf=[{if:{properties:{state:{const:"ENABLED"}}},then:{properties:{reason_code:{type:"null"},refusals:{maxItems:0}}},else:{properties:{reason_code:reason,refusals:{minItems:1}}}}];
 profile.properties.refusals=array(ref("SetupRefusal"),8);
 const budget=obj({scope:{const:"DECLARED_CAPS_NOT_RESERVATION_OR_ESTIMATE"},recipe_digest:digest,profile_digest:nullable(digest),
-  qualification:{const:"LEGACY_EXACT_BINDING"},memory_bytes:{type:"integer",minimum:2147483648,maximum:8589934592},
+  qualification:en("LEGACY_EXACT_BINDING","CANDIDATE_NOT_QUALIFIED","PRODUCT_RUN_QUALIFIED"),memory_bytes:{type:"integer",minimum:2147483648,maximum:8589934592},
   cpu_seconds:{type:"integer",minimum:1,maximum:1800},wall_seconds:{type:"integer",minimum:1,maximum:3600},
   scratch_bytes:{type:"integer",minimum:1,maximum:536870912},io_bytes:{type:"integer",minimum:1,maximum:1073741824},
   file_bytes:{type:"integer",minimum:1,maximum:16777216},fd_limit:{type:"integer",minimum:32,maximum:512},

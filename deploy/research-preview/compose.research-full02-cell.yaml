@@ -1,0 +1,11 @@
+# FULL02-only disposable qualification custody. Existing P23/Research/stable
+# volumes are never reused or deleted. No extra public port or authority.
+volumes:
+  portal-artifacts:
+    name: portal-research-full02-20261006-artifacts
+  portal-postgres-data:
+    name: portal-research-full02-20261006-postgres
+  portal-nats-data:
+    name: portal-research-full02-20261006-nats
+  roadmap-task-board-data:
+    name: portal-research-full02-20261006-roadmap

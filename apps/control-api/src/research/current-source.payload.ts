@@ -369,10 +369,53 @@ export const CurrentSourceSourceSeriesArtifactSchema = z.object({
   digest: z.string().regex(/^[0-9a-f]{64}$/),
   logical_name: z.literal("series/stitched.parquet"),
   size_bytes: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
-  scope: z.literal("FULL_STITCHED_SOURCE_SERIES"),
+  scope: z.enum(["FULL_STITCHED_SOURCE_SERIES", "OOS_CALIBRATION_REPLAY_SERIES"]),
 }).strict();
 
+const ProtocolWindowSchema = z.object({
+  start_utc_ms: FactUtcMsSchema, end_exclusive_utc_ms: FactUtcMsSchema,
+  bar_count: z.number().int().positive().max(100_000),
+}).strict();
+const ProtocolSeriesPointSchema = z.object({
+  at_utc_ms: FactUtcMsSchema, equity: CurrentSourceDecimalSchema,
+  return_fraction: CurrentSourceDecimalSchema, accepted_position: CurrentSourceDecimalSchema,
+  drawdown_fraction: CurrentSourceDecimalSchema, signal_target: CurrentSourceDecimalSchema.nullable(),
+}).strict();
+export const CurrentSourceProtocolDisclosureSchema = z.object({
+  schema_version: z.literal("research.current-source-protocol-disclosure.v1"),
+  protocol: z.literal("three_window_decay"), engine_operation: z.literal("train_test_split"),
+  calibration_scope: z.literal("IS_OOS_ONLY"), observation_scope: z.literal("OOS_SELECTION_INPUT"),
+  independent_holdout: ProtocolWindowSchema.extend({
+    state: z.literal("AVAILABLE"), holdout_used_for_selection: z.literal(false),
+    selected_params_digest: z.string().regex(/^[0-9a-f]{64}$/), freeze_before_holdout: z.literal(true),
+  }),
+  windows: z.object({ is: ProtocolWindowSchema, oos: ProtocolWindowSchema, holdout: ProtocolWindowSchema }).strict(),
+  window_series: z.object({ is: z.array(ProtocolSeriesPointSchema).min(1).max(192),
+    oos: z.array(ProtocolSeriesPointSchema).min(1).max(192), holdout: z.array(ProtocolSeriesPointSchema).min(1).max(192) }).strict(),
+}).strict().superRefine((value, context) => {
+  const windows = value.windows;
+  if (!(windows.is.start_utc_ms < windows.is.end_exclusive_utc_ms
+    && windows.is.end_exclusive_utc_ms === windows.oos.start_utc_ms
+    && windows.oos.start_utc_ms < windows.oos.end_exclusive_utc_ms
+    && windows.oos.end_exclusive_utc_ms === windows.holdout.start_utc_ms
+    && windows.holdout.start_utc_ms < windows.holdout.end_exclusive_utc_ms)
+    || value.independent_holdout.start_utc_ms !== windows.holdout.start_utc_ms
+    || value.independent_holdout.end_exclusive_utc_ms !== windows.holdout.end_exclusive_utc_ms
+    || value.independent_holdout.bar_count !== windows.holdout.bar_count) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "Three Window must retain exact contiguous half-open windows and the independent holdout" });
+  }
+  for (const key of ["is", "oos", "holdout"] as const) {
+    const window = windows[key], series = value.window_series[key];
+    if (series.some((point,index) => point.at_utc_ms < window.start_utc_ms || point.at_utc_ms >= window.end_exclusive_utc_ms
+      || index > 0 && point.at_utc_ms <= series[index - 1]!.at_utc_ms)) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ["window_series",key], message: "window series must be chronological and stay inside its own half-open source window" });
+    }
+  }
+});
+export type CurrentSourceProtocolDisclosure = z.infer<typeof CurrentSourceProtocolDisclosureSchema>;
+
 export const CurrentSourceSummarySchema = z.object({
+  protocol_disclosure: CurrentSourceProtocolDisclosureSchema.optional(),
   schema_version: z.literal("research.current-source-summary.v1"),
   // Adapter-observed engine-call completion; never a claimed engine first-read clock.
   execution_observation: RetainedExecutionObservationSchema.optional(),
@@ -499,6 +542,23 @@ export const CurrentSourceCausalSelectionSchema = z.object({
 });
 export type CurrentSourceCausalSelection = z.infer<typeof CurrentSourceCausalSelectionSchema>;
 
+/** FULL-02: decay selects within each outer study USING that fold's OOS.
+ * This is intentionally not a causal/inner selection or run-global theta. */
+export const CurrentSourceFoldSelectionSchema = z.object({
+  schema_version: z.literal("research.current-source-fold-selection.v1"),
+  scope: z.literal("OUTER_FOLD_SELECTION"), study_id: FactTokenSchema,
+  selected_trial_id: FactTokenSchema, parameters: CurrentSourceParameterMapSchema,
+  objective: CurrentSourceDecimalSchema.nullable(), objective_kind: z.literal("OUTER_FOLD_DECAY_J"),
+  candidate_is_metric: CurrentSourceDecimalSchema.nullable(),
+  candidate_oos_metric: CurrentSourceDecimalSchema.nullable(), candidate_decay: CurrentSourceDecimalSchema.nullable(),
+  candidate_count: z.number().int().min(1).max(3), study_trial_rows: z.literal(3),
+  outer_oos_used_for_selection: z.literal(true),
+  params_digest: z.string().regex(/^[0-9a-f]{64}$/),
+  selection_sequence: z.number().int().nonnegative().max(15),
+  params_frozen_at_utc_ms: FactUtcMsSchema.nullable(),
+}).strict();
+export type CurrentSourceFoldSelection = z.infer<typeof CurrentSourceFoldSelectionSchema>;
+
 export const CurrentSourceFoldPayloadSchema = z.object({
   fold_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/),
   train_start_utc_ms: z.number().int().nonnegative().nullable(),
@@ -509,7 +569,11 @@ export const CurrentSourceFoldPayloadSchema = z.object({
   // P17-T14: QuantBT's strategy-isolation records for this fold.
   child_audit: CurrentSourceFoldChildAuditSchema.optional(),
   causal_selection: CurrentSourceCausalSelectionSchema.optional(),
+  fold_selection: CurrentSourceFoldSelectionSchema.optional(),
 }).strict().superRefine((value, context) => {
+  if (value.causal_selection && value.fold_selection) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "one fold cannot have both causal and OOS-used selections" });
+  }
   if (!value.causal_selection) return;
   const start = value.train_start_utc_ms, end = value.train_end_utc_ms, test = value.test_start_utc_ms;
   if (start === null || end === null || test === null || end >= test ||

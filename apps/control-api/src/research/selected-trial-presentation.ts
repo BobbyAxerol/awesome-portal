@@ -2,6 +2,7 @@
 import { z } from "zod";
 import { RS02_DELTA_WFO_GLOBAL_PROFILE_ID, RS02_SIGNAL_NOTIONAL_PROFILE_ID } from "./delta-wfo.profile";
 import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
+import { DELTA_PER_FOLD_DECAY_PROFILE, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE } from "./full02.profiles";
 
 export const SelectedTrialPresentationSchema = z.object({
   selected_trial_ordinal: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).nullable(),
@@ -27,8 +28,10 @@ export function selectedTrialPresentation(
     selected_trial_ordinal: null, selected_trial_ordinal_scope: null, selected_trial_ordinal_reason_code: reason,
   });
   if (id === null) return absent("SELECTION_HAS_NO_TRIAL");
-  const causal = profileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id;
-  const global = profileId === RS02_DELTA_WFO_GLOBAL_PROFILE_ID || profileId === RS02_SIGNAL_NOTIONAL_PROFILE_ID;
+  const causal = profileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id
+    || profileId === DELTA_PER_FOLD_DECAY_PROFILE.current_source.profile_id;
+  const global = profileId === RS02_DELTA_WFO_GLOBAL_PROFILE_ID || profileId === RS02_SIGNAL_NOTIONAL_PROFILE_ID
+    || profileId === DELTA_THREE_WINDOW_OPTIMIZED_PROFILE.current_source.profile_id;
   // Causal IDs are opaque to this operation. A separate retained native
   // mapping must bind both the original study and local Optuna number.
   if (causal && (!native?.study_id || native.source_trial_id === null

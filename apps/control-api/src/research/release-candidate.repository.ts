@@ -19,7 +19,7 @@ import {
   type CurrentSourceBatchDigestRow,
   type CurrentSourceTableKind,
 } from "./current-source.repository";
-import { isDeltaWfoProfile } from "./delta-wfo.profile";
+import { isCurrentSourceExecutionProfile } from "./current-source-profile";
 import { ResearchReleaseCandidateError } from "./release-candidate.error";
 import { runDisplayLabel, runDisplayOrdinal, runDisplayOrdinalSql } from "./run-display-label";
 import type { ReleaseCandidateRetainedLane } from "./release-candidate.retained-lane";
@@ -29,6 +29,7 @@ import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contr
 import { ResearchAllTimeDistributionsSchema } from "./all-time-distributions.contract";
 import { CurrentSourceSummarySchema, CurrentSourceTrialPayloadSchema } from "./current-source.payload";
 import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
+import { DELTA_PER_FOLD_DECAY_PROFILE } from "./full02.profiles";
 import { readPinnedAuditProofs } from "./final-audit.read";
 import type { VerifiedPinnedAudit } from "./final-audit.contract";
 import { memoizedResearchJsonDigest } from "./memoized-json-digest";
@@ -806,7 +807,7 @@ export class ResearchReleaseCandidateRepository {
    * other execution profile) answers null and its composition is unchanged.
    */
   private async retainedLane(client: PoolClient, workspaceId: string, runId: string, row: SourceRow): Promise<ReleaseCandidateRetainedLane | null> {
-    if (row.execution_profile_id === null || !isDeltaWfoProfile(row.execution_profile_id, row.execution_profile_digest)) return null;
+    if (row.execution_profile_id === null || !isCurrentSourceExecutionProfile(row.execution_profile_id, row.execution_profile_digest)) return null;
     const claim = this.claimFacts(row.progress_snapshot);
     const base = {
       executionProfileId: row.execution_profile_id,
@@ -943,7 +944,8 @@ export class ResearchReleaseCandidateRepository {
     client: PoolClient, workspaceId: string, runId: string, lane: ReleaseCandidateRetainedLane | null,
   ): Promise<ReleaseCandidateSource["selectedTrialNativeFacts"]> {
     const seal = lane?.seal;
-    if (!seal || seal.profileId !== DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id) return undefined;
+    if (!seal || (seal.profileId !== DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id
+      && seal.profileId !== DELTA_PER_FOLD_DECAY_PROFILE.current_source.profile_id)) return undefined;
     const summary = CurrentSourceSummarySchema.safeParse(seal.summary);
     const trialId = summary.success ? summary.data.selection.trial_id : null;
     if (trialId === null) return undefined;

@@ -89,6 +89,11 @@ _PROFILE_COPY = {
         "not_issued": "The Delta walk-forward study sealed its artifacts but did not issue a release claim.",
         "claimed": "worker claimed durable P10 walk-forward study",
     },
+    "DELTA_THREE_WINDOW": {
+        "forecast": "The optimized Three Window study has not sealed a publishable claim.",
+        "not_issued": "The optimized Three Window study sealed its artifacts but did not issue a release claim.",
+        "claimed": "worker claimed durable P10 Three Window study",
+    },
     # W5a A10c: a diagnostic evaluates a grid for its parent; it never
     # selects, freezes or claims anything of its own.
     "DELTA_WHATIF": {

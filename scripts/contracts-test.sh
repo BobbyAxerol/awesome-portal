@@ -108,7 +108,8 @@ for receipt in \
   P10/B7_B8_TEMPORAL_EXECUTOR_2026-10-02.md \
   P10/B8_CAUSAL_INNER_CURRENT_SOURCE_2026-10-02.md \
   P10/B8_VN_FIXED_PRODUCT_VERTICAL_2026-10-02.md \
-  P10/E17_IMPORTED_DRAFT_EXECUTION_BACKEND_RECEIPT_2026-09-27.md; do
+  P10/E17_IMPORTED_DRAFT_EXECUTION_BACKEND_RECEIPT_2026-09-27.md \
+  P10/FULL_02_PRODUCT_QUALIFICATION_2026-10-06.md; do
   mkdir -p "${WORKSPACE_DIR}/upgrade/research_loop/evidence/${receipt%/*}"
   cp -a "${ROOT_DIR}/upgrade/research_loop/evidence/${receipt}" \
     "${WORKSPACE_DIR}/upgrade/research_loop/evidence/${receipt}"

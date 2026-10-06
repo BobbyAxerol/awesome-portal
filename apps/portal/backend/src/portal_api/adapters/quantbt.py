@@ -227,6 +227,7 @@ class QuantBTGateway:
         optuna_early_stopping: int | None,
         random_seed: int | None,
         account_kwargs: Mapping[str, object],
+        target_mode: Literal["pct_equity", "signal_notional"] = "pct_equity",
     ) -> tuple[Any, dict[str, Any]]:
         """Run the single IS/OOS Mode 1 study on the calibration tape.
 
@@ -234,12 +235,14 @@ class QuantBTGateway:
         public-API artifact (plan §10 steps 4-6) and must be normalized only
         through the canonical serializer.
         """
+        if target_mode not in {"pct_equity", "signal_notional"}:
+            raise ValueError("three-window target mode is not Portal-allowlisted")
         module = self._module()
         self.validate_param_ranges(param_ranges)
         endpoint = module.QuantBTEndpoint.train_test_split(
             strategy_class=strategy_fn,
             test_start=oos_start,
-            target_mode="pct_equity",
+            target_mode=target_mode,
             optimization_mode="mode_1_decay",
             optimization_schedule="global",
             optimization_config=dict(optimization_config),
@@ -257,9 +260,12 @@ class QuantBTGateway:
         evaluation_frame: pd.DataFrame,
         signal: pd.Series,
         account_kwargs: Mapping[str, object],
+        target_mode: Literal["pct_equity", "signal_notional"] = "pct_equity",
     ) -> Any:
         """Replay one segment with frozen params on a fresh account (plan §10.8)."""
-        endpoint = self._module().QuantBTEndpoint.pct_equity(**dict(account_kwargs))
+        if target_mode not in {"pct_equity", "signal_notional"}:
+            raise ValueError("frozen replay target mode is not Portal-allowlisted")
+        endpoint = self.route_endpoint(target_mode, **dict(account_kwargs))
         endpoint.backtest(data=evaluation_frame, signal=signal)
         return endpoint
 

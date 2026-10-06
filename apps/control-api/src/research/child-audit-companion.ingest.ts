@@ -1,6 +1,6 @@
 /** Private ingress service. Root controller supplies an authenticated live lease. */
 import { Inject, Injectable } from "@nestjs/common";
-import { isDeltaWfoProfile, deltaWfoCurrentSourcePair } from "./delta-wfo.profile";
+import { isCurrentSourceExecutionProfile, currentSourceExecutionPair } from "./current-source-profile";
 import { ResearchCurrentSourceRepository } from "./current-source.repository";
 import { ResearchCurrentSourceError } from "./current-source.error";
 import type { ProgressIngressScope } from "./progress.repository";
@@ -32,10 +32,10 @@ export class ResearchChildAuditCompanionIngestService {
   private async authority(lease: ProgressIngressScope, input: ChildAuditCompanionBatchIngress | ChildAuditCompanionSealIngress) {
     const a = await this.source.ingestAuthority({workspaceId:lease.workspaceId,actorUserId:lease.actorUserId},input.run_id,input.artifact_id);
     const m=input.manifest, artifact=a?.artifact;
-    const pair=a ? deltaWfoCurrentSourcePair(a.executionProfileId,a.executionProfileDigest) : null;
+    const pair=a ? currentSourceExecutionPair(a.executionProfileId,a.executionProfileDigest) : null;
     if (input.workspace_id !== lease.workspaceId || input.job_id !== lease.jobId
       || input.worker_attempt_id !== lease.workerAttemptId || input.lease_epoch !== lease.leaseEpoch
-      || !a || !isDeltaWfoProfile(a.executionProfileId,a.executionProfileDigest)
+      || !a || !isCurrentSourceExecutionProfile(a.executionProfileId,a.executionProfileDigest)
       || m.execution_profile_id !== a.executionProfileId || m.execution_profile_digest !== a.executionProfileDigest
       || m.requested_spec_digest !== a.requestedSpecDigest || m.effective_spec_digest !== a.effectiveSpecDigest
       || m.dataset_binding_digest !== a.datasetBindingDigest

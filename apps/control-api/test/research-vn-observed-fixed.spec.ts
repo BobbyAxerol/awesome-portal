@@ -86,8 +86,15 @@ describe("one pinned source-qualified VN observed-date profile", () => {
       { release_id: "er_quantbt_111", verified: true, vn_observed_daily_qualification: qualification });
     expect(validate(qualified), JSON.stringify(validate.errors)).toBe(true);
     expect(qualified.profiles[4]).toMatchObject({ profile_id: ID, state: "ENABLED", reason: null });
+    const full02 = researchPortalAdmission({ ...flags, FEATURE_RESEARCH_VN_OBSERVED_PROFILE: "true",
+      FEATURE_RESEARCH_FULL02_PROFILE: "true" } as never,
+      { release_id: "er_quantbt_111", verified: true, vn_observed_daily_qualification: qualification });
+    expect(full02.profiles.slice(0, 5)).toEqual(qualified.profiles);
+    expect(validate(full02), JSON.stringify(validate.errors)).toBe(true);
+    expect(full02.profiles.slice(5).map(profile => profile.profile_id)).toEqual([
+      "p10.delta-signal-notional-per-fold-decay.v1", "p10.delta-signal-notional-three-window-optimized.v1"]);
     expect(document.components.schemas.PortalAdmission.properties.profiles.items.properties.profile_id.enum)
-      .toEqual(qualified.profiles.map(profile => profile.profile_id));
+      .toEqual(full02.profiles.map(profile => profile.profile_id));
   });
   it("pins immutable exact source and generic accounting without claiming a VN calendar", () => {
     expect(vnObservedFixedProfileDigest()).toBe(DIGEST);

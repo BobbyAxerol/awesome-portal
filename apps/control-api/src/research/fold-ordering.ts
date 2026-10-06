@@ -25,9 +25,10 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { P11StageEventsSchema, type P11StageEvents } from "./p11-stage-events";
 
-import type { CurrentSourceCausalSelection, CurrentSourceFacts } from "./current-source.payload";
+import type { CurrentSourceCausalSelection, CurrentSourceFoldSelection, CurrentSourceFacts } from "./current-source.payload";
 import type { HistoricalProfileBinding } from "./parameter-binding.registry";
 import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
+import { DELTA_PER_FOLD_DECAY_PROFILE } from "./full02.profiles";
 import { sha256ResearchJson } from "./preflight.service";
 
 export const FOLD_ORDERING_RULE = "research.freeze-fold-ordering.v1" as const;
@@ -70,11 +71,11 @@ export const FoldOrderingRowSchema = z.object({
     boundary: z.enum(["IS_ENDS_BEFORE_OOS", "IS_OVERLAPS_OOS", "NOT_PUBLISHED"]),
     reason_code: Reason.nullable(),
   }).strict(),
-  verdict: z.enum(["NOT_CAUSAL_GLOBAL_SELECTION", "CAUSAL_DATA_TIME_SELECTION", "NOT_EVALUATED", "NOT_PUBLISHED"]),
+  verdict: z.enum(["NOT_CAUSAL_GLOBAL_SELECTION", "NOT_CAUSAL_OUTER_OOS_SELECTION", "CAUSAL_DATA_TIME_SELECTION", "NOT_EVALUATED", "NOT_PUBLISHED"]),
   reason_code: Reason.nullable(),
   selected_candidate: z.object({
     candidate_id: CandidateId.nullable(), params_digest: z.string().regex(/^[0-9a-f]{64}$/),
-    study_id: Token, selected_trial_id: Token, inner_fold_count: z.number().int().min(2).max(16),
+    study_id: Token, selected_trial_id: Token, inner_fold_count: z.number().int().min(2).max(16).optional(),
   }).strict().optional(),
   oos_generation_child: z.object({
     state: z.enum(["MATCH", "MISMATCH", "NOT_RETAINED", "NOT_PUBLISHED", "NOT_COMPUTABLE"]),
@@ -111,6 +112,7 @@ export const FoldOrderingSchema = z.object({
     not_evaluated: z.number().int().nonnegative(),
     not_published: z.number().int().nonnegative(),
     causal_data_time_selection: z.number().int().nonnegative().optional(),
+    not_causal_outer_oos_selection: z.number().int().nonnegative().optional(),
     oos_child_match: z.number().int().nonnegative(),
     oos_child_mismatch: z.number().int().nonnegative(),
   }).strict(),
@@ -129,6 +131,7 @@ export interface FoldOrderingInput {
   /** Child-audit records (W5b); undefined when the seal predates P17-T14. */
   childAudit: ReadonlyArray<{ audit_ordinal: number; candidate_id: string | null; context: string | null }> | undefined;
   causalSelection?: CurrentSourceCausalSelection;
+  foldSelection?: CurrentSourceFoldSelection;
 }
 
 const EXACT_JSON_NUMBER = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
@@ -174,6 +177,9 @@ function scopeOf(facts: CurrentSourceFacts | undefined): {
   }
   if (schedule === "per_fold_causal") {
     return { scope: "PER_FOLD", verdict: "NOT_EVALUATED", reason: FOLD_ORDERING_REASONS.perFoldNotAdmitted };
+  }
+  if (schedule === "per_fold_decay") {
+    return { scope: "PER_FOLD", verdict: "NOT_CAUSAL_OUTER_OOS_SELECTION", reason: "OUTER_OOS_USED_FOR_FOLD_SELECTION" };
   }
   return { scope: "NOT_PUBLISHED", verdict: "NOT_EVALUATED", reason: FOLD_ORDERING_REASONS.scheduleUnknown };
 }
@@ -223,11 +229,14 @@ export function foldOrdering(
   const { scope, verdict, reason } = scopeOf(facts);
   const frozen = quantbtCandidateId(frozenParameters, candidateParameterKinds);
   const causal = sourceProfileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id && scope === "PER_FOLD";
+  const decay = sourceProfileId === DELTA_PER_FOLD_DECAY_PROFILE.current_source.profile_id && scope === "PER_FOLD";
   const rows = [...folds]
     .sort((a, b) => a.sourceOrdinal - b.sourceOrdinal)
     .map((fold): FoldOrdering["folds"][number] => {
       const selected = causal ? fold.causalSelection : undefined;
-      const candidate = causal ? selected ? quantbtCandidateId(selected.parameters, candidateParameterKinds) : null : frozen;
+      const decaySelected = decay ? fold.foldSelection : undefined;
+      const actualSelection = selected ?? decaySelected;
+      const candidate = causal || decay ? actualSelection ? quantbtCandidateId(actualSelection.parameters, candidateParameterKinds) : null : frozen;
       const dataTime = boundaryOf(fold);
       let actualVerdict = verdict;
       let actualReason: string | null = reason;
@@ -248,6 +257,10 @@ export function foldOrdering(
           if (actualReason === null) actualVerdict = "CAUSAL_DATA_TIME_SELECTION";
         }
       }
+      if (decay && (!decaySelected || facts?.claims.oos_used_for_selection !== true
+        || decaySelected.outer_oos_used_for_selection !== true)) {
+        actualVerdict = "NOT_EVALUATED"; actualReason = "DECAY_FOLD_SELECTION_OR_OOS_USE_NOT_RETAINED";
+      }
       return {
       fold_id: fold.foldId,
       source_ordinal: fold.sourceOrdinal,
@@ -256,6 +269,8 @@ export function foldOrdering(
       reason_code: actualReason,
       ...(selected ? { selected_candidate: { candidate_id: candidate, params_digest: sha256ResearchJson(selected.parameters),
         study_id: selected.study_id, selected_trial_id: selected.selected_trial_id, inner_fold_count: selected.inner_fold_count } } : {}),
+      ...(decaySelected ? { selected_candidate: { candidate_id: candidate, params_digest: decaySelected.params_digest,
+        study_id: decaySelected.study_id, selected_trial_id: decaySelected.selected_trial_id } } : {}),
       oos_generation_child: childOf(fold, candidate),
     };
     });
@@ -274,8 +289,8 @@ export function foldOrdering(
     ...(stageEvents ? { stage_events: stageEvents } : {}),
     frozen_candidate: {
       identity_rule: QUANTBT_CANDIDATE_IDENTITY_RULE,
-      candidate_id: causal ? null : frozen,
-      reason_code: causal ? FOLD_ORDERING_REASONS.noGlobalCandidate : frozen === null ? FOLD_ORDERING_REASONS.identityNotComputable : null,
+      candidate_id: causal || decay ? null : frozen,
+      reason_code: causal || decay ? FOLD_ORDERING_REASONS.noGlobalCandidate : frozen === null ? FOLD_ORDERING_REASONS.identityNotComputable : null,
     },
     counts: {
       folds: rows.length,
@@ -283,6 +298,7 @@ export function foldOrdering(
       not_evaluated: count((row) => row.verdict === "NOT_EVALUATED"),
       not_published: count((row) => row.verdict === "NOT_PUBLISHED"),
       ...(causal ? { causal_data_time_selection: count(row => row.verdict === "CAUSAL_DATA_TIME_SELECTION") } : {}),
+      ...(decay ? { not_causal_outer_oos_selection: count(row => row.verdict === "NOT_CAUSAL_OUTER_OOS_SELECTION") } : {}),
       oos_child_match: count((row) => row.oos_generation_child.state === "MATCH"),
       oos_child_mismatch: count((row) => row.oos_generation_child.state === "MISMATCH"),
     },

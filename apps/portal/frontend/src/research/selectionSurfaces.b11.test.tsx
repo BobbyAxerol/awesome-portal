@@ -161,4 +161,13 @@ describe("S07 · per-fold selection on the freeze ordering", () => {
     const { container } = render(<FoldSelectionPanel ordering={FREEZE.fold_ordering} />);
     expect(container.firstChild).toBeNull();
   });
+
+  it("names outer-OOS selection without presenting per-fold decay as causal", () => {
+    const value = ordering();
+    value.folds = value.folds.map((fold) => ({ ...fold,
+      verdict: "NOT_CAUSAL_OUTER_OOS_SELECTION", reason_code: "OUTER_OOS_USED_FOR_SELECTION" }));
+    render(<FoldSelectionPanel ordering={value} />);
+    expect(screen.getAllByText("not causal · outer OOS used for selection")).toHaveLength(2);
+    expect(screen.queryByText("causal · data-time selection")).toBeNull();
+  });
 });

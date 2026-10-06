@@ -361,6 +361,7 @@ class AdvancedWalkForwardRunner:
         run_id: str,
         wf: Mapping[str, Any],
         account_metadata: Mapping[str, Any] | None,
+        *, engine_operation: str = "walk_forward",
     ) -> None:
         """Retain two small, additive QuantBT fact documents (W3, CG-P13-07/08).
 
@@ -450,7 +451,8 @@ class AdvancedWalkForwardRunner:
                 "source_contract.v1.json",
                 canonicalize({
                     "schema_version": "portal.wfo-source-contract.v1",
-                    "source": "QuantBT walk_forward metadata and final account metadata",
+                    "source": f"QuantBT {engine_operation} metadata and final account metadata",
+                    **({"engine_operation": engine_operation} if engine_operation != "walk_forward" else {}),
                     "walk_forward": walk_forward,
                     "final_account": account,
                 }),
@@ -628,10 +630,10 @@ def _freeze_deployment_selection(
             "capabilities": {"per_trial_selection_breakdown": False},
         },
     }
-    if config.optimization_schedule.value == "per_fold_causal" and config.optimization_mode.value == "mode_1_decay":
+    if config.optimization_schedule.value in {"per_fold_causal", "per_fold_decay"} and config.optimization_mode.value == "mode_1_decay":
         table = wf.get("fold_selection_table")
         if not isinstance(table, pd.DataFrame) or table.empty:
-            raise AdvancedWalkForwardError("causal source did not publish per-fold selection")
+            raise AdvancedWalkForwardError("per-fold source did not publish per-fold selection")
         result["scope"] = "LAST_FOLD_DEPLOYMENT"
         result["fold_id"] = str(int(table.iloc[-1]["fold_id"]))
     return result

@@ -14,6 +14,7 @@ import type { FoldOrdering, FoldOrderingRow } from "./freezeClient";
 const VERDICT_WORDS: Record<FoldOrderingRow["verdict"], string> = {
   CAUSAL_DATA_TIME_SELECTION: "causal · data-time selection",
   NOT_CAUSAL_GLOBAL_SELECTION: "not causal · global selection",
+  NOT_CAUSAL_OUTER_OOS_SELECTION: "not causal · outer OOS used for selection",
   NOT_EVALUATED: "not evaluated",
   NOT_PUBLISHED: "not published",
 };

@@ -270,7 +270,8 @@ it("B8 terminal split absence cannot be sealed as a completed retained Report", 
     });
     const repaired = await service.read(scope, real.run_id);
     expect(repository.claimMissingWfo).toHaveBeenCalledWith(scope, real.run_id,
-      ["p10.delta-signal-notional-wfo.v1", "p10.delta-signal-notional-wfo.v2", "p10.delta-signal-notional-causal-inner.v1"]);
+      ["p10.delta-signal-notional-wfo.v1", "p10.delta-signal-notional-wfo.v2", "p10.delta-signal-notional-causal-inner.v1",
+        "p10.delta-signal-notional-per-fold-decay.v1", "p10.delta-signal-notional-three-window-optimized.v1"]);
     expect(repaired.schema_version).toBe("research.report-detail.v1");
     expect(repository.markRepairOutcome).toHaveBeenCalledWith(scope, real.run_id, "SEALED", null);
     expect(repository.seal).toHaveBeenCalledTimes(1);

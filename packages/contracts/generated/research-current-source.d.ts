@@ -160,6 +160,127 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        DisplayFoldSelection: {
+            /** @constant */
+            schema_version: "research.current-source-fold-selection.v1";
+            /** @constant */
+            scope: "OUTER_FOLD_SELECTION";
+            study_id: string;
+            selected_trial_id: string;
+            parameters: {
+                [key: string]: string;
+            };
+            objective: string | null;
+            /** @constant */
+            objective_kind: "OUTER_FOLD_DECAY_J";
+            candidate_is_metric: string | null;
+            candidate_oos_metric: string | null;
+            candidate_decay: string | null;
+            candidate_count: number;
+            /** @constant */
+            study_trial_rows: 3;
+            /** @constant */
+            outer_oos_used_for_selection: true;
+            params_digest: string;
+            selection_sequence: number;
+            params_frozen_at_utc_ms: number | null;
+            selected_trial_ordinal?: number | null;
+            selected_trial_ordinal_scope?: ("RUN_GLOBAL" | "STUDY_LOCAL") | null;
+            selected_trial_ordinal_reason_code?: ("SELECTION_HAS_NO_TRIAL" | "SOURCE_TRIAL_NUMBER_NOT_PUBLISHED" | "STUDY_LOCAL_TRIAL_MAPPING_NOT_PUBLISHED") | null;
+        };
+        FoldSelection: {
+            /** @constant */
+            schema_version: "research.current-source-fold-selection.v1";
+            /** @constant */
+            scope: "OUTER_FOLD_SELECTION";
+            study_id: string;
+            selected_trial_id: string;
+            parameters: {
+                [key: string]: string;
+            };
+            objective: string | null;
+            /** @constant */
+            objective_kind: "OUTER_FOLD_DECAY_J";
+            candidate_is_metric: string | null;
+            candidate_oos_metric: string | null;
+            candidate_decay: string | null;
+            candidate_count: number;
+            /** @constant */
+            study_trial_rows: 3;
+            /** @constant */
+            outer_oos_used_for_selection: true;
+            params_digest: string;
+            selection_sequence: number;
+            params_frozen_at_utc_ms: number | null;
+        };
+        /** @description Native Three Window facts: calibration uses IS and OOS only; independent holdout runs after frozen selection. UTC half-open windows are contiguous. Runtime verifies every emitted series point stays inside its own window. Observation/analytics rows are calibration OOS, never relabelled untouched holdout. No filesystem locator or engine input is exposed. */
+        ProtocolDisclosure: {
+            /** @constant */
+            schema_version: "research.current-source-protocol-disclosure.v1";
+            /** @constant */
+            protocol: "three_window_decay";
+            /** @constant */
+            engine_operation: "train_test_split";
+            /** @constant */
+            calibration_scope: "IS_OOS_ONLY";
+            /** @constant */
+            observation_scope: "OOS_SELECTION_INPUT";
+            independent_holdout: {
+                start_utc_ms: number;
+                end_exclusive_utc_ms: number;
+                bar_count: number;
+                /** @constant */
+                state: "AVAILABLE";
+                /** @constant */
+                holdout_used_for_selection: false;
+                selected_params_digest: string;
+                /** @constant */
+                freeze_before_holdout: true;
+            };
+            windows: {
+                is: {
+                    start_utc_ms: number;
+                    end_exclusive_utc_ms: number;
+                    bar_count: number;
+                };
+                oos: {
+                    start_utc_ms: number;
+                    end_exclusive_utc_ms: number;
+                    bar_count: number;
+                };
+                holdout: {
+                    start_utc_ms: number;
+                    end_exclusive_utc_ms: number;
+                    bar_count: number;
+                };
+            };
+            window_series: {
+                is: {
+                    at_utc_ms: number;
+                    equity: string;
+                    return_fraction: string;
+                    accepted_position: string;
+                    drawdown_fraction: string;
+                    signal_target: string | null;
+                }[];
+                oos: {
+                    at_utc_ms: number;
+                    equity: string;
+                    return_fraction: string;
+                    accepted_position: string;
+                    drawdown_fraction: string;
+                    signal_target: string | null;
+                }[];
+                holdout: {
+                    at_utc_ms: number;
+                    equity: string;
+                    return_fraction: string;
+                    accepted_position: string;
+                    drawdown_fraction: string;
+                    signal_target: string | null;
+                }[];
+            };
+        };
         /** @description Safe immutable AlphaVersion validator inputs, not raw source, provenance or mutable execution instructions. */
         RunDeclarationAlphaVersionDeclaration: {
             /** @constant */
@@ -1166,8 +1287,8 @@ export interface components {
             selected_trial_ordinal_reason_code?: ("SELECTION_HAS_NO_TRIAL" | "SOURCE_TRIAL_NUMBER_NOT_PUBLISHED" | "STUDY_LOCAL_TRIAL_MAPPING_NOT_PUBLISHED") | null;
         };
         SearchStudySurface: {
-            /** @constant */
-            scope: "INNER_VALIDATION_OUTER_STUDY";
+            /** @enum {unknown} */
+            scope: "INNER_VALIDATION_OUTER_STUDY" | "OUTER_FOLD_DECAY_STUDY";
             fold_id: string;
             study_id: string;
             surface: components["schemas"]["SearchSurface"] & {
@@ -1299,9 +1420,9 @@ export interface components {
         /** @description Exact historical/global/causal custody pair; mixing is refused. */
         Provenance: {
             /** @enum {unknown} */
-            source_adapter_id: "rs02.quantbt-advanced-wfo.v1" | "rs02.quantbt-signal-notional-wfo.v1" | "rs02.quantbt-signal-notional-causal-inner.v1";
+            source_adapter_id: "rs02.quantbt-advanced-wfo.v1" | "rs02.quantbt-signal-notional-wfo.v1" | "rs02.quantbt-signal-notional-causal-inner.v1" | "full02.quantbt-signal-notional-per-fold-decay.v1" | "full02.quantbt-signal-notional-three-window.v1";
             /** @enum {unknown} */
-            profile_id: "rs02.delta-wfo-global.v1" | "rs02.delta-signal-notional-wfo.v1" | "rs02.delta-signal-notional-causal-inner.v1";
+            profile_id: "rs02.delta-wfo-global.v1" | "rs02.delta-signal-notional-wfo.v1" | "rs02.delta-signal-notional-causal-inner.v1" | "full02.delta-signal-notional-per-fold-decay.v1" | "full02.delta-signal-notional-three-window.v1";
             /** @constant */
             engine_version: "1.1.1";
             source_manifest_digest: components["schemas"]["Digest"];
@@ -1326,6 +1447,16 @@ export interface components {
             source_adapter_id?: "rs02.quantbt-signal-notional-causal-inner.v1";
             /** @constant */
             profile_id?: "rs02.delta-signal-notional-causal-inner.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full02.quantbt-signal-notional-per-fold-decay.v1";
+            /** @constant */
+            profile_id?: "full02.delta-signal-notional-per-fold-decay.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "full02.quantbt-signal-notional-three-window.v1";
+            /** @constant */
+            profile_id?: "full02.delta-signal-notional-three-window.v1";
         });
         Common: {
             /** @constant */
@@ -1342,6 +1473,7 @@ export interface components {
             presentation_revision?: string;
             /** @description Immutable bound version declaration and explicit requested overrides. Never current registry defaults or evidence of actual runtime/sampler execution. Optional during additive rollout. */
             run_declaration?: components["schemas"]["RunDeclaration"];
+            protocol_disclosure?: components["schemas"]["ProtocolDisclosure"];
         };
         Page: {
             limit: number;
@@ -1422,6 +1554,7 @@ export interface components {
                 oos_trades: components["schemas"]["Decimal"] | null;
             };
             causal_selection?: components["schemas"]["DisplayCausalSelection"];
+            fold_selection?: components["schemas"]["DisplayFoldSelection"];
         };
         Trial: {
             source_ordinal: number;
@@ -1459,7 +1592,7 @@ export interface components {
             };
             availability: components["schemas"]["Availability"];
             /** @enum {string} */
-            objective_kind: "IS_MEAN_SHARPE" | "MODE_1_DECAY_J" | "NOT_PUBLISHED" | "INNER_VALIDATION_DECAY_J";
+            objective_kind: "IS_MEAN_SHARPE" | "MODE_1_DECAY_J" | "NOT_PUBLISHED" | "INNER_VALIDATION_DECAY_J" | "OUTER_FOLD_DECAY_J";
             roles: {
                 raw_best_is: components["schemas"]["SelectionRole"];
                 selected: components["schemas"]["SelectionRole"];
@@ -1491,8 +1624,8 @@ export interface components {
                 /** @constant */
                 logical_name: "series/stitched.parquet";
                 size_bytes: number;
-                /** @constant */
-                scope: "FULL_STITCHED_SOURCE_SERIES";
+                /** @enum {unknown} */
+                scope: "FULL_STITCHED_SOURCE_SERIES" | "OOS_CALIBRATION_REPLAY_SERIES";
             };
             passport: {
                 artifact_table_rows: {
@@ -1540,10 +1673,18 @@ export interface components {
                 /** @constant */
                 state: "AVAILABLE";
                 folds: components["schemas"]["Fold"][];
-                /** @constant */
-                chronology: "SOURCE_OBSERVED_ADVANCED_WFO";
+                /** @enum {unknown} */
+                chronology: "SOURCE_OBSERVED_ADVANCED_WFO" | "SOURCE_OBSERVED_THREE_WINDOW";
                 availability: components["schemas"]["Availability"];
-            };
+            } & ({
+                /** @constant */
+                chronology?: "SOURCE_OBSERVED_THREE_WINDOW";
+                folds?: unknown;
+            } | {
+                /** @constant */
+                chronology?: "SOURCE_OBSERVED_ADVANCED_WFO";
+                folds?: unknown;
+            });
             data_use: {
                 warmup: components["schemas"]["Fact"];
                 purge: components["schemas"]["Fact"];
@@ -1643,12 +1784,17 @@ export interface components {
                     reason_code: string | null;
                     source: ("QUANTBT_SEALED_SEARCH_FACT" | "PORTAL_INFERENCE_RULE") | null;
                 };
+                /**
+                 * @description Three Window classification derived by Portal from sealed native protocol disclosure, not a verbatim WFO claim or untouched calibration OOS.
+                 * @constant
+                 */
+                classification_basis?: "PORTAL_FULL02_PROTOCOL_DISCLOSURE_CLASSIFICATION_V1";
             };
             declared_space?: components["schemas"]["DeclaredSpace"];
             surface?: components["schemas"]["SearchSurface"];
             pool?: components["schemas"]["SearchPool"];
             stage_events?: components["schemas"]["P11StageEvents"];
-            /** @description Only for the exact causal profile: independently ranked inner-validation study surfaces. Never a run-global ranking or theta. Total source trials remain bounded to 48. */
+            /** @description Exactly three native Stage-A trials per admitted outer study, independently scoped. Causal uses inner validation; per-fold decay uses outer OOS. No run-global pool, objective or theta is invented. */
             surfaces_by_study?: components["schemas"]["SearchStudySurface"][];
             /** @description Immutable requested config, retained trial observations and optional actual public Optuna-hook capture from a new confined child. Private TPE densities and historical traces are never inferred. */
             sampler_evidence?: components["schemas"]["SamplerEvidence"];
@@ -1815,7 +1961,7 @@ export interface components {
              * @description Only the admitted causal/inner profile can earn a data-time causal verdict, from retained own-fold selection and inner ranges. Global selection never earns it; engine wall clocks remain separately absent.
              * @enum {unknown}
              */
-            verdict: "NOT_CAUSAL_GLOBAL_SELECTION" | "NOT_EVALUATED" | "NOT_PUBLISHED" | "CAUSAL_DATA_TIME_SELECTION";
+            verdict: "NOT_CAUSAL_GLOBAL_SELECTION" | "NOT_EVALUATED" | "NOT_PUBLISHED" | "CAUSAL_DATA_TIME_SELECTION" | "NOT_CAUSAL_OUTER_OOS_SELECTION";
             reason_code: string | null;
             oos_generation_child: {
                 /** @enum {unknown} */
@@ -1829,7 +1975,7 @@ export interface components {
                 params_digest: string;
                 study_id: string;
                 selected_trial_id: string;
-                inner_fold_count: number;
+                inner_fold_count?: number;
             };
         };
         /** @description W5a P16-T02/T11: per-fold ordering on two axes (data time, wall clock); the per-fold causal verdict from QuantBT's own claims; the out-of-sample generation child compared with the frozen selection by QuantBT's candidate identity. */
@@ -1867,6 +2013,7 @@ export interface components {
                 oos_child_match: number;
                 oos_child_mismatch: number;
                 causal_data_time_selection?: number;
+                not_causal_outer_oos_selection?: number;
             };
             folds: components["schemas"]["FoldOrderingRow"][];
             stage_events?: components["schemas"]["P11StageEvents"];
@@ -2576,7 +2723,7 @@ export interface components {
             trial_id: string | null;
             objective: components["schemas"]["Decimal"] | null;
             /** @enum {string} */
-            objective_kind: "IS_MEAN_SHARPE" | "MODE_1_DECAY_J" | "NOT_PUBLISHED" | "INNER_VALIDATION_DECAY_J";
+            objective_kind: "IS_MEAN_SHARPE" | "MODE_1_DECAY_J" | "NOT_PUBLISHED" | "INNER_VALIDATION_DECAY_J" | "OUTER_FOLD_DECAY_J";
             /** @constant */
             scope?: "LAST_FOLD_DEPLOYMENT";
             fold_id?: string;

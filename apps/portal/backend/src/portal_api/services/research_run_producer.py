@@ -22,7 +22,7 @@ import os
 import re
 import shutil
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from decimal import Decimal, InvalidOperation, ROUND_CEILING, ROUND_HALF_EVEN
 from pathlib import Path
 from typing import Any
@@ -44,6 +44,11 @@ from portal_api.domain.research_delta_wfo_profile import (
 from portal_api.domain.research_run_producer import ResearchRunProducerRequest, sibling_pins
 from portal_api.domain.research_delta_wfo_v2_profile import DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST, temporal_controls
 from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST, causal_inner_controls
+from portal_api.domain.research_full02_profiles import (
+    DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_DIGEST,
+    DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST,
+    per_fold_decay_controls, full02_profile_enabled,
+)
 from portal_api.domain.research_whatif_profile import WHATIF_PROFILE_DIGEST, WHATIF_PROFILE_ID
 from portal_api.domain.research_vn_observed_fixed_profile import vn_source_instant, vn_observed_fixed_enabled
 from portal_api.serialization import canonicalize
@@ -336,7 +341,8 @@ class ResearchRunProducerExecutor:
         """Plan against the exact immutable snapshot before opening P11."""
         from portal_api.adapters.quantbt import QuantBTGateway
         research = request.research
-        if research.execution_profile_id != DELTA_CAUSAL_INNER_PROFILE_ID:
+        decay = research.execution_profile_id == DELTA_PER_FOLD_DECAY_PROFILE_ID
+        if research.execution_profile_id not in {DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_ID}:
             raise ResearchRunProducerError("causal trial planning requires its immutable profile")
         identity, _ = self.snapshots.describe(research.snapshot_id)
         frame_path = self.snapshots.snapshot_path(research.snapshot_id) / "frame.parquet"
@@ -348,9 +354,9 @@ class ResearchRunProducerExecutor:
         start = _utc_timestamp(wf["start"], label="walk-forward start")
         end = _utc_timestamp(wf["end_exclusive"], label="walk-forward end")
         plan = QuantBTGateway().walk_forward_fold_plan(index=index[(index >= start) & (index < end)], config_fields={
-            **causal_inner_controls(research.requested_spec), "split_mode": wf["split_mode"],
-            "optimization_mode": "mode_1_decay", "optimization_schedule": "per_fold_causal", "optuna_trials": 3})
-        if not 2 <= len(plan) <= 16 or any(not 2 <= len(fold["inner"] or []) <= 16 for fold in plan):
+            **(per_fold_decay_controls(research.requested_spec) if decay else causal_inner_controls(research.requested_spec)), "split_mode": wf["split_mode"],
+            "optimization_mode": "mode_1_decay", "optimization_schedule": "per_fold_decay" if decay else "per_fold_causal", "optuna_trials": 3})
+        if not 2 <= len(plan) <= 16 or not decay and any(not 2 <= len(fold["inner"] or []) <= 16 for fold in plan):
             raise ResearchRunProducerError("causal inner immutable tape exceeds profile fold bounds")
         return 3 * len(plan)
 
@@ -889,6 +895,10 @@ class ResearchRunProducerExecutor:
             )
         research = request.research
         whatif = research.whatif if research.is_whatif else None
+        full02 = research.execution_profile_id in {DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID}
+        three_window = research.is_three_window_optimized
+        if full02 and not full02_profile_enabled(research.execution_profile_id):
+            raise ResearchRunProducerError("FULL-02 recipe is not enabled", code="CAPABILITY_MISMATCH")
         if research.is_whatif:
             # W5a A10c: the diagnostic re-runs its parent's exact study with
             # its admitted evaluations enqueued; nothing else changes.
@@ -899,12 +909,12 @@ class ResearchRunProducerExecutor:
                 )
             if research.execution_profile_digest != WHATIF_PROFILE_DIGEST:
                 raise ResearchRunProducerError("P16 what-if profile digest no longer matches", code="CAPABILITY_MISMATCH")
-        elif research.execution_profile_digest != (DELTA_CAUSAL_INNER_PROFILE_DIGEST if research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID else DELTA_WFO_V2_PROFILE_DIGEST if research.execution_profile_id == DELTA_WFO_V2_PROFILE_ID else DELTA_WFO_PROFILE_DIGEST):
+        elif research.execution_profile_digest != (DELTA_PER_FOLD_DECAY_PROFILE_DIGEST if research.execution_profile_id == DELTA_PER_FOLD_DECAY_PROFILE_ID else DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST if three_window else DELTA_CAUSAL_INNER_PROFILE_DIGEST if research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID else DELTA_WFO_V2_PROFILE_DIGEST if research.execution_profile_id == DELTA_WFO_V2_PROFILE_ID else DELTA_WFO_PROFILE_DIGEST):
             raise ResearchRunProducerError("P10 Delta WFO profile digest no longer matches", code="CAPABILITY_MISMATCH")
         # Research preview only: a long study runs the spec's own admitted
         # trial count under the preview child limits. Off, both stay locked.
         try:
-            preview_long = whatif is None and research.execution_profile_id != DELTA_CAUSAL_INNER_PROFILE_ID and delta_wfo_preview_long_enabled()
+            preview_long = whatif is None and not full02 and research.execution_profile_id != DELTA_CAUSAL_INNER_PROFILE_ID and delta_wfo_preview_long_enabled()
             study_trials = (
                 delta_wfo_admitted_trials(research.requested_spec) if preview_long else DELTA_WFO_OPTUNA_TRIALS
             )
@@ -926,7 +936,10 @@ class ResearchRunProducerExecutor:
         if _sha256_file(frame_path) != identity.content_hash:
             raise ResearchRunProducerError("P10 immutable preflight snapshot bytes no longer match")
 
-        walk_forward = research.requested_spec["walk_forward"]
+        windows = research.requested_spec.get("windows") if three_window else None
+        walk_forward = ({"start": windows["is"]["start"], "split_mode": windows["oos"]["start"],
+                        "end_exclusive": windows["holdout"]["end_exclusive"]}
+                        if three_window else research.requested_spec["walk_forward"])
         assert isinstance(walk_forward, dict)  # enforced by the private DTO
         span_start = _utc_timestamp(walk_forward.get("start"), label="walk-forward start")
         first_oos = _utc_timestamp(walk_forward.get("split_mode"), label="walk-forward first OOS")
@@ -942,6 +955,7 @@ class ResearchRunProducerExecutor:
             shutil.rmtree(job_directory)
         job_directory.mkdir(mode=0o700, parents=True)
         source_root = artifact_root / WFO_SOURCE_DIRNAME
+        holdout_bars: int | None = None
         try:
             tape_counts = self._write_is_oos_tape(
                 frame_path=frame_path,
@@ -952,6 +966,14 @@ class ResearchRunProducerExecutor:
             )
             if tape_counts.is_bars < 1 or tape_counts.outer_oos_bars < 1:
                 raise ResearchRunProducerError("P10 immutable snapshot cannot form a bounded walk-forward tape")
+            if three_window:
+                holdout_start = _utc_timestamp(windows["holdout"]["start"], label="holdout start")
+                parquet = pq.ParquetFile(tape_path)
+                index = pd.DatetimeIndex(parquet.read(columns=[_timestamp_index_column(parquet.schema_arrow)]).column(0).to_pandas())
+                holdout_bars = int(((index >= holdout_start) & (index < span_end)).sum())
+                tape_counts = replace(tape_counts, outer_oos_bars=tape_counts.outer_oos_bars - holdout_bars)
+                if holdout_bars < 1 or tape_counts.outer_oos_bars < 1:
+                    raise ResearchRunProducerError("P10 optimized Three Window cannot form its independent OOS and Holdout tapes")
             os.chmod(tape_path, 0o600)
             progress("stage_completed", {"stage": "S1"})
             progress("stage_started", {"stage": "S2"})
@@ -969,7 +991,7 @@ class ResearchRunProducerExecutor:
                 data_start_utc_ms=int(span_start.value // 1_000_000),
                 data_end_exclusive_utc_ms=int(span_end.value // 1_000_000),
                 first_oos_utc_ms=int(first_oos.value // 1_000_000),
-                task="P16_DELTA_WHATIF_GRID" if whatif is not None else "P10_DELTA_WFO",
+                task="P16_DELTA_WHATIF_GRID" if whatif is not None else "P10_DELTA_THREE_WINDOW_OPTIMIZED" if three_window else "P10_DELTA_WFO",
                 # A what-if diagnostic scores full configurations, so it never
                 # carries its parent's pins; a sibling WFO run does.
                 pinned_parameters=() if whatif is not None else tuple(
@@ -982,8 +1004,9 @@ class ResearchRunProducerExecutor:
                     for entry in whatif.evaluations
                 ) if whatif is not None else (),
                 optuna_trials=study_trials if preview_long else None,
-                temporal_controls=temporal_controls(research.requested_spec) if research.execution_profile_id == DELTA_WFO_V2_PROFILE_ID else None,
+                temporal_controls=per_fold_decay_controls(research.requested_spec) if research.execution_profile_id == DELTA_PER_FOLD_DECAY_PROFILE_ID else temporal_controls(research.requested_spec) if research.execution_profile_id == DELTA_WFO_V2_PROFILE_ID else None,
                 causal_inner_controls=causal_inner_controls(research.requested_spec) if research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID else None,
+                holdout_start_utc_ms=int(_utc_timestamp(windows["holdout"]["start"], label="holdout start").value // 1_000_000) if three_window else None,
             )
             progress("stage_completed", {"stage": "S2"})
             progress("stage_started", {"stage": "S3"})
@@ -993,15 +1016,16 @@ class ResearchRunProducerExecutor:
             progress("budget_tick", _cpu_budget_tick_payload(0, cpu_cap))
             declared_trials = len(whatif.evaluations) if whatif is not None else study_trials
             causal = research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID
-            if causal:
+            per_fold = causal or research.execution_profile_id == DELTA_PER_FOLD_DECAY_PROFILE_ID
+            if per_fold:
                 from portal_api.adapters.quantbt import QuantBTGateway
                 index = pd.read_parquet(tape_path).index
                 plan = QuantBTGateway().walk_forward_fold_plan(index=index[(index >= span_start) & (index < span_end)], config_fields={
-                    **causal_inner_controls(research.requested_spec), "split_mode": first_oos.isoformat(), "optimization_mode": "mode_1_decay", "optimization_schedule": "per_fold_causal", "optuna_trials": 3})
-                if not 2 <= len(plan) <= 16 or any(not 2 <= len(fold["inner"] or []) <= 16 for fold in plan):
+                    **(causal_inner_controls(research.requested_spec) if causal else per_fold_decay_controls(research.requested_spec)), "split_mode": first_oos.isoformat(), "optimization_mode": "mode_1_decay", "optimization_schedule": "per_fold_causal" if causal else "per_fold_decay", "optuna_trials": 3})
+                if not 2 <= len(plan) <= 16 or causal and any(not 2 <= len(fold["inner"] or []) <= 16 for fold in plan):
                     raise ResearchRunProducerError("causal inner immutable tape exceeds profile fold bounds")
                 declared_trials = 3 * len(plan)
-            live = LiveStudyProgress(progress, trials_declared=declared_trials, cpu_cap_seconds=cpu_cap, per_fold=causal)
+            live = LiveStudyProgress(progress, trials_declared=declared_trials, cpu_cap_seconds=cpu_cap, per_fold=per_fold)
             child = self.supervisor.run_delta_wfo(
                 receipt,
                 limits=child_limits,
@@ -1045,7 +1069,7 @@ class ResearchRunProducerExecutor:
             "effective_spec_digest": research.effective_spec_digest,
             "dataset_binding_digest": research.dataset_binding_digest,
             "manifest_digest": research.manifest_digest,
-            "input_scope": "P08_OPTIONAL_WARMUP_PLUS_WFO_SPAN",
+            "input_scope": "P08_OPTIONAL_WARMUP_PLUS_INDEPENDENT_THREE_WINDOWS" if three_window else "P08_OPTIONAL_WARMUP_PLUS_WFO_SPAN",
         }
         request_path = engine_directory / "config" / "request.json"
         request_path.write_text(
@@ -1063,7 +1087,7 @@ class ResearchRunProducerExecutor:
             "effective_spec_digest": research.effective_spec_digest,
             "dataset_binding_digest": research.dataset_binding_digest,
             "manifest_digest": research.manifest_digest,
-            "input_scope": "P08_OPTIONAL_WARMUP_PLUS_WFO_SPAN",
+            "input_scope": "P08_OPTIONAL_WARMUP_PLUS_INDEPENDENT_THREE_WINDOWS" if three_window else "P08_OPTIONAL_WARMUP_PLUS_WFO_SPAN",
             "tape": {
                 "warmup_bars": tape_counts.warmup_bars,
                 "is_bars": tape_counts.is_bars,
@@ -1090,6 +1114,9 @@ class ResearchRunProducerExecutor:
                 "grid_key": whatif.grid_key,
                 "evaluations": len(whatif.evaluations),
             }
+        if three_window:
+            receipt_document["tape"]["holdout_bars"] = holdout_bars
+            receipt_document["tape"]["holdout_used_for_selection"] = False
         receipt_path = engine_directory / "research" / "p10-receipt.json"
         receipt_path.write_text(
             json.dumps(canonicalize(receipt_document), sort_keys=True, indent=2) + "\n",

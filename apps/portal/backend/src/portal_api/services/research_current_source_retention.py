@@ -31,6 +31,7 @@ from urllib.parse import urlparse
 
 from portal_api.domain.research_delta_wfo_profile import delta_wfo_admitted_trials
 from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE_ID
+from portal_api.domain.research_full02_profiles import DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID
 from portal_api.domain.research_run_producer import ResearchRunProducerRequest
 from portal_api.repositories.artifacts import ArtifactRepository
 from portal_api.services.current_source_artifacts import (
@@ -39,6 +40,7 @@ from portal_api.services.current_source_artifacts import (
     iter_current_source_retention_batches,
     signal_notional_current_source_admission,
     causal_inner_current_source_admission,
+    full02_current_source_admission,
 )
 from portal_api.services.research_artifacts import (
     ArtifactFence,
@@ -141,6 +143,14 @@ def _declared_wfo_oos_window(requested: Mapping[str, Any]) -> dict[str, Any]:
         "start": utc(walk_forward["split_mode"]), "end_exclusive": utc(walk_forward["end_exclusive"]),
     }})
     windows["oos"]["source_locator"] = "P10.immutable_requested_spec.walk_forward:split_mode..end_exclusive"
+    return windows
+
+
+def _declared_three_windows(requested: Mapping[str, Any]) -> dict[str, Any]:
+    from portal_api.services.research_enrich_analysis import declared_source_windows
+    windows = declared_source_windows(requested["windows"])
+    for name in windows:
+        windows[name]["source_locator"] = f"P10.immutable_requested_spec.windows.{name}"
     return windows
 
 
@@ -249,10 +259,11 @@ class ResearchCurrentSourceRetentionClient:
             identity=identity,
             fence=fence,
             # The locked 3, or the preview long WFO's admitted count (flag on only).
-            admission=(causal_inner_current_source_admission() if research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID
+            admission=(full02_current_source_admission(three_window=research.is_three_window_optimized) if research.execution_profile_id in {DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID}
+                       else causal_inner_current_source_admission() if research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID
                        else signal_notional_current_source_admission(delta_wfo_admitted_trials(research.requested_spec))),
             fence_validator=fence_validator,
-            source_windows=_declared_wfo_oos_window(research.requested_spec),
+            source_windows=_declared_three_windows(research.requested_spec) if research.is_three_window_optimized else _declared_wfo_oos_window(research.requested_spec),
         )
         receipt = export.receipt
 
@@ -324,13 +335,15 @@ class ResearchCurrentSourceRetentionClient:
                 for row in batch.rows:
                     state = row.get("payload", {}).get("state")
                     trial_states.append(state if isinstance(state, str) else None)
-                    if research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID:
+                    if research.execution_profile_id in {DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_ID}:
                         payload = row["payload"]
                         facts = payload["trial_facts"]
                         causal_trials.append({"trial_id": payload["trial_id"], "source_trial_id": facts["source_trial_id"],
                                               "study_id": facts["study_id"], "state": state, "objective": payload["objective"]})
             if batch.table_kind == "FOLD" and research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID:
                 causal_fold_selections.extend({"fold_id": row["payload"]["fold_id"], **row["payload"]["causal_selection"]} for row in batch.rows)
+            if batch.table_kind == "FOLD" and research.execution_profile_id == DELTA_PER_FOLD_DECAY_PROFILE_ID:
+                causal_fold_selections.extend({"fold_id": row["payload"]["fold_id"], **row["payload"]["fold_selection"]} for row in batch.rows)
             accepted.append({
                 "table_kind": batch.table_kind,
                 "batch_ordinal": batch.batch_ordinal,

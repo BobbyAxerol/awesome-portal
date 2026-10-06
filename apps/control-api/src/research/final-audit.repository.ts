@@ -15,6 +15,7 @@ export interface AuditParent {
   pins: ReturnType<typeof PinnedAuditPreparationSchema.parse>;
   attemptId: string; legacyRequest: Record<string, unknown>;
   requestedSpecDigest: string; effectiveSpecDigest: string;
+  executionProfileId?: string; executionProfileDigest?: string;
 }
 export interface AdmittedAudit {
   runId: string; jobId: string; legacyRequest: Record<string, unknown>; dispatchState: string; replayed: boolean;
@@ -48,7 +49,8 @@ export class ResearchFinalAuditRepository {
         execution_adapter_id:row.execution_adapter_id,adapter_contract_digest:row.adapter_contract_digest});
       if (!pins.success) throw new ResearchFinalAuditError("RESEARCH_FINAL_AUDIT_NOT_APPLICABLE", "Parent is outside the qualified audit profile.",409);
       return {pins:pins.data,attemptId:String(row.attempt_id),legacyRequest:object(row.legacy_request),
-        requestedSpecDigest:String(row.requested_spec_digest),effectiveSpecDigest:String(row.effective_spec_digest)};
+        requestedSpecDigest:String(row.requested_spec_digest),effectiveSpecDigest:String(row.effective_spec_digest),
+        executionProfileId:String(row.execution_profile_id),executionProfileDigest:String(row.execution_profile_digest)};
     });
   }
   async latest(scope:ResearchScope,parentRunId:string,targetDigest:string) {

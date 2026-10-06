@@ -182,8 +182,8 @@ export interface components {
             scope: "DECLARED_CAPS_NOT_RESERVATION_OR_ESTIMATE";
             recipe_digest: string;
             profile_digest: string | null;
-            /** @constant */
-            qualification: "LEGACY_EXACT_BINDING";
+            /** @enum {unknown} */
+            qualification: "LEGACY_EXACT_BINDING" | "CANDIDATE_NOT_QUALIFIED" | "PRODUCT_RUN_QUALIFIED";
             memory_bytes: number;
             cpu_seconds: number;
             wall_seconds: number;

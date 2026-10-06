@@ -39,6 +39,7 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
   ];
   const profiles: RunSetupProfile[] = admission.profiles.map(row => {
     const temporal = row.protocol === "advanced";
+    const optimized = executionRecipe(row.profile_id).adapter_kind === "DELTA_THREE_WINDOW_OPTIMIZED";
     const refusals = [...common, ...refusal(imported ? "ALPHA_EXECUTOR_MISMATCH" : null, ["alpha_binding"]),
       ...refusal(row.dataset_id ? row.dataset_id !== context.dataset_id ? "PROFILE_DATASET_NOT_ADMITTED" : null
         : context.dataset_id === "vn-stock-daily" ? "PROFILE_DATASET_NOT_ADMITTED" : null, ["data", "dataset_id"]),
@@ -58,8 +59,9 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
       max_span_days: row.max_span_days, fold_bounds: row.fold_bounds,
       frequencies: row.frequencies ?? (row.frequency ? [row.frequency] : []),
       window_modes: (row.window_modes ?? (row.window_mode ? [row.window_mode] : [])) as RunSetupProfile["window_modes"],
-      parameter_policy: temporal ? "DELTA_SEARCH_WITH_QUALIFIED_PINS" : "FIXED_NO_OVERRIDES",
-      allowed_pin_names: temporal ? WHATIF_PROFILE.axes.map(axis => axis.parameter) : [],
+      parameter_policy: temporal || optimized ? "DELTA_SEARCH_WITH_QUALIFIED_PINS" : "FIXED_NO_OVERRIDES",
+      allowed_pin_names: (temporal || optimized) && row.optimization_schedule !== "per_fold_decay"
+        ? WHATIF_PROFILE.axes.map(axis => axis.parameter) : [],
       inner_validation: row.inner_validation ?? "NOT_APPLICABLE", inner_constraints: row.inner_constraints ?? null,
       temporal_guards: { policy: temporal ? "V1_ABSENT_V2_EXPLICIT" : "NOT_APPLICABLE", defaults: temporal ? guards : null,
         max_bars: temporal ? 10_000 : null, zero_semantics: "ZERO_APPLIES_NO_TEMPORAL_GUARD" },
@@ -87,8 +89,10 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
   }
   for (const profile of profiles) {
     const row = executionRecipe(profile.profile_id), budgets = executionRecipeBudgets(row, config);
+    const qualification = executionRecipeQualification(row.profile_id);
     profile.budget = {...budgets, scope:"DECLARED_CAPS_NOT_RESERVATION_OR_ESTIMATE", profile_digest:row.profile_digest,
-      recipe_digest:executionRecipeQualification(row.profile_id).recipe_digest, qualification:"LEGACY_EXACT_BINDING",
+      recipe_digest:qualification.recipe_digest,
+      qualification:qualification.kind === "LEGACY_COMPATIBILITY_REFERENCE" ? "LEGACY_EXACT_BINDING" : qualification.kind,
       queue_class:row.queue_class, resource_class:row.resource_class, preview_override:budgets.cpu_seconds !== row.budgets.cpu_seconds};
   }
   const payload = { schema_version: "research.run-setup-options.v1" as const, context,

@@ -25,6 +25,8 @@ import type { ResearchProgressSnapshot } from "./progress.contract";
 import type { SealedArtifactParts } from "./report.repository";
 import { extremaPreservingSample } from "./run-library.service";
 import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
+import { DELTA_PER_FOLD_DECAY_PROFILE, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE } from "./full02.profiles";
+import { sha256ResearchJson as sha } from "./preflight.service";
 
 export type Availability = {
   state: "AVAILABLE" | "NOT_PUBLISHED" | "PENDING_SOURCE_CALLBACK" | "LEGACY_METADATA_ONLY" | "NOT_APPLICABLE";
@@ -265,7 +267,10 @@ export function retainedFinalAudit(
   const causal = freeze.provenance.profile_id === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id
     && freeze.provenance.source_adapter_id === DELTA_CAUSAL_INNER_PROFILE.current_source.source_adapter_id
     && search.search_contract.optimization_schedule === "per_fold_causal";
-  const target = causal ? "PER_FOLD_PARAMETER_SELECTIONS" as const : "SINGLE_PARAMETER_SET" as const;
+  const decay = freeze.provenance.profile_id === DELTA_PER_FOLD_DECAY_PROFILE.current_source.profile_id
+    && search.search_contract.optimization_schedule === "per_fold_decay";
+  const perFold = causal || decay;
+  const target = perFold ? "PER_FOLD_PARAMETER_SELECTIONS" as const : "SINGLE_PARAMETER_SET" as const;
   if (relation === null) {
     return {
       schema_version: "research.report-final-audit.v1", kind: "NOT_PUBLISHED", reason_code: FINAL_AUDIT_NOT_READ, audit_target_kind: target,
@@ -273,11 +278,26 @@ export function retainedFinalAudit(
     };
   }
   const linked = linkedChild(relation, runId, "SINGLE_PARAMETER_SET");
-  if (linked) return causal ? {
+  if (linked) return perFold ? {
     schema_version: "research.report-final-audit.v1", kind: "NOT_PUBLISHED", reason_code: "CAUSAL_LINKED_CHILD_PER_FOLD_AUDIT_TARGET_NOT_PROVEN",
     audit_target_kind: target, final_audit_run_id: null, audited_run_id: null, relationship: null,
     optimizer_reinvoked: null, optimizer_basis: null, source_refs: [], folds: [],
   } : linked;
+  const protocol = freeze.protocol_disclosure;
+  if (freeze.provenance.profile_id === DELTA_THREE_WINDOW_OPTIMIZED_PROFILE.current_source.profile_id && protocol) {
+    const selectedDigest = sha(search.selection.parameters);
+    const exact = protocol.independent_holdout.selected_params_digest === selectedDigest
+      && search.protocol_disclosure !== undefined && replay.protocol_disclosure !== undefined
+      && sha(protocol) === sha(search.protocol_disclosure) && sha(protocol) === sha(replay.protocol_disclosure)
+      && freeze.integrity.state === "MATCH";
+    return { schema_version: "research.report-final-audit.v1", kind: "REUSED_ORIGINAL",
+      reason_code: exact ? null : "THREE_WINDOW_HOLDOUT_SELECTION_BINDING_NOT_PROVEN", audit_target_kind: "SINGLE_PARAMETER_SET",
+      final_audit_run_id: runId, audited_run_id: runId, relationship: "PRIMARY",
+      optimizer_reinvoked: exact ? false : null,
+      optimizer_basis: exact ? "THREE_WINDOW_HOLDOUT_RAN_FROZEN_CALIBRATION_SELECTION" : "THREE_WINDOW_HOLDOUT_SELECTION_BINDING_NOT_PROVEN",
+      source_refs: [{ key: "independent_holdout", ref: `${freeze.revision} · train_test_split untouched holdout` },
+        { key: "selected_params", ref: selectedDigest }, { key: "replay", ref: replay.revision }], folds: [] };
+  }
   const ordering = freeze.fold_ordering;
   const folds = (ordering?.folds ?? []).map((fold) => ({
     fold_id: fold.fold_id,
@@ -285,8 +305,8 @@ export function retainedFinalAudit(
     candidate_id: fold.oos_generation_child.candidate_id,
     state: fold.oos_generation_child.state,
   }));
-  const actualCausalTargets = !causal || ordering?.selection_scope === "PER_FOLD"
-    && ordering.folds.every(fold => fold.verdict === "CAUSAL_DATA_TIME_SELECTION"
+  const actualCausalTargets = !perFold || ordering?.selection_scope === "PER_FOLD"
+    && ordering.folds.every(fold => fold.verdict === (causal ? "CAUSAL_DATA_TIME_SELECTION" : "NOT_CAUSAL_OUTER_OOS_SELECTION")
       && fold.selected_candidate?.candidate_id != null
       && fold.selected_candidate.candidate_id === fold.oos_generation_child.candidate_id);
   const allMatch = actualCausalTargets && folds.length > 0 && folds.every((fold) => fold.state === "MATCH");
@@ -299,12 +319,12 @@ export function retainedFinalAudit(
     final_audit_run_id: runId,
     audited_run_id: runId,
     relationship: "PRIMARY",
-    optimizer_reinvoked: allMatch ? false : anyMismatch && !causal ? true : null,
+    optimizer_reinvoked: allMatch ? false : anyMismatch && !perFold ? true : null,
     optimizer_basis: allMatch
-      ? causal ? "EVERY_OOS_GENERATION_CHILD_RAN_ITS_FOLD_SELECTED_CANDIDATE" : "EVERY_OOS_GENERATION_CHILD_RAN_THE_FROZEN_CANDIDATE"
+      ? perFold ? "EVERY_OOS_GENERATION_CHILD_RAN_ITS_FOLD_SELECTED_CANDIDATE" : "EVERY_OOS_GENERATION_CHILD_RAN_THE_FROZEN_CANDIDATE"
       : anyMismatch ? "AN_OOS_GENERATION_CHILD_RAN_ANOTHER_CANDIDATE" : "QUANTBT_CHILD_AUDIT_NOT_RETAINED_FOR_EVERY_FOLD",
     source_refs: [
-      ...(causal ? [{ key: "per_fold_selections", ref: `${freeze.revision} · retained outer-fold parameter selections` }]
+      ...(perFold ? [{ key: "per_fold_selections", ref: `${freeze.revision} · retained outer-fold parameter selections` }]
         : [{ key: "selection", ref: `${search.revision} · trial ${search.selection.selected_trial_id ?? "none"}` },
           { key: "frozen_candidate", ref: `QUANTBT_WALKFORWARD_STRATEGY_CANDIDATE_ID_V1 ${ordering?.frozen_candidate.candidate_id ?? "not computable"}` }]),
       { key: "freeze", ref: freeze.revision },
@@ -506,12 +526,15 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
   const schedule = contract.optimization_schedule;
   const params = parameterText(search.selection.parameters);
   const causalProfile = provenance.profile_id === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id;
-  const globalParams = !causalProfile && schedule === "global" && params !== null;
+  const decayProfile = provenance.profile_id === DELTA_PER_FOLD_DECAY_PROFILE.current_source.profile_id;
+  const perFoldProfile = causalProfile || decayProfile;
+  const globalParams = !perFoldProfile && schedule === "global" && params !== null;
   const causal = causalProfile && provenance.source_adapter_id === DELTA_CAUSAL_INNER_PROFILE.current_source.source_adapter_id
     && schedule === "per_fold_causal";
   const causalParameters = new Map(split.fold_plan.folds.map((fold) => [fold.fold_id,
-    causal && fold.causal_selection ? parameterText(fold.causal_selection.parameters) : null]));
-  const perFoldParams = causal && folds.length > 0 && folds.length === split.fold_plan.folds.length
+    causal && fold.causal_selection ? parameterText(fold.causal_selection.parameters)
+      : decayProfile && fold.fold_selection ? parameterText(fold.fold_selection.parameters) : null]));
+  const perFoldParams = perFoldProfile && folds.length > 0 && folds.length === split.fold_plan.folds.length
     && new Set(folds.map(fold => fold.fold_id)).size === folds.length
     && causalParameters.size === split.fold_plan.folds.length
     && folds.every((fold) => causalParameters.get(fold.fold_id) != null);
@@ -522,7 +545,9 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
     : { value: null, availability: NOT_PUBLISHED("QUANTBT_SEARCH_CONTRACT_NOT_PUBLISHED") };
   const guards = split.guards;
   const foldCount = split.fold_plan.folds.length;
-  const protocol = claim.validation_claim.value !== null
+  const protocolDisclosure = evidence.protocol_disclosure;
+  const protocol = protocolDisclosure ? "three_window_decay · IS/OOS calibration · independent untouched holdout"
+    : claim.validation_claim.value !== null
     ? `${claim.validation_claim.value} · ${foldCount} outer folds · purge ${guards.purge_bars.value ?? "n/a"} bars · embargo ${guards.embargo_bars.value ?? "n/a"} bars`
     : null;
   const runtime = claim.runtime_authority;
@@ -559,6 +584,7 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
   const warn = verdicts.counts.warn;
 
   return {
+    ...(protocolDisclosure ? { protocol_disclosure: protocolDisclosure } : {}),
     schema_version: "research.report-frozen-core.v2",
     report_source: "RS02_RETAINED_CURRENT_SOURCE",
     source_revisions: {
@@ -603,7 +629,7 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
       identity("route", "Route", ids.route.value, ids.route.availability, "P18_ROUTE_NOT_PUBLISHED"),
       identity("runtime_authority", "Runtime", runtimeText, runtime.availability as Availability, "QUANTBT_RUNTIME_AUTHORITY_NOT_PUBLISHED"),
       identity("optimization", "Optimization", modeSchedule.value, modeSchedule.availability, "QUANTBT_SEARCH_CONTRACT_NOT_PUBLISHED"),
-      identity("selected_params", causalProfile ? "Last-fold deployment parameters" : "Selected parameters", params, search.selection.availability as Availability, "QUANTBT_SELECTION_NOT_PUBLISHED"),
+      identity("selected_params", perFoldProfile ? "Last-fold deployment parameters" : "Selected parameters", params, search.selection.availability as Availability, "QUANTBT_SELECTION_NOT_PUBLISHED"),
       identity("random_seed", "Seed", ids.seed.value, ids.seed.availability, "P18_SEED_NOT_PUBLISHED"),
       identity("config_digest", "Config digest", ids.configDigest.value, ids.configDigest.availability, "P18_CONFIG_DIGEST_NOT_PUBLISHED"),
       identity("evidence_revision", "Evidence revision", evidence.revision, AVAILABLE, "P18_REVISION_NOT_PUBLISHED"),
@@ -633,16 +659,20 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
       { key: "WIN_RATE", label: analyticsV2 ? "Episode win rate · not audited trades" : "Win rate", scope: analyticsV2 ? "OOS" : "NOT_PUBLISHED", ...(analyticsV2 ? descriptiveFact(analyticsV2.behaviour.win_rate, "PORTAL_ANALYTICS_EPISODE_WIN_RATE_UNAVAILABLE") : { value: null, availability: NOT_PUBLISHED("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS") }) },
       { key: "FUNDING", label: "Funding", scope: "NOT_PUBLISHED", value: null, availability: NOT_PUBLISHED("RS02_SUMMARY_PUBLISHES_NO_FUNDING_TOTAL") },
     ],
-    headline_footnote: "OOS return/Sharpe use outer tests; drawdown spans retained account path.",
+    headline_footnote: protocolDisclosure ? "OOS is a calibration input, not untouched holdout; independent holdout is disclosed separately."
+      : "OOS return/Sharpe use outer tests; drawdown spans retained account path.",
     equity: {
-      ...equityBlock("RS02_STITCHED_OUTER_TEST_WINDOWS", oosPoints, seriesSampling, 600, "RS02_OUTER_TEST_WINDOWS_HAVE_NO_RETAINED_OBSERVATIONS"),
+      ...equityBlock(protocolDisclosure ? "THREE_WINDOW_CALIBRATION_OOS" : "RS02_STITCHED_OUTER_TEST_WINDOWS", oosPoints, seriesSampling, 600, "RS02_OUTER_TEST_WINDOWS_HAVE_NO_RETAINED_OBSERVATIONS"),
       digest: evidence.source_series_artifact?.digest ?? null,
       digest_scope: evidence.source_series_artifact?.scope ?? null,
       logical_name: evidence.source_series_artifact?.logical_name ?? null,
       digest_availability: evidence.source_series_artifact
         ? AVAILABLE : NOT_PUBLISHED("P05_SEAL_PREDATES_SOURCE_SERIES_BYTE_DIGEST"),
     },
-    equity_is: equityBlock("RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST", isPoints, seriesSampling, 300, "RS02_NO_RETAINED_OBSERVATION_BEFORE_FIRST_OUTER_TEST"),
+    equity_is: protocolDisclosure
+      ? equityBlock("THREE_WINDOW_CALIBRATION_IS", protocolDisclosure.window_series.is.map(point => ({ at_utc_ms: point.at_utc_ms,
+        equity: point.equity, drawdown_fraction: point.drawdown_fraction })), "OBSERVATION_EXTREMA_BUCKET_V2", 300, "THREE_WINDOW_IS_REPLAY_NOT_RETAINED")
+      : equityBlock("RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST", isPoints, seriesSampling, 300, "RS02_NO_RETAINED_OBSERVATION_BEFORE_FIRST_OUTER_TEST"),
     folds: {
       state: verdicts.state === "AVAILABLE" ? "AVAILABLE" : "NOT_PUBLISHED",
       reason_code: verdicts.state === "AVAILABLE" ? null : verdicts.reason_code,

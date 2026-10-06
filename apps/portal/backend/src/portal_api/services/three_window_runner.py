@@ -189,6 +189,9 @@ class ThreeWindowRunner:
         param_ranges = _quantbt_param_ranges(request.parameter_space.root)
         optimization_config = _mode1_optimization_config(config)
         account_kwargs = _account_kwargs(request.account, request.execution)
+        target_mode = request.execution.target_mode
+        if target_mode not in {"pct_equity", "signal_notional"}:
+            raise ThreeWindowRunnerError("Three Window target mode is not allowlisted")
 
         started_at = _utc_now_iso()
         stage("OPTIMIZING_IS")
@@ -202,6 +205,7 @@ class ThreeWindowRunner:
             optuna_early_stopping=config.optuna_early_stopping,
             random_seed=config.random_seed,
             account_kwargs=account_kwargs,
+            target_mode=target_mode,
         )
         # These stages occur inside the single public calibration call; they
         # are recorded as completed once the study returns (§9).
@@ -235,19 +239,27 @@ class ThreeWindowRunner:
             "oos": "BACKTESTING_OOS",
             "holdout_live": "BACKTESTING_HOLDOUT_LIVE",
         }
+        holdout_replay_started_at: str | None = None
         for key, segment_frame in segment_frames.items():
             stage(replay_stages[key])
+            if key == "holdout_live":
+                holdout_replay_started_at = _utc_now_iso()
             series, metrics = self._replay_segment(
                 run_id,
                 key,
                 segment_frame,
-                protocol_tape,
+                market.frame if target_mode == "signal_notional" else protocol_tape,
                 selected_params["params"],
                 account_kwargs,
                 trading_days=int(request.calibration.optimization.scoring_trading_days),
+                target_mode=target_mode,
             )
             series_by_segment[key] = series
             metrics_by_segment[key] = metrics
+
+        if target_mode == "signal_notional":
+            self._write_current_source_artifacts(run_id, request, wf, endpoint.result, calibration_tape,
+                selected_params=selected_params, holdout_replay_started_at=holdout_replay_started_at)
 
         stage("BUILDING_ARTIFACTS")
         calendar_equity, rebased_equity = _build_presentation_equity(
@@ -312,6 +324,55 @@ class ThreeWindowRunner:
 
     # -- internals -----------------------------------------------------------
 
+    def _write_current_source_artifacts(
+        self, run_id: str, request: PortalRunRequest, wf: Mapping[str, Any],
+        result: Any, calibration_tape: pd.DataFrame,
+        *, selected_params: Mapping[str, Any], holdout_replay_started_at: str | None,
+    ) -> None:
+        """Retain native calibration facts, never relabel untouched Holdout as OOS.
+
+        The shared retained series is the OOS window of QuantBT's actual
+        train_test_split account. Independent fresh-account replays stay in their named
+        is/oos/holdout_live artifacts. No Holdout bar reaches the study.
+        """
+        from portal_api.services.advanced_walkforward_runner import AdvancedWalkForwardRunner, _stitched_series
+        from portal_api.services.research_portal_analytics import portal_analytics_v2
+        from portal_api.services.research_retained_analytics import retained_analytics
+
+        native = AdvancedWalkForwardRunner(gateway=self._gateway, artifacts=self._artifacts)
+        config = request.calibration
+        oos_tape = calibration_tape.loc[(calibration_tape.index >= config.oos_start) & (calibration_tape.index < config.oos_end_exclusive)]
+        folds = wf.get("fold_table")
+        if not isinstance(folds, pd.DataFrame) or len(folds) != 1:
+            raise ThreeWindowRunnerError("train_test_split must publish one genuine IS/OOS pair")
+        native._write_compatible_fold_tables(run_id, folds)
+        native._write_wfo_source_facts(run_id, wf, getattr(result, "metadata", None), engine_operation="train_test_split")
+        native._write_account_ledger(run_id, oos_tape, result, wf)
+        self._artifacts.write_frame(run_id, "series/stitched.parquet", _stitched_series(oos_tape, result))
+        self._artifacts.write_json(run_id, "wfo/retained_analytics.v1.json", with_portal_provenance(
+            "retained_analytics.v1.json", retained_analytics(result=result, mode="WFO")))
+        self._artifacts.write_json(run_id, "wfo/retained_analytics.v2.json", with_portal_provenance(
+            "retained_analytics.v2.json", portal_analytics_v2(result=result, mode="WFO", market_close=calibration_tape["close"],
+                benchmark_locator=f"P08.snapshot:{request.dataset_id}:{request.symbol}:{request.timeframe}:close:OOS")))
+        frozen_at = selected_params["frozen_at"]
+        if holdout_replay_started_at is None or datetime.fromisoformat(frozen_at) > datetime.fromisoformat(holdout_replay_started_at):
+            raise ThreeWindowRunnerError("Holdout replay did not follow the immutable parameter freeze")
+        self._artifacts.write_json(run_id, "wfo/three_window_roles.v1.json", with_portal_provenance(
+            "three_window_roles.v1.json", canonicalize({
+                "schema_version": "portal.three-window-roles.v1", "engine_operation": "train_test_split",
+                "calibration_tape": ["IS", "OOS"], "holdout_used_for_selection": False,
+                "selected_params_digest": selected_params["params_hash"],
+                "selected_params_digest_scope": "SHA256_SORTED_NUMERIC_PARAMETER_JSON",
+                "freeze_before_holdout": True, "frozen_at": frozen_at,
+                "holdout_replay_started_at": holdout_replay_started_at,
+                "observation_account": "QUANTBT_CALIBRATION_FINAL_ACCOUNT", "holdout_account": "FRESH_AFTER_SELECTION_FREEZE",
+                "windows": {
+                    "IS": {"start_utc_ms": int(config.is_start.timestamp() * 1000), "end_exclusive_utc_ms": int(config.is_end_exclusive.timestamp() * 1000)},
+                    "OOS": {"start_utc_ms": int(config.oos_start.timestamp() * 1000), "end_exclusive_utc_ms": int(config.oos_end_exclusive.timestamp() * 1000)},
+                    "HOLDOUT": {"start_utc_ms": int(config.holdout_start.timestamp() * 1000), "end_exclusive_utc_ms": int(config.holdout_end_exclusive.timestamp() * 1000) if config.holdout_end_exclusive is not None else None},
+                },
+            })))
+
     def _write_wfo_artifacts(self, run_id: str, wf: Mapping[str, Any]) -> None:
         folds = wf.get("fold_table")
         if isinstance(folds, pd.DataFrame):
@@ -346,6 +407,7 @@ class ThreeWindowRunner:
         frozen_params: Mapping[str, object],
         account_kwargs: Mapping[str, object],
         trading_days: int,
+        target_mode: str = "pct_equity",
     ) -> tuple[pd.DataFrame, dict[str, Any]]:
         # Warm-up history is readable up to the segment start, but the account
         # starts fresh at the segment boundary (plan §7.2, §7.3).
@@ -353,7 +415,7 @@ class ThreeWindowRunner:
         generated = generate_signals(history, frozen_params)
         signal = generated["pos_weight"].reindex(segment_frame.index).fillna(0.0).astype(float)
         endpoint = self._gateway.run_frozen_replay(
-            evaluation_frame=segment_frame, signal=signal, account_kwargs=account_kwargs
+            evaluation_frame=segment_frame, signal=signal, account_kwargs=account_kwargs, target_mode=target_mode
         )
         metrics = self._gateway.metrics(endpoint, trading_days=trading_days)
         result = endpoint.result

@@ -31,6 +31,14 @@ test('sudo-safe test-only Execution UI build arg is explicit and bounded', () =>
   assert.throws(() => executionPreviewBuildArg('true --build-arg FEATURE_EXECUTION_COMMAND_RELAY=true'),
     /P23_EXECUTION_PREVIEW_BUILD_ARG_INVALID/);
 });
+test('FULL02 candidate uses separate named custody, never an older P23 data volume', () => {
+  const args = composeArguments('/home/bobby/.local/state/portal-research-p23/20261006/full02/preview.env', 'full02');
+  assert(args.at(-1).endsWith('compose.research-full02-cell.yaml'));
+  assert.throws(() => composeArguments('/tmp/preview.env', 'other'), /UNKNOWN_QUALIFICATION_SLICE/);
+  const yaml = readFileSync(new URL('../../deploy/research-preview/compose.research-full02-cell.yaml', import.meta.url), 'utf8');
+  for (const name of ['artifacts', 'postgres', 'nats', 'roadmap']) assert(yaml.includes(`name: portal-research-full02-20261006-${name}`));
+  assert(!yaml.includes('external:'));
+});
 test('sudo forwards only validated non-secret source stamps to the owned Compose invocation', () => {
   const sha = 'a'.repeat(40);
   assert.deepEqual(stampedComposePrefix(['docker'], sha, false), ['docker']);

@@ -24,8 +24,9 @@ import {
   type CurrentSourceIngestAuthority,
   type CurrentSourceLanePair,
 } from "./current-source.repository";
-import { DELTA_WFO_PROFILE, deltaWfoCurrentSourcePair, isDeltaWfoProfile } from "./delta-wfo.profile";
+import { currentSourceExecutionPair, isCurrentSourceExecutionProfile } from "./current-source-profile";
 import { DELTA_CAUSAL_INNER_PROFILE, DELTA_CAUSAL_INNER_PROFILE_ID } from "./delta-causal-inner.profile";
+import { DELTA_PER_FOLD_DECAY_PROFILE, DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID } from "./full02.profiles";
 import type { ProgressIngressScope } from "./progress.repository";
 
 export interface CurrentSourceBatchReceipt {
@@ -60,6 +61,10 @@ export class ResearchCurrentSourceIngestService {
         ? row.payload.causal_selection === undefined : row.payload.causal_selection !== undefined)) {
         throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Per-fold causal selections must match the admitted immutable execution profile.", 400);
       }
+      if (input.table_kind === "FOLD" && (authority.executionProfileId === DELTA_PER_FOLD_DECAY_PROFILE_ID
+        ? row.payload.fold_selection === undefined : row.payload.fold_selection !== undefined)) {
+        throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "OOS-used fold selections must match the exact per-fold-decay execution profile.", 400);
+      }
     }
     const result = await this.repository.append(scope, {
       runId: input.run_id,
@@ -89,13 +94,11 @@ export class ResearchCurrentSourceIngestService {
   async seal(lease: ProgressIngressScope, input: ResearchCurrentSourceSealIngress): Promise<CurrentSourceSealReceipt> {
     const scope = { workspaceId: lease.workspaceId, actorUserId: lease.actorUserId };
     const authority = await this.requireAuthority(lease, input);
-    const pair = deltaWfoCurrentSourcePair(authority.executionProfileId, authority.executionProfileDigest);
+    const pair = currentSourceExecutionPair(authority.executionProfileId, authority.executionProfileDigest);
     if (!pair || input.source_adapter_id !== pair.source_adapter_id || input.profile_id !== pair.profile_id) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source seal names a lane pair outside the run execution profile.", 400);
     }
-    const lane: CurrentSourceLanePair = pair.profile_id === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id
-      ? { sourceAdapterId: DELTA_CAUSAL_INNER_PROFILE.current_source.source_adapter_id, profileId: DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id }
-      : { sourceAdapterId: DELTA_WFO_PROFILE.current_source.source_adapter_id, profileId: DELTA_WFO_PROFILE.current_source.profile_id };
+    const lane = { sourceAdapterId: pair.source_adapter_id, profileId: pair.profile_id } as CurrentSourceLanePair;
     const summary = CurrentSourceSummarySchema.safeParse(input.summary);
     if (!summary.success) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source seal summary is incompatible.", 400);
@@ -104,6 +107,12 @@ export class ResearchCurrentSourceIngestService {
       && (summary.data.selection.scope !== "LAST_FOLD_DEPLOYMENT" || summary.data.selection.fold_id === undefined
         || summary.data.source_facts?.search.optimization_schedule !== "per_fold_causal")) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Causal retention requires the actual last-fold deployment singleton and per-fold source facts.", 400);
+    }
+    if (authority.executionProfileId === DELTA_PER_FOLD_DECAY_PROFILE_ID
+      && (summary.data.selection.scope !== "LAST_FOLD_DEPLOYMENT" || summary.data.selection.fold_id === undefined
+        || summary.data.source_facts?.search.optimization_schedule !== "per_fold_decay"
+        || summary.data.source_facts.claims.oos_used_for_selection !== true)) {
+      throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Decay retention requires per-fold selection and truthful outer-OOS use.", 400);
     }
     const counts = summary.data.counts;
     if (counts && (counts.folds !== input.table_rows.FOLD || counts.trials !== input.table_rows.TRIAL
@@ -151,7 +160,7 @@ export class ResearchCurrentSourceIngestService {
     if (!authority) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_NOT_FOUND", "Research run was not found.", 404);
     }
-    if (!isDeltaWfoProfile(authority.executionProfileId, authority.executionProfileDigest)) {
+    if (!isCurrentSourceExecutionProfile(authority.executionProfileId, authority.executionProfileDigest)) {
       throw new ResearchCurrentSourceError(
         "RESEARCH_CURRENT_SOURCE_CONFLICT",
         "Only a run admitted under the Delta signal-notional WFO execution profile may retain current-source rows.",

@@ -60,11 +60,14 @@ function dockerPrefix() {
   catch { execFileSync('sudo', ['-n', 'docker', 'info'], { stdio: 'pipe', timeout: 15000 }); return ['sudo', '-n', 'docker']; }
 }
 
-export function composeArguments(envFile) {
+export function composeArguments(envFile, qualificationSlice = undefined) {
+  assert(qualificationSlice === undefined || qualificationSlice === 'full02', 'P23_UNKNOWN_QUALIFICATION_SLICE');
   return ['compose', '-p', PROJECT, '--project-directory', ROOT, '--env-file', envFile,
     ...['compose.yaml', 'deploy/compose.research-progress.yaml',
       'deploy/research-preview/compose.research-p23-activation.yaml',
-      'deploy/research-preview/compose.research-p23-5gb.yaml'].flatMap(file => ['-f', join(ROOT, file)])];
+      'deploy/research-preview/compose.research-p23-5gb.yaml',
+      ...(qualificationSlice === 'full02' ? ['deploy/research-preview/compose.research-full02-cell.yaml'] : []),
+    ].flatMap(file => ['-f', join(ROOT, file)])];
 }
 
 export function executionPreviewBuildArg(value) {
@@ -127,6 +130,9 @@ async function main() {
     return;
   }
   const settings = parseEnv(readPrivate(envFile));
+  const qualificationSlice = settings.P23_QUALIFICATION_SLICE;
+  assert(qualificationSlice === undefined || (qualificationSlice === 'full02' && home.endsWith('/full02')),
+    'P23_EXACT_FULL02_STATE_REQUIRED');
   assert(settings.PORTAL_STACK_NAME === PROJECT && settings.PORTAL_HTTP_PORT === '8096'
     && settings.PORTAL_PUBLIC_ORIGIN === BASE_URL && settings.PREVIEW_AUTO_LOGIN_USERNAME === '',
   'P23_EXACT_PROJECT_PORT_NO_AUTOLOGIN_REQUIRED');
@@ -136,7 +142,7 @@ async function main() {
     COMPOSE_PARALLEL_LIMIT: '1' };
   const composePrefix = stampedComposePrefix(prefix, sha, dirty);
   const compose = (args, capture = false, observerCopy = false) => {
-    const result = spawnSync(composePrefix[0], [...composePrefix.slice(1), ...composeArguments(envFile),
+    const result = spawnSync(composePrefix[0], [...composePrefix.slice(1), ...composeArguments(envFile, qualificationSlice),
       ...(observerCopy ? ['-f', join(ROOT, 'deploy/research-preview/compose.research-p23-observer-copy.yaml')] : []), ...args], {
       env: environment, stdio: capture ? 'pipe' : 'inherit', encoding: 'utf8',
       maxBuffer: 4 * 1024 * 1024,

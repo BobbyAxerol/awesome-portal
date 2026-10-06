@@ -300,7 +300,7 @@ describe("P09 published Research foundation contract", () => {
     const schemas = document.components.schemas;
     expect(schemas.AtlasResponse.oneOf[0].required).toContain("portal_admission");
     expect(schemas.AtlasResponse.oneOf[1].properties.portal_admission).toBeUndefined();
-    expect(schemas.PortalAdmission.properties.profiles.maxItems).toBe(5);
+    expect(schemas.PortalAdmission.properties.profiles.maxItems).toBe(7);
     const current = JSON.parse(readFileSync(join(ROOT, "fixtures", "research-foundation.atlas-current.valid.json"), "utf8")) as Record<string, any>;
     expect(current.atlas.current_release.submission_constraints.profile_id).toBe("p10.fixed-qualification.v1");
     expect(current.portal_admission.profiles).toMatchObject([
@@ -309,12 +309,13 @@ describe("P09 published Research foundation contract", () => {
     ]);
     expect(readFileSync(generatedPath, "utf8")).toContain("PortalAdmission");
   });
-  it("publishes all five canonical admission identities and preserves exact causal profile bounds", () => {
+  it("preserves the five historical identities and adds exactly two FULL-02 identities", () => {
     const fixture = JSON.parse(readFileSync(admissionFixturePath,"utf8"));
     expect(fixture.profiles).toHaveLength(5);
     const document = JSON.parse(readFileSync(openApiPath,"utf8"));
     expect(document.components.schemas.PortalAdmission.properties.profiles.items.properties.profile_id.enum)
-      .toEqual(fixture.profiles.map((profile: { profile_id: string }) => profile.profile_id));
+      .toEqual([...fixture.profiles.map((profile: { profile_id: string }) => profile.profile_id),
+        "p10.delta-signal-notional-per-fold-decay.v1", "p10.delta-signal-notional-three-window-optimized.v1"]);
     expect(admissionValidator()(fixture)).toBe(true);
     expect(fixture.profiles[3]).toMatchObject({profile_id:"p10.delta-signal-notional-causal-inner.v1",
       optimization_schedule:"per_fold_causal",requested_spec_versions:["research.requested-spec.v2"],
@@ -327,6 +328,19 @@ describe("P09 published Research foundation contract", () => {
       dataset_id:"vn-stock-daily",symbol:"FPT",timeframe:"1d",calendar_authority:"NOT_PUBLISHED" });
     expect(readFileSync(generatedPath,"utf8")).toContain('"p10.delta-signal-notional-causal-inner.v1"');
     expect(readFileSync(generatedPath,"utf8")).toContain('"p10.vn-stock-daily-observed-fixed.v1"');
+  });
+  it("validates all seven exact Atlas profiles without a later generator restoring the old five-row cap", () => {
+    const fixture = JSON.parse(readFileSync(admissionFixturePath,"utf8"));
+    const registry = JSON.parse(readFileSync(join(ROOT,"../../apps/portal/registry/research-execution-recipes.v1.json"),"utf8"));
+    // Synthetic activation states for schema coverage, not a qualification receipt.
+    const additions = registry.recipes.filter((row: { profile_id: string }) =>
+      ["p10.delta-signal-notional-per-fold-decay.v1", "p10.delta-signal-notional-three-window-optimized.v1"].includes(row.profile_id))
+      .map((row: { public_profile: Record<string, unknown> }) => ({ ...row.public_profile, state: "ENABLED", reason: null }));
+    const current = { ...fixture, profiles: [...fixture.profiles, ...additions] };
+    expect(current.profiles).toHaveLength(7);
+    const validate = admissionValidator();
+    expect(validate(current),JSON.stringify(validate.errors)).toBe(true);
+    expect(validate({ ...current, profiles: [...current.profiles, { ...additions[0], state: "DISABLED", reason: "PROFILE_FLAG_OFF" }] })).toBe(false);
   });
   it("validates both historical admission examples without widening the causal study", () => {
     const validate = admissionValidator();

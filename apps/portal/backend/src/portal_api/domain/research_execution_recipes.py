@@ -30,6 +30,7 @@ def assert_execution_recipe_table(table: dict[str, Any], revision: str) -> None:
 assert_execution_recipe_table(EXECUTION_RECIPE_TABLE, EXECUTION_RECIPE_REVISION)
 # Private canonical bytes, not a mutable public module-global authority.
 _RECIPES = {r["profile_id"]: json.dumps(r, sort_keys=True, separators=(",", ":")) for r in EXECUTION_RECIPE_TABLE["recipes"]}
+_QUALIFICATIONS = {r["profile_id"]: json.dumps(r, sort_keys=True, separators=(",", ":")) for r in EXECUTION_RECIPE_TABLE["qualification_references"]}
 EXECUTION_MAX_WARMUP_BARS = max(r["budgets"]["max_warmup_bars"] for r in EXECUTION_RECIPE_TABLE["recipes"])
 EXECUTION_PLANNING_MAX_BARS = min(r["budgets"]["planning_max_bars"] for r in EXECUTION_RECIPE_TABLE["recipes"])
 del EXECUTION_RECIPE_TABLE
@@ -53,3 +54,8 @@ def execution_recipe_budgets(profile_id: str, env: Mapping[str, str]) -> dict[st
             raise ValueError("preview recipe budget is outside local environment")
         result.update(cpu_seconds=override["cpu_seconds"], wall_seconds=override["wall_seconds"])
     return result
+
+
+def execution_recipe_qualification(profile_id: str) -> dict[str, Any]:
+    execution_recipe(profile_id)
+    return json.loads(_QUALIFICATIONS[profile_id])

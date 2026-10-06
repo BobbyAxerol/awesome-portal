@@ -35,6 +35,7 @@ from portal_api.domain.research_delta_wfo_profile import (
 )
 from portal_api.domain.research_run_producer import ResearchRunProducerRequest
 from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE_ID
+from portal_api.domain.research_full02_profiles import DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, full02_profile_enabled
 from portal_api.domain.research_imported_alpha_profile import IMPORTED_ALPHA_CPU_SECONDS
 from portal_api.domain.research_whatif_profile import WHATIF_CPU_SECONDS
 from portal_api.services.artifact_store import ContentAddressedArtifactStore
@@ -328,19 +329,26 @@ class DurableQuantWorker:
                     "P10 Delta WFO profile requires PORTAL_FEATURE_RESEARCH_WFO_PROFILE, "
                     "PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS and PORTAL_FEATURE_RESEARCH_PROGRESS"
                 )
+            if is_delta_wfo and research_request.research.execution_profile_id in {DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID} and not full02_profile_enabled(research_request.research.execution_profile_id):
+                raise _DeltaWfoProfileUnavailable("FULL-02 exact profile is not enabled")
             # Research preview only: a long WFO declares its admitted trial
             # count and the preview child CPU cap. Off, both stay locked.
             wfo_trials = DELTA_WFO_OPTUNA_TRIALS
             wfo_cpu_cap = DELTA_WFO_CPU_SECONDS
             if is_delta_wfo and not is_whatif:
                 try:
-                    if research_request.research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID:
+                    if research_request.research.execution_profile_id in {DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_ID}:
                         planner = getattr(self._research_executor, "causal_planned_trials", None)
                         if not callable(planner):
                             raise _DeltaWfoProfileUnavailable("Causal executor cannot bind its trial count to the immutable snapshot")
                         wfo_trials = await asyncio.to_thread(planner, research_request)
                         from portal_api.domain.research_execution_recipes import execution_recipe
-                        wfo_cpu_cap = execution_recipe(DELTA_CAUSAL_INNER_PROFILE_ID)["budgets"]["cpu_seconds"]
+                        wfo_cpu_cap = execution_recipe(research_request.research.execution_profile_id)["budgets"]["cpu_seconds"]
+                    elif research_request.research.is_three_window_optimized:
+                        from portal_api.domain.research_execution_recipes import execution_recipe
+                        recipe = execution_recipe(DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID)
+                        wfo_trials = recipe["public_profile"]["trial_default"]
+                        wfo_cpu_cap = recipe["budgets"]["cpu_seconds"]
                     else:
                         wfo_trials = delta_wfo_admitted_trials(research_request.research.requested_spec)
                         wfo_cpu_cap = delta_wfo_child_cpu_seconds()
@@ -369,7 +377,8 @@ class DurableQuantWorker:
                     ),
                     profile=(
                         "PINNED_FINAL_AUDIT" if is_final_audit else "DELTA_WHATIF" if is_whatif else "IMPORTED_ALPHA"
-                        if is_imported_alpha else "DELTA_WFO" if is_delta_wfo else "P04_FIXED"
+                        if is_imported_alpha else "DELTA_THREE_WINDOW" if research_request.research.is_three_window_optimized
+                        else "DELTA_WFO" if is_delta_wfo else "P04_FIXED"
                     ),
                 )
                 try:
@@ -1143,7 +1152,7 @@ class DurableQuantWorker:
             trials = list(retention.causal_trials)
             folds = list(retention.causal_fold_selections)
             if len(trials) != total or len(folds) != retention.table_rows["FOLD"] or total != 3 * len(folds):
-                raise DurableRunError("P11 retained causal study counts do not match")
+                raise DurableRunError("P11 retained per-fold study counts do not match")
             for index in range(live + 1, total + 1):
                 source = trials[index - 1]
                 journal.emit("trial_completed", {"study": "PER_FOLD_STUDY", "trial": index, "eta_s": None,
@@ -1154,7 +1163,7 @@ class DurableQuantWorker:
                 selected = [(index + 1, trial) for index, trial in enumerate(trials)
                             if trial["trial_id"] == source["selected_trial_id"] and trial["study_id"] == source["study_id"]]
                 if len(selected) != 1:
-                    raise DurableRunError("P11 causal fold does not name one exact retained study trial")
+                    raise DurableRunError("P11 fold does not name one exact retained study trial")
                 selected_trial, selected_row = selected[0]
                 digest = parameter_bundle_digest(dict(source["parameters"]))
                 journal.emit("fold_completed", {"fold": ordinal, "selection": {

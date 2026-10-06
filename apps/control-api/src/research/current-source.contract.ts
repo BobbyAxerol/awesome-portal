@@ -25,7 +25,7 @@ import { P11StageEventsSchema } from "./p11-stage-events";
 import { DeclaredSpaceSchema, SearchSurfaceSchema, SearchStudySurfaceSchema } from "./current-source-surface";
 import { CandidateDrawdownSchema, SearchPoolSchema } from "./current-source-pool";
 import { ParameterAuthoritySchema, Stage4BindingSchema } from "./stage4-binding";
-import { CurrentSourceSourceSeriesArtifactSchema, CurrentSourceCausalSelectionSchema } from "./current-source.payload";
+import { CurrentSourceSourceSeriesArtifactSchema, CurrentSourceCausalSelectionSchema, CurrentSourceFoldSelectionSchema, CurrentSourceProtocolDisclosureSchema } from "./current-source.payload";
 
 export const ResearchCurrentSourceRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
@@ -51,6 +51,7 @@ const DisplayCausalSelectionSchema = CurrentSourceCausalSelectionSchema.innerTyp
     const checked = CurrentSourceCausalSelectionSchema.safeParse(source);
     if (!checked.success) for (const issue of checked.error.issues) context.addIssue(issue);
   });
+const DisplayFoldSelectionSchema = CurrentSourceFoldSelectionSchema.extend(SelectedTrialPresentationSchema.partial().shape);
 /**
  * Read-side ceiling on retained TRIAL rows. The RS-02 seal still admits at
  * most 64 (current-source.repository.ts); only the research-preview long WFO
@@ -121,8 +122,8 @@ export const ResearchCurrentSourceEvidenceSeriesQuerySchema = ResearchCurrentSou
  * with the signal-notional profile (or vice versa).
  */
 const ProvenanceBaseSchema = z.object({
-  source_adapter_id: z.enum(["rs02.quantbt-advanced-wfo.v1", "rs02.quantbt-signal-notional-wfo.v1", "rs02.quantbt-signal-notional-causal-inner.v1"]),
-  profile_id: z.enum(["rs02.delta-wfo-global.v1", "rs02.delta-signal-notional-wfo.v1", "rs02.delta-signal-notional-causal-inner.v1"]),
+  source_adapter_id: z.enum(["rs02.quantbt-advanced-wfo.v1", "rs02.quantbt-signal-notional-wfo.v1", "rs02.quantbt-signal-notional-causal-inner.v1", "full02.quantbt-signal-notional-per-fold-decay.v1", "full02.quantbt-signal-notional-three-window.v1"]),
+  profile_id: z.enum(["rs02.delta-wfo-global.v1", "rs02.delta-signal-notional-wfo.v1", "rs02.delta-signal-notional-causal-inner.v1", "full02.delta-signal-notional-per-fold-decay.v1", "full02.delta-signal-notional-three-window.v1"]),
   engine_version: z.literal("1.1.1"),
   source_manifest_digest: DigestSchema,
   source_transform_digest: DigestSchema,
@@ -136,13 +137,16 @@ const ProvenanceBaseSchema = z.object({
 const ProvenanceSchema = ProvenanceBaseSchema.superRefine((value, context) => {
   const paired = (value.source_adapter_id === "rs02.quantbt-advanced-wfo.v1" && value.profile_id === "rs02.delta-wfo-global.v1")
     || (value.source_adapter_id === "rs02.quantbt-signal-notional-wfo.v1" && value.profile_id === "rs02.delta-signal-notional-wfo.v1")
-    || (value.source_adapter_id === "rs02.quantbt-signal-notional-causal-inner.v1" && value.profile_id === "rs02.delta-signal-notional-causal-inner.v1");
+    || (value.source_adapter_id === "rs02.quantbt-signal-notional-causal-inner.v1" && value.profile_id === "rs02.delta-signal-notional-causal-inner.v1")
+    || (value.source_adapter_id === "full02.quantbt-signal-notional-per-fold-decay.v1" && value.profile_id === "full02.delta-signal-notional-per-fold-decay.v1")
+    || (value.source_adapter_id === "full02.quantbt-signal-notional-three-window.v1" && value.profile_id === "full02.delta-signal-notional-three-window.v1");
   if (!paired) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["profile_id"], message: "current-source source adapter and profile must be one admitted pair" });
   }
 });
 
 const CommonSchema = z.object({
+  protocol_disclosure: CurrentSourceProtocolDisclosureSchema.optional(),
   run_declaration: ResearchRunDeclarationSchema.optional(),
   read_authority: z.literal("PORTAL_RETAINED_CURRENT_SOURCE"),
   run_id: ResearchCurrentSourceRunIdSchema,
@@ -605,6 +609,7 @@ const FoldAnatomySchema = z.object({
 
 const FoldSchema = z.object({
   causal_selection: DisplayCausalSelectionSchema.optional(),
+  fold_selection: DisplayFoldSelectionSchema.optional(),
   source_ordinal: z.number().int().nonnegative().max(255),
   fold_id: SourceIdentifierSchema,
   train_start_utc_ms: UtcMsSchema.nullable(),
@@ -728,10 +733,13 @@ export const ResearchCurrentSourceSplitResponseSchema = CommonSchema.extend({
   schema_version: z.literal("research.current-source-split.v1"),
   fold_plan: z.object({
     state: z.literal("AVAILABLE"),
-    folds: z.array(FoldSchema).min(2).max(256),
-    chronology: z.literal("SOURCE_OBSERVED_ADVANCED_WFO"),
+    folds: z.array(FoldSchema).min(1).max(256),
+    chronology: z.enum(["SOURCE_OBSERVED_ADVANCED_WFO", "SOURCE_OBSERVED_THREE_WINDOW"]),
     availability: ResearchCurrentSourceAvailabilitySchema,
-  }).strict(),
+  }).strict().superRefine((plan,ctx)=>{
+    if(plan.chronology === "SOURCE_OBSERVED_THREE_WINDOW" ? plan.folds.length !== 1 : plan.folds.length < 2)
+      ctx.addIssue({code:z.ZodIssueCode.custom,message:"Native Three Window has one calibration fold; Advanced WFO requires at least two folds"});
+  }),
   data_use: z.object({
     warmup: ResearchCurrentSourceFactSchema,
     purge: ResearchCurrentSourceFactSchema,
@@ -838,7 +846,7 @@ const SelectionRoleSchema = z.object({
   reason_code: ReasonCodeSchema.nullable(),
   trial_id: SourceIdentifierSchema.nullable(),
   objective: DecimalSchema.nullable(),
-  objective_kind: z.enum(["IS_MEAN_SHARPE", "MODE_1_DECAY_J", "INNER_VALIDATION_DECAY_J", "NOT_PUBLISHED"]),
+  objective_kind: z.enum(["IS_MEAN_SHARPE", "MODE_1_DECAY_J", "INNER_VALIDATION_DECAY_J", "OUTER_FOLD_DECAY_J", "NOT_PUBLISHED"]),
 }).strict();
 
 export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
@@ -853,7 +861,7 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
     parameters: ParameterMapSchema,
     availability: ResearchCurrentSourceAvailabilitySchema,
     /** W3 · CG-P15-03: raw IS best vs the selected candidate vs a centroid. */
-    objective_kind: z.enum(["IS_MEAN_SHARPE", "MODE_1_DECAY_J", "INNER_VALIDATION_DECAY_J", "NOT_PUBLISHED"]),
+    objective_kind: z.enum(["IS_MEAN_SHARPE", "MODE_1_DECAY_J", "INNER_VALIDATION_DECAY_J", "OUTER_FOLD_DECAY_J", "NOT_PUBLISHED"]),
     roles: z.object({
       raw_best_is: SelectionRoleSchema,
       selected: SelectionRoleSchema,
@@ -887,6 +895,7 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
     /** The S06 claim row, the same verbatim QuantBT tokens as the S04 claim strip. */
     validation_claim: FactTokenValueSchema.nullable(),
     chronological_claim: FactTokenValueSchema.nullable(),
+    classification_basis: z.literal("PORTAL_FULL02_PROTOCOL_DISCLOSURE_CLASSIFICATION_V1").optional(),
     oos_used_for_selection: z.boolean().nullable(),
     scoring_backend: FactTokenValueSchema.nullable(),
     availability: ResearchCurrentSourceAvailabilitySchema,

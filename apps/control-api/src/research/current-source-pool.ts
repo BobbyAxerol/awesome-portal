@@ -32,6 +32,7 @@
 import { z } from "zod";
 import { POOL_FREEZE_CLOCK_ABSENT } from "./p11-stage-events";
 import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
+import { DELTA_PER_FOLD_DECAY_PROFILE } from "./full02.profiles";
 
 import type { CurrentSourceFacts, CurrentSourceFoldFacts, CurrentSourceTrialFacts } from "./current-source.payload";
 import { RS02_ROW_PREDATES_FACTS, RS02_SEAL_PREDATES_SOURCE_FACTS, WALK_FORWARD_HAS_NO_CONSTRAINTS } from "./current-source-facts";
@@ -131,6 +132,7 @@ export interface PoolCandidate { candidateId: string; objective: string | null; 
 export interface PoolFold {
   foldId: string; sourceOrdinal: number; facts: CurrentSourceFoldFacts | undefined;
   causalSelection?: { scope: "OUTER_FOLD_SELECTION"; study_id: string; selected_trial_id: string; parameters: Record<string, string> };
+  foldSelection?: { scope: "OUTER_FOLD_SELECTION"; study_id: string; selected_trial_id: string; parameters: Record<string, string> };
 }
 
 function count(value: number, source: NonNullable<z.infer<typeof PoolCountSchema>["source"]>) {
@@ -168,9 +170,11 @@ export function searchPool(input: {
   folds: readonly PoolFold[];
   selectedTrialId: string | null;
 }): SearchPool {
-  const { facts, trials, candidates, folds } = input;
+  const { facts, trials, candidates } = input;
+  // Identity subset only; this does not relabel decay facts as causal.
+  const folds = input.folds.map(fold => ({ ...fold, selection: fold.foldSelection ?? fold.causalSelection }));
   const search = facts?.search;
-  const perFoldStudies = search?.optimization_schedule === "per_fold_causal";
+  const perFoldStudies = search?.optimization_schedule === "per_fold_causal" || search?.optimization_schedule === "per_fold_decay";
   const searched = trials.filter(isSearchTrial);
   const eligible = searched.filter(scoredUnpruned);
   const rowsHaveFacts = trials.every((trial) => trial.facts !== undefined);
@@ -196,9 +200,11 @@ export function searchPool(input: {
   const retainedInnerStudies = pooled.length > 0 && pooled.every(candidate => candidate.facts !== undefined
     && candidate.facts.study_id !== null && candidate.facts.fold_scope.fold_id !== null
     && folds.some(fold => fold.foldId === candidate.facts!.fold_scope.fold_id
-      && fold.causalSelection?.scope === "OUTER_FOLD_SELECTION"
-      && fold.causalSelection.study_id === candidate.facts!.study_id));
-  const reevaluationScope = causalPair && perFoldStudies && nativeScope === "FOLD" && retainedInnerStudies
+      && fold.selection?.scope === "OUTER_FOLD_SELECTION"
+      && fold.selection.study_id === candidate.facts!.study_id));
+  const decayPair = input.sourceAdapterId === DELTA_PER_FOLD_DECAY_PROFILE.current_source.source_adapter_id
+    && input.sourceProfileId === DELTA_PER_FOLD_DECAY_PROFILE.current_source.profile_id;
+  const reevaluationScope = (causalPair || decayPair) && perFoldStudies && nativeScope === "FOLD" && retainedInnerStudies
     ? "PER_FOLD_STUDY" as const : nativeScope;
 
   // K: the retained pool, published only when it is the whole pool and QuantBT's rule agrees.
@@ -240,10 +246,10 @@ export function searchPool(input: {
 
   const selected = perFoldStudies ? folds.length > 0
     && new Set(folds.map(fold => fold.foldId)).size === folds.length
-    && new Set(folds.map(fold => fold.causalSelection?.study_id)).size === folds.length
-    && folds.every((fold) => fold.causalSelection?.scope === "OUTER_FOLD_SELECTION"
-      && fold.causalSelection.study_id.length > 0 && fold.causalSelection.selected_trial_id.length > 0
-      && Object.keys(fold.causalSelection.parameters).length > 0)
+    && new Set(folds.map(fold => fold.selection?.study_id)).size === folds.length
+    && folds.every((fold) => fold.selection?.scope === "OUTER_FOLD_SELECTION"
+      && fold.selection.study_id.length > 0 && fold.selection.selected_trial_id.length > 0
+      && Object.keys(fold.selection.parameters).length > 0)
     ? count(folds.length, "RETAINED_SELECTION") : absent("NOT_PUBLISHED", POOL_REASONS.noSelection)
     : input.selectedTrialId !== null ? count(1, "RETAINED_SELECTION") : absent("NOT_PUBLISHED", POOL_REASONS.noSelection);
 

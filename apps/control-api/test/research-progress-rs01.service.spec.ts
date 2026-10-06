@@ -169,6 +169,17 @@ describe("RS-01 terminal materialization and retry recovery", () => {
     expect(capped.progress.persistIngress).not.toHaveBeenCalled();
   });
 
+  it.each(["p10.delta-signal-notional-per-fold-decay.v1", "p10.delta-signal-notional-three-window-optimized.v1"])("FULL02 %s materializes retained reports with its own 120s budget", async executionProfileId => {
+    const target = subject({scope:{executionProfileId}, reportRefuses:true});
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try { await target.service.ingest(terminalIngress as never); } finally { stderr.mockRestore(); }
+    expect(target.reports.materializeTerminal).toHaveBeenCalledWith(expect.anything(), expect.anything(), "RS02_RETAINED_CURRENT_SOURCE");
+    expect(target.progress.markTerminalMaterialized).toHaveBeenCalledTimes(1);
+    const excessive = structuredClone(terminalIngress);
+    excessive.event.payload.usage.cpu_seconds = 121;
+    await expect(target.service.ingest(excessive as never)).rejects.toMatchObject({code:"RESEARCH_PROGRESS_INVALID"});
+    await expect(target.service.ingest({...terminalIngress, evidence:{}} as never)).rejects.toMatchObject({code:"RESEARCH_PROGRESS_INVALID"});
+  });
   it("pinned audit completes its persisted terminal without a fabricated P04 report and retries idempotently", async () => {
     const audit = subject({ scope: { executionProfileId: PINNED_AUDIT_PROFILE_ID }, reportRefuses: true });
     const input = structuredClone(terminalIngress);

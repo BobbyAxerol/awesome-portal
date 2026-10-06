@@ -1317,6 +1317,7 @@ function RetainedFrozenTable({ freeze, identity }: { freeze: RetainedFreeze; ide
 
 const FOLD_VERDICT_WORDS: Record<FoldOrderingRow["verdict"], string> = {
   NOT_CAUSAL_GLOBAL_SELECTION: "not causal · global selection",
+  NOT_CAUSAL_OUTER_OOS_SELECTION: "not causal · outer OOS used for selection",
   /* Per-fold study: the selection used only data before this fold's OOS. A data-time statement — never a claim about an engine freeze or first-OOS-read clock. */
   CAUSAL_DATA_TIME_SELECTION: "causal · data-time selection",
   NOT_EVALUATED: "not evaluated",

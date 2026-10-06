@@ -33,11 +33,12 @@ import type { CurrentSourceSealRow, CurrentSourceTableKind } from "./current-sou
 import { currentSourceReadRevisions } from "./current-source.service";
 import {
   DELTA_WFO_PROFILE,
-  isDeltaWfoProfile,
 } from "./delta-wfo.profile";
+import { currentSourceExecutionPair, isCurrentSourceExecutionProfile } from "./current-source-profile";
 import { canonicalResearchJson } from "./preflight.service";
 import { DEFAULT_PARAMETER_BINDING_REGISTRY } from "./parameter-binding.registry";
 import { DELTA_CAUSAL_INNER_PROFILE, DELTA_CAUSAL_INNER_PROFILE_ID } from "./delta-causal-inner.profile";
+import { DELTA_PER_FOLD_DECAY_PROFILE_ID } from "./full02.profiles";
 import { ExactJsonCalculationMemo } from "./exact-json-calculation-memo";
 
 const DIGEST = /^[0-9a-f]{64}$/;
@@ -115,6 +116,7 @@ export function retainedLaneFacts(lane: ReleaseCandidateRetainedLane): RetainedL
 }
 function calculateRetainedLaneFacts(lane: ReleaseCandidateRetainedLane): RetainedLaneFacts {
   const causal = lane.executionProfileId === DELTA_CAUSAL_INNER_PROFILE_ID;
+  const decay = lane.executionProfileId === DELTA_PER_FOLD_DECAY_PROFILE_ID;
   const seal = lane.seal;
   const summary = seal ? CurrentSourceSummarySchema.safeParse(seal.summary) : null;
   const parsed = summary?.success ? summary.data : null;
@@ -132,7 +134,7 @@ function calculateRetainedLaneFacts(lane: ReleaseCandidateRetainedLane): Retaine
   const foldsValid = seal === null || (
     folds.length === seal.tableRows.FOLD
     && folds.every(({ row, parsed: fold }) => fold.success && fold.data.fold_id === row.sourceId
-      && (!causal || fold.data.causal_selection !== undefined))
+      && (!causal || fold.data.causal_selection !== undefined) && (!decay || fold.data.fold_selection !== undefined))
   );
   const ordering = parsed && selection && foldsValid && folds.length > 0
     ? foldOrdering(folds.map(({ row, parsed: fold }) => {
@@ -148,14 +150,16 @@ function calculateRetainedLaneFacts(lane: ReleaseCandidateRetainedLane): Retaine
         ...(causal ? {
           causalSelection: data?.causal_selection,
         } : {}),
+        ...(decay ? { foldSelection: data?.fold_selection } : {}),
       };
     }), parsed.source_facts, selection.parameters,
     DEFAULT_PARAMETER_BINDING_REGISTRY.byProfileDigest(lane.executionProfileDigest)?.candidateParameterKinds,
     undefined, seal?.profileId)
     : null;
-  const laneConsistent = isDeltaWfoProfile(lane.executionProfileId, lane.executionProfileDigest) && (seal === null || (
-    seal.sourceAdapterId === (causal ? DELTA_CAUSAL_INNER_PROFILE : DELTA_WFO_PROFILE).current_source.source_adapter_id
-    && seal.profileId === (causal ? DELTA_CAUSAL_INNER_PROFILE : DELTA_WFO_PROFILE).current_source.profile_id
+  const pair = currentSourceExecutionPair(lane.executionProfileId, lane.executionProfileDigest);
+  const laneConsistent = isCurrentSourceExecutionProfile(lane.executionProfileId, lane.executionProfileDigest) && (seal === null || (
+    seal.sourceAdapterId === pair?.source_adapter_id
+    && seal.profileId === pair?.profile_id
   ));
   return {
     sealed: seal !== null,

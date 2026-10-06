@@ -7,7 +7,8 @@
  */
 
 import { Inject, Injectable } from "@nestjs/common";
-import {executionRecipe, wfoExecutionRecipe} from "./execution-recipes";
+import {executionRecipe, executionRecipeActivationReason, wfoExecutionRecipe} from "./execution-recipes";
+import { DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_ID } from "./full02.profiles";
 
 import { ControlApiConfig } from "../config";
 import { PortalUser } from "../domain";
@@ -230,11 +231,14 @@ export class ResearchRunAdmissionService {
     // (including `advanced` with the flag off) takes the unchanged P04 branch,
     // so P04 admission, wording and bytes are identical to the pre-W1 release.
     const wfo = requestedSpec.protocol === "advanced" && this.config.FEATURE_RESEARCH_WFO_PROFILE === "true";
+    const optimized = requestedSpec.protocol === "three_window_decay" && requestedSpec.optuna_trials > 1;
     const vnObserved = requestedSpec.data.dataset_id === VN_OBSERVED_FIXED_PROFILE.dataset_id;
     const unsupported = vnObserved
       ? this.vnObservedUnsupportedReason(requestedSpec, manifest)
       : wfo
       ? this.deltaWfoUnsupportedReason(requestedSpec, manifest)
+      : optimized
+      ? this.optimizedThreeWindowUnsupportedReason(requestedSpec, manifest)
       : this.p04UnsupportedReason(requestedSpec, manifest);
     if (unsupported) {
       return denied("RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE", unsupported);
@@ -250,7 +254,7 @@ export class ResearchRunAdmissionService {
         alphaVersionId: eligibility.alphaVersionId,
         adapterId: eligibility.binding.adapterId,
         adapterContractDigest: eligibility.binding.contractDigest,
-        fixedParameters: wfo && !vnObserved ? null : P04_DELTA_FIXED_PARAMETERS,
+        fixedParameters: (wfo || optimized) && !vnObserved ? null : P04_DELTA_FIXED_PARAMETERS,
         importedParameters: null,
         sourceDigest: null,
         entrypoint: eligibility.entrypoint,
@@ -259,6 +263,8 @@ export class ResearchRunAdmissionService {
         ? { id: VN_OBSERVED_FIXED_PROFILE_ID, digest: VN_OBSERVED_FIXED_PROFILE_DIGEST }
         : wfo
         ? this.wfoProfileIdentity(requestedSpec)
+        : optimized
+        ? {id: DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, digest: executionRecipe(DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID).profile_digest}
         : { id: P04_FIXED_QUALIFICATION_PROFILE_ID, digest: null },
     };
   }
@@ -437,6 +443,10 @@ export class ResearchRunAdmissionService {
     manifest: ResearchPreflightManifestRecord,
   ): string | null {
     const row = wfoExecutionRecipe(requested);
+    if (row && (row.feature_flags as readonly string[]).includes("FEATURE_RESEARCH_FULL02_PROFILE")) {
+      const activation = executionRecipeActivationReason(row, this.config, {engine_release_id: requested.client.engine_release_id, verified: true});
+      if (activation !== null) return `The exact execution recipe is not admitted: ${activation}.`;
+    }
     const profile = (row ?? executionRecipe(DELTA_WFO_PROFILE_ID)).public_profile;
     const temporal = requested.schema_version === "research.requested-spec.v2";
     const causal = temporal && requested.optimization_schedule === DELTA_CAUSAL_INNER_PROFILE.optimization_schedule;
@@ -465,13 +475,16 @@ export class ResearchRunAdmissionService {
     // W5a · A10c sibling: the only admitted overrides are pins of the two
     // what-if axes, on a declared step inside the declared range; every other
     // parameter is still searched exactly as the locked profile says.
+    if (profile.profile_id === DELTA_PER_FOLD_DECAY_PROFILE_ID && requested.parameter_space_overrides.length !== 0) {
+      return "The qualified per-fold-decay recipe searches the installed Delta space without parameter overrides.";
+    }
     const pinReason = siblingPinReason(requested.parameter_space_overrides);
     if (pinReason !== null ||
         (requested.optimization_config && Object.keys(requested.optimization_config).length !== 0)) {
       return pinReason ?? "The Delta walk-forward profile searches only the installed Delta parameter space and accepts no overrides.";
     }
     // Preview's 400-trial GLOBAL exception must not become 400 per fold.
-    if (deltaWfoPreviewLongEnabled(this.config) && !causal) {
+    if (deltaWfoPreviewLongEnabled(this.config) && row?.preview_override !== null && row !== null) {
       // Research preview only: a long study, bounded; the seed stays locked.
       const trials = requested.optuna_trials;
       if (!Number.isSafeInteger(trials) || trials < DELTA_WFO_PREVIEW_LONG_LIMITS.min_trials ||
@@ -522,6 +535,38 @@ export class ResearchRunAdmissionService {
     if (requested.alpha_binding === null || requested.strategy_id !== requested.alpha_binding.alpha_id) {
       return "The run strategy identity must equal the explicitly bound AlphaVersion identity.";
     }
+    return null;
+  }
+
+  /** FULL-02: a separate calibration study; never substitutes fixed P04. */
+  private optimizedThreeWindowUnsupportedReason(requested: ResearchRequestedSpec, manifest: ResearchPreflightManifestRecord): string | null {
+    const row = executionRecipe(DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID);
+    const profile = row.public_profile;
+    const reason = executionRecipeActivationReason(row, this.config, {engine_release_id: requested.client.engine_release_id, verified: true});
+    if (reason !== null) return `The optimized Three Window recipe is not admitted: ${reason}.`;
+    const engine = manifest.effectiveSpec.engine as Record<string, unknown> | undefined;
+    if (!engine || engine.execution_route !== profile.execution_route || engine.engine_release_id !== profile.engine_release_id)
+      return "The effective preflight engine binding does not match the optimized Three Window recipe.";
+    if (requested.schema_version !== "research.requested-spec.v1" || requested.execution_route !== profile.execution_route
+        || requested.optimization_mode !== profile.optimization_mode || requested.optimization_schedule !== profile.optimization_schedule
+        || requested.data.timeframe !== profile.timeframe || requested.protocol !== profile.protocol || requested.walk_forward)
+      return "Optimized Three Window requires requested-spec v1, 1h signal_notional and Mode 1/global.";
+    if (requested.optuna_trials !== profile.trial_default || requested.random_seed !== profile.random_seed || requested.early_stopping !== null)
+      return "Optimized Three Window requires exactly 3 trials, seed 42 and no early stopping.";
+    if (requested.route_params && Object.keys(requested.route_params).length || requested.optimization_config && Object.keys(requested.optimization_config).length)
+      return "Optimized Three Window accepts no route or optimizer override.";
+    const pins = siblingPinReason(requested.parameter_space_overrides);
+    if (pins !== null) return pins;
+    const windows = requested.windows;
+    if (!windows) return "Optimized Three Window requires IS, OOS and an independent holdout.";
+    const a = utcInstantMs(windows.is.start), b = utcInstantMs(windows.is.end_exclusive),
+      b2 = utcInstantMs(windows.oos.start), c = utcInstantMs(windows.oos.end_exclusive),
+      c2 = utcInstantMs(windows.holdout.start), d = utcInstantMs(windows.holdout.end_exclusive);
+    if (a === null || b === null || c === null || d === null || b !== b2 || c !== c2 || !(a < b && b < c && c < d))
+      return "Optimized Three Window requires contiguous UTC end-exclusive IS/OOS/holdout boundaries.";
+    if (d - a > profile.max_span_days * 86_400_000) return "Optimized Three Window exceeds its admitted 92-day span.";
+    if (requested.alpha_binding === null || requested.strategy_id !== requested.alpha_binding.alpha_id)
+      return "The strategy must match its immutable Delta AlphaVersion binding.";
     return null;
   }
 

@@ -13,6 +13,7 @@ import { ResearchEnrichedAnalysisSchema } from "./enriched-analysis.contract";
 import { DELTA_WFO_PROFILE_ID } from "./delta-wfo.profile";
 import { DELTA_WFO_V2_PROFILE_ID } from "./delta-wfo-v2.profile";
 import { DELTA_CAUSAL_INNER_PROFILE_ID } from "./delta-causal-inner.profile";
+import { DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID } from "./full02.profiles";
 import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
 import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
 import { sourceTrialOrdinal } from "./selected-trial-presentation";
@@ -984,7 +985,8 @@ export function toPublicResearchProgressSnapshot(
   const line = publicSnapshot.overall.tqdm_line;
   let handoff = publicSnapshot.claim.handoff_cursor;
   let handoffReason: HandoffProjectionReason | null = null;
-  if (handoff !== null && executionProfileId === DELTA_CAUSAL_INNER_PROFILE_ID) {
+  if (handoff !== null && (executionProfileId === DELTA_CAUSAL_INNER_PROFILE_ID
+    || executionProfileId === DELTA_PER_FOLD_DECAY_PROFILE_ID)) {
     const matches = snapshot.folds.filter(fold => fold.fold === handoff!.fold);
     const selection = matches.length === 1 ? matches[0]!.selection : null;
     if (!selection || selection.state !== "AVAILABLE" || selection.scope !== "PER_FOLD_STUDY") {
@@ -999,7 +1001,8 @@ export function toPublicResearchProgressSnapshot(
         source_trial_id: selection.source_trial_id!, study_id: selection.study_id,
         progress_trial_ordinal: handoff.trial } as z.infer<typeof PublicResearchHandoffCursorSchema>;
     }
-  } else if (handoff !== null && (executionProfileId === DELTA_WFO_PROFILE_ID || executionProfileId === DELTA_WFO_V2_PROFILE_ID)) {
+  } else if (handoff !== null && (executionProfileId === DELTA_WFO_PROFILE_ID || executionProfileId === DELTA_WFO_V2_PROFILE_ID
+    || executionProfileId === DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID)) {
     handoff = { ...handoff, trial_scope: "RUN_GLOBAL", source_trial_id: String(handoff.trial - 1),
       study_id: null, progress_trial_ordinal: handoff.trial } as z.infer<typeof PublicResearchHandoffCursorSchema>;
   }

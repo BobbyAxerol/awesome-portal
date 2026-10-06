@@ -13,6 +13,7 @@
 
 import type {
   CurrentSourceCausalSelection,
+  CurrentSourceProtocolDisclosure,
   CurrentSourceFacts,
   CurrentSourceFoldFacts,
   CurrentSourceTrialFacts,
@@ -41,23 +42,27 @@ function claimFact(value: string | boolean | null, sourceKey: string, missingRea
   return { value, source_key: sourceKey, ...namedFact("AVAILABLE", null) };
 }
 
-/** CG-P13-07 (A11): the eight-chip claim strip, verbatim engine tokens. */
-export function claimStrip(facts: CurrentSourceFacts | undefined) {
+/** CG-P13-07 (A11): verbatim legacy tokens; native Three has a labelled Portal protocol classification. */
+export function claimStrip(facts: CurrentSourceFacts | undefined, protocol?: CurrentSourceProtocolDisclosure) {
   const claims = facts?.claims;
   const execution = facts?.execution;
   return {
     schema_version: "research.current-source-claim-strip.v1" as const,
-    validation_claim: claimFact(claims?.validation_claim ?? null, "walk_forward.validation_claim",
-      "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_VALIDATION_CLAIM", facts),
-    chronological_claim: claimFact(claims?.chronological_validation_claim ?? null, "walk_forward.chronological_validation_claim",
-      "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_CHRONOLOGICAL_CLAIM", facts),
-    causality_claim: claimFact(claims?.causality_claim ?? null, "walk_forward.causality_claim",
-      "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_CAUSALITY_CLAIM", facts),
-    oos_used_for_selection: claimFact(claims?.oos_used_for_selection ?? null, "walk_forward.oos_used_for_selection",
-      "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_OOS_USE", facts),
+    validation_claim: protocol ? {value:"THREE_WINDOW_IS_OOS_CALIBRATION",source_key:"portal.full02_protocol_classification_v1.validation",...namedFact("AVAILABLE",null)}
+      : claimFact(claims?.validation_claim ?? null, "walk_forward.validation_claim", "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_VALIDATION_CLAIM", facts),
+    chronological_claim: protocol ? {value:"NOT_CAUSAL_THREE_WINDOW_CALIBRATION",source_key:"portal.full02_protocol_classification_v1.chronology",...namedFact("AVAILABLE",null)}
+      : claimFact(claims?.chronological_validation_claim ?? null, "walk_forward.chronological_validation_claim", "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_CHRONOLOGICAL_CLAIM", facts),
+    causality_claim: protocol ? {value:"RETROSPECTIVE_IS_OOS_CALIBRATION",source_key:"portal.full02_protocol_classification_v1.causality",...namedFact("AVAILABLE",null)}
+      : claimFact(claims?.causality_claim ?? null, "walk_forward.causality_claim", "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_CAUSALITY_CLAIM", facts),
+    oos_used_for_selection: protocol ? {value:true,source_key:"train_test_split.calibration_scope",...namedFact("AVAILABLE",null)}
+      : claimFact(claims?.oos_used_for_selection ?? null, "walk_forward.oos_used_for_selection", "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_OOS_USE", facts),
     // The P10 Delta WFO profile tapes IS + OOS only (W1 design §2 row D):
     // there is no holdout segment to seal, so this is a declaration, not a gap.
-    holdout: {
+    holdout: protocol ? {
+      value: "UNTOUCHED_INDEPENDENT_HOLDOUT" as const,
+      source_key: "train_test_split.independent_holdout",
+      ...namedFact("AVAILABLE", null),
+    } : {
       value: null,
       source_key: "p10.delta_wfo_profile.segments",
       ...namedFact("NOT_APPLICABLE", "P10_DELTA_WFO_PROFILE_HAS_NO_HOLDOUT_SEGMENT"),
@@ -408,7 +413,8 @@ export function selectionRoles(facts: CurrentSourceFacts | undefined, selection:
     reason_code: null,
     trial_id: selection.trial_id,
     objective: selection.objective,
-    objective_kind: facts ? selection.scope === "LAST_FOLD_DEPLOYMENT" ? "INNER_VALIDATION_DECAY_J" as const : "MODE_1_DECAY_J" as const : "NOT_PUBLISHED" as const,
+    objective_kind: facts ? search?.optimization_schedule === "per_fold_decay" ? "OUTER_FOLD_DECAY_J" as const
+      : selection.scope === "LAST_FOLD_DEPLOYMENT" ? "INNER_VALIDATION_DECAY_J" as const : "MODE_1_DECAY_J" as const : "NOT_PUBLISHED" as const,
     ...(selection.scope ? { scope: selection.scope, fold_id: selection.fold_id } : {}),
   };
   if (!facts || !search) {
@@ -434,7 +440,7 @@ export function selectionRoles(facts: CurrentSourceFacts | undefined, selection:
   };
 }
 
-export function searchContract(facts: CurrentSourceFacts | undefined) {
+export function searchContract(facts: CurrentSourceFacts | undefined,protocol?: CurrentSourceProtocolDisclosure) {
   const search = facts?.search;
   return {
     optimization_mode: search?.optimization_mode ?? null,
@@ -449,9 +455,10 @@ export function searchContract(facts: CurrentSourceFacts | undefined) {
       : { state: "NOT_PUBLISHED" as const, reason_code: "QUANTBT_SELECTOR_METRIC_NOT_IN_SEALED_SEARCH_FACT", source: null },
     top_is_fraction: search?.top_is_fraction ?? null,
     top_is_k: search?.top_is_k ?? null,
-    validation_claim: facts?.claims.validation_claim ?? null,
-    chronological_claim: facts?.claims.chronological_validation_claim ?? null,
-    oos_used_for_selection: facts?.claims.oos_used_for_selection ?? null,
+    ...(protocol ? {classification_basis:"PORTAL_FULL02_PROTOCOL_DISCLOSURE_CLASSIFICATION_V1" as const} : {}),
+    validation_claim: protocol ? "THREE_WINDOW_IS_OOS_CALIBRATION" : facts?.claims.validation_claim ?? null,
+    chronological_claim: protocol ? "NOT_CAUSAL_THREE_WINDOW_CALIBRATION" : facts?.claims.chronological_validation_claim ?? null,
+    oos_used_for_selection: protocol ? true : facts?.claims.oos_used_for_selection ?? null,
     scoring_backend: facts?.execution.scoring_backend ?? null,
     availability: facts ? { state: "AVAILABLE" as const, reason_code: null }
       : { state: "NOT_PUBLISHED" as const, reason_code: RS02_SEAL_PREDATES_SOURCE_FACTS },

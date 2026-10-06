@@ -21,8 +21,10 @@ export function amendVnObservedFixedOpenApi(original, file) {
   const addEnum = (s, value) => { if (!s.enum.includes(value)) s.enum.push(value); };
   if (file === "research-foundation") {
     const admission = edit("PortalAdmission"), profiles = admission.properties.profiles, props = profiles.items.properties;
-    profiles.maxItems = 5;
     addEnum(props.profile_id, profileId);
+    // Later exact recipe additions must survive this historical VN amendment.
+    // Bound the array by its declared unique identities, not the old five rows.
+    profiles.maxItems = props.profile_id.enum.length;
     addEnum(props.reason, "SOURCE_PROFILE_UNQUALIFIED");
     if (!profiles.allOf.some(s => s.contains?.properties?.profile_id?.const === profileId))
       profiles.allOf.push({ contains: { type: "object", required: ["profile_id"], properties: { profile_id: { const: profileId } } }, minContains: 0, maxContains: 1 });

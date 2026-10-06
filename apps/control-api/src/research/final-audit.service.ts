@@ -7,7 +7,8 @@ import { PortalProxyService, FacadeError } from "../facade/proxy.service";
 import { ResearchMetadataRepository } from "./repository";
 import type { ResearchScope } from "./contracts";
 import { ResearchFinalAuditClient } from "./final-audit.client";
-import { ResearchFinalAuditRepository, type AdmittedAudit } from "./final-audit.repository";
+import { ResearchFinalAuditRepository, type AdmittedAudit, type AuditParent } from "./final-audit.repository";
+import { DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID } from "./full02.profiles";
 import { sha256ResearchJson } from "./preflight.service";
 import { pinnedAuditTargetDigest, PINNED_AUDIT_PROFILE_ID, PINNED_AUDIT_PROFILE_DIGEST,
   ResearchFinalAuditError, ResearchFinalAuditReadSchema, type ResearchFinalAuditRead, type ResearchFinalAuditCreateSchema,
@@ -28,9 +29,22 @@ export class ResearchFinalAuditService {
       throw new ResearchFinalAuditError("RESEARCH_FINAL_AUDIT_UNAVAILABLE","Linked audit is not enabled in this profile.",503);
   }
   private mayCreate(user:PortalUser):boolean{return user.role==="ADMIN" && user.status==="ACTIVE" && !user.mustChangePassword;}
+  private requireLinkedAuditProfile(parent:AuditParent):void{
+    // This endpoint is the qualified run-global, Advanced linked-child audit.
+    // A per-fold deployment singleton is not a run-global optimizer target.
+    if(parent.executionProfileId===DELTA_PER_FOLD_DECAY_PROFILE_ID)
+      throw new ResearchFinalAuditError("RESEARCH_FINAL_AUDIT_NOT_APPLICABLE",
+        "Run-global selection audit does not apply to per-fold decay. Read the retained per-fold selection and OOS generation evidence.",409);
+    // Three Window already retained its independent Holdout against the frozen
+    // calibration selection. Do not recast its single calibration fold as WFO.
+    if(parent.executionProfileId===DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID)
+      throw new ResearchFinalAuditError("RESEARCH_FINAL_AUDIT_NOT_APPLICABLE",
+        "Advanced linked audit does not apply to Three Window. The Report carries its sealed independent Holdout selection proof.",409);
+  }
   async read(user:PortalUser,scope:ResearchScope,runId:string):Promise<ResearchFinalAuditRead>{
     this.requireEnabled();
     const parent=await this.repository.parent(scope,runId);
+    this.requireLinkedAuditProfile(parent);
     const target=await this.client.prepare(scope.actorUserId,parent.pins);
     return this.compose(scope,runId,pinnedAuditTargetDigest(target),this.mayCreate(user));
   }
@@ -48,7 +62,9 @@ export class ResearchFinalAuditService {
   async create(user:PortalUser,scope:ResearchScope,runId:string,input:z.infer<typeof ResearchFinalAuditCreateSchema>,requestId:string){
     this.requireEnabled();
     if(!this.mayCreate(user))throw new ResearchFinalAuditError("RESEARCH_FINAL_AUDIT_FORBIDDEN","Audit creation requires the existing Research producer authority.",403);
-    const parent=await this.repository.parent(scope,runId),target=await this.client.prepare(scope.actorUserId,parent.pins);
+    const parent=await this.repository.parent(scope,runId);
+    this.requireLinkedAuditProfile(parent);
+    const target=await this.client.prepare(scope.actorUserId,parent.pins);
     const targetDigest=pinnedAuditTargetDigest(target);
     if(targetDigest!==input.target_digest)throw new ResearchFinalAuditError("RESEARCH_FINAL_AUDIT_CONFLICT","Frozen target changed; reread before creating audit.",409);
     const original=parent.legacyRequest.research;

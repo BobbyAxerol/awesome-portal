@@ -48,7 +48,7 @@ describe("bounded additional causal/inner transport",()=>{
     expect(s.Search.allOf[1].properties.surfaces_by_study.minItems).toBe(2);
     expect(s.Search.allOf[1].properties.surfaces_by_study.maxItems).toBe(16);
     expect(s.SearchStudySurface.required).toEqual(["scope","fold_id","study_id","surface"]);
-    expect(s.SearchStudySurface.properties.scope.const).toBe("INNER_VALIDATION_OUTER_STUDY");
+    expect(s.SearchStudySurface.properties.scope.enum).toEqual(["INNER_VALIDATION_OUTER_STUDY", "OUTER_FOLD_DECAY_STUDY"]);
     expect(s.SearchStudySurface.properties.surface.allOf[1].properties.source_trial_count.const).toBe(3);
     expect(s.SearchStudySurface.properties.surface.allOf[1].properties.points.maxItems).toBe(3);
     expect(s.SearchSurface.properties.state.enum).toContain("NOT_APPLICABLE");

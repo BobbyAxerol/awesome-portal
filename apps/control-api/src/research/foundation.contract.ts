@@ -426,7 +426,7 @@ export interface ResearchPortalAdmission {
   profiles: Array<{
     profile_id: string;
     state: "ENABLED" | "DISABLED";
-    reason: "PROFILE_FLAG_OFF" | "RUN_PRODUCER_OFF" | "ENGINE_RELEASE_MISMATCH" | "SOURCE_RELEASE_UNVERIFIED" | "SOURCE_PROFILE_UNQUALIFIED" | null;
+    reason: "PROFILE_FLAG_OFF" | "RUN_PRODUCER_OFF" | "ENGINE_RELEASE_MISMATCH" | "SOURCE_RELEASE_UNVERIFIED" | "SOURCE_PROFILE_UNQUALIFIED" | "RECIPE_NOT_QUALIFIED" | null;
     engine_release_id: string;
     execution_route: string;
     protocol: string;

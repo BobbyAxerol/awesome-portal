@@ -52,6 +52,13 @@ export function declarationConditions(spec: ResearchRequestedSpec, metadata: z.i
   narrow(row => row.optimization_schedule === spec.optimization_schedule, "PROFILE_SCHEDULE_NOT_ADMITTED", ["optimization_schedule"]);
   narrow(row => (row.requested_spec_versions ?? ["research.requested-spec.v1"]).includes(spec.schema_version),
     "REQUESTED_SPEC_EXECUTOR_NOT_INSTALLED", ["schema_version"]);
+  // Fixed and optimized Three Window share mode/schedule, not the optimizer
+  // policy. Prefer its exact trial/seed recipe before consulting activation;
+  // otherwise S02 would silently validate a 3-trial request against P04.
+  const optimizerMatches = matching.filter(row => spec.optuna_trials >= row.trial_count.min
+    && spec.optuna_trials <= row.trial_count.max && (row.seed_policy === "OPTIONAL"
+      || (row.seed_policy === "REQUIRED" ? spec.random_seed !== null : spec.random_seed === row.random_seed)));
+  if (!mismatch && optimizerMatches.length > 0) matching = optimizerMatches;
   const profile = matching.find(row => row.state === "ENABLED") ?? matching[0];
   const primary = mismatch ?? profile?.refusals?.[0] ?? {reason_code: profile?.reason_code ?? "PORTAL_EXECUTION_PROFILE_NOT_ENABLED", field_path: ["profile_id"]};
   add("profile", !mismatch && profile?.state === "ENABLED", primary.reason_code, mismatch ? null : profile?.profile_id, "Enabled execution profile", primary.field_path);
@@ -75,7 +82,8 @@ export function declarationConditions(spec: ResearchRequestedSpec, metadata: z.i
     add("route_params", Object.keys(spec.route_params).length === 0, "PROFILE_ROUTE_PARAMS_NOT_ADMITTED", Object.keys(spec.route_params).length, "0 overrides");
     add("optimizer_overrides", Object.keys(spec.optimization_config).length === 0,
       "PROFILE_OPTIMIZER_OVERRIDES_NOT_ADMITTED", Object.keys(spec.optimization_config).length, "0 overrides");
-    if (profile.protocol === "three_window_decay" && profile.parameter_policy !== "DECLARED_PINS_ONLY") add("parameter_overrides", spec.parameter_space_overrides.length === 0,
+    if (profile.protocol === "three_window_decay" && profile.parameter_policy !== "DECLARED_PINS_ONLY"
+        && profile.parameter_policy !== "DELTA_SEARCH_WITH_QUALIFIED_PINS") add("parameter_overrides", spec.parameter_space_overrides.length === 0,
       "FIXED_PROFILE_PARAMETER_OVERRIDES_NOT_ADMITTED", spec.parameter_space_overrides.length, "0 overrides");
     if (profile.parameter_policy === "DELTA_SEARCH_WITH_QUALIFIED_PINS" && profile.allowed_pin_names) add("parameter_overrides",
       spec.parameter_space_overrides.every(row => row.kind === "pin" && profile.allowed_pin_names!.includes(row.name)),
@@ -93,7 +101,7 @@ export function declarationConditions(spec: ResearchRequestedSpec, metadata: z.i
         bounds.window_modes.includes(inner.window_mode) && new RegExp(bounds.train_window_pattern).test(inner.train_window) &&
         (inner.min_folds ?? 2) >= bounds.fold_bounds.min && (inner.min_folds ?? 2) <= bounds.fold_bounds.max : inner === undefined;
       add("inner_validation", allowed, causal ? "CAUSAL_INNER_CONFIGURATION_REQUIRED" : "PER_FOLD_SELECTION_RETENTION_PROFILE_NOT_INSTALLED",
-        inner === undefined ? "absent" : "requested", causal ? "Required engine nested validation inside outer IS" : "Global retained profile only");
+        inner === undefined ? "absent" : "requested", causal ? "Required engine nested validation inside outer IS" : "No nested inner validation for this recipe");
     }
     if (profile.max_span_days && spec.walk_forward) {
       const span = metadata.windows.find(row => row.window === "SPAN");

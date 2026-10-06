@@ -25,6 +25,7 @@ import { VN_OBSERVED_FIXED_PROFILE_ID,
   VN_OBSERVED_FIXED_WORK_SCHEMA_VERSION } from "./vn-observed-fixed.profile";
 import { DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_WORK_SCHEMA_VERSION } from "./delta-wfo-v2.profile";
 import { DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_WORK_SCHEMA_VERSION } from "./delta-causal-inner.profile";
+import { DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID } from "./full02.profiles";
 import {
   DELTA_WFO_PROFILE_ID,
   DELTA_WFO_WORK_SCHEMA_VERSION,
@@ -115,7 +116,9 @@ export class ResearchRunCreateService {
     const commandId = stableId("rcmd", commandDigest);
     const profile = accepted.profile!;
     const causal = profile.id === DELTA_CAUSAL_INNER_PROFILE_ID;
-    const wfo = profile.id === DELTA_WFO_PROFILE_ID || profile.id === DELTA_WFO_V2_PROFILE_ID || causal;
+    const wfo = profile.id === DELTA_WFO_PROFILE_ID || profile.id === DELTA_WFO_V2_PROFILE_ID || causal
+      || profile.id === DELTA_PER_FOLD_DECAY_PROFILE_ID;
+    const optimized = profile.id === DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID;
     const imported = profile.id === IMPORTED_ALPHA_PROFILE_ID;
     const vnObserved = profile.id === VN_OBSERVED_FIXED_PROFILE_ID;
     const observation = vnObserved ? VnObservedSourceObservationSchema.safeParse({
@@ -170,9 +173,9 @@ export class ResearchRunCreateService {
         engine_release_id: requested.client.engine_release_id,
         requested_spec: requested,
       })
-      : wfo
+      : wfo || optimized
       ? digest({
-        schema_version: causal ? DELTA_CAUSAL_INNER_WORK_SCHEMA_VERSION : profile.id === DELTA_WFO_V2_PROFILE_ID ? DELTA_WFO_V2_WORK_SCHEMA_VERSION : DELTA_WFO_WORK_SCHEMA_VERSION,
+        schema_version: executionRecipe(profile.id, profile.digest).work_schema_version,
         requested_spec_digest: manifest.requestedSpecDigest,
         effective_spec_digest: manifest.effectiveSpecDigest,
         dataset_binding_digest: manifest.datasetBindingDigest,
@@ -216,7 +219,7 @@ export class ResearchRunCreateService {
         // a value before the only installed worker profile evaluated it.
         requested_spec: requested,
       });
-    const legacyRequest = (wfo || imported) ? {
+    const legacyRequest = (wfo || optimized || imported) ? {
       strategy_id: requested.strategy_id,
       dataset_id: requested.data.dataset_id,
       protocol: requested.protocol,

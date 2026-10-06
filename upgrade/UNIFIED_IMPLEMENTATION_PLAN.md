@@ -8075,7 +8075,7 @@ S02 calendar/presets and Claude receipts preserved, not retaken by this plan.
 | Stage | Scope | Guide / current state |
 | --- | --- | --- |
 | FULL-01 | Shared versioned recipe table, common admission authority, bounded budgets/quota and historic compatibility | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-01) · BACKEND_DELIVERED / NO_RECIPE_OPENED · [Receipt/handoff](./research_loop/evidence/P10/FULL_01_SHARED_RECIPES_2026-10-05.md) |
-| FULL-02 | Mode 1 missing schedule + optimized Three Window/global, full retained/read chain | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-02) · PLANNED |
+| FULL-02 | Mode 1 missing schedule + optimized Three Window/global, full retained/read chain | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-02) · BACKEND_DELIVERED / TWO_EXACT_RECIPES_PRODUCT_RUN_QUALIFIED / RESEARCH_PREVIEW_ENABLED · [Proof, rollback, cleanup and Claude handoff](./research_loop/evidence/P10/FULL_02_MODE1_VERTICAL_2026-10-06.md) |
 | FULL-03 | All actual indexed timeframes, source clocks/warmup and immutable Delta declaration extension | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-03) · PLANNED |
 | FULL-04 | All other valid optimizer pairs, mode-native readers and measured slow-mode limits | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-04) · PLANNED |
 | FULL-05 | Confined imported Alpha execution on compatible qualified recipes | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-05) · PLANNED |
@@ -8101,3 +8101,20 @@ commit locator and Claude handoff](./research_loop/evidence/P10/FULL_01_SHARED_R
 No frontend/design changes, recipe opening, preview/production deployment,
 remote push or dev/main merge. Next: FULL-02, not yet started. The historical
 planning-only text above records the earlier planning turn, not this delivery.
+
+FULL-02 addendum, 2026-10-06 (Bobby approved): Mode1/per-fold-decay Advanced
+and separate optimized Three/global 1h recipes completed through real ordinary
+P08→P10→confined QuantBT1.1.1→P05→named reads. Decay run
+`rrun_05b84bb90e07e7a040062460ef12457f` (2 folds/6 trials), Three run
+`rrun_f3fadab0bf9f450f4c7e0024a9ccb620` (3 trials + untouched Holdout): eight
+HTTP200 reads each, five current-source AVAILABLE, integrity/Stage4 MATCH,
+RC missing0; legacy Advanced audit remains method-scoped typed409. Append-only
+096/097 keep old descriptors/seals and candidate history unchanged. Real flag-off
+rollback rejects new intake while completed new runs stay AVAILABLE/MATCH.
+Two byte-hashed exact qualifications now ENABLED on **Research preview only**;
+20 prior seal identities/accounts preserved. Approved two FE verdict copy
+maps only; frontend default/Suggest disambiguation and browser/visual receipt
+are explicitly handed to Claude, not claimed as a signed/product-UI release.
+No remote push, dev/main/production change. C4 owned-cell teardown/identity
+revocation completed, proof volumes retained. Next proposed backend: FULL-03.
+[Implementation, gates, proof hashes and handoff](./research_loop/evidence/P10/FULL_02_MODE1_VERTICAL_2026-10-06.md).

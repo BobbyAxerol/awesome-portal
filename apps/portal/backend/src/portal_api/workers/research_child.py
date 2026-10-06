@@ -59,7 +59,7 @@ _MAX_EVIDENCE_RECEIPT_BYTES = 24 * 1024
 _MAX_CANDLE_OVERVIEW_BUCKETS = 48
 _MIN_CANDLE_OVERVIEW_BUCKETS = 8
 _ALLOWED_TASKS = frozenset({
-    "P04_DELTA_SMOKE", "P10_DELTA_WFO", "P16_DELTA_WHATIF_GRID", "P17_IMPORTED_SIGNAL_NOTIONAL", "P23_PINNED_FINAL_AUDIT"
+    "P04_DELTA_SMOKE", "P10_DELTA_WFO", "P10_DELTA_THREE_WINDOW_OPTIMIZED", "P16_DELTA_WHATIF_GRID", "P17_IMPORTED_SIGNAL_NOTIONAL", "P23_PINNED_FINAL_AUDIT"
 })
 
 _IMPORTED_FORBIDDEN_NODES = (
@@ -1302,8 +1302,10 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
 
     from portal_api.domain.research_delta_wfo_v2_profile import DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST, temporal_controls
     from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST, causal_inner_controls
+    from portal_api.domain.research_full02_profiles import DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_DIGEST, per_fold_decay_controls
     temporal = receipt.get("execution_profile_id") == DELTA_WFO_V2_PROFILE_ID
     causal = receipt.get("execution_profile_id") == DELTA_CAUSAL_INNER_PROFILE_ID
+    decay = receipt.get("execution_profile_id") == DELTA_PER_FOLD_DECAY_PROFILE_ID
     controls = None
     if causal:
         if receipt.get("execution_profile_digest") != DELTA_CAUSAL_INNER_PROFILE_DIGEST or "optuna_trials" in receipt or "temporal_controls" in receipt:
@@ -1317,17 +1319,20 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
             "inner": {"split_frequency": raw["inner_split_frequency"], "window_mode": raw["inner_window_mode"], "train_window": raw["inner_train_window"], "min_folds": raw["inner_min_folds"]}}})
     elif receipt.get("causal_inner_controls") is not None:
         raise ValueError("causal controls cannot enter another child profile")
-    elif temporal:
-        if receipt.get("execution_profile_digest") != DELTA_WFO_V2_PROFILE_DIGEST:
+    elif temporal or decay:
+        expected_digest = DELTA_PER_FOLD_DECAY_PROFILE_DIGEST if decay else DELTA_WFO_V2_PROFILE_DIGEST
+        if receipt.get("execution_profile_digest") != expected_digest:
             raise ValueError("P10 temporal child profile digest does not match its installed profile")
+        if decay and "optuna_trials" in receipt:
+            raise ValueError("per-fold decay has exactly three trials per study and no preview override")
         raw = receipt.get("temporal_controls")
         if not isinstance(raw, dict) or set(raw) != {"split_frequency", "window_mode", "train_window", "label_horizon_bars", "purge_bars", "embargo_bars"}:
             raise ValueError("P10 temporal child requires exactly its bounded controls")
-        controls = temporal_controls({"schema_version": "research.requested-spec.v2", "optimization_mode": "mode_1_decay", "optimization_schedule": "global",
+        controls = (per_fold_decay_controls if decay else temporal_controls)({"schema_version": "research.requested-spec.v2", "optimization_mode": "mode_1_decay", "optimization_schedule": "per_fold_decay" if decay else "global",
             "walk_forward": {"frequency": raw["split_frequency"], **{k: v for k, v in raw.items() if k != "split_frequency"}}})
     elif receipt.get("execution_profile_id") != DELTA_WFO_PROFILE_ID:
         raise ValueError("P10 WFO child receipt names an uninstalled execution profile")
-    if not temporal and not causal and (
+    if not temporal and not causal and not decay and (
         receipt.get("execution_profile_digest") != DELTA_WFO_PROFILE_DIGEST
         or delta_wfo_profile_digest(DELTA_WFO_PROFILE) != DELTA_WFO_PROFILE_DIGEST
     ):
@@ -1345,12 +1350,13 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
             raise ValueError("P10 WFO child preview trial count is outside its admitted bound")
         optuna_trials = requested
     return _run_delta_wfo_study(receipt, output_root, optuna_trials=optuna_trials,
-        temporal_controls=controls, profile_digest=DELTA_CAUSAL_INNER_PROFILE_DIGEST if causal else DELTA_WFO_V2_PROFILE_DIGEST if temporal else DELTA_WFO_PROFILE_DIGEST,
-        causal_inner=causal)
+        temporal_controls=controls, profile_digest=DELTA_PER_FOLD_DECAY_PROFILE_DIGEST if decay else DELTA_CAUSAL_INNER_PROFILE_DIGEST if causal else DELTA_WFO_V2_PROFILE_DIGEST if temporal else DELTA_WFO_PROFILE_DIGEST,
+        causal_inner=causal, per_fold_decay=decay)
 
 
 def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_trials: int,
-        temporal_controls: dict[str, Any] | None = None, profile_digest: str | None = None, causal_inner: bool = False) -> dict[str, Any]:
+        temporal_controls: dict[str, Any] | None = None, profile_digest: str | None = None, causal_inner: bool = False,
+        per_fold_decay: bool = False) -> dict[str, Any]:
     """The locked W1 Delta WFO study, with a caller-verified trial count.
 
     Both the WFO profile (3 sampled trials) and the P16 what-if profile
@@ -1392,11 +1398,20 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
         pins[name] = float(Decimal(value))
         if not low <= pins[name] <= high:
             raise ValueError("P10 WFO pin leaves its declared range")
+        if per_fold_decay:
+            exact = Decimal(value)
+            if not exact.is_finite() or (exact - Decimal(str(low))) % Decimal(str(_step)) != 0:
+                raise ValueError("per-fold decay pin must lie on its declared step")
     if causal_inner:
         from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE
-    profile = DELTA_CAUSAL_INNER_PROFILE if causal_inner else DELTA_WFO_PROFILE
-    if causal_inner and optuna_trials != 3:
-        raise ValueError("causal inner execution runs exactly 3 trials per outer study")
+    if per_fold_decay:
+        from portal_api.domain.research_full02_profiles import DELTA_PER_FOLD_DECAY_PROFILE
+    if causal_inner and per_fold_decay:
+        raise ValueError("one child cannot combine causal and decay selection contracts")
+    profile = DELTA_PER_FOLD_DECAY_PROFILE if per_fold_decay else DELTA_CAUSAL_INNER_PROFILE if causal_inner else DELTA_WFO_PROFILE
+    per_fold = causal_inner or per_fold_decay
+    if per_fold and optuna_trials != 3:
+        raise ValueError("per-fold execution runs exactly 3 trials per outer study")
     run_id = receipt.get("run_id")
     dataset_id = receipt.get("dataset_id")
     symbol = receipt.get("symbol")
@@ -1407,6 +1422,8 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
     split_ms = _utc_ms_field(receipt, "first_oos_utc_ms")
     if not start_ms < split_ms < end_ms:
         raise ValueError("P10 WFO child span is invalid")
+    if per_fold_decay and end_ms - start_ms > profile["max_span_days"] * 86_400_000:
+        raise ValueError("per-fold decay child exceeds its bounded study span")
 
     market_path = _safe_path(str(receipt["market_path"]), label="market_path")
     market = prepare_market_data(
@@ -1417,11 +1434,11 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
     end = pd.Timestamp(end_ms, unit="ms", tz="UTC")
     split = pd.Timestamp(split_ms, unit="ms", tz="UTC")
     temporal = temporal_controls or {}
-    if causal_inner:
+    if per_fold:
         plan = QuantBTGateway().walk_forward_fold_plan(index=market.frame.index[(market.frame.index >= start) & (market.frame.index < end)], config_fields={
-            **temporal, "split_mode": split.isoformat(), "optimization_mode": "mode_1_decay", "optimization_schedule": "per_fold_causal", "optuna_trials": 3})
-        if not 2 <= len(plan) <= 16 or any(not 2 <= len(fold["inner"] or []) <= 16 for fold in plan):
-            raise ValueError("causal inner plan exceeds its 2..16 outer/inner fold bounds")
+            **temporal, "split_mode": split.isoformat(), "optimization_mode": "mode_1_decay", "optimization_schedule": profile["optimization_schedule"], "optuna_trials": 3})
+        if not 2 <= len(plan) <= 16 or (causal_inner and any(not 2 <= len(fold["inner"] or []) <= 16 for fold in plan)):
+            raise ValueError("per-fold plan exceeds its admitted 2..16 outer/inner fold bounds")
     request = PortalRunRequest(
         strategy_id="delta-rsi-polynomial-alpha",
         dataset_id=dataset_id,
@@ -1466,7 +1483,7 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
     from portal_api.services.research_supervisor import CHILD_PROGRESS_FILENAME
     from portal_api.services.research_sampler_trace import SamplerPublicTrace
 
-    writer = _ChildProgressWriter(output_root.parent / CHILD_PROGRESS_FILENAME, cumulative_trials=causal_inner)
+    writer = _ChildProgressWriter(output_root.parent / CHILD_PROGRESS_FILENAME, cumulative_trials=per_fold)
     trace = SamplerPublicTrace(run_id=run_id, engine_version=QuantBTGateway().version())
     restore = _observe_optuna_trials(writer, sampler_trace=trace)
     try:
@@ -1483,12 +1500,12 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
         raise ValueError(f"P10 WFO produced {n_folds} folds outside the admitted {bounds['min']}..{bounds['max']}")
     trials_path = output_root / run_id / "wfo" / "trials.parquet"
     trial_rows = len(pd.read_parquet(trials_path)) if trials_path.is_file() else 0
-    if trial_rows != optuna_trials * (n_folds if causal_inner else 1):
+    if trial_rows != optuna_trials * (n_folds if per_fold else 1):
         raise ValueError("P10 WFO did not publish exactly the admitted trial count")
-    if causal_inner:
+    if per_fold:
         trials = pd.read_parquet(trials_path)
         if "study_id" not in trials or len(trials.groupby("study_id")) != n_folds or not trials.groupby("study_id").size().eq(3).all():
-            raise ValueError("causal inner source did not publish exactly 3 trials for every outer study")
+            raise ValueError("per-fold source did not publish exactly 3 trials for every outer study")
     trace.write(artifacts=ArtifactRepository(output_root), run_id=run_id)
     return {
         "task": "P10_DELTA_WFO",
@@ -1500,6 +1517,93 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
         # CG-P11-09: this process's own high-water RSS (Linux reports KiB).
         "peak_rss_bytes": int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024,
     }
+
+
+def _run_p10_delta_three_window_optimized(receipt: dict[str, Any], output_root: Path) -> dict[str, Any]:
+    """Exact FULL-02 calibration, freeze, then independent Holdout replay.
+
+    A separate task/profile is required: the historical fixed P04 admission
+    cannot accidentally gain search, overrides or a wider runtime budget.
+    """
+    import pandas as pd
+    from portal_api.adapters.market_data import DatasetDescriptor, prepare_market_data
+    from portal_api.adapters.quantbt import QuantBTGateway
+    from portal_api.domain.research_full02_profiles import (
+        DELTA_THREE_WINDOW_OPTIMIZED_PROFILE, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID,
+        DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST,
+    )
+    from portal_api.domain.requests import AccountConfig, ExecutionConfig, OptimizationConfig, ParameterSpaceConfig, ParameterSpec, PortalRunRequest, ThreeWindowConfig
+    from portal_api.repositories.artifacts import ArtifactRepository
+    from portal_api.services.research_sampler_trace import SamplerPublicTrace
+    from portal_api.services.research_supervisor import CHILD_PROGRESS_FILENAME
+    from portal_api.services.three_window_runner import ThreeWindowRunner
+    from portal_api.strategies import StrategyRegistry
+    from strategy.specification import DELTA_RSI_SPECIFICATION
+
+    required = {"schema_version", "task", "job_id", "run_id", "worker_attempt_id", "lease_epoch",
+        "market_path", "artifact_root", "output_root", "execution_profile_id", "execution_profile_digest",
+        "dataset_id", "symbol", "data_start_utc_ms", "data_end_exclusive_utc_ms", "first_oos_utc_ms", "holdout_start_utc_ms"}
+    if not required <= set(receipt) or set(receipt) - required - {"pinned_parameters"}:
+        raise ValueError("optimized Three Window child requires exactly its bounded task fields")
+    if (receipt["task"], receipt["execution_profile_id"], receipt["execution_profile_digest"]) != (
+        "P10_DELTA_THREE_WINDOW_OPTIMIZED", DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST):
+        raise ValueError("optimized Three Window child requires its exact installed profile")
+    profile = DELTA_THREE_WINDOW_OPTIMIZED_PROFILE
+    run_id, dataset_id, symbol = (receipt.get(name) for name in ("run_id", "dataset_id", "symbol"))
+    if not all(isinstance(value, str) and value for value in (run_id, dataset_id, symbol)):
+        raise ValueError("optimized Three Window child identity is invalid")
+    start_ms, split_ms, holdout_ms, end_ms = (_utc_ms_field(receipt, name) for name in (
+        "data_start_utc_ms", "first_oos_utc_ms", "holdout_start_utc_ms", "data_end_exclusive_utc_ms"))
+    if not start_ms < split_ms < holdout_ms < end_ms or end_ms - start_ms > profile["max_span_days"] * 86_400_000:
+        raise ValueError("optimized Three Window child requires bounded contiguous IS/OOS/Holdout")
+    raw_pins = receipt.get("pinned_parameters") or {}
+    if not isinstance(raw_pins, dict) or not set(raw_pins) <= {"rvol", "slpercent"}:
+        raise ValueError("optimized Three Window pins only qualified declared axes")
+    pins: dict[str, float] = {}
+    for name, value in raw_pins.items():
+        if not isinstance(value, str):
+            raise ValueError("optimized Three Window pins are exact decimal text")
+        decimal = Decimal(value)
+        low, high, step = DELTA_RSI_SPECIFICATION.parameter_space[name]
+        if (not decimal.is_finite() or not Decimal(str(low)) <= decimal <= Decimal(str(high))
+                or (decimal - Decimal(str(low))) % Decimal(str(step)) != 0):
+            raise ValueError("optimized Three Window pin leaves its declared range")
+        pins[name] = float(decimal)
+    market = prepare_market_data(pd.read_parquet(_safe_path(str(receipt["market_path"]), label="market_path")),
+        DatasetDescriptor(dataset_id=dataset_id, symbol=symbol, venue="BINANCE", timeframe=profile["timeframe"]))
+    if len(market.frame) > 100_000:
+        raise ValueError("optimized Three Window tape exceeds its admitted bar budget")
+    timestamps = [pd.Timestamp(value, unit="ms", tz="UTC").to_pydatetime() for value in (start_ms, split_ms, holdout_ms, end_ms)]
+    start, split, holdout, end = timestamps
+    request = PortalRunRequest(strategy_id="delta-rsi-polynomial-alpha", dataset_id=dataset_id, symbol=symbol,
+        timeframe=profile["timeframe"], protocol="three_window_decay",
+        parameter_space=ParameterSpaceConfig({key: ParameterSpec(kind="fixed", value=pins[key]) if key in pins else ParameterSpec(
+            kind="float_range" if isinstance(low, float) else "int_range", low=low, high=high, step=step)
+            for key, (low, high, step) in DELTA_RSI_SPECIFICATION.parameter_space.items()}),
+        account=AccountConfig(initial_capital=20_000, leverage=3, alloc_per_trade=2_000,
+            canonical_one_way_fee_rate=0.0005, funding_enabled=False),
+        execution=ExecutionConfig(target_mode=profile["execution_route"]),
+        calibration=ThreeWindowConfig(is_start=start, is_end_exclusive=split, oos_start=split,
+            oos_end_exclusive=holdout, holdout_start=holdout, holdout_end_exclusive=end,
+            optuna_trials=3, optuna_early_stopping=None, random_seed=profile["random_seed"],
+            optimization=OptimizationConfig(min_trades_per_year=50.0, trade_penalty_factor=0.5)))
+    gateway, artifacts = QuantBTGateway(), ArtifactRepository(output_root)
+    writer = _ChildProgressWriter(output_root.parent / CHILD_PROGRESS_FILENAME)
+    trace = SamplerPublicTrace(run_id=run_id, engine_version=gateway.version())
+    restore = _observe_optuna_trials(writer, sampler_trace=trace)
+    try:
+        ThreeWindowRunner(gateway=gateway, strategies=StrategyRegistry(), artifacts=artifacts).run(request, market, run_id)
+    finally:
+        restore()
+        writer.close()
+    trials = pd.read_parquet(output_root / run_id / "wfo" / "trials.parquet")
+    if len(trials) != 3:
+        raise ValueError("optimized Three Window did not publish exactly three admitted trials")
+    trace.write(artifacts=artifacts, run_id=run_id)
+    return {"task": "P10_DELTA_THREE_WINDOW_OPTIMIZED", "engine_version": gateway.version(),
+        "bars": len(market.frame), "n_folds": 1, "trial_rows": len(trials),
+        "execution_profile_digest": DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST,
+        "peak_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024}
 
 
 def _engine_value(value: str, *, kind: type) -> int | float:
@@ -1670,6 +1774,8 @@ def execute_receipt(receipt: dict[str, Any], *, receipt_dir: Path | None = None)
         result = _run_p23_pinned_final_audit(receipt, _wfo_output_root(receipt, receipt_dir))
     elif task == "P10_DELTA_WFO":
         result = _run_p10_delta_wfo(receipt, _wfo_output_root(receipt, receipt_dir))
+    elif task == "P10_DELTA_THREE_WINDOW_OPTIMIZED":
+        result = _run_p10_delta_three_window_optimized(receipt, _wfo_output_root(receipt, receipt_dir))
     elif task == "P16_DELTA_WHATIF_GRID":
         result = _run_p16_delta_whatif(receipt, _wfo_output_root(receipt, receipt_dir))
     elif task == "P17_IMPORTED_SIGNAL_NOTIONAL":

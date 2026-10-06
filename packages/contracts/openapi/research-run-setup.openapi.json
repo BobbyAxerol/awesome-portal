@@ -1342,7 +1342,11 @@
             ]
           },
           "qualification": {
-            "const": "LEGACY_EXACT_BINDING"
+            "enum": [
+              "LEGACY_EXACT_BINDING",
+              "CANDIDATE_NOT_QUALIFIED",
+              "PRODUCT_RUN_QUALIFIED"
+            ]
           },
           "memory_bytes": {
             "type": "integer",

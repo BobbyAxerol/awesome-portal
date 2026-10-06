@@ -2250,4 +2250,32 @@ handoff](./evidence/P10/FULL_01_SHARED_RECIPES_2026-10-05.md).
 Backend completion does not mean new modes/timeframes opened or a frontend
 rebuild. Claude can consume optional declared caps and bounded retry detail
 without changing S02 design. FULL-02 is the next stage; it has not started.
+
+#### §37 FULL-02 delivery — 2026-10-06
+
+**BACKEND_DELIVERED / TWO_EXACT_RECIPES_PRODUCT_RUN_QUALIFIED /
+RESEARCH_PREVIEW_ENABLED**. This dated addendum supersedes the historical
+not-started note above, without changing the remaining FULL-03…06 plan.
+
+Exact 1h Mode1/per-fold-decay Advanced and separate optimized Three/global
+recipes now have real ordinary authenticated P08→P10→confined QuantBT1.1.1
+child→P05→named-read proof: 2 folds/6 actual trials and 3 actual trials with
+independent Holdout respectively. All five core current-source reads AVAILABLE,
+params/bundle/integrity MATCH, RC missing0; real negative cursor/workspace,
+flag-off rollback and legacy descriptor compatibility retained. No new fake
+run-global θ/K, causal claim or calibration-as-untouched-OOS label.
+
+Append-only 096/097 plus byte-hashed immutable receipt qualify only those two
+recipes. Both now ENABLED on Research8095, normal qualification selector unset;
+original20 seal identities preserved, existing accounts/status/session versions
+unchanged. Production, Execution, dev/main and remotes untouched.
+
+[Delivery, exact profiles/types, real runs/hashes/images, gates and C4 cleanup](./evidence/P10/FULL_02_MODE1_VERTICAL_2026-10-06.md).
+Claude: consume `ProtocolDisclosure`, per-study `FoldSelection` and exact setup
+budgets. Approved verdict copy maps already patched/tested without design edits.
+S02's `selectProfile` must distinguish historical 1-trial/no-seed Three from
+new 3-trial/seed42 Three for default/Suggest, preserving entered/clone values;
+backend Conditions/admission already resolve exact policy. Take frontend browser
+receipt separately; named backend proof is not visual acceptance. Next backend
+stage FULL-03 remains pending Bobby's instruction, not a FULL-02 source blocker.
 No remote push, dev/main promotion or runtime change.

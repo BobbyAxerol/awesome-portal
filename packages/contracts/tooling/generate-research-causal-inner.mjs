@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { replaceComponent } from "./generate-research-progress-truth.mjs";
 import { amendVnObservedFixedOpenApi } from "./generate-research-vn-observed-fixed.mjs";
 import { amendW1Presentation } from "./generate-research-w1-presentation.mjs";
+import { amendFull02CurrentSource } from "./generate-research-full02-current-source.mjs";
 
 const ref = name => ({ $ref: `#/components/schemas/${name}` });
 const obj = properties => ({ type: "object", additionalProperties: false, required: Object.keys(properties), properties });
@@ -14,8 +15,8 @@ const ms = { type: "integer", minimum: 0, maximum: Number.MAX_SAFE_INTEGER };
 const innerBounds = { type: "integer", minimum: 2, maximum: 16 };
 const frequency = { enum: ["weekly", "monthly", "quarterly"] };
 const windowMode = { enum: ["expanding", "rolling"] };
-const admissionProfileIds = ["p04.fixed-qualification.v1", "p10.delta-signal-notional-wfo.v1",
-  "p10.delta-signal-notional-wfo.v2", "p10.delta-signal-notional-causal-inner.v1", "p10.vn-stock-daily-observed-fixed.v1"];
+const admissionProfileIds = JSON.parse(readFileSync(new URL("../../../apps/portal/registry/research-execution-recipes.v1.json",import.meta.url)))
+  .recipes.filter(row => row.adapter_kind !== "IMPORTED_FIXED").map(row => row.profile_id);
 const params = { type: "object", maxProperties: 24, propertyNames: { pattern: "^[A-Za-z][A-Za-z0-9_]{0,63}$" }, additionalProperties: decimal };
 export const causalSelectionSchema = {
   ...obj({ schema_version: { const: "research.current-source-causal-selection.v1" }, scope: { const: "OUTER_FOLD_SELECTION" },
@@ -49,6 +50,7 @@ function amend(original, file) {
       type: "object", required: ["profile_id"], properties: { profile_id: { const: profileId } },
     }, minContains: 0, maxContains: 1 }));
     const p = profiles.items.properties;
+    addEnum(p.reason, "RECIPE_NOT_QUALIFIED");
     p.profile_id.enum = [...admissionProfileIds];
     p.inner_validation = { enum: ["NOT_ADMITTED_GLOBAL_RETENTION_ONLY", "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY"] };
     p.trial_scope = { const: "PER_OUTER_FOLD_STUDY" };
@@ -153,7 +155,8 @@ function amend(original, file) {
     else next = next.replace('"schemas": {\n', `"schemas": {\n      "${name}": ${JSON.stringify(value)},\n`);
   }
   next = amendVnObservedFixedOpenApi(next, file);
-  return file === "research-current-source" ? amendW1Presentation(next, file) : next;
+  if (file === "research-current-source") return amendFull02CurrentSource(amendW1Presentation(next, file),file);
+  return file === "research-report" ? amendFull02CurrentSource(next,file) : next;
 }
 export function amendCausalInnerOpenApi(original, file) { return amend(original, file); }
 

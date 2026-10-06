@@ -67,6 +67,10 @@ SIGNAL_NOTIONAL_CURRENT_SOURCE_ADAPTER_ID: Final = "rs02.quantbt-signal-notional
 SIGNAL_NOTIONAL_CURRENT_SOURCE_PROFILE_ID: Final = "rs02.delta-signal-notional-wfo.v1"
 CAUSAL_INNER_CURRENT_SOURCE_ADAPTER_ID: Final = "rs02.quantbt-signal-notional-causal-inner.v1"
 CAUSAL_INNER_CURRENT_SOURCE_PROFILE_ID: Final = "rs02.delta-signal-notional-causal-inner.v1"
+PER_FOLD_DECAY_CURRENT_SOURCE_ADAPTER_ID: Final = "full02.quantbt-signal-notional-per-fold-decay.v1"
+PER_FOLD_DECAY_CURRENT_SOURCE_PROFILE_ID: Final = "full02.delta-signal-notional-per-fold-decay.v1"
+THREE_WINDOW_CURRENT_SOURCE_ADAPTER_ID: Final = "full02.quantbt-signal-notional-three-window.v1"
+THREE_WINDOW_CURRENT_SOURCE_PROFILE_ID: Final = "full02.delta-signal-notional-three-window.v1"
 MAXIMUM_OPTUNA_TRIALS: Final = 64
 
 
@@ -93,6 +97,8 @@ _CURRENT_SOURCE_PROFILES: Final = {
         "signal_notional",
     ),
     CAUSAL_INNER_CURRENT_SOURCE_PROFILE_ID: (CAUSAL_INNER_CURRENT_SOURCE_ADAPTER_ID, "signal_notional"),
+    PER_FOLD_DECAY_CURRENT_SOURCE_PROFILE_ID: (PER_FOLD_DECAY_CURRENT_SOURCE_ADAPTER_ID, "signal_notional"),
+    THREE_WINDOW_CURRENT_SOURCE_PROFILE_ID: (THREE_WINDOW_CURRENT_SOURCE_ADAPTER_ID, "signal_notional"),
 }
 
 
@@ -133,13 +139,14 @@ class CurrentSourceAdmission:
                 "The current-source profile is not installed.",
             )
         expected_adapter, expected_target_mode = profile
-        if self.engine_operation != CURRENT_SOURCE_ENGINE_OPERATION or self.target_mode != expected_target_mode:
+        three = self.profile_id == THREE_WINDOW_CURRENT_SOURCE_PROFILE_ID
+        if self.engine_operation != ("train_test_split" if three else CURRENT_SOURCE_ENGINE_OPERATION) or self.target_mode != expected_target_mode:
             raise CurrentSourceArtifactError(
                 "RESEARCH_CURRENT_SOURCE_ROUTE_REJECTED",
                 f"The {expected_adapter} adapter accepts only QuantBT walk_forward with {expected_target_mode}.",
             )
         causal = self.profile_id == CAUSAL_INNER_CURRENT_SOURCE_PROFILE_ID
-        expected_schedule = "per_fold_causal" if causal else "global"
+        expected_schedule = "per_fold_causal" if causal else "per_fold_decay" if self.profile_id == PER_FOLD_DECAY_CURRENT_SOURCE_PROFILE_ID else "global"
         if self.optimization_mode != "mode_1_decay" or self.optimization_schedule != expected_schedule:
             raise CurrentSourceArtifactError(
                 "RESEARCH_CURRENT_SOURCE_MODE_REJECTED",
@@ -170,6 +177,8 @@ class CurrentSourceAdmission:
                 )
         if causal and (self.random_seed != 42 or self.optuna_trials != 3 or self.maximum_runtime_seconds != 240):
             raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_PROFILE_REJECTED", "Causal inner custody requires seed 42, three trials per study and the 240-second cap.")
+        if self.profile_id in {PER_FOLD_DECAY_CURRENT_SOURCE_PROFILE_ID, THREE_WINDOW_CURRENT_SOURCE_PROFILE_ID} and (self.random_seed != 42 or self.optuna_trials != 3 or self.maximum_runtime_seconds != 240):
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_PROFILE_REJECTED", "FULL-02 custody requires its exact seed, trial count and wall cap; preview-long never widens it.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -305,6 +314,14 @@ def causal_inner_current_source_admission() -> CurrentSourceAdmission:
     )
 
 
+def full02_current_source_admission(*, three_window: bool = False) -> CurrentSourceAdmission:
+    return CurrentSourceAdmission(profile_id=THREE_WINDOW_CURRENT_SOURCE_PROFILE_ID if three_window else PER_FOLD_DECAY_CURRENT_SOURCE_PROFILE_ID,
+        engine_operation="train_test_split" if three_window else "walk_forward", target_mode="signal_notional",
+        optimization_mode="mode_1_decay", optimization_schedule="global" if three_window else "per_fold_decay",
+        random_seed=42, optuna_trials=3, maximum_runtime_seconds=240,
+        maximum_rss_bytes=2 * 1024 ** 3, maximum_disk_bytes=4 * 1024 ** 3, lease_seconds=90)
+
+
 def iter_current_source_retention_batches(
     *,
     retained_artifacts: ResearchArtifactStore,
@@ -409,6 +426,9 @@ def _portal_retention_row(table_kind: str, row: Mapping[str, Any]) -> Mapping[st
         causal_selection = _retained_facts(row, "causal_selection")
         if causal_selection is not None:
             payload["causal_selection"] = causal_selection
+        fold_selection = _retained_facts(row, "fold_selection")
+        if fold_selection is not None:
+            payload["fold_selection"] = fold_selection
     elif table_kind == "trials":
         source_id = row.get("trial_id")
         at_utc_ms = None
@@ -634,6 +654,8 @@ class CurrentSourceArtifactAdapter:
 
         admission.validate()
         causal = admission.profile_id == CAUSAL_INNER_CURRENT_SOURCE_PROFILE_ID
+        per_fold_decay = admission.profile_id == PER_FOLD_DECAY_CURRENT_SOURCE_PROFILE_ID
+        three_window = admission.profile_id == THREE_WINDOW_CURRENT_SOURCE_PROFILE_ID
         source_adapter_id = _CURRENT_SOURCE_PROFILES[admission.profile_id][0]
         if identity.run_id != run_id or fence.run_id != run_id:
             raise CurrentSourceArtifactError(
@@ -642,7 +664,7 @@ class CurrentSourceArtifactAdapter:
             )
         raw_dir = self._source_artifacts.run_directory(run_id)
         manifest = self._read_json(raw_dir / "manifest.json", "manifest")
-        self._require_current_advanced_wfo(manifest)
+        self._require_current_advanced_wfo(manifest, three_window=three_window)
         config = self._read_json(raw_dir / "config.json", "config")
         self._assert_admission_matches_source(config, admission)
         strategy = self._read_json(raw_dir / "strategy.json", "strategy")
@@ -654,6 +676,14 @@ class CurrentSourceArtifactAdapter:
         # CG-P13-07/08. An older source tree simply lacks them; every fact
         # derived from them then stays a typed absence downstream.
         source_contract = self._optional_json(raw_dir / "wfo" / "source_contract.v1.json", "source contract")
+        if three_window and (not isinstance(source_contract, Mapping) or source_contract.get("engine_operation") != "train_test_split"):
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_HOLDOUT_BINDING_REJECTED", "Three Window source must name its actual train_test_split operation.")
+        if per_fold_decay:
+            wf = source_contract.get("walk_forward") if isinstance(source_contract, Mapping) else None
+            if (not isinstance(wf, Mapping) or wf.get("optimization_schedule") != "per_fold_decay"
+                    or wf.get("optimization_mode") != "mode_1_decay" or wf.get("oos_used_for_selection") is not True
+                    or wf.get("causality_claim") != "fold_local_decay_calibration"):
+                raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_FOLD_SELECTION_REJECTED", "Per-fold decay must publish its native outer-OOS selection-input semantics.")
         if causal:
             source_wfo = source_contract.get("walk_forward") if isinstance(source_contract, Mapping) else None
             if (not isinstance(source_wfo, Mapping) or source_wfo.get("optimization_mode") != "mode_1_decay"
@@ -682,13 +712,13 @@ class CurrentSourceArtifactAdapter:
             fold_metrics=None if causal else fold_metrics,
             observations=observations,
         )
-        trials = self._frame_rows(raw_dir / "wfo" / "trials.parquet", kind="trials", source_contract=source_contract, causal=causal)
+        trials = self._frame_rows(raw_dir / "wfo" / "trials.parquet", kind="trials", source_contract=source_contract, causal=causal or per_fold_decay)
         candidates = self._frame_rows(
             raw_dir / "wfo" / "candidates.parquet",
             kind="candidates",
             source_contract=source_contract,
             objective_terms=self._objective_terms(config),
-            causal=causal,
+            causal=causal or per_fold_decay,
         )
         from portal_api.services.research_sampler_trace import SAMPLER_TRACE_PATH, retain_sampler_trace
         try:
@@ -697,6 +727,8 @@ class CurrentSourceArtifactAdapter:
             raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_SAMPLER_TRACE_INVALID", "Sampler source trace is incompatible with this run's retained source.") from exc
         if causal:
             selection = self._attach_causal_selections(raw_dir, folds=folds, trials=trials, candidates=candidates, config=config, selection=selection)
+        if per_fold_decay:
+            selection = self._attach_per_fold_decay_selections(raw_dir, folds=folds, trials=trials, candidates=candidates, selection=selection)
         selection_rows = [self._selection_row(selection)]
         execution_observation = self._execution_observation(manifest, folds, selection)
         # W5b (P17): the final account's per-bar ledger and its counted
@@ -730,7 +762,9 @@ class CurrentSourceArtifactAdapter:
             trials=trials,
             candidates=candidates,
             selection=selection_rows,
+            three_window=three_window,
         )
+        window_replay = self._three_window_replay_rows(raw_dir) if three_window else None
 
         source_transform_digest = self._source_transform_digest(
             manifest=manifest,
@@ -752,11 +786,20 @@ class CurrentSourceArtifactAdapter:
                     ("strategy_lifecycle_contract", lifecycle_contract if child_audit_summary is not None else None),
                     ("execution_observation", execution_observation),
                     ("sampler_public_trace", None if sampler_trace is None else sampler_trace[0]),
+                    ("three_window_replay", window_replay),
                 )
                 if value is not None
             },
         )
         registry = current_source_schema_registry(bar_ledger=account_ledger is not None)
+        if window_replay is not None:
+            base = current_source_schema_registry().require("observations").arrow_schema
+            registry.register(ArtifactTableSchema(table_kind="three_window_replay",
+                schema_version="research.three-window-replay.v1",
+                arrow_schema=pa.schema([*base, pa.field("window_role", pa.string(), nullable=False),
+                    pa.field("window_source_ordinal", pa.int64(), nullable=False),
+                    pa.field("window_source_id", pa.string(), nullable=False)]),
+                sequence_column="source_ordinal", id_column="window_source_id"))
         summary = self._summary(
             observations=observations,
             folds=folds,
@@ -775,6 +818,13 @@ class CurrentSourceArtifactAdapter:
         )
         if sampler_trace is not None and isinstance(summary.get("source_facts"), dict):
             summary["source_facts"]["search"]["sampler_trace"] = sampler_trace[1]
+        if per_fold_decay and isinstance(summary.get("source_facts"), dict):
+            # No run-global raw winner exists across independent outer studies.
+            summary["source_facts"]["search"]["raw_best_is_trial_id"] = None
+            summary["source_facts"]["search"]["raw_best_is_objective"] = None
+            summary["source_facts"]["search"]["candidate_source_trial_ids"] = sorted(row["candidate_id"] for row in candidates)
+        if three_window:
+            summary["protocol_disclosure"] = self._three_window_disclosure(raw_dir, config=config, selection=selection)
         # The retained table/manifest hashes authenticate the projection,
         # not the source equity file itself. Seal its actual bytes once here.
         series_path = raw_dir / "series" / "stitched.parquet"
@@ -789,7 +839,7 @@ class CurrentSourceArtifactAdapter:
             "digest": series_hash.hexdigest(),
             "logical_name": "series/stitched.parquet",
             "size_bytes": series_size,
-            "scope": "FULL_STITCHED_SOURCE_SERIES",
+            "scope": "OOS_CALIBRATION_REPLAY_SERIES" if three_window else "FULL_STITCHED_SOURCE_SERIES",
         }
         if execution_observation is not None:
             summary["execution_observation"] = execution_observation
@@ -817,6 +867,8 @@ class CurrentSourceArtifactAdapter:
             self._write_rows(writer, registry, "trials", trials)
             self._write_rows(writer, registry, "candidates", candidates)
             self._write_rows(writer, registry, "selection", selection_rows)
+            if window_replay is not None:
+                self._write_rows(writer, registry, "three_window_replay", window_replay)
             writer.write_small_document("source_manifest", self._document(manifest))
             writer.write_small_document("source_config", self._document(config))
             writer.write_small_document("source_strategy", self._document(strategy))
@@ -826,7 +878,7 @@ class CurrentSourceArtifactAdapter:
                 "source_adapter_id": source_adapter_id,
                 "profile_id": admission.profile_id,
                 "source_transform_digest": source_transform_digest,
-                "available": ["observations", "returns", "positions", "folds", "trials", "candidates", "selection"],
+                "available": ["observations", "returns", "positions", "folds", "trials", "candidates", "selection", *(["three_window_replay"] if three_window else [])],
                 "unavailable": {
                     "route_ledger": "SOURCE_UNSUPPORTED_CONFIRMED",
                     "audited_fills": "SOURCE_UNSUPPORTED_CONFIRMED",
@@ -835,6 +887,8 @@ class CurrentSourceArtifactAdapter:
             })
             if source_contract is not None:
                 writer.write_small_document("source_contract", self._document(source_contract))
+            if three_window:
+                writer.write_small_document("source_three_window_roles", self._document(self._read_json(raw_dir / "wfo" / "three_window_roles.v1.json", "Three Window roles")))
             if sampler_trace is not None:
                 writer.write_small_document("source_sampler_public_trace", self._document(sampler_trace[0]))
             if fold_metrics is not None:
@@ -905,13 +959,13 @@ class CurrentSourceArtifactAdapter:
             **{key + "_utc_ms": self._nullable_utc_ms(record.get(key), "lifecycle " + key.replace("_", " "))
                 for key in ("cutoff", "train_start", "train_end", "test_start", "test_end")}}
 
-    def _require_current_advanced_wfo(self, manifest: Mapping[str, Any]) -> None:
+    def _require_current_advanced_wfo(self, manifest: Mapping[str, Any], *, three_window: bool = False) -> None:
         if manifest.get("quantbt_version") != QUANTBT_ENGINE_VERSION:
             raise CurrentSourceArtifactError(
                 "NOT_RETAINED_LEGACY",
                 "Only a current QuantBT 1.1.1 artifact may enter the RS-02 current-source lane.",
             )
-        if manifest.get("protocol") != "advanced_walk_forward":
+        if manifest.get("protocol") != ("three_window_decay" if three_window else "advanced_walk_forward"):
             raise CurrentSourceArtifactError(
                 "RESEARCH_CURRENT_SOURCE_PROFILE_REJECTED",
                 "The RS-02 current-source lane accepts only an admitted advanced_walk_forward result; fixed P04 remains on its versioned reader.",
@@ -942,6 +996,7 @@ class CurrentSourceArtifactAdapter:
         trials: list[dict[str, Any]],
         candidates: list[dict[str, Any]],
         selection: list[dict[str, Any]],
+        three_window: bool = False,
     ) -> None:
         """Reject an over-budget engine result before P05 writes any bytes.
 
@@ -953,7 +1008,7 @@ class CurrentSourceArtifactAdapter:
 
         bounds = (
             ("observations", len(observations), 1, 2_000_000),
-            ("folds", len(folds), 2, 256),
+            ("folds", len(folds), 1 if three_window else 2, 1 if three_window else 256),
             ("trials", len(trials), 2, _maximum_optuna_trials()),
             ("candidates", len(candidates), 1, MAXIMUM_OPTUNA_TRIALS),
             ("selection", len(selection), 1, 1),
@@ -1220,6 +1275,122 @@ class CurrentSourceArtifactAdapter:
                 or self._nullable_decimal(selection.get("objective"), "last-fold objective") != last["objective"]):
             refuse()
         return {**selection, "trial_id": last["selected_trial_id"]}
+
+    def _attach_per_fold_decay_selections(
+        self, raw_dir: Path, *, folds: list[dict[str, Any]], trials: list[dict[str, Any]],
+        candidates: list[dict[str, Any]], selection: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Join real fold-local selection; unlike causal, outer OOS participated."""
+        def refuse() -> None:
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_FOLD_SELECTION_REJECTED",
+                "Per-fold-decay source selection must bind to its exact retained study, parameters and outer fold.")
+
+        frame = self._read_frame(raw_dir / "wfo" / "fold_selection.parquet", "per-fold-decay selection")
+        native_rows = [{str(k): self._json_value(v) for k, v in row.to_dict().items()} for _, row in frame.iterrows()]
+        params_by_fold = self._read_json(raw_dir / "wfo" / "params_by_fold.json", "per-fold parameter map")
+        params_by_fold = {k: v for k, v in params_by_fold.items() if k not in {"producer", "artifact_schema_version"}}
+        ids = {row["fold_id"] for row in folds}
+        if not 2 <= len(folds) <= 16 or len(ids) != len(folds) or len(native_rows) != len(folds) or len(trials) != 3 * len(folds) or set(params_by_fold) != ids:
+            refuse()
+        by_fold = {self._nullable_identifier(row.get("fold_id")): row for row in native_rows}
+        if set(by_fold) != ids:
+            refuse()
+        def facts(row: Mapping[str, Any]) -> Mapping[str, Any]:
+            return json.loads(row["payload_json"])["trial_facts"]
+        for ordinal, fold in enumerate(folds):
+            native = by_fold[fold["fold_id"]]
+            study = self._nullable_identifier(native.get("study_id", native.get("fold_id")))
+            if (study != fold["fold_id"] or native.get("outer_oos_used_for_selection") is not True
+                    or native.get("causality_claim") != "fold_local_decay_calibration"):
+                refuse()
+            for name in ("train_start", "train_end", "test_start", "test_end"):
+                if self._nullable_utc_ms(native.get(name), name) != fold[name + "_utc_ms"]:
+                    refuse()
+            native_params = native.get("selected_params")
+            if native_params is None and isinstance(native.get("selected_params_json"), str):
+                native_params = _json_object(native["selected_params_json"], "fold selected parameters")
+            params = _decimal_object(native_params, "fold selected parameters")
+            if not params or params != _decimal_object(params_by_fold[fold["fold_id"]], "fold parameter map"):
+                refuse()
+            local = self._nullable_identifier(native.get("selected_trial_id"))
+            searched = [row for row in trials if facts(row).get("study_id") == study]
+            pool = [row for row in candidates if facts(row).get("study_id") == study]
+            selected = [row for row in pool if facts(row).get("source_trial_id") == local and json.loads(row["parameters_json"]) == params]
+            matching = [row for row in searched if facts(row).get("source_trial_id") == local and json.loads(row["parameters_json"]) == params]
+            if (len(searched) != 3 or not 1 <= len(pool) <= 3 or len(selected) != 1 or len(matching) != 1
+                    or matching[0]["state"] != "COMPLETE" or selected[0]["objective"] is None
+                    or facts(selected[0]).get("stage") != "oos_candidate_selection"):
+                refuse()
+            block = {
+                "schema_version": "research.current-source-fold-selection.v1", "scope": "OUTER_FOLD_SELECTION",
+                "study_id": study, "selected_trial_id": matching[0]["trial_id"], "parameters": params,
+                "params_digest": hashlib.sha256(self._canonical_json(params).encode()).hexdigest(),
+                "objective": selected[0]["objective"], "objective_kind": "OUTER_FOLD_DECAY_J",
+                "candidate_count": len(pool), "study_trial_rows": 3,
+                "outer_oos_used_for_selection": True,
+                "selection_sequence": ordinal,
+                "params_frozen_at_utc_ms": self._nullable_utc_ms(native.get("params_frozen_at"), "fold parameter freeze"),
+                **{name: self._nullable_decimal(native.get(name), name) for name in ("candidate_is_metric", "candidate_oos_metric", "candidate_decay")},
+            }
+            payload = json.loads(fold["payload_json"])
+            payload["fold_selection"] = block
+            fold["payload_json"] = self._canonical_json(payload)
+        last = json.loads(folds[-1]["payload_json"])["fold_selection"]
+        if (selection.get("scope") != "LAST_FOLD_DEPLOYMENT" or selection.get("fold_id") != folds[-1]["fold_id"]
+                or _decimal_object(selection.get("params"), "last fold parameters") != last["parameters"]
+                or self._nullable_identifier(selection.get("trial_id")) != self._nullable_identifier(by_fold[folds[-1]["fold_id"]].get("selected_trial_id"))):
+            refuse()
+        return {**selection, "trial_id": last["selected_trial_id"]}
+
+    def _three_window_disclosure(self, raw_dir: Path, *, config: Mapping[str, Any], selection: Mapping[str, Any]) -> dict[str, Any]:
+        roles = self._read_json(raw_dir / "wfo" / "three_window_roles.v1.json", "three-window roles")
+        if (roles.get("engine_operation") != "train_test_split" or roles.get("calibration_tape") != ["IS", "OOS"]
+                or roles.get("holdout_used_for_selection") is not False or roles.get("freeze_before_holdout") is not True):
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_HOLDOUT_BINDING_REJECTED", "Independent Holdout requires explicit native custody/selection-order facts.")
+        frozen_at = self._nullable_utc_ms(roles.get("frozen_at"), "Three Window parameter freeze")
+        holdout_read = self._nullable_utc_ms(roles.get("holdout_replay_started_at"), "Three Window holdout replay start")
+        if (frozen_at is None or holdout_read is None or frozen_at > holdout_read
+                or roles.get("frozen_at") != selection.get("frozen_at")
+                or roles.get("selected_params_digest_scope") != "SHA256_SORTED_NUMERIC_PARAMETER_JSON"):
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_HOLDOUT_BINDING_REJECTED", "Holdout replay clocks must follow the retained native parameter freeze.")
+        windows, series = {}, {}
+        params = _decimal_object(selection.get("params"), "Three Window selected parameters")
+        digest = hashlib.sha256(self._canonical_json(params).encode()).hexdigest()
+        if roles.get("selected_params_digest") != hashlib.sha256(self._canonical_json(selection.get("params")).encode()).hexdigest():
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_HOLDOUT_BINDING_REJECTED", "Holdout parameter bundle does not bind the actual selected parameters.")
+        for key, source_role, file_key in (("is", "IS", "is"), ("oos", "OOS", "oos"), ("holdout", "HOLDOUT", "holdout_live")):
+            bounds = roles.get("windows", {}).get(source_role)
+            if not isinstance(bounds, Mapping) or any(type(bounds.get(name)) is not int for name in ("start_utc_ms", "end_exclusive_utc_ms")) or bounds["start_utc_ms"] >= bounds["end_exclusive_utc_ms"]:
+                raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_HOLDOUT_BINDING_REJECTED", "Three Window role bounds are incomplete.")
+            rows = self._observation_rows(raw_dir / "series" / f"{file_key}.parquet")
+            if any(not bounds["start_utc_ms"] <= row["at_utc_ms"] < bounds["end_exclusive_utc_ms"] for row in rows):
+                raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_HOLDOUT_BINDING_REJECTED", "A replay observation escapes its named window.")
+            windows[key] = {**bounds, "bar_count": len(rows)}
+            indexes = sorted({round(i * (len(rows) - 1) / max(1, min(len(rows), 48) - 1)) for i in range(min(len(rows), 48))})
+            series[key] = [{name: rows[i][name] for name in ("at_utc_ms", "equity", "return_fraction", "accepted_position", "drawdown_fraction", "signal_target")} for i in indexes]
+        if windows["is"]["end_exclusive_utc_ms"] != windows["oos"]["start_utc_ms"] or windows["oos"]["end_exclusive_utc_ms"] != windows["holdout"]["start_utc_ms"]:
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_HOLDOUT_BINDING_REJECTED", "Three Window replay roles are not contiguous.")
+        return {"schema_version": "research.current-source-protocol-disclosure.v1", "protocol": "three_window_decay",
+            "engine_operation": "train_test_split", "calibration_scope": "IS_OOS_ONLY", "observation_scope": "OOS_SELECTION_INPUT",
+            "windows": windows, "window_series": series, "independent_holdout": {"state": "AVAILABLE", **windows["holdout"],
+                "holdout_used_for_selection": False, "selected_params_digest": digest, "freeze_before_holdout": True}}
+
+    def _three_window_replay_rows(self, raw_dir: Path) -> list[dict[str, Any]]:
+        """Complete private frozen-parameter replays, not the native study ledger.
+
+        The public summary samples these series. All original exact rows have
+        durable P05 Parquet custody, so a sampled chart never becomes the only
+        retained IS/Holdout evidence after the confined child is cleaned up.
+        """
+        result: list[dict[str, Any]] = []
+        for role, file_key in (("IS", "is"), ("OOS", "oos"), ("HOLDOUT", "holdout_live")):
+            for row in self._observation_rows(raw_dir / "series" / f"{file_key}.parquet"):
+                result.append({**row, "source_ordinal": len(result), "window_role": role,
+                    "window_source_ordinal": row["source_ordinal"],
+                    "window_source_id": f"{role}:{row['source_index_utc']}"})
+        if not 3 <= len(result) <= 92 * 24:
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_ARTIFACT_BOUNDS_REJECTED", "Optimized Three Window full replay exceeds its exact 92-day/1h recipe bound.")
+        return result
 
     def _selection_row(self, selection: Mapping[str, Any]) -> dict[str, Any]:
         params = selection.get("params")

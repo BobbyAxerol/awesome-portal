@@ -203,6 +203,7 @@ export function retainedStage4Binding(
   sealedParamsSha256: string | null,
   folds: readonly ChildAuditFold[],
   candidateParameterKinds?: import("./parameter-binding.registry").HistoricalProfileBinding["candidateParameterKinds"],
+  perFoldSourceKey = "rs02.fold.causal_selection.parameters",
 ): Stage4Binding {
   const perFold = folds.some(fold => fold.selectedParameters !== undefined);
   const frozenByFold = perFold ? new Map(folds.map(fold => [fold.foldId,
@@ -219,7 +220,7 @@ export function retainedStage4Binding(
   const sealedParams = row("SEALED_PARAMS", {
     value: perFold ? expectedCommon : frozen,
     identity_rule: QUANTBT_CANDIDATE_IDENTITY_RULE,
-    source_key: perFold ? "rs02.fold.causal_selection.parameters" : "rs02.seal.selection.parameters",
+    source_key: perFold ? perFoldSourceKey : "rs02.seal.selection.parameters",
     folds: selectedCandidates,
     state: perFold ? expectedMissing ? "NOT_PUBLISHED" : "MATCH" : frozen === null ? "NOT_PUBLISHED" : "MATCH",
     reason_code: perFold ? expectedMissing?.reason_code ?? null : frozen === null ? STAGE4_REASONS.identityNotComputable : null,

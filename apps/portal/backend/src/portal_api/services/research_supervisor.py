@@ -310,9 +310,10 @@ class DeltaWfoChildReceipt:
     optuna_trials: int | None = None
     temporal_controls: dict[str, Any] | None = None
     causal_inner_controls: dict[str, Any] | None = None
+    holdout_start_utc_ms: int | None = None
 
     def as_payload(self, *, output_root: Path) -> dict[str, Any]:
-        if self.task not in {"P10_DELTA_WFO", "P16_DELTA_WHATIF_GRID"}:
+        if self.task not in {"P10_DELTA_WFO", "P16_DELTA_WHATIF_GRID", "P10_DELTA_THREE_WINDOW_OPTIMIZED"}:
             raise ResearchSupervisorError("P06 WFO child task is not allowlisted")
         from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE_ID
         if self.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID and self.causal_inner_controls is None:
@@ -336,7 +337,7 @@ class DeltaWfoChildReceipt:
             "first_oos_utc_ms": self.first_oos_utc_ms,
         }
         if self.pinned_parameters:
-            if self.task != "P10_DELTA_WFO":
+            if self.task not in {"P10_DELTA_WFO", "P10_DELTA_THREE_WINDOW_OPTIMIZED"}:
                 raise ResearchSupervisorError("P06 only a WFO study may carry pinned parameters")
             payload["pinned_parameters"] = dict(self.pinned_parameters)
         if self.optuna_trials is not None:
@@ -348,9 +349,29 @@ class DeltaWfoChildReceipt:
             ):
                 raise ResearchSupervisorError("P06 only a preview long WFO study may carry a bounded trial count")
             payload["optuna_trials"] = self.optuna_trials
+        from portal_api.domain.research_full02_profiles import (
+            DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_DIGEST,
+            DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST,
+        )
+        full02 = self.execution_profile_id in {DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID}
+        if full02 and self.optuna_trials is not None:
+            raise ResearchSupervisorError("FULL-02 recipes never inherit preview-long trial budgets")
+        if self.execution_profile_id == DELTA_PER_FOLD_DECAY_PROFILE_ID and self.temporal_controls is None:
+            raise ResearchSupervisorError("per-fold-decay requires its explicit temporal controls")
+        if self.execution_profile_id == DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID and self.task != "P10_DELTA_THREE_WINDOW_OPTIMIZED":
+            raise ResearchSupervisorError("optimized Three Window cannot enter an Advanced task")
+        if self.task == "P10_DELTA_THREE_WINDOW_OPTIMIZED":
+            if ((self.execution_profile_id, self.execution_profile_digest) != (DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST)
+                    or type(self.holdout_start_utc_ms) is not int
+                    or not self.data_start_utc_ms < self.first_oos_utc_ms < self.holdout_start_utc_ms < self.data_end_exclusive_utc_ms
+                    or self.temporal_controls is not None or self.causal_inner_controls is not None):
+                raise ResearchSupervisorError("optimized Three Window requires its exact independent holdout/profile")
+            payload["holdout_start_utc_ms"] = self.holdout_start_utc_ms
+        elif self.holdout_start_utc_ms is not None:
+            raise ResearchSupervisorError("independent holdout cannot enter an Advanced profile")
         if self.temporal_controls is not None:
             from portal_api.domain.research_delta_wfo_v2_profile import DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST
-            if self.task != "P10_DELTA_WFO" or (self.execution_profile_id, self.execution_profile_digest) != (DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST):
+            if self.task != "P10_DELTA_WFO" or (self.execution_profile_id, self.execution_profile_digest) not in {(DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST), (DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_DIGEST)}:
                 raise ResearchSupervisorError("temporal controls require the exact v2 execution profile")
             payload["temporal_controls"] = dict(self.temporal_controls)
         if self.causal_inner_controls is not None:
@@ -872,6 +893,11 @@ class IsolatedResearchSupervisor:
         causal_caps = execution_recipe(DELTA_CAUSAL_INNER_PROFILE_ID)["budgets"]
         if receipt.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID and (limits.cpu_seconds > causal_caps["cpu_seconds"] or limits.wall_seconds > causal_caps["wall_seconds"]):
             raise ResearchSupervisorError("causal inner child cannot widen its 120 CPU/240 wall-second profile caps")
+        from portal_api.domain.research_full02_profiles import DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID
+        if receipt.execution_profile_id in {DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID}:
+            caps = execution_recipe(receipt.execution_profile_id)["budgets"]
+            if any(getattr(limits, field) > caps[field] for field in ("memory_bytes", "cpu_seconds", "wall_seconds", "scratch_bytes", "file_bytes", "fd_limit")):
+                raise ResearchSupervisorError("FULL-02 child cannot widen its exact recipe resource caps")
         self._validate_launch_identity(
             job_id=receipt.job_id,
             run_id=receipt.run_id,
@@ -918,6 +944,11 @@ class IsolatedResearchSupervisor:
             )
             if profile_digest != receipt.execution_profile_digest:
                 raise ResearchSupervisorError("P06 WFO child did not run the admitted execution profile")
+            if receipt.execution_profile_id in {DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID}:
+                minimum, maximum = (1, 1) if receipt.execution_profile_id == DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID else (2, 16)
+                if (engine_version != "1.1.1" or not minimum <= n_folds <= maximum
+                        or not 0 < bars <= 10_000 or trial_rows != 3 * n_folds):
+                    raise ResearchSupervisorError("FULL-02 child returned incompatible profile counts or engine")
             output = output_holder["output"]
             files, total_bytes = self._validate_output_tree(output, run_id=receipt.run_id)
             audit_receipt = None

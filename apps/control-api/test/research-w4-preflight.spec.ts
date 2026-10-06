@@ -95,6 +95,16 @@ describe("CG-P08-03 admission reason → field path", () => {
       .toEqual(["parameter_space_overrides"]);
   });
 
+  it("routes FULL-02 refusal copy to the existing form fields without exposing submitted values", () => {
+    for (const [message, path] of [
+      ["The qualified per-fold-decay recipe searches the installed Delta space without parameter overrides.", ["parameter_space_overrides"]],
+      ["Optimized Three Window requires exactly 3 trials, seed 42 and no early stopping.", ["optuna_trials"]],
+      ["Optimized Three Window requires contiguous UTC end-exclusive IS/OOS/holdout boundaries.", ["windows"]],
+      ["Optimized Three Window exceeds its admitted 92-day span.", ["windows", "holdout", "end_exclusive"]],
+      ["The strategy must match its immutable Delta AlphaVersion binding.", ["alpha_binding"]],
+    ] as const) expect(admissionFieldPath(message)).toEqual(path);
+  });
+
   it("admits consumed v2 temporal guards with their distinct pinned execution profile", async () => {
     const spec = v2({ purge_bars: 2 }) as unknown as ResearchRequestedSpec;
     const manifest = manifestFor(spec);

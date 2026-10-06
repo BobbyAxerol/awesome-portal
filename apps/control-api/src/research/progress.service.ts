@@ -8,6 +8,8 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import { type ResearchScope, type ResearchWorkerUsage, ResearchMetadataError } from "./contracts";
 import { DELTA_WFO_V2_PROFILE_ID } from "./delta-wfo-v2.profile";
 import { DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
+import { DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID,
+  DELTA_PER_FOLD_DECAY_PROFILE, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE } from "./full02.profiles";
 import {
   type ResearchProgressEvent,
   type ResearchProgressIngress,
@@ -319,7 +321,9 @@ export class ResearchProgressService {
     // own. Sending that terminal callback to P18 would strand a verified child.
     if (ingressScope.executionProfileId === PINNED_AUDIT_PROFILE_ID) return;
     if (ingressScope.executionProfileId !== DELTA_WFO_PROFILE_ID && ingressScope.executionProfileId !== DELTA_WFO_V2_PROFILE_ID
-      && ingressScope.executionProfileId !== DELTA_CAUSAL_INNER_PROFILE_ID && ingressScope.executionProfileId !== WHATIF_PROFILE_ID) {
+      && ingressScope.executionProfileId !== DELTA_CAUSAL_INNER_PROFILE_ID && ingressScope.executionProfileId !== WHATIF_PROFILE_ID
+      && ingressScope.executionProfileId !== DELTA_PER_FOLD_DECAY_PROFILE_ID
+      && ingressScope.executionProfileId !== DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID) {
       await this.reports.materializeTerminal(ingressScope, input);
     } else if (ingressScope.executionProfileId !== WHATIF_PROFILE_ID) {
       // W6a (P18 over current-source): the WFO report is sealed from the
@@ -871,13 +875,16 @@ export class ResearchProgressService {
     const whatIf = scope.executionProfileId === WHATIF_PROFILE_ID;
     const pinnedAudit = scope.executionProfileId === PINNED_AUDIT_PROFILE_ID;
     const causal = scope.executionProfileId === DELTA_CAUSAL_INNER_PROFILE_ID;
-    const wfo = scope.executionProfileId === DELTA_WFO_PROFILE_ID || scope.executionProfileId === DELTA_WFO_V2_PROFILE_ID || causal || whatIf;
+    const full02 = scope.executionProfileId === DELTA_PER_FOLD_DECAY_PROFILE_ID || scope.executionProfileId === DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID;
+    const wfo = scope.executionProfileId === DELTA_WFO_PROFILE_ID || scope.executionProfileId === DELTA_WFO_V2_PROFILE_ID || causal || whatIf || full02;
     const usage = input.event.payload.usage;
     if (usage && typeof usage === "object" && !Array.isArray(usage)) {
       const cpu = (usage as Record<string, unknown>).cpu_seconds;
       const cap = pinnedAudit ? PINNED_AUDIT_PROFILE.cpu_seconds : whatIf
         ? WHATIF_PROFILE.child_limits.cpu_seconds
         : causal ? DELTA_CAUSAL_INNER_PROFILE.child_limits.cpu_seconds
+        : full02 ? (scope.executionProfileId === DELTA_PER_FOLD_DECAY_PROFILE_ID
+          ? DELTA_PER_FOLD_DECAY_PROFILE : DELTA_THREE_WINDOW_OPTIMIZED_PROFILE).child_limits.cpu_seconds
         : wfo
           // Research preview only: the long WFO child's own CPU cap.
           ? (deltaWfoPreviewLongEnabled(this.config)

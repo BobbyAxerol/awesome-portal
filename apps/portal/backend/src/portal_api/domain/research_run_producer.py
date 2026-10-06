@@ -38,6 +38,11 @@ from .research_imported_alpha_profile import (
 )
 from .research_delta_wfo_v2_profile import DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST, temporal_controls
 from .research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST, DELTA_CAUSAL_INNER_PROFILE, causal_inner_controls
+from .research_full02_profiles import (
+    DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_DIGEST, DELTA_PER_FOLD_DECAY_PROFILE,
+    DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE,
+    per_fold_decay_controls,
+)
 from .research_whatif_profile import WHATIF_MAX_EVALUATIONS, WHATIF_PROFILE_DIGEST, WHATIF_PROFILE_ID
 from .research_final_audit import (
     PinnedSelectionAuditTarget, PINNED_FINAL_AUDIT_PROFILE_ID,
@@ -140,7 +145,8 @@ class ResearchRunProducerEnvelope(PortalModel):
     execution_profile_id: Literal[
         "p04.fixed-qualification.v1", "p10.delta-signal-notional-wfo.v1", "p10.delta-signal-notional-wfo.v2", "p16.delta-whatif-grid.v1",
         "p17.imported-signal-notional.v1", "p10.delta-signal-notional-causal-inner.v1", "p10.vn-stock-daily-observed-fixed.v1",
-        "p23.delta-pinned-final-audit.v1"
+        "p23.delta-pinned-final-audit.v1", "p10.delta-signal-notional-per-fold-decay.v1",
+        "p10.delta-signal-notional-three-window-optimized.v1"
     ] = P04_FIXED_QUALIFICATION_PROFILE_ID
     execution_profile_digest: str | None = Field(default=None, pattern=_DIGEST)
     p04_parameters: Annotated[dict[str, int | float], Field(min_length=8, max_length=8)] | None = None
@@ -161,7 +167,12 @@ class ResearchRunProducerEnvelope(PortalModel):
 
     @property
     def is_delta_wfo(self) -> bool:
-        return self.execution_profile_id in (DELTA_WFO_PROFILE_ID, DELTA_WFO_V2_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_ID)
+        return self.execution_profile_id in (DELTA_WFO_PROFILE_ID, DELTA_WFO_V2_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_ID,
+            DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID)
+
+    @property
+    def is_three_window_optimized(self) -> bool:
+        return self.execution_profile_id == DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID
 
     @property
     def is_whatif(self) -> bool:
@@ -291,6 +302,17 @@ class ResearchRunProducerEnvelope(PortalModel):
             causal_inner_controls(self.requested_spec)
             self._validate_delta_wfo_spec(temporal=True, causal=True)
             return self
+        if self.execution_profile_id == DELTA_PER_FOLD_DECAY_PROFILE_ID:
+            if self.execution_profile_digest != DELTA_PER_FOLD_DECAY_PROFILE_DIGEST:
+                raise ValueError("the per-fold-decay executor digest does not match its installed profile")
+            per_fold_decay_controls(self.requested_spec)
+            self._validate_delta_wfo_spec(temporal=True, per_fold_decay=True)
+            self._validate_full02_work(encoded)
+            return self
+        if self.is_three_window_optimized:
+            self._validate_three_window_optimized()
+            self._validate_full02_work(encoded)
+            return self
         if self.execution_profile_id == IMPORTED_ALPHA_PROFILE_ID:
             self._validate_imported_alpha_profile()
             return self
@@ -387,10 +409,10 @@ class ResearchRunProducerEnvelope(PortalModel):
             raise ValueError("the Delta WFO execution profile digest does not match the installed profile")
         self._validate_delta_wfo_spec()
 
-    def _validate_delta_wfo_spec(self, *, temporal: bool = False, causal: bool = False) -> None:
+    def _validate_delta_wfo_spec(self, *, temporal: bool = False, causal: bool = False, per_fold_decay: bool = False) -> None:
         """The locked W1 requested-spec shape (shared by the WFO and what-if profiles)."""
 
-        profile = DELTA_CAUSAL_INNER_PROFILE if causal else DELTA_WFO_PROFILE
+        profile = DELTA_CAUSAL_INNER_PROFILE if causal else DELTA_PER_FOLD_DECAY_PROFILE if per_fold_decay else DELTA_WFO_PROFILE
         spec = self.requested_spec
         if self.p04_parameters is not None:
             raise ValueError("the Delta WFO profile searches its parameters and carries no P04 parameter map")
@@ -403,13 +425,13 @@ class ResearchRunProducerEnvelope(PortalModel):
         if "windows" in spec:
             raise ValueError("the Delta WFO profile forbids three-window boundaries")
         try:
-            preview_long = False if causal else delta_wfo_preview_long_enabled()
+            preview_long = False if causal or per_fold_decay else delta_wfo_preview_long_enabled()
         except DeltaWfoPreviewLongMisconfigured as exc:
             raise ValueError(str(exc)) from exc
         if preview_long:
             # Research preview only: 2..400 trials, the seed and all else locked.
             delta_wfo_admitted_trials(spec)
-        elif spec.get("optuna_trials") != (profile["trial_count"]["min"] if causal else profile["optuna_trials"]) or isinstance(spec.get("optuna_trials"), bool):
+        elif spec.get("optuna_trials") != (profile["trial_count"]["min"] if causal or per_fold_decay else profile["optuna_trials"]) or isinstance(spec.get("optuna_trials"), bool):
             raise ValueError("the Delta WFO profile accepts exactly 3 Optuna trials")
         if spec.get("random_seed") != profile["random_seed"] or isinstance(spec.get("random_seed"), bool):
             raise ValueError("the Delta WFO profile accepts exactly random seed 42")
@@ -417,8 +439,8 @@ class ResearchRunProducerEnvelope(PortalModel):
             raise ValueError("the Delta WFO profile accepts only mode_1_decay/global")
         if spec.get("early_stopping") is not None:
             raise ValueError("the Delta WFO profile does not admit early stopping")
-        if causal and (spec.get("optimization_config") or spec.get("route_params")):
-            raise ValueError("causal inner execution admits no optimizer or route overrides")
+        if (causal or per_fold_decay) and (spec.get("optimization_config") or spec.get("route_params")):
+            raise ValueError("per-fold execution admits no optimizer or route overrides")
         _validate_sibling_pins(spec.get("parameter_space_overrides"))
         data = spec.get("data")
         if not isinstance(data, dict) or data.get("timeframe") != profile["timeframe"]:
@@ -438,6 +460,53 @@ class ResearchRunProducerEnvelope(PortalModel):
             raise ValueError("the Delta WFO first OOS boundary must lie strictly inside the walk-forward span")
         if (end - start).total_seconds() > DELTA_WFO_MAX_SPAN_DAYS * 86_400:
             raise ValueError("the Delta WFO span exceeds the admitted 92 days")
+
+    def _validate_three_window_optimized(self) -> None:
+        """A new immutable search recipe, never a widening of the fixed P04 wire."""
+        profile, spec = DELTA_THREE_WINDOW_OPTIMIZED_PROFILE, self.requested_spec
+        if (self.execution_profile_digest != DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST
+                or self.execution_adapter_id != profile["adapter_id"]
+                or self.adapter_contract_digest != profile["adapter_contract_digest"]
+                or self.p04_parameters is not None or self.imported_parameters is not None
+                or spec.get("schema_version") != profile["requested_spec_version"]
+                or spec.get("protocol") != profile["protocol"]
+                or spec.get("execution_route") != profile["execution_route"]
+                or spec.get("optimization_mode") != "mode_1_decay"
+                or spec.get("optimization_schedule") != "global"
+                or type(spec.get("optuna_trials")) is not int or spec["optuna_trials"] != 3
+                or type(spec.get("random_seed")) is not int or spec["random_seed"] != 42
+                or spec.get("early_stopping") is not None or spec.get("walk_forward") is not None
+                or spec.get("optimization_config") or spec.get("route_params")
+                or spec.get("data", {}).get("timeframe") != "1h"
+                or spec.get("client", {}).get("engine_release_id") != "er_quantbt_111"):
+            raise ValueError("optimized Three Window requires its exact three-trial, seed-42 Delta profile")
+        _validate_sibling_pins(spec.get("parameter_space_overrides"))
+        windows = spec.get("windows", {})
+        try:
+            a, b = (_utc_instant(windows["is"][name], "IS " + name) for name in ("start", "end_exclusive"))
+            c = _utc_instant(windows["oos"]["end_exclusive"], "OOS end")
+            d = _utc_instant(windows["holdout"]["end_exclusive"], "Holdout end")
+            if (_utc_instant(windows["oos"]["start"], "OOS start") != b
+                    or _utc_instant(windows["holdout"]["start"], "Holdout start") != c
+                    or not a < b < c < d or (d - a).total_seconds() > 92 * 86_400):
+                raise ValueError("optimized Three Window requires contiguous half-open independent windows within 92 days")
+        except (KeyError, TypeError) as exc:
+            raise ValueError("optimized Three Window requires three explicit windows") from exc
+
+    def _validate_full02_work(self, encoded_spec: bytes) -> None:
+        from .research_execution_recipes import execution_recipe, recipe_digest
+        if hashlib.sha256(encoded_spec).hexdigest() != self.requested_spec_digest:
+            raise ValueError("FULL-02 requested spec does not match its retained digest")
+        work = {"schema_version": execution_recipe(self.execution_profile_id, self.execution_profile_digest)["work_schema_version"],
+            "requested_spec_digest": self.requested_spec_digest, "effective_spec_digest": self.effective_spec_digest,
+            "dataset_binding_digest": self.dataset_binding_digest, "manifest_digest": self.manifest_digest,
+            "snapshot": {"snapshot_id": self.snapshot_id, "snapshot_content_hash": self.snapshot_content_hash},
+            "alpha": {"alpha_id": self.alpha_id, "alpha_version_id": self.alpha_version_id,
+                "adapter_id": self.execution_adapter_id, "adapter_contract_digest": self.adapter_contract_digest},
+            "execution_profile": {"profile_id": self.execution_profile_id, "profile_digest": self.execution_profile_digest},
+            "engine_release_id": self.requested_spec["client"]["engine_release_id"], "requested_spec": self.requested_spec}
+        if recipe_digest(work) != self.work_digest:
+            raise ValueError("FULL-02 work digest does not match its immutable recipe/source binding")
 
 
 # W5a A10c: a sibling attempt forked from the Screen-07 what-if pins the two

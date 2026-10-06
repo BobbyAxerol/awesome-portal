@@ -82,6 +82,74 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Native Three Window facts: calibration uses IS and OOS only; independent holdout runs after frozen selection. UTC half-open windows are contiguous. Runtime verifies every emitted series point stays inside its own window. Observation/analytics rows are calibration OOS, never relabelled untouched holdout. No filesystem locator or engine input is exposed. */
+        ProtocolDisclosure: {
+            /** @constant */
+            schema_version: "research.current-source-protocol-disclosure.v1";
+            /** @constant */
+            protocol: "three_window_decay";
+            /** @constant */
+            engine_operation: "train_test_split";
+            /** @constant */
+            calibration_scope: "IS_OOS_ONLY";
+            /** @constant */
+            observation_scope: "OOS_SELECTION_INPUT";
+            independent_holdout: {
+                start_utc_ms: number;
+                end_exclusive_utc_ms: number;
+                bar_count: number;
+                /** @constant */
+                state: "AVAILABLE";
+                /** @constant */
+                holdout_used_for_selection: false;
+                selected_params_digest: string;
+                /** @constant */
+                freeze_before_holdout: true;
+            };
+            windows: {
+                is: {
+                    start_utc_ms: number;
+                    end_exclusive_utc_ms: number;
+                    bar_count: number;
+                };
+                oos: {
+                    start_utc_ms: number;
+                    end_exclusive_utc_ms: number;
+                    bar_count: number;
+                };
+                holdout: {
+                    start_utc_ms: number;
+                    end_exclusive_utc_ms: number;
+                    bar_count: number;
+                };
+            };
+            window_series: {
+                is: {
+                    at_utc_ms: number;
+                    equity: string;
+                    return_fraction: string;
+                    accepted_position: string;
+                    drawdown_fraction: string;
+                    signal_target: string | null;
+                }[];
+                oos: {
+                    at_utc_ms: number;
+                    equity: string;
+                    return_fraction: string;
+                    accepted_position: string;
+                    drawdown_fraction: string;
+                    signal_target: string | null;
+                }[];
+                holdout: {
+                    at_utc_ms: number;
+                    equity: string;
+                    return_fraction: string;
+                    accepted_position: string;
+                    drawdown_fraction: string;
+                    signal_target: string | null;
+                }[];
+            };
+        };
         EnrichedAnalysis: {
             /** @constant */
             schema_version: "research.enriched-analysis.v1";
@@ -744,13 +812,13 @@ export interface components {
             /** @enum {unknown} */
             state: "AVAILABLE" | "NOT_PUBLISHED";
             /** @enum {unknown} */
-            scope: "P13_OOS_EQUITY" | "RS02_STITCHED_OUTER_TEST_WINDOWS" | "RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST" | "NOT_PUBLISHED";
+            scope: "P13_OOS_EQUITY" | "RS02_STITCHED_OUTER_TEST_WINDOWS" | "RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST" | "NOT_PUBLISHED" | "THREE_WINDOW_CALIBRATION_OOS" | "THREE_WINDOW_CALIBRATION_IS";
             source_observation_count: number | null;
             emitted_point_count: number | null;
             sampling: ("FULL" | "EXTREMA_BUCKET_V1" | "OBSERVATION_EXTREMA_BUCKET_V2") | null;
             points: components["schemas"]["EquityPoint"][];
             digest?: components["schemas"]["Digest"] | null;
-            digest_scope?: "FULL_STITCHED_SOURCE_SERIES" | null;
+            digest_scope?: ("FULL_STITCHED_SOURCE_SERIES" | "OOS_CALIBRATION_REPLAY_SERIES") | null;
             logical_name?: "series/stitched.parquet" | null;
             digest_availability?: components["schemas"]["Availability"];
             availability: components["schemas"]["Availability"];
@@ -902,6 +970,7 @@ export interface components {
                 [key: string]: components["schemas"]["ReportFact"];
             };
             final_audit?: components["schemas"]["FinalAudit"];
+            protocol_disclosure?: components["schemas"]["ProtocolDisclosure"];
         };
         /** @description X2 · P18-T10 (guide §5.6): the report's final audit. REUSED_ORIGINAL — the run is its own audit; on the retained WFO lane each fold's out-of-sample generation child is checked to be the frozen candidate (QuantBT child audit), so `optimizer_reinvoked` is false only when every fold matched. LINKED_CHILD — a READY AUDIT_OF_SELECTION run in the P19 lineage. NOT_PUBLISHED when the lineage relation was not read. */
         FinalAudit: {

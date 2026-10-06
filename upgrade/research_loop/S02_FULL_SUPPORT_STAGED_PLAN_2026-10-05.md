@@ -171,6 +171,15 @@ consistent selection/digests/coverage and terminal progress. Negative seed,
 mode/schedule, source, lease/fencing, cursor and budget cases. S02 offers only
 qualified recipes; old fixed/global/causal reads remain valid.
 
+Delivery addendum, 2026-10-06: **BACKEND_DELIVERED / TWO_EXACT_RECIPES_QUALIFIED /
+RESEARCH_PREVIEW_ENABLED**. [Implementation, actual product runs, focused gates,
+rollback, unchanged seals, cleanup and Claude consumer handoff](./evidence/P10/FULL_02_MODE1_VERTICAL_2026-10-06.md).
+Real 1h decay2folds/6trials and optimized Three3trials/independentHoldout passed
+ordinary P08/P10/child/P05/named reads; append-only096/097. Only these two recipes
+were opened on Research preview, no production/dev/main/push. Backend proof is
+not browser/visual acceptance; the two approved verdict mappings are done and
+S02 profile default/Suggest disambiguation is handed to Claude within this slice.
+
 <a id="full-03"></a>
 ### FULL-03 — Indexed timeframes and observed source clocks
 
@@ -323,13 +332,13 @@ alter the approved design. Existing accepted S02 calendar/presets stay intact.
 
 | Request | Owning stages | State now |
 | --- | --- | --- |
-| BR-FULL-01 | FULL-02 + FULL-04; meaningful protocol check in FULL-06 | PLANNED, not enabled |
+| BR-FULL-01 | FULL-02 + FULL-04; meaningful protocol check in FULL-06 | FULL-02 exact two Mode1 recipes QUALIFIED / Research preview ENABLED; remaining modes PLANNED |
 | BR-FULL-02 | FULL-03 + per-mode extension in FULL-04 | PLANNED, not enabled |
 | BR-FULL-03 | FULL-01 | BACKEND_DELIVERED: shared registry and append-only 095; no new recipe opened |
-| BR-FULL-04 | Each vertical stage, especially FULL-02/04 | PLANNED, no reader widened |
+| BR-FULL-04 | Each vertical stage, especially FULL-02/04 | FULL-02 exact retained/read chains DELIVERED; other modes not claimed |
 | BR-FULL-05 | FULL-01 + measured per-mode FULL-04 | Shared cap/quota foundation DELIVERED; per-mode qualification PLANNED; existing limits unchanged |
 | BR-FULL-06 | FULL-06 batches 6a–6f | PLANNED, no route opened |
 | BR-FULL-07 | FULL-05 + compatible FULL-06 inputs | PLANNED, imported fixed path unchanged |
 
-Next proposed implementation: **FULL-02**. FULL-01 delivery is linked above;
+Next proposed implementation: **FULL-03**. FULL-01/FULL-02 deliveries are linked above;
 the remaining staged response is not a passing qualification or a Portal release.
