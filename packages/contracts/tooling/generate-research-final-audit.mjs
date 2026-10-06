@@ -1,6 +1,8 @@
 /** Canonical additive browser contract; raw frozen documents remain private. */
 import {readFileSync,writeFileSync} from "node:fs";
 import {amendCausalInnerOpenApi} from "./generate-research-causal-inner.mjs";
+import {amendFull04CurrentSource} from "./generate-research-full04-current-source.mjs";
+import {replaceComponent} from "./generate-research-progress-truth.mjs";
 const root=new URL("../",import.meta.url),check=process.argv.includes("--check");
 const ref=name=>({$ref:`#/components/schemas/${name}`});
 const object=properties=>({type:"object",additionalProperties:false,required:Object.keys(properties),properties});
@@ -51,8 +53,20 @@ const doc={openapi:"3.1.0",info:{title:"Research pinned linked final audit",vers
 function emit(path,value){let text=JSON.stringify(value,null,2)+"\n";
   // Preserve the established causal generator's canonical schema formatting
   // in the shared readers. All amendments must converge, not fight each other.
-  if(path==="openapi/research-report.openapi.json"||path==="openapi/research-attempt-lineage.openapi.json")
+  if(path==="openapi/research-report.openapi.json"||path==="openapi/research-attempt-lineage.openapi.json") {
+    text=readFileSync(new URL(path,root),"utf8");
+    const existing=JSON.parse(text).components.schemas;
+    for(const[name,schema]of Object.entries(value.components.schemas)) {
+      if(JSON.stringify(existing[name])===JSON.stringify(schema))continue;
+      text=existing[name]?replaceComponent(text,name,schema,text.indexOf('"schemas": {'))
+        :text.replace('"schemas": {\n',`"schemas": {\n      "${name}": ${JSON.stringify(schema)},\n`);
+    }
     text=amendCausalInnerOpenApi(text,path.slice("openapi/".length,-".openapi.json".length));
+  }
+  // Preserve the canonical additive FULL04 formatting and scopes after the
+  // historical audit amendment; this does not widen its execution profile.
+  if(path==="openapi/research-report.openapi.json"&&value.components.schemas.OptimizerDisclosure)
+    text=amendFull04CurrentSource(text,"research-report");
   const url=new URL(path,root);
   if(check){if(readFileSync(url,"utf8")!==text)throw new Error(`Pinned audit contract drift: ${path}`);}else writeFileSync(url,text);}
 emit("openapi/research-final-audit.openapi.json",doc);

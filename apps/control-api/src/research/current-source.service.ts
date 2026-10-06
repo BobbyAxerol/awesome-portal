@@ -74,6 +74,7 @@ import {
   type CurrentSourceBar,
   type CurrentSourceCausalSelection,
   type CurrentSourceFoldSelection,
+  type CurrentSourceMode4Selection,
   type CurrentSourceFacts,
   type CurrentSourceReplaySummary,
 } from "./current-source.payload";
@@ -194,8 +195,11 @@ function isCausalSeal(seal: CurrentSourceSealRow): boolean {
 function isDecaySeal(seal: CurrentSourceSealRow): boolean {
   return currentSourceRetainedMethod(seal.profileId,seal.sourceAdapterId) === "PER_FOLD_DECAY";
 }
-function isPerFoldSeal(seal: CurrentSourceSealRow): boolean { return isCausalSeal(seal) || isDecaySeal(seal); }
-function retainedFoldSelection(fold: ReturnType<typeof asFold>) { return fold.fold_selection ?? fold.causal_selection; }
+function isMode4CausalSeal(seal: CurrentSourceSealRow): boolean {
+  return currentSourceRetainedMethod(seal.profileId,seal.sourceAdapterId) === "CAUSAL_IS_ONLY";
+}
+function isPerFoldSeal(seal: CurrentSourceSealRow): boolean { return isCausalSeal(seal) || isDecaySeal(seal) || isMode4CausalSeal(seal); }
+function retainedFoldSelection(fold: ReturnType<typeof asFold>) { return fold.fold_selection ?? fold.causal_selection ?? fold.mode4_selection; }
 
 function parseSummary(seal: CurrentSourceSealRow) {
   const analytics = seal.analyticsSidecar?.analytics ?? seal.summary.summary_analytics_v2;
@@ -515,6 +519,7 @@ export class ResearchCurrentSourceService {
             ...(isCausalSeal(seal) && fold.causal_selection
               ? { selectedParameters: fold.causal_selection.parameters, causalSelection: fold.causal_selection } : {}),
             ...(isDecaySeal(seal) && fold.fold_selection ? { selectedParameters: fold.fold_selection.parameters } : {}),
+            ...(isMode4CausalSeal(seal) && fold.mode4_selection ? { selectedParameters: fold.mode4_selection.parameters } : {}),
           };
         }),
         facts,
@@ -572,6 +577,8 @@ export class ResearchCurrentSourceService {
           ...selectedTrialPresentation(fold.causal_selection.selected_trial_id, seal.profileId, native) } } : {}),
         ...(fold.fold_selection ? { fold_selection: { ...fold.fold_selection,
           ...selectedTrialPresentation(fold.fold_selection.selected_trial_id, seal.profileId, native) } } : {}),
+        ...(fold.mode4_selection ? { mode4_selection: { ...fold.mode4_selection,
+          ...selectedTrialPresentation(fold.mode4_selection.selected_trial_id, seal.profileId, native) } } : {}),
         anatomy: foldAnatomy(foldFacts), score: foldScore(foldFacts) };
     });
     // E14 · 5.11/5.12: boundary integrity and stitched OOS provenance, both
@@ -597,7 +604,9 @@ export class ResearchCurrentSourceService {
         state: "AVAILABLE" as const,
         folds,
         chronology: currentSourceRetainedMethod(seal.profileId,seal.sourceAdapterId) === "THREE_WINDOW"
-          ? "SOURCE_OBSERVED_THREE_WINDOW" as const : "SOURCE_OBSERVED_ADVANCED_WFO" as const,
+          ? "SOURCE_OBSERVED_THREE_WINDOW" as const
+          : currentSourceRetainedMethod(seal.profileId,seal.sourceAdapterId) === "FULL_SAMPLE"
+          ? "SOURCE_OBSERVED_FULL_SAMPLE" as const : "SOURCE_OBSERVED_ADVANCED_WFO" as const,
         availability: available(),
       },
       data_use: {
@@ -609,7 +618,10 @@ export class ResearchCurrentSourceService {
       guards: {
         ...temporalGuards,
         ...appliedTemporalGuards(nativeFolds, summary.source_facts, witness, seal.tableRows.OBSERVATION),
-        train_test_disjoint: trainTestDisjoint(
+        train_test_disjoint: currentSourceRetainedMethod(seal.profileId,seal.sourceAdapterId) === "FULL_SAMPLE"
+          ? {verdict:"NOT_APPLICABLE" as const,basis:"RETAINED_FOLD_INCLUSIVE_BAR_WINDOWS_AND_PUBLISHED_TEMPORAL_GUARDS_V2" as const,
+            reason_code:"FULL_SAMPLE_CALIBRATION_TRAIN_TEST_ARE_THE_SAME_SAMPLE"}
+          : trainTestDisjoint(
           folds,
           temporalGuards.purge_bars,
           temporalGuards.embargo_bars,
@@ -669,7 +681,7 @@ export class ResearchCurrentSourceService {
     // X2 · B3: the surface is every retained trial (≤ 64), whatever page the ledger shows.
     const allTrials = inputs.trials;
     let space = declaredSpace(seal.profileId, summary.selection.parameters);
-    const roles = selectionRoles(facts, summary.selection);
+    const roles = selectionRoles(facts, summary.selection,summary.optimizer_disclosure);
     const surfaceTrials: SurfaceTrial[] = allTrials.map((row) => {
       const trial = asTrial(row);
       return {
@@ -708,7 +720,7 @@ export class ResearchCurrentSourceService {
             selectedParameters: selected.parameters, trials: members };
         });
         studySurfaces = searchStudySurfaces(seal.profileId, studies,
-          isDecaySeal(seal) ? "OUTER_FOLD_DECAY_STUDY" : "INNER_VALIDATION_OUTER_STUDY");
+          isDecaySeal(seal) ? "OUTER_FOLD_DECAY_STUDY" : isMode4CausalSeal(seal) ? "IS_ONLY_OUTER_STUDY" : "INNER_VALIDATION_OUTER_STUDY");
         // Declared ranges are common; this singleton's values belong only to
         // the final deployment, not a run-global theta used by earlier folds.
         space = { ...space, selection_scope: "LAST_FOLD_DEPLOYMENT", fold_id: last.fold_id, study_id: retainedFoldSelection(last)!.study_id };
@@ -733,9 +745,10 @@ export class ResearchCurrentSourceService {
       }),
       folds: poolFolds.map((row) => {
         const fold = asFold(row);
-        return { foldId: fold.fold_id, sourceOrdinal: row.sourceOrdinal, facts: fold.fold_facts, causalSelection: fold.causal_selection, foldSelection: fold.fold_selection };
+        return { foldId: fold.fold_id, sourceOrdinal: row.sourceOrdinal, facts: fold.fold_facts, causalSelection: fold.causal_selection, foldSelection: fold.fold_selection, mode4Selection: fold.mode4_selection };
       }),
       selectedTrialId: summary.selection.trial_id,
+      optimizerDisclosure: summary.optimizer_disclosure,
     });
     const contract = searchContract(facts,summary.protocol_disclosure);
     const rawRequest = inputs.requestedSpec;
@@ -758,8 +771,7 @@ export class ResearchCurrentSourceService {
         objective: summary.selection.objective,
         parameters: summary.selection.parameters,
         availability: available(),
-        objective_kind: facts ? isDecaySeal(seal) ? "OUTER_FOLD_DECAY_J" as const
-          : summary.selection.scope === "LAST_FOLD_DEPLOYMENT" ? "INNER_VALIDATION_DECAY_J" as const : "MODE_1_DECAY_J" as const : "NOT_PUBLISHED" as const,
+        objective_kind: roles.selected.objective_kind,
         ...(summary.selection.scope ? { scope: summary.selection.scope, fold_id: summary.selection.fold_id } : {}),
         roles,
       },
@@ -802,6 +814,7 @@ export class ResearchCurrentSourceService {
               selection: summary.selection,
               schedule: facts?.search.optimization_schedule ?? null,
               passportMaxDrawdown: summary.metrics.max_drawdown_fraction,
+              fullSampleCalibration: summary.optimizer_disclosure?.calibration_sample === "FULL_SAMPLE",
             }),
           };
         }),
@@ -868,7 +881,8 @@ export class ResearchCurrentSourceService {
           trainEndUtcMs: fold.train_end_utc_ms,
           testStartUtcMs: fold.test_start_utc_ms,
           testEndUtcMs: fold.test_end_utc_ms,
-          childAudit: fold.child_audit?.records,
+        childAudit: fold.child_audit?.records,
+        mode4Selection: fold.mode4_selection,
           causalSelection: fold.causal_selection,
           foldSelection: fold.fold_selection,
         };
@@ -1214,7 +1228,7 @@ export class ResearchCurrentSourceService {
     ledger: CurrentSourceReplaySummary | null,
     facts: CurrentSourceFacts | null,
     selectedParamsDigest: string | null,
-    perFoldSelections?: ReadonlyMap<string, CurrentSourceCausalSelection | CurrentSourceFoldSelection>,
+    perFoldSelections?: ReadonlyMap<string, CurrentSourceCausalSelection | CurrentSourceFoldSelection | CurrentSourceMode4Selection>,
   ) {
     const execution = facts?.execution ?? null;
     const contract = ledger?.account_contract ?? null;
@@ -1443,6 +1457,7 @@ export class ResearchCurrentSourceService {
     })}` : value;
     return {
       ...(seal.summary.protocol_disclosure ? { protocol_disclosure: parseSummary(seal).protocol_disclosure } : {}),
+      ...(seal.summary.optimizer_disclosure ? { optimizer_disclosure: parseSummary(seal).optimizer_disclosure } : {}),
       ...(declaration ? { run_declaration: declaration } : {}),
       read_authority: "PORTAL_RETAINED_CURRENT_SOURCE" as const,
       run_id: seal.runId,
@@ -1538,7 +1553,7 @@ export class ResearchCurrentSourceService {
       return { availability: { state: source.state, reason_code: source.reason_code },
         source_sample: { source_observation_count: kind === "MONTHLY_RETURNS" ? enriched.scope.observation_count : enriched.return_distribution.observation_count,
           emitted_point_count: values.length, sampling: source.state === "AVAILABLE" ? kind === "MONTHLY_RETURNS" ? enriched.monthly_returns.sampling : "FULL_RETURN_HISTOGRAM_V2" : "NOT_APPLICABLE", envelope: null,
-          derivation: { origin: "PORTAL_DERIVED", scope: "OOS", input_digest: enriched.input_digest, source_locator: enriched.scope.locator,
+          derivation: { origin: "PORTAL_DERIVED", scope: enriched.scope.window, input_digest: enriched.input_digest, source_locator: enriched.scope.locator,
             definition_id: kind === "MONTHLY_RETURNS" ? enriched.monthly_returns.definition_id : enriched.return_distribution.bucket_basis,
             grain: kind === "MONTHLY_RETURNS" ? "UTC_CALENDAR_MONTH" : "UTC_DAY", oos_observation_count: enriched.scope.observation_count,
             ...(kind === "MONTHLY_RETURNS" ? { total_period_count: enriched.monthly_returns.total_period_count,
@@ -1693,7 +1708,10 @@ export class ResearchCurrentSourceService {
     }
     // Immutable older seals used the entire stitched tape, including pre-OOS
     // bars. Preserve their raw rows, but never label those compact facts OOS.
-    if (summary.derived_scope !== "OUTER_TEST_UNION_INCLUSIVE_V1") {
+    const fullSample = seal && currentSourceRetainedMethod(seal.profileId,seal.sourceAdapterId) === "FULL_SAMPLE"
+      && summary.optimizer_disclosure?.calibration_sample === "FULL_SAMPLE";
+    if (fullSample ? summary.derived_scope !== "FULL_SAMPLE_CALIBRATION_INCLUSIVE_V1"
+      : summary.derived_scope !== "OUTER_TEST_UNION_INCLUSIVE_V1") {
       return { state: "NOT_PUBLISHED", reason_code: "PORTAL_DERIVED_SERIES_SCOPE_NOT_OOS" };
     }
     if (kind === "ROLLING_RETURNS_20" && summary.derived.rolling_returns_20.sampling === "NOT_APPLICABLE") {

@@ -9,7 +9,7 @@ import {ResearchRunAdmissionService} from "../src/research/run-admission.service
 import {researchPortalAdmission} from "../src/research/portal-admission";
 import {admissionRepository,flagConfig,manifestFor,w1Admin,w1Scope,wfoRequested,p04Requested} from "./research-w1-wfo.fixture";
 import {ResearchCurrentSourceSealIngressSchema} from "../src/research/artifact-ingress.contract";
-const rows=executionRecipes.filter(r=>r.source_requirement==="FULL03_IMMUTABLE_DELTA_BINDING");
+const rows=executionRecipes.filter(r=>r.descriptor.schema_version==="research.full03-delta-profile.v1");
 function specFor(row:typeof rows[number]):ResearchRequestedSpec {
   const three=row.adapter_kind==="DELTA_THREE_WINDOW_OPTIMIZED",causal=row.public_profile.optimization_schedule==="per_fold_causal";
   const value=three?p04Requested({optuna_trials:3,random_seed:42}):wfoRequested({schema_version:"research.requested-spec.v2",

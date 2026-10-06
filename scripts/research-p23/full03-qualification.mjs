@@ -48,7 +48,7 @@ export function assertOrdinaryProductReceipt(row,record){
 }
 export async function compileQualification(home){
   home=validateHome(home);assert(home.endsWith('/full03'),'EXACT_FULL03_OWNED_CELL');
-  const path=join(ROOT,TABLE),table=JSON.parse(readFileSync(path)),rows=table.recipes.filter(r=>r.source_requirement==='FULL03_IMMUTABLE_DELTA_BINDING');
+  const path=join(ROOT,TABLE),table=JSON.parse(readFileSync(path)),rows=table.recipes.filter(r=>r.descriptor.schema_version==='research.full03-delta-profile.v1');
   assert.equal(rows.length,28);assert(!existsSync(join(ROOT,PACKET)),'IMMUTABLE_PRODUCT_PACKET_ALREADY_EXISTS');
   const files=readdirSync(home).filter(f=>f.startsWith('qualification-')&&f.endsWith('.json'));
   const facts=rows.map(row=>{

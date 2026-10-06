@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import Ajv2020 from "ajv/dist/2020.js";
 import { describe, expect, it } from "vitest";
 
@@ -10,6 +11,14 @@ const create=ajv.compile({$defs:schemas,$ref:"#/$defs/Create"});
 const fixture=(state:string)=>JSON.parse(readFileSync(new URL(`../fixtures/research-final-audit.${state}.valid.json`,import.meta.url),"utf8"));
 
 describe("named pinned final-audit canonical contract",()=>{
+  it("keeps FULL04 additive report scopes stable through historical audit regeneration",()=>{
+    expect(()=>execFileSync(process.execPath,["tooling/generate-research-final-audit.mjs","--check"],{
+      cwd:new URL("../",import.meta.url),stdio:"pipe",
+    })).not.toThrow();
+    const report=JSON.parse(readFileSync(new URL("../openapi/research-report.openapi.json",import.meta.url),"utf8"));
+    expect(report.components.schemas.FinalAudit.properties.kind.enum).toContain("NOT_APPLICABLE");
+    expect(report.components.schemas.HeadlineV2.properties.scope.enum).toContain("FULL_SAMPLE");
+  });
   it("publishes only one named read and one explicit intent, with typed refusals",()=>{
     expect(Object.keys(doc.paths)).toEqual(["/api/v1/quantbt/runs/{run_id}/final-audit"]);
     const path=Object.values(doc.paths)[0] as any;

@@ -4203,6 +4203,4521 @@ EXECUTION_RECIPE_TABLE = json.loads(r'''{
         "max_warmup_bars": 100000
       },
       "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode3-global-1h.v1",
+      "profile_digest": "9ff3faba04aca57c06273a04ba964e57fe27e4173c4cf8e23bc18dc628104c6b",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode3-global-1h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode3-global-1h.v1",
+          "profile_id": "full04.delta-signal-notional-mode3-global-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "flat_selector": "centroid",
+          "flat_top_fraction": 1,
+          "flat_eps": 1,
+          "flat_min_samples": 2
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode3-global-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 5,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode3-global-1m.v1",
+      "profile_digest": "5bfffbab43c7188eb1aefd79b24f2d956b50c950946ba6a114d9bc2abd171c25",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode3-global-1m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode3-global-1m.v1",
+          "profile_id": "full04.delta-signal-notional-mode3-global-1m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 60000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "flat_selector": "centroid",
+          "flat_top_fraction": 1,
+          "flat_eps": 1,
+          "flat_min_samples": 2
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode3-global-1m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "timeframe": "1m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 5,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode3-global-5m.v1",
+      "profile_digest": "97ecb01a8bd432c38b5d7c8913d065533a5c7b7d5887f3832ce326f705f9956b",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode3-global-5m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "5m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode3-global-5m.v1",
+          "profile_id": "full04.delta-signal-notional-mode3-global-5m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 300000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "flat_selector": "centroid",
+          "flat_top_fraction": 1,
+          "flat_eps": 1,
+          "flat_min_samples": 2
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode3-global-5m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "timeframe": "5m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 5,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode3-global-15m.v1",
+      "profile_digest": "aa7fca2ff8a869b3e093c79e87ab6326fdcf8ca6114cb33e00ee872a5feb857e",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode3-global-15m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "15m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode3-global-15m.v1",
+          "profile_id": "full04.delta-signal-notional-mode3-global-15m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 900000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "flat_selector": "centroid",
+          "flat_top_fraction": 1,
+          "flat_eps": 1,
+          "flat_min_samples": 2
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode3-global-15m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "timeframe": "15m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 5,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode3-global-30m.v1",
+      "profile_digest": "ec305b64d599b5dcba3f0bf155d13b39ee65f4542c0ae24f04d392fe9c7fdf17",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode3-global-30m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "30m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode3-global-30m.v1",
+          "profile_id": "full04.delta-signal-notional-mode3-global-30m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 1800000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "flat_selector": "centroid",
+          "flat_top_fraction": 1,
+          "flat_eps": 1,
+          "flat_min_samples": 2
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode3-global-30m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "timeframe": "30m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 5,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode3-global-4h.v1",
+      "profile_digest": "290d57773732557b46a28a925f2d72b7f5cb9f649a26060122b5ed5b739153ba",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode3-global-4h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode3-global-4h.v1",
+          "profile_id": "full04.delta-signal-notional-mode3-global-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "flat_selector": "centroid",
+          "flat_top_fraction": 1,
+          "flat_eps": 1,
+          "flat_min_samples": 2
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode3-global-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 5,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode3-global-1d.v1",
+      "profile_digest": "3c0c5e82125b0897791eec9444b92d82737e1ae4929ef222c628f9b9a79fff10",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode3-global-1d.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode3-global-1d.v1",
+          "profile_id": "full04.delta-signal-notional-mode3-global-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "flat_selector": "centroid",
+          "flat_top_fraction": 1,
+          "flat_eps": 1,
+          "flat_min_samples": 2
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode3-global-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_3_flat_minima",
+        "optimization_schedule": "global",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 5,
+          "max": 5
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 5,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode2-global-1h.v1",
+      "profile_digest": "b1b7711868dc03111c9ad923ffbe6837028818786be4133de36d7abad938aea7",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode2-global-1h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode2-global-1h.v1",
+          "profile_id": "full04.delta-signal-notional-mode2-global-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "scoring_backend": "proxy",
+          "sbb_samples": 32,
+          "sbb_block_length": 20,
+          "sbb_simulation": "stationary",
+          "candidate_selection_metric": "mean_is_sharpe"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode2-global-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode2-global-1m.v1",
+      "profile_digest": "f9b5ea5c974b56ecce1b9dd38e21ac98cbafb9f55c2af756330b397b7f1d4f69",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode2-global-1m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode2-global-1m.v1",
+          "profile_id": "full04.delta-signal-notional-mode2-global-1m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 60000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "scoring_backend": "proxy",
+          "sbb_samples": 32,
+          "sbb_block_length": 20,
+          "sbb_simulation": "stationary",
+          "candidate_selection_metric": "mean_is_sharpe"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode2-global-1m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "timeframe": "1m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode2-global-5m.v1",
+      "profile_digest": "8ed1ffce1a41ea64f44c1d45b55066cb1e3306f869504f22f4024fbd6677f7ac",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode2-global-5m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "5m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode2-global-5m.v1",
+          "profile_id": "full04.delta-signal-notional-mode2-global-5m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 300000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "scoring_backend": "proxy",
+          "sbb_samples": 32,
+          "sbb_block_length": 20,
+          "sbb_simulation": "stationary",
+          "candidate_selection_metric": "mean_is_sharpe"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode2-global-5m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "timeframe": "5m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode2-global-15m.v1",
+      "profile_digest": "f0e76c9dd0d3377b699d66b8c8b079cf6a4125e44f142afdcf195aee72e1f481",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode2-global-15m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "15m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode2-global-15m.v1",
+          "profile_id": "full04.delta-signal-notional-mode2-global-15m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 900000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "scoring_backend": "proxy",
+          "sbb_samples": 32,
+          "sbb_block_length": 20,
+          "sbb_simulation": "stationary",
+          "candidate_selection_metric": "mean_is_sharpe"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode2-global-15m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "timeframe": "15m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode2-global-30m.v1",
+      "profile_digest": "be3336abf6d659e61d357cca8c911094c92ad530e9d3d679f41448e47715131d",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode2-global-30m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "30m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode2-global-30m.v1",
+          "profile_id": "full04.delta-signal-notional-mode2-global-30m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 1800000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "scoring_backend": "proxy",
+          "sbb_samples": 32,
+          "sbb_block_length": 20,
+          "sbb_simulation": "stationary",
+          "candidate_selection_metric": "mean_is_sharpe"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode2-global-30m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "timeframe": "30m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode2-global-4h.v1",
+      "profile_digest": "d61512f448b572053502fca57fd8e7f45b13137cd53536a517432173528c0aa4",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode2-global-4h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode2-global-4h.v1",
+          "profile_id": "full04.delta-signal-notional-mode2-global-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "scoring_backend": "proxy",
+          "sbb_samples": 32,
+          "sbb_block_length": 20,
+          "sbb_simulation": "stationary",
+          "candidate_selection_metric": "mean_is_sharpe"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode2-global-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode2-global-1d.v1",
+      "profile_digest": "7ed040be22c1a81d17b8c4198f36808a7713c32b112d7e26e7ac28e7c69bc824",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode2-global-1d.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode2-global-1d.v1",
+          "profile_id": "full04.delta-signal-notional-mode2-global-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "scoring_backend": "proxy",
+          "sbb_samples": 32,
+          "sbb_block_length": 20,
+          "sbb_simulation": "stationary",
+          "candidate_selection_metric": "mean_is_sharpe"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode2-global-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_2_sbb",
+        "optimization_schedule": "global",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode4-global-1h.v1",
+      "profile_digest": "d3f431e55afbf9df5defcdcf56e6e3c6a50b28777c5ef9f4e1ccc3063a724b93",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode4-global-1h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode4-global-1h.v1",
+          "profile_id": "full04.delta-signal-notional-mode4-global-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode4-global-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode4-global-1m.v1",
+      "profile_digest": "b4df036ede4495ec079564813b22bcde480fe4df86bf3ce4a1ddf4ed5a3f3880",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode4-global-1m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode4-global-1m.v1",
+          "profile_id": "full04.delta-signal-notional-mode4-global-1m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 60000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode4-global-1m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "timeframe": "1m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode4-global-5m.v1",
+      "profile_digest": "ac4e04c079027158c48da396856959449333dde74e60dce45c990492c28ad0db",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode4-global-5m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "5m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode4-global-5m.v1",
+          "profile_id": "full04.delta-signal-notional-mode4-global-5m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 300000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode4-global-5m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "timeframe": "5m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode4-global-15m.v1",
+      "profile_digest": "8d1dd99925a2f5938d3ea8567831c8f61fdd8f132e61c73cce30d9c3adf48155",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode4-global-15m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "15m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode4-global-15m.v1",
+          "profile_id": "full04.delta-signal-notional-mode4-global-15m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 900000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode4-global-15m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "timeframe": "15m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode4-global-30m.v1",
+      "profile_digest": "4c261b0ccde17de14ff4ed94d9f107bb29046b1863db7f39d764a2ece9127141",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode4-global-30m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "30m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode4-global-30m.v1",
+          "profile_id": "full04.delta-signal-notional-mode4-global-30m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 1800000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode4-global-30m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "timeframe": "30m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode4-global-4h.v1",
+      "profile_digest": "2b23b63997eac811a026904e8c67f33d4bd2cc231709468661a1a66649cb6f8b",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode4-global-4h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode4-global-4h.v1",
+          "profile_id": "full04.delta-signal-notional-mode4-global-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode4-global-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode4-global-1d.v1",
+      "profile_digest": "733acf79dbc67fa0e22cd174ff1c83b3256ed430410084b094dc439d373bc1fa",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode4-global-1d.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode4-global-1d.v1",
+          "profile_id": "full04.delta-signal-notional-mode4-global-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode4-global-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode4-causal-1h.v1",
+      "profile_digest": "f9ce9ec00d8da087733abee25b83e03bcd8f0b0c30bf9a0f74101bb6a5e2b27e",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode4-causal-1h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode4-causal-1h.v1",
+          "profile_id": "full04.delta-signal-notional-mode4-causal-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode4-causal-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode4-causal-1m.v1",
+      "profile_digest": "8fcd8a19a4ee3626cfc1aac0f5a4652e83ce563f497d74519e35e2bf12297299",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode4-causal-1m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode4-causal-1m.v1",
+          "profile_id": "full04.delta-signal-notional-mode4-causal-1m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 60000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode4-causal-1m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "1m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode4-causal-5m.v1",
+      "profile_digest": "f422d261393b58324dd92b913bad494b19429c3d499948e1040fef97eebcee26",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode4-causal-5m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "5m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode4-causal-5m.v1",
+          "profile_id": "full04.delta-signal-notional-mode4-causal-5m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 300000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode4-causal-5m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "5m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode4-causal-15m.v1",
+      "profile_digest": "1ae46d8faffed3ba450535f292c53a3b3f53fa2f2bc78f838ea118519ab37944",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode4-causal-15m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "15m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode4-causal-15m.v1",
+          "profile_id": "full04.delta-signal-notional-mode4-causal-15m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 900000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode4-causal-15m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "15m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode4-causal-30m.v1",
+      "profile_digest": "a3e805300237498e933444599b72e2876108b70a9ba7c28daaa3ea8557f0943a",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode4-causal-30m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "30m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode4-causal-30m.v1",
+          "profile_id": "full04.delta-signal-notional-mode4-causal-30m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 1800000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode4-causal-30m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "30m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode4-causal-4h.v1",
+      "profile_digest": "c274002565714f94d61b0e7acb0374dd980d4f6a9497562575a72f89906b501b",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode4-causal-4h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode4-causal-4h.v1",
+          "profile_id": "full04.delta-signal-notional-mode4-causal-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode4-causal-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode4-causal-1d.v1",
+      "profile_digest": "956d3dbc819211c7caf3ec714adbac8b2f6fc2973bb826a4308c0b8088d90e48",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode4-causal-1d.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode4-causal-1d.v1",
+          "profile_id": "full04.delta-signal-notional-mode4-causal-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48,
+        "optimizer_settings": {
+          "candidate_selection_metric": "is_only_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode4-causal-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "per_fold_causal",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "PER_OUTER_FOLD_STUDY",
+        "max_total_trials": 48
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode5-global-1h.v1",
+      "profile_digest": "7b5b430746cf83c5cf16cc80c04d9b400b6afc3de1baa4719995a8e350d46db9",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode5-global-1h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode5-global-1h.v1",
+          "profile_id": "full04.delta-signal-notional-mode5-global-1h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 3600000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "full_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode5-global-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "timeframe": "1h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode5-global-1m.v1",
+      "profile_digest": "a6f15a99d03c44be6ae95b7e226f72ae7c4b4f6a0e95be3afe5c467f1af9bbd6",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode5-global-1m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode5-global-1m.v1",
+          "profile_id": "full04.delta-signal-notional-mode5-global-1m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 60000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "full_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode5-global-1m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "timeframe": "1m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 66,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode5-global-5m.v1",
+      "profile_digest": "ffb56f1d31ce48baebf6f6cbda191ed9aa9636a5e4b9bfa07e555d8fda796f57",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode5-global-5m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "5m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode5-global-5m.v1",
+          "profile_id": "full04.delta-signal-notional-mode5-global-5m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 300000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "full_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode5-global-5m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "timeframe": "5m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 333,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode5-global-15m.v1",
+      "profile_digest": "bfeaf40e37863c841316b8ed5895fdcf0907c155964d6c59ec015ecfd14c2056",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode5-global-15m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "15m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode5-global-15m.v1",
+          "profile_id": "full04.delta-signal-notional-mode5-global-15m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 900000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "full_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode5-global-15m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "timeframe": "15m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 1000,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode5-global-30m.v1",
+      "profile_digest": "2e0e0575849e5253a36552f4269bc62604b90eace458ac9c8eff6d4a898de27f",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode5-global-30m.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "30m",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode5-global-30m.v1",
+          "profile_id": "full04.delta-signal-notional-mode5-global-30m.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 1800000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "full_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode5-global-30m.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "timeframe": "30m",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 2000,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode5-global-4h.v1",
+      "profile_digest": "0c1d2b9ce333bbe27d9d35e8a1a849c6b0112f559ee49c2f7c494ddd319cde3c",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode5-global-4h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "4h",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode5-global-4h.v1",
+          "profile_id": "full04.delta-signal-notional-mode5-global-4h.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 14400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "full_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode5-global-4h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "timeframe": "4h",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-mode5-global-1d.v1",
+      "profile_digest": "b3f7df6fee1ff8e9647cfaaa52ac088f763001b172ae0e3f548233c00ce701d8",
+      "descriptor": {
+        "schema_version": "research.full04-delta-profile.v1",
+        "profile_id": "p10.delta-mode5-global-1d.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+        "engine_release_id": "er_quantbt_111",
+        "requested_spec_version": "research.requested-spec.v2",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "timeframe": "1d",
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42,
+        "max_guard_bars": 10000,
+        "inner_validation": "NOT_APPLICABLE",
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "current_source": {
+          "source_adapter_id": "full04.quantbt-signal-notional-mode5-global-1d.v1",
+          "profile_id": "full04.delta-signal-notional-mode5-global-1d.v1"
+        },
+        "child_limits": {
+          "cpu_seconds": 120,
+          "wall_seconds": 240
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_1",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "23dc1d78b6c8787147951ff284ffd0d6e2aec8e3f1203a75b74a124125a6d83b",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "bar_interval_ms": 86400000,
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY",
+        "optimizer_settings": {
+          "candidate_selection_metric": "full_robust",
+          "is_subperiods": 3,
+          "flat_selector": "medoid"
+        }
+      },
+      "adapter_kind": "DELTA_WFO",
+      "work_schema_version": "research.full03-delta-work.v1",
+      "resource_class": "p10-delta-wfo-v1",
+      "queue_class": "HEAVY",
+      "public_profile": {
+        "profile_id": "p10.delta-mode5-global-1d.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "protocol": "advanced",
+        "optimization_mode": "mode_5_full_robust",
+        "optimization_schedule": "global",
+        "timeframe": "1d",
+        "random_seed": 42,
+        "trial_count": {
+          "min": 3,
+          "max": 3
+        },
+        "max_span_days": 3650,
+        "fold_bounds": {
+          "min": 1,
+          "max": 1
+        },
+        "frequency": null,
+        "window_mode": null,
+        "frequencies": [
+          "weekly",
+          "monthly",
+          "quarterly"
+        ],
+        "window_modes": [
+          "expanding",
+          "rolling"
+        ],
+        "requested_spec_versions": [
+          "research.requested-spec.v2"
+        ],
+        "seed_policy": "LOCKED",
+        "trial_default": 3,
+        "early_stopping_policy": "FORBIDDEN",
+        "inner_validation": "NOT_APPLICABLE",
+        "dataset_id": "crypto-binance-1m",
+        "trial_scope": "GLOBAL_STUDY"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_WFO_PROFILE",
+        "FEATURE_RESEARCH_FULL03_PROFILE",
+        "FEATURE_RESEARCH_FULL04_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 120,
+        "wall_seconds": 240,
+        "scratch_bytes": 134217728,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 100000,
+        "max_warmup_bars": 100000
+      },
+      "preview_override": null
     }
   ],
   "qualification_references": [
@@ -4457,6 +8972,251 @@ EXECUTION_RECIPE_TABLE = json.loads(r'''{
       "kind": "PRODUCT_RUN_QUALIFIED",
       "receipt_path": "upgrade/research_loop/evidence/P10/FULL_03_PRODUCT_QUALIFICATION_2026-10-06.md",
       "receipt_sha256": "d0724038ec678a2b076331a2aeb697ee602edfe54a14ac3d1b07f4a7f9f9d324"
+    },
+    {
+      "profile_id": "p10.delta-mode3-global-1h.v1",
+      "recipe_digest": "da91fbcf6cec2987f1fe4652f6a8afc3bf631b4578eb81955e426faac5a84359",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode3-global-1m.v1",
+      "recipe_digest": "43c23dcb544b6466347a4a57b67f83c0602eb9d26cd8ad4068212778fc108fac",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode3-global-5m.v1",
+      "recipe_digest": "0c4151b021f26503a5364082d2a5d916d235f53aa33f3c1ceec196b97bd1019a",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode3-global-15m.v1",
+      "recipe_digest": "7321e277cb4290dd26b746ce81163a8a5dade53ab0a054fabf438c959c5d7b32",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode3-global-30m.v1",
+      "recipe_digest": "5dfb2554ffd6198174d5a0f7cec3dfc6ea7007c2f6027029e447eb18554d46e7",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode3-global-4h.v1",
+      "recipe_digest": "55fd613822760d6c62f7416b8d6040548faac66cbe2ed88a9772158e8dd6c037",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode3-global-1d.v1",
+      "recipe_digest": "1013254639017729ee3afd5d825c6d55fa456e5b93dfa5c14615957db6ad4d48",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode2-global-1h.v1",
+      "recipe_digest": "179c7a6717994fc2c4ec42c0f42c9bac1657bd07a77c7a9633a1ac48ad78d538",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode2-global-1m.v1",
+      "recipe_digest": "f8851c896d3ce077a45767b743daa5034342842995ca5734eaf88c880c2d13e6",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode2-global-5m.v1",
+      "recipe_digest": "65d1a6d2ca997c6d6c1d8dfbedaccb5af08160f287f05acbb012ae4ceda525c3",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode2-global-15m.v1",
+      "recipe_digest": "8c0d4f59c1e254313a89fb3bba6f0be1846eaa13c1afab230f1a61c7215169ff",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode2-global-30m.v1",
+      "recipe_digest": "848a287fd929b2c652cc0948da4230a93e83b81ad12094eb6937ec73fdb1a070",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode2-global-4h.v1",
+      "recipe_digest": "7482f00252f62dc4c9c7ea4a73f1c57a9424a0f2b8d6f7a3d80d21e13072937a",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode2-global-1d.v1",
+      "recipe_digest": "e860278f83d44a555953f89ab42282f2c42b1291459ea04834c61ab018073023",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode4-global-1h.v1",
+      "recipe_digest": "f5d1930ee99c16c3dbc39638c4bf8a9431710f1cf7d9abab709a17f6e4039418",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode4-global-1m.v1",
+      "recipe_digest": "aaf8bfea8b7e261b7e84ec645cc7fe1d08043fa61acc785b2a95b2ec0d7d5721",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode4-global-5m.v1",
+      "recipe_digest": "1795592e932a875c3e1959f664e548d67d7f37a11d28a548e8e7d61067760efc",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode4-global-15m.v1",
+      "recipe_digest": "a8efdf17c87bc1f73cc6eb870c3a333c7a5195b773dbc1905a1df85c612a373b",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode4-global-30m.v1",
+      "recipe_digest": "7a300cb1d7ce9ce27fb4efebe16fa786c08a567bca6446727e67d1cc328d1ef4",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode4-global-4h.v1",
+      "recipe_digest": "352cad3f5fccb5bc34788fcb5efee2b29c8c4d5273f05960ac500b633eac4656",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode4-global-1d.v1",
+      "recipe_digest": "a579ebc9599046e1f62cffce3447e10e918de05a5da6f5bd7b1a5aed5c579535",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode4-causal-1h.v1",
+      "recipe_digest": "edf0f40b46fd0ba5c92b7d525b775fba43dd99b67010d89d1f5a5debd1d210ed",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode4-causal-1m.v1",
+      "recipe_digest": "fe783ec45fda3b08506cd6b73c3448b8b4261e9b8785eef6ce9aeeebed97ac5b",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode4-causal-5m.v1",
+      "recipe_digest": "228aea9413b832dd6b4e16bf09e5c9d0c56e70936fa7da0a5a7cabf96080be07",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode4-causal-15m.v1",
+      "recipe_digest": "ab19e87c0b1bcdd15762f42231dd2ddf738e3e149d0aa13c36c6688aef8650e8",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode4-causal-30m.v1",
+      "recipe_digest": "7aa0b54dff6badb200ef70fd39004c3b193a878d0bf9da9265ec7e8e770872dd",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode4-causal-4h.v1",
+      "recipe_digest": "081d41734d93ece070cf3427115b84c12fb7657d074d8919a498ea1a7e10d7e6",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode4-causal-1d.v1",
+      "recipe_digest": "60c7508875880dbddd487f2252ce8eaf42ed3a247c881859808b45a09d523cad",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode5-global-1h.v1",
+      "recipe_digest": "6a9ffc7982ee61fd6d554e0d56cb4cc63a4d75fc6bfe27a9550c7bb0c1bd4ae9",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode5-global-1m.v1",
+      "recipe_digest": "59a28c95f361c18a27a4b44b23b94c4f6ad5ae87a3c8d188f64bcdad99e3b20b",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode5-global-5m.v1",
+      "recipe_digest": "5f6396303784eed85fd2d13ce3d9cb51e9105551a6c2af5415645b5f48e02daa",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode5-global-15m.v1",
+      "recipe_digest": "34827383c70714c9da5b4ae3d0fa5f4ba3f338f2cc00c442b165ef8d1166f41e",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode5-global-30m.v1",
+      "recipe_digest": "bc434ae28b023e83f406c42ba4fa2d6d79991c488c3c99f9730a1cb88bef38d9",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode5-global-4h.v1",
+      "recipe_digest": "488e7637f6083c62f2d4315b9676dd4b38820908cfef0a1139d142d392714760",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
+    },
+    {
+      "profile_id": "p10.delta-mode5-global-1d.v1",
+      "recipe_digest": "639d2b2757ed15c3cec2fa4dc0994350131518212e554588c1da19f750ce09f3",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md",
+      "receipt_sha256": "2732b72edd920a40e34a5d2f2ed2f3be77d7e45cac4eb0ed81bc1c4fbcc4407e"
     }
   ],
   "preflight_policy": {
@@ -4469,4 +9229,4 @@ EXECUTION_RECIPE_TABLE = json.loads(r'''{
     "maximum_bytes": 1048576
   }
 }''')
-EXECUTION_RECIPE_REVISION = "ef26a469e4e3b2a9f33c38c232a70f4cbff709aa3d4002d529e770c34c2a76f4"
+EXECUTION_RECIPE_REVISION = "6352f540470eb8e593cb0ffc9f461ce0eb68d2a7c7c58131d54581e5c290bde5"

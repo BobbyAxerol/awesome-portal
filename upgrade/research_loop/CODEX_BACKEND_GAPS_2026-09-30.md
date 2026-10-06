@@ -2309,3 +2309,37 @@ Claude consumes dynamic Registry/setup and exact seed/trial policy, keeps old
 clones/AVs unchanged and labels sampled displays; no new UI design is required.
 Browser acceptance is not claimed. FULL04 other modes, FULL05 imported WFO,
 FULL06 other routes remain planned; no push/dev/main/production action.
+
+#### §37 FULL-04 delivery — 2026-10-06
+
+**BACKEND_DELIVERED /35_EXACT_RECIPES_PRODUCT_RUN_QUALIFIED /
+RESEARCH_PREVIEW_ENABLED**, superseding the earlier FULL04 planning status.
+Five other valid mode/schedule pairs ×seven actual indexed intervals now have
+ordinary authenticated product receipts (35 runs/280 named reads), native
+mode evidence, stage4/byte MATCH, RC missing0 and workspace/cursor negatives.
+No Mode1 stand-in for plateau, proxy bootstrap, IS-only or full-sample truth;
+three actual native centroid targets have null trial IDs/ordinals. Mode4
+causal joins explicit study/local trial facts, not evaluation-ID parsing.
+Mode5 has one calibration fold and labels full-sample metrics/returns/exposure
+through Report/Library/Compare/Lineage; no untouched Final Audit is promised.
+
+Real measured maxima14.896CPU/15.259wall seconds/468MiB RSS stay inside
+unchanged120CPU/240wall/4GiB/128MiB budgets.35 separate qualifications bind the
+immutable product packet via append103;101/102 leave old36 rows/AV/seals and
+candidate history unchanged. Final images passed280 retained reads plus scoped
+aggregate/progress reads; rollback preserves70 retained reads and rejects new
+create. Preview publishes35 exact profiles,5new+4old per each7 timeframe and
+five real runnable baseline preflights.20 prior seals,accounts/AV/index/pointers
+and Claude web unchanged;21 disposable test users disabled/all22 sessions
+revoked, exact test project torn down,4 proof volumes preserved.
+
+[Complete actual gates/failed attempts/fixes/contract/C4/Claude handoff](./evidence/P10/FULL_04_OTHER_MODES_2026-10-06.md),
+[immutable35-run product packet](./evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md).
+Generated `OptimizerDisclosure`/`OptimizerModeEvidence`, `Mode4Selection`,
+FULL_SAMPLE scopes, full-sample fold verdict and `FinalAudit.NOT_APPLICABLE`
+are ready for Claude. Five approved copy mappings are already done; rich UI
+native-detail integration/browser receipts remain his named frontend work.
+Legitimate missing native details stay `QUANTBT_MODE_DETAIL_NOT_PUBLISHED`;
+the separate historical linked-audit executor remains exact-binding typed409,
+not broadened by these optimizer reads. No remote push, dev/main or production
+action. FULL05 imported WFO and FULL06 other routes remain unstarted.

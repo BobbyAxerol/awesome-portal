@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { replaceComponent } from "./generate-research-progress-truth.mjs";
 import { selectedTrialPresentation } from "./generate-research-w1-presentation.mjs";
 import {amendFull03} from "./generate-research-full03.mjs";
+import {amendFull04CurrentSource} from "./generate-research-full04-current-source.mjs";
 
 const ref = name => ({ $ref: `#/components/schemas/${name}` });
 const object = properties => ({ type: "object", additionalProperties: false, required: Object.keys(properties), properties });
@@ -88,7 +89,7 @@ export function amendFull02CurrentSource(original, file = "research-current-sour
     if (schemas[name]) next = replaceComponent(next, name, value, next.indexOf('"schemas": {'));
     else next = next.replace('"schemas": {\n', `"schemas": {\n      "${name}": ${JSON.stringify(value)},\n`);
   }
-  return amendFull03(next,file);
+  return amendFull04CurrentSource(amendFull03(next,file),file);
 }
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const only = process.argv.find(arg => arg.startsWith("--only="))?.slice(7);

@@ -201,6 +201,9 @@ export const ADMISSION_REASON_FIELD_PATHS: Readonly<Record<string, readonly stri
   "The Delta walk-forward profile accepts only the signal-notional route.": ["execution_route"],
   "The Delta walk-forward profile accepts only the advanced walk-forward protocol.": ["protocol"],
   "The Delta walk-forward profile executes only mode_1_decay with the global schedule.": ["optimization_schedule"],
+  "The optimization mode and schedule must match the exact execution recipe.": ["optimization_schedule"],
+  "Full-sample calibration requires exactly one engine-planned full-span fold.": ["walk_forward"],
+  "Mode 4 IS-only uses outer-fold studies without nested inner selection.": ["walk_forward", "inner"],
   "The Delta walk-forward profile does not accept route-specific parameters.": ["route_params"],
   "The Delta walk-forward profile searches only the installed Delta parameter space and accepts no overrides.": ["parameter_space_overrides"],
   "The Delta walk-forward profile searches only the installed Delta parameter space and accepts no overrides except what-if pins on rvol and slpercent.": ["parameter_space_overrides"],
@@ -237,6 +240,9 @@ export function admissionFieldPath(message: string | null): readonly string[] {
   if (message === null) return [];
   const exact = ADMISSION_REASON_FIELD_PATHS[message];
   if (exact) return exact;
+  if (/^The exact walk-forward recipe runs [1-9][0-9]* Optuna trials per study\.$/.test(message)) {
+    return ["optuna_trials"];
+  }
   // Declaration/pin refusals have a validated public parameter name in the
   // sentence, not a fixed literal. Publish the form field, never that value.
   if (/^The imported Alpha (?:fixed )?parameter [A-Za-z][A-Za-z0-9_]{0,63} /.test(message)

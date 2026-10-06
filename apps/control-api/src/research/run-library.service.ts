@@ -282,11 +282,11 @@ function performanceMetricDefinitions(): readonly PerformanceMetricDefinitionLik
 /** Mirrors the Hub's source-absence code for a projection sealed before OOS analytics. */
 const PREDATES_OOS_ANALYTICS = "P13_SOURCE_PREDATES_OOS_ANALYTICS";
 
-type MetricScope = "OOS" | "IS_PLUS_OOS" | "CHILD_TAPE";
+type MetricScope = "OOS" | "IS_PLUS_OOS" | "CHILD_TAPE" | "FULL_SAMPLE";
 
 function metricScope(definition: ResearchMetricDefinition): MetricScope | null {
   const scope = definition.scope as string;
-  return scope === "OOS" || scope === "IS_PLUS_OOS" || scope === "CHILD_TAPE" ? scope : null;
+  return scope === "OOS" || scope === "IS_PLUS_OOS" || scope === "CHILD_TAPE" || scope === "FULL_SAMPLE" ? scope : null;
 }
 
 /**
@@ -1232,6 +1232,27 @@ export class ResearchRunLibraryService {
       ] as ResearchRunLibraryItem["stats"];
     }
     if (status === "COMPLETED") {
+      const fullSample = sealed.enriched?.scope.window === "FULL_SAMPLE"
+        || sealed.analyticsV2?.metrics.sharpe.scope === "FULL_SAMPLE";
+      if (fullSample && this.evidenceEnabled()) {
+        const cells = (["sharpe", "sharpe_decay"] as const).map((key, index) => {
+          const fact = resolveSealedPerformanceMetric(key, sealed);
+          const missing = unavailable("NOT_PUBLISHED", "FULL_SAMPLE_SOURCE_DID_NOT_RETAIN_SCALAR");
+          return {
+            ...metric(index === 0 ? "oos_sharpe" : "decay", index === 0 ? "Full-sample Sharpe" : "Δ decay",
+              index === 0 ? "OOS_SHARPE" : "DECAY", fact?.value ?? null,
+              fact?.state === "AVAILABLE" ? available() : unavailable("NOT_PUBLISHED", fact?.reason_code ?? missing.reason_code!),
+              "DEFAULT", fact?.state === "AVAILABLE" ? "FULL_SAMPLE" : null, fact?.state === "AVAILABLE" ? fact.definition_id : null),
+            ...(fact ? {source:fact.source,origin:fact.origin,source_locator:fact.source_locator,input_digest:fact.input_digest} : {}),
+          };
+        });
+        return [...cells, metric("trade_count", "Full-sample fold trades", "TRADE_COUNT",
+          retained?.oosTrades === null || retained?.oosTrades === undefined ? null : String(retained.oosTrades),
+          retained?.oosTrades === null || retained?.oosTrades === undefined
+            ? unavailable("NOT_PUBLISHED", retained?.oosTradesReason ?? "FULL_SAMPLE_FOLD_TRADE_COUNT_NOT_RETAINED") : available(),
+          "DEFAULT", retained?.oosTrades === null || retained?.oosTrades === undefined ? null : "FULL_SAMPLE",
+          retained?.oosTrades === null || retained?.oosTrades === undefined ? null : "research.current-source.v1.full-sample-published-fold-trade-count")] as ResearchRunLibraryItem["stats"];
+      }
       const cells: Array<[string, string, StatRole]> = [
         ["oos_sharpe", "OOS sharpe", "OOS_SHARPE"],
         ["decay", "Δ decay", "DECAY"],

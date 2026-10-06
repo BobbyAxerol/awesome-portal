@@ -72,7 +72,7 @@
       "properties": {
         "month_start_utc_ms": {"$ref": "#/$defs/UtcMs"}, "return_fraction": {"$ref": "#/$defs/Decimal"},
         "partial": {"type": "boolean"}, "observation_count": {"$ref": "#/$defs/PositiveCount"},
-        "basis": {"enum": ["FIRST_OOS_CLOSE", "PREVIOUS_OBSERVED_MONTH_CLOSE"]},
+        "basis": {"enum": ["FIRST_OOS_CLOSE", "FIRST_FULL_SAMPLE_CLOSE", "PREVIOUS_OBSERVED_MONTH_CLOSE"]},
         "base_at_utc_ms": {"$ref": "#/$defs/UtcMs"}, "close_at_utc_ms": {"$ref": "#/$defs/UtcMs"}
       }
     },
@@ -82,9 +82,9 @@
       "description": "Additive precomputed OOS companion, including a partial leading month. Daily histogram is all-time, not a trade or per-bar histogram. Original seals remain immutable.",
       "required": ["schema_version","origin","scope","scope_locator","input_digest","oos_observation_count","monthly_definition","distribution_definition","monthly_returns","return_distribution"],
       "properties": {
-        "schema_version":{"const":"research.all-time-distributions.v1"},"origin":{"const":"PORTAL_DERIVED"},"scope":{"const":"OOS"},
+        "schema_version":{"const":"research.all-time-distributions.v1"},"origin":{"const":"PORTAL_DERIVED"},"scope":{"enum":["OOS","FULL_SAMPLE"]},
         "scope_locator":{"$ref":"#/$defs/Locator"},"input_digest":{"$ref":"#/$defs/Digest"},"oos_observation_count":{"type":"integer","minimum":2,"maximum":2000000},
-        "monthly_definition":{"const":"OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1"},
+        "monthly_definition":{"enum":["OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1","FULL_SAMPLE_MONTH_CLOSE_OVER_FIRST_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1"]},
         "distribution_definition":{"const":"ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1"},
         "monthly_returns":{"type":"object","additionalProperties":false,"required":["state","reason_code","source_observation_count","emitted_point_count","total_period_count","omitted_leading_period_count","omitted_transport_period_count","sampling","values"],"properties":{"state":{"enum":["AVAILABLE","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"$ref":"#/$defs/Reason"},{"type":"null"}]},"source_observation_count":{"$ref":"#/$defs/Count"},"emitted_point_count":{"type":"integer","minimum":0,"maximum":32},"total_period_count":{"$ref":"#/$defs/Count"},"omitted_leading_period_count":{"$ref":"#/$defs/Count"},"omitted_transport_period_count":{"$ref":"#/$defs/Count"},"sampling":{"enum":["FULL","TAIL_WINDOW_V1"]},"values":{"type":"array","maxItems":32,"items":{"$ref":"#/$defs/MonthlyPoint"}}}},
         "return_distribution":{"type":"object","additionalProperties":false,"required":["state","reason_code","source_observation_count","emitted_point_count","sampling","values"],"properties":{"state":{"enum":["AVAILABLE","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"$ref":"#/$defs/Reason"},{"type":"null"}]},"source_observation_count":{"$ref":"#/$defs/Count"},"emitted_point_count":{"type":"integer","minimum":0,"maximum":12},"sampling":{"enum":["FULL_RETURN_HISTOGRAM_V2","NOT_APPLICABLE"]},"values":{"type":"array","maxItems":12,"items":{"$ref":"#/$defs/DistributionBucket"}}}}
@@ -105,7 +105,7 @@
         "reason_code": {"anyOf": [{"$ref": "#/$defs/Reason"}, {"type": "null"}]},
         "value": {"anyOf": [{"$ref": "#/$defs/Decimal"}, {"type": "null"}]},
         "origin": {"enum": ["ENGINE_DIRECT", "PORTAL_DERIVED"]},
-        "scope": {"const": "OOS"},
+        "scope": {"enum": ["OOS", "FULL_SAMPLE"]},
         "source_locator": {"$ref": "#/$defs/Locator"},
         "input_digest": {"$ref": "#/$defs/Digest"}
       },

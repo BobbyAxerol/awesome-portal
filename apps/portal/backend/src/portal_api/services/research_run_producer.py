@@ -366,10 +366,11 @@ class ResearchRunProducerExecutor:
         trial_count = row["public_profile"]["trial_default"] if row else 3
         plan = QuantBTGateway().walk_forward_fold_plan(index=index[(index >= start) & (index < end)], config_fields={
             **controls, "split_mode": wf["split_mode"],
-            "optimization_mode": "mode_1_decay", "optimization_schedule": "per_fold_decay" if decay else "per_fold_causal", "optuna_trials": trial_count})
+            "optimization_mode": row["descriptor"]["optimization_mode"] if row else "mode_1_decay", "optimization_schedule": "per_fold_decay" if decay else "per_fold_causal", "optuna_trials": trial_count})
         outer = row["descriptor"]["fold_bounds"] if row else {"min": 2, "max": 16}
         inner = row["descriptor"].get("inner_constraints", {}).get("fold_bounds", {"min": 2, "max": 16}) if row else {"min": 2, "max": 16}
-        if not outer["min"] <= len(plan) <= outer["max"] or not decay and any(not inner["min"] <= len(fold["inner"] or []) <= inner["max"] for fold in plan):
+        nested_causal = not decay and (not row or "inner_constraints" in row["descriptor"])
+        if not outer["min"] <= len(plan) <= outer["max"] or nested_causal and any(not inner["min"] <= len(fold["inner"] or []) <= inner["max"] for fold in plan):
             raise ResearchRunProducerError("causal inner immutable tape exceeds profile fold bounds")
         if row and trial_count * len(plan) > row["descriptor"]["max_total_trials"]:
             raise ResearchRunProducerError("FULL-03 total study trials exceed the exact recipe budget")
@@ -1038,7 +1039,7 @@ class ResearchRunProducerExecutor:
             progress("stage_started", {"stage": "S3"})
             progress("stage_completed", {"stage": "S3"})
             progress("stage_started", {"stage": "S4"})
-            cpu_cap = child_limits.cpu_seconds if preview_long else min(child_limits.cpu_seconds, DELTA_WFO_CPU_SECONDS)
+            cpu_cap = child_limits.cpu_seconds if preview_long or row else min(child_limits.cpu_seconds, DELTA_WFO_CPU_SECONDS)
             progress("budget_tick", _cpu_budget_tick_payload(0, cpu_cap))
             declared_trials = len(whatif.evaluations) if whatif is not None else study_trials
             causal = row["descriptor"]["optimization_schedule"] == "per_fold_causal" if row else research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID
@@ -1047,10 +1048,11 @@ class ResearchRunProducerExecutor:
                 from portal_api.adapters.quantbt import QuantBTGateway
                 index = pd.read_parquet(tape_path).index
                 plan = QuantBTGateway().walk_forward_fold_plan(index=index[(index >= span_start) & (index < span_end)], config_fields={
-                    **(controls if row else causal_inner_controls(research.requested_spec) if causal else per_fold_decay_controls(research.requested_spec)), "split_mode": first_oos.isoformat(), "optimization_mode": "mode_1_decay", "optimization_schedule": "per_fold_causal" if causal else "per_fold_decay", "optuna_trials": study_trials})
+                    **(controls if row else causal_inner_controls(research.requested_spec) if causal else per_fold_decay_controls(research.requested_spec)), "split_mode": first_oos.isoformat(), "optimization_mode": row["descriptor"]["optimization_mode"] if row else "mode_1_decay", "optimization_schedule": "per_fold_causal" if causal else "per_fold_decay", "optuna_trials": study_trials})
                 outer = row["descriptor"]["fold_bounds"] if row else {"min": 2, "max": 16}
                 inner = row["descriptor"].get("inner_constraints", {}).get("fold_bounds", {"min": 2, "max": 16}) if row else {"min": 2, "max": 16}
-                if not outer["min"] <= len(plan) <= outer["max"] or causal and any(not inner["min"] <= len(fold["inner"] or []) <= inner["max"] for fold in plan):
+                nested = causal and (row is None or "inner_constraints" in row["descriptor"])
+                if not outer["min"] <= len(plan) <= outer["max"] or nested and any(not inner["min"] <= len(fold["inner"] or []) <= inner["max"] for fold in plan):
                     raise ResearchRunProducerError("causal inner immutable tape exceeds profile fold bounds")
                 declared_trials = study_trials * len(plan)
                 if row and declared_trials > row["descriptor"]["max_total_trials"]:

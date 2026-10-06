@@ -520,9 +520,10 @@ export class ResearchProgressService {
   ) {
     this.requireEnabled();
     const page = await this.progress.events(scope, runId, afterSequence, limit);
+    const { executionProfileId, ...publicPage } = page;
     return {
-      ...page,
-      events: page.events.map(toPublicResearchProgressEvent),
+      ...publicPage,
+      events: page.events.map(event => toPublicResearchProgressEvent(event, executionProfileId)),
     };
   }
 
@@ -534,7 +535,10 @@ export class ResearchProgressService {
   ): Promise<ResearchProgressConsoleResponse> {
     this.requireEnabled();
     const page = await this.progress.events(scope, runId, afterSequence, limit);
-    const lines = page.events.flatMap<ResearchProgressConsoleResponse["lines"][number]>((event) => {
+    const lines = page.events.flatMap<ResearchProgressConsoleResponse["lines"][number]>((rawEvent) => {
+      const recipe = (() => { try { return page.executionProfileId ? executionRecipe(page.executionProfileId) : null; } catch { return null; } })();
+      const event = recipe?.descriptor.schema_version === "research.full04-delta-profile.v1"
+        ? toPublicResearchProgressEvent(rawEvent, page.executionProfileId) : rawEvent;
       const console = event.payload.console;
       const record = console && typeof console === "object" && !Array.isArray(console)
         ? console as Record<string, unknown> : null;
@@ -643,7 +647,7 @@ export class ResearchProgressService {
   ): () => void {
     this.requireEnabled();
     return this.fanout.subscribe(runId, (envelope: ResearchProgressEnvelope) => listener({
-      event: toPublicResearchProgressEvent(envelope.event),
+      event: toPublicResearchProgressEvent(envelope.event, envelope.run?.identity?.executionProfileId),
       snapshot: envelope.snapshot ? toPublicResearchProgressSnapshot(envelope.snapshot, envelope.run?.identity?.executionProfileId) : null,
       read: envelope.run ? this.readResponse(user, envelope.run) : null,
     }));

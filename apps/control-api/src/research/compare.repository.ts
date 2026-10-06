@@ -72,6 +72,7 @@ export interface CompareRunRow {
   alpha_version_lifecycle: string | null;
   /** W6a: the retained Delta WFO lane — seal summary, fold rows (at most 33) and the selected candidate's metrics. */
   current_profile_id: string | null;
+  current_source_adapter_id?: string | null;
   current_source_summary: JsonColumn;
   current_source_table_rows: JsonColumn;
   current_source_folds: JsonColumn;
@@ -489,6 +490,7 @@ export class ResearchCompareRepository {
                 evidence_equity.series_payload AS evidence_equity_values,
                 version.lifecycle_state AS alpha_version_lifecycle,
                 current_source.profile_id AS current_profile_id,
+                current_source.source_adapter_id AS current_source_adapter_id,
                 current_source.summary AS current_source_summary,
                 current_source.table_rows AS current_source_table_rows,
                 current_folds.folds AS current_source_folds,
@@ -547,7 +549,7 @@ export class ResearchCompareRepository {
            LEFT JOIN LATERAL (
              SELECT artifact_revision, manifest_digest, requested_spec_digest, effective_spec_digest,
                     dataset_binding_digest, retained_import_digest, source_transform_digest,
-                    profile_id, summary, table_rows
+                    profile_id, source_adapter_id, summary, table_rows
                FROM research.current_source_seals_v1 source_seal
               WHERE source_seal.workspace_id = attempt.workspace_id AND source_seal.run_id = primary_run.run_id
               ORDER BY source_seal.artifact_revision DESC

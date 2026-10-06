@@ -2,7 +2,7 @@
 import { executionRecipe, executionRecipes, type ExecutionRecipe } from "./execution-recipes";
 
 export type CurrentSourcePair = { source_adapter_id: string; profile_id: string };
-export type CurrentSourceMethod = "GLOBAL_WFO" | "CAUSAL_INNER" | "PER_FOLD_DECAY" | "THREE_WINDOW";
+export type CurrentSourceMethod = "GLOBAL_WFO" | "CAUSAL_INNER" | "CAUSAL_IS_ONLY" | "PER_FOLD_DECAY" | "THREE_WINDOW" | "FULL_SAMPLE";
 const intervals: Readonly<Record<string, number>> = {
   "1m": 60_000, "5m": 300_000, "15m": 900_000, "30m": 1_800_000,
   "30min": 1_800_000, "1h": 3_600_000, "4h": 14_400_000, "1d": 86_400_000,
@@ -32,6 +32,9 @@ export function currentSourceRetainedRecipe(profileId: string | null | undefined
 export function currentSourceRetainedMethod(profileId: string | null | undefined, sourceAdapterId?: string): CurrentSourceMethod | null {
   const row = currentSourceRetainedRecipe(profileId, sourceAdapterId);
   if (row?.public_profile.protocol === "three_window_decay") return "THREE_WINDOW";
+  if (row?.public_profile.optimization_mode === "mode_5_full_robust") return "FULL_SAMPLE";
+  if (row?.public_profile.optimization_schedule === "per_fold_causal"
+      && row.public_profile.optimization_mode === "mode_4_is_only_robust") return "CAUSAL_IS_ONLY";
   if (row?.public_profile.optimization_schedule === "per_fold_causal") return "CAUSAL_INNER";
   if (row?.public_profile.optimization_schedule === "per_fold_decay") return "PER_FOLD_DECAY";
   if (row?.public_profile.protocol === "advanced") return "GLOBAL_WFO";

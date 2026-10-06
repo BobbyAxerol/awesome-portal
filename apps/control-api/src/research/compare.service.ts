@@ -32,6 +32,7 @@ import {
   ResearchCompareRepository,
 } from "./compare.repository";
 import { CurrentSourceSummarySchema } from "./current-source.payload";
+import { currentSourceRetainedMethod } from "./current-source-profile";
 import { RS02_DELTA_WFO_GLOBAL_PROFILE_ID, RS02_SIGNAL_NOTIONAL_PROFILE_ID } from "./delta-wfo.profile";
 import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
 import { RESEARCH_PERFORMANCE_METRIC_DEFINITIONS } from "./evidence-metric-registry";
@@ -183,10 +184,14 @@ function asRequestedSpec(value: unknown): RequestedSpec | null {
 }
 
 function asRetained(row: CompareRunRow): Retained | null {
-  const causal = row.current_profile_id === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id;
-  if (row.current_profile_id !== RS02_DELTA_WFO_GLOBAL_PROFILE_ID && row.current_profile_id !== RS02_SIGNAL_NOTIONAL_PROFILE_ID && !causal) return null;
+  const method = row.current_profile_id ? currentSourceRetainedMethod(row.current_profile_id,row.current_source_adapter_id ?? undefined) : null;
+  const causal = method === "CAUSAL_INNER" || method === "CAUSAL_IS_ONLY" || method === "PER_FOLD_DECAY";
+  const historical = row.current_profile_id === RS02_DELTA_WFO_GLOBAL_PROFILE_ID || row.current_profile_id === RS02_SIGNAL_NOTIONAL_PROFILE_ID
+    || row.current_profile_id === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id;
+  if (!historical && (!method || !row.current_source_adapter_id)) return null;
   const summary = CurrentSourceSummarySchema.safeParse(record(row.current_source_summary));
   if (!summary.success) return null;
+  if ((method === "FULL_SAMPLE") !== (summary.data.optimizer_disclosure?.calibration_sample === "FULL_SAMPLE")) return null;
   const rawFolds = typeof row.current_source_folds === "string" ? (() => { try { return JSON.parse(row.current_source_folds as string); } catch { return null; } })() : row.current_source_folds;
   const folds = z.array(RetainedFoldSchema).max(33).safeParse(rawFolds ?? []);
   if (!folds.success) return null;
@@ -314,9 +319,25 @@ function claim(row: CompareRunRow, split: ResearchSplitSource | null, retained: 
   return { ...family, text: sourceText ?? sourceFallback };
 }
 
-function retainedMetrics(retained: Retained) {
+function retainedMetrics(retained: Retained, enriched?: ResearchEnrichedAnalysis) {
   const metric = (key: "NET_RETURN_FRACTION" | "MAX_DRAWDOWN_FRACTION" | "TRADE_COUNT" | "OOS_SHARPE" | "DECAY", definition: string, scope: string, value: string | null, reason: string) =>
     ({ key, definition_id: `research.compare.metric.v1.${definition}`, scope, value, availability: value === null ? absent(reason) : available() });
+  const fullSample = retained.summary.optimizer_disclosure?.calibration_sample === "FULL_SAMPLE";
+  if (fullSample) {
+    const scalar=(key:"OOS_SHARPE"|"DECAY", source:"sharpe"|"sharpe_decay")=>{
+      const fact=resolveSealedPerformanceMetric(source,{enriched,analyticsV2:retained.summary.summary_analytics_v2});
+      return fact ? {key,definition_id:fact.definition_id,scope:fact.scope,value:fact.value,
+        availability:{state:fact.state,reason_code:fact.reason_code},source:fact.source,origin:fact.origin,
+        source_locator:fact.source_locator,input_digest:fact.input_digest}
+        : metric(key,source,"FULL_SAMPLE",null,"FULL_SAMPLE_SOURCE_DID_NOT_RETAIN_SCALAR");
+    };
+    return [
+      metric("NET_RETURN_FRACTION","full-sample-net-return","FULL_SAMPLE",exactDecimal(retained.summary.metrics.net_return_fraction),"FULL_SAMPLE_NET_RETURN_NOT_RETAINED"),
+      metric("MAX_DRAWDOWN_FRACTION","full-sample-max-drawdown","FULL_SAMPLE",exactDecimal(retained.summary.metrics.max_drawdown_fraction),"FULL_SAMPLE_MAX_DRAWDOWN_NOT_RETAINED"),
+      metric("TRADE_COUNT","full-sample-fold-trade-count","FULL_SAMPLE",retained.sourceFoldCount===retained.folds.length?sumIntegers(retained.folds.map(fold=>fold.oos_trade_count)):null,"FULL_SAMPLE_FOLD_TRADE_COUNTS_NOT_RETAINED"),
+      scalar("OOS_SHARPE","sharpe"),scalar("DECAY","sharpe_decay"),
+    ];
+  }
   return [
     metric("NET_RETURN_FRACTION", "original-net-return", "RS02_RETAINED_FINAL_ACCOUNT", exactDecimal(retained.summary.metrics.net_return_fraction), "P20_RS02_NET_RETURN_NOT_RETAINED"),
     metric("MAX_DRAWDOWN_FRACTION", "original-max-drawdown", "RS02_RETAINED_FINAL_ACCOUNT", exactDecimal(retained.summary.metrics.max_drawdown_fraction), "P20_RS02_MAX_DRAWDOWN_NOT_RETAINED"),
@@ -327,7 +348,12 @@ function retainedMetrics(retained: Retained) {
       ...(retained.outerFoldMeans ? { origin: "PORTAL_DERIVED" as const } : {}) },
     { ...metric("DECAY", retained.outerFoldMeans ? "outer-fold-mean-inner-is-mean-minus-outer-oos" : "decay", "RS02_OOS_MEAN_OF_FOLDS", retained.meanDecay, "P20_SOURCE_DID_NOT_PUBLISH_DECAY"),
       ...(retained.outerFoldMeans ? { origin: "PORTAL_DERIVED" as const } : {}) },
-  ];
+  ].map(original=>{
+    if(original.availability.state === "AVAILABLE" || (original.key !== "OOS_SHARPE" && original.key !== "DECAY"))return original;
+    const fact=resolveSealedPerformanceMetric(original.key === "OOS_SHARPE" ? "sharpe":"sharpe_decay",{enriched,analyticsV2:retained.summary.summary_analytics_v2});
+    return fact ? {...original,value:fact.value,definition_id:fact.definition_id,scope:fact.scope,availability:{state:fact.state,reason_code:fact.reason_code},
+      source:fact.source,origin:fact.origin,source_locator:fact.source_locator,input_digest:fact.input_digest}:original;
+  });
 }
 
 function originalMetrics(row: CompareRunRow, enriched?: ResearchEnrichedAnalysis) {
@@ -422,7 +448,7 @@ function buildCandidate(row: CompareRunRow): Candidate | null {
     created_at_utc_ms: utcMs(row.run_created_at, "run timestamp"),
     comparison_contract_key: comparisonKey(requested),
     claim: claim(row, split, retained),
-    original_metrics: retained ? retainedMetrics(retained) : originalMetrics(row, enriched),
+    original_metrics: retained ? retainedMetrics(retained, enriched) : originalMetrics(row, enriched),
     lane,
     schedule: requested
       ? { mode: requested.optimization_mode ?? null, schedule: requested.optimization_schedule ?? null, availability: requested.optimization_mode && requested.optimization_schedule ? available() : absent("P20_REQUESTED_SPEC_HAS_NO_OPTIMIZATION_SCHEDULE") }

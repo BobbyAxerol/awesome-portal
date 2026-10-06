@@ -5,7 +5,10 @@ import {fileURLToPath} from "node:url";
 import {replaceComponent} from "./generate-research-progress-truth.mjs";
 const root=new URL("../../../",import.meta.url);
 const table=JSON.parse(readFileSync(new URL("apps/portal/registry/research-execution-recipes.v1.json",root)));
-const full=table.recipes.filter(r=>r.source_requirement==="FULL03_IMMUTABLE_DELTA_BINDING");
+// Applied FULL03 SQL remains reproducible after later recipes reuse its adapter.
+const full=table.recipes.filter(r=>r.descriptor.schema_version==="research.full03-delta-profile.v1");
+const indexed=table.recipes.filter(r=>r.source_requirement==="FULL03_IMMUTABLE_DELTA_BINDING");
+const historicalRecipes=table.recipes.filter(r=>r.descriptor.schema_version!=="research.full04-delta-profile.v1");
 const canonical=v=>Array.isArray(v)?v.map(canonical):v&&typeof v==="object"
   ?Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])])):v;
 const hash=v=>createHash("sha256").update(JSON.stringify(canonical(v))).digest("hex");
@@ -33,7 +36,7 @@ export function amendFull03(original,file){
     const walk=v=>{if(!v||typeof v!=="object")return;
       if(v.enum?.includes("p04.delta-rsi.v1")&&v.enum?.includes("p17.imported-signal-notional.v1")&&!v.enum.includes("full03.delta-rsi.v1")){
         v.enum.push("full03.delta-rsi.v1");changed=true;}
-      if(v.enum?.includes("p10.delta-signal-notional-wfo.v1"))for(const row of full)
+      if(v.enum?.includes("p10.delta-signal-notional-wfo.v1"))for(const row of indexed)
         if(!v.enum.includes(row.profile_id)){v.enum.push(row.profile_id);changed=true;}
       for(const child of Object.values(v))walk(child);};
     walk(value);
@@ -47,7 +50,7 @@ export function amendFull03(original,file){
       conditional.else={if:{required:["provenance"]},then:{properties:{timezone:{const:"UTC"},provenance:{$ref:"#/components/schemas/FixedUtcProvenance"}}}};
       changed=true;
     }
-    if(name==="Provenance"&&file==="research-current-source")for(const row of full){
+    if(name==="Provenance"&&file==="research-current-source")for(const row of indexed){
       const pair=row.descriptor.current_source;
       for(const key of ["source_adapter_id","profile_id"])if(!value.properties[key].enum.includes(pair[key])){
         value.properties[key].enum.push(pair[key]);changed=true;}
@@ -69,20 +72,20 @@ function migration(){
   const binding=full[0].descriptor.alpha_binding_requirements;
   const utilities={"p16.delta-whatif-grid.v1":"3c29160abf214a0ef1c20c630048442ef131aadc1d00849f69ae428d0ff513bc",
     "p23.delta-pinned-final-audit.v1":"457267c54edd02fcea53eceb92a81cdec9fdaefc8b9231638540b51a85b92491"};
-  const profiles=table.recipes.map(r=>({id:r.profile_id,digest:r.profile_digest})).concat(Object.entries(utilities).map(([id,digest])=>({id,digest})));
+  const profiles=historicalRecipes.map(r=>({id:r.profile_id,digest:r.profile_digest})).concat(Object.entries(utilities).map(([id,digest])=>({id,digest})));
   let sql=`-- FULL03 append-only identities. No existing AV, index, producer or seal is rewritten.\n`;
   sql+=`ALTER TABLE research.execution_adapter_bindings DROP CONSTRAINT execution_adapter_bindings_adapter_id_check;\n`;
   sql+=`ALTER TABLE research.execution_adapter_bindings ADD CONSTRAINT execution_adapter_bindings_adapter_id_check CHECK(adapter_id IN('p04.delta-rsi.v1','p17.imported-signal-notional.v1','full03.delta-rsi.v1')),\n ADD CONSTRAINT execution_adapter_bindings_full03_exact_check CHECK(adapter_id<>'full03.delta-rsi.v1' OR (alpha_version_id=${quote(binding.alpha_version_id)} AND contract_digest=${quote(binding.adapter_contract_digest)}));\n`;
   sql+=`ALTER TABLE research.run_producers DROP CONSTRAINT run_producers_execution_adapter_id_check, DROP CONSTRAINT run_producers_execution_profile_id_check, DROP CONSTRAINT run_producers_execution_profile_digest_check;\n`;
   sql+=`ALTER TABLE research.run_producers ADD CONSTRAINT run_producers_execution_adapter_id_check CHECK(execution_adapter_id IN('p04.delta-rsi.v1','p17.imported-signal-notional.v1','full03.delta-rsi.v1')),\n ADD CONSTRAINT run_producers_execution_profile_id_check CHECK(execution_profile_id IN(${profiles.map(r=>quote(r.id)).join(',')})),\n ADD CONSTRAINT run_producers_execution_profile_digest_check CHECK(${profiles.map(r=>r.digest===null?`(execution_profile_id=${quote(r.id)} AND execution_profile_digest IS NULL)`:`(execution_profile_id=${quote(r.id)} AND execution_profile_digest=${quote(r.digest)} AND execution_profile_digest IS NOT NULL)`).join('\n OR ')}),\n ADD CONSTRAINT run_producers_full03_exact_check CHECK((execution_adapter_id='full03.delta-rsi.v1')=(execution_profile_id IN(${full.map(r=>quote(r.profile_id)).join(',')})) AND (execution_adapter_id<>'full03.delta-rsi.v1' OR (alpha_version_id=${quote(binding.alpha_version_id)} AND adapter_contract_digest=${quote(binding.adapter_contract_digest)})));\n`;
   const pairs=[{source_adapter_id:'rs02.quantbt-advanced-wfo.v1',profile_id:'rs02.delta-wfo-global.v1'},
-    ...table.recipes.flatMap(r=>r.descriptor.current_source?[r.descriptor.current_source]:[])];
+    ...historicalRecipes.flatMap(r=>r.descriptor.current_source?[r.descriptor.current_source]:[])];
   sql+=`ALTER TABLE research.current_source_seals_v1 DROP CONSTRAINT current_source_seals_v1_source_profile_pair_check;\nALTER TABLE research.current_source_seals_v1 ADD CONSTRAINT current_source_seals_v1_source_profile_pair_check CHECK(${pairs.map(p=>`(source_adapter_id=${quote(p.source_adapter_id)} AND profile_id=${quote(p.profile_id)})`).join('\n OR ')});\n`;
   for(const r of full){
     sql+=`INSERT INTO research.execution_recipe_descriptors_v1(profile_id,profile_digest,recipe_digest,descriptor,policy) VALUES(${quote(r.profile_id)},${quote(r.profile_digest)},${quote(hash(r))},${quote(JSON.stringify(r.descriptor))}::jsonb,${quote(JSON.stringify(Object.fromEntries(Object.entries(r).filter(([k])=>k!=='descriptor'))))}::jsonb);\n`;
     sql+=`INSERT INTO research.execution_recipe_qualifications_v1(recipe_digest,kind,state,receipt_path,receipt_sha256,scope) VALUES(${quote(hash(r))},'CANDIDATE_NOT_QUALIFIED','CANDIDATE',NULL,NULL,'OWNER_CELL_ONLY_NOT_PRODUCT_AUTHORITY');\n`;
   }
-  sql+=`CREATE OR REPLACE FUNCTION research.run_library_display_kind(profile_id text) RETURNS text LANGUAGE sql IMMUTABLE SET search_path=pg_catalog,research AS $$\n SELECT CASE profile_id\n WHEN 'p04.fixed-qualification.v1' THEN 'P04'\n WHEN 'p10.vn-stock-daily-observed-fixed.v1' THEN 'VN'\n${table.recipes.filter(r=>['DELTA_WFO','DELTA_THREE_WINDOW_OPTIMIZED'].includes(r.adapter_kind)).map(r=>` WHEN ${quote(r.profile_id)} THEN ${quote(r.adapter_kind==='DELTA_WFO'?'WFO':'OPT')}`).join('\n')}\n END; $$;\nSELECT 1;\n`;
+  sql+=`CREATE OR REPLACE FUNCTION research.run_library_display_kind(profile_id text) RETURNS text LANGUAGE sql IMMUTABLE SET search_path=pg_catalog,research AS $$\n SELECT CASE profile_id\n WHEN 'p04.fixed-qualification.v1' THEN 'P04'\n WHEN 'p10.vn-stock-daily-observed-fixed.v1' THEN 'VN'\n${historicalRecipes.filter(r=>['DELTA_WFO','DELTA_THREE_WINDOW_OPTIMIZED'].includes(r.adapter_kind)).map(r=>` WHEN ${quote(r.profile_id)} THEN ${quote(r.adapter_kind==='DELTA_WFO'?'WFO':'OPT')}`).join('\n')}\n END; $$;\nSELECT 1;\n`;
   return sql;
 }
 function bindingMigration(){

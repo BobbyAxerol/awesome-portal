@@ -25,6 +25,11 @@ export const CurrentSourceParameterMapSchema = z.record(
     context.addIssue({ code: z.ZodIssueCode.custom, message: "current-source parameter map exceeds 24 fields" });
   }
 });
+/** Native objective values are not the selector's separate robust ranking score. */
+export const CurrentSourceObjectiveKindSchema = z.enum([
+  "IS_MEAN_SHARPE", "MODE_1_DECAY_J", "INNER_VALIDATION_DECAY_J", "OUTER_FOLD_DECAY_J",
+  "SBB_BOOTSTRAP_ROBUST_J", "PLATEAU_ROBUST_J", "IS_ONLY_ROBUST_J", "FULL_SAMPLE_ROBUST_J", "FULL_SAMPLE_MEAN_SHARPE", "NOT_PUBLISHED",
+]);
 /**
  * W3 (CG-P13-07/08, CG-P14-02, CG-P15-03/04): versioned fact blocks the
  * exporter adds to retained rows and to the seal summary. Every block is
@@ -92,7 +97,7 @@ const ObjectiveTermSchema = z.object({
 export const CurrentSourceTrialFactsSchema = z.object({
   schema_version: z.literal("research.current-source-trial-facts.v1"),
   stage: FactTokenSchema.nullable(),
-  objective_kind: z.enum(["IS_MEAN_SHARPE", "MODE_1_DECAY_J", "NOT_PUBLISHED"]),
+  objective_kind: CurrentSourceObjectiveKindSchema,
   fold_scope: z.object({
     kind: z.enum(["FOLD", "PER_FOLD_STUDY", "ALL_OUTER_FOLDS", "NOT_PUBLISHED"]),
     fold_id: FactTokenSchema.nullable(),
@@ -426,8 +431,60 @@ export const CurrentSourceProtocolDisclosureSchema = z.object({
 });
 export type CurrentSourceProtocolDisclosure = z.infer<typeof CurrentSourceProtocolDisclosureSchema>;
 
+const ModeEvidenceBase = { source_locator: z.string().min(1).max(256), reason_code: FactTokenSchema.nullable() };
+const DispersionEvidence = { selector: FactTokenSchema.nullable(), is_subperiods: FactCountSchema,
+  temporal_score: CurrentSourceDecimalSchema.nullable(), temporal_q25: CurrentSourceDecimalSchema.nullable(),
+  temporal_mad: CurrentSourceDecimalSchema.nullable(), temporal_count: FactCountSchema.nullable(),
+  is_only_robust_score: CurrentSourceDecimalSchema.nullable() };
+export const CurrentSourceModeEvidenceSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("PLATEAU"), ...ModeEvidenceBase, selector: FactTokenSchema.nullable(),
+    cluster_method: FactTokenSchema.nullable(), cluster_size: FactCountSchema.nullable(), top_trials: FactCountSchema.nullable(),
+    medoid_trial_id: FactTokenSchema.nullable(), cluster_mean_objective: CurrentSourceDecimalSchema.nullable(),
+    cluster_best_objective: CurrentSourceDecimalSchema.nullable() }).strict(),
+  z.object({ kind: z.literal("BOOTSTRAP_PROXY"), ...ModeEvidenceBase, scoring_backend: z.literal("proxy"),
+    sbb_samples: FactCountSchema, sbb_block_length: FactCountSchema, sbb_simulation: FactTokenSchema,
+    synthetic_oos_mean: CurrentSourceDecimalSchema.nullable(), synthetic_oos_std: CurrentSourceDecimalSchema.nullable() }).strict(),
+  z.object({ kind: z.literal("IS_ONLY_DISPERSION"), ...ModeEvidenceBase, ...DispersionEvidence }).strict(),
+  z.object({ kind: z.literal("FULL_SAMPLE_ROBUST"), ...ModeEvidenceBase, ...DispersionEvidence,
+    selection_sample_bars: FactCountSchema }).strict(),
+]);
+export const CurrentSourceOptimizerDisclosureSchema = z.object({
+  schema_version: z.literal("research.current-source-optimizer-disclosure.v1"),
+  optimization_mode: z.enum(["mode_2_sbb", "mode_3_flat_minima", "mode_4_is_only_robust", "mode_5_full_robust"]),
+  optimization_schedule: z.enum(["global", "per_fold_causal"]),
+  selection_target: z.object({ kind: z.enum(["TRIAL", "STUDY_LOCAL_TRIAL", "SYNTHETIC_CENTROID"]),
+    trial_id: FactTokenSchema.nullable(), objective_kind: CurrentSourceObjectiveKindSchema,
+    selection_score: CurrentSourceDecimalSchema.nullable(), selection_score_kind: FactTokenSchema.nullable() }).strict(),
+  calibration_sample: z.enum(["IS_ONLY", "IS_OOS", "FULL_SAMPLE", "BOOTSTRAP_PROXY"]),
+  oos_used_for_selection: z.boolean(), full_sample_used_for_selection: z.boolean(),
+  centroid: z.object({ state: z.literal("AVAILABLE"), parameters: CurrentSourceParameterMapSchema,
+    medoid_trial_id: FactTokenSchema.nullable(), cluster_size: FactCountSchema.nullable(), cluster_method: FactTokenSchema.nullable(),
+    requires_evaluation: z.boolean() }).strict().optional(),
+  mode_evidence: CurrentSourceModeEvidenceSchema,
+}).strict().superRefine((value,ctx) => {
+  const target=value.selection_target;
+  if ((target.kind === "SYNTHETIC_CENTROID") !== (target.trial_id === null)
+    || (target.kind === "SYNTHETIC_CENTROID") !== (value.centroid !== undefined))
+    ctx.addIssue({code:z.ZodIssueCode.custom,message:"A synthetic centroid is parameters, never a fabricated Optuna trial"});
+  if (target.kind === "SYNTHETIC_CENTROID" && value.optimization_mode !== "mode_3_flat_minima")
+    ctx.addIssue({code:z.ZodIssueCode.custom,message:"Only a native flat-minima selection publishes centroid parameters"});
+  if (value.optimization_mode === "mode_5_full_robust"
+      ? value.calibration_sample !== "FULL_SAMPLE" || !value.full_sample_used_for_selection || value.oos_used_for_selection
+      : value.full_sample_used_for_selection)
+    ctx.addIssue({code:z.ZodIssueCode.custom,message:"Full-sample calibration must preserve its native data-use disclosure"});
+  if (value.optimization_mode === "mode_4_is_only_robust" && (value.calibration_sample !== "IS_ONLY" || value.oos_used_for_selection))
+    ctx.addIssue({code:z.ZodIssueCode.custom,message:"Mode 4 selects from IS only, not Mode 1 inner or outer OOS"});
+  if (value.optimization_schedule === "per_fold_causal" && value.optimization_mode !== "mode_4_is_only_robust")
+    ctx.addIssue({code:z.ZodIssueCode.custom,message:"The retained FULL04 causal recipe is native IS-only Mode 4"});
+  const modeKind = {mode_2_sbb:"BOOTSTRAP_PROXY",mode_3_flat_minima:"PLATEAU",mode_4_is_only_robust:"IS_ONLY_DISPERSION",mode_5_full_robust:"FULL_SAMPLE_ROBUST"} as const;
+  if (value.mode_evidence.kind !== modeKind[value.optimization_mode])
+    ctx.addIssue({code:z.ZodIssueCode.custom,message:"Native mode evidence must belong to its published optimizer mode"});
+});
+export type CurrentSourceOptimizerDisclosure = z.infer<typeof CurrentSourceOptimizerDisclosureSchema>;
+
 export const CurrentSourceSummarySchema = z.object({
   protocol_disclosure: CurrentSourceProtocolDisclosureSchema.optional(),
+  optimizer_disclosure: CurrentSourceOptimizerDisclosureSchema.optional(),
   schema_version: z.literal("research.current-source-summary.v1"),
   // Adapter-observed engine-call completion; never a claimed engine first-read clock.
   execution_observation: RetainedExecutionObservationSchema.optional(),
@@ -467,7 +524,7 @@ export const CurrentSourceSummarySchema = z.object({
   summary_analytics_v2: ResearchRetainedAnalyticsV2Schema.optional(),
   enriched_analysis: ResearchEnrichedAnalysisSchema.optional(),
   // Absent on immutable older seals whose compact chart series included the pre-OOS prefix.
-  derived_scope: z.literal("OUTER_TEST_UNION_INCLUSIVE_V1").optional(),
+  derived_scope: z.enum(["OUTER_TEST_UNION_INCLUSIVE_V1", "FULL_SAMPLE_CALIBRATION_INCLUSIVE_V1"]).optional(),
   derived: z.object({
     monthly_returns: z.object({
       source_observation_count: z.number().int().nonnegative().max(2_000_000),
@@ -500,8 +557,29 @@ export const CurrentSourceSummarySchema = z.object({
     }).strict(),
   }).strict(),
 }).strict().superRefine((value, context) => {
-  if (value.summary_analytics && value.summary_analytics.in_sample_equity.scope !== "SELECTED_CANDIDATE_IS") {
-    context.addIssue({ code: z.ZodIssueCode.custom, message: "WFO seal cannot substitute fixed-child IS equity" });
+  const fullSample = value.optimizer_disclosure?.calibration_sample === "FULL_SAMPLE";
+  const expectedScope = fullSample ? "FULL_SAMPLE" : "OOS";
+  if (value.execution_observation
+    && fullSample !== (value.execution_observation.evaluation_role === "FULL_SAMPLE_CALIBRATION")) {
+    context.addIssue({code:z.ZodIssueCode.custom,message:"Execution observation role must preserve the declared optimizer sample"});
+  }
+  if (value.summary_analytics?.net_oos_return.scope !== undefined && value.summary_analytics.net_oos_return.scope !== expectedScope
+    || value.enriched_analysis && value.enriched_analysis.scope.window !== expectedScope
+    || value.derived_scope === "FULL_SAMPLE_CALIBRATION_INCLUSIVE_V1" && !fullSample
+    || fullSample && value.derived_scope !== "FULL_SAMPLE_CALIBRATION_INCLUSIVE_V1") {
+    context.addIssue({code:z.ZodIssueCode.custom,message:"Retained analytics must preserve exact optimizer sample scope"});
+  }
+  if (value.summary_analytics_v2) {
+    const v2=value.summary_analytics_v2;
+    if ([...Object.values(v2.metrics),...Object.values(v2.behaviour),v2.last_30d.return_fraction,v2.last_30d.sharpe]
+      .some(fact=>fact.scope!==expectedScope) || v2.distributions && v2.distributions.scope!==expectedScope)
+      context.addIssue({code:z.ZodIssueCode.custom,message:"All retained analytical facts must share the declared calibration sample"});
+  }
+  if (value.summary_analytics && value.summary_analytics.in_sample_equity.scope !== "SELECTED_CANDIDATE_IS"
+    && !(fullSample && value.summary_analytics.in_sample_equity.scope === "FULL_SAMPLE_CALIBRATION")
+    || fullSample && value.summary_analytics?.in_sample_equity.state === "AVAILABLE"
+      && value.summary_analytics.in_sample_equity.scope !== "FULL_SAMPLE_CALIBRATION") {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "Retained equity must preserve source sample scope; missing IS is not full-sample equity" });
   }
 });
 
@@ -571,6 +649,24 @@ export const CurrentSourceFoldSelectionSchema = z.object({
 }).strict();
 export type CurrentSourceFoldSelection = z.infer<typeof CurrentSourceFoldSelectionSchema>;
 
+/** FULL04 Mode4 causal calibrates on its own IS subperiods, never Mode1 inner validation. */
+export const CurrentSourceMode4SelectionSchema = z.object({
+  schema_version: z.literal("research.current-source-mode4-selection.v1"),
+  scope: z.literal("OUTER_FOLD_SELECTION"), study_id: FactTokenSchema,
+  fold_seed: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  selected_trial_id: FactTokenSchema, source_trial_id: FactTokenSchema,
+  parameters: CurrentSourceParameterMapSchema, objective: CurrentSourceDecimalSchema.nullable(),
+  objective_kind: z.enum(["IS_MEAN_SHARPE", "IS_ONLY_ROBUST_J"]),
+  candidate_is_metric: CurrentSourceDecimalSchema.nullable(),
+  candidate_count: z.number().int().min(1).max(3), study_trial_rows: z.literal(3),
+  outer_oos_used_for_selection: z.literal(false),
+  causality_claim: z.literal("strict_fold_local_retraining"),
+  params_digest: z.string().regex(/^[0-9a-f]{64}$/),
+  selection_sequence: z.number().int().nonnegative().max(15),
+  params_frozen_at_utc_ms: FactUtcMsSchema.nullable(),
+}).strict();
+export type CurrentSourceMode4Selection = z.infer<typeof CurrentSourceMode4SelectionSchema>;
+
 export const CurrentSourceFoldPayloadSchema = z.object({
   fold_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/),
   train_start_utc_ms: z.number().int().nonnegative().nullable(),
@@ -582,9 +678,10 @@ export const CurrentSourceFoldPayloadSchema = z.object({
   child_audit: CurrentSourceFoldChildAuditSchema.optional(),
   causal_selection: CurrentSourceCausalSelectionSchema.optional(),
   fold_selection: CurrentSourceFoldSelectionSchema.optional(),
+  mode4_selection: CurrentSourceMode4SelectionSchema.optional(),
 }).strict().superRefine((value, context) => {
-  if (value.causal_selection && value.fold_selection) {
-    context.addIssue({ code: z.ZodIssueCode.custom, message: "one fold cannot have both causal and OOS-used selections" });
+  if ([value.causal_selection, value.fold_selection, value.mode4_selection].filter(Boolean).length > 1) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "one fold cannot have multiple distinct optimizer selections" });
   }
   if (!value.causal_selection) return;
   const start = value.train_start_utc_ms, end = value.train_end_utc_ms, test = value.test_start_utc_ms;

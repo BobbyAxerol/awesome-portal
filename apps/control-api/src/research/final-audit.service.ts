@@ -12,7 +12,7 @@ import { currentSourceExecutionPair, currentSourceRetainedMethod, currentSourceR
 import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "./p04-delta.binding";
 import { sha256ResearchJson } from "./preflight.service";
 import { pinnedAuditTargetDigest, PINNED_AUDIT_PROFILE_ID, PINNED_AUDIT_PROFILE_DIGEST,
-  ResearchFinalAuditError, ResearchFinalAuditReadSchema, type ResearchFinalAuditRead, type ResearchFinalAuditCreateSchema,
+  ResearchFinalAuditError, ResearchFinalAuditReadSchema, FULL_SAMPLE_FINAL_AUDIT_REASON, type ResearchFinalAuditRead, type ResearchFinalAuditCreateSchema,
   type PinnedAuditSealSchema } from "./final-audit.contract";
 import { ResearchArtifactVerifyClient } from "./artifact-verify.client";
 import { ResearchArtifactVerifyRepository } from "./artifact-verify.repository";
@@ -38,6 +38,9 @@ export class ResearchFinalAuditService {
       throw new ResearchFinalAuditError("RESEARCH_FINAL_AUDIT_NOT_APPLICABLE",
         "The parent's exact execution recipe is not registered for the linked audit executor.",409);
     const method=pair && currentSourceRetainedMethod(pair.profile_id,pair.source_adapter_id);
+    if(method==="FULL_SAMPLE")
+      throw new ResearchFinalAuditError("RESEARCH_FINAL_AUDIT_NOT_APPLICABLE",
+        FULL_SAMPLE_FINAL_AUDIT_REASON,409);
     if(method==="PER_FOLD_DECAY")
       throw new ResearchFinalAuditError("RESEARCH_FINAL_AUDIT_NOT_APPLICABLE",
         "Run-global selection audit does not apply to per-fold decay. Read the retained per-fold selection and OOS generation evidence.",409);

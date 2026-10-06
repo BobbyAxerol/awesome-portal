@@ -4391,7 +4391,7 @@ export class ResearchMetadataRepository {
     runId: string;
     evaluationId?: string | null;
     snapshotDigest: string;
-    evaluationRole: "QUALITY_SCAN" | "TRAIN" | "SELECTION_INPUT" | "OUTER_OOS" | "HOLDOUT" | "RETROSPECTIVE" | "UNKNOWN";
+    evaluationRole: "QUALITY_SCAN" | "TRAIN" | "SELECTION_INPUT" | "OUTER_OOS" | "HOLDOUT" | "RETROSPECTIVE" | "UNKNOWN" | "FULL_SAMPLE_CALIBRATION";
     sourceFactRef: string;
     sourceAsOf: Date;
     rangeStartUtc?: Date | null;

@@ -11,6 +11,7 @@ import { runControlApiMigrations } from "../src/cli/migrate";
 import { FULL03_DELTA_BINDING } from "../src/research/full03-delta.binding";
 import { P04_DELTA_BINDING } from "../src/research/p04-delta.binding";
 import { ResearchMetadataRepository } from "../src/research/repository";
+import { executionRecipes, executionRecipeQualification } from "../src/research/execution-recipes";
 
 const baseUrl = process.env.TEST_DATABASE_URL ?? "postgres://portal:portal@127.0.0.1:5432/portal_control_test";
 const databaseName = `research_full03_av_${randomUUID().replaceAll("-", "")}`;
@@ -163,7 +164,7 @@ describe("FULL03 exact immutable AV migration on disposable PostgreSQL", () => {
     const receipts = await database.query(`SELECT d.profile_id,p.receipt_path,p.receipt_sha256
       FROM research.execution_recipe_product_receipts_v1 p
       JOIN research.execution_recipe_descriptors_v1 d ON d.recipe_digest=p.recipe_digest
-      WHERE d.descriptor->>'adapter_id'='full03.delta-rsi.v1' ORDER BY d.profile_id`);
+      WHERE d.descriptor->>'schema_version'='research.full03-delta-profile.v1' ORDER BY d.profile_id`);
     expect(receipts.rows).toHaveLength(28);
     expect(new Set(receipts.rows.map(row=>row.receipt_sha256)).size).toBe(1);
     expect(receipts.rows.every(row=>row.receipt_path===
@@ -171,11 +172,53 @@ describe("FULL03 exact immutable AV migration on disposable PostgreSQL", () => {
     const candidates = await database.query(`SELECT q.kind,q.state,q.receipt_path
       FROM research.execution_recipe_qualifications_v1 q
       JOIN research.execution_recipe_descriptors_v1 d ON d.recipe_digest=q.recipe_digest
-      WHERE d.descriptor->>'adapter_id'='full03.delta-rsi.v1'`);
+      WHERE d.descriptor->>'schema_version'='research.full03-delta-profile.v1'`);
     expect(candidates.rows).toHaveLength(28);
     expect(candidates.rows.every(row=>row.kind==='CANDIDATE_NOT_QUALIFIED'&&row.state==='CANDIDATE'&&row.receipt_path===null)).toBe(true);
-    await expect(database.query("UPDATE research.execution_recipe_product_receipts_v1 SET receipt_sha256=$1 WHERE recipe_digest IN (SELECT recipe_digest FROM research.execution_recipe_descriptors_v1 WHERE descriptor->>'adapter_id'='full03.delta-rsi.v1')",
+    await expect(database.query("UPDATE research.execution_recipe_product_receipts_v1 SET receipt_sha256=$1 WHERE recipe_digest IN (SELECT recipe_digest FROM research.execution_recipe_descriptors_v1 WHERE descriptor->>'schema_version'='research.full03-delta-profile.v1')",
       ["0".repeat(64)])).rejects.toMatchObject({code:"55000"});
+    expect(await historicalBytes()).toBe(historicalSnapshot);
+  });
+
+  it("adds 35 exact FULL04 descriptors beside unchanged FULL03 history", async () => {
+    const expected = executionRecipes.filter(row => row.descriptor.schema_version === "research.full04-delta-profile.v1");
+    const rows = (await database.query(`SELECT d.profile_id,d.profile_digest,d.recipe_digest,d.descriptor,q.kind,q.state
+      FROM research.execution_recipe_descriptors_v1 d JOIN research.execution_recipe_qualifications_v1 q USING(recipe_digest)
+      WHERE d.descriptor->>'schema_version'='research.full04-delta-profile.v1' ORDER BY d.profile_id`)).rows;
+    expect(rows).toHaveLength(35);
+    for (const row of rows) {
+      const recipe = expected.find(value => value.profile_id === row.profile_id)!;
+      expect(row).toMatchObject({ profile_digest: recipe.profile_digest, descriptor: recipe.descriptor,
+        recipe_digest: executionRecipeQualification(row.profile_id).recipe_digest,
+        kind: "CANDIDATE_NOT_QUALIFIED", state: "CANDIDATE" });
+    }
+    expect(await historicalBytes()).toBe(historicalSnapshot);
+  });
+
+  it("admits explicit full-sample exposure scope without weakening immutable facts", async () => {
+    const constraints = (await database.query(`SELECT pg_get_constraintdef(oid) AS definition
+      FROM pg_constraint WHERE conrelid='research.exposure_facts'::regclass
+        AND conname='exposure_facts_evaluation_role_check'`)).rows;
+    expect(constraints).toHaveLength(1);
+    for (const role of ["QUALITY_SCAN", "TRAIN", "SELECTION_INPUT", "OUTER_OOS", "HOLDOUT", "RETROSPECTIVE", "UNKNOWN", "FULL_SAMPLE_CALIBRATION"])
+      expect(constraints[0].definition).toContain(role);
+    const rights = (await database.query(`SELECT has_table_privilege('portal_research_runtime','research.exposure_facts','UPDATE') AS may_update`)).rows[0];
+    expect(rights.may_update).toBe(false);
+    expect(await historicalBytes()).toBe(historicalSnapshot);
+  });
+  it("appends35 FULL04 product proofs without rewriting their candidate history",async()=>{
+    const rows=(await database.query(`SELECT d.profile_id,p.receipt_path,p.receipt_sha256,q.kind,q.state
+      FROM research.execution_recipe_product_receipts_v1 p
+      JOIN research.execution_recipe_descriptors_v1 d ON d.recipe_digest=p.recipe_digest
+      JOIN research.execution_recipe_qualifications_v1 q ON q.recipe_digest=p.recipe_digest
+      WHERE d.descriptor->>'schema_version'='research.full04-delta-profile.v1'`)).rows;
+    expect(rows).toHaveLength(35);
+    for(const row of rows){const ref=executionRecipeQualification(row.profile_id);
+      expect(row).toMatchObject({receipt_path:ref.receipt_path,receipt_sha256:ref.receipt_sha256,
+        kind:"CANDIDATE_NOT_QUALIFIED",state:"CANDIDATE"});}
+    await expect(database.query(`UPDATE research.execution_recipe_product_receipts_v1 SET receipt_sha256=$1
+      WHERE recipe_digest IN(SELECT recipe_digest FROM research.execution_recipe_descriptors_v1
+        WHERE descriptor->>'schema_version'='research.full04-delta-profile.v1')`,["0".repeat(64)])).rejects.toMatchObject({code:"55000"});
     expect(await historicalBytes()).toBe(historicalSnapshot);
   });
 });

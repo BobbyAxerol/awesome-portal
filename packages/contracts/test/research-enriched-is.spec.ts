@@ -15,7 +15,7 @@ describe("optional IS source-time generated contract", () => {
     expect(block.by_window.is.scope.source_table).toBe("OBSERVATION_IS");
     expect(block.by_window.is.return_distribution.statistics_policy.quantile_method).toBe("LINEAR_TYPE_7");
     expect(schema.required).not.toContain("by_window");
-    expect(schema.$defs.Fact.properties.scope.const).toBe("OOS");
+    expect(schema.$defs.Fact.properties.scope.enum).toEqual(["OOS", "FULL_SAMPLE"]);
     expect(schema.$defs.ISFact.properties.scope.const).toBe("IS");
   });
   it.each(["healthy", "partial-month", "no-benchmark"])("keeps legacy %s accepted without default IS fields", name => {

@@ -253,6 +253,23 @@ budget timeout/cancel/retry/backpressure, no cross-study leakage, authoritative
 causality/full-sample-use disclosures. Raise trial ceilings only with measured
 cost evidence; a three-trial qualification is not a 400-trial throughput claim.
 
+FULL-04 delivery addendum,2026-10-06: **BACKEND_DELIVERED /35_EXACT_RECIPES
+PRODUCT_RUN_QUALIFIED /RESEARCH_PREVIEW_ENABLED**. Five valid pairs above ×
+seven actual indexed clocks have ordinary P08/P10/confined QuantBT1.1.1/P05/
+eight named-read proofs; Mode3 includes actual centroid selections, Mode2 proxy,
+Mode4 IS-only global/fold-local, Mode5 explicit full-sample calibration. Exact
+caps remain120CPU/240wall,4GiB RAM/128MiB scratch; measured maxima14.896CPU /
+15.259wall seconds /468MiB RSS, not a maximum-trial throughput promise.
+Append101–103 preserve old36 descriptors/seals and immutable qualification
+history. Final-image280 reads, flag-off70 reads+new-create409, preview35 Atlas/
+seven setup/five preflight checks,20-seal/account/AV/index/web custody and exact
+test-identity/cell C4 cleanup passed. [Implementation, actual gates, bounds,
+images, failures/fixes and Claude handoff](./evidence/P10/FULL_04_OTHER_MODES_2026-10-06.md),
+[immutable35-run qualification](./evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md).
+Only the five approved FE copy mappings changed; no layout/baseline or served
+web rebuild. FE/browser acceptance stays Claude-owned. FULL05–06 not started;
+no remote/dev/main/production action.
+
 <a id="full-05"></a>
 ### FULL-05 — Imported Alpha WFO and compatible optimizer recipes
 
@@ -347,13 +364,13 @@ alter the approved design. Existing accepted S02 calendar/presets stay intact.
 
 | Request | Owning stages | State now |
 | --- | --- | --- |
-| BR-FULL-01 | FULL-02 + FULL-04; meaningful protocol check in FULL-06 | FULL-02 exact two Mode1 recipes QUALIFIED / Research preview ENABLED; remaining modes PLANNED |
-| BR-FULL-02 | FULL-03 + per-mode extension in FULL-04 | PLANNED, not enabled |
+| BR-FULL-01 | FULL-02 + FULL-04; meaningful protocol check in FULL-06 | All eight valid Advanced pairs + separate optimized Three Window qualified/enabled on seven indexed BTCUSDT intervals; other route recipes stay FULL06 |
+| BR-FULL-02 | FULL-03 + per-mode extension in FULL-04 | FULL03 28 + FULL04 35 exact interval/method recipes product-qualified and Research preview enabled; other source clocks remain typed |
 | BR-FULL-03 | FULL-01 | BACKEND_DELIVERED: shared registry and append-only 095; no new recipe opened |
-| BR-FULL-04 | Each vertical stage, especially FULL-02/04 | FULL-02 exact retained/read chains DELIVERED; other modes not claimed |
-| BR-FULL-05 | FULL-01 + measured per-mode FULL-04 | Shared cap/quota foundation DELIVERED; per-mode qualification PLANNED; existing limits unchanged |
+| BR-FULL-04 | Each vertical stage, especially FULL-02/04 | Exact FULL02/03/04 native retained/read chains DELIVERED; centroid/IS-only/full-sample scopes truthful; separate historical linked-audit executor fence unchanged |
+| BR-FULL-05 | FULL-01 + measured per-mode FULL-04 | Shared caps/quota and real per-mode resource proof DELIVERED at unchanged120CPU/240wall ceilings; no preview-long inheritance |
 | BR-FULL-06 | FULL-06 batches 6a–6f | PLANNED, no route opened |
 | BR-FULL-07 | FULL-05 + compatible FULL-06 inputs | PLANNED, imported fixed path unchanged |
 
-Next proposed implementation: **FULL-03**. FULL-01/FULL-02 deliveries are linked above;
+Next proposed implementation: **FULL-05**. FULL-01–04 deliveries are linked above;
 the remaining staged response is not a passing qualification or a Portal release.

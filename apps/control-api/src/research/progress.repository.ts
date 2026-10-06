@@ -988,10 +988,10 @@ export class ResearchProgressRepository {
     runId: string,
     afterSequence: number,
     limit: number,
-  ): Promise<{ events: ResearchProgressEvent[]; sourceLatestSequence: number; retentionFloorSequence: number }> {
+  ): Promise<{ events: ResearchProgressEvent[]; sourceLatestSequence: number; retentionFloorSequence: number; executionProfileId?: string }> {
     const current = await this.readRun(scope, runId);
     if (!current.progress) {
-      return { events: [], sourceLatestSequence: 0, retentionFloorSequence: 0 };
+      return { events: [], sourceLatestSequence: 0, retentionFloorSequence: 0, executionProfileId: current.identity?.executionProfileId };
     }
     const progress = current.progress;
     if (afterSequence < current.retentionFloorSequence) {
@@ -1028,6 +1028,7 @@ export class ResearchProgressRepository {
         events,
         sourceLatestSequence: current.sourceLatestSequence,
         retentionFloorSequence: current.retentionFloorSequence,
+        executionProfileId: current.identity?.executionProfileId,
       };
     });
   }

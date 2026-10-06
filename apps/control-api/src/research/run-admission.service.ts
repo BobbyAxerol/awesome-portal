@@ -471,7 +471,7 @@ export class ResearchRunAdmissionService {
     const row = wfoExecutionRecipe(requested);
     if(!row && requested.alpha_binding?.alpha_version_id==="av_delta_rsi_polynomial_alpha_1_0_1")
       return "No exact indexed execution recipe matches the requested AlphaVersion and timeframe.";
-    if (row && (row.feature_flags as readonly string[]).some(flag=>flag==="FEATURE_RESEARCH_FULL02_PROFILE"||flag==="FEATURE_RESEARCH_FULL03_PROFILE")) {
+    if (row && (row.feature_flags as readonly string[]).some(flag=>flag==="FEATURE_RESEARCH_FULL02_PROFILE"||flag==="FEATURE_RESEARCH_FULL03_PROFILE"||flag==="FEATURE_RESEARCH_FULL04_PROFILE")) {
       const activation = executionRecipeActivationReason(row, this.config, {engine_release_id: requested.client.engine_release_id, verified: true});
       if (activation !== null) return `The exact execution recipe is not admitted: ${activation}.`;
     }
@@ -479,6 +479,7 @@ export class ResearchRunAdmissionService {
     const profile = (row ?? executionRecipe(DELTA_WFO_PROFILE_ID)).public_profile;
     const temporal = requested.schema_version === "research.requested-spec.v2";
     const causal = temporal && requested.optimization_schedule === DELTA_CAUSAL_INNER_PROFILE.optimization_schedule;
+    const nestedCausal = causal && profile.optimization_mode === "mode_1_decay";
     const engine = manifest.effectiveSpec.engine;
     if (!engine || typeof engine !== "object" || Array.isArray(engine) ||
         (engine as Record<string, unknown>).execution_route !== requested.execution_route ||
@@ -494,9 +495,10 @@ export class ResearchRunAdmissionService {
     if (requested.protocol !== profile.protocol || !requested.walk_forward || requested.windows) {
       return "The Delta walk-forward profile accepts only the advanced walk-forward protocol.";
     }
-    if (requested.optimization_mode !== profile.optimization_mode ||
-        (!causal && requested.optimization_schedule !== profile.optimization_schedule)) {
-      return "The Delta walk-forward profile executes only mode_1_decay with the global schedule.";
+    if (requested.optimization_mode !== profile.optimization_mode || requested.optimization_schedule !== profile.optimization_schedule) {
+      if (!row || row.profile_id === DELTA_WFO_PROFILE_ID)
+        return "The Delta walk-forward profile executes only mode_1_decay with the global schedule.";
+      return "The optimization mode and schedule must match the exact execution recipe.";
     }
     if (requested.route_params && Object.keys(requested.route_params).length !== 0) {
       return "The Delta walk-forward profile does not accept route-specific parameters.";
@@ -521,7 +523,9 @@ export class ResearchRunAdmissionService {
         return "The preview long walk-forward profile admits 2 to 400 Optuna trials.";
       }
     } else if (requested.optuna_trials !== profile.trial_default) {
-      return "The Delta walk-forward profile runs exactly 3 Optuna trials.";
+      if (!row || row.profile_id === DELTA_WFO_PROFILE_ID)
+        return "The Delta walk-forward profile runs exactly 3 Optuna trials.";
+      return `The exact walk-forward recipe runs ${profile.trial_default} Optuna trials per study.`;
     }
     if (requested.random_seed !== profile.random_seed) {
       return "The Delta walk-forward profile runs exactly random seed 42.";
@@ -534,10 +538,12 @@ export class ResearchRunAdmissionService {
         ? "The requested timeframe must match the exact indexed execution recipe." : "The Delta walk-forward profile accepts only the 1h timeframe.";
     }
     const walkForward = requested.walk_forward;
-    if (temporal && !causal && walkForward.inner !== undefined) {
+    if (temporal && !nestedCausal && walkForward.inner !== undefined) {
+      if (profile.optimization_mode === "mode_4_is_only_robust")
+        return "Mode 4 IS-only uses outer-fold studies without nested inner selection.";
       return "Inner causal selection requires a retained per-fold selection profile; the installed v2 executor is global only.";
     }
-    if (causal && !causalInnerTopologyMatches(walkForward, manifest.topology)) {
+    if (nestedCausal && !causalInnerTopologyMatches(walkForward, manifest.topology)) {
       return "The causal inner profile requires a matching engine-built inner plan with 2 to 16 folds inside every outer IS window.";
     }
     if (temporal && (!(DELTA_WFO_V2_PROFILE.frequencies as readonly string[]).includes(walkForward.frequency)
@@ -559,7 +565,9 @@ export class ResearchRunAdmissionService {
     }
     const folds = advancedFoldCount(manifest.topology, walkForward.frequency, walkForward.window_mode);
     if (folds === null || folds < profile.fold_bounds.min || folds > profile.fold_bounds.max) {
-      return temporal
+      return profile.optimization_mode === "mode_5_full_robust"
+        ? "Full-sample calibration requires exactly one engine-planned full-span fold."
+        : temporal
         ? "The selected temporal walk-forward profile requires 2 to 16 engine-planned outer folds in the preflight topology."
         : "The Delta walk-forward profile admits 2 to 16 weekly expanding folds in the preflight topology.";
     }

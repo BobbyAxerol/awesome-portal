@@ -1,4 +1,5 @@
 import { afterEach,describe,expect,it,vi } from "vitest";
+import { ResearchFinalAuditRepository } from "../src/research/final-audit.repository";
 import { auditTarget,auditResult,auditProof } from "./research-final-audit.fixture";
 import { pinnedAuditTargetDigest,pinnedAuditParametersDigest,PINNED_AUDIT_PROFILE_DIGEST,ResearchFinalAuditCreateSchema,
   ResearchFinalAuditReadSchema,VerifiedPinnedAuditSchema } from "../src/research/final-audit.contract";
@@ -10,6 +11,7 @@ import { ResearchFinalAuditController } from "../src/research/final-audit.contro
 import { sha256 } from "../src/auth/argon";
 import { DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_DIGEST,
   DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST } from "../src/research/full02.profiles";
+import {executionRecipes} from "../src/research/execution-recipes";
 
 const scope={workspaceId:"ws_audit",actorUserId:"usr_audit"};
 const user={userId:scope.actorUserId,role:"ADMIN",status:"ACTIVE",mustChangePassword:false};
@@ -75,6 +77,32 @@ describe("Pinned final audit contract/private preparation",()=>{
   });
 });
 describe("Final audit actor/idempotency/byte seal boundary",()=>{
+  it("returns full-sample truth from the real repository path without widening historical pin admission",async()=>{
+    const row=executionRecipes.find(row=>row.profile_id==="p10.delta-mode5-global-1h.v1")!;
+    for(const digest of [row.profile_digest,"0".repeat(64)]){
+      const client={query:vi.fn(async(sql:string)=>sql.includes("FROM research.run_producers producer")
+        ?{rows:[{execution_profile_id:row.profile_id,execution_profile_digest:digest}]}
+        :sql.includes("FROM workspace_members")?{rows:[{}],rowCount:1}:{rows:[],rowCount:0}),release:vi.fn()};
+      const repository=new ResearchFinalAuditRepository({connect:async()=>client} as never);
+      await expect(repository.parent(scope,auditTarget.parent_run_id)).rejects.toMatchObject({
+        code:"RESEARCH_FINAL_AUDIT_NOT_APPLICABLE",status:409,
+        message:digest===row.profile_digest
+          ?"Full-sample calibration has no untouched Final Audit. Read the Report's retained data-use and frozen selection evidence."
+          :"Parent is outside the qualified audit profile."});
+      expect(client.query.mock.calls.every(([sql])=>!sql.includes("INSERT"))).toBe(true);
+    }
+  });
+  it("uses full-sample truth before the historical linked-audit binding fence",async()=>{
+    const rows=executionRecipes.filter(row=>row.descriptor.schema_version==="research.full04-delta-profile.v1"
+      &&row.public_profile.optimization_mode==="mode_5_full_robust");
+    expect(rows).toHaveLength(7);
+    for(const row of rows){const x=subject(),parent=await x.repository.parent();
+      x.repository.parent.mockResolvedValue({...parent,executionProfileId:row.profile_id,executionProfileDigest:row.profile_digest} as never);
+      await expect(x.service.read(user as never,scope,auditTarget.parent_run_id)).rejects.toMatchObject({
+        code:"RESEARCH_FINAL_AUDIT_NOT_APPLICABLE",status:409,
+        message:"Full-sample calibration has no untouched Final Audit. Read the Report's retained data-use and frozen selection evidence."});
+      expect(x.client.prepare).not.toHaveBeenCalled();expect(x.repository.admit).not.toHaveBeenCalled();}
+  });
   it("refuses exact FULL-02 protocols before calling the run-global Advanced audit adapter",async()=>{
     for(const [profile,digest] of [[DELTA_PER_FOLD_DECAY_PROFILE_ID,DELTA_PER_FOLD_DECAY_PROFILE_DIGEST],
       [DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID,DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST]]){

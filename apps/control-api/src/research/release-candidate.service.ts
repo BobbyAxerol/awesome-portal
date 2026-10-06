@@ -777,7 +777,7 @@ export class ResearchReleaseCandidateService {
           `${claimLine}; the release claim is ${lane.claimState ?? "not published"} and no methodology certificate is issued, so the claim ceiling travels unchanged.`);
 
     const selection = !sealed ? unsealed(4) : facts.selection && facts.parameterDigest
-      ? complete(at(4).key, 5, at(4).item, at(4).source, facts.parameterDigest, `Retained global selection (trial ${facts.selection.trialId}) is the frozen θ*; its parameter digest ${lane.handoffParamsDigest ? "matches the run's hand-off cursor" : "is pinned by the P14 rule"}.`)
+      ? complete(at(4).key, 5, at(4).item, at(4).source, facts.parameterDigest, `Retained selection (${facts.selection.trialId === null ? "source-published synthetic centroid; no Optuna trial" : `trial ${facts.selection.trialId}`}) is the frozen θ*; its parameter digest ${lane.handoffParamsDigest ? "matches the run's hand-off cursor" : "is pinned by the P14 rule"}.`)
       : missing(at(4).key, 5, at(4).item, at(4).source, facts.parameterDigestConflict ? "P21_RETAINED_PARAMETER_DIGEST_MISMATCH" : "P21_SELECTION_PARAMETER_BUNDLE_NOT_PUBLISHED",
         facts.parameterDigestConflict ? "The retained selection and the run's hand-off cursor name different parameter digests." : "The retained seal names no selected trial with parameters.");
 

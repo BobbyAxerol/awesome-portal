@@ -11,7 +11,7 @@
     "scope_locator": {"$ref": "#/$defs/Locator"},
     "oos_observation_count": {"type": "integer", "minimum": 1, "maximum": 2000000},
     "trade_ledger_record_count": {"$ref": "#/$defs/Count"},
-    "net_oos_return": {"allOf": [{"$ref": "#/$defs/Fact"}, {"properties": {"scope": {"const": "OOS"}, "origin": {"const": "ENGINE_DIRECT"}}}]},
+    "net_oos_return": {"description":"Legacy field name; exact Mode 5 facts carry FULL_SAMPLE scope, never an untouched OOS claim.","allOf": [{"$ref": "#/$defs/Fact"}, {"properties": {"scope": {"enum": ["OOS", "FULL_SAMPLE"]}, "origin": {"const": "ENGINE_DIRECT"}}}]},
     "total_trade_count": {"allOf": [{"$ref": "#/$defs/Fact"}, {"properties": {"scope": {"const": "CHILD_TAPE"}, "origin": {"const": "ENGINE_DIRECT"}, "value": {"anyOf": [{"type": "null"}, {"type": "string", "pattern": "^(?:0|[1-9][0-9]*)$", "maxLength": 96}]}}}]},
     "rolling_sharpe_63": {"$ref": "#/$defs/Rolling"},
     "in_sample_equity": {"$ref": "#/$defs/Curve"},
@@ -43,19 +43,19 @@
         "reason_code": {"anyOf": [{"$ref": "#/$defs/Reason"}, {"type": "null"}]},
         "value": {"anyOf": [{"$ref": "#/$defs/Decimal"}, {"type": "null"}]},
         "source_locator": {"$ref": "#/$defs/Locator"},
-        "scope": {"enum": ["OOS", "CHILD_TAPE"]},
+        "scope": {"enum": ["OOS", "CHILD_TAPE", "FULL_SAMPLE"]},
         "origin": {"enum": ["ENGINE_DIRECT", "SOURCE_DERIVED"]}
       },
       "allOf": [{"if": {"properties": {"state": {"const": "AVAILABLE"}}}, "then": {"properties": {"value": {"$ref": "#/$defs/Decimal"}, "reason_code": {"type": "null"}}}, "else": {"properties": {"value": {"type": "null"}, "reason_code": {"$ref": "#/$defs/Reason"}}}}]
     },
-    "OosFact": {"allOf": [{"$ref": "#/$defs/Fact"}, {"properties": {"scope": {"const": "OOS"}}}]},
+    "OosFact": {"allOf": [{"$ref": "#/$defs/Fact"}, {"properties": {"scope": {"enum": ["OOS", "FULL_SAMPLE"]}}}]},
     "Curve": {
       "type": "object", "additionalProperties": false,
       "required": ["state", "reason_code", "scope", "source_locator", "start_utc_ms", "end_exclusive_utc_ms", "source_observation_count", "emitted_point_count", "sampling", "points"],
       "properties": {
         "state": {"$ref": "#/$defs/State"},
         "reason_code": {"anyOf": [{"$ref": "#/$defs/Reason"}, {"type": "null"}]},
-        "scope": {"enum": ["DECLARED_IS", "SELECTED_CANDIDATE_IS"]},
+        "scope": {"enum": ["DECLARED_IS", "SELECTED_CANDIDATE_IS", "FULL_SAMPLE_CALIBRATION"]},
         "source_locator": {"$ref": "#/$defs/Locator"},
         "start_utc_ms": {"anyOf": [{"$ref": "#/$defs/UtcMs"}, {"type": "null"}]},
         "end_exclusive_utc_ms": {"anyOf": [{"$ref": "#/$defs/UtcMs"}, {"type": "null"}]},

@@ -65,6 +65,10 @@ export class ResearchCurrentSourceIngestService {
         ? row.payload.fold_selection === undefined : row.payload.fold_selection !== undefined)) {
         throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "OOS-used fold selections must match the exact per-fold-decay execution profile.", 400);
       }
+      if (input.table_kind === "FOLD" && (method === "CAUSAL_IS_ONLY"
+        ? row.payload.mode4_selection === undefined : row.payload.mode4_selection !== undefined)) {
+        throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "IS-only outer selections must match the exact Mode 4 causal execution profile.", 400);
+      }
     }
     const result = await this.repository.append(scope, {
       runId: input.run_id,
@@ -104,7 +108,10 @@ export class ResearchCurrentSourceIngestService {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source seal summary is incompatible.", 400);
     }
     const method = currentSourceRetainedMethod(pair.profile_id,pair.source_adapter_id);
-    if (method === "CAUSAL_INNER"
+    if ((method === "FULL_SAMPLE") !== (summary.data.optimizer_disclosure?.calibration_sample === "FULL_SAMPLE")) {
+      throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Full-sample analytics must belong to the exact Mode 5 execution profile.", 400);
+    }
+    if ((method === "CAUSAL_INNER" || method === "CAUSAL_IS_ONLY")
       && (summary.data.selection.scope !== "LAST_FOLD_DEPLOYMENT" || summary.data.selection.fold_id === undefined
         || summary.data.source_facts?.search.optimization_schedule !== "per_fold_causal")) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Causal retention requires the actual last-fold deployment singleton and per-fold source facts.", 400);

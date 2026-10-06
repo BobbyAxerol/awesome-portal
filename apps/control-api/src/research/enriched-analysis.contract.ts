@@ -38,7 +38,7 @@ const RegimeAbsence = z.object({
   source_locator: z.string().min(1).max(256), input_digest: Digest,
 }).strict();
 const Curve = z.array(z.object({ at_utc_ms: Ms, value: Decimal }).strict()).max(64);
-/** Source-time IS only. The legacy v2 Fact intentionally remains OOS-only. */
+/** Independent source-time IS, never inferred from full-sample calibration. */
 const ISFact = z.object({ state: z.enum(["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"]),
   reason_code: Reason.nullable(), value: Decimal.nullable(), origin: z.enum(["ENGINE_DIRECT", "PORTAL_DERIVED"]),
   scope: z.literal("IS"), source_locator: z.string().min(1).max(256), input_digest: Digest,
@@ -72,14 +72,14 @@ const ISPayload = z.object({ state: z.literal("AVAILABLE"), reason_code: z.null(
       upper_inclusive: z.enum(["true", "false"]), count: Count }).strict()).max(12),
   }).strict(),
 }).strict();
-const Coverage = z.enum(["FULL_RETAINED_OOS", "SAMPLED_RETAINED_EQUITY"]);
+const Coverage = z.enum(["FULL_RETAINED_OOS", "SAMPLED_RETAINED_EQUITY", "FULL_RETAINED_FULL_SAMPLE"]);
 const v2 = ResearchRetainedAnalyticsV2Schema._def.schema.shape;
 export const ResearchAnalyticsAllTimeSchema = Head.extend({
   label: z.literal("all time"), basis: z.literal("ALL_TIME"), sparkline: Curve,
   sampling: z.literal("EXTREMA_BUCKET_V1"), source_observation_count: Count,
   coverage: Coverage, return_fraction: Decimal.nullable(), sharpe: ResearchRetainedAnalyticsV2FactSchema,
-  return_basis: z.object({ definition_id: z.literal("FIRST_LAST_RETAINED_OOS_EQUITY_V1"),
-    scope: z.literal("RETAINED_OOS_OBSERVATIONS"), first_at_utc_ms: Ms, last_at_utc_ms: Ms,
+  return_basis: z.object({ definition_id: z.enum(["FIRST_LAST_RETAINED_OOS_EQUITY_V1", "FIRST_LAST_RETAINED_FULL_SAMPLE_EQUITY_V1"]),
+    scope: z.enum(["RETAINED_OOS_OBSERVATIONS", "RETAINED_FULL_SAMPLE_OBSERVATIONS"]), first_at_utc_ms: Ms, last_at_utc_ms: Ms,
     start_equity: Decimal, end_equity: Decimal, source_locator: z.string().min(1).max(256),
   }).strict().optional(),
   max_drawdown_fraction: Decimal.nullable(), input_digest: Digest,
@@ -88,20 +88,20 @@ export const ResearchEnrichedAnalysisSchema = z.object({
   schema_version: z.literal("research.enriched-analysis.v1"), service: z.literal("enrich_analysis"), basis: z.literal("ALL_TIME"),
   lane: z.enum(["WFO", "FIXED"]), run_id: z.string().regex(/^rrun_[a-f0-9]{32}$/), input_digest: Digest,
   source_tables: z.array(z.object({ name: z.string().regex(/^[A-Z0-9_]{1,64}$/), row_count: Count, digest: Digest }).strict()).min(1).max(8),
-  scope: z.object({ window: z.literal("OOS"), first_at_utc_ms: Ms, last_at_utc_ms: Ms,
+  scope: z.object({ window: z.enum(["OOS", "FULL_SAMPLE"]), first_at_utc_ms: Ms, last_at_utc_ms: Ms,
     observation_count: Count.min(2), fold_count: Count.min(1).max(32), locator: z.string().min(1).max(256),
     benchmark_locator: z.string().min(1).max(256), coverage: Coverage, source_observation_count: Count.min(2),
   }).strict(),
-  windows: z.object({ is: WindowHead, oos: WindowHead, holdout: WindowHead }).strict(),
+  windows: z.object({ is: WindowHead, oos: WindowHead, holdout: WindowHead, full_sample: WindowHead.optional() }).strict(),
   by_window: z.object({ is: ISPayload }).strict().optional(),
   facts: z.object({ metrics: v2.metrics, behaviour: v2.behaviour }).strict(),
   curves: z.object({ sampling: z.object({ source_observation_count: Count, emitted_point_count: Count.max(64), method: z.literal("EXTREMA_BUCKET_V1") }).strict(),
     strategy_rebased_100: Curve, benchmark_rebased_100: Curve, drawdown_fraction: Curve }).strict(),
   monthly_returns: Derived.extend({ includes_partial_months: z.literal(true),
     sampling: z.enum(["FULL", "TAIL_WINDOW_V1"]), total_period_count: Count, omitted_transport_period_count: Count,
-    definition_id: z.literal("OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1"),
+    definition_id: z.enum(["OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1", "FULL_SAMPLE_MONTH_CLOSE_OVER_FIRST_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1"]),
     values: z.array(z.object({ month_start_utc_ms: Ms, return_fraction: Decimal, observation_count: Count.positive(),
-      expected_observation_count: Count.positive(), partial: z.boolean(), basis: z.enum(["FIRST_OOS_CLOSE", "PREVIOUS_OBSERVED_MONTH_CLOSE"]),
+      expected_observation_count: Count.positive(), partial: z.boolean(), basis: z.enum(["FIRST_OOS_CLOSE", "FIRST_FULL_SAMPLE_CLOSE", "PREVIOUS_OBSERVED_MONTH_CLOSE"]),
       base_at_utc_ms: Ms, close_at_utc_ms: Ms }).strict()).max(120),
   }).strict(),
   return_distribution: Derived.extend({ sampling: z.literal("UTC_DAY"), observation_count: Count,
@@ -120,26 +120,40 @@ export const ResearchEnrichedAnalysisSchema = z.object({
 }).strict().superRefine((block, ctx) => {
   const bad = (message: string) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
   const scope = block.scope;
+  const fullSample = scope.window === "FULL_SAMPLE";
+  if (fullSample !== (scope.coverage === "FULL_RETAINED_FULL_SAMPLE")
+    || fullSample !== (block.monthly_returns.definition_id === "FULL_SAMPLE_MONTH_CLOSE_OVER_FIRST_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1")
+    || (fullSample && block.by_window !== undefined)) bad("full-sample enrichment must disclose one sample, not independent IS/OOS");
+  const fullWindow = block.windows.full_sample;
+  if (fullSample ? (!fullWindow || fullWindow.state !== "AVAILABLE" || fullWindow.reason_code !== null
+    || fullWindow.start_ms === undefined || fullWindow.end_ms === undefined
+    || fullWindow.start_ms > scope.first_at_utc_ms || fullWindow.end_ms <= scope.last_at_utc_ms
+    || fullWindow.source_locator === undefined || fullWindow.bounds_semantics !== "START_INCLUSIVE_END_EXCLUSIVE"
+    || block.windows.oos.state !== "NOT_APPLICABLE"
+    || block.windows.oos.reason_code !== "FULL_SAMPLE_CALIBRATION_HAS_NO_UNTOUCHED_OOS")
+    : fullWindow !== undefined) bad("full-sample window must disclose actual calibration bounds and no independent OOS");
   if (scope.first_at_utc_ms >= scope.last_at_utc_ms || scope.observation_count > scope.source_observation_count
     || block.library_summary.input_digest !== block.input_digest || block.library_summary.coverage !== scope.coverage
     || new Set(block.source_tables.map(row => row.name)).size !== block.source_tables.length
     || Buffer.byteLength(JSON.stringify(block), "utf8") > 65_536) bad("enriched source binding/count/byte mismatch");
   const returnBasis = block.library_summary.return_basis;
+  if (returnBasis && (fullSample !== (returnBasis.scope === "RETAINED_FULL_SAMPLE_OBSERVATIONS")
+    || fullSample !== (returnBasis.definition_id === "FIRST_LAST_RETAINED_FULL_SAMPLE_EQUITY_V1"))) bad("enriched sample and return basis differ");
   if (returnBasis && (returnBasis.first_at_utc_ms !== scope.first_at_utc_ms
     || returnBasis.last_at_utc_ms !== scope.last_at_utc_ms || returnBasis.source_locator !== scope.locator
     || Number(returnBasis.start_equity) <= 0 || Number(returnBasis.end_equity) <= 0
     || !Number.isFinite(Number(returnBasis.start_equity)) || !Number.isFinite(Number(returnBasis.end_equity))
     || block.library_summary.return_fraction === null)) bad("enriched return basis/scope mismatch");
   for (const fact of [...Object.values(block.facts.metrics), ...Object.values(block.facts.behaviour), block.library_summary.sharpe]) {
-    if (fact.input_digest !== block.input_digest) bad("enriched fact input digest mismatch");
+    if (fact.input_digest !== block.input_digest || fact.scope !== scope.window) bad("enriched fact input digest/scope mismatch");
   }
   const statistics = [block.return_distribution.mean, block.return_distribution.median,
     block.return_distribution.var_95, block.return_distribution.cvar_95];
   if ([block.return_distribution.statistics_policy, ...statistics].some(value => value !== undefined)
     && [block.return_distribution.statistics_policy, ...statistics].some(value => value === undefined)) bad("enriched distribution statistics/policy incomplete");
   for (const fact of statistics) {
-    if (fact && (fact.input_digest !== block.input_digest || fact.origin !== "PORTAL_DERIVED")) bad("enriched distribution fact binding/origin mismatch");
-    if (fact?.state === "AVAILABLE" && (scope.coverage !== "FULL_RETAINED_OOS" || block.return_distribution.observation_count < 2)) bad("enriched distribution statistics require a complete daily population");
+    if (fact && (fact.input_digest !== block.input_digest || fact.origin !== "PORTAL_DERIVED" || fact.scope !== scope.window)) bad("enriched distribution fact binding/origin/scope mismatch");
+    if (fact?.state === "AVAILABLE" && (!["FULL_RETAINED_OOS", "FULL_RETAINED_FULL_SAMPLE"].includes(scope.coverage) || block.return_distribution.observation_count < 2)) bad("enriched distribution statistics require a complete daily population");
   }
   for (const head of [block.windows.is, block.windows.oos, block.windows.holdout,
     block.monthly_returns, block.return_distribution, block.drawdown_episodes, block.library_summary]) {

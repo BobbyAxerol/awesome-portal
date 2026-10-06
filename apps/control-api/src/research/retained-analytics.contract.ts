@@ -10,7 +10,7 @@ const State = z.enum(["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"]);
 
 export const ResearchRetainedAnalyticsFactSchema = z.object({
   state: State, reason_code: Reason.nullable(), value: Decimal.nullable(),
-  source_locator: Locator, scope: z.enum(["OOS", "CHILD_TAPE"]),
+  source_locator: Locator, scope: z.enum(["OOS", "CHILD_TAPE", "FULL_SAMPLE"]),
   origin: z.enum(["ENGINE_DIRECT", "SOURCE_DERIVED"]),
 }).strict().superRefine((value, context) => {
   if ((value.state === "AVAILABLE") !== (value.value !== null)
@@ -21,7 +21,7 @@ export const ResearchRetainedAnalyticsFactSchema = z.object({
 
 const Curve = z.object({
   state: State, reason_code: Reason.nullable(),
-  scope: z.enum(["DECLARED_IS", "SELECTED_CANDIDATE_IS"]), source_locator: Locator,
+  scope: z.enum(["DECLARED_IS", "SELECTED_CANDIDATE_IS", "FULL_SAMPLE_CALIBRATION"]), source_locator: Locator,
   start_utc_ms: UtcMs.nullable(), end_exclusive_utc_ms: UtcMs.nullable(),
   source_observation_count: Count, emitted_point_count: Count.max(24),
   sampling: z.enum(["FULL", "EXTREMA_BUCKET_V1"]).nullable(),
@@ -86,9 +86,10 @@ export const ResearchRetainedAnalyticsSchema = z.object({
     exposure_fraction: ResearchRetainedAnalyticsFactSchema,
   }).strict(),
 }).strict().superRefine((value, context) => {
-  if (value.net_oos_return.scope !== "OOS" || value.total_trade_count.scope !== "CHILD_TAPE"
+  const sampleScope = value.net_oos_return.scope === "FULL_SAMPLE" ? "FULL_SAMPLE" : "OOS";
+  if (value.net_oos_return.scope !== sampleScope || value.total_trade_count.scope !== "CHILD_TAPE"
     || value.net_oos_return.origin !== "ENGINE_DIRECT" || value.total_trade_count.origin !== "ENGINE_DIRECT"
-    || Object.values(value.behaviour).some((fact) => fact.scope !== "OOS")) {
+    || Object.values(value.behaviour).some((fact) => fact.scope !== sampleScope)) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "retained fact scopes must remain explicit" });
   }
   if (value.total_trade_count.state === "AVAILABLE" && !/^(?:0|[1-9][0-9]*)$/.test(value.total_trade_count.value!)) {

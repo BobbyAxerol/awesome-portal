@@ -39,6 +39,18 @@ test('FULL02 candidate uses separate named custody, never an older P23 data volu
   for (const name of ['artifacts', 'postgres', 'nats', 'roadmap']) assert(yaml.includes(`name: portal-research-full02-20261006-${name}`));
   assert(!yaml.includes('external:'));
 });
+test('FULL04 keeps exact isolated custody and never exposes a shared candidate selector',()=>{
+  const args=composeArguments('/home/bobby/.local/state/portal-research-p23/20261006/full04/preview.env','full04');
+  assert(args.at(-1).endsWith('compose.research-full04-cell.yaml'));
+  const yaml=readFileSync(new URL('../../deploy/research-preview/compose.research-full04-cell.yaml',import.meta.url),'utf8');
+  for(const name of ['artifacts','postgres','nats','roadmap'])assert(yaml.includes(`name: portal-research-full04-20261006-${name}`));
+  const source=readFileSync(new URL('../research-preview/full04-profile.mjs',import.meta.url),'utf8');
+  assert(source.includes('NO_SHARED_PREVIEW_CANDIDATE_SELECTOR'));
+  assert(source.includes('PREVIEW_CHILD_IN_FLIGHT_DO_NOT_RESTART'));
+  assert(source.includes('CLAUDE_WEB_IMAGE_MUST_STAY'));
+  assert(!source.includes("compose(['build'"));
+  assert(!source.includes("'portal-postgres']);"));
+});
 test('sudo forwards only validated non-secret source stamps to the owned Compose invocation', () => {
   const sha = 'a'.repeat(40);
   assert.deepEqual(stampedComposePrefix(['docker'], sha, false), ['docker']);

@@ -440,8 +440,11 @@ export interface components {
             reason_code: "SOURCE_DID_NOT_PUBLISH_FOLD_SELECTION" | null;
             /** @description Exact original local Optuna trial ID; causal studies require study_id to distinguish repeated trial numbers. Never derived from a run-global ordinal. */
             source_trial_id?: string;
-            /** @enum {unknown} */
-            objective_kind?: "MODE_1_DECAY_J" | "INNER_VALIDATION_DECAY_J";
+            /**
+             * @description The generic journal does not publish other modes' native objective semantics; those are retained in Search/Freeze optimizer disclosure. NOT_PUBLISHED is never a fabricated Mode 1 objective.
+             * @enum {unknown}
+             */
+            objective_kind?: "MODE_1_DECAY_J" | "INNER_VALIDATION_DECAY_J" | "NOT_PUBLISHED";
             display_trial_ordinal?: number | null;
             /**
              * @description trial and display_trial_ordinal are the same 1-based P11 display ordinal, not source trial identity. WFO source_trial_id preserves Optuna's zero-based ID; fixed profiles do not invent one.

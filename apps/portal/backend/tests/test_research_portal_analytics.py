@@ -75,3 +75,30 @@ def test_exposure_parts_sum_to_one_without_pretending_to_have_trades():
               for side in ("long", "short", "flat")]
     assert np.isclose(sum(values), 1)
     assert block["behaviour"]["win_rate"]["source_locator"].endswith("not_audited_trades")
+
+
+def test_long_range_adapts_display_bytes_without_changing_all_time_facts(monkeypatch):
+    from portal_api.services import research_portal_analytics as analytics
+
+    market = _synthetic_market(450)
+    result = _engine_run(market)
+    kwargs = dict(result=result, mode="FIXED", market_close=market["close"],
+                  benchmark_locator="hmd:test/BTCUSDT/1h#close@sealed-snapshot",
+                  oos_start_utc_ms=_ms(result.equity.index[1]))
+    # Compare the same real source population, not a fabricated analytics DTO.
+    monkeypatch.setattr(analytics, "MAX_BLOCK_BYTES", 64_000)
+    full = portal_analytics_v2(**kwargs, maximum_block_bytes=64_000)
+    monkeypatch.setattr(analytics, "MAX_BLOCK_BYTES", 16_384)
+    bounded = portal_analytics_v2(**kwargs, maximum_block_bytes=15_360)
+    assert len(json.dumps(bounded, separators=(",", ":"), allow_nan=False).encode()) <= 16_384
+    for key in ("input_digest", "metrics", "behaviour", "oos_observation_count"):
+        assert bounded[key] == full[key]
+    assert bounded["distributions"]["return_distribution"] == full["distributions"]["return_distribution"]
+    for key in ("strategy_curve", "benchmark_curve"):
+        assert bounded[key][0] == full[key][0] and bounded[key][-1] == full[key][-1]
+    monthly = bounded["distributions"]["monthly_returns"]
+    assert monthly["emitted_point_count"] + monthly["omitted_transport_period_count"] == monthly["total_period_count"]
+    assert monthly["source_observation_count"] == full["oos_observation_count"]
+    from portal_api.services.current_source_artifacts import CurrentSourceArtifactAdapter
+    calibration = CurrentSourceArtifactAdapter._full_sample_projection(bounded)
+    assert len(json.dumps(calibration, separators=(",", ":"), allow_nan=False).encode()) <= 16_384

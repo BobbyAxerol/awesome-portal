@@ -1228,11 +1228,13 @@ export const SCOPE_LABEL: Record<NonNullable<MetricCell["scope"]>, string | null
   OOS: null,
   IS_PLUS_OOS: "IS + OOS",
   CHILD_TAPE: "child tape",
+  FULL_SAMPLE: "full sample",
 };
 export const SCOPE_SENTENCE: Record<NonNullable<MetricCell["scope"]>, string> = {
   OOS: "measured on the out-of-sample window",
   IS_PLUS_OOS: "measured over in-sample and out-of-sample together, not OOS only",
   CHILD_TAPE: "counted over the run's whole child tape, not the OOS window only",
+  FULL_SAMPLE: "measured over the full calibration sample, not untouched out-of-sample data",
 };
 
 /** The scope words written after a value, or null when the label already says it. */

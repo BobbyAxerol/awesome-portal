@@ -33,7 +33,7 @@ import { z } from "zod";
 import { POOL_FREEZE_CLOCK_ABSENT } from "./p11-stage-events";
 import { currentSourceRetainedMethod } from "./current-source-profile";
 
-import type { CurrentSourceFacts, CurrentSourceFoldFacts, CurrentSourceTrialFacts } from "./current-source.payload";
+import type { CurrentSourceFacts, CurrentSourceFoldFacts, CurrentSourceTrialFacts, CurrentSourceOptimizerDisclosure } from "./current-source.payload";
 import { RS02_ROW_PREDATES_FACTS, RS02_SEAL_PREDATES_SOURCE_FACTS, WALK_FORWARD_HAS_NO_CONSTRAINTS } from "./current-source-facts";
 
 export const SEARCH_POOL_RULE = "research.current-source-search-pool.v1" as const;
@@ -120,7 +120,7 @@ export const CandidateDrawdownSchema = z.object({
   state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
   value: Decimal.nullable(),
   reason_code: Reason.nullable(),
-  source: z.literal("RETAINED_STITCHED_OOS_PATH").nullable(),
+  source: z.enum(["RETAINED_STITCHED_OOS_PATH", "RETAINED_FULL_SAMPLE_CALIBRATION_PATH"]).nullable(),
 }).strict();
 
 export type SearchPool = z.infer<typeof SearchPoolSchema>;
@@ -132,6 +132,7 @@ export interface PoolFold {
   foldId: string; sourceOrdinal: number; facts: CurrentSourceFoldFacts | undefined;
   causalSelection?: { scope: "OUTER_FOLD_SELECTION"; study_id: string; selected_trial_id: string; parameters: Record<string, string> };
   foldSelection?: { scope: "OUTER_FOLD_SELECTION"; study_id: string; selected_trial_id: string; parameters: Record<string, string> };
+  mode4Selection?: { scope: "OUTER_FOLD_SELECTION"; study_id: string; selected_trial_id: string; parameters: Record<string, string> };
 }
 
 function count(value: number, source: NonNullable<z.infer<typeof PoolCountSchema>["source"]>) {
@@ -152,7 +153,7 @@ export function quantbtPoolSize(n: number, fraction: string | null, configuredK:
 
 function isSearchTrial(trial: PoolTrial): boolean {
   // A pre-W3 row carries no stage; the trial ledger holds Optuna trials only.
-  return trial.facts === undefined || trial.facts.stage === "is_search";
+  return trial.facts === undefined || trial.facts.stage === "is_search" || trial.facts.stage === "sbb_search";
 }
 
 function scoredUnpruned(trial: PoolTrial): boolean {
@@ -168,10 +169,11 @@ export function searchPool(input: {
   candidates: readonly PoolCandidate[];
   folds: readonly PoolFold[];
   selectedTrialId: string | null;
+  optimizerDisclosure?: CurrentSourceOptimizerDisclosure;
 }): SearchPool {
   const { facts, trials, candidates } = input;
   // Identity subset only; this does not relabel decay facts as causal.
-  const folds = input.folds.map(fold => ({ ...fold, selection: fold.foldSelection ?? fold.causalSelection }));
+  const folds = input.folds.map(fold => ({ ...fold, selection: fold.foldSelection ?? fold.causalSelection ?? fold.mode4Selection }));
   const search = facts?.search;
   const perFoldStudies = search?.optimization_schedule === "per_fold_causal" || search?.optimization_schedule === "per_fold_decay";
   const searched = trials.filter(isSearchTrial);
@@ -182,7 +184,7 @@ export function searchPool(input: {
   const scored = rowsHaveFacts ? count(eligible.length, "RETAINED_TRIAL_LEDGER") : absent("NOT_PUBLISHED", POOL_REASONS.rowPredatesFacts);
   const feasible = facts ? absent("NOT_APPLICABLE", POOL_REASONS.noConstraints) : absent("NOT_PUBLISHED", POOL_REASONS.sealPredatesFacts);
 
-  const pooled = candidates.filter((candidate) => candidate.facts?.stage === "oos_candidate_selection");
+  const pooled = candidates.filter((candidate) => ["oos_candidate_selection", "is_only_candidate_selection", "full_sample_candidate_selection"].includes(candidate.facts?.stage ?? ""));
   const sourceIds = new Set(pooled.map((candidate) => candidate.facts?.source_trial_id).filter((id): id is string => typeof id === "string"));
   const reevaluated = candidates.length > 0 && pooled.length === candidates.length
     ? count(pooled.length, "RETAINED_CANDIDATE_LEDGER")
@@ -195,7 +197,7 @@ export function searchPool(input: {
   // candidate objective was evaluated on INNER validation. Name that public
   // scope only for the exact admitted pair and retained study/fold join.
   const method = currentSourceRetainedMethod(input.sourceProfileId,input.sourceAdapterId);
-  const causalPair = method === "CAUSAL_INNER";
+  const causalPair = method === "CAUSAL_INNER" || method === "CAUSAL_IS_ONLY";
   const retainedInnerStudies = pooled.length > 0 && pooled.every(candidate => candidate.facts !== undefined
     && candidate.facts.study_id !== null && candidate.facts.fold_scope.fold_id !== null
     && folds.some(fold => fold.foldId === candidate.facts!.fold_scope.fold_id
@@ -249,7 +251,8 @@ export function searchPool(input: {
       && fold.selection.study_id.length > 0 && fold.selection.selected_trial_id.length > 0
       && Object.keys(fold.selection.parameters).length > 0)
     ? count(folds.length, "RETAINED_SELECTION") : absent("NOT_PUBLISHED", POOL_REASONS.noSelection)
-    : input.selectedTrialId !== null ? count(1, "RETAINED_SELECTION") : absent("NOT_PUBLISHED", POOL_REASONS.noSelection);
+    : input.selectedTrialId !== null || input.optimizerDisclosure?.selection_target.kind === "SYNTHETIC_CENTROID"
+      ? count(1, "RETAINED_SELECTION") : absent("NOT_PUBLISHED", POOL_REASONS.noSelection);
 
   const scores = [...folds].sort((a, b) => a.sourceOrdinal - b.sourceOrdinal);
   const perFoldDecay: SearchPool["per_fold_decay"] = scores.length > 0 && scores.every((fold) => fold.facts?.oos_score)
@@ -288,14 +291,16 @@ export function searchPool(input: {
 
 /**
  * One candidate's max drawdown. The selected candidate under the `global`
- * schedule is the only candidate whose OOS path is retained (the stitched
- * passport path); every other candidate is a typed absence.
+ * schedule is the only candidate whose accounting path is retained (the
+ * stitched passport path). Full-sample calibration explicitly declares its
+ * different scope; every other candidate is a typed absence.
  */
 export function candidateDrawdown(input: {
   candidate: PoolCandidate;
   selection: { trial_id: string | null; objective: string | null };
   schedule: string | null;
   passportMaxDrawdown: string;
+  fullSampleCalibration?: boolean;
 }): CandidateDrawdown {
   const { candidate, selection } = input;
   if (!candidate.facts) return { state: "NOT_PUBLISHED", value: null, reason_code: POOL_REASONS.rowPredatesFacts, source: null };
@@ -306,5 +311,6 @@ export function candidateDrawdown(input: {
   if (input.schedule !== "global" || candidate.facts.fold_scope.kind !== "ALL_OUTER_FOLDS") {
     return { state: "NOT_PUBLISHED", value: null, reason_code: POOL_REASONS.pathNotThisCandidate, source: null };
   }
-  return { state: "AVAILABLE", value: input.passportMaxDrawdown, reason_code: null, source: "RETAINED_STITCHED_OOS_PATH" };
+  return { state: "AVAILABLE", value: input.passportMaxDrawdown, reason_code: null,
+    source: input.fullSampleCalibration ? "RETAINED_FULL_SAMPLE_CALIBRATION_PATH" : "RETAINED_STITCHED_OOS_PATH" };
 }

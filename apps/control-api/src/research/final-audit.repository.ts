@@ -10,6 +10,8 @@ import { PinnedAuditPreparationSchema, PINNED_AUDIT_PROFILE_ID, PINNED_AUDIT_PRO
   ResearchFinalAuditError, type PinnedAuditTarget, type PinnedAuditResult, pinnedAuditTargetDigest,
   pinnedAuditParametersDigest } from "./final-audit.contract";
 import { readPinnedAuditProofs } from "./final-audit.read";
+import { currentSourceExecutionPair, currentSourceRetainedMethod } from "./current-source-profile";
+import { FULL_SAMPLE_FINAL_AUDIT_REASON } from "./final-audit.contract";
 
 export interface AuditParent {
   pins: ReturnType<typeof PinnedAuditPreparationSchema.parse>;
@@ -42,6 +44,12 @@ export class ResearchFinalAuditRepository {
         AND run.relationship_kind<>'AUDIT_OF_SELECTION'`, [scope.workspaceId,runId]);
       const row=rows.rows[0];
       if (!row) throw new ResearchFinalAuditError("RESEARCH_FINAL_AUDIT_NOT_FOUND", "Ready retained parent was not found.",404);
+      // Decide full-sample non-applicability from the exact persisted recipe,
+      // after workspace authorization but before the legacy audit pin fence.
+      // No widening of that fence and no prepare/admission/source side effect.
+      const pair = currentSourceExecutionPair(String(row.execution_profile_id), String(row.execution_profile_digest));
+      if (pair && currentSourceRetainedMethod(pair.profile_id, pair.source_adapter_id) === "FULL_SAMPLE")
+        throw new ResearchFinalAuditError("RESEARCH_FINAL_AUDIT_NOT_APPLICABLE", FULL_SAMPLE_FINAL_AUDIT_REASON, 409);
       const pins=PinnedAuditPreparationSchema.safeParse({parent_run_id:runId,parent_artifact_id:row.artifact_id,
         parent_artifact_revision:Number(row.artifact_revision),parent_manifest_digest:row.artifact_manifest_digest,
         dataset_binding_digest:row.dataset_binding_digest,snapshot_id:row.snapshot_id,snapshot_content_hash:row.snapshot_content_hash,

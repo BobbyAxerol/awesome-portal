@@ -13,7 +13,7 @@ export const RetainedExecutionObservationSchema = z.object({
   completed_at_utc_ms: UtcMs,
   range_start_utc_ms: UtcMs,
   range_end_exclusive_utc_ms: UtcMs,
-  evaluation_role: z.enum(["SELECTION_INPUT", "OUTER_OOS"]),
+  evaluation_role: z.enum(["SELECTION_INPUT", "OUTER_OOS", "FULL_SAMPLE_CALIBRATION"]),
 }).strict().refine(value => value.completed_at_utc_ms >= value.started_at_utc_ms
   && value.range_end_exclusive_utc_ms > value.range_start_utc_ms, "Invalid execution observation bounds");
 

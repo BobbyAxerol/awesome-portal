@@ -10,7 +10,7 @@ import {ResearchProgressService} from "../src/research/progress.service";
 import {ResearchProgressSnapshotSchema,toPublicResearchProgressSnapshot} from "../src/research/progress.contract";
 import {isCurrentSourceLanePair} from "../src/research/current-source.repository";
 
-const recipes=executionRecipes.filter(row=>row.source_requirement==="FULL03_IMMUTABLE_DELTA_BINDING");
+const recipes=executionRecipes.filter(row=>row.descriptor.schema_version==="research.full03-delta-profile.v1");
 const fixture=JSON.parse(readFileSync(join(__dirname,"research-progress-w2.fixture.json"),"utf8"));
 describe("FULL-03 exact current-source contracts",()=>{
   it("installs all named new intervals without inheriting historical pairs",()=>{

@@ -1,5 +1,8 @@
 /** Byte-pinned linked audit. Raw config/selection bytes are private only. */
 import { z } from "zod";
+
+export const FULL_SAMPLE_FINAL_AUDIT_REASON =
+  "Full-sample calibration has no untouched Final Audit. Read the Report's retained data-use and frozen selection evidence.";
 import { sha256ResearchJson } from "./preflight.service";
 
 export const PINNED_AUDIT_PROFILE_ID = "p23.delta-pinned-final-audit.v1" as const;
@@ -58,6 +61,7 @@ export type VerifiedPinnedAudit = z.infer<typeof VerifiedPinnedAuditSchema>;
 /** Profile applicability only, never RBAC, enabled state or permission to create. */
 export function finalAuditTargetApplicable(audit: unknown): boolean | null {
   if (!audit || typeof audit !== "object" || Array.isArray(audit)) return null;
+  if ((audit as Record<string,unknown>).kind === "NOT_APPLICABLE") return false;
   const target = (audit as Record<string, unknown>).audit_target_kind;
   if (target === "SINGLE_PARAMETER_SET") return true;
   if (target === "FIXED_PARAMETER_PROFILE" || target === "PER_FOLD_PARAMETER_SELECTIONS") return false;

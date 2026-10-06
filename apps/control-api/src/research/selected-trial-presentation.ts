@@ -27,8 +27,8 @@ export function selectedTrialPresentation(
   });
   if (id === null) return absent("SELECTION_HAS_NO_TRIAL");
   const method = currentSourceRetainedMethod(profileId);
-  const causal = method === "CAUSAL_INNER" || method === "PER_FOLD_DECAY";
-  const global = method === "GLOBAL_WFO" || method === "THREE_WINDOW";
+  const causal = method === "CAUSAL_INNER" || method === "CAUSAL_IS_ONLY" || method === "PER_FOLD_DECAY";
+  const global = method === "GLOBAL_WFO" || method === "THREE_WINDOW" || method === "FULL_SAMPLE";
   // Causal IDs are opaque to this operation. A separate retained native
   // mapping must bind both the original study and local Optuna number.
   if (causal && (!native?.study_id || native.source_trial_id === null

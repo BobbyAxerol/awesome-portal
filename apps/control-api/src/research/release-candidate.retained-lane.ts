@@ -90,7 +90,7 @@ export interface RetainedLaneFacts {
   searchRevision: string | null;
   replayRevision: string | null;
   claims: CurrentSourceFacts["claims"] | null;
-  selection: { trialId: string; parameters: Record<string, string> } | null;
+  selection: { trialId: string | null; parameters: Record<string, string> } | null;
   parameterDigest: string | null;
   parameterDigestConflict: boolean;
   replayRetained: boolean;
@@ -112,7 +112,7 @@ export function retainedLaneFacts(lane: ReleaseCandidateRetainedLane): RetainedL
 function calculateRetainedLaneFacts(lane: ReleaseCandidateRetainedLane): RetainedLaneFacts {
   const executionPair = currentSourceExecutionPair(lane.executionProfileId,lane.executionProfileDigest);
   const method = executionPair && currentSourceRetainedMethod(executionPair.profile_id,executionPair.source_adapter_id);
-  const causal = method === "CAUSAL_INNER", decay = method === "PER_FOLD_DECAY";
+  const causal = method === "CAUSAL_INNER", mode4 = method === "CAUSAL_IS_ONLY", decay = method === "PER_FOLD_DECAY";
   const seal = lane.seal;
   const summary = seal ? CurrentSourceSummarySchema.safeParse(seal.summary) : null;
   const parsed = summary?.success ? summary.data : null;
@@ -120,7 +120,7 @@ function calculateRetainedLaneFacts(lane: ReleaseCandidateRetainedLane): Retaine
     { ...seal, summary: seal.summary as Record<string, unknown> }) : null;
   const sealDigest = revisionSet?.sealDigest ?? null;
   const revision = (kind: string) => revisionSet?.revisions[kind] ?? null;
-  const selection = parsed && parsed.selection.trial_id !== null && Object.keys(parsed.selection.parameters).length > 0
+  const selection = parsed && (parsed.selection.trial_id !== null || parsed.optimizer_disclosure?.selection_target.kind === "SYNTHETIC_CENTROID") && Object.keys(parsed.selection.parameters).length > 0
     ? { trialId: parsed.selection.trial_id, parameters: parsed.selection.parameters }
     : null;
   const retainedDigest = selection ? sha(selection.parameters) : null;
@@ -130,7 +130,8 @@ function calculateRetainedLaneFacts(lane: ReleaseCandidateRetainedLane): Retaine
   const foldsValid = seal === null || (
     folds.length === seal.tableRows.FOLD
     && folds.every(({ row, parsed: fold }) => fold.success && fold.data.fold_id === row.sourceId
-      && (!causal || fold.data.causal_selection !== undefined) && (!decay || fold.data.fold_selection !== undefined))
+      && (!causal || fold.data.causal_selection !== undefined) && (!mode4 || fold.data.mode4_selection !== undefined)
+      && (!decay || fold.data.fold_selection !== undefined))
   );
   const ordering = parsed && selection && foldsValid && folds.length > 0
     ? foldOrdering(folds.map(({ row, parsed: fold }) => {
@@ -147,6 +148,7 @@ function calculateRetainedLaneFacts(lane: ReleaseCandidateRetainedLane): Retaine
           causalSelection: data?.causal_selection,
         } : {}),
         ...(decay ? { foldSelection: data?.fold_selection } : {}),
+        ...(mode4 ? { mode4Selection: data?.mode4_selection } : {}),
       };
     }), parsed.source_facts, selection.parameters,
     DEFAULT_PARAMETER_BINDING_REGISTRY.byProfileDigest(lane.executionProfileDigest)?.candidateParameterKinds,

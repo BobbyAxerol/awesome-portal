@@ -26,7 +26,7 @@ import { P11StageEventsSchema } from "./p11-stage-events";
 import { DeclaredSpaceSchema, SearchSurfaceSchema, SearchStudySurfaceSchema } from "./current-source-surface";
 import { CandidateDrawdownSchema, SearchPoolSchema } from "./current-source-pool";
 import { ParameterAuthoritySchema, Stage4BindingSchema } from "./stage4-binding";
-import { CurrentSourceSourceSeriesArtifactSchema, CurrentSourceCausalSelectionSchema, CurrentSourceFoldSelectionSchema, CurrentSourceProtocolDisclosureSchema } from "./current-source.payload";
+import { CurrentSourceSourceSeriesArtifactSchema, CurrentSourceCausalSelectionSchema, CurrentSourceFoldSelectionSchema, CurrentSourceMode4SelectionSchema, CurrentSourceProtocolDisclosureSchema, CurrentSourceOptimizerDisclosureSchema, CurrentSourceObjectiveKindSchema } from "./current-source.payload";
 
 export const ResearchCurrentSourceRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
@@ -53,6 +53,7 @@ const DisplayCausalSelectionSchema = CurrentSourceCausalSelectionSchema.innerTyp
     if (!checked.success) for (const issue of checked.error.issues) context.addIssue(issue);
   });
 const DisplayFoldSelectionSchema = CurrentSourceFoldSelectionSchema.extend(SelectedTrialPresentationSchema.partial().shape);
+const DisplayMode4SelectionSchema = CurrentSourceMode4SelectionSchema.extend(SelectedTrialPresentationSchema.partial().shape);
 /**
  * Read-side ceiling on retained TRIAL rows. The RS-02 seal still admits at
  * most 64 (current-source.repository.ts); only the research-preview long WFO
@@ -149,6 +150,7 @@ const ProvenanceSchema = ProvenanceBaseSchema.superRefine((value, context) => {
 
 const CommonSchema = z.object({
   protocol_disclosure: CurrentSourceProtocolDisclosureSchema.optional(),
+  optimizer_disclosure: CurrentSourceOptimizerDisclosureSchema.optional(),
   run_declaration: ResearchRunDeclarationSchema.optional(),
   read_authority: z.literal("PORTAL_RETAINED_CURRENT_SOURCE"),
   run_id: ResearchCurrentSourceRunIdSchema,
@@ -537,9 +539,9 @@ export const ResearchCurrentSourceEvidenceSeriesResponseSchema = CommonSchema.ex
       extrema_emitted: z.boolean(),
     }).strict().nullable(),
     derivation: z.object({
-      origin: z.literal("PORTAL_DERIVED"), scope: z.literal("OOS"),
+      origin: z.literal("PORTAL_DERIVED"), scope: z.enum(["OOS", "FULL_SAMPLE"]),
       input_digest: DigestSchema, source_locator: z.string().min(1).max(256),
-      definition_id: z.enum(["OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1", "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1"]),
+      definition_id: z.enum(["OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1", "FULL_SAMPLE_MONTH_CLOSE_OVER_FIRST_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1", "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1"]),
       grain: z.enum(["UTC_CALENDAR_MONTH", "UTC_DAY"]),
       oos_observation_count: z.number().int().nonnegative().max(2_000_000),
       total_period_count: z.number().int().nonnegative().max(2_000_000).optional(),
@@ -612,6 +614,7 @@ const FoldAnatomySchema = z.object({
 const FoldSchema = z.object({
   causal_selection: DisplayCausalSelectionSchema.optional(),
   fold_selection: DisplayFoldSelectionSchema.optional(),
+  mode4_selection: DisplayMode4SelectionSchema.optional(),
   source_ordinal: z.number().int().nonnegative().max(255),
   fold_id: SourceIdentifierSchema,
   train_start_utc_ms: UtcMsSchema.nullable(),
@@ -736,10 +739,10 @@ export const ResearchCurrentSourceSplitResponseSchema = CommonSchema.extend({
   fold_plan: z.object({
     state: z.literal("AVAILABLE"),
     folds: z.array(FoldSchema).min(1).max(256),
-    chronology: z.enum(["SOURCE_OBSERVED_ADVANCED_WFO", "SOURCE_OBSERVED_THREE_WINDOW"]),
+    chronology: z.enum(["SOURCE_OBSERVED_ADVANCED_WFO", "SOURCE_OBSERVED_THREE_WINDOW", "SOURCE_OBSERVED_FULL_SAMPLE"]),
     availability: ResearchCurrentSourceAvailabilitySchema,
   }).strict().superRefine((plan,ctx)=>{
-    if(plan.chronology === "SOURCE_OBSERVED_THREE_WINDOW" ? plan.folds.length !== 1 : plan.folds.length < 2)
+    if(plan.chronology !== "SOURCE_OBSERVED_ADVANCED_WFO" ? plan.folds.length !== 1 : plan.folds.length < 2)
       ctx.addIssue({code:z.ZodIssueCode.custom,message:"Native Three Window has one calibration fold; Advanced WFO requires at least two folds"});
   }),
   data_use: z.object({
@@ -761,7 +764,7 @@ export const ResearchCurrentSourceSplitResponseSchema = CommonSchema.extend({
     purge_applied: AppliedTemporalGuardProofSchema.optional(),
     embargo_respected: AppliedTemporalGuardProofSchema.optional(),
     train_test_disjoint: z.object({
-      verdict: z.enum(["PASS", "FAIL", "NOT_CHECKABLE"]),
+      verdict: z.enum(["PASS", "FAIL", "NOT_CHECKABLE", "NOT_APPLICABLE"]),
       // V1 remains readable for old captured responses; new reads publish inclusive-bar V2.
       basis: z.enum(["RETAINED_FOLD_UTC_WINDOWS_AND_PUBLISHED_TEMPORAL_GUARDS_V1",
         "RETAINED_FOLD_INCLUSIVE_BAR_WINDOWS_AND_PUBLISHED_TEMPORAL_GUARDS_V2"]),
@@ -786,7 +789,7 @@ const TrialFactsSchema = z.object({
   state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
   reason_code: ReasonCodeSchema.nullable(),
   stage: FactTokenValueSchema.nullable(),
-  objective_kind: z.enum(["IS_MEAN_SHARPE", "MODE_1_DECAY_J", "NOT_PUBLISHED"]),
+  objective_kind: CurrentSourceObjectiveKindSchema,
   fold_scope: z.object({
     kind: z.enum(["FOLD", "PER_FOLD_STUDY", "ALL_OUTER_FOLDS", "NOT_PUBLISHED"]),
     fold_id: FactTokenValueSchema.nullable(),
@@ -848,7 +851,7 @@ const SelectionRoleSchema = z.object({
   reason_code: ReasonCodeSchema.nullable(),
   trial_id: SourceIdentifierSchema.nullable(),
   objective: DecimalSchema.nullable(),
-  objective_kind: z.enum(["IS_MEAN_SHARPE", "MODE_1_DECAY_J", "INNER_VALIDATION_DECAY_J", "OUTER_FOLD_DECAY_J", "NOT_PUBLISHED"]),
+  objective_kind: CurrentSourceObjectiveKindSchema,
 }).strict();
 
 export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
@@ -863,7 +866,7 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
     parameters: ParameterMapSchema,
     availability: ResearchCurrentSourceAvailabilitySchema,
     /** W3 · CG-P15-03: raw IS best vs the selected candidate vs a centroid. */
-    objective_kind: z.enum(["IS_MEAN_SHARPE", "MODE_1_DECAY_J", "INNER_VALIDATION_DECAY_J", "OUTER_FOLD_DECAY_J", "NOT_PUBLISHED"]),
+    objective_kind: CurrentSourceObjectiveKindSchema,
     roles: z.object({
       raw_best_is: SelectionRoleSchema,
       selected: SelectionRoleSchema,

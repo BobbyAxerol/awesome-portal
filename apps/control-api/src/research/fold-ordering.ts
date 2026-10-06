@@ -25,7 +25,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { P11StageEventsSchema, type P11StageEvents } from "./p11-stage-events";
 
-import type { CurrentSourceCausalSelection, CurrentSourceFoldSelection, CurrentSourceFacts } from "./current-source.payload";
+import type { CurrentSourceCausalSelection, CurrentSourceFoldSelection, CurrentSourceMode4Selection, CurrentSourceFacts } from "./current-source.payload";
 import type { HistoricalProfileBinding } from "./parameter-binding.registry";
 import { currentSourceRetainedMethod } from "./current-source-profile";
 import { sha256ResearchJson } from "./preflight.service";
@@ -70,7 +70,7 @@ export const FoldOrderingRowSchema = z.object({
     boundary: z.enum(["IS_ENDS_BEFORE_OOS", "IS_OVERLAPS_OOS", "NOT_PUBLISHED"]),
     reason_code: Reason.nullable(),
   }).strict(),
-  verdict: z.enum(["NOT_CAUSAL_GLOBAL_SELECTION", "NOT_CAUSAL_OUTER_OOS_SELECTION", "CAUSAL_DATA_TIME_SELECTION", "NOT_EVALUATED", "NOT_PUBLISHED"]),
+  verdict: z.enum(["NOT_CAUSAL_GLOBAL_SELECTION", "NOT_CAUSAL_OUTER_OOS_SELECTION", "NOT_CAUSAL_FULL_SAMPLE_SELECTION", "CAUSAL_DATA_TIME_SELECTION", "NOT_EVALUATED", "NOT_PUBLISHED"]),
   reason_code: Reason.nullable(),
   selected_candidate: z.object({
     candidate_id: CandidateId.nullable(), params_digest: z.string().regex(/^[0-9a-f]{64}$/),
@@ -112,6 +112,7 @@ export const FoldOrderingSchema = z.object({
     not_published: z.number().int().nonnegative(),
     causal_data_time_selection: z.number().int().nonnegative().optional(),
     not_causal_outer_oos_selection: z.number().int().nonnegative().optional(),
+    not_causal_full_sample_selection: z.number().int().nonnegative().optional(),
     oos_child_match: z.number().int().nonnegative(),
     oos_child_mismatch: z.number().int().nonnegative(),
   }).strict(),
@@ -131,6 +132,7 @@ export interface FoldOrderingInput {
   childAudit: ReadonlyArray<{ audit_ordinal: number; candidate_id: string | null; context: string | null }> | undefined;
   causalSelection?: CurrentSourceCausalSelection;
   foldSelection?: CurrentSourceFoldSelection;
+  mode4Selection?: CurrentSourceMode4Selection;
 }
 
 const EXACT_JSON_NUMBER = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
@@ -229,14 +231,17 @@ export function foldOrdering(
   const frozen = quantbtCandidateId(frozenParameters, candidateParameterKinds);
   const method = currentSourceRetainedMethod(sourceProfileId);
   const causal = method === "CAUSAL_INNER" && scope === "PER_FOLD";
+  const isOnly = method === "CAUSAL_IS_ONLY" && scope === "PER_FOLD";
+  const fullSample = method === "FULL_SAMPLE";
   const decay = method === "PER_FOLD_DECAY" && scope === "PER_FOLD";
   const rows = [...folds]
     .sort((a, b) => a.sourceOrdinal - b.sourceOrdinal)
     .map((fold): FoldOrdering["folds"][number] => {
       const selected = causal ? fold.causalSelection : undefined;
       const decaySelected = decay ? fold.foldSelection : undefined;
-      const actualSelection = selected ?? decaySelected;
-      const candidate = causal || decay ? actualSelection ? quantbtCandidateId(actualSelection.parameters, candidateParameterKinds) : null : frozen;
+      const isOnlySelected = isOnly ? fold.mode4Selection : undefined;
+      const actualSelection = selected ?? decaySelected ?? isOnlySelected;
+      const candidate = causal || decay || isOnly ? actualSelection ? quantbtCandidateId(actualSelection.parameters, candidateParameterKinds) : null : frozen;
       const dataTime = boundaryOf(fold);
       let actualVerdict = verdict;
       let actualReason: string | null = reason;
@@ -261,6 +266,19 @@ export function foldOrdering(
         || decaySelected.outer_oos_used_for_selection !== true)) {
         actualVerdict = "NOT_EVALUATED"; actualReason = "DECAY_FOLD_SELECTION_OR_OOS_USE_NOT_RETAINED";
       }
+      if (isOnly) {
+        const claimMatches = isOnlySelected?.outer_oos_used_for_selection === false
+          && isOnlySelected.causality_claim === "strict_fold_local_retraining"
+          && facts?.claims.oos_used_for_selection === false
+          && facts.claims.causality_claim === "strict_fold_local_retraining";
+        actualVerdict = claimMatches && dataTime.boundary === "IS_ENDS_BEFORE_OOS" ? "CAUSAL_DATA_TIME_SELECTION" : "NOT_EVALUATED";
+        actualReason = !claimMatches ? "IS_ONLY_SELECTION_SOURCE_CLAIMS_NOT_COMPATIBLE"
+          : dataTime.boundary !== "IS_ENDS_BEFORE_OOS" ? "IS_ONLY_SELECTION_IS_NOT_BEFORE_OUTER_OOS" : null;
+      }
+      if (fullSample) {
+        actualVerdict = "NOT_CAUSAL_FULL_SAMPLE_SELECTION";
+        actualReason = "SELECTION_USED_FULL_SAMPLE_NO_UNTOUCHED_OOS";
+      }
       return {
       fold_id: fold.foldId,
       source_ordinal: fold.sourceOrdinal,
@@ -271,6 +289,8 @@ export function foldOrdering(
         study_id: selected.study_id, selected_trial_id: selected.selected_trial_id, inner_fold_count: selected.inner_fold_count } } : {}),
       ...(decaySelected ? { selected_candidate: { candidate_id: candidate, params_digest: decaySelected.params_digest,
         study_id: decaySelected.study_id, selected_trial_id: decaySelected.selected_trial_id } } : {}),
+      ...(isOnlySelected ? { selected_candidate: { candidate_id: candidate, params_digest: isOnlySelected.params_digest,
+        study_id: isOnlySelected.study_id, selected_trial_id: isOnlySelected.selected_trial_id } } : {}),
       oos_generation_child: childOf(fold, candidate),
     };
     });
@@ -289,15 +309,16 @@ export function foldOrdering(
     ...(stageEvents ? { stage_events: stageEvents } : {}),
     frozen_candidate: {
       identity_rule: QUANTBT_CANDIDATE_IDENTITY_RULE,
-      candidate_id: causal || decay ? null : frozen,
-      reason_code: causal || decay ? FOLD_ORDERING_REASONS.noGlobalCandidate : frozen === null ? FOLD_ORDERING_REASONS.identityNotComputable : null,
+      candidate_id: causal || decay || isOnly ? null : frozen,
+      reason_code: causal || decay || isOnly ? FOLD_ORDERING_REASONS.noGlobalCandidate : frozen === null ? FOLD_ORDERING_REASONS.identityNotComputable : null,
     },
     counts: {
       folds: rows.length,
       not_causal_global_selection: count((row) => row.verdict === "NOT_CAUSAL_GLOBAL_SELECTION"),
       not_evaluated: count((row) => row.verdict === "NOT_EVALUATED"),
       not_published: count((row) => row.verdict === "NOT_PUBLISHED"),
-      ...(causal ? { causal_data_time_selection: count(row => row.verdict === "CAUSAL_DATA_TIME_SELECTION") } : {}),
+      ...(causal || isOnly ? { causal_data_time_selection: count(row => row.verdict === "CAUSAL_DATA_TIME_SELECTION") } : {}),
+      ...(fullSample ? { not_causal_full_sample_selection: count(row => row.verdict === "NOT_CAUSAL_FULL_SAMPLE_SELECTION") } : {}),
       ...(decay ? { not_causal_outer_oos_selection: count(row => row.verdict === "NOT_CAUSAL_OUTER_OOS_SELECTION") } : {}),
       oos_child_match: count((row) => row.oos_generation_child.state === "MATCH"),
       oos_child_mismatch: count((row) => row.oos_generation_child.state === "MISMATCH"),

@@ -58,7 +58,7 @@ export const ResearchLineageReleaseCandidateRefSchema = z.object({
 const RunMetricFactSchema = z.object({
   value: ExactDecimalSchema.nullable(),
   source: z.enum(["P13_EVIDENCE_PROJECTION", "RS02_RETAINED_SELECTED_TRIAL", "RS02_RETAINED_OUTER_FOLD_SELECTIONS", "SUMMARY_ANALYTICS_V2", "ENRICHED_ANALYSIS"]).nullable(),
-  scope: z.enum(["OOS", "IS_PLUS_OOS", "CHILD_TAPE", "SELECTED_TRIAL_MEAN_ACROSS_FOLDS", "OUTER_FOLD_SELECTED_OOS_MEAN"]).nullable(),
+  scope: z.enum(["OOS", "IS_PLUS_OOS", "CHILD_TAPE", "SELECTED_TRIAL_MEAN_ACROSS_FOLDS", "OUTER_FOLD_SELECTED_OOS_MEAN", "FULL_SAMPLE"]).nullable(),
   definition_id: z.string().regex(/^research\.[a-z0-9_.-]{3,120}$/).nullable(),
   availability: ResearchLineageAvailabilitySchema,
   origin: z.enum(["ENGINE_DIRECT", "PORTAL_DERIVED"]).optional(),
@@ -254,8 +254,8 @@ const ExposureSchema = z.object({
   state: z.enum(["RECORDED", "NOT_PUBLISHED"]),
   count: z.number().int().nonnegative(),
   roles: z.array(z.enum([
-    "QUALITY_SCAN", "TRAIN", "SELECTION_INPUT", "OUTER_OOS", "HOLDOUT", "RETROSPECTIVE", "UNKNOWN",
-  ])).max(7),
+    "QUALITY_SCAN", "TRAIN", "SELECTION_INPUT", "OUTER_OOS", "HOLDOUT", "RETROSPECTIVE", "UNKNOWN", "FULL_SAMPLE_CALIBRATION",
+  ])).max(8),
   latest_source_as_of_utc_ms: UtcMsSchema.nullable(),
   availability: ResearchLineageAvailabilitySchema,
 }).strict();

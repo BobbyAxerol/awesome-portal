@@ -8077,7 +8077,7 @@ S02 calendar/presets and Claude receipts preserved, not retaken by this plan.
 | FULL-01 | Shared versioned recipe table, common admission authority, bounded budgets/quota and historic compatibility | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-01) · BACKEND_DELIVERED / NO_RECIPE_OPENED · [Receipt/handoff](./research_loop/evidence/P10/FULL_01_SHARED_RECIPES_2026-10-05.md) |
 | FULL-02 | Mode 1 missing schedule + optimized Three Window/global, full retained/read chain | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-02) · BACKEND_DELIVERED / TWO_EXACT_RECIPES_PRODUCT_RUN_QUALIFIED / RESEARCH_PREVIEW_ENABLED · [Proof, rollback, cleanup and Claude handoff](./research_loop/evidence/P10/FULL_02_MODE1_VERTICAL_2026-10-06.md) |
 | FULL-03 | All actual indexed timeframes, source clocks/warmup and immutable Delta declaration extension | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-03) · BACKEND_DELIVERED / 28_EXACT_RECIPES_PRODUCT_RUN_QUALIFIED / RESEARCH_PREVIEW_ENABLED · [Delivery/rollback/custody/cleanup/Claude handoff](./research_loop/evidence/P10/FULL_03_INDEXED_TIMEFRAMES_2026-10-06.md), [immutable product proof](./research_loop/evidence/P10/FULL_03_PRODUCT_QUALIFICATION_2026-10-06.md) |
-| FULL-04 | All other valid optimizer pairs, mode-native readers and measured slow-mode limits | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-04) · PLANNED |
+| FULL-04 | All other valid optimizer pairs, mode-native readers and measured slow-mode limits | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-04) · BACKEND_DELIVERED /35_EXACT_RECIPES_PRODUCT_RUN_QUALIFIED /RESEARCH_PREVIEW_ENABLED · [Implementation, tests, activation/rollback/C4 and Claude handoff](./research_loop/evidence/P10/FULL_04_OTHER_MODES_2026-10-06.md), [immutable35-run proof](./research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md) |
 | FULL-05 | Confined imported Alpha execution on compatible qualified recipes | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-05) · PLANNED |
 | FULL-06 | Remaining route families with exact inputs/cost/claims; staged batch order, no Cartesian mode/route invention | [Goal/to-do/tests/exit](./research_loop/S02_FULL_SUPPORT_STAGED_PLAN_2026-10-05.md#full-06) · PLANNED |
 
@@ -8138,3 +8138,23 @@ handoff, not a backend release claim. No remotes, dev/main, Execution or prod.
 [Delivery, tests, hashes/images, rollback/C4 and generated-type handoff](./research_loop/evidence/P10/FULL_03_INDEXED_TIMEFRAMES_2026-10-06.md),
 [immutable28-run proof](./research_loop/evidence/P10/FULL_03_PRODUCT_QUALIFICATION_2026-10-06.md).
 Next recommendation: Bobby approve FULL04; no unrequested stage started.
+
+FULL-04 addendum,2026-10-06 (Bobby approved): **BACKEND_DELIVERED /
+35_EXACT_RECIPES_PRODUCT_RUN_QUALIFIED /RESEARCH_PREVIEW_ENABLED** supersedes
+the preceding proposed-next note. Mode3/global,Mode2/global,Mode4/global,
+Mode4/causal,Mode5/global each passed ordinary P08→P10→confined QuantBT1.1.1→
+P05→eight named screen reads at all seven indexed intervals. Real centroids
+keep null trial identity; bootstrap remains proxy; Mode4 is IS-only without
+fabricated Mode1 inner folds; Mode5 is full-sample calibration, not untouched
+OOS/Final Audit. Maximum14.896CPU/15.259wall seconds/468MiB RSS stays inside
+unchanged120CPU/240wall/4GiB/128MiB caps. Append101–103/71-row table preserve
+old36 semantics and receipt history. Final-image280 retained reads plus named
+aggregate reads, flag-off70 reads+create409, served-preview35 Atlas profiles/
+seven setup/five real preflight checks,20 old seal/user/AV/index/web custody
+and exact test-identity/cell teardown PASS. No broad prune, secret/data/engine
+kernel changes, remote push, dev/main or prod/Execution action. Bobby-approved
+five FE copy mappings only; Claude's current served web/S02 remains intact,
+with real browser/native-detail rendering explicitly handed off rather than
+called a backend acceptance result. [Full gate/contract/cleanup handoff](./research_loop/evidence/P10/FULL_04_OTHER_MODES_2026-10-06.md),
+[immutable35-run proof](./research_loop/evidence/P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md).
+Next proposed backend: FULL-05; not started without Bobby's named instruction.

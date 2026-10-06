@@ -14,6 +14,7 @@
 import type {
   CurrentSourceCausalSelection,
   CurrentSourceProtocolDisclosure,
+  CurrentSourceOptimizerDisclosure,
   CurrentSourceFacts,
   CurrentSourceFoldFacts,
   CurrentSourceTrialFacts,
@@ -406,15 +407,15 @@ export function trialCoversFold(facts: CurrentSourceTrialFacts | undefined, fold
 const CENTROID_SELECTORS = new Set(["is_plateau_robust", "full_plateau_robust", "plateau", "flat"]);
 
 /** Raw IS best vs the selected candidate vs a centroid (CG-P15-03). */
-export function selectionRoles(facts: CurrentSourceFacts | undefined, selection: { trial_id: string | null; objective: string | null; scope?: "LAST_FOLD_DEPLOYMENT"; fold_id?: string }) {
+export function selectionRoles(facts: CurrentSourceFacts | undefined, selection: { trial_id: string | null; objective: string | null; scope?: "LAST_FOLD_DEPLOYMENT"; fold_id?: string }, disclosure?: CurrentSourceOptimizerDisclosure) {
   const search = facts?.search;
   const selected = {
     state: "AVAILABLE" as const,
     reason_code: null,
     trial_id: selection.trial_id,
     objective: selection.objective,
-    objective_kind: facts ? search?.optimization_schedule === "per_fold_decay" ? "OUTER_FOLD_DECAY_J" as const
-      : selection.scope === "LAST_FOLD_DEPLOYMENT" ? "INNER_VALIDATION_DECAY_J" as const : "MODE_1_DECAY_J" as const : "NOT_PUBLISHED" as const,
+    objective_kind: disclosure?.selection_target.objective_kind ?? (facts ? search?.optimization_schedule === "per_fold_decay" ? "OUTER_FOLD_DECAY_J" as const
+      : selection.scope === "LAST_FOLD_DEPLOYMENT" ? "INNER_VALIDATION_DECAY_J" as const : "MODE_1_DECAY_J" as const : "NOT_PUBLISHED" as const),
     ...(selection.scope ? { scope: selection.scope, fold_id: selection.fold_id } : {}),
   };
   if (!facts || !search) {
@@ -425,9 +426,14 @@ export function selectionRoles(facts: CurrentSourceFacts | undefined, selection:
     ? { state: "NOT_APPLICABLE" as const, reason_code: "PER_FOLD_STUDIES_HAVE_NO_RUN_GLOBAL_RAW_BEST", trial_id: null, objective: null, objective_kind: "NOT_PUBLISHED" as const }
     : search.raw_best_is_trial_id === null
     ? { state: "NOT_PUBLISHED" as const, reason_code: "QUANTBT_LEDGER_HAS_NO_SCORED_IS_SEARCH_TRIAL", trial_id: null, objective: null, objective_kind: "NOT_PUBLISHED" as const }
-    : { state: "AVAILABLE" as const, reason_code: null, trial_id: search.raw_best_is_trial_id, objective: search.raw_best_is_objective, objective_kind: "IS_MEAN_SHARPE" as const };
+    : { state: "AVAILABLE" as const, reason_code: null, trial_id: search.raw_best_is_trial_id, objective: search.raw_best_is_objective,
+      objective_kind: disclosure?.calibration_sample === "FULL_SAMPLE" ? "FULL_SAMPLE_MEAN_SHARPE" as const
+      : disclosure?.calibration_sample === "BOOTSTRAP_PROXY" ? "SBB_BOOTSTRAP_ROBUST_J" as const : "IS_MEAN_SHARPE" as const };
   const metric = search.candidate_selection_metric;
-  const centroid = metric !== null && CENTROID_SELECTORS.has(metric)
+  const centroid = disclosure?.centroid
+    ? { state: "AVAILABLE" as const, reason_code: null, trial_id: null, objective: selection.objective,
+      objective_kind: disclosure.selection_target.objective_kind }
+    : metric !== null && CENTROID_SELECTORS.has(metric)
     ? { state: "NOT_PUBLISHED" as const, reason_code: "QUANTBT_DID_NOT_PUBLISH_THE_PLATEAU_CENTROID", trial_id: null, objective: null, objective_kind: "NOT_PUBLISHED" as const }
     : { state: "NOT_APPLICABLE" as const, reason_code: "QUANTBT_SELECTOR_HAS_NO_CENTROID", trial_id: null, objective: null, objective_kind: "NOT_PUBLISHED" as const };
   return {

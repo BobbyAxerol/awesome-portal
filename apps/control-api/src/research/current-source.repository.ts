@@ -26,6 +26,7 @@ import { ResearchRetainedAnalyticsV2Schema, type ResearchRetainedAnalyticsV2 } f
 import { ResearchAllTimeDistributionsSchema, type ResearchAllTimeDistributions } from "./all-time-distributions.contract";
 import { assertCausalSealConsistency } from "./causal-seal-consistency";
 import { assertFull02SealConsistency } from "./full02-seal-consistency";
+import { assertFull04SealConsistency } from "./full04-seal-consistency";
 import { currentSourceRetainedIntervalMs, currentSourceRetainedMethod, currentSourceRetainedRecipe,
   isCurrentSourceRetainedPair, isCurrentSourceExecutionProfile } from "./current-source-profile";
 import { MAXIMUM_GUARD_ENDPOINTS, type GuardIndexWitness } from "./applied-temporal-guards";
@@ -592,6 +593,15 @@ export class ResearchCurrentSourceRepository {
         assertFull02SealConsistency(input, retained.rows.map(row => ({ tableKind: row.table_kind,
           sourceOrdinal: asSafeNonNegative(row.source_ordinal,"FULL02 source ordinal"), sourceId: row.source_id,
           payload: asJsonRecord(row.payload,"FULL02 source payload") })));
+      }
+      if (currentSourceRetainedRecipe(input.profileId,input.sourceAdapterId)?.descriptor.schema_version === "research.full04-delta-profile.v1") {
+        const retained = await client.query<{table_kind:string;source_ordinal:string|number;source_id:string;payload:JsonColumn}>(
+          `SELECT table_kind,source_ordinal,source_id,payload FROM research.current_source_rows_v1
+            WHERE workspace_id=$1 AND run_id=$2 AND artifact_revision=$3
+              AND table_kind IN ('FOLD','TRIAL','CANDIDATE','SELECTION') ORDER BY table_kind,source_ordinal LIMIT 114`,
+          [scope.workspaceId,input.runId,input.artifactRevision]);
+        assertFull04SealConsistency(input,retained.rows.map(row=>({tableKind:row.table_kind,sourceOrdinal:asSafeNonNegative(row.source_ordinal,"optimizer source ordinal"),
+          sourceId:row.source_id,payload:asJsonRecord(row.payload,"optimizer source payload")})));
       }
       await client.query(
         `INSERT INTO research.current_source_seals_v1

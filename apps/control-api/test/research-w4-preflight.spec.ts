@@ -105,6 +105,18 @@ describe("CG-P08-03 admission reason → field path", () => {
     ] as const) expect(admissionFieldPath(message)).toEqual(path);
   });
 
+  it("maps bounded FULL-04 trial defaults without losing the legacy refusal field", () => {
+    for (const count of [3, 5])
+      expect(admissionFieldPath(`The exact walk-forward recipe runs ${count} Optuna trials per study.`))
+        .toEqual(["optuna_trials"]);
+    expect(admissionFieldPath("The optimization mode and schedule must match the exact execution recipe."))
+      .toEqual(["optimization_schedule"]);
+    expect(admissionFieldPath("Full-sample calibration requires exactly one engine-planned full-span fold."))
+      .toEqual(["walk_forward"]);
+    expect(admissionFieldPath("Mode 4 IS-only uses outer-fold studies without nested inner selection."))
+      .toEqual(["walk_forward", "inner"]);
+  });
+
   it("admits consumed v2 temporal guards with their distinct pinned execution profile", async () => {
     const spec = v2({ purge_bars: 2 }) as unknown as ResearchRequestedSpec;
     const manifest = manifestFor(spec);

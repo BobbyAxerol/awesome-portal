@@ -7,7 +7,8 @@ import {randomUUID,createHash} from 'node:crypto';
 import {validateHome} from './cell.mjs';
 import {loadSessions,makeClient,privateJson,savePrivate} from './api-client.mjs';
 const home=validateHome(process.argv.find(a=>a.startsWith('--home='))?.slice(7));
-assert(home.endsWith('/full03'),'EXACT_FULL03_CELL');
+const slice=process.argv.find(a=>a.startsWith('--slice='))?.slice(8)??'full03';
+assert(['full03','full04'].includes(slice)&&home.endsWith('/'+slice),'EXACT_RECIPE_CELL');
 const target=join(home,'flag-off-retained-read-receipt.json');
 assert(!existsSync(target),'IMMUTABLE_ROLLBACK_RECEIPT');
 const facts=privateJson(join(home,'qualified-products-summary.json')).facts;
@@ -27,12 +28,13 @@ try{
         body_sha256:createHash('sha256').update(JSON.stringify(result.body)).digest('hex')});
     }
   }
-  const fact=facts.find(f=>f.profile_id==='p10.delta-wfo-temporal-4h.v1');
+  const fact=facts.find(f=>f.profile_id===(slice==='full04'?'p10.delta-mode4-causal-4h.v1':'p10.delta-wfo-temporal-4h.v1'));
+  assert(fact,'EXACT_FLAG_OFF_RECIPE_REQUIRED');
   const spec=privateJson(join(home,fact.private_receipt)).run.requested_spec;
   const preflight=await client.call('POST','/api/v1/research/preflights',{requested_spec:spec},[201]);
   assert.equal(preflight.body.may_create_run,false);
   const create=await client.call('POST','/api/v1/research/runs',{
-    schema_version:'research.run-create.v1',client_intent_id:'full03-flag-off-'+randomUUID(),
+    schema_version:'research.run-create.v1',client_intent_id:slice+'-flag-off-'+randomUUID(),
     requested_spec:spec,preflight_token:preflight.body.preflight_token},[409]);
   assert.equal(create.body.error.code,'RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE');
   record.admission={preflight,create};record.passed=true;

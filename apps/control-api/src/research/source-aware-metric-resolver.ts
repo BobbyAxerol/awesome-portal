@@ -39,9 +39,12 @@ export function resolveSealedPerformanceMetric(key: SealedPerformanceMetric, sou
     ?? candidates[0];
   if (!found) return undefined;
   const engine = found.fact.origin === "ENGINE_DIRECT";
+  const fullSample = found.fact.scope === "FULL_SAMPLE";
   return {
     ...found.fact, source: found.source,
-    definition_id: key === "sharpe"
+    definition_id: fullSample
+      ? `research.metric.analytics-v2.sealed-full-sample-${engine ? "engine" : "portal"}-${key === "sharpe" ? "sharpe" : "decay"}`
+      : key === "sharpe"
       ? engine ? SEALED_PERFORMANCE_DEFINITIONS.engineSharpe : SEALED_PERFORMANCE_DEFINITIONS.portalSharpe
       : engine ? SEALED_PERFORMANCE_DEFINITIONS.engineDecay : SEALED_PERFORMANCE_DEFINITIONS.portalDecay,
   };

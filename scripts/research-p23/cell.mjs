@@ -61,13 +61,14 @@ function dockerPrefix() {
 }
 
 export function composeArguments(envFile, qualificationSlice = undefined) {
-  assert(qualificationSlice === undefined || ['full02','full03'].includes(qualificationSlice), 'P23_UNKNOWN_QUALIFICATION_SLICE');
+  assert(qualificationSlice === undefined || ['full02','full03','full04'].includes(qualificationSlice), 'P23_UNKNOWN_QUALIFICATION_SLICE');
   return ['compose', '-p', PROJECT, '--project-directory', ROOT, '--env-file', envFile,
     ...['compose.yaml', 'deploy/compose.research-progress.yaml',
       'deploy/research-preview/compose.research-p23-activation.yaml',
       'deploy/research-preview/compose.research-p23-5gb.yaml',
       ...(qualificationSlice === 'full02' ? ['deploy/research-preview/compose.research-full02-cell.yaml'] : []),
       ...(qualificationSlice === 'full03' ? ['deploy/research-preview/compose.research-full03-cell.yaml'] : []),
+      ...(qualificationSlice === 'full04' ? ['deploy/research-preview/compose.research-full04-cell.yaml'] : []),
     ].flatMap(file => ['-f', join(ROOT, file)])];
 }
 
@@ -132,7 +133,7 @@ async function main() {
   }
   const settings = parseEnv(readPrivate(envFile));
   const qualificationSlice = settings.P23_QUALIFICATION_SLICE;
-  assert(qualificationSlice === undefined || (['full02','full03'].includes(qualificationSlice) && home.endsWith('/'+qualificationSlice)),
+  assert(qualificationSlice === undefined || (['full02','full03','full04'].includes(qualificationSlice) && home.endsWith('/'+qualificationSlice)),
     'P23_EXACT_FULL02_STATE_REQUIRED');
   assert(settings.PORTAL_STACK_NAME === PROJECT && settings.PORTAL_HTTP_PORT === '8096'
     && settings.PORTAL_PUBLIC_ORIGIN === BASE_URL && settings.PREVIEW_AUTO_LOGIN_USERNAME === '',

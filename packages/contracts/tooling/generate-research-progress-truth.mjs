@@ -30,6 +30,8 @@ export function progressTruthComponents(document) {
     "CAUSAL_HANDOFF_JOURNAL_SELECTION_MISMATCH",
   ] });
   const selection = structuredClone(schemas.ProgressFoldSelection);
+  selection.properties.objective_kind = {enum:["MODE_1_DECAY_J","INNER_VALIDATION_DECAY_J","NOT_PUBLISHED"],
+    description:"The generic journal does not publish other modes' native objective semantics; those are retained in Search/Freeze optimizer disclosure. NOT_PUBLISHED is never a fabricated Mode 1 objective."};
   Object.assign(selection.properties, {
     display_trial_ordinal: nullable({ type: "integer", minimum: 1 }),
     trial_numbering: { const: "P11_ORDINAL_1_BASED", description: "trial and display_trial_ordinal are the same 1-based P11 display ordinal, not source trial identity. WFO source_trial_id preserves Optuna's zero-based ID; fixed profiles do not invent one." },

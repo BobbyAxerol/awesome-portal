@@ -264,12 +264,18 @@ export function retainedFinalAudit(
   replay: ResearchCurrentSourceReplayResponse,
 ): ResearchReportFinalAudit {
   const method = currentSourceRetainedMethod(freeze.provenance.profile_id,freeze.provenance.source_adapter_id);
-  const causal = method === "CAUSAL_INNER"
+  const causal = (method === "CAUSAL_INNER" || method === "CAUSAL_IS_ONLY")
     && search.search_contract.optimization_schedule === "per_fold_causal";
   const decay = method === "PER_FOLD_DECAY"
     && search.search_contract.optimization_schedule === "per_fold_decay";
   const perFold = causal || decay;
   const target = perFold ? "PER_FOLD_PARAMETER_SELECTIONS" as const : "SINGLE_PARAMETER_SET" as const;
+  if (method === "FULL_SAMPLE") return {
+    schema_version: "research.report-final-audit.v1", kind: "NOT_APPLICABLE",
+    reason_code: "FULL_SAMPLE_CALIBRATION_HAS_NO_UNTOUCHED_FINAL_AUDIT", audit_target_kind: null,
+    final_audit_run_id: null, audited_run_id: null, relationship: null, optimizer_reinvoked: null,
+    optimizer_basis: null, source_refs: [], folds: [],
+  };
   if (relation === null) {
     return {
       schema_version: "research.report-final-audit.v1", kind: "NOT_PUBLISHED", reason_code: FINAL_AUDIT_NOT_READ, audit_target_kind: target,
@@ -525,13 +531,14 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
   const schedule = contract.optimization_schedule;
   const params = parameterText(search.selection.parameters);
   const method = currentSourceRetainedMethod(provenance.profile_id,provenance.source_adapter_id);
-  const causalProfile = method === "CAUSAL_INNER";
+  const causalProfile = method === "CAUSAL_INNER" || method === "CAUSAL_IS_ONLY";
   const decayProfile = method === "PER_FOLD_DECAY";
   const perFoldProfile = causalProfile || decayProfile;
   const globalParams = !perFoldProfile && schedule === "global" && params !== null;
   const causal = causalProfile && schedule === "per_fold_causal";
   const causalParameters = new Map(split.fold_plan.folds.map((fold) => [fold.fold_id,
     causal && fold.causal_selection ? parameterText(fold.causal_selection.parameters)
+      : causal && fold.mode4_selection ? parameterText(fold.mode4_selection.parameters)
       : decayProfile && fold.fold_selection ? parameterText(fold.fold_selection.parameters) : null]));
   const perFoldParams = perFoldProfile && folds.length > 0 && folds.length === split.fold_plan.folds.length
     && new Set(folds.map(fold => fold.fold_id)).size === folds.length
@@ -582,8 +589,9 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
   const drag = verdicts.counts.drag;
   const warn = verdicts.counts.warn;
 
-  return {
+  const result: CoreV2 = {
     ...(protocolDisclosure ? { protocol_disclosure: protocolDisclosure } : {}),
+    ...(evidence.optimizer_disclosure ? { optimizer_disclosure: evidence.optimizer_disclosure } : {}),
     schema_version: "research.report-frozen-core.v2",
     report_source: "RS02_RETAINED_CURRENT_SOURCE",
     source_revisions: {
@@ -714,7 +722,9 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
             ? check("PASS", `${foldCount} outer folds retained · holdout ${String(claim.holdout.value)}`, "p10.delta_wfo_profile.segments", AVAILABLE)
             : check("CAVEAT", `${foldCount} outer folds retained · no holdout segment`, "p10.delta_wfo_profile.segments", AVAILABLE));
         case "S2":
-          return stage(hubStage, oosUsed === null
+          return stage(hubStage, method === "FULL_SAMPLE"
+            ? check("CAVEAT", "full-sample calibration; no untouched OOS", "walk_forward.full_sample_used_for_selection", AVAILABLE)
+            : oosUsed === null
             ? noCheck("QUANTBT_OOS_SELECTION_FACT_NOT_PUBLISHED")
             : oosUsed === true
               ? check("CAVEAT", "selection saw the outer test windows", "walk_forward.oos_used_for_selection", AVAILABLE)
@@ -781,6 +791,17 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
       approval_annotation: { state: "NOT_PUBLISHED", text: null, reason_code: "P18_APPROVAL_ANNOTATION_NOT_PUBLISHED", availability: NOT_PUBLISHED("P18_APPROVAL_ANNOTATION_NOT_PUBLISHED") },
     },
   };
+  if (method === "FULL_SAMPLE") {
+    // Native Mode 5's train and test are the same full sample. Preserve the
+    // measured values while removing every presentation claim of untouched OOS.
+    const relabel = (label:string) => label.replace(/All-time OOS/g,"All-time full-sample").replace(/\bOOS\b/g,"full-sample");
+    result.metrics = result.metrics.map(metric => ({...metric,label:relabel(metric.label),scope:metric.scope === "NOT_PUBLISHED" ? "NOT_PUBLISHED" : "FULL_SAMPLE"}));
+    result.headline = result.headline.map(metric => ({...metric,label:relabel(metric.label),scope:metric.scope === "NOT_PUBLISHED" ? "NOT_PUBLISHED" : "FULL_SAMPLE"}));
+    result.headline_footnote = "Full-sample calibration uses every retained bar for selection; no untouched OOS or final-audit claim.";
+    result.equity = {...result.equity,scope:"FULL_SAMPLE_CALIBRATION"};
+    result.equity_is = {...result.equity_is,scope:"NOT_PUBLISHED",availability:NOT_PUBLISHED("FULL_SAMPLE_HAS_NO_SEPARATE_IS_SERIES")};
+  }
+  return result;
 }
 
 export interface FixedProfileReads {

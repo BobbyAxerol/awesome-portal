@@ -11,6 +11,8 @@ semantics are taken from QuantBT metadata, never inferred from the last fold
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 from datetime import UTC, datetime
 from typing import Any, Callable, Literal, Mapping
@@ -20,7 +22,7 @@ import pandas as pd
 from portal_api import __version__ as portal_version
 from portal_api.adapters.market_data import PreparedMarketData, slice_market_range
 from portal_api.adapters.quantbt import QuantBTGateway
-from portal_api.domain.enums import OptimizationMode, RunProtocol
+from portal_api.domain.enums import OptimizationMode, OptimizationSchedule, RunProtocol
 from portal_api.domain.requests import (
     AdvancedWalkForwardConfig,
     PortalRunRequest,
@@ -171,6 +173,7 @@ class AdvancedWalkForwardRunner:
         *,
         target_mode: Literal["pct_equity", "signal_notional"] = "pct_equity",
         strategy_callable: Callable[..., Any] | None = None,
+        retain_mode_evidence: bool = False,
     ) -> dict[str, Any]:
         if request.protocol != RunProtocol.ADVANCED_WALK_FORWARD:
             raise AdvancedWalkForwardError("AdvancedWalkForwardRunner requires protocol=advanced_walk_forward")
@@ -191,6 +194,12 @@ class AdvancedWalkForwardRunner:
             end_exclusive=config.data_end_exclusive,
         )
         fields = _config_fields(config, target_mode=target_mode)
+        if retain_mode_evidence:
+            # Only bounded FULL-04 recipes opt into the public native audit.
+            # No candidate replay or additional legacy-profile memory cost.
+            fields["metadata"].update(research_retention="full_trial_ledger",
+                research_audit_chunk_rows=256, research_audit_max_chunks=64,
+                research_audit_max_materialized_frames=1)
         self._gateway.validate_advanced_walkforward(config_fields=fields)
         wf_config = self._gateway.build_advanced_walkforward_config(config_fields=fields)
 
@@ -227,7 +236,19 @@ class AdvancedWalkForwardRunner:
 
         self._write_wfo_artifacts(run_id, wf)
         self._write_wfo_source_facts(run_id, wf, getattr(endpoint.result, "metadata", None))
+        if retain_mode_evidence:
+            self._write_mode_evidence(run_id, wf, endpoint)
         selected = _freeze_deployment_selection(wf, config)
+        if retain_mode_evidence:
+            selected["selection_target"] = _native_selection_target(wf.get("best_trial"))
+            if selected["selection_target"]["kind"] == "SYNTHETIC_CENTROID":
+                selected["native_trial_id"] = selected["trial_id"]
+                selected["trial_id"] = None
+            if config.optimization_schedule == OptimizationSchedule.PER_FOLD_CAUSAL:
+                table = wf.get("fold_selection_table")
+                if not isinstance(table, pd.DataFrame) or table.empty:
+                    raise AdvancedWalkForwardError("causal source did not publish per-fold selection")
+                selected.update(scope="LAST_FOLD_DEPLOYMENT", fold_id=str(int(table.iloc[-1]["fold_id"])))
         self._artifacts.write_json(
             run_id,
             "selection/selected_params.json",
@@ -250,12 +271,16 @@ class AdvancedWalkForwardRunner:
             run_id, "wfo/retained_analytics.v1.json",
             with_portal_provenance("retained_analytics.v1.json", retained_analytics(result=result, mode="WFO")),
         )
-        from portal_api.services.research_portal_analytics import portal_analytics_v2
+        from portal_api.services.research_portal_analytics import MAX_BLOCK_BYTES, portal_analytics_v2
         self._artifacts.write_json(
             run_id, "wfo/retained_analytics.v2.json",
             with_portal_provenance("retained_analytics.v2.json", portal_analytics_v2(
                 result=result, mode="WFO", market_close=active_market.frame["close"],
                 benchmark_locator=f"P08.snapshot:{active_market.content_hash}:{request.symbol}:{request.timeframe}:close:OOS",
+                # P05 replaces OOS presentation labels with longer FULL_SAMPLE
+                # labels. Reserve their bounded size, never widen the16KiB DTO.
+                maximum_block_bytes=MAX_BLOCK_BYTES - 1024
+                    if config.optimization_mode == OptimizationMode.MODE_5_FULL_ROBUST else MAX_BLOCK_BYTES,
             )),
         )
         series = _stitched_series(active_market.frame, result)
@@ -324,6 +349,48 @@ class AdvancedWalkForwardRunner:
             "params_semantics": wf.get("params_semantics"),
         }
 
+    def _write_mode_evidence(self, run_id: str, wf: Mapping[str, Any], endpoint: Any) -> None:
+        """Retain bounded native mode evidence; never reconstruct methodology."""
+        audit = getattr(endpoint, "research_audit", None)
+        if audit is None or not callable(getattr(audit, "to_pandas", None)):
+            raise AdvancedWalkForwardError("FULL-04 requires the native public research audit")
+        from portal_api.services.three_window_runner import _structured_json_cell
+        tables: dict[str, dict[str, Any]] = {}
+        total = 0
+        for name in ("trials", "analysis", "evaluations", "selection", "objective_components"):
+            frame = audit.to_pandas(name)
+            if not isinstance(frame, pd.DataFrame) or len(frame) > 4096:
+                raise AdvancedWalkForwardError("FULL-04 native audit exceeds its table row bound")
+            total += len(frame)
+            if total > 8192:
+                raise AdvancedWalkForwardError("FULL-04 native audit exceeds its total row bound")
+            # Columnar custody, not large JSON carried through P05 ingress.
+            # Preserve nested native values as canonical structured cells.
+            encoded = frame.copy()
+            for column in encoded.columns:
+                if encoded[column].map(lambda value: isinstance(value, (Mapping, list, tuple))).any():
+                    encoded[column] = encoded[column].map(_structured_json_cell)
+            relative = f"wfo/mode_audit_{name}.v1.parquet"
+            self._artifacts.write_frame(run_id, relative, encoded)
+            path = self._artifacts.run_directory(run_id) / relative
+            tables[name] = {"path": relative, "rows": len(frame),
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+        document = with_portal_provenance("mode_evidence.v1.json", canonicalize(_sanitize({
+            "schema_version": "portal.wfo-mode-evidence.v1",
+            "source": "QuantBT 1.1.1 public research_audit and walk_forward metadata",
+            "optimization_mode": wf.get("optimization_mode"),
+            "optimization_schedule": wf.get("optimization_schedule"),
+            "selection_target": _native_selection_target(wf.get("best_trial")),
+            "best_trial": wf.get("best_trial"),
+            "source_tables": tables,
+            "row_counts": {name: table["rows"] for name, table in tables.items()},
+            "bounds": {"table_rows": 4096, "total_rows": 8192, "bytes": 256 * 1024},
+            "audit_summary": audit.metadata(),
+        })))
+        if len(json.dumps(document, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")) > 256 * 1024:
+            raise AdvancedWalkForwardError("FULL-04 native mode evidence exceeds its byte bound")
+        self._artifacts.write_json(run_id, "wfo/mode_evidence.v1.json", document)
+
     def _write_wfo_artifacts(self, run_id: str, wf: Mapping[str, Any]) -> None:
         from portal_api.services.three_window_runner import _flatten_frame
 
@@ -355,6 +422,10 @@ class AdvancedWalkForwardRunner:
                     from portal_api.services.three_window_runner import _search_trials_only
 
                     table = _search_trials_only(table)
+                    if wf.get("optimization_mode") in {"mode_2_sbb", "mode_3_flat_minima", "mode_4_is_only_robust", "mode_5_full_robust"}:
+                        # Native candidate replays may add centroid -1 rows.
+                        # They are evaluations, not sampled Optuna identities.
+                        table = _native_optuna_trials(table)
                 self._artifacts.write_frame(run_id, f"wfo/{name}.parquet", _flatten_frame(table))
 
     def _write_wfo_source_facts(
@@ -429,6 +500,11 @@ class AdvancedWalkForwardRunner:
             "min_trades_per_year",
             "trade_penalty_factor",
         )
+        if wf.get("optimization_mode") in {"mode_2_sbb", "mode_3_flat_minima", "mode_4_is_only_robust", "mode_5_full_robust"}:
+            wf_keys += ("sbb_simulation", "sbb_samples", "sbb_block_length",
+                "is_subperiods", "plateau_quantile", "plateau_median_weight",
+                "plateau_std_penalty", "plateau_size_bonus", "q25_weight",
+                "dispersion_penalty", "temporal_weight", "plateau_weight")
         walk_forward = {key: _sanitize(wf.get(key)) for key in wf_keys if key in wf}
         native = wf.get("native_prepared_wfo")
         if isinstance(native, Mapping):
@@ -599,6 +675,33 @@ class AdvancedWalkForwardRunner:
             self._artifacts.write_frame(
                 run_id, "wfo/folds_extension.v1.parquet", extension
             )
+
+
+def _native_selection_target(best: object) -> dict[str, Any]:
+    if not isinstance(best, Mapping):
+        raise AdvancedWalkForwardError("native mode has no selected parameter target")
+    trial_id = best.get("trial_id")
+    if type(trial_id) is not int or trial_id < -1:
+        raise AdvancedWalkForwardError("native mode selected target has an invalid trial identity")
+    metadata = best.get("selection_metadata")
+    metadata = metadata if isinstance(metadata, Mapping) else {}
+    if trial_id == -1 and metadata.get("selector") != "centroid":
+        raise AdvancedWalkForwardError("native synthetic target is not a declared centroid")
+    return {"kind": "SYNTHETIC_CENTROID" if trial_id == -1 else "OPTUNA_TRIAL",
+        "source_trial_id": None if trial_id == -1 else trial_id,
+        "native_trial_id": trial_id, "params": _sanitize(best.get("params")),
+        "selection_metadata": _sanitize(dict(metadata))}
+
+
+def _native_optuna_trials(table: pd.DataFrame) -> pd.DataFrame:
+    def sampled(row: pd.Series) -> bool:
+        trial_id = row.get("trial_id")
+        if isinstance(trial_id, bool) or not isinstance(trial_id, (int, float)) or trial_id < 0:
+            return False
+        metadata = row.get("selection_metadata")
+        return bool(row.get("pruned", False)) or (
+            isinstance(metadata, Mapping) and metadata.get("stage") in {"is_search", "sbb_search"})
+    return table.loc[table.apply(sampled, axis=1)].reset_index(drop=True)
 
 
 def _freeze_deployment_selection(

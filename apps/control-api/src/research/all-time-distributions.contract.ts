@@ -8,7 +8,7 @@ const Reason = z.string().regex(/^[A-Z][A-Z0-9_]{2,159}$/).nullable();
 export const ResearchMonthlyPointSchema = z.object({
   month_start_utc_ms: Utc, return_fraction: Decimal,
   partial: z.boolean().optional(), observation_count: Count.optional(),
-  basis: z.enum(["FIRST_OOS_CLOSE", "PREVIOUS_OBSERVED_MONTH_CLOSE"]).optional(),
+  basis: z.enum(["FIRST_OOS_CLOSE", "FIRST_FULL_SAMPLE_CLOSE", "PREVIOUS_OBSERVED_MONTH_CLOSE"]).optional(),
   base_at_utc_ms: Utc.optional(), close_at_utc_ms: Utc.optional(),
 }).strict();
 
@@ -16,10 +16,10 @@ const Bucket = z.object({ lower_inclusive: Decimal, upper: Decimal,
   upper_inclusive: z.enum(["true", "false"]), count: z.string().regex(/^[0-9]+$/).max(7) }).strict();
 export const ResearchAllTimeDistributionsSchema = z.object({
   schema_version: z.literal("research.all-time-distributions.v1"),
-  origin: z.literal("PORTAL_DERIVED"), scope: z.literal("OOS"),
+  origin: z.literal("PORTAL_DERIVED"), scope: z.enum(["OOS", "FULL_SAMPLE"]),
   scope_locator: z.string().min(1).max(256), input_digest: z.string().regex(/^[0-9a-f]{64}$/),
   oos_observation_count: Count.min(2),
-  monthly_definition: z.literal("OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1"),
+  monthly_definition: z.enum(["OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1", "FULL_SAMPLE_MONTH_CLOSE_OVER_FIRST_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1"]),
   distribution_definition: z.literal("ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1"),
   monthly_returns: z.object({
     state: z.enum(["AVAILABLE", "NOT_APPLICABLE"]), reason_code: Reason,
@@ -38,6 +38,7 @@ export const ResearchAllTimeDistributionsSchema = z.object({
   const monthly = block.monthly_returns;
   const histogram = block.return_distribution;
   let valid = monthly.source_observation_count === block.oos_observation_count
+    && (block.scope === "FULL_SAMPLE") === (block.monthly_definition === "FULL_SAMPLE_MONTH_CLOSE_OVER_FIRST_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1")
     && monthly.emitted_point_count === monthly.values.length
     && monthly.total_period_count === monthly.values.length + monthly.omitted_transport_period_count
     && (monthly.sampling === "FULL") === (monthly.omitted_transport_period_count === 0)

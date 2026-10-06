@@ -33,6 +33,7 @@ from typing import Any, Callable, Final, Iterable, Mapping
 
 import pandas as pd
 import pyarrow as pa
+import pyarrow.parquet as pq
 
 from portal_api.services.research_child_audit_companion import (
     ChildAuditCompanionCapture, digest as child_audit_digest, source_file_digest,
@@ -482,6 +483,9 @@ def _portal_retention_row(table_kind: str, row: Mapping[str, Any]) -> Mapping[st
         fold_selection = _retained_facts(row, "fold_selection")
         if fold_selection is not None:
             payload["fold_selection"] = fold_selection
+        mode4_selection = _retained_facts(row, "mode4_selection")
+        if mode4_selection is not None:
+            payload["mode4_selection"] = mode4_selection
     elif table_kind == "trials":
         source_id = row.get("trial_id")
         at_utc_ms = None
@@ -708,6 +712,9 @@ class CurrentSourceArtifactAdapter:
         admission.validate()
         recipe = admission.recipe()
         causal = admission.optimization_schedule == "per_fold_causal"
+        full04 = recipe is not None and recipe["descriptor"].get("schema_version") == "research.full04-delta-profile.v1"
+        mode4_causal = full04 and causal and admission.optimization_mode == "mode_4_is_only_robust"
+        nested_causal = causal and not mode4_causal
         per_fold_decay = admission.optimization_schedule == "per_fold_decay"
         three_window = admission.engine_operation == "train_test_split"
         source_adapter_id = admission.source_adapter_id
@@ -737,6 +744,8 @@ class CurrentSourceArtifactAdapter:
         # CG-P13-07/08. An older source tree simply lacks them; every fact
         # derived from them then stays a typed absence downstream.
         source_contract = self._optional_json(raw_dir / "wfo" / "source_contract.v1.json", "source contract")
+        mode_evidence = self._read_mode_evidence(raw_dir / "wfo" / "mode_evidence.v1.json") if full04 else None
+        mode_tables = self._mode_audit_tables(raw_dir, mode_evidence, recipe) if full04 else {}
         if three_window and (not isinstance(source_contract, Mapping) or source_contract.get("engine_operation") != "train_test_split"):
             raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_HOLDOUT_BINDING_REJECTED", "Three Window source must name its actual train_test_split operation.")
         if per_fold_decay:
@@ -745,7 +754,7 @@ class CurrentSourceArtifactAdapter:
                     or wf.get("optimization_mode") != "mode_1_decay" or wf.get("oos_used_for_selection") is not True
                     or wf.get("causality_claim") != "fold_local_decay_calibration"):
                 raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_FOLD_SELECTION_REJECTED", "Per-fold decay must publish its native outer-OOS selection-input semantics.")
-        if causal:
+        if nested_causal:
             source_wfo = source_contract.get("walk_forward") if isinstance(source_contract, Mapping) else None
             if (not isinstance(source_wfo, Mapping) or source_wfo.get("optimization_mode") != "mode_1_decay"
                     or source_wfo.get("optimization_schedule") != "per_fold_causal"
@@ -773,22 +782,27 @@ class CurrentSourceArtifactAdapter:
             fold_metrics=None if causal else fold_metrics,
             observations=observations,
         )
-        trials = self._frame_rows(raw_dir / "wfo" / "trials.parquet", kind="trials", source_contract=source_contract, causal=causal or per_fold_decay)
+        trials = self._frame_rows(raw_dir / "wfo" / "trials.parquet", kind="trials", source_contract=source_contract, causal=causal or per_fold_decay,
+            full04_mode=admission.optimization_mode if full04 else None)
         candidates = self._frame_rows(
             raw_dir / "wfo" / "candidates.parquet",
             kind="candidates",
             source_contract=source_contract,
             objective_terms=self._objective_terms(config),
             causal=causal or per_fold_decay,
+            full04_mode=admission.optimization_mode if full04 else None,
         )
         from portal_api.services.research_sampler_trace import SAMPLER_TRACE_PATH, retain_sampler_trace
         try:
             sampler_trace = retain_sampler_trace(raw_dir / SAMPLER_TRACE_PATH, run_id=run_id, trial_count=len(trials))
         except (OSError, ValueError, TypeError, KeyError) as exc:
             raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_SAMPLER_TRACE_INVALID", "Sampler source trace is incompatible with this run's retained source.") from exc
-        if causal:
+        if nested_causal:
             selection = self._attach_causal_selections(raw_dir, folds=folds, trials=trials, candidates=candidates, config=config, selection=selection,
                 constraints=recipe["descriptor"]["inner_constraints"] if recipe is not None else None)
+        if mode4_causal:
+            selection = self._attach_mode4_selections(raw_dir, folds=folds, trials=trials, candidates=candidates,
+                selection=selection, recipe=recipe)
         if per_fold_decay:
             selection = self._attach_per_fold_decay_selections(raw_dir, folds=folds, trials=trials, candidates=candidates, selection=selection)
         selection_rows = [self._selection_row(selection)]
@@ -825,6 +839,7 @@ class CurrentSourceArtifactAdapter:
             candidates=candidates,
             selection=selection_rows,
             three_window=three_window,
+            recipe=recipe if full04 else None,
         )
         window_replay = self._three_window_replay_rows(raw_dir,
             maximum_rows=recipe["budgets"]["planning_max_bars"] if recipe is not None else 92 * 24) if three_window else None
@@ -850,11 +865,16 @@ class CurrentSourceArtifactAdapter:
                     ("execution_observation", execution_observation),
                     ("sampler_public_trace", None if sampler_trace is None else sampler_trace[0]),
                     ("three_window_replay", window_replay),
+                    ("mode_evidence", mode_evidence),
                 )
                 if value is not None
             },
         )
         registry = current_source_schema_registry(bar_ledger=account_ledger is not None)
+        for name, (path, schema) in mode_tables.items():
+            if schema.names:
+                registry.register(ArtifactTableSchema(table_kind=f"mode_audit_{name}",
+                    schema_version=f"research.current-source-mode-audit-{name}.v1", arrow_schema=schema))
         if window_replay is not None:
             base = current_source_schema_registry().require("observations").arrow_schema
             registry.register(ArtifactTableSchema(table_kind="three_window_replay",
@@ -876,7 +896,7 @@ class CurrentSourceArtifactAdapter:
                 trials=trials,
                 candidates=candidates,
                 selection=selection_rows[0],
-                folds=folds if causal else None,
+                folds=folds if nested_causal else None,
             ),
         )
         if sampler_trace is not None and isinstance(summary.get("source_facts"), dict):
@@ -886,6 +906,23 @@ class CurrentSourceArtifactAdapter:
             summary["source_facts"]["search"]["raw_best_is_trial_id"] = None
             summary["source_facts"]["search"]["raw_best_is_objective"] = None
             summary["source_facts"]["search"]["candidate_source_trial_ids"] = sorted(row["candidate_id"] for row in candidates)
+        if mode4_causal and isinstance(summary.get("source_facts"), dict):
+            summary["source_facts"]["search"]["raw_best_is_trial_id"] = None
+            summary["source_facts"]["search"]["raw_best_is_objective"] = None
+            summary["source_facts"]["search"]["candidate_source_trial_ids"] = sorted(row["candidate_id"] for row in candidates)
+        if full04:
+            summary["optimizer_disclosure"] = self._optimizer_disclosure(mode_evidence, source_contract=source_contract,
+                config=config, selection=selection_rows[0], folds=folds, trials=trials, candidates=candidates, admission=admission)
+            if admission.optimization_mode == "mode_5_full_robust":
+                summary["derived_scope"] = "FULL_SAMPLE_CALIBRATION_INCLUSIVE_V1"
+            if isinstance(summary.get("source_facts"), dict):
+                # Mode1's top-IS/decay controls are not another optimizer's
+                # population/ranking contract, even when constructor defaults
+                # happen to carry the same values.
+                search = summary["source_facts"]["search"]
+                for key in ("top_is_fraction", "top_is_k", "decay_lambda", "decay_gamma",
+                            "raw_best_is_trial_id", "raw_best_is_objective"):
+                    search[key] = None
         if three_window:
             summary["protocol_disclosure"] = self._three_window_disclosure(raw_dir, config=config, selection=selection,
                                                                          exact_display_sampling=recipe is not None)
@@ -918,6 +955,25 @@ class CurrentSourceArtifactAdapter:
         from portal_api.services.research_enrich_analysis import enrich_retained
         summary["enriched_analysis"] = enrich_retained(run_id=identity.run_id, observations=observations, folds=folds,
             source_windows=source_windows)
+        if full04 and admission.optimization_mode == "mode_5_full_robust":
+            # Values and original source documents stay intact. Only this
+            # new mode's retained reader projection receives its actual
+            # full-sample role, never an untouched-OOS label inherited from
+            # the generic WFO analytics adapters.
+            for name in ("summary_analytics", "summary_analytics_v2", "enriched_analysis"):
+                if name in summary:
+                    summary[name] = self._full_sample_projection(summary[name])
+            if "execution_observation" in summary:
+                summary["execution_observation"] = {**summary["execution_observation"],
+                    "evaluation_role": "FULL_SAMPLE_CALIBRATION"}
+            enriched = summary["enriched_analysis"]
+            enriched["windows"]["oos"] = {"state": "NOT_APPLICABLE",
+                "reason_code": "FULL_SAMPLE_CALIBRATION_HAS_NO_UNTOUCHED_OOS"}
+            enriched["windows"]["full_sample"] = {"state": "AVAILABLE", "reason_code": None,
+                "start_ms": enriched["scope"]["first_at_utc_ms"],
+                "end_ms": enriched["scope"]["last_at_utc_ms"] + recipe["descriptor"]["source_clock"]["bar_interval_ms"],
+                "bounds_semantics": "START_INCLUSIVE_END_EXCLUSIVE",
+                "source_locator": "P05.native_full_sample_fold.train_start..test_end"}
         self._fit_summary_budget(summary, observations, exact_display_sampling=recipe is not None)
         writer = self._retained_artifacts.begin_write(
             identity=identity,
@@ -936,6 +992,17 @@ class CurrentSourceArtifactAdapter:
             self._write_rows(writer, registry, "trials", trials)
             self._write_rows(writer, registry, "candidates", candidates)
             self._write_rows(writer, registry, "selection", selection_rows)
+            for name, (path, schema) in mode_tables.items():
+                if not schema.names:
+                    continue  # exact native empty relation is declared in the bound source document
+                table = pq.read_table(path)
+                if source_file_digest(path) != mode_evidence["source_tables"][name]["sha256"]:
+                    raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_MODE_EVIDENCE_REJECTED", "Native mode audit source changed during P05 custody transfer.")
+                batches = table.to_batches(max_chunksize=MAXIMUM_TABLE_BATCH_ROWS)
+                if not batches:
+                    batches = [pa.RecordBatch.from_pylist([], schema=schema)]
+                for batch in batches:
+                    writer.append_batch(f"mode_audit_{name}", batch)
             if window_replay is not None:
                 self._write_rows(writer, registry, "three_window_replay", window_replay,
                                  maximum_batch_rows=FULL03_STORAGE_BATCH_ROWS if recipe is not None else MAXIMUM_TABLE_BATCH_ROWS)
@@ -957,6 +1024,8 @@ class CurrentSourceArtifactAdapter:
             })
             if source_contract is not None:
                 writer.write_small_document("source_contract", self._document(source_contract))
+            if mode_evidence is not None:
+                writer.write_small_document("source_mode_evidence", self._document(mode_evidence))
             if three_window:
                 writer.write_small_document("source_three_window_roles", self._document(self._read_json(raw_dir / "wfo" / "three_window_roles.v1.json", "Three Window roles")))
             if sampler_trace is not None:
@@ -1057,6 +1126,214 @@ class CurrentSourceArtifactAdapter:
             raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_CONFIG_REJECTED", "The completed source mode/schedule does not match its admitted profile.")
         if calibration.get("random_seed") != admission.random_seed or calibration.get("optuna_trials") != admission.optuna_trials:
             raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_CONFIG_REJECTED", "The completed source seed/trial budget does not match its admitted profile.")
+        recipe = admission.recipe()
+        if recipe is not None and recipe["descriptor"].get("schema_version") == "research.full04-delta-profile.v1":
+            settings = recipe["descriptor"]["optimizer_settings"]
+            native_settings = calibration.get("optimization")
+            if not isinstance(native_settings, Mapping) or any(native_settings.get(key) != value for key, value in settings.items()):
+                raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_CONFIG_REJECTED", "Native mode settings differ from the exact immutable optimizer recipe.")
+
+    @staticmethod
+    def _full_sample_projection(value: Any) -> Any:
+        """Role-only FULL-04 transformation; no metric/series recomputation."""
+        if isinstance(value, Mapping):
+            return {key: CurrentSourceArtifactAdapter._full_sample_projection(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [CurrentSourceArtifactAdapter._full_sample_projection(item) for item in value]
+        if not isinstance(value, str):
+            return value
+        exact = {
+            "OOS": "FULL_SAMPLE",
+            "FULL_RETAINED_OOS": "FULL_RETAINED_FULL_SAMPLE",
+            "RETAINED_OOS_OBSERVATIONS": "RETAINED_FULL_SAMPLE_OBSERVATIONS",
+            "FIRST_LAST_RETAINED_OOS_EQUITY_V1": "FIRST_LAST_RETAINED_FULL_SAMPLE_EQUITY_V1",
+            "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1": "FULL_SAMPLE_MONTH_CLOSE_OVER_FIRST_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1",
+            "FIRST_OOS_CLOSE": "FIRST_FULL_SAMPLE_CLOSE",
+        }
+        if value in exact:
+            return exact[value]
+        # These are Portal-derived source locators/reasons, not native engine
+        # claim strings. Explicit test scope means the native full-span fold.
+        return value.replace("scope='oos',source_fold_table", "scope='test',full_sample_source_fold_table").replace(
+            "_OOS_", "_FULL_SAMPLE_").replace(":OOS", ":FULL_SAMPLE").replace("IS_minus_OOS", "IS_minus_FULL_SAMPLE")
+
+    @staticmethod
+    def _read_mode_evidence(path: Path) -> dict[str, Any]:
+        try:
+            if path.is_symlink() or not path.is_file() or path.stat().st_size > 256 * 1024:
+                raise ValueError("unbounded native mode document")
+        except (OSError, ValueError) as exc:
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_MODE_EVIDENCE_REJECTED", "Native mode evidence must be a bounded regular source document.") from exc
+        return CurrentSourceArtifactAdapter._read_json(path, "native mode evidence")
+
+    @staticmethod
+    def _mode_audit_tables(raw_dir: Path, evidence: Mapping[str, Any], recipe: Mapping[str, Any]) -> dict[str, tuple[Path, pa.Schema]]:
+        """Authenticate five named native tables before any P05 write.
+
+        Table values remain private columnar custody. Neither a public JSON
+        blob nor a browser-time engine/audit call is an acceptable substitute.
+        """
+        tables = evidence.get("source_tables")
+        names = {"trials", "analysis", "evaluations", "selection", "objective_components"}
+        if (not isinstance(tables, Mapping) or set(tables) != names
+                or evidence.get("bounds") != {"table_rows": 4096, "total_rows": 8192, "bytes": 256 * 1024}):
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_MODE_EVIDENCE_REJECTED", "Native mode evidence must name its five bounded source audit tables.")
+        result, total_rows, total_bytes = {}, 0, 0
+        for name in sorted(names):
+            declaration = tables[name]
+            relative = f"wfo/mode_audit_{name}.v1.parquet"
+            if (not isinstance(declaration, Mapping) or set(declaration) != {"path", "rows", "sha256"}
+                    or declaration.get("path") != relative or type(declaration.get("rows")) is not int
+                    or not 0 <= declaration["rows"] <= 4096
+                    or not isinstance(declaration.get("sha256"), str) or not _SHA256.fullmatch(declaration["sha256"])):
+                raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_MODE_EVIDENCE_REJECTED", "Native mode audit table identity/count/hash is outside its exact custody schema.")
+            path = raw_dir / relative
+            try:
+                if path.is_symlink() or not path.is_file() or path.stat().st_size > recipe["budgets"]["file_bytes"]:
+                    raise ValueError("native table is not a bounded regular file")
+                total_bytes += path.stat().st_size
+                if source_file_digest(path) != declaration["sha256"]:
+                    raise ValueError("native audit source bytes changed")
+                metadata = pq.read_metadata(path)
+                schema = pq.read_schema(path)
+                if metadata.num_rows != declaration["rows"] or len(schema.names) > 128:
+                    raise ValueError("native audit cardinality differs")
+                if name == "selection":
+                    selected = pq.read_table(path).to_pylist()
+                    best = evidence.get("best_trial")
+                    if len(selected) != 1 or not isinstance(best, Mapping):
+                        raise ValueError("native audit has no single final selection")
+                    native = selected[0]
+                    native_params = _json_object(native.get("selected_params"), "native audit selected parameters")
+                    native_metadata = _json_object(native.get("selection_metadata"), "native audit selected metadata")
+                    if (native.get("selected_trial_id") != best.get("trial_id")
+                            or CurrentSourceArtifactAdapter._decimal(native.get("selected_objective"), "native audit objective") != CurrentSourceArtifactAdapter._decimal(best.get("objective"), "native selected objective")
+                            or _decimal_object(native_params, "native audit parameters") != _decimal_object(best.get("params"), "native selected parameters")
+                            or native_metadata != best.get("selection_metadata")):
+                        raise ValueError("native audit selection differs from the compact mode target")
+            except (OSError, ValueError, KeyError, TypeError, pa.ArrowException, CurrentSourceArtifactError) as exc:
+                raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_MODE_EVIDENCE_REJECTED", "Native mode audit bytes do not match their pinned source evidence.") from exc
+            total_rows += metadata.num_rows
+            if total_rows > 8192 or total_bytes > recipe["budgets"]["scratch_bytes"]:
+                raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_MODE_EVIDENCE_REJECTED", "Native mode audit exceeds its total row/byte budget.")
+            result[name] = (path, schema)
+        if evidence.get("row_counts") != {name: tables[name]["rows"] for name in names}:
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_MODE_EVIDENCE_REJECTED", "Native mode audit count witnesses disagree.")
+        return result
+
+    def _optimizer_disclosure(
+        self, evidence: Mapping[str, Any], *, source_contract: Mapping[str, Any], config: Mapping[str, Any],
+        selection: Mapping[str, Any], folds: list[dict[str, Any]], trials: list[dict[str, Any]],
+        candidates: list[dict[str, Any]], admission: CurrentSourceAdmission,
+    ) -> dict[str, Any]:
+        """A closed, small projection of authentic native mode evidence.
+
+        Every objective/selector fact retains its published value. In
+        particular a bootstrap proxy is not realized OOS, a centroid is not
+        an Optuna trial, and a full-sample fold is not untouched validation.
+        """
+        def refuse() -> None:
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_MODE_EVIDENCE_REJECTED", "Native mode selection, methodology and source claims do not bind to the exact optimizer recipe.")
+
+        mode, schedule = admission.optimization_mode, admission.optimization_schedule
+        wf = source_contract.get("walk_forward") if isinstance(source_contract, Mapping) else None
+        best, target = evidence.get("best_trial"), evidence.get("selection_target")
+        retained = _json_object(selection["payload_json"], "mode selection payload")
+        if (evidence.get("schema_version") != "portal.wfo-mode-evidence.v1"
+                or evidence.get("optimization_mode") != mode or evidence.get("optimization_schedule") != schedule
+                or not isinstance(wf, Mapping) or wf.get("optimization_mode") != mode or wf.get("optimization_schedule") != schedule
+                or wf.get("oos_used_for_selection") is not (mode == "mode_3_flat_minima")
+                or wf.get("full_sample_used_for_selection") is not (mode == "mode_5_full_robust")
+                or not isinstance(best, Mapping) or not isinstance(target, Mapping)
+                or target != retained.get("selection_target")
+                or _decimal_object(best.get("params"), "native mode parameters") != _decimal_object(retained.get("params"), "mode selected parameters")
+                or self._nullable_decimal(best.get("objective"), "native mode objective") != selection["objective"]):
+            refuse()
+        metadata = best.get("selection_metadata")
+        metadata = metadata if isinstance(metadata, Mapping) else {}
+        native_id = best.get("trial_id")
+        synthetic = target.get("kind") == "SYNTHETIC_CENTROID"
+        if (type(native_id) is not int or native_id < -1 or target.get("native_trial_id") != native_id
+                or target.get("params") != best.get("params") or target.get("selection_metadata") != metadata
+                or synthetic != (native_id == -1)
+                or target.get("kind") not in {"SYNTHETIC_CENTROID", "OPTUNA_TRIAL"}
+                or target.get("source_trial_id") != (None if synthetic else native_id)):
+            refuse()
+        if synthetic:
+            if mode != "mode_3_flat_minima" or metadata.get("selector") != "centroid" or selection["trial_id"] is not None or metadata.get("requires_evaluation") is not True:
+                refuse()
+        elif schedule == "global" and selection["trial_id"] != str(native_id):
+            refuse()
+        if schedule == "per_fold_causal":
+            if mode != "mode_4_is_only_robust" or wf.get("causality_claim") != "strict_fold_local_retraining":
+                refuse()
+            last = json.loads(folds[-1]["payload_json"])["mode4_selection"]
+            if last["source_trial_id"] != str(native_id) or last["selected_trial_id"] != selection["trial_id"]:
+                refuse()
+        elif wf.get("causality_claim") != "retrospective_global_calibration":
+            refuse()
+        locator = "wfo.mode_evidence.v1:best_trial.selection_metadata"
+        settings = config["calibration"]["optimization"]
+        selector_metadata = metadata
+        if mode == "mode_3_flat_minima" and metadata.get("cluster_size") is None:
+            plateau = [json.loads(row["payload_json"]).get("selection_metadata", {}) for row in candidates]
+            plateau = [row for row in plateau if row.get("selector") == "centroid" and row.get("cluster_size") is not None]
+            if len(plateau) == 1:
+                selector_metadata = plateau[0]
+                locator = "wfo.candidates.parquet:selection_metadata.centroid"
+        scalar = lambda key: self._fact_decimal(selector_metadata.get(key), key)
+        token = lambda key: self._fact_token(selector_metadata.get(key))
+        if mode == "mode_3_flat_minima":
+            native = {"kind": "PLATEAU", "selector": token("selector"), "cluster_method": token("cluster_method"),
+                "cluster_size": self._fact_int(selector_metadata.get("cluster_size")), "top_trials": self._fact_int(selector_metadata.get("top_trials")),
+                "medoid_trial_id": self._nullable_identifier(selector_metadata.get("medoid_trial_id")),
+                "cluster_mean_objective": scalar("cluster_mean_objective"), "cluster_best_objective": scalar("cluster_best_objective")}
+            score, score_kind = selection["objective"], self._full04_objective_kind(best, mode)
+        elif mode == "mode_2_sbb":
+            if wf.get("scoring_backend") != "proxy" or settings.get("scoring_backend") != "proxy":
+                refuse()
+            sampled = [json.loads(row["payload_json"]) for row in trials if row["trial_id"] == str(native_id)]
+            if len(sampled) != 1:
+                refuse()
+            native = {"kind": "BOOTSTRAP_PROXY", "scoring_backend": "proxy", "sbb_samples": settings["sbb_samples"],
+                "sbb_block_length": settings["sbb_block_length"], "sbb_simulation": settings["sbb_simulation"],
+                "synthetic_oos_mean": self._fact_decimal(sampled[0].get("mean_oos_sharpe"), "synthetic OOS mean"),
+                # Fold-level standard deviations are retained in native audit.
+                # They are not a source-published run-level std statistic.
+                "synthetic_oos_std": self._fact_decimal(sampled[0].get("synthetic_oos_std"), "synthetic OOS std")}
+            locator = "wfo.trials.parquet:selection_metadata.mode_2_sbb"
+            if settings.get("candidate_selection_metric") != "mean_is_sharpe" or metadata.get("selected_by") != "mean_is_sharpe":
+                refuse()
+            score, score_kind = self._fact_decimal(best.get("mean_is_sharpe"), "IS selection mean"), "IS_MEAN_SHARPE"
+        else:
+            native = {"kind": "IS_ONLY_DISPERSION" if mode == "mode_4_is_only_robust" else "FULL_SAMPLE_ROBUST",
+                "selector": token("selector"), "is_subperiods": settings["is_subperiods"],
+                "temporal_score": scalar("temporal_score"), "temporal_q25": scalar("temporal_q25"),
+                "temporal_mad": scalar("temporal_mad"), "temporal_count": self._fact_int(metadata.get("temporal_count")),
+                "is_only_robust_score": scalar("is_only_robust_score")}
+            score, score_kind = native["is_only_robust_score"], "IS_ONLY_ROBUST_J" if mode == "mode_4_is_only_robust" else "FULL_SAMPLE_ROBUST_J"
+            if score is None and native["temporal_score"] is not None:
+                score, score_kind = native["temporal_score"], "IS_TEMPORAL_ROBUST_SCORE" if mode == "mode_4_is_only_robust" else "FULL_SAMPLE_TEMPORAL_ROBUST_SCORE"
+            if mode == "mode_5_full_robust":
+                if len(folds) != 1 or any(folds[0][f"train_{edge}_utc_ms"] != folds[0][f"test_{edge}_utc_ms"] for edge in ("start", "end")):
+                    refuse()
+                native["selection_sample_bars"] = self._fact_int(json.loads(folds[0]["payload_json"]).get("train_bars"))
+                if native["selection_sample_bars"] is None:
+                    refuse()
+        native.update(source_locator=locator, reason_code="QUANTBT_MODE_DETAIL_NOT_PUBLISHED" if any(value is None for value in native.values()) else None)
+        result = {"schema_version": "research.current-source-optimizer-disclosure.v1", "optimization_mode": mode,
+            "optimization_schedule": schedule, "selection_target": {
+                "kind": "SYNTHETIC_CENTROID" if synthetic else "STUDY_LOCAL_TRIAL" if schedule == "per_fold_causal" else "TRIAL",
+                "trial_id": selection["trial_id"], "objective_kind": self._full04_objective_kind(best, mode),
+                "selection_score": score, "selection_score_kind": score_kind if score is not None else None},
+            "calibration_sample": "BOOTSTRAP_PROXY" if mode == "mode_2_sbb" else "FULL_SAMPLE" if mode == "mode_5_full_robust" else "IS_OOS" if mode == "mode_3_flat_minima" else "IS_ONLY",
+            "oos_used_for_selection": wf["oos_used_for_selection"], "full_sample_used_for_selection": wf["full_sample_used_for_selection"],
+            "mode_evidence": native}
+        if synthetic:
+            result["centroid"] = {"state": "AVAILABLE", "parameters": _decimal_object(best["params"], "centroid parameters"),
+                "medoid_trial_id": native["medoid_trial_id"], "cluster_size": native["cluster_size"],
+                "cluster_method": native["cluster_method"], "requires_evaluation": True}
+        return result
 
     @staticmethod
     def _assert_admitted_output_bounds(
@@ -1067,6 +1344,7 @@ class CurrentSourceArtifactAdapter:
         candidates: list[dict[str, Any]],
         selection: list[dict[str, Any]],
         three_window: bool = False,
+        recipe: Mapping[str, Any] | None = None,
     ) -> None:
         """Reject an over-budget engine result before P05 writes any bytes.
 
@@ -1083,6 +1361,17 @@ class CurrentSourceArtifactAdapter:
             ("candidates", len(candidates), 1, MAXIMUM_OPTUNA_TRIALS),
             ("selection", len(selection), 1, 1),
         )
+        if recipe is not None:
+            p = recipe["descriptor"]
+            fold_bounds = p["fold_bounds"]
+            maximum_trials = p.get("max_total_trials", p["trial_count"]["max"])
+            bounds = (
+                ("observations", len(observations), 1, recipe["budgets"]["planning_max_bars"]),
+                ("folds", len(folds), fold_bounds["min"], fold_bounds["max"]),
+                ("trials", len(trials), p["trial_count"]["min"], maximum_trials),
+                ("candidates", len(candidates), 1, maximum_trials),
+                ("selection", len(selection), 1, 1),
+            )
         for relation, count, minimum, maximum in bounds:
             if not minimum <= count <= maximum:
                 raise CurrentSourceArtifactError(
@@ -1143,6 +1432,7 @@ class CurrentSourceArtifactAdapter:
         source_contract: Mapping[str, Any] | None = None,
         objective_terms: Mapping[str, Decimal] | None = None,
         causal: bool = False,
+        full04_mode: str | None = None,
     ) -> list[dict[str, Any]]:
         frame = self._read_frame(path, kind)
         if frame.empty:
@@ -1173,7 +1463,9 @@ class CurrentSourceArtifactAdapter:
                 trial_id = self._identifier(record.get("trial_id"), f"{kind} id", ordinal)
                 params = record.get("params") if isinstance(record.get("params"), Mapping) else {}
                 normalized_params = _decimal_object(params, f"{kind} parameters")
-                record["trial_facts"] = self._trial_facts(record, source_contract=source_contract, objective_terms=None)
+                if full04_mode is not None and (type(record.get("trial_id")) is not int or record["trial_id"] < 0):
+                    raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_MODE_BINDING_REJECTED", "An optimizer trial must retain its actual non-negative native identity.")
+                record["trial_facts"] = self._trial_facts(record, source_contract=source_contract, objective_terms=None, full04_mode=full04_mode)
                 if causal:
                     trial_id = self._causal_trial_id(record, trial_id)
                 rows.append({
@@ -1186,11 +1478,22 @@ class CurrentSourceArtifactAdapter:
                 })
             elif kind == "candidates":
                 candidate_id = self._identifier(self._first(record, "candidate_id", "trial_id", "id"), f"{kind} id", ordinal)
+                if full04_mode is not None and record.get("trial_id") == -1:
+                    if full04_mode != "mode_3_flat_minima" or causal:
+                        raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_MODE_BINDING_REJECTED", "A synthetic centroid is not an Optuna trial or fold-local pick.")
+                    candidate_id = "native_centroid_minus1"
                 params = record.get("params") if isinstance(record.get("params"), Mapping) else {}
                 normalized_params = _decimal_object(params, f"{kind} parameters")
-                record["trial_facts"] = self._trial_facts(record, source_contract=source_contract, objective_terms=objective_terms)
+                record["trial_facts"] = self._trial_facts(record, source_contract=source_contract, objective_terms=objective_terms, full04_mode=full04_mode)
                 if causal:
                     candidate_id = self._causal_trial_id(record, candidate_id)
+                if full04_mode is not None:
+                    # A native candidate ledger may contain the robust pick
+                    # and the same real trial again as a shortlist member.
+                    # Evaluation-row identity is not an invented trial ID.
+                    candidate_id = f"{candidate_id}.evaluation_{ordinal}"
+                    if not causal and type(record.get("trial_id")) is int and record["trial_id"] >= 0:
+                        record["trial_facts"]["source_trial_id"] = str(record["trial_id"])
                 rows.append({
                     "source_ordinal": ordinal,
                     "candidate_id": candidate_id,
@@ -1200,7 +1503,7 @@ class CurrentSourceArtifactAdapter:
                 })
             else:  # pragma: no cover - private call sites stay explicit
                 raise AssertionError(f"unsupported current-source table {kind}")
-        if causal:
+        if causal or full04_mode is not None:
             field = "trial_id" if kind == "trials" else "candidate_id"
             if len({row[field] for row in rows}) != len(rows):
                 raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_CAUSAL_BINDING_REJECTED", "Causal source rows repeat an identity within one study.")
@@ -1344,6 +1647,93 @@ class CurrentSourceArtifactAdapter:
                 or original_local != self._nullable_identifier(native_last.get("selected_trial_id"))
                 or _decimal_object(selection.get("params"), "last-fold parameters") != last["parameters"]
                 or self._nullable_decimal(selection.get("objective"), "last-fold objective") != last["objective"]):
+            refuse()
+        return {**selection, "trial_id": last["selected_trial_id"]}
+
+    def _attach_mode4_selections(
+        self, raw_dir: Path, *, folds: list[dict[str, Any]], trials: list[dict[str, Any]],
+        candidates: list[dict[str, Any]], selection: Mapping[str, Any], recipe: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Bind actual IS-only outer studies; Mode 4 has no nested inner study.
+
+        The selector's robustness score is not automatically the native row's
+        objective: a medoid retains its original IS mean Sharpe. Both remain
+        source facts, never recomputed or relabelled by this custody adapter.
+        """
+        def refuse() -> None:
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_MODE4_BINDING_REJECTED",
+                "IS-only selections must bind to their own outer study, source trial, parameters and frozen deployment.")
+
+        frame = self._read_frame(raw_dir / "wfo" / "fold_selection.parquet", "IS-only fold selection")
+        native_rows = [{str(k): self._json_value(v) for k, v in row.to_dict().items()} for _, row in frame.iterrows()]
+        params_by_fold = self._read_json(raw_dir / "wfo" / "params_by_fold.json", "IS-only parameters by fold")
+        params_by_fold = {k: v for k, v in params_by_fold.items() if k not in {"producer", "artifact_schema_version"}}
+        ids = {row["fold_id"] for row in folds}
+        limits, configured_trials = recipe["descriptor"]["fold_bounds"], recipe["descriptor"]["trial_count"]["max"]
+        if (not limits["min"] <= len(folds) <= limits["max"] or len(ids) != len(folds)
+                or len(native_rows) != len(folds) or set(params_by_fold) != ids
+                or len(trials) != configured_trials * len(folds) or len(trials) > recipe["descriptor"]["max_total_trials"]):
+            refuse()
+        by_fold = {self._nullable_identifier(row.get("fold_id")): row for row in native_rows}
+        if set(by_fold) != ids:
+            refuse()
+
+        def facts(row: Mapping[str, Any]) -> Mapping[str, Any]:
+            return json.loads(row["payload_json"])["trial_facts"]
+
+        for ordinal, fold in enumerate(folds):
+            native = by_fold[fold["fold_id"]]
+            study, seed = self._nullable_identifier(native.get("study_id")), self._fact_int(native.get("fold_seed"))
+            if (study != fold["fold_id"] or seed is None or seed > 9_007_199_254_740_991
+                    or native.get("outer_oos_used_for_selection") is not False
+                    or native.get("causality_claim") != "strict_fold_local_retraining"
+                    or native.get("inner_fold_count") not in (None, 0)):
+                refuse()
+            for name in ("train_start", "train_end", "test_start", "test_end"):
+                if self._nullable_utc_ms(native.get(name), name) != fold[name + "_utc_ms"]:
+                    refuse()
+            native_params = native.get("selected_params")
+            if native_params is None and isinstance(native.get("selected_params_json"), str):
+                native_params = _json_object(native["selected_params_json"], "IS-only selected parameters")
+            params = _decimal_object(native_params, "IS-only selected parameters")
+            if not params or params != _decimal_object(params_by_fold[fold["fold_id"]], "IS-only fold parameter map"):
+                refuse()
+            local = self._nullable_identifier(native.get("selected_trial_id"))
+            searched = [row for row in trials if facts(row).get("study_id") == study]
+            pool = [row for row in candidates if facts(row).get("study_id") == study]
+            matching = [row for row in searched if facts(row).get("source_trial_id") == local and json.loads(row["parameters_json"]) == params]
+            selected = [row for row in pool if facts(row).get("source_trial_id") == local and json.loads(row["parameters_json"]) == params]
+            # QuantBT publishes [robust_pick, *top_IS] without deduplicating
+            # this IS-only pool. Select the explicit native robust witness,
+            # not whichever repeated row happened to arrive first.
+            selected = [row for row in selected if json.loads(row["payload_json"]).get("selection_metadata", {}).get("selected_by") == "is_only_robust"]
+            if (len(searched) != configured_trials or self._fact_int(native.get("study_trial_rows")) != configured_trials
+                    or not 1 <= len(pool) <= configured_trials or self._fact_int(native.get("candidate_count")) != len(pool)
+                    or len(matching) != 1 or len(selected) != 1 or matching[0]["state"] != "COMPLETE"
+                    or facts(matching[0]).get("stage") != "is_search" or facts(matching[0]).get("pruned") is not False
+                    or facts(selected[0]).get("stage") not in {"is_search", "is_only_candidate_selection"}
+                    or facts(selected[0]).get("oos_seen_by_optuna") is not False):
+                refuse()
+            block = {
+                "schema_version": "research.current-source-mode4-selection.v1", "scope": "OUTER_FOLD_SELECTION",
+                "study_id": study, "fold_seed": seed, "source_trial_id": local,
+                "selected_trial_id": matching[0]["trial_id"], "parameters": params,
+                "params_digest": hashlib.sha256(self._canonical_json(params).encode()).hexdigest(),
+                "objective": selected[0]["objective"], "objective_kind": facts(selected[0])["objective_kind"],
+                "candidate_count": len(pool), "study_trial_rows": configured_trials,
+                "outer_oos_used_for_selection": False, "causality_claim": "strict_fold_local_retraining",
+                "selection_sequence": ordinal,
+                "params_frozen_at_utc_ms": self._nullable_utc_ms(native.get("params_frozen_at"), "IS-only parameter freeze"),
+                "candidate_is_metric": self._nullable_decimal(native.get("candidate_is_metric"), "IS-only candidate metric"),
+            }
+            payload = json.loads(fold["payload_json"])
+            payload["mode4_selection"] = block
+            fold["payload_json"] = self._canonical_json(payload)
+        last = json.loads(folds[-1]["payload_json"])["mode4_selection"]
+        if (selection.get("scope") != "LAST_FOLD_DEPLOYMENT" or selection.get("fold_id") != folds[-1]["fold_id"]
+                or self._nullable_identifier(selection.get("trial_id")) != last["source_trial_id"]
+                or _decimal_object(selection.get("params"), "IS-only last-fold parameters") != last["parameters"]
+                or self._nullable_decimal(selection.get("objective"), "IS-only last-fold objective") != last["objective"]):
             refuse()
         return {**selection, "trial_id": last["selected_trial_id"]}
 
@@ -2099,6 +2489,7 @@ class CurrentSourceArtifactAdapter:
         *,
         source_contract: Mapping[str, Any] | None,
         objective_terms: Mapping[str, Decimal] | None,
+        full04_mode: str | None = None,
     ) -> dict[str, Any]:
         """Declared per-trial facts; OOS numbers only when the stage evaluated OOS.
 
@@ -2122,6 +2513,8 @@ class CurrentSourceArtifactAdapter:
         else:
             fold_scope = {"kind": "NOT_PUBLISHED", "fold_id": None, "reason_code": "QUANTBT_TRIAL_ROW_DID_NOT_PUBLISH_A_FOLD_SCOPE"}
         oos_evaluated = stage is not None and stage != "is_search"
+        if full04_mode is not None:
+            oos_evaluated = stage == "oos_candidate_selection"
         temporal_count = self._fact_decimal(metadata.get("temporal_count", record.get("temporal_count")), "temporal count")
         temporal_scored = temporal_count is not None and Decimal(temporal_count) > 0
         metrics = {
@@ -2144,6 +2537,11 @@ class CurrentSourceArtifactAdapter:
             "is_search": "IS_MEAN_SHARPE",
             "oos_candidate_selection": "MODE_1_DECAY_J",
         }.get(stage or "", "NOT_PUBLISHED")
+        if full04_mode is not None:
+            objective_kind = self._full04_objective_kind(record, full04_mode)
+        components = self._objective_components(record, stage=stage, objective_terms=objective_terms)
+        if full04_mode is not None:
+            components = {"state": "NOT_PUBLISHED", "reason_code": "QUANTBT_MODE_COMPONENTS_RETAINED_IN_NATIVE_EVIDENCE", "formula": None, "terms": []}
         return {
             "schema_version": "research.current-source-trial-facts.v1",
             "stage": stage,
@@ -2154,8 +2552,23 @@ class CurrentSourceArtifactAdapter:
             "pruned": self._fact_bool(record.get("pruned")),
             "oos_seen_by_optuna": self._fact_bool(metadata.get("oos_seen_by_optuna")),
             "metrics": metrics,
-            "objective_components": self._objective_components(record, stage=stage, objective_terms=objective_terms),
+            "objective_components": components,
         }
+
+    @staticmethod
+    def _full04_objective_kind(record: Mapping[str, Any], mode: str) -> str:
+        metadata = record.get("selection_metadata") if isinstance(record.get("selection_metadata"), Mapping) else {}
+        if metadata.get("stage") == "oos_candidate_selection":
+            return "MODE_1_DECAY_J"
+        if mode == "mode_2_sbb":
+            return "SBB_BOOTSTRAP_ROBUST_J"
+        if mode == "mode_3_flat_minima":
+            return "IS_MEAN_SHARPE" if metadata.get("stage") == "is_search" else "MODE_1_DECAY_J"
+        if mode == "mode_4_is_only_robust":
+            return "IS_ONLY_ROBUST_J" if record.get("trial_id") == -1 else "IS_MEAN_SHARPE"
+        if mode == "mode_5_full_robust":
+            return "FULL_SAMPLE_ROBUST_J" if record.get("trial_id") == -1 else "FULL_SAMPLE_MEAN_SHARPE"
+        raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_MODE_BINDING_REJECTED", "An unregistered optimizer mode cannot acquire retained mode facts.")
 
     def _objective_components(
         self,

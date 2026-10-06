@@ -33,7 +33,7 @@ const {Pool}=require('pg'),p=new Pool({connectionString:process.env.DATABASE_URL
   const web=docker(['inspect','--format','{{.Image}}',PROJECT+'-portal-web-1']).trim();
   return {recorded_at_utc:new Date().toISOString(),project:PROJECT,...value,index,web_image_id:web};
 }
-async function previewProbe(enabled){
+async function previewProbe(enabled,slice='full03',home){
   // Keep the connection loopback-only, but use the deployment-bound public
   // Origin for CSRF. The served preview is no longer configured as localhost;
   // never weaken its origin guard just to obtain a probe receipt.
@@ -56,24 +56,41 @@ async function previewProbe(enabled){
   try{
     if(enabled)await call('POST','/api/v1/research/run-producer/p04-delta/install',{});
     const atlas=await call('GET','/api/v1/research/quantbt/atlas');
-    assert.equal(atlas.portal_admission.profiles.filter(r=>r.profile_id.startsWith('p10.delta-')&&/-(?:1m|5m|15m|30m|1h|4h|1d)\.v1$/.test(r.profile_id)).length,enabled?28:0);
+    const registry=JSON.parse(readFileSync(join(ROOT,'apps/portal/registry/research-execution-recipes.v1.json')));
+    const exactIds=registry.recipes.filter(r=>r.descriptor.schema_version===`research.${slice}-delta-profile.v1`).map(r=>r.profile_id);
+    assert.equal(exactIds.length,slice==='full04'?35:28);
+    assert.equal(atlas.portal_admission.profiles.filter(r=>exactIds.includes(r.profile_id)).length,enabled?exactIds.length:0);
     for(const timeframe of ['1m','5m','15m','30m','1h','4h','1d']){
       const query=new URLSearchParams({alpha_id:'delta-rsi-polynomial-alpha',alpha_version_id:'av_delta_rsi_polynomial_alpha_1_0_1',
         dataset_id:'crypto-binance-1m',symbol:'BTCUSDT',timeframe});
       const options=await call('GET','/api/v1/research/runs/setup-options?'+query);
-      const active=options.profiles.filter(p=>p.state==='ENABLED');assert.equal(active.length,enabled?4:0);
+      const active=options.profiles.filter(p=>p.state==='ENABLED'&&exactIds.includes(p.profile_id));
+      assert.equal(active.length,enabled?(slice==='full04'?5:4):0);
       for(const profile of active)assert.equal(profile.budget.qualification,'PRODUCT_RUN_QUALIFIED');
+      if(slice==='full04')assert.equal(options.profiles.filter(p=>p.state==='ENABLED'&&!exactIds.includes(p.profile_id)).length,4,
+        'FULL03_PREDECESSOR_RECIPES_STAY_ENABLED');
+    }
+    if(slice==='full04'&&enabled){
+      const facts=privateJson(join(home,'qualified-products-summary.json')).facts.filter(f=>f.timeframe==='1h');
+      assert.equal(facts.length,5);
+      for(const fact of facts){
+        const spec=privateJson(join(home,fact.private_receipt)).run.requested_spec;
+        const preflight=await call('POST','/api/v1/research/preflights',{requested_spec:spec});
+        assert.equal(preflight.may_create_run,true,'SERVED_PREVIEW_MAY_CREATE:'+fact.profile_id);
+      }
     }
     return {project:PROJECT,enabled,calls,passed:true};
   }finally{await call('POST','/api/auth/logout',{});}
 }
-export async function runPreviewReceipt(home,action,preserveConcurrentWebImage){
-  home=validateHome(home);assert(home.endsWith('/full03'),'EXACT_FULL03_PRIVATE_PROOF_HOME');
+export async function runPreviewReceipt(home,action,preserveConcurrentWebImage,slice='full03'){
+  assert(['full03','full04'].includes(slice),'EXACT_RECIPE_SLICE');
+  home=validateHome(home);assert(home.endsWith('/'+slice),'EXACT_PRIVATE_PROOF_HOME');
   assert(['before','enabled','disabled','after'].includes(action),'EXPLICIT_PREVIEW_PROBE_REQUIRED');
   const path=join(home,`preview-${action}.json`);assert(!existsSync(path),'PRIOR_PREVIEW_EVIDENCE_MUST_NOT_BE_OVERWRITTEN');
   if(action==='enabled'||action==='disabled'){
-    const result=await previewProbe(action==='enabled');savePrivate(path,result);
-    console.log(JSON.stringify({passed:true,action,source_calls:0,setup_checks:7}));
+    const result=await previewProbe(action==='enabled',slice,home);savePrivate(path,result);
+    console.log(JSON.stringify({passed:true,action,external_execution_calls:0,setup_checks:7,
+      preflight_checks:slice==='full04'&&action==='enabled'?5:0}));
   }else{
     const result=snapshot();
     if(action==='after'){

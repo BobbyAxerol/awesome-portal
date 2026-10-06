@@ -59,6 +59,10 @@ def full03_profile_enabled(profile_id: str, env: Mapping[str, str] | None = None
     if not is_full03_profile(profile_id) or source.get("PORTAL_FEATURE_RESEARCH_FULL03_PROFILE", "false") != "true":
         return False
     qualification = execution_recipe_qualification(profile_id)
+    row = execution_recipe(profile_id)
+    if ("FEATURE_RESEARCH_FULL04_PROFILE" in row["feature_flags"]
+            and source.get("PORTAL_FEATURE_RESEARCH_FULL04_PROFILE", "false") != "true"):
+        return False
     return qualification["kind"] == "PRODUCT_RUN_QUALIFIED" or (
         qualification["kind"] == "CANDIDATE_NOT_QUALIFIED"
         and source.get("PORTAL_ENV") == "local"
@@ -103,7 +107,7 @@ def full03_controls(spec: Mapping[str, Any], row: Mapping[str, Any]) -> dict[str
             raise ValueError("FULL-03 temporal guard is outside its exact recipe")
         controls[name] = value
     inner = wf.get("inner")
-    if p["optimization_schedule"] != "per_fold_causal":
+    if p["optimization_schedule"] != "per_fold_causal" or "inner_constraints" not in p:
         if inner is not None:
             raise ValueError("FULL-03 non-causal recipe forbids inner validation")
         return controls
@@ -131,12 +135,13 @@ def full03_controls_from_receipt(receipt: Mapping[str, Any], row: Mapping[str, A
         raise ValueError("FULL-03 recipes forbid preview trial overrides and foreign controls")
     raw = receipt.get(key)
     fields = {"split_frequency", "window_mode", "train_window", "label_horizon_bars", "purge_bars", "embargo_bars"}
-    if causal:
+    nested = causal and "inner_constraints" in p
+    if nested:
         fields |= {"inner_split_frequency", "inner_window_mode", "inner_train_window", "inner_min_folds"}
     if not isinstance(raw, dict) or set(raw) != fields:
         raise ValueError("FULL-03 child requires exactly its bounded temporal controls")
     wf = {"frequency": raw["split_frequency"], **{k: v for k, v in raw.items() if k != "split_frequency" and not k.startswith("inner_")}}
-    if causal:
+    if nested:
         wf["inner"] = {"split_frequency": raw["inner_split_frequency"], "window_mode": raw["inner_window_mode"],
             "train_window": raw["inner_train_window"], "min_folds": raw["inner_min_folds"]}
     return full03_controls({"schema_version": p["requested_spec_version"], "optimization_mode": p["optimization_mode"],

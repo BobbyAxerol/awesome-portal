@@ -339,7 +339,7 @@
           }
         }
       },
-      "RunMetricFact": {"type":"object","additionalProperties":false,"required":["value","source","scope","definition_id","availability"],"description":"W6b CG-P19-05: one retained per-run value with its own source and scope. A null value is a typed absence, never a zero.","properties":{"value":{"anyOf":[{"$ref":"#/components/schemas/ExactDecimal"},{"type":"null"}]},"source":{"anyOf":[{"enum":["P13_EVIDENCE_PROJECTION","RS02_RETAINED_SELECTED_TRIAL","SUMMARY_ANALYTICS_V2","ENRICHED_ANALYSIS","RS02_RETAINED_OUTER_FOLD_SELECTIONS"]},{"type":"null"}]},"scope":{"anyOf":[{"enum":["OOS","IS_PLUS_OOS","CHILD_TAPE","SELECTED_TRIAL_MEAN_ACROSS_FOLDS","OUTER_FOLD_SELECTED_OOS_MEAN"]},{"type":"null"}]},"definition_id":{"anyOf":[{"type":"string","pattern":"^research\\.[a-z0-9_.-]{3,120}$"},{"type":"null"}]},"availability":{"$ref":"#/components/schemas/Availability"},"origin":{"enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"source_locator":{"type":"string","minLength":1,"maxLength":256},"input_digest":{"type":"string","pattern":"^[0-9a-f]{64}$"}},"allOf":[{"if":{"properties":{"availability":{"properties":{"state":{"const":"AVAILABLE"}},"required":["state"]}},"required":["availability"]},"then":{"properties":{"value":{"type":"string","minLength":1}},"required":["value"]}}]},
+      "RunMetricFact": {"type":"object","additionalProperties":false,"required":["value","source","scope","definition_id","availability"],"description":"W6b CG-P19-05: one retained per-run value with its own source and scope. A null value is a typed absence, never a zero.","properties":{"value":{"anyOf":[{"$ref":"#/components/schemas/ExactDecimal"},{"type":"null"}]},"source":{"anyOf":[{"enum":["P13_EVIDENCE_PROJECTION","RS02_RETAINED_SELECTED_TRIAL","SUMMARY_ANALYTICS_V2","ENRICHED_ANALYSIS","RS02_RETAINED_OUTER_FOLD_SELECTIONS"]},{"type":"null"}]},"scope":{"anyOf":[{"enum":["OOS","IS_PLUS_OOS","CHILD_TAPE","SELECTED_TRIAL_MEAN_ACROSS_FOLDS","OUTER_FOLD_SELECTED_OOS_MEAN","FULL_SAMPLE"]},{"type":"null"}]},"definition_id":{"anyOf":[{"type":"string","pattern":"^research\\.[a-z0-9_.-]{3,120}$"},{"type":"null"}]},"availability":{"$ref":"#/components/schemas/Availability"},"origin":{"enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"source_locator":{"type":"string","minLength":1,"maxLength":256},"input_digest":{"type":"string","pattern":"^[0-9a-f]{64}$"}},"allOf":[{"if":{"properties":{"availability":{"properties":{"state":{"const":"AVAILABLE"}},"required":["state"]}},"required":["availability"]},"then":{"properties":{"value":{"type":"string","minLength":1}},"required":["value"]}}]},
       "RunFacts": {
         "type": "object",
         "additionalProperties": false,
@@ -1101,57 +1101,7 @@
           }
         }
       },
-      "Exposure": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "state",
-          "count",
-          "roles",
-          "latest_source_as_of_utc_ms",
-          "availability"
-        ],
-        "properties": {
-          "state": {
-            "enum": [
-              "RECORDED",
-              "NOT_PUBLISHED"
-            ]
-          },
-          "count": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "roles": {
-            "type": "array",
-            "maxItems": 7,
-            "items": {
-              "enum": [
-                "QUALITY_SCAN",
-                "TRAIN",
-                "SELECTION_INPUT",
-                "OUTER_OOS",
-                "HOLDOUT",
-                "RETROSPECTIVE",
-                "UNKNOWN"
-              ]
-            }
-          },
-          "latest_source_as_of_utc_ms": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/UtcMilliseconds"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "availability": {
-            "$ref": "#/components/schemas/Availability"
-          }
-        }
-      },
+      "Exposure": {"type":"object","additionalProperties":false,"required":["state","count","roles","latest_source_as_of_utc_ms","availability"],"properties":{"state":{"enum":["RECORDED","NOT_PUBLISHED"]},"count":{"type":"integer","minimum":0},"roles":{"type":"array","maxItems":8,"items":{"enum":["QUALITY_SCAN","TRAIN","SELECTION_INPUT","OUTER_OOS","HOLDOUT","RETROSPECTIVE","UNKNOWN","FULL_SAMPLE_CALIBRATION"]}},"latest_source_as_of_utc_ms":{"anyOf":[{"$ref":"#/components/schemas/UtcMilliseconds"},{"type":"null"}]},"availability":{"$ref":"#/components/schemas/Availability"}}},
       "AttemptNode": {
         "type": "object",
         "additionalProperties": false,

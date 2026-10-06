@@ -1136,7 +1136,7 @@ class DurableQuantWorker:
     def _emit_retained_wfo_progress(
         journal: ResearchProgressJournal,
         retention: CurrentSourceRetentionResult,
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any] | None:
         """Close the WFO study from the rows Control API has retained.
 
         Trials were already observed live from the child's Optuna callback
@@ -1200,6 +1200,21 @@ class DurableQuantWorker:
             raise DurableRunError("P11 retained WFO selection is unavailable")
         trial_id = selection.get("trial_id")
         parameters = selection.get("parameters")
+        disclosure = retention.receipt.summary.get("optimizer_disclosure")
+        if (trial_id is None and isinstance(disclosure, dict)
+                and disclosure.get("optimization_mode") == "mode_3_flat_minima"
+                and disclosure.get("selection_target", {}).get("kind") == "SYNTHETIC_CENTROID"
+                and isinstance(parameters, dict) and parameters):
+            # This selected native parameter bundle is not any Optuna trial.
+            # The retained Search/Freeze expose its centroid custody. Complete
+            # actual folds, but do not invent a trial/navigation cursor.
+            fold_count = int(retention.table_rows["FOLD"])
+            if fold_count < 1:
+                raise DurableRunError("P11 retained centroid has no fold")
+            for fold in range(1, fold_count + 1):
+                journal.emit("fold_completed", {"fold": fold})
+            journal.emit("stage_completed", {"stage": "S4"})
+            return None
         if not isinstance(trial_id, str) or not trial_id.isdigit() or not isinstance(parameters, dict) or not parameters:
             raise DurableRunError("P11 retained WFO selection is not a numbered trial with parameters")
         selected_trial = int(trial_id) + 1  # Optuna trial numbers are 0-based; P11 ordinals are not.

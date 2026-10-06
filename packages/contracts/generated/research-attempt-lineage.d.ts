@@ -62,7 +62,7 @@ export interface components {
         RunMetricFact: {
             value: components["schemas"]["ExactDecimal"] | null;
             source: ("P13_EVIDENCE_PROJECTION" | "RS02_RETAINED_SELECTED_TRIAL" | "SUMMARY_ANALYTICS_V2" | "ENRICHED_ANALYSIS" | "RS02_RETAINED_OUTER_FOLD_SELECTIONS") | null;
-            scope: ("OOS" | "IS_PLUS_OOS" | "CHILD_TAPE" | "SELECTED_TRIAL_MEAN_ACROSS_FOLDS" | "OUTER_FOLD_SELECTED_OOS_MEAN") | null;
+            scope: ("OOS" | "IS_PLUS_OOS" | "CHILD_TAPE" | "SELECTED_TRIAL_MEAN_ACROSS_FOLDS" | "OUTER_FOLD_SELECTED_OOS_MEAN" | "FULL_SAMPLE") | null;
             definition_id: string | null;
             availability: components["schemas"]["Availability"];
             /** @enum {unknown} */
@@ -212,7 +212,7 @@ export interface components {
             /** @enum {unknown} */
             state: "RECORDED" | "NOT_PUBLISHED";
             count: number;
-            roles: ("QUALITY_SCAN" | "TRAIN" | "SELECTION_INPUT" | "OUTER_OOS" | "HOLDOUT" | "RETROSPECTIVE" | "UNKNOWN")[];
+            roles: ("QUALITY_SCAN" | "TRAIN" | "SELECTION_INPUT" | "OUTER_OOS" | "HOLDOUT" | "RETROSPECTIVE" | "UNKNOWN" | "FULL_SAMPLE_CALIBRATION")[];
             latest_source_as_of_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
             availability: components["schemas"]["Availability"];
         };

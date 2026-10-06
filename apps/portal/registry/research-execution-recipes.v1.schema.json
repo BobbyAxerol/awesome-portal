@@ -442,10 +442,11 @@
                 "FEATURE_RESEARCH_FULL02_PROFILE",
                 "FEATURE_RESEARCH_IMPORTED_EXECUTION",
                 "FEATURE_RESEARCH_VN_OBSERVED_PROFILE",
-                "FEATURE_RESEARCH_FULL03_PROFILE"
+                "FEATURE_RESEARCH_FULL03_PROFILE",
+                "FEATURE_RESEARCH_FULL04_PROFILE"
               ]
             },
-            "maxItems": 3,
+            "maxItems": 4,
             "uniqueItems": true
           },
           "source_requirement": {

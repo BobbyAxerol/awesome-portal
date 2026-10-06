@@ -130,7 +130,7 @@ const MetricCellSchema = z.object({
    * COMPLETED-card value (e.g. trade count covers the full child tape, not
    * OOS only).  Null for lifecycle cells and for absent values.
    */
-  scope: z.enum(["OOS", "IS_PLUS_OOS", "CHILD_TAPE"]).nullable(),
+  scope: z.enum(["OOS", "IS_PLUS_OOS", "CHILD_TAPE", "FULL_SAMPLE"]).nullable(),
   /**
    * E11: also the retained lane's definition ids
    * (`research.current-source.v1.…`), which is what Screen 10 already

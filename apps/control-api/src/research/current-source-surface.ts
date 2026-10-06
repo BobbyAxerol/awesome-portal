@@ -222,7 +222,7 @@ export type SearchSurface = z.infer<typeof SearchSurfaceSchema>;
 
 /** Exactly one retained outer study; never a run-global ranking or theta. */
 export const SearchStudySurfaceSchema = z.object({
-  scope: z.enum(["INNER_VALIDATION_OUTER_STUDY", "OUTER_FOLD_DECAY_STUDY"]),
+  scope: z.enum(["INNER_VALIDATION_OUTER_STUDY", "OUTER_FOLD_DECAY_STUDY", "IS_ONLY_OUTER_STUDY"]),
   fold_id: TrialId,
   study_id: TrialId,
   surface: SearchSurfaceSchema.extend({
@@ -533,7 +533,7 @@ export interface SearchStudySurfaceInput {
 export function searchStudySurfaces(
   retainedProfileId: string,
   studies: readonly SearchStudySurfaceInput[],
-  scope: "INNER_VALIDATION_OUTER_STUDY" | "OUTER_FOLD_DECAY_STUDY" = "INNER_VALIDATION_OUTER_STUDY",
+  scope: "INNER_VALIDATION_OUTER_STUDY" | "OUTER_FOLD_DECAY_STUDY" | "IS_ONLY_OUTER_STUDY" = "INNER_VALIDATION_OUTER_STUDY",
 ): SearchStudySurface[] {
   if (studies.length < 2 || studies.length > 16) throw new RangeError("Causal study count is outside the immutable profile bound.");
   const foldIds = new Set<string>(), studyIds = new Set<string>(), trialIds = new Set<string>();
@@ -588,7 +588,7 @@ export function searchSurface(input: {
   space: DeclaredSpace;
   selectedTrialId: string | null;
   bestIsTrialId: string | null;
-  objectiveKind: "IS_MEAN_SHARPE" | "MODE_1_DECAY_J" | "NOT_PUBLISHED";
+  objectiveKind: import("./current-source.payload").CurrentSourceTrialFacts["objective_kind"];
 }): SearchSurface {
   const { trials, space } = input;
   if (space.state !== "AVAILABLE") return emptySurface(space.reason_code ?? SURFACE_REASONS.bindingNotRegistered, trials.length);

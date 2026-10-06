@@ -944,7 +944,7 @@ export class ResearchReleaseCandidateRepository {
   ): Promise<ReleaseCandidateSource["selectedTrialNativeFacts"]> {
     const seal = lane?.seal;
     const method = seal && currentSourceRetainedMethod(seal.profileId,seal.sourceAdapterId);
-    if (!seal || (method !== "CAUSAL_INNER" && method !== "PER_FOLD_DECAY")) return undefined;
+    if (!seal || (method !== "CAUSAL_INNER" && method !== "CAUSAL_IS_ONLY" && method !== "PER_FOLD_DECAY")) return undefined;
     const summary = CurrentSourceSummarySchema.safeParse(seal.summary);
     const trialId = summary.success ? summary.data.selection.trial_id : null;
     if (trialId === null) return undefined;

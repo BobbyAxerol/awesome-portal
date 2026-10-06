@@ -99,7 +99,8 @@ def _episodes(positions: Any, returns: Any, digest: str) -> dict[str, dict[str, 
 
 def portal_analytics_v2(*, result: Any, mode: str, market_close: Any,
                         benchmark_locator: str, is_start_utc_ms: int | None = None,
-                        oos_start_utc_ms: int | None = None) -> dict[str, Any]:
+                        oos_start_utc_ms: int | None = None,
+                        maximum_block_bytes: int = MAX_BLOCK_BYTES) -> dict[str, Any]:
     """Produce all-time OOS facts and one explicitly labelled last-30D card.
 
     WFO scopes to QuantBT's union of outer-test windows; FIXED scopes to P08's
@@ -111,6 +112,8 @@ def portal_analytics_v2(*, result: Any, mode: str, market_close: Any,
     from quantbt.core.scopes import scoped_result
     from quantbt.core.types import BacktestResult
 
+    if type(maximum_block_bytes) is not int or not 12_288 <= maximum_block_bytes <= MAX_BLOCK_BYTES:
+        raise ValueError("Portal analytics presentation budget cannot widen the immutable bound")
     if not isinstance(result, (BacktestResult, BacktestResultV2)) or mode not in {"FIXED", "WFO"}:
         raise ValueError("Portal analytics require an admitted QuantBT result")
     if mode == "WFO":
@@ -273,6 +276,25 @@ def portal_analytics_v2(*, result: Any, mode: str, market_close: Any,
         "distributions": all_time_distributions(equity=scoped.equity, daily_returns=daily,
             digest=digest, scope_locator=scope_locator),
     }
-    if len(json.dumps(block, separators=(",", ":"), allow_nan=False).encode()) > MAX_BLOCK_BYTES:
+    def within_budget() -> bool:
+        return len(json.dumps(block, separators=(",", ":"), allow_nan=False).encode()) <= maximum_block_bytes
+
+    # Long full-sample/daily ranges can fill the 16KiB companion even though
+    # every individual array is bounded. Adapt ONLY display sampling; all-time
+    # metrics, histogram population, input digest and source counts above stay
+    # exact. Existing short blocks are byte-for-byte unchanged.
+    for maximum in (16, 12, 8, 4, 2):
+        if within_budget():
+            break
+        block["strategy_curve"] = _curve(index, equity / equity[0] * 100, maximum=maximum)
+        block["benchmark_curve"] = _curve(index, close_values / baseline * 100, maximum=maximum) if good_close else []
+        block["last_30d"]["points"] = _curve(last_equity.index, last_equity.to_numpy(dtype=float), maximum=maximum)
+    monthly = block["distributions"]["monthly_returns"]
+    while not within_budget() and len(monthly["values"]) > 1:
+        monthly["values"] = monthly["values"][1:]
+        monthly["emitted_point_count"] = len(monthly["values"])
+        monthly["omitted_transport_period_count"] = monthly["total_period_count"] - len(monthly["values"])
+        monthly["sampling"] = "TAIL_WINDOW_V1"
+    if not within_budget():
         raise ValueError("Portal analytics v2 exceed immutable transport budget")
     return block

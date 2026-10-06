@@ -72,7 +72,10 @@ function amend(original, file) {
       value.properties.study_id = token;
       value.properties.source_trial_id = { type: "string", pattern: "^(?:0|[1-9][0-9]*)$",
         description: "Exact original local Optuna trial ID; causal studies require study_id to distinguish repeated trial numbers. Never derived from a run-global ordinal." };
-      if (name === "ProgressFoldSelection") value.properties.objective_kind = { enum: ["MODE_1_DECAY_J", "INNER_VALIDATION_DECAY_J"] };
+      if (name === "ProgressFoldSelection") value.properties.objective_kind = {
+        ...value.properties.objective_kind,
+        enum: ["MODE_1_DECAY_J", "INNER_VALIDATION_DECAY_J", "NOT_PUBLISHED"],
+      };
       value.allOf = [{ if: { properties: { scope: { const: "PER_FOLD_STUDY" } }, required: ["scope"] },
         then: { required: ["study_id", "source_trial_id"] } }];
     }

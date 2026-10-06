@@ -45,71 +45,232 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description Safe immutable AlphaVersion validator inputs, not raw source, provenance or mutable execution instructions. */
-        RunDeclarationAlphaVersionDeclaration: {
+        /**
+         * ResearchRetainedAnalytics
+         * @description E11/E14 source-time analytics sealed with one immutable artifact/projection. UTC milliseconds, exact decimals, no compute on GET. Child-tape trade count is not an audited ledger.
+         */
+        RetainedAnalytics: {
             /** @constant */
-            schema_version: "research.alpha-version-declaration.v1";
-            entrypoint: string;
-            timeframes: string[];
-            required_columns: ("open" | "high" | "low" | "close" | "volume")[];
-            warmup_bars: number;
-            determinism: {
-                seed_required: boolean;
+            schema_version: "research.retained-analytics.v1";
+            input_digest: string;
+            scope_locator: components["schemas"]["RetainedAnalyticsLocator"];
+            oos_observation_count: number;
+            trade_ledger_record_count: components["schemas"]["RetainedAnalyticsCount"];
+            /** @description Legacy field name; exact Mode 5 facts carry FULL_SAMPLE scope, never an untouched OOS claim. */
+            net_oos_return: components["schemas"]["RetainedAnalyticsFact"] & {
+                /** @enum {unknown} */
+                scope?: "OOS" | "FULL_SAMPLE";
+                /** @constant */
+                origin?: "ENGINE_DIRECT";
             };
-            parameter_space: {
-                [key: string]: components["schemas"]["RunDeclarationParameterDeclaration"];
+            total_trade_count: components["schemas"]["RetainedAnalyticsFact"] & {
+                /** @constant */
+                scope?: "CHILD_TAPE";
+                /** @constant */
+                origin?: "ENGINE_DIRECT";
+                value?: null | string;
+            };
+            rolling_sharpe_63: components["schemas"]["RetainedAnalyticsRolling"];
+            in_sample_equity: components["schemas"]["RetainedAnalyticsCurve"];
+            behaviour: {
+                win_rate: components["schemas"]["RetainedAnalyticsOosFact"];
+                payoff_ratio: components["schemas"]["RetainedAnalyticsOosFact"];
+                average_hold_seconds: components["schemas"]["RetainedAnalyticsOosFact"];
+                max_consecutive_losses: components["schemas"]["RetainedAnalyticsOosFact"];
+                turnover_notional: components["schemas"]["RetainedAnalyticsOosFact"];
+                exposure_fraction: components["schemas"]["RetainedAnalyticsOosFact"];
             };
         };
-        RunDeclarationParameterDeclaration: {
-            /** @constant */
-            kind: "fixed";
-            value: components["schemas"]["RunDeclarationDeclarationScalar"];
-        } | {
-            /** @constant */
-            kind: "int_range";
-            low: number;
-            high: number;
-            step: number;
-        } | {
-            /** @constant */
-            kind: "float_range";
-            low: number;
-            high: number;
-            step: number;
-        } | {
-            /** @constant */
-            kind: "categorical";
-            values: components["schemas"]["RunDeclarationDeclarationScalar"][];
+        RetainedAnalyticsDecimal: string;
+        RetainedAnalyticsUtcMs: number;
+        RetainedAnalyticsCount: number;
+        RetainedAnalyticsLocator: string;
+        RetainedAnalyticsReason: string;
+        /** @enum {unknown} */
+        RetainedAnalyticsState: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+        RetainedAnalyticsFact: {
+            state: components["schemas"]["RetainedAnalyticsState"];
+            reason_code: components["schemas"]["RetainedAnalyticsReason"] | null;
+            value: components["schemas"]["RetainedAnalyticsDecimal"] | null;
+            source_locator: components["schemas"]["RetainedAnalyticsLocator"];
+            /** @enum {unknown} */
+            scope: "OOS" | "CHILD_TAPE" | "FULL_SAMPLE";
+            /** @enum {unknown} */
+            origin: "ENGINE_DIRECT" | "SOURCE_DERIVED";
+        } & unknown;
+        RetainedAnalyticsOosFact: components["schemas"]["RetainedAnalyticsFact"] & {
+            /** @enum {unknown} */
+            scope?: "OOS" | "FULL_SAMPLE";
         };
-        RunDeclarationDeclarationScalar: string | number | boolean | null;
-        RunDeclaration: {
+        RetainedAnalyticsCurve: {
+            state: components["schemas"]["RetainedAnalyticsState"];
+            reason_code: components["schemas"]["RetainedAnalyticsReason"] | null;
+            /** @enum {unknown} */
+            scope: "DECLARED_IS" | "SELECTED_CANDIDATE_IS" | "FULL_SAMPLE_CALIBRATION";
+            source_locator: components["schemas"]["RetainedAnalyticsLocator"];
+            start_utc_ms: components["schemas"]["RetainedAnalyticsUtcMs"] | null;
+            end_exclusive_utc_ms: components["schemas"]["RetainedAnalyticsUtcMs"] | null;
+            source_observation_count: components["schemas"]["RetainedAnalyticsCount"];
+            emitted_point_count: number;
+            /** @enum {unknown} */
+            sampling: "FULL" | "EXTREMA_BUCKET_V1" | null;
+            points: {
+                at_utc_ms: components["schemas"]["RetainedAnalyticsUtcMs"];
+                equity: components["schemas"]["RetainedAnalyticsDecimal"];
+            }[];
+        } & unknown;
+        RetainedAnalyticsRolling: {
+            state: components["schemas"]["RetainedAnalyticsState"];
+            reason_code: components["schemas"]["RetainedAnalyticsReason"] | null;
             /** @constant */
-            schema_version: "research.run-declaration.v1";
+            window_days: 63;
+            daily_return_count: components["schemas"]["RetainedAnalyticsCount"] | null;
+            locator: components["schemas"]["RetainedAnalyticsLocator"] | null;
+            source_observation_count: components["schemas"]["RetainedAnalyticsCount"];
+            omitted_non_finite_count: components["schemas"]["RetainedAnalyticsCount"];
+            emitted_point_count: number;
+            /** @enum {unknown} */
+            sampling: "FULL" | "EXTREMA_BUCKET_V1" | null;
+            points: {
+                at_utc_ms: components["schemas"]["RetainedAnalyticsUtcMs"];
+                sharpe: components["schemas"]["RetainedAnalyticsDecimal"];
+            }[];
+        } & unknown;
+        /**
+         * ResearchRetainedAnalyticsV2
+         * @description D-AN-01 source-time all-time OOS descriptive analytics. v1 remains readable. No rolling detailed-screen metrics or reconstructed PnL/fills/objectives.
+         */
+        RetainedAnalyticsV2: {
+            /** @constant */
+            schema_version: "research.retained-analytics.v2";
+            input_digest: components["schemas"]["RetainedAnalyticsV2Digest"];
+            scope_locator: components["schemas"]["RetainedAnalyticsV2Locator"];
+            benchmark_locator: components["schemas"]["RetainedAnalyticsV2Locator"];
+            oos_observation_count: components["schemas"]["RetainedAnalyticsV2PositiveCount"];
+            drawdown_recovered: boolean;
+            metrics: {
+                sharpe: components["schemas"]["RetainedAnalyticsV2Fact"];
+                sortino: components["schemas"]["RetainedAnalyticsV2Fact"];
+                cagr_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                profit_factor: components["schemas"]["RetainedAnalyticsV2Fact"];
+                long_hit_rate_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                short_hit_rate_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                volatility_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                skew: components["schemas"]["RetainedAnalyticsV2Fact"];
+                excess_kurtosis: components["schemas"]["RetainedAnalyticsV2Fact"];
+                beta: components["schemas"]["RetainedAnalyticsV2Fact"];
+                correlation: components["schemas"]["RetainedAnalyticsV2Fact"];
+                benchmark_return_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                max_drawdown_duration_days: components["schemas"]["RetainedAnalyticsV2Fact"];
+                sharpe_decay: components["schemas"]["RetainedAnalyticsV2Fact"];
+            };
+            behaviour: {
+                exposure_long_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                exposure_short_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                exposure_flat_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                win_rate: components["schemas"]["RetainedAnalyticsV2Fact"];
+                payoff_ratio: components["schemas"]["RetainedAnalyticsV2Fact"];
+                average_hold_seconds: components["schemas"]["RetainedAnalyticsV2Fact"];
+                max_consecutive_losses: components["schemas"]["RetainedAnalyticsV2Fact"];
+                turnover_notional: components["schemas"]["RetainedAnalyticsV2Fact"];
+            };
+            strategy_curve: components["schemas"]["RetainedAnalyticsV2Curve"];
+            benchmark_curve: components["schemas"]["RetainedAnalyticsV2Curve"];
+            distributions?: components["schemas"]["RetainedAnalyticsV2Distributions"];
+            last_30d: {
+                /** @constant */
+                label: "last 30D";
+                window_start_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
+                window_end_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
+                partial_window: boolean;
+                source_observation_count: components["schemas"]["RetainedAnalyticsV2Count"];
+                points: components["schemas"]["RetainedAnalyticsV2Curve"];
+                return_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                sharpe: components["schemas"]["RetainedAnalyticsV2Fact"];
+            };
+        };
+        RetainedAnalyticsV2MonthlyPoint: {
+            month_start_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
+            return_fraction: components["schemas"]["RetainedAnalyticsV2Decimal"];
+            partial: boolean;
+            observation_count: components["schemas"]["RetainedAnalyticsV2PositiveCount"];
+            /** @enum {unknown} */
+            basis: "FIRST_OOS_CLOSE" | "FIRST_FULL_SAMPLE_CLOSE" | "PREVIOUS_OBSERVED_MONTH_CLOSE";
+            base_at_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
+            close_at_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
+        };
+        RetainedAnalyticsV2DistributionBucket: {
+            lower_inclusive: components["schemas"]["RetainedAnalyticsV2Decimal"];
+            upper: components["schemas"]["RetainedAnalyticsV2Decimal"];
+            /** @enum {unknown} */
+            upper_inclusive: "true" | "false";
+            count: string;
+        };
+        /**
+         * ResearchAllTimeDistributions
+         * @description Additive precomputed OOS companion, including a partial leading month. Daily histogram is all-time, not a trade or per-bar histogram. Original seals remain immutable.
+         */
+        RetainedAnalyticsV2Distributions: {
+            /** @constant */
+            schema_version: "research.all-time-distributions.v1";
+            /** @constant */
+            origin: "PORTAL_DERIVED";
+            /** @enum {unknown} */
+            scope: "OOS" | "FULL_SAMPLE";
+            scope_locator: components["schemas"]["RetainedAnalyticsV2Locator"];
+            input_digest: components["schemas"]["RetainedAnalyticsV2Digest"];
+            oos_observation_count: number;
+            /** @enum {unknown} */
+            monthly_definition: "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1" | "FULL_SAMPLE_MONTH_CLOSE_OVER_FIRST_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1";
+            /** @constant */
+            distribution_definition: "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1";
+            monthly_returns: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_APPLICABLE";
+                reason_code: components["schemas"]["RetainedAnalyticsV2Reason"] | null;
+                source_observation_count: components["schemas"]["RetainedAnalyticsV2Count"];
+                emitted_point_count: number;
+                total_period_count: components["schemas"]["RetainedAnalyticsV2Count"];
+                omitted_leading_period_count: components["schemas"]["RetainedAnalyticsV2Count"];
+                omitted_transport_period_count: components["schemas"]["RetainedAnalyticsV2Count"];
+                /** @enum {unknown} */
+                sampling: "FULL" | "TAIL_WINDOW_V1";
+                values: components["schemas"]["RetainedAnalyticsV2MonthlyPoint"][];
+            };
+            return_distribution: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_APPLICABLE";
+                reason_code: components["schemas"]["RetainedAnalyticsV2Reason"] | null;
+                source_observation_count: components["schemas"]["RetainedAnalyticsV2Count"];
+                emitted_point_count: number;
+                /** @enum {unknown} */
+                sampling: "FULL_RETURN_HISTOGRAM_V2" | "NOT_APPLICABLE";
+                values: components["schemas"]["RetainedAnalyticsV2DistributionBucket"][];
+            };
+        };
+        RetainedAnalyticsV2Decimal: string;
+        RetainedAnalyticsV2Digest: string;
+        RetainedAnalyticsV2UtcMs: number;
+        RetainedAnalyticsV2Count: number;
+        RetainedAnalyticsV2PositiveCount: number;
+        RetainedAnalyticsV2Locator: string;
+        RetainedAnalyticsV2Reason: string;
+        RetainedAnalyticsV2Fact: {
             /** @enum {unknown} */
             state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
-            reason_code: string | null;
-            /** @constant */
-            source_ref: "IMMUTABLE_RUN_REQUEST_AND_ALPHA_VERSION_DECLARATION_V1";
-            alpha_binding: {
-                alpha_id: string;
-                alpha_version_id: string;
-            } | null;
-            declaration_digest: string | null;
-            requested_spec_digest: string | null;
-            declaration: components["schemas"]["RunDeclarationAlphaVersionDeclaration"] | null;
-            requested_overrides: ({
-                name: string;
-                /** @constant */
-                kind: "sweep";
-                low: string | number | boolean;
-                high: string | number | boolean;
-            } | {
-                name: string;
-                /** @constant */
-                kind: "pin";
-                value: string | number | boolean;
-            })[] | null;
+            reason_code: components["schemas"]["RetainedAnalyticsV2Reason"] | null;
+            value: components["schemas"]["RetainedAnalyticsV2Decimal"] | null;
+            /** @enum {unknown} */
+            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+            /** @enum {unknown} */
+            scope: "OOS" | "FULL_SAMPLE";
+            source_locator: components["schemas"]["RetainedAnalyticsV2Locator"];
+            input_digest: components["schemas"]["RetainedAnalyticsV2Digest"];
         } & unknown;
+        RetainedAnalyticsV2Curve: {
+            at_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
+            value: components["schemas"]["RetainedAnalyticsV2Decimal"];
+        }[];
         EnrichedAnalysis: {
             /** @constant */
             schema_version: "research.enriched-analysis.v1";
@@ -127,8 +288,8 @@ export interface components {
                 digest: components["schemas"]["EnrichedAnalysisDigest"];
             }[];
             scope: {
-                /** @constant */
-                window: "OOS";
+                /** @enum {unknown} */
+                window: "OOS" | "FULL_SAMPLE";
                 first_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
                 last_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
                 observation_count: number;
@@ -136,7 +297,7 @@ export interface components {
                 locator: components["schemas"]["EnrichedAnalysisLocator"];
                 benchmark_locator: components["schemas"]["EnrichedAnalysisLocator"];
                 /** @enum {unknown} */
-                coverage: "FULL_RETAINED_OOS" | "SAMPLED_RETAINED_EQUITY";
+                coverage: "FULL_RETAINED_OOS" | "SAMPLED_RETAINED_EQUITY" | "FULL_RETAINED_FULL_SAMPLE";
                 source_observation_count: number;
             };
             windows: {
@@ -163,6 +324,16 @@ export interface components {
                 holdout: {
                     /** @enum {unknown} */
                     state: "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                    reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+                    start_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    end_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    source_locator?: components["schemas"]["EnrichedAnalysisLocator"];
+                    /** @constant */
+                    bounds_semantics?: "START_INCLUSIVE_END_EXCLUSIVE";
+                };
+                full_sample?: {
+                    /** @enum {unknown} */
+                    state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
                     reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
                     start_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
                     end_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
@@ -222,8 +393,8 @@ export interface components {
                 sampling: "FULL" | "TAIL_WINDOW_V1";
                 total_period_count: components["schemas"]["EnrichedAnalysisCount"];
                 omitted_transport_period_count: components["schemas"]["EnrichedAnalysisCount"];
-                /** @constant */
-                definition_id: "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1";
+                /** @enum {unknown} */
+                definition_id: "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1" | "FULL_SAMPLE_MONTH_CLOSE_OVER_FIRST_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1";
                 values: {
                     month_start_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
                     return_fraction: components["schemas"]["EnrichedAnalysisDecimal"];
@@ -231,7 +402,7 @@ export interface components {
                     expected_observation_count: components["schemas"]["EnrichedAnalysisCount"];
                     partial: boolean;
                     /** @enum {unknown} */
-                    basis: "FIRST_OOS_CLOSE" | "PREVIOUS_OBSERVED_MONTH_CLOSE";
+                    basis: "FIRST_OOS_CLOSE" | "FIRST_FULL_SAMPLE_CLOSE" | "PREVIOUS_OBSERVED_MONTH_CLOSE";
                     base_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
                     close_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
                 }[];
@@ -305,14 +476,14 @@ export interface components {
             by_window?: {
                 is: components["schemas"]["EnrichedAnalysisISPayload"];
             };
-        } & unknown;
+        } & (unknown & unknown);
         EnrichedAnalysisMonthlyPoint: {
             month_start_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
             return_fraction: components["schemas"]["EnrichedAnalysisDecimal"];
             partial: boolean;
             observation_count: components["schemas"]["EnrichedAnalysisPositiveCount"];
             /** @enum {unknown} */
-            basis: "FIRST_OOS_CLOSE" | "PREVIOUS_OBSERVED_MONTH_CLOSE";
+            basis: "FIRST_OOS_CLOSE" | "FIRST_FULL_SAMPLE_CLOSE" | "PREVIOUS_OBSERVED_MONTH_CLOSE";
             base_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
             close_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
         };
@@ -332,13 +503,13 @@ export interface components {
             schema_version: "research.all-time-distributions.v1";
             /** @constant */
             origin: "PORTAL_DERIVED";
-            /** @constant */
-            scope: "OOS";
+            /** @enum {unknown} */
+            scope: "OOS" | "FULL_SAMPLE";
             scope_locator: components["schemas"]["EnrichedAnalysisLocator"];
             input_digest: components["schemas"]["EnrichedAnalysisDigest"];
             oos_observation_count: number;
-            /** @constant */
-            monthly_definition: "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1";
+            /** @enum {unknown} */
+            monthly_definition: "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1" | "FULL_SAMPLE_MONTH_CLOSE_OVER_FIRST_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1";
             /** @constant */
             distribution_definition: "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1";
             monthly_returns: {
@@ -379,8 +550,8 @@ export interface components {
             value: components["schemas"]["EnrichedAnalysisDecimal"] | null;
             /** @enum {unknown} */
             origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
-            /** @constant */
-            scope: "OOS";
+            /** @enum {unknown} */
+            scope: "OOS" | "FULL_SAMPLE";
             source_locator: components["schemas"]["EnrichedAnalysisLocator"];
             input_digest: components["schemas"]["EnrichedAnalysisDigest"];
         } & unknown;
@@ -401,16 +572,16 @@ export interface components {
             sampling: "EXTREMA_BUCKET_V1";
             source_observation_count: components["schemas"]["EnrichedAnalysisCount"];
             /** @enum {unknown} */
-            coverage: "FULL_RETAINED_OOS" | "SAMPLED_RETAINED_EQUITY";
+            coverage: "FULL_RETAINED_OOS" | "SAMPLED_RETAINED_EQUITY" | "FULL_RETAINED_FULL_SAMPLE";
             return_fraction: components["schemas"]["EnrichedAnalysisDecimal"] | null;
             sharpe: components["schemas"]["EnrichedAnalysisFact"];
             max_drawdown_fraction: components["schemas"]["EnrichedAnalysisDecimal"] | null;
             input_digest: components["schemas"]["EnrichedAnalysisDigest"];
             return_basis?: {
-                /** @constant */
-                definition_id: "FIRST_LAST_RETAINED_OOS_EQUITY_V1";
-                /** @constant */
-                scope: "RETAINED_OOS_OBSERVATIONS";
+                /** @enum {unknown} */
+                definition_id: "FIRST_LAST_RETAINED_OOS_EQUITY_V1" | "FIRST_LAST_RETAINED_FULL_SAMPLE_EQUITY_V1";
+                /** @enum {unknown} */
+                scope: "RETAINED_OOS_OBSERVATIONS" | "RETAINED_FULL_SAMPLE_OBSERVATIONS";
                 first_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
                 last_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
                 start_equity: components["schemas"]["EnrichedAnalysisDecimal"];
@@ -567,231 +738,71 @@ export interface components {
             /** @enum {unknown} */
             reason_code: "SEALED_ENRICHMENT_NOT_COMPUTED" | "SOURCE_EVIDENCE_NOT_SEALED";
         };
-        /**
-         * ResearchRetainedAnalytics
-         * @description E11/E14 source-time analytics sealed with one immutable artifact/projection. UTC milliseconds, exact decimals, no compute on GET. Child-tape trade count is not an audited ledger.
-         */
-        RetainedAnalytics: {
+        /** @description Safe immutable AlphaVersion validator inputs, not raw source, provenance or mutable execution instructions. */
+        RunDeclarationAlphaVersionDeclaration: {
             /** @constant */
-            schema_version: "research.retained-analytics.v1";
-            input_digest: string;
-            scope_locator: components["schemas"]["RetainedAnalyticsLocator"];
-            oos_observation_count: number;
-            trade_ledger_record_count: components["schemas"]["RetainedAnalyticsCount"];
-            net_oos_return: components["schemas"]["RetainedAnalyticsFact"] & {
-                /** @constant */
-                scope?: "OOS";
-                /** @constant */
-                origin?: "ENGINE_DIRECT";
+            schema_version: "research.alpha-version-declaration.v1";
+            entrypoint: string;
+            timeframes: string[];
+            required_columns: ("open" | "high" | "low" | "close" | "volume")[];
+            warmup_bars: number;
+            determinism: {
+                seed_required: boolean;
             };
-            total_trade_count: components["schemas"]["RetainedAnalyticsFact"] & {
-                /** @constant */
-                scope?: "CHILD_TAPE";
-                /** @constant */
-                origin?: "ENGINE_DIRECT";
-                value?: null | string;
-            };
-            rolling_sharpe_63: components["schemas"]["RetainedAnalyticsRolling"];
-            in_sample_equity: components["schemas"]["RetainedAnalyticsCurve"];
-            behaviour: {
-                win_rate: components["schemas"]["RetainedAnalyticsOosFact"];
-                payoff_ratio: components["schemas"]["RetainedAnalyticsOosFact"];
-                average_hold_seconds: components["schemas"]["RetainedAnalyticsOosFact"];
-                max_consecutive_losses: components["schemas"]["RetainedAnalyticsOosFact"];
-                turnover_notional: components["schemas"]["RetainedAnalyticsOosFact"];
-                exposure_fraction: components["schemas"]["RetainedAnalyticsOosFact"];
+            parameter_space: {
+                [key: string]: components["schemas"]["RunDeclarationParameterDeclaration"];
             };
         };
-        RetainedAnalyticsDecimal: string;
-        RetainedAnalyticsUtcMs: number;
-        RetainedAnalyticsCount: number;
-        RetainedAnalyticsLocator: string;
-        RetainedAnalyticsReason: string;
-        /** @enum {unknown} */
-        RetainedAnalyticsState: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
-        RetainedAnalyticsFact: {
-            state: components["schemas"]["RetainedAnalyticsState"];
-            reason_code: components["schemas"]["RetainedAnalyticsReason"] | null;
-            value: components["schemas"]["RetainedAnalyticsDecimal"] | null;
-            source_locator: components["schemas"]["RetainedAnalyticsLocator"];
-            /** @enum {unknown} */
-            scope: "OOS" | "CHILD_TAPE";
-            /** @enum {unknown} */
-            origin: "ENGINE_DIRECT" | "SOURCE_DERIVED";
-        } & unknown;
-        RetainedAnalyticsOosFact: components["schemas"]["RetainedAnalyticsFact"] & {
+        RunDeclarationParameterDeclaration: {
             /** @constant */
-            scope?: "OOS";
+            kind: "fixed";
+            value: components["schemas"]["RunDeclarationDeclarationScalar"];
+        } | {
+            /** @constant */
+            kind: "int_range";
+            low: number;
+            high: number;
+            step: number;
+        } | {
+            /** @constant */
+            kind: "float_range";
+            low: number;
+            high: number;
+            step: number;
+        } | {
+            /** @constant */
+            kind: "categorical";
+            values: components["schemas"]["RunDeclarationDeclarationScalar"][];
         };
-        RetainedAnalyticsCurve: {
-            state: components["schemas"]["RetainedAnalyticsState"];
-            reason_code: components["schemas"]["RetainedAnalyticsReason"] | null;
-            /** @enum {unknown} */
-            scope: "DECLARED_IS" | "SELECTED_CANDIDATE_IS";
-            source_locator: components["schemas"]["RetainedAnalyticsLocator"];
-            start_utc_ms: components["schemas"]["RetainedAnalyticsUtcMs"] | null;
-            end_exclusive_utc_ms: components["schemas"]["RetainedAnalyticsUtcMs"] | null;
-            source_observation_count: components["schemas"]["RetainedAnalyticsCount"];
-            emitted_point_count: number;
-            /** @enum {unknown} */
-            sampling: "FULL" | "EXTREMA_BUCKET_V1" | null;
-            points: {
-                at_utc_ms: components["schemas"]["RetainedAnalyticsUtcMs"];
-                equity: components["schemas"]["RetainedAnalyticsDecimal"];
-            }[];
-        } & unknown;
-        RetainedAnalyticsRolling: {
-            state: components["schemas"]["RetainedAnalyticsState"];
-            reason_code: components["schemas"]["RetainedAnalyticsReason"] | null;
+        RunDeclarationDeclarationScalar: string | number | boolean | null;
+        RunDeclaration: {
             /** @constant */
-            window_days: 63;
-            daily_return_count: components["schemas"]["RetainedAnalyticsCount"] | null;
-            locator: components["schemas"]["RetainedAnalyticsLocator"] | null;
-            source_observation_count: components["schemas"]["RetainedAnalyticsCount"];
-            omitted_non_finite_count: components["schemas"]["RetainedAnalyticsCount"];
-            emitted_point_count: number;
-            /** @enum {unknown} */
-            sampling: "FULL" | "EXTREMA_BUCKET_V1" | null;
-            points: {
-                at_utc_ms: components["schemas"]["RetainedAnalyticsUtcMs"];
-                sharpe: components["schemas"]["RetainedAnalyticsDecimal"];
-            }[];
-        } & unknown;
-        /**
-         * ResearchRetainedAnalyticsV2
-         * @description D-AN-01 source-time all-time OOS descriptive analytics. v1 remains readable. No rolling detailed-screen metrics or reconstructed PnL/fills/objectives.
-         */
-        RetainedAnalyticsV2: {
-            /** @constant */
-            schema_version: "research.retained-analytics.v2";
-            input_digest: components["schemas"]["RetainedAnalyticsV2Digest"];
-            scope_locator: components["schemas"]["RetainedAnalyticsV2Locator"];
-            benchmark_locator: components["schemas"]["RetainedAnalyticsV2Locator"];
-            oos_observation_count: components["schemas"]["RetainedAnalyticsV2PositiveCount"];
-            drawdown_recovered: boolean;
-            metrics: {
-                sharpe: components["schemas"]["RetainedAnalyticsV2Fact"];
-                sortino: components["schemas"]["RetainedAnalyticsV2Fact"];
-                cagr_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
-                profit_factor: components["schemas"]["RetainedAnalyticsV2Fact"];
-                long_hit_rate_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
-                short_hit_rate_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
-                volatility_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
-                skew: components["schemas"]["RetainedAnalyticsV2Fact"];
-                excess_kurtosis: components["schemas"]["RetainedAnalyticsV2Fact"];
-                beta: components["schemas"]["RetainedAnalyticsV2Fact"];
-                correlation: components["schemas"]["RetainedAnalyticsV2Fact"];
-                benchmark_return_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
-                max_drawdown_duration_days: components["schemas"]["RetainedAnalyticsV2Fact"];
-                sharpe_decay: components["schemas"]["RetainedAnalyticsV2Fact"];
-            };
-            behaviour: {
-                exposure_long_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
-                exposure_short_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
-                exposure_flat_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
-                win_rate: components["schemas"]["RetainedAnalyticsV2Fact"];
-                payoff_ratio: components["schemas"]["RetainedAnalyticsV2Fact"];
-                average_hold_seconds: components["schemas"]["RetainedAnalyticsV2Fact"];
-                max_consecutive_losses: components["schemas"]["RetainedAnalyticsV2Fact"];
-                turnover_notional: components["schemas"]["RetainedAnalyticsV2Fact"];
-            };
-            strategy_curve: components["schemas"]["RetainedAnalyticsV2Curve"];
-            benchmark_curve: components["schemas"]["RetainedAnalyticsV2Curve"];
-            distributions?: components["schemas"]["RetainedAnalyticsV2Distributions"];
-            last_30d: {
-                /** @constant */
-                label: "last 30D";
-                window_start_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
-                window_end_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
-                partial_window: boolean;
-                source_observation_count: components["schemas"]["RetainedAnalyticsV2Count"];
-                points: components["schemas"]["RetainedAnalyticsV2Curve"];
-                return_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
-                sharpe: components["schemas"]["RetainedAnalyticsV2Fact"];
-            };
-        };
-        RetainedAnalyticsV2MonthlyPoint: {
-            month_start_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
-            return_fraction: components["schemas"]["RetainedAnalyticsV2Decimal"];
-            partial: boolean;
-            observation_count: components["schemas"]["RetainedAnalyticsV2PositiveCount"];
-            /** @enum {unknown} */
-            basis: "FIRST_OOS_CLOSE" | "PREVIOUS_OBSERVED_MONTH_CLOSE";
-            base_at_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
-            close_at_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
-        };
-        RetainedAnalyticsV2DistributionBucket: {
-            lower_inclusive: components["schemas"]["RetainedAnalyticsV2Decimal"];
-            upper: components["schemas"]["RetainedAnalyticsV2Decimal"];
-            /** @enum {unknown} */
-            upper_inclusive: "true" | "false";
-            count: string;
-        };
-        /**
-         * ResearchAllTimeDistributions
-         * @description Additive precomputed OOS companion, including a partial leading month. Daily histogram is all-time, not a trade or per-bar histogram. Original seals remain immutable.
-         */
-        RetainedAnalyticsV2Distributions: {
-            /** @constant */
-            schema_version: "research.all-time-distributions.v1";
-            /** @constant */
-            origin: "PORTAL_DERIVED";
-            /** @constant */
-            scope: "OOS";
-            scope_locator: components["schemas"]["RetainedAnalyticsV2Locator"];
-            input_digest: components["schemas"]["RetainedAnalyticsV2Digest"];
-            oos_observation_count: number;
-            /** @constant */
-            monthly_definition: "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1";
-            /** @constant */
-            distribution_definition: "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1";
-            monthly_returns: {
-                /** @enum {unknown} */
-                state: "AVAILABLE" | "NOT_APPLICABLE";
-                reason_code: components["schemas"]["RetainedAnalyticsV2Reason"] | null;
-                source_observation_count: components["schemas"]["RetainedAnalyticsV2Count"];
-                emitted_point_count: number;
-                total_period_count: components["schemas"]["RetainedAnalyticsV2Count"];
-                omitted_leading_period_count: components["schemas"]["RetainedAnalyticsV2Count"];
-                omitted_transport_period_count: components["schemas"]["RetainedAnalyticsV2Count"];
-                /** @enum {unknown} */
-                sampling: "FULL" | "TAIL_WINDOW_V1";
-                values: components["schemas"]["RetainedAnalyticsV2MonthlyPoint"][];
-            };
-            return_distribution: {
-                /** @enum {unknown} */
-                state: "AVAILABLE" | "NOT_APPLICABLE";
-                reason_code: components["schemas"]["RetainedAnalyticsV2Reason"] | null;
-                source_observation_count: components["schemas"]["RetainedAnalyticsV2Count"];
-                emitted_point_count: number;
-                /** @enum {unknown} */
-                sampling: "FULL_RETURN_HISTOGRAM_V2" | "NOT_APPLICABLE";
-                values: components["schemas"]["RetainedAnalyticsV2DistributionBucket"][];
-            };
-        };
-        RetainedAnalyticsV2Decimal: string;
-        RetainedAnalyticsV2Digest: string;
-        RetainedAnalyticsV2UtcMs: number;
-        RetainedAnalyticsV2Count: number;
-        RetainedAnalyticsV2PositiveCount: number;
-        RetainedAnalyticsV2Locator: string;
-        RetainedAnalyticsV2Reason: string;
-        RetainedAnalyticsV2Fact: {
+            schema_version: "research.run-declaration.v1";
             /** @enum {unknown} */
             state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
-            reason_code: components["schemas"]["RetainedAnalyticsV2Reason"] | null;
-            value: components["schemas"]["RetainedAnalyticsV2Decimal"] | null;
-            /** @enum {unknown} */
-            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+            reason_code: string | null;
             /** @constant */
-            scope: "OOS";
-            source_locator: components["schemas"]["RetainedAnalyticsV2Locator"];
-            input_digest: components["schemas"]["RetainedAnalyticsV2Digest"];
+            source_ref: "IMMUTABLE_RUN_REQUEST_AND_ALPHA_VERSION_DECLARATION_V1";
+            alpha_binding: {
+                alpha_id: string;
+                alpha_version_id: string;
+            } | null;
+            declaration_digest: string | null;
+            requested_spec_digest: string | null;
+            declaration: components["schemas"]["RunDeclarationAlphaVersionDeclaration"] | null;
+            requested_overrides: ({
+                name: string;
+                /** @constant */
+                kind: "sweep";
+                low: string | number | boolean;
+                high: string | number | boolean;
+            } | {
+                name: string;
+                /** @constant */
+                kind: "pin";
+                value: string | number | boolean;
+            })[] | null;
         } & unknown;
-        RetainedAnalyticsV2Curve: {
-            at_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
-            value: components["schemas"]["RetainedAnalyticsV2Decimal"];
-        }[];
         WorkspaceId: string;
         RunId: string;
         Digest: string;
@@ -1089,6 +1100,7 @@ export interface components {
         };
         /** @description RF-05 registry v3 OOS performance fact. ENGINE_DIRECT values are QuantBT 1.1.1 full_report fields over QuantBT's own OOS scope; source_locator names the exact field. Engine sentinels (0.0 for zero variance, inf without losses, 0.0 without exposure) are typed absences, never values. */
         PerformanceMetric: {
+            enriched_analysis_availability?: components["schemas"]["EnrichedAnalysisAvailability"];
             /** @enum {unknown} */
             key: "OOS_SHARPE" | "OOS_SORTINO" | "OOS_CAGR_FRACTION" | "OOS_PROFIT_FACTOR" | "OOS_LONG_HIT_RATE_FRACTION" | "OOS_SHORT_HIT_RATE_FRACTION" | "OOS_SHARPE_DECAY";
             label: string;

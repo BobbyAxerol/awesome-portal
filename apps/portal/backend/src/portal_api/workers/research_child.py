@@ -1306,9 +1306,10 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
             raise ValueError("FULL-03 Advanced child requires exactly its bounded task fields")
         validate_full03_execution_binding(receipt.get("execution_binding"), row)
         controls = full03_controls_from_receipt(receipt, row)
+        nested = row["descriptor"]["optimization_schedule"] == "per_fold_causal" and "inner_constraints" in row["descriptor"]
         return _run_delta_wfo_study(receipt, output_root, optuna_trials=row["public_profile"]["trial_default"],
             temporal_controls=controls, profile_digest=row["profile_digest"],
-            causal_inner=row["descriptor"]["optimization_schedule"] == "per_fold_causal",
+            causal_inner=nested,
             per_fold_decay=row["descriptor"]["optimization_schedule"] == "per_fold_decay", exact_recipe=row)
     if receipt.get("execution_binding") is not None:
         raise ValueError("FULL-03 binding cannot enter a historical WFO child")
@@ -1430,7 +1431,7 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
     if causal_inner and per_fold_decay:
         raise ValueError("one child cannot combine causal and decay selection contracts")
     profile = exact_recipe["descriptor"] if exact_recipe is not None else DELTA_PER_FOLD_DECAY_PROFILE if per_fold_decay else DELTA_CAUSAL_INNER_PROFILE if causal_inner else DELTA_WFO_PROFILE
-    per_fold = causal_inner or per_fold_decay
+    per_fold = profile["optimization_schedule"] != "global"
     if per_fold and optuna_trials != 3:
         raise ValueError("per-fold execution runs exactly 3 trials per outer study")
     run_id = receipt.get("run_id")
@@ -1459,7 +1460,8 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
     temporal = temporal_controls or {}
     if per_fold:
         plan = QuantBTGateway().walk_forward_fold_plan(index=market.frame.index[(market.frame.index >= start) & (market.frame.index < end)], config_fields={
-            **temporal, "split_mode": split.isoformat(), "optimization_mode": "mode_1_decay", "optimization_schedule": profile["optimization_schedule"], "optuna_trials": 3})
+            **temporal, "split_mode": split.isoformat(), "optimization_mode": profile["optimization_mode"], "optimization_schedule": profile["optimization_schedule"], "optuna_trials": 3,
+            **profile.get("optimizer_settings", {})})
         outer = profile["fold_bounds"]
         inner = profile.get("inner_constraints", {}).get("fold_bounds", {"min": 2, "max": 16})
         if not outer["min"] <= len(plan) <= outer["max"] or (causal_inner and any(not inner["min"] <= len(fold["inner"] or []) <= inner["max"] for fold in plan)):
@@ -1502,7 +1504,8 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
             optuna_trials=optuna_trials,
             optuna_early_stopping=None,
             random_seed=profile["random_seed"],
-            optimization=OptimizationConfig(min_trades_per_year=50.0, trade_penalty_factor=0.5),
+            optimization=OptimizationConfig(**{"min_trades_per_year": 50.0, "trade_penalty_factor": 0.5,
+                **profile.get("optimizer_settings", {})}),
         ),
     )
     from portal_api.services.research_supervisor import CHILD_PROGRESS_FILENAME
@@ -1516,7 +1519,8 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
             gateway=QuantBTGateway(),
             artifacts=ArtifactRepository(output_root),
         ).run(request, market, run_id, target_mode=profile["execution_route"],
-            **({"strategy_callable": _full03_strategy_callable(market.frame)} if exact_recipe is not None else {}))
+            **({"strategy_callable": _full03_strategy_callable(market.frame)} if exact_recipe is not None else {}),
+            **({"retain_mode_evidence": True} if profile.get("schema_version") == "research.full04-delta-profile.v1" else {}))
     finally:
         restore()
         writer.close()

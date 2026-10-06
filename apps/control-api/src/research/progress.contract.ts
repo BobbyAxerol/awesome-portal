@@ -947,25 +947,36 @@ export type ResearchProgressPublicSnapshot = Omit<ResearchProgressSnapshot, "att
     elapsed_basis: "SOURCE_JOURNAL_CREATED_TO_LAST_EVENT_V1";
   };
   folds: Array<Omit<ResearchProgressSnapshot["folds"][number], "selection"> & {
-    selection: ResearchProgressSnapshot["folds"][number]["selection"] & {
+    selection: Omit<ResearchProgressSnapshot["folds"][number]["selection"], "objective_kind"> & {
+      /** A generic journal must not assert an objective kind it did not publish. */
+      objective_kind?: "MODE_1_DECAY_J" | "INNER_VALIDATION_DECAY_J" | "NOT_PUBLISHED";
       display_trial_ordinal: number | null;
       trial_numbering: "P11_ORDINAL_1_BASED";
     };
   }>;
 };
 
-export function toPublicResearchProgressEvent(event: ResearchProgressEvent): ResearchProgressPublicEvent {
+function progressObjectiveLabel(executionProfileId?: string | null): "IS Sharpe" | "objective" {
+  try {
+    const recipe = executionProfileId ? executionRecipe(executionProfileId) : null;
+    return recipe?.descriptor.schema_version === "research.full04-delta-profile.v1"
+      && recipe.public_profile.optimization_mode !== "mode_1_decay" ? "objective" : "IS Sharpe";
+  } catch { return "IS Sharpe"; }
+}
+export function toPublicResearchProgressEvent(event: ResearchProgressEvent, executionProfileId?: string | null): ResearchProgressPublicEvent {
   const { attempt_id: _attemptId, lease_epoch: _leaseEpoch, ...publicEvent } = event;
   if (publicEvent.event_type === "trial_completed" && publicEvent.payload.study === "GLOBAL") {
     const payload = publicEvent.payload as { study: "GLOBAL"; tqdm_line?: string; console?: { text: string; [key: string]: unknown } };
+    const label = progressObjectiveLabel(executionProfileId);
     return {
       ...publicEvent,
       payload: {
         ...payload,
-        tqdm_line: payload.tqdm_line?.replace(" · best J₁ ", " · best IS Sharpe "),
+        tqdm_line: payload.tqdm_line?.replace(" · best J₁ ", ` · best ${label} `)
+          .replace(" · best IS Sharpe ", ` · best ${label} `),
         console: payload.console ? {
           ...payload.console,
-          text: payload.console.text.replace(" J₁=", " IS Sharpe="),
+          text: payload.console.text.replace(" J₁=", ` ${label}=`).replace(" IS Sharpe=", ` ${label}=`),
         } : undefined,
       },
     };
@@ -978,20 +989,18 @@ export function toPublicResearchProgressSnapshot(
   executionProfileId?: string | null,
 ): ResearchProgressPublicSnapshot {
   const { attempt_id: _attemptId, lease_epoch: _leaseEpoch, ...publicSnapshot } = snapshot;
-  // Legacy source journals are immutable. Only their public display copy is
-  // corrected: the live Optuna callback reported raw IS Sharpe, not selected J.
+  // Legacy source journals are immutable. Their Mode1 display correction
+  // stays intact; other modes' generic callback does not establish IS Sharpe.
   const line = publicSnapshot.overall.tqdm_line;
   let handoff = publicSnapshot.claim.handoff_cursor;
   let handoffReason: HandoffProjectionReason | null = null;
-  const method = (() => {
+  const recipe = (() => {
     if (!executionProfileId) return null;
-    try {
-      const recipe = executionRecipe(executionProfileId);
-      const pair = currentSourceExecutionPair(recipe.profile_id,recipe.profile_digest);
-      return pair && currentSourceRetainedMethod(pair.profile_id,pair.source_adapter_id);
-    } catch { return null; }
+    try { return executionRecipe(executionProfileId); } catch { return null; }
   })();
-  if (handoff !== null && (method === "CAUSAL_INNER" || method === "PER_FOLD_DECAY")) {
+  const pair = recipe && currentSourceExecutionPair(recipe.profile_id,recipe.profile_digest);
+  const method = pair && currentSourceRetainedMethod(pair.profile_id,pair.source_adapter_id);
+  if (handoff !== null && (method === "CAUSAL_INNER" || method === "CAUSAL_IS_ONLY" || method === "PER_FOLD_DECAY")) {
     const matches = snapshot.folds.filter(fold => fold.fold === handoff!.fold);
     const selection = matches.length === 1 ? matches[0]!.selection : null;
     if (!selection || selection.state !== "AVAILABLE" || selection.scope !== "PER_FOLD_STUDY") {
@@ -1006,7 +1015,7 @@ export function toPublicResearchProgressSnapshot(
         source_trial_id: selection.source_trial_id!, study_id: selection.study_id,
         progress_trial_ordinal: handoff.trial } as z.infer<typeof PublicResearchHandoffCursorSchema>;
     }
-  } else if (handoff !== null && (method === "GLOBAL_WFO" || method === "THREE_WINDOW")) {
+  } else if (handoff !== null && (method === "GLOBAL_WFO" || method === "THREE_WINDOW" || method === "FULL_SAMPLE")) {
     handoff = { ...handoff, trial_scope: "RUN_GLOBAL", source_trial_id: String(handoff.trial - 1),
       study_id: null, progress_trial_ordinal: handoff.trial } as z.infer<typeof PublicResearchHandoffCursorSchema>;
   }
@@ -1018,7 +1027,8 @@ export function toPublicResearchProgressSnapshot(
       pct_basis: "SOURCE_STAGE_WEIGHTED_V1",
       elapsed_basis: "SOURCE_JOURNAL_CREATED_TO_LAST_EVENT_V1",
       tqdm_line: line.startsWith("global study · trial ")
-        ? line.replace(" · best J₁ ", " · best IS Sharpe ")
+        ? line.replace(" · best J₁ ", ` · best ${progressObjectiveLabel(executionProfileId)} `)
+          .replace(" · best IS Sharpe ", ` · best ${progressObjectiveLabel(executionProfileId)} `)
         : line,
     },
     folds: publicSnapshot.folds.map((fold) => ({
@@ -1030,7 +1040,9 @@ export function toPublicResearchProgressSnapshot(
         ...(method === "CAUSAL_INNER" && fold.selection.state === "AVAILABLE"
           && fold.selection.scope === "PER_FOLD_STUDY" && fold.selection.study_id !== undefined
           && fold.selection.source_trial_id !== undefined ? { objective_kind: "INNER_VALIDATION_DECAY_J" as const } : {}),
-        ...((method === "GLOBAL_WFO" || method === "THREE_WINDOW")
+        ...(method === "CAUSAL_IS_ONLY" && fold.selection.state === "AVAILABLE"
+          ? {objective_kind:"NOT_PUBLISHED" as const} : {}),
+        ...((method === "GLOBAL_WFO" || method === "THREE_WINDOW" || method === "FULL_SAMPLE")
           && fold.selection.state === "AVAILABLE"
           && fold.selection.scope === "GLOBAL_STUDY"
           && fold.selection.trial !== null
@@ -1038,7 +1050,10 @@ export function toPublicResearchProgressSnapshot(
             // The P10 WFO journal uses a 1-based ordinal; Optuna and the
             // retained current-source/Freeze use a 0-based source trial id.
             source_trial_id: String(fold.selection.trial - 1),
-            objective_kind: "MODE_1_DECAY_J" as const,
+            // Other modes' precise native objective is published by their
+            // retained Search/Freeze disclosure, not this generic journal.
+            objective_kind: recipe?.public_profile.optimization_mode === "mode_1_decay"
+              ? "MODE_1_DECAY_J" as const : "NOT_PUBLISHED" as const,
           }
           : {}),
       },

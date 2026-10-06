@@ -152,6 +152,7 @@ export function FailedSheet({ core, seriesUnavailable }: { core: FrozenCoreFaile
 const AUDIT_WORDS: Record<FinalAudit["kind"], string> = {
   REUSED_ORIGINAL: "this run is its own final audit",
   LINKED_CHILD: "a separate audit run",
+  NOT_APPLICABLE: "not applicable · full-sample calibration has no untouched final audit",
   NOT_PUBLISHED: "not published",
 };
 

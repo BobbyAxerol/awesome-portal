@@ -1,5 +1,6 @@
 /** Additive sealed-scalar provenance in three named components only. */
 import { readFileSync, writeFileSync } from "node:fs";
+import { replaceComponent } from "./generate-research-progress-truth.mjs";
 const check = process.argv.includes("--check");
 const provenance = {
   origin: { enum: ["ENGINE_DIRECT", "PORTAL_DERIVED"] },
@@ -12,6 +13,10 @@ for (const [name, component] of [["research-run-library", "MetricCell"], ["resea
   const metric = document.components.schemas[component];
   if (!metric?.properties?.definition_id || !metric.properties.scope) throw new Error(`Missing ${component}`);
   Object.assign(metric.properties, provenance);
+  if (name === "research-run-library" || name === "research-attempt-lineage") {
+    const scope = metric.properties.scope.anyOf.find(value => value.enum);
+    if (!scope.enum.includes("FULL_SAMPLE")) scope.enum.push("FULL_SAMPLE");
+  }
   const sources = ["SUMMARY_ANALYTICS_V2", "ENRICHED_ANALYSIS"];
   if (component !== "RunMetricFact") metric.properties.source = { enum: sources };
   // A later Compare target runs this amender again after causal generation.
@@ -32,7 +37,14 @@ for (const [name, component] of [["research-run-library", "MetricCell"], ["resea
   const block = new RegExp(`^      "${component}": \\{\\n[\\s\\S]*?^      },$`, "m");
   const target = line.test(original) ? line : block;
   if (!target.test(original)) throw new Error(`${component} layout changed`);
-  const updated = original.replace(target, `      "${component}": ${JSON.stringify(metric)},`);
+  let updated = original.replace(target, `      "${component}": ${JSON.stringify(metric)},`);
+  if (name === "research-attempt-lineage") {
+    const exposure = document.components.schemas.Exposure;
+    const roles = exposure.properties.roles;
+    if (!roles.items.enum.includes("FULL_SAMPLE_CALIBRATION")) roles.items.enum.push("FULL_SAMPLE_CALIBRATION");
+    roles.maxItems = 8;
+    updated = replaceComponent(updated, "Exposure", exposure, updated.indexOf('"schemas": {'));
+  }
   if (updated !== original) {
     if (check) throw new Error(`${component} generated drift`);
     writeFileSync(path, updated);

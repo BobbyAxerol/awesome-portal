@@ -86,7 +86,10 @@
       ],
       "properties": {
         "window": {
-          "const": "OOS"
+          "enum": [
+            "OOS",
+            "FULL_SAMPLE"
+          ]
         },
         "first_at_utc_ms": {
           "$ref": "#/$defs/UtcMs"
@@ -113,7 +116,8 @@
         "coverage": {
           "enum": [
             "FULL_RETAINED_OOS",
-            "SAMPLED_RETAINED_EQUITY"
+            "SAMPLED_RETAINED_EQUITY",
+            "FULL_RETAINED_FULL_SAMPLE"
           ]
         },
         "source_observation_count": {
@@ -264,6 +268,67 @@
           "properties": {
             "state": {
               "enum": [
+                "NOT_PUBLISHED",
+                "NOT_APPLICABLE"
+              ]
+            },
+            "reason_code": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Reason"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "start_ms": {
+              "$ref": "#/$defs/UtcMs"
+            },
+            "end_ms": {
+              "$ref": "#/$defs/UtcMs"
+            },
+            "source_locator": {
+              "$ref": "#/$defs/Locator"
+            },
+            "bounds_semantics": {
+              "const": "START_INCLUSIVE_END_EXCLUSIVE"
+            }
+          },
+          "dependentRequired": {
+            "start_ms": [
+              "end_ms",
+              "source_locator",
+              "bounds_semantics"
+            ],
+            "end_ms": [
+              "start_ms",
+              "source_locator",
+              "bounds_semantics"
+            ],
+            "source_locator": [
+              "start_ms",
+              "end_ms",
+              "bounds_semantics"
+            ],
+            "bounds_semantics": [
+              "start_ms",
+              "end_ms",
+              "source_locator"
+            ]
+          }
+        },
+        "full_sample": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "reason_code"
+          ],
+          "properties": {
+            "state": {
+              "enum": [
+                "AVAILABLE",
                 "NOT_PUBLISHED",
                 "NOT_APPLICABLE"
               ]
@@ -524,7 +589,10 @@
           "$ref": "#/$defs/Count"
         },
         "definition_id": {
-          "const": "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1"
+          "enum": [
+            "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1",
+            "FULL_SAMPLE_MONTH_CLOSE_OVER_FIRST_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1"
+          ]
         },
         "values": {
           "type": "array",
@@ -560,6 +628,7 @@
               "basis": {
                 "enum": [
                   "FIRST_OOS_CLOSE",
+                  "FIRST_FULL_SAMPLE_CLOSE",
                   "PREVIOUS_OBSERVED_MONTH_CLOSE"
                 ]
               },
@@ -890,6 +959,7 @@
         "basis": {
           "enum": [
             "FIRST_OOS_CLOSE",
+            "FIRST_FULL_SAMPLE_CLOSE",
             "PREVIOUS_OBSERVED_MONTH_CLOSE"
           ]
         },
@@ -955,7 +1025,10 @@
           "const": "PORTAL_DERIVED"
         },
         "scope": {
-          "const": "OOS"
+          "enum": [
+            "OOS",
+            "FULL_SAMPLE"
+          ]
         },
         "scope_locator": {
           "$ref": "#/$defs/Locator"
@@ -969,7 +1042,10 @@
           "maximum": 2000000
         },
         "monthly_definition": {
-          "const": "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1"
+          "enum": [
+            "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1",
+            "FULL_SAMPLE_MONTH_CLOSE_OVER_FIRST_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1"
+          ]
         },
         "distribution_definition": {
           "const": "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1"
@@ -1170,7 +1246,10 @@
           ]
         },
         "scope": {
-          "const": "OOS"
+          "enum": [
+            "OOS",
+            "FULL_SAMPLE"
+          ]
         },
         "source_locator": {
           "$ref": "#/$defs/Locator"
@@ -1284,7 +1363,8 @@
         "coverage": {
           "enum": [
             "FULL_RETAINED_OOS",
-            "SAMPLED_RETAINED_EQUITY"
+            "SAMPLED_RETAINED_EQUITY",
+            "FULL_RETAINED_FULL_SAMPLE"
           ]
         },
         "return_fraction": {
@@ -1327,10 +1407,16 @@
           ],
           "properties": {
             "definition_id": {
-              "const": "FIRST_LAST_RETAINED_OOS_EQUITY_V1"
+              "enum": [
+                "FIRST_LAST_RETAINED_OOS_EQUITY_V1",
+                "FIRST_LAST_RETAINED_FULL_SAMPLE_EQUITY_V1"
+              ]
             },
             "scope": {
-              "const": "RETAINED_OOS_OBSERVATIONS"
+              "enum": [
+                "RETAINED_OOS_OBSERVATIONS",
+                "RETAINED_FULL_SAMPLE_OBSERVATIONS"
+              ]
             },
             "first_at_utc_ms": {
               "$ref": "#/$defs/UtcMs"
@@ -2033,6 +2119,91 @@
                   "name"
                 ]
               }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "object",
+            "properties": {
+              "window": {
+                "const": "FULL_SAMPLE"
+              }
+            },
+            "required": [
+              "window"
+            ]
+          }
+        },
+        "required": [
+          "scope"
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "windows": {
+            "type": "object",
+            "required": [
+              "full_sample"
+            ],
+            "properties": {
+              "full_sample": {
+                "type": "object",
+                "required": [
+                  "start_ms",
+                  "end_ms",
+                  "source_locator",
+                  "bounds_semantics"
+                ],
+                "properties": {
+                  "state": {
+                    "const": "AVAILABLE"
+                  },
+                  "reason_code": {
+                    "type": "null"
+                  },
+                  "start_ms": {
+                    "$ref": "#/$defs/UtcMs"
+                  },
+                  "end_ms": {
+                    "$ref": "#/$defs/UtcMs"
+                  },
+                  "source_locator": {
+                    "$ref": "#/$defs/Locator"
+                  },
+                  "bounds_semantics": {
+                    "const": "START_INCLUSIVE_END_EXCLUSIVE"
+                  }
+                }
+              },
+              "oos": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "const": "NOT_APPLICABLE"
+                  },
+                  "reason_code": {
+                    "const": "FULL_SAMPLE_CALIBRATION_HAS_NO_UNTOUCHED_OOS"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "type": "object",
+        "properties": {
+          "windows": {
+            "type": "object",
+            "properties": {
+              "full_sample": false
             }
           }
         }

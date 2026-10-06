@@ -265,7 +265,9 @@ class ResearchCurrentSourceRetentionClient:
                        else causal_inner_current_source_admission() if research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID
                        else signal_notional_current_source_admission(delta_wfo_admitted_trials(research.requested_spec))),
             fence_validator=fence_validator,
-            source_windows=_declared_three_windows(research.requested_spec) if research.is_three_window_optimized else _declared_wfo_oos_window(research.requested_spec),
+            source_windows=(_declared_three_windows(research.requested_spec) if research.is_three_window_optimized
+                else None if research.is_full03 and research.requested_spec.get("optimization_mode") == "mode_5_full_robust"
+                else _declared_wfo_oos_window(research.requested_spec)),
         )
         receipt = export.receipt
 
@@ -343,7 +345,8 @@ class ResearchCurrentSourceRetentionClient:
                         causal_trials.append({"trial_id": payload["trial_id"], "source_trial_id": facts["source_trial_id"],
                                               "study_id": facts["study_id"], "state": state, "objective": payload["objective"]})
             if batch.table_kind == "FOLD" and research.requested_spec.get("optimization_schedule") == "per_fold_causal":
-                causal_fold_selections.extend({"fold_id": row["payload"]["fold_id"], **row["payload"]["causal_selection"]} for row in batch.rows)
+                key = "mode4_selection" if research.requested_spec.get("optimization_mode") == "mode_4_is_only_robust" else "causal_selection"
+                causal_fold_selections.extend({"fold_id": row["payload"]["fold_id"], **row["payload"][key]} for row in batch.rows)
             if batch.table_kind == "FOLD" and research.requested_spec.get("optimization_schedule") == "per_fold_decay":
                 causal_fold_selections.extend({"fold_id": row["payload"]["fold_id"], **row["payload"]["fold_selection"]} for row in batch.rows)
             accepted.append({

@@ -38,7 +38,7 @@ describe("FULL03 additive indexed UTC wire authority",()=>{
   });
   it("publishes all exact interval/semantic pairs, not an arbitrary family prefix",()=>{
     const table=JSON.parse(readFileSync(join(root,"../../apps/portal/registry/research-execution-recipes.v1.json"),"utf8"));
-    const rows=table.recipes.filter((r:any)=>r.source_requirement==="FULL03_IMMUTABLE_DELTA_BINDING");
+    const rows=table.recipes.filter((r:any)=>r.descriptor.schema_version==="research.full03-delta-profile.v1");
     const schemas=doc("research-current-source").components.schemas;
     const validate=validator("research-current-source","Provenance");
     const value=JSON.parse(readFileSync(join(root,"fixtures/research-current-source.split.valid.json"),"utf8")).provenance;

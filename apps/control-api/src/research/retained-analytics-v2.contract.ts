@@ -14,7 +14,7 @@ export const ResearchRetainedAnalyticsV2FactSchema = z.object({
   reason_code: Reason.nullable(),
   value: Decimal.nullable(),
   origin: z.enum(["ENGINE_DIRECT", "PORTAL_DERIVED"]),
-  scope: z.literal("OOS"),
+  scope: z.enum(["OOS", "FULL_SAMPLE"]),
   source_locator: Locator,
   input_digest: Digest,
 }).strict().superRefine((fact, context) => {

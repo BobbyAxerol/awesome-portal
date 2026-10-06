@@ -10,7 +10,7 @@
 import { z } from "zod";
 import { ResearchEnrichedAnalysisSchema, ResearchEnrichedAvailabilitySchema } from "./enriched-analysis.contract";
 import { VerifiedPinnedAuditSchema } from "./final-audit.contract";
-import { CurrentSourceProtocolDisclosureSchema } from "./current-source.payload";
+import { CurrentSourceProtocolDisclosureSchema, CurrentSourceOptimizerDisclosureSchema } from "./current-source.payload";
 
 export const ResearchReportRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 export const ResearchReportExportJobIdSchema = z.string().regex(/^rpex_[0-9A-HJKMNP-TV-Z]{26}$/);
@@ -196,7 +196,7 @@ export const ResearchReportFrozenCoreV1Schema = z.object({
  * current-source reads; a P04 run keeps its P13–P17 hubs.
  */
 const SourceRevisionV2Schema = z.string().regex(/^(?:p1[3-7]r1_[0-9a-f]{64}|rs02_[a-z][a-z-]{2,40}_[0-9a-f]{64})$/);
-const ReportScopeV2Schema = z.enum(["OOS", "IS_PLUS_OOS", "CHILD_TAPE", "NOT_PUBLISHED", "OOS_MEAN_OF_FOLDS", "OOS_SUM_OF_FOLDS"]);
+const ReportScopeV2Schema = z.enum(["OOS", "IS_PLUS_OOS", "CHILD_TAPE", "NOT_PUBLISHED", "OOS_MEAN_OF_FOLDS", "OOS_SUM_OF_FOLDS", "FULL_SAMPLE"]);
 
 const ReportFactV2Schema = ReportFactSchema.extend({
   key: z.string().regex(/^[a-z][a-z0-9_]{2,63}$/),
@@ -220,6 +220,7 @@ const EquityV2Schema = z.object({
     "RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST",
     "THREE_WINDOW_CALIBRATION_OOS",
     "THREE_WINDOW_CALIBRATION_IS",
+    "FULL_SAMPLE_CALIBRATION",
     "NOT_PUBLISHED",
   ]),
   source_observation_count: z.number().int().nonnegative().max(2_000_000).nullable(),
@@ -323,7 +324,7 @@ const ArtifactV2Schema = z.object({
  */
 export const ReportFinalAuditSchema = z.object({
   schema_version: z.literal("research.report-final-audit.v1"),
-  kind: z.enum(["REUSED_ORIGINAL", "LINKED_CHILD", "NOT_PUBLISHED"]),
+  kind: z.enum(["REUSED_ORIGINAL", "LINKED_CHILD", "NOT_PUBLISHED", "NOT_APPLICABLE"]),
   reason_code: ReasonCodeSchema.nullable(),
   audit_target_kind: z.enum(["SINGLE_PARAMETER_SET", "FIXED_PARAMETER_PROFILE", "PER_FOLD_PARAMETER_SELECTIONS"]).nullable(),
   final_audit_run_id: ResearchReportRunIdSchema.nullable(),
@@ -345,6 +346,7 @@ export const ReportFinalAuditSchema = z.object({
 
 export const ResearchReportFrozenCoreV2Schema = z.object({
   protocol_disclosure: CurrentSourceProtocolDisclosureSchema.optional(),
+  optimizer_disclosure: CurrentSourceOptimizerDisclosureSchema.optional(),
   schema_version: z.literal("research.report-frozen-core.v2"),
   report_source: z.enum(["P13_P17_FIXED_PROFILE", "RS02_RETAINED_CURRENT_SOURCE"]),
   source_revisions: z.object({

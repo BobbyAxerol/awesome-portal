@@ -317,6 +317,7 @@ describe("stats — OOS Sharpe, decay, trades with their scope (CG-P12-02)", () 
     expect(value.getAttribute("title")).toBe("counted over the run's whole child tape, not the OOS window only");
     expect(scopeSuffix({ scope: "IS_PLUS_OOS" })).toBe("IS + OOS");
     expect(scopeSuffix({ scope: "OOS" })).toBeNull();
+    expect(scopeSuffix({ scope: "FULL_SAMPLE" })).toBe("full sample");
   });
 
   it("gives decay a typed absence with the reason's words and sentence, never a dash or a zero", () => {
