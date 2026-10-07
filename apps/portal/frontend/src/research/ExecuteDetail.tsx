@@ -40,6 +40,7 @@ import {
   RETAINED_CAPABILITY_LABEL,
   RETAINED_NO_FIELD,
   FIXED_ROUTE_NOTE,
+  FIXED_ROUTE_NOTE_NATIVE,
   fixedFreshAbsence,
   gapReason,
   isRetainedReplay,
@@ -1311,9 +1312,11 @@ function RetainedBody({
 function FixedObservationPanel({
   controller,
   slot,
+  native = false,
 }: {
   controller: ReplayController;
   slot: Extract<FixedReplaySlot, { state: "ready" }>;
+  native?: boolean;
 }) {
   const page = slot.pages[slot.index]!;
   const manifest = page.manifest!;
@@ -1379,7 +1382,7 @@ function FixedObservationPanel({
         ) : null}
       </div>
       <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-fixed-scope>
-        {FIXED_ROUTE_NOTE}
+        {native ? FIXED_ROUTE_NOTE_NATIVE : FIXED_ROUTE_NOTE}
       </p>
       {slot.recovered ? (
         <p className="mono text-[10px]" role="status" style={{ color: "var(--warn)" }} data-recovered>
@@ -1440,6 +1443,8 @@ export function executeLane(controller: ReplayController): "hub" | "retained" | 
 }
 
 export interface ExecuteScreenProps {
+  /** §44: drawn last inside the screen's own frame (so it shares its width and rhythm): the complete retained window and the engine journal. */
+  footer?: React.ReactNode;
   runId: string;
   workspaceId?: string;
   cursor: EvidenceCursor;
@@ -1472,6 +1477,7 @@ export function ExecuteScreen({
   embedded = false,
   windowKey = "oos",
   onWindow,
+  footer = null,
 }: ExecuteScreenProps) {
   const { replay, state } = controller;
   const replayWindow = replay?.equity_replay;
@@ -1809,7 +1815,7 @@ export function ExecuteScreen({
         ) : null}
       </ResearchPanel>
 
-      {controller.fixed?.state === "ready" ? <FixedObservationPanel controller={controller} slot={controller.fixed} /> : null}
+      {controller.fixed?.state === "ready" ? <FixedObservationPanel controller={controller} slot={controller.fixed} native={isNativeReplayRoute(replay?.route.id)} /> : null}
 
       {replay ? (
         <>
@@ -1819,13 +1825,13 @@ export function ExecuteScreen({
             </Card>
           ) : null}
           {/* ONE block for everything this source did not publish; every name carries its reason in its tooltip. */}
-          <NotPublishedBlock replay={replay} />
+          <NotPublishedBlock replay={replay} native={isNativeReplayRoute(replay.route.id)} />
           <RetainedReplayPanel slot={controller.retained} onRead={controller.ensureRetained} />
         </>
       ) : null}
       </>
       )}
-
+      {footer}
     </div>
   );
 }
@@ -1867,7 +1873,7 @@ function StateAtCursor({ replay, pinnedAt }: { replay: Replay; pinnedAt: number 
 }
 
 /** ONE block: what the source did not publish. The names are the route's capabilities; each reason (sentence + code) is that name's tooltip. */
-export function NotPublishedBlock({ replay }: { replay: Replay }) {
+export function NotPublishedBlock({ replay, native = false }: { replay: Replay; /** A native route: the equity-sample read below names what IT lacks; the complete-window journal publishes the fills and levels. */ native?: boolean }) {
   const missing = ROUTE_CAPABILITY_KEYS.filter((key) => replay.route_capabilities[key].state !== "AVAILABLE");
   const sources = Object.entries(replay.source_absences);
   if (missing.length === 0 && sources.length === 0) return null;
@@ -1881,9 +1887,14 @@ export function NotPublishedBlock({ replay }: { replay: Replay }) {
       title={sourceNote === "" ? undefined : sourceNote}
       aria-label={`Not published by this source: ${missing.map((key) => CAPABILITY_LABEL[key]).join(", ")}`}
     >
-      <h2 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-        Not published by this source
+      <h2 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }} data-not-published-scope={native ? "equity-sample" : "source"}>
+        {native ? "Not published by this equity-sample read" : "Not published by this source"}
       </h2>
+      {native ? (
+        <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} data-native-journal-note>
+          fills, trades and protective levels are in the engine journal below, where the source published them
+        </span>
+      ) : null}
       {missing.map((key, index) => {
         const fact = replay.route_capabilities[key];
         const why = `${REPLAY_GAP_WORDS[fact.state]} · ${gapReason(fact)}`;

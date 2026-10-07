@@ -27,6 +27,31 @@ import { trialLabel, trialTitle } from "./trialLabel";
 import { humanise, humaniseTokens } from "./humanise";
 import { AtlasSummaryCard, StageSummaryCard } from "./hubStageSummary";
 import { NativeExecutionPanel } from "./NativeExecutionPanel";
+import {
+  WINDOW_BEHAVIOUR,
+  WINDOW_EXPOSURE,
+  WINDOW_HERO,
+  authorityWords,
+  benchmarkCurve,
+  blockAbsence,
+  distributionSeries,
+  episodeRows,
+  factAvailable,
+  factOf,
+  factText,
+  factTitle,
+  monthlySeries,
+  samplingLine,
+  strategyCurve,
+  underwater,
+  completeWindowOf,
+  windowScopeFor,
+  windowSourceOf,
+  windowWords,
+  type MetricRow,
+} from "./windowAnalyticsView";
+import { analyticsOf, type WindowExecutionPage } from "./windowExecutionClient";
+import { IDLE_WINDOW_ANALYTICS, type WindowAnalyticsController } from "./useWindowAnalytics";
 
 import { usePresentation } from "../app/presentation";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
@@ -3565,6 +3590,157 @@ export function RetainedWindowPanel({ evidence, window: active, fold }: {
   </section>;
 }
 
+/* ---------------------------------------------------------------------------------------------------------------
+ * §44 / WEX — the complete-window analytics of one window (and one Walk-forward fold), exactly as the backend published them.
+ * Every figure is a full-population fact (basis ALL_TIME) with its own origin, scope and input digest; the curves are
+ * presentation samples and feed nothing. A fact the source did not publish keeps its typed state; nothing is relabelled
+ * from another window.
+ * ------------------------------------------------------------------------------------------------------------- */
+
+function WindowTile({ row, fact }: { row: MetricRow; fact: ReturnType<typeof factOf> }) {
+  const available = factAvailable(fact);
+  const text = !available ? null : (factText(fact.value, row.unit) ?? fact.value);
+  const negative = available && fact.value.trim().startsWith("-");
+  const signedUnit = row.unit === "signed" || row.unit === "ratio";
+  const tone = !available || !signedUnit ? "var(--ink)" : row.key === "max_drawdown_fraction" || negative ? "var(--bad)" : "var(--good)";
+  return (
+    <div
+      className="flex min-h-[90px] min-w-0 flex-col gap-[3px] rounded-[6px] border px-3 py-2"
+      data-window-metric={row.key}
+      data-fact-state={fact.state}
+      title={factTitle(row, fact)}
+      style={{ borderColor: "var(--line-soft)", background: "var(--paper-raised)" }}
+    >
+      <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>{row.label}</span>
+      {available ? (
+        <span className="mono text-[22px] font-semibold leading-[28px]" style={{ color: tone, fontVariantNumeric: "tabular-nums" }} data-metric-value={row.key} data-exact={fact.value}>
+          {text}
+        </span>
+      ) : (
+        <span className="leading-[28px]"><Withheld availability={{ state: fact.state === "AVAILABLE" ? "NOT_PUBLISHED" : fact.state, reason_code: fact.reason_code }} /></span>
+      )}
+      <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
+        {fact.scope} · {fact.origin === "ENGINE_DIRECT" ? "engine-direct" : "portal-derived"}
+      </span>
+    </div>
+  );
+}
+
+function WindowCell({ row, fact }: { row: MetricRow; fact: ReturnType<typeof factOf> }) {
+  const available = factAvailable(fact);
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5" data-window-fact={row.key} data-fact-state={fact.state} title={factTitle(row, fact)}>
+      <span className="text-[10px]" style={{ color: "var(--ink-faint)" }}>{row.label}</span>
+      {available ? (
+        <span className="mono text-[13px]" style={{ fontVariantNumeric: "tabular-nums" }} data-exact={fact.value}>{factText(fact.value, row.unit) ?? fact.value}</span>
+      ) : (
+        <Withheld availability={{ state: fact.state === "AVAILABLE" ? "NOT_PUBLISHED" : fact.state, reason_code: fact.reason_code }} />
+      )}
+    </div>
+  );
+}
+
+export function WindowAnalyticsPanel({ page }: { page: WindowExecutionPage }) {
+  const analytics = analyticsOf(page);
+  if (analytics === null || page.descriptor === null) return null;
+  const { descriptor } = page;
+  const authority = authorityWords(descriptor.authority);
+  const label = windowWords(analytics.window, analytics.fold_id);
+  const group = `evidence-window-${analytics.window}-${analytics.fold_id ?? "all"}`;
+  const strategy = strategyCurve(analytics);
+  const benchmark = benchmarkCurve(analytics);
+  const monthly = monthlySeries(analytics);
+  const distribution = distributionSeries(analytics);
+  const episodes = episodeRows(analytics);
+  const exposure = WINDOW_EXPOSURE.map((entry) => ({ entry, fact: factOf(analytics, entry.key) }));
+  return (
+    <section
+      className="flex flex-col gap-3.5"
+      data-window-view={analytics.window.toLowerCase()}
+      data-window-source="WINDOW_ANALYTICS"
+      data-window-fold={analytics.fold_id ?? undefined}
+      data-window-authority={descriptor.authority}
+      title={`${page.revision ?? "no revision"} · ${descriptor.authority} · input ${analytics.input_digest.slice(0, 12)}`}
+    >
+      <p className="mono text-[10px]" style={{ color: "var(--ink-soft)" }} data-window-bounds>
+        {label} · {utcZ(analytics.start_utc_ms)} to {utcZ(analytics.end_exclusive_utc_ms)} (end exclusive) · {formatMetric(analytics.observation_count, "count")} retained observations · {authority.words}
+      </p>
+      {authority.caution !== null ? (
+        <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-window-caution>{authority.caution}</p>
+      ) : null}
+      <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(max(150px, calc((100% - 40px) / 6)), 1fr))" }} data-window-metrics>
+        {WINDOW_HERO.map((row) => <WindowTile key={row.key} row={row} fact={factOf(analytics, row.key)} />)}
+      </div>
+      <figure className="m-0 min-w-0 rounded-[8px] border p-4" style={PANEL_STYLE} data-window-account="strategy-benchmark">
+        <figcaption className="mb-3 flex flex-wrap items-baseline gap-2">
+          <span className="text-[15px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>Strategy vs benchmark — {label}</span>
+          <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} data-window-sampling={analytics.curves.sampling.method}>{samplingLine(analytics)}</span>
+        </figcaption>
+        {strategy.length > 0 ? (
+          <ChartFrame height={260}><StrategyBenchmarkChart strategy={strategy} benchmark={benchmark} group={group} /></ChartFrame>
+        ) : (
+          <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what="strategy curve" />
+        )}
+      </figure>
+      <figure className="m-0 min-w-0 rounded-[8px] border p-4" style={PANEL_STYLE} data-window-account="drawdown">
+        <figcaption className="mb-3 text-[15px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>Underwater — {label} drawdown</figcaption>
+        {analytics.curves.drawdown_fraction.length > 0 ? (
+          <ChartFrame height={180}><DrawdownChart points={underwater(analytics)} group={group} /></ChartFrame>
+        ) : (
+          <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what="drawdown curve" />
+        )}
+      </figure>
+      <section className="rounded-[8px] border p-4" style={PANEL_STYLE} data-window-behaviour>
+        <h3 className="m-0 mb-3 text-[15px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>Behavior — {label}</h3>
+        <div className="grid gap-x-4 gap-y-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
+          {WINDOW_BEHAVIOUR.map((row) => <WindowCell key={row.key} row={row} fact={factOf(analytics, row.key)} />)}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2" data-window-exposure>
+          {exposure.map(({ entry, fact }) => (
+            <WindowCell key={entry.key} row={{ key: entry.key, label: `Exposure · ${entry.label}`, unit: "percent" }} fact={fact} />
+          ))}
+        </div>
+      </section>
+      <div className="grid gap-3.5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))" }}>
+        <figure className="m-0 min-w-0 rounded-[8px] border p-4" style={PANEL_STYLE} data-window-panel="monthly">
+          <figcaption className="mb-3 text-[15px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>Monthly returns — {label}</figcaption>
+          {monthly !== null ? <MonthlyHeat series={monthly} /> : <Withheld availability={blockAbsence(analytics, "monthly") ?? { state: "NOT_PUBLISHED", reason_code: null }} what="monthly returns" />}
+        </figure>
+        <figure className="m-0 min-w-0 rounded-[8px] border p-4" style={PANEL_STYLE} data-window-panel="distribution">
+          <figcaption className="mb-3 text-[15px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>Daily return distribution — {label}</figcaption>
+          {distribution !== null ? (
+            <ChartFrame height={200}><DistributionChart series={distribution} /></ChartFrame>
+          ) : (
+            <Withheld availability={blockAbsence(analytics, "distribution") ?? { state: "NOT_PUBLISHED", reason_code: null }} what="return distribution" />
+          )}
+        </figure>
+      </div>
+      <section className="rounded-[8px] border p-4" style={PANEL_STYLE} data-window-panel="episodes">
+        <h3 className="m-0 mb-2 text-[15px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>Drawdown episodes — {label}</h3>
+        {blockAbsence(analytics, "episodes") !== null ? (
+          <Withheld availability={blockAbsence(analytics, "episodes")!} what="drawdown episodes" />
+        ) : episodes.rows.length === 0 ? (
+          <p className="mono text-[11px]" style={{ color: "var(--ink-soft)" }} data-episodes-total={episodes.total}>No drawdown episode in this window ({episodes.total} of {episodes.total}).</p>
+        ) : (
+          <ul className="m-0 flex list-none flex-col gap-1 p-0" data-episodes-total={episodes.total}>
+            {episodes.rows.map((episode) => (
+              <li key={episode.startMs} className="mono text-[11px]" data-episode={episode.startMs} style={{ fontVariantNumeric: "tabular-nums" }} title={`depth ${episode.depth} · ${episode.durationSeconds} s`}>
+                {utcZ(episode.startMs)} → trough {utcZ(episode.troughMs)} · {episode.recoveryMs === null ? "not recovered" : `recovered ${utcZ(episode.recoveryMs)}`} · depth {formatMetric(episode.depth, "fraction")}
+              </li>
+            ))}
+          </ul>
+        )}
+        {episodes.rows.length > 0 && episodes.total > episodes.rows.length ? (
+          <p className="mono mt-2 text-[10px]" style={{ color: "var(--ink-faint)" }}>{episodes.rows.length} of {episodes.total} episodes</p>
+        ) : null}
+      </section>
+      <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-window-metric-policy>
+        Every figure is computed on the full retained window. The curves are display samples and feed no number. Engine audit, not a broker record.
+      </p>
+    </section>
+  );
+}
+
 function SummaryTab({
   hub,
   runId,
@@ -3580,7 +3756,9 @@ function SummaryTab({
   ensureRetainedSeries,
   retainedKinds,
   ensureRetainedKind,
+  windowAnalytics,
 }: {
+  windowAnalytics: WindowAnalyticsController;
   hub: EvidenceHub;
   runId: string;
   cursor: EvidenceCursor;
@@ -3757,11 +3935,35 @@ function SummaryTab({
     </SeriesPanel>
   );
 
+  /* §44: the completed window the reader opened. OOS keeps the Hub/lane path above; IS and Holdout (and a Walk-forward fold's IS) read the
+     complete-window analytics, asked only once the lane (and so the protocol) is known. */
+  const foldRows = retained !== null && (retained as Partial<CurrentSourceEvidence>).protocol_disclosure === undefined ? (verdicts?.rows ?? null) : null;
+  const windowScope = windowScopeFor({ window: evidenceWindow, walkForwardFolds: foldRows, cursorFold: cursor.fold });
+  const windowScopeKey = windowScope === null ? "" : `${windowScope.window}|${windowScope.foldId ?? ""}`;
+  const laneKnown = passport.state !== "idle" && passport.state !== "loading";
+  useEffect(() => {
+    if (windowScope !== null && laneKnown) windowAnalytics.ensure(windowScope);
+  }, [windowScopeKey, laneKnown, windowAnalytics.ensure]); // eslint-disable-line react-hooks/exhaustive-deps
+  const completeWindow = completeWindowOf(windowAnalytics.slot(windowScope));
+  const legacyHasWindow = evidenceWindow !== "oos" && ((retained !== null && views?.[evidenceWindow].state === "AVAILABLE") || (evidenceWindow === "is" && isRead !== null && isRead.kind !== "absent"));
+  const windowSource = evidenceWindow === "oos" ? "legacy" : windowSourceOf(completeWindow, legacyHasWindow);
+
   return (
     <section data-screen-label="Summary" className="flex flex-col gap-3.5">
       <WindowSwitcher window={evidenceWindow} onWindow={onWindow} windows={windowsShown} />
-      {evidenceWindow !== "oos" && retained && views?.[evidenceWindow].state === "AVAILABLE" ? (
-        <RetainedWindowPanel evidence={retained} window={evidenceWindow} fold={cursor.fold} />
+      {completeWindow !== null && completeWindow.kind === "ready" && windowSource === "analytics" ? (
+        <WindowAnalyticsPanel page={completeWindow.page} />
+      ) : completeWindow !== null && completeWindow.kind === "absent" && windowSource === "absence" && evidenceWindow !== "oos" ? (
+        <WindowAbsent window={evidenceWindow} runId={runId} cursor={cursor} availability={{ state: completeWindow.absence.state, reason_code: completeWindow.absence.reasonCode }} />
+      ) : evidenceWindow !== "oos" && retained && views?.[evidenceWindow].state === "AVAILABLE" ? (
+        <>
+          {windowSource === "legacy-with-note" && completeWindow !== null && completeWindow.kind === "absent" ? (
+            <p className="mono text-[10px]" data-complete-window-absent={completeWindow.absence.reasonCode ?? completeWindow.absence.state}>
+              <Withheld availability={{ state: completeWindow.absence.state, reason_code: completeWindow.absence.reasonCode }} what="Complete-window analytics" />
+            </p>
+          ) : null}
+          <RetainedWindowPanel evidence={retained} window={evidenceWindow} fold={cursor.fold} />
+        </>
       ) : evidenceWindow === "is" && isRead !== null && isRead.kind !== "absent" ? (
         <IsWindowPanel read={isRead} />
       ) : evidenceWindow !== "oos" ? (
@@ -4747,6 +4949,8 @@ const IDLE_IDENTITY: RunIdentitySlot = { state: "idle" };
 const NO_KINDS: ReadonlyMap<RetainedSeriesKind, RetainedSeriesSlot> = new Map();
 
 export interface EvidenceFlowProps {
+  /** §44: the completed-window analytics reads (IS / Holdout / Walk-forward fold), asked once per selector. */
+  windowAnalytics?: WindowAnalyticsController;
   runId: string;
   hub: EvidenceHub | null;
   state: ResearchState;
@@ -4798,6 +5002,7 @@ export function EvidenceFlow({
   ensureRetainedKind = NOOP,
   runIdentity = IDLE_IDENTITY,
   onReread,
+  windowAnalytics = IDLE_WINDOW_ANALYTICS,
 }: EvidenceFlowProps) {
   /* W3: the lane is read as soon as the Hub says the run is not in progress,
      so the claim strip above every tab can show a retained run's claims. */
@@ -5041,6 +5246,7 @@ export function EvidenceFlow({
               ensureRetainedSeries={ensureRetainedSeries}
               retainedKinds={retainedKinds}
               ensureRetainedKind={ensureRetainedKind}
+              windowAnalytics={windowAnalytics}
             />}
           </div>
         ) : null}

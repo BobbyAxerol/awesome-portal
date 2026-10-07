@@ -482,6 +482,10 @@ export function replayState(replay: Replay): ResearchState {
 export const FIXED_ROUTE_NOTE =
   "Observation replay: the market candle and the account's equity and native position at each retained out-of-sample bar. It is not an orders, fills or trades ledger, and no order or fill is drawn.";
 
+/** The same sentence on a native route: this panel still draws no fill, because the engine journal below it is what carries them. */
+export const FIXED_ROUTE_NOTE_NATIVE =
+  "Observation replay: the market candle and the account's equity and native position at each retained out-of-sample bar. This panel draws no order or fill; the engine journal below publishes fills, trades and protective levels where the source did.";
+
 export function isFixedReplayPage(body: unknown): body is FixedReplayPage {
   return (body as { schema_version?: unknown } | null)?.schema_version === "research.fixed-replay-companion-page.v1";
 }

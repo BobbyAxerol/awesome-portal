@@ -20,6 +20,7 @@ import { coreV2, linkFromLocation } from "./reportClient";
 import { useReport } from "./useReport";
 import { useReportExport } from "./useReportExport";
 import { LinkedAuditConsumer } from "./LinkedAuditConsumer";
+import { WindowAnalyticsSupplement } from "./WindowAnalyticsSupplement";
 
 export const PRINT_SHEET_ATTRIBUTE = "data-research-print-sheet";
 
@@ -39,6 +40,7 @@ function ReportContainer({ runId }: { runId: string }) {
   }, []);
 
   return <ReportScreen runId={runId} workspaceId={workspaceId} cursor={link.cursor ?? null} window={link.window ?? null} controller={controller} exporter={exporter} requestedRevision={requestedRevision}
+    supplement={controller.report ? <WindowAnalyticsSupplement key={`${workspaceId ?? ""}|${runId}`} runId={runId} workspaceId={workspaceId} sealedRevision={controller.report.report_revision} /> : undefined}
     linkedAudit={controller.report ? <LinkedAuditConsumer runId={runId} workspaceId={workspaceId} onSettled={controller.retry} applicable={controller.report.final_audit_applicable} targetKind={coreV2(controller.report.frozen_core)?.final_audit?.audit_target_kind ?? null} /> : undefined} />;
 }
 

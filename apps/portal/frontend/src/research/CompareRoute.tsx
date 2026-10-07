@@ -23,6 +23,9 @@ import { Navigate, useParams, useSearchParams } from "react-router-dom";
 import { CompareScreen, PAIR_NEEDS_TWO, RESOLVER_NEEDS_ALPHA } from "./CompareDetail";
 import { compareHref, isCompareMode, pairRuns, splitRuns, type CompareMode } from "./compareClient";
 import { useCompare, type CompareQuery } from "./useCompare";
+import { useWindowCompare } from "./useWindowCompare";
+import { isWindowName } from "./WindowCompareSection";
+import type { WindowScope } from "./windowExecutionClient";
 import { withWorkspace } from "./runLinks";
 
 function CompareContainer({ alphaId }: { alphaId: string | null }) {
@@ -34,14 +37,42 @@ function CompareContainer({ alphaId }: { alphaId: string | null }) {
   const pairIncomplete = requested === "pair" && pairRuns(runs) === null;
 
   const query: CompareQuery | null = alphaId && !pairIncomplete ? { mode: requested, runs: requested === "pair" ? runs : null } : null;
-  const controller = useCompare(alphaId, query, { workspaceId: params.get("workspace_id") || undefined });
+  const workspaceId = params.get("workspace_id") || undefined;
+  const controller = useCompare(alphaId, query, { workspaceId });
+
+  /* §44: the window the two runs are compared on. It lives in the URL beside `runs`; nothing is requested until one is chosen. */
+  const pair = requested === "pair" ? pairRuns(runs) : null;
+  const rawWindow = params.get("window");
+  const rawFold = params.get("fold_id");
+  const windowScope: WindowScope | null = pair !== null && isWindowName(rawWindow) ? { window: rawWindow, foldId: rawWindow === "IS" && rawFold ? rawFold : null } : null;
+  const windowState = useWindowCompare(pair, windowScope, workspaceId);
+  const onScope = useCallback(
+    (next: WindowScope | null) => {
+      setParams(
+        (current) => {
+          const updated = new URLSearchParams(current);
+          if (next === null) updated.delete("window");
+          else updated.set("window", next.window);
+          if (next === null || next.foldId === null || next.foldId === undefined || next.window !== "IS") updated.delete("fold_id");
+          else updated.set("fold_id", next.foldId);
+          return updated;
+        },
+        { replace: true },
+      );
+    },
+    [setParams],
+  );
 
   const onMode = useCallback(
     (next: CompareMode) => {
       setParams((current) => {
         const updated = new URLSearchParams(current);
         updated.set("mode", next);
-        if (next !== "pair") updated.delete("runs");
+        if (next !== "pair") {
+          updated.delete("runs");
+          updated.delete("window");
+          updated.delete("fold_id");
+        }
         return updated;
       });
     },
@@ -58,6 +89,7 @@ function CompareContainer({ alphaId }: { alphaId: string | null }) {
       controller={controller}
       onMode={onMode}
       idleReason={idleReason}
+      windowCompare={pair === null ? undefined : { runs: pair, scope: windowScope, state: windowState, onScope }}
     />
   );
 }

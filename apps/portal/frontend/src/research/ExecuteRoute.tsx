@@ -10,7 +10,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 
-import { ExecuteScreen, executeLane, useTransportInput } from "./ExecuteDetail";
+import { ExecuteScreen, executeLane, isNativeReplayRoute, useTransportInput } from "./ExecuteDetail";
+import { WindowReplayCard } from "./WindowReplayCard";
 import { useSplitBand } from "./SplitBand";
 import { windowOf, type ExecWindow } from "./executeWindows";
 import { RouteCursorNotice } from "./CursorNotice";
@@ -181,7 +182,23 @@ export function ExecuteContainer({
   return (
     <>
       {embedded ? null : <RouteCursorNotice problems={problems} notes={notes} />}
-      <ExecuteScreen runId={runId} workspaceId={workspaceId} cursor={cursor} controller={controller} transport={transport} band={band} embedded={embedded} windowKey={windowKey} onWindow={setWindowKey} />
+      <ExecuteScreen
+        runId={runId}
+        workspaceId={workspaceId}
+        cursor={cursor}
+        controller={controller}
+        transport={transport}
+        band={band}
+        embedded={embedded}
+        windowKey={windowKey}
+        onWindow={setWindowKey}
+        footer={
+          /* §44: the complete retained window and the engine journal. Open on arrival for a native route (its fills are the point of the screen); one click for any other run. */
+          controller.replay !== null || controller.retained.state !== "idle" ? (
+            <WindowReplayCard key={`${workspaceId ?? ""}|${runId}`} runId={runId} workspaceId={workspaceId} defaultOpen={isNativeReplayRoute(controller.replay?.route.id)} />
+          ) : null
+        }
+      />
     </>
   );
 }

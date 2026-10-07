@@ -1729,6 +1729,8 @@ export interface ReportScreenProps {
   runId: string;
   workspaceId?: string;
   linkedAudit?: ReactNode;
+  /** §44: the supplemental complete-window analytics (collapsed; never part of the sealed report). */
+  supplement?: ReactNode;
   /** The cursor of the page that sent the reader here; `null` when it carried none. */
   cursor?: EvidenceCursor | null;
   /** `?window=` of that page. */
@@ -1745,7 +1747,7 @@ export function revisionNotice(requested: string | null | undefined, report: Rep
   return `This link names report revision ${requested}. The page shows the current sealed revision, ${report.report_revision}.`;
 }
 
-export function ReportScreen({ runId, workspaceId, linkedAudit, cursor = null, window: evidenceWindow = null, controller, exporter, requestedRevision = null }: ReportScreenProps) {
+export function ReportScreen({ runId, workspaceId, linkedAudit, supplement, cursor = null, window: evidenceWindow = null, controller, exporter, requestedRevision = null }: ReportScreenProps) {
   const { report } = controller;
   const link = useMemo<LinkCursor>(() => ({ cursor, window: evidenceWindow, workspaceId }), [cursor, evidenceWindow, workspaceId]);
   const revisionLine = revisionNotice(requestedRevision, report);
@@ -1831,6 +1833,7 @@ export function ReportScreen({ runId, workspaceId, linkedAudit, cursor = null, w
           {/* QA S09 (UX-22): a run that ended without a claim has nothing to export. */}
           {core ? <Exports report={report} exporter={exporter} /> : null}
           {linkedAudit}
+          {supplement}
           <AnnotationBlock report={report} />
         </div>
       ) : null}

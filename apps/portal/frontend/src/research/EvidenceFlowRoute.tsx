@@ -15,6 +15,7 @@ import { EvidenceFlow } from "./EvidenceFlow";
 import { RouteCursorNotice } from "./CursorNotice";
 import { useEvidenceCursor } from "./evidenceCursor";
 import { useEvidence } from "./useEvidence";
+import { useWindowAnalytics } from "./useWindowAnalytics";
 import type { EvidenceWindow } from "./evidenceWindow";
 import { useHandoffCursor } from "./handoffCursor";
 
@@ -39,6 +40,8 @@ function EvidenceFlowRun({ runId, workspaceId }: { runId: string; workspaceId?: 
     { handoff: handoffRead.cursor },
   );
   const evidence = useEvidence(runId, workspaceId);
+  /* §44: IS / Holdout / Walk-forward-fold analytics, asked once per selector the reader opens. */
+  const windowAnalytics = useWindowAnalytics(runId, workspaceId);
   const onWindow = useCallback((next: EvidenceWindow) => update({ window: next }), [update]);
 
   /* RF-06 FE-S04-06: a linked fold the run never observed is moved to the
@@ -78,6 +81,7 @@ function EvidenceFlowRun({ runId, workspaceId }: { runId: string; workspaceId?: 
         ensureRetainedKind={evidence.ensureRetainedKind}
         runIdentity={runIdentity}
         onReread={evidence.reread}
+        windowAnalytics={windowAnalytics}
       />
     </>
   );

@@ -58,7 +58,7 @@
    "interaction_class": "INTENTIONALLY_UNEXPOSED",
    "consumer": "WORKER",
    "unused_capability": false,
-   "evidence": "WEX-04: private live lease/fencing and exact sealed P05 parts/proof; idempotent bounded append.",
+   "evidence": "WEX-04: worker infrastructure route, never a browser surface — private live lease/fencing and exact sealed P05 parts/proof; idempotent bounded append.",
    "owner": "codex",
    "test_owner": "codex"
   },
@@ -68,7 +68,7 @@
    "interaction_class": "INTENTIONALLY_UNEXPOSED",
    "consumer": "WORKER",
    "unused_capability": false,
-   "evidence": "WEX-04: full normalized digest/count/chronology and immutable DB finalization, not a browser write.",
+   "evidence": "WEX-04: worker infrastructure route, never a browser surface \u2014 full normalized digest/count/chronology and immutable DB finalization, not a browser write.",
    "owner": "codex",
    "test_owner": "codex"
   },

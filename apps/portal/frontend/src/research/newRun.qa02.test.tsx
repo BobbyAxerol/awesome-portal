@@ -289,7 +289,9 @@ describe("U05 — early stopping and the seed are validated, not silently droppe
   it("the optimization validator names each, after the trial rules", () => {
     expect(validateOptimization(draft({ earlyStopping: "abc" }), limits)).toBe("Early stopping must be a whole number of at least 1.");
     expect(validateOptimization(draft({ randomSeed: "x1" }), limits)).toBe("Random seed must be a whole number.");
-    expect(validateOptimization(draft({ earlyStopping: "20" }), limits)).toBeNull();
+    /* §43: patience is per study and cannot exceed the declared trials. */
+    expect(validateOptimization(draft({ optunaTrials: "30", earlyStopping: "20" }), limits)).toBeNull();
+    expect(validateOptimization(draft({ optunaTrials: "3", earlyStopping: "20" }), limits)).toBe("Early stopping cannot exceed the declared trials per study.");
     expect(validateOptimization(draft({ optunaTrials: "0", earlyStopping: "abc" }), limits)).toBe("Trials must be a whole number of at least 1.");
     /* It blocks preflight: the serializer would have sent `early_stopping: null`. */
     expect(blockingProblems(draft({ earlyStopping: "abc" }), limits).map((problem) => problem.step)).toContain("optimization");

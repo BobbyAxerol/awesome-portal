@@ -1325,6 +1325,171 @@ export function StrategyBenchmarkChart({
   );
 }
 
+/* ---------------------------------------------------------- §44 two runs, one window */
+
+/**
+ * Two runs' rebased strategy curves on one window. Each has its OWN timestamps: the lines are never aligned, forward-filled or
+ * merged, and the chart derives no spread or delta. The tooltip names the nearest served point of each series with its own time.
+ */
+export function windowCompareOption(left: readonly RebasedPoint[], right: readonly RebasedPoint[], names: { left: string; right: string }) {
+  const role = roleColorsNow();
+  const { inkSoft } = canvasTokens(activeTheme());
+  const series = (name: string, points: readonly RebasedPoint[], color: string, dashed: boolean) => ({
+    type: "line" as const,
+    name,
+    showSymbol: false,
+    data: points.map((point) => [point.at_utc_ms, Number(point.value)]),
+    lineStyle: { width: dashed ? 1.75 : 2.5, color, ...(dashed ? { type: "dashed" as const } : {}) },
+    itemStyle: { color },
+  });
+  return evidenceBase({
+    ...noChartApparatus(true),
+    legend: { show: true, top: 0, right: 8, itemWidth: 10, itemHeight: 8, textStyle: { fontSize: 10, fontFamily: "JetBrains Mono, monospace" }, data: [names.left, names.right] },
+    useUTC: true,
+    grid: { left: 50, right: 20, top: 30, bottom: 40, containLabel: true },
+    xAxis: TIME_AXIS,
+    yAxis: { type: "value", scale: true, axisLabel: { formatter: (value: number) => withMinus(formatMetric(value, "count")) } },
+    tooltip: {
+      ...hifiTooltip(),
+      formatter: (params: unknown) => {
+        const list = (Array.isArray(params) ? params : [params]) as (AxisParam & { axisValue?: number | string })[];
+        const at = typeof list[0]?.axisValue === "number" ? list[0].axisValue : undefined;
+        if (at === undefined) return "";
+        const row = (name: string, points: readonly RebasedPoint[]) => {
+          const point = nearestPoint(points, at);
+          if (point === undefined) return "";
+          const marker = list.find((param) => param.seriesName === name)?.marker ?? "";
+          return `${marker}${name} <b>${ratio(point.value)}</b> <span style="opacity:.7">${utcZ(point.at_utc_ms)}</span>`;
+        };
+        return `${utcZ(at)}<br/>${[row(names.left, left), row(names.right, right)].filter(Boolean).join("<br/>")}`;
+      },
+    },
+    series: [series(names.left, left, role.oos, false), series(names.right, right, inkSoft, true)],
+  });
+}
+
+export function WindowCompareChart({ left, right, names, group = CHART_GROUP.curves }: { left: readonly RebasedPoint[]; right: readonly RebasedPoint[]; names: { left: string; right: string }; group?: string }) {
+  const option = useMemo(() => windowCompareOption(left, right, names), [left, right, names.left, names.right]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <ChartShell chart="window-compare" label="Two runs on one window, rebased to 100" group={group} option={option}>
+      <div role="img" aria-label="Two runs on one window, each rebased to 100 on its own time axis; exact values in the table below">
+        <EChart option={option} height={CHART_HEIGHT.rolling} />
+      </div>
+      <ExactTable
+        id="window-compare"
+        caption="Two runs rebased to 100 on one window, exact values"
+        head={["run", "time (UTC)", "value"]}
+        rows={[
+          ...left.map((point) => ({ key: `l${point.at_utc_ms}`, cells: [names.left, timeCell(point.at_utc_ms), numberCell(point.value)] })),
+          ...right.map((point) => ({ key: `r${point.at_utc_ms}`, cells: [names.right, timeCell(point.at_utc_ms), numberCell(point.value)] })),
+        ]}
+      />
+    </ChartShell>
+  );
+}
+
+/* ------------------------------------------------ §44 retained bars with the engine's own fills and levels */
+
+export interface ReplayBar {
+  at_utc_ms: number;
+  open: string;
+  high: string;
+  low: string;
+  close: string;
+  /** The active protective levels the engine published for this bar; null where it published none (a gap, never a line at zero). */
+  active_stop: string | null;
+  active_take_profit: string | null;
+}
+
+export interface ReplayFill {
+  at_utc_ms: number;
+  price: string;
+  qty: string | null;
+  side: string | null;
+  /** The engine's own words: `entry`, `take_profit`, `stop_loss`, … `null` when the source named none. */
+  exit_reason: string | null;
+}
+
+const FILL_SYMBOL: Record<string, "triangle" | "diamond" | "rect" | "circle"> = { entry: "triangle", take_profit: "diamond", stop_loss: "rect", stop: "rect" };
+export const fillSymbol = (reason: string | null): "triangle" | "diamond" | "rect" | "circle" => (reason === null ? "circle" : (FILL_SYMBOL[reason] ?? "circle"));
+
+/**
+ * Candles from the retained observations, the engine's fills at their actual fill price and source bar (beside the body, never at the
+ * bucket's high or low), and the active stop / take-profit as step lines that BREAK where the engine published none. Nothing is
+ * inferred: no parent/child connector, no level from a tag, no price where the source gave none.
+ */
+export function windowReplayOption(bars: readonly ReplayBar[], fills: readonly ReplayFill[]) {
+  const { good, bad, ink, inkFaint } = paletteNow();
+  const px = bars.length > 0 ? Math.max(5, Math.min(14, Math.round(900 / bars.length / 2) + 4)) : 8;
+  const levelSeries = (name: string, color: string, pick: (bar: ReplayBar) => string | null) => ({
+    type: "line" as const,
+    name,
+    step: "end" as const,
+    showSymbol: false,
+    connectNulls: false,
+    lineStyle: { width: 1.25, type: "dashed" as const, color },
+    itemStyle: { color },
+    data: bars.map((bar) => [bar.at_utc_ms, pick(bar) === null ? null : Number(pick(bar))]),
+  });
+  return evidenceBase({
+    legend: { show: true, top: 0, right: 8, itemWidth: 10, itemHeight: 8, textStyle: { fontSize: 10, fontFamily: "JetBrains Mono, monospace" } },
+    dataZoom: timeZoom(),
+    useUTC: true,
+    animation: false,
+    grid: { left: 50, right: 20, top: 30, bottom: 56, containLabel: true },
+    xAxis: TIME_AXIS,
+    yAxis: { type: "value", scale: true, axisLabel: { formatter: (value: number) => withMinus(formatMetric(value, "count")) } },
+    tooltip: {
+      ...hifiTooltip(),
+      trigger: "item" as const,
+      formatter: (raw: unknown) => {
+        const param = raw as { seriesName?: string; value?: unknown };
+        const v = param.value as (number | null)[] | undefined;
+        if (param.seriesName === "Fills") {
+          const fill = fills.find((entry) => entry.at_utc_ms === v?.[0] && Number(entry.price) === v?.[1]);
+          if (fill === undefined) return "";
+          return `${utcZ(fill.at_utc_ms)}<br/><b>${fill.side ?? "side not published"}</b> ${fill.exit_reason ?? ""}<br/>price ${fill.price}<br/>qty ${fill.qty ?? "not published"}`;
+        }
+        const bar = bars.find((entry) => entry.at_utc_ms === v?.[0]);
+        if (bar === undefined) return "";
+        return `${utcZ(bar.at_utc_ms)}<br/>O ${bar.open} H ${bar.high}<br/>L ${bar.low} C ${bar.close}${bar.active_stop ? `<br/>stop ${bar.active_stop}` : ""}${bar.active_take_profit ? `<br/>take-profit ${bar.active_take_profit}` : ""}`;
+      },
+    },
+    series: [
+      {
+        type: "candlestick" as const,
+        name: "Bars",
+        data: bars.map((bar) => [bar.at_utc_ms, Number(bar.open), Number(bar.close), Number(bar.low), Number(bar.high)]),
+        itemStyle: { color: good, color0: bad, borderColor: good, borderColor0: bad },
+      },
+      levelSeries("Active stop", bad, (bar) => bar.active_stop),
+      levelSeries("Active take-profit", good, (bar) => bar.active_take_profit),
+      {
+        type: "scatter" as const,
+        name: "Fills",
+        symbolSize: 11,
+        symbolOffset: [px, 0],
+        z: 5,
+        data: fills.map((fill) => ({
+          value: [fill.at_utc_ms, Number(fill.price)],
+          symbol: fillSymbol(fill.exit_reason),
+          symbolRotate: fill.side === "SELL" ? 180 : 0,
+          itemStyle: { color: fill.side === "SELL" ? bad : fill.side === "BUY" ? good : inkFaint, borderColor: ink, borderWidth: 1 },
+        })),
+      },
+    ],
+  });
+}
+
+export function WindowReplayChart({ bars, fills }: { bars: readonly ReplayBar[]; fills: readonly ReplayFill[] }) {
+  const option = useMemo(() => windowReplayOption(bars, fills), [bars, fills]);
+  return (
+    <div role="img" aria-label={`${bars.length} retained bars with ${fills.length} engine fills; exact values in the tables below`} data-chart="window-replay">
+      <EChart option={option} height={320} />
+    </div>
+  );
+}
+
 export function DistributionChart({ series, block = null }: { series: EvidenceSeries; /** B9: the enrich_analysis block, when it publishes the shared statistics. */ block?: EnrichedAnalysis | null }) {
   const buckets = series.values as Bucket[];
   const daily = isDailyDistribution(series);

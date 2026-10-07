@@ -106,6 +106,9 @@ import { ResearchNotice } from "./ResearchNotice";
 import { humanise } from "./humanise";
 import type { ResearchState } from "./state";
 import type { CompareController } from "./useCompare";
+import type { WindowCompareState } from "./useWindowCompare";
+import { WindowCompareSection } from "./WindowCompareSection";
+import type { WindowScope } from "./windowExecutionClient";
 import { iso } from "./utcMinute";
 import { datasetKey, pathVertices, ScrubLayer, tipMinus, useDrawIn, useScrub } from "./compareChartLife";
 
@@ -2760,7 +2763,7 @@ function Differences({ result }: { result: PairComparable }) {
   );
 }
 
-function PairBody({ result, runs }: { result: PairResult; runs: readonly string[] | null }) {
+function PairBody({ result, runs, windowCompare }: { result: PairResult; runs: readonly string[] | null; windowCompare?: CompareScreenProps["windowCompare"] }) {
   if (result.state === "REFUSED") {
     /* `pair` is null: nothing below the refusal exists, hidden or otherwise. */
     return (
@@ -2773,6 +2776,7 @@ function PairBody({ result, runs }: { result: PairResult; runs: readonly string[
   return (
     <>
       <ComparableGuard result={result} runs={runs} />
+      {windowCompare ? <WindowCompareSection runs={windowCompare.runs} scope={windowCompare.scope} state={windowCompare.state} onScope={windowCompare.onScope} /> : null}
       <OverlayFigure result={result} />
       <div className="cp-grid">
         <DeltaTable result={result} />
@@ -2939,9 +2943,11 @@ export interface CompareScreenProps {
   onMode: (mode: CompareMode) => void;
   /** Panel-local text for a comparison that could not be addressed (nothing was sent). */
   idleReason?: string | null;
+  /** §44: the same two runs on one explicit window (complete retained accounts). Absent when the URL names no pair. */
+  windowCompare?: { runs: readonly [string, string]; scope: WindowScope | null; state: WindowCompareState; onScope: (next: WindowScope | null) => void };
 }
 
-export function CompareScreen({ alphaId, mode, runs, controller, onMode, idleReason = null }: CompareScreenProps) {
+export function CompareScreen({ alphaId, mode, runs, controller, onMode, idleReason = null, windowCompare }: CompareScreenProps) {
   const { compare, state } = controller;
   const result = compare?.result ?? null;
   const shownMode: CompareMode | null = result ? result.mode : mode;
@@ -2977,7 +2983,7 @@ export function CompareScreen({ alphaId, mode, runs, controller, onMode, idleRea
         ) : result.mode === "markets" ? (
           <MarketsBody result={result} />
         ) : (
-          <PairBody result={result} runs={runs} />
+          <PairBody result={result} runs={runs} windowCompare={windowCompare} />
         )
       ) : (
         <PendingBody

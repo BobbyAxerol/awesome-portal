@@ -61,6 +61,9 @@
       "@portal/contracts-research-split": [
         "../../../packages/contracts/generated/research-split.d.ts"
       ],
+      "@portal/contracts-research-window-execution": [
+        "../../../packages/contracts/generated/research-window-execution.d.ts"
+      ],
       "@portal/contracts-research-evidence": [
         "../../../packages/contracts/generated/research-evidence.d.ts"
       ],

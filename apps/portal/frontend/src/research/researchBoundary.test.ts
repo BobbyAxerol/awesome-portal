@@ -95,6 +95,8 @@ describe("no internal identifier or direct source access on the Research surface
     "linkedAuditClient.ts",
     // S02: Alpha-bound run setup options + window suggestion (same-origin read-only GET/POST).
     "setupClient.ts",
+    // §44 / WEX: completed-window analytics, observations, native journal and window compare (same-origin read-only GETs).
+    "windowExecutionClient.ts",
   ];
 
   /*

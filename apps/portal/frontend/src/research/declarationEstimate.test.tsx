@@ -492,7 +492,7 @@ describe("the Atlas profile follows the requested-spec version", () => {
 
   it("reads the served lists and policies of the v2 profile, and states none it was not served", () => {
     const v2 = PROFILES.find((profile) => profile.profileId.endsWith("wfo.v2"))!;
-    expect(v2).toMatchObject({ requestedSpecVersions: [SPEC_V2], frequencies: ["weekly", "monthly", "quarterly"], windowModes: ["expanding", "rolling"], trialDefault: 3, earlyStopping: "forbidden", innerValidation: "NOT_ADMITTED_GLOBAL_RETENTION_ONLY", seed: { state: "fixed", value: 42 } });
+    expect(v2).toMatchObject({ requestedSpecVersions: [SPEC_V2], frequencies: ["weekly", "monthly", "quarterly"], windowModes: ["expanding", "rolling"], trialDefault: 3, earlyStopping: "optional", innerValidation: "NOT_ADMITTED_GLOBAL_RETENTION_ONLY", seed: { state: "fixed", value: 42 } });
     expect(admitsSpecV2(v2)).toBe(true);
     const v1 = PROFILES.find((profile) => profile.profileId.endsWith("wfo.v1"))!;
     expect(v1).toMatchObject({ frequencies: null, windowModes: null, innerValidation: null, granularity: "weekly", windowMode: "expanding" });
@@ -668,14 +668,20 @@ describe("policies come from the server", () => {
     expect(readProfiles(free)!.every((profile) => profile.seed.state === "unpinned")).toBe(true);
   });
 
-  it("early stopping FORBIDDEN: read-only when empty, noted when a value is already there; free when the policy is not served", () => {
-    optimization(advanced({ earlyStopping: "" }));
+  it("early stopping: FORBIDDEN is read-only when empty and noted when set; OPTIONAL is free and says so; not served is free", () => {
+    const forbidden = TEMPORAL.profiles.map((row) => ({ ...row, early_stopping_policy: "FORBIDDEN" }));
+    optimization(advanced({ earlyStopping: "" }), forbidden);
     expect(field("Early stopping").readOnly).toBe(true);
     expect(field("Early stopping").getAttribute("data-forbidden-by")).toBe("p10.delta-signal-notional-wfo.v1");
     cleanup();
-    optimization(advanced({ earlyStopping: "5" }));
+    optimization(advanced({ earlyStopping: "5" }), forbidden);
     expect(field("Early stopping").readOnly).toBe(false);
     expect(text('[data-outside-profile-field="early_stopping"]')).toBe("Early stopping 5 — profile admits none. Kept as entered.");
+    cleanup();
+    /* §43: an optimizer recipe serves the policy OPTIONAL — blank stays off and the field is the reader's. */
+    optimization(advanced({ earlyStopping: "" }));
+    expect(field("Early stopping").readOnly).toBe(false);
+    expect(field("Early stopping").getAttribute("data-forbidden-by")).toBeNull();
     cleanup();
     optimization(advanced({ earlyStopping: "" }), TEMPORAL.profiles.map(({ early_stopping_policy: _drop, ...rest }) => rest));
     expect(field("Early stopping").readOnly).toBe(false);
