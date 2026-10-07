@@ -630,7 +630,17 @@ export interface ProfileBudget {
   qualification: string;
 }
 
+/** The server's presentation of a recipe (`Profile.recipe`): a stable group key, family, English label and display rank. Never an authorization. */
+export interface RecipePins {
+  key: string;
+  family: "THREE_WINDOW_FIXED" | "THREE_WINDOW_OPTIMIZED" | "ADVANCED_WFO" | "FULL_SAMPLE" | "NATIVE_FIXED";
+  label: string;
+  rank: number;
+}
+
 export interface ProfilePins {
+  /** Served `recipe` presentation, when the server sends it (older servers do not): label, order and group key then come from it. */
+  recipe?: RecipePins | null;
   profileId: string;
   enabled: boolean;
   /** The server's reason this profile is not enabled. */

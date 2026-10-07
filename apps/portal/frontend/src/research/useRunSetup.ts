@@ -220,6 +220,7 @@ export function profilePinsFromSetup(profile: SetupProfile): ProfilePins {
     parameterPolicy: profile.parameter_policy,
     temporalGuards,
     independentHoldout: profile.independent_holdout,
+    recipe: profile.recipe ? { key: profile.recipe.key, family: profile.recipe.family, label: profile.recipe.label, rank: profile.recipe.recommended_rank } : null,
     nativeInput: profile.native_input
       ? {
           executionClock: profile.native_input.execution_clock,

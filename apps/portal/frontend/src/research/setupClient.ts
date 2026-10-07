@@ -29,6 +29,8 @@ export type SuggestionRequest = Schemas["SuggestionRequest"];
 export type WindowSuggestion = Schemas["WindowSuggestion"];
 export type WindowPatch = NonNullable<Schemas["SuggestionMetadata"]["patch"]>;
 export type SetupProblem = Schemas["Problem"];
+export type VersionOptions = Schemas["VersionOptions"];
+export type RecipePresentation = Schemas["RecipePresentation"];
 
 /** The five things that identify one setup read; `workspaceId` is optional on the wire but part of the key. */
 export interface SetupQuery {
@@ -74,8 +76,10 @@ export type WindowSuggestionResult = SetupResult<WindowSuggestion>;
 
 const OPTIONS_PATH = "/api/v1/research/runs/setup-options";
 const SUGGESTION_PATH = "/api/v1/research/runs/window-suggestions";
+const VERSION_PATH = "/api/v1/research/runs/version-options";
 
-const absentRoutes = new Set<"setup-options" | "window-suggestions">();
+type SetupRoute = "setup-options" | "window-suggestions" | "version-options";
+const absentRoutes = new Set<SetupRoute>();
 
 /** For tests: forget which routes were absent. */
 export function resetSetupRouteMemory(): void {
@@ -98,6 +102,18 @@ export function isSetupOptions(raw: unknown): raw is SetupOptions {
     && body.source_revision !== ""
     && bag(body.context) !== null
     && Array.isArray(body.profiles)
+  );
+}
+
+/** A served version-options body: the right schema, a context and a route list. */
+export function isVersionOptions(raw: unknown): raw is VersionOptions {
+  const body = bag(raw);
+  return (
+    body !== null
+    && body.schema_version === "research.run-version-options.v1"
+    && bag(body.context) !== null
+    && Array.isArray(body.declared_timeframes)
+    && Array.isArray(body.routes)
   );
 }
 
@@ -155,7 +171,7 @@ export function setupQueryString(query: SetupQuery): string {
 }
 
 async function settle<T>(
-  route: "setup-options" | "window-suggestions",
+  route: SetupRoute,
   response: Response,
   isBody: (raw: unknown) => raw is T,
   staleOn409: boolean,
@@ -211,6 +227,35 @@ export async function postWindowSuggestion(request: SuggestionRequest, signal?: 
       body: JSON.stringify(request),
     });
     return await settle("window-suggestions", response, isWindowSuggestion, true);
+  } catch (error) {
+    if ((error as { name?: string } | null)?.name === "AbortError") throw error;
+    return { state: "network" };
+  }
+}
+
+/** The key of one version read: workspace, Alpha and version (it names no dataset, symbol or timeframe). */
+export interface VersionQuery {
+  workspaceId?: string;
+  alphaId: string;
+  alphaVersionId: string;
+}
+
+export function versionQueryString(query: VersionQuery): string {
+  const params = new URLSearchParams({ alpha_id: query.alphaId, alpha_version_id: query.alphaVersionId });
+  if (query.workspaceId) params.set("workspace_id", query.workspaceId);
+  return params.toString();
+}
+
+/**
+ * `GET /api/v1/research/runs/version-options` (`researchRunVersionOptionsGetV1`): which routes, timeframes and recipes the Portal
+ * executor can bind to one Alpha version, read before any dataset is chosen. A binding fact, never a dataset or run authorization:
+ * the dataset-bound setup and the fresh preflight stay the authority.
+ */
+export async function getVersionOptions(query: VersionQuery, signal?: AbortSignal): Promise<SetupResult<VersionOptions>> {
+  if (absentRoutes.has("version-options")) return { state: "absent" };
+  try {
+    const response = await fetch(`${VERSION_PATH}?${versionQueryString(query)}`, { credentials: "same-origin", signal });
+    return await settle("version-options", response, isVersionOptions, false);
   } catch (error) {
     if ((error as { name?: string } | null)?.name === "AbortError") throw error;
     return { state: "network" };

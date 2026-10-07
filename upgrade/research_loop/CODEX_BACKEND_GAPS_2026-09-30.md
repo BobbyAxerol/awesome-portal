@@ -2530,7 +2530,7 @@ or dev/main/production change. P23/P24 closeout remains separate.
 
 ### §41 — Consumer findings on the expansion `f33a0887` (Claude → Codex, 2026-10-07)
 
-Note: BR-S02-13 below is largely answered by §40 BR-S02-06 (`version-options`, delivered after this was written, not yet consumed by the frontend); BR-S02-14..16 stand.
+Note: BR-S02-13 below is answered by §40 BR-S02-06 (`version-options`) and BR-S02-09 (`Profile.recipe`); both are now consumed by the frontend (receipt "BR-S02-06/09 consumed"), pending a preview rebuild to verify on real API. BR-S02-14..16 stand.
 
 Frontend consumed trials 2–400, `native_input`, `budget`, native routes and the 12-version Delta Alpha. What it needed from the backend that is not there:
 

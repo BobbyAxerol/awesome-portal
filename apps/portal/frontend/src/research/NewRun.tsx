@@ -86,8 +86,10 @@ import { WindowSetupBar } from "./WindowSetupBar";
 import { DateInput } from "./DateInput";
 import { AccountFacts } from "./AccountFacts";
 import { RecipePicker } from "./RecipePicker";
+import { routeWord } from "./nativeFacts";
 import { RunTypePicker } from "./RunTypePicker";
 import { runTypesFrom, useRunTypes } from "./useRunTypes";
+import { compatibleRoutes, useVersionOptions } from "./useVersionOptions";
 import { applyRecipe, recipesFromSetup } from "./runRecipes";
 import { suggestionToDayEdges } from "./useWindowSuggestion";
 import type { WindowSuggestion } from "./setupClient";
@@ -554,6 +556,14 @@ function ContextStep({
       .sort((a, b) => (b.declaration?.timeframes?.length ?? 0) - (a.declaration?.timeframes?.length ?? 0) || a.registered_at_utc_ms - b.registered_at_utc_ms)[0];
     patch({ alphaId, alphaVersionId: versions.length === 1 ? versions[0]!.alpha_version_id : (newestActive?.alpha_version_id ?? ""), strategyId: "" });
   };
+  /* What each version binds, read before any dataset is chosen: the version list says it ("Bracket", "Percent equity"), never inferred. */
+  const bindings = useVersionOptions(draft.bound && draft.alphaId !== "", registry, { workspaceId, alphaId: draft.alphaId });
+  const bindingWords = (entry: RegistryEntry): string | null => {
+    const options = bindings.byVersion.get(entry.alpha_version_id);
+    if (options === undefined) return null;
+    const routes = compatibleRoutes(options, null).routes;
+    return routes.length === 0 ? "no open route" : routes.map(routeWord).join(" + ");
+  };
   /* FG-05: the P22 lookup runs only for a bound version the registry listed. */
   const lookedUp = draft.bound && bound ? bound.alpha_version_id : null;
   const publications = useAlphaVersionPublications(lookedUp !== null ? [lookedUp] : [], { workspaceId });
@@ -585,7 +595,7 @@ function ContextStep({
           {draft.bound ? (
             <select className={INPUT_CLASS} style={inputStyle()} value={draft.alphaVersionId} onChange={(event) => patch({ alphaVersionId: event.target.value })} aria-label="Alpha version" data-version-selector disabled={registry.length === 0 || !draft.alphaId} title={registry.length === 0 ? "No registry entry is available for the bound declaration." : !draft.alphaId ? "Select an alpha first." : undefined}>
               <option value="">Select a version</option>
-              {registry.filter((entry) => entry.alpha_id === draft.alphaId).sort((a, b) => b.registered_at_utc_ms - a.registered_at_utc_ms).map((entry) => <option key={entry.alpha_version_id} value={entry.alpha_version_id} title={`declares timeframes ${(entry.declaration?.timeframes ?? []).join(", ") || "none"} · source ${entry.source_digest_prefix}`}>{entry.version_label} · {entry.lifecycle_state} · {(entry.declaration?.timeframes ?? []).join(" ") || "no timeframes"}{supersededBy(entry) !== null ? ` · replaced by ${supersededBy(entry)}` : ""}</option>)}
+              {registry.filter((entry) => entry.alpha_id === draft.alphaId).sort((a, b) => b.registered_at_utc_ms - a.registered_at_utc_ms).map((entry) => <option key={entry.alpha_version_id} value={entry.alpha_version_id} title={`declares timeframes ${(entry.declaration?.timeframes ?? []).join(", ") || "none"} · source ${entry.source_digest_prefix}`}>{entry.version_label} · {entry.lifecycle_state} · {(entry.declaration?.timeframes ?? []).join(" ") || "no timeframes"}{bindingWords(entry) !== null ? ` · ${bindingWords(entry)}` : ""}{supersededBy(entry) !== null ? ` · replaced by ${supersededBy(entry)}` : ""}</option>)}
             </select>
           ) : <input className={INPUT_CLASS} style={inputStyle()} value={draft.alphaVersionId} onChange={(event) => patch({ alphaVersionId: event.target.value })} aria-label="Alpha version" />}
         </Field>
@@ -1575,8 +1585,14 @@ function WindowsStep({
     return routes.size === 1 ? ([...routes][0] ?? null) : null;
   })();
   /* The run types of this Alpha for this context (one GET per ACTIVE sibling version, cached): picking one switches the version. */
-  const runTypeProbe = useRunTypes(setup.status === "served", registry, setupContextFrom(draft, workspaceId), { versionId: draft.alphaVersionId, options: setup.options });
-  const runTypes = runTypesFrom(runTypeProbe.probed, registry.filter((entry) => entry.alpha_id === draft.alphaId), draft.alphaVersionId);
+  /* The server names what each version binds (`version-options`); an older server without it is read version by version through the setup. */
+  const versionOptions = useVersionOptions(draft.bound && draft.alphaId !== "", registry, { workspaceId, alphaId: draft.alphaId });
+  const versionRoutes = useMemo(
+    () => new Map([...versionOptions.byVersion].map(([id, options]) => [id, compatibleRoutes(options, draft.timeframe || null)] as const)),
+    [versionOptions.byVersion, draft.timeframe],
+  );
+  const runTypeProbe = useRunTypes(setup.status === "served" && versionOptions.status === "absent", registry, setupContextFrom(draft, workspaceId), { versionId: draft.alphaVersionId, options: setup.options });
+  const runTypes = runTypesFrom(versionOptions.status === "ready" ? versionRoutes : runTypeProbe.probed, registry.filter((entry) => entry.alpha_id === draft.alphaId), draft.alphaVersionId);
   const recipesOffered = setup.status === "served" && recipes.some((recipe) => recipe.enabled);
   const defaultRecipe = recipes.find((recipe) => recipe.enabled && recipe.protocol === draft.protocol && recipe.executionRoute === draft.executionRoute)
     ?? recipes.find((recipe) => recipe.enabled && recipe.protocol === draft.protocol)

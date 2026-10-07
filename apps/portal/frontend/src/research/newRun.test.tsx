@@ -1161,7 +1161,11 @@ describe("FG-05 — last published rc reads the Alpha version's publication", ()
     );
     expect(row.querySelector("[data-last-rc] [title]")!.getAttribute("title")).toBe(new Date(LOOKUP_PUBLISHED_AT).toISOString());
     expect(row.querySelector("[data-last-rc]")!.getAttribute("data-last-rc-status")).toBe("APPROVED_WITH_CONDITION");
-    expect(sent.map((call) => call.url)).toEqual([LOOKUP_URL]);
+    /* The publication is asked once; the version's own binding read (version-options, no dataset) is a separate, early read. */
+    expect(sent.map((call) => call.url).filter((url) => !url.includes("/runs/version-options"))).toEqual([LOOKUP_URL]);
+    expect(sent.map((call) => call.url).filter((url) => url.includes("/runs/version-options"))).toEqual([
+      expect.stringMatching(/^\/api\/v1\/research\/runs\/version-options\?alpha_id=[^&]+&alpha_version_id=av_0_3_0$/),
+    ]);
   });
 
   it("marks a superseded rc with the server's candidate_relation", async () => {
@@ -1206,7 +1210,7 @@ describe("FG-05 — last published rc reads the Alpha version's publication", ()
     const stop = onSessionExpired(() => {
       reports += 1;
     });
-    stub(() => [401, lookupProblem(401, "UNAUTHENTICATED")]);
+    stub((url) => (url.includes("/publication") ? [401, lookupProblem(401, "UNAUTHENTICATED")] : [200, {}]));
     view({ registry });
     goToStep("context");
     await lastRc("session");
@@ -1214,7 +1218,7 @@ describe("FG-05 — last published rc reads the Alpha version's publication", ()
     expect(reports).toBe(1);
   });
 
-  it("asks nothing for a scratch draft or a version the registry does not list", () => {
+  it("asks nothing for a scratch draft or a version the registry does not list", async () => {
     stub(() => [200, lookupAbsent("av_0_3_0")]);
     view({ registry, draft: draft({ bound: false }) });
     goToStep("context");
@@ -1223,7 +1227,9 @@ describe("FG-05 — last published rc reads the Alpha version's publication", ()
     view({ registry, draft: draft({ alphaVersionId: "av_0_4_0" }) });
     goToStep("context");
     expect(document.querySelector("[data-last-published-rc]")).toBeNull();
-    expect(sent).toEqual([]);
+    /* The version binding read is asked (it names no dataset); the settled answer lands inside act before the assertion. */
+    await waitFor(() => expect(sent.some((call) => call.url.includes("/runs/version-options"))).toBe(true));
+    expect(sent.filter((call) => call.url.includes("/publication"))).toEqual([]);
   });
 });
 

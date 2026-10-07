@@ -213,7 +213,8 @@ export function recipesFromSetup(options: SetupOptions | null, ctx: RecipeContex
      is one recipe: when the backend serves several trial ranges (a minimal 3-trial qualification beside a 2–400 one), the widest stands,
      so the user is offered ONE card with the real range, not a card per qualification. */
   const fixedCheck = (profile: ProfilePins) => profile.trials !== null && profile.trials.min === 1 && profile.trials.max === 1 && profile.seed.state === "forbidden";
-  const combo = (profile: ProfilePins) => [profile.protocol, profile.executionRoute ?? "", profile.optimizationMode ?? "", profile.optimizationSchedule ?? "", fixedCheck(profile) ? "fixed" : "search"].join("|");
+  /* The server's stable group key (`recipe.key`) when it sends one; the same five facts, read here, otherwise. */
+  const combo = (profile: ProfilePins) => profile.recipe?.key ?? [profile.protocol, profile.executionRoute ?? "", profile.optimizationMode ?? "", profile.optimizationSchedule ?? "", fixedCheck(profile) ? "fixed" : "search"].join("|");
   const wider = (a: ProfilePins, b: ProfilePins) => (a.trials?.max ?? 0) > (b.trials?.max ?? 0);
 
   /* v1/v2 twins of one combination collapse: the widest range, then the v1 one; v2 only when it alone is enabled. */
@@ -228,13 +229,17 @@ export function recipesFromSetup(options: SetupOptions | null, ctx: RecipeContex
     const held = chosen.get(combo(profile));
     if (held !== undefined && held !== profile) twins.add(held.profileId);
   }
+  /* The server's display rank orders the cards when every one carries it; otherwise the generic order below. */
+  const served = [...chosen.values()].every((profile) => profile.recipe != null);
   const ordered = [...chosen.values()].sort(
-    (a, b) => protocolRank(a) - protocolRank(b) || (a.optimizationMode ?? "").localeCompare(b.optimizationMode ?? "") || a.profileId.localeCompare(b.profileId),
+    (a, b) => (served ? a.recipe!.rank - b.recipe!.rank || a.profileId.localeCompare(b.profileId) : 0) || protocolRank(a) - protocolRank(b) || (a.optimizationMode ?? "").localeCompare(b.optimizationMode ?? "") || a.profileId.localeCompare(b.profileId),
   );
 
   const modes = new Set(ordered.map((profile) => profile.optimizationMode ?? ""));
   const routes = new Set(ordered.map((profile) => profile.executionRoute ?? ""));
   const labelled = ordered.map((profile) => {
+    /* A served label already names the mode, schedule or native route: nothing is appended to it (a collision is told apart below). */
+    if (profile.recipe != null) return { profile, label: profile.recipe.label };
     let label = baseLabel(profile);
     if (modes.size > 1) label += ` · ${modeName(profile.optimizationMode ?? "", ctx)}`;
     if (routes.size > 1 && profile.executionRoute) label += ` · ${humanise(profile.executionRoute)}`;
@@ -245,7 +250,10 @@ export function recipesFromSetup(options: SetupOptions | null, ctx: RecipeContex
   for (const entry of labelled) counts.set(entry.label, (counts.get(entry.label) ?? 0) + 1);
   const enabled: Recipe[] = labelled.map(({ profile, label }) => {
     let text = label;
-    if ((counts.get(label) ?? 0) > 1) {
+    if ((counts.get(label) ?? 0) > 1 && profile.recipe != null) {
+      /* A served label is the same for Three Window and Walk-forward of one mode and schedule: the protocol tells them apart. */
+      text = `${label} · ${profile.protocol === "advanced" ? "Walk-forward" : "Three Window"}`;
+    } else if ((counts.get(label) ?? 0) > 1) {
       /* Told apart by the schedule word — "global" included, so the plain one is not the unlabelled leftover. */
       const schedule = scheduleWord(profile.optimizationSchedule ?? "") || "global";
       text = `${label} · ${schedule}`;
