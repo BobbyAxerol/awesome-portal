@@ -66,6 +66,7 @@ import { ResearchScopedAnchor } from "./ResearchScopedLink";
 import { trialLabel, trialTitle } from "./trialLabel";
 import { humanise } from "./humanise";
 import { PageHeader } from "./PageHeader";
+import { NativeExecutionPanel } from "./NativeExecutionPanel";
 import { RunDeclarationRead } from "./RunDeclarationRead";
 import { reasonCodeSentence, REFUSAL_COPY } from "./researchRefusal";
 
@@ -2580,6 +2581,8 @@ export function RunProgress(props: RunProgressProps) {
       {/* QA S03 NEW-3: a refused first read has no identity to wait for; the short id is in the breadcrumb once. */}
       {firstReadFailed ? null : <RunMetaStrip runId={runId} identity={identity} status={statusSlot} panel omitRunStatus />}
       {firstReadFailed ? null : <RunDeclarationRead fact={read?.run_declaration} />}
+      {/* A native fixed route's persisted result facts: absent until the source receipt matches, never inferred from the route. */}
+      {firstReadFailed ? null : <NativeExecutionPanel native={read?.native_execution} />}
       {read && (read.queue || (read.attempts?.length ?? 0) > 0) ? (
         <ServedAttempts queue={read.queue} attempts={read.attempts} />
       ) : null}

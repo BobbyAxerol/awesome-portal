@@ -77,3 +77,12 @@ Preview rebuilt from `bf31b377` (running image IDs = built tags for control-api,
 - **Defect found and fixed in the frontend:** the Parameters step and the Review row still said "8 swept" for a native fixed recipe. They now say "declared · not swept", the table is read-only (`inert`) with a one-line note; the server refuses overrides on native fixed requests, so editing could only produce a refusal.
 - **Backend finding (BR-S02-17):** the Bracket run has `fills_count 0`, fees "0" and a flat 20,000 equity sample, yet S04's trade count says 1 (child tape). A trade with no fill is a contradiction between two served facts; the UI prints both as served. Reactive / Event-driven are consistent (22 fills).
 - Not checked: S06 pruned/6400 paging (a native run has 1 trial), visual baselines (not recorded in this change), the P24 15-screen matrix on the new bundle.
+
+## Consuming `afb4007e` (BR-S02-14/16/17) — frontend, 2026-10-07
+
+Lane rebased on `afb4007e` + `947929e9`. Verified on the preview (images = tags; dirty-source build per Codex's receipt): Hub `TRADE_COUNT` is "Position regimes (engine)" with `count_semantics`, Progress serves `native_execution`, Atlas routes carry `recipes_enabled` + `axes_scope`.
+
+- **S03:** `RunProgress` renders `NativeExecutionPanel` from `read.native_execution`; nothing when the field is absent (never inferred from the route). Real run `rrun_ea0e06b9…`: panel present at S03 and S04, no console error.
+- **Atlas:** `constraintsFrom` opens a route when the Atlas names an enabled recipe for it (`recipes_enabled.length > 0`); an Atlas that does not publish the field falls back to the routes the Alpha-bound setup opened.
+- Tests: `runProgress.native.test.tsx`, `atlasRecipes.test.ts`; `src/research` 3844/3845 (the one failure is the known `compareDetail` "P24 pair picker" flake, 60/60 alone); tsc clean; S02 e2e on real API 20/20.
+- **Bracket is not a data problem.** See §44 (BR-S02-18): the adapter declares `entry_size`/`alloc_per_trade` wrongly. Until Codex repairs it, the three Bracket recipes produce runs with 0 fills; the UI prints that as served.

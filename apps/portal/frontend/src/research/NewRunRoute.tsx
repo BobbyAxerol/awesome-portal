@@ -97,15 +97,18 @@ export function constraintsFrom(
      */
     usesSpecV2?: boolean;
     /**
-     * Routes the Alpha-bound setup serves an ENABLED recipe for (this version, dataset, symbol and timeframe). The Atlas is the engine catalogue and
-     * keeps saying a route is not baseline-admitted; an exact qualified recipe is what opens it, so it is not blocked here.
+     * Routes the Alpha-bound setup serves an ENABLED recipe for (this version, dataset, symbol and timeframe). Only the fallback for an Atlas that
+     * does not publish `recipes_enabled`: the Atlas now says which routes a qualified recipe opens.
      */
     openedRoutes?: ReadonlySet<string>;
   },
 ): DraftConstraints {
   const blocked: Record<string, string> = {};
   for (const route of atlas?.routes ?? []) {
-    if (route.axes.admission !== "P04_BASELINE_ONLY" && !(data?.openedRoutes?.has(route.route_id) ?? false)) blocked[route.route_id] = route.reason;
+    /* The Atlas names the current ENABLED recipes of a route (`recipes_enabled`): a route with one is opened by a qualified recipe, whatever the pinned
+       engine axes say (they are the catalogue, not runtime admission). A server that predates the field is read through the Alpha-bound setup. */
+    const opened = route.recipes_enabled !== undefined ? route.recipes_enabled.length > 0 : (data?.openedRoutes?.has(route.route_id) ?? false);
+    if (route.axes.admission !== "P04_BASELINE_ONLY" && !opened) blocked[route.route_id] = route.reason;
   }
 
   const bound = registry.find((entry) => entry.alpha_version_id === alphaVersionId) ?? null;
