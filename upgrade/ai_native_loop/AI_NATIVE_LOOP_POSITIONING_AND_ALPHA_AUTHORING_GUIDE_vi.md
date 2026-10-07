@@ -28,7 +28,7 @@ Mọi khẳng định kỹ thuật dưới đây mang một trong ba nhãn. Agen
 
 1. **Hợp đồng alpha thật không phải "pandas + `pos_weight`".** Alpha import là **một file Python thuần giới hạn (restricted Python), không cho `import` bất kỳ thứ gì** (không numpy, pandas, math, random). Nó có một dict `ALPHA_CONTRACT` literal và một hàm nhận `context`, trả về một dict `signal_notional`. Chỉ alpha Delta built-in mới dùng pandas và `pos_weight`; đó là *protected kernel*, không import được.
 2. **QuantBT là nguồn sự thật duy nhất cho kết quả.** Mô phỏng trên chart của AI Native Loop chỉ là *bản phác (preview)*, không phải bằng chứng. Mọi con số "lãi/lỗ/Sharpe" đưa cho người dùng phải đến từ một run QuantBT có run id.
-3. **Imported alpha chỉ chạy route `signal_notional`** (tín hiệu mục tiêu theo notional có dấu). Stop-loss/take-profit nội bar, lệnh limit, event-driven… hiện **đóng** với imported alpha (chỉ Delta built-in có). Đây là khoảng cách lớn nhất giữa ý tưởng "TradingView strategy" và thực tế, xem §10.
+3. **Hôm nay imported alpha chỉ chạy route `signal_notional`, nhưng đó là *trạng thái hiện tại*, không phải giới hạn thiết kế.** QuantBT Backtest Loop đi theo hướng **hỗ trợ tối đa** và sẽ **mở dần** các route/endpoint (bracket, orders, portfolio…). AI Native Loop vì vậy **được phép (và nên) khai báo toàn bộ endpoint QuantBT mà alpha có thể dùng**, và tham chiếu thẳng vào QuantBT theo từng version khi viết alpha. Xem §4.7. Những chỗ đang bị "đóng" trong tài liệu này là *chưa mở*, không phải *cấm vĩnh viễn*.
 
 ---
 
@@ -240,7 +240,7 @@ Mỗi run có hai họ đọc: **lịch sử** (`/quantbt/runs/{id}/…`, `read_
 | `intrabar_bracket`, `reactive`, `event_driven` | Không | chỉ Delta built-in, BTC/ETH/SOL 1h, 1 lần chạy cố định, ≤ 92 ngày |
 | `dca_ladder`, `basket`, `arbitrage`, `portfolio`, `orders`, `fill_replay`, `options`, `nautilus_dca_grid`, `native_event_lifecycle` | Không | engine có, Portal chưa admit cho imported |
 
-> `upgrade/research_loop/evidence/P10/FULL_05_IMPORTED_ALPHA_2026-10-06.md` ghi: "FULL06 other route families remain a separate named, unstarted phase" cho imported. Đây là nơi AI Native Loop cần một yêu cầu backend (§10).
+> `upgrade/research_loop/evidence/P10/FULL_05_IMPORTED_ALPHA_2026-10-06.md` ghi: "FULL06 other route families remain a separate named, unstarted phase" cho imported: tức là **đã được đặt tên là pha kế tiếp**, chưa bắt đầu. Cột "Imported alpha" ở trên là ảnh chụp hôm nay; Bobby sẽ mở dần. Cách AI Native Loop chuẩn bị cho việc đó: §4.7.
 
 ### 3.5 Các quy tắc vận hành ảnh hưởng thiết kế agent
 
@@ -322,7 +322,7 @@ Controller: `apps/control-api/src/research/alpha-import.controller.ts`, gốc `/
 
 `version_note` (tuỳ chọn): văn bản tự do, không cổng nào đọc.
 
-> **Mâu thuẫn nguồn đã gặp:** một báo cáo coi `version` là bắt buộc, một báo cáo coi tuỳ chọn. Mẫu chuẩn (`deltaRsiReference.py`) có `version`, và nhãn version được suy từ nó, nên **luôn khai `version`**.
+> **Đã giải:** `version` là **bắt buộc** (`research_alpha_analyzer.py` `_validate_contract` liệt kê nó trong tập `required`), và nhãn version được suy từ nó. **[ĐÃ KIỂM]**
 
 **Các kind tham số:**
 
@@ -378,6 +378,42 @@ Mọi thứ khác ⇒ `ALPHA_OUTPUT_CONTRACT_REJECTED` (search) hoặc `ValueErr
 - **Bất biến:** cùng `alpha_version_id` + byte/contract khác ⇒ `409 RESEARCH_IMMUTABLE_ALPHA_VERSION_CONFLICT`. Cùng byte ⇒ cổng 3 từ chối. Vì vậy **mỗi thay đổi code cần một `version` semver mới trong file**.
 - `alpha_id` khớp `^[a-z][a-z0-9-]{2,63}$`; `alphaVersionId = av_<alpha_id với - → _>_<version với . → _>`.
 - **Chữ ký/SBOM:** đang `NOT_PUBLISHED` có chủ ý trong `import_attestation`.
+
+### 4.7 Hướng mở rộng: khai báo tối đa endpoint QuantBT, tham chiếu QuantBT theo từng version
+
+**Nguyên tắc (Bobby, 2026-10-07):** QuantBT Backtest Loop luôn đi theo hướng *hỗ trợ tối đa*; các giới hạn hiện nay là *tạm thời* và sẽ được mở dần. Do đó:
+
+1. **Được phép khai báo hết các endpoint/route QuantBT mà alpha có thể dùng**, kể cả cái Portal chưa admit. Khai báo là *ý định và khả năng* của alpha. **Admission thật vẫn do Portal quyết** (setup-options → preflight → run-admission), nên một route chưa mở sẽ trả **lý do có kiểu** (`PROFILE_NOT_OPENED`, `ALPHA_EXECUTOR_MISMATCH`…), **không** làm hỏng việc đăng ký alpha. Khi route được mở, alpha đã khai sẵn không phải viết lại.
+2. **Agent soạn alpha tự tham chiếu vào QuantBT theo đúng version engine** để biết route nào có, cần đầu vào gì, ngữ nghĩa khớp lệnh ra sao, thay vì dựa vào bản tóm tắt trong tài liệu này. Nguồn tham chiếu trong repo, đều theo version:
+   - **Engine pin:** `quantbt-engine==1.1.1`, release `er_quantbt_111` (`portal_api/adapters/quantbt.py`). Release kế tiếp sẽ có id mới; agent phải đọc id đang áp dụng, không cứng hoá.
+   - **Bề mặt route công khai:** `QuantBTGateway.public_route_surface()` và `route_endpoint(route_id, **kwargs)` (14 route: `signal_notional`, `pct_equity`, `intrabar_bracket`, `dca_ladder`, `reactive`, `event_driven`, `native_event_lifecycle`, `orders`, `fill_replay`, `basket`, `arbitrage`, `portfolio`, `nautilus_dca_grid`, `options`). **[ĐÃ KIỂM]**
+   - **Engine Atlas** (`GET /api/v1/research/quantbt/atlas`): mỗi route có `execution_contract`, `required_input_class`, `report_levels`, `engine_facts` kèm **source locator** (file, khoảng dòng, digest của wheel RECORD, chuỗi xuất hiện trong khoảng đó) và, từ 2026-10-07, `recipes_enabled` + `axes_scope`. Đây là cách *tra cứu có bằng chứng* từ chính engine. **[ĐÃ KIỂM]**
+   - **Capability manifest:** `apps/portal/registry/engine-capabilities.v1.json` (protocol/endpoint được certify).
+   - **Mã nguồn engine theo version** (gói đã cài; đọc `endpoint.py`, `core/execution_contract.py`, `core/intrabar_reference.py`…) để biết đơn vị và khớp lệnh. **Bài học Bracket (§5.5):** ngữ nghĩa đơn vị phải *đọc từ engine hoặc đo*, không đoán.
+3. **Ranh giới an toàn giữ nguyên:** admission, recipe bất biến theo digest, seal, typed absence và claim không bị nới. "Hỗ trợ tối đa" nghĩa là *mở rộng những gì được phép thử*, không phải bỏ kiểm chứng.
+
+**Điểm mở rộng đã có sẵn trong code [ĐÃ KIỂM]:** analyzer trả "mirror" 14 hàng; bốn hàng `structural_contract`, `supported_endpoint_ids`, `execution_contracts`, `output_contract` hiện có trạng thái `not_in_contract` kèm ghi chú "not in v1" (`research_alpha_analyzer.py` ~dòng 557). Đây chính là chỗ hợp đồng v2 sẽ khai: alpha hỗ trợ route nào, hợp đồng thực thi nào, dạng đầu ra nào. Design note cũ (`STRATEGY_IMPORT_AND_RUNTIME_CONTRACT.md` §2) đã phác các trường tương ứng (`supported_endpoint_ids`, `execution_contracts`, `output_contract`, `structural_contract`) và có thể dùng làm điểm xuất phát, *đã lỗi thời ở các phần khác*.
+
+**Đề xuất hợp đồng v2 (chưa có người duyệt, chưa có code) [ĐỀ XUẤT]:**
+
+```python
+ALPHA_CONTRACT = {
+    # ... 8 trường v1 giữ nguyên ...
+    "supported_endpoint_ids": ["signal_notional", "intrabar_bracket", "orders"],   # khai tối đa
+    "execution_contracts":    {"signal_notional": "close_target_v2",
+                               "intrabar_bracket": "intrabar_bracket_v1"},
+    "output_contract":        {"signal_notional": "research.imported-signal-notional-output.v1",
+                               "intrabar_bracket": "<schema do QuantBT/Portal công bố>"},
+    "structural_contract":    {...},   # bất biến theo version, để audit
+}
+```
+
+- Mỗi route khai phải có **hàm đầu ra tương ứng** (ví dụ `generate_intents(context)` cho bracket) hoặc một envelope do Portal công bố; ngữ pháp sandbox mở rộng tương ứng.
+- Cổng mới đề xuất: *route-declared-known* (route có trong `public_route_surface` của release đang áp dụng) và *output-contract-per-route* (đúng schema). Route đã khai nhưng chưa mở ⇒ **cảnh báo**, không chặn.
+
+**Điều agent kế tiếp phải biết ngay hôm nay (v1):** analyzer **không** từ chối khoá lạ ở top-level `ALPHA_CONTRACT` (chỉ kiểm tập bắt buộc). Khoá lạ được mang trong `declared_contract` (làm đổi `analysis_digest`) nhưng phép chiếu khai báo phía Control API có thể bỏ qua chúng, và không ai đọc. ⇒ **Đừng đặt `supported_endpoint_ids`… vào file nộp thật cho tới khi schema v2 tồn tại**; ghi ý định vào `version_note` (văn bản tự do) và vào tài liệu thiết kế. Khi v2 ra, agent soạn alpha dùng chính bộ khai báo ở trên.
+
+**Việc cần phối hợp:** hợp đồng v2, cổng mới và việc mở route cho imported là backend (Codex) + quyết định của Bobby; AI Native Loop chỉ cần giữ alpha *sẵn sàng* và tham chiếu QuantBT theo version.
 
 ---
 
@@ -679,7 +715,7 @@ def generate_signals(context):
 |---|---|---|
 | AN-BE-01 | `POST /research/alpha-preview`: chạy cùng loader với worker trên bar đã index, trả chuỗi `signal_notional` + tài khoản mô phỏng đơn giản. | Preview parity (§2.2) |
 | AN-BE-02 | Endpoint nhẹ "dry-run 1 bar/1 cửa sổ" cho đo đơn vị notional, không tạo run bền vững. | Giảm đốt quota khi thăm dò |
-| AN-BE-03 | Mở route khác cho imported (bracket/orders…) hoặc một "bộ stop/TP khai báo" trong hợp đồng. | Mô phỏng vào/ra như TradingView |
+| AN-BE-03 | Mở dần route khác cho imported (bracket/orders…) theo hợp đồng v2 (§4.7), hoặc một "bộ stop/TP khai báo". | Mô phỏng vào/ra như TradingView |
 | AN-BE-04 | Bộ helper số học duyệt sẵn (log/exp/sqrt/EMA) trong ngữ pháp. | TA phong phú, ít sai |
 | AN-BE-05 | Cơ chế **ủy quyền cho agent** (xem §9.3). | Hiện chưa có |
 
@@ -713,7 +749,7 @@ Với TradingView MCP bên ngoài: coi đó là *nguồn ý tưởng/vẽ*, khô
 
 | Tầm nhìn | Hiện thực | Hệ quả |
 |---|---|---|
-| "Lệnh ra/vào mô phỏng như TradingView strategy" (stop/TP, limit, đảo chiều) | Imported chỉ có `signal_notional` ở bar-close, khớp `SAME_CLOSE` **[SUY RA]**. | Không có khớp nội bar; stop/TP chỉ là xấp xỉ bar-close trong code. Cần AN-BE-03 để mở. |
+| "Lệnh ra/vào mô phỏng như TradingView strategy" (stop/TP, limit, đảo chiều) | Hôm nay imported chỉ có `signal_notional` ở bar-close, khớp `SAME_CLOSE` **[SUY RA]**. QuantBT sẽ **mở dần** các route (hướng "hỗ trợ tối đa"). | Tạm thời không có khớp nội bar; stop/TP chỉ là xấp xỉ bar-close trong code. Khai báo sẵn route mong muốn theo §4.7; AN-BE-03 là việc mở dần. |
 | "TA phong phú (numpy/pandas)" | Cấm mọi import. | Phải tự viết; chi phí O(warmup); cần AN-BE-04. |
 | "Đa symbol, đa timeframe" | Imported: 1h/4h/1d, BTCUSDT có biên nhận; một symbol mỗi run. | Cần mở rộng qualification trước khi hứa. |
 | "Agent tự động" | Không token/MCP/service account. | Quyết định §9.3. |
@@ -731,7 +767,7 @@ Với TradingView MCP bên ngoài: coi đó là *nguồn ý tưởng/vẽ*, khô
 ### 10.3 Mâu thuẫn nguồn đã phát hiện (agent kế tiếp nên xác minh)
 
 1. `warmup_bars`: analyzer cho ≤ 100.000, worker/recipe chỉ ≤ 4.096.
-2. `version` trong `ALPHA_CONTRACT`: bắt buộc hay tuỳ chọn (tài liệu/báo cáo mâu thuẫn); mẫu chuẩn có `version`.
+2. ~~`version` bắt buộc hay tuỳ chọn~~ — **đã giải: bắt buộc** (§4.4).
 3. Đơn vị notional hiệu dụng của `signal_notional` so với `alloc_per_trade` 2.000: chưa đo trực tiếp.
 4. Thời điểm khớp `SAME_CLOSE`: chỉ suy ra từ mã nguồn engine ngoài repo.
 5. Fixture Atlas trong repo (`research-foundation.atlas-current.valid.json`) là góc nhìn P04 baseline cũ; admission chạy thật do preflight/run-admission quyết định.
@@ -740,7 +776,7 @@ Với TradingView MCP bên ngoài: coi đó là *nguồn ý tưởng/vẽ*, khô
 ### 10.4 Việc Bobby cần quyết
 
 1. **Cơ chế xác thực cho agent** (§9.3): phiên người dùng, token ủy quyền hẹp, hay MCP.
-2. **Có mở thêm route cho imported alpha** (bracket/stop-TP khai báo) hay chấp nhận chỉ `signal_notional` ở giai đoạn đầu.
+2. **Thứ tự mở route cho imported alpha** (bracket/stop-TP trước hay orders trước…); Bobby đã chốt hướng *mở dần, hỗ trợ tối đa*, còn cần chốt thứ tự và hợp đồng v2 (§4.7).
 3. **Có đưa bộ helper số học duyệt sẵn vào ngữ pháp** không.
 4. **Preview ở server hay trình duyệt** (A vs B, §2.2).
 5. **Phạm vi symbol/timeframe** cho AI Native Loop ở phiên bản đầu.
