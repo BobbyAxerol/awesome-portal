@@ -1002,6 +1002,11 @@ export interface components {
                 oos_bars: number;
             }[];
             holdout_bars: {
+                /** @constant */
+                state: "AVAILABLE";
+                reason_code: null;
+                value: number;
+            } | {
                 /** @enum {unknown} */
                 state: "DENIED" | "NOT_APPLICABLE" | "NOT_PUBLISHED";
                 reason_code: string;

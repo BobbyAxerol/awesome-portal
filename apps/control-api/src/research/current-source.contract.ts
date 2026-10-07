@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { ResearchCurrentSourceWindowViewsSchema } from "./current-source-window-views";
 import {currentSourceRecipePairs} from "./execution-recipes";
 import { ResearchRunDeclarationSchema } from "./run-declaration.contract";
 import { ResearchSamplerEvidenceSchema } from "./sampler-evidence.contract";
@@ -460,6 +461,7 @@ const FoldVerdictsSchema = z.object({
 }).strict();
 
 export const ResearchCurrentSourceEvidenceResponseSchema = CommonSchema.extend({
+  window_views: ResearchCurrentSourceWindowViewsSchema.optional(),
   enriched_analysis: ResearchEnrichedAnalysisSchema.optional(),
   enriched_analysis_availability: ResearchEnrichedAvailabilitySchema.optional(),
   summary_analytics: ResearchRetainedAnalyticsSchema.optional(),

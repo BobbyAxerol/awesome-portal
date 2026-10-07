@@ -1,4 +1,5 @@
 import { ResearchEvidenceError } from "./evidence.error";
+import { CurrentSourceProtocolDisclosureSchema } from "./current-source.payload";
 import { ResearchPreflightPrivateResponseSchema } from "./preflight.contract";
 
 /** P08 metadata only: no HMD read, snapshot path, rows or holdout values. */
@@ -56,7 +57,7 @@ export function evidenceDatasetCoverage(snapshot: unknown) {
 }
 
 /** B3 CG-FG-S04-07: immutable P08 topology, never result/holdout data. */
-export function evidenceWindowDisclosure(topology: unknown) {
+export function evidenceWindowDisclosure(topology: unknown, completedProtocol?: unknown) {
   const absent = (reasonCode: string) => ({
     availability: { state: "NOT_PUBLISHED" as const, reason_code: reasonCode },
     aggregation_scope: null,
@@ -107,8 +108,27 @@ export function evidenceWindowDisclosure(topology: unknown) {
     is_bars: isBars,
     oos_bars: oosBars,
     folds,
-    holdout_bars: source.protocol === "three_window_decay"
+    holdout_bars: completedHoldout(source, completedProtocol) ?? (source.protocol === "three_window_decay"
       ? { state: "DENIED" as const, reason_code: "P13_SEALED_HOLDOUT_BAR_COUNT_DENIED", value: null }
-      : { state: "NOT_APPLICABLE" as const, reason_code: "P13_PROTOCOL_HAS_NO_SEALED_HOLDOUT", value: null },
+      : { state: "NOT_APPLICABLE" as const, reason_code: "P13_PROTOCOL_HAS_NO_SEALED_HOLDOUT", value: null }),
   };
+}
+
+function completedHoldout(topology: { protocol: string; folds: {
+  train: { bars?: number; start_utc_ms: number; end_exclusive_utc_ms: number };
+  outer_oos: { bars?: number; start_utc_ms: number; end_exclusive_utc_ms: number };
+}[]; sealed_holdout?: { start_utc_ms: number; end_exclusive_utc_ms: number } | null }, protocol: unknown) {
+  if (protocol === undefined || protocol === null) return null;
+  const parsed = CurrentSourceProtocolDisclosureSchema.safeParse(protocol);
+  if (!parsed.success || topology.protocol !== "three_window_decay" || topology.folds.length !== 1
+    || topology.folds[0]!.train.bars !== parsed.data.windows.is.bar_count
+    || topology.folds[0]!.outer_oos.bars !== parsed.data.windows.oos.bar_count
+    || topology.folds[0]!.train.start_utc_ms !== parsed.data.windows.is.start_utc_ms
+    || topology.folds[0]!.train.end_exclusive_utc_ms !== parsed.data.windows.is.end_exclusive_utc_ms
+    || topology.folds[0]!.outer_oos.start_utc_ms !== parsed.data.windows.oos.start_utc_ms
+    || topology.folds[0]!.outer_oos.end_exclusive_utc_ms !== parsed.data.windows.oos.end_exclusive_utc_ms
+    || topology.sealed_holdout?.start_utc_ms !== parsed.data.windows.holdout.start_utc_ms
+    || topology.sealed_holdout?.end_exclusive_utc_ms !== parsed.data.windows.holdout.end_exclusive_utc_ms)
+    throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Completed window disclosure is incompatible.", 503);
+  return { state: "AVAILABLE" as const, reason_code: null, value: parsed.data.independent_holdout.bar_count };
 }

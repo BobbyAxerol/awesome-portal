@@ -147,6 +147,14 @@ for (const [file, dto, property, definition] of [
   properties[property] = { $ref: `#/components/schemas/${definition}` };
   properties.enriched_analysis_availability = { $ref: "#/components/schemas/EnrichedAnalysisAvailability" };
   next = replaceComponent(next, dto, existing, next.indexOf('"schemas": {'));
+  if (file === "research-evidence") {
+    const disclosure = structuredClone(JSON.parse(next).components.schemas.WindowDisclosure);
+    disclosure.properties.holdout_bars = { oneOf: [
+      object({ state: { const: "AVAILABLE" }, reason_code: { type: "null" }, value: { type: "integer", minimum: 1, maximum: 100_000 } }),
+      object({ state: { enum: ["DENIED", "NOT_APPLICABLE", "NOT_PUBLISHED"] }, reason_code: { type: "string", pattern: "^[A-Z][A-Z0-9_]{2,159}$" }, value: { type: "null" } }),
+    ] };
+    next = replaceComponent(next, "WindowDisclosure", disclosure, next.indexOf('"schemas": {'));
+  }
   emit(path, next);
 }
 process.stdout.write(`Enrichment components ${check ? "verified" : "generated"}.\n`);

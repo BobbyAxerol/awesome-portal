@@ -5,6 +5,7 @@ import { replaceComponent } from "./generate-research-progress-truth.mjs";
 import { selectedTrialPresentation } from "./generate-research-w1-presentation.mjs";
 import {amendFull03} from "./generate-research-full03.mjs";
 import {amendFull04CurrentSource} from "./generate-research-full04-current-source.mjs";
+import {windowViewComponents} from "./research-window-views.mjs";
 
 const ref = name => ({ $ref: `#/components/schemas/${name}` });
 const object = properties => ({ type: "object", additionalProperties: false, required: Object.keys(properties), properties });
@@ -44,6 +45,8 @@ export function amendFull02CurrentSource(original, file = "research-current-sour
   const addEnum = (schema, value) => { if (!schema.enum.includes(value)) schema.enum.push(value); };
   updates.ProtocolDisclosure = full02ProtocolDisclosure;
   if (file === "research-current-source") {
+    Object.assign(updates, windowViewComponents);
+    edit("Evidence").allOf[1].properties.window_views = ref("WindowViews");
     updates.FoldSelection = full02FoldSelection;
     updates.DisplayFoldSelection = { ...structuredClone(full02FoldSelection),properties: {
       ...structuredClone(full02FoldSelection.properties), ...selectedTrialPresentation } };

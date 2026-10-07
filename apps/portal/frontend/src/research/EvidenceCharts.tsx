@@ -126,6 +126,8 @@ export function entryAnimation(requested: boolean): Record<string, unknown> {
 
 /** Options every builder accepts: draw-in on first mount, and the deepest published drawdown as a shaded span. */
 export interface ChartOpts {
+  /** Actual account role supplied by the typed window reader. */
+  windowLabel?: "IS" | "Holdout";
   animate?: boolean;
   span?: DrawdownSpan | null;
   /** B9: the served shared histogram statistics, drawn as markers. */
@@ -679,6 +681,7 @@ export function preOosSplit(points: EquityPoint[], boundaries: readonly FoldBoun
 
 /** Exported for unit tests: jsdom never initialises a canvas, so the option is the testable surface. */
 export function equityOption(points: EquityPoint[], boundaries: readonly FoldBoundary[] = [], inSample: readonly InSampleEquityPoint[] = [], opts: ChartOpts = {}) {
+  const equityName = opts.windowLabel ? `${opts.windowLabel} equity` : SERIES_NAME.equity;
   const role = roleColorsNow();
   const { inkFaint } = paletteNow();
   const split = preOosSplit(points, boundaries);
@@ -697,7 +700,7 @@ export function equityOption(points: EquityPoint[], boundaries: readonly FoldBou
           itemWidth: 10,
           itemHeight: 8,
           textStyle: { fontSize: 10, fontFamily: "JetBrains Mono, monospace" },
-          data: [...(inSample.length > 0 ? [SERIES_NAME.inSample] : []), ...(split > 0 ? [SERIES_NAME.beforeOos] : []), SERIES_NAME.equity],
+          data: [...(inSample.length > 0 ? [SERIES_NAME.inSample] : []), ...(split > 0 ? [SERIES_NAME.beforeOos] : []), equityName],
         },
       }
       : {}),
@@ -725,7 +728,7 @@ export function equityOption(points: EquityPoint[], boundaries: readonly FoldBou
           if (!point) continue;
           head ??= point.at_utc_ms;
           const stamp = point.at_utc_ms === head ? undefined : utcZ(point.at_utc_ms);
-          rows.push({ marker: param.marker, name: param.seriesName ?? SERIES_NAME.equity, value: currency(point.equity), note: stamp });
+          rows.push({ marker: param.marker, name: param.seriesName ?? equityName, value: currency(point.equity), note: stamp });
           if (!isIs && !isBefore && "drawdown_fraction" in point) {
             const dd = Number((point as EquityPoint).drawdown_fraction);
             rows.push({ name: "drawdown", value: dd === 0 ? "0.00%" : fraction((point as EquityPoint).drawdown_fraction) });
@@ -763,7 +766,7 @@ export function equityOption(points: EquityPoint[], boundaries: readonly FoldBou
         : []),
       {
         type: "line",
-        name: SERIES_NAME.equity,
+        name: equityName,
         showSymbol: false,
         data: oos.map((point) => [point.at_utc_ms, Number(point.equity)]),
         lineStyle: { width: 1.75, color: role.oos },
@@ -777,6 +780,7 @@ export function equityOption(points: EquityPoint[], boundaries: readonly FoldBou
 }
 
 export function drawdownOption(points: EquityPoint[], boundaries: readonly FoldBoundary[] = [], opts: ChartOpts = {}) {
+  const drawdownName = opts.windowLabel ? `${opts.windowLabel} drawdown` : SERIES_NAME.drawdown;
   const tone = roleColorsNow().oos;
   const { ink, paperRaised } = paletteNow();
   /* A trough exists only if the series the server sent goes below zero. */
@@ -799,14 +803,14 @@ export function drawdownOption(points: EquityPoint[], boundaries: readonly FoldB
         const point = points[param?.dataIndex ?? -1];
         if (!point) return "";
         const inside = spanRow(opts.span, point.at_utc_ms);
-        const text = `${utcZ(point.at_utc_ms)}<br/>${tooltipRow(param, SERIES_NAME.drawdown, Number(point.drawdown_fraction) === 0 ? "0.00%" : fraction(point.drawdown_fraction))}`;
+        const text = `${utcZ(point.at_utc_ms)}<br/>${tooltipRow(param, drawdownName, Number(point.drawdown_fraction) === 0 ? "0.00%" : fraction(point.drawdown_fraction))}`;
         return inside ? axisTooltipHtml(text, [inside]) : text;
       },
     },
     series: [
       {
         type: "line",
-        name: SERIES_NAME.drawdown,
+        name: drawdownName,
         showSymbol: false,
         areaStyle: { color: tone, opacity: 0.18 },
         data: points.map((point) => [point.at_utc_ms, Number(point.drawdown_fraction)]),
@@ -1160,6 +1164,7 @@ export function EquityChart({
   inSample = NO_IN_SAMPLE,
   span = null,
   group = CHART_GROUP.equity,
+  windowLabel,
 }: {
   series?: EvidenceSeries;
   /** W3: the retained lane's observations, drawn as they were served. */
@@ -1169,18 +1174,19 @@ export function EquityChart({
   /** The deepest published drawdown episode, shaded when the service served one. */
   span?: DrawdownSpan | null;
   group?: string;
+  windowLabel?: "IS" | "Holdout";
 }) {
   const points = given ?? ((series?.values ?? []) as EquityPoint[]);
   const animate = useEntryMotion(signatureOf(points));
-  const equity = useMemo(() => equityOption(points, boundaries, inSample, { animate, span }), [points, boundaries, inSample, span]); // eslint-disable-line react-hooks/exhaustive-deps -- animate is the first-render flag, not a trigger
+  const equity = useMemo(() => equityOption(points, boundaries, inSample, { animate, span, windowLabel }), [points, boundaries, inSample, span, windowLabel]); // eslint-disable-line react-hooks/exhaustive-deps -- animate is the first-render flag, not a trigger
   return (
-    <ChartShell chart="equity" label="OOS equity curve" group={group} option={equity}>
-      <div role="img" aria-label="OOS equity curve; exact values in the table below">
+    <ChartShell chart="equity" label={`${windowLabel ?? "OOS"} equity curve`} group={group} option={equity}>
+      <div role="img" aria-label={`${windowLabel ?? "OOS"} equity curve; exact values in the table below`}>
         <EChart option={equity} height={CHART_HEIGHT.equity} />
       </div>
       <ExactTable
         id="equity"
-        caption="OOS equity and drawdown, exact values"
+        caption={`${windowLabel ?? "OOS"} equity and drawdown, exact values`}
         head={["time (UTC)", "equity", "drawdown fraction"]}
         rows={points.map((point) => ({
           key: String(point.at_utc_ms),
@@ -1214,6 +1220,7 @@ export function DrawdownChart({
   chart = "drawdown",
   span = null,
   group = CHART_GROUP.equity,
+  windowLabel,
 }: {
   series?: EvidenceSeries;
   points?: EquityPoint[];
@@ -1223,15 +1230,16 @@ export function DrawdownChart({
   chart?: string;
   span?: DrawdownSpan | null;
   group?: string;
+  windowLabel?: "IS" | "Holdout";
 }) {
   const points = given ?? ((series?.values ?? []) as EquityPoint[]);
   const animate = useEntryMotion(signatureOf(points));
   const drawdown = useMemo(() => {
-    return compactUnderwater(drawdownOption(points, boundaries, { animate, span }), height);
-  }, [points, boundaries, height, span]); // eslint-disable-line react-hooks/exhaustive-deps -- animate is the first-render flag, not a trigger
+    return compactUnderwater(drawdownOption(points, boundaries, { animate, span, windowLabel }), height);
+  }, [points, boundaries, height, span, windowLabel]); // eslint-disable-line react-hooks/exhaustive-deps -- animate is the first-render flag, not a trigger
   return (
-    <ChartShell chart={chart} label="OOS drawdown" group={group} option={drawdown}>
-      <div role="img" aria-label="OOS drawdown, from the running peak">
+    <ChartShell chart={chart} label={`${windowLabel ?? "OOS"} drawdown`} group={group} option={drawdown}>
+      <div role="img" aria-label={`${windowLabel ?? "OOS"} drawdown, from the running peak`}>
         <EChart option={drawdown} height={height} />
       </div>
     </ChartShell>

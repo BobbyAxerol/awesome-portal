@@ -6,9 +6,9 @@ import {resolve} from 'node:path';
 import {chromium} from '../../apps/portal/frontend/node_modules/playwright/index.mjs';
 
 const [stage,out]=process.argv.slice(2), BASE='http://localhost:8095';
-assert(['probe','prepare','three','wfo','inspect','report','readback'].includes(stage),'STAGE_REQUIRED');
+assert(['probe','prepare','three','wfo','inspect','report','readback','windows'].includes(stage),'STAGE_REQUIRED');
 const inspectionRunIds=process.argv.slice(4);
-if(['inspect','report','readback'].includes(stage))assert(inspectionRunIds.length>0&&inspectionRunIds.length<=2&&inspectionRunIds.every(id=>/^rrun_[a-f0-9]{32}$/.test(id)),'EXPLICIT_INSPECTION_RUN_IDS_REQUIRED');
+if(['inspect','report','readback','windows'].includes(stage))assert(inspectionRunIds.length>0&&inspectionRunIds.length<=2&&inspectionRunIds.every(id=>/^rrun_[a-f0-9]{32}$/.test(id)),'EXPLICIT_INSPECTION_RUN_IDS_REQUIRED');
 assert(out?.startsWith('/home/bobby/.local/state/portal-research-p23/long-range-delta-'),'PRIVATE_RECEIPT_PATH_REQUIRED');
 mkdirSync(out,{recursive:true,mode:0o700});
 const save=(name,data)=>{const path=resolve(out,name);assert(!existsSync(path),'IMMUTABLE_RECEIPT');writeFileSync(path,JSON.stringify(data,null,2)+'\n',{mode:0o600})};
@@ -27,7 +27,74 @@ try{
  await page.route('**/api/**',route=>route.request().method()==='GET'?route.continue():
   route.fetch({headers:{...route.request().headers(),origin},timeout:180000}).then(response=>route.fulfill({response})));
  const get=async(name,path)=>{const r=await page.request.get(BASE+path);const body=await r.json();save(name,{status:r.status(),body});assert(r.ok(),path+': '+r.status());return body};
- if(stage==='readback'){
+ if(stage==='windows'){
+  const results=[];
+  // Inspect the accepted HiFi on the same browser, with no snapshot updates.
+  const hifi=resolve('upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html');
+  await page.goto('file://'+hifi,{waitUntil:'load'});
+  await page.screenshot({path:resolve(out,'hifi-1280.png'),fullPage:true});
+  for(const id of inspectionRunIds){
+   const before=await get(id+'.progress-before.json','/api/v1/research/runs/'+id+'/progress');
+   const hub=await get(id+'.hub.json','/api/v1/quantbt/runs/'+id+'/evidence');
+   const source=await get(id+'.retained.json','/api/v1/quantbt/runs/'+id+'/current-source/evidence');
+   assert(source.window_views,'WINDOW_VIEWS_REQUIRED');
+   assert(!/source_locator|P05[.]/.test(JSON.stringify(source.window_views)),'PUBLIC_WINDOW_REFERENCES_ONLY');
+   const baselineRoot='/home/bobby/.local/state/portal-research-p23/long-range-delta-20261007';
+   const baseline=JSON.parse(readFileSync(baselineRoot+'/inspect/'+id+'.retained.json','utf8')).body;
+   for(const key of ['provenance','passport','protocol_disclosure','enriched_analysis'])assert.deepEqual(source[key],baseline[key],'IMMUTABLE_SOURCE_'+key);
+   const stale=await page.request.get(BASE+'/api/v1/quantbt/runs/'+id+'/current-source/evidence',{headers:{'If-None-Match':baseline.etag}});
+   assert.equal(stale.status(),200,'OLD_PRESENTATION_ETAG_MUST_INVALIDATE');
+   const previousWindow=JSON.parse(readFileSync(baselineRoot+'/overview-repair-final/'+id+'.retained.json','utf8')).body;
+   const corrected=await page.request.get(BASE+'/api/v1/quantbt/runs/'+id+'/current-source/evidence',{headers:{'If-None-Match':previousWindow.etag}});
+   assert.equal(corrected.status(),200,'PREVIOUS_WINDOW_WIRE_ETAG_MUST_INVALIDATE');
+   const fresh=await page.request.get(BASE+'/api/v1/quantbt/runs/'+id+'/current-source/evidence',{headers:{'If-None-Match':source.etag}});
+   assert.equal(fresh.status(),304,'NEW_PRESENTATION_ETAG_REVALIDATES');
+   const report=await get(id+'.report.json','/api/v1/quantbt/runs/'+id+'/report');
+   const originalReport=JSON.parse(readFileSync(baselineRoot+'/report-browser/'+id+'.report.json','utf8')).body;
+   assert.deepEqual(report.frozen_core,originalReport.frozen_core,'FROZEN_REPORT_CORE_UNCHANGED');
+   assert.equal(report.report_revision,originalReport.report_revision,'FROZEN_REPORT_REVISION_UNCHANGED');
+   const three=source.window_views.is.kind==='ACCOUNT_REPLAY';
+   if(three)assert.equal(hub.core.window_disclosure.holdout_bars.value,source.protocol_disclosure.windows.holdout.bar_count);
+   else assert.equal(source.window_views.holdout.state,'NOT_APPLICABLE');
+   const views=three?[{window:'is',fold:1},{window:'holdout',fold:1}]:[
+    {window:'is',fold:1},{window:'is',fold:source.window_views.is.folds.length},{window:'holdout',fold:1}];
+   for(const width of [1280,660]){
+    await page.setViewportSize({width,height:1000});
+    for(const view of views){
+     const url=BASE+'/research/quantbt/runs/'+id+'/evidence#stage=summary&fold='+view.fold+'&window='+view.window;
+     await page.goto(url,{waitUntil:'networkidle'});
+     if(three){
+      await page.locator('[data-window-view="'+view.window+'"]').waitFor();
+      assert.equal(await page.locator('[data-window-account="equity"]').count(),1);
+      assert.equal(await page.locator('[data-window-account="drawdown"]').count(),1);
+      assert.equal(await page.locator('[data-window-view="'+view.window+'"] [data-chart]').count()>0,true);
+     }else if(view.window==='is'){
+      await page.locator('[data-window-fold="'+view.fold+'"]').waitFor();
+      const row=source.window_views.is.folds.find(r=>r.source_ordinal===view.fold-1);
+      const shown=page.locator('[data-window-fold="'+view.fold+'"]');
+      assert((await shown.innerText()).includes('not one combined IS account'));
+      if(row.is_sharpe!==null)assert.equal(await shown.locator('[data-metric-value="OOS_SHARPE"]').getAttribute('data-exact'),row.is_sharpe);
+     }else{
+      await page.locator('[data-window-absent="holdout"]').waitFor();
+      assert.match(await page.locator('[data-window-absent="holdout"]').innerText(),/not applicable/i);
+      assert.doesNotMatch(await page.locator('[data-window-absent="holdout"]').innerText(),/locked|denied/i);
+     }
+     const name=id+'.'+view.window+'.fold-'+view.fold+'.'+width;
+     save(name+'.ui.json',{url:page.url(),text:await page.locator('main').innerText()});
+     await page.screenshot({path:resolve(out,name+'.png'),fullPage:true});
+     await page.reload({waitUntil:'networkidle'});
+     assert(page.url().includes('window='+view.window));
+     results.push({run_id:id,...view,width,hard_refresh:true});
+    }
+   }
+   const after=await get(id+'.progress-after.json','/api/v1/research/runs/'+id+'/progress');
+   assert.equal(before.current.effective_status,'COMPLETED');assert.equal(after.current.effective_status,'COMPLETED');
+  }
+  assert.equal(responses.filter(r=>r.method!=='GET').length,0,'READ_ONLY_BROWSER_PROOF');
+  assert.equal(errors.length,0,'PAGE_ERRORS');
+  save('receipt.json',{recorded_at_utc:new Date().toISOString(),results,errors,responses});
+  console.log(JSON.stringify({views:results.length,errors:errors.length,product_writes:0}));
+ }else if(stage==='readback'){
   for(const id of inspectionRunIds){
    for(const kind of ['EQUITY','RETURNS','POSITIONS','MONTHLY_RETURNS','ROLLING_RETURNS_20','RETURN_DISTRIBUTION']){
     const body=await get(id+'.'+kind+'.json','/api/v1/quantbt/runs/'+id+'/current-source/evidence/series?kind='+kind);

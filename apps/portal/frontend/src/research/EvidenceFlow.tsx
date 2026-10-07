@@ -2926,7 +2926,7 @@ function WindowSwitcher({
   window: EvidenceWindow;
   onWindow: (next: EvidenceWindow) => void;
   /** enrich_analysis: each window's own state and reason code, in place of the Hub's blanket sentence. */
-  windows?: EnrichedAnalysis["windows"] | null;
+  windows?: Record<EvidenceWindow, EnrichedAnalysis["windows"]["is"]> | null;
 }) {
   /* F2b: IS / OOS / Holdout write `?window=` (the vocabulary S08 reads). The Hub still publishes OOS only,
      so the other two say so in place of the numbers instead of showing OOS under the wrong label. */
@@ -3499,6 +3499,72 @@ function BehaviorCard({
   );
 }
 
+/** Window data binding only: reuse the accepted tiles and lazy chart panels. */
+export function RetainedWindowPanel({ evidence, window: active, fold }: {
+  evidence: CurrentSourceEvidence; window: "is" | "holdout"; fold: number;
+}) {
+  const view = evidence.window_views?.[active];
+  if (!view || view.kind === "ABSENT") return null;
+  if (view.kind === "FOLD_FACTS") {
+    // Cursor is a one-based display ordinal, never an engine fold identifier.
+    const selected = view.folds.find(row => row.source_ordinal === fold - 1);
+    if (!selected) return <p data-window-fold="absent">IS fold not published for this cursor.</p>;
+    const sourceMetrics: Pick<RetainedTileFact, "key" | "label" | "unit" | "value">[] = [
+      { key: "OOS_SHARPE", label: "IS Sharpe", unit: "ratio", value: selected.is_sharpe },
+      { key: "TRADE_COUNT", label: "IS trades (engine)", unit: "count", value: selected.is_trade_count },
+      { key: "BARS_PROCESSED", label: "IS training bars", unit: "count", value: selected.observation_count?.toString() ?? null },
+    ];
+    const metrics = sourceMetrics.map((row): RetainedTileFact => ({ ...row, foot: `IS · ${selected.fold_id} · engine-direct`,
+      absence: row.value === null ? { state: "NOT_PUBLISHED", reason_code: "RETAINED_IS_FOLD_METRIC_NOT_PUBLISHED" } : null }));
+    return <section className="flex flex-col gap-3.5" data-window-view="is-fold" data-window-fold={fold}
+      title={`${selected.source_ref} · raw IS Sharpe ${selected.is_sharpe_raw ?? "not published"} · ${evidence.provenance.retained_import_digest}`}>
+      <p className="mono text-[10px]" style={{ color: "var(--ink-soft)" }}>
+        IS · fold {fold} ({selected.fold_id}) · {utcZ(selected.start_utc_ms)} to {utcZ(selected.last_bar_utc_ms)} · first/last actual training bar inclusive
+      </p>
+      <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
+        {metrics.map(tile => <RetainedTile key={tile.key} tile={tile} />)}
+      </div>
+      <p className="text-[11px]" style={{ color: "var(--ink-soft)" }}>
+        Training windows may overlap; these are separate fold facts, not one combined IS account.
+      </p>
+      <p className="text-[11px]" data-series-absent="EQUITY_IS" data-absence-reason={selected.curve.reason_code}>
+        <Withheld availability={{ state: selected.curve.state, reason_code: selected.curve.reason_code }} what="IS account curve" />
+      </p>
+    </section>;
+  }
+  const protocol = evidence.protocol_disclosure;
+  if (!protocol) return null; // older/incompatible read: never fall back to the OOS curve
+  const label = active === "is" ? "IS" : "Holdout";
+  const points = protocol.window_series[active], bounds = protocol.windows[active];
+  const sampling = protocol.window_series_metadata?.[active];
+  return <section className="flex flex-col gap-3.5" data-window-view={active} data-window-source="PROTOCOL_DISCLOSURE"
+    title={`${view.source_ref} · ${active} · ${evidence.provenance.retained_import_digest}`}>
+    <p className="mono text-[10px]" style={{ color: "var(--ink-soft)" }} data-window-bounds>
+      {label} · {utcZ(bounds.start_utc_ms)} to {utcZ(bounds.end_exclusive_utc_ms)} (end exclusive) · {formatMetric(bounds.bar_count, "count")} retained observations
+    </p>
+    {active === "holdout" ? <p className="text-[11px]" data-independent-holdout>
+      Independent Holdout · evaluated after parameter freeze · not used for selection
+    </p> : null}
+    <figure className="m-0 min-w-0 rounded-[8px] border p-4" style={PANEL_STYLE} data-window-account="equity">
+      <figcaption className="mb-3 flex flex-wrap items-baseline gap-2">
+        <span className="text-[15px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>Equity — {label} account</span>
+        <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} data-window-sampling={sampling?.sampling ?? "LEGACY_SAMPLING_NOT_PUBLISHED"}>
+          {formatMetric(points.length, "count")} of {formatMetric(bounds.bar_count, "count")} points{sampling?.sampling === "MULTI_SERIES_EXTREMA_V1" ? " · extrema kept" : ""}
+        </span>
+      </figcaption>
+      <ChartFrame height={380}><EquityChart points={points} windowLabel={label} group={`evidence-window-${active}`} /></ChartFrame>
+      <p className="mono mt-2 text-[9.5px]" style={{ color: "var(--ink-faint)" }}>source retained current-source · {evidence.provenance.profile_id} · currency · UTC</p>
+    </figure>
+    <figure className="m-0 min-w-0 rounded-[8px] border p-4" style={PANEL_STYLE} data-window-account="drawdown">
+      <figcaption className="mb-3 text-[15px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>Underwater — {label} drawdown</figcaption>
+      <ChartFrame height={180}><DrawdownChart points={points} windowLabel={label} group={`evidence-window-${active}`} /></ChartFrame>
+    </figure>
+    <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-window-metric-policy>
+      Retained account observations; sampled display points are not used to calculate Sharpe or other full-population metrics.
+    </p>
+  </section>;
+}
+
 function SummaryTab({
   hub,
   runId,
@@ -3576,12 +3642,18 @@ function SummaryTab({
   /* QA S04-I3: the sealed claim says the Delta WFO profile has no holdout (NOT_APPLICABLE, with its code); the
      analytics block's blanket NOT_PUBLISHED is the weaker answer. The claim's own typed state wins for the holdout window. */
   const claimHoldout = (retained as Partial<CurrentSourceEvidence> | null)?.claim?.holdout ?? null;
-  const windowsShown: EnrichedAnalysis["windows"] | null =
+  const legacyWindows: EnrichedAnalysis["windows"] | null =
     enriched === null
       ? null
       : claimHoldout !== null && claimHoldout.state === "NOT_APPLICABLE"
         ? { ...enriched.windows, holdout: { ...enriched.windows.holdout, state: "NOT_APPLICABLE", reason_code: claimHoldout.reason_code } as EnrichedAnalysis["windows"]["holdout"] }
         : enriched.windows;
+  // Completed recipe read-side truth wins over the immutable generic enrichment.
+  const views = retained?.window_views;
+  const windowsShown = views ? { ...(legacyWindows ?? { oos: { state: "AVAILABLE" as const, reason_code: null } }),
+    is: { state: views.is.state, reason_code: views.is.reason_code },
+    holdout: { state: views.holdout.state, reason_code: views.holdout.reason_code },
+  } : legacyWindows;
   const enrichedSeries = new Map<SeriesKind, EvidenceSeries>();
   const enrichedAbsent = new Map<SeriesKind, Availability>();
   if (enriched !== null) {
@@ -3623,7 +3695,7 @@ function SummaryTab({
   const underwater = enriched !== null ? underwaterPoints(enriched) : null;
   /* The deepest drawdown episode the service published, shaded on the equity, underwater and curve charts. */
   const deepest = enriched !== null && enriched.drawdown_episodes.state === "AVAILABLE" ? deepestSpan(enriched.drawdown_episodes.values) : null;
-  const bands = windowBands(windowsShown);
+  const bands = windowBands(legacyWindows);
   const isRead = enriched !== null ? readIsFacts(enriched) : null;
   /* W4B: "Trade count" is one label with one number. The engine's own count (a different scope, and not an audited
      fill count) is a tooltip on that tile, never a second figure beside it. */
@@ -3688,7 +3760,9 @@ function SummaryTab({
   return (
     <section data-screen-label="Summary" className="flex flex-col gap-3.5">
       <WindowSwitcher window={evidenceWindow} onWindow={onWindow} windows={windowsShown} />
-      {evidenceWindow === "is" && isRead !== null && isRead.kind !== "absent" ? (
+      {evidenceWindow !== "oos" && retained && views?.[evidenceWindow].state === "AVAILABLE" ? (
+        <RetainedWindowPanel evidence={retained} window={evidenceWindow} fold={cursor.fold} />
+      ) : evidenceWindow === "is" && isRead !== null && isRead.kind !== "absent" ? (
         <IsWindowPanel read={isRead} />
       ) : evidenceWindow !== "oos" ? (
         <WindowAbsent
@@ -4096,7 +4170,9 @@ function WindowDisclosureTable({
           )}
           {disclosure !== null ? (
             <span data-holdout-bars={disclosure.holdout_bars.state}>
-              {disclosure.holdout_bars.state === "DENIED" ? (
+              {disclosure.holdout_bars.state === "AVAILABLE" ? (
+                <span className="mono text-[10px]">{formatMetric(disclosure.holdout_bars.value, "count")} bars</span>
+              ) : disclosure.holdout_bars.state === "DENIED" ? (
                 <span
                   className="mono text-[10px] italic"
                   style={{ color: "var(--role-holdout)" }}

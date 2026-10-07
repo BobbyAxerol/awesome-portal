@@ -4,6 +4,7 @@ import { Buffer } from "node:buffer";
 import { selectedTrialPresentation } from "./selected-trial-presentation";
 import { replayNavigation, replayRequestedIdentity } from "./replay-navigation";
 import { Inject, Injectable, Optional } from "@nestjs/common";
+import { currentSourceWindowViews } from "./current-source-window-views";
 import { isCausalStageATrial } from "./causal-seal-consistency";
 import { readRunDeclaration } from "./run-declaration.read";
 import { readSamplerEvidence } from "./sampler-evidence.read";
@@ -469,6 +470,9 @@ export class ResearchCurrentSourceService {
       && candidate.objective === summary.selection.objective) ?? null;
     const value = {
       schema_version: "research.current-source-evidence.v1" as const,
+      window_views: currentSourceWindowViews(summary.protocol_disclosure,
+        foldRows.map(row => ({ sourceOrdinal: row.sourceOrdinal, payload: asFold(row) })),
+        summary.optimizer_disclosure?.calibration_sample === "FULL_SAMPLE"),
       ...(seal.enrichedAnalysis ? { enriched_analysis: seal.enrichedAnalysis } : {}),
       enriched_analysis_availability: enrichedAvailability(seal.enrichedAnalysis),
       ...(summary.summary_analytics ? { summary_analytics: summary.summary_analytics } : {}),
@@ -504,7 +508,8 @@ export class ResearchCurrentSourceService {
         /* E11: named so Screen 04 can state them instead of leaving EChart 1
            one legend entry short and EChart 3 half empty with a UI-authored
            code. Both are structural facts of this lane, not this run. */
-        in_sample_account: sourceGap("QUANTBT_ADVANCED_WFO_RETAINED_NO_IN_SAMPLE_ACCOUNT"),
+        in_sample_account: summary.protocol_disclosure ? fact("AVAILABLE", null)
+          : sourceGap("QUANTBT_ADVANCED_WFO_RETAINED_NO_IN_SAMPLE_ACCOUNT"),
         ...(summary.summary_analytics?.rolling_sharpe_63.state === "AVAILABLE" ? {} : {
           rolling_sharpe: sourceGap(summary.summary_analytics?.rolling_sharpe_63.reason_code
             ?? "RS02_SOURCE_PREDATES_RETAINED_ANALYTICS"),
@@ -1461,8 +1466,9 @@ export class ResearchCurrentSourceService {
       ? readRunDeclaration(seal.runDeclarationInputs) : null;
     // Keep source/cursor revision unchanged. Only the exact representation
     // validator includes the additive immutable run declaration.
-    const presentation = declaration ? `rs02_${kind}_${sha256ResearchJson({
-      source_presentation_revision: value, run_declaration: declaration,
+    const presentation = declaration || kind === "evidence" ? `rs02_${kind}_${sha256ResearchJson({
+      source_presentation_revision: value, ...(declaration ? { run_declaration: declaration } : {}),
+      ...(kind === "evidence" ? { window_views_version: "OVERVIEW_RETAINED_WINDOWS_PUBLIC_REF_V1" } : {}),
     })}` : value;
     return {
       ...(seal.summary.protocol_disclosure ? { protocol_disclosure: parseSummary(seal).protocol_disclosure } : {}),

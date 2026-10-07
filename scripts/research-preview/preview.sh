@@ -126,6 +126,14 @@ ENV
 }
 
 cmd_build() {
+  local services=("$@")
+  [[ ${#services[@]} -gt 0 ]] || services=(portal-api control-api portal-web roadmap-task-board-api)
+  local service
+  for service in "${services[@]}"; do
+    case "$service" in portal-api|control-api|portal-web|roadmap-task-board-api) ;;
+      *) echo "preview: unsupported build service $service" >&2; return 1;;
+    esac
+  done
   # The approved Historical Market Data reader is a code-only wheel staged into
   # the ignored vendor/hmd-reader directory; the image refuses to build
   # without it rather than start a portal-api that cannot read data.
@@ -135,7 +143,7 @@ cmd_build() {
   sha="$(git -C "$ROOT" rev-parse HEAD)"
   [[ -z "$(git -C "$ROOT" status --porcelain)" ]] || dirty=true
   PORTAL_BUILD_COMMIT="$sha" PORTAL_BUILD_DIRTY="$dirty" compose build \
-    --build-arg PORTAL_HMD_READER_REQUIRED=true portal-api control-api portal-web roadmap-task-board-api
+    --build-arg PORTAL_HMD_READER_REQUIRED=true "${services[@]}"
 }
 
 record_identity() {
@@ -165,7 +173,19 @@ record_identity() {
 cmd_up() {
   local sha
   sha="$(git -C "$ROOT" rev-parse HEAD)"
-  PORTAL_BUILD_COMMIT="$sha" compose up -d --no-build portal-web quant-worker-py
+  if [[ $# -gt 0 ]]; then
+    local service
+    for service in "$@"; do
+      case "$service" in control-api|portal-web) ;;
+        *) echo "preview: read-side rollout only permits control-api and portal-web" >&2; return 1;;
+      esac
+    done
+    # A read-side repair must not recreate a worker, run a migration/bootstrap,
+    # or restart PostgreSQL/NATS just because they appear as dependencies.
+    PORTAL_BUILD_COMMIT="$sha" compose up -d --no-build --no-deps "$@"
+  else
+    PORTAL_BUILD_COMMIT="$sha" compose up -d --no-build portal-web quant-worker-py
+  fi
   # A backend-only build leaves nginx running, with its startup-resolved old
   # Docker addresses. Re-resolve after Compose has made the new APIs healthy;
   # never report a healthy static index while all same-origin APIs return 502.
@@ -207,8 +227,8 @@ cmd_teardown() {
 
 case "${1:-}" in
   init) cmd_init ;;
-  build) cmd_build ;;
-  up) cmd_up ;;
+  build) shift; cmd_build "$@" ;;
+  up) shift; cmd_up "$@" ;;
   activate) cmd_activate ;;
   status) cmd_status ;;
   down) cmd_down ;;

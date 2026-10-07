@@ -535,10 +535,14 @@ export const ResearchEvidenceWindowDisclosureSchema = z.object({
     oos_bars: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
   }).strict()).max(128),
   holdout_bars: z.object({
-    state: z.enum(["DENIED", "NOT_APPLICABLE", "NOT_PUBLISHED"]),
-    reason_code: ReasonCodeSchema,
-    value: z.null(),
-  }).strict(),
+    state: z.enum(["AVAILABLE", "DENIED", "NOT_APPLICABLE", "NOT_PUBLISHED"]),
+    reason_code: ReasonCodeSchema.nullable(),
+    value: z.number().int().positive().max(100_000).nullable(),
+  }).strict().superRefine((value, ctx) => {
+    if ((value.state === "AVAILABLE") !== (value.value !== null)
+      || (value.state === "AVAILABLE") !== (value.reason_code === null))
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "holdout count availability contradicts its value/reason" });
+  }),
 }).strict().superRefine((value, context) => {
   const published = value.availability.state === "AVAILABLE";
   if (published && (value.aggregation_scope === null || value.is_bars === null ||

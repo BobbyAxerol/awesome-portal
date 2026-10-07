@@ -160,6 +160,54 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        WindowViews: {
+            /** @constant */
+            schema_version: "research.current-source-window-views.v1";
+            is: components["schemas"]["WindowAccountView"] | components["schemas"]["WindowFoldFacts"] | components["schemas"]["WindowViewAbsence"];
+            holdout: components["schemas"]["WindowAccountView"] | components["schemas"]["WindowViewAbsence"];
+        };
+        WindowFoldFacts: {
+            /** @constant */
+            kind: "FOLD_FACTS";
+            /** @constant */
+            state: "AVAILABLE";
+            reason_code: null;
+            /** @constant */
+            aggregation: "SEPARATE_TRAINING_WINDOWS_MAY_OVERLAP_NOT_ONE_ACCOUNT";
+            folds: {
+                source_ordinal: number;
+                fold_id: string;
+                start_utc_ms: number | null;
+                last_bar_utc_ms: number | null;
+                /** @constant */
+                bounds_semantics: "FIRST_AND_LAST_ACTUAL_TRAINING_BAR_INCLUSIVE";
+                observation_count: number | null;
+                is_sharpe: string | null;
+                is_sharpe_raw: string | null;
+                is_trade_count: string | null;
+                /** @constant */
+                source_ref: "RETAINED_FOLD_IS_FACTS_V1";
+                curve: components["schemas"]["WindowViewAbsence"];
+            }[];
+        };
+        WindowAccountView: {
+            /** @constant */
+            kind: "ACCOUNT_REPLAY";
+            /** @constant */
+            state: "AVAILABLE";
+            reason_code: null;
+            /** @constant */
+            source_ref: "RETAINED_WINDOW_ACCOUNT_V1";
+            /** @constant */
+            metric_policy: "DISPLAY_POINTS_ARE_NOT_A_FULL_METRIC_POPULATION";
+        };
+        WindowViewAbsence: {
+            /** @constant */
+            kind: "ABSENT";
+            /** @enum {unknown} */
+            state: "NOT_PUBLISHED" | "NOT_APPLICABLE";
+            reason_code: string;
+        };
         /**
          * ResearchRetainedAnalytics
          * @description E11/E14 source-time analytics sealed with one immutable artifact/projection. UTC milliseconds, exact decimals, no compute on GET. Child-tape trade count is not an audited ledger.
@@ -3354,6 +3402,7 @@ export interface components {
             };
             claim: components["schemas"]["ClaimStrip"];
             fold_verdicts: components["schemas"]["FoldVerdicts"];
+            window_views?: components["schemas"]["WindowViews"];
         };
         EvidenceSeries: components["schemas"]["Common"] & {
             enriched_analysis_availability?: components["schemas"]["EnrichedAnalysisAvailability"];

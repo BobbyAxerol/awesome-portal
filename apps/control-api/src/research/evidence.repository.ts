@@ -60,6 +60,7 @@ export interface EvidenceHubRow {
   runDeclarationInputs?: RunDeclarationInputs;
   /** Private same-snapshot proof; never infer readiness from enrichment alone. */
   retainedSource?: {
+    protocolDisclosure?: unknown;
     runId: string;
     sourceAdapterId: string;
     profileId: string;
@@ -122,6 +123,7 @@ export interface EvidenceReadBundle {
 }
 
 interface HubQueryRow {
+  retained_protocol_disclosure?: unknown;
   retained_run_id?: string | null;
   retained_source_adapter_id?: string | null;
   retained_profile_id?: string | null;
@@ -429,6 +431,7 @@ export class ResearchEvidenceRepository {
                 retained.profile_id AS retained_profile_id,
                 retained.artifact_revision AS retained_artifact_revision,
                 retained.retained_import_digest,
+                retained.protocol_disclosure AS retained_protocol_disclosure,
                 retained.manifest_digest AS retained_manifest_digest,
                 sealed_artifact.manifest_digest AS retained_artifact_manifest_digest,
                 sealed_artifact.artifact_revision AS retained_artifact_sealed_revision,
@@ -469,6 +472,7 @@ export class ResearchEvidenceRepository {
             AND checkpoint.source_sequence = head.source_sequence
            LEFT JOIN LATERAL (
              SELECT run_id, source_adapter_id, profile_id, artifact_revision, retained_import_digest,
+                    summary->'protocol_disclosure' AS protocol_disclosure,
                     manifest_digest, requested_spec_digest, effective_spec_digest, dataset_binding_digest
                FROM research.current_source_seals_v1
               WHERE workspace_id = producer.workspace_id AND run_id = producer.run_id
@@ -505,6 +509,7 @@ export class ResearchEvidenceRepository {
             && row.retained_effective_spec_digest && row.retained_dataset_binding_digest && row.lifecycle_status
             && row.retained_artifact_revision !== null && row.retained_artifact_revision !== undefined ? {
               retainedSource: {
+                protocolDisclosure: row.retained_protocol_disclosure,
                 runId: row.retained_run_id, sourceAdapterId: row.retained_source_adapter_id,
                 profileId: row.retained_profile_id,
                 artifactRevision: asSafeNonNegative(row.retained_artifact_revision, "retained revision"),

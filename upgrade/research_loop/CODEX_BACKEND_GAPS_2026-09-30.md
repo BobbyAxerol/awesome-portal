@@ -2622,3 +2622,58 @@ Production/TS access or remote push. Both results are available now for Bobby.
 Claude handoff is exact existing fields and remaining backend enrichment,
 not a request to invent IS metrics from decimated points or a WFO Holdout.
 [Browser/API receipt, exact ranges, custody and resource closeout](./evidence/P10/DELTA_LONG_RANGE_OWNER_REVIEW_2026-10-07.md).
+
+### §42 repair — approved Overview window binding (2026-10-07)
+
+Bobby approved implementing LR-01…03 now, preserving Claude's UI design.
+Use the two completed runs above; **no new engine run, profile activation,
+seal/Report mutation, remote push or production change**. Add an optional,
+generated current-source `window_views` projection: Three Window points and
+sampling/bounds come from its verified retained `protocol_disclosure`; WFO IS
+uses each retained fold's actual training bounds and selected-trial metrics.
+An overlapping WFO training set is not one account, and an idle OOS prefix
+must never become an IS curve. Missing per-fold account curves remain a
+panel-local typed absence. WFO independent Holdout is NOT_APPLICABLE.
+
+Implementation: focused Control API contract/builder/cache-validator tests,
+generated contracts, and Overview data binding using existing chart/panel
+components only. Keep OOS source and financial definitions unchanged; do not
+compute Sharpe or other full-population metrics from sampled curves. Inspect
+the S04 HiFi/spec in a browser; verify IS/Holdout, WFO fold switching and hard
+refresh at 1280/660 against real API responses from these exact runs. One
+targeted preview rebuild and one grouped normal commit hook; reuse unchanged
+engine/DR/visual receipts. Record capacity, response/custody hashes, remaining
+source absences and the final receipt here and in Unified before claiming GO.
+
+Capacity decision before preview build: root available **108,101,873,664 /
+665,811,062,784 bytes (16.24%)**, available memory about10.7GiB. Bounded
+read-side change: build **control-api + portal-web only**, sequential cached
+layers, no QuantBT/worker/portal-api/Roadmap image rebuild and no wheel install,
+no broad prune/volume deletion. Existing engine jobs and artifact volumes are
+preserved. Record image IDs and capacity again at closeout. This scoped
+decision is not authorization for a further full-stack/release build.
+
+**§42 repair delivery:** LR-01/LR-03 **REAL_API_BROWSER_ACCEPTED**;
+LR-02 **PER_FOLD_IS_FACTS_BOUND / INDEPENDENT_HOLDOUT_NOT_APPLICABLE**.
+New optional generated `WindowViews` binds Three retained account points and
+WFO's15 training folds. Separate WFO IS account curves were not retained and
+remain explicitly absent, not synthesized from OOS. Two existing owner runs,
+10/10 real browser views1280/660;0 page/API errors and0 product writes/jobs.
+Original generic enrichment, source custody and frozen Reports unchanged;
+stale/fresh ETags200/304. Only Control/API web preview images rebuilt, worker
+unchanged. [Exact receipt, metrics, hashes, images and cleanup](./evidence/P13/OVERVIEW_RETAINED_WINDOWS_2026-10-07.md).
+
+#### Overview public-boundary correction — 2026-10-07
+
+The first complete hook caught `source_locator` in the additive Overview DTO
+(2334 Control tests passed, one RS-03 public-boundary assertion failed).
+Keep that gate unchanged: publish closed public `source_ref` enum identities,
+not internal P05 record/field locators. Refresh only Control/Web images and
+the same read-only two-run browser receipt, then run the mandatory commit
+hook. Capacity before this bounded cached rebuild: 107,827,765,248 bytes
+available of 665,811,062,784. Do not rebuild or restart API/worker/DB/NATS,
+create new engine jobs, delete source/artifacts/rollback images, or broad-prune.
+Corrected-wire acceptance requires the refreshed real receipt under private
+`long-range-delta-20261007/overview-public-ref/` before shared-branch landing;
+the already-proven retained source facts remain unchanged. Its new ETag must
+invalidate the earlier diagnostic DTO as well as the original response.

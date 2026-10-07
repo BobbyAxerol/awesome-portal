@@ -8287,3 +8287,25 @@ enrichment/window consumer ignores these facts. Global WFO has no independent
 Holdout, and its overlapping IS windows must be presented per fold. This run
 receipt is not a fix for those mappings, a causal qualification, or P24 GO.
 [Accepted specs, results, source hashes, window diagnosis and Claude handoff](./research_loop/evidence/P10/DELTA_LONG_RANGE_OWNER_REVIEW_2026-10-07.md).
+
+**2026-10-07 LR-01…03 implementation approved / IN_PROGRESS.** Repair the
+Overview window projection and data binding on those two completed runs.
+Three Window consumes its retained, separately scoped IS/Holdout account
+points and sampling facts; WFO consumes selected-trial IS facts per training
+fold and explicitly reports no independent Holdout. No account is synthesized
+from the stitched idle prefix, no sampled-curve financial analytics, no engine
+rerun or immutable evidence rewrite. Preserve Claude's existing components,
+tokens, layout and baselines. Contract generation/focused tests precede one
+bounded preview rebuild and real API/browser checks at 1280/660, followed by
+one normal grouped commit hook. [Exact scope/test plan](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#42-repair--approved-overview-window-binding-2026-10-07).
+
+**LR-01…03 delivery:** real API/browser acceptance of the requested Overview
+repair, **10/10 views at1280/660** on the same completed long-range runs.
+Three IS/Holdout now display their retained account curves and source bounds;
+WFO displays independent selected-trial IS facts per fold, Holdout explicitly
+NOT_APPLICABLE. Per-fold IS curves remain a precise source absence, never an
+OOS-prefix substitute. Completed Three Hub Holdout count6552; pre-execution
+seal protection preserved.0 engine reruns/product writes, immutable source
+and Report equality, old/new ETag200/304. Preview Control/Web only, worker and
+all data untouched. No remote/main/dev/production or P24 GO implied.
+[Implementation, tests, exact fields, runtime identities and cleanup receipt](./research_loop/evidence/P13/OVERVIEW_RETAINED_WINDOWS_2026-10-07.md).

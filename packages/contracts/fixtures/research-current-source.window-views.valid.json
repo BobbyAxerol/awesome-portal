@@ -1,0 +1,15 @@
+{
+  "schema_version": "research.current-source-window-views.v1",
+  "is": {
+    "kind": "FOLD_FACTS", "state": "AVAILABLE", "reason_code": null,
+    "aggregation": "SEPARATE_TRAINING_WINDOWS_MAY_OVERLAP_NOT_ONE_ACCOUNT",
+    "folds": [{
+      "source_ordinal": 0, "fold_id": "0", "start_utc_ms": 10, "last_bar_utc_ms": 20,
+      "bounds_semantics": "FIRST_AND_LAST_ACTUAL_TRAINING_BAR_INCLUSIVE",
+      "observation_count": 11, "is_sharpe": "0.23", "is_sharpe_raw": "0.24", "is_trade_count": "2",
+      "source_ref": "RETAINED_FOLD_IS_FACTS_V1",
+      "curve": { "kind": "ABSENT", "state": "NOT_PUBLISHED", "reason_code": "WFO_RETAINED_FOLD_HAS_NO_SEPARATE_IS_ACCOUNT_CURVE" }
+    }]
+  },
+  "holdout": { "kind": "ABSENT", "state": "NOT_APPLICABLE", "reason_code": "WFO_PROTOCOL_HAS_NO_INDEPENDENT_HOLDOUT" }
+}
