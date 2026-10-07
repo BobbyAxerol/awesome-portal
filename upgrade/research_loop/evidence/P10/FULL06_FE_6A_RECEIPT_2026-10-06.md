@@ -62,3 +62,18 @@ Read: `S02_VERSION_RECIPE_REFINEMENT_2026-10-07.md`, `research-run-version-optio
 - **BR-S02-09 `Profile.recipe`**: key / family / label / `recommended_rank` mapped to `ProfilePins.recipe`. Recipe cards use the served label and display order when every enabled profile carries one, and the served key as the group key; two served labels that read alike (same mode and schedule under Three Window and Walk-forward) are told apart by the protocol. No recipe field (old server) = the previous derived label/order. Rank is display order, never optimality.
 - Tests: `versionOptions.full06.test.tsx` (37 with the shared S02 fixtures), FG-05 tests now separate the publication lookup from the binding read; `src/research` 3840/3840, tsc clean.
 - **Not yet verified on the running preview**: it still serves `5e85493` (no `version-options` route), where the browser logs a 404 per page load and the e2e console check fails by design. A coordinated rebuild is the next step.
+
+## Real native runs on the preview — 2026-10-07 (Bobby approved: "Bạn làm ngay nhé")
+
+Preview rebuilt from `bf31b377` (running image IDs = built tags for control-api, portal-api, portal-web; `version-options` answers 401 unauthenticated, not 404). S02 e2e on real API **20/20** (the imported-alpha case now picks the served "· Walk-forward" label). Three runs created through the UI (Run type → native recipe → preflight → Create), BTCUSDT 1h crypto-binance-1m, windows from Suggest (IS 2026-08-03 → OOS 2026-09-14 → holdout 2026-09-26 → 2026-10-01):
+
+| Route | Run | Status | fills / orders / fees (hub `native_execution`) |
+|---|---|---|---|
+| Bracket · av 1.0.9 | `rrun_ea0e06b9d56e08757c40d54746982098` | COMPLETED | 0 / null / "0" |
+| Reactive · av 1.0.10 | `rrun_a7c3c23ff88df9f133061d0586c550d9` | COMPLETED | 22 / null / "22.338955495865164" |
+| Event-driven · av 1.0.11 | `rrun_e21e324c6ba49393ce82c3603ddc139a` | COMPLETED | 22 / 22 / "22.338955495865164" |
+
+- S03–S09, S11 opened for each run: **no console error, no failed request**. S04 shows the "Native execution" panel with the served values exactly (a served `"0"` is printed as 0; `orders_count: null` says "not published"); S08 states route, "retrospective equity only", "OOS equity sample from the engine — not a broker lifecycle replay" and the sampling caption (17 of 288 points, extrema kept); the clock reads "next bar intrabar" for Bracket and "next-bar close" for Reactive / Event-driven.
+- **Defect found and fixed in the frontend:** the Parameters step and the Review row still said "8 swept" for a native fixed recipe. They now say "declared · not swept", the table is read-only (`inert`) with a one-line note; the server refuses overrides on native fixed requests, so editing could only produce a refusal.
+- **Backend finding (BR-S02-17):** the Bracket run has `fills_count 0`, fees "0" and a flat 20,000 equity sample, yet S04's trade count says 1 (child tape). A trade with no fill is a contradiction between two served facts; the UI prints both as served. Reactive / Event-driven are consistent (22 fills).
+- Not checked: S06 pruned/6400 paging (a native run has 1 trial), visual baselines (not recorded in this change), the P24 15-screen matrix on the new bundle.

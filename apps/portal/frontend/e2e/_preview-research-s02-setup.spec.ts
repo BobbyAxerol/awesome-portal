@@ -245,7 +245,13 @@ for (const width of WIDTHS) {
       await expect(page.locator("[data-native-facts]").first()).toContainText("stop 1.3% · take-profit 2.6%");
       await expect(page.locator("[data-native-facts]").first()).toContainText("not a scalar optimizer");
       await expect(edges(page).nth(0)).not.toHaveValue("", { timeout: 20_000 });
+      /* A native fixed recipe runs the declared pins once: the Parameters step says so, shows nothing as swept and is not editable. */
+      await page.locator('[data-step-pill="parameters"]').click();
+      await expect(page.locator("[data-native-parameters-note]")).toContainText("Nothing here is swept or editable");
+      await expect(page.locator("[data-sweep-count]")).toContainText("declared · not swept");
+      await expect(page.locator("[data-parameters-readonly]")).toHaveAttribute("inert", "");
       await page.locator('[data-step-pill="review"]').click();
+      await expect(page.locator("main")).toContainText("fixed recipe, not swept");
       await page.locator('[data-action="preflight"]').click();
       await expect(page.locator('[data-action="create-run"]')).toBeEnabled({ timeout: 30_000 });
       const sent = counts.bodies.filter((entry) => entry.url.endsWith("/research/preflights")).map((entry) => entry.body);
@@ -286,7 +292,7 @@ for (const width of WIDTHS) {
       await expect(edges(page).nth(0)).not.toHaveValue("", { timeout: 20_000 });
       const cards = page.locator("[data-recipe]:not([data-closed])");
       expect(await cards.count(), "an imported alpha declaring 1h is offered the opened recipes").toBeGreaterThanOrEqual(2);
-      const advanced = page.locator('[data-recipe]:not([data-closed])', { hasText: "Walk-forward search" }).first();
+      const advanced = page.locator('[data-recipe]:not([data-closed])', { hasText: "· Walk-forward" }).first();
       await advanced.click();
       await page.locator('[data-action="suggest-windows"]').click();
       await expect(page.locator('[data-window-setup][data-suggestion-state="proposal"]')).toBeVisible({ timeout: 20_000 });

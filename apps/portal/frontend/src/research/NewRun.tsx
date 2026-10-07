@@ -2017,12 +2017,15 @@ function ParametersStep({
   patch,
   error,
   ceiling = SWEEP_CEILING,
+  fixedNative = false,
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
   error: string | null;
   /** CG-P08-05: the release's published sweep ceiling; null when not published. */
   ceiling?: number | null;
+  /** The chosen recipe is a native fixed Delta input: it runs the declared pins once, so these ranges are shown, not swept, and cannot be edited. */
+  fixedNative?: boolean;
 }) {
   const swept = sweptCount(draft);
   const hasRows = draft.parameters.length > 0;
@@ -2054,16 +2057,21 @@ function ParametersStep({
           data-sweep-count
           style={{ color: ceiling !== null && swept > ceiling ? "var(--bad)" : "var(--ink-faint)" }}
         >
-          {swept} swept · {pinnedCount(draft)} pinned · {ceiling === null ? "sweep ceiling not published" : `sweep ceiling ${ceiling}`}
+          {fixedNative ? "declared · not swept" : `${swept} swept · ${pinnedCount(draft)} pinned · ${ceiling === null ? "sweep ceiling not published" : `sweep ceiling ${ceiling}`}`}
         </span>
       }
     >
+      {fixedNative ? (
+        <p className="mb-2 text-[11px]" style={{ color: "var(--ink-soft)" }} data-native-parameters-note title="A native fixed recipe is one execution of the Alpha's declared pins with the server-owned bracket and clock: it is not a scalar optimizer, so nothing here is swept or pinned by you.">
+          Fixed recipe · the Alpha&apos;s declared values run once. Nothing here is swept or editable.
+        </p>
+      ) : null}
       {draft.parameters.length === 0 ? (
         <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-no-parameters>
           {draft.bound && draft.alphaVersionId === "" ? "Choose a version first." : "This version declares no parameters."}
         </p>
       ) : (
-        <div className="flex flex-col" data-parameter-table data-parameter-compact={compact || undefined} ref={tableRef}>
+        <div className="flex flex-col" data-parameter-table data-parameter-compact={compact || undefined} data-parameters-readonly={fixedNative || undefined} ref={tableRef} style={fixedNative ? { opacity: 0.65 } : undefined} {...(fixedNative ? { inert: "" as unknown as undefined } : {})}>
           {/* E4 (audit 02-14): the HiFi's header row. Without it the two
               free-text boxes on each row are unlabelled, and the declared
               step — which the registry publishes and the form dropped — had
@@ -3006,8 +3014,11 @@ function ReviewRows({
   labelWidth,
   withWindows = false,
   versionDeclared = false,
+  fixedNative = false,
 }: {
   draft: RunDraft;
+  /** A native fixed recipe runs the declared pins once: the parameter row says so instead of counting a sweep. */
+  fixedNative?: boolean;
   sweepCeiling: number | null;
   usesV2: boolean;
   registry: readonly RegistryEntry[];
@@ -3066,8 +3077,9 @@ function ReviewRows({
       ) : null}
       {draft.parameters.length > 0 || versionRead ? (
         <Row label="parameter_space" labelWidth={labelWidth}>
-          {draft.parameters.length} entries · {sweptCount(draft)} swept · {pinnedCount(draft)} pinned
-          {sweepCeiling === null ? "" : ` (sweep ceiling ${sweepCeiling})`}
+          {fixedNative
+            ? `${draft.parameters.length} declared · fixed recipe, not swept`
+            : `${draft.parameters.length} entries · ${sweptCount(draft)} swept · ${pinnedCount(draft)} pinned${sweepCeiling === null ? "" : ` (sweep ceiling ${sweepCeiling})`}`}
           {withWindows && draft.parameters.length > 0 ? (
             <div className="mt-1.5" data-review-parameter-table>
               <ParameterSpaceTable rows={rowsFromEntries(draft.parameters)} ariaLabel="parameters of this run" />
@@ -3669,7 +3681,7 @@ export function NewRun(props: NewRunProps) {
             <WindowsStep draft={draft} patch={stepPatch} adopt={patch} atlas={atlas} profile={profile} family={family} profiles={profiles} estimateStatus={estimateStatus} estimate={estimate} error={shownError.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} setup={setup} workspaceId={workspaceId} timeframe={draft.timeframe} registry={registry} />
           ) : null}
           {step === "parameters" ? (
-            <ParametersStep draft={draft} patch={stepPatch} error={shownError.get("parameters") ?? null} ceiling={sweepCeiling} />
+            <ParametersStep draft={draft} patch={stepPatch} error={shownError.get("parameters") ?? null} ceiling={sweepCeiling} fixedNative={(profile?.enabled ? profile : null)?.nativeInput != null} />
           ) : null}
           {step === "optimization" ? (
             <OptimizationStep
@@ -3689,7 +3701,7 @@ export function NewRun(props: NewRunProps) {
                   block, the same rows the submit serializes; the rail keeps the
                   timeline and the forecast. */}
               <Card title="Review &amp; run">
-                <ReviewRows draft={draft} sweepCeiling={sweepCeiling} usesV2={v2} registry={registry} labelWidth={150} withWindows versionDeclared={declarationBound ?? false} />
+                <ReviewRows draft={draft} sweepCeiling={sweepCeiling} usesV2={v2} registry={registry} labelWidth={150} withWindows versionDeclared={declarationBound ?? false} fixedNative={profile?.nativeInput != null} />
                 <AccountFacts account={profile?.account} native={profile?.nativeInput ?? null} />
               </Card>
               {clearedBecause && preflight === null ? (
