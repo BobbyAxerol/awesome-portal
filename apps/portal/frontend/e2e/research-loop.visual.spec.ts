@@ -111,6 +111,8 @@ async function openLinkedWindows(page: Page): Promise<void> {
 async function setupAbsent(page: Page): Promise<void> {
   await datasetCatalogV2(page);
   await page.route("**/api/v1/research/runs/setup-options*", (route) => route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ error: { code: "REQUEST_REJECTED", message: "Invalid request." }, request_id: "visual" }) }));
+  /* The version-binding read (BR-S02-06) is absent on the same older server: the version list then names no route and the run types fall back to the setup. */
+  await page.route("**/api/v1/research/runs/version-options*", (route) => route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ error: { code: "REQUEST_REJECTED", message: "Invalid request." }, request_id: "visual" }) }));
 }
 
 interface Cell {
