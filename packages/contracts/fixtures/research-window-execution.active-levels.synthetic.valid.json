@@ -1,0 +1,47 @@
+{
+  "schema_version": "research.window-execution-page.v1",
+  "run_id": "rrun_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "availability": {"state": "AVAILABLE", "reason_code": null},
+  "revision": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "window": "OOS",
+  "fold_id": null,
+  "descriptor": {
+    "window": "OOS", "fold_id": null,
+    "availability": {"state": "AVAILABLE", "reason_code": null},
+    "start_utc_ms": 1781280000000, "end_exclusive_utc_ms": 1781287200000,
+    "observation_count": 2, "authority": "RETAINED_NATIVE_ACCOUNT"
+  },
+  "counts": {"matching": 2, "returned": 2},
+  "rows": [
+    {
+      "source_ordinal": 0, "kind": "OBSERVATION", "window": "OOS", "fold_id": null, "at_utc_ms": 1781280000000,
+      "payload": {
+        "equity": "20000", "return_fraction": "0", "drawdown_fraction": "0", "accepted_position": "0",
+        "signal_target": "0", "candle": null, "fee": null, "funding": null, "turnover": null,
+        "active_stop": null, "active_take_profit": null,
+        "active_level_availability": {
+          "policy_id": "POSITION_BOUND_POSITIVE_LEVEL_V1", "origin": "PORTAL_NORMALIZED",
+          "source_ref": "RETAINED_WINDOW_OBSERVATION_PAYLOAD",
+          "active_stop": {"state": "NOT_APPLICABLE", "reason_code": "POSITION_FLAT", "source_value": "0"},
+          "active_take_profit": {"state": "NOT_APPLICABLE", "reason_code": "POSITION_FLAT", "source_value": "0"}
+        }
+      }
+    },
+    {
+      "source_ordinal": 1, "kind": "OBSERVATION", "window": "OOS", "fold_id": null, "at_utc_ms": 1781283600000,
+      "payload": {
+        "equity": "20000", "return_fraction": "0", "drawdown_fraction": "0", "accepted_position": "0.03146776677979329",
+        "signal_target": "1", "candle": null, "fee": null, "funding": null, "turnover": null,
+        "active_stop": "62730.8577", "active_take_profit": "65209.5846",
+        "active_level_availability": {
+          "policy_id": "POSITION_BOUND_POSITIVE_LEVEL_V1", "origin": "PORTAL_NORMALIZED",
+          "source_ref": "RETAINED_WINDOW_OBSERVATION_PAYLOAD",
+          "active_stop": {"state": "AVAILABLE", "reason_code": null, "source_value": "62730.8577"},
+          "active_take_profit": {"state": "AVAILABLE", "reason_code": null, "source_value": "65209.5846"}
+        }
+      }
+    }
+  ],
+  "next_cursor": null,
+  "authority": "COMPLETED_RETAINED_ACCOUNT_AND_ENGINE_AUDIT_NOT_BROKER_HISTORY"
+}

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Research completed windows and native execution API",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "All-time descriptive analytics; WFO training folds remain separate and have no independent Holdout. Native source relation ordinals are not a global causal ordering. Null fields have explicit source absence; no inferred SL/TP/OCO or broker events."
   },
   "servers": [
@@ -3676,167 +3676,7 @@
                 "const": "OBSERVATION"
               },
               "payload": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "equity": {
-                    "type": "string",
-                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
-                    "maxLength": 96
-                  },
-                  "return_fraction": {
-                    "type": "string",
-                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
-                    "maxLength": 96
-                  },
-                  "drawdown_fraction": {
-                    "type": "string",
-                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
-                    "maxLength": 96
-                  },
-                  "accepted_position": {
-                    "type": "string",
-                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
-                    "maxLength": 96
-                  },
-                  "signal_target": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
-                        "maxLength": 96
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "candle": {
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "additionalProperties": false,
-                        "properties": {
-                          "open": {
-                            "type": "string",
-                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
-                            "maxLength": 96
-                          },
-                          "high": {
-                            "type": "string",
-                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
-                            "maxLength": 96
-                          },
-                          "low": {
-                            "type": "string",
-                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
-                            "maxLength": 96
-                          },
-                          "close": {
-                            "type": "string",
-                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
-                            "maxLength": 96
-                          },
-                          "volume": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
-                                "maxLength": 96
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          }
-                        },
-                        "required": [
-                          "open",
-                          "high",
-                          "low",
-                          "close",
-                          "volume"
-                        ]
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "fee": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
-                        "maxLength": 96
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "funding": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
-                        "maxLength": 96
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "turnover": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
-                        "maxLength": 96
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "active_stop": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
-                        "maxLength": 96
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "active_take_profit": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
-                        "maxLength": 96
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  }
-                },
-                "required": [
-                  "equity",
-                  "return_fraction",
-                  "drawdown_fraction",
-                  "accepted_position",
-                  "signal_target",
-                  "candle",
-                  "fee",
-                  "funding",
-                  "turnover",
-                  "active_stop",
-                  "active_take_profit"
-                ]
+                "$ref": "#/components/schemas/WindowObservation"
               }
             },
             "required": [
@@ -3946,6 +3786,246 @@
               "payload"
             ]
           }
+        ]
+      },
+      "WindowObservation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "equity": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+            "maxLength": 96
+          },
+          "return_fraction": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+            "maxLength": 96
+          },
+          "drawdown_fraction": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+            "maxLength": 96
+          },
+          "accepted_position": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+            "maxLength": 96
+          },
+          "signal_target": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "candle": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "open": {
+                    "type": "string",
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                    "maxLength": 96
+                  },
+                  "high": {
+                    "type": "string",
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                    "maxLength": 96
+                  },
+                  "low": {
+                    "type": "string",
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                    "maxLength": 96
+                  },
+                  "close": {
+                    "type": "string",
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                    "maxLength": 96
+                  },
+                  "volume": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "open",
+                  "high",
+                  "low",
+                  "close",
+                  "volume"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fee": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "funding": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "turnover": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "active_stop": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "active_take_profit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "active_level_availability": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "policy_id": {
+                "const": "POSITION_BOUND_POSITIVE_LEVEL_V1"
+              },
+              "origin": {
+                "const": "PORTAL_NORMALIZED"
+              },
+              "source_ref": {
+                "const": "RETAINED_WINDOW_OBSERVATION_PAYLOAD"
+              },
+              "active_stop": {
+                "$ref": "#/components/schemas/ActiveProtectionLevel"
+              },
+              "active_take_profit": {
+                "$ref": "#/components/schemas/ActiveProtectionLevel"
+              }
+            },
+            "required": [
+              "policy_id",
+              "origin",
+              "source_ref",
+              "active_stop",
+              "active_take_profit"
+            ]
+          }
+        },
+        "required": [
+          "equity",
+          "return_fraction",
+          "drawdown_fraction",
+          "accepted_position",
+          "signal_target",
+          "candle",
+          "fee",
+          "funding",
+          "turnover",
+          "active_stop",
+          "active_take_profit",
+          "active_level_availability"
+        ],
+        "description": "Public read projection only. active_stop and active_take_profit are null when flat or without a positive source level. active_level_availability records each typed reason and the original exact source_value. revision remains the immutable retained-source identity, not a hash of this normalized DTO. No normalization of journal/order-intent prices."
+      },
+      "ActiveProtectionLevel": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "AVAILABLE",
+              "NOT_PUBLISHED",
+              "NOT_APPLICABLE"
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "POSITION_FLAT",
+                  "SOURCE_FIELD_NOT_PUBLISHED",
+                  "ENGINE_ACTIVE_LEVEL_NOT_SET",
+                  "SOURCE_ACTIVE_LEVEL_NON_POSITIVE"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "state",
+          "reason_code",
+          "source_value"
         ]
       },
       "WindowExecutionPage": {

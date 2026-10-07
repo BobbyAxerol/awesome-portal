@@ -8,6 +8,7 @@ import {sha256ResearchJson} from "../src/research/preflight.service";
 import {replayNavigation,replayBoundIdentity} from "../src/research/replay-navigation";
 import {ReplayNavigationSchema} from "../src/research/replay-navigation.contract";
 import {openApiValidator} from "./research-rf05-openapi";
+import {normalizeWindowActiveLevels} from "../src/research/window-execution-levels";
 
 const scope={workspaceId:"window-workspace",actorUserId:"window-user"},runId="rrun_"+"a".repeat(32);
 const config={FEATURE_RESEARCH_REPLAY:"true",FEATURE_RESEARCH_COMPARE:"true",QUERY_CURSOR_ACTIVE_KEY_ID:"k1",
@@ -41,7 +42,7 @@ describe("WEX per-window source contracts and authority",()=>{
     const h=harness(),first=await h.service.read(scope,runId,{window:"HOLDOUT",limit:200},"OBSERVATION");
     expect(first.rows).toHaveLength(200);expect(first.next_cursor).toBeTruthy();
     const last=await h.service.read(scope,runId,{window:"HOLDOUT",limit:200,cursor:first.next_cursor},"OBSERVATION");
-    expect(last.rows).toEqual(h.rows.slice(200));expect(last.next_cursor).toBeNull();
+    expect(last.rows).toEqual(h.rows.slice(200).map(r=>normalizeWindowActiveLevels(r as any)));expect(last.next_cursor).toBeNull();
     for(const [s,q]of [[{...scope,actorUserId:"other"},{window:"HOLDOUT",limit:200}],
       [scope,{window:"IS",limit:200}],[scope,{window:"HOLDOUT",limit:1}],
       [scope,{window:"HOLDOUT",limit:200,at_utc_ms:1700000000000}]] as const)
@@ -58,6 +59,16 @@ describe("WEX per-window source contracts and authority",()=>{
     for(const q of [{workspace_id:"foreign"},{limit:201},{table:"fills"},{window:"HOLDOUT",record_kind:"ORDER"}])
       await expect(service.read(scope,runId,q,"OBSERVATION")).rejects.toMatchObject({status:400});
     expect(page).toHaveBeenCalledTimes(2);
+  });
+  it("normalizes historical sentinels on the named read without changing source revision or repository rows",async()=>{
+    const h=harness();
+    h.rows[0]!.payload.active_stop="0" as any;h.rows[0]!.payload.active_take_profit="0" as any;
+    const digest=sha256ResearchJson(h.rows),page=await h.service.read(scope,runId,{window:"HOLDOUT",limit:1},"OBSERVATION");
+    expect(page.revision).toBe(h.state.revision);
+    expect(page.rows[0]).toMatchObject({payload:{active_stop:null,active_take_profit:null,
+      active_level_availability:{active_stop:{state:"NOT_APPLICABLE",reason_code:"POSITION_FLAT",source_value:"0"}}}});
+    openApiValidator("research-window-execution.openapi.json","WindowExecutionPage").assert(page);
+    expect(sha256ResearchJson(h.rows)).toBe(digest);
   });
   it("requires exact ingress identity, byte/digest and contiguous row custody",async()=>{
     const rows=fixture.rows.map((r:any)=>({...r,source_ordinal:0}));

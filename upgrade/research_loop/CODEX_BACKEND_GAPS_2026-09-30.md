@@ -2808,3 +2808,23 @@ Final normal hook passed: published contracts312/312; Control API2388 PASS,
 3 pre-existing SKIP, build and PostgreSQL restore drill PASS. No engine rerun
 for test-harness fixes. Rebase preserves Claude's BR-S02-18 request above and
 all concurrent frontend/AI Native documentation; no remote push or release.
+
+### §45 — BR-S02-19: active SL/TP absence — Bobby approved, 2026-10-07
+
+**DELIVERED_SOURCE / focused tests accepted; preview consumer rebuild belongs
+to Claude.** Accepted WEX finding: Bracket V4 publishes source `"0"` on 115
+flat bars. The named observation BFF now normalizes inactive levels to null
+with required typed `active_level_availability`; 53 open bars keep their exact
+prices. Source sentinel retained as `source_value`, never a plot value.
+
+Public `WindowObservation` / `ActiveProtectionLevel` are generated from closed
+Zod. Original ingress/custody schemas, source rows, digests, seals, engine,
+order-intent DTOs and frontend bytes remain unchanged. Source companion
+revision is explicit; observation cursors also bind the new policy. No new
+profile, migration, child, runtime rollout, remote push or release.
+
+Control21/21 (including accepted-source receipt reuse), contracts5/5,
+Control build; normal grouped hook is the commit gate. Reuse real Bracket
+receipt, no engine rerun. Claude rebuilds preview then verifies typed null
+and exact levels before the 73-cell matrix. Other open FE gates are not
+silently closed. [Contract, example, proof and precise consumer handoff](./evidence/P17/BR_S02_19_ACTIVE_LEVEL_ABSENCE_2026-10-07.md).

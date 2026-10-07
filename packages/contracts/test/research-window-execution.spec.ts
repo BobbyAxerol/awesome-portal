@@ -51,4 +51,23 @@ describe("completed-window and native execution public contract", () => {
     for (const type of ["WindowAnalytics", "WindowDescriptor", "WindowExecutionPage", "NativeExecutionRecord", "WindowCompare"])
       expect(generated).toContain(type);
   });
+  it("publishes position-bound typed absence while keeping exact source sentinel disclosure separate", () => {
+    const page = JSON.parse(readFileSync(join(root, "fixtures/research-window-execution.active-levels.synthetic.valid.json"), "utf8"));
+    const validate = validator();
+    expect(validate(page), JSON.stringify(validate.errors)).toBe(true);
+    expect(page.rows[0].payload.active_stop).toBeNull();
+    expect(page.rows[0].payload.active_level_availability.active_stop).toEqual({
+      state: "NOT_APPLICABLE", reason_code: "POSITION_FLAT", source_value: "0",
+    });
+    expect(page.rows[1].payload.active_stop).toBe("62730.8577");
+    const invalid = structuredClone(page);
+    invalid.rows[0].payload.active_level_availability.active_stop.reason_code = "GUESSED";
+    expect(validate(invalid)).toBe(false);
+    const undisclosed = structuredClone(page);
+    delete undisclosed.rows[0].payload.active_level_availability;
+    expect(validate(undisclosed)).toBe(false);
+    const generated = readFileSync(join(root, "generated/research-window-execution.d.ts"), "utf8");
+    for (const name of ["WindowObservation", "ActiveProtectionLevel", "POSITION_FLAT", "ENGINE_ACTIVE_LEVEL_NOT_SET"])
+      expect(generated).toContain(name);
+  });
 });

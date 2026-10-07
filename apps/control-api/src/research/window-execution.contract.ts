@@ -76,11 +76,43 @@ export const NativeExecutionRecordSchema=z.object({record_kind:z.enum(["ORDER","
 const Observation=z.object({equity:Decimal,return_fraction:Decimal,drawdown_fraction:Decimal,accepted_position:Decimal,
   signal_target:Decimal.nullable(),candle:z.object({open:Decimal,high:Decimal,low:Decimal,close:Decimal,volume:Decimal.nullable()}).strict().nullable(),
   fee:Decimal.nullable(),funding:Decimal.nullable(),turnover:Decimal.nullable(),active_stop:Decimal.nullable(),active_take_profit:Decimal.nullable()}).strict();
+// The retained/ingress shape above is immutable source custody. Only public
+// reads normalize the engine's flat/zero sentinels; preserve their exact bytes
+// in source_value so the source revision is not misrepresented as a DTO hash.
+export const ACTIVE_LEVEL_POLICY="POSITION_BOUND_POSITIVE_LEVEL_V1" as const;
+const zero=(v:string)=>/^-?0(?:\.0+)?$/.test(v);
+const positive=(v:string)=>!v.startsWith("-")&&!zero(v);
+export const ActiveProtectionLevelSchema=z.object({
+  state:z.enum(["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]),
+  reason_code:z.enum(["POSITION_FLAT","SOURCE_FIELD_NOT_PUBLISHED","ENGINE_ACTIVE_LEVEL_NOT_SET","SOURCE_ACTIVE_LEVEL_NON_POSITIVE"]).nullable(),
+  source_value:Decimal.nullable(),
+}).strict().refine(v=>(v.state==="AVAILABLE")===(v.reason_code===null),"Active-level availability requires a consistent reason");
+export const WindowObservationSchema=Observation.extend({
+  active_level_availability:z.object({policy_id:z.literal(ACTIVE_LEVEL_POLICY),origin:z.literal("PORTAL_NORMALIZED"),
+    source_ref:z.literal("RETAINED_WINDOW_OBSERVATION_PAYLOAD"),
+    active_stop:ActiveProtectionLevelSchema,active_take_profit:ActiveProtectionLevelSchema}).strict(),
+}).superRefine((v,c)=>{
+  for(const key of ["active_stop","active_take_profit"] as const){
+    const fact=v.active_level_availability[key],source=fact.source_value;
+    const [state,reason,value]=zero(v.accepted_position)
+      ?["NOT_APPLICABLE","POSITION_FLAT",null]
+      :source===null?["NOT_PUBLISHED","SOURCE_FIELD_NOT_PUBLISHED",null]
+      :zero(source)?["NOT_APPLICABLE","ENGINE_ACTIVE_LEVEL_NOT_SET",null]
+      :!positive(source)?["NOT_PUBLISHED","SOURCE_ACTIVE_LEVEL_NON_POSITIVE",null]
+      :["AVAILABLE",null,source];
+    if(fact.state!==state||fact.reason_code!==reason||v[key]!==value)
+      c.addIssue({code:z.ZodIssueCode.custom,path:[key],message:"Active-level value must match the position-bound source disclosure"});
+  }
+});
 const Envelope={source_ordinal:Count,window:WindowKindSchema,fold_id:Id.nullable(),at_utc_ms:Ms.nullable()};
 export const WindowExecutionRowSchema=z.discriminatedUnion("kind",[
   z.object({...Envelope,kind:z.literal("OBSERVATION"),at_utc_ms:Ms,payload:Observation}).strict(),
   z.object({...Envelope,kind:z.literal("ANALYTICS"),at_utc_ms:z.null(),payload:WindowAnalyticsSchema}).strict(),
   z.object({...Envelope,kind:z.literal("EXECUTION"),at_utc_ms:Ms,payload:NativeExecutionRecordSchema}).strict(),
+]);
+export const WindowExecutionReadRowSchema=z.discriminatedUnion("kind",[
+  z.object({...Envelope,kind:z.literal("OBSERVATION"),at_utc_ms:Ms,payload:WindowObservationSchema}).strict(),
+  WindowExecutionRowSchema.options[1],WindowExecutionRowSchema.options[2],
 ]);
 export const WindowDescriptorSchema=z.object({window:WindowKindSchema,fold_id:Id.nullable(),availability:Availability,
   start_utc_ms:Ms.nullable(),end_exclusive_utc_ms:Ms.nullable(),observation_count:Count.nullable(),
@@ -115,7 +147,7 @@ export const WindowExecutionQuerySchema=z.object({workspace_id:Id.optional(),win
 export const WindowExecutionPageSchema=z.object({schema_version:z.literal("research.window-execution-page.v1"),run_id:Id,
   availability:Availability,revision:Digest.nullable(),window:WindowKindSchema,fold_id:Id.nullable(),
   descriptor:WindowDescriptorSchema.nullable(),counts:z.object({matching:Count.nullable(),returned:Count.max(200)}).strict(),
-  rows:z.array(WindowExecutionRowSchema).max(200),next_cursor:z.string().max(4096).nullable(),
+  rows:z.array(WindowExecutionReadRowSchema).max(200),next_cursor:z.string().max(4096).nullable(),
   authority:z.literal("COMPLETED_RETAINED_ACCOUNT_AND_ENGINE_AUDIT_NOT_BROKER_HISTORY")}).strict()
   .refine(v=>v.counts.returned===v.rows.length&&v.rows.every(r=>r.window===v.window&&r.fold_id===v.fold_id)
     &&(v.availability.state==="AVAILABLE"||v.rows.length===0&&v.next_cursor===null),"Page scope/availability mismatch");

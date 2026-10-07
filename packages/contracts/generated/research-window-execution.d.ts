@@ -604,25 +604,7 @@ export interface components {
             at_utc_ms: number;
             /** @constant */
             kind: "OBSERVATION";
-            payload: {
-                equity: string;
-                return_fraction: string;
-                drawdown_fraction: string;
-                accepted_position: string;
-                signal_target: string | null;
-                candle: {
-                    open: string;
-                    high: string;
-                    low: string;
-                    close: string;
-                    volume: string | null;
-                } | null;
-                fee: string | null;
-                funding: string | null;
-                turnover: string | null;
-                active_stop: string | null;
-                active_take_profit: string | null;
-            };
+            payload: components["schemas"]["WindowObservation"];
         } | {
             source_ordinal: number;
             /** @enum {string} */
@@ -641,6 +623,42 @@ export interface components {
             /** @constant */
             kind: "EXECUTION";
             payload: components["schemas"]["NativeExecutionRecord"];
+        };
+        /** @description Public read projection only. active_stop and active_take_profit are null when flat or without a positive source level. active_level_availability records each typed reason and the original exact source_value. revision remains the immutable retained-source identity, not a hash of this normalized DTO. No normalization of journal/order-intent prices. */
+        WindowObservation: {
+            equity: string;
+            return_fraction: string;
+            drawdown_fraction: string;
+            accepted_position: string;
+            signal_target: string | null;
+            candle: {
+                open: string;
+                high: string;
+                low: string;
+                close: string;
+                volume: string | null;
+            } | null;
+            fee: string | null;
+            funding: string | null;
+            turnover: string | null;
+            active_stop: string | null;
+            active_take_profit: string | null;
+            active_level_availability: {
+                /** @constant */
+                policy_id: "POSITION_BOUND_POSITIVE_LEVEL_V1";
+                /** @constant */
+                origin: "PORTAL_NORMALIZED";
+                /** @constant */
+                source_ref: "RETAINED_WINDOW_OBSERVATION_PAYLOAD";
+                active_stop: components["schemas"]["ActiveProtectionLevel"];
+                active_take_profit: components["schemas"]["ActiveProtectionLevel"];
+            };
+        };
+        ActiveProtectionLevel: {
+            /** @enum {string} */
+            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+            reason_code: ("POSITION_FLAT" | "SOURCE_FIELD_NOT_PUBLISHED" | "ENGINE_ACTIVE_LEVEL_NOT_SET" | "SOURCE_ACTIVE_LEVEL_NON_POSITIVE") | null;
+            source_value: string | null;
         };
         WindowExecutionPage: {
             /** @constant */

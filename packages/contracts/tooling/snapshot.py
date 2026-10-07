@@ -23,6 +23,7 @@ TRACKED = (
     "openapi/research-window-execution.openapi.json",
     "generated/research-window-execution.d.ts",
     "fixtures/research-window-execution.holdout.synthetic.valid.json",
+    "fixtures/research-window-execution.active-levels.synthetic.valid.json",
     "tooling/generate-research-window-execution.mjs",
     "tooling/generate-research-native-bracket-v4.mjs",
     "fixtures/research-current-source.window-views.valid.json",

@@ -38,10 +38,14 @@ export function jsonSchema(s){
 const ref=n=>({$ref:`#/components/schemas/${n}`}),nullable=v=>({anyOf:[v,{type:'null'}]});
 export function windowExecutionOpenApi(){
   const schemas={WindowAnalytics:jsonSchema(schema.WindowAnalyticsSchema),NativeExecutionRecord:jsonSchema(schema.NativeExecutionRecordSchema),
-    WindowDescriptor:jsonSchema(schema.WindowDescriptorSchema),WindowExecutionRow:jsonSchema(schema.WindowExecutionRowSchema),
+    WindowDescriptor:jsonSchema(schema.WindowDescriptorSchema),WindowExecutionRow:jsonSchema(schema.WindowExecutionReadRowSchema),
+    WindowObservation:jsonSchema(schema.WindowObservationSchema),ActiveProtectionLevel:jsonSchema(schema.ActiveProtectionLevelSchema),
     WindowExecutionPage:jsonSchema(schema.WindowExecutionPageSchema)};
   // Reuse definitions rather than allowing independently drifting UI types.
   schemas.WindowExecutionPage.properties.rows.items=ref('WindowExecutionRow');
+  schemas.WindowExecutionRow.anyOf[0].properties.payload=ref('WindowObservation');
+  schemas.WindowObservation.properties.active_level_availability.properties.active_stop=ref('ActiveProtectionLevel');
+  schemas.WindowObservation.properties.active_level_availability.properties.active_take_profit=ref('ActiveProtectionLevel');
   schemas.WindowExecutionRow.anyOf[1].properties.payload=ref('WindowAnalytics');
   schemas.WindowExecutionRow.anyOf[2].properties.payload=ref('NativeExecutionRecord');
   schemas.WindowCompare={type:'object',additionalProperties:false,required:['schema_version','window','fold_id','basis','alignment','runs','revision','correlation'],properties:{
@@ -62,7 +66,8 @@ export function windowExecutionOpenApi(){
     paths[`/api/v1/quantbt/runs/{runId}/${suffix}`]={get:{operationId,summary,parameters:[{name:'runId',in:'path',required:true,schema:{type:'string',pattern:'^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$'}},...filters],responses:responses('WindowExecutionPage')}};
   }
   paths['/api/v1/quantbt/windows/compare']={get:{operationId:'researchWindowCompareGetV1',summary:'Compare the same explicit window of two completed runs',parameters:[{name:'runs',in:'query',required:true,schema:{type:'string',pattern:'^rrun_[a-f0-9]{32},rrun_[a-f0-9]{32}$'}},...query.filter(q=>['workspace_id','window','fold_id'].includes(q.name))],responses:responses('WindowCompare')}};
-  return {openapi:'3.1.0',info:{title:'Research completed windows and native execution API',version:'1.0.0',description:'All-time descriptive analytics; WFO training folds remain separate and have no independent Holdout. Native source relation ordinals are not a global causal ordering. Null fields have explicit source absence; no inferred SL/TP/OCO or broker events.'},servers:[{url:'/'}],security:[{portalSession:[]}],paths,components:{securitySchemes:{portalSession:{type:'apiKey',in:'cookie',name:'portal_session'}},schemas}};
+  schemas.WindowObservation.description='Public read projection only. active_stop and active_take_profit are null when flat or without a positive source level. active_level_availability records each typed reason and the original exact source_value. revision remains the immutable retained-source identity, not a hash of this normalized DTO. No normalization of journal/order-intent prices.';
+  return {openapi:'3.1.0',info:{title:'Research completed windows and native execution API',version:'1.0.1',description:'All-time descriptive analytics; WFO training folds remain separate and have no independent Holdout. Native source relation ordinals are not a global causal ordering. Null fields have explicit source absence; no inferred SL/TP/OCO or broker events.'},servers:[{url:'/'}],security:[{portalSession:[]}],paths,components:{securitySchemes:{portalSession:{type:'apiKey',in:'cookie',name:'portal_session'}},schemas}};
 }
 if(process.argv[1]===fileURLToPath(import.meta.url)){
   const path=new URL('../openapi/research-window-execution.openapi.json',import.meta.url),bytes=JSON.stringify(windowExecutionOpenApi(),null,2)+'\n';

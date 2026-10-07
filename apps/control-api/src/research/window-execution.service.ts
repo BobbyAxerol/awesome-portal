@@ -8,7 +8,8 @@ import {ResearchReplayError} from "./replay.error";
 import {sha256ResearchJson} from "./preflight.service";
 import {ResearchWindowExecutionRepository} from "./window-execution.repository";
 import {WindowExecutionBatchSchema,WindowExecutionSealSchema,WindowExecutionQuerySchema,WindowExecutionPageSchema,
-  type WindowExecutionManifest,type WindowExecutionBatch,type WindowExecutionSeal,type WindowExecutionQuery} from "./window-execution.contract";
+  ACTIVE_LEVEL_POLICY,type WindowExecutionManifest,type WindowExecutionBatch,type WindowExecutionSeal,type WindowExecutionQuery} from "./window-execution.contract";
+import {normalizeWindowActiveLevels} from "./window-execution-levels";
 
 @Injectable()
 export class ResearchWindowExecutionService {
@@ -39,7 +40,8 @@ export class ResearchWindowExecutionService {
     const query={...parsed.data,...(kind==="ANALYTICS"?{limit:1}:{})};
     const resourceId=`window-execution:${kind}:${runId}`;
     const fingerprint=(revision:string|null)=>sha256ResearchJson({workspace:scope.workspaceId,actor:scope.actorUserId,runId,kind,revision,
-      window:query.window,fold_id:query.fold_id??null,limit:query.limit,at:query.at_utc_ms??null,record:query.record_kind??null});
+      window:query.window,fold_id:query.fold_id??null,limit:query.limit,at:query.at_utc_ms??null,record:query.record_kind??null,
+      ...(kind==="OBSERVATION"?{active_level_policy:ACTIVE_LEVEL_POLICY}:{})});
     const result=await this.repo.page(scope,runId,query,kind,revision=>{
       if(!query.cursor)return undefined;
       try{
@@ -54,7 +56,7 @@ export class ResearchWindowExecutionService {
       journal&&Object.values(journal).some(v=>v.state==="AVAILABLE")?{state:"AVAILABLE" as const,reason_code:null}:
       {state:"NOT_APPLICABLE" as const,reason_code:"SOURCE_ROUTE_HAS_NO_NATIVE_EXECUTION_JOURNAL"};
     const state=journalState?.state??descriptor?.availability.state??"NOT_PUBLISHED";
-    let rows=result.rows,next=null as string|null;
+    let rows=result.rows.map(normalizeWindowActiveLevels),next=null as string|null;
     if(result.hasMore)next=this.cursors.encode({resource_id:resourceId,workspace_id:scope.workspaceId,direction:"after",query_fingerprint:fingerprint(result.revision),boundary:[rows.at(-1)!.source_ordinal]});
     // Variable byte truncation uses the SAME source ordinal cursor; no hidden
     // skipped rows. The first oversized DTO fails closed instead of lying empty.

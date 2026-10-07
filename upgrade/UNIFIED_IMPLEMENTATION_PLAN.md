@@ -8351,3 +8351,14 @@ awaits Claude consumer/visual acceptance. One grouped normal hook before
 ff-only shared landing; no remote/main/dev/production/release promotion.
 [Backend receipt](./research_loop/evidence/P17/COMPLETE_WINDOW_EXECUTION_BACKEND_2026-10-07.md) ·
 [Claude prompt and exact contract handoff](./research_loop/evidence/P17/COMPLETE_WINDOW_EXECUTION_CLAUDE_HANDOFF_2026-10-07.md).
+
+**BR-S02-19 / WEX active protection absence — DELIVERED_SOURCE, 2026-10-07:**
+Codex normalizes public SL/TP levels to null while flat/unset, with required
+typed availability and exact raw `source_value` provenance. Genuine open
+position levels retain original decimals. Immutable source/P05/seal/schema
+custody and Claude UI stay unchanged; no engine rerun, migration or runtime
+rollout. Focused Control21/21 and contracts5/5, build; normal commit hook then
+ff-only shared landing. Claude takes the clean preview rebuild and real
+consumer/matrix receipt; pending Holdout, Limit/OCO, S06 paging and P24 gates
+are not counted as complete by this mapper fix.
+[BR-S02-19 receipt and Claude handoff](./research_loop/evidence/P17/BR_S02_19_ACTIVE_LEVEL_ABSENCE_2026-10-07.md).
