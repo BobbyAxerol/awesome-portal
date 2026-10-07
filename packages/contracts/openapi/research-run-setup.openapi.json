@@ -814,6 +814,61 @@
           },
           "recipe": {
             "$ref": "#/components/schemas/RecipePresentation"
+          },
+          "early_stopping_policy": {
+            "enum": [
+              "FORBIDDEN",
+              "OPTIONAL"
+            ]
+          },
+          "early_stopping_guidance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "scope",
+              "minimum",
+              "maximum_basis",
+              "suggested_range_ratio",
+              "suggested_ratio",
+              "suggestion_is_default",
+              "semantics"
+            ],
+            "properties": {
+              "scope": {
+                "const": "PER_STUDY"
+              },
+              "minimum": {
+                "const": 1
+              },
+              "maximum_basis": {
+                "const": "REQUESTED_TRIALS_PER_STUDY"
+              },
+              "suggested_range_ratio": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "prefixItems": [
+                  {
+                    "const": 0.5
+                  },
+                  {
+                    "const": 0.75
+                  }
+                ],
+                "items": false
+              },
+              "suggested_ratio": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1
+              },
+              "suggestion_is_default": {
+                "const": false
+              },
+              "semantics": {
+                "const": "CONSECUTIVE_COMPLETED_TRIALS_WITHOUT_OBJECTIVE_IMPROVEMENT"
+              }
+            }
           }
         },
         "allOf": [

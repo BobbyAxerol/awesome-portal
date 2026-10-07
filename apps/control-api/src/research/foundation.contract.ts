@@ -449,7 +449,7 @@ export interface ResearchPortalAdmission {
     window_modes?: string[];
     seed_policy?: "LOCKED" | "FORBIDDEN";
     trial_default?: number;
-    early_stopping_policy?: "FORBIDDEN";
+    early_stopping_policy?: "FORBIDDEN" | "OPTIONAL";
     inner_validation?: "NOT_ADMITTED_GLOBAL_RETENTION_ONLY" | "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY";
     trial_scope?: "PER_OUTER_FOLD_STUDY";
     max_total_trials?: number;

@@ -51,6 +51,7 @@ function amend(original, file) {
       type: "object", required: ["profile_id"], properties: { profile_id: { const: profileId } },
     }, minContains: 0, maxContains: 1 }));
     const p = profiles.items.properties;
+    p.early_stopping_policy = { enum: ["FORBIDDEN", "OPTIONAL"] };
     addEnum(p.reason, "RECIPE_NOT_QUALIFIED");
     p.profile_id.enum = [...admissionProfileIds];
     p.inner_validation = { enum: ["NOT_ADMITTED_GLOBAL_RETENTION_ONLY", "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY"] };

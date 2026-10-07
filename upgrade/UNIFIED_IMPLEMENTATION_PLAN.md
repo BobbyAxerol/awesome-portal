@@ -8309,3 +8309,25 @@ seal protection preserved.0 engine reruns/product writes, immutable source
 and Report equality, old/new ETag200/304. Preview Control/Web only, worker and
 all data untouched. No remote/main/dev/production or P24 GO implied.
 [Implementation, tests, exact fields, runtime identities and cleanup receipt](./research_loop/evidence/P13/OVERVIEW_RETAINED_WINDOWS_2026-10-07.md).
+
+**S02 optional early stopping, 2026-10-07 — IMPLEMENTING / Bobby approved:**
+Codex owns setup/preflight/admission/producer/child/retention wiring plus
+minimal existing-field hint/validation, no Claude visual redesign. Optional
+integer patience per study; blank stays null, recommended½…¾ trials with⅔
+suggestion only. All-pass data preflight must include the distinct execution
+admission verdict. Retain actual early-stopped studies, never padded trials;
+null execution/history stays unchanged. Required focused tests and real
+Three/WFO preview receipts precede closeout, one grouped hook. No remote
+push/main/dev/production change. [Exact scope and tests, backend queue §43](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#43--optional-per-study-early-stopping--bobby-approved-2026-10-07).
+
+**S02 optional early stopping — REAL_PREVIEW_ACCEPTED:** generated OPTIONAL
+per-study policy and display-only200–300/267 suggestion for400 trials; blank
+stays null. Actual patience reaches pinned QuantBT1.1.1. P08 exposes the
+separate execution-admission gate, and invalid values point to the exact
+field. P05/seal/read/Progress preserve actual counts under immutable P08
+authority, not padded studies. Four ordinary real runs completed/retained:
+Three390/400, global5/20, per-fold4+7+6/20 each, blank3/3; final real readback
+and S06 browser0 errors. Minimal existing-field binding only, no design or
+baseline change. Focused tests/build/typecheck pass; one normal grouped hook
+for landing. Research preview only; no remote/main/dev/production or P24 GO.
+[Detailed receipt and Claude consumer rules](./research_loop/evidence/P10/OPTIONAL_EARLY_STOPPING_2026-10-07.md).

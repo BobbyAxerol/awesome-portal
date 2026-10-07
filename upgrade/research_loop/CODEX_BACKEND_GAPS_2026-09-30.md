@@ -2677,3 +2677,57 @@ Corrected-wire acceptance requires the refreshed real receipt under private
 `long-range-delta-20261007/overview-public-ref/` before shared-branch landing;
 the already-proven retained source facts remain unchanged. Its new ETag must
 invalidate the earlier diagnostic DTO as well as the original response.
+
+### §43 — Optional per-study early stopping — Bobby approved, 2026-10-07
+
+**IMPLEMENTING**, not accepted yet. Actual owner preflight at09:37UTC has
+15 data/structure gates PASS but `early_stopping:200` is rejected by P10;
+setup omits this policy and the admission refusal has an empty field path.
+Bobby now approves optional engine early stopping, not bypassing admission.
+
+- Empty input remains JSON null: unchanged execution and historical bytes.
+  Optimizer recipes accept an integer patience1…requested trials **per study**;
+  fixed/native no-search recipes remain NOT_APPLICABLE/forbidden.
+- Typed setup exposes optional policy, no-improvement semantics, trial-bound
+  limits and display-only suggestion:½…¾ of the declared study trials,
+  recommended rounded⅔ (400 →200…300, recommended267). Never silently fill,
+  modify seed/optimizer defaults, or call this an optimal statistical choice.
+- One TS/Python predicate validates Conditions, P08/P10, producer and confined
+  child. The actual value travels through the immutable request/child receipt
+  into QuantBT1.1.1; no hardcoded None, callback simulation or source rework.
+- Early-stopped studies retain actual trials and selection without fabricating
+  missing trials; declared trials stay an upper budget. Preserve exact-count
+  checking when null, workspace/RBAC/fencing, source/recipe/seal digests and
+  total caps. Per-fold patience resets in each engine-owned study.
+- Expose execution admission as a preflight gate with accurate `field_path`;
+  data gates passing alone must not look like permission to create a run.
+- Preserve Claude composition/styles; only bind optional policy/hint and
+  validation. Focused schema/predicate/worker/count/FE tests, real preview
+  Three Window and WFO receipts (both optional-on and unchanged-null paths),
+  then one grouped normal commit hook and exact preview rebuild. No remote
+  push, dev/main/production rollout, historical seal modification or prune.
+
+Closeout receipt and delivered contract details will be recorded here and
+in Unified; never mark PRODUCT_ACCEPTED from a unit fixture alone.
+
+Bounded-build capacity decision:107,604,180,992/665,811,062,784 bytes
+available (~16.2%),12.6GiB available RAM. Build Control/API/Web sequentially
+from this lane, cached pinned wheel/HMD-reader only; no dependency upgrade,
+Roadmap/DB/NATS rebuild or broad prune. Preserve current/rollback images,
+business/source/artifact volumes and any active job. API/worker rollout must
+wait for admitted in-flight work to finish; no cancellation for deployment.
+
+**§43 delivery — REAL_PREVIEW_ACCEPTED:** optional patience is wired through
+setup/Conditions/P08/P10/producer/QuantBT child/P05 and typed screen readers.
+Blank/null remains unchanged; fixed/native no-search recipes stay forbidden.
+400 trials suggests200–300/267, never an automatic default. Corrected three
+real integration faults: obsolete producer3-trial cap, strict declared-count
+seal checking after stopping, and uniform independent-study counts in P11.
+Pinned P08 authority remains mandatory for shorter retained populations.
+Real Three400/patience200 retained390; global20/3 retained5; per-fold20/3
+retained4+7+6; null3 retained3. All four COMPLETED/READY; final browser/API
+readback0 errors, no engine reruns. Invalid401/400 returns409 with exact
+early-stopping field path. Existing design preserved, generated contracts and
+focused tests pass; normal grouped hook remains the commit landing gate.
+Preview only; no remote/main/dev/production/migration/old-seal change.
+[Exact receipt, source windows, runtime images, hashes and Claude handoff](./evidence/P10/OPTIONAL_EARLY_STOPPING_2026-10-07.md).

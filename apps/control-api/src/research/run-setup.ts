@@ -1,4 +1,5 @@
 import type { ControlApiConfig } from "../config";
+import { EARLY_STOPPING_GUIDANCE, earlyStoppingPolicy } from "./early-stopping";
 import type { PortalUser } from "../domain";
 import type { ResearchMetadataRepository } from "./repository";
 import type { ResearchPortalAdmission, ResearchEngineAtlasPublic } from "./foundation.contract";
@@ -106,6 +107,7 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
       timeframe: row.timeframe, trial_count: row.trial_count, trial_default: row.trial_default ?? row.trial_count.min,
       trial_scope: row.trial_scope ?? "GLOBAL_STUDY", max_total_trials: row.max_total_trials ?? null,
       seed_policy: row.seed_policy ?? "LOCKED", random_seed: row.random_seed,
+      early_stopping_policy: earlyStoppingPolicy(row), early_stopping_guidance: EARLY_STOPPING_GUIDANCE,
       max_span_days: row.max_span_days, fold_bounds: row.fold_bounds,
       frequencies: row.frequencies ?? (row.frequency ? [row.frequency] : []),
       window_modes: (row.window_modes ?? (row.window_mode ? [row.window_mode] : [])) as RunSetupProfile["window_modes"],
@@ -133,6 +135,7 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
       requested_spec_versions: ["research.requested-spec.v1"], timeframe: context.timeframe,
       trial_count: { min: 1, max: 1 }, trial_default: 1, trial_scope: "GLOBAL_STUDY", max_total_trials: null,
       seed_policy: declaration.determinism.seed_required ? "REQUIRED" : "OPTIONAL", random_seed: null,
+      early_stopping_policy: "FORBIDDEN", early_stopping_guidance: EARLY_STOPPING_GUIDANCE,
       max_span_days: null, fold_bounds: null, frequencies: [], window_modes: [], parameter_policy: "DECLARED_PINS_ONLY",
       allowed_pin_names: Object.keys(declaration.parameter_space),
       inner_validation: "NOT_APPLICABLE", inner_constraints: null,

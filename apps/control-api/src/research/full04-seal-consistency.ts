@@ -4,9 +4,10 @@ import {CurrentSourceFoldPayloadSchema,CurrentSourceSummarySchema} from "./curre
 import {ResearchCurrentSourceError} from "./current-source.error";
 import {sha256ResearchJson} from "./preflight.service";
 import {currentSourceRetainedMethod,currentSourceRetainedRecipe,currentSourceStudyTrialCount} from "./current-source-profile";
+import {retainedStudyTrialCountAdmitted} from "./early-stopping";
 
 type Row={tableKind:string;sourceOrdinal:number;sourceId:string;payload:Record<string,unknown>};
-export function assertFull04SealConsistency(input:{profileId:string;sourceAdapterId:string;tableRows:Record<string,number>;summary:Record<string,unknown>},rows:Row[]):void {
+export function assertFull04SealConsistency(input:{profileId:string;sourceAdapterId:string;tableRows:Record<string,number>;summary:Record<string,unknown>},rows:Row[],requestedSpec?:Readonly<Record<string,unknown>>):void {
   const fail=():never=>{throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_CONFLICT","Optimizer source facts do not match the admitted mode, selection or population.",409);};
   const parsed=CurrentSourceSummarySchema.safeParse(input.summary);
   const recipe=currentSourceRetainedRecipe(input.profileId,input.sourceAdapterId);
@@ -45,7 +46,7 @@ export function assertFull04SealConsistency(input:{profileId:string;sourceAdapte
       || fold.data.causal_selection || fold.data.fold_selection || fold.data.mode4_selection)return fail();
   }
   if(method!=="CAUSAL_IS_ONLY")return;
-  if(folds.length<2 || folds.length>16 || trials.length!==folds.length*configuredTrials || disclosure.selection_target.kind!=="STUDY_LOCAL_TRIAL"
+  if(folds.length<2 || folds.length>16 || !retainedStudyTrialCountAdmitted(trials.length,configuredTrials,requestedSpec,folds.length) || disclosure.selection_target.kind!=="STUDY_LOCAL_TRIAL"
     || summary.selection.scope!=="LAST_FOLD_DEPLOYMENT" || facts.search.n_studies!==folds.length)return fail();
   const studies=new Set<string>();
   for(const [ordinal,row] of folds.entries()){
@@ -58,7 +59,7 @@ export function assertFull04SealConsistency(input:{profileId:string;sourceAdapte
     studies.add(selection.study_id);
     const members=(source:Row[])=>source.filter(member=>(member.payload.trial_facts as {study_id?:string}|undefined)?.study_id===selection.study_id);
     const studyTrials=members(trials),studyCandidates=members(candidates);
-    if(studyTrials.length!==configuredTrials || selection.study_trial_rows!==configuredTrials
+    if(!retainedStudyTrialCountAdmitted(studyTrials.length,configuredTrials,requestedSpec) || selection.study_trial_rows!==studyTrials.length
       || studyCandidates.length!==selection.candidate_count || studyCandidates.length>configuredTrials
       || [...studyTrials,...studyCandidates].some(member=>{
         const scope=(member.payload.trial_facts as {fold_scope?:{kind:string;fold_id:string}}|undefined)?.fold_scope;

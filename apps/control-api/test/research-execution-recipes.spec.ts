@@ -51,7 +51,7 @@ describe("FULL-01 exact historical recipe authority",()=>{
     expect(executionRecipeActivationReason(executionRecipe(vn.profile_id),{FEATURE_RESEARCH_RUN_PRODUCER:"true",FEATURE_RESEARCH_VN_OBSERVED_PROFILE:"true"},
       {engine_release_id:"er_quantbt_111",verified:true,context_qualified:false})).toBe("SOURCE_PROFILE_UNQUALIFIED");
   });
-  it("matches 192 old Atlas admission results independently captured from git baseline 491eb066",()=>{
+  it("preserves 192 captured Atlas admissions except the approved optional-patience policy",()=>{
     const q={state:"AVAILABLE",reason_code:null,profile_id:vn.profile_id,profile_digest:VN_OBSERVED_FIXED_PROFILE_DIGEST,
       dataset_id:vn.dataset_id,symbol:vn.symbol,timeframe:vn.timeframe,source_timezone:vn.source_timezone,
       clock_basis:vn.clock_basis,index_revision:"a".repeat(64)};
@@ -63,9 +63,15 @@ describe("FULL-01 exact historical recipe authority",()=>{
       results.push(researchPortalAdmission(flags as never,{release_id,verified,vn_observed_daily_qualification:qualification} as never));
     }
     expect(results).toHaveLength(192);
-    expect(recipeDigest(results)).toBe("3c0dd1fa932ecbb773ead7f8632624451c7a13b973319c8bcf79797b2fb5bacc");
+    // Only this explicitly approved runtime overlay may differ from the
+    // independently captured baseline. Keep every other fact and wire order.
+    const historical=results.map(result=>({...result,profiles:result.profiles.map(profile=>{
+      expect(profile.early_stopping_policy).toBe(profile.trial_count.max>1?"OPTIONAL":"FORBIDDEN");
+      return {...profile,early_stopping_policy:"FORBIDDEN"};
+    })}));
+    expect(recipeDigest(historical)).toBe("3c0dd1fa932ecbb773ead7f8632624451c7a13b973319c8bcf79797b2fb5bacc");
     // Atlas ETags hash the wire JSON, so semantic equality alone misses key-order drift.
-    expect(createHash("sha256").update(JSON.stringify(results)).digest("hex"))
+    expect(createHash("sha256").update(JSON.stringify(historical)).digest("hex"))
       .toBe("3ec4a92d48d0acb80dc9c71530a580a5c024235b2cd0c2628d7a946daa63dec6");
   });
 });

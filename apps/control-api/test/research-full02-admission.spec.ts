@@ -21,6 +21,14 @@ async function facts(spec: ResearchRequestedSpec, config: Record<string, unknown
   return service.require(w1Admin, w1Scope, manifest.preflightToken, spec);
 }
 describe("FULL-02 exact new recipe predicates and owner qualification", () => {
+  it("admits optional patience on both study protocols and refuses overflow", async () => {
+    for(const [spec,id] of [[threeSpec(),three],[decaySpec(),decay]] as const){
+      spec.early_stopping=2;
+      await expect(facts(spec,flags(id))).resolves.toHaveProperty("allowed",true);
+      spec.early_stopping=4;
+      await expect(facts(spec,flags(id))).rejects.toThrow("Early stopping must be an integer");
+    }
+  });
   it.each([decay, three])("keeps qualified %s bounded and independently activation-gated", id => {
     const row = executionRecipe(id), ref = executionRecipeQualification(id);
     expect(recipeDigest(row.descriptor)).toBe(row.profile_digest);

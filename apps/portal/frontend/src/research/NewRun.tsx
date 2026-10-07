@@ -2482,6 +2482,11 @@ function OptimizationStep({
      read-only and says so. A value that is already there (a copied run) stays editable, and is noted below. */
   const seedForbidden = profile?.enabled === true && profile.seed.state === "forbidden" && draft.randomSeed.trim() === "";
   const earlyStopForbidden = profile?.enabled === true && profile.earlyStopping === "forbidden" && draft.earlyStopping.trim() === "";
+  const guidance = profile?.earlyStoppingGuidance;
+  const studyTrials = Number(draft.optunaTrials);
+  const stoppingSuggestion = profile?.earlyStopping === "optional" && guidance && Number.isSafeInteger(studyTrials) && studyTrials > 1
+    ? `Optional · suggested ${Math.max(1, Math.ceil(studyTrials * guidance.suggestedRangeRatio[0]))}–${Math.max(1, Math.floor(studyTrials * guidance.suggestedRangeRatio[1]))}; ≈${Math.max(1, Math.round(studyTrials * guidance.suggestedRatio))} per study. Blank = off; suggestion, not an optimum.`
+    : profile?.earlyStopping === "optional" ? "Optional · trials without improvement; blank = off" : "Trials without gain before stopping";
   const lockStyle = { background: "var(--paper-sunken)", cursor: "not-allowed" } as const;
   return (
     <Card title="Optimization">
@@ -2509,7 +2514,7 @@ function OptimizationStep({
             data-pinned-by={trialsLocked ? profile?.profileId : undefined}
           />
         </Field>
-        <Field label="Early stopping" hint={earlyStopForbidden ? `not admitted · ${profile?.profileId}` : "Trials without gain before stopping"}>
+        <Field label="Early stopping" hint={earlyStopForbidden ? `not admitted · ${profile?.profileId}` : stoppingSuggestion}>
           <input
             className={INPUT_CLASS}
             style={earlyStopForbidden ? { ...inputStyle(), ...lockStyle } : inputStyle(earlyStoppingInvalid(draft.earlyStopping))}

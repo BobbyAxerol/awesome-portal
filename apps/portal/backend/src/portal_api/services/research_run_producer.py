@@ -1071,6 +1071,7 @@ class ResearchRunProducerExecutor:
                 holdout_start_utc_ms=int(_utc_timestamp(windows["holdout"]["start"], label="holdout start").value // 1_000_000) if three_window else None,
                 execution_binding=full03_execution_binding(row) if row else None,
                 imported_source=imported_source,
+                early_stopping=research.requested_spec.get("early_stopping") if whatif is None else None,
             )
             progress("stage_completed", {"stage": "S2"})
             progress("stage_started", {"stage": "S3"})

@@ -74,6 +74,11 @@ profile.properties.account_model={const:'QUANTBT_PERCENT_EQUITY_V1'};
 profile.properties.account=ref('PercentEquityAccount');
 profile.properties.native_input=ref('NativeDeltaInput');
 profile.properties.recipe=ref('RecipePresentation');
+profile.properties.early_stopping_policy=en('FORBIDDEN','OPTIONAL');
+profile.properties.early_stopping_guidance=obj({scope:{const:'PER_STUDY'},minimum:{const:1},
+  maximum_basis:{const:'REQUESTED_TRIALS_PER_STUDY'},suggested_range_ratio:{type:'array',minItems:2,maxItems:2,prefixItems:[{const:0.5},{const:0.75}],items:false},
+  suggested_ratio:{type:'number',exclusiveMinimum:0,maximum:1},suggestion_is_default:{const:false},
+  semantics:{const:'CONSECUTIVE_COMPLETED_TRIALS_WITHOUT_OBJECTIVE_IMPROVEMENT'}});
 profile.dependentRequired={account_model:['account'],account:['account_model']};
 profile.allOf.push({if:{required:['account_model']},then:{properties:{execution_route:{const:'pct_equity'}}}});
 profile.allOf.push({if:{required:['execution_route'],properties:{execution_route:{const:'pct_equity'}}},
@@ -171,6 +176,16 @@ presented.presentation_revision="research.recipe-presentation.v1";
 presented.profiles[0].recipe={key:`three_window_fixed.${fixed.execution_route}.${fixed.protocol}.${fixed.optimization_mode}.${fixed.optimization_schedule}`,
   family:"THREE_WINDOW_FIXED",label:"Fixed Three Window",recommended_rank:0,scope:"DISPLAY_ORDER_NOT_OPTIMAL_SETUP_OR_AUTHORIZATION"};
 emit("fixtures/research-run-setup-options.presented.valid.json",presented);
+const stoppingFixture=structuredClone(presented);
+Object.assign(stoppingFixture.profiles[0],{profile_id:'p10.delta-three-window-optimized-1h.v2',
+  trial_count:{min:2,max:400},trial_default:3,random_seed:42,seed_policy:'LOCKED',
+  early_stopping_policy:'OPTIONAL',early_stopping_guidance:{scope:'PER_STUDY',minimum:1,
+    maximum_basis:'REQUESTED_TRIALS_PER_STUDY',suggested_range_ratio:[0.5,0.75],suggested_ratio:2/3,
+    suggestion_is_default:false,semantics:'CONSECUTIVE_COMPLETED_TRIALS_WITHOUT_OBJECTIVE_IMPROVEMENT'}});
+delete stoppingFixture.engine_options;
+delete stoppingFixture.profiles[0].budget;
+delete stoppingFixture.profiles[0].recipe;
+emit('fixtures/research-run-setup-options.early-stopping.valid.json',stoppingFixture);
 emit("fixtures/research-run-version-options.scalar.valid.json",{schema_version:"research.run-version-options.v1",
   scope:"VERSION_BINDING_NOT_DATASET_OR_RUN_AUTHORIZATION",context:{workspace_id:ctx.workspace_id,alpha_id:ctx.alpha_id,alpha_version_id:ctx.alpha_version_id},
   source_revision:"a".repeat(64),recipe_revision:"c".repeat(64),presentation_revision:"research.recipe-presentation.v1",

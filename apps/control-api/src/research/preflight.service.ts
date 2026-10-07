@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { earlyStoppingRefusal } from "./early-stopping";
 import { createHash } from "node:crypto";
 
 import { ControlApiConfig } from "../config";
@@ -87,6 +88,10 @@ export function sweptDimensionCount(
 
 /** P08 checks only immutable P07 declarations; preflight is not execution admission. */
 export function assertDeclaredOptimization(alpha: ResearchAlphaVersionDataContract, spec: ResearchRequestedSpec): void {
+  const stopping = earlyStoppingRefusal(spec, spec.optuna_trials > 1 ? "OPTIONAL" : "FORBIDDEN");
+  if (stopping) throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", stopping.message, 409, {
+    gate: stopping.reason_code, field_path: stopping.field_path,
+  });
   const refusal = declaredOptimizationRefusal(alpha, spec);
   if (refusal) throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", refusal.message, 409, {
     gate: "alpha_declaration", field_path: refusal.field_path,

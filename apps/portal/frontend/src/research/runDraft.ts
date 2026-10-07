@@ -487,6 +487,8 @@ export function validateOptimization(draft: RunDraft, limits: DraftConstraints):
   }
   /* A typed value the serializer cannot read as a number was sent as null — a silent drop. */
   if (earlyStoppingInvalid(draft.earlyStopping)) return "Early stopping must be a whole number of at least 1.";
+  if (asNumber(draft.earlyStopping) !== null && Number(draft.earlyStopping) > trials)
+    return "Early stopping cannot exceed the declared trials per study.";
   if (randomSeedInvalid(draft.randomSeed)) return "Random seed must be a whole number.";
   return null;
 }

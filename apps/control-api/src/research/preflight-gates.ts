@@ -13,7 +13,7 @@
 
 import type { ResearchPreflightPrivateResponse, ResearchRequestedSpec } from "./preflight.contract";
 
-export type ResearchPreflightGateState = "PASS" | "NOT_APPLICABLE" | "NOT_RECORDED";
+export type ResearchPreflightGateState = "PASS" | "FAIL" | "NOT_APPLICABLE" | "NOT_RECORDED";
 
 export interface ResearchPreflightGateRow {
   gate: string;
@@ -225,6 +225,10 @@ export const ADMISSION_REASON_FIELD_PATHS: Readonly<Record<string, readonly stri
   "The preview long walk-forward profile admits 2 to 400 Optuna trials.": ["optuna_trials"],
   "The Delta walk-forward profile runs exactly random seed 42.": ["random_seed"],
   "The Delta walk-forward profile does not admit early stopping.": ["early_stopping"],
+  "Early stopping is not applicable to this fixed execution recipe.": ["early_stopping"],
+  "Early stopping must be an integer from 1 to the declared trials per study.": ["early_stopping"],
+  "The declared trial count is outside the selected recipe's per-study limits.": ["optuna_trials"],
+  "The optimized Three Window recipe requires random seed 42.": ["random_seed"],
   "The Delta walk-forward profile accepts only the 1h timeframe.": ["data", "timeframe"],
   "The Delta walk-forward profile accepts only weekly expanding folds.": ["walk_forward", "frequency"],
   "The Delta walk-forward first out-of-sample boundary must lie strictly inside the walk-forward span.": ["walk_forward", "split_mode"],

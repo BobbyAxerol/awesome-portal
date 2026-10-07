@@ -19,6 +19,7 @@ from typing import Annotated, Any, Literal
 from pydantic import Field, model_serializer, model_validator
 
 from .requests import PortalModel
+from .research_early_stopping import admitted_early_stopping
 from .research_delta_wfo_profile import (
     DELTA_WFO_MAX_SPAN_DAYS,
     DELTA_WFO_PROFILE,
@@ -234,6 +235,8 @@ class ResearchRunProducerEnvelope(PortalModel):
         # Registry identity is bounded and image-owned; arbitrary strings are
         # never a route to an unknown adapter or the legacy default profile.
         execution_recipe(self.execution_profile_id)
+        admitted_early_stopping(self.requested_spec,
+            optimizing=execution_recipe(self.execution_profile_id)["public_profile"]["trial_count"]["max"] > 1)
         encoded = json.dumps(
             self.requested_spec,
             sort_keys=True,
@@ -479,8 +482,6 @@ class ResearchRunProducerEnvelope(PortalModel):
             raise ValueError("the Delta WFO profile accepts exactly random seed 42")
         if spec.get("optimization_mode") != profile["optimization_mode"] or spec.get("optimization_schedule") != profile["optimization_schedule"]:
             raise ValueError("the Delta WFO profile accepts only mode_1_decay/global")
-        if spec.get("early_stopping") is not None:
-            raise ValueError("the Delta WFO profile does not admit early stopping")
         if (causal or per_fold_decay) and (spec.get("optimization_config") or spec.get("route_params")):
             raise ValueError("per-fold execution admits no optimizer or route overrides")
         _validate_sibling_pins(spec.get("parameter_space_overrides"))
@@ -523,7 +524,7 @@ class ResearchRunProducerEnvelope(PortalModel):
                 or type(spec.get("optuna_trials")) is not int
                 or not row["public_profile"]["trial_count"]["min"] <= spec["optuna_trials"] <= row["public_profile"]["trial_count"]["max"]
                 or type(spec.get("random_seed")) is not int or spec["random_seed"] != p["random_seed"]
-                or spec.get("early_stopping") is not None or spec.get("optimization_config") or spec.get("route_params")
+                or spec.get("optimization_config") or spec.get("route_params")
                 or not isinstance(client, dict) or client.get("engine_release_id") != p["engine_release_id"]):
             raise ValueError("FULL-03 spec does not match its exact immutable Alpha/recipe binding")
         data = spec.get("data")
@@ -561,7 +562,7 @@ class ResearchRunProducerEnvelope(PortalModel):
                 or spec.get("optimization_schedule") != p["optimization_schedule"]
                 or type(spec.get("optuna_trials")) is not int
                 or not row["public_profile"]["trial_count"]["min"] <= spec["optuna_trials"] <= row["public_profile"]["trial_count"]["max"] or spec.get("random_seed") != 42
-                or spec.get("early_stopping") is not None or spec.get("optimization_config") or spec.get("route_params")
+                or spec.get("optimization_config") or spec.get("route_params")
                 or spec.get("client", {}).get("engine_release_id") != p["engine_release_id"]
                 or spec.get("data", {}).get("dataset_id") != p["dataset_id"] or spec.get("data", {}).get("timeframe") != p["timeframe"]
                 or spec.get("alpha_binding") != {"alpha_id": self.alpha_id, "alpha_version_id": self.alpha_version_id}
@@ -603,6 +604,7 @@ class ResearchRunProducerEnvelope(PortalModel):
     def _validate_three_window_optimized(self, *, profile: dict[str, Any] | None = None, full03: bool = False) -> None:
         """A new immutable search recipe, never a widening of the fixed P04 wire."""
         profile, spec = profile or DELTA_THREE_WINDOW_OPTIMIZED_PROFILE, self.requested_spec
+        trial_range = execution_recipe(self.execution_profile_id)["public_profile"]["trial_count"] if full03 else {"min": 3, "max": 3}
         if ((not full03 and self.execution_profile_digest != DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_DIGEST)
                 or self.execution_adapter_id != profile["adapter_id"]
                 or self.adapter_contract_digest != profile["adapter_contract_digest"]
@@ -612,13 +614,13 @@ class ResearchRunProducerEnvelope(PortalModel):
                 or spec.get("execution_route") != profile["execution_route"]
                 or spec.get("optimization_mode") != "mode_1_decay"
                 or spec.get("optimization_schedule") != "global"
-                or type(spec.get("optuna_trials")) is not int or spec["optuna_trials"] != 3
+                or type(spec.get("optuna_trials")) is not int or not trial_range["min"] <= spec["optuna_trials"] <= trial_range["max"]
                 or type(spec.get("random_seed")) is not int or spec["random_seed"] != 42
-                or spec.get("early_stopping") is not None or spec.get("walk_forward") is not None
+                or spec.get("walk_forward") is not None
                 or spec.get("optimization_config") or spec.get("route_params")
                 or spec.get("data", {}).get("timeframe") != profile["timeframe"]
                 or spec.get("client", {}).get("engine_release_id") != "er_quantbt_111"):
-            raise ValueError("optimized Three Window requires its exact three-trial, seed-42 Delta profile")
+            raise ValueError("optimized Three Window requires its declared trial range and seed-42 Delta profile")
         _validate_sibling_pins(spec.get("parameter_space_overrides"))
         windows = spec.get("windows", {})
         try:

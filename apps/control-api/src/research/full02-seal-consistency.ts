@@ -4,10 +4,12 @@ import { CurrentSourceFoldPayloadSchema, CurrentSourceSummarySchema } from "./cu
 import { ResearchCurrentSourceError } from "./current-source.error";
 import { currentSourceRetainedIntervalMs, currentSourceRetainedMethod, currentSourceRetainedRecipe, currentSourceStudyTrialCount } from "./current-source-profile";
 import { sha256ResearchJson } from "./preflight.service";
+import { retainedStudyTrialCountAdmitted } from "./early-stopping";
 
 export function assertFull02SealConsistency(
   input: { profileId: string; sourceAdapterId?: string; tableRows: Record<string, number>; summary: Record<string, unknown> },
   rows: Array<{ tableKind: string; sourceOrdinal: number; sourceId: string; payload: Record<string, unknown> }>,
+  requestedSpec?: Readonly<Record<string, unknown>>,
 ): void {
   const fail = (): never => { throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_CONFLICT", "FULL-02 selection, population or protocol does not match its retained source.", 409); };
   const summary = CurrentSourceSummarySchema.safeParse(input.summary);
@@ -26,7 +28,7 @@ export function assertFull02SealConsistency(
       && sha256ResearchJson(selection.parameters) === sha256ResearchJson(parameters);
   const method = currentSourceRetainedMethod(input.profileId,input.sourceAdapterId);
   if (method === "PER_FOLD_DECAY") {
-    if (folds.length < 2 || folds.length > 16 || trials.length !== folds.length * configuredTrials
+    if (folds.length < 2 || folds.length > 16 || !retainedStudyTrialCountAdmitted(trials.length, configuredTrials, requestedSpec, folds.length)
       || summary.data.source_facts?.search.optimization_schedule !== "per_fold_decay"
       || summary.data.source_facts.search.n_studies !== folds.length
       || summary.data.source_facts.claims.oos_used_for_selection !== true) return fail();
@@ -42,7 +44,7 @@ export function assertFull02SealConsistency(
       const members = (source: typeof rows) => source.filter(member =>
         (member.payload.trial_facts as Record<string, unknown> | undefined)?.study_id === selected.study_id);
       const trialMembers = members(trials), candidateMembers = members(candidates);
-      if (trialMembers.length !== configuredTrials || selected.study_trial_rows !== configuredTrials
+      if (!retainedStudyTrialCountAdmitted(trialMembers.length, configuredTrials, requestedSpec) || selected.study_trial_rows !== trialMembers.length
         || candidateMembers.length !== selected.candidate_count || candidateMembers.length > configuredTrials
         || [...trialMembers, ...candidateMembers].some(member => {
           const scope = (member.payload.trial_facts as Record<string, unknown> | undefined)?.fold_scope as Record<string, unknown> | undefined;
@@ -62,7 +64,7 @@ export function assertFull02SealConsistency(
         || !sameSelection(selected, final.selected_trial_id, final.parameters, final.objective)) return fail();
     }
   } else if (method === "THREE_WINDOW") {
-    if (folds.length !== 1 || trials.length !== configuredTrials || summary.data.selection.scope !== undefined
+    if (folds.length !== 1 || !retainedStudyTrialCountAdmitted(trials.length, configuredTrials, requestedSpec) || summary.data.selection.scope !== undefined
       || summary.data.source_facts?.search.optimization_schedule !== "global"
       || !summary.data.protocol_disclosure || summary.data.source_facts.claims.oos_used_for_selection !== true) return fail();
     const fold = CurrentSourceFoldPayloadSchema.safeParse(folds[0]!.payload);

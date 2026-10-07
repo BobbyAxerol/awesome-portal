@@ -491,15 +491,15 @@ function GateRows({ gates }: { gates: NonNullable<PreflightResponse["gates"]> })
           key={gate.gate}
           data-gate-segment={gate.state}
           title={`${gate.gate} · ${gate.state}`}
-          style={{ flex: 1, height: 6, borderRadius: 2, background: gate.state === "PASS" ? "var(--good)" : "var(--line-strong)" }}
+          style={{ flex: 1, height: 6, borderRadius: 2, background: gate.state === "PASS" ? "var(--good)" : gate.state === "FAIL" ? "var(--role-holdout)" : "var(--line-strong)" }}
         />
       ))}
     </div>
     <ol className="flex flex-col" role="list" data-preflight-gates>
       {gates.map((gate) => (
         <li key={gate.gate} className="flex items-baseline gap-2 border-b py-[2px] text-[10.5px] last:border-b-0" style={{ borderColor: "var(--line-soft)" }} data-preflight-gate={gate.gate} data-gate-state={gate.state}>
-          <span className="mono w-[14px] flex-none font-bold" style={{ color: gate.state === "PASS" ? "var(--good)" : "var(--ink-faint)" }}>
-            {gate.state === "PASS" ? "✓" : "·"}
+          <span className="mono w-[14px] flex-none font-bold" style={{ color: gate.state === "PASS" ? "var(--good)" : gate.state === "FAIL" ? "var(--role-holdout)" : "var(--ink-faint)" }}>
+            {gate.state === "PASS" ? "✓" : gate.state === "FAIL" ? "✗" : "·"}
           </span>
           <span className="mono flex-none text-[9.5px]" style={{ width: 150, color: "var(--ink-soft)" }}>{gate.gate}</span>
           <span className="flex-1" style={{ color: gate.state === "PASS" ? "var(--ink-soft)" : "var(--ink-faint)" }}>

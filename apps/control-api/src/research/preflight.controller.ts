@@ -91,12 +91,18 @@ export class ResearchPreflightController {
   }
 
   /** CG-P08-03: the typed reason and field path behind `may_create_run`. */
-  private withAdmission<T extends object>(
+  private withAdmission<T extends { gates?: readonly { gate: string; state: string; field_path: readonly string[]; message: string }[] }>(
     response: T,
     facts: { allowed: boolean; code: string | null; message: string | null },
   ): T & { may_create_run: boolean; run_admission: { may_create_run: boolean; code: string | null; message: string | null; field_path: readonly string[] } } {
     return {
       ...response,
+      gates: [...(response.gates ?? []).filter(gate => gate.gate !== "execution_admission"), {
+        gate: "execution_admission", state: facts.allowed ? "PASS" as const : "FAIL" as const,
+        field_path: facts.allowed ? [] : admissionFieldPath(facts.message),
+        message: facts.allowed ? "This exact preflight is currently admitted for run creation."
+          : facts.message ?? "Run creation admission could not be established; no execution permission is granted.",
+      }],
       may_create_run: facts.allowed,
       run_admission: {
         may_create_run: facts.allowed,

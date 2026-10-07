@@ -21,6 +21,7 @@ from decimal import Decimal, localcontext
 from pathlib import Path
 from typing import Any
 from portal_api.domain.research_full03_profiles import indexed_account_kwargs, indexed_execution_kwargs
+from portal_api.domain.research_early_stopping import admitted_early_stopping, validate_study_trial_count
 
 
 _BLOCKED_ENV_PREFIXES = (
@@ -1339,7 +1340,7 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
         from portal_api.domain.research_trial_budget import child_study_trials, expanded_trials
         if expanded_trials(row):
             required.add('optuna_trials')
-        if not (required | {controls_key}) <= set(receipt) or set(receipt) - required - {controls_key, "pinned_parameters"}:
+        if not (required | {controls_key}) <= set(receipt) or set(receipt) - required - {controls_key, "pinned_parameters", "early_stopping"}:
             raise ValueError("FULL-03 Advanced child requires exactly its bounded task fields")
         validate_full03_execution_binding(receipt.get("execution_binding"), row)
         controls = full03_controls_from_receipt(receipt, row)
@@ -1538,7 +1539,7 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
             optimization_schedule=OptimizationSchedule(profile["optimization_schedule"]),
             fold_boundary_position_policy="carry",
             optuna_trials=optuna_trials,
-            optuna_early_stopping=None,
+            optuna_early_stopping=admitted_early_stopping({"early_stopping":receipt.get("early_stopping"), "optuna_trials":optuna_trials}),
             random_seed=profile["random_seed"],
             optimization=OptimizationConfig(**{"min_trades_per_year": 50.0, "trade_penalty_factor": 0.5,
                 **profile.get("optimizer_settings", {})}),
@@ -1567,12 +1568,14 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
         raise ValueError(f"P10 WFO produced {n_folds} folds outside the admitted {bounds['min']}..{bounds['max']}")
     trials_path = output_root / run_id / "wfo" / "trials.parquet"
     trial_rows = len(pd.read_parquet(trials_path)) if trials_path.is_file() else 0
-    if trial_rows != optuna_trials * (n_folds if per_fold else 1):
-        raise ValueError("P10 WFO did not publish exactly the admitted trial count")
+    patience = admitted_early_stopping({"early_stopping":receipt.get("early_stopping"), "optuna_trials":optuna_trials})
+    validate_study_trial_count(trial_rows, optuna_trials * (n_folds if per_fold else 1), patience)
     if per_fold:
         trials = pd.read_parquet(trials_path)
-        if "study_id" not in trials or len(trials.groupby("study_id")) != n_folds or not trials.groupby("study_id").size().eq(optuna_trials).all():
+        if "study_id" not in trials or len(trials.groupby("study_id")) != n_folds:
             raise ValueError("per-fold source did not publish the admitted trials for every outer study")
+        for actual in trials.groupby("study_id").size():
+            validate_study_trial_count(int(actual), optuna_trials, patience)
     trace.write(artifacts=ArtifactRepository(output_root), run_id=run_id)
     return {
         "task": "P10_DELTA_WFO",
@@ -1621,7 +1624,7 @@ def _run_p10_delta_three_window_optimized(receipt: dict[str, Any], output_root: 
             required.add('optuna_trials')
         if row["source_requirement"] == "IMPORTED_IMMUTABLE_SEARCH_BINDING":
             required.add("imported_source")
-    if not required <= set(receipt) or set(receipt) - required - {"pinned_parameters"}:
+    if not required <= set(receipt) or set(receipt) - required - {"pinned_parameters", "early_stopping"}:
         raise ValueError("optimized Three Window child requires exactly its bounded task fields")
     if full03:
         if row["descriptor"]["protocol"] != "three_window_decay" or receipt["task"] != "P10_DELTA_THREE_WINDOW_OPTIMIZED":
@@ -1671,7 +1674,8 @@ def _run_p10_delta_three_window_optimized(receipt: dict[str, Any], output_root: 
         execution=ExecutionConfig(target_mode=profile["execution_route"], **indexed_execution_kwargs(row)),
         calibration=ThreeWindowConfig(is_start=start, is_end_exclusive=split, oos_start=split,
             oos_end_exclusive=holdout, holdout_start=holdout, holdout_end_exclusive=end,
-            optuna_trials=trials_admitted, optuna_early_stopping=None, random_seed=profile["random_seed"],
+            optuna_trials=trials_admitted, optuna_early_stopping=admitted_early_stopping({
+                "early_stopping":receipt.get("early_stopping"), "optuna_trials":trials_admitted}), random_seed=profile["random_seed"],
             optimization=OptimizationConfig(min_trades_per_year=50.0, trade_penalty_factor=0.5)))
     gateway, artifacts = QuantBTGateway(), ArtifactRepository(output_root)
     writer = _ChildProgressWriter(output_root.parent / CHILD_PROGRESS_FILENAME)
@@ -1687,8 +1691,8 @@ def _run_p10_delta_three_window_optimized(receipt: dict[str, Any], output_root: 
         restore()
         writer.close()
     trials = pd.read_parquet(output_root / run_id / "wfo" / "trials.parquet")
-    if len(trials) != trials_admitted:
-        raise ValueError("optimized Three Window did not publish the exact admitted trials")
+    validate_study_trial_count(len(trials), trials_admitted, admitted_early_stopping({
+        "early_stopping":receipt.get("early_stopping"), "optuna_trials":trials_admitted}))
     trace.write(artifacts=artifacts, run_id=run_id)
     return {"task": "P10_DELTA_THREE_WINDOW_OPTIMIZED", "engine_version": gateway.version(),
         "bars": len(market.frame), "n_folds": 1, "trial_rows": len(trials),

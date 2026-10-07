@@ -2,6 +2,7 @@
 import { CurrentSourceFoldPayloadSchema, CurrentSourceSummarySchema } from "./current-source.payload";
 import { ResearchCurrentSourceError } from "./current-source.error";
 import { sha256ResearchJson } from "./preflight.service";
+import { retainedStudyTrialCountAdmitted } from "./early-stopping";
 
 /** QuantBT may prune before publishing Stage-A/objective metadata. Keep that
  * absence, without admitting a scored row from a different objective domain. */
@@ -40,7 +41,7 @@ export function assertCausalSealConsistency(
       authority.requestedSpec.optimization_schedule !== "per_fold_causal" ||
       authority.topology.plan_source !== "quantbt.walkforward.WalkForwardEngine.build_folds" ||
       !Array.isArray(plannedFolds) || plannedFolds.length !== folds.length) return fail();
-  if (rows.length > 2*configuredTrials*folds.length+folds.length+1 || folds.length < 2 || folds.length > 16 || trials.length !== folds.length*configuredTrials ||
+  if (rows.length > 2*configuredTrials*folds.length+folds.length+1 || folds.length < 2 || folds.length > 16 || !retainedStudyTrialCountAdmitted(trials.length,configuredTrials,authority.requestedSpec,folds.length) ||
       !summary.success || selection.length !== 1 || folds.length !== input.tableRows.FOLD ||
       trials.length !== input.tableRows.TRIAL || candidates.length !== input.tableRows.CANDIDATE) return fail();
   // Every retained member must stay in its native objective domain, not only
@@ -77,7 +78,7 @@ export function assertCausalSealConsistency(
     studies.add(fact.study_id); innerCount += fact.inner_folds.length;
     const studyTrials = trials.filter(row => (row.payload.trial_facts as Record<string,unknown> | undefined)?.study_id === fact.study_id);
     const studyCandidates = candidates.filter(row => (row.payload.trial_facts as Record<string,unknown> | undefined)?.study_id === fact.study_id);
-    if (studyTrials.length !== configuredTrials || fact.study_trial_rows !== configuredTrials) return fail();
+    if (!retainedStudyTrialCountAdmitted(studyTrials.length,configuredTrials,authority.requestedSpec) || fact.study_trial_rows !== studyTrials.length) return fail();
     if (studyCandidates.length !== fact.candidate_count || studyCandidates.length > configuredTrials || [...studyTrials,...studyCandidates].some(row => {
       const trialFact = row.payload.trial_facts as Record<string,unknown>;
       const scope = trialFact.fold_scope as Record<string,unknown> | undefined;

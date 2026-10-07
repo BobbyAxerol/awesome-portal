@@ -7,6 +7,7 @@
  */
 
 import { Inject, Injectable } from "@nestjs/common";
+import { earlyStoppingRefusal } from "./early-stopping";
 import {executionRecipe, executionRecipeActivationReason, wfoExecutionRecipe} from "./execution-recipes";
 import { DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID, DELTA_PER_FOLD_DECAY_PROFILE_ID } from "./full02.profiles";
 import {isIndexedDeltaBinding as isFull03DeltaBinding} from "./full06-delta.binding";
@@ -165,6 +166,8 @@ export class ResearchRunAdmissionService {
       return denied("RESEARCH_RUN_PREFLIGHT_NOT_READY", "The immutable preflight specification is no longer valid.");
     }
     const requestedSpec = parsed.data;
+    const stopping = earlyStoppingRefusal(requestedSpec, requestedSpec.optuna_trials > 1 ? "OPTIONAL" : "FORBIDDEN");
+    if (stopping) return denied("RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE", stopping.message);
     if (requestedSpec.alpha_binding === null || requestedSpec.not_publishable) {
       return denied("RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE", "Scratch specifications have no installed execution adapter.");
     }
@@ -417,7 +420,6 @@ export class ResearchRunAdmissionService {
         :requested.execution_route!==p.execution_route?["execution_route"]
         :requested.data.dataset_id!==row.descriptor.dataset_id?["data","dataset_id"]
         :!recipeTrialCountAdmitted(row,requested.optuna_trials,this.config)?["optuna_trials"]
-        :requested.early_stopping!==null?["early_stopping"]
         :Object.keys(requested.route_params).length?["route_params"]
         :Object.keys(requested.optimization_config).length?["optimization_config"]:null;
       if(axis)return reject("The imported request does not match its exact bounded recipe.","IMPORTED_RECIPE_AXIS_NOT_ADMITTED",axis);
@@ -524,7 +526,7 @@ export class ResearchRunAdmissionService {
     const p=row.public_profile,d=manifest.datasetBinding,prov=FixedUtcProvenanceSchema.safeParse(d.provenance);
     if(spec.schema_version!==row.descriptor.requested_spec_version||spec.client.engine_release_id!==p.engine_release_id
       ||spec.execution_route!==p.execution_route||spec.data.dataset_id!==p.dataset_id||!recipeTrialCountAdmitted(row,spec.optuna_trials,this.config)
-      ||spec.random_seed!==42||spec.early_stopping!==null||Object.keys(spec.route_params).length||Object.keys(spec.optimization_config).length)
+      ||spec.random_seed!==42||Object.keys(spec.route_params).length||Object.keys(spec.optimization_config).length)
       return "The imported request must match its exact bounded recipe axes and trial budget.";
     if(!prov.success||d.timezone!=="UTC"||d.closed_bar_policy!=="CLOSED_BARS_ONLY"
       ||prov.data.metadata_index_source_manifest_digest!==d.source_manifest_digest||prov.data.warmup_start_utc_ms!==d.range_start_utc_ms)
@@ -625,9 +627,6 @@ export class ResearchRunAdmissionService {
     if (requested.random_seed !== profile.random_seed) {
       return "The Delta walk-forward profile runs exactly random seed 42.";
     }
-    if (requested.early_stopping !== null) {
-      return "The Delta walk-forward profile does not admit early stopping.";
-    }
     if (requested.data.timeframe !== profile.timeframe) {
       return row?.source_requirement==="FULL03_IMMUTABLE_DELTA_BINDING"
         ? "The requested timeframe must match the exact indexed execution recipe." : "The Delta walk-forward profile accepts only the 1h timeframe.";
@@ -692,8 +691,10 @@ export class ResearchRunAdmissionService {
       return row.source_requirement==="FULL03_IMMUTABLE_DELTA_BINDING"
         ? "Optimized Three Window requires requested-spec v1, its exact signal_notional timeframe and Mode 1/global."
         : "Optimized Three Window requires requested-spec v1, 1h signal_notional and Mode 1/global.";
-    if (!recipeTrialCountAdmitted(row,requested.optuna_trials,this.config) || requested.random_seed !== profile.random_seed || requested.early_stopping !== null)
-      return `Optimized Three Window requires ${profile.trial_count.min}–${profile.trial_count.max} trials, seed 42 and no early stopping.`;
+    if (!recipeTrialCountAdmitted(row,requested.optuna_trials,this.config))
+      return "The declared trial count is outside the selected recipe's per-study limits.";
+    if (requested.random_seed !== profile.random_seed)
+      return "The optimized Three Window recipe requires random seed 42.";
     if (requested.route_params && Object.keys(requested.route_params).length || requested.optimization_config && Object.keys(requested.optimization_config).length)
       return "Optimized Three Window accepts no route or optimizer override.";
     const pins = siblingPinReason(requested.parameter_space_overrides);

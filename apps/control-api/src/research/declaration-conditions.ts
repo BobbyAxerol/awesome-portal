@@ -4,6 +4,7 @@ import type { DeclarationConditionSchema, DeclarationMetadataSchema } from "./da
 import type { ResearchRequestedSpec } from "./preflight.contract";
 import type { ResearchPortalAdmission } from "./foundation.contract";
 import type { SetupRefusal } from "./run-setup.contract";
+import { earlyStoppingPolicy, earlyStoppingRefusal } from "./early-stopping";
 type CheckProfile = Pick<ResearchPortalAdmission["profiles"][number],
   "profile_id" | "state" | "protocol" | "execution_route" | "optimization_mode" | "optimization_schedule"
   | "engine_release_id" | "timeframe" | "trial_count" | "random_seed" | "max_span_days" | "fold_bounds"> & {
@@ -78,7 +79,9 @@ export function declarationConditions(spec: ResearchRequestedSpec, metadata: z.i
     add("optimizer", modeOk && scheduleOk, modeOk ? "PROFILE_SCHEDULE_NOT_ADMITTED" : "PROFILE_MODE_NOT_ADMITTED",
       `${spec.optimization_mode}/${spec.optimization_schedule}`, `${profile.optimization_mode}/${profile.optimization_schedule}`,
       [modeOk ? "optimization_schedule" : "optimization_mode"]);
-    add("early_stopping", spec.early_stopping === null, "PROFILE_EARLY_STOPPING_NOT_ADMITTED", spec.early_stopping, "null");
+    const stopping = earlyStoppingRefusal(spec, earlyStoppingPolicy(profile));
+    add("early_stopping", stopping === null, stopping?.reason_code ?? "PROFILE_EARLY_STOPPING_NOT_ADMITTED",
+      spec.early_stopping, earlyStoppingPolicy(profile) === "OPTIONAL" ? `null or 1…${spec.optuna_trials} per study` : "null");
     add("route_params", Object.keys(spec.route_params).length === 0, "PROFILE_ROUTE_PARAMS_NOT_ADMITTED", Object.keys(spec.route_params).length, "0 overrides");
     add("optimizer_overrides", Object.keys(spec.optimization_config).length === 0,
       "PROFILE_OPTIMIZER_OVERRIDES_NOT_ADMITTED", Object.keys(spec.optimization_config).length, "0 overrides");

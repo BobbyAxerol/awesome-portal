@@ -142,6 +142,14 @@ describe("bounded causal study surfaces", () => {
       expect(study.surface.points.some(point => point.trial_id === `study_${index}.trial_399`)).toBe(true);
     });
   });
+  it("keeps actual independently stopped study populations without padding; null stays strict", () => {
+    const populations = studies();
+    populations[0]!.trials = populations[0]!.trials.slice(0, 2);
+    expect(() => searchStudySurfaces(lane.profile_id, populations)).toThrow(RangeError);
+    const result = searchStudySurfaces(lane.profile_id, populations, "INNER_VALIDATION_OUTER_STUDY", {requestedTrials:3,patience:1});
+    expect(result.map(row => row.surface.source_trial_count)).toEqual([2,3]);
+    expect(() => searchStudySurfaces(lane.profile_id, populations, "INNER_VALIDATION_OUTER_STUDY", {requestedTrials:3,patience:4})).toThrow(RangeError);
+  });
   it("integrates only the exact causal pair, independent of ledger paging/filter, with explicit final deployment declaration", async () => {
     const source = fixture(), service = reader(source);
     const full = await service.search(scope, source.run_id, { limit: 1 }) as any;

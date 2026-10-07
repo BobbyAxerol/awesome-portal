@@ -89,6 +89,17 @@ if(check){if(readFileSync(path,'utf8')!==text)throw Error('Native fixture drift'
 
 // Canonical presentation fixtures only. The pinned source/legacy captures and
 // real receipts/seals are never rewritten by a presentation generator.
+for(const name of ['temporal','causal-inner']){
+ const path=new URL(`packages/contracts/fixtures/research-foundation.portal-admission-${name}.valid.json`,root);
+ const old=readFileSync(path,'utf8'),doc=JSON.parse(old);
+ for(const profile of doc.profiles){
+  const row=table.recipes.find(r=>r.profile_id===profile.profile_id);
+  if(!row)throw Error('Unknown fixture recipe '+profile.profile_id);
+  profile.early_stopping_policy=row.public_profile.trial_count.max>1?'OPTIONAL':'FORBIDDEN';
+ }
+ const next=JSON.stringify(doc,null,2)+'\n';
+ if(check){if(next!==old)throw Error('Runtime admission fixture drift '+name);}else if(next!==old)writeFileSync(path,next);
+}
 for(const name of ['current','historical']){
  const path=new URL(`packages/contracts/fixtures/research-foundation.atlas-presented-${name}.valid.json`,root);
  const old=readFileSync(path,'utf8'),doc=JSON.parse(old);
@@ -103,7 +114,10 @@ for(const name of ['current','historical']){
   const row=table.recipes.find(r=>r.profile_id===profile.profile_id);
   if(!row)throw Error('Unknown fixture recipe '+profile.profile_id);
   const {profile_id,...facts}=row.public_profile;
-  return {profile_id,state:profile.state,reason:profile.reason,...facts,trial_count:profile.trial_count};
+  // Runtime policy overlay: do not rewrite the immutable recipe descriptor.
+  profile.early_stopping_policy=row.public_profile.trial_count.max>1?'OPTIONAL':'FORBIDDEN';
+  return {profile_id,state:profile.state,reason:profile.reason,...facts,trial_count:profile.trial_count,
+   early_stopping_policy:profile.early_stopping_policy};
  })}:null;
  const key=doc.atlas?`research.atlas-presentation.v3:${doc.atlas.manifest_revision}:${doc.selected_release_id}:::${JSON.stringify(wireAdmission)}`
   :`research.atlas-presentation.v3:${JSON.parse(readFileSync(new URL('packages/contracts/fixtures/research-foundation.atlas-current.valid.json',root))).atlas.manifest_revision}:${doc.selected_release_id}:historical-identity`;

@@ -414,7 +414,7 @@ export interface components {
         PreflightGate: {
             gate: string;
             /** @enum {unknown} */
-            state: "PASS" | "NOT_APPLICABLE" | "NOT_RECORDED";
+            state: "PASS" | "FAIL" | "NOT_APPLICABLE" | "NOT_RECORDED";
             field_path: components["schemas"]["FieldPath"];
             message: string;
         };

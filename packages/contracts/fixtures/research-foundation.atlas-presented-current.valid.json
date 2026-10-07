@@ -3427,7 +3427,7 @@
         ],
         "seed_policy": "LOCKED",
         "trial_default": 3,
-        "early_stopping_policy": "FORBIDDEN"
+        "early_stopping_policy": "OPTIONAL"
       },
       {
         "profile_id": "p10.delta-signal-notional-wfo.v2",
@@ -3465,7 +3465,7 @@
         ],
         "seed_policy": "LOCKED",
         "trial_default": 3,
-        "early_stopping_policy": "FORBIDDEN",
+        "early_stopping_policy": "OPTIONAL",
         "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY"
       },
       {
@@ -3506,7 +3506,7 @@
         ],
         "seed_policy": "LOCKED",
         "trial_default": 3,
-        "early_stopping_policy": "FORBIDDEN",
+        "early_stopping_policy": "OPTIONAL",
         "inner_validation": "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
         "inner_constraints": {
           "fold_bounds": {
@@ -3562,5 +3562,5 @@
     "note": "PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE"
   },
   "historical_identity": null,
-  "etag": "W/\"research-atlas-d439020ebf874cc7bc877b16\""
+  "etag": "W/\"research-atlas-0ca97114f7a8660a4a537636\""
 }

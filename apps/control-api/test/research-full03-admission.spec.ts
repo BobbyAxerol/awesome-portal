@@ -49,6 +49,10 @@ async function facts(row:typeof rows[number],change?:(s:ResearchRequestedSpec)=>
   return service.require(w1Admin,w1Scope,manifest.preflightToken,spec);
 }
 describe("FULL03 immutable indexed profile authority",()=>{
+  it.each(rows)("admits bounded early stopping without changing recipe identity $profile_id", async row => {
+    const result=await facts(row,s=>{s.early_stopping=2;});
+    expect(result.allowed).toBe(true);
+  });
   it("pins a new version without widening the old AV/declaration",()=>{
     expect(rows).toHaveLength(28);
     expect(FULL03_DELTA_BINDING.alphaVersionId).not.toBe(P04_DELTA_BINDING.alphaVersionId);

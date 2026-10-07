@@ -473,8 +473,8 @@ export interface components {
                 /** @enum {unknown} */
                 seed_policy?: "LOCKED" | "FORBIDDEN";
                 trial_default?: number;
-                /** @constant */
-                early_stopping_policy?: "FORBIDDEN";
+                /** @enum {unknown} */
+                early_stopping_policy?: "FORBIDDEN" | "OPTIONAL";
                 /** @enum {unknown} */
                 inner_validation?: "NOT_ADMITTED_GLOBAL_RETENTION_ONLY" | "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY";
                 max_span_days: number | null;

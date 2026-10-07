@@ -665,6 +665,12 @@ export class ResearchCurrentSourceService {
     const summary = parseSummary(seal);
     const facts = summary.source_facts;
     const ledgerMode = facts?.search.trial_ledger_mode ?? null;
+    const rawRequest = inputs.requestedSpec;
+    const admitted = rawRequest === null ? null : ResearchRequestedSpecSchema.safeParse(rawRequest);
+    if (admitted !== null && !admitted.success) {
+      throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained P08 request is incompatible.", 503);
+    }
+    const patience = admitted?.data.early_stopping ?? null;
     const currentRevision = `rs02_search_${sha256ResearchJson({
       base: revision("search", seal), stage_events: inputs.stageEvents,
     })}`;
@@ -710,7 +716,9 @@ export class ResearchCurrentSourceService {
       const last = outer.at(-1);
       const configuredTrials = currentSourceStudyTrialCount(currentSourceRetainedRecipe(seal.profileId,seal.sourceAdapterId),
         facts?.search.optuna_trials_per_study);
-      if (configuredTrials === null || outer.length < 2 || outer.length > 16 || allTrials.length !== outer.length * configuredTrials
+      if (configuredTrials === null || outer.length < 2 || outer.length > 16
+        || (patience === null ? allTrials.length !== outer.length * configuredTrials
+          : patience < 1 || patience > configuredTrials || allTrials.length < 2 * outer.length || allTrials.length > outer.length * configuredTrials)
         || summary.selection.scope !== "LAST_FOLD_DEPLOYMENT" || !last || !retainedFoldSelection(last)
         || summary.selection.fold_id !== last.fold_id) {
         throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Causal study populations or last-fold deployment were not retained exactly.", 503);
@@ -732,7 +740,8 @@ export class ResearchCurrentSourceService {
             selectedParameters: selected.parameters, trials: members };
         });
         studySurfaces = searchStudySurfaces(seal.profileId, studies,
-          isDecaySeal(seal) ? "OUTER_FOLD_DECAY_STUDY" : isMode4CausalSeal(seal) ? "IS_ONLY_OUTER_STUDY" : "INNER_VALIDATION_OUTER_STUDY");
+          isDecaySeal(seal) ? "OUTER_FOLD_DECAY_STUDY" : isMode4CausalSeal(seal) ? "IS_ONLY_OUTER_STUDY" : "INNER_VALIDATION_OUTER_STUDY",
+          patience === null ? null : {requestedTrials: configuredTrials, patience});
         // Declared ranges are common; this singleton's values belong only to
         // the final deployment, not a run-global theta used by earlier folds.
         space = { ...space, selection_scope: "LAST_FOLD_DEPLOYMENT", fold_id: last.fold_id, study_id: retainedFoldSelection(last)!.study_id };
@@ -763,11 +772,6 @@ export class ResearchCurrentSourceService {
       optimizerDisclosure: summary.optimizer_disclosure,
     });
     const contract = searchContract(facts,summary.protocol_disclosure);
-    const rawRequest = inputs.requestedSpec;
-    const admitted = rawRequest === null ? null : ResearchRequestedSpecSchema.safeParse(rawRequest);
-    if (admitted !== null && !admitted.success) {
-      throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained P08 request is incompatible.", 503);
-    }
     const requestSeed = admitted?.data.random_seed ?? null;
     const seedAvailability = admitted === null ? fact("NOT_PUBLISHED", "P08_REQUESTED_SPEC_NOT_RETAINED").availability
       : requestSeed === null ? fact("NOT_APPLICABLE", "P08_RANDOM_SEED_NOT_SELECTED").availability : available();

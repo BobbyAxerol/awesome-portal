@@ -20,6 +20,7 @@ models.  GET handlers must never call this module or QuantBT.
 """
 
 from __future__ import annotations
+from portal_api.domain.research_early_stopping import admitted_early_stopping, study_trial_count_admitted
 
 import hashlib
 import json
@@ -138,6 +139,7 @@ class CurrentSourceAdmission:
     # admission constructors retain their original defaults and byte identity.
     execution_profile_id: str | None = None
     execution_profile_digest: str | None = None
+    early_stopping: int | None = None
 
     def recipe(self) -> Mapping[str, Any] | None:
         if self.execution_profile_id is None and self.execution_profile_digest is None:
@@ -156,6 +158,7 @@ class CurrentSourceAdmission:
         return row["descriptor"]["current_source"]["source_adapter_id"] if row is not None else _CURRENT_SOURCE_PROFILES[self.profile_id][0]
 
     def validate(self) -> None:
+        admitted_early_stopping({"early_stopping":self.early_stopping, "optuna_trials":self.optuna_trials})
         row = self.recipe()
         if row is not None:
             p, budgets = row["descriptor"], row["budgets"]
@@ -809,13 +812,13 @@ class CurrentSourceArtifactAdapter:
         if nested_causal:
             selection = self._attach_causal_selections(raw_dir, folds=folds, trials=trials, candidates=candidates, config=config, selection=selection,
                 constraints=recipe["descriptor"]["inner_constraints"] if recipe is not None else None,
-                configured_trials=admission.optuna_trials)
+                configured_trials=admission.optuna_trials, patience=admission.early_stopping)
         if mode4_causal:
             selection = self._attach_mode4_selections(raw_dir, folds=folds, trials=trials, candidates=candidates,
-                selection=selection, recipe=recipe, configured_trials=admission.optuna_trials)
+                selection=selection, recipe=recipe, configured_trials=admission.optuna_trials, patience=admission.early_stopping)
         if per_fold_decay:
             selection = self._attach_per_fold_decay_selections(raw_dir, folds=folds, trials=trials, candidates=candidates,
-                selection=selection, configured_trials=admission.optuna_trials)
+                selection=selection, configured_trials=admission.optuna_trials, patience=admission.early_stopping)
         selection_rows = [self._selection_row(selection)]
         execution_observation = self._execution_observation(manifest, folds, selection)
         # W5b (P17): the final account's per-bar ledger and its counted
@@ -857,6 +860,7 @@ class CurrentSourceArtifactAdapter:
             selection=selection_rows,
             three_window=three_window,
             recipe=recipe,
+            patience=admission.early_stopping,
         )
         window_replay = self._three_window_replay_rows(raw_dir,
             maximum_rows=recipe["budgets"]["planning_max_bars"] if recipe is not None else 92 * 24) if three_window else None
@@ -1143,6 +1147,8 @@ class CurrentSourceArtifactAdapter:
             raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_CONFIG_REJECTED", "The completed source mode/schedule does not match its admitted profile.")
         if calibration.get("random_seed") != admission.random_seed or calibration.get("optuna_trials") != admission.optuna_trials:
             raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_CONFIG_REJECTED", "The completed source seed/trial budget does not match its admitted profile.")
+        if calibration.get("optuna_early_stopping") != admission.early_stopping:
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_CONFIG_REJECTED", "The completed source early stopping differs from its immutable request.")
         recipe = admission.recipe()
         if recipe is not None and admission.optimization_mode != "mode_1_decay":
             settings = recipe["descriptor"]["optimizer_settings"]
@@ -1362,6 +1368,7 @@ class CurrentSourceArtifactAdapter:
         selection: list[dict[str, Any]],
         three_window: bool = False,
         recipe: Mapping[str, Any] | None = None,
+        patience: int | None = None,
     ) -> None:
         """Reject an over-budget engine result before P05 writes any bytes.
 
@@ -1374,7 +1381,7 @@ class CurrentSourceArtifactAdapter:
         bounds = (
             ("observations", len(observations), 1, 2_000_000),
             ("folds", len(folds), 1 if three_window else 2, 1 if three_window else 256),
-            ("trials", len(trials), 2, _maximum_optuna_trials()),
+            ("trials", len(trials), 1 if patience is not None else 2, _maximum_optuna_trials()),
             ("candidates", len(candidates), 1, MAXIMUM_OPTUNA_TRIALS),
             ("selection", len(selection), 1, 1),
         )
@@ -1385,7 +1392,7 @@ class CurrentSourceArtifactAdapter:
             bounds = (
                 ("observations", len(observations), 1, recipe["budgets"]["planning_max_bars"]),
                 ("folds", len(folds), fold_bounds["min"], fold_bounds["max"]),
-                ("trials", len(trials), p["trial_count"]["min"], maximum_trials),
+                ("trials", len(trials), 1 if patience is not None else p["trial_count"]["min"], maximum_trials),
                 ("candidates", len(candidates), 1, maximum_trials),
                 ("selection", len(selection), 1, 1),
             )
@@ -1544,7 +1551,7 @@ class CurrentSourceArtifactAdapter:
     def _attach_causal_selections(
         self, raw_dir: Path, *, folds: list[dict[str, Any]], trials: list[dict[str, Any]],
         candidates: list[dict[str, Any]], config: Mapping[str, Any], selection: Mapping[str, Any],
-        constraints: Mapping[str, Any] | None = None, configured_trials: int = 3,
+        constraints: Mapping[str, Any] | None = None, configured_trials: int = 3, patience: int | None = None,
     ) -> dict[str, Any]:
         """Join actual nested tables; never reinterpret last-study inner scores as outer scores."""
         def refuse() -> None:
@@ -1585,7 +1592,7 @@ class CurrentSourceArtifactAdapter:
         def facts(row: Mapping[str, Any]) -> Mapping[str, Any]:
             return json.loads(row["payload_json"])["trial_facts"]
 
-        if type(configured_trials) is not int or not 2 <= configured_trials <= 400 or len(trials) != configured_trials * len(folds) or len(trials) > 6400:
+        if type(configured_trials) is not int or not 2 <= configured_trials <= 400 or not study_trial_count_admitted(len(trials), configured_trials * len(folds), patience) or len(trials) > 6400:
             refuse()
         for fold in folds:
             fold_id = fold["fold_id"]
@@ -1605,7 +1612,7 @@ class CurrentSourceArtifactAdapter:
                 refuse()
             study_trials = [row for row in trials if facts(row).get("study_id") == study]
             study_candidates = [row for row in candidates if facts(row).get("study_id") == study]
-            if len(study_trials) != configured_trials or self._fact_int(native.get("study_trial_rows")) != configured_trials or not 1 <= len(study_candidates) <= configured_trials or self._fact_int(native.get("candidate_count")) != len(study_candidates):
+            if not study_trial_count_admitted(len(study_trials), configured_trials, patience) or self._fact_int(native.get("study_trial_rows")) != len(study_trials) or not 1 <= len(study_candidates) <= configured_trials or self._fact_int(native.get("candidate_count")) != len(study_candidates):
                 refuse()
             local = self._nullable_identifier(native.get("selected_trial_id"))
             selected = [row for row in study_candidates if facts(row).get("source_trial_id") == local and json.loads(row["parameters_json"]) == params]
@@ -1650,7 +1657,7 @@ class CurrentSourceArtifactAdapter:
                 **{name: self._nullable_decimal(native.get(name), name) for name in ("candidate_is_metric", "candidate_oos_metric", "candidate_decay")},
                 "candidate_is_scope": "INNER_VALIDATION_IS_MEAN", "candidate_oos_scope": "OUTER_FOLD_OOS",
                 "candidate_decay_scope": "INNER_IS_MEAN_MINUS_OUTER_OOS",
-                "candidate_metrics_scope": "OUTER_FOLD_POST_SELECTION", "candidate_count": len(study_candidates), "study_trial_rows": configured_trials,
+                "candidate_metrics_scope": "OUTER_FOLD_POST_SELECTION", "candidate_count": len(study_candidates), "study_trial_rows": len(study_trials),
                 "outer_oos_used_for_selection": False, "causality_claim": claim,
                 "inner_fold_count": len(retained_inner), "inner_validation": inner_config, "inner_folds": retained_inner,
             }
@@ -1669,7 +1676,7 @@ class CurrentSourceArtifactAdapter:
 
     def _attach_mode4_selections(
         self, raw_dir: Path, *, folds: list[dict[str, Any]], trials: list[dict[str, Any]],
-        candidates: list[dict[str, Any]], selection: Mapping[str, Any], recipe: Mapping[str, Any], configured_trials: int = 3,
+        candidates: list[dict[str, Any]], selection: Mapping[str, Any], recipe: Mapping[str, Any], configured_trials: int = 3, patience: int | None = None,
     ) -> dict[str, Any]:
         """Bind actual IS-only outer studies; Mode 4 has no nested inner study.
 
@@ -1690,7 +1697,7 @@ class CurrentSourceArtifactAdapter:
         configured_trials = admitted_study_trials(recipe, configured_trials)
         if (not limits["min"] <= len(folds) <= limits["max"] or len(ids) != len(folds)
                 or len(native_rows) != len(folds) or set(params_by_fold) != ids
-                or len(trials) != configured_trials * len(folds) or len(trials) > recipe["descriptor"]["max_total_trials"]):
+                or not study_trial_count_admitted(len(trials), configured_trials * len(folds), patience) or len(trials) > recipe["descriptor"]["max_total_trials"]):
             refuse()
         by_fold = {self._nullable_identifier(row.get("fold_id")): row for row in native_rows}
         if set(by_fold) != ids:
@@ -1725,7 +1732,7 @@ class CurrentSourceArtifactAdapter:
             # this IS-only pool. Select the explicit native robust witness,
             # not whichever repeated row happened to arrive first.
             selected = [row for row in selected if json.loads(row["payload_json"]).get("selection_metadata", {}).get("selected_by") == "is_only_robust"]
-            if (len(searched) != configured_trials or self._fact_int(native.get("study_trial_rows")) != configured_trials
+            if (not study_trial_count_admitted(len(searched), configured_trials, patience) or self._fact_int(native.get("study_trial_rows")) != len(searched)
                     or not 1 <= len(pool) <= configured_trials or self._fact_int(native.get("candidate_count")) != len(pool)
                     or len(matching) != 1 or len(selected) != 1 or matching[0]["state"] != "COMPLETE"
                     or facts(matching[0]).get("stage") != "is_search" or facts(matching[0]).get("pruned") is not False
@@ -1738,7 +1745,7 @@ class CurrentSourceArtifactAdapter:
                 "selected_trial_id": matching[0]["trial_id"], "parameters": params,
                 "params_digest": hashlib.sha256(self._canonical_json(params).encode()).hexdigest(),
                 "objective": selected[0]["objective"], "objective_kind": facts(selected[0])["objective_kind"],
-                "candidate_count": len(pool), "study_trial_rows": configured_trials,
+                "candidate_count": len(pool), "study_trial_rows": len(searched),
                 "outer_oos_used_for_selection": False, "causality_claim": "strict_fold_local_retraining",
                 "selection_sequence": ordinal,
                 "params_frozen_at_utc_ms": self._nullable_utc_ms(native.get("params_frozen_at"), "IS-only parameter freeze"),
@@ -1757,7 +1764,7 @@ class CurrentSourceArtifactAdapter:
 
     def _attach_per_fold_decay_selections(
         self, raw_dir: Path, *, folds: list[dict[str, Any]], trials: list[dict[str, Any]],
-        candidates: list[dict[str, Any]], selection: Mapping[str, Any], configured_trials: int = 3,
+        candidates: list[dict[str, Any]], selection: Mapping[str, Any], configured_trials: int = 3, patience: int | None = None,
     ) -> dict[str, Any]:
         """Join real fold-local selection; unlike causal, outer OOS participated."""
         def refuse() -> None:
@@ -1769,7 +1776,7 @@ class CurrentSourceArtifactAdapter:
         params_by_fold = self._read_json(raw_dir / "wfo" / "params_by_fold.json", "per-fold parameter map")
         params_by_fold = {k: v for k, v in params_by_fold.items() if k not in {"producer", "artifact_schema_version"}}
         ids = {row["fold_id"] for row in folds}
-        if type(configured_trials) is not int or not 2 <= configured_trials <= 400 or not 2 <= len(folds) <= 16 or len(ids) != len(folds) or len(native_rows) != len(folds) or len(trials) != configured_trials * len(folds) or set(params_by_fold) != ids:
+        if type(configured_trials) is not int or not 2 <= configured_trials <= 400 or not 2 <= len(folds) <= 16 or len(ids) != len(folds) or len(native_rows) != len(folds) or not study_trial_count_admitted(len(trials), configured_trials * len(folds), patience) or set(params_by_fold) != ids:
             refuse()
         by_fold = {self._nullable_identifier(row.get("fold_id")): row for row in native_rows}
         if set(by_fold) != ids:
@@ -1796,7 +1803,7 @@ class CurrentSourceArtifactAdapter:
             pool = [row for row in candidates if facts(row).get("study_id") == study]
             selected = [row for row in pool if facts(row).get("source_trial_id") == local and json.loads(row["parameters_json"]) == params]
             matching = [row for row in searched if facts(row).get("source_trial_id") == local and json.loads(row["parameters_json"]) == params]
-            if (len(searched) != configured_trials or not 1 <= len(pool) <= configured_trials or len(selected) != 1 or len(matching) != 1
+            if (not study_trial_count_admitted(len(searched), configured_trials, patience) or not 1 <= len(pool) <= configured_trials or len(selected) != 1 or len(matching) != 1
                     or matching[0]["state"] != "COMPLETE" or selected[0]["objective"] is None
                     or facts(selected[0]).get("stage") != "oos_candidate_selection"):
                 refuse()
@@ -1805,7 +1812,7 @@ class CurrentSourceArtifactAdapter:
                 "study_id": study, "selected_trial_id": matching[0]["trial_id"], "parameters": params,
                 "params_digest": hashlib.sha256(self._canonical_json(params).encode()).hexdigest(),
                 "objective": selected[0]["objective"], "objective_kind": "OUTER_FOLD_DECAY_J",
-                "candidate_count": len(pool), "study_trial_rows": configured_trials,
+                "candidate_count": len(pool), "study_trial_rows": len(searched),
                 "outer_oos_used_for_selection": True,
                 "selection_sequence": ordinal,
                 "params_frozen_at_utc_ms": self._nullable_utc_ms(native.get("params_frozen_at"), "fold parameter freeze"),

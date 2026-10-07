@@ -344,6 +344,7 @@ class DeltaWfoChildReceipt:
     # None leaves every historical launch payload byte-for-byte unchanged.
     execution_binding: dict[str, Any] | None = None
     imported_source: dict[str, Any] | None = None
+    early_stopping: int | None = None
 
     def as_payload(self, *, output_root: Path) -> dict[str, Any]:
         if self.task not in {"P10_DELTA_WFO", "P16_DELTA_WHATIF_GRID", "P10_DELTA_THREE_WINDOW_OPTIMIZED"}:
@@ -369,6 +370,14 @@ class DeltaWfoChildReceipt:
             "data_end_exclusive_utc_ms": self.data_end_exclusive_utc_ms,
             "first_oos_utc_ms": self.first_oos_utc_ms,
         }
+        from portal_api.domain.research_early_stopping import admitted_early_stopping
+        row = execution_recipe(self.execution_profile_id)
+        stopping = admitted_early_stopping({"early_stopping": self.early_stopping,
+            "optuna_trials": self.optuna_trials or row["public_profile"]["trial_default"]})
+        if stopping is not None:
+            if self.task == "P16_DELTA_WHATIF_GRID":
+                raise ResearchSupervisorError("what-if diagnostics cannot inherit optimizer early stopping")
+            payload["early_stopping"] = stopping
         if is_full03_profile(self.execution_profile_id):
             try:
                 row = full03_recipe(self.execution_profile_id, self.execution_profile_digest)
@@ -1040,12 +1049,14 @@ class IsolatedResearchSupervisor:
                 expected_trials = admitted_total_trials(full03_row, child_study_trials(
                     full03_row, receipt.as_payload(output_root=output_holder["output"])), n_folds)
                 if (engine_version != "1.1.1" or not bounds["min"] <= n_folds <= bounds["max"]
-                        or not 0 < bars <= full03_row["budgets"]["planning_max_bars"] or trial_rows != expected_trials):
+                        or not 0 < bars <= full03_row["budgets"]["planning_max_bars"]
+                        or (trial_rows != expected_trials if receipt.early_stopping is None else not 1 <= trial_rows <= expected_trials)):
                     raise ResearchSupervisorError("FULL-03 child returned incompatible exact recipe counts or engine")
             if receipt.execution_profile_id in {DELTA_PER_FOLD_DECAY_PROFILE_ID, DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID}:
                 minimum, maximum = (1, 1) if receipt.execution_profile_id == DELTA_THREE_WINDOW_OPTIMIZED_PROFILE_ID else (2, 16)
                 if (engine_version != "1.1.1" or not minimum <= n_folds <= maximum
-                        or not 0 < bars <= 10_000 or trial_rows != 3 * n_folds):
+                        or not 0 < bars <= 10_000
+                        or (trial_rows != 3 * n_folds if receipt.early_stopping is None else not 1 <= trial_rows <= 3 * n_folds)):
                     raise ResearchSupervisorError("FULL-02 child returned incompatible profile counts or engine")
             output = output_holder["output"]
             files, total_bytes = self._validate_output_tree(output, run_id=receipt.run_id)

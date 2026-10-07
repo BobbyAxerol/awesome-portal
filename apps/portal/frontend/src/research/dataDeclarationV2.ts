@@ -665,7 +665,8 @@ export interface ProfilePins {
   /** The served `trial_default`; null when the server sent none (never invented). */
   trialDefault: number | null;
   /** `early_stopping_policy`: `FORBIDDEN` is the only served word; null when not stated. */
-  earlyStopping: "forbidden" | null;
+  earlyStopping: "forbidden" | "optional" | null;
+  earlyStoppingGuidance?: { suggestedRangeRatio: readonly [number, number]; suggestedRatio: number };
   /** `inner_validation`: the served word while inner/per-fold selection is not admitted (`NOT_ADMITTED_GLOBAL_RETENTION_ONLY`); null when not stated. */
   innerValidation: string | null;
   /** `optimization_schedule` as served (e.g. `per_fold_causal`); null when not stated. */
@@ -805,7 +806,8 @@ export function readProfile(raw: unknown): ProfilePins | null {
     frequencies: words(row.frequencies),
     windowModes: words(row.window_modes),
     trialDefault: count(row.trial_default),
-    earlyStopping: text(row.early_stopping_policy)?.toUpperCase() === "FORBIDDEN" ? "forbidden" : null,
+    earlyStopping: text(row.early_stopping_policy)?.toUpperCase() === "FORBIDDEN" ? "forbidden"
+      : text(row.early_stopping_policy)?.toUpperCase() === "OPTIONAL" ? "optional" : null,
     innerValidation: text(row.inner_validation),
     optimizationSchedule: text(row.optimization_schedule),
     trialScope: text(row.trial_scope),

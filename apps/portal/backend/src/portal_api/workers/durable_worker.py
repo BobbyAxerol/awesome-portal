@@ -562,7 +562,8 @@ class DurableQuantWorker:
                     artifact_root=Path(self._artifact_store.root),
                     fence_validator=current_wfo_fence,
                 )
-                handoff_cursor = self._emit_retained_wfo_progress(progress_journal, retention)
+                handoff_cursor = self._emit_retained_wfo_progress(progress_journal, retention,
+                    requested_spec=research_request.research.requested_spec)
             elif is_whatif:
                 # W5a A10c: reserve → P05 whatif_results → P05 seal →
                 # WHATIF_GRID seal, all before `run_completed`. The frozen
@@ -1156,6 +1157,7 @@ class DurableQuantWorker:
     def _emit_retained_wfo_progress(
         journal: ResearchProgressJournal,
         retention: CurrentSourceRetentionResult,
+        *, requested_spec: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
         """Close the WFO study from the rows Control API has retained.
 
@@ -1181,8 +1183,13 @@ class DurableQuantWorker:
             study_counts = {}
             for trial in trials:
                 study_counts[trial['study_id']]=study_counts.get(trial['study_id'],0)+1
+            from portal_api.domain.research_early_stopping import admitted_early_stopping, study_trial_count_admitted
+            patience = admitted_early_stopping(requested_spec) if requested_spec is not None else None
+            counts_match = (all(study_trial_count_admitted(count,requested_spec["optuna_trials"],patience)
+                for count in study_counts.values()) if requested_spec is not None
+                else len(set(study_counts.values())) == 1)
             if (len(trials) != total or len(folds) != retention.table_rows["FOLD"]
-                    or len(study_counts)!=len(folds) or len(set(study_counts.values()))!=1
+                    or len(study_counts)!=len(folds) or not counts_match
                     or not all(1<=count<=400 for count in study_counts.values())):
                 raise DurableRunError("P11 retained per-fold study counts do not match")
             for index in range(live + 1, total + 1):

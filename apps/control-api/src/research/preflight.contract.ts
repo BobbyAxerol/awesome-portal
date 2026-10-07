@@ -430,7 +430,7 @@ export type ResearchPreflightPrivateResponse = z.infer<typeof ResearchPreflightP
 export interface ResearchPreflightGate {
   gate: string;
   /** NOT_RECORDED: the manifest predates the gate; never shown as PASS. */
-  state: "PASS" | "NOT_APPLICABLE" | "NOT_RECORDED";
+  state: "PASS" | "FAIL" | "NOT_APPLICABLE" | "NOT_RECORDED";
   field_path: readonly string[];
   message: string;
 }

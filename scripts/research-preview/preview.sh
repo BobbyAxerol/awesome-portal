@@ -176,12 +176,25 @@ cmd_up() {
   if [[ $# -gt 0 ]]; then
     local service
     for service in "$@"; do
-      case "$service" in control-api|portal-web) ;;
-        *) echo "preview: read-side rollout only permits control-api and portal-web" >&2; return 1;;
+      case "$service" in control-api|portal-web|portal-api|quant-worker-py) ;;
+        *) echo "preview: scoped application rollout excludes DB/NATS/migrations/bootstrap" >&2; return 1;;
       esac
     done
-    # A read-side repair must not recreate a worker, run a migration/bootstrap,
-    # or restart PostgreSQL/NATS just because they appear as dependencies.
+    if [[ " $* " == *" portal-api "* || " $* " == *" quant-worker-py "* ]]; then
+      local active_children
+      active_children="$(compose exec -T portal-postgres sh -c 'exec psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "$1"' sh "
+        SELECT count(*) FROM research.jobs j LEFT JOIN research.worker_attempts w
+          ON w.workspace_id=j.workspace_id AND w.worker_attempt_id=j.current_worker_attempt_id
+        WHERE j.state IN ('CLAIMED','RUNNING','CANCEL_REQUESTED') AND NOT COALESCE(
+          j.state='CLAIMED' AND w.state='CLAIMED' AND w.worker_id='research-producer-v1'
+          AND w.expires_at<=now() AND EXISTS (SELECT 1 FROM research.run_producers p
+            WHERE p.workspace_id=j.workspace_id AND p.run_id=j.run_id AND p.dispatch_state='PENDING'), false)
+      ")"
+      [[ "$active_children" == "0" ]] || { echo "preview: preserve in-flight children; retry rollout when idle" >&2; return 1; }
+    fi
+    # Explicit application services only: no migration/bootstrap or DB/NATS
+    # dependency restart. Before an API/worker change the operator must verify
+    # there is no in-flight admitted child; never cancel work to deploy.
     PORTAL_BUILD_COMMIT="$sha" compose up -d --no-build --no-deps "$@"
   else
     PORTAL_BUILD_COMMIT="$sha" compose up -d --no-build portal-web quant-worker-py
@@ -196,6 +209,9 @@ cmd_up() {
   curl --fail --silent --show-error --retry 5 --retry-delay 1 --retry-all-errors \
     --connect-timeout 3 --max-time 5 --output /dev/null \
     "http://127.0.0.1:$port/api/control/readyz"
+  curl --fail --silent --show-error --retry 10 --retry-delay 1 --retry-all-errors \
+    --connect-timeout 3 --max-time 5 --output /dev/null \
+    "http://127.0.0.1:$port/api/ready"
   record_identity
 }
 

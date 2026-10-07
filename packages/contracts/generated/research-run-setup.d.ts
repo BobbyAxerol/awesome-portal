@@ -131,6 +131,25 @@ export interface components {
             account?: components["schemas"]["PercentEquityAccount"];
             native_input?: components["schemas"]["NativeDeltaInput"];
             recipe?: components["schemas"]["RecipePresentation"];
+            /** @enum {unknown} */
+            early_stopping_policy?: "FORBIDDEN" | "OPTIONAL";
+            early_stopping_guidance?: {
+                /** @constant */
+                scope: "PER_STUDY";
+                /** @constant */
+                minimum: 1;
+                /** @constant */
+                maximum_basis: "REQUESTED_TRIALS_PER_STUDY";
+                suggested_range_ratio: [
+                    0.5,
+                    0.75
+                ];
+                suggested_ratio: number;
+                /** @constant */
+                suggestion_is_default: false;
+                /** @constant */
+                semantics: "CONSECUTIVE_COMPLETED_TRIALS_WITHOUT_OBJECTIVE_IMPROVEMENT";
+            };
         } & (unknown & unknown & unknown);
         SetupOptions: {
             /** @constant */

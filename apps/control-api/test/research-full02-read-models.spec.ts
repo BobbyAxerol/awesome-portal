@@ -115,6 +115,13 @@ describe("FULL-02 exact retained semantics (unit only)", () => {
     const input={profileId:descriptor.current_source.profile_id,sourceAdapterId:descriptor.current_source.source_adapter_id,
       tableRows:f.table_rows,summary:f.summary};
     expect(()=>assertFull02SealConsistency(input,rowsForCheck(f))).not.toThrow();
+    const shorter=structuredClone(f);
+    shorter.rows.TRIAL=shorter.rows.TRIAL.slice(0,2);
+    shorter.table_rows.TRIAL=2;
+    if(shorter.summary.counts) shorter.summary.counts.trials=2;
+    const shorterInput={...input,tableRows:shorter.table_rows,summary:shorter.summary};
+    expect(()=>assertFull02SealConsistency(shorterInput,rowsForCheck(shorter))).toThrow();
+    expect(()=>assertFull02SealConsistency(shorterInput,rowsForCheck(shorter),{optuna_trials:3,early_stopping:1})).not.toThrow();
     f.rows.FOLD[0].payload.test_end_utc_ms++;
     expect(()=>assertFull02SealConsistency(input,rowsForCheck(f))).toThrow();
   });

@@ -1935,6 +1935,7 @@
           "state": {
             "enum": [
               "PASS",
+              "FAIL",
               "NOT_APPLICABLE",
               "NOT_RECORDED"
             ]

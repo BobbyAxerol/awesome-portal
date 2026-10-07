@@ -2,6 +2,7 @@ import type { ControlApiConfig } from "../config";
 import type { ResearchPortalAdmission, ResearchEngineAtlasPrivate } from "./foundation.contract";
 import { VN_OBSERVED_FIXED_PROFILE, VN_OBSERVED_FIXED_PROFILE_DIGEST } from "./vn-observed-fixed.profile";
 import { executionRecipes, executionRecipeActivationReason, executionRecipeTrialCount, preferredIntakeRecipes } from "./execution-recipes";
+import { earlyStoppingPolicy } from "./early-stopping";
 
 type AdmissionFlags = Pick<ControlApiConfig,
   "FEATURE_RESEARCH_RUN_PRODUCER" | "FEATURE_RESEARCH_WFO_PROFILE" | "FEATURE_RESEARCH_PREVIEW_LONG_WFO">
@@ -39,7 +40,7 @@ export function researchPortalAdmission(
       // Atlas's historical ETag hashes wire JSON, not a sorted object. Keep
       // the original prefix/key insertion order as well as semantic facts.
       return {profile_id, state:reason ? "DISABLED" : "ENABLED", reason,
-        ...facts, trial_count:executionRecipeTrialCount(row, config)};
+        ...facts, trial_count:executionRecipeTrialCount(row, config), early_stopping_policy:earlyStoppingPolicy(row.public_profile)};
     }),
     note: "PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE",
   };

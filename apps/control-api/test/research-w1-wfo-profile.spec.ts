@@ -153,7 +153,7 @@ describe("W1 run admission matrix", () => {
     ["trials", wfoRequested({ optuna_trials: 4 }), "The Delta walk-forward profile runs exactly 3 Optuna trials."],
     ["seed", wfoRequested({ random_seed: 7 }), "The Delta walk-forward profile runs exactly random seed 42."],
     ["null seed", wfoRequested({ random_seed: null }), "The Delta walk-forward profile runs exactly random seed 42."],
-    ["early stopping", wfoRequested({ early_stopping: 2 }), "The Delta walk-forward profile does not admit early stopping."],
+    ["early stopping outside study budget", wfoRequested({ early_stopping: 4 }), "Early stopping must be an integer from 1 to the declared trials per study."],
     ["timeframe", wfoRequested({ data: { dataset_id: "crypto-binance-1m", symbol: "BTCUSDT", timeframe: "4h" } }),
       "The Delta walk-forward profile accepts only the 1h timeframe."],
     ["frequency", wfoRequested({}, { frequency: "monthly" }), "The Delta walk-forward profile accepts only weekly expanding folds."],
@@ -183,6 +183,12 @@ describe("W1 run admission matrix", () => {
       expect(error).toMatchObject({ code: "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE", status: 409, message });
     });
   }
+
+  it("admits optional patience inside the unchanged legacy study budget", async () => {
+    const spec = wfoRequested({ early_stopping: 2 });
+    await expect(admit(spec, { manifest: manifestFor(spec) }))
+      .resolves.toMatchObject({ profile: { id: DELTA_WFO_PROFILE_ID } });
+  });
 
   it("keeps 92 days inclusive and 16 folds admissible", async () => {
     const edge = wfoRequested({}, { start: "2026-04-14T00:00:00Z", end_exclusive: "2026-07-15T00:00:00Z" });

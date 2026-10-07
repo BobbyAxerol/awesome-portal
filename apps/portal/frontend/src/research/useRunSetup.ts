@@ -202,7 +202,12 @@ export function profilePinsFromSetup(profile: SetupProfile): ProfilePins {
     frequencies: nonEmpty(profile.frequencies),
     windowModes: nonEmpty(profile.window_modes),
     trialDefault: profile.trial_default,
-    earlyStopping: null,
+    earlyStopping: profile.early_stopping_policy === "FORBIDDEN" ? "forbidden"
+      : profile.early_stopping_policy === "OPTIONAL" ? "optional" : null,
+    ...(profile.early_stopping_guidance ? {earlyStoppingGuidance: {
+      suggestedRangeRatio: profile.early_stopping_guidance.suggested_range_ratio,
+      suggestedRatio: profile.early_stopping_guidance.suggested_ratio,
+    }} : {}),
     innerValidation: profile.inner_validation,
     optimizationSchedule: profile.optimization_schedule,
     trialScope: profile.trial_scope,

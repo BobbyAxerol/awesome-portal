@@ -560,6 +560,23 @@ export class ResearchCurrentSourceRepository {
       const sealMaximumTrials = sealRecipe && "max_total_trials" in sealRecipe.public_profile
         ? sealRecipe.public_profile.max_total_trials : sealRecipe?.public_profile.trial_count.max ?? 64;
       const sealRelationLimit = 2 * sealMaximumTrials + 18;
+      let stoppingAuthority: Record<string, unknown> | undefined;
+      if (method === "PER_FOLD_DECAY" || method === "THREE_WINDOW"
+          || sealRecipe && sealRecipe.public_profile.optimization_mode !== "mode_1_decay") {
+        const pinned = await client.query<{ requested_spec: JsonColumn }>(
+          `SELECT preflight.requested_spec FROM research.run_producers producer
+             JOIN research.preflight_manifests preflight ON preflight.workspace_id=producer.workspace_id
+              AND preflight.preflight_token=producer.preflight_token AND preflight.actor_user_id=producer.actor_user_id
+            WHERE producer.workspace_id=$1 AND producer.run_id=$2
+              AND producer.requested_spec_digest=$3 AND preflight.requested_spec_digest=$3
+              AND producer.effective_spec_digest=$4 AND preflight.effective_spec_digest=$4
+              AND producer.dataset_binding_digest=$5 AND preflight.dataset_binding_digest=$5
+              AND producer.execution_profile_id=$6 AND producer.execution_profile_digest=$7 LIMIT 1`,
+          [scope.workspaceId,input.runId,input.requestedSpecDigest,input.effectiveSpecDigest,input.datasetBindingDigest,
+            sealRecipe?.profile_id,sealRecipe?.profile_digest]);
+        if (pinned.rowCount !== 1) throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_CONFLICT", "Source stopping policy does not match its immutable admission.",409);
+        stoppingAuthority = asJsonRecord(pinned.rows[0]!.requested_spec,"admitted stopping policy");
+      }
       if (method === "CAUSAL_INNER") {
         const recipe = currentSourceRetainedRecipe(input.profileId,input.sourceAdapterId)!;
         const pin = await client.query<{ requested_spec: JsonColumn; topology: JsonColumn }>(
@@ -598,7 +615,7 @@ export class ResearchCurrentSourceRepository {
             ORDER BY table_kind, source_ordinal LIMIT $4`, [scope.workspaceId,input.runId,input.artifactRevision,sealRelationLimit]);
         assertFull02SealConsistency(input, retained.rows.map(row => ({ tableKind: row.table_kind,
           sourceOrdinal: asSafeNonNegative(row.source_ordinal,"FULL02 source ordinal"), sourceId: row.source_id,
-          payload: asJsonRecord(row.payload,"FULL02 source payload") })));
+          payload: asJsonRecord(row.payload,"FULL02 source payload") })), stoppingAuthority);
       }
       if (sealRecipe && sealRecipe.public_profile.optimization_mode !== "mode_1_decay") {
         const retained = await client.query<{table_kind:string;source_ordinal:string|number;source_id:string;payload:JsonColumn}>(
@@ -607,7 +624,7 @@ export class ResearchCurrentSourceRepository {
               AND table_kind IN ('FOLD','TRIAL','CANDIDATE','SELECTION') ORDER BY table_kind,source_ordinal LIMIT $4`,
           [scope.workspaceId,input.runId,input.artifactRevision,sealRelationLimit]);
         assertFull04SealConsistency(input,retained.rows.map(row=>({tableKind:row.table_kind,sourceOrdinal:asSafeNonNegative(row.source_ordinal,"optimizer source ordinal"),
-          sourceId:row.source_id,payload:asJsonRecord(row.payload,"optimizer source payload")})));
+          sourceId:row.source_id,payload:asJsonRecord(row.payload,"optimizer source payload")})),stoppingAuthority);
       }
       await client.query(
         `INSERT INTO research.current_source_seals_v1

@@ -536,6 +536,7 @@ export function searchStudySurfaces(
   retainedProfileId: string,
   studies: readonly SearchStudySurfaceInput[],
   scope: "INNER_VALIDATION_OUTER_STUDY" | "OUTER_FOLD_DECAY_STUDY" | "IS_ONLY_OUTER_STUDY" = "INNER_VALIDATION_OUTER_STUDY",
+  stoppingBudget: { requestedTrials: number; patience: number } | null = null,
 ): SearchStudySurface[] {
   if (studies.length < 2 || studies.length > 16) throw new RangeError("Causal study count is outside the immutable profile bound.");
   const range = currentSourceRetainedRecipe(retainedProfileId)?.public_profile.trial_count ?? { min: 3, max: 3 };
@@ -544,8 +545,13 @@ export function searchStudySurfaces(
   const foldIds = new Set<string>(), studyIds = new Set<string>(), trialIds = new Set<string>();
   return studies.map((study) => {
     if (!TrialId.safeParse(study.foldId).success || !TrialId.safeParse(study.studyId).success
-      || foldIds.has(study.foldId) || studyIds.has(study.studyId) || study.trials.length !== population
-      || population < range.min || population > range.max) {
+      || foldIds.has(study.foldId) || studyIds.has(study.studyId)
+      || (stoppingBudget === null
+        ? study.trials.length !== population || population < range.min || population > range.max
+        : !Number.isSafeInteger(stoppingBudget.patience) || stoppingBudget.patience < 1
+          || stoppingBudget.patience > stoppingBudget.requestedTrials
+          || stoppingBudget.requestedTrials < range.min || stoppingBudget.requestedTrials > range.max
+          || study.trials.length < 2 || study.trials.length > stoppingBudget.requestedTrials)) {
       throw new RangeError("Causal surface must have one exact bounded population per outer study.");
     }
     foldIds.add(study.foldId); studyIds.add(study.studyId);

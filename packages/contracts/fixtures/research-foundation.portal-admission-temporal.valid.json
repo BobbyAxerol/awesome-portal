@@ -55,7 +55,7 @@
       ],
       "seed_policy": "LOCKED",
       "trial_default": 3,
-      "early_stopping_policy": "FORBIDDEN"
+      "early_stopping_policy": "OPTIONAL"
     },
     {
       "profile_id": "p10.delta-signal-notional-wfo.v2",
@@ -93,7 +93,7 @@
       ],
       "seed_policy": "LOCKED",
       "trial_default": 3,
-      "early_stopping_policy": "FORBIDDEN",
+      "early_stopping_policy": "OPTIONAL",
       "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY"
     }
   ],
