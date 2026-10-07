@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/api/v1/research/runs/version-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Actor/workspace-fenced immutable version compatibility before dataset selection. No dataset coverage, default replacement, token or run authorization. Private no-store; bounded response. */
+        get: operations["researchRunVersionOptionsGetV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/research/runs/setup-options": {
         parameters: {
             query?: never;
@@ -113,6 +130,7 @@ export interface components {
             account_model?: "QUANTBT_PERCENT_EQUITY_V1";
             account?: components["schemas"]["PercentEquityAccount"];
             native_input?: components["schemas"]["NativeDeltaInput"];
+            recipe?: components["schemas"]["RecipePresentation"];
         } & (unknown & unknown & unknown);
         SetupOptions: {
             /** @constant */
@@ -131,6 +149,8 @@ export interface components {
             preflight_required: true;
             engine_options?: components["schemas"]["EngineOptions"];
             recipe_revision?: string;
+            /** @constant */
+            presentation_revision?: "research.recipe-presentation.v1";
             preflight_policy?: {
                 maximum_active_unbound_per_actor: number;
                 ttl_seconds: number;
@@ -180,6 +200,45 @@ export interface components {
                 field_path: string[];
                 profile_ids: string[];
             } & (unknown & unknown))[];
+        };
+        RecipePresentation: {
+            key: string;
+            /** @enum {unknown} */
+            family: "THREE_WINDOW_FIXED" | "THREE_WINDOW_OPTIMIZED" | "ADVANCED_WFO" | "FULL_SAMPLE" | "NATIVE_FIXED";
+            label: string;
+            recommended_rank: number;
+            /** @constant */
+            scope: "DISPLAY_ORDER_NOT_OPTIMAL_SETUP_OR_AUTHORIZATION";
+        };
+        VersionContext: {
+            workspace_id: string;
+            alpha_id: string;
+            alpha_version_id: string;
+        };
+        VersionOptions: {
+            /** @constant */
+            schema_version: "research.run-version-options.v1";
+            /** @constant */
+            scope: "VERSION_BINDING_NOT_DATASET_OR_RUN_AUTHORIZATION";
+            context: components["schemas"]["VersionContext"];
+            source_revision: string;
+            recipe_revision: string;
+            /** @constant */
+            presentation_revision: "research.recipe-presentation.v1";
+            /** @enum {unknown} */
+            lifecycle_state: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
+            declared_timeframes: string[];
+            routes: ({
+                execution_route: string;
+                /** @enum {unknown} */
+                state: "COMPATIBLE" | "UNAVAILABLE";
+                reason_code: string | null;
+                compatible_timeframes: string[];
+                compatible_profile_ids: string[];
+                compatible_recipe_keys: string[];
+            } & unknown)[];
+            /** @constant */
+            preflight_required: true;
         };
         Budget: {
             /** @constant */
@@ -370,6 +429,93 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    researchRunVersionOptionsGetV1: {
+        parameters: {
+            query: {
+                workspace_id?: string;
+                alpha_id: string;
+                alpha_version_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Read-only setup facts; no authorization */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionOptions"];
+                };
+            };
+            /** @description Typed refusal */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Typed refusal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Typed refusal */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Typed refusal */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Typed refusal */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Typed refusal */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Typed refusal */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     researchRunSetupOptionsGetV1: {
         parameters: {
             query: {

@@ -7,11 +7,58 @@ import { projectResearchAlphaVersionDeclaration } from "./alpha-version-declarat
 import { researchRunVersionPrecheck } from "./version-admission";
 import { IMPORTED_ALPHA_ADAPTER_ID, IMPORTED_ALPHA_PROFILE } from "./imported-alpha.profile";
 import { sha256ResearchJson } from "./preflight.service";
-import { RunSetupOptionsSchema, type RunSetupContext, type RunSetupProfile, type SetupRefusal } from "./run-setup.contract";
+import { RunSetupOptionsSchema, RunVersionOptionsSchema, type RunSetupContext, type RunSetupProfile, type SetupRefusal } from "./run-setup.contract";
+import { recipePresentation, RECIPE_PRESENTATION_REVISION } from "./recipe-presentation";
 import { WHATIF_PROFILE } from "./whatif.profile";
 import {executionRecipe, executionRecipeBudgets, executionRecipeQualification, EXECUTION_RECIPE_REVISION, EXECUTION_SETUP_BOUNDS} from "./execution-recipes";
 
 type Version = NonNullable<Awaited<ReturnType<ResearchMetadataRepository["loadRunAdapterEligibility"]>>>;
+type AdmissionProfile = ResearchPortalAdmission["profiles"][number];
+/** Shared binding predicate: early compatibility and dataset-bound setup cannot drift. */
+function versionProfileReason(version: Version, declaration: ReturnType<typeof projectResearchAlphaVersionDeclaration>, row: AdmissionProfile) {
+  const recipe = executionRecipe(row.profile_id), imported = version.binding?.adapterId === IMPORTED_ALPHA_ADAPTER_ID;
+  const importedSearch = recipe.adapter_kind === "IMPORTED_SEARCH";
+  const bindingMismatch = recipe.source_requirement === "FULL03_IMMUTABLE_DELTA_BINDING"
+    ? recipe.descriptor.alpha_binding_requirements.alpha_version_id !== version.alphaVersionId
+      || recipe.descriptor.adapter_id !== version.binding?.adapterId
+      || recipe.descriptor.adapter_contract_digest !== version.binding?.contractDigest
+    : version.binding?.adapterId === "full03.delta-rsi.v1";
+  if (importedSearch ? !imported : imported || bindingMismatch) return "ALPHA_EXECUTOR_MISMATCH";
+  if (importedSearch && declaration.warmup_bars > 4096) return "IMPORTED_WARMUP_EXCEEDS_EXECUTOR_LIMIT";
+  if (importedSearch && Object.values(declaration.parameter_space).some(p => p.kind === "fixed" ? typeof p.value !== "number"
+    : p.kind === "categorical" ? p.values.some(v => typeof v !== "number") : false)) return "IMPORTED_NON_NUMERIC_SEARCH_NOT_QUALIFIED";
+  return null;
+}
+
+/** Does not read the dataset index, issue a token, choose a default or claim supersession. */
+export function runVersionOptions(user: PortalUser, config: ControlApiConfig, version: Version,
+  context: {workspace_id: string; alpha_id: string; alpha_version_id: string}, admission: ResearchPortalAdmission) {
+  const declaration = projectResearchAlphaVersionDeclaration(version.declaredContract, version.entrypoint);
+  const callerReason = researchRunVersionPrecheck(user, config, version).code;
+  const candidates: {row: Pick<AdmissionProfile, "profile_id" | "execution_route" | "timeframe" | "protocol" | "optimization_mode" | "optimization_schedule" | "trial_count">; reason: string | null}[] = admission.profiles.map(row => ({ row, reason: callerReason
+    ?? versionProfileReason(version, declaration, row)
+    ?? (!declaration.timeframes.includes(row.timeframe) ? "ALPHA_TIMEFRAME_NOT_DECLARED" : null)
+    ?? row.reason ?? (row.state === "DISABLED" ? "PROFILE_NOT_ENABLED" : null) }));
+  if (version.binding?.adapterId === IMPORTED_ALPHA_ADAPTER_ID) {
+    const row = executionRecipe(IMPORTED_ALPHA_ADAPTER_ID).public_profile;
+    const reason = callerReason ?? (declaration.warmup_bars > 4096 ? "IMPORTED_WARMUP_EXCEEDS_EXECUTOR_LIMIT" : null)
+      ?? (admission.profiles[0]?.engine_release_id !== row.engine_release_id || admission.profiles[0]?.reason ? "SOURCE_RELEASE_UNVERIFIED" : null);
+    for (const timeframe of declaration.timeframes) candidates.push({row: {...row, timeframe}, reason});
+  }
+  const routes = [...new Set(candidates.map(item => item.row.execution_route))].sort().map(execution_route => {
+    const rows = candidates.filter(item => item.row.execution_route === execution_route), compatible = rows.filter(item => item.reason === null);
+    return { execution_route, state: compatible.length ? "COMPATIBLE" : "UNAVAILABLE", reason_code: compatible.length ? null : rows[0].reason,
+      compatible_timeframes: [...new Set(compatible.map(item => item.row.timeframe))].sort(),
+      compatible_profile_ids: [...new Set(compatible.map(item => item.row.profile_id))].sort(),
+      compatible_recipe_keys: [...new Set(compatible.map(item => recipePresentation(item.row).key))].sort() };
+  });
+  const payload = {schema_version: "research.run-version-options.v1", scope: "VERSION_BINDING_NOT_DATASET_OR_RUN_AUTHORIZATION",
+    context, recipe_revision: EXECUTION_RECIPE_REVISION, presentation_revision: RECIPE_PRESENTATION_REVISION,
+    lifecycle_state: version.lifecycleState, declared_timeframes: [...declaration.timeframes], routes, preflight_required: true};
+  const result = RunVersionOptionsSchema.parse({...payload, source_revision: sha256ResearchJson(payload)});
+  if (Buffer.byteLength(JSON.stringify(result), "utf8") > EXECUTION_SETUP_BOUNDS.maximum_bytes) throw new Error("Version setup exceeds its bounded response");
+  return result;
+}
 /** Version-specific view. This never grants a token, admits a job or mutates defaults. */
 export function runSetupOptions(user: PortalUser, config: ControlApiConfig, version: Version,
   context: RunSetupContext & { workspace_id: string }, admission: ResearchPortalAdmission,
@@ -40,18 +87,9 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
   const profiles: RunSetupProfile[] = admission.profiles.map(row => {
     const recipe = executionRecipe(row.profile_id);
     const importedSearch=recipe.adapter_kind==="IMPORTED_SEARCH";
-    const nonnumeric=Object.values(declaration.parameter_space).some(p=>p.kind==="fixed"?typeof p.value!=="number"
-      :p.kind==="categorical"?p.values.some(v=>typeof v!=="number"):false);
-    const bindingReason = recipe.source_requirement === "FULL03_IMMUTABLE_DELTA_BINDING"
-      ? recipe.descriptor.alpha_binding_requirements.alpha_version_id !== version.alphaVersionId
-        || recipe.descriptor.adapter_id !== version.binding?.adapterId
-        || recipe.descriptor.adapter_contract_digest !== version.binding?.contractDigest
-      : version.binding?.adapterId === "full03.delta-rsi.v1";
     const temporal = row.protocol === "advanced";
     const optimized = executionRecipe(row.profile_id).adapter_kind === "DELTA_THREE_WINDOW_OPTIMIZED";
-    const refusals = [...common, ...refusal(importedSearch?!imported?"ALPHA_EXECUTOR_MISMATCH":null:imported || bindingReason ? "ALPHA_EXECUTOR_MISMATCH" : null, ["alpha_binding"]),
-      ...refusal(importedSearch&&declaration.warmup_bars>4096?"IMPORTED_WARMUP_EXCEEDS_EXECUTOR_LIMIT":null,["alpha_binding"]),
-      ...refusal(importedSearch&&nonnumeric?"IMPORTED_NON_NUMERIC_SEARCH_NOT_QUALIFIED":null,["alpha_binding"]),
+    const refusals = [...common, ...refusal(versionProfileReason(version, declaration, row), ["alpha_binding"]),
       ...refusal(row.dataset_id ? row.dataset_id !== context.dataset_id ? "PROFILE_DATASET_NOT_ADMITTED" : null
         : context.dataset_id === "vn-stock-daily" ? "PROFILE_DATASET_NOT_ADMITTED" : null, ["data", "dataset_id"]),
       ...refusal(row.symbol && row.symbol !== context.symbol ? "PROFILE_SYMBOL_NOT_ADMITTED" : null, ["data", "symbol"]),
@@ -101,6 +139,7 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
       temporal_guards: { policy: "NOT_APPLICABLE", defaults: null, max_bars: null, zero_semantics: "ZERO_APPLIES_NO_TEMPORAL_GUARD" },
       independent_holdout: true });
   }
+  for (const profile of profiles) profile.recipe = recipePresentation(profile);
   for (const profile of profiles) {
     const row = executionRecipe(profile.profile_id), budgets = executionRecipeBudgets(row, config);
     const qualification = executionRecipeQualification(row.profile_id);
@@ -113,7 +152,7 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
     scope: "CONFIGURATION_FACTS_NOT_RUN_AUTHORIZATION" as const, catalog_revision: catalog.catalog_revision,
     as_of_utc_ms: catalog.as_of_utc_ms, warmup_bars: declaration.warmup_bars,
     source_timezone: context.dataset_id === "vn-stock-daily" ? "Asia/Ho_Chi_Minh" as const : "UTC" as const,
-    profiles, recipe_revision:EXECUTION_RECIPE_REVISION,
+    profiles, recipe_revision:EXECUTION_RECIPE_REVISION, presentation_revision: RECIPE_PRESENTATION_REVISION,
     preflight_policy:{maximum_active_unbound_per_actor:config.RESEARCH_PREFLIGHT_MAXIMUM_ACTIVE_MANIFESTS_PER_ACTOR ?? 8,
       ttl_seconds:config.RESEARCH_PREFLIGHT_TTL_SECONDS ?? 600, reuse:"IDENTICAL_FRESH_SOURCE_REVALIDATED_UNBOUND_ONLY" as const,
       expiry_extension:false as const},

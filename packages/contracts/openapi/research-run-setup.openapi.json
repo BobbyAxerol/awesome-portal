@@ -2,10 +2,132 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Research New Run setup",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Alpha-bound current Portal executor facts and editable indexed-bar hints. No HMD scan, execution, preflight token or admission widening. Advanced folds remain engine/P08 authoritative."
   },
   "paths": {
+    "/api/v1/research/runs/version-options": {
+      "get": {
+        "operationId": "researchRunVersionOptionsGetV1",
+        "security": [
+          {
+            "portalSession": []
+          }
+        ],
+        "description": "Actor/workspace-fenced immutable version compatibility before dataset selection. No dataset coverage, default replacement, token or run authorization. Private no-store; bounded response.",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+            }
+          },
+          {
+            "name": "alpha_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+            }
+          },
+          {
+            "name": "alpha_version_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read-only setup facts; no authorization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionOptions"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed refusal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed refusal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed refusal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed refusal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed refusal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Typed refusal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed refusal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/research/runs/setup-options": {
       "get": {
         "operationId": "researchRunSetupOptionsGetV1",
@@ -689,6 +811,9 @@
           },
           "native_input": {
             "$ref": "#/components/schemas/NativeDeltaInput"
+          },
+          "recipe": {
+            "$ref": "#/components/schemas/RecipePresentation"
           }
         },
         "allOf": [
@@ -844,6 +969,9 @@
           "recipe_revision": {
             "type": "string",
             "pattern": "^[a-f0-9]{64}$"
+          },
+          "presentation_revision": {
+            "const": "research.recipe-presentation.v1"
           },
           "preflight_policy": {
             "type": "object",
@@ -1348,6 +1476,237 @@
             },
             "maxItems": 4,
             "minItems": 0
+          }
+        }
+      },
+      "RecipePresentation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "family",
+          "label",
+          "recommended_rank",
+          "scope"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$"
+          },
+          "family": {
+            "enum": [
+              "THREE_WINDOW_FIXED",
+              "THREE_WINDOW_OPTIMIZED",
+              "ADVANCED_WFO",
+              "FULL_SAMPLE",
+              "NATIVE_FIXED"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "recommended_rank": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 999
+          },
+          "scope": {
+            "const": "DISPLAY_ORDER_NOT_OPTIMAL_SETUP_OR_AUTHORIZATION"
+          }
+        }
+      },
+      "VersionContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "workspace_id",
+          "alpha_id",
+          "alpha_version_id"
+        ],
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+          },
+          "alpha_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+          },
+          "alpha_version_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+          }
+        }
+      },
+      "VersionOptions": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "scope",
+          "context",
+          "source_revision",
+          "recipe_revision",
+          "presentation_revision",
+          "lifecycle_state",
+          "declared_timeframes",
+          "routes",
+          "preflight_required"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.run-version-options.v1"
+          },
+          "scope": {
+            "const": "VERSION_BINDING_NOT_DATASET_OR_RUN_AUTHORIZATION"
+          },
+          "context": {
+            "$ref": "#/components/schemas/VersionContext"
+          },
+          "source_revision": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "recipe_revision": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "presentation_revision": {
+            "const": "research.recipe-presentation.v1"
+          },
+          "lifecycle_state": {
+            "enum": [
+              "DRAFT",
+              "ACTIVE",
+              "SUPERSEDED",
+              "ABANDONED"
+            ]
+          },
+          "declared_timeframes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+            },
+            "maxItems": 32,
+            "minItems": 1
+          },
+          "routes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "execution_route",
+                "state",
+                "reason_code",
+                "compatible_timeframes",
+                "compatible_profile_ids",
+                "compatible_recipe_keys"
+              ],
+              "properties": {
+                "execution_route": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+                },
+                "state": {
+                  "enum": [
+                    "COMPATIBLE",
+                    "UNAVAILABLE"
+                  ]
+                },
+                "reason_code": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "compatible_timeframes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+                  },
+                  "maxItems": 32,
+                  "minItems": 0
+                },
+                "compatible_profile_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+                  },
+                  "maxItems": 512,
+                  "minItems": 0
+                },
+                "compatible_recipe_keys": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$"
+                  },
+                  "maxItems": 512,
+                  "minItems": 0
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "state": {
+                        "const": "COMPATIBLE"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "reason_code": {
+                        "type": "null"
+                      },
+                      "compatible_timeframes": {
+                        "minItems": 1
+                      },
+                      "compatible_profile_ids": {
+                        "minItems": 1
+                      },
+                      "compatible_recipe_keys": {
+                        "minItems": 1
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "reason_code": {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      "compatible_timeframes": {
+                        "maxItems": 0
+                      },
+                      "compatible_profile_ids": {
+                        "maxItems": 0
+                      },
+                      "compatible_recipe_keys": {
+                        "maxItems": 0
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "maxItems": 32,
+            "minItems": 0
+          },
+          "preflight_required": {
+            "const": true
           }
         }
       },

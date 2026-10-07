@@ -22,6 +22,22 @@ const fieldPath={type:"array",minItems:1,maxItems:8,items:{type:"string",pattern
 const refusal=obj({reason_code:reason,field_path:fieldPath});
 const recipeTable=JSON.parse(readFileSync(new URL("../../apps/portal/registry/research-execution-recipes.v1.json",root)));
 const maximumProfiles=recipeTable.setup_bounds.maximum_profiles;
+const presentation=obj({key:{...str,pattern:"^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$"},
+  family:en("THREE_WINDOW_FIXED","THREE_WINDOW_OPTIMIZED","ADVANCED_WFO","FULL_SAMPLE","NATIVE_FIXED"),
+  label:{...str,minLength:1,maxLength:120},recommended_rank:{type:"integer",minimum:0,maximum:999},
+  scope:{const:"DISPLAY_ORDER_NOT_OPTIMAL_SETUP_OR_AUTHORIZATION"}});
+const versionContext=obj({workspace_id:id,alpha_id:id,alpha_version_id:id});
+const versionRoute=obj({execution_route:id,state:en("COMPATIBLE","UNAVAILABLE"),reason_code:nullable(reason),
+  compatible_timeframes:array(id,32),compatible_profile_ids:array(id,maximumProfiles),
+  compatible_recipe_keys:array(presentation.properties.key,maximumProfiles)});
+versionRoute.allOf=[{if:{properties:{state:{const:"COMPATIBLE"}}},then:{properties:{reason_code:{type:"null"},
+  compatible_timeframes:{minItems:1},compatible_profile_ids:{minItems:1},compatible_recipe_keys:{minItems:1}}},
+  else:{properties:{reason_code:reason,compatible_timeframes:{maxItems:0},compatible_profile_ids:{maxItems:0},compatible_recipe_keys:{maxItems:0}}}}];
+const versionOptions=obj({schema_version:{const:"research.run-version-options.v1"},
+  scope:{const:"VERSION_BINDING_NOT_DATASET_OR_RUN_AUTHORIZATION"},context:ref("VersionContext"),source_revision:digest,
+  recipe_revision:digest,presentation_revision:{const:"research.recipe-presentation.v1"},
+  lifecycle_state:en("DRAFT","ACTIVE","SUPERSEDED","ABANDONED"),declared_timeframes:array(id,32,1),
+  routes:array(versionRoute,32),preflight_required:{const:true}});
 const choiceFields={state:en("ENABLED","DISABLED"),reason_code:nullable(reason),field_path:fieldPath,profile_ids:array(id,maximumProfiles)};
 const choiceRules=[{if:{properties:{state:{const:"ENABLED"}}},then:{properties:{reason_code:{type:"null"}}},else:{properties:{reason_code:reason}}},
   {if:{properties:{profile_ids:{maxItems:0}}},then:{properties:{reason_code:{const:"PROFILE_NOT_OPENED"}}},else:{properties:{reason_code:{not:{const:"PROFILE_NOT_OPENED"}}}}}];
@@ -57,6 +73,7 @@ const percentAccount=obj(Object.fromEntries(Object.entries(recipeTable.recipes.f
 profile.properties.account_model={const:'QUANTBT_PERCENT_EQUITY_V1'};
 profile.properties.account=ref('PercentEquityAccount');
 profile.properties.native_input=ref('NativeDeltaInput');
+profile.properties.recipe=ref('RecipePresentation');
 profile.dependentRequired={account_model:['account'],account:['account_model']};
 profile.allOf.push({if:{required:['account_model']},then:{properties:{execution_route:{const:'pct_equity'}}}});
 profile.allOf.push({if:{required:['execution_route'],properties:{execution_route:{const:'pct_equity'}}},
@@ -65,6 +82,7 @@ const options=obj({schema_version:{const:"research.run-setup-options.v1"},contex
   source_revision:digest,catalog_revision:nullable(digest),as_of_utc_ms:nullable(ms),warmup_bars:count,source_timezone:en("UTC","Asia/Ho_Chi_Minh"),profiles:array(ref("Profile"),maximumProfiles),preflight_required:{const:true}});
 options.properties.engine_options=ref("EngineOptions");
 options.properties.recipe_revision=digest;
+options.properties.presentation_revision={const:"research.recipe-presentation.v1"};
 options.properties.preflight_policy=obj({maximum_active_unbound_per_actor:{type:"integer",minimum:1,maximum:16},
   ttl_seconds:{type:"integer",minimum:60,maximum:3600},reuse:{const:"IDENTICAL_FRESH_SOURCE_REVALIDATED_UNBOUND_ONLY"},expiry_extension:{const:false}});
 const span=obj({start_utc_ms:ms,end_exclusive_utc_ms:ms,bars:{...count,minimum:1}});
@@ -85,14 +103,17 @@ const responses=name=>Object.fromEntries([200,400,401,403,404,409,502,503].map(s
 const problem=structuredClone(old.components.schemas.Problem);
 problem.properties.error.properties.code.enum.push("RESEARCH_SETUP_OPTIONS_STALE","RESEARCH_SETUP_PROFILE_REFUSED","RESEARCH_SETUP_PREFERENCE_REFUSED");
 problem.properties.details.properties.reason_code=reason;
-const doc={openapi:"3.1.0",info:{title:"Research New Run setup",version:"1.0.0",description:"Alpha-bound current Portal executor facts and editable indexed-bar hints. No HMD scan, execution, preflight token or admission widening. Advanced folds remain engine/P08 authoritative."},
-  paths:{"/api/v1/research/runs/setup-options":{get:{operationId:"researchRunSetupOptionsGetV1",security:[{portalSession:[]}],
+const doc={openapi:"3.1.0",info:{title:"Research New Run setup",version:"1.1.0",description:"Alpha-bound current Portal executor facts and editable indexed-bar hints. No HMD scan, execution, preflight token or admission widening. Advanced folds remain engine/P08 authoritative."},
+  paths:{"/api/v1/research/runs/version-options":{get:{operationId:"researchRunVersionOptionsGetV1",security:[{portalSession:[]}],
+    description:"Actor/workspace-fenced immutable version compatibility before dataset selection. No dataset coverage, default replacement, token or run authorization. Private no-store; bounded response.",
+    parameters:Object.entries(versionContext.properties).map(([name,schema])=>({name,in:"query",required:name!=="workspace_id",schema})),responses:responses("VersionOptions")}},
+    "/api/v1/research/runs/setup-options":{get:{operationId:"researchRunSetupOptionsGetV1",security:[{portalSession:[]}],
     parameters:Object.entries(context.properties).map(([name,schema])=>({name,in:"query",required:name!=="workspace_id",schema})),responses:responses("SetupOptions")}},
     "/api/v1/research/runs/window-suggestions":{post:{operationId:"researchRunWindowSuggestionPostV1",security:[{portalSession:[]}],
       description:"Read-only POST requires same-origin and CSRF; apply only after confirming; discard after context changes.",
       requestBody:{required:true,content:{"application/json":{schema:ref("SuggestionRequest")}}},responses:responses("WindowSuggestion")}}},
   components:{securitySchemes:{portalSession:{type:"apiKey",in:"cookie",name:"portal_session"}},schemas:{Context:context,Profile:profile,SetupOptions:options,
-    SetupRefusal:refusal,EngineOptions:engineOptions,
+    SetupRefusal:refusal,EngineOptions:engineOptions,RecipePresentation:presentation,VersionContext:versionContext,VersionOptions:versionOptions,
     Budget:budget,PercentEquityAccount:percentAccount,NativeDeltaInput:nativeInput,
     WindowPatch:patch,SuggestionMetadata:metadata,SuggestionRequest:request,WindowSuggestion:suggestion,
     FieldPath:old.components.schemas.FieldPath,Problem:problem}}};
@@ -145,5 +166,17 @@ fixed.budget={...recipe.budgets,scope:"DECLARED_CAPS_NOT_RESERVATION_OR_ESTIMATE
 optionsFixture.preflight_policy={maximum_active_unbound_per_actor:8,ttl_seconds:600,
   reuse:"IDENTICAL_FRESH_SOURCE_REVALIDATED_UNBOUND_ONLY",expiry_extension:false};
 emit("fixtures/research-run-setup-options.fixed.valid.json",optionsFixture);
+const presented=structuredClone(optionsFixture);
+presented.presentation_revision="research.recipe-presentation.v1";
+presented.profiles[0].recipe={key:`three_window_fixed.${fixed.execution_route}.${fixed.protocol}.${fixed.optimization_mode}.${fixed.optimization_schedule}`,
+  family:"THREE_WINDOW_FIXED",label:"Fixed Three Window",recommended_rank:0,scope:"DISPLAY_ORDER_NOT_OPTIMAL_SETUP_OR_AUTHORIZATION"};
+emit("fixtures/research-run-setup-options.presented.valid.json",presented);
+emit("fixtures/research-run-version-options.scalar.valid.json",{schema_version:"research.run-version-options.v1",
+  scope:"VERSION_BINDING_NOT_DATASET_OR_RUN_AUTHORIZATION",context:{workspace_id:ctx.workspace_id,alpha_id:ctx.alpha_id,alpha_version_id:ctx.alpha_version_id},
+  source_revision:"a".repeat(64),recipe_revision:"c".repeat(64),presentation_revision:"research.recipe-presentation.v1",
+  lifecycle_state:"ACTIVE",declared_timeframes:["1h","4h","1d"],routes:[
+    {execution_route:fixed.execution_route,state:"COMPATIBLE",reason_code:null,compatible_timeframes:["1h"],
+      compatible_profile_ids:[fixed.profile_id],compatible_recipe_keys:[presented.profiles[0].recipe.key]},
+    {execution_route:"pct_equity",state:"UNAVAILABLE",reason_code:"ALPHA_EXECUTOR_MISMATCH",compatible_timeframes:[],compatible_profile_ids:[],compatible_recipe_keys:[]}],preflight_required:true});
 emit("fixtures/research-run-setup-options.stale.valid.json",{error:{code:"RESEARCH_SETUP_OPTIONS_STALE",message:"Run setup changed. Reload setup options before applying a suggestion."},
   request_id:"s02-stale-fixture",details:{gate:"setup_revision",field_path:["options_revision"]}});

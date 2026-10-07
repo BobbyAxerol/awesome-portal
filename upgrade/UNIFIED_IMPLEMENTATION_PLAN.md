@@ -8216,3 +8216,27 @@ No remote push, dev/main/Production/Execution change. This latest addendum
 supersedes older stage-not-started and6b–6f ordering notes only within the
 approved three native families and trial expansion, not the deferred routes.
 [Exact scope, sequencing, tests, activation, custody and delivery journal](./research_loop/evidence/P10/FULL_06_APPROVED_EXPANSION_2026-10-06.md).
+
+### S02 refinement and frontend import — 2026-10-07
+
+Bobby approved **BR-S02-06/09** and the existing two Claude frontend commits.
+Codex owns version/setup contracts; Claude retains native consumer/layout.
+`researchRunVersionOptionsGetV1` is a workspace/actor-fenced read before dataset
+selection, using the same immutable version predicate as dataset-bound setup.
+It reports compatibility, not run authorization or replacement of scalar/pct/
+native versions. Additive recipe presentation owns key/family/label/display
+rank outside immutable execution descriptors/proofs/seals. No new recipe,
+migration, source read, preflight, child or default mutation is required.
+
+Import original `89097619` + `532a9c85` preserving ancestry, current backend
+and both request-ledger appendices; Claude's later rebased two commits have
+identical frontend bytes. Uncommitted native consumer work is not staged.
+BR-S02-11/12 are already delivered by `f33a0887`, not new OPEN work. Old
+FULL-06 board6b–6f ordering remains historical under the owner expansion above.
+
+Exit: generated schema/client/fixtures + route inventory, binding/flags/
+workspace/refusal/compatibility and old-consumer tests, one grouped normal
+hook, clean FF to `docs/research-loop-plan`, exact Claude handoff. Backend
+source delivery is not preview API or browser acceptance. P23/P24/owner review
+and quiet C4 maintenance are not silently converted to PASS by this slice.
+[Receipt and integration journal](./research_loop/evidence/P10/S02_VERSION_RECIPE_REFINEMENT_2026-10-07.md).

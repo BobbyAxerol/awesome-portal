@@ -926,6 +926,17 @@ describe("the route", () => {
 import { beforeEach as clearDraftBeforeEach } from "vitest";
 clearDraftBeforeEach(() => { window.sessionStorage.clear(); });
 
+describe("selectProfile — several trial ranges hold the count", () => {
+  it("the widest range is the profile; equal widths stay not identified", () => {
+    const base = readProfiles(PROFILES)!.find((entry) => entry.profileId.startsWith("p10"))!;
+    const narrow = { ...base, profileId: "narrow", trials: { min: 3, max: 3, default: 3 } };
+    const wide = { ...base, profileId: "wide", trials: { min: 2, max: 400, default: 10 } };
+    const draft = { protocol: base.protocol!, executionRoute: base.executionRoute!, optimizationMode: base.optimizationMode ?? "mode_1_decay", optimizationSchedule: base.optimizationSchedule ?? "global", trials: "3" };
+    expect(selectProfile([narrow, wide], draft)?.profileId).toBe("wide");
+    expect(selectProfile([narrow, { ...narrow, profileId: "twin" }], draft)).toBeNull();
+  });
+});
+
 describe("foldCountProblem — the fold requirement is said before any preflight", () => {
   const cond = (state: "PASS" | "FAIL", observed: string) => ({ conditions: [{ key: "profile_folds", state, reasonCode: state === "FAIL" ? "PROFILE_FOLD_COUNT_NOT_ADMITTED" : null, observed, required: "2…16" }] });
   it("names both numbers when the plan has too few folds; silent when it holds or is not served", () => {

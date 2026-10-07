@@ -2494,3 +2494,36 @@ optional recipe-label/ranking metadata (BR-S02-09) remains a separate
 consumer refinement, not an enabled input with a missing executor.
 No extra engine run is needed. Backend API proof does not close
 browser/visual consumer acceptance. No push/dev/main/Production action.
+### §39 — Trial ranges for the qualified recipes (Bobby, 2026-10-06) — Claude → Codex
+
+Bobby, after the first percent-equity and 100-trial runs: "chạy tầm 100 trials … quantbt chạy nhanh lắm". Probe of `setup-options` @1h (BTCUSDT) shows the new recipes are fixed at the minimal qualification
+trial count: 1.0.1 and 1.0.2 — every Advanced and Three-Window-optimized recipe `trial_count 3–3` (Mode 3: `5–5`); only the old 1.0.0 `wfo.v1/v2` serves `2–400`.
+Measured today on the shared preview: 100 trials on 1.0.0 WFO (92 days, weekly folds) completed in ≈24 s; a 1-year percent-equity WFO with 3 trials in ≈20 s.
+
+| ID | Request | Expected |
+|---|---|---|
+| BR-S02-11 | Qualify real trial ranges for every opened recipe (all modes, schedules, both account models) | `trial_count {min, max}` with a measured resource curve (CPU/wall/RSS per trials × folds × bars) inside the 120 CPU / 240 wall caps; start with 3–100 and extend toward 400 where the curve allows; `trial_default` stays small |
+| BR-S02-12 | `max_total_trials` for per-fold schedules (today 48) | say the formula (trials × folds) so S02 can print the real ceiling next to the span |
+
+Frontend needs nothing: the trials field and the recipe summary read `trial_count` / `trial_default` from setup.
+
+### §40 — BR-S02-06/09 refinement and accepted frontend import, 2026-10-07
+
+Bobby approved the two backend refinements and import of Claude's two existing
+frontend commits. Original `89097619`/`532a9c85` are imported without rewriting
+their history; Claude's rebased `2e661fc5`/`f7a6c77f` have identical frontend
+bytes. His current uncommitted native work remains in the FE lane, untouched.
+The §37 expansion and §39 request are both retained above.
+
+| ID | Backend delivery / consumer boundary |
+| --- | --- |
+| BR-S02-06 | `researchRunVersionOptionsGetV1`, GET `/api/v1/research/runs/version-options`, needs only workspace/Alpha/AV. `VersionOptions` reports immutable declared timeframes and current adapter/flag-qualified route compatibility before Market data. Scope is `VERSION_BINDING_NOT_DATASET_OR_RUN_AUTHORIZATION`; no supersession/default mutation, index scan, token or job. Claude binds it to the early Route step and revalidates dataset-bound setup + fresh preflight later. |
+| BR-S02-09 | Optional `Profile.recipe: RecipePresentation` and `presentation_revision` in generated setup; stable group key, typed family, English label, display rank. The same family/route/method retains one key across trial-range successor profiles; fixed and optimized Three Window have different keys. No execution descriptor/proof/AV/SQL change. Claude consumes label/order without changing accepted layout or treating rank as methodological superiority. |
+| BR-S02-07/08 | Already typed and consumed; not reopened or implemented twice. |
+| BR-S02-10 | Native input/result backend delivered at `f33a0887`; Claude's live native consumer is separate and not imported while uncommitted. |
+| BR-S02-11/12 | Delivered by §37 expansion at `f33a0887`: bounded2–400 (Mode3≥5); per-fold total `trials × outer folds`, capped6400, global400. Later approved versioned resource budgets supersede §39's original120/240 ceiling, not historical descriptors. No Cartesian every-count proof is claimed. |
+
+[Plan, tests, custody and exact frontend handoff](./evidence/P10/S02_VERSION_RECIPE_REFINEMENT_2026-10-07.md).
+This commit adds source contracts; it does not deploy the new version read to
+the shared preview or certify native browser/visual acceptance. No remote push
+or dev/main/production change. P23/P24 closeout remains separate.

@@ -12,8 +12,8 @@ import { ResearchFoundationService } from "./foundation.service";
 import { ResearchMetadataRepository } from "./repository";
 import { ResearchPreflightError } from "./preflight.error";
 import { ResearchRunSetupError } from "./run-setup.error";
-import { RunSetupContextSchema, WindowSuggestionRequestSchema, WindowSuggestionSchema, type RunSetupContext } from "./run-setup.contract";
-import { runSetupOptions } from "./run-setup";
+import { RunSetupContextSchema, RunVersionContextSchema, WindowSuggestionRequestSchema, WindowSuggestionSchema, type RunSetupContext } from "./run-setup.contract";
+import { runSetupOptions, runVersionOptions } from "./run-setup";
 
 interface Request extends FastifyRequest {
   portalUser: PortalUser; portalWorkspaceId: string; portalSession: { csrfSecretHash: string };
@@ -27,6 +27,21 @@ export class ResearchRunSetupController {
     @Inject(ResearchFoundationService) private readonly foundation: ResearchFoundationService,
     @Inject(ResearchDatasetIndexClient) private readonly client: ResearchDatasetIndexClient,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig) {}
+
+  @Get("version-options")
+  async versionOptions(@Req() request: Request, @Query() raw: unknown, @Res({ passthrough: true }) reply: FastifyReply) {
+    const parsed = RunVersionContextSchema.safeParse(raw);
+    if (!parsed.success) throw this.error("Invalid AlphaVersion setup context.", 400, parsed.error.issues.map(row => row.path.map(String)));
+    const context = {...parsed.data, workspace_id: parsed.data.workspace_id ?? request.portalWorkspaceId};
+    if (!(await this.workspaces.isMember(context.workspace_id, request.portalUser.userId))) throw this.error("Workspace or AlphaVersion not found.", 404);
+    const version = await this.repository.loadRunAdapterEligibility({workspaceId: context.workspace_id, actorUserId: request.portalUser.userId}, context.alpha_id, context.alpha_version_id);
+    if (!version) throw this.error("Workspace or AlphaVersion not found.", 404);
+    const atlas = await this.foundation.atlas(request.portalUser, {});
+    if (atlas.selected_release_kind !== "CURRENT") throw this.error("Current release facts are unavailable.", 503);
+    reply.header("cache-control", "private, no-store");
+    try { return runVersionOptions(request.portalUser, this.config, version, context, atlas.portal_admission); }
+    catch { throw this.error("AlphaVersion setup declaration is unavailable.", 503); }
+  }
 
   @Get("setup-options")
   async options(@Req() request: Request, @Query() raw: unknown, @Res({ passthrough: true }) reply: FastifyReply) {

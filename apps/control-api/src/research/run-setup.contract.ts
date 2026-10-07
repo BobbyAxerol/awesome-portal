@@ -8,6 +8,31 @@ const Digest = z.string().regex(/^[a-f0-9]{64}$/);
 export const SetupFieldPathSchema = z.array(z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$|^[0-9]+$/)).min(1).max(8);
 export const SetupRefusalSchema = z.object({ reason_code: Reason, field_path: SetupFieldPathSchema }).strict();
 export type SetupRefusal = z.infer<typeof SetupRefusalSchema>;
+export const RecipePresentationSchema = z.object({
+  key: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/),
+  family: z.enum(["THREE_WINDOW_FIXED", "THREE_WINDOW_OPTIMIZED", "ADVANCED_WFO", "FULL_SAMPLE", "NATIVE_FIXED"]),
+  label: z.string().min(1).max(120), recommended_rank: z.number().int().min(0).max(999),
+  scope: z.literal("DISPLAY_ORDER_NOT_OPTIMAL_SETUP_OR_AUTHORIZATION"),
+}).strict();
+export const RunVersionContextSchema = z.object({ workspace_id: Id.optional(), alpha_id: Id, alpha_version_id: Id }).strict();
+export const RunVersionOptionsSchema = z.object({
+  schema_version: z.literal("research.run-version-options.v1"),
+  scope: z.literal("VERSION_BINDING_NOT_DATASET_OR_RUN_AUTHORIZATION"),
+  context: RunVersionContextSchema.extend({ workspace_id: Id }), source_revision: Digest,
+  recipe_revision: Digest, presentation_revision: z.literal("research.recipe-presentation.v1"),
+  lifecycle_state: z.enum(["DRAFT", "ACTIVE", "SUPERSEDED", "ABANDONED"]),
+  declared_timeframes: z.array(Id).min(1).max(32),
+  routes: z.array(z.object({
+    execution_route: Id, state: z.enum(["COMPATIBLE", "UNAVAILABLE"]), reason_code: Reason.nullable(),
+    compatible_timeframes: z.array(Id).max(32),
+    compatible_profile_ids: z.array(Id).max(EXECUTION_SETUP_BOUNDS.maximum_profiles),
+    compatible_recipe_keys: z.array(RecipePresentationSchema.shape.key).max(EXECUTION_SETUP_BOUNDS.maximum_profiles),
+  }).strict().refine(v => (v.state === "COMPATIBLE") === (v.reason_code === null)
+    && (v.state === "COMPATIBLE") === (v.compatible_profile_ids.length > 0)
+    && (v.state === "COMPATIBLE") === (v.compatible_timeframes.length > 0)
+    && (v.state === "COMPATIBLE") === (v.compatible_recipe_keys.length > 0))).max(32),
+  preflight_required: z.literal(true),
+}).strict();
 const EngineChoiceFields = z.object({ value: Id, state: z.enum(["ENABLED", "DISABLED"]), reason_code: Reason.nullable(),
   field_path: SetupFieldPathSchema, profile_ids: z.array(Id).max(EXECUTION_SETUP_BOUNDS.maximum_profiles) }).strict();
 const consistentChoice = (v: {state: string; reason_code: string | null; profile_ids: string[]}) =>
@@ -73,6 +98,7 @@ export const RunSetupProfileSchema = z.object({
   account_model: z.literal("QUANTBT_PERCENT_EQUITY_V1").optional(),
   account: PercentEquityAccountSchema.optional(),
   native_input:NativeDeltaInputSchema.optional(),
+  recipe: RecipePresentationSchema.optional(),
 }).strict().refine(v => (v.state === "ENABLED") === (v.reason_code === null)
   && (v.account_model === undefined) === (v.account === undefined)
   && (v.account_model === undefined || v.execution_route === "pct_equity")
@@ -88,6 +114,7 @@ export const RunSetupOptionsSchema = z.object({
   source_timezone: z.enum(["UTC", "Asia/Ho_Chi_Minh"]),
   profiles: z.array(RunSetupProfileSchema).max(EXECUTION_SETUP_BOUNDS.maximum_profiles),
   recipe_revision: Digest.optional(),
+  presentation_revision: z.literal("research.recipe-presentation.v1").optional(),
   preflight_policy: z.object({ maximum_active_unbound_per_actor: z.number().int().min(1).max(16),
     ttl_seconds: z.number().int().min(60).max(3_600),
     reuse: z.literal("IDENTICAL_FRESH_SOURCE_REVALIDATED_UNBOUND_ONLY"), expiry_extension: z.literal(false) }).strict().optional(),

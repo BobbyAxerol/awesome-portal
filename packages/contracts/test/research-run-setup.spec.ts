@@ -33,13 +33,33 @@ describe("S02 named setup contract and safe canonical examples",()=>{
     const validate=schema("Problem");expect(validate(value),JSON.stringify(validate.errors)).toBe(true);
     expect(value.error.code).toBe("RESEARCH_SETUP_OPTIONS_STALE");expect(value.details?.field_path).toEqual(["options_revision"]);
   });
-  it("exports exactly two named operations, requires both explicit bounds and a context revision",()=>{
-    expect(Object.keys(doc.paths)).toHaveLength(2);
+  it("exports exactly three named operations, requires both explicit bounds and a context revision",()=>{
+    expect(Object.keys(doc.paths)).toHaveLength(3);
     const generated=readFileSync(resolve(__dirname,"../generated/research-run-setup.d.ts"),"utf8");
     expect(generated).toContain("researchRunSetupOptionsGetV1");expect(generated).toContain("researchRunWindowSuggestionPostV1");
+    expect(generated).toContain("researchRunVersionOptionsGetV1");
     const validate=schema("SuggestionRequest");
     const request={alpha_id:"alpha",alpha_version_id:"av_alpha_1",dataset_id:"crypto-binance-1m",symbol:"BTCUSDT",timeframe:"1h",profile_id:"p04.fixed-qualification.v1",options_revision:"a".repeat(64)};
     expect(validate(request)).toBe(true);expect(validate({...request,start_utc_ms:1})).toBe(false);
     expect(validate({...request,source_path:"/data/private"})).toBe(false);
+  });
+  it("keeps early version compatibility separate from data, supersession and authorization",()=>{
+    const fixture:components["schemas"]["VersionOptions"]=read("fixtures/research-run-version-options.scalar.valid.json");
+    const validate=schema("VersionOptions");expect(validate(fixture),JSON.stringify(validate.errors)).toBe(true);
+    expect(validate({...fixture,may_create_run:true})).toBe(false);
+    expect(validate({...fixture,superseded_by:"av_newest"})).toBe(false);
+    expect(validate({...fixture,context:{...fixture.context,dataset_id:"crypto-binance-1m"}})).toBe(false);
+    const bad=structuredClone(fixture);bad.routes[1].state="COMPATIBLE";bad.routes[1].reason_code=null;
+    expect(validate(bad)).toBe(false);
+    const context=schema("VersionContext");expect(context(fixture.context)).toBe(true);
+  });
+  it("validates additive presentation without breaking older setup fixtures",()=>{
+    const validate=schema("SetupOptions"),fixture:components["schemas"]["SetupOptions"]=read("fixtures/research-run-setup-options.presented.valid.json");
+    expect(validate(fixture),JSON.stringify(validate.errors)).toBe(true);
+    expect(validate(read("fixtures/research-run-setup-options.fixed.valid.json"))).toBe(true);
+    expect(fixture.profiles[0].recipe?.family).toBe("THREE_WINDOW_FIXED");
+    const bad=structuredClone(fixture);bad.profiles[0].recipe!.recommended_rank=-1;
+    expect(validate(bad)).toBe(false);
+    expect(validate({...fixture,presentation_revision:"engine_execution_override"})).toBe(false);
   });
 });

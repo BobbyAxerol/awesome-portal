@@ -1849,7 +1849,7 @@ function Anatomy({ replay, selected, childAudit, windowLoaded = true }: { replay
   const route = replay.execution.route;
   const links: Array<{ key: string; value: ReactNode; na?: boolean }> = selected
     ? [
-        { key: "signal", value: `bar ${iso(selected.at_utc_ms)} · evaluated at the ${words(route.signal_phase ?? "bar close")}` },
+        { key: "signal", value: `bar ${iso(selected.at_utc_ms)} · ${route.signal_phase ? `evaluated at the ${words(route.signal_phase)}` : "signal phase not published"}` },
         {
           key: "order",
           na: true,
@@ -1866,7 +1866,7 @@ function Anatomy({ replay, selected, childAudit, windowLoaded = true }: { replay
         {
           key: "fill",
           na: true,
-          value: `fills at the ${route.fill_price_policy ?? "close"}`,
+          value: route.fill_price_policy ? `fills at the ${route.fill_price_policy}` : "fill policy not published",
         },
         {
           key: "child",
@@ -1945,21 +1945,29 @@ function CostTimeline({ rows, replay, reveal, transport }: {
         </span>
         <FactLine label="funding" fact={funding} name="funding" />
       </div>
-      <div className="flex h-[36px] items-end gap-px" aria-hidden="true" title="Each column is a bar; a tall column is a bar that was charged a fee.">
+      {!rows.some((row) => row.bar?.fee !== null && row.bar?.fee !== undefined) ? (
+        /* No bar carries a fee (a percent-equity source publishes equity, returns and positions, not a fee ledger): absence is said, never drawn as zero cost. */
+        <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-cost-absent>
+          per-bar fee not published for this route
+        </p>
+      ) : (
+      <div className="flex h-[36px] items-end gap-px" aria-hidden="true" title="Each column is a bar; a tall column is a bar that was charged a fee. A bar with no published fee is left blank.">
         {rows.map((row, position) => {
-          const fee = Number(row.bar?.fee ?? 0);
+          const published = row.bar?.fee !== null && row.bar?.fee !== undefined;
+          const fee = published ? Number(row.bar!.fee) : 0;
           return (
             <span
               key={row.source_ordinal}
               style={{
                 flex: 1,
                 height: fee > 0 ? "100%" : "2px",
-                background: position >= cut ? "transparent" : fee > 0 ? "var(--warn)" : "var(--line-soft)",
+                background: position >= cut || !published ? "transparent" : fee > 0 ? "var(--warn)" : "var(--line-soft)",
               }}
             />
           );
         })}
       </div>
+      )}
       <span className="text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
         fee rate{" "}
         {replay.execution.route.fee_rate_oneway === null || replay.execution.route.fee_rate_oneway === undefined ? (

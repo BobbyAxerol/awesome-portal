@@ -1,7 +1,8 @@
 import {readFileSync} from "node:fs";
 import {resolve} from "node:path";
 import {describe,expect,it,vi} from "vitest";
-import {runSetupOptions} from "../src/research/run-setup";
+import {runSetupOptions,runVersionOptions} from "../src/research/run-setup";
+import {recipePresentation} from "../src/research/recipe-presentation";
 import {RunSetupOptionsSchema,WindowSuggestionSchema,WindowSuggestionRequestSchema} from "../src/research/run-setup.contract";
 import {ResearchRunSetupController} from "../src/research/run-setup.controller";
 import {researchPortalAdmission} from "../src/research/portal-admission";
@@ -15,6 +16,7 @@ import {HttpErrorFilter} from "../src/http-error.filter";
 import {ResearchRunSetupError} from "../src/research/run-setup.error";
 import {declaredOptimizationRefusal} from "../src/research/preflight.service";
 import {ResearchRunAdmissionService} from "../src/research/run-admission.service";
+import {executionRecipes} from "../src/research/execution-recipes";
 const root=process.env.PORTAL_CONTRACTS_DIR??resolve(__dirname,"../../../packages/contracts");
 const read=(name:string)=>JSON.parse(readFileSync(resolve(root,`fixtures/${name}`),"utf8"));
 const config={FEATURE_RESEARCH_RUN_PRODUCER:"true",FEATURE_RESEARCH_WFO_PROFILE:"true",FEATURE_RESEARCH_PREVIEW_LONG_WFO:"true",
@@ -30,6 +32,81 @@ const build=(v=version,ctx=context,user=w1Admin,flags=config)=>runSetupOptions(u
   read("research-dataset-catalog.v2.healthy.valid.json"),guards);
 const reply={header:vi.fn()};
 describe("S02 Alpha-bound setup without admission widening",()=>{
+  it("discloses version compatibility before data selection without mutating registry/defaults",()=>{
+    const before=JSON.stringify(version),result=runVersionOptions(w1Admin,config,version,
+      {workspace_id:context.workspace_id,alpha_id:context.alpha_id,alpha_version_id:context.alpha_version_id},admission);
+    expect(result.routes.find(r=>r.execution_route==="signal_notional")).toMatchObject({state:"COMPATIBLE",compatible_timeframes:["1h"]});
+    expect(result.declared_timeframes).toEqual(["1h","4h","1d"]);
+    expect(result).not.toHaveProperty("may_create_run");expect(result).not.toHaveProperty("superseded_by");
+    expect(result.context).not.toHaveProperty("dataset_id");expect(JSON.stringify(version)).toBe(before);
+    expect(result.source_revision).toBe(runVersionOptions(w1Admin,config,version,result.context,admission).source_revision);
+    const denied=runVersionOptions({...w1Admin,role:"USER"},config,version,result.context,admission);
+    expect(denied.routes.every(r=>r.state==="UNAVAILABLE"&&r.compatible_profile_ids.length===0)).toBe(true);
+    expect(denied.source_revision).not.toBe(result.source_revision);
+  });
+  it("uses the exact immutable scalar/pct/native binding, not newest ACTIVE as universal replacement",()=>{
+    const flags={...config as any,FEATURE_RESEARCH_FULL02_PROFILE:"true",FEATURE_RESEARCH_FULL03_PROFILE:"true",
+      FEATURE_RESEARCH_FULL04_PROFILE:"true",FEATURE_RESEARCH_FULL05_PROFILE:"true",FEATURE_RESEARCH_FULL06_PROFILE:"true"};
+    const profiles=researchPortalAdmission(flags,{release_id:"er_quantbt_111",verified:true});
+    for(const route of ["signal_notional","pct_equity","intrabar_bracket","reactive","event_driven"]) {
+      const profile=profiles.profiles.find(row=>row.execution_route===route&&row.state==="ENABLED"
+        && executionRecipes.some(r=>r.profile_id===row.profile_id&&r.source_requirement==="FULL03_IMMUTABLE_DELTA_BINDING"));
+      const recipe=executionRecipes.find(r=>r.profile_id===profile?.profile_id);
+      expect(recipe,route).toBeDefined();
+      if(!recipe||!("alpha_binding_requirements" in recipe.descriptor))throw new Error("exact binding missing");
+      const v={...version,alphaVersionId:recipe.descriptor.alpha_binding_requirements.alpha_version_id,
+        binding:{...version.binding,adapterId:recipe.descriptor.adapter_id,contractDigest:recipe.descriptor.adapter_contract_digest}};
+      const result=runVersionOptions(w1Admin,flags,v,{workspace_id:context.workspace_id,alpha_id:context.alpha_id,alpha_version_id:v.alphaVersionId},profiles);
+      expect(result.routes.filter(r=>r.state==="COMPATIBLE").map(r=>r.execution_route)).toEqual([route]);
+      expect(result.routes.filter(r=>r.execution_route!==route).every(r=>r.compatible_profile_ids.length===0)).toBe(true);
+    }
+  });
+  it("serves presentation metadata for every recipe without changing its descriptor",()=>{
+    const before=JSON.stringify(executionRecipes);
+    for(const recipe of executionRecipes) {
+      const meta=recipePresentation(recipe.public_profile);
+      expect(meta.scope).toBe("DISPLAY_ORDER_NOT_OPTIMAL_SETUP_OR_AUTHORIZATION");
+      expect(meta.label.length).toBeLessThanOrEqual(120);expect(meta.recommended_rank).toBeGreaterThanOrEqual(0);
+    }
+    expect(JSON.stringify(executionRecipes)).toBe(before);
+    expect(build().profiles[0].recipe).toMatchObject({family:"THREE_WINDOW_FIXED",recommended_rank:0});
+    expect(build().profiles[1].recipe).toMatchObject({family:"ADVANCED_WFO"});
+    const fixed=build().profiles[0];
+    expect(recipePresentation({...fixed,trial_count:{min:2,max:400}}).key).not.toBe(fixed.recipe!.key);
+  });
+  it("keeps compatible imported DRAFT timeframes separate from nonnumeric search and dataset grants",()=>{
+    const v={...version,lifecycleState:"DRAFT" as const,sourceDigest:"b".repeat(64),
+      declaredContract:{...P04_DELTA_DECLARED_CONTRACT,schema_version:"research.alpha-source.v1"},
+      binding:{...version.binding,adapterId:IMPORTED_ALPHA_ADAPTER_ID,contractDigest:IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST}};
+    const result=runVersionOptions(w1Admin,config,v,{workspace_id:context.workspace_id,alpha_id:context.alpha_id,alpha_version_id:context.alpha_version_id},admission);
+    const route=result.routes.find(r=>r.execution_route==="signal_notional")!;
+    expect(result.lifecycle_state).toBe("DRAFT");expect(route.state).toBe("COMPATIBLE");
+    expect(route.compatible_profile_ids).toEqual([IMPORTED_ALPHA_ADAPTER_ID]);
+    expect(new Set(route.compatible_timeframes)).toEqual(new Set(v.declaredContract.timeframes));
+    const flags={...config as any,FEATURE_RESEARCH_IMPORTED_EXECUTION:"false"};
+    expect(runVersionOptions(w1Admin,flags,v,result.context,admission).routes.every(r=>r.state==="UNAVAILABLE")).toBe(true);
+    const disabled=researchPortalAdmission({...config as any,FEATURE_RESEARCH_RUN_PRODUCER:"false"},{release_id:"er_quantbt_111",verified:true});
+    expect(runVersionOptions(w1Admin,config,version,result.context,disabled).routes.every(r=>r.state==="UNAVAILABLE")).toBe(true);
+  });
+  it("fences the new early read before foundation access and never calls the data index",async()=>{
+    const catalog=vi.fn(),suggest=vi.fn(),load=vi.fn(async()=>version),atlasRead=vi.fn(async()=>{
+      const atlas=read("research-foundation.atlas-current.valid.json");atlas.portal_admission=admission;return atlas;
+    });
+    const controller=new ResearchRunSetupController({loadRunAdapterEligibility:load} as never,{isMember:async()=>true} as never,
+      {atlas:atlasRead} as never,{catalog,suggest} as never,config);
+    const req={portalUser:w1Admin,portalWorkspaceId:context.workspace_id} as never;
+    const query={alpha_id:context.alpha_id,alpha_version_id:context.alpha_version_id};
+    const result=await controller.versionOptions(req,query,reply as never);
+    expect(result.context.workspace_id).toBe(context.workspace_id);expect(catalog).not.toHaveBeenCalled();expect(suggest).not.toHaveBeenCalled();
+    expect(load).toHaveBeenCalledWith({workspaceId:context.workspace_id,actorUserId:w1Admin.userId},context.alpha_id,context.alpha_version_id);
+    expect(reply.header).toHaveBeenCalledWith("cache-control","private, no-store");
+    const denied=new ResearchRunSetupController({loadRunAdapterEligibility:load} as never,{isMember:async()=>false} as never,
+      {atlas:atlasRead} as never,{catalog,suggest} as never,config);
+    load.mockClear();atlasRead.mockClear();
+    await expect(denied.versionOptions(req,query,reply as never)).rejects.toMatchObject({status:404});
+    await expect(controller.versionOptions(req,{...query,dataset_id:"extra"},reply as never)).rejects.toMatchObject({status:400});
+    expect(load).not.toHaveBeenCalled();expect(atlasRead).not.toHaveBeenCalled();
+  });
   it("publishes exact runnable version/flag/timeframe limits, not engine ceilings",()=>{
     const r=build();expect(RunSetupOptionsSchema.parse(r)).toEqual(r);
     expect(r.profiles.filter(p=>p.state==="ENABLED")).toHaveLength(4);

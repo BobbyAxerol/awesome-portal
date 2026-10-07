@@ -1466,6 +1466,16 @@
    "test_owner": "codex"
   },
   {
+   "route": "GET /api/v1/research/runs/version-options",
+   "controller": "research/run-setup.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "BR-S02-06: actor/workspace-fenced immutable AlphaVersion compatibility before dataset selection. Shared binding/flag predicate; no HMD read, replacement claim, preflight token or run grant. Claude owns typed S02 route-summary consumption and browser acceptance.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
    "route": "GET /api/v1/research/runs/setup-options",
    "controller": "research/run-setup.controller.ts",
    "interaction_class": "AUTO_READ",
