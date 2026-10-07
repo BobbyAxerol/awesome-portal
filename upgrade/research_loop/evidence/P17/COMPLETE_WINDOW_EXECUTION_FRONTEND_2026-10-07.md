@@ -5,7 +5,7 @@ Handoff: [`COMPLETE_WINDOW_EXECUTION_CLAUDE_HANDOFF_2026-10-07.md`](./COMPLETE_W
 Frontend only: no backend, engine, seal, deployment flag or protected-kernel file was touched; no run was created by this work; every request this work
 makes is a GET (asserted by the e2e).
 
-**Status: frontend CONNECTED and actual-API verified for the four operations; visual baselines for the changed screens are a separate recorded step.
+**Status: frontend CONNECTED and actual-API verified for the four operations; the Research visual gate (30 cells, laptop + mobile) compares clean with no baseline re-recorded.
 Not product/release acceptance.**
 
 ## What was connected (all four named operations, no hand parsing)
@@ -52,7 +52,7 @@ Unit: `windowAnalytics.test.tsx` (19), `windowCompare.test.tsx` (11), `windowRep
 
 ## Not done / open
 
-- **Visual baselines** for the changed screens (S04 IS/Holdout, S08, S09, S13): recorded as a separate bounded step with the Research recorder.
+- **Visual:** `scripts/portal-web-visual.sh e2e/research-loop.visual.spec.ts` in the pinned image: **30 passed, 0 re-recorded**. The new surfaces do not appear in any existing cell (the Replay card and the Report supplement are collapsed, IS/Holdout/Compare windows are not part of a cell), so there is no baseline for them: the real-API screenshots at 1280/660 are the only visual evidence, and no new baseline cell was added. The two S02 cells that failed were a fixture gap (the new `version-options` read was unstubbed), fixed in the spec (`64e0f934`, `fa4b58cd`), not by touching an image.
 - **Pending-run Holdout protection** (`RUN_NOT_COMPLETED_WINDOW_PROTECTED`) is unit-pinned as a typed absence but was not observed on a real pending run (none was available).
 - **Limit / OCO Alpha** has no real run: the journal table shows only fields the source publishes and DTO support is not claimed as browser acceptance.
 - S06 pruned / 6400 paging and the P24 73-cell matrix on the new bundle remain open.
