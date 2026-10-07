@@ -251,7 +251,7 @@ export function SurfaceScatter({
   const sampled =
     surface.sampling === "ALL_RETAINED_TRIALS"
       ? `${surface.emitted_point_count} of ${surface.source_trial_count} trials drawn`
-      : `${surface.emitted_point_count} of ${surface.source_trial_count} trials drawn · stride sample, θ* and best IS kept`;
+      : `${surface.emitted_point_count} of ${surface.source_trial_count} trials drawn · sampled ≤${surface.point_limit} of ${surface.source_trial_count}, θ* and best IS kept`;
   return (
     <SurfacePanel
       id="scatter"
@@ -384,12 +384,14 @@ export function SurfaceProgression({
   const [conc, setConc] = useState(() => (surface.axes.includes("window") ? "window" : surface.axes[0] ?? ""));
   const points = surface.points;
   const n = Math.max(points.length, 1);
-  const lo = Number(surface.objective_ramp.minimum);
-  const hi = Number(surface.objective_ramp.maximum);
+  /* A null ramp end is absence, not 0: Number(null) would place every trial against a fabricated zero. */
+  const lo = surface.objective_ramp.minimum === null ? Number.NaN : Number(surface.objective_ramp.minimum);
+  const hi = surface.objective_ramp.maximum === null ? Number.NaN : Number(surface.objective_ramp.maximum);
   /* Geometry only: an objective's height between the ramp's published minimum and maximum. */
   const height = (value: string | null) => {
     if (value === null || !Number.isFinite(lo) || !Number.isFinite(hi)) return null;
     const v = Number(value);
+    if (!Number.isFinite(v)) return null;
     return hi === lo ? 50 : 92 - ((v - lo) / (hi - lo)) * 84;
   };
   const thetaRow = declared.parameters.find((parameter) => parameter.name === conc);
@@ -426,7 +428,7 @@ export function SurfaceProgression({
                     <span
                       className="absolute h-[5px] w-[5px] rounded-full"
                       style={{ left: `${x.toFixed(1)}%`, top: `${y.toFixed(1)}%`, background: "var(--accent)", opacity: 0.55 }}
-                      title={`trial ${point.trial_id} · IS ${two(point.objective)}`}
+                      title={`trial ${point.trial_id} · IS ${two(point.objective) ?? "not published"}`}
                       data-entry="fade"
                       data-progression-trial={point.trial_id}
                     />
@@ -435,7 +437,7 @@ export function SurfaceProgression({
                     <span
                       className="absolute h-[2px] w-[9px]"
                       style={{ left: `calc(${x.toFixed(1)}% - 2px)`, top: `${best.toFixed(1)}%`, background: "var(--accent-2)" }}
-                      title={`best-so-far ${two(point.best_so_far)}`}
+                      title={`best-so-far ${two(point.best_so_far) ?? "not published"}`}
                       data-entry="x"
                       data-entry-origin="left"
                       data-best-so-far={point.best_so_far ?? ""}

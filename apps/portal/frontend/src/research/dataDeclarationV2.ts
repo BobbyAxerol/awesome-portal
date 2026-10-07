@@ -610,6 +610,26 @@ export interface ProfileAccount {
   sizingAuthority: string;
 }
 
+/** The server-owned input of a native route recipe (bracket / reactive / event-driven): shown, never edited. */
+export interface ProfileNativeInput {
+  executionClock: string;
+  signalAuthority: string;
+  targetNotional: string;
+  positionUnit: string;
+  bracket: { stopFraction: string; takeProfitFraction: string; levelMode: string } | null;
+  account: { initialCapital: string; leverage: string; oneWayFeeRate: string; fundingEnabled: boolean };
+  optimizer: string;
+}
+
+/** The declared caps of a recipe (never a reservation or an estimate). */
+export interface ProfileBudget {
+  cpuSeconds: number;
+  wallSeconds: number;
+  memoryBytes: number;
+  planningMaxBars: number;
+  qualification: string;
+}
+
 export interface ProfilePins {
   profileId: string;
   enabled: boolean;
@@ -667,6 +687,8 @@ export interface ProfilePins {
   /** `account_model` / `account` of a percent-equity recipe: the engine's account inputs, exactly as served (never defaulted). */
   accountModel?: string | null;
   account?: ProfileAccount | null;
+  nativeInput?: ProfileNativeInput | null;
+  budget?: ProfileBudget | null;
 }
 
 /** `V1_ABSENT_V2_EXPLICIT`: v1 carries no guard; a v2 declaration may adopt the published defaults. `NOT_APPLICABLE`: no guards. */
@@ -1190,4 +1212,23 @@ export function foldCountProblem(estimate: Pick<PreflightEstimate, "conditions">
   const observed = condition.observed ?? "?";
   const required = condition.required ?? "the profile's range";
   return `The profile needs ${required} outer folds; this plan has ${observed}. Use a finer frequency or a longer span.`;
+}
+
+/**
+ * The recipe's trial budget judged before any preflight: the declared count must sit in the recipe's range, and for a per-fold schedule the
+ * count times the engine-planned folds must fit the recipe's total cap. A sentence naming the numbers, or null. Never a runtime estimate.
+ */
+export function trialBudgetProblem(trialsText: string, profile: ProfilePins | null, folds: number | null): string | null {
+  if (profile === null || !profile.enabled || profile.trials === null) return null;
+  const text = trialsText.trim();
+  if (text === "") return null;
+  const declared = Number(text);
+  if (!Number.isInteger(declared)) return null;
+  const { min, max } = profile.trials;
+  if (declared < min || declared > max) return min === max ? `This recipe runs exactly ${min} ${min === 1 ? "trial" : "trials"}.` : `Trials must be ${min}–${max} for this recipe.`;
+  const perFold = (profile.trialScope ?? "").includes("FOLD");
+  if (perFold && profile.maxTotalTrials !== null && folds !== null && folds > 0 && declared * folds > profile.maxTotalTrials) {
+    return `${declared} trials × ${folds} folds = ${declared * folds}; this recipe admits ${profile.maxTotalTrials} in total. Use fewer trials or fewer folds.`;
+  }
+  return null;
 }

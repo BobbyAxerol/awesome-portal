@@ -26,6 +26,7 @@ import { libraryHref, newRunHref, progressHref, rcHref, reportHref } from "./run
 import { trialLabel, trialTitle } from "./trialLabel";
 import { humanise, humaniseTokens } from "./humanise";
 import { AtlasSummaryCard, StageSummaryCard } from "./hubStageSummary";
+import { NativeExecutionPanel } from "./NativeExecutionPanel";
 
 import { usePresentation } from "../app/presentation";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
@@ -3705,6 +3706,7 @@ function SummaryTab({
       ) : null}
       <EnrichedRefusedLine read={enrichedRead} />
       {enrichedAbsentCode !== null ? <EnrichedAbsenceLine code={enrichedAbsentCode} /> : null}
+      <NativeExecutionPanel native={hub.core.native_execution} />
 
       {/* Every block below describes the OOS window, the only one the Hub publishes. It stays mounted (its charts
           are not rebuilt) and is hidden while another window is chosen, so OOS numbers never sit under an IS label. */}

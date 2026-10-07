@@ -12,6 +12,7 @@
  *  - **An unknown outcome is never retried.** A blind retry is how one
  *    declaration becomes two runs.
  */
+import { withUtcInstants } from "./utcInstants";
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -793,7 +794,8 @@ describe("P10-T07 — the create request carries only what the contract declares
     // The preview, the preflight and the submit carry the identical spec.
     const preflightCall = sent.find((r) => r.url.startsWith("/api/v1/research/preflights"))!;
     expect(create.body.requested_spec).toEqual(preflightCall.body.requested_spec);
-    expect(create.body.requested_spec).toEqual(result.current.requestedSpec);
+    /* What is sent says it is UTC (zone and seconds on the window instants); the held spec keeps the typed form. */
+    expect(create.body.requested_spec).toEqual(withUtcInstants(result.current.requestedSpec));
   });
 
   it("sends no private or derived fact", async () => {

@@ -55,6 +55,7 @@ import {
   coverageWarnings,
   foldPlan,
   foldCountProblem,
+  trialBudgetProblem,
   SCHEDULE_PER_FOLD_CAUSAL,
   admitsSpecV2,
   causalScheduleProfile,
@@ -85,10 +86,12 @@ import { WindowSetupBar } from "./WindowSetupBar";
 import { DateInput } from "./DateInput";
 import { AccountFacts } from "./AccountFacts";
 import { RecipePicker } from "./RecipePicker";
+import { RunTypePicker } from "./RunTypePicker";
+import { runTypesFrom, useRunTypes } from "./useRunTypes";
 import { applyRecipe, recipesFromSetup } from "./runRecipes";
 import { suggestionToDayEdges } from "./useWindowSuggestion";
 import type { WindowSuggestion } from "./setupClient";
-import { contextClosure, engineModeClosed, engineOptionPair, setupProfilesOr, type RunSetupState } from "./useRunSetup";
+import { contextClosure, engineModeClosed, engineOptionPair, setupContextFrom, setupProfilesOr, type RunSetupState } from "./useRunSetup";
 import { edgesOf, windowsFromEdges } from "./useWindowSuggestion";
 import { timeframeBarMs } from "./windowGeometry";
 import type { EstimateStatus } from "./useDeclarationEstimate";
@@ -543,7 +546,12 @@ function ContextStep({
   const pickAlpha = (alphaId: string) => {
     const versions = registry.filter((entry) => entry.alpha_id === alphaId);
     /* One version is that one; several start on the newest ACTIVE (a later version may declare more timeframes: the label says which). */
-    const newestActive = [...versions].filter((entry) => entry.lifecycle_state === "ACTIVE").sort((a, b) => b.registered_at_utc_ms - a.registered_at_utc_ms)[0];
+    /* One Alpha can carry editions for different routes (notional, percent equity, native); the registry does not name them, so the start is the
+       ACTIVE version declaring the most timeframes (earliest of those: the notional edition, the default route), never "the newest edition".
+       The Run type row on Walk-forward then offers the others. */
+    const newestActive = [...versions]
+      .filter((entry) => entry.lifecycle_state === "ACTIVE")
+      .sort((a, b) => (b.declaration?.timeframes?.length ?? 0) - (a.declaration?.timeframes?.length ?? 0) || a.registered_at_utc_ms - b.registered_at_utc_ms)[0];
     patch({ alphaId, alphaVersionId: versions.length === 1 ? versions[0]!.alpha_version_id : (newestActive?.alpha_version_id ?? ""), strategyId: "" });
   };
   /* FG-05: the P22 lookup runs only for a bound version the registry listed. */
@@ -1501,9 +1509,12 @@ function WindowsStep({
   setup = IDLE_SETUP,
   workspaceId,
   timeframe = "",
+  registry = [],
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
+  /** The Alpha's registered versions: the run types are read from the setup of each ACTIVE sibling. */
+  registry?: readonly RegistryEntry[];
   /** S02 linked-window setup: the runnable options the Suggest / Apply / Reset bar reads. */
   setup?: RunSetupState;
   workspaceId?: string;
@@ -1563,6 +1574,9 @@ function WindowsStep({
     const routes = new Set(recipes.filter((recipe) => recipe.enabled).map((recipe) => recipe.executionRoute));
     return routes.size === 1 ? ([...routes][0] ?? null) : null;
   })();
+  /* The run types of this Alpha for this context (one GET per ACTIVE sibling version, cached): picking one switches the version. */
+  const runTypeProbe = useRunTypes(setup.status === "served", registry, setupContextFrom(draft, workspaceId), { versionId: draft.alphaVersionId, options: setup.options });
+  const runTypes = runTypesFrom(runTypeProbe.probed, registry.filter((entry) => entry.alpha_id === draft.alphaId), draft.alphaVersionId);
   const recipesOffered = setup.status === "served" && recipes.some((recipe) => recipe.enabled);
   const defaultRecipe = recipes.find((recipe) => recipe.enabled && recipe.protocol === draft.protocol && recipe.executionRoute === draft.executionRoute)
     ?? recipes.find((recipe) => recipe.enabled && recipe.protocol === draft.protocol)
@@ -1646,13 +1660,20 @@ function WindowsStep({
     <Card title="Walk-forward">
       {setup.status === "served" ? (
         <>
+          <RunTypePicker
+            types={runTypes}
+            current={draft.alphaVersionId}
+            pending={runTypeProbe.status === "pending"}
+            /* A version change starts the recipe over: its mode, schedule and trials were another version's. */
+            onPick={(alphaVersionId) => patch({ alphaVersionId, optimizationMode: "", optimizationSchedule: "", optunaTrials: "" })}
+          />
           <RecipePicker recipes={recipes} draft={draft} onPick={patch} disabledReason={contextClosure(setup.options) !== null ? setupReasonWords(contextClosure(setup.options)!.reasonCode) : null} />
           {routeOfRecipes !== null ? (
             <p className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-route-note>
               This version runs the <strong>{humaniseTokens(routeOfRecipes)}</strong> route only: picking a recipe sets it.
             </p>
           ) : null}
-          <AccountFacts account={(profile?.enabled ? profile : defaultRecipe?.profile)?.account} />
+          <AccountFacts account={(profile?.enabled ? profile : defaultRecipe?.profile)?.account} native={(profile?.enabled ? profile : defaultRecipe?.profile)?.nativeInput ?? null} />
         </>
       ) : null}
       {recipesOffered ? null : <ProtocolToggle draft={draft} patch={setup.status === "served" ? switchProtocol : patch} />}
@@ -3361,6 +3382,8 @@ export function NewRun(props: NewRunProps) {
   );
   /* The estimate already knows the fold count: a plan the profile refuses (1 fold where 2–16 are needed) is said before any preflight. */
   const foldProblem = foldCountProblem(estimate);
+  /* The recipe's own trial range (and, per fold, its total cap) is said before a preflight spends a preview on it. */
+  const trialProblem = trialBudgetProblem(draft.optunaTrials, profile, estimate?.plannedFolds?.count ?? null);
   /* A typed refusal in the preflight (may_create_run false with a code) will be refused again at create: no point offering the button. */
   const admissionRefused = canSubmit && !mayCreateRun && Boolean(preflight?.run_admission?.code);
   const blocking = useMemo(
@@ -3368,8 +3391,9 @@ export function NewRun(props: NewRunProps) {
       ...blockingProblems(draft, limits),
       ...(unopenedCombination !== null ? [{ step: "windows" as const, message: unopenedCombination }] : []),
       ...(foldProblem !== null && draft.protocol === "advanced" ? [{ step: "windows" as const, message: foldProblem }] : []),
+      ...(trialProblem !== null ? [{ step: "optimization" as const, message: trialProblem }] : []),
     ],
-    [draft, limits, unopenedCombination, foldProblem],
+    [draft, limits, unopenedCombination, foldProblem, trialProblem],
   );
   problemsRef.current = { draft, blocking };
   const errorByStep = useMemo(
@@ -3626,7 +3650,7 @@ export function NewRun(props: NewRunProps) {
             <DataStep workspaceId={workspaceId} draft={draft} patch={stepPatch} limits={limits} error={shownError.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} registry={registry} profileFit={profileFit} onSymbolMiss={onSymbolMiss} setupStatus={setup.status} />
           ) : null}
           {step === "windows" ? (
-            <WindowsStep draft={draft} patch={stepPatch} adopt={patch} atlas={atlas} profile={profile} family={family} profiles={profiles} estimateStatus={estimateStatus} estimate={estimate} error={shownError.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} setup={setup} workspaceId={workspaceId} timeframe={draft.timeframe} />
+            <WindowsStep draft={draft} patch={stepPatch} adopt={patch} atlas={atlas} profile={profile} family={family} profiles={profiles} estimateStatus={estimateStatus} estimate={estimate} error={shownError.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} setup={setup} workspaceId={workspaceId} timeframe={draft.timeframe} registry={registry} />
           ) : null}
           {step === "parameters" ? (
             <ParametersStep draft={draft} patch={stepPatch} error={shownError.get("parameters") ?? null} ceiling={sweepCeiling} />
@@ -3650,7 +3674,7 @@ export function NewRun(props: NewRunProps) {
                   timeline and the forecast. */}
               <Card title="Review &amp; run">
                 <ReviewRows draft={draft} sweepCeiling={sweepCeiling} usesV2={v2} registry={registry} labelWidth={150} withWindows versionDeclared={declarationBound ?? false} />
-                <AccountFacts account={profile?.account} />
+                <AccountFacts account={profile?.account} native={profile?.nativeInput ?? null} />
               </Card>
               {clearedBecause && preflight === null ? (
                 <p role="status" className="text-[11px]" style={{ color: "var(--role-holdout)" }} data-cleared-note>

@@ -80,6 +80,10 @@ export const RETAINED_PLAYHEAD_NOTE = "retained observation — not a broker sta
 /* VD-TEXT-01: the one-line forms of the route and sampling notes (replayClient keeps the long constants, unused here). */
 const RETAINED_ROUTE_SHORT = "model observations only — no orders, fills or candles";
 const SAMPLE_ROUTE_SHORT = "equity samples only — no orders, fills, positions or candles";
+/** Native fixed routes (one Three Window execution): the replay is the engine's OOS equity sample, never a broker lifecycle. */
+export const NATIVE_REPLAY_NOTE = "OOS equity sample from the engine — not a broker lifecycle replay";
+const NATIVE_ROUTE_IDS: ReadonlySet<string> = new Set(["intrabar_bracket", "reactive", "event_driven"]);
+export const isNativeReplayRoute = (id: string | null | undefined): boolean => id != null && NATIVE_ROUTE_IDS.has(id);
 const RETAINED_SAMPLING_SHORT = "every observation · nothing bucketed";
 const SAMPLING_SHORT: Record<"FULL" | "EXTREMA_BUCKET_V1", string> = {
   FULL: "every observation",
@@ -1655,7 +1659,9 @@ export function ExecuteScreen({
             <span className="mono text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
               route contract{" "}
             </span>
-            {replay.route.state === "RETROSPECTIVE_EQUITY_ONLY" ? SAMPLE_ROUTE_SHORT : ROUTE_STATE_NOTE[replay.route.state]}
+            {isNativeReplayRoute(replay.route.id)
+              ? <span data-native-replay-note>{NATIVE_REPLAY_NOTE}</span>
+              : replay.route.state === "RETROSPECTIVE_EQUITY_ONLY" ? SAMPLE_ROUTE_SHORT : ROUTE_STATE_NOTE[replay.route.state]}
           </p>
         </Card>
       ) : null}

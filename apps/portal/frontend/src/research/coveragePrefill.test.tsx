@@ -538,10 +538,12 @@ describe("D4 — Screen 02, real route and hook", () => {
     expect(posts).toHaveLength(1);
     const sent = JSON.parse(posts[0]!.body ?? "{}") as { requested_spec: RequestedSpec };
     expect(sent.requested_spec.data).toEqual({ dataset_id: BTC.dataset, symbol: BTC.symbol, timeframe: "1h" });
+    /* What is sent says it is UTC: the same instants with seconds and Z. */
+    const utc = (value: string) => (/Z$|:\d{2}:\d{2}/.test(value) ? value : `${value}:00Z`);
     expect(sent.requested_spec.windows).toEqual({
-      is: { start: BTC.lower, end_exclusive: "2024-01-01T00:00" },
-      oos: { start: "2024-01-01T00:00", end_exclusive: "2025-01-01T00:00" },
-      holdout: { start: "2025-01-01T00:00", end_exclusive: BTC.upper },
+      is: { start: utc(BTC.lower), end_exclusive: "2024-01-01T00:00:00Z" },
+      oos: { start: "2024-01-01T00:00:00Z", end_exclusive: "2025-01-01T00:00:00Z" },
+      holdout: { start: "2025-01-01T00:00:00Z", end_exclusive: utc(BTC.upper) },
     });
     expect(posts[0]!.body).not.toMatch(/coverage|prefill|placed|touched/i);
 
@@ -560,8 +562,8 @@ describe("D4 — Screen 02, real route and hook", () => {
     fireEvent.click(document.querySelector('[data-action="preflight"]') as HTMLButtonElement);
     await waitFor(() => expect(served.calls.filter((call) => call.method === "POST")).toHaveLength(2));
     const second = JSON.parse(served.calls.filter((call) => call.method === "POST")[1]!.body ?? "{}") as { requested_spec: RequestedSpec };
-    expect(second.requested_spec.windows?.is).toEqual({ start: "2020-09-01T00:00", end_exclusive: "2024-01-01T00:00" });
-    expect(second.requested_spec.windows?.holdout.end_exclusive).toBe(BTC.upper);
+    expect(second.requested_spec.windows?.is).toEqual({ start: "2020-09-01T00:00:00Z", end_exclusive: "2024-01-01T00:00:00Z" });
+    expect(second.requested_spec.windows?.holdout.end_exclusive).toBe(`${BTC.upper}:00Z`);
     await waitFor(() => expect(document.querySelector("[data-preflight-preview]")).toBeNull());
   });
 });

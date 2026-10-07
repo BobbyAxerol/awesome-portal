@@ -96,11 +96,16 @@ export function constraintsFrom(
      * then: a v1 declaration (a cloned v1 run) carries none, and another enabled profile admitting v2 does not make it v2.
      */
     usesSpecV2?: boolean;
+    /**
+     * Routes the Alpha-bound setup serves an ENABLED recipe for (this version, dataset, symbol and timeframe). The Atlas is the engine catalogue and
+     * keeps saying a route is not baseline-admitted; an exact qualified recipe is what opens it, so it is not blocked here.
+     */
+    openedRoutes?: ReadonlySet<string>;
   },
 ): DraftConstraints {
   const blocked: Record<string, string> = {};
   for (const route of atlas?.routes ?? []) {
-    if (route.axes.admission !== "P04_BASELINE_ONLY") blocked[route.route_id] = route.reason;
+    if (route.axes.admission !== "P04_BASELINE_ONLY" && !(data?.openedRoutes?.has(route.route_id) ?? false)) blocked[route.route_id] = route.reason;
   }
 
   const bound = registry.find((entry) => entry.alpha_version_id === alphaVersionId) ?? null;
@@ -264,9 +269,11 @@ function NewRunRouteBody({ onStartOver, workspaceId, draftScope }: { onStartOver
   /* A symbol the server's own search answered "not listed" for (a partial symbol list), reported by the Market data step. */
   const [symbolMiss, setSymbolMiss] = useState<string | null>(null);
   const draftUsesV2 = usesSpecV2(draft);
+  /* The routes the setup serves an enabled recipe for (set from the setup read below): they are not blocked by the Atlas catalogue. */
+  const [openedRoutes, setOpenedRoutes] = useState<ReadonlySet<string>>(() => new Set());
   const limits = useMemo(
-    () => constraintsFrom(document, registry, draft.alphaVersionId, { catalog, datasetId: draft.datasetId, unlistedSymbol: symbolMiss, profiles, usesSpecV2: draftUsesV2 }),
-    [document, registry, draft.alphaVersionId, catalog, draft.datasetId, symbolMiss, profiles, draftUsesV2],
+    () => constraintsFrom(document, registry, draft.alphaVersionId, { catalog, datasetId: draft.datasetId, unlistedSymbol: symbolMiss, profiles, usesSpecV2: draftUsesV2, openedRoutes }),
+    [document, registry, draft.alphaVersionId, catalog, draft.datasetId, symbolMiss, profiles, draftUsesV2, openedRoutes],
   );
   /*
    * W5a · `?from=<run>&fork=<cell>` (spec 07 §2.5 / §15.5): Screen 07's
@@ -350,6 +357,10 @@ function NewRunRouteBody({ onStartOver, workspaceId, draftScope }: { onStartOver
   const run = useNewRun(draft, limits, workspaceId, lineage);
   /* S02 linked-window setup: the runnable options for this exact Alpha / dataset / symbol / timeframe, read when that context settles. */
   const setup = useRunSetup(setupContextFrom(run.draft, workspaceId));
+  useEffect(() => {
+    const routes = new Set((setup.options?.profiles ?? []).filter((profile) => profile.state === "ENABLED").map((profile) => profile.execution_route));
+    setOpenedRoutes((previous) => (previous.size === routes.size && [...routes].every((route) => previous.has(route)) ? previous : routes));
+  }, [setup.options]);
   /* A combination no enabled profile opens cannot run: said before Run, with the server's own reason, and Run stays off. */
   const unopened = useMemo(() => unopenedCombination(run.draft, setup.options), [run.draft, setup.options]);
 

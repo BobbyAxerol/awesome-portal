@@ -16,6 +16,7 @@ import {
   type ProfilePins,
 } from "./dataDeclarationV2";
 import { humanise } from "./humanise";
+import { clockWords, routeWord } from "./nativeFacts";
 import type { RunDraft } from "./runDraft";
 import type { SetupOptions } from "./setupClient";
 import { engineOptionPair, profilesFromSetup } from "./useRunSetup";
@@ -79,6 +80,7 @@ function scheduleWord(schedule: string): string {
 }
 
 function baseLabel(profile: ProfilePins): string {
+  if (profile.nativeInput) return `${routeWord(profile.executionRoute)} · native`;
   if (profile.optimizationSchedule === SCHEDULE_PER_FOLD_CAUSAL) return "Causal inner selection";
   if (profile.protocol === "three_window_decay") {
     const single = profile.trials !== null && profile.trials.min === 1 && profile.trials.max === 1;
@@ -127,7 +129,9 @@ function pctWord(fraction: number): string {
 }
 
 function summaryOf(profile: ProfilePins, ctx: RecipeContext): string {
-  const parts: (string | null)[] = [profile.account ? `${pctWord(profile.account.allocPerTrade)} of equity` : null, trialsWord(profile), seedWord(profile)];
+  const parts: (string | null)[] = profile.nativeInput
+    ? [profile.nativeInput.bracket ? `stop ${Number((Number(profile.nativeInput.bracket.stopFraction) * 100).toPrecision(6))}% · take-profit ${Number((Number(profile.nativeInput.bracket.takeProfitFraction) * 100).toPrecision(6))}%` : null, clockWords(profile.nativeInput.executionClock)]
+    : [profile.account ? `${pctWord(profile.account.allocPerTrade)} of equity` : null, trialsWord(profile), seedWord(profile)];
   if (profile.protocol === "advanced") {
     parts.push(pick(profile.windowModes, ctx.windowModeDefault ?? null), pickFrequency(profile.frequencies));
   }

@@ -22,6 +22,7 @@
  * message.
  */
 
+import { withUtcInstants } from "./utcInstants";
 import type { components } from "@portal/contracts-research-preflight";
 
 import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
@@ -120,7 +121,7 @@ function query(workspaceId?: string): string {
 export const preflightApi = {
   /** Authoritative preflight. The body carries the spec, never a digest of it. */
   create: (body: CreateRequest) =>
-    call<PreflightResponse>(BASE, { method: "POST", body: JSON.stringify(body) }),
+    call<PreflightResponse>(BASE, { method: "POST", body: JSON.stringify({ ...body, requested_spec: withUtcInstants(body.requested_spec) }) }),
 
   /** Reopen an unchanged preview. Returns current immutable metadata only. */
   get: (preflightToken: string, workspaceId?: string) =>

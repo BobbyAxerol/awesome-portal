@@ -12,6 +12,7 @@
  * route is asked once and every later read goes straight to what exists.
  */
 
+import { withUtcInstants } from "./utcInstants";
 import type { components } from "@portal/contracts-research-preflight";
 
 import { PortalApiError } from "../lib/api";
@@ -273,7 +274,7 @@ export async function postDeclarationEstimate(
       credentials: "same-origin",
       signal,
       headers: { "content-type": "application/json", ...(csrf ? { [CSRF_HEADER]: csrf } : {}) },
-      body: JSON.stringify({ ...(workspaceId ? { workspace_id: workspaceId } : {}), requested_spec: requestedSpec }),
+      body: JSON.stringify({ ...(workspaceId ? { workspace_id: workspaceId } : {}), requested_spec: withUtcInstants(requestedSpec) }),
     });
     if (response.status === 401) reportSessionExpired();
     if (!response.ok) {

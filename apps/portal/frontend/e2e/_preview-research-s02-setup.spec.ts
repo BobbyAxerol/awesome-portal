@@ -30,6 +30,7 @@ interface Counts {
 async function watch(page: Page): Promise<{ counts: Counts; errors: string[] }> {
   const counts: Counts = { setup: 0, suggestions: 0, estimates: 0, preflights: 0, runCreates: 0, bodies: [] };
   const errors: string[] = [];
+  const reads = new Map<string, number>();
   /* Writes carry the stack's public Origin, which the Control API checks; reads go straight through. */
   await page.route("**/api/**", (route) => {
     const request = route.request();
@@ -39,7 +40,12 @@ async function watch(page: Page): Promise<{ counts: Counts; errors: string[] }> 
   });
   page.on("request", (request) => {
     const path = new URL(request.url()).pathname;
-    if (request.method() === "GET" && path.endsWith("/runs/setup-options")) counts.setup += 1;
+    if (request.method() === "GET" && path.endsWith("/runs/setup-options")) {
+      /* The run types read the siblings once each; what must hold is that no version is read twice. */
+      const version = new URL(request.url()).searchParams.get("alpha_version_id") ?? "";
+      reads.set(version, (reads.get(version) ?? 0) + 1);
+      counts.setup = Math.max(...reads.values());
+    }
     if (request.method() !== "POST") return;
     if (path.endsWith("/runs/window-suggestions")) counts.suggestions += 1;
     if (path.endsWith("/datasets/declaration-estimates")) counts.estimates += 1;
@@ -58,7 +64,7 @@ async function choose(page: Page, label: string, value: string): Promise<void> {
   const field = page.getByLabel(label, { exact: true });
   if ((await field.evaluate((node) => node.tagName)) === "SELECT") {
     const options = await field.evaluate((node) => [...(node as HTMLSelectElement).options].map((option) => [option.value, option.textContent ?? ""]));
-    const hit = options.find(([optionValue, text]) => optionValue === value || optionValue.includes(value) || text.includes(value));
+    const hit = options.find(([optionValue]) => optionValue === value) ?? options.find(([optionValue, text]) => optionValue.includes(value) || text.includes(value));
     await field.selectOption(hit ? hit[0]! : value);
   } else await field.fill(value);
 }
@@ -139,6 +145,8 @@ for (const width of WIDTHS) {
       const { counts, errors } = await watch(page);
       await toWindows(page, DELTA);
       await expect(edges(page).nth(0)).not.toHaveValue("", { timeout: 20_000 });
+      /* The run types arrive after the first paint and move the page: measure only once they are in. */
+      await expect(page.locator("[data-run-type]").first()).toBeVisible({ timeout: 30_000 });
       const read = () => edges(page).evaluateAll((nodes) => nodes.map((node) => (node as HTMLInputElement).value));
       const verified = (await page.locator("[data-calendar-verified]").innerText()).match(/\d{4}-\d{2}-\d{2}/)![0];
       const suggestions = counts.suggestions;
@@ -149,6 +157,8 @@ for (const width of WIDTHS) {
       await page.getByRole("button", { name: "70 / 20 / 10" }).click();
       const before = await read();
       const handle = page.getByRole("slider", { name: /IS end · OOS start \(B\) handle/ });
+      /* The recipes and run types above push the track below the first screen: bring it into view before measuring. */
+      await handle.scrollIntoViewIfNeeded();
       const box = (await handle.boundingBox())!;
       await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
       await page.mouse.down();
@@ -218,6 +228,28 @@ for (const width of WIDTHS) {
       await expect(page.locator("[data-account-facts]").first()).toBeVisible();
       await page.locator('[data-action="preflight"]').click();
       await expect(page.locator('[data-action="create-run"]')).toBeEnabled({ timeout: 30_000 });
+      expect(counts.runCreates, "no run is created by this acceptance").toBe(0);
+      expect(errors).toEqual([]);
+    });
+
+    test("run types: one Alpha offers notional, percent-equity and the three native editions; a native recipe says its fixed input and passes preflight", async ({ page }) => {
+      await signIn(page);
+      const { counts, errors } = await watch(page);
+      await toWindows(page, DELTA_FULL);
+      const types = page.locator("[data-run-type]");
+      await expect(types.first()).toBeVisible({ timeout: 30_000 });
+      const labels = await types.allInnerTexts();
+      for (const word of ["Percent equity", "Bracket", "Reactive", "Event-driven"]) expect(labels.join(" | ")).toContain(word);
+      await page.locator("[data-run-type]", { hasText: "Bracket" }).click();
+      await expect(page.locator("[data-recipe]:not([data-closed])")).toHaveCount(1, { timeout: 20_000 });
+      await expect(page.locator("[data-native-facts]").first()).toContainText("stop 1.3% · take-profit 2.6%");
+      await expect(page.locator("[data-native-facts]").first()).toContainText("not a scalar optimizer");
+      await expect(edges(page).nth(0)).not.toHaveValue("", { timeout: 20_000 });
+      await page.locator('[data-step-pill="review"]').click();
+      await page.locator('[data-action="preflight"]').click();
+      await expect(page.locator('[data-action="create-run"]')).toBeEnabled({ timeout: 30_000 });
+      const sent = counts.bodies.filter((entry) => entry.url.endsWith("/research/preflights")).map((entry) => entry.body);
+      expect(sent[0], "the instants sent say they are UTC").toMatch(/"start":"\d{4}-\d{2}-\d{2}T00:00:00Z"/);
       expect(counts.runCreates, "no run is created by this acceptance").toBe(0);
       expect(errors).toEqual([]);
     });

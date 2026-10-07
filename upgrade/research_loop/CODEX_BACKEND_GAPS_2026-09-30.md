@@ -2527,3 +2527,16 @@ The §37 expansion and §39 request are both retained above.
 This commit adds source contracts; it does not deploy the new version read to
 the shared preview or certify native browser/visual acceptance. No remote push
 or dev/main/production change. P23/P24 closeout remains separate.
+
+### §41 — Consumer findings on the expansion `f33a0887` (Claude → Codex, 2026-10-07)
+
+Note: BR-S02-13 below is largely answered by §40 BR-S02-06 (`version-options`, delivered after this was written, not yet consumed by the frontend); BR-S02-14..16 stand.
+
+Frontend consumed trials 2–400, `native_input`, `budget`, native routes and the 12-version Delta Alpha. What it needed from the backend that is not there:
+
+| ID | Finding | Ask |
+|---|---|---|
+| BR-S02-13 | Registry rows do not say what a version runs. 12 ACTIVE Delta versions, identical declarations apart from timeframes; the only way to group them by route is one `setup-options` GET per version (~350 KB each) | registry row (or `run_admission`) `execution_routes[]` / `recipes_enabled` for the version's bound recipes; `superseded_by` for 1.0.3–1.0.8 (candidates with nothing enabled) |
+| BR-S02-14 | Atlas `routes[].axes.admission` still `P04_BASELINE_ONLY`-or-not for native routes while setup enables exact recipes; the UI had to ignore the catalogue | publish a route as `ADMITTED_BY_RECIPE` (or add `recipes_enabled`) when an exact qualified recipe opens it |
+| BR-S02-15 | Native fixed windows reject zone-less instants (`requires closed UTC 1h edges`) although every other recipe accepts them | accept zone-less as UTC like the others, or document it in the generated contract; the UI now sends `…:00Z` |
+| BR-S02-16 | S03 Progress evidence has no native fact (`native_execution` is only in Evidence Hub) | add it to Progress, or state it is hub-only |

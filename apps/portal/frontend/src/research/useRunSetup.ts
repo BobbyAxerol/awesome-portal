@@ -220,6 +220,33 @@ export function profilePinsFromSetup(profile: SetupProfile): ProfilePins {
     parameterPolicy: profile.parameter_policy,
     temporalGuards,
     independentHoldout: profile.independent_holdout,
+    nativeInput: profile.native_input
+      ? {
+          executionClock: profile.native_input.execution_clock,
+          signalAuthority: profile.native_input.signal_authority,
+          targetNotional: profile.native_input.target_notional,
+          positionUnit: profile.native_input.position_unit,
+          bracket: profile.native_input.bracket
+            ? { stopFraction: profile.native_input.bracket.stop_fraction, takeProfitFraction: profile.native_input.bracket.take_profit_fraction, levelMode: profile.native_input.bracket.level_mode }
+            : null,
+          account: {
+            initialCapital: profile.native_input.account.initial_capital,
+            leverage: profile.native_input.account.leverage,
+            oneWayFeeRate: profile.native_input.account.one_way_fee_rate,
+            fundingEnabled: profile.native_input.account.funding_enabled,
+          },
+          optimizer: profile.native_input.optimizer,
+        }
+      : null,
+    budget: profile.budget
+      ? {
+          cpuSeconds: profile.budget.cpu_seconds,
+          wallSeconds: profile.budget.wall_seconds,
+          memoryBytes: profile.budget.memory_bytes,
+          planningMaxBars: profile.budget.planning_max_bars,
+          qualification: profile.budget.qualification,
+        }
+      : null,
     accountModel: profile.account_model ?? null,
     account: profile.account
       ? {

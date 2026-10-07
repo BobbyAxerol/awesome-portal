@@ -18,6 +18,7 @@
  * same intent rather than as a second run.
  */
 
+import { withUtcInstants } from "./utcInstants";
 import type { components } from "@portal/contracts-research-run-create";
 
 import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
@@ -37,6 +38,10 @@ export type RunCreateProblemCode = Schemas["Problem"]["error"]["code"];
 
 const RUNS_PATH = "/api/v1/research/runs";
 
+function withRequestedSpecUtc(body: unknown): unknown {
+  return body !== null && typeof body === "object" && "requested_spec" in body ? { ...(body as object), requested_spec: withUtcInstants((body as { requested_spec: unknown }).requested_spec) } : body;
+}
+
 async function call<T>(path: string, body: unknown): Promise<T> {
   const csrf = csrfTokenFromCookie();
   const response = await fetch(path, {
@@ -46,7 +51,7 @@ async function call<T>(path: string, body: unknown): Promise<T> {
       "content-type": "application/json",
       ...(csrf ? { [CSRF_HEADER]: csrf } : {}),
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(withRequestedSpecUtc(body)),
   });
 
   if (!response.ok) {

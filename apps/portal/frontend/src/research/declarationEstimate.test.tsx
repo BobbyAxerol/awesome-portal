@@ -751,7 +751,8 @@ describe("the route", () => {
     expect(posts.length).toBe(1);
     const body = JSON.parse((posts[0]![1] as RequestInit).body as string);
     expect(body.requested_spec.data).toMatchObject({ symbol: "BTCUSDT", timeframe: "1h" });
-    expect(body.requested_spec.windows.holdout.end_exclusive).toBe("2026-07-04T00:00");
+    /* What is sent says it is UTC (the native fixed windows refuse a zone-less instant); the draft keeps its typed form. */
+    expect(body.requested_spec.windows.holdout.end_exclusive).toBe("2026-07-04T00:00:00Z");
     expect(fetchMock.mock.calls.some(([input]) => String(input).includes("bar-metadata"))).toBe(false);
   });
 
