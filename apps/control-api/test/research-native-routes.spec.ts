@@ -10,6 +10,27 @@ import {admissionRepository,flagConfig,manifestFor,p04Requested,w1Admin,w1Scope}
 const contractsRoot=process.env.PORTAL_CONTRACTS_DIR??resolve(__dirname,'../../../packages/contracts');
 const result=JSON.parse(readFileSync(join(contractsRoot,'fixtures/research-native-route-result.valid.json'),'utf8'));
 describe('native Delta input and historical binding',()=>{
+ it('BR-S02-15 interprets absent timezone as UTC, accepts equivalent offsets, and rejects sub-hour edges',()=>{
+  const binding=NATIVE_DELTA_BINDINGS[0]!;
+  const spec=p04Requested({alpha_binding:{alpha_id:binding.alphaId,alpha_version_id:binding.alphaVersionId},
+   execution_route:binding.declaredContract.execution.execution_route as never});
+  const row=nativeDeltaRecipe(spec)!,manifest=manifestFor(spec);
+  const service=new ResearchRunAdmissionService({} as never,{...flagConfig(true),FEATURE_RESEARCH_FULL06_PROFILE:'true',PORTAL_ENV:'local',AUTH_MODE:'dev',RESEARCH_RECIPE_QUALIFICATION_PROFILE_ID:row.profile_id} as never);
+  // Source identity is tested by the real admission case below; isolate only
+  // this layer's chronology to exercise both timestamp representations.
+  const validator=service as unknown as {nativeUnsupportedReason:(s:typeof spec,m:typeof manifest,r:typeof row)=>string|null;
+   full03SourceReason:()=>null};
+  validator.full03SourceReason=()=>null;
+  for(const zone of ['Z','','+00:00']){
+   const input=structuredClone(spec);
+   for(const window of Object.values(input.windows!))for(const key of ['start','end_exclusive'] as const)window[key]=window[key].replace(/Z$/,zone);
+   expect(validator.nativeUnsupportedReason(input,manifest,row)).toBeNull();
+  }
+  const bad=structuredClone(spec);bad.windows!.is.start=bad.windows!.is.start.replace('00:00:00Z','00:01:00Z');
+  expect(validator.nativeUnsupportedReason(bad,manifest,row)).toContain('UTC 1h edges');
+  const fractional=structuredClone(spec);fractional.windows!.is.start=fractional.windows!.is.start.replace('00:00:00Z','00:00:00.0000001Z');
+  expect(validator.nativeUnsupportedReason(fractional,manifest,row)).toContain('UTC 1h edges');
+ });
  for(const binding of NATIVE_DELTA_BINDINGS)it('admits only exact version/route after owner qualification: '+binding.alphaVersionId,async()=>{
   const spec=p04Requested({alpha_binding:{alpha_id:binding.alphaId,alpha_version_id:binding.alphaVersionId},
    execution_route:binding.declaredContract.execution.execution_route as never});

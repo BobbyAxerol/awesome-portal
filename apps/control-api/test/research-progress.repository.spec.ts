@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ResearchProgressRepository } from "../src/research/progress.repository";
 import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE } from "../src/research/contracts";
+import {readFileSync} from "node:fs";
+import {resolve} from "node:path";
 
 function subject(row: Record<string, unknown>) {
   const queries: string[] = [];
@@ -43,6 +45,23 @@ function runRow(overrides: Record<string, unknown> = {}) {
 
 describe("ResearchProgressRepository terminal materialisation requirement", () => {
   const scope = { workspaceId: "research-workspace", actorUserId: "research-owner" };
+
+  it("BR-S02-16 reads only the matching native sidecar in the existing scoped transaction", async () => {
+    const native = JSON.parse(readFileSync(resolve(process.env.PORTAL_CONTRACTS_DIR
+      ?? resolve(__dirname, "../../../packages/contracts"), "fixtures/research-native-route-result.valid.json"), "utf8"));
+    const { repository, queries } = subject(runRow({native_execution:native,spec_route:"reactive"}));
+    expect((await repository.readRun(scope, "run_terminal_truth")).nativeExecution).toEqual(native);
+    const query = queries.find(q => q.includes("SELECT producer.run_id"))!;
+    for (const fence of ["evidence.workspace_id = producer.workspace_id", "evidence.run_id = producer.run_id",
+      "evidence.worker_attempt_id = producer.worker_attempt_id", "evidence.source_event_sequence = snapshot.source_latest_sequence",
+      "evidence.source_evidence_digest = latest_event.event_payload->>'evidence_digest'"]) expect(query).toContain(fence);
+    expect(queries.filter(q => q.includes("SELECT producer.run_id"))).toHaveLength(1);
+    expect((await subject(runRow()).repository.readRun(scope, "run_terminal_truth"))).not.toHaveProperty("nativeExecution");
+    for (const value of [{...native,clock:"KNOWN_CLOSE_NEXT_BAR_INTRABAR"},native]) {
+      await expect(subject(runRow({native_execution:value,spec_route:"intrabar_bracket"})).repository.readRun(scope,"run_terminal_truth"))
+        .rejects.toMatchObject({code:"RESEARCH_PROGRESS_CONFLICT",status:409});
+    }
+  });
 
   it("sets all five exact transaction-local budgets/scopes in one round trip before reads", async () => {
     const { repository, client } = subject(runRow());

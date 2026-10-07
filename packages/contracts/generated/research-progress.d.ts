@@ -834,6 +834,82 @@ export interface components {
             denied_artifacts?: components["schemas"]["ProgressDeniedArtifact"][];
             /** @description Immutable bound version declaration and explicit requested overrides. Never current registry defaults or evidence of actual runtime/sampler execution. Optional during additive rollout. */
             run_declaration?: components["schemas"]["RunDeclaration"];
+            /** @description Exact persisted native sidecar bound to workspace/run/current worker/source sequence and digest. Absent before a matching source receipt; never inferred from route or engine counter. */
+            native_execution?: {
+                /** @constant */
+                schema_version: "research.native-route-result.v1";
+                /** @enum {unknown} */
+                execution_route: "intrabar_bracket" | "reactive" | "event_driven";
+                /** @constant */
+                authority: "PINNED_QUANTBT_ACCOUNTING_NOT_PORTAL_PNL";
+                /** @enum {unknown} */
+                input_protocol: "DELTA_CLOSE_BRACKET_INTENTS_V1" | "DELTA_CLOSE_STATEFUL_CALLBACK_V1" | "DELTA_CLOSE_ORDER_COMMANDS_V1";
+                /** @enum {unknown} */
+                clock: "KNOWN_CLOSE_NEXT_BAR_INTRABAR" | "KNOWN_CLOSE_NEXT_BAR_CLOSE";
+                /** @constant */
+                position_unit: "CONTRACT_QUANTITY";
+                /** @constant */
+                target_notional: "2000";
+                fees: {
+                    /** @enum {unknown} */
+                    state: "AVAILABLE" | "NOT_PUBLISHED";
+                    total: string | null;
+                    reason_code: "NATIVE_RESULT_SERIES_NOT_PUBLISHED" | null;
+                } & ({
+                    /** @constant */
+                    state?: "AVAILABLE";
+                    total?: string;
+                    reason_code?: null;
+                } | {
+                    /** @constant */
+                    state?: "NOT_PUBLISHED";
+                    total?: null;
+                    reason_code?: string;
+                });
+                funding: {
+                    /** @enum {unknown} */
+                    state: "AVAILABLE" | "NOT_PUBLISHED";
+                    total: string | null;
+                    reason_code: "NATIVE_RESULT_SERIES_NOT_PUBLISHED" | null;
+                } & ({
+                    /** @constant */
+                    state?: "AVAILABLE";
+                    total?: string;
+                    reason_code?: null;
+                } | {
+                    /** @constant */
+                    state?: "NOT_PUBLISHED";
+                    total?: null;
+                    reason_code?: string;
+                });
+                /** @constant */
+                cost_scope: "FULL_CHILD_TAPE";
+                fills_count: number;
+                orders_count: number | null;
+                /** @constant */
+                replay_authority: "RETAINED_ENGINE_AUDIT_ONLY_NOT_BROKER_EVENTS";
+            } & ({
+                /** @constant */
+                execution_route?: "intrabar_bracket";
+                /** @constant */
+                input_protocol?: "DELTA_CLOSE_BRACKET_INTENTS_V1";
+                /** @constant */
+                clock?: "KNOWN_CLOSE_NEXT_BAR_INTRABAR";
+            } | {
+                /** @constant */
+                execution_route?: "reactive";
+                /** @constant */
+                input_protocol?: "DELTA_CLOSE_STATEFUL_CALLBACK_V1";
+                /** @constant */
+                clock?: "KNOWN_CLOSE_NEXT_BAR_CLOSE";
+            } | {
+                /** @constant */
+                execution_route?: "event_driven";
+                /** @constant */
+                input_protocol?: "DELTA_CLOSE_ORDER_COMMANDS_V1";
+                /** @constant */
+                clock?: "KNOWN_CLOSE_NEXT_BAR_CLOSE";
+            });
         };
         /** @description CG-P11-08 (DQ-13). A live frame carries this viewer's current read, materialised once after the event committed, so the browser never refetches per event. A replayed frame (sequence at or below the opening research.progress.snapshot) carries read: null because the opening frame is already current. A read over 192 KiB is omitted with read_omitted_reason and the client makes one snapshot GET. */
         ProgressStreamEvent: {

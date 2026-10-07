@@ -8240,3 +8240,22 @@ hook, clean FF to `docs/research-loop-plan`, exact Claude handoff. Backend
 source delivery is not preview API or browser acceptance. P23/P24/owner review
 and quiet C4 maintenance are not silently converted to PASS by this slice.
 [Receipt and integration journal](./research_loop/evidence/P10/S02_VERSION_RECIPE_REFINEMENT_2026-10-07.md).
+
+### S02 native truth repair — Bobby approved, 2026-10-07
+
+Codex implements BR-S02-14…17 on `codex/be-gaps` from `6b3f6a2d`, then lands
+on the shared Research branch. Claude's fixed native Parameters consumer is
+already in the base; preserve it and all UI design. Current Atlas recipe
+disclosure, normalized UTC hourly windows, bounded persisted Progress native
+facts and explicit engine position-regime semantics are the exact backend
+scope. No new profile, engine, migration or immutable seal rewrite.
+
+[Queue §41 implementation plan and test/capacity boundary](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#41-implementation-addendum--codex-bobby-approval-2026-10-07).
+Status **DELIVERED — BR-S02-14…17**. Control52/52, contracts21/21, Python4/4;
+three existing real native runs, S03/S04 at1280/660 (12 views), Atlas200/304.
+Preview includes Claude's Parameters fix; no frontend source/visual change,
+profile opening, source/seal rewrite, remote push or production rollout.
+[Receipt and Claude consumer handoff](./research_loop/evidence/P10/S02_NATIVE_TRUTH_REPAIR_2026-10-07.md).
+Reuse unchanged T07 restore/three-manifest exception
+and T12 scoped scenario evidence; candidate-final T02/T14 and changed FE
+matrix/baselines are not relabelled PASS by a backend repair.

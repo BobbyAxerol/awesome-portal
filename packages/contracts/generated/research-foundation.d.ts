@@ -187,6 +187,10 @@ export interface components {
             required_input_class: string;
             status_word?: string | null;
             engine_facts?: components["schemas"]["AtlasRouteEngineFacts"] | null;
+            /** @description Current enabled recipe IDs for this route/release. Not an actor, Alpha, dataset or timeframe grant. Exact setup and fresh preflight remain authoritative. */
+            recipes_enabled?: string[];
+            /** @constant */
+            axes_scope?: "PINNED_ENGINE_CATALOGUE_NOT_RUNTIME_ADMISSION";
         };
         /** @description Where a fact is stated in the pinned engine package: file, line range, the file digest carried by the wheel RECORD, and a string that occurs in that range. */
         AtlasSourceLocator: {

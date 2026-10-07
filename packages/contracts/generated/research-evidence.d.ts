@@ -922,6 +922,11 @@ export interface components {
             definition_id: string;
             value: components["schemas"]["ExactDecimal"] | null;
             availability: components["schemas"]["Availability"];
+            /**
+             * @description Native num_trades counts the initial position regime plus position changes per symbol, even for an all-zero series. Not fill count or round-trip executions. Original engine integer is preserved.
+             * @constant
+             */
+            count_semantics?: "POSITION_REGIMES_INCLUDING_INITIAL_STATE_NOT_EXECUTIONS";
         };
         Warning: {
             definition_id: string;

@@ -2,7 +2,8 @@
 from __future__ import annotations
 import hashlib
 import json
-from datetime import datetime
+import re
+from datetime import datetime, timezone
 from typing import Any
 from .research_execution_recipes import execution_recipe, execution_recipe_qualification
 
@@ -50,8 +51,18 @@ def validate_native_spec(spec: dict[str, Any], row: dict[str, Any]) -> None:
         window = windows[name]
         if not isinstance(window, dict) or set(window) != {'start', 'end_exclusive'}:
             raise ValueError('native fixed window boundary is invalid')
+        # datetime truncates fractional precision beyond microseconds. Refuse
+        # any non-zero fraction before parsing, like the TS admission boundary.
+        if any((fraction := re.search(r'\.(\d+)', window[key]))
+               and any(digit != '0' for digit in fraction.group(1))
+               for key in ('start', 'end_exclusive')):
+            raise ValueError('native fixed window requires closed UTC 1h edges')
         pair = [datetime.fromisoformat(window[key].replace('Z', '+00:00')) for key in ('start', 'end_exclusive')]
-        if any(t.tzinfo is None or int(t.timestamp()*1000) % 3_600_000 for t in pair) or pair[0] >= pair[1]:
+        # Match the existing producer's UTC boundary, without changing the
+        # requested-spec bytes/digest. Explicit offsets name the same instant.
+        pair = [t.replace(tzinfo=timezone.utc) if t.tzinfo is None
+                else t.astimezone(timezone.utc) for t in pair]
+        if any(t.microsecond != 0 or int(t.timestamp()) % 3600 for t in pair) or pair[0] >= pair[1]:
             raise ValueError('native fixed window requires closed UTC 1h edges')
         edges.extend(pair)
     if edges[1] != edges[2] or edges[3] != edges[4] or (edges[5]-edges[0]).total_seconds() > 92*86400:

@@ -1,7 +1,7 @@
-import type { ResearchEngineAtlasPrivate, ResearchEngineAtlasPublic } from "./foundation.contract";
+import type { ResearchEngineAtlasPrivate, ResearchEngineAtlasPublic, ResearchPortalAdmission } from "./foundation.contract";
 
 /** Bump whenever this Portal-owned projection changes; it is not a manifest revision. */
-export const RESEARCH_ATLAS_PRESENTATION_REVISION = "research.atlas-presentation.v2" as const;
+export const RESEARCH_ATLAS_PRESENTATION_REVISION = "research.atlas-presentation.v3" as const;
 
 /**
  * Codes name a known NOT_PUBLISHED slot. They do not explain why the engine
@@ -9,9 +9,16 @@ export const RESEARCH_ATLAS_PRESENTATION_REVISION = "research.atlas-presentation
  * label likewise only names an existing source string. Preserve its original
  * reason/source and every other manifest fact; never fill an absent facts block.
  */
-export function presentResearchAtlas(atlas: ResearchEngineAtlasPrivate): ResearchEngineAtlasPublic {
+export function presentResearchAtlas(atlas: ResearchEngineAtlasPrivate, admission?: ResearchPortalAdmission): ResearchEngineAtlasPublic {
   return {
     ...atlas,
+    ...(admission ? { routes: atlas.routes.map(route => ({
+      ...route,
+      axes_scope: "PINNED_ENGINE_CATALOGUE_NOT_RUNTIME_ADMISSION" as const,
+      recipes_enabled: [...new Set(admission.profiles.filter(profile => profile.state === "ENABLED"
+        && profile.engine_release_id === atlas.current_release.release_id
+        && profile.execution_route === route.route_id).map(profile => profile.profile_id))].sort(),
+    })) } : {}),
     modes: atlas.modes.map(mode => {
       if (!mode.facts) return mode;
       const facts = mode.facts;

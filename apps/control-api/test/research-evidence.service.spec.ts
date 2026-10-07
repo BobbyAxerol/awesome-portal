@@ -8,6 +8,7 @@ import type { ResearchProgressIngress } from "../src/research/progress.contract"
 import { p13EvidenceSourceFixture } from "./research-evidence.fixture";
 import { b3RetainedSnapshot } from "./research-b3-snapshot.fixture";
 import { p13WindowTopology } from "./research-evidence-window-disclosure.fixture";
+import { openApiValidator } from "./research-rf05-openapi";
 
 const scope = { workspaceId: "p13-workspace", actorUserId: "p13-user" };
 const ingressScope = { ...scope, jobId: "job_p13", workerAttemptId: "attempt_p13", leaseEpoch: 1 };
@@ -198,6 +199,38 @@ describe("P13 Evidence Flow projection authority", () => {
         },
       },
     });
+  });
+
+  it("BR-S02-17 identifies the native regime counter without changing source bytes or inventing a trade", async () => {
+    const native = JSON.parse(readFileSync(resolve(process.env.PORTAL_CONTRACTS_DIR
+      ?? resolve(__dirname, "../../../packages/contracts"), "fixtures/research-native-route-result.valid.json"), "utf8"));
+    const baseline = p13EvidenceSourceFixture();
+    const evidence = {...baseline,source:{...baseline.source,execution_adapter_id:"full03.delta-rsi.v1" as const,native_execution:native},
+      direct:{...baseline.direct,num_trades:"1"}};
+    const before = JSON.stringify(evidence), digest = sha256ResearchJson(evidence);
+    const repository = {persist:vi.fn().mockResolvedValue(undefined),inputBinding:vi.fn().mockResolvedValue(null),hub:vi.fn()};
+    const service = new ResearchEvidenceService(repository as never,{FEATURE_RESEARCH_EVIDENCE:"true"} as never);
+    await service.ingest(ingressScope,{run_id:"run_p13",event:{event_type:"run_completed",sequence:9,payload:{evidence_digest:digest}},evidence} as unknown as ResearchProgressIngress);
+    const write = repository.persist.mock.calls[0]![1];
+    const row = {kind:"DURABLE",runId:"run_p13",requestedSpec:{data:{dataset_id:"ds_p13",symbol:"BTCUSDT",timeframe:"1h"}},
+      requestedSpecDigest:"a".repeat(64),effectiveSpecDigest:"b".repeat(64),datasetBindingDigest:"c".repeat(64),manifestDigest:"d".repeat(64),
+      progressSnapshot:null,jobState:"SUCCEEDED",revision:write.projectionRevision,projection:write.projection,readiness:write.readiness,
+      sourceEvidenceDigest:digest,receivedAt:new Date(),asOfUtcMs:1_725_000_000_000};
+    repository.hub.mockResolvedValue(row);
+    const hub = await service.hub(scope,"run_p13");
+    expect(hub.metrics.find(m=>m.key==="TRADE_COUNT")).toMatchObject({value:"1",label:"Position regimes (engine)",
+      origin:"ENGINE_DIRECT",definition_id:"research.metric.v1.native_position_regime_count",
+      count_semantics:"POSITION_REGIMES_INCLUDING_INITIAL_STATE_NOT_EXECUTIONS"});
+    expect(hub.core.native_execution!.fills_count).toBe(0);
+    expect(hub.core.native_execution!.fees.total).toBe("0");
+    expect(hub.core.native_execution!.orders_count).toBeNull();
+    expect(JSON.stringify(evidence)).toBe(before);
+    expect(sha256ResearchJson(evidence)).toBe(digest);
+    expect(row.projection.direct.num_trades).toBe("1");
+    openApiValidator("research-evidence.openapi.json","EvidenceHub").assert(hub);
+    const scalarProjection=structuredClone(row.projection);delete scalarProjection.source.native_execution;
+    repository.hub.mockResolvedValue({...row,projection:scalarProjection});
+    expect((await service.hub(scope,"run_p13")).metrics.find(m=>m.key==="TRADE_COUNT")).toMatchObject({value:"1",label:"Trade count",definition_id:"research.metric.v1.trade_count"});
   });
 
   it("maps an immutable projection into direct/derived metrics and typed source gaps", async () => {

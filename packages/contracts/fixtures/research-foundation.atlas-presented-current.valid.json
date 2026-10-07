@@ -486,7 +486,14 @@
               "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
             }
           ]
-        }
+        },
+        "axes_scope": "PINNED_ENGINE_CATALOGUE_NOT_RUNTIME_ADMISSION",
+        "recipes_enabled": [
+          "p04.fixed-qualification.v1",
+          "p10.delta-signal-notional-causal-inner.v1",
+          "p10.delta-signal-notional-wfo.v1",
+          "p10.delta-signal-notional-wfo.v2"
+        ]
       },
       {
         "route_id": "pct_equity",
@@ -534,7 +541,9 @@
               "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
             }
           ]
-        }
+        },
+        "axes_scope": "PINNED_ENGINE_CATALOGUE_NOT_RUNTIME_ADMISSION",
+        "recipes_enabled": []
       },
       {
         "route_id": "intrabar_bracket",
@@ -657,7 +666,9 @@
               "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
             }
           ]
-        }
+        },
+        "axes_scope": "PINNED_ENGINE_CATALOGUE_NOT_RUNTIME_ADMISSION",
+        "recipes_enabled": []
       },
       {
         "route_id": "dca_ladder",
@@ -757,7 +768,9 @@
               "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
             }
           ]
-        }
+        },
+        "axes_scope": "PINNED_ENGINE_CATALOGUE_NOT_RUNTIME_ADMISSION",
+        "recipes_enabled": []
       },
       {
         "route_id": "reactive",
@@ -866,7 +879,9 @@
               "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
             }
           ]
-        }
+        },
+        "axes_scope": "PINNED_ENGINE_CATALOGUE_NOT_RUNTIME_ADMISSION",
+        "recipes_enabled": []
       },
       {
         "route_id": "event_driven",
@@ -916,7 +931,9 @@
               "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
             }
           ]
-        }
+        },
+        "axes_scope": "PINNED_ENGINE_CATALOGUE_NOT_RUNTIME_ADMISSION",
+        "recipes_enabled": []
       },
       {
         "route_id": "native_event_lifecycle",
@@ -971,7 +988,9 @@
               "anchor": "def native_event_lifecycle(cls, **kwargs) -> \"QuantBTEndpoint\":"
             }
           ]
-        }
+        },
+        "axes_scope": "PINNED_ENGINE_CATALOGUE_NOT_RUNTIME_ADMISSION",
+        "recipes_enabled": []
       },
       {
         "route_id": "orders",
@@ -1026,7 +1045,9 @@
               "anchor": "Use `simulate(data=df, orders=[OrderIntent(...), ...])`. Orders are run"
             }
           ]
-        }
+        },
+        "axes_scope": "PINNED_ENGINE_CATALOGUE_NOT_RUNTIME_ADMISSION",
+        "recipes_enabled": []
       },
       {
         "route_id": "fill_replay",
@@ -1079,7 +1100,9 @@
               "anchor": "def fill_replay("
             }
           ]
-        }
+        },
+        "axes_scope": "PINNED_ENGINE_CATALOGUE_NOT_RUNTIME_ADMISSION",
+        "recipes_enabled": []
       },
       {
         "route_id": "basket",
@@ -1128,7 +1151,9 @@
               "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
             }
           ]
-        }
+        },
+        "axes_scope": "PINNED_ENGINE_CATALOGUE_NOT_RUNTIME_ADMISSION",
+        "recipes_enabled": []
       },
       {
         "route_id": "arbitrage",
@@ -1254,7 +1279,9 @@
               "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
             }
           ]
-        }
+        },
+        "axes_scope": "PINNED_ENGINE_CATALOGUE_NOT_RUNTIME_ADMISSION",
+        "recipes_enabled": []
       },
       {
         "route_id": "portfolio",
@@ -1384,7 +1411,9 @@
               "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
             }
           ]
-        }
+        },
+        "axes_scope": "PINNED_ENGINE_CATALOGUE_NOT_RUNTIME_ADMISSION",
+        "recipes_enabled": []
       },
       {
         "route_id": "nautilus_dca_grid",
@@ -1453,7 +1482,9 @@
               "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
             }
           ]
-        }
+        },
+        "axes_scope": "PINNED_ENGINE_CATALOGUE_NOT_RUNTIME_ADMISSION",
+        "recipes_enabled": []
       },
       {
         "route_id": "options",
@@ -1501,7 +1532,9 @@
               "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
             }
           ]
-        }
+        },
+        "axes_scope": "PINNED_ENGINE_CATALOGUE_NOT_RUNTIME_ADMISSION",
+        "recipes_enabled": []
       }
     ],
     "modes": [
@@ -3529,5 +3562,5 @@
     "note": "PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE"
   },
   "historical_identity": null,
-  "etag": "W/\"research-atlas-abc511c060ddccd28e271d20\""
+  "etag": "W/\"research-atlas-d439020ebf874cc7bc877b16\""
 }

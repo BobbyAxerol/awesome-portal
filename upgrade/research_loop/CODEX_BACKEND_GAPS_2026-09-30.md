@@ -2541,3 +2541,61 @@ Frontend consumed trials 2–400, `native_input`, `budget`, native routes and th
 | BR-S02-15 | Native fixed windows reject zone-less instants (`requires closed UTC 1h edges`) although every other recipe accepts them | accept zone-less as UTC like the others, or document it in the generated contract; the UI now sends `…:00Z` |
 | BR-S02-16 | S03 Progress evidence has no native fact (`native_execution` is only in Evidence Hub) | add it to Progress, or state it is hub-only |
 | BR-S02-17 | Real Bracket run `rrun_ea0e06b9…` (1.0.9, BTCUSDT 1h): hub `native_execution.fills_count 0`, fees `"0"`, equity flat at 20,000, but the S04 trade count (child tape) is 1. Reactive/Event-driven runs agree (22 fills) | explain or fix the Bracket result: zero fills with one trade is contradictory; say which fact is the authority |
+
+### §41 implementation addendum — Codex, Bobby approval 2026-10-07
+
+**IN_PROGRESS**, base `6b3f6a2d`; isolated `codex/be-gaps`, landing only on
+`docs/research-loop-plan`. Parameters fix is already retained at that base.
+
+- BR-S02-14: add current, enabled recipe IDs to each public Atlas route from
+  the existing admission table. Preserve the pinned engine axes and historical
+  identity; a route summary is not actor/dataset-bound run permission.
+- BR-S02-15: normalize absent timezone to UTC at the native validator, matching
+  the established producer boundary; retain exact hourly, contiguous,
+  end-exclusive bounds and refuse sub-hour precision. No requested-spec or
+  immutable receipt rewrite.
+- BR-S02-16: publish optional native facts on Progress from the matching
+  workspace/run/worker/source-sequence/digest sidecar in the existing read
+  transaction, without a source/engine call or unbounded second read.
+- BR-S02-17: preserve QuantBT's raw `num_trades`, which counts an initial
+  position regime plus changes, even for a zero-position series. Identify the
+  native metric as a position-regime counter, not executed fills/trades. Native
+  fills remain the existing engine-journal fact; do not subtract one, equate
+  fills with round trips, modify QuantBT, or rewrite old seals/reports.
+- Exit: focused contract/BE tests, generated clients and examples, existing
+  native-run readback where feasible, one grouped normal hook, safe FF and
+  Claude handoff. Keep T07's restored-browser/approved exact-three exception
+  and T12's 24 scoped dispositions; do not rerun unchanged load/DR/24 engines.
+  T02/T14 and the final 73-cell/visual bundle remain explicit acceptance scope.
+- Capacity: root free 110,149,783,552 bytes / 665,811,062,784 (<20%); memory
+  available 14,020,038,656 bytes. Existing local dependencies suffice for
+  focused tests/generation. No disk-intensive image build until C4 quiet-window
+  inventory and a bounded capacity decision; no broad prune or data cleanup.
+
+No frontend layout/token/baseline edit, remote push, dev/main or production
+operation is authorized by this slice. Delivery results are appended below.
+
+### §41 delivery — BR-S02-14…17, 2026-10-07
+
+**DELIVERED**, normal grouped delivery commit containing the following receipt.
+BR-S02-13 remains the existing version-options/recipe presentation delivery;
+Claude's `6b3f6a2d` fix is retained and rebuilt, not reimplemented.
+
+| ID | Status | Generated consumer field / proof |
+|---|---|---|
+| BR-S02-14 | DELIVERED | `AtlasRoute.recipes_enabled`, `axes_scope`; current admission parity + real Atlas 200/304. Pinned axes unchanged, no blanket run permission. |
+| BR-S02-15 | DELIVERED | TS/Python UTC normalization, precision/alignment/contiguity/cap guards; existing requested-spec unchanged; validator tests, not a newly qualified engine profile. |
+| BR-S02-16 | DELIVERED | `ProgressRead.native_execution` optional, exact scoped sidecar; equality with Hub on all three existing real native runs; no invented absence-to-zero. |
+| BR-S02-17 | DELIVERED | `Metric.count_semantics`; native Position regimes (engine) label. Bracket `1` regimes/0 fills/`"0"` fees; other two `23` regimes/22 fills. Raw source/seals unchanged; real S04 label verified at 1280/660. |
+
+Focused gates: Control **52/52**, contracts **21/21**, Python **4/4**; source
+build and one preview build pass. Real S03/S04: three runs, **12 views**, no
+console/page errors, failed API or product writes. Original custody hashes
+match; separately recorded concurrent preview job/report growth is not hidden.
+No frontend source, remote, dev/main or production change.
+
+[Implementation, exact examples, hashes, images, custody, resource cleanup and
+Claude handoff](./evidence/P10/S02_NATIVE_TRUTH_REPAIR_2026-10-07.md).
+This repair is not final P23/P24 acceptance. Reuse scoped T07/T12 receipts and
+the approved exact-three exception; finish candidate-final T02/T14 and affected
+frontend matrix/baselines instead of repeating unchanged full suites/DR.

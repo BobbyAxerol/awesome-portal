@@ -123,6 +123,8 @@ export interface ResearchProgressDeniedArtifact {
 }
 
 export interface ResearchProgressReadResponse {
+  /** Exact source sidecar from the current run/attempt; absent before publication. */
+  native_execution?: import("zod").z.infer<typeof import("./native-route.contract").ResearchNativeRouteResultSchema>;
   schema_version: "research.progress-read.v1";
   run_declaration?: import("./run-declaration.contract").ResearchRunDeclaration;
   run_id: string;
@@ -682,6 +684,7 @@ export class ResearchProgressService {
     const identity = current.identity ?? null;
     return {
       schema_version: "research.progress-read.v1",
+      ...(current.nativeExecution ? { native_execution: current.nativeExecution } : {}),
       run_id: current.runId,
       run: identity ? this.runIdentity(identity) : null,
       ...(identity?.runDeclaration ? { run_declaration: identity.runDeclaration } : {}),

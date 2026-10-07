@@ -12,5 +12,5 @@
     "facts_reason": "Only the historical release identity is retained; route, mode and claim facts for that release are not published.",
     "facts_reason_code": "ATLAS_HISTORICAL_FACTS_NOT_PUBLISHED"
   },
-  "etag": "W/\"research-atlas-17dae94eef65a2bc774490e9\""
+  "etag": "W/\"research-atlas-cc3dba04a7a7b32892fd9ce7\""
 }

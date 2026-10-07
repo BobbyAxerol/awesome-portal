@@ -1,5 +1,6 @@
 /** Additive native facts, never replace accepted scalar/WFO representations. */
 import {readFileSync,writeFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import {replaceComponent} from './generate-research-progress-truth.mjs';
 const root=new URL('../../../',import.meta.url),check=process.argv.includes('--check');
 const table=JSON.parse(readFileSync(new URL('apps/portal/registry/research-execution-recipes.v1.json',root)));
@@ -60,6 +61,23 @@ for(const file of ['research-foundation','research-run-create','research-progres
     contains:{type:'object',required:['profile_id'],properties:{profile_id:{const:r.profile_id}}},minContains:0,maxContains:1}));
    changed=true;
   }
+  if(file==='research-foundation'&&name==='AtlasRoute'){
+   value.properties.recipes_enabled={type:'array',maxItems:1024,uniqueItems:true,
+    items:{type:'string',minLength:1,maxLength:191},
+    description:'Current enabled recipe IDs for this route/release. Not an actor, Alpha, dataset or timeframe grant. Exact setup and fresh preflight remain authoritative.'};
+   value.properties.axes_scope={const:'PINNED_ENGINE_CATALOGUE_NOT_RUNTIME_ADMISSION'};
+   changed=true;
+  }
+  if(file==='research-progress'&&name==='ProgressRead'){
+   value.properties.native_execution={...result,
+    description:'Exact persisted native sidecar bound to workspace/run/current worker/source sequence and digest. Absent before a matching source receipt; never inferred from route or engine counter.'};
+   changed=true;
+  }
+  if(file==='research-evidence'&&name==='Metric'){
+   value.properties.count_semantics={const:'POSITION_REGIMES_INCLUDING_INITIAL_STATE_NOT_EXECUTIONS',
+    description:'Native num_trades counts the initial position regime plus position changes per symbol, even for an all-zero series. Not fill count or round-trip executions. Original engine integer is preserved.'};
+   changed=true;
+  }
   if(changed)next=replaceComponent(next,name,value,next.indexOf('"schemas": {'));
  }
  if(check){if(next!==old)throw Error(`Native contract drift ${file}`);}else if(next!==old)writeFileSync(path,next);
@@ -68,3 +86,28 @@ const fixture={schema_version:'research.native-route-result.v1',execution_route:
  fees:{state:'AVAILABLE',total:'0',reason_code:null},funding:{state:'NOT_PUBLISHED',total:null,reason_code:'NATIVE_RESULT_SERIES_NOT_PUBLISHED'},cost_scope:'FULL_CHILD_TAPE',fills_count:0,orders_count:null,replay_authority:'RETAINED_ENGINE_AUDIT_ONLY_NOT_BROKER_EVENTS'};
 const path=new URL('packages/contracts/fixtures/research-native-route-result.valid.json',root),text=JSON.stringify(fixture,null,2)+'\n';
 if(check){if(readFileSync(path,'utf8')!==text)throw Error('Native fixture drift');}else writeFileSync(path,text);
+
+// Canonical presentation fixtures only. The pinned source/legacy captures and
+// real receipts/seals are never rewritten by a presentation generator.
+for(const name of ['current','historical']){
+ const path=new URL(`packages/contracts/fixtures/research-foundation.atlas-presented-${name}.valid.json`,root);
+ const old=readFileSync(path,'utf8'),doc=JSON.parse(old);
+ if(doc.atlas)for(const route of doc.atlas.routes){
+  route.axes_scope='PINNED_ENGINE_CATALOGUE_NOT_RUNTIME_ADMISSION';
+  route.recipes_enabled=[...new Set(doc.portal_admission.profiles.filter(p=>p.state==='ENABLED'
+   &&p.engine_release_id===doc.selected_release_id&&p.execution_route===route.route_id).map(p=>p.profile_id))].sort();
+ }
+ // Preserve the runtime wire object's insertion order (the legacy validator
+ // hashes wire JSON). Fixture formatting/order must not make a different ETag.
+ const wireAdmission=doc.portal_admission?{...doc.portal_admission,profiles:doc.portal_admission.profiles.map(profile=>{
+  const row=table.recipes.find(r=>r.profile_id===profile.profile_id);
+  if(!row)throw Error('Unknown fixture recipe '+profile.profile_id);
+  const {profile_id,...facts}=row.public_profile;
+  return {profile_id,state:profile.state,reason:profile.reason,...facts,trial_count:profile.trial_count};
+ })}:null;
+ const key=doc.atlas?`research.atlas-presentation.v3:${doc.atlas.manifest_revision}:${doc.selected_release_id}:::${JSON.stringify(wireAdmission)}`
+  :`research.atlas-presentation.v3:${JSON.parse(readFileSync(new URL('packages/contracts/fixtures/research-foundation.atlas-current.valid.json',root))).atlas.manifest_revision}:${doc.selected_release_id}:historical-identity`;
+ doc.etag=`W/"research-atlas-${createHash('sha256').update(key).digest('hex').slice(0,24)}"`;
+ const next=JSON.stringify(doc,null,2)+'\n';
+ if(check){if(next!==old)throw Error('Native Atlas presentation fixture drift '+name);}else if(next!==old)writeFileSync(path,next);
+}

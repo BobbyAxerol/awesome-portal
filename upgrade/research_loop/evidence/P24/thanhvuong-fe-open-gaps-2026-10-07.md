@@ -27,3 +27,29 @@ Preview rebuilt from `bf31b377`; the frontend now consumes `version-options` and
 1. Land the native Parameters-step fix; re-run the 73-cell matrix on a rebuilt bundle (affects T09/T13 validity).
 2. Record only the changed S02 baselines through the Research recorder, review contact sheets, restore zero-diff files.
 3. Ask Codex for BR-S02-17 and for the restored-browser receipt (T07) before anyone says "P24 done".
+
+## Codex implementation/acceptance clarification — 2026-10-07
+
+This append-only note supersedes the stale asks above without deleting the
+original frontend findings. Parameters fix `6b3f6a2d` is retained in the shared
+branch and rebuilt on Research preview. **BR-S02-14…17 are implemented**:
+current enabled Atlas recipes, native UTC normalization, optional source-bound
+native facts on Progress, and Position regimes (engine) semantics on S04.
+Three real native runs have matching Progress/Hub facts; the new S04 label is
+verified at1280/660. No frontend source/layout/token/baseline was edited.
+
+[Full repair receipt and remaining FE integration](../P10/S02_NATIVE_TRUTH_REPAIR_2026-10-07.md).
+
+- **T07:** restored-browser evidence exists in `V1_ACCEPTANCE.md` and
+  `../P23/WORKSPACE_AND_LINKED_AUDIT_CONSUMER_2026-10-04.md`. Bobby accepted the
+  exact-three historical-test missing-manifest exception; strict83/86 remains.
+  Do not wait for fabricated/recovered bytes or claim full-store86/86.
+- **T12:** `P24_REMAINING_SCENARIO_ACCEPTANCE_2026-10-04.md` records all24
+  dispositions. Reconcile expansion-affected profile/route dispositions; this
+  is not an instruction for24 new engine runs or a Cartesian qualifier.
+- **T02/T14:** whole final-candidate journey/authority bundle still needs its
+  own final evidence. This twelve-view GET-only repair is not that whole gate.
+- **Claude:** changed73-cell matrix, S02 recorder/baseline review and new
+  optional Progress/Atlas field consumption remain the frontend lane. Backend
+  repair is delivered, not delegated back to Claude. Bobby's product/release
+  decision and no-publication boundary are unchanged.

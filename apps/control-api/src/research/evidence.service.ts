@@ -732,12 +732,16 @@ export class ResearchEvidenceService {
           : projectionAvailability;
       return {
         key: definition.key,
-        label: definition.label,
+        label: projection?.source.native_execution && definition.key === "TRADE_COUNT"
+          ? "Position regimes (engine)" : definition.label,
         unit: definition.unit,
         scope: definition.scope,
         frequency: definition.frequency,
         origin: definition.origin,
-        definition_id: definition.definitionId,
+        definition_id: projection?.source.native_execution && definition.key === "TRADE_COUNT"
+          ? "research.metric.v1.native_position_regime_count" : definition.definitionId,
+        ...(projection?.source.native_execution && definition.key === "TRADE_COUNT"
+          ? { count_semantics: "POSITION_REGIMES_INCLUDING_INITIAL_STATE_NOT_EXECUTIONS" as const } : {}),
         value: metricValues[definition.key] ?? null,
         availability: definition.origin === "NOT_PUBLISHED" ? missing : projectionAvailability,
       };

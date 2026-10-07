@@ -403,6 +403,11 @@ export type ResearchEngineAtlasPrivate = z.infer<typeof ResearchEngineAtlasPriva
 
 /** Separate public boundary: no Portal label is accepted from the private source. */
 export const ResearchEngineAtlasPublicSchema = ResearchEngineAtlasPrivateSchema.extend({
+  routes: z.array(AtlasRouteSchema.extend({
+    /** Current enabled recipes, not an actor/dataset grant or engine claim. */
+    recipes_enabled: z.array(z.string().min(1).max(191)).max(1024).optional(),
+    axes_scope: z.literal("PINNED_ENGINE_CATALOGUE_NOT_RUNTIME_ADMISSION").optional(),
+  })).min(1).max(32),
   modes: z.array(AtlasModeSchema.extend({
     facts: ModeFactsSchema.extend({
       schedules: z.array(ScheduleFactSchema.extend({

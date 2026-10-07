@@ -282,6 +282,8 @@ const MetricSchema = z.object({
   frequency: z.enum(["RUN_FINAL", "PER_OBSERVATION", "CALENDAR_MONTH"]),
   origin: z.enum(["ENGINE_DIRECT", "SOURCE_DERIVED", "NOT_PUBLISHED"]),
   definition_id: z.string().regex(/^research\.metric\.v1\.[a-z0-9_.-]{2,96}$/),
+  /** Native engine counter is not the fill journal or round-trip trade count. */
+  count_semantics: z.literal("POSITION_REGIMES_INCLUDING_INITIAL_STATE_NOT_EXECUTIONS").optional(),
   value: DecimalSchema.nullable(),
   availability: ResearchEvidenceAvailabilitySchema,
 }).strict();

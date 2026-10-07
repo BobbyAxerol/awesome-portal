@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { ResearchProgressEventSchema, ResearchProgressSnapshotSchema, toPublicResearchProgressSnapshot } from "../src/research/progress.contract";
 import { ResearchProgressService } from "../src/research/progress.service";
@@ -28,6 +28,15 @@ function build(row: Record<string, unknown>, events: unknown[] = []) {
 }
 
 describe("B8 S03 progress authority and terminal observations", () => {
+  it("BR-S02-16 publishes exact native facts and preserves older absent responses", async () => {
+    const native = JSON.parse(readFileSync(resolve(process.env.PORTAL_CONTRACTS_DIR
+      ?? resolve(__dirname, "../../../packages/contracts"), "fixtures/research-native-route-result.valid.json"), "utf8"));
+    const {service} = build({nativeExecution:native});
+    const read = await service.read({role:"USER"} as never,scope,"native_run");
+    expect(read.native_execution).toEqual(native);
+    openApiValidator("research-progress.openapi.json","ProgressRead").assert(read);
+    expect(await build({}).service.read({role:"USER"} as never,scope,"old_run")).not.toHaveProperty("native_execution");
+  });
   it.each([DELTA_WFO_PROFILE_ID, DELTA_WFO_V2_PROFILE_ID])("labels ordinal and original source id without rewriting %s source", (profile) => {
     const source = sourceSnapshot();
     source.folds[0]!.selection.trial = 351;

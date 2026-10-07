@@ -17,6 +17,8 @@ import {
 import { ResearchProgressError } from "./progress.error";
 import { readRunDeclaration } from "./run-declaration.read";
 import type { ResearchRunDeclaration } from "./run-declaration.contract";
+import { ResearchNativeRouteResultSchema } from "./native-route.contract";
+import type { z } from "zod";
 
 const TERMINAL_JOB_STATES = new Set(["SUCCEEDED", "FAILED", "CANCELLED"]);
 
@@ -41,6 +43,7 @@ interface IngressRow {
 }
 
 interface ReadRunRow {
+  native_execution?: Record<string, unknown> | null;
   bound_requested_spec?: Record<string, unknown> | null;
   alpha_declared_contract?: Record<string, unknown> | null;
   alpha_entrypoint?: string | null;
@@ -257,6 +260,7 @@ export interface ProgressRequestedSpec {
 }
 
 export interface ProgressRunRead {
+  nativeExecution?: z.infer<typeof ResearchNativeRouteResultSchema>;
   runId: string;
   jobState: string;
   queueClass: "INTERACTIVE" | "HEAVY" | "BACKGROUND";
@@ -529,6 +533,7 @@ export class ResearchProgressRepository {
                 job.terminal_reason AS job_terminal_reason, job.requested_by_user_id,
                 producer.alpha_id, alpha.name AS alpha_name, producer.alpha_version_id,
                 producer.execution_profile_id, producer.requested_spec_digest,
+                evidence.source_payload->'source'->'native_execution' AS native_execution,
                 preflight.requested_spec AS bound_requested_spec,
                 version.declared_contract AS alpha_declared_contract, version.entrypoint AS alpha_entrypoint,
                 preflight.requested_spec->>'protocol' AS spec_protocol,
@@ -575,6 +580,12 @@ export class ResearchProgressRepository {
             AND latest_event.run_id = snapshot.run_id
             AND latest_event.worker_attempt_id = snapshot.worker_attempt_id
             AND latest_event.source_sequence = snapshot.source_latest_sequence
+          LEFT JOIN research.run_evidence_sources_v1 evidence
+            ON evidence.workspace_id = producer.workspace_id
+            AND evidence.run_id = producer.run_id
+            AND evidence.worker_attempt_id = producer.worker_attempt_id
+            AND evidence.source_event_sequence = snapshot.source_latest_sequence
+            AND evidence.source_evidence_digest = latest_event.event_payload->>'evidence_digest'
           WHERE producer.workspace_id = $1 AND producer.run_id = $2
           ORDER BY producer.created_at DESC
           LIMIT 1`,
@@ -638,7 +649,12 @@ export class ResearchProgressRepository {
         }
         progress = parsed.data;
       }
+      const native = row.native_execution == null ? undefined : ResearchNativeRouteResultSchema.safeParse(row.native_execution);
+      if (native && (!native.success || native.data.execution_route !== row.spec_route)) {
+        throw new ResearchProgressError("RESEARCH_PROGRESS_CONFLICT", "Research native receipt is incompatible with the scoped run.", 409);
+      }
       return {
+        ...(native?.success ? { nativeExecution: native.data } : {}),
         runId: row.run_id,
         jobState: row.job_state,
         queueClass: row.queue_class,

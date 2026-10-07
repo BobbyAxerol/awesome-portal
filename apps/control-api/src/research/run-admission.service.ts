@@ -303,9 +303,12 @@ export class ResearchRunAdmissionService {
       ||spec.parameter_space_overrides.length||!spec.windows)
       return 'Native Delta admits one fixed three-window run, exact 1h source, no scalar optimizer/overrides.';
     const source=this.full03SourceReason(row,spec,manifest);if(source)return source;
-    const edges=[spec.windows.is.start,spec.windows.is.end_exclusive,spec.windows.oos.start,
-      spec.windows.oos.end_exclusive,spec.windows.holdout.start,spec.windows.holdout.end_exclusive].map(Date.parse);
-    if(edges.some(v=>!Number.isFinite(v)||v%3600000!==0)||!(edges[0]!<edges[1]!)||edges[1]!==edges[2]
+    const values=[spec.windows.is.start,spec.windows.is.end_exclusive,spec.windows.oos.start,
+      spec.windows.oos.end_exclusive,spec.windows.holdout.start,spec.windows.holdout.end_exclusive];
+    const edges=values
+      .map(value => Date.parse(/(?:Z|[+-]\d{2}:\d{2})$/i.test(value) ? value : `${value}Z`));
+    if(values.some(value=>/[1-9]/.test(value.match(/\.(\d+)/)?.[1]??""))
+      ||edges.some(v=>!Number.isFinite(v)||v%3600000!==0)||!(edges[0]!<edges[1]!)||edges[1]!==edges[2]
       ||!(edges[2]!<edges[3]!)||edges[3]!==edges[4]||!(edges[4]!<edges[5]!)
       ||edges[5]!-edges[0]!>p.max_span_days*86400000)
       return 'Native fixed windows require contiguous half-open UTC 1h edges within92 days.';

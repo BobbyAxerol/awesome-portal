@@ -8,6 +8,7 @@ import { presentResearchAtlas, RESEARCH_ATLAS_PRESENTATION_REVISION } from "../s
 import { ResearchEngineAtlasPrivateSchema, ResearchEngineAtlasPublicSchema } from "../src/research/foundation.contract";
 import { ResearchFoundationController } from "../src/research/foundation.controller";
 import { ResearchFoundationService } from "../src/research/foundation.service";
+import { researchPortalAdmission } from "../src/research/portal-admission";
 
 const root = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
 const fixture = (name: string) => JSON.parse(readFileSync(resolve(root, "fixtures", `research-foundation.${name}.valid.json`), "utf8"));
@@ -33,6 +34,27 @@ function withoutCodes(value: unknown): unknown {
 }
 
 describe("BR-TXT-01 Portal-owned Atlas absence presentation", () => {
+  it("BR-S02-14 reports only enabled current recipes without rewriting pinned axes", () => {
+    const source = frozen(privateAtlas()), bytes = JSON.stringify(source);
+    const admission = researchPortalAdmission(config, source.current_release);
+    const nativeFlags = { ...(config as object), FEATURE_RESEARCH_FULL06_PROFILE: "true", PORTAL_ENV: "local", AUTH_MODE: "dev" } as never;
+    const nativeAdmission = researchPortalAdmission(nativeFlags, source.current_release);
+    for (const current of [admission, nativeAdmission]) {
+      const presented = presentResearchAtlas(source, current);
+      expect(ResearchEngineAtlasPublicSchema.safeParse(presented).success).toBe(true);
+      expect(ResearchEngineAtlasPrivateSchema.safeParse(presented).success).toBe(false);
+      for (const route of presented.routes) {
+        expect(route.axes).toEqual(source.routes.find(r => r.route_id === route.route_id)!.axes);
+        expect(route.recipes_enabled).toEqual([...new Set(current.profiles.filter(p => p.state === "ENABLED"
+          && p.engine_release_id === source.current_release.release_id && p.execution_route === route.route_id)
+          .map(p => p.profile_id))].sort());
+        expect(route.axes_scope).toBe("PINNED_ENGINE_CATALOGUE_NOT_RUNTIME_ADMISSION");
+      }
+      const foreign = { ...current, profiles: current.profiles.map(p => ({ ...p, engine_release_id: "er_other" })) };
+      expect(presentResearchAtlas(source, foreign).routes.every(r => r.recipes_enabled!.length === 0)).toBe(true);
+    }
+    expect(JSON.stringify(source)).toBe(bytes);
+  });
   it("adds codes to known absent slots without changing any source fact or manifest byte", () => {
     const source = frozen(privateAtlas()), bytes = JSON.stringify(source);
     const presented = presentResearchAtlas(source);

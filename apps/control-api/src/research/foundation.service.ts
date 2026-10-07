@@ -107,7 +107,7 @@ export class ResearchFoundationService {
       schema_version: "research.engine-atlas-response.v1",
       selected_release_id: selected.releaseId,
       selected_release_kind: selected.kind,
-      atlas: presentResearchAtlas(atlas),
+      atlas: presentResearchAtlas(atlas, portalAdmission),
       portal_admission: portalAdmission,
       historical_identity: null,
       etag: this.etag(

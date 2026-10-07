@@ -34,4 +34,16 @@ describe('native edition input and typed result boundaries',()=>{
   expect(validate({...fixture,input_protocol:'DELTA_CLOSE_ORDER_COMMANDS_V1'})).toBe(false);
   expect(validate({...fixture,clock:'KNOWN_CLOSE_NEXT_BAR_INTRABAR'})).toBe(false);
  });
+ it('BR-S02-16 publishes the identical native fact boundary on Progress',()=>{
+  const evidence=read('openapi/research-evidence.openapi.json').components.schemas.EvidenceHub.properties.core.properties.native_execution;
+  const progress=read('openapi/research-progress.openapi.json').components.schemas.ProgressRead;
+  expect(progress.required).not.toContain('native_execution');
+  const result=progress.properties.native_execution;
+  expect(result.properties).toEqual(evidence.properties);
+  const validate=new Ajv2020({strict:false,allErrors:true}).compile(result);
+  const fixture=read('fixtures/research-native-route-result.valid.json');
+  expect(validate(fixture),JSON.stringify(validate.errors)).toBe(true);
+  expect(validate({...fixture,funding:{...fixture.funding,total:'0'}})).toBe(false);
+  expect(validate({...fixture,clock:'KNOWN_CLOSE_NEXT_BAR_INTRABAR'})).toBe(false);
+ });
 });
