@@ -2740,3 +2740,71 @@ Bobby ran the QuantBT 1.1.1 package directly (package has no defect). Result: in
 Why this is not a one-line edit: the adapter bytes are digest-pinned (`adapter_sha256` `24648f97…` in `native_input` and the immutable recipe descriptors), so a fix needs a new recipe version (v4) and re-qualification of the three Bracket recipes; the Bracket rows of `NATIVE_ROUTE_PRODUCT_QUALIFICATION_2026-10-06` (0 fills ×3) must not stand as qualification evidence. Existing runs/seals stay immutable. Needs Bobby's decision on the new recipe version and on whether to hide the Bracket recipe until then (frontend can do that from the served `recipe.key`/`recipes_enabled` once the backend withdraws it).
 
 Wrong guesses on the frontend side, for the record: "intent placed on the wrong bar" (it is correct); "`entry_size` unit" (this was the cause).
+
+**Codex disposition — DELIVERED in the WEX addendum below:** the sizing diagnosis
+is accepted. Bobby's backend repair approval covers the additive V4 recipe;
+the protected original adapter and V1–V3 histories remain byte-identical.
+Normal qualified preview intake produced two actual Bracket V4 fills on BTCUSDT
+1h. The frozen V4 receipt replaces no historical receipt. The new binding
+resolver selects qualified V4; frontend must not relabel an old V3 run.
+
+### §44 addendum — Complete window analytics and source-backed execution replay — Bobby approved
+
+**IMPLEMENTING, 2026-10-07.** Backend slice only; Claude owns presentation.
+This approval supersedes the old blanket prohibition on completed Three Window
+Holdout reads, not pre-execution protection or immutable artifact custody.
+
+1. **WEX-01 / retention correctness:** select the bar-bearing Arrow schema when
+   OHLC/account bars were attached, independently of whether the engine publishes
+   an accounting ledger. Prove persisted row readback, not summary counts alone.
+   Never rewrite old seals; historical repairs must be additive, digest-bound
+   and explicitly attributed, or return an accurate typed absence.
+2. **WEX-02 / window truth:** publish complete descriptive analytics and bounded
+   observations for each retained Three Window IS/OOS/Holdout. Use complete raw
+   retained populations, never sampled chart points. WFO IS is per fold, never
+   a compounded overlapping training account; independent Holdout is N/A.
+   Preserve D-AN-01 all-time scope, decimals, source grain and metric provenance.
+3. **WEX-03 / Compare and Replay:** additive typed window/fold selection, matching
+   metrics/curves and revision-bound cursors/cache. Completed, verified Three
+   Holdout may be AVAILABLE; unexecuted/protected Holdout may not. Existing OOS
+   callers remain compatible. No mixed-window correlation or invented histories.
+4. **WEX-04 / native execution:** retain actual QuantBT order/fill/lifecycle
+   records rather than discarding them after counting. Publish closed DTOs for
+   source-provided prices, times, states, SL/TP/Limit/Bracket, parent/child/OCO
+   and exit reasons. Missing engine facts have typed reasons, not fabricated
+   IDs, prices, events, broker semantics or causal ordering.
+5. **WEX-05 / acceptance and handoff:** regenerate affected OpenAPI/types,
+   canonical fixtures and contract tests; test custody, authorization, bounds,
+   old-wire compatibility and protected Holdout negatives. Take real preview
+   API receipts for Three/WFO and native positive/empty paths, then one grouped
+   normal hook. Write a Claude handoff with generated types, operation/query
+   names, real examples, historical limitations and body-adjacent marker rules.
+
+No frontend edits, protected engine/kernel changes, dependency upgrade, remote
+push, main/dev/production rollout or P24 release verdict. Shared landing is
+ff-only after checking Claude's concurrent commits. Record capacity before
+the minimum cached preview build; preserve all business/artifact/rollback data.
+
+§44 capacity decision: isolated cached API/Control-only rebuild, no frontend,
+DB/NATS/HMD/dependency expansion. Root had97GiB free (~15.6% of621GiB),12GiB
+available RAM before the final candidate build; bounded layers fit, no garbage
+collection while builds or qualification jobs are active. Keep existing and
+rollback images/volumes. Test DB is one named tmpfs container, removed by trap.
+
+**§44 delivery / BACKEND_REAL_PREVIEW_ACCEPTED:** four named window/native
+operations generated; complete Three IS/OOS/Holdout, per-fold diagnostic WFO
+IS, exact local window Compare, protected-vs-completed Holdout, full native
+journal custody and closed nullable SL/TP/Limit/OCO DTOs delivered. Actual
+Three×2/WFO/Bracket/Reactive/Event runs and30 final GET assertions pass; no
+old seal/account/Alpha/HMD/web changes. Missing source relations, old custody
+and unexecuted native Holdout stay typed, not falsely AVAILABLE. Additive
+Bracket V4 corrects sizing without replacing V3. Migration116–118/RLS and
+focused17 Python/18 TS cases pass; normal grouped hook is the local landing
+gate. Frontend consumption/visual acceptance remains Claude's task.
+[Exact backend receipt](./evidence/P17/COMPLETE_WINDOW_EXECUTION_BACKEND_2026-10-07.md) ·
+[Claude prompt and contract handoff](./evidence/P17/COMPLETE_WINDOW_EXECUTION_CLAUDE_HANDOFF_2026-10-07.md).
+
+Final normal hook passed: published contracts312/312; Control API2388 PASS,
+3 pre-existing SKIP, build and PostgreSQL restore drill PASS. No engine rerun
+for test-harness fixes. Rebase preserves Claude's BR-S02-18 request above and
+all concurrent frontend/AI Native documentation; no remote push or release.

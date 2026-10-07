@@ -11,7 +11,7 @@ for(const file of ['research-requested-spec.v1','research-requested-spec.v2']){
  const path=new URL(`packages/contracts/schemas/${file}.schema.json`,root),old=readFileSync(path,'utf8'),doc=JSON.parse(old);
  for(const condition of doc.allOf??[]){const route=condition.if?.properties?.execution_route?.const;
   const editions=rows.filter(r=>r.descriptor.execution_route===route);
-  if(editions.length&&route!=='event_driven')condition.if.not={properties:{alpha_binding:{type:'object',required:['alpha_version_id'],properties:{alpha_version_id:{enum:editions.map(r=>r.descriptor.alpha_binding_requirements.alpha_version_id)}}}},required:['alpha_binding']};
+  if(editions.length&&route!=='event_driven')condition.if.not={properties:{alpha_binding:{type:'object',required:['alpha_version_id'],properties:{alpha_version_id:{enum:[...new Set(editions.map(r=>r.descriptor.alpha_binding_requirements.alpha_version_id))]}}}},required:['alpha_binding']};
  }
  for(const row of rows){const id=row.descriptor.alpha_binding_requirements.alpha_version_id;
   if(!doc.allOf.some(c=>c.if?.properties?.alpha_binding?.properties?.alpha_version_id?.const===id))doc.allOf.push({

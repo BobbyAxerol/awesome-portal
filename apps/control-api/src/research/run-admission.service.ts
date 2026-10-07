@@ -252,7 +252,7 @@ export class ResearchRunAdmissionService {
     // profile can own, and only while its flag is on; every other request
     // (including `advanced` with the flag off) takes the unchanged P04 branch,
     // so P04 admission, wording and bytes are identical to the pre-W1 release.
-    const native = nativeDeltaRecipe(requestedSpec);
+    const native = nativeDeltaRecipe(requestedSpec,this.config);
     const wfo = requestedSpec.protocol === "advanced" && this.config.FEATURE_RESEARCH_WFO_PROFILE === "true";
     const optimized = requestedSpec.protocol === "three_window_decay" && requestedSpec.optuna_trials > 1;
     const vnObserved = requestedSpec.data.dataset_id === VN_OBSERVED_FIXED_PROFILE.dataset_id;

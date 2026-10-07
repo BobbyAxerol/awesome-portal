@@ -874,6 +874,8 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
     native_row = native_profile(receipt['execution_profile_id'],receipt.get('execution_profile_digest')) if native else None
     if native:
         from portal_api.adapters import research_native_routes
+        if native_row['profile_id'] == 'p10.delta-intrabar-bracket-fixed-1h.v4':
+            from portal_api.adapters import research_native_bracket_v4 as research_native_routes
         actual_hash=hashlib.sha256(Path(research_native_routes.__file__).read_bytes()).hexdigest()
         if qualification_binding is not None or native_row['descriptor']['native_input']['adapter_sha256'] != actual_hash:
             raise ValueError('native implementation/release differs from its immutable declaration')
@@ -919,7 +921,7 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
         use_funding=False,
     )
     if native:
-        from portal_api.adapters.research_native_routes import run_native_delta,native_result_facts
+        run_native_delta,native_result_facts=research_native_routes.run_native_delta,research_native_routes.native_result_facts
         # The source pair travels inside a digest-bound native receipt, not a
         # browser-selected callable or order tape. Symbol is derived from P08.
         symbol=receipt.get('native_symbol')
@@ -945,6 +947,10 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
     if native:
         output.update(execution_profile_id=native_row['profile_id'],execution_profile_digest=native_row['profile_digest'],
             native_execution=native_result_facts(route=native_row['descriptor']['execution_route'],result=result))
+        from portal_api.services.research_window_execution import capture_native_windows
+        output["window_execution_source"] = capture_native_windows(result=result, market=market,
+            route=native_row["descriptor"]["execution_route"], symbol=symbol,
+            source_windows=receipt["source_windows"], output_directory=receipt_dir)
     oos_start_utc_ms = receipt.get("oos_start_utc_ms")
     # Older P06 test receipts are intentionally still executable; P13 only
     # receives an evidence document when P10 supplied the immutable boundary.
@@ -1558,7 +1564,8 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
         ).run(request, market, run_id, target_mode=profile["execution_route"],
             **({"strategy_callable": strategy_fn, "strategy_specification": strategy_specification} if imported is not None
                else {"strategy_callable": _full03_strategy_callable(market.frame)} if exact_recipe is not None else {}),
-            **({"retain_mode_evidence": True} if profile.get("optimization_mode") != "mode_1_decay" and exact_recipe is not None else {}))
+            **({"retain_mode_evidence": True} if profile.get("optimization_mode") != "mode_1_decay" and exact_recipe is not None else {}),
+            retain_window_execution=exact_recipe is not None)
     finally:
         restore()
         writer.close()

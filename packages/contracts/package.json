@@ -5,10 +5,11 @@
   "type": "module",
   "description": "Portal canonical contract workspace (U09): schemas, fixtures, generated types",
   "scripts": {
+    "generate:research-window-execution": "node tooling/generate-research-window-execution.mjs && openapi-typescript openapi/research-window-execution.openapi.json -o generated/research-window-execution.d.ts",
     "generate:research-execution-recipes": "node tooling/generate-research-execution-recipes.mjs && npm run generate:research-dataset-index && npm run generate:research-run-setup && openapi-typescript openapi/research-preflight.openapi.json -o generated/research-preflight.d.ts",
     "generate:research-run-setup": "node tooling/generate-research-run-setup.mjs && openapi-typescript openapi/research-run-setup.openapi.json -o generated/research-run-setup.d.ts",
     "pregenerate": "node tooling/generate-research-retained-analytics.mjs && node tooling/generate-research-enriched-analysis.mjs && node tooling/generate-research-dataset-index.mjs && node tooling/generate-research-progress-truth.mjs && node tooling/generate-research-current-source-terminal-split.mjs && node tooling/generate-research-search.mjs && node tooling/generate-research-sparkline.mjs && node tooling/generate-research-library-lineage-metrics.mjs && node tooling/generate-research-compare-truth.mjs && node tooling/generate-research-p11-stage-events.mjs && node tooling/generate-research-causal-inner.mjs && node tooling/generate-research-full02-current-source.mjs",
-    "postgenerate": "npm run generate:research-dataset-index && npm run generate:research-final-audit && npm run generate:research-execution-recipes && npm run generate:research-expanded-native",
+    "postgenerate": "npm run generate:research-dataset-index && npm run generate:research-final-audit && npm run generate:research-execution-recipes && npm run generate:research-expanded-native && npm run generate:research-window-execution",
     "generate:research-expanded-native": "node tooling/generate-research-expanded-native.mjs",
     "generate:research-dataset-index": "node tooling/generate-research-dataset-index.mjs && openapi-typescript openapi/research-dataset-index.openapi.json -o generated/research-dataset-index.d.ts",
     "generate:research-enriched-analysis": "node tooling/generate-research-enriched-analysis.mjs && npm run generate:research-evidence && npm run generate:research-current-source && npm run generate:research-run-library && npm run generate:research-report",
@@ -49,6 +50,7 @@
   "devDependencies": {
     "openapi-typescript": "^7.4.0",
     "typescript": "^5.7.0",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "zod": "3.25.76"
   }
 }

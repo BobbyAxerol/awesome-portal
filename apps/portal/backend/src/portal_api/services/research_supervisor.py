@@ -228,6 +228,8 @@ class ResearchChildResult:
     fixed_replay_source: dict[str, Any] | None = None
     fixed_replay_path: Path | None = None
     native_execution: dict[str, Any] | None = None
+    window_execution_source: dict[str, Any] | None = None
+    window_execution_path: Path | None = None
     # Opt-in operator qualification only; these fields never enter the
     # public evidence receipt, engine bundle or P05 manifest.
     is_qualification_source: dict[str, Any] | None = None
@@ -810,6 +812,14 @@ class IsolatedResearchSupervisor:
             self._validate_evidence_source(evidence_source, expected_engine_version=expected_engine_version,
                 expected_adapter_id='full03.delta-rsi.v1' if native else 'p04.delta-rsi.v1')
         fixed_replay_source, fixed_replay_path = self._validated_fixed_replay(payload, receipt)
+        window_source, window_path = None, None
+        if native:
+            from portal_api.services.research_window_execution import read_rows, verify_source
+            window_source = payload.get("window_execution_source")
+            window_path = self._scratch_root / receipt.job_id / receipt.worker_attempt_id / "window-execution.parquet"
+            if not isinstance(window_source, dict):
+                raise ResearchSupervisorError("native child omitted window/execution custody")
+            verify_source(window_source, read_rows(window_path))
         is_qualification_source, is_qualification_path = self._validated_is_qualification(payload, receipt)
         return ResearchChildResult(
             launcher_pid=launch.launcher_pid,
@@ -825,6 +835,8 @@ class IsolatedResearchSupervisor:
             enforced_limits=launch.enforced_limits,
             evidence_source=evidence_source if isinstance(evidence_source, dict) else None,
             native_execution=payload.get('native_execution') if native else None,
+            window_execution_source=window_source,
+            window_execution_path=window_path,
             fixed_replay_source=fixed_replay_source,
             fixed_replay_path=fixed_replay_path,
             is_qualification_source=is_qualification_source,

@@ -171,6 +171,9 @@ import { ResearchFixedReplayCompanionController } from "./research/fixed-replay-
 import { ResearchFixedReplayCompanionRepository } from "./research/fixed-replay-companion.repository";
 import { ResearchFixedReplayCompanionService } from "./research/fixed-replay-companion.service";
 import { ResearchFixedReplayCompanionIngestService } from "./research/fixed-replay-companion.ingest";
+import { ResearchWindowExecutionController } from "./research/window-execution.controller";
+import { ResearchWindowExecutionRepository } from "./research/window-execution.repository";
+import { ResearchWindowExecutionService } from "./research/window-execution.service";
 import { ResearchReportController } from "./research/report.controller";
 import { ResearchReportRepository } from "./research/report.repository";
 import { ResearchReportService } from "./research/report.service";
@@ -255,6 +258,7 @@ export class AppModule {
         ResearchCurrentSourceController,
         ResearchChildAuditCompanionController,
         ResearchFixedReplayCompanionController,
+        ResearchWindowExecutionController,
         ResearchReportController,
         ResearchLineageController,
         ResearchCompareController,
@@ -354,6 +358,8 @@ export class AppModule {
         ResearchFixedReplayCompanionRepository,
         ResearchFixedReplayCompanionService,
         ResearchFixedReplayCompanionIngestService,
+        ResearchWindowExecutionRepository,
+        ResearchWindowExecutionService,
         ResearchReportRepository,
         ResearchReportService,
         ResearchLineageRepository,

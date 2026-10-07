@@ -300,7 +300,9 @@ describe("P09 published Research foundation contract", () => {
     const schemas = document.components.schemas;
     expect(schemas.AtlasResponse.oneOf[0].required).toContain("portal_admission");
     expect(schemas.AtlasResponse.oneOf[1].properties.portal_admission).toBeUndefined();
-    expect(schemas.PortalAdmission.properties.profiles.maxItems).toBe(322);
+    const registry = JSON.parse(readFileSync(join(ROOT, "../../apps/portal/registry/research-execution-recipes.v1.json"), "utf8"));
+    expect(schemas.PortalAdmission.properties.profiles.maxItems)
+      .toBe(registry.recipes.filter((row: any) => row.adapter_kind !== "IMPORTED_FIXED").length);
     const current = JSON.parse(readFileSync(join(ROOT, "fixtures", "research-foundation.atlas-current.valid.json"), "utf8")) as Record<string, any>;
     expect(current.atlas.current_release.submission_constraints.profile_id).toBe("p10.fixed-qualification.v1");
     expect(current.portal_admission.profiles).toMatchObject([
@@ -332,7 +334,10 @@ describe("P09 published Research foundation contract", () => {
     expect(publishedIds.slice(97,160)).toEqual(full06.map((row: any) => row.profile_id));
     const expanded=registry.recipes.filter((row:any)=>row.descriptor.schema_version==='research.expanded-trial-profile.v1');
     const native=registry.recipes.filter((row:any)=>row.descriptor.schema_version==='research.native-route-profile.v1');
-    expect(expanded).toHaveLength(153);expect(native).toHaveLength(9);
+    expect(expanded).toHaveLength(153);expect(native).toHaveLength(10);
+    expect(native.slice(0, 9).map((row: any) => row.profile_id))
+      .not.toContain("p10.delta-intrabar-bracket-fixed-1h.v4");
+    expect(native[9]).toMatchObject({ profile_id: "p10.delta-intrabar-bracket-fixed-1h.v4" });
     expect(publishedIds.slice(160)).toEqual([...expanded,...native].map((row:any)=>row.profile_id));
     expect(new Set(publishedIds).size).toBe(publishedIds.length);
     expect(admissionValidator()(fixture)).toBe(true);

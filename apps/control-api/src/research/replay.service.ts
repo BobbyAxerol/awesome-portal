@@ -2,7 +2,9 @@
 
 import { Buffer } from "node:buffer";
 
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { ResearchWindowExecutionService } from "./window-execution.service";
+import type { WindowExecutionManifest } from "./window-execution.contract";
 
 import { ControlApiConfig, querySigningKeys } from "../config";
 import { KeysetCursorCodec, QueryContractError, queryFingerprint } from "../query";
@@ -84,6 +86,7 @@ export class ResearchReplayService {
   constructor(
     private readonly evidence: ResearchEvidenceService,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() @Inject(ResearchWindowExecutionService) private readonly windowExecution?: ResearchWindowExecutionService,
   ) {
     this.cursors = new KeysetCursorCodec({
       activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
@@ -100,7 +103,8 @@ export class ResearchReplayService {
   ): Promise<ResearchReplayResponse> {
     this.requireEnabled();
     const { hub, series, candleOverview } = await this.readEvidence(scope, runId, signal);
-    const response = this.mapResponse(scope, runId, query, hub, series, candleOverview);
+    const response = this.mapResponse(scope, runId, query, hub, series, candleOverview,
+      await this.windowExecution?.navigation(scope, runId, signal));
     const parsed = ResearchReplayResponseSchema.safeParse(response);
     if (!parsed.success || Buffer.byteLength(JSON.stringify(response), "utf8") > RESPONSE_MAX_BYTES) {
       throw new ResearchReplayError("RESEARCH_REPLAY_UNAVAILABLE", "Replay response is incompatible or exceeds its bounded budget.", 503);
@@ -157,6 +161,7 @@ export class ResearchReplayService {
     hub: ResearchEvidenceHubResponse,
     series: ResearchEvidenceSeriesResponse,
     candleOverview: EvidenceCandleOverview,
+    completedCustody?: WindowExecutionManifest["source"],
   ): unknown {
     const sourceAvailability = responseAvailability(series.availability);
     const sourceAdapterId = hub.core.source_adapter_id;
@@ -290,7 +295,7 @@ export class ResearchReplayService {
     const noLedger = (reason: string) => this.routeGap(sourceReason(reason), absenceAvailability);
     const identity = replayBoundIdentity(hub.core.run_identity?.binding);
     return {
-      ...replayNavigation(identity, hub.enriched_analysis),
+      ...replayNavigation(identity, hub.enriched_analysis, undefined, completedCustody),
       schema_version: "research.replay.v1",
       read_authority: "PORTAL_PERSISTED_RESEARCH",
       run_id: runId,

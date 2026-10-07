@@ -3,6 +3,7 @@ import type { ResearchEnrichedAnalysis } from "./enriched-analysis.contract";
 import { ResearchRequestedSpecSchema } from "./preflight.contract";
 import { sha256ResearchJson } from "./preflight.service";
 import type { ReplayIdentity, ReplayWindowDisclosure } from "./replay-navigation.contract";
+import type { WindowExecutionManifest } from "./window-execution.contract";
 
 const PRESENTATION = "research.replay-navigation.v1" as const;
 const absent = (reason_code: string) => ({ state: "NOT_PUBLISHED" as const, reason_code });
@@ -75,11 +76,28 @@ function foldWindow(window: "IS" | "OOS", folds: readonly ReplayRetainedFold[]):
     segments: exact,
     availability: bars !== null ? available : absent("REPLAY_RETAINED_FOLD_BAR_COUNTS_NOT_PUBLISHED") };
 }
-export function replayNavigation(identity: ReplayIdentity, analysis?: ResearchEnrichedAnalysis, folds?: readonly ReplayRetainedFold[]) {
+export function replayNavigation(identity: ReplayIdentity, analysis?: ResearchEnrichedAnalysis, folds?: readonly ReplayRetainedFold[],
+  completedCustody?: WindowExecutionManifest["source"]) {
   const facts = { identity,
     is_window: folds ? foldWindow("IS", folds) : declaredWindow("IS", analysis),
     oos_window: folds ? foldWindow("OOS", folds) : declaredWindow("OOS", analysis),
     holdout_window: folds ? noWindow("HOLDOUT", "REPLAY_HOLDOUT_NOT_EXPOSED") : declaredWindow("HOLDOUT", analysis) };
+  // Only the completed-run repository may supply this verified P05 companion.
+  // Source counts/curves never grant execution access before completion.
+  if(completedCustody?.protocol === "three_window_decay") {
+    for(const role of ["IS","OOS","HOLDOUT"] as const) {
+      const d=completedCustody.windows.find(w=>w.window===role&&w.fold_id===null);
+      if(d?.availability.state!=="AVAILABLE")continue;
+      const key=role==="IS"?"is_window":role==="OOS"?"oos_window":"holdout_window";
+      facts[key]={window:role,start_utc_ms:d.start_utc_ms,end_utc_ms:d.end_exclusive_utc_ms,bars:d.observation_count,
+        bounds_semantics:"START_INCLUSIVE_END_EXCLUSIVE",count_basis:"FULL_SOURCE_WINDOW_OBSERVATIONS",segments:[],
+        basis:role==="IS"?"DECLARED_IS_WINDOW":role==="OOS"?"DECLARED_OOS_WINDOW":"DECLARED_HOLDOUT_WINDOW",availability:available,
+        ...(role==="HOLDOUT"?{access_basis:"COMPLETED_THREE_WINDOW_RETAINED_ACCOUNT" as const}:{})};
+    }
+  } else if(completedCustody?.protocol === "advanced_walk_forward") {
+    facts.holdout_window={...noWindow("HOLDOUT","WFO_PROTOCOL_HAS_NO_INDEPENDENT_HOLDOUT"),
+      availability:{state:"NOT_APPLICABLE",reason_code:"WFO_PROTOCOL_HAS_NO_INDEPENDENT_HOLDOUT"}};
+  }
   return { ...facts, presentation_revision: PRESENTATION,
     presentation_digest: sha256ResearchJson({ presentation_revision: PRESENTATION, ...facts }) };
 }

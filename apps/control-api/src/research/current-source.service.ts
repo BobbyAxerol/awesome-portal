@@ -1,6 +1,7 @@
 /** RS-02 retained-current-source named BFF projection service. */
 
 import { Buffer } from "node:buffer";
+import { ResearchWindowExecutionService } from "./window-execution.service";
 import { selectedTrialPresentation } from "./selected-trial-presentation";
 import { replayNavigation, replayRequestedIdentity } from "./replay-navigation";
 import { Inject, Injectable, Optional } from "@nestjs/common";
@@ -449,6 +450,8 @@ export class ResearchCurrentSourceService {
     private readonly bytes?: ResearchArtifactVerifyService,
     @Optional() @Inject(ResearchWhatIfService)
     private readonly whatIf?: ResearchWhatIfService,
+    @Optional() @Inject(ResearchWindowExecutionService)
+    private readonly windowExecution?: ResearchWindowExecutionService,
   ) {
     this.cursors = new KeysetCursorCodec({
       activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
@@ -1043,7 +1046,8 @@ export class ResearchCurrentSourceService {
     const value = {
       schema_version: "research.current-source-replay.v1" as const,
       ...this.common("replay", seal, currentRevision),
-      ...replayNavigation(replayRequestedIdentity(requested, seal.requestedSpecDigest), seal.enrichedAnalysis, replayFolds),
+      ...replayNavigation(replayRequestedIdentity(requested, seal.requestedSpecDigest), seal.enrichedAnalysis, replayFolds,
+        await this.windowExecution?.navigation(scope, runId, signal)),
       replay: {
         source_observation_count: seal.tableRows.OBSERVATION,
         rows: page.rows.map((row) => {

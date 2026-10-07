@@ -384,6 +384,16 @@ class ResearchCurrentSourceRetentionClient:
                 "dataset_binding_digest": research.dataset_binding_digest,
                 "execution_profile_id": research.execution_profile_id, "execution_profile_digest": research.execution_profile_digest,
                 "source_adapter_id": receipt.source_adapter_id, "profile_id": receipt.profile_id}, identity_fields=identity_fields)
+        from portal_api.services.research_window_execution import retain_companion
+        retained_root = store.artifacts_dir / identity.artifact_id
+        companion_manifest, _ = store._load_and_verify_manifest(identity.artifact_id, verify_parts=True)
+        retain_companion(root=retained_root, artifact_manifest=companion_manifest, manifest_digest=manifest_digest,
+            binding={"workspace_id": request.workspace_id, "run_id": request.run_id,
+                "artifact_id": identity.artifact_id, "artifact_revision": revision, "manifest_digest": manifest_digest,
+                "requested_spec_digest": research.requested_spec_digest, "effective_spec_digest": research.effective_spec_digest,
+                "dataset_binding_digest": research.dataset_binding_digest,
+                "execution_profile_id": research.execution_profile_id, "execution_profile_digest": research.execution_profile_digest},
+            identity=dict(identity_fields), post=self._post, fence_validator=fence_validator, fence=fence)
         return CurrentSourceRetentionResult(
             receipt=receipt,
             manifest_digest=manifest_digest,

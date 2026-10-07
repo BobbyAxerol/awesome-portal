@@ -19,6 +19,8 @@ import { ResearchCurrentSourceIngestService } from "./current-source-ingest.serv
 import { ResearchChildAuditCompanionIngestService } from "./child-audit-companion.ingest";
 import { ChildAuditCompanionBatchIngressSchema, ChildAuditCompanionSealIngressSchema } from "./child-audit-companion.contract";
 import { ResearchFixedReplayCompanionIngestService } from "./fixed-replay-companion.ingest";
+import { ResearchWindowExecutionService } from "./window-execution.service";
+import { WindowExecutionBatchSchema,WindowExecutionSealSchema } from "./window-execution.contract";
 import { FixedReplayCompanionBatchIngressSchema, FixedReplayCompanionSealIngressSchema } from "./fixed-replay-companion.contract";
 import { ResearchMetadataRepository } from "./repository";
 import { ResearchProgressRepository } from "./progress.repository";
@@ -43,6 +45,7 @@ export class ResearchProgressIngressController {
     @Inject(ResearchChildAuditCompanionIngestService) private readonly childAudit?: ResearchChildAuditCompanionIngestService,
     @Inject(ResearchFixedReplayCompanionIngestService) private readonly fixedReplay?: ResearchFixedReplayCompanionIngestService,
     @Inject(ResearchFinalAuditService) private readonly finalAudit?: ResearchFinalAuditService,
+    @Inject(ResearchWindowExecutionService) private readonly windowExecution?: ResearchWindowExecutionService,
   ) {}
 
   @Post("events")
@@ -54,6 +57,25 @@ export class ResearchProgressIngressController {
       throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Research progress source payload is invalid.", 400);
     }
     return this.service.ingest(parsed.data);
+  }
+
+  @Post("artifacts/window-execution/batches")
+  @HttpCode(200)
+  async appendWindowExecution(@Req() request:FastifyRequest,@Body() body:unknown){
+    this.assertWorkerPrincipal(request);this.assertCurrentSourceIngestEnabled();this.assertBoundedBody(body);
+    const parsed=WindowExecutionBatchSchema.safeParse(body);
+    if(!parsed.success||!this.windowExecution)throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID","Invalid window execution batch.",400);
+    const lease=await this.progress.resolveIngress(parsed.data);
+    return this.windowExecution.ingest(lease,parsed.data);
+  }
+  @Post("artifacts/window-execution/seal")
+  @HttpCode(200)
+  async sealWindowExecution(@Req() request:FastifyRequest,@Body() body:unknown){
+    this.assertWorkerPrincipal(request);this.assertCurrentSourceIngestEnabled();this.assertBoundedBody(body);
+    const parsed=WindowExecutionSealSchema.safeParse(body);
+    if(!parsed.success||!this.windowExecution)throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID","Invalid window execution seal.",400);
+    const lease=await this.progress.resolveIngress(parsed.data);
+    return this.windowExecution.ingest(lease,parsed.data,true);
   }
 
   @Post("artifacts/reserve")

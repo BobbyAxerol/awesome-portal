@@ -60,3 +60,9 @@ test('FULL06 product proof is copied as a public hash-bound input, never private
   assert(!source.includes('/.local/state/portal-research-p23'));
   assert(!source.includes('sessions.json'));
 });
+test('completed-window schema and Bracket V4 proof are explicit public CI inputs', () => {
+  const source = readFileSync(script, 'utf8');
+  assert(source.includes('apps/control-api/src/research/window-execution.contract.ts'));
+  assert(source.includes('P10/BRACKET_V4_SOURCE_JOURNAL_QUALIFICATION_2026-10-07.md'));
+  assert(!source.includes('/.local/state/portal-research-p23'));
+});

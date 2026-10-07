@@ -2,7 +2,7 @@
   "schema": "research-loop.live-route-ledger.v1",
   "statement": "Live static route ledger. Regenerate with --write-live-routes in the same change that adds or removes a route.",
   "protected_kernel_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
-  "route_count": 263,
+  "route_count": 269,
   "routes": [
     {
       "method": "DELETE",
@@ -741,6 +741,11 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/execution/records",
+      "owner": "apps/control-api/src/research/window-execution.controller.ts"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/quantbt/runs/:runId/final-audit",
       "owner": "apps/control-api/src/research/final-audit.controller.ts"
     },
@@ -788,6 +793,21 @@
       "method": "GET",
       "path": "/api/v1/quantbt/runs/:runId/split",
       "owner": "apps/control-api/src/research/split.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/windows/analytics",
+      "owner": "apps/control-api/src/research/window-execution.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/windows/observations",
+      "owner": "apps/control-api/src/research/window-execution.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/windows/compare",
+      "owner": "apps/control-api/src/research/window-execution.controller.ts"
     },
     {
       "method": "GET",
@@ -1307,6 +1327,16 @@
     {
       "method": "POST",
       "path": "/internal/research/progress/artifacts/what-if/seal",
+      "owner": "apps/control-api/src/research/progress-ingress.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/research/progress/artifacts/window-execution/batches",
+      "owner": "apps/control-api/src/research/progress-ingress.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/research/progress/artifacts/window-execution/seal",
       "owner": "apps/control-api/src/research/progress-ingress.controller.ts"
     },
     {

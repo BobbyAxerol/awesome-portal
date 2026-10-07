@@ -25,15 +25,17 @@ const window = obj({ window: { enum: ["IS", "OOS", "HOLDOUT"] },
     start_utc_ms: ms, end_utc_ms: ms, bars: nullable(count) }) },
   basis: { enum: ["BOUND_WINDOW_METADATA", "DECLARED_IS_WINDOW", "DECLARED_OOS_WINDOW", "DECLARED_HOLDOUT_WINDOW",
     "RETAINED_FOLD_TRAIN_WINDOWS", "RETAINED_FOLD_TEST_WINDOWS"] }, availability });
-window.description = "Existing immutable metadata only. Retained fold start/end are exact source bounds, not converted half-open dates; the top range is an envelope, not contiguous coverage. Sum counts may overlap and are not unique bars. A partial NOT_PUBLISHED object may retain known bounds. Holdout never publishes bars or source values.";
+window.properties.access_basis = { const: "COMPLETED_THREE_WINDOW_RETAINED_ACCOUNT" };
+window.description = "Retained fold start/end are exact source bounds; sums may overlap. Holdout AVAILABLE requires completed Three Window retained custody, never pre-execution permission. Old seals remain typed absent; WFO has no independent Holdout.";
 window.allOf = [{ if: { properties: { availability: { properties: { state: { const: "AVAILABLE" } } } } },
   then: { properties: { start_utc_ms: ms, end_utc_ms: ms, bars: count,
     bounds_semantics: { type: "string" }, count_basis: { type: "string" },
     availability: { properties: { reason_code: { type: "null" } } } } },
   else: { properties: { availability: { properties: { reason_code: reason } } } } },
-  { if: { properties: { window: { const: "HOLDOUT" } } }, then: { properties: {
-    bars: { type: "null" }, count_basis: { type: "null" }, segments: { maxItems: 0 },
-    availability: { properties: { state: { enum: ["NOT_PUBLISHED", "NOT_APPLICABLE"] } } } } } }];
+  { if: { properties: { window: { const: "HOLDOUT" } } }, then: { properties: {segments: { maxItems: 0 }}, allOf:[
+    {if:{properties:{availability:{properties:{state:{const:"AVAILABLE"}}}}},
+      then:{required:["access_basis"],properties:{access_basis:{const:"COMPLETED_THREE_WINDOW_RETAINED_ACCOUNT"}}},
+      else:{properties:{bars:{type:"null"},count_basis:{type:"null"}}}}] } }];
 
 export function amendReplayNavigation(original, name) {
   const document = JSON.parse(original), schemas = document.components.schemas;

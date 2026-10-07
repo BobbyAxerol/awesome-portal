@@ -891,7 +891,25 @@ class CurrentSourceArtifactAdapter:
                 if value is not None
             },
         )
-        registry = current_source_schema_registry(bar_ledger=account_ledger is not None)
+        # pct_equity can publish actual market/position bars without an optional
+        # accounting ledger. Arrow drops extra dict keys silently: selecting the
+        # old schema here discarded every attached candle/transition while the
+        # summary still advertised them. Schema follows persisted row facts.
+        registry = current_source_schema_registry(bar_ledger=replay_summary is not None)
+        from portal_api.services.research_window_execution import (
+            capture_current_windows, ROW_SCHEMA as window_schema, TABLE as window_table, TABLE_VERSION as window_version,
+        )
+        window_source = None
+        window_records = []
+        if recipe is not None:
+            window_source, window_records = capture_current_windows(
+                observations=observations, folds=folds, windows=source_windows or {}, three_rows=window_replay,
+                raw_dir=raw_dir, route=recipe["descriptor"]["execution_route"],
+                bar_ms=recipe["descriptor"]["source_clock"]["bar_interval_ms"],
+                full_sample=full04 and admission.optimization_mode == "mode_5_full_robust",
+            )
+            registry.register(ArtifactTableSchema(table_kind=window_table, schema_version=window_version,
+                arrow_schema=window_schema, sequence_column="source_ordinal", id_column="source_ordinal"))
         for name, (path, schema) in mode_tables.items():
             if schema.names:
                 registry.register(ArtifactTableSchema(table_kind=f"mode_audit_{name}",
@@ -1013,6 +1031,13 @@ class CurrentSourceArtifactAdapter:
             self._write_rows(writer, registry, "trials", trials)
             self._write_rows(writer, registry, "candidates", candidates)
             self._write_rows(writer, registry, "selection", selection_rows)
+            if window_source is not None:
+                from portal_api.services.research_window_execution import storage_batch
+                # Storage parts are independently bounded; public transport is
+                # still <=200 rows/1 MiB, not the Parquet row-group size.
+                for start in range(0, len(window_records), 8192):
+                    writer.append_batch(window_table, storage_batch(window_records[start:start + 8192]))
+                writer.write_small_document("window_execution_source", window_source)
             for name, (path, schema) in mode_tables.items():
                 if not schema.names:
                     continue  # exact native empty relation is declared in the bound source document

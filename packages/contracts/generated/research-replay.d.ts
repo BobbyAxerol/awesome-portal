@@ -25,7 +25,7 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description Existing immutable metadata only. Retained fold start/end are exact source bounds, not converted half-open dates; the top range is an envelope, not contiguous coverage. Sum counts may overlap and are not unique bars. A partial NOT_PUBLISHED object may retain known bounds. Holdout never publishes bars or source values. */
+        /** @description Retained fold start/end are exact source bounds; sums may overlap. Holdout AVAILABLE requires completed Three Window retained custody, never pre-execution permission. Old seals remain typed absent; WFO has no independent Holdout. */
         ReplayNavigationWindow: {
             /** @enum {unknown} */
             window: "IS" | "OOS" | "HOLDOUT";
@@ -47,6 +47,8 @@ export interface components {
                 state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
                 reason_code: string | null;
             };
+            /** @constant */
+            access_basis?: "COMPLETED_THREE_WINDOW_RETAINED_ACCOUNT";
         } & (unknown & unknown);
         ReplayNavigationIdentity: {
             alpha_id: string | null;

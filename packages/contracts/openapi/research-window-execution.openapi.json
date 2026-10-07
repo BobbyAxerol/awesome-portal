@@ -1,0 +1,4389 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Research completed windows and native execution API",
+    "version": "1.0.0",
+    "description": "All-time descriptive analytics; WFO training folds remain separate and have no independent Holdout. Native source relation ordinals are not a global causal ordering. Null fields have explicit source absence; no inferred SL/TP/OCO or broker events."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "security": [
+    {
+      "portalSession": []
+    }
+  ],
+  "paths": {
+    "/api/v1/quantbt/runs/{runId}/windows/analytics": {
+      "get": {
+        "operationId": "researchWindowAnalyticsGetV1",
+        "summary": "Read full-population descriptive analytics for one completed window",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+            }
+          },
+          {
+            "name": "window",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "IS",
+                "OOS",
+                "HOLDOUT",
+                "FULL_SAMPLE"
+              ],
+              "default": "OOS"
+            }
+          },
+          {
+            "name": "fold_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Exact complete source window or typed absence; private no-store; at most 200 rows/1 MiB.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WindowExecutionPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          },
+          "401": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          },
+          "403": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          },
+          "404": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          },
+          "409": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          },
+          "503": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          }
+        }
+      }
+    },
+    "/api/v1/quantbt/runs/{runId}/windows/observations": {
+      "get": {
+        "operationId": "researchWindowObservationsGetV1",
+        "summary": "Read bounded complete source observations for one completed window",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+            }
+          },
+          {
+            "name": "window",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "IS",
+                "OOS",
+                "HOLDOUT",
+                "FULL_SAMPLE"
+              ],
+              "default": "OOS"
+            }
+          },
+          {
+            "name": "fold_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          },
+          {
+            "name": "at_utc_ms",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Exact complete source window or typed absence; private no-store; at most 200 rows/1 MiB.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WindowExecutionPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          },
+          "401": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          },
+          "403": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          },
+          "404": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          },
+          "409": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          },
+          "503": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          }
+        }
+      }
+    },
+    "/api/v1/quantbt/runs/{runId}/execution/records": {
+      "get": {
+        "operationId": "researchNativeExecutionRecordsGetV1",
+        "summary": "Read actual native order/fill/lifecycle records, not broker history",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+            }
+          },
+          {
+            "name": "window",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "IS",
+                "OOS",
+                "HOLDOUT",
+                "FULL_SAMPLE"
+              ],
+              "default": "OOS"
+            }
+          },
+          {
+            "name": "fold_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          },
+          {
+            "name": "at_utc_ms",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "record_kind",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ORDER",
+                "FILL",
+                "TRADE",
+                "COMMAND",
+                "ORDER_REPORT",
+                "LIFECYCLE"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Exact complete source window or typed absence; private no-store; at most 200 rows/1 MiB.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WindowExecutionPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          },
+          "401": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          },
+          "403": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          },
+          "404": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          },
+          "409": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          },
+          "503": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          }
+        }
+      }
+    },
+    "/api/v1/quantbt/windows/compare": {
+      "get": {
+        "operationId": "researchWindowCompareGetV1",
+        "summary": "Compare the same explicit window of two completed runs",
+        "parameters": [
+          {
+            "name": "runs",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^rrun_[a-f0-9]{32},rrun_[a-f0-9]{32}$"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+            }
+          },
+          {
+            "name": "window",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "IS",
+                "OOS",
+                "HOLDOUT",
+                "FULL_SAMPLE"
+              ],
+              "default": "OOS"
+            }
+          },
+          {
+            "name": "fold_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Exact complete source window or typed absence; private no-store; at most 200 rows/1 MiB.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WindowCompare"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          },
+          "401": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          },
+          "403": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          },
+          "404": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          },
+          "409": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          },
+          "503": {
+            "description": "Typed authority, query, cursor or availability refusal."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "portalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "portal_session"
+      }
+    },
+    "schemas": {
+      "WindowAnalytics": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "research.window-analytics.v1"
+          },
+          "window": {
+            "type": "string",
+            "enum": [
+              "IS",
+              "OOS",
+              "HOLDOUT",
+              "FULL_SAMPLE"
+            ]
+          },
+          "fold_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "basis": {
+            "const": "ALL_TIME"
+          },
+          "input_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "observation_count": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 200000
+          },
+          "start_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "end_exclusive_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "first_observed_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "last_observed_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "metrics": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "sharpe": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "sortino": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "cagr_fraction": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "profit_factor": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "long_hit_rate_fraction": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "short_hit_rate_fraction": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "volatility_fraction": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "skew": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "excess_kurtosis": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "beta": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "correlation": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "benchmark_return_fraction": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "max_drawdown_duration_days": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "sharpe_decay": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "exposure_long_fraction": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "exposure_short_fraction": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "exposure_flat_fraction": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "win_rate": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "payoff_ratio": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "average_hold_seconds": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "max_consecutive_losses": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "turnover_notional": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "return_fraction": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "max_drawdown_fraction": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              },
+              "trade_count": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  },
+                  "reason_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "ENGINE_DIRECT",
+                      "PORTAL_DERIVED"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "input_digest": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "source_ref": {
+                    "const": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "origin",
+                  "scope",
+                  "input_digest",
+                  "source_ref"
+                ]
+              }
+            },
+            "required": [
+              "sharpe",
+              "sortino",
+              "cagr_fraction",
+              "profit_factor",
+              "long_hit_rate_fraction",
+              "short_hit_rate_fraction",
+              "volatility_fraction",
+              "skew",
+              "excess_kurtosis",
+              "beta",
+              "correlation",
+              "benchmark_return_fraction",
+              "max_drawdown_duration_days",
+              "sharpe_decay",
+              "exposure_long_fraction",
+              "exposure_short_fraction",
+              "exposure_flat_fraction",
+              "win_rate",
+              "payoff_ratio",
+              "average_hold_seconds",
+              "max_consecutive_losses",
+              "turnover_notional",
+              "return_fraction",
+              "max_drawdown_fraction",
+              "trade_count"
+            ]
+          },
+          "curves": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "sampling": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "source_observation_count": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 200000
+                  },
+                  "emitted_point_count": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 64
+                  },
+                  "method": {
+                    "const": "EXTREMA_BUCKET_V1"
+                  }
+                },
+                "required": [
+                  "source_observation_count",
+                  "emitted_point_count",
+                  "method"
+                ]
+              },
+              "strategy_rebased_100": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "at_utc_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "value": {
+                      "type": "string",
+                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                      "maxLength": 96
+                    }
+                  },
+                  "required": [
+                    "at_utc_ms",
+                    "value"
+                  ]
+                },
+                "maxItems": 64
+              },
+              "benchmark_rebased_100": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "at_utc_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "value": {
+                      "type": "string",
+                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                      "maxLength": 96
+                    }
+                  },
+                  "required": [
+                    "at_utc_ms",
+                    "value"
+                  ]
+                },
+                "maxItems": 64
+              },
+              "drawdown_fraction": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "at_utc_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "value": {
+                      "type": "string",
+                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                      "maxLength": 96
+                    }
+                  },
+                  "required": [
+                    "at_utc_ms",
+                    "value"
+                  ]
+                },
+                "maxItems": 64
+              }
+            },
+            "required": [
+              "sampling",
+              "strategy_rebased_100",
+              "benchmark_rebased_100",
+              "drawdown_fraction"
+            ]
+          },
+          "monthly_returns": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "AVAILABLE",
+                  "NOT_PUBLISHED",
+                  "NOT_APPLICABLE"
+                ]
+              },
+              "reason_code": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "origin": {
+                "const": "PORTAL_DERIVED"
+              },
+              "includes_partial_months": {
+                "const": true
+              },
+              "sampling": {
+                "type": "string",
+                "enum": [
+                  "FULL",
+                  "TAIL_WINDOW_V1"
+                ]
+              },
+              "total_period_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 200000
+              },
+              "omitted_transport_period_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 200000
+              },
+              "definition_id": {
+                "const": "WINDOW_MONTH_CLOSE_OVER_FIRST_WINDOW_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1"
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "month_start_utc_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "return_fraction": {
+                      "type": "string",
+                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                      "maxLength": 96
+                    },
+                    "observation_count": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 200000
+                    },
+                    "expected_observation_count": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 200000
+                    },
+                    "partial": {
+                      "type": "boolean"
+                    },
+                    "basis": {
+                      "type": "string",
+                      "enum": [
+                        "FIRST_WINDOW_CLOSE",
+                        "PREVIOUS_OBSERVED_MONTH_CLOSE"
+                      ]
+                    },
+                    "base_at_utc_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "close_at_utc_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "month_start_utc_ms",
+                    "return_fraction",
+                    "observation_count",
+                    "expected_observation_count",
+                    "partial",
+                    "basis",
+                    "base_at_utc_ms",
+                    "close_at_utc_ms"
+                  ]
+                },
+                "maxItems": 120
+              }
+            },
+            "required": [
+              "state",
+              "reason_code",
+              "origin",
+              "includes_partial_months",
+              "sampling",
+              "total_period_count",
+              "omitted_transport_period_count",
+              "definition_id",
+              "values"
+            ]
+          },
+          "return_distribution": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "AVAILABLE",
+                  "NOT_PUBLISHED",
+                  "NOT_APPLICABLE"
+                ]
+              },
+              "reason_code": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "origin": {
+                "const": "PORTAL_DERIVED"
+              },
+              "sampling": {
+                "const": "UTC_DAY"
+              },
+              "observation_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 200000
+              },
+              "bucket_basis": {
+                "const": "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1"
+              },
+              "statistics_policy": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "quantile_method": {
+                    "const": "LINEAR_TYPE_7"
+                  },
+                  "probability": {
+                    "const": "0.95"
+                  },
+                  "risk_variable": {
+                    "const": "LOSS_FRACTION_NEGATIVE_RETURN"
+                  },
+                  "risk_sign": {
+                    "const": "SIGNED_LOSS_FRACTION"
+                  },
+                  "tail": {
+                    "const": "LOSS_GTE_VAR_INCLUSIVE"
+                  },
+                  "minimum_observations": {
+                    "const": 2
+                  }
+                },
+                "required": [
+                  "quantile_method",
+                  "probability",
+                  "risk_variable",
+                  "risk_sign",
+                  "tail",
+                  "minimum_observations"
+                ]
+              },
+              "buckets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "lower_inclusive": {
+                      "type": "string",
+                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                      "maxLength": 96
+                    },
+                    "upper": {
+                      "type": "string",
+                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                      "maxLength": 96
+                    },
+                    "upper_inclusive": {
+                      "type": "string",
+                      "enum": [
+                        "true",
+                        "false"
+                      ]
+                    },
+                    "count": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 200000
+                    }
+                  },
+                  "required": [
+                    "lower_inclusive",
+                    "upper",
+                    "upper_inclusive",
+                    "count"
+                  ]
+                },
+                "maxItems": 12
+              }
+            },
+            "required": [
+              "state",
+              "reason_code",
+              "origin",
+              "sampling",
+              "observation_count",
+              "bucket_basis",
+              "statistics_policy",
+              "buckets"
+            ]
+          },
+          "drawdown_episodes": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "AVAILABLE",
+                  "NOT_PUBLISHED",
+                  "NOT_APPLICABLE"
+                ]
+              },
+              "reason_code": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "origin": {
+                "const": "PORTAL_DERIVED"
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 200000
+              },
+              "open_episode_present": {
+                "type": "boolean"
+              },
+              "longest_open": {
+                "type": "boolean"
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "start_utc_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "trough_utc_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "recovery_utc_ms": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "depth_fraction": {
+                      "type": "string",
+                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                      "maxLength": 96
+                    },
+                    "duration_seconds": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "label": {
+                      "type": "string",
+                      "maxLength": 96
+                    }
+                  },
+                  "required": [
+                    "start_utc_ms",
+                    "trough_utc_ms",
+                    "recovery_utc_ms",
+                    "depth_fraction",
+                    "duration_seconds"
+                  ]
+                },
+                "maxItems": 10
+              }
+            },
+            "required": [
+              "state",
+              "reason_code",
+              "origin",
+              "total",
+              "open_episode_present",
+              "longest_open",
+              "values"
+            ]
+          }
+        },
+        "required": [
+          "schema_version",
+          "window",
+          "fold_id",
+          "basis",
+          "input_digest",
+          "observation_count",
+          "start_utc_ms",
+          "end_exclusive_utc_ms",
+          "first_observed_utc_ms",
+          "last_observed_utc_ms",
+          "metrics",
+          "curves",
+          "monthly_returns",
+          "return_distribution",
+          "drawdown_episodes"
+        ]
+      },
+      "NativeExecutionRecord": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "record_kind": {
+            "type": "string",
+            "enum": [
+              "ORDER",
+              "FILL",
+              "TRADE",
+              "COMMAND",
+              "ORDER_REPORT",
+              "LIFECYCLE"
+            ]
+          },
+          "source_relation": {
+            "type": "string",
+            "enum": [
+              "result.orders",
+              "result.fills",
+              "result.trades",
+              "metadata.fills_report",
+              "metadata.command_report",
+              "metadata.order_report",
+              "metadata.lifecycle_event_report_v1"
+            ]
+          },
+          "source_ordinal": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 200000
+          },
+          "execution_route": {
+            "type": "string",
+            "enum": [
+              "intrabar_bracket",
+              "reactive",
+              "event_driven"
+            ]
+          },
+          "qty": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "trigger_price": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fee": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "remaining_qty": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "filled_qty": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stop_price": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "take_profit_price": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "avg_entry": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "avg_exit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "realized_pnl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fees": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "working_qty": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "working_price": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "working_trigger_price": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fill_qty": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fill_price": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fill_fee": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                "maxLength": 96
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "order_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target_order_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "parent_order_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "group_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "oco_group_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "trade_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "order_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tif": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "activation_policy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tag": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "action": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "event_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "exit_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "liquidity": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "campaign_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cycle_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "level_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reject_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lifecycle_event_kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lifecycle_order_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "timestamp_utc_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "activated_at_utc_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cancelled_at_utc_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "filled_at_utc_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expires_at_utc_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "opened_at_utc_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "closed_at_utc_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bar_index": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 200000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_sequence": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 200000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reduce_only": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "waiting_parent": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "missing_fields": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "enum": [
+                "qty",
+                "price",
+                "trigger_price",
+                "fee",
+                "remaining_qty",
+                "filled_qty",
+                "stop_price",
+                "take_profit_price",
+                "avg_entry",
+                "avg_exit",
+                "realized_pnl",
+                "fees",
+                "working_qty",
+                "working_price",
+                "working_trigger_price",
+                "fill_qty",
+                "fill_price",
+                "fill_fee",
+                "order_id",
+                "target_order_id",
+                "parent_order_id",
+                "group_id",
+                "oco_group_id",
+                "trade_id",
+                "symbol",
+                "side",
+                "order_type",
+                "tif",
+                "activation_policy",
+                "tag",
+                "action",
+                "status",
+                "event_name",
+                "reason_code",
+                "exit_reason",
+                "liquidity",
+                "campaign_id",
+                "cycle_id",
+                "level_id",
+                "reject_code",
+                "lifecycle_event_kind",
+                "lifecycle_order_status",
+                "timestamp_utc_ms",
+                "activated_at_utc_ms",
+                "cancelled_at_utc_ms",
+                "filled_at_utc_ms",
+                "expires_at_utc_ms",
+                "opened_at_utc_ms",
+                "closed_at_utc_ms",
+                "bar_index",
+                "source_sequence",
+                "reduce_only",
+                "active",
+                "waiting_parent"
+              ]
+            },
+            "additionalProperties": {
+              "const": "SOURCE_FIELD_NOT_PUBLISHED"
+            }
+          }
+        },
+        "required": [
+          "record_kind",
+          "source_relation",
+          "source_ordinal",
+          "execution_route",
+          "qty",
+          "price",
+          "trigger_price",
+          "fee",
+          "remaining_qty",
+          "filled_qty",
+          "stop_price",
+          "take_profit_price",
+          "avg_entry",
+          "avg_exit",
+          "realized_pnl",
+          "fees",
+          "working_qty",
+          "working_price",
+          "working_trigger_price",
+          "fill_qty",
+          "fill_price",
+          "fill_fee",
+          "order_id",
+          "target_order_id",
+          "parent_order_id",
+          "group_id",
+          "oco_group_id",
+          "trade_id",
+          "symbol",
+          "side",
+          "order_type",
+          "tif",
+          "activation_policy",
+          "tag",
+          "action",
+          "status",
+          "event_name",
+          "reason_code",
+          "exit_reason",
+          "liquidity",
+          "campaign_id",
+          "cycle_id",
+          "level_id",
+          "reject_code",
+          "lifecycle_event_kind",
+          "lifecycle_order_status",
+          "timestamp_utc_ms",
+          "activated_at_utc_ms",
+          "cancelled_at_utc_ms",
+          "filled_at_utc_ms",
+          "expires_at_utc_ms",
+          "opened_at_utc_ms",
+          "closed_at_utc_ms",
+          "bar_index",
+          "source_sequence",
+          "reduce_only",
+          "active",
+          "waiting_parent",
+          "missing_fields"
+        ]
+      },
+      "WindowDescriptor": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "window": {
+            "type": "string",
+            "enum": [
+              "IS",
+              "OOS",
+              "HOLDOUT",
+              "FULL_SAMPLE"
+            ]
+          },
+          "fold_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "availability": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "AVAILABLE",
+                  "NOT_PUBLISHED",
+                  "NOT_APPLICABLE"
+                ]
+              },
+              "reason_code": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "state",
+              "reason_code"
+            ]
+          },
+          "start_utc_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "end_exclusive_utc_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "observation_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 200000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "authority": {
+            "type": "string",
+            "enum": [
+              "FROZEN_PARAMETER_POST_SELECTION_ACCOUNT",
+              "FROZEN_PARAMETER_POST_SELECTION_TRAINING_DIAGNOSTIC",
+              "FOLD_TRAINING_ACCOUNT",
+              "RETAINED_OOS_ACCOUNT",
+              "RETAINED_NATIVE_ACCOUNT",
+              "NO_INDEPENDENT_HOLDOUT"
+            ]
+          }
+        },
+        "required": [
+          "window",
+          "fold_id",
+          "availability",
+          "start_utc_ms",
+          "end_exclusive_utc_ms",
+          "observation_count",
+          "authority"
+        ]
+      },
+      "WindowExecutionRow": {
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "source_ordinal": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 200000
+              },
+              "window": {
+                "type": "string",
+                "enum": [
+                  "IS",
+                  "OOS",
+                  "HOLDOUT",
+                  "FULL_SAMPLE"
+                ]
+              },
+              "fold_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "at_utc_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "kind": {
+                "const": "OBSERVATION"
+              },
+              "payload": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "equity": {
+                    "type": "string",
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                    "maxLength": 96
+                  },
+                  "return_fraction": {
+                    "type": "string",
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                    "maxLength": 96
+                  },
+                  "drawdown_fraction": {
+                    "type": "string",
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                    "maxLength": 96
+                  },
+                  "accepted_position": {
+                    "type": "string",
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                    "maxLength": 96
+                  },
+                  "signal_target": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "candle": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "open": {
+                            "type": "string",
+                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                            "maxLength": 96
+                          },
+                          "high": {
+                            "type": "string",
+                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                            "maxLength": 96
+                          },
+                          "low": {
+                            "type": "string",
+                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                            "maxLength": 96
+                          },
+                          "close": {
+                            "type": "string",
+                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                            "maxLength": 96
+                          },
+                          "volume": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                                "maxLength": 96
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "open",
+                          "high",
+                          "low",
+                          "close",
+                          "volume"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "fee": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "funding": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "turnover": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "active_stop": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "active_take_profit": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                        "maxLength": 96
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "equity",
+                  "return_fraction",
+                  "drawdown_fraction",
+                  "accepted_position",
+                  "signal_target",
+                  "candle",
+                  "fee",
+                  "funding",
+                  "turnover",
+                  "active_stop",
+                  "active_take_profit"
+                ]
+              }
+            },
+            "required": [
+              "source_ordinal",
+              "window",
+              "fold_id",
+              "at_utc_ms",
+              "kind",
+              "payload"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "source_ordinal": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 200000
+              },
+              "window": {
+                "type": "string",
+                "enum": [
+                  "IS",
+                  "OOS",
+                  "HOLDOUT",
+                  "FULL_SAMPLE"
+                ]
+              },
+              "fold_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "at_utc_ms": {
+                "type": "null"
+              },
+              "kind": {
+                "const": "ANALYTICS"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/WindowAnalytics"
+              }
+            },
+            "required": [
+              "source_ordinal",
+              "window",
+              "fold_id",
+              "at_utc_ms",
+              "kind",
+              "payload"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "source_ordinal": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 200000
+              },
+              "window": {
+                "type": "string",
+                "enum": [
+                  "IS",
+                  "OOS",
+                  "HOLDOUT",
+                  "FULL_SAMPLE"
+                ]
+              },
+              "fold_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "at_utc_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "kind": {
+                "const": "EXECUTION"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/NativeExecutionRecord"
+              }
+            },
+            "required": [
+              "source_ordinal",
+              "window",
+              "fold_id",
+              "at_utc_ms",
+              "kind",
+              "payload"
+            ]
+          }
+        ]
+      },
+      "WindowExecutionPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "research.window-execution-page.v1"
+          },
+          "run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+          },
+          "availability": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "AVAILABLE",
+                  "NOT_PUBLISHED",
+                  "NOT_APPLICABLE"
+                ]
+              },
+              "reason_code": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "state",
+              "reason_code"
+            ]
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "window": {
+            "type": "string",
+            "enum": [
+              "IS",
+              "OOS",
+              "HOLDOUT",
+              "FULL_SAMPLE"
+            ]
+          },
+          "fold_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "descriptor": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "window": {
+                    "type": "string",
+                    "enum": [
+                      "IS",
+                      "OOS",
+                      "HOLDOUT",
+                      "FULL_SAMPLE"
+                    ]
+                  },
+                  "fold_id": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "availability": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "state": {
+                        "type": "string",
+                        "enum": [
+                          "AVAILABLE",
+                          "NOT_PUBLISHED",
+                          "NOT_APPLICABLE"
+                        ]
+                      },
+                      "reason_code": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "state",
+                      "reason_code"
+                    ]
+                  },
+                  "start_utc_ms": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "end_exclusive_utc_ms": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "observation_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 200000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "authority": {
+                    "type": "string",
+                    "enum": [
+                      "FROZEN_PARAMETER_POST_SELECTION_ACCOUNT",
+                      "FROZEN_PARAMETER_POST_SELECTION_TRAINING_DIAGNOSTIC",
+                      "FOLD_TRAINING_ACCOUNT",
+                      "RETAINED_OOS_ACCOUNT",
+                      "RETAINED_NATIVE_ACCOUNT",
+                      "NO_INDEPENDENT_HOLDOUT"
+                    ]
+                  }
+                },
+                "required": [
+                  "window",
+                  "fold_id",
+                  "availability",
+                  "start_utc_ms",
+                  "end_exclusive_utc_ms",
+                  "observation_count",
+                  "authority"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "counts": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "matching": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 200000
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "returned": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 200
+              }
+            },
+            "required": [
+              "matching",
+              "returned"
+            ]
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WindowExecutionRow"
+            },
+            "maxItems": 200
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "authority": {
+            "const": "COMPLETED_RETAINED_ACCOUNT_AND_ENGINE_AUDIT_NOT_BROKER_HISTORY"
+          }
+        },
+        "required": [
+          "schema_version",
+          "run_id",
+          "availability",
+          "revision",
+          "window",
+          "fold_id",
+          "descriptor",
+          "counts",
+          "rows",
+          "next_cursor",
+          "authority"
+        ]
+      },
+      "WindowCompare": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "window",
+          "fold_id",
+          "basis",
+          "alignment",
+          "runs",
+          "revision",
+          "correlation"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.window-compare.v1"
+          },
+          "window": {
+            "type": "string",
+            "enum": [
+              "IS",
+              "OOS",
+              "HOLDOUT",
+              "FULL_SAMPLE"
+            ]
+          },
+          "fold_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "basis": {
+            "const": "ALL_TIME_FULL_RETAINED_WINDOW"
+          },
+          "alignment": {
+            "const": "INDEPENDENT_ACCOUNT_WINDOWS_NOT_FORWARD_FILLED"
+          },
+          "revision": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "runs": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "run_id",
+                "availability",
+                "revision",
+                "descriptor",
+                "analysis"
+              ],
+              "properties": {
+                "run_id": {
+                  "type": "string"
+                },
+                "availability": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "AVAILABLE",
+                        "NOT_PUBLISHED",
+                        "NOT_APPLICABLE"
+                      ]
+                    },
+                    "reason_code": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "state",
+                    "reason_code"
+                  ]
+                },
+                "revision": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "descriptor": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/WindowDescriptor"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "analysis": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/WindowAnalytics"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "correlation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "reason_code",
+              "value",
+              "matched_observation_count",
+              "basis"
+            ],
+            "properties": {
+              "state": {
+                "enum": [
+                  "AVAILABLE",
+                  "NOT_PUBLISHED",
+                  "NOT_APPLICABLE"
+                ]
+              },
+              "reason_code": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "value": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "matched_observation_count": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 200000
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "basis": {
+                "const": "EXACT_SHARED_UTC_MS_RETURN_FRACTIONS_NO_FORWARD_FILL"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

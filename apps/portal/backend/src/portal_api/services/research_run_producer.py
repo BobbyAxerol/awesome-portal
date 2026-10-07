@@ -636,6 +636,14 @@ class ResearchRunProducerExecutor:
                 replay_directory = artifact_root / request.run_id / "research"
                 replay_directory.mkdir(mode=0o700, parents=True, exist_ok=True)
                 copy_fixed_replay_file(child.fixed_replay_path, replay_directory / FILE_NAME, child.fixed_replay_source)
+            if child.window_execution_source is not None:
+                from portal_api.services.research_window_execution import read_rows, verify_source
+                if child.window_execution_path is None:
+                    raise ResearchRunProducerError("native window execution source has no verified file")
+                verify_source(child.window_execution_source, read_rows(child.window_execution_path))
+                replay_directory = artifact_root / request.run_id / "research"
+                replay_directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+                shutil.copyfile(child.window_execution_path, replay_directory / "window-execution.parquet")
             progress("budget_tick", _cpu_budget_tick_payload(
                 child.cpu_seconds,
                 child.enforced_limits.get("cpu_seconds", 0),
@@ -787,6 +795,8 @@ class ResearchRunProducerExecutor:
             receipt_document["evidence_source"] = child.evidence_source
         if child.fixed_replay_source is not None:
             receipt_document["fixed_replay_source"] = child.fixed_replay_source
+        if child.window_execution_source is not None:
+            receipt_document["window_execution_source"] = child.window_execution_source
         receipt_path = engine_directory / "research" / "p10-receipt.json"
         receipt_path.write_text(
             json.dumps(canonicalize(receipt_document), sort_keys=True, indent=2) + "\n",

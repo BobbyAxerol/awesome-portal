@@ -100,6 +100,7 @@ cp -a "${ROOT_DIR}/apps/portal/registry/research-execution-recipes.v1.json" \
   "${ROOT_DIR}/apps/portal/registry/research-native-delta-bindings.v1.json" \
   "${WORKSPACE_DIR}/apps/portal/registry/"
 cp -a "${ROOT_DIR}/apps/control-api/src/research/execution-recipes.generated.ts" \
+  "${ROOT_DIR}/apps/control-api/src/research/window-execution.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/research/"
 cp -a "${ROOT_DIR}/apps/portal/backend/src/portal_api/domain/research_execution_recipes_generated.py" \
   "${WORKSPACE_DIR}/apps/portal/backend/src/portal_api/domain/"
@@ -116,7 +117,8 @@ for receipt in \
   P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md \
   P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md \
   P10/EXPANDED_TRIAL_PRODUCT_QUALIFICATION_2026-10-06.md \
-  P10/NATIVE_ROUTE_PRODUCT_QUALIFICATION_2026-10-06.md; do
+  P10/NATIVE_ROUTE_PRODUCT_QUALIFICATION_2026-10-06.md \
+  P10/BRACKET_V4_SOURCE_JOURNAL_QUALIFICATION_2026-10-07.md; do
   mkdir -p "${WORKSPACE_DIR}/upgrade/research_loop/evidence/${receipt%/*}"
   cp -a "${ROOT_DIR}/upgrade/research_loop/evidence/${receipt}" \
     "${WORKSPACE_DIR}/upgrade/research_loop/evidence/${receipt}"

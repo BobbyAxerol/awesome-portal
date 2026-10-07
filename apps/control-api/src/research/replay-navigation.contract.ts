@@ -30,6 +30,7 @@ export const ReplayWindowDisclosureSchema = z.object({
   basis: z.enum(["BOUND_WINDOW_METADATA", "DECLARED_IS_WINDOW", "DECLARED_OOS_WINDOW", "DECLARED_HOLDOUT_WINDOW",
     "RETAINED_FOLD_TRAIN_WINDOWS", "RETAINED_FOLD_TEST_WINDOWS"]),
   availability: Availability,
+  access_basis: z.literal("COMPLETED_THREE_WINDOW_RETAINED_ACCOUNT").optional(),
 }).strict().superRefine((value, ctx) => {
   const bounds = value.start_utc_ms !== null && value.end_utc_ms !== null;
   const available = value.availability.state === "AVAILABLE";
@@ -40,7 +41,9 @@ export const ReplayWindowDisclosureSchema = z.object({
     || (value.bars === null) !== (value.count_basis === null)
     || available && (!bounds || value.bars === null)
     || available === (value.availability.reason_code !== null)
-    || value.window === "HOLDOUT" && (available || value.bars !== null || value.segments.length !== 0)
+    || value.window === "HOLDOUT" && (value.segments.length !== 0
+      || available && value.access_basis !== "COMPLETED_THREE_WINDOW_RETAINED_ACCOUNT"
+      || !available && value.bars !== null)
     || value.segments.some(row => row.start_utc_ms > row.end_utc_ms)
     || value.segments.length > 0 && (value.bounds_semantics !== "SOURCE_RETAINED_FOLD_BOUNDS"
       || value.start_utc_ms !== Math.min(...value.segments.map(row => row.start_utc_ms))

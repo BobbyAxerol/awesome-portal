@@ -64,3 +64,5 @@ generate_and_compare openapi/research-compare.openapi.json generated/research-co
 generate_and_compare openapi/research-release-candidate.openapi.json generated/research-release-candidate.d.ts
 node tooling/generate-research-final-audit.mjs --check
 generate_and_compare openapi/research-final-audit.openapi.json generated/research-final-audit.d.ts
+node tooling/generate-research-window-execution.mjs --check
+generate_and_compare openapi/research-window-execution.openapi.json generated/research-window-execution.d.ts

@@ -174,6 +174,7 @@ class AdvancedWalkForwardRunner:
         target_mode: Literal["pct_equity", "signal_notional"] = "pct_equity",
         strategy_callable: Callable[..., Any] | None = None,
         retain_mode_evidence: bool = False,
+        retain_window_execution: bool = False,
         strategy_specification: Any | None = None,
     ) -> dict[str, Any]:
         if request.protocol != RunProtocol.ADVANCED_WALK_FORWARD:
@@ -287,6 +288,9 @@ class AdvancedWalkForwardRunner:
         series = _stitched_series(active_market.frame, result)
         self._artifacts.write_frame(run_id, "series/stitched.parquet", series)
         self._write_account_ledger(run_id, active_market.frame, result, wf)
+        if retain_window_execution and config.optimization_mode != OptimizationMode.MODE_5_FULL_ROBUST:
+            self._write_training_diagnostics(run_id, market.frame, wf, account_kwargs, target_mode,
+                _strategy_callable if strategy_callable is None else strategy_callable)
         non_finite: list[str] = []
         clean_metrics = _sanitize({"stitched": metrics}, non_finite=non_finite)
         warnings = [f"non-finite metric field: {path}" for path in non_finite]
@@ -351,6 +355,52 @@ class AdvancedWalkForwardRunner:
             "n_studies": wf.get("n_studies"),
             "params_semantics": wf.get("params_semantics"),
         }
+
+    def _write_training_diagnostics(self, run_id, history, wf, account_kwargs, target_mode, strategy):
+        """Post-selection diagnostic accounts, never another search or OOS path.
+
+        Exact engine fold boundaries and params_by_fold are used. Aggregate
+        custody is bounded; omitted oversized training accounts remain typed.
+        Public QuantBT accounting, not a Portal PnL implementation.
+        """
+        table = wf.get("fold_table")
+        if not isinstance(table, pd.DataFrame):
+            return
+        from types import SimpleNamespace
+        remaining = 190_000 - len(history)  # reserve full OOS + analytics + finite journal
+        disclosure = {}
+        for _, source in table.iterrows():
+            fold_id = int(source["fold_id"])
+            params = _training_params_for_fold(wf, fold_id)
+            start, end = pd.Timestamp(source["train_start"]), pd.Timestamp(source["train_end"])
+            frame = history.loc[(history.index >= start) & (history.index <= end)]
+            if not isinstance(params, Mapping) or not 2 <= len(frame) <= remaining:
+                disclosure[str(fold_id)] = "SELECTED_FOLD_PARAMETERS_NOT_PUBLISHED" if not isinstance(params, Mapping) \
+                    else "TRAINING_WINDOW_TOO_FEW_OBSERVATIONS" if len(frame) < 2 else "TRAINING_DIAGNOSTIC_RETENTION_BUDGET_EXCEEDED"
+                continue  # no sample promoted to a complete source account
+            fold = SimpleNamespace(**source.to_dict())
+            # Same engine scoring-slice convention as optimization. The
+            # confined strategy closure supplies its real predecessor warmup;
+            # passing the warmup tape itself would make that closure seek
+            # predecessors before the beginning of its source history.
+            output = strategy(frame, params, frame.index, frame.index, fold)
+            signal = output["pos_weight"] if isinstance(output, pd.DataFrame) else output
+            if not isinstance(signal, pd.Series) or signal.reindex(frame.index).isna().any():
+                raise AdvancedWalkForwardError("training diagnostic requires an exact finite source signal")
+            endpoint = self._gateway.run_frozen_replay(evaluation_frame=frame, signal=signal.reindex(frame.index),
+                account_kwargs=account_kwargs, target_mode=target_mode)
+            result = endpoint.result
+            if len(result.positions.columns) != 1:
+                raise AdvancedWalkForwardError("training diagnostic requires its actual single-symbol account")
+            series = frame[["open", "high", "low", "close", "volume"]].copy()
+            series["signal_target"] = signal.reindex(frame.index)
+            series["equity"] = result.equity.reindex(frame.index)
+            series["returns"] = result.returns.reindex(frame.index)
+            series["accepted_position"] = result.positions.iloc[:, 0].reindex(frame.index)
+            series["drawdown"] = series.equity / series.equity.cummax() - 1
+            self._artifacts.write_frame(run_id, f"series/training-{fold_id}.parquet", series)
+            remaining -= len(frame)
+        self._artifacts.write_json(run_id, "series/training-disclosure.v1.json", {"schema_version":"research.training-disclosure.v1", "absences":disclosure})
 
     def _write_mode_evidence(self, run_id: str, wf: Mapping[str, Any], endpoint: Any) -> None:
         """Retain bounded native mode evidence; never reconstruct methodology."""
@@ -706,6 +756,25 @@ def _native_optuna_trials(table: pd.DataFrame) -> pd.DataFrame:
         return bool(row.get("pruned", False)) or (
             isinstance(metadata, Mapping) and metadata.get("stage") in {"is_search", "sbb_search"})
     return table.loc[table.apply(sampled, axis=1)].reset_index(drop=True)
+
+
+def _training_params_for_fold(wf: Mapping[str, Any], fold_id: int):
+    """Global binds the actual global selection; local binds only its own fold.
+
+    QuantBT intentionally publishes an empty params_by_fold for global WFO.
+    Never use the last-fold deployment selection as another local fold's input.
+    """
+    by_fold = wf.get("params_by_fold")
+    if isinstance(by_fold, Mapping):
+        params = by_fold.get(fold_id, by_fold.get(str(fold_id)))
+        if isinstance(params, Mapping) and params:
+            return params
+    best = wf.get("best_trial")
+    if wf.get("optimization_schedule") == "global" and isinstance(best, Mapping):
+        params = best.get("params")
+        if isinstance(params, Mapping) and params:
+            return params
+    return None
 
 
 def _freeze_deployment_selection(

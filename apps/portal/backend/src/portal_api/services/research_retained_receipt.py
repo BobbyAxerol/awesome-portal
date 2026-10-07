@@ -82,9 +82,24 @@ class ResearchRetainedReceiptClient:
         artifact_root: Path,
         fence_validator: Callable[[ArtifactFence], bool],
         fixed_replay_path: Path | None = None,
+        window_execution_path: Path | None = None,
         audit_source_root: Path | None = None,
     ) -> str:
         research = request.research
+        from portal_api.services.research_window_execution import (
+            ROW_SCHEMA as window_schema, TABLE as window_table, TABLE_VERSION as window_version,
+            read_rows as window_read_rows, verify_source as verify_window_source, storage_batch as window_batch,
+            retain_companion,
+        )
+        window_source = receipt.get("window_execution_source")
+        window_rows = None
+        if window_source is not None:
+            if window_execution_path is None or not research.is_native_fixed:
+                raise ResearchRetainedReceiptError("native window execution requires its exact source file/profile")
+            window_rows = window_read_rows(window_execution_path)
+            verify_window_source(window_source, window_rows)
+        elif window_execution_path is not None:
+            raise ResearchRetainedReceiptError("window execution source file has no bound receipt")
         audit_output = None
         if research.is_final_audit:
             if audit_source_root is None or fixed_replay_path is not None:
@@ -164,6 +179,9 @@ class ResearchRetainedReceiptClient:
                 table_kind="fixed_replay", schema_version=TABLE_SCHEMA_VERSION,
                 arrow_schema=REPLAY_SCHEMA, sequence_column="source_ordinal", id_column="source_ordinal",
             ))
+        if window_rows is not None:
+            definitions.append(ArtifactTableSchema(table_kind=window_table, schema_version=window_version,
+                arrow_schema=window_schema, sequence_column="source_ordinal", id_column="source_ordinal"))
         if audit_output is not None:
             definitions.extend(table.definition for table in audit_output.tables)
         registry = ArtifactSchemaRegistry(definitions)
@@ -193,6 +211,10 @@ class ResearchRetainedReceiptClient:
                     pa.array([receipt_digest], type=pa.string()),
                 ], schema=_RECEIPT_SCHEMA))
                 writer.write_small_document("run_receipt", canonicalize(receipt))
+                if window_rows is not None:
+                    for start in range(0, len(window_rows), 8192):
+                        writer.append_batch(window_table, window_batch(window_rows[start:start + 8192]))
+                    writer.write_small_document("window_execution_source", window_source)
                 if audit_output is not None:
                     from portal_api.services.research_final_audit_retention import verify_audit_output_unchanged
                     assert audit_source_root is not None
@@ -221,6 +243,10 @@ class ResearchRetainedReceiptClient:
         manifest, digest = store._load_and_verify_manifest(identity.artifact_id, verify_parts=True)
         tables = {table.get("table_kind"): table for table in manifest.get("tables", [])}
         expected_tables = {"run_receipt", "fixed_replay"} if replay_available else {"run_receipt"}
+        if window_rows is not None:
+            expected_tables.add(window_table)
+            if tables.get(window_table, {}).get("rows") != len(window_rows):
+                raise ResearchRetainedReceiptError("native window execution sealed population changed")
         if audit_output is not None:
             expected_tables.update(table.definition.table_kind for table in audit_output.tables)
             if any(tables.get(table.definition.table_kind, {}).get("rows") != table.source_rows
@@ -301,6 +327,14 @@ class ResearchRetainedReceiptClient:
                 )
             except (OSError, ValueError, TypeError, KeyError) as exc:
                 raise ResearchRetainedReceiptError("fixed replay private companion retention failed closed") from exc
+        if window_rows is not None:
+            retain_companion(root=final_dir, artifact_manifest=manifest, manifest_digest=digest,
+                binding={"workspace_id": request.workspace_id, "run_id": request.run_id,
+                    "artifact_id": identity.artifact_id, "artifact_revision": revision, "manifest_digest": digest,
+                    "requested_spec_digest": research.requested_spec_digest, "effective_spec_digest": research.effective_spec_digest,
+                    "dataset_binding_digest": research.dataset_binding_digest, "execution_profile_id": research.execution_profile_id,
+                    "execution_profile_digest": research.execution_profile_digest},
+                identity=identity_fields, post=self._post, fence_validator=fence_validator, fence=fence)
         return digest
 
     def _post(self, operation: str, body: dict[str, Any]) -> dict[str, Any]:

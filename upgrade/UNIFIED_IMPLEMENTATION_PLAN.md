@@ -8331,3 +8331,23 @@ and S06 browser0 errors. Minimal existing-field binding only, no design or
 baseline change. Focused tests/build/typecheck pass; one normal grouped hook
 for landing. Research preview only; no remote/main/dev/production or P24 GO.
 [Detailed receipt and Claude consumer rules](./research_loop/evidence/P10/OPTIONAL_EARLY_STOPPING_2026-10-07.md).
+
+**Window analytics and execution replay completeness — BACKEND_REAL_PREVIEW_ACCEPTED / Bobby
+approved, 2026-10-07:** Codex fixes P05 bar-schema selection, publishes retained
+IS/OOS/Holdout descriptive analytics and Compare/Replay selectors, and retains
+actual native execution journals with maximum source-backed conditional-order
+DTOs. Completed Three Holdout is readable after verified execution; WFO has no
+independent Holdout and IS remains fold-scoped. Historical seals stay immutable.
+Claude receives generated contracts and a precise consumer/marker handoff;
+Codex does not modify frontend. Real preview evidence and one grouped hook,
+no remote/main/dev/production/release action.
+[Delivery order and exit gates: backend queue §44 WEX addendum](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#44-addendum--complete-window-analytics-and-source-backed-execution-replay--bobby-approved).
+
+Backend delivery:four generated window/native reads, real Three×2/WFO/native×3
+acceptance,30 final GET assertions, migration116–118/RLS and preserved30 prior
+seals/accounts/HMD/web. WFO IS remains diagnostic per fold; WFO Holdout N/A;
+unexecuted native Holdout/old missing custody stay typed. Frontend unchanged,
+awaits Claude consumer/visual acceptance. One grouped normal hook before
+ff-only shared landing; no remote/main/dev/production/release promotion.
+[Backend receipt](./research_loop/evidence/P17/COMPLETE_WINDOW_EXECUTION_BACKEND_2026-10-07.md) ·
+[Claude prompt and exact contract handoff](./research_loop/evidence/P17/COMPLETE_WINDOW_EXECUTION_CLAUDE_HANDOFF_2026-10-07.md).

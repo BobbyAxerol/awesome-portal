@@ -633,6 +633,8 @@ class DurableQuantWorker:
                             and receipt["fixed_replay_source"].get("state") == "AVAILABLE"
                             else None
                         ),
+                        **({"window_execution_path": engine_root / research_request.run_id / "research" / "window-execution.parquet"}
+                           if receipt.get("window_execution_source") is not None else {}),
                         **({"audit_source_root": engine_root / WFO_SOURCE_DIRNAME / run_id} if is_final_audit else {}),
                     )
             split_digest: str | None = None
