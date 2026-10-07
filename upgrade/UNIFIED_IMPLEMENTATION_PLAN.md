@@ -8259,3 +8259,31 @@ profile opening, source/seal rewrite, remote push or production rollout.
 Reuse unchanged T07 restore/three-manifest exception
 and T12 scoped scenario evidence; candidate-final T02/T14 and changed FE
 matrix/baselines are not relabelled PASS by a backend repair.
+
+### Delta RSI 2020–2026 owner review runs — Bobby, 2026-10-07
+
+Codex runs the existing Notional Delta edition1.0.1 on BTCUSDT/1h through
+real S02 → preflight → admission → child → P05 → named screen reads, serially.
+Two requested lanes: optimized Three Window and Advanced Mode1/global,
+quarterly/expanding, published recipe defaults (3 trials, seed42, no parameter
+or optimizer overrides). The source index currently stops2026-10-01T23:00Z;
+review range uses completed days2020-01-14 →2026-10-01 (UTC/end-exclusive),
+with300 actual predecessor warmup bars. No future2026 rows or invented gaps.
+Three Window boundaries2024-10-01 /2026-01-01; WFO firstOOS2023-01-01,
+15 quarterly outer folds expected, subject to the actual engine plan.
+Also inspect S04 IS/Holdout availability against retained source facts:
+do not relabel OOS as another window or a WFO fold as independent Holdout.
+No new profile/default change, production, remote push or design change.
+Status **OWNER_REVIEW_RUNS_COMPLETED · OVERVIEW_WINDOW_MAPPING_GAP_CONFIRMED**.
+Three `rrun_338193efca9bf958fe9126f495bb37be` and WFO
+`rrun_a0314cb849a692712035fcca836eb233` both completed with terminal retention
+READY; WFO engine produced15/15 folds, no failed folds. Real browser S02
+preflight201/create202, downstream named reads and Report readback200.
+Both initial Reports and one WFO series request returned transient503 during
+materialization; targeted readback recovered. Linked audit409 is explicitly
+NOT_APPLICABLE, not hidden or represented as a successful audit.
+Three already publishes separate IS/OOS/Holdout curves, but Overview's
+enrichment/window consumer ignores these facts. Global WFO has no independent
+Holdout, and its overlapping IS windows must be presented per fold. This run
+receipt is not a fix for those mappings, a causal qualification, or P24 GO.
+[Accepted specs, results, source hashes, window diagnosis and Claude handoff](./research_loop/evidence/P10/DELTA_LONG_RANGE_OWNER_REVIEW_2026-10-07.md).

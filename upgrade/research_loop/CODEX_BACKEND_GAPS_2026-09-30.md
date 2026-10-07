@@ -2599,3 +2599,26 @@ Claude handoff](./evidence/P10/S02_NATIVE_TRUTH_REPAIR_2026-10-07.md).
 This repair is not final P23/P24 acceptance. Reuse scoped T07/T12 receipts and
 the approved exact-three exception; finish candidate-final T02/T14 and affected
 frontend matrix/baselines instead of repeating unchanged full suites/DR.
+
+### §42 — Delta RSI 2020–2026 owner review and Overview window diagnosis
+
+Bobby requested two real default-configuration New Run journeys before final
+acceptance. **OWNER_REVIEW_RUNS_COMPLETED**, without a new profile or cap lift:
+Three `rrun_338193efca9bf958fe9126f495bb37be`; Advanced global WFO
+`rrun_a0314cb849a692712035fcca836eb233`. Both COMPLETED/READY on BTCUSDT1h,
+2020-01-14→2026-10-01 UTC/end-exclusive,300 actual warmup bars; default
+declared search,3 trials,seed42, no caller overrides. WFO15/15 quarterly
+expanding folds. This does not claim January1 warmup or unverified future2026.
+
+| Finding | Current-source fact / remaining scope |
+|---|---|
+| LR-01 — Three Window Overview | **OPEN_MAPPING**. Public `protocol_disclosure.windows`, `window_series` and sampling metadata already disclose separate IS/OOS/Holdout; full window replay rows are retained. Generic `enriched_analysis.windows` still declares IS/Holdout NOT_PUBLISHED and Overview only consumes `by_window.is`, not those protocol curves. Fix by mapping verified window facts/retained analytics, not relaxing authorization, relabelling OOS, or rerunning the engine. Sampled curves are not a complete metric ledger. |
+| LR-02 — WFO Overview/replay | **OPEN_ALIGNMENT** for per-fold IS and replay navigation; independent Holdout is **NOT_APPLICABLE**, not an unlockable hidden window.15 expanding training windows overlap;619,752 summed IS bars are not unique history. Global Mode1 uses outer OOS for selection and is retrospective, not causal. |
+| LR-03 — Holdout disclosure | **OPEN_COPY_ALIGNMENT**. Generic Hub reports `P13_SEALED_HOLDOUT_BAR_COUNT_DENIED`; completed Three current-source protocol truthfully publishes6552 holdout bars, freeze-before-holdout and no holdout selection. P08 preflight seal remains immutable/pre-execution; its old no-reader/unlock copy must not overrule completed recipe facts or imply Bobby lacks access. No request to expose holdout before freeze. |
+| LR-04 — New Run/downstream timing | **READBACK_RECOVERED**. Both Reports and one WFO series first returned503; Reports then200/rendered and all12 named current-source series returned200/AVAILABLE. Preserve the initial responses as evidence. Linked audit409 is `RESEARCH_FINAL_AUDIT_NOT_APPLICABLE` for these sources; no audit job was requested or invented. |
+
+No frontend source/design edit, rebuild, engine rerun, seal mutation, migration,
+Production/TS access or remote push. Both results are available now for Bobby.
+Claude handoff is exact existing fields and remaining backend enrichment,
+not a request to invent IS metrics from decimated points or a WFO Holdout.
+[Browser/API receipt, exact ranges, custody and resource closeout](./evidence/P10/DELTA_LONG_RANGE_OWNER_REVIEW_2026-10-07.md).
