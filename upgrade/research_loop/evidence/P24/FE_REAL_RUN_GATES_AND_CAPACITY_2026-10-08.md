@@ -48,3 +48,15 @@ Row sizes (heap): observation 0.79 KB, trial 1.27 KB, candidate 1.53 KB, fold 3.
 | 16 folds × 400 trials, per-fold (`rrun_bd59…`, FAILED) | 610 progress events | 0.39 MB | **+0.8 MB measured**; artifacts +2 MB scratch | ~6 min, 1 core, peak 358 MiB |
 
 Estimate if a 16 × 400 run did seal (not measured; it fails closed): 6,400 trial rows ≈ 8 MB + per-fold IS observations ≈ 22 MB + OOS ≈ 2 MB ≈ 33 MB heap, **~70 MB on disk**. So disk is not the limit: 99 GB free holds ~22,000 runs of the 400-trial Three Window kind; the cost of a run is **CPU time** (one core, minutes), not space.
+
+## Addendum — 8 folds × 400 trials (Bobby approved the probe)
+
+`rrun_4eab9bf92ba1a4aa00ad1bca4416b1d0` also **FAILED**, but not at the 64 KiB summary: it computed (~4.4 min, one core, RSS 536 → 600 MiB), got past that budget and wrote retained rows, then the worker's call to seal the window-execution companion got
+`HTTP 503` three times (`RS-02 window-execution/seal private authority is unavailable after 3 retries`); the lease expired and the retry was never dispatched (`P06_RETRY_NOT_DISPATCHED`, 10.6 min after creation). Request: §48 addendum. Boundary found so far: 1 and 3 folds seal; 8 and 16 folds do not; fold count, not trial count, looks like the driver (a reading).
+
+| Measured | Value |
+|---|---|
+| Rows retained by this FAILED run | window-execution 46,377 (32.2 MB heap) · current-source 9,903 (9.9 MB) · child-audit 3,692 (3.6 MB) · events 577 (0.4 MB) |
+| Database growth | **+76.7 MB** (301.6 → 378.3 MB) for a run with no seal |
+| Host free space | 98 GB → 96 GB (the 2 GB includes concurrent backend builds by Codex; the run itself is the 77 MB above) |
+| CPU / RAM | one core at ~100%, RSS 536 → 600 MiB |
