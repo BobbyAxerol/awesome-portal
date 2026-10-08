@@ -52,7 +52,7 @@ Estimate if a 16 × 400 run did seal (not measured; it fails closed): 6,400 tria
 ## Addendum — 8 folds × 400 trials (Bobby approved the probe)
 
 `rrun_4eab9bf92ba1a4aa00ad1bca4416b1d0` also **FAILED**, but not at the 64 KiB summary: it computed (~4.4 min, one core, RSS 536 → 600 MiB), got past that budget and wrote retained rows, then the worker's call to seal the window-execution companion got
-`HTTP 503` three times (`RS-02 window-execution/seal private authority is unavailable after 3 retries`); the lease expired and the retry was never dispatched (`P06_RETRY_NOT_DISPATCHED`, 10.6 min after creation). Request: §48 addendum. Boundary found so far: 1 and 3 folds seal; 8 and 16 folds do not; fold count, not trial count, looks like the driver (a reading).
+`HTTP 503` three times (`RS-02 window-execution/seal private authority is unavailable after 3 retries`); the lease expired and the retry was never dispatched (`P06_RETRY_NOT_DISPATCHED`, 10.6 min after creation). Request: §48 addendum. What was observed: a Three Window with 400 trials (1 split) and a 3-fold Walk-forward with 3 trials sealed; 8 folds × 400 and 16 folds × 400 did not. Fold count looks like the driver, but 3 folds × 400 trials was not tried, so trial count is not excluded (a reading from three data points).
 
 | Measured | Value |
 |---|---|
