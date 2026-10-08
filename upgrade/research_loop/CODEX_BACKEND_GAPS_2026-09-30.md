@@ -3011,3 +3011,50 @@ a normal authenticated create of the default 16-fold × 400-trial recipe ran to 
 - S08 journal: the table now names each order by its source `order_id` with `order_type`, and its explicit `parent_order_id`, `oco_group_id`, `activation_policy`, `reduce_only` exactly as published (no suffix parsing, no row adjacency). Two defects found by feeding the 19 real BTC rows: a lifecycle row showed the engine's numeric `status` ("0") instead of `event_name` (place/fill/activate/cancel), and a stop order showed "not published" for price although `trigger_price` was published. Both fixed; `windowLimitOco.fixture.json` is a copy of the real Control API page, test in `windowReplay.test.tsx`.
 
 **Blocker for real-API S08 acceptance on the shared preview (Bobby/Codex decision, I did not touch the DB):** migrations 119–124 are applied there, but the shared preview has no Alpha edition `av_delta_rsi_polynomial_alpha_1_0_12` (editions stop at `1_0_11`) and every Limit/OCO recipe row is `CANDIDATE_NOT_QUALIFIED / OWNER_CELL_ONLY_NOT_PRODUCT_AUTHORITY`. The New Run wizard therefore cannot create a Limit/OCO run there. Please say whether you will register the edition and the product qualification in the shared preview, or hand me an explicit retained-data receipt. Until then S08 is verified only against the owner-cell responses, not in the browser.
+
+### §50 — Shared-preview Limit/OCO product acceptance — Bobby approved 2026-10-08
+
+Scope: only Research shared preview `portal-research-preview`, port 8095.
+Keep production/dev/main, frontend composition, existing accounts/data/seals,
+other candidate authority and compaction unchanged. Forward migrations only;
+no manual SQL writes. Use the ordinary authenticated installer, preflight,
+producer, isolated child, retention and named S08 readers.
+
+Preflight inspection: runtime identity already pins Research `6441e93c` and
+migration 124 is applied; no active child. Do not rebuild an unchanged image.
+The preview workspace has protected Delta versions 1.0.0–1.0.11 but lacks
+1.0.12. The existing admin install API can add that exact immutable binding;
+all other entries are already installed and must remain identity-preserving
+replays. Qualification remains the exact receipt-bound Limit/OCO recipe only.
+
+Run the longest useful bounded range (90 days, verified historical BTCUSDT
+1h coverage) and inspect source-backed journal/window/candle reads plus S08
+at 1280/660 px. **This recipe is fixed one trial and emits one entry cycle:**
+longer data cannot honestly produce a many-trial/many-cycle stress receipt.
+Do not raise its immutable budget or invent orders. Existing 16×400-trial
+receipt remains separate; multi-cycle Limit/OCO needs an additive recipe.
+
+Exit: ordinary creation completes and materializes; reads expose real LIMIT,
+parent/OCO activation and fill/cancel records; unaffected versions/flags and
+frontend image stay unchanged; ephemeral probe/browser sessions are revoked.
+Record exact source/runtime/run identity, date windows, measured record/page
+counts and honest absence states. Shared preview stays up for owner review.
+No remote push, release, broad prune, volume deletion or full unrelated rerun.
+
+Status: **BACKEND_SHARED_PREVIEW_READY**, 2026-10-08. Fresh 90-day ordinary run
+`rrun_7c6aff8dc45f1781887527c2bf970f2c` completed/materialized. All 1,944 IS/OOS
+bars pass full opaque-cursor sweeps (8+3 pages, max 158,437 bytes), IS real
+3-order/2-fill/8-event journal passes parent/OCO activation and cancellation;
+OOS is published empty and native Holdout remains typed unexecuted. Exact
+setup is now ENABLED / PRODUCT_RUN_QUALIFIED after the existing admin install;
+all twelve old bindings and other candidate receipt authority stay unchanged.
+
+**Not full S08 acceptance:** browser 1280/660 has no errors/API failures and
+plots both real fills, but the served web bundle predates Claude `1ab33e3f`
+(missing source order ID / parent-OCO / event-name columns). Claude must
+rebuild only web and retake journal rendering on this same run; no new child
+needed. Codex did not expand a backend-only approval into a frontend rebuild.
+No many-trial/multi-cycle Limit/OCO claim; no P24/owner/release claim.
+Sessions revoked, zero active children, accounts/data/images preserved;
+no destructive cleanup needed.
+[Exact run link, measures, private hashes and Claude handoff](./evidence/P24/SHARED_PREVIEW_LIMIT_OCO_90D_2026-10-08.md).

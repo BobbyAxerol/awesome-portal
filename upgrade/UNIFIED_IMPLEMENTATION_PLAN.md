@@ -8403,3 +8403,25 @@ No remote push/dev/main/release, FE design change or Parquet compaction.
 Claude follows the [precise S06/S08 consumer and browser handoff](./research_loop/evidence/P24/SUMMARY_LIMIT_OCO_BACKEND_CLOSEOUT_2026-10-08.md);
 the proof run IDs are in the owned cell, not the shared preview DB. Backend
 qualification does not silently close P24/owner visual or browser acceptance.
+
+**2026-10-08 / shared-preview Limit/OCO acceptance — IN_PROGRESS:** Bobby
+approves backend refresh/forward migrations and an ordinary product run in
+the shared Research preview only. Runtime already matches `6441e93c`/migration
+124, so reuse it. Register the missing protected 1.0.12 binding through the
+existing admin API; preserve all prior immutable bindings and candidate
+authority. Use a verified 90-day range and affected S08 browser receipts.
+The exact recipe remains fixed one trial/one entry cycle; this does not claim
+many-trial or multi-cycle Limit/OCO qualification. No production/dev/main,
+manual SQL writes, frontend design change or remote push.
+[Scope and exit gates: backend queue §50](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#50--shared-preview-limitoco-product-acceptance--bobby-approved-2026-10-08).
+
+**Shared-preview backend receipt — READY, not full S08/P24 acceptance.**
+Ordinary 90-day run `rrun_7c6aff8dc45f1781887527c2bf970f2c` is COMPLETED/READY;
+1,944 IS/OOS bars pass complete cursor sweeps, actual LIMIT/parent/OCO journal
+has 3 orders/2 fills/8 events. Existing installer adds only missing 1.0.12;
+prior bindings/accounts/qualification authority and images stay unchanged.
+S08 1280/660 basic real-API/browser checks pass, but served web predates
+Claude `1ab33e3f` and lacks the new journal columns. Claude rebuilds web and
+retakes the source parent/OCO/event rendering on this run; no engine rerun.
+Exact recipe remains one fixed trial/one cycle, not many-order stress proof.
+[Receipt and direct Claude handoff](./research_loop/evidence/P24/SHARED_PREVIEW_LIMIT_OCO_90D_2026-10-08.md).
