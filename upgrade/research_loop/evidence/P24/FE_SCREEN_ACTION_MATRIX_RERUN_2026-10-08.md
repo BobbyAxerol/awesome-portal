@@ -34,3 +34,14 @@ Verdict: **T09 / T13 = READY_FOR_BOBBY_REVIEW for the GET/navigation denominator
 duplicates, no horizontal scroll, no console error, no write. **It found a real defect:** a PRUNED trial's IS cell printed `0.00` because the source stores `mean_is_sharpe = "0"` with no reason for a trial that has `objective: null` and `pruned: true`.
 Fixed on the screen (a pruned trial is never drawn as a number: "not published · pruned before the engine published an objective") with a unit test; the source-side ask is `BR-S02-20` (§46 of the request ledger). The largest retained ledger is 400 rows, so
 **6,400-row paging is not verified** and is not claimed.
+
+## Update 2026-10-08 (later) — BR-S02-20 delivered and re-verified
+
+Codex `4cff6010` publishes `value: null` + `TRIAL_PRUNED_NO_OBJECTIVE` for all five objective metrics of a PRUNED trial and a typed-absent objective decomposition. Preview rebuilt clean from `4cff6010` (clean tree): Control `sha256:dfd648a5f1e4…`, Portal API / worker
+`sha256:53cd72ecd455…`, Web `sha256:2108e2498122…` — every running image equals its built tag.
+
+Real API on the two runs: `rrun_70d7d8d1…` 3 PRUNED and `rrun_7d4709b7…` 7 PRUNED (first 200 rows each): **10 of 10 pruned trials have all five metrics `null` + `TRIAL_PRUNED_NO_OBJECTIVE` and an absent decomposition**. The S06 and WEX specs on the served bundle: **20/20** (S06 4, WEX 16, at 1280 and 660).
+The screen's own PRUNED guard stays (it is now redundant against the repaired server and still protects an older one). Not verified on real data: a COMPLETE trial with a true zero (none among the first 200 rows of either run); that case is covered by Codex's unit and contract tests only.
+
+Tooling observation (not a product defect): after the build, `preview.sh up` left `portal-api` and `quant-worker-py` on the previous image although their tags had moved, and `preview.sh up portal-api quant-worker-py` (the scoped rollout, which does check for in-flight children) did not recreate them either.
+They were recreated with the same compose invocation plus `--force-recreate` (no in-flight job; DB/NATS untouched), then nginx was re-resolved. Image equality is therefore checked by comparing each running image ID with its tag, not by the script's exit code.
