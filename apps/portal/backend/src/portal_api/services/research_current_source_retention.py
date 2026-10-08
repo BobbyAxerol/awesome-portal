@@ -69,6 +69,12 @@ _TABLE_KIND_BY_ARTIFACT = {
 # above all 409 -- is a deterministic refusal and fails closed at once.
 _RETRYABLE_STATUSES = frozenset({502, 503, 504})
 
+# A seal verifies the whole companion on the server (O(rows): a 46k-row Walk-forward window companion is ~230 batches), so its honest duration is
+# seconds, not the 5 s of a small append. With the append timeout the worker gave up on a seal that was still running and its retry collided with
+# the first call (503 x3) although the first call went on to commit; a seal gets the ceiling the client allows and a longer pause between sends.
+SEAL_TIMEOUT_SECONDS = 30.0
+SEAL_RETRY_BACKOFF_SECONDS = 1.0
+
 
 
 def _problem_code(exc: urllib.error.HTTPError) -> str:
@@ -423,9 +429,12 @@ class ResearchCurrentSourceRetentionClient:
     def _post(self, operation: str, body: Mapping[str, Any]) -> dict[str, Any]:
         encoded = encode_ingest_body(body)
         last_error: Exception | None = None
+        sealing = operation.endswith("/seal")
+        timeout_seconds = max(self.timeout_seconds, SEAL_TIMEOUT_SECONDS) if sealing else self.timeout_seconds
+        backoff_seconds = max(self.retry_backoff_seconds, SEAL_RETRY_BACKOFF_SECONDS) if sealing else self.retry_backoff_seconds
         for attempt in range(TRANSPORT_RETRIES + 1):
             if attempt:
-                self._sleep(self.retry_backoff_seconds * attempt)
+                self._sleep(backoff_seconds * attempt)
             request = urllib.request.Request(
                 self.endpoint + "/" + operation,
                 data=encoded,
@@ -439,7 +448,7 @@ class ResearchCurrentSourceRetentionClient:
                 },
             )
             try:
-                with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
+                with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
                     if response.status != 200:
                         raise ResearchCurrentSourceRetentionError(
                             f"RS-02 {operation} returned {response.status}", status=response.status
