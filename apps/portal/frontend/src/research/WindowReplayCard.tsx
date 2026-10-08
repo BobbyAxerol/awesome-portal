@@ -19,6 +19,8 @@ import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { PortalApiError } from "../lib/api";
 import { reasonCodeSentence } from "./researchRefusal";
 import { authorityWords, windowWords } from "./windowAnalyticsView";
+import { buildTracks } from "./executionTracks";
+import { OcoTree } from "./OcoTree";
 import {
   RECORD_KINDS,
   WINDOW_PAGE_LIMIT,
@@ -112,6 +114,57 @@ function useWindowPage(key: string | null, load: ((signal: AbortSignal) => Promi
   return answer !== null && answer.key === key ? answer.value : { state: "loading" };
 }
 
+/** The most pages one journal relation is read for the chart: 5 × 200 rows. A relation longer than that says so; it is never silently cut. */
+const MAX_JOURNAL_PAGES = 5;
+
+interface AllRecords {
+  state: "loading" | "ready" | "unavailable" | "failed";
+  rows: readonly ExecutionRow[];
+  /** True when the bounded read stopped with more rows on the server. */
+  truncated: boolean;
+  total: number | null;
+  /** A typed absence of the whole relation (`NOT_PUBLISHED` / `NOT_APPLICABLE`), or null. */
+  absent: boolean;
+}
+
+/**
+ * One journal relation, every page up to the bound, for the chart overlay. It is independent of the journal table's own first page;
+ * the cursor of each page is the one the server minted for this exact selector and relation. Aborted when the selector changes.
+ */
+function useAllRecords(key: string | null, load: ((cursor: string | null, signal: AbortSignal) => Promise<WindowExecutionPage>) | null): AllRecords | null {
+  const [answer, setAnswer] = useState<{ key: string; value: AllRecords } | null>(null);
+  useEffect(() => {
+    if (key === null || load === null) return undefined;
+    const controller = new AbortController();
+    (async () => {
+      const rows: ExecutionRow[] = [];
+      let cursor: string | null = null;
+      let total: number | null = null;
+      for (let pages = 0; pages < MAX_JOURNAL_PAGES; pages += 1) {
+        const page = await load(cursor, controller.signal);
+        if (controller.signal.aborted) return;
+        if (absenceOf(page) !== null) {
+          setAnswer({ key, value: { state: "ready", rows: [], truncated: false, total: null, absent: true } });
+          return;
+        }
+        rows.push(...executionRows(page));
+        total = page.counts.matching ?? total;
+        cursor = page.next_cursor;
+        if (cursor === null) break;
+      }
+      setAnswer({ key, value: { state: "ready", rows, truncated: cursor !== null, total, absent: false } });
+    })().catch((error: unknown) => {
+      if (controller.signal.aborted) return;
+      const missing = error instanceof PortalApiError && [404, 405, 501].includes(error.status) && (error.code === null || !error.code.startsWith("RESEARCH_"));
+      setAnswer({ key, value: { state: missing ? "unavailable" : "failed", rows: [], truncated: false, total: null, absent: false } });
+    });
+    return () => controller.abort();
+    // the key carries every input
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (key === null) return null;
+  return answer !== null && answer.key === key ? answer.value : { state: "loading", rows: [], truncated: false, total: null, absent: false };
+}
+
 /** The value a record field carries, or a typed absence: the server guarantees null if and only if the field is in `missing_fields`. */
 function Field({ value, record, name }: { value: string | number | null | undefined; record: ExecutionRow["payload"]; name: string }) {
   if (value === null || value === undefined) {
@@ -161,6 +214,12 @@ export function WindowReplayCard({ runId, workspaceId, defaultOpen = false }: { 
   const fills = useWindowPage(open ? `${scopeKey}|fills` : null, (signal) => windowExecutionApi.records(runId, scope, { workspaceId, kind: "FILL", limit: WINDOW_PAGE_LIMIT, signal }));
   const journal = useWindowPage(open && kind !== "FILL" ? `${scopeKey}|journal|${kind}` : null, (signal) => windowExecutionApi.records(runId, scope, { workspaceId, kind, limit: WINDOW_PAGE_LIMIT, signal }));
   const journalShown = kind === "FILL" ? fills : journal;
+  const useRelation = (record: RecordKind) =>
+    useAllRecords(open ? `${scopeKey}|all|${record}` : null, (at, signal) => windowExecutionApi.records(runId, scope, { workspaceId, kind: record, limit: WINDOW_PAGE_LIMIT, cursor: at, signal }));
+  const allFills = useRelation("FILL");
+  const allOrders = useRelation("ORDER");
+  const allCommands = useRelation("COMMAND");
+  const allLifecycle = useRelation("LIFECYCLE");
 
   const page = observations?.state === "ready" ? observations.page : null;
   const bars = useMemo(
@@ -170,11 +229,11 @@ export function WindowReplayCard({ runId, workspaceId, defaultOpen = false }: { 
         : observationRows(page).flatMap((row) =>
             row.payload.candle === null
               ? []
-              : [{ at_utc_ms: row.at_utc_ms, open: row.payload.candle.open, high: row.payload.candle.high, low: row.payload.candle.low, close: row.payload.candle.close, active_stop: servedLevel(row.payload, "active_stop"), active_take_profit: servedLevel(row.payload, "active_take_profit") }],
+              : [{ at_utc_ms: row.at_utc_ms, open: row.payload.candle.open, high: row.payload.candle.high, low: row.payload.candle.low, close: row.payload.candle.close, equity: row.payload.equity ?? null, position: row.payload.accepted_position ?? null, active_stop: servedLevel(row.payload, "active_stop"), active_take_profit: servedLevel(row.payload, "active_take_profit") }],
           ),
     [page],
   );
-  const fillRows = fills?.state === "ready" ? executionRows(fills.page) : [];
+  const fillRows = allFills?.state === "ready" ? allFills.rows : fills?.state === "ready" ? executionRows(fills.page) : [];
   const spanMs = bars.length > 1 ? Math.max(1, bars[1]!.at_utc_ms - bars[0]!.at_utc_ms) : 3_600_000;
   const first = bars[0]?.at_utc_ms ?? null;
   const last = bars.length > 0 ? bars[bars.length - 1]!.at_utc_ms + spanMs : null;
@@ -189,6 +248,11 @@ export function WindowReplayCard({ runId, workspaceId, defaultOpen = false }: { 
       }),
     [fillRows, first, last],
   );
+  const tracks = useMemo(
+    () => (allOrders?.state === "ready" ? buildTracks({ orders: allOrders.rows, commands: allCommands?.rows ?? [], lifecycle: allLifecycle?.rows ?? [], fills: allFills?.rows ?? [] }) : []),
+    [allOrders, allCommands, allLifecycle, allFills],
+  );
+  const truncatedNote = [allOrders, allCommands, allLifecycle, allFills].some((r) => r?.truncated) ? `journal read stopped at ${MAX_JOURNAL_PAGES * WINDOW_PAGE_LIMIT} rows per relation; later rows are not drawn` : null;
   const absence = page === null ? null : absenceOf(page);
   const descriptor = page?.descriptor ?? null;
   const authority = descriptor === null ? null : authorityWords(descriptor.authority);
@@ -261,11 +325,12 @@ export function WindowReplayCard({ runId, workspaceId, defaultOpen = false }: { 
             {authority?.caution ? <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-window-caution>{authority.caution}</p> : null}
             {bars.length > 0 ? (
               <Suspense fallback={<div className="mono text-[10px] italic" style={{ height: 320, color: "var(--ink-faint)" }} data-chart-loading>drawing…</div>}>
-                <WindowFillCandles bars={bars} fills={marks} fillsLoaded={fillRows.length} fillTotal={fills?.state === "ready" ? (fills.page.counts.matching ?? null) : null} />
+                <WindowFillCandles bars={bars} fills={marks} tracks={tracks} fillsLoaded={fillRows.length} fillTotal={allFills?.state === "ready" ? allFills.total : fills?.state === "ready" ? (fills.page.counts.matching ?? null) : null} journalNote={truncatedNote} />
               </Suspense>
             ) : (
               <p className="mono text-[11px] italic" style={{ color: "var(--ink-faint)" }} data-window-no-bars>no candle was published for this page</p>
             )}
+            {tracks.length > 0 ? <OcoTree tracks={tracks} /> : null}
             {page !== null && bars.length > 0 ? <LevelDisclosure rows={observationRows(page)} /> : null}
             <div className="flex flex-wrap items-center gap-2" data-window-paging>
               <button type="button" className="btn-ghost mono text-[10px]" disabled={cursors.length <= 1} title={cursors.length <= 1 ? "This is the first page of the window." : "The previous page of this window."} data-action="earlier" onClick={() => setCursors((current) => (current.length > 1 ? current.slice(0, -1) : current))}>‹ earlier</button>

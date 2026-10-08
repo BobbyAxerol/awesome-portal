@@ -1815,7 +1815,9 @@ export function ExecuteScreen({
         ) : null}
       </ResearchPanel>
 
-      {controller.fixed?.state === "ready" ? <FixedObservationPanel controller={controller} slot={controller.fixed} native={isNativeReplayRoute(replay?.route.id)} /> : null}
+      {/* A native route's orders, fills, OCO legs and account panes are ONE chart (the complete-window chart below); only the other fixed
+          routes keep this separate observation lane. */}
+      {controller.fixed?.state === "ready" && !isNativeReplayRoute(replay?.route.id) ? <FixedObservationPanel controller={controller} slot={controller.fixed} native={false} /> : null}
 
       {replay ? (
         <>

@@ -8,14 +8,14 @@ import { barIndexAt, fillDirection, fillMarkers, fillsCaption, legLabel } from "
 import { windowExecutionApi, type WindowExecutionPage } from "./windowExecutionClient";
 import limitOco from "./windowLimitOco.fixture.json";
 
-const charts = vi.hoisted(() => ({ last: null as null | { bars: unknown[]; fills: unknown[] } }));
+const charts = vi.hoisted(() => ({ last: null as null | { bars: unknown[]; fills: unknown[]; tracks?: unknown[] } }));
 vi.mock("./WindowFillCandles", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./WindowFillCandles")>();
   return {
     ...actual,
-    WindowFillCandles: (props: { bars: unknown[]; fills: unknown[] }) => {
+    WindowFillCandles: (props: { bars: unknown[]; fills: unknown[]; tracks?: unknown[] }) => {
       charts.last = props;
-      return <div data-chart-stub data-bars={props.bars.length} data-fills={props.fills.length} />;
+      return <div data-chart-stub data-bars={props.bars.length} data-fills={props.fills.length} data-tracks={props.tracks?.length ?? 0} />;
     },
   };
 });
@@ -195,10 +195,12 @@ describe("the card", () => {
 
   it("an unpublished journal relation is a typed absence, not '0 orders'; an empty published journal says it is empty", async () => {
     vi.spyOn(windowExecutionApi, "observations").mockResolvedValue(page(rows10()));
-    const records = vi.spyOn(windowExecutionApi, "records");
-    records.mockResolvedValueOnce(page([fillRow(2, {})]));
-    records.mockResolvedValueOnce(page([], { availability: { state: "NOT_PUBLISHED", reason_code: "ENGINE_EXECUTION_RELATION_NOT_PUBLISHED" }, descriptor: null }));
-    records.mockResolvedValueOnce(page([]));
+    /* By relation, not by call order: the chart overlay reads ORDER / COMMAND / LIFECYCLE / FILL on its own. */
+    vi.spyOn(windowExecutionApi, "records").mockImplementation(async (_run, _scope, options) => {
+      if (options?.kind === "FILL" || options?.kind === undefined) return page([fillRow(2, {})]);
+      if (options.kind === "TRADE") return page([]);
+      return page([], { availability: { state: "NOT_PUBLISHED", reason_code: "ENGINE_EXECUTION_RELATION_NOT_PUBLISHED" }, descriptor: null });
+    });
     const { container } = render(<WindowReplayCard runId="rrun_x" defaultOpen />);
     await waitFor(() => expect(container.querySelector("[data-record='FILL']")).not.toBeNull());
     fireEvent.click(container.querySelector('[data-record-kind="ORDER"]')!);
@@ -319,5 +321,43 @@ describe("the Limit/OCO journal as the engine published it", () => {
     const rows = [...container.querySelectorAll("[data-journal-table='LIFECYCLE'] tbody tr")];
     const event = (row: Element) => `${row.querySelector("[data-order-ref]")!.getAttribute("data-order-ref")!.replace("delta-limit-oco-entry-579", "e")}:${row.querySelectorAll("td")[7]!.textContent}`;
     expect(rows.map(event)).toEqual(["e:place", "e-sl:place", "e-tp:place", "e:fill", "e-sl:activate", "e-tp:activate", "e-tp:fill", "e-sl:cancel"]);
+  });
+});
+
+describe("one chart for the orders, fills and OCO of a window (BR-S02-21)", () => {
+  const rowsOf = (limitOco.page as unknown as { rows: { payload: { record_kind: string } }[] }).rows;
+  const serve = () => {
+    vi.spyOn(windowExecutionApi, "observations").mockResolvedValue(page(rows10()));
+    vi.spyOn(windowExecutionApi, "records").mockImplementation(async (_run, _scope, options) => {
+      const rows = rowsOf.filter((row) => row.payload.record_kind === (options?.kind ?? "FILL"));
+      return page(rows, { counts: { matching: rows.length, returned: rows.length } });
+    });
+  };
+
+  it("hands the chart one track per published order and draws the OCO group from the explicit ids", async () => {
+    serve();
+    const { container } = render(<WindowReplayCard runId="rrun_x" defaultOpen />);
+    await waitFor(() => expect(container.querySelector("[data-oco-group]")).not.toBeNull());
+    expect(charts.last!.tracks).toHaveLength(3);
+    const group = container.querySelector('[data-oco-group="delta-limit-oco-exits-579"]')!;
+    expect(group.querySelector('[data-oco-parent="delta-limit-oco-entry-579"]')).not.toBeNull();
+    const legs = [...group.querySelectorAll("[data-oco-leg]")];
+    expect(legs.map((leg) => [leg.getAttribute("data-oco-leg")!.replace("delta-limit-oco-entry-579", "p"), leg.getAttribute("data-leg-state")])).toEqual([["p-sl", "canceled"], ["p-tp", "filled"]]);
+    /* the cancelled leg is struck through and says when the source cancelled it */
+    expect(legs[0]!.querySelector("[data-leg-end]")!.textContent).toMatch(/^cancelled · 2026-/);
+    expect(legs[1]!.hasAttribute("data-oco-parent")).toBe(false);
+    expect(legs[1]!.querySelector("[data-leg-end]")!.textContent).toContain("filled @ 65209.482");
+  });
+
+  it("an order relation the server did not publish draws no track and no OCO tree, and says nothing was invented", async () => {
+    vi.spyOn(windowExecutionApi, "observations").mockResolvedValue(page(rows10()));
+    vi.spyOn(windowExecutionApi, "records").mockImplementation(async (_run, _scope, options) =>
+      options?.kind === "FILL" ? page([fillRow(2, {})]) : page([], { availability: { state: "NOT_PUBLISHED", reason_code: "ENGINE_EXECUTION_RELATION_NOT_PUBLISHED" }, descriptor: null }),
+    );
+    const { container } = render(<WindowReplayCard runId="rrun_x" defaultOpen />);
+    await waitFor(() => expect(container.querySelector("[data-chart-stub]")).not.toBeNull());
+    await waitFor(() => expect(charts.last!.fills.length).toBeGreaterThan(0));
+    expect(charts.last!.tracks).toHaveLength(0);
+    expect(container.querySelector("[data-oco-tree]")).toBeNull();
   });
 });

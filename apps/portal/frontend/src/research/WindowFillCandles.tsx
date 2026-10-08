@@ -4,7 +4,7 @@
  *
  * It draws what the source published and no more: the retained candles, every fill at its actual fill price on the bar that holds it,
  * and the account-active stop / take-profit as step lines that BREAK where the engine published none. A fill's glyph is its DIRECTION
- * (buy ▲, sell ▼); it is never called an entry or an exit from the side alone — a leg word (TP, SL, TRAIL, TIME) is printed only when the
+ * (buy ▲, sell ▼, drawn in ink so it reads on a green and on a red candle); it is never called an entry or an exit from the side alone — a leg word (TP, SL, TRAIL, TIME) is printed only when the
  * source named the exit reason. Nothing is inferred: no parent/child connector, no PnL, no level from a tag.
  *
  * The values live in the readout above the plot (the bar under the pointer and the fills it holds, exact strings as served), so no
@@ -15,7 +15,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { paletteNow } from "../charts/theme";
 import { smokeMotionAllowed } from "../execution/smokeMotion";
-import { AXIS_END_ROOM_BARS, chartPrice, loadLib, sec } from "./ExecuteCandleReplay";
+import { AXIS_END_ROOM_BARS, chartPrice, loadLib, paddedRange, sec } from "./ExecuteCandleReplay";
+import { trackStyle, trackWords, type OrderTrack } from "./executionTracks";
 import { iso } from "./utcMinute";
 
 export interface ReplayBar {
@@ -27,6 +28,9 @@ export interface ReplayBar {
   /** The active protective levels the engine published for this bar; null where it published none (a gap, never a line at zero). */
   active_stop: string | null;
   active_take_profit: string | null;
+  /** The account's equity and native position at this bar, as served (the lower panes). */
+  equity?: string | null;
+  position?: string | null;
 }
 
 export interface ReplayFill {
@@ -92,22 +96,6 @@ export function fillMarkers(bars: readonly ReplayBar[], fills: readonly ReplayFi
 
 const SHAPE: Record<FillDirection, "arrowUp" | "arrowDown" | "circle"> = { buy: "arrowUp", sell: "arrowDown", unknown: "circle" };
 
-function Glyph({ kind }: { kind: "buy" | "sell" | "stop" | "take" }) {
-  const color = kind === "buy" || kind === "take" ? "var(--good)" : "var(--bad)";
-  return kind === "buy" || kind === "sell" ? (
-    <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" style={{ display: "inline-block", verticalAlign: "-1px" }}>
-      <path d={kind === "buy" ? "M5 1 L9 9 L1 9 Z" : "M5 9 L9 1 L1 1 Z"} fill={color} />
-    </svg>
-  ) : (
-    <svg width="14" height="10" viewBox="0 0 14 10" aria-hidden="true" style={{ display: "inline-block", verticalAlign: "-1px" }}>
-      <line x1="0" y1="5" x2="14" y2="5" stroke={color} strokeWidth="1.5" strokeDasharray="2 2" />
-    </svg>
-  );
-}
-
-const fillWords = (fill: ReplayFill) =>
-  `${fill.side ?? "side not published"}${fill.exit_reason ? ` ${fill.exit_reason}` : ""} ${fill.qty ?? "qty not published"} @ ${fill.price}${fill.order_id ? ` · ${fill.order_id}` : ""}`;
-
 /**
  * What the plot shows against what exists: fills on THESE bars, fills the journal read already holds but that sit on other pages of
  * bars, and fills the journal has not delivered yet (a later journal page). Three different things, never one "x of y".
@@ -120,13 +108,74 @@ export function fillsCaption(plotted: number, loaded: number, total: number | nu
   return parts.join(" · ");
 }
 
-export function WindowFillCandles({ bars, fills, fillsLoaded = null, fillTotal = null }: { bars: readonly ReplayBar[]; fills: readonly ReplayFill[]; fillsLoaded?: number | null; fillTotal?: number | null }) {
+type LegendKind = "buy" | "sell" | "stop" | "take" | "entry" | "order-stop" | "order-exit" | "canceled";
+
+function Glyph({ kind }: { kind: LegendKind }) {
+  if (kind === "buy" || kind === "sell") {
+    return (
+      <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" style={{ display: "inline-block", verticalAlign: "-1px" }}>
+        <path d={kind === "buy" ? "M5 1 L9 9 L1 9 Z" : "M5 9 L9 1 L1 1 Z"} fill="var(--ink)" />
+      </svg>
+    );
+  }
+  const color = kind === "stop" || kind === "order-stop" ? "var(--bad)" : kind === "take" || kind === "order-exit" ? "var(--good)" : kind === "entry" ? "var(--accent)" : "var(--ink-faint)";
+  const dash = kind === "entry" ? undefined : kind === "canceled" ? "1 3" : "2 2";
+  return (
+    <svg width="14" height="10" viewBox="0 0 14 10" aria-hidden="true" style={{ display: "inline-block", verticalAlign: "-1px" }}>
+      <line x1="0" y1="5" x2="14" y2="5" stroke={color} strokeWidth="1.5" strokeDasharray={dash} />
+    </svg>
+  );
+}
+
+const fillWords = (fill: ReplayFill) =>
+  `${fill.side ?? "side not published"}${fill.exit_reason ? ` ${fill.exit_reason}` : ""} ${fill.qty ?? "qty not published"} @ ${fill.price}${fill.order_id ? ` · ${fill.order_id}` : ""}`;
+
+const STATE_WORDS: Record<OrderTrack["state"], string> = { filled: "filled", canceled: "cancelled", expired: "expired", rejected: "rejected", open: "no terminal event in the rows read" };
+
+/** What a hovered bar says about an order that was working there: its type and level, relations as served, and how it ended. */
+export function trackReadout(track: OrderTrack): string {
+  const level = track.level === null ? "level not published" : `${track.levelKind === "trigger" ? "trigger " : ""}${track.level}`;
+  const rel = [track.parentOrderId ? `parent ${track.parentOrderId}` : null, track.ocoGroupId ? `OCO ${track.ocoGroupId}` : null].filter(Boolean).join(" · ");
+  const end = track.endMs === null ? STATE_WORDS.open : `${STATE_WORDS[track.state]} ${iso(track.endMs)}`;
+  return `${trackWords(track)} ${level}${rel ? ` · ${rel}` : ""} · ${end}`;
+}
+
+/** The tracks working at an instant: started at or before it and not yet ended. */
+export function tracksAt(tracks: readonly OrderTrack[], at: number): OrderTrack[] {
+  return tracks.filter((track) => track.startMs !== null && track.startMs <= at && (track.endMs === null || at < track.endMs));
+}
+
+/** One series per drawn order; a window with more orders than this draws the first ones and says how many were left out. */
+const MAX_DRAWN_ORDERS = 150;
+
+export function WindowFillCandles({
+  bars,
+  fills,
+  tracks = [],
+  fillsLoaded = null,
+  fillTotal = null,
+  journalNote = null,
+}: {
+  bars: readonly ReplayBar[];
+  fills: readonly ReplayFill[];
+  /** Orders the journal published, clipped by the caller to nothing: this component clips to its own bars. */
+  tracks?: readonly OrderTrack[];
+  fillsLoaded?: number | null;
+  fillTotal?: number | null;
+  /** A sentence about records the journal read could not deliver (a bounded read stopped), shown in the legend row. */
+  journalNote?: string | null;
+}) {
+  type Api = import("lightweight-charts").ISeriesApi<"Line">;
   const host = useRef<HTMLDivElement | null>(null);
   const chart = useRef<{
+    lib: Awaited<ReturnType<typeof loadLib>>;
     api: import("lightweight-charts").IChartApi;
     candles: import("lightweight-charts").ISeriesApi<"Candlestick">;
-    stop: import("lightweight-charts").ISeriesApi<"Line">;
-    take: import("lightweight-charts").ISeriesApi<"Line">;
+    stop: Api;
+    take: Api;
+    position: Api;
+    equity: Api;
+    lanes: Api[];
     markers: import("lightweight-charts").ISeriesMarkersPluginApi<import("lightweight-charts").Time>;
   } | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "unavailable">("loading");
@@ -134,6 +183,9 @@ export function WindowFillCandles({ bars, fills, fillsLoaded = null, fillTotal =
   const [theme, setTheme] = useState(0);
   const timeIndex = useRef<Map<number, number>>(new Map());
   const fitted = useRef<readonly ReplayBar[] | null>(null);
+
+  const hasEquity = useMemo(() => bars.some((bar) => bar.equity !== null && bar.equity !== undefined), [bars]);
+  const hasPosition = useMemo(() => bars.some((bar) => bar.position !== null && bar.position !== undefined), [bars]);
 
   useEffect(() => {
     let disposed = false;
@@ -144,7 +196,7 @@ export function WindowFillCandles({ bars, fills, fillsLoaded = null, fillTotal =
         const pal = paletteNow();
         const api = lib.createChart(element, {
           autoSize: true,
-          layout: { background: { type: lib.ColorType.Solid, color: pal.paperRaised }, textColor: pal.inkFaint, fontSize: 10, attributionLogo: false },
+          layout: { background: { type: lib.ColorType.Solid, color: pal.paperRaised }, textColor: pal.inkFaint, fontSize: 10, panes: { separatorColor: pal.lineSoft }, attributionLogo: false },
           grid: { vertLines: { color: pal.lineSoft }, horzLines: { color: pal.lineSoft } },
           timeScale: { timeVisible: true, borderColor: pal.lineSoft },
           rightPriceScale: { borderColor: pal.lineSoft, scaleMargins: { top: 0.08, bottom: 0.06 } },
@@ -158,7 +210,23 @@ export function WindowFillCandles({ bars, fills, fillsLoaded = null, fillTotal =
         const stop = level(pal.bad);
         const take = level(pal.good);
         const markers = lib.createSeriesMarkers(candles, []);
-        chart.current = { api, candles, stop, take, markers };
+        const position = api.addSeries(lib.LineSeries, { color: pal.accent, lineWidth: 1, lineType: lib.LineType.WithSteps, priceLineVisible: false, lastValueVisible: false }, 1);
+        const equity = api.addSeries(lib.LineSeries, { color: pal.ink, lineWidth: 1, priceLineVisible: false, lastValueVisible: false }, 2);
+        equity.applyOptions({
+          autoscaleInfoProvider: () => {
+            const range = paddedRange(equity.data().map((point) => (point as { value?: number }).value).filter((value): value is number => typeof value === "number"));
+            return range ? { priceRange: { minValue: range.min, maxValue: range.max } } : null;
+          },
+        });
+        try {
+          const panes = api.panes();
+          panes[0]?.setHeight(300);
+          panes[1]?.setHeight(52);
+          panes[2]?.setHeight(76);
+        } catch {
+          /* pane sizing is cosmetic */
+        }
+        chart.current = { lib, api, candles, stop, take, position, equity, lanes: [], markers };
         try {
           api.subscribeCrosshairMove?.((param: { time?: unknown }) => {
             const at = typeof param?.time === "number" ? timeIndex.current.get(param.time) : undefined;
@@ -187,7 +255,7 @@ export function WindowFillCandles({ bars, fills, fillsLoaded = null, fillTotal =
       if (!c) return;
       const pal = paletteNow();
       c.api.applyOptions({
-        layout: { background: { type: "solid" as never, color: pal.paperRaised }, textColor: pal.inkFaint },
+        layout: { background: { type: "solid" as never, color: pal.paperRaised }, textColor: pal.inkFaint, panes: { separatorColor: pal.lineSoft } },
         grid: { vertLines: { color: pal.lineSoft }, horzLines: { color: pal.lineSoft } },
         timeScale: { borderColor: pal.lineSoft },
         rightPriceScale: { borderColor: pal.lineSoft },
@@ -195,6 +263,8 @@ export function WindowFillCandles({ bars, fills, fillsLoaded = null, fillTotal =
       c.candles.applyOptions({ upColor: pal.good, downColor: pal.bad, borderUpColor: pal.good, borderDownColor: pal.bad, wickUpColor: pal.good, wickDownColor: pal.bad });
       c.stop.applyOptions({ color: pal.bad });
       c.take.applyOptions({ color: pal.good });
+      c.position.applyOptions({ color: pal.accent });
+      c.equity.applyOptions({ color: pal.ink });
       setTheme((n) => n + 1);
     });
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "class"] });
@@ -214,6 +284,8 @@ export function WindowFillCandles({ bars, fills, fillsLoaded = null, fillTotal =
       });
     c.stop.setData(levelData((bar) => bar.active_stop));
     c.take.setData(levelData((bar) => bar.active_take_profit));
+    c.position.setData(bars.map((bar) => (bar.position === null || bar.position === undefined ? { time: sec(bar.at_utc_ms) } : { time: sec(bar.at_utc_ms), value: Number(bar.position) })));
+    c.equity.setData(bars.map((bar) => (bar.equity === null || bar.equity === undefined ? { time: sec(bar.at_utc_ms) } : { time: sec(bar.at_utc_ms), value: Number(bar.equity) })));
     if (fitted.current !== bars) {
       fitted.current = bars;
       c.api.timeScale().fitContent();
@@ -221,24 +293,109 @@ export function WindowFillCandles({ bars, fills, fillsLoaded = null, fillTotal =
     }
   }, [bars, status]);
 
-  const marks = useMemo(() => fillMarkers(bars, fills), [bars, fills]);
+  /* The orders the journal published, drawn as horizontal segments from the instant the source made them working to the instant it
+     filled or cancelled them (or to the window's end). Tracks of one style that overlap share no series: each takes its own lane. */
+  const inWindow = useMemo(() => {
+    if (bars.length === 0) return [];
+    const spanMs = bars.length > 1 ? Math.max(1, bars[1]!.at_utc_ms - bars[0]!.at_utc_ms) : 3_600_000;
+    const first = bars[0]!.at_utc_ms;
+    const end = bars[bars.length - 1]!.at_utc_ms + spanMs;
+    return tracks.filter((track) => track.startMs !== null && track.level !== null && Number.isFinite(Number(track.level)) && track.startMs < end && (track.endMs === null || track.endMs >= first));
+  }, [bars, tracks]);
   useEffect(() => {
     const c = chart.current;
     if (status !== "ready" || !c) return;
     const pal = paletteNow();
-    c.markers.setMarkers(
-      marks.map((mark) => ({
+    for (const lane of c.lanes) c.api.removeSeries(lane);
+    c.lanes = [];
+    if (bars.length === 0) return;
+    const spanMs = bars.length > 1 ? Math.max(1, bars[1]!.at_utc_ms - bars[0]!.at_utc_ms) : 3_600_000;
+    const windowEnd = bars[bars.length - 1]!.at_utc_ms;
+    const snap = (ms: number) => sec(bars[Math.max(0, barIndexAt(bars, ms))]!.at_utc_ms);
+    const stepSec = Math.max(1, Math.floor(spanMs / 1000));
+    /* One two-point series per order: a line never connects two different orders, whatever their order of time or price. */
+    for (const track of inWindow.slice(0, MAX_DRAWN_ORDERS)) {
+      const style = trackStyle(track);
+      const color = style === "stop" ? pal.bad : style === "exit-limit" ? pal.good : style === "entry" ? pal.accent : pal.inkFaint;
+      const withdrawn = track.state === "canceled" || track.state === "expired" || track.state === "rejected";
+      const from = snap(track.startMs!);
+      const reach = track.endMs === null ? sec(windowEnd) : snap(Math.min(track.endMs, windowEnd));
+      /* an order that ended on its own bar still shows its level for one bar */
+      const to = Math.max(reach as number, (from as number) + stepSec) as import("lightweight-charts").UTCTimestamp;
+      const value = Number(track.level);
+      const series = c.api.addSeries(c.lib.LineSeries, {
+        /* a withdrawn order is grey: it did not trade */
+        color: withdrawn ? pal.inkFaint : color,
+        lineWidth: 1,
+        lineStyle: style === "entry" && !withdrawn ? c.lib.LineStyle.Solid : c.lib.LineStyle.Dashed,
+        priceLineVisible: false,
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
+      });
+      series.setData([{ time: from, value }, { time: to, value }]);
+      c.lanes.push(series);
+    }
+  }, [bars, inWindow, status, theme]);
+
+  const marks = useMemo(() => fillMarkers(bars, fills), [bars, fills]);
+  const cancels = useMemo(
+    () =>
+      inWindow.flatMap((track) => {
+        const at = track.events.find((event) => event.name === "cancel")?.at;
+        const bar = at === undefined ? -1 : barIndexAt(bars, at);
+        return at !== undefined && bar >= 0 && Number.isFinite(Number(track.level)) ? [{ time: Math.floor(bars[bar]!.at_utc_ms / 1000), price: Number(track.level), id: `cancel-${track.orderId}` }] : [];
+      }),
+    [bars, inWindow],
+  );
+  useEffect(() => {
+    const c = chart.current;
+    if (status !== "ready" || !c) return;
+    const pal = paletteNow();
+    const list = [
+      ...marks.map((mark) => ({
         time: mark.time as import("lightweight-charts").UTCTimestamp,
         position: "atPriceMiddle" as const,
         price: mark.price,
         shape: SHAPE[mark.direction],
-        color: mark.direction === "buy" ? pal.good : mark.direction === "sell" ? pal.bad : pal.inkFaint,
+        /* ink, not the candle colours: the glyph must stay visible on a green and on a red body; its SHAPE is the direction */
+        color: mark.direction === "unknown" ? pal.inkFaint : pal.ink,
         text: mark.text,
         id: mark.id,
-        size: 1.2,
+        size: 2,
       })),
-    );
-  }, [marks, status, theme]);
+      ...cancels.map((cancel) => ({
+        time: cancel.time as import("lightweight-charts").UTCTimestamp,
+        position: "atPriceMiddle" as const,
+        price: cancel.price,
+        shape: "square" as const,
+        color: pal.inkFaint,
+        text: "cancel",
+        id: cancel.id,
+        size: 0.6,
+      })),
+    ].sort((a, b) => (a.time as number) - (b.time as number));
+    c.markers.setMarkers(list);
+  }, [marks, cancels, status, theme]);
+
+  /* The playhead is keyboard-steppable: ← → one bar, Shift ten, Home / End the ends. It moves the readout and the crosshair only. */
+  const [cursor, setCursor] = useState<number | null>(null);
+  const move = (event: React.KeyboardEvent) => {
+    if (bars.length === 0) return;
+    const at = cursor ?? probe ?? bars.length - 1;
+    const step = event.shiftKey ? 10 : 1;
+    const next = event.key === "ArrowRight" ? at + step : event.key === "ArrowLeft" ? at - step : event.key === "Home" ? 0 : event.key === "End" ? bars.length - 1 : null;
+    if (next === null) return;
+    event.preventDefault();
+    const clamped = Math.max(0, Math.min(bars.length - 1, next));
+    setCursor(clamped);
+    setProbe(clamped);
+    try {
+      const bar = bars[clamped]!;
+      chart.current?.api.setCrosshairPosition(Number(bar.close), sec(bar.at_utc_ms), chart.current.candles);
+    } catch {
+      /* the crosshair is a convenience */
+    }
+  };
 
   const last = bars.length - 1;
   const bar = bars[probe ?? last];
@@ -247,17 +404,26 @@ export function WindowFillCandles({ bars, fills, fillsLoaded = null, fillTotal =
     const at = barIndexAt(bars, bar.at_utc_ms);
     return fills.filter((fill) => barIndexAt(bars, fill.at_utc_ms) === at);
   }, [bar, bars, fills]);
+  const working = useMemo(() => (bar ? tracksAt(inWindow, bar.at_utc_ms) : []), [bar, inWindow]);
   const plotted = marks.length;
+  const styles = new Set(inWindow.map(trackStyle));
+  const withdrawn = inWindow.some((track) => track.state === "canceled" || track.state === "expired" || track.state === "rejected");
 
   return (
-    <div className="relative" data-chart="window-replay" data-chart-status={status} data-fills-plotted={plotted}>
+    <div className="relative" data-chart="window-replay" data-chart-status={status} data-fills-plotted={plotted} data-order-tracks={inWindow.length}>
       <div className="mono mb-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px]" style={{ color: "var(--ink-soft)" }} data-window-legend>
         <span className="whitespace-nowrap"><Glyph kind="buy" /> buy fill</span>
         <span className="whitespace-nowrap"><Glyph kind="sell" /> sell fill</span>
-        <span className="whitespace-nowrap"><Glyph kind="stop" /> active stop</span>
-        <span className="whitespace-nowrap"><Glyph kind="take" /> active take-profit</span>
+        {styles.has("entry") ? <span className="whitespace-nowrap" data-legend="entry"><Glyph kind="entry" /> limit order</span> : null}
+        {styles.has("stop") ? <span className="whitespace-nowrap" data-legend="order-stop"><Glyph kind="order-stop" /> stop order · reduce-only</span> : null}
+        {styles.has("exit-limit") ? <span className="whitespace-nowrap" data-legend="order-exit"><Glyph kind="order-exit" /> limit order · reduce-only</span> : null}
+        {withdrawn ? <span className="whitespace-nowrap" data-legend="canceled"><Glyph kind="canceled" /> cancelled / expired, did not trade</span> : null}
+        {bars.some((b) => b.active_stop !== null) ? <span className="whitespace-nowrap"><Glyph kind="stop" /> account stop</span> : null}
+        {bars.some((b) => b.active_take_profit !== null) ? <span className="whitespace-nowrap"><Glyph kind="take" /> account take-profit</span> : null}
         <span style={{ color: "var(--ink-faint)" }} data-fills-caption>
           {fillsCaption(plotted, fillsLoaded ?? fills.length, fillTotal)}
+          {inWindow.length > 0 ? ` · ${inWindow.length.toLocaleString("en-US")} orders on these bars${inWindow.length > MAX_DRAWN_ORDERS ? ` (first ${MAX_DRAWN_ORDERS} drawn)` : ""}` : ""}
+          {journalNote ? ` · ${journalNote}` : ""}
         </span>
       </div>
       {bar ? (
@@ -267,8 +433,20 @@ export function WindowFillCandles({ bars, fills, fillsLoaded = null, fillTotal =
           <span><span style={{ color: "var(--ink-faint)" }}>H </span>{bar.high}</span>
           <span><span style={{ color: "var(--ink-faint)" }}>L </span>{bar.low}</span>
           <span><span style={{ color: "var(--ink-faint)" }}>C </span>{bar.close}</span>
-          {bar.active_stop ? <span data-readout-level="stop"><span style={{ color: "var(--ink-faint)" }}>stop </span>{bar.active_stop}</span> : null}
-          {bar.active_take_profit ? <span data-readout-level="take-profit"><span style={{ color: "var(--ink-faint)" }}>take-profit </span>{bar.active_take_profit}</span> : null}
+          {hasPosition ? <span data-readout-position><span style={{ color: "var(--ink-faint)" }}>position </span>{bar.position ?? "not published"}</span> : null}
+          {hasEquity ? <span data-readout-equity><span style={{ color: "var(--ink-faint)" }}>equity </span>{bar.equity ?? "not published"}</span> : null}
+          {bar.active_stop ? <span data-readout-level="stop"><span style={{ color: "var(--ink-faint)" }}>account stop </span>{bar.active_stop}</span> : null}
+          {bar.active_take_profit ? <span data-readout-level="take-profit"><span style={{ color: "var(--ink-faint)" }}>account take-profit </span>{bar.active_take_profit}</span> : null}
+        </div>
+      ) : null}
+      {working.length > 0 ? (
+        <div className="mono flex flex-col gap-0.5 pb-1 text-[10px]" style={{ color: "var(--ink)" }} data-window-readout-orders>
+          {working.map((track) => (
+            <span key={track.orderId} data-readout-order={track.orderId}>
+              <span style={{ color: "var(--ink-faint)" }}>order {track.orderId} · </span>
+              {trackReadout(track)}
+            </span>
+          ))}
         </div>
       ) : null}
       {barFills.length > 0 ? (
@@ -281,8 +459,15 @@ export function WindowFillCandles({ bars, fills, fillsLoaded = null, fillTotal =
           ))}
         </div>
       ) : null}
-      <div role="img" aria-label={`${bars.length} retained bars with ${plotted} engine fills; exact values in the journal below`}>
-        <div ref={host} className={status === "ready" && smokeMotionAllowed() ? "s08-chart-in" : undefined} style={{ height: 320 }} aria-hidden="true" />
+      <div
+        role="application"
+        tabIndex={0}
+        aria-label={`${bars.length} retained bars with ${plotted} engine fills and ${inWindow.length} orders; arrow keys step the readout, exact values in the journal below`}
+        onKeyDown={move}
+        style={{ outline: "none" }}
+        data-window-chart-region
+      >
+        <div ref={host} className={status === "ready" && smokeMotionAllowed() ? "s08-chart-in" : undefined} style={{ height: 300 + (hasPosition ? 52 : 0) + (hasEquity ? 76 : 0) + 28 }} aria-hidden="true" />
       </div>
       {status !== "ready" ? (
         <span className="mono absolute left-3 top-8 text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
