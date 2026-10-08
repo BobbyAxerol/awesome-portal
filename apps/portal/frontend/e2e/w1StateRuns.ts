@@ -99,7 +99,12 @@ const STATELESS_POSTS = /\/(datasets\/declaration-estimates|runs\/window-suggest
 export async function getOnly(page: Page): Promise<void> {
   await page.route("**/api/**", (route) => {
     const request = route.request();
-    return request.method() === "GET" || STATELESS_POSTS.test(new URL(request.url()).pathname) ? route.continue() : route.abort();
+    if (request.method() === "GET") return route.continue();
+    /* A stateless computing POST carries the stack's public Origin (which the Control API checks on every write); without it the answer is a 403. */
+    if (STATELESS_POSTS.test(new URL(request.url()).pathname)) {
+      return route.fetch({ headers: { ...request.headers(), origin: ORIGIN } }).then((response) => route.fulfill({ response }), () => route.abort().catch(() => undefined));
+    }
+    return route.abort();
   });
 }
 

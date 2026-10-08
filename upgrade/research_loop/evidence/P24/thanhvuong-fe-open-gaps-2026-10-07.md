@@ -7,7 +7,7 @@ Read: `P23_QUALIFICATION_CLOSEOUT_2026-10-05.md`, `P24/V1_ACCEPTANCE.md` (15-ID 
 | Group | Item | State | Owner |
 |---|---|---|---|
 | **Bobby decides** | P24-T15 product review, visual review and signed release | OPEN_OWNER_PRODUCT_REVIEW; strict 83/86 stays (three-manifest exception accepted) | Bobby |
-| **Claude (frontend), no one to wait for** | P24-T09 / T13 15-screen matrix | READY_FOR_BOBBY_REVIEW on the 2026-10-04 bundle (73 cells, 613 PASS / 0 FAIL / 69 NA, GET/navigation only). **Stale since**: S02 gained run types, served recipe labels, native recipes, native parameters step and the native result panel; S03–S11 gained the native panel. Re-run the matrix on a bundle built from the final candidate | Claude |
+| **Claude (frontend), no one to wait for** | P24-T09 / T13 15-screen matrix | **Re-run 2026-10-08 on the clean bundle built from `938fa74d`: 73 cells, 613 PASS / 0 FAIL / 69 NA** (GET/navigation only; one first-pass harness failure fixed and re-run, see [rerun note](./FE_SCREEN_ACTION_MATRIX_RERUN_2026-10-08.md)). READY_FOR_BOBBY_REVIEW | Claude |
 | | Write controls `NOT_RUN_WRITE` in the matrix | OPEN: only the P22 publish and the journey receipt cover them | Claude (needs an approved real-write lane) |
 | | Visual baselines for the changed S02 screens | NOT recorded in this change (recorder rules 2026-10-03) | Claude |
 | | `denied` / `stale` states | do not exist on the preview; stale seals exist on R-WFO-022/023 | Claude + Codex data |

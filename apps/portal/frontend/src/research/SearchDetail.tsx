@@ -950,7 +950,11 @@ function LedgerRows({
               </span>
             ) : null}
             <span className={columnClass(LEDGER_COLUMNS[3])} style={columnStyle(LEDGER_COLUMNS[3])} data-trial-is>
-              {facts ? (
+              {trial.state === "PRUNED" || facts?.pruned === true ? (
+                /* A pruned trial never reached an objective (`objective: null`, `pruned: true`): whatever the row's stored metric holds is not an IS Sharpe,
+                   so it is never drawn as a number (the source stores a bare "0" there with no reason; BR-S02-20). */
+                <NotPublished title="pruned before the engine published an objective" />
+              ) : facts ? (
                 <MetricCell metric={facts.metrics.mean_is_sharpe} compact />
               ) : (
                 trial.objective ?? <NotPublished title="the retained trial publishes no objective" />

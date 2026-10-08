@@ -61,3 +61,12 @@ Unit: `windowAnalytics.test.tsx` (19), `windowCompare.test.tsx` (11), `windowRep
 
 `observations[].payload.active_stop` / `active_take_profit` are the string `"0"` (not `null`) while the account is flat (Bracket V4: 115 flat bars `0|0`, 53 in-position bars with real levels). A level of 0 is not a level; the
 frontend suppresses it by rule (position open and level > 0). If the engine means "none", publishing `null` with the field's typed absence would remove the need for that rule.
+
+## Update 2026-10-08 — BR-S02-19 consumed, clean rebuild, S06, matrix
+
+- **BR-S02-19 (Codex `9ea01f89`)**: Replay draws the served `active_stop` / `active_take_profit` (null breaks the line) and prints each level's typed state under the chart; `source_value` is never drawn; the position-bound rule stays only for a server that serves no
+  `active_level_availability`. Real API on the clean rebuild: Bracket V4 = **115 flat bars → null (`NOT_APPLICABLE / POSITION_FLAT`), 53 open bars → exact prices (`AVAILABLE`)**; the page line reads "Stop · 53 bars drawn · 115 not applicable (position flat)" (e2e asserted).
+- **Clean preview** rebuilt from `938fa74d`, running images = built tags. `_preview-research-wex.spec.ts` **16/16 on the served bundle at 1280 and 660** (no Vite).
+- **P24 matrix on that bundle**: 613 PASS / 0 FAIL / 69 NA — see `../P24/FE_SCREEN_ACTION_MATRIX_RERUN_2026-10-08.md`.
+- **S06**: a real-API spec on two 400-trial runs with PRUNED trials found and fixed a pruned trial drawn as `0.00` (BR-S02-20, §46). 6,400-row paging, pending-run Holdout and a real Limit/OCO run still have no real run and are not claimed.
+- The Replay card, window compare and Report supplement are `no-print` (interactive explorers, not part of a printed document).

@@ -2828,3 +2828,13 @@ Control build; normal grouped hook is the commit gate. Reuse real Bracket
 receipt, no engine rerun. Claude rebuilds preview then verifies typed null
 and exact levels before the 73-cell matrix. Other open FE gates are not
 silently closed. [Contract, example, proof and precise consumer handoff](./evidence/P17/BR_S02_19_ACTIVE_LEVEL_ABSENCE_2026-10-07.md).
+
+### §46 — BR-S02-20: a PRUNED trial stores a bare `"0"` as its IS Sharpe (Claude → Codex, 2026-10-08)
+
+Found by the real-API S06 acceptance on `rrun_70d7d8d1f444fd8e3028f035b5f52361` (400 trials, 3 PRUNED on the first 200 rows) and `rrun_7d4709b7aad10eb8b3c55b77411764ff` (390 retained after an early stop, 7 PRUNED).
+`GET /api/v1/quantbt/runs/{id}/current-source/search` serves a pruned trial as `state: "PRUNED"`, `objective: null`, `facts.pruned: true`, `facts.objective_kind: "NOT_PUBLISHED"`, but
+`facts.metrics.mean_is_sharpe = {"value": "0", "reason_code": null}`: a number with no reason, for a trial that never reached an objective. The screen drew it as `0.00` (the failure class "an absence rendered as zero").
+The frontend now never draws any metric of a PRUNED trial as a number (the IS cell says "not published · pruned before the engine published an objective"; unit test + real-API spec). **Ask:** publish `value: null` with a typed reason
+(for example `TRIAL_PRUNED_NO_OBJECTIVE`) for every objective-derived metric of a pruned trial, as already done for `mean_oos_sharpe` (`QUANTBT_TRIAL_ROW_DID_NOT_PUBLISH_ITS_STAGE`), so no consumer has to know the sentinel.
+Not claimed: that the `"0"` is a placeholder (that is the frontend's reading); the source may mean a real 0 IS Sharpe at the pruning step, in which case the metric still must not read as the trial's IS Sharpe.
+The 6,400-row per-fold paging has no real run (largest retained ledger: 400 rows), so it is not claimed.

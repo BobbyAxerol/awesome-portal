@@ -159,6 +159,11 @@ for (const width of WIDTHS) {
       await card.locator('[data-record-kind="ORDER"]').click();
       await expect(card.locator('[data-window-journal] [data-window-absent="NOT_PUBLISHED"]')).toHaveAttribute("data-reason-code", "ENGINE_EXECUTION_RELATION_NOT_PUBLISHED");
       await expect(page.locator("[data-native-journal-note]")).toBeVisible();
+      /* BR-S02-19: 168 retained bars — 115 flat (typed not applicable, no line) and 53 with a position (the engine's own prices). */
+      const levels = card.locator("[data-level-disclosure]");
+      await expect(levels).toContainText("Stop · 53 bars drawn · 115 not applicable (position flat)");
+      await expect(levels).toContainText("Take-profit · 53 bars drawn · 115 not applicable (position flat)");
+      await expect(levels).not.toContainText("62730.8577");
       expect(await noHorizontalScroll(page)).toBe(true);
       expect(seen.failures).toEqual([]);
       expect(seen.writes).toEqual([]);

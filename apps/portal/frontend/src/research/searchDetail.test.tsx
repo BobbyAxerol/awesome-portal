@@ -552,6 +552,23 @@ describe("P15-T05 — the ledger comes from the one operation that retains it", 
     // A pruned trial with no objective says so rather than showing a zero.
     expect(container.querySelector("[data-trial='trial_042']")?.textContent).toContain("not published");
   });
+
+  it("never draws a stored 0 as the IS Sharpe of a pruned trial (the source stores a bare \"0\" with no reason)", () => {
+    const search = retainedSearch();
+    const trials = search.ledger.trials as unknown as Record<string, unknown>[];
+    const pruned = trials.find((row) => row.trial_id === "trial_042")!;
+    pruned.state = "PRUNED";
+    pruned.objective = null;
+    pruned.facts = {
+      state: "AVAILABLE", reason_code: null, stage: null, objective_kind: "NOT_PUBLISHED", fold_scope: { kind: "ALL_OUTER_FOLDS", fold_id: null, reason_code: null }, source_trial_id: null, pruned: true, oos_seen_by_optuna: null,
+      metrics: { mean_is_sharpe: { value: "0", reason_code: null }, mean_oos_sharpe: { value: null, reason_code: "QUANTBT_TRIAL_ROW_DID_NOT_PUBLISH_ITS_STAGE" }, mean_decay: { value: null, reason_code: "X" }, std_decay: { value: null, reason_code: "X" }, trade_count: { value: null, reason_code: "X" } },
+    };
+    const { container } = view({ ledger: { state: "ready", search } });
+    const cell = container.querySelector("[data-trial='trial_042'] [data-trial-is]")!;
+    expect(cell.textContent).not.toMatch(/\d/);
+    expect(cell.textContent).toContain("not published");
+    expect(cell.querySelector("[title]")?.getAttribute("title")).toBe("pruned before the engine published an objective");
+  });
 });
 
 /* -------------------------------------------------------------------------
