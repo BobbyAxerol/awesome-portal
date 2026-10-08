@@ -24,6 +24,7 @@
  * run published that fact.
  */
 
+import { NativeOptimizationSummary } from "./NativeOptimizationSummary";
 import { Absence } from "./Absence";
 import {
   createContext,
@@ -2117,6 +2118,9 @@ export function SplitScreen({
 
               {lane ? <LaneHoldout lane={lane} runId={runId} cursor={cursor} /> : <HoldoutBlock detail={detail} timeline={timeline} runId={runId} cursor={cursor} />}
             </section>
+
+            {/* ------------------------- native optimization (bounded summary; not the scalar study) */}
+            {detail.protocol.selection.native_optimization ? <NativeOptimizationSummary optimization={detail.protocol.selection.native_optimization} /> : null}
 
             {/* ----------------------------------------- S2 · θ* flow */}
             <ThetaFlow detail={detail} folds={folds} cursor={cursor} onFold={onFold} lane={lane} />

@@ -8460,3 +8460,11 @@ RecipePins/NATIVE_OPTIMIZED and fixedNative bindings. Preserve typed
 Holdout/SL/TP absence and unsupported native readers; no invented facts.
 **FRONTEND_HANDOFF_READY / CLAUDE_VISUAL_ACCEPTANCE_OPEN**, not P24/release closed.
 [Exact assignment, source locations, real run, DTO constraints and exit gates](./research_loop/evidence/P24/S08_COMPONENT_INTEGRITY_CLAUDE_HANDOFF_2026-10-08.md).
+
+## 2026-10-08 Claude frontend addendum — S08 component integrity (response)
+
+Frontend slice for the assignment above, `FRONTEND_RECEIPT_ATTACHED / OWNER_VISUAL_REVIEW_OPEN` — not P24/release closed.
+Commits on the FE lane: `95b9e736` (shared candle component, readout labels, fills, `RecipePins.family`, native-searched vs fixed Parameters/Review), `6ee64787`/`d58b0adb` (one chart: order tracks, fills, cancel/expire marks, equity/position panes, OCO tree), and the native-optimization summary commit that follows this note.
+Bobby's direction that the chart itself must draw orders, fills, conditional orders and order types replaced the separate "OOS observation" panel on native routes; the other fixed routes keep it. Every order, relation and end state comes from the journal's explicit `order_id` / `parent_order_id` / `oco_group_id` and lifecycle events; no role (entry / SL / TP) is stated that the source did not name. Real API on `rrun_ee50cb82…` at 1280 and 660 px: no overlapping labels, no horizontal overflow, 0 console messages, 0 responses ≥ 400; IS / OOS / Holdout (typed `FIXED_NATIVE_PROFILE_DID_NOT_EXECUTE_HOLDOUT`), bar paging and the six journal relations read. Native optimization summary on Progress, Evidence and Split (trial 41, objective as served, 100 / 100 / 100); Search keeps its typed `NATIVE_OPTIMIZER_POPULATION_SEALED_IN_P05_NOT_SCALAR_WFO_LEDGER` absence. S06: 620 / 620 candidates in 12 pages on the 16 × 400 run, candidate cursor sent alone.
+Open: HiFi equivalence is not claimed (the HiFi file demonstrates `close_target_v2`); active SL/TP account levels unverified on a run that publishes them; the 73-cell matrix and visual baselines not retaken; `market` orders have no price and appear as fills/journal rows, not levels.
+[Receipt, defects found on the real run and open items](./research_loop/evidence/P24/S08_COMPONENT_INTEGRITY_CLAUDE_RECEIPT_2026-10-08.md).

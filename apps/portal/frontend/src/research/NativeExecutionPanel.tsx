@@ -10,6 +10,7 @@
 import { Absence } from "./Absence";
 import type { EvidenceHub } from "./evidenceClient";
 import { humanise } from "./humanise";
+import { NativeOptimizationSummary, type NativeOptimizationFacts } from "./NativeOptimizationSummary";
 
 export type NativeExecution = NonNullable<EvidenceHub["core"]["native_execution"]>;
 
@@ -47,6 +48,7 @@ function Count({ value, name }: { value: number | null | undefined; name: string
 
 export function NativeExecutionPanel({ native }: { native: NativeExecution | null | undefined }) {
   if (!native) return null;
+  const optimization = (native as { optimization?: NativeOptimizationFacts }).optimization ?? null;
   const rows: { id: string; label: string; value: React.ReactNode; title?: string }[] = [
     { id: "route", label: "route", value: words(ROUTE, native.execution_route), title: native.execution_route },
     { id: "clock", label: "clock", value: words(CLOCK, native.clock), title: native.clock },
@@ -64,12 +66,19 @@ export function NativeExecutionPanel({ native }: { native: NativeExecution | nul
     { id: "orders", label: "orders", value: <Count value={native.orders_count} name="orders_count" /> },
     { id: "scope", label: "cost scope", value: humanise(native.cost_scope), title: native.cost_scope },
     { id: "replay", label: "replay", value: words(REPLAY, native.replay_authority), title: native.replay_authority },
-    {
-      id: "optimizer",
-      label: "optimizer",
-      value: "not applicable — fixed input, not a scalar optimizer",
-      title: "A native route runs one fixed Three Window execution; it has no methodology or optimizer ledger.",
-    },
+    optimization
+      ? {
+          id: "optimizer",
+          label: "optimizer",
+          value: "pinned QuantBT native optimizer — see below",
+          title: "This recipe searched the Alpha's declared parameters with the pinned native optimizer; its bounded summary is below. It is not the scalar Walk-forward study.",
+        }
+      : {
+          id: "optimizer",
+          label: "optimizer",
+          value: "not applicable — fixed input, not a scalar optimizer",
+          title: "A native route runs one fixed Three Window execution; it has no methodology or optimizer ledger.",
+        },
   ];
   return (
     <section
@@ -94,6 +103,7 @@ export function NativeExecutionPanel({ native }: { native: NativeExecution | nul
           </div>
         ))}
       </dl>
+      {optimization ? <NativeOptimizationSummary optimization={optimization} /> : null}
     </section>
   );
 }
