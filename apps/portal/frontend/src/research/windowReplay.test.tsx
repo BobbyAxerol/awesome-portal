@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PortalApiError } from "../lib/api";
-import { WindowReplayCard, activeLevel } from "./WindowReplayCard";
+import { WindowReplayCard, activeLevel, levelDisclosure, servedLevel } from "./WindowReplayCard";
 import { fillSymbol } from "./EvidenceCharts";
 import { windowExecutionApi, type WindowExecutionPage } from "./windowExecutionClient";
 
@@ -71,6 +71,63 @@ describe("the protective levels", () => {
   });
   it("gives each exit its own glyph", () => {
     expect([fillSymbol("entry"), fillSymbol("take_profit"), fillSymbol("stop_loss"), fillSymbol("anything"), fillSymbol(null)]).toEqual(["triangle", "diamond", "rect", "circle", "circle"]);
+  });
+});
+
+/** A bar as the repaired read (BR-S02-19) serves it: levels null unless a position is open and the engine published a positive price. */
+const served = (i: number, kind: "flat" | "open" | "open-unset" | "open-missing") => {
+  const open = kind !== "flat";
+  const state = (level: string | null, why: string) => ({ state: level === null ? (why === "SOURCE_FIELD_NOT_PUBLISHED" ? "NOT_PUBLISHED" : "NOT_APPLICABLE") : "AVAILABLE", reason_code: level === null ? why : null, source_value: level ?? "0" });
+  const stop = kind === "open" ? "62730.8577" : null;
+  const take = kind === "open" ? "65209.5846" : null;
+  const why = kind === "flat" ? "POSITION_FLAT" : kind === "open-unset" ? "ENGINE_ACTIVE_LEVEL_NOT_SET" : "SOURCE_FIELD_NOT_PUBLISHED";
+  return obs(i, {
+    accepted_position: open ? "0.031" : "0",
+    active_stop: stop,
+    active_take_profit: take,
+    active_level_availability: { policy_id: "POSITION_BOUND_POSITIVE_LEVEL_V1", origin: "PORTAL_NORMALIZED", source_ref: "RETAINED_WINDOW_OBSERVATION_PAYLOAD", active_stop: state(stop, why), active_take_profit: state(take, why) },
+  });
+};
+
+describe("the served protective levels (BR-S02-19)", () => {
+  it("draws exactly what the server served; the raw source value is never drawn", () => {
+    expect(servedLevel(served(0, "flat").payload as never, "active_stop")).toBeNull();
+    expect(servedLevel(served(0, "open").payload as never, "active_stop")).toBe("62730.8577");
+    /* An open position whose level the engine left unset stays a gap, even though the older rule would also have drawn nothing here. */
+    expect(servedLevel(served(0, "open-unset").payload as never, "active_take_profit")).toBeNull();
+    /* A served null wins over the heuristic: the older rule would have drawn this stale positive level, the repaired read says it is not an active level. */
+    const stale = obs(0, { accepted_position: "0.031", active_stop: null, active_take_profit: null, active_level_availability: { policy_id: "POSITION_BOUND_POSITIVE_LEVEL_V1", origin: "PORTAL_NORMALIZED", source_ref: "RETAINED_WINDOW_OBSERVATION_PAYLOAD", active_stop: { state: "NOT_PUBLISHED", reason_code: "SOURCE_ACTIVE_LEVEL_NON_POSITIVE", source_value: "-5" }, active_take_profit: { state: "NOT_APPLICABLE", reason_code: "POSITION_FLAT", source_value: "62000" } } });
+    expect(servedLevel(stale.payload as never, "active_stop")).toBeNull();
+    expect(servedLevel(stale.payload as never, "active_take_profit")).toBeNull();
+  });
+  it("an older server that serves no availability block keeps the position-bound rule", () => {
+    expect(servedLevel(obs(0, { accepted_position: "0", active_stop: "0" }).payload as never, "active_stop")).toBeNull();
+    expect(servedLevel(obs(0, { accepted_position: "0.031", active_stop: "62730.8577" }).payload as never, "active_stop")).toBe("62730.8577");
+  });
+  it("counts bars by typed state and reason, in the server's terms", () => {
+    const rows = [served(0, "flat"), served(1, "flat"), served(2, "open"), served(3, "open"), served(4, "open-unset"), served(5, "open-missing")] as never;
+    const stop = levelDisclosure(rows, "active_stop");
+    expect(stop.typed).toBe(true);
+    expect(stop.drawn).toBe(2);
+    expect(stop.absent.map((a) => [a.state, a.reason, a.count])).toEqual([
+      ["NOT_APPLICABLE", "POSITION_FLAT", 2],
+      ["NOT_APPLICABLE", "ENGINE_ACTIVE_LEVEL_NOT_SET", 1],
+      ["NOT_PUBLISHED", "SOURCE_FIELD_NOT_PUBLISHED", 1],
+    ]);
+    expect(levelDisclosure([obs(0)] as never, "active_stop").typed).toBe(false);
+  });
+  it("prints the disclosure under the chart and passes only served levels to it", async () => {
+    vi.spyOn(windowExecutionApi, "observations").mockResolvedValue(page(Array.from({ length: 10 }, (_, i) => served(i, i >= 3 && i <= 6 ? "open" : "flat"))));
+    vi.spyOn(windowExecutionApi, "records").mockResolvedValue(page([]));
+    const { container } = render(<WindowReplayCard runId="rrun_x" defaultOpen />);
+    await waitFor(() => expect(container.querySelector("[data-level-disclosure]")).not.toBeNull());
+    await waitFor(() => expect(charts.last).not.toBeNull());
+    const line = container.querySelector("[data-level-disclosure]")!.textContent!;
+    expect(line).toContain("Stop · 4 bars drawn · 6 not applicable (position flat)");
+    expect(line).toContain("Take-profit · 4 bars drawn · 6 not applicable (position flat)");
+    expect(line).not.toContain("62730.8577");
+    const bars = charts.last!.bars as { active_stop: string | null }[];
+    expect(bars.filter((bar) => bar.active_stop !== null)).toHaveLength(4);
   });
 });
 

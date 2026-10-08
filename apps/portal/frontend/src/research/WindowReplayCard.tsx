@@ -25,6 +25,7 @@ import {
   absenceOf,
   executionRows,
   observationRows,
+  type ObservationRow,
   windowExecutionApi,
   type ExecutionRow,
   type RecordKind,
@@ -50,6 +51,39 @@ export function activeLevel(level: string | null, position: string | null): stri
   const price = Number(level);
   const open = Number(position);
   return Number.isFinite(price) && price > 0 && Number.isFinite(open) && open !== 0 ? level : null;
+}
+
+type Observation = ObservationRow["payload"];
+
+/**
+ * The level to draw at one bar. A server that serves `active_level_availability` (BR-S02-19) has already decided: its `active_stop` /
+ * `active_take_profit` are the exact decimal when AVAILABLE and null otherwise, and `source_value` is raw provenance that is NEVER drawn.
+ * Only an older server that serves no such block falls back to the position-bound rule above.
+ */
+export function servedLevel(payload: Observation, which: "active_stop" | "active_take_profit"): string | null {
+  if (payload.active_level_availability !== undefined) return payload[which];
+  return activeLevel(payload[which], payload.accepted_position);
+}
+
+/** What the page says about one protective level: bars per typed state/reason, in the server's words. */
+export function levelDisclosure(rows: readonly ObservationRow[], which: "active_stop" | "active_take_profit"): { drawn: number; absent: { key: string; state: string; reason: string | null; count: number }[]; typed: boolean } {
+  const absent = new Map<string, { key: string; state: string; reason: string | null; count: number }>();
+  let drawn = 0;
+  let typed = false;
+  for (const row of rows) {
+    const served = row.payload.active_level_availability?.[which];
+    if (served === undefined) continue;
+    typed = true;
+    if (served.state === "AVAILABLE") {
+      drawn += 1;
+      continue;
+    }
+    const key = `${served.state}|${served.reason_code ?? ""}`;
+    const entry = absent.get(key) ?? { key, state: served.state, reason: served.reason_code, count: 0 };
+    entry.count += 1;
+    absent.set(key, entry);
+  }
+  return { drawn, absent: [...absent.values()].sort((a, b) => b.count - a.count), typed };
 }
 
 const iso = (ms: number | null | undefined): string => (ms === null || ms === undefined ? "not published" : `${new Date(ms).toISOString().slice(0, 16).replace("T", " ")}Z`);
@@ -136,7 +170,7 @@ export function WindowReplayCard({ runId, workspaceId, defaultOpen = false }: { 
         : observationRows(page).flatMap((row) =>
             row.payload.candle === null
               ? []
-              : [{ at_utc_ms: row.at_utc_ms, open: row.payload.candle.open, high: row.payload.candle.high, low: row.payload.candle.low, close: row.payload.candle.close, active_stop: activeLevel(row.payload.active_stop, row.payload.accepted_position), active_take_profit: activeLevel(row.payload.active_take_profit, row.payload.accepted_position) }],
+              : [{ at_utc_ms: row.at_utc_ms, open: row.payload.candle.open, high: row.payload.candle.high, low: row.payload.candle.low, close: row.payload.candle.close, active_stop: servedLevel(row.payload, "active_stop"), active_take_profit: servedLevel(row.payload, "active_take_profit") }],
           ),
     [page],
   );
@@ -232,6 +266,7 @@ export function WindowReplayCard({ runId, workspaceId, defaultOpen = false }: { 
             ) : (
               <p className="mono text-[11px] italic" style={{ color: "var(--ink-faint)" }} data-window-no-bars>no candle was published for this page</p>
             )}
+            {page !== null && bars.length > 0 ? <LevelDisclosure rows={observationRows(page)} /> : null}
             <div className="flex flex-wrap items-center gap-2" data-window-paging>
               <button type="button" className="btn-ghost mono text-[10px]" disabled={cursors.length <= 1} title={cursors.length <= 1 ? "This is the first page of the window." : "The previous page of this window."} data-action="earlier" onClick={() => setCursors((current) => (current.length > 1 ? current.slice(0, -1) : current))}>‹ earlier</button>
               <button type="button" className="btn-ghost mono text-[10px]" disabled={page?.next_cursor === null || page?.next_cursor === undefined} title={page?.next_cursor ? "The next page of this window." : "This is the last page of the window."} data-action="later" onClick={() => page?.next_cursor && setCursors((current) => [...current, page.next_cursor])}>later ›</button>
@@ -254,6 +289,27 @@ export function WindowReplayCard({ runId, workspaceId, defaultOpen = false }: { 
         ) : null}
       </div>
     </details>
+  );
+}
+
+const LEVEL_WORDS: Record<string, string> = {
+  POSITION_FLAT: "position flat",
+  ENGINE_ACTIVE_LEVEL_NOT_SET: "no level set by the engine",
+  SOURCE_ACTIVE_LEVEL_NON_POSITIVE: "source level not a price",
+  SOURCE_FIELD_NOT_PUBLISHED: "not published by the source",
+};
+
+/** One line per protective level: bars drawn, and every bar that is not, with the server's typed reason. Raw `source_value` is never shown. */
+function LevelDisclosure({ rows }: { rows: readonly ObservationRow[] }) {
+  const stop = levelDisclosure(rows, "active_stop");
+  const take = levelDisclosure(rows, "active_take_profit");
+  if (!stop.typed && !take.typed) return null;
+  const line = (name: string, d: ReturnType<typeof levelDisclosure>) =>
+    `${name} · ${d.drawn.toLocaleString("en-US")} bars drawn${d.absent.map((a) => ` · ${a.count.toLocaleString("en-US")} ${a.state === "NOT_APPLICABLE" ? "not applicable" : "not published"}${a.reason ? ` (${LEVEL_WORDS[a.reason] ?? a.reason.toLowerCase().replace(/_/g, " ")})` : ""}`).join("")}`;
+  return (
+    <p className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} data-level-disclosure title="Account-active protective levels as the engine published them for each retained bar. A level is drawn only while a position is open and the engine published a positive price; the line breaks everywhere else.">
+      {line("Stop", stop)} · {line("Take-profit", take)}
+    </p>
   );
 }
 
