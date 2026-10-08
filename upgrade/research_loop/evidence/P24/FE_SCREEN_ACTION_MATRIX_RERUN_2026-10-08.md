@@ -45,3 +45,13 @@ The screen's own PRUNED guard stays (it is now redundant against the repaired se
 
 Tooling observation (not a product defect): after the build, `preview.sh up` left `portal-api` and `quant-worker-py` on the previous image although their tags had moved, and `preview.sh up portal-api quant-worker-py` (the scoped rollout, which does check for in-flight children) did not recreate them either.
 They were recreated with the same compose invocation plus `--force-recreate` (no in-flight job; DB/NATS untouched), then nginx was re-resolved. Image equality is therefore checked by comparing each running image ID with its tag, not by the script's exit code.
+
+## Update 2026-10-08 (evening) — re-run on the bundle with the one-chart S08, native optimization summary and candidate paging
+
+Target: shared preview `http://localhost:8095`, Web image = tag (`89d8f2d4…`, built from lane `84fe9fca`'s frontend; backend images unchanged from `6441e93c`). Receipt `fe-screen-action-matrix-receipt-2026-10-08b.json` (the morning receipt is untouched). GET and navigation only.
+
+**73 cells · 682 checks = 612 PASS / 1 FAIL / 69 NA** (morning: 613 / 0 / 69). Wall clock 23.0 min, one worker. All eight S08 cells (including the one-chart native Replay cell), the S04 / S05 Split / S06 / S09 / S11 cells and the two states pass.
+
+**The one FAIL is a backend gap, not a harness or UI defect:** cell `S01 Run Library`, check `console` — `Failed to load resource: 404 … /api/v1/quantbt/runs/rrun_ee50cb82…/report`. The Library now lists the COMPLETED native optimized run first (it did not exist in the morning run) and its "open report" navigation reads `GET /report`, which answers `404 RESEARCH_REPORT_NOT_FOUND` for a native run (the full native Report is not delivered, §51). Reproduced alone (`-g "S01 Run Library"`, same failure). Request `§54` in `CODEX_BACKEND_GAPS_2026-09-30.md` asks for a typed absence (200 with a reason, or a capability on the library row). I did not hide the request by recipe family in the frontend: that would re-derive a server fact. Not waived: the cell stays FAIL until the server types it.
+
+Not covered (unchanged): write controls (`NOT_RUN_WRITE`), `denied` / `stale` states, device print. Verdict: **T09 / T13 = NOT READY — one open console failure with a named backend request**; every other cell is READY_FOR_BOBBY_REVIEW for the GET/navigation denominator. Not P24 closure, not release.
