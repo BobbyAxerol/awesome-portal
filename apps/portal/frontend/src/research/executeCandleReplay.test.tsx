@@ -183,6 +183,9 @@ describe("P17-T01 · candles + markers, and the route's own absences", () => {
     expect(container.querySelector("[data-chart='replay-candles']")).toBeTruthy();
     expect(container.querySelector("[data-chart='replay-equity']")).toBeNull();
     expect(container.querySelectorAll("[data-candle-row]")).toHaveLength(168);
+    /* The bar count is a cell of the readout row; a label laid over the canvas collided with the date. */
+    expect(container.querySelector("[data-bar-count]")?.closest("[data-crosshair-readout]")).not.toBeNull();
+    expect(container.querySelector("[data-chart='replay-candles'] span.absolute.top-1")).toBeNull();
     expect([...container.querySelectorAll("[data-marker]")].map((node) => node.getAttribute("data-marker"))).toEqual(["727", "736", "867", "880"]);
     /* UX-07 / T-01: the "… · 0 orders · 0 fills · 0 trades" line is gone; the chips below carry the absences. */
     expect(container.querySelector("[data-route-note]")).toBeNull();

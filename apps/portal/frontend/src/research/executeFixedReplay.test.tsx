@@ -293,6 +293,16 @@ describe("S08 fixed · the screen", () => {
     expect(readout?.querySelector("[data-position-key='DEFAULT']")?.textContent).toContain("0.25");
   });
 
+  it("the observation count is a cell of the readout row, not a label laid over the chart (it used to collide with the date)", async () => {
+    serve(fivePages);
+    mount();
+    await waitFor(() => expect(chartCalls.candles.length).toBeGreaterThan(0));
+    const count = panel()!.querySelector("[data-observation-count]");
+    expect(count?.closest("[data-crosshair-readout]")).not.toBeNull();
+    expect(count?.textContent).toBe(`${PAGE} observations`);
+    expect(panel()!.querySelector("span.absolute.top-1")).toBeNull();
+  });
+
   it("polls nothing: one hub read and one fixed read, however long it stays", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {

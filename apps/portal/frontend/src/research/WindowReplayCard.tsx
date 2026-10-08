@@ -34,7 +34,7 @@ import {
   type WindowScope,
 } from "./windowExecutionClient";
 
-const WindowReplayChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.WindowReplayChart })));
+const WindowFillCandles = lazy(() => import("./WindowFillCandles").then((m) => ({ default: m.WindowFillCandles })));
 
 const TABS: readonly { window: WindowName; label: string }[] = [
   { window: "IS", label: "IS" },
@@ -185,7 +185,7 @@ export function WindowReplayCard({ runId, workspaceId, defaultOpen = false }: { 
         const price = p.fill_price ?? p.price;
         const at = p.filled_at_utc_ms ?? row.at_utc_ms;
         if (price === null || price === undefined || at === null || first === null || last === null || at < first || at >= last) return [];
-        return [{ at_utc_ms: at, price, qty: p.fill_qty ?? p.qty ?? null, side: p.side ?? null, exit_reason: p.exit_reason ?? null }];
+        return [{ at_utc_ms: at, price, qty: p.fill_qty ?? p.qty ?? null, side: p.side ?? null, exit_reason: p.exit_reason ?? null, order_id: p.order_id ?? null }];
       }),
     [fillRows, first, last],
   );
@@ -261,7 +261,7 @@ export function WindowReplayCard({ runId, workspaceId, defaultOpen = false }: { 
             {authority?.caution ? <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-window-caution>{authority.caution}</p> : null}
             {bars.length > 0 ? (
               <Suspense fallback={<div className="mono text-[10px] italic" style={{ height: 320, color: "var(--ink-faint)" }} data-chart-loading>drawing…</div>}>
-                <WindowReplayChart bars={bars} fills={marks} />
+                <WindowFillCandles bars={bars} fills={marks} fillsLoaded={fillRows.length} fillTotal={fills?.state === "ready" ? (fills.page.counts.matching ?? null) : null} />
               </Suspense>
             ) : (
               <p className="mono text-[11px] italic" style={{ color: "var(--ink-faint)" }} data-window-no-bars>no candle was published for this page</p>

@@ -13,6 +13,7 @@
  * `dataDeclaration.ts` re-exports everything here, so callers import one module.
  */
 
+import type { SetupProfile } from "./setupClient";
 import type { components } from "@portal/contracts-research-dataset-index";
 
 import type { CatalogDataset, CatalogSymbol, DatasetCatalog } from "./datasetClient";
@@ -618,7 +619,18 @@ export interface ProfileNativeInput {
   positionUnit: string;
   bracket: { stopFraction: string; takeProfitFraction: string; levelMode: string } | null;
   account: { initialCapital: string; leverage: string; oneWayFeeRate: string; fundingEnabled: boolean };
-  optimizer: string;
+  /** The server's own optimizer pin; the two values below are the only ones the contract names. */
+  optimizer: "NOT_APPLICABLE_FIXED_DELTA_INPUT_NOT_SCALAR_OPTIMIZER" | "PINNED_QUANTBT_NATIVE_IS_SHARPE_V1";
+}
+
+/**
+ * A native input exists for two different recipes. `fixed`: the Alpha's declared pins run once, nothing is swept (the scalar optimizer is
+ * not applicable). `searched`: the pinned QuantBT native optimizer searches every declared parameter. Native input existing is never
+ * the authority for "fixed"; the optimizer pin is.
+ */
+export function nativeKind(native: ProfileNativeInput | null | undefined): "fixed" | "searched" | null {
+  if (native === null || native === undefined) return null;
+  return native.optimizer === "PINNED_QUANTBT_NATIVE_IS_SHARPE_V1" ? "searched" : "fixed";
 }
 
 /** The declared caps of a recipe (never a reservation or an estimate). */
@@ -633,7 +645,8 @@ export interface ProfileBudget {
 /** The server's presentation of a recipe (`Profile.recipe`): a stable group key, family, English label and display rank. Never an authorization. */
 export interface RecipePins {
   key: string;
-  family: "THREE_WINDOW_FIXED" | "THREE_WINDOW_OPTIMIZED" | "ADVANCED_WFO" | "FULL_SAMPLE" | "NATIVE_FIXED";
+  /** Taken from the generated recipe type, so a family the server adds (NATIVE_OPTIMIZED) is never silently dropped by a hand-kept union. */
+  family: NonNullable<SetupProfile["recipe"]>["family"];
   label: string;
   rank: number;
 }

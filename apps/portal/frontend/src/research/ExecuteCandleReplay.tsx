@@ -207,7 +207,7 @@ export function exactPercent(value: string): string | null {
 }
 
 /** Bars of empty room each side of the bars, so the first and last time labels stays inside the plot. */
-const AXIS_END_ROOM_BARS = 5;
+export const AXIS_END_ROOM_BARS = 5;
 
 /** A price on a chart axis: grouped thousands, two places from 1 up, finer below — the readout's own grouping. */
 export function chartPrice(value: number): string {
@@ -339,9 +339,9 @@ function FactLine({ label, fact, name }: { label: string; fact: Fact; name: stri
 
 type Lib = typeof import("lightweight-charts");
 let libPromise: Promise<Lib> | null = null;
-const loadLib = () => (libPromise ??= import("lightweight-charts"));
+export const loadLib = () => (libPromise ??= import("lightweight-charts"));
 
-const sec = (ms: number) => Math.floor(ms / 1000) as import("lightweight-charts").UTCTimestamp;
+export const sec = (ms: number) => Math.floor(ms / 1000) as import("lightweight-charts").UTCTimestamp;
 
 /**
  * A flat series (equity that did not move over a window) must not autoscale to
@@ -810,6 +810,9 @@ function CandleChart({
           <ReadoutCell label="C" value={readout.close} />
           <ReadoutCell label="pos" value={readout.position} />
           <ReadoutCell label="equity" value={readout.equity} />
+          <span className="ml-auto whitespace-nowrap" style={{ color: "var(--ink-faint)" }} data-bar-count title="Panes: candles with transition markers, model position (units), equity.">
+            {rows.length} bars
+          </span>
         </div>
       ) : null}
       <div {...region.merge()}>
@@ -821,9 +824,6 @@ function CandleChart({
           {status === "loading" ? "drawing candles…" : "the chart could not be drawn here; every bar is listed for screen readers"}
         </span>
       ) : null}
-      <span className="mono pointer-events-none absolute left-3 top-1 text-[9px]" style={{ color: "var(--ink-faint)" }} title="Panes: candles with transition markers, model position (units), equity.">
-        {rows.length} bars
-      </span>
       <MarkerLayer
         markers={visibleMarkers}
         handles={handles}
@@ -2527,7 +2527,7 @@ export function FixedCandleChart({ rows, transport }: { rows: readonly FixedRepl
           },
           grid: { vertLines: { color: pal.lineSoft }, horzLines: { color: pal.lineSoft } },
           timeScale: { timeVisible: true, borderColor: pal.lineSoft },
-          rightPriceScale: { borderColor: pal.lineSoft },
+          rightPriceScale: { borderColor: pal.lineSoft, scaleMargins: { top: 0.08, bottom: 0.06 } },
           localization: { priceFormatter: chartPrice },
         });
         const candles = api.addSeries(lib.CandlestickSeries, {
@@ -2693,6 +2693,9 @@ export function FixedCandleChart({ rows, transport }: { rows: readonly FixedRepl
             ))
           )}
           <ReadoutCell label="equity" value={readout.equity} />
+          <span className="ml-auto whitespace-nowrap" style={{ color: "var(--ink-faint)" }} data-observation-count title="Panes: market candles, native position per label (units), equity.">
+            {rows.length} observations
+          </span>
         </div>
       ) : null}
       <div {...region.merge()}>
@@ -2704,9 +2707,6 @@ export function FixedCandleChart({ rows, transport }: { rows: readonly FixedRepl
           {status === "loading" ? "drawing candles…" : "the chart could not be drawn here; every observation is listed for screen readers"}
         </span>
       ) : null}
-      <span className="mono pointer-events-none absolute left-3 top-1 text-[9px]" style={{ color: "var(--ink-faint)" }} title="Panes: market candles, native position per label (units), equity.">
-        {rows.length} observations
-      </span>
       <div className="sr-only">
         <table data-chart-table="fixed-replay-candles">
           <caption>Retained out-of-sample observations in this window, exact values</caption>

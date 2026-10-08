@@ -4,16 +4,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PortalApiError } from "../lib/api";
 import { WindowReplayCard, activeLevel, levelDisclosure, servedLevel } from "./WindowReplayCard";
-import { fillSymbol } from "./EvidenceCharts";
+import { barIndexAt, fillDirection, fillMarkers, fillsCaption, legLabel } from "./WindowFillCandles";
 import { windowExecutionApi, type WindowExecutionPage } from "./windowExecutionClient";
 import limitOco from "./windowLimitOco.fixture.json";
 
 const charts = vi.hoisted(() => ({ last: null as null | { bars: unknown[]; fills: unknown[] } }));
-vi.mock("./EvidenceCharts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./EvidenceCharts")>();
+vi.mock("./WindowFillCandles", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./WindowFillCandles")>();
   return {
     ...actual,
-    WindowReplayChart: (props: { bars: unknown[]; fills: unknown[] }) => {
+    WindowFillCandles: (props: { bars: unknown[]; fills: unknown[] }) => {
       charts.last = props;
       return <div data-chart-stub data-bars={props.bars.length} data-fills={props.fills.length} />;
     },
@@ -70,8 +70,27 @@ describe("the protective levels", () => {
     expect(activeLevel("62730.8577", null)).toBeNull();
     expect(activeLevel("62730.8577", "0.031")).toBe("62730.8577");
   });
-  it("gives each exit its own glyph", () => {
-    expect([fillSymbol("entry"), fillSymbol("take_profit"), fillSymbol("stop_loss"), fillSymbol("anything"), fillSymbol(null)]).toEqual(["triangle", "diamond", "rect", "circle", "circle"]);
+  it("reads a fill's direction as the engine serves it (lower case), never grey for a known side", () => {
+    expect([fillDirection("buy"), fillDirection("sell"), fillDirection("BUY"), fillDirection(" Sell "), fillDirection(null), fillDirection("short")]).toEqual(["buy", "sell", "buy", "sell", "unknown", "unknown"]);
+  });
+  it("names an exit leg only when the source named the reason", () => {
+    expect([legLabel("take_profit"), legLabel("stop_loss"), legLabel("stop"), legLabel("trailing_stop"), legLabel("entry"), legLabel("anything"), legLabel(null)]).toEqual(["TP", "SL", "SL", "TRAIL", "", "", ""]);
+  });
+  it("says three different things apart: fills on these bars, fills on other pages of bars, fills the journal has not delivered", () => {
+    expect(fillsCaption(4, 11, 11)).toBe("4 fills on these bars · 7 more on other pages of bars · exit-leg word only where the source named it");
+    expect(fillsCaption(1, 1, 250)).toBe("1 fill on these bars · 249 more on later journal pages · exit-leg word only where the source named it");
+    expect(fillsCaption(0, 0, 0)).toBe("0 fills on these bars");
+  });
+  it("puts each fill on the bar that holds it, at its own price, and drops one before the first bar", () => {
+    const bars = [0, 1, 2].map((i) => ({ at_utc_ms: T0 + i * H, open: "1", high: "1", low: "1", close: "1", active_stop: null, active_take_profit: null }));
+    expect(barIndexAt(bars, T0 - 1)).toBe(-1);
+    expect(barIndexAt(bars, T0 + H + 5)).toBe(1);
+    const marks = fillMarkers(bars, [
+      { at_utc_ms: T0 + H + 5, price: "63557.1", qty: "1", side: "buy", exit_reason: null },
+      { at_utc_ms: T0 - 1, price: "9", qty: "1", side: "sell", exit_reason: null },
+      { at_utc_ms: T0 + 2 * H, price: "65209.5846", qty: "1", side: "sell", exit_reason: "take_profit" },
+    ]);
+    expect(marks.map((m) => [m.time, m.price, m.direction, m.text])).toEqual([[(T0 + H) / 1000, 63557.1, "buy", ""], [(T0 + 2 * H) / 1000, 65209.5846, "sell", "TP"]]);
   });
 });
 
@@ -155,8 +174,8 @@ describe("the card", () => {
     expect(bars[0]!.active_stop).toBeNull();
     expect(bars[0]!.active_take_profit).toBeNull();
     expect(stub.fills).toEqual([
-      { at_utc_ms: T0 + 2 * H, price: "63557.1", qty: "0.03146776677979329", side: "BUY", exit_reason: "entry" },
-      { at_utc_ms: T0 + 6 * H, price: "65209.5846", qty: "0.03146776677979329", side: "SELL", exit_reason: "take_profit" },
+      { at_utc_ms: T0 + 2 * H, price: "63557.1", qty: "0.03146776677979329", side: "BUY", exit_reason: "entry", order_id: null },
+      { at_utc_ms: T0 + 6 * H, price: "65209.5846", qty: "0.03146776677979329", side: "SELL", exit_reason: "take_profit", order_id: null },
     ]);
     const row = container.querySelector("[data-record='FILL']")!;
     expect(row.querySelector('[data-exact="0.9999999999999999"]')).not.toBeNull();
