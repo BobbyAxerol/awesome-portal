@@ -3122,3 +3122,9 @@ affected 1280/660 exit gates are in the
 Documentation only: no frontend/backend source, baseline, runtime, migration,
 remote/dev/main/production or release mutation. Claude records genuine missing
 DTO facts as backend requests rather than inventing data to fit a chart.
+
+### §53 — Fold cap above 16: Bobby's decision, NOT implemented yet (2026-10-08)
+
+Bobby: keep the current cap (2–16 folds, ≤ 6,400 trials in total) for now; when the cap is raised toward **30 folds**, take **option B** — keep the 6,400-trial total and reduce the admitted trials per study as folds grow beyond 16 (e.g. 30 folds × 213), rather than raising the total to 12,000. Folds 10–16 are the expected common range.
+
+Where the cap lives (for whoever implements it): `fold_bounds {min:2,max:16}` is sealed into the immutable recipe descriptors of migrations 095–108 (a raise needs a new recipe edition/digest and migration, like 119–124); `max(16)` is hard-coded in control-api `full04-seal-consistency.ts:49`, `current-source.payload.ts:623,628`, `final-audit.contract.ts:45`, `fold-ordering.ts:77`; generated contracts must be regenerated; the 6,400 total is hard-coded in about eight places (`current-source.contract.ts:64`, `current_source_artifacts.py:2323`, `current-source.repository.ts:638`, `sampler-evidence.contract.ts:100`, …). Size budgets that held only just at 16 folds (core summary 63,492 / 65,536 bytes; Search trial page 1,000,181 / 1,048,576 bytes; ~82,001 window-execution rows) must be re-measured with a real 30-fold run before any claim. No code was changed for this.
