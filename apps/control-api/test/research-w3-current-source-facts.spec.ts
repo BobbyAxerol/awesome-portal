@@ -29,7 +29,11 @@ import {
   currentSourceRowMatchesKind,
 } from "../src/research/current-source.payload";
 import type { CurrentSourceSealRow, CurrentSourceStoredRow } from "../src/research/current-source.repository";
-import { ResearchCurrentSourceService } from "../src/research/current-source.service";
+import { ResearchCurrentSourceService, currentSourceReadRevision } from "../src/research/current-source.service";
+import { PRUNED_TRIAL_METRIC_POLICY } from "../src/research/current-source-facts";
+import { sha256ResearchJson } from "../src/research/preflight.service";
+import { p11StageEvents } from "../src/research/p11-stage-events";
+import { KeysetCursorCodec, queryFingerprint } from "../src/query";
 import { openApiValidator } from "./research-rf05-openapi";
 
 type Kind = "OBSERVATION" | "FOLD" | "TRIAL" | "CANDIDATE" | "SELECTION";
@@ -404,6 +408,45 @@ describe("W3 · S06 search: ledger, roles, diagnostics (CG-P15-03/04)", () => {
     expect(search.ledger.source_trial_count).toBe(states.length);
     expect(search.selection.roles.candidate_source_trial_ids).toContain(search.selection.selected_trial_id);
     expect(search.candidates.source_candidate_count).toBe(search.candidates.rows.length);
+    expect(Object.values(search.ledger.trials[2]!.facts.metrics)).toEqual(Array(5).fill({ value: null, reason_code: "TRIAL_PRUNED_NO_OBJECTIVE" }));
+    expect(ResearchCurrentSourceSearchResponseSchema.safeParse(search).success).toBe(true);
+    openApiValidator("research-current-source.openapi.json", "Search").assert(search);
+  });
+
+  it("BR-S02-20: ledger PRUNED without fact blocks still publishes typed absence and never mutates custody", async () => {
+    const trials = structuredClone(real.rows.TRIAL);
+    trials[2]!.payload.state = "PRUNED"; trials[2]!.payload.objective = null;
+    delete trials[2]!.payload.trial_facts;
+    const before = structuredClone(trials), sealBefore = structuredClone(realSeal);
+    const { service } = memory(realSeal, { ...realTables, TRIAL: trials });
+    const search = sealed<ResearchCurrentSourceSearchResponse>(await service.search(scope, real.run_id, { limit: 100 }));
+    expect(search.ledger.trials[2]!).toMatchObject({ state: "PRUNED", objective: null, facts: { pruned: true } });
+    expect(Object.values(search.ledger.trials[2]!.facts.metrics)).toEqual(Array(5).fill({ value: null, reason_code: "TRIAL_PRUNED_NO_OBJECTIVE" }));
+    expect(trials).toEqual(before); expect(realSeal).toEqual(sealBefore);
+    openApiValidator("research-current-source.openapi.json", "Search").assert(search);
+  });
+
+  it("BR-S02-20: public revision/ETag binds the metric policy and rejects an old signed page cursor", async () => {
+    const { service } = memory(realSeal, realTables);
+    const basis = { base: currentSourceReadRevision("search", realSeal), stage_events: p11StageEvents() };
+    const previousRevision = `rs02_search_${sha256ResearchJson(basis)}`;
+    const resourceId = `research.current-source.search.v1:${real.run_id}:${previousRevision}:TRIAL`;
+    const codec = new KeysetCursorCodec({ activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
+      keys: JSON.parse(config.QUERY_CURSOR_KEYS_JSON), ttlSeconds: config.QUERY_CURSOR_TTL_SECONDS });
+    const cursor = codec.encode({ resource_id: resourceId, workspace_id: scope.workspaceId, direction: "after",
+      query_fingerprint: queryFingerprint({ resourceId, limit: 1, filters: [], sort: [] }), boundary: [0] });
+    const search = sealed<ResearchCurrentSourceSearchResponse>(await service.search(scope, real.run_id, { limit: 1 }));
+    expect(search.revision).toBe(`rs02_search_${sha256ResearchJson({ ...basis, trial_metric_policy: PRUNED_TRIAL_METRIC_POLICY })}`);
+    expect(search.revision).not.toBe(previousRevision);
+    expect(search.etag).toBe(`"${search.revision}"`);
+    expect(search.source_revision).toBe(`rs02_search_${sha256ResearchJson({
+      artifact_revision: realSeal.artifactRevision, manifest_digest: realSeal.manifestDigest,
+      source_transform_digest: realSeal.sourceTransformDigest, retained_import_digest: realSeal.retainedImportDigest,
+      table_rows: realSeal.tableRows, summary: realSeal.summary,
+    })}`);
+    await expect(service.search(scope, real.run_id, { limit: 1, cursor })).rejects.toMatchObject({ code: "RESEARCH_CURRENT_SOURCE_INVALID", status: 400 });
+    const next = sealed<ResearchCurrentSourceSearchResponse>(await service.search(scope, real.run_id, { limit: 1, cursor: search.ledger.page.next_cursor! }));
+    expect(next.ledger.trials[0]!.trial_id).toBe("1");
   });
 
   it("P15-T07: a limit-1 keyset walk reaches every row and reconciles the count, also under a fold filter", async () => {

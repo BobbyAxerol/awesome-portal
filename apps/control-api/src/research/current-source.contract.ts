@@ -783,9 +783,13 @@ const TrialMetricSchema = z.object({
   value: DecimalSchema.nullable(),
   reason_code: ReasonCodeSchema.nullable(),
 }).strict();
+export const PrunedTrialMetricSchema = z.object({
+  value: z.null(),
+  reason_code: z.literal("TRIAL_PRUNED_NO_OBJECTIVE"),
+}).strict();
 
 /** W3 · CG-P15-03/04: what one ledger row is, measured and scoped. */
-const TrialFactsSchema = z.object({
+export const TrialFactsSchema = z.object({
   evaluation_scope: z.literal("INNER_VALIDATION").optional(),
   study_id: FactTokenValueSchema.nullable().optional(),
   state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
@@ -820,7 +824,21 @@ const TrialFactsSchema = z.object({
       contribution: DecimalSchema,
     }).strict()).max(8),
   }).strict(),
-}).strict();
+}).strict().superRefine((facts, context) => {
+  if (facts.pruned !== true) return;
+  for (const [key, metric] of Object.entries(facts.metrics)) {
+    if (!PrunedTrialMetricSchema.safeParse(metric).success) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ["metrics", key],
+        message: "PRUNED trial has no completed-objective metric; publish typed absence." });
+    }
+  }
+  const components = facts.objective_components;
+  if (components.state !== "NOT_PUBLISHED" || components.reason_code !== "TRIAL_PRUNED_NO_OBJECTIVE"
+    || components.formula !== null || components.terms.length !== 0) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["objective_components"],
+      message: "PRUNED trial has no completed-objective decomposition; publish typed absence." });
+  }
+});
 
 const TrialSchema = z.object({
   source_ordinal: z.number().int().nonnegative().max(2_000_000),

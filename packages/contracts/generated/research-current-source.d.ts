@@ -160,6 +160,11 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        PrunedTrialMetric: {
+            value: null;
+            /** @constant */
+            reason_code: "TRIAL_PRUNED_NO_OBJECTIVE";
+        };
         WindowViews: {
             /** @constant */
             schema_version: "research.current-source-window-views.v1";
@@ -4429,6 +4434,7 @@ export interface components {
             value: components["schemas"]["Decimal"] | null;
             reason_code: string | null;
         };
+        /** @description Public completed-objective facts. When pruned is true, all five metrics are PrunedTrialMetric and objective_components is NOT_PUBLISHED/TRIAL_PRUNED_NO_OBJECTIVE with null formula and no terms. Raw retained pruning-step values and seal digests remain immutable; a COMPLETE trial's exact zero stays numeric. */
         TrialFacts: {
             /** @enum {string} */
             state: "AVAILABLE" | "NOT_PUBLISHED";
@@ -4469,7 +4475,7 @@ export interface components {
             /** @constant */
             evaluation_scope?: "INNER_VALIDATION";
             study_id?: string | null;
-        };
+        } & unknown;
         SelectionRole: {
             /** @enum {string} */
             state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";

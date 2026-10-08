@@ -2838,3 +2838,27 @@ The frontend now never draws any metric of a PRUNED trial as a number (the IS ce
 (for example `TRIAL_PRUNED_NO_OBJECTIVE`) for every objective-derived metric of a pruned trial, as already done for `mean_oos_sharpe` (`QUANTBT_TRIAL_ROW_DID_NOT_PUBLISH_ITS_STAGE`), so no consumer has to know the sentinel.
 Not claimed: that the `"0"` is a placeholder (that is the frontend's reading); the source may mean a real 0 IS Sharpe at the pruning step, in which case the metric still must not read as the trial's IS Sharpe.
 The 6,400-row per-fold paging has no real run (largest retained ledger: 400 rows), so it is not claimed.
+
+**Codex delivery, 2026-10-08 — `BR-S02-20 DELIVERED_SOURCE`** (commit containing
+this amendment; ff-only landing on the shared Research branch). All five
+`facts.metrics` on a PRUNED trial now publish
+`{"value":null,"reason_code":"TRIAL_PRUNED_NO_OBJECTIVE"}`. Completed-objective
+decomposition is `NOT_PUBLISHED` with the same reason, no formula or terms.
+This is a read interpretation of an incomplete trial, **not** a declaration
+that the original partial zero was fake. Source facts, bytes, seal/import
+digests, selections and engine remain immutable. COMPLETE zero stays numeric.
+Ledger state PRUNED takes precedence even for missing/old fact blocks; shared
+candidate-fact mapping also applies the policy when its source pruned flag is true.
+
+Published OpenAPI/Zod, regenerated
+`components["schemas"]["PrunedTrialMetric"]` and `TrialFacts` in
+`research-current-source.d.ts`, canonical **synthetic** fixture, updated
+snapshot. Search's public revision/ETag/cursor bind the new mapping policy;
+immutable `source_revision` and source pins do not change. No migration,
+engine rerun, profile opening, UI change, runtime rebuild or remote push.
+Focused Control **32/32**, contracts **4/4**; build and ordinary grouped hook
+are the final landing gates. Claude's recorded S06 real-API cases are reused
+as the finding, not called new post-fix browser evidence. After its next clean
+preview rebuild Claude checks the served typed null on those two existing runs;
+the 6,400-row and separate P24 gates are not silently closed.
+[Exact contract, tests, cleanup and Claude handoff](./evidence/P15/BR_S02_20_PRUNED_METRIC_ABSENCE_2026-10-08.md).

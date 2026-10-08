@@ -8362,3 +8362,17 @@ ff-only shared landing. Claude takes the clean preview rebuild and real
 consumer/matrix receipt; pending Holdout, Limit/OCO, S06 paging and P24 gates
 are not counted as complete by this mapper fix.
 [BR-S02-19 receipt and Claude handoff](./research_loop/evidence/P17/BR_S02_19_ACTIVE_LEVEL_ABSENCE_2026-10-07.md).
+
+**BR-S02-20 / P15 pruned metrics — DELIVERED_SOURCE, 2026-10-08:** Codex repairs
+the named Search read: a PRUNED trial's five completed-objective metrics are
+null with `TRIAL_PRUNED_NO_OBJECTIVE`; its completed decomposition is absent
+with the same reason. Raw source partial values, old seals, selection/source
+identity and COMPLETE zeros stay unchanged. Ledger PRUNED also covers old
+rows without fact blocks. Closed Zod/OpenAPI guard, generated
+`PrunedTrialMetric`, canonical synthetic fixture, snapshot and policy-bound
+public revision/ETag/cursor are delivered. Focused Control32/32, contracts4/4;
+Control build and one ordinary commit hook are landing gates. No engine
+rerun/UI edit/migration/runtime rebuild/remote push. Claude takes the next
+clean preview/API consumer receipt on the existing 400/390-trial runs; this
+does not claim the unseen 6,400-row lane or P24 release acceptance.
+[Precise backend receipt and consumer handoff](./research_loop/evidence/P15/BR_S02_20_PRUNED_METRIC_ABSENCE_2026-10-08.md).

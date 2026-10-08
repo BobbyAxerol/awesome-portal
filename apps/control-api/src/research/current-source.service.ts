@@ -56,6 +56,7 @@ import {
   splitGuards,
   trialCoversFold,
   trialFacts,
+  PRUNED_TRIAL_METRIC_POLICY,
 } from "./current-source-facts";
 import { splitGapScan, splitStitch } from "./current-source-split-integrity";
 import { POOL_FREEZE_CLOCK_ABSENT } from "./p11-stage-events";
@@ -676,6 +677,7 @@ export class ResearchCurrentSourceService {
     const patience = admitted?.data.early_stopping ?? null;
     const currentRevision = `rs02_search_${sha256ResearchJson({
       base: revision("search", seal), stage_events: inputs.stageEvents,
+      trial_metric_policy: PRUNED_TRIAL_METRIC_POLICY,
     })}`;
     const fold = "fold" in query ? query.fold ?? null : null;
     // A fold filter binds its own cursors: a page minted for fold 1 is
@@ -804,15 +806,16 @@ export class ResearchCurrentSourceService {
         returned_rows: page.rows.length,
         trials: page.rows.map((row) => {
           const { trial_facts: rowFacts, ...trial } = asTrial(row);
+          const state = typedTrialState(trial.state);
           return {
             source_ordinal: row.sourceOrdinal,
             trial_id: trial.trial_id,
-            state: typedTrialState(trial.state),
+            state,
             objective: trial.objective,
             parameters: trial.parameters,
             params_digest: sha256ResearchJson(trial.parameters),
             params_digest_source: "PORTAL_CANONICAL_TRIAL_PARAMETERS_V1" as const,
-            facts: trialFacts(rowFacts, ledgerMode, isCausalSeal(seal)),
+            facts: trialFacts(rowFacts, ledgerMode, isCausalSeal(seal), state === "PRUNED"),
             playback_cursor: this.playbackCursor(scope.workspaceId, runId, currentRevision, "TRIAL", row.sourceOrdinal),
           };
         }),

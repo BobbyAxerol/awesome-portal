@@ -27,6 +27,9 @@ export const RS02_SEAL_PREDATES_SOURCE_FACTS = "RS02_SEAL_PREDATES_W3_SOURCE_FAC
 export const RS02_ROW_PREDATES_FACTS = "RS02_RETAINED_ROW_PREDATES_W3_FACT_BLOCK_V1";
 /** QuantBT's walk-forward Optuna study declares no constraints (E5). */
 export const WALK_FORWARD_HAS_NO_CONSTRAINTS = "QUANTBT_WALK_FORWARD_STUDY_DECLARES_NO_CONSTRAINTS";
+export const TRIAL_PRUNED_NO_OBJECTIVE = "TRIAL_PRUNED_NO_OBJECTIVE";
+/** Public interpretation only; never rewrites the immutable retained row. */
+export const PRUNED_TRIAL_METRIC_POLICY = "PRUNED_TRIAL_COMPLETED_OBJECTIVE_ABSENCE_V1";
 
 function outer(state: State, reasonCode: string | null) {
   return state === "AVAILABLE" ? { state, reason_code: null } : { state, reason_code: reasonCode };
@@ -349,13 +352,24 @@ function metric(value: string | null | undefined, reason: string | null) {
 }
 
 /** CG-P15-03/04: one ledger row's facts, typed absence for a pre-W3 row. */
-export function trialFacts(facts: CurrentSourceTrialFacts | undefined, _ledgerMode: string | null, causal = false) {
+export function trialFacts(facts: CurrentSourceTrialFacts | undefined, _ledgerMode: string | null, causal = false, ledgerPruned = false) {
   // E5 correction (was: "the compact ledger drops per-fold constraint rows"):
   // QuantBT's walk-forward creates its Optuna study with no constraints
   // function (quantbt-engine 1.0.8/1.1.1 `walkforward.py`), so no trial on
   // this lane has a constraint or a feasibility to publish — the question
   // does not arise, whatever the ledger mode.
   const constraintReason = WALK_FORWARD_HAS_NO_CONSTRAINTS;
+  // A partial pruning-step value (including a real zero) is not the final
+  // trial objective. Ledger PRUNED is sufficient even on pre-fact-block rows.
+  const pruned = ledgerPruned || facts?.pruned === true;
+  const prunedMetric = { value: null, reason_code: TRIAL_PRUNED_NO_OBJECTIVE };
+  const prunedMetrics = {
+    mean_is_sharpe: prunedMetric, mean_oos_sharpe: prunedMetric,
+    mean_decay: prunedMetric, std_decay: prunedMetric, temporal_score: prunedMetric,
+  };
+  const prunedComponents = {
+    state: "NOT_PUBLISHED" as const, reason_code: TRIAL_PRUNED_NO_OBJECTIVE, formula: null, terms: [],
+  };
   if (!facts) {
     const absent = { value: null, reason_code: RS02_ROW_PREDATES_FACTS };
     return {
@@ -365,12 +379,12 @@ export function trialFacts(facts: CurrentSourceTrialFacts | undefined, _ledgerMo
       objective_kind: "NOT_PUBLISHED" as const,
       fold_scope: { kind: "NOT_PUBLISHED" as const, fold_id: null, reason_code: RS02_ROW_PREDATES_FACTS },
       source_trial_id: null,
-      pruned: null,
+      pruned: pruned ? true : null,
       oos_seen_by_optuna: null,
-      metrics: { mean_is_sharpe: absent, mean_oos_sharpe: absent, mean_decay: absent, std_decay: absent, temporal_score: absent },
+      metrics: pruned ? prunedMetrics : { mean_is_sharpe: absent, mean_oos_sharpe: absent, mean_decay: absent, std_decay: absent, temporal_score: absent },
       constraints: namedFact("NOT_PUBLISHED", RS02_ROW_PREDATES_FACTS),
       feasible: namedFact("NOT_PUBLISHED", RS02_ROW_PREDATES_FACTS),
-      objective_components: { state: "NOT_PUBLISHED" as const, reason_code: RS02_ROW_PREDATES_FACTS, formula: null, terms: [] },
+      objective_components: pruned ? prunedComponents : { state: "NOT_PUBLISHED" as const, reason_code: RS02_ROW_PREDATES_FACTS, formula: null, terms: [] },
     };
   }
   const metrics = facts.metrics;
@@ -382,9 +396,9 @@ export function trialFacts(facts: CurrentSourceTrialFacts | undefined, _ledgerMo
     objective_kind: facts.objective_kind,
     fold_scope: facts.fold_scope,
     source_trial_id: facts.source_trial_id,
-    pruned: facts.pruned,
+    pruned: pruned ? true : facts.pruned,
     oos_seen_by_optuna: facts.oos_seen_by_optuna,
-    metrics: {
+    metrics: pruned ? prunedMetrics : {
       mean_is_sharpe: metric(metrics.mean_is_sharpe, null),
       mean_oos_sharpe: metric(metrics.mean_oos_sharpe, metrics.oos_reason_code),
       mean_decay: metric(metrics.mean_decay, metrics.oos_reason_code),
@@ -393,7 +407,7 @@ export function trialFacts(facts: CurrentSourceTrialFacts | undefined, _ledgerMo
     },
     constraints: namedFact("NOT_APPLICABLE", constraintReason),
     feasible: namedFact("NOT_APPLICABLE", constraintReason),
-    objective_components: facts.objective_components,
+    objective_components: pruned ? prunedComponents : facts.objective_components,
   };
 }
 
