@@ -68,7 +68,10 @@ Private final new-run browser receipt:
 `shared-limit-oco-search/rrun_ee50cb82d6de9e495e10b32323b62f8c/browser.json` under
 `/home/bobby/.local/state/portal-research-p23/20261008/`.
 SHA `6f909376d15d77c9882c47ff8dcda625c82d289683f96ad38a0a6c8ac43b2957`.
-This is affected S08 acceptance, **not** a fresh whole-product 73-cell matrix.
+This is affected S08 **functional/data acceptance**, not HiFi/component/visual
+acceptance and **not** a fresh whole-product 73-cell matrix. Bobby reports
+component/visual defects in the served S08; Claude owns their correction under
+the [2026-10-08 component-integrity handoff](./S08_COMPONENT_INTEGRITY_CLAUDE_HANDOFF_2026-10-08.md).
 
 ## Exact public contract for Claude
 
@@ -89,7 +92,11 @@ This is affected S08 acceptance, **not** a fresh whole-product 73-cell matrix.
   `packages/contracts/fixtures/research-native-optimization-result.valid.json`.
   No market tape, session, token or path input is public to the browser.
 
-### Mandatory narrow frontend mapping follow-up
+### Mandatory narrow frontend mapping follow-up — Claude owns implementation
+
+Bobby's latest instruction assigns frontend/components back to Claude;
+Codex does not land these frontend patches. This supersedes any earlier
+conditional proposal for a Codex mechanical mapping patch.
 
 At current accepted source, `dataDeclarationV2.ts:RecipePins.family` is a
 hand-maintained union without NATIVE_OPTIMIZED. Extend it from generated
@@ -112,8 +119,9 @@ Prompt:
 > Claude — read backend queue §51, this packet and its immutable P10
 > qualification link. Use regenerated run-setup/progress/evidence/split types
 > and the actual native optimizer fixture. Finish the exact RecipePins type
-> and two fixedNative data-binding corrections if Codex has not already
-> landed the owner-approved narrow patch; do not repeat completed work.
+> and two fixedNative data-binding corrections as the frontend owner;
+> Codex remains backend-only. Also follow the linked component-integrity
+> handoff; the prior functional browser PASS is not visual acceptance.
 > Consume native optimization facts where the existing native panel can
 > display them without pretending it is scalar WFO. Take real API/browser
 > receipts on the linked completed 100-trial run, never rerun the engine to

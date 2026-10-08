@@ -8447,3 +8447,16 @@ FE type/Parameters mapping remains separately tracked in the handoff.
 No production/dev/main/remote push or compaction; temporary QA identity
 revoked and exact QA cell stopped, all data/evidence/rollback images kept.
 [Complete shared receipt, limitations and Claude consumer prompt](./research_loop/evidence/P24/LIMIT_OCO_MULTICYCLE_SHARED_PREVIEW_AND_CLAUDE_HANDOFF_2026-10-08.md).
+
+## 2026-10-08 owner addendum — S08 component integrity belongs to Claude
+
+Bobby directs Codex to backend only and assigns S08 frontend/component fixes
+to Claude using the accepted component/HiFi design. The two inconsistent
+candle panels, overlapping readout and fill presentation require an affected
+visual receipt; earlier §51 browser checks are functional/data evidence only,
+not visual acceptance. §51 native backend qualification stays valid; do not
+rerun the engine to repair frontend. Claude also owns the pending generated
+RecipePins/NATIVE_OPTIMIZED and fixedNative bindings. Preserve typed
+Holdout/SL/TP absence and unsupported native readers; no invented facts.
+**FRONTEND_HANDOFF_READY / CLAUDE_VISUAL_ACCEPTANCE_OPEN**, not P24/release closed.
+[Exact assignment, source locations, real run, DTO constraints and exit gates](./research_loop/evidence/P24/S08_COMPONENT_INTEGRITY_CLAUDE_HANDOFF_2026-10-08.md).

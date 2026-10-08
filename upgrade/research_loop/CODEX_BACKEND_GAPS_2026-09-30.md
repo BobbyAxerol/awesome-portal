@@ -3103,3 +3103,22 @@ are not falsely declared complete. No production/dev/main/remote push,
 compaction or source-data changes. Owned QA identity revoked/cell stopped.
 [Frozen source proof](./evidence/P10/LIMIT_OCO_MULTICYCLE_PRODUCT_QUALIFICATION_2026-10-08.md) ·
 [Shared run, actual receipts and exact Claude handoff](./evidence/P24/LIMIT_OCO_MULTICYCLE_SHARED_PREVIEW_AND_CLAUDE_HANDOFF_2026-10-08.md).
+
+## §52 — S08 accepted-component integrity / Bobby frontend ownership correction
+
+2026-10-08: Bobby rejects the inconsistent two-chart S08 presentation and
+directs Codex to backend only; Claude implements frontend/components using
+the accepted HiFi/design. This also assigns §51's pending RecipePins and two
+fixedNative mappings to Claude, superseding conditional Codex frontend patches.
+The earlier S08 receipt proves functional/data behavior, **not visual integrity**.
+Backend §51 qualification/source custody remains valid; no engine rerun is
+needed to repair a frontend component. Holdout/SL/TP absence and incomplete
+native Search/Freeze/Report readers remain truthful, not silently closed.
+
+**Status: FRONTEND_HANDOFF_READY / CLAUDE_VISUAL_ACCEPTANCE_OPEN.** Exact source
+locations, generated DTOs, paging/causal constraints, current real run and
+affected 1280/660 exit gates are in the
+[S08 component-integrity handoff](./evidence/P24/S08_COMPONENT_INTEGRITY_CLAUDE_HANDOFF_2026-10-08.md).
+Documentation only: no frontend/backend source, baseline, runtime, migration,
+remote/dev/main/production or release mutation. Claude records genuine missing
+DTO facts as backend requests rather than inventing data to fit a chart.
