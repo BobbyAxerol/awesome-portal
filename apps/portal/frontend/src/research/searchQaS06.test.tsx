@@ -227,6 +227,49 @@ describe("D5 — the ledger pages with the served cursor", () => {
   });
 });
 
+describe("W3 — the candidate pool pages on its own cursor", () => {
+  const pool = (ids: string[], hasMore: boolean, next: string | null) => {
+    const body = copy(SURFACE);
+    body.candidates.source_candidate_count = 4;
+    body.candidates.rows = ids.map((id) => ({ ...copy(SURFACE.candidates.rows[0]!), candidate_id: id, source_ordinal: Number(id) }));
+    body.candidates.page = { ...SURFACE.ledger.page, has_more: hasMore, next_cursor: next } as NonNullable<typeof body.candidates.page>;
+    return body;
+  };
+
+  it("sends the candidate cursor alone (never a trial cursor), appends once, then offers nothing", async () => {
+    stub((params) => {
+      if (params.get("candidate_cursor") === "cand-2") return [200, pool(["1", "2", "3"], false, null)];
+      return [200, pool(["0", "1"], true, "cand-2")];
+    });
+    const { container } = await settled();
+    expect(container.querySelectorAll("[data-candidate]")).toHaveLength(2);
+    expect(container.querySelector("[data-candidate-count]")?.textContent).toContain("2 of 4");
+    const more = container.querySelector("[data-action='candidate-more']") as HTMLButtonElement;
+    expect(more.getAttribute("title")).toContain("2 of 4");
+    fireEvent.click(more);
+    await waitFor(() => expect(container.querySelectorAll("[data-candidate]")).toHaveLength(4));
+    const paged = currentSourceCalls.filter((search) => search.includes("candidate_cursor=cand-2"));
+    expect(paged).toHaveLength(1);
+    expect(paged[0]).not.toMatch(/[?&]cursor=/);
+    expect(container.querySelector("[data-candidate-count]")?.textContent).toContain("4 of 4");
+    expect(container.querySelector("[data-action='candidate-more']")).toBeNull();
+  });
+
+  it("a failed candidate page says so, keeps the button and leaves the rows in hand", async () => {
+    stub((params) => (params.get("candidate_cursor") ? [503, { error: { code: "UNAVAILABLE" } }] : [200, pool(["0", "1"], true, "cand-2")]));
+    const { container } = await settled();
+    fireEvent.click(container.querySelector("[data-action='candidate-more']") as Element);
+    await waitFor(() => expect(container.querySelector("[data-candidate-more-error]")).toBeTruthy());
+    expect(container.querySelector("[data-action='candidate-more']")).toBeTruthy();
+    expect(container.querySelectorAll("[data-candidate]")).toHaveLength(2);
+  });
+
+  it("a small historical pool has no page and no button", async () => {
+    const { container } = await settled();
+    expect(container.querySelector("[data-action='candidate-more']")).toBeNull();
+  });
+});
+
 describe("D4 — float noise", () => {
   it("removes binary noise, leaves integers, categories and short decimals alone", () => {
     expect(cleanParamText("2.4000000000000004")).toBe("2.4");

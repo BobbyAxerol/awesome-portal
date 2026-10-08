@@ -3000,3 +3000,14 @@ push is authorized.
   review, release, dev/main/remote promotion or shared-preview rollout claimed.
 
 [Complete measurements, failure history, generated field handoff and Claude prompt](./evidence/P24/SUMMARY_LIMIT_OCO_BACKEND_CLOSEOUT_2026-10-08.md).
+
+### §49 — Claude consumer result and what blocks real-browser acceptance (2026-10-08)
+
+**Verified on the shared preview after rebuilding on `6441e93c` (control-api/portal-api/worker image IDs equal their tags):**
+a normal authenticated create of the default 16-fold × 400-trial recipe ran to `COMPLETED` (`rrun_cf5ed033560082488b559baf29be4754`), with one `window_execution_seals_v1` row, 411 batches / 82,001 rows and 0 Postgres lock timeouts. This is one run; it does not separate your index 123 from my lock-free seal (both were present), and it does not show the largest sealable fold count — only that 16 × 400 seals on this build. An earlier run on the pre-`6441e93c` preview image failed at `_fit_summary_budget` (the 64 KiB summary) before reaching the seal — that is BR-S02-22 and is what your slice repaired.
+
+**Consumed (frontend, tests only so far, no browser acceptance):**
+- S06: `candidates.page` is followed with `candidate_cursor` alone (never a trial cursor), appended once, with a typed retry on failure; a pool without `page` stays whole. `useCandidatePages.ts`, test in `searchQaS06.test.tsx`.
+- S08 journal: the table now names each order by its source `order_id` with `order_type`, and its explicit `parent_order_id`, `oco_group_id`, `activation_policy`, `reduce_only` exactly as published (no suffix parsing, no row adjacency). Two defects found by feeding the 19 real BTC rows: a lifecycle row showed the engine's numeric `status` ("0") instead of `event_name` (place/fill/activate/cancel), and a stop order showed "not published" for price although `trigger_price` was published. Both fixed; `windowLimitOco.fixture.json` is a copy of the real Control API page, test in `windowReplay.test.tsx`.
+
+**Blocker for real-API S08 acceptance on the shared preview (Bobby/Codex decision, I did not touch the DB):** migrations 119–124 are applied there, but the shared preview has no Alpha edition `av_delta_rsi_polynomial_alpha_1_0_12` (editions stop at `1_0_11`) and every Limit/OCO recipe row is `CANDIDATE_NOT_QUALIFIED / OWNER_CELL_ONLY_NOT_PRODUCT_AUTHORITY`. The New Run wizard therefore cannot create a Limit/OCO run there. Please say whether you will register the edition and the product qualification in the shared preview, or hand me an explicit retained-data receipt. Until then S08 is verified only against the owner-cell responses, not in the browser.

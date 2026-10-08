@@ -6,6 +6,7 @@ import { PortalApiError } from "../lib/api";
 import { WindowReplayCard, activeLevel, levelDisclosure, servedLevel } from "./WindowReplayCard";
 import { fillSymbol } from "./EvidenceCharts";
 import { windowExecutionApi, type WindowExecutionPage } from "./windowExecutionClient";
+import limitOco from "./windowLimitOco.fixture.json";
 
 const charts = vi.hoisted(() => ({ last: null as null | { bars: unknown[]; fills: unknown[] } }));
 vi.mock("./EvidenceCharts", async (importOriginal) => {
@@ -250,5 +251,54 @@ describe("the card", () => {
     await waitFor(() => expect(container.querySelector('[data-window-authority="FROZEN_PARAMETER_POST_SELECTION_TRAINING_DIAGNOSTIC"]')).not.toBeNull());
     expect(container.querySelector("[data-window-caution]")!.textContent).toContain("not one stitched IS account");
     expect(observations.mock.calls.at(-1)![1]).toEqual({ window: "IS", foldId: "0" });
+  });
+});
+
+/**
+ * BR-S02-21 · the journal of a real Delta Limit/OCO run (BTCUSDT, `rrun_eea1b8e4…`; 19 rows copied from the Control API answer, not built here):
+ * a LIMIT entry, a stop and a take-profit child, their relations and the lifecycle in order.
+ */
+describe("the Limit/OCO journal as the engine published it", () => {
+  const all = (limitOco.page as unknown as { rows: { payload: { record_kind: string } }[] }).rows;
+  const open = async (kind: string) => {
+    vi.spyOn(windowExecutionApi, "observations").mockResolvedValue(page(rows10()));
+    vi.spyOn(windowExecutionApi, "records").mockImplementation(async (_run, _scope, options) => {
+      const rows = all.filter((row) => row.payload.record_kind === (options?.kind ?? "FILL"));
+      return page(rows, { counts: { matching: rows.length, returned: rows.length } });
+    });
+    const view = render(<WindowReplayCard runId="rrun_x" defaultOpen />);
+    await waitFor(() => expect(view.container.querySelector("[data-record='FILL']")).not.toBeNull());
+    if (kind !== "FILL") {
+      fireEvent.click(view.container.querySelector(`[data-record-kind="${kind}"]`)!);
+      await waitFor(() => expect(view.container.querySelector(`[data-journal-table="${kind}"]`)).not.toBeNull());
+    }
+    return view;
+  };
+
+  it("names each order, its source parent, OCO group and activation policy exactly as the command report published them", async () => {
+    const { container } = await open("COMMAND");
+    const refs = [...container.querySelectorAll("[data-order-ref]")];
+    expect(refs.map((node) => node.getAttribute("data-order-ref"))).toEqual(["delta-limit-oco-entry-579", "delta-limit-oco-entry-579-sl", "delta-limit-oco-entry-579-tp"]);
+    expect(refs[0]!.textContent).toContain("limit");
+    expect(refs[0]!.querySelector("[data-order-relations]")!.textContent).toBe("activates immediately");
+    const sl = refs[1]!;
+    expect(sl.textContent).toContain("stop market");
+    expect(sl.querySelector("[data-order-relations]")!.textContent).toBe("parent delta-limit-oco-entry-579 · OCO delta-limit-oco-exits-579 · activates on parent full fill · reduce-only");
+  });
+
+  it("the stop order shows its trigger as a trigger, never as an unpublished price", async () => {
+    const { container } = await open("ORDER");
+    const stop = [...container.querySelectorAll("[data-record='ORDER']")].find((row) => row.querySelector('[data-order-ref="delta-limit-oco-entry-579-sl"]'))!;
+    const price = stop.querySelector('[data-price-kind="trigger"]')!;
+    expect(price.getAttribute("data-exact")).toBe("62730.759");
+    expect(price.textContent).toContain("trigger");
+    expect(stop.querySelector('[data-field-absent="price"]')).toBeNull();
+  });
+
+  it("lifecycle rows read place → fill → activate → fill → cancel by event name, not by the engine's numeric status", async () => {
+    const { container } = await open("LIFECYCLE");
+    const rows = [...container.querySelectorAll("[data-journal-table='LIFECYCLE'] tbody tr")];
+    const event = (row: Element) => `${row.querySelector("[data-order-ref]")!.getAttribute("data-order-ref")!.replace("delta-limit-oco-entry-579", "e")}:${row.querySelectorAll("td")[7]!.textContent}`;
+    expect(rows.map(event)).toEqual(["e:place", "e-sl:place", "e-tp:place", "e:fill", "e-sl:activate", "e-tp:activate", "e-tp:fill", "e-sl:cancel"]);
   });
 });

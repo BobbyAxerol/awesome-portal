@@ -313,6 +313,47 @@ function LevelDisclosure({ rows }: { rows: readonly ObservationRow[] }) {
   );
 }
 
+type JournalPayload = ExecutionRow["payload"];
+
+const ACTIVATION_WORDS: Record<string, string> = { immediate: "immediately", on_parent_full_fill: "on parent full fill" };
+
+/**
+ * The price a record published: a fill price, a limit price or a working price, and for a stop order its trigger. The trigger is named
+ * as one; a stop order is never shown as having no price when the engine published its trigger.
+ */
+function PriceCell({ payload }: { payload: JournalPayload }) {
+  const price = payload.fill_price ?? payload.price ?? payload.working_price;
+  if (price === null || price === undefined) {
+    const trigger = payload.trigger_price ?? payload.working_trigger_price;
+    if (trigger !== null && trigger !== undefined) {
+      return <span className="mono" data-exact={String(trigger)} data-price-kind="trigger" style={{ fontVariantNumeric: "tabular-nums" }}>{String(trigger)} <span style={{ color: "var(--ink-faint)" }}>trigger</span></span>;
+    }
+  }
+  return <Field value={price} record={payload} name="price" />;
+}
+
+/**
+ * Which order a record is about and, when the source published them, its explicit relations. Only the source's own IDs are shown and only
+ * as served: a parent, an OCO group and an activation policy are never inferred from an ID suffix or from row order.
+ */
+function OrderRef({ payload }: { payload: JournalPayload }) {
+  if (!payload.order_id) return <span className="mono italic" style={{ color: "var(--ink-faint)" }} data-field-absent="order_id">—</span>;
+  const relations: string[] = [];
+  if (payload.parent_order_id) relations.push(`parent ${payload.parent_order_id}`);
+  if (payload.oco_group_id) relations.push(`OCO ${payload.oco_group_id}`);
+  if (payload.activation_policy) relations.push(`activates ${ACTIVATION_WORDS[payload.activation_policy] ?? payload.activation_policy.replace(/_/g, " ")}`);
+  if (payload.reduce_only === true) relations.push("reduce-only");
+  return (
+    <span className="flex flex-col" data-order-ref={payload.order_id}>
+      <span className="mono" title={payload.order_id}>
+        {payload.order_id}
+        {payload.order_type ? <span style={{ color: "var(--ink-faint)" }}> · {payload.order_type.replace(/_/g, " ")}</span> : null}
+      </span>
+      {relations.length > 0 ? <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-order-relations>{relations.join(" · ")}</span> : null}
+    </span>
+  );
+}
+
 function Journal({ state, kind }: { state: PageState | null; kind: RecordKind }) {
   if (state === null || state.state === "loading") return <p className="mono text-[11px] italic" style={{ color: "var(--ink-faint)" }}>reading the journal…</p>;
   if (state.state === "unavailable") return <p className="mono text-[11px] italic" style={{ color: "var(--ink-soft)" }}>This server does not publish the engine journal yet.</p>;
@@ -328,7 +369,7 @@ function Journal({ state, kind }: { state: PageState | null; kind: RecordKind })
       <table className="w-full text-[11px]" data-journal-table={kind}>
         <thead>
           <tr style={{ color: "var(--ink-faint)", textAlign: "left" }}>
-            {["time (UTC)", "kind", "side", "price", "qty", "fee", "status / reason", "source"].map((head) => <th key={head} scope="col" className="mono pr-3 text-[9.5px] font-medium uppercase">{head}</th>)}
+            {["time (UTC)", "kind", "order", "side", "price", "qty", "fee", "status / reason", "source"].map((head) => <th key={head} scope="col" className="mono pr-3 text-[9.5px] font-medium uppercase">{head}</th>)}
           </tr>
         </thead>
         <tbody>
@@ -338,11 +379,12 @@ function Journal({ state, kind }: { state: PageState | null; kind: RecordKind })
               <tr key={`${p.source_relation}:${p.source_ordinal}:${row.source_ordinal}`} tabIndex={0} data-record={p.record_kind} data-record-ordinal={p.source_ordinal} style={{ borderTop: "1px solid var(--line-soft)" }}>
                 <td className="mono pr-3">{iso(p.filled_at_utc_ms ?? p.timestamp_utc_ms ?? row.at_utc_ms)}</td>
                 <td className="mono pr-3">{p.record_kind.toLowerCase().replace(/_/g, " ")}</td>
+                <td className="pr-3"><OrderRef payload={p} /></td>
                 <td className="pr-3"><Field value={p.side} record={p} name="side" /></td>
-                <td className="pr-3"><Field value={p.fill_price ?? p.price ?? p.working_price} record={p} name="price" /></td>
+                <td className="pr-3"><PriceCell payload={p} /></td>
                 <td className="pr-3"><Field value={p.fill_qty ?? p.qty ?? p.working_qty} record={p} name="qty" /></td>
                 <td className="pr-3"><Field value={p.fill_fee ?? p.fee} record={p} name="fee" /></td>
-                <td className="pr-3"><Field value={p.exit_reason ?? p.status ?? p.event_name ?? p.reason_code} record={p} name="status" /></td>
+                <td className="pr-3"><Field value={p.exit_reason ?? p.event_name ?? p.status ?? p.reason_code} record={p} name="status" /></td>
                 <td className="mono pr-3" style={{ color: "var(--ink-faint)" }} title="relation-local ordinal, not a global causal sequence">{p.source_relation} #{p.source_ordinal}</td>
               </tr>
             );

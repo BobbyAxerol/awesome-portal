@@ -87,7 +87,7 @@ export const searchApi = {
   /** `researchCurrentSourceSearchGetV1` — the retained ledger, or the typed not-applicable answer. */
   currentSource: (
     runId: string,
-    options: { workspaceId?: string; cursor?: string | null; fold?: string | null; signal?: AbortSignal } = {},
+    options: { workspaceId?: string; cursor?: string | null; candidateCursor?: string | null; fold?: string | null; signal?: AbortSignal } = {},
   ) => {
     const params = new URLSearchParams();
     if (options.workspaceId) params.set("workspace_id", options.workspaceId);
@@ -96,6 +96,8 @@ export const searchApi = {
     /* The cursor is echoed exactly as the server minted it; it is never
        decoded, rebuilt or compared. */
     if (options.cursor) params.set("cursor", options.cursor);
+    /* The candidate pool pages on its own relation: its cursor is never a trial cursor and is sent alone (it addresses only `candidates`). */
+    if (options.candidateCursor) params.set("candidate_cursor", options.candidateCursor);
     const serialized = params.toString();
     return call<CurrentSourceSearch | LaneNotApplicable>(
       `${RUNS}/${encodeURIComponent(runId)}/current-source/search${serialized ? `?${serialized}` : ""}`,

@@ -45,6 +45,7 @@ import { InfoMark } from "../components/InfoMark";
 import { ShortId } from "./ShortId";
 import { ImportedAlphaLine } from "./ImportedAlphaLine";
 import type { FoldLedgerSlot } from "./useFoldLedger";
+import { useCandidatePages } from "./useCandidatePages";
 import { useLedgerPages } from "./useLedgerPages";
 import { cleanParamText, cleanParameters } from "./searchParamText";
 import { refusalState } from "./researchRefusal";
@@ -666,6 +667,7 @@ function LedgerPanel({
   onClear,
   foldNote,
   more,
+  candidateMore,
 }: {
   slot: LedgerSlot;
   detail: SearchDetailDocument;
@@ -675,6 +677,7 @@ function LedgerPanel({
   onClear?: () => void;
   foldNote: string | null;
   more?: LedgerMore;
+  candidateMore?: LedgerMore;
 }) {
   useEffect(() => {
     onNeeded();
@@ -701,7 +704,7 @@ function LedgerPanel({
       </div>
 
       {slot.state === "ready" ? (
-        <LedgerRows search={slot.search} pick={pick} onPick={onPick} onClear={onClear} foldNote={foldNote} more={more} />
+        <LedgerRows search={slot.search} pick={pick} onPick={onPick} onClear={onClear} foldNote={foldNote} more={more} candidateMore={candidateMore} />
       ) : (
         <>
           <LedgerHead />
@@ -824,6 +827,7 @@ function LedgerRows({
   onClear,
   foldNote,
   more,
+  candidateMore,
 }: {
   search: CurrentSourceSearch;
   pick: string | null;
@@ -831,6 +835,7 @@ function LedgerRows({
   onClear?: () => void;
   foldNote: string | null;
   more?: LedgerMore;
+  candidateMore?: LedgerMore;
 }) {
   const trials = search.ledger.trials;
   const selectedId = search.selection.selected_trial_id;
@@ -990,7 +995,7 @@ function LedgerRows({
           ) : null}
         </div>
       ) : null}
-      {search.candidates.rows.length > 0 && (search.candidates.rows[0] as Partial<RetainedCandidate>).facts ? <CandidateLedger search={search} /> : null}
+      {search.candidates.rows.length > 0 && (search.candidates.rows[0] as Partial<RetainedCandidate>).facts ? <CandidateLedger search={search} more={candidateMore} /> : null}
     </div>
   );
 }
@@ -1069,7 +1074,7 @@ function scopeWords(facts: TrialFacts): string {
  * W3 · CG-P15-03: the Stage B ledger — QuantBT's candidate replays, each with
  * the OOS numbers the IS search never produced and the J the selector ranked.
  */
-function CandidateLedger({ search }: { search: CurrentSourceSearch }) {
+function CandidateLedger({ search, more }: { search: CurrentSourceSearch; more?: LedgerMore }) {
   const selectedId = search.selection.selected_trial_id;
   const rows = search.candidates.rows;
   /* Uniform note / equal id: stated once, not per row. */
@@ -1123,6 +1128,20 @@ function CandidateLedger({ search }: { search: CurrentSourceSearch }) {
           </div>
         );
       })}
+      {more && (more.hasMore || more.error) ? (
+        <div className="flex flex-wrap items-center gap-3 px-3 py-2" data-candidate-more>
+          {more.hasMore ? (
+            <button type="button" className="btn-ghost mono text-[10px]" disabled={more.loading} title={more.loading ? "Reading the next page of candidates" : `Show more candidates (${rows.length} of ${search.candidates.source_candidate_count} loaded)`} aria-label={`Show more candidates, ${rows.length} of ${search.candidates.source_candidate_count} loaded`} onClick={more.onMore} data-action="candidate-more">
+              {more.loading ? "loading…" : "more"}
+            </button>
+          ) : null}
+          {more.error ? (
+            <span className="mono text-[10px]" style={{ color: "var(--bad)" }} data-candidate-more-error role="alert">
+              Could not read the next page of candidates. Try again.
+            </span>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -2058,9 +2077,12 @@ export function SearchScreen({
   const folded = lane && foldLedger.state === "ready" ? foldLedger.search : null;
   /* D5: later pages of the retained ledger, appended to the first one in hand. */
   const pages = useLedgerPages(runId, folded ?? lane, folded && foldLedger.state === "ready" ? foldLedger.foldId : null, workspaceId);
-  const ledgerSlot: LedgerSlot = pages.merged && (folded || lane) ? { state: "ready", search: pages.merged } : ledger;
+  /* The candidate pool pages on its own cursor, appended to whatever the ledger hook merged. */
+  const candidatePages = useCandidatePages(runId, pages.merged, folded && foldLedger.state === "ready" ? foldLedger.foldId : null, workspaceId);
+  const ledgerSlot: LedgerSlot = candidatePages.merged && (folded || lane) ? { state: "ready", search: candidatePages.merged } : ledger;
   const inspected = folded ?? lane;
   const ledgerMore: LedgerMore = { hasMore: pages.hasMore, loading: pages.loading, error: pages.error !== null, onMore: pages.loadMore };
+  const candidateMore: LedgerMore = { hasMore: candidatePages.hasMore, loading: candidatePages.loading, error: candidatePages.error !== null, onMore: candidatePages.loadMore };
   /* D6: the ledger's fold id is the plan's own (0-based); the reader's fold is the cursor's. A filter that keeps every trial says nothing. */
   const filter = inspected?.ledger.fold_filter ?? null;
   const foldNote = filter && filter.matched_rows < inspected!.ledger.source_trial_count ? `fold ${cursor.fold}` : null;
@@ -2716,7 +2738,7 @@ export function SearchScreen({
             </div>
 
             {/* ------------------------------------------ ledger, full width */}
-            <LedgerPanel slot={ledgerSlot} detail={detail} onNeeded={ensureLedger} pick={pick} onPick={onPick} onClear={onClear} foldNote={foldNote} more={ledgerMore} />
+            <LedgerPanel slot={ledgerSlot} detail={detail} onNeeded={ensureLedger} pick={pick} onPick={onPick} onClear={onClear} foldNote={foldNote} more={ledgerMore} candidateMore={candidateMore} />
 
             {absences.length > 0 ? (
               <section className="flex flex-wrap gap-x-5 gap-y-1.5 px-1" data-source-absences>
