@@ -876,6 +876,8 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
         from portal_api.adapters import research_native_routes
         if native_row['profile_id'] == 'p10.delta-intrabar-bracket-fixed-1h.v4':
             from portal_api.adapters import research_native_bracket_v4 as research_native_routes
+        elif native_row['profile_id'] == 'p10.delta-event-driven-limit-oco-fixed-1h.v1':
+            from portal_api.adapters import research_native_limit_oco_v1 as research_native_routes
         actual_hash=hashlib.sha256(Path(research_native_routes.__file__).read_bytes()).hexdigest()
         if qualification_binding is not None or native_row['descriptor']['native_input']['adapter_sha256'] != actual_hash:
             raise ValueError('native implementation/release differs from its immutable declaration')

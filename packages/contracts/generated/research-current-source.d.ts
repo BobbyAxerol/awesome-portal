@@ -3492,10 +3492,13 @@ export interface components {
                     matched_rows: number;
                 };
             };
+            /** @description Complete source_candidate_count; rows are one independent candidate page. Large pools use 50 rows, small historical pools remain whole. Follow page.next_cursor as candidate_cursor; no trial cursor can address this relation. Selection/pool calculations always use all retained candidates. */
             candidates: {
                 source_candidate_count: number;
                 rows: components["schemas"]["Candidate"][];
                 availability: components["schemas"]["Availability"];
+                returned_rows?: number;
+                page?: components["schemas"]["Page"];
             };
             diagnostics: {
                 candidates: components["schemas"]["Fact"];
@@ -4933,6 +4936,8 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 /** @description W3: keep ledger rows whose published fold scope covers this retained fold id; cursors bind the filter. */
                 fold?: components["parameters"]["Fold"];
+                /** @description Independent candidate-page cursor, scoped to this workspace/run/revision/operation/table. Never a TRIAL cursor. */
+                candidate_cursor?: components["schemas"]["OpaqueCursor"];
             };
             header?: never;
             path: {

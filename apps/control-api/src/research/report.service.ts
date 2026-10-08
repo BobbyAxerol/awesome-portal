@@ -203,14 +203,19 @@ export class ResearchReportService {
       throw new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", "Retained current-source reads are not enabled in this deployment.", 503);
     }
     const page = ResearchCurrentSourcePageQuerySchema.parse({ limit: 1 });
-    const [evidence, split, search, freeze, replay, equity] = await Promise.all([
-      this.currentSource.evidence(scope, runId),
-      this.currentSource.split(scope, runId),
-      this.currentSource.search(scope, runId, page),
-      this.currentSource.freeze(scope, runId),
-      this.currentSource.replay(scope, runId, page),
-      this.currentSource.evidenceSeries(scope, runId, "EQUITY"),
-    ]).catch((error: unknown) => {
+    // Respect the retained reader's two-slot admission. Six concurrent
+    // projections of a 6,400-trial run cause this writer to time out its own
+    // queue and leave unrelated acquired clients idle during CPU validation.
+    // No DB transaction spans these calls; every named reader keeps its own
+    // actor/source-revision checks and finite row bounds.
+    const [evidence, split, search, freeze, replay, equity] = await (async()=>[
+      await this.currentSource.evidence(scope, runId),
+      await this.currentSource.split(scope, runId),
+      await this.currentSource.search(scope, runId, page),
+      await this.currentSource.freeze(scope, runId),
+      await this.currentSource.replay(scope, runId, page),
+      await this.currentSource.evidenceSeries(scope, runId, "EQUITY"),
+    ] as const)().catch((error: unknown) => {
       if (error instanceof ResearchCurrentSourceError && error.status === 409) {
         throw new ResearchReportError("RESEARCH_REPORT_NOT_READY", "Report source facts are not sealed yet.", 409);
       }

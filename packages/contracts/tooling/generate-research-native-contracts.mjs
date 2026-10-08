@@ -25,12 +25,13 @@ const nullable=s=>({anyOf:[s,{type:'null'}]}),en=(...v)=>({enum:v});
 const cost=obj({state:en('AVAILABLE','NOT_PUBLISHED'),total:nullable({type:'string',pattern:'^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$',maxLength:96}),reason_code:nullable(en('NATIVE_RESULT_SERIES_NOT_PUBLISHED'))});
 cost.oneOf=[{properties:{state:{const:'AVAILABLE'},total:{type:'string'},reason_code:{type:'null'}}},{properties:{state:{const:'NOT_PUBLISHED'},total:{type:'null'},reason_code:{type:'string'}}}];
 const result=obj({schema_version:{const:'research.native-route-result.v1'},execution_route:en('intrabar_bracket','reactive','event_driven'),
- authority:{const:'PINNED_QUANTBT_ACCOUNTING_NOT_PORTAL_PNL'},input_protocol:en('DELTA_CLOSE_BRACKET_INTENTS_V1','DELTA_CLOSE_STATEFUL_CALLBACK_V1','DELTA_CLOSE_ORDER_COMMANDS_V1'),
+ authority:{const:'PINNED_QUANTBT_ACCOUNTING_NOT_PORTAL_PNL'},input_protocol:en('DELTA_CLOSE_BRACKET_INTENTS_V1','DELTA_CLOSE_STATEFUL_CALLBACK_V1','DELTA_CLOSE_ORDER_COMMANDS_V1','DELTA_CLOSE_LIMIT_OCO_COMMANDS_V1'),
  clock:en('KNOWN_CLOSE_NEXT_BAR_INTRABAR','KNOWN_CLOSE_NEXT_BAR_CLOSE'),position_unit:{const:'CONTRACT_QUANTITY'},target_notional:{const:'2000'},
  fees:cost,funding:cost,cost_scope:{const:'FULL_CHILD_TAPE'},fills_count:{type:'integer',minimum:0,maximum:100000},orders_count:nullable({type:'integer',minimum:0,maximum:100000}),replay_authority:{const:'RETAINED_ENGINE_AUDIT_ONLY_NOT_BROKER_EVENTS'}});
 result.oneOf=[['intrabar_bracket','DELTA_CLOSE_BRACKET_INTENTS_V1','KNOWN_CLOSE_NEXT_BAR_INTRABAR'],
  ['reactive','DELTA_CLOSE_STATEFUL_CALLBACK_V1','KNOWN_CLOSE_NEXT_BAR_CLOSE'],
- ['event_driven','DELTA_CLOSE_ORDER_COMMANDS_V1','KNOWN_CLOSE_NEXT_BAR_CLOSE']]
+ ['event_driven','DELTA_CLOSE_ORDER_COMMANDS_V1','KNOWN_CLOSE_NEXT_BAR_CLOSE'],
+ ['event_driven','DELTA_CLOSE_LIMIT_OCO_COMMANDS_V1','KNOWN_CLOSE_NEXT_BAR_CLOSE']]
  .map(([route,protocol,clock])=>({properties:{execution_route:{const:route},input_protocol:{const:protocol},clock:{const:clock}}}));
 for(const file of ['research-foundation','research-run-create','research-progress','research-evidence','research-split','research-search','research-freeze','research-replay','research-report','research-attempt-lineage','research-current-source']){
  const path=new URL(`packages/contracts/openapi/${file}.openapi.json`,root),old=readFileSync(path,'utf8'),doc=JSON.parse(old);let next=old;

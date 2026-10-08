@@ -537,11 +537,14 @@ export function searchStudySurfaces(
   studies: readonly SearchStudySurfaceInput[],
   scope: "INNER_VALIDATION_OUTER_STUDY" | "OUTER_FOLD_DECAY_STUDY" | "IS_ONLY_OUTER_STUDY" = "INNER_VALIDATION_OUTER_STUDY",
   stoppingBudget: { requestedTrials: number; patience: number } | null = null,
+  maximumEmittedPoints = SURFACE_POINT_LIMIT,
 ): SearchStudySurface[] {
   if (studies.length < 2 || studies.length > 16) throw new RangeError("Causal study count is outside the immutable profile bound.");
+  if(!Number.isSafeInteger(maximumEmittedPoints) || maximumEmittedPoints < 2*studies.length
+    || maximumEmittedPoints > SURFACE_POINT_LIMIT) throw new RangeError("Study transport point budget is invalid.");
   const range = currentSourceRetainedRecipe(retainedProfileId)?.public_profile.trial_count ?? { min: 3, max: 3 };
   const population = studies[0]!.trials.length;
-  const pointBudget = Math.floor(SURFACE_POINT_LIMIT / studies.length);
+  const pointBudget = Math.floor(maximumEmittedPoints / studies.length);
   const foldIds = new Set<string>(), studyIds = new Set<string>(), trialIds = new Set<string>();
   return studies.map((study) => {
     if (!TrialId.safeParse(study.foldId).success || !TrialId.safeParse(study.studyId).success

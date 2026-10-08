@@ -118,7 +118,8 @@ for receipt in \
   P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md \
   P10/EXPANDED_TRIAL_PRODUCT_QUALIFICATION_2026-10-06.md \
   P10/NATIVE_ROUTE_PRODUCT_QUALIFICATION_2026-10-06.md \
-  P10/BRACKET_V4_SOURCE_JOURNAL_QUALIFICATION_2026-10-07.md; do
+  P10/BRACKET_V4_SOURCE_JOURNAL_QUALIFICATION_2026-10-07.md \
+  P10/LIMIT_OCO_PRODUCT_QUALIFICATION_2026-10-08.md; do
   mkdir -p "${WORKSPACE_DIR}/upgrade/research_loop/evidence/${receipt%/*}"
   cp -a "${ROOT_DIR}/upgrade/research_loop/evidence/${receipt}" \
     "${WORKSPACE_DIR}/upgrade/research_loop/evidence/${receipt}"

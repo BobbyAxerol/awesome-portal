@@ -418,6 +418,33 @@ def _retention(trial_states: tuple, *, selection: dict | None, folds: int = 2) -
     )
 
 
+def test_6400_retained_catchup_keeps_exact_study_census_without_6000_relay_events(tmp_path: Path) -> None:
+    journal = _journal(tmp_path, profile="DELTA_WFO", planned_trials=6400)
+    _to_study(journal)
+    journal.emit("trial_completed", {"study": "PER_FOLD_STUDY", "trial": 400,
+        "study_id": "0", "source_trial_id": "399", "state": "COMPLETE"})
+    trials = tuple({"trial_id": f"study_{i // 400}.trial_{i % 400}",
+        "study_id": str(i // 400), "source_trial_id": str(i % 400),
+        "state": "COMPLETE", "objective": "1.5"} for i in range(6400))
+    folds = tuple({"study_id": str(i), "selected_trial_id": f"study_{i}.trial_1",
+        "objective": "1.5", "parameters": {"window": "34"}} for i in range(16))
+    result = SimpleNamespace(trial_states=("COMPLETE",) * 6400, causal_trials=trials,
+        causal_fold_selections=folds, table_rows={"FOLD": 16})
+    cursor = DurableQuantWorker._emit_retained_wfo_progress(journal, result)
+    events = journal.events_after(0)["events"]
+    catchup = [e["payload"] for e in events if e["event_type"] == "trial_completed"]
+    assert [e["trial"] for e in catchup] == list(range(400, 6401, 400))
+    assert [e["study_id"] for e in catchup] == [str(i) for i in range(16)]
+    assert all(e["source_trial_id"] == "399" for e in catchup)
+    assert len(result.causal_trials) == 6400
+    snapshot = journal.snapshot()
+    assert snapshot["overall"]["trials_done"] == 6400
+    assert len(snapshot["folds"]) == 16
+    assert cursor["fold"] == 16 and cursor["trial"] == 6002
+    reopened = _journal(tmp_path, profile="DELTA_WFO", planned_trials=6400).snapshot()
+    assert reopened["overall"]["trials_done"] == 6400
+
+
 def test_retained_wfo_close_fills_only_missed_trials_and_carries_the_selection(tmp_path: Path) -> None:
     journal = _journal(tmp_path, profile="DELTA_WFO")
     _to_study(journal)

@@ -16,13 +16,23 @@ export function buildPool(connectionString: string): Pool {
     // DB restart. Do not log Error.message/client/config: they can carry DSNs.
     const logger = new Logger("PostgreSQLPool");
     let lastWarningAt = -Infinity;
-    sharedPool.on("error", (error: Error & { code?: string }) => {
+    const warnConnectionLoss = (event: string, error: Error & { code?: string }) => {
       const now = Date.now();
       if (now - lastWarningAt < 30_000) return;
       lastWarningAt = now;
       const code = typeof error.code === "string" && /^[A-Z0-9]{5}$/.test(error.code)
         ? error.code : "CONNECTION_ERROR";
-      logger.warn(JSON.stringify({ event: "DATABASE_IDLE_CONNECTION_LOST", code }));
+      logger.warn(JSON.stringify({ event, code }));
+    };
+    sharedPool.on("error", (error: Error & { code?: string }) =>
+      warnConnectionLoss("DATABASE_IDLE_CONNECTION_LOST", error));
+    // pg's pool handler is removed while a client is checked out. A server
+    // idle-in-transaction termination can otherwise crash the process before
+    // COMMIT rejects. The query still rejects normally; pg destroys the broken
+    // client on release. Never swallow query errors or relax transaction bounds.
+    sharedPool.on("connect", (client: PoolClient) => {
+      client.on("error", (error: Error & { code?: string }) =>
+        warnConnectionLoss("DATABASE_BORROWED_CONNECTION_LOST", error));
     });
   }
   return sharedPool;

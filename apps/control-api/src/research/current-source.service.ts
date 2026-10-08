@@ -666,6 +666,11 @@ export class ResearchCurrentSourceService {
     const retained = await this.repository.searchForRead(scope, runId, signal);
     if (!retained) return this.noSealForRead(scope, runId, "search", signal);
     const { seal, inputs } = retained;
+    // Validate each exact DB row once for this authorized snapshot. At 16 ×
+    // 400 trials, parsing the entire ledger again inside every study starves
+    // the API event loop (and unrelated transaction heartbeats).
+    const parsedTrials = new Map(inputs.trials.map(row => [row, asTrial(row)]));
+    const parsedTrial = (row: CurrentSourceStoredRow) => parsedTrials.get(row)!;
     const summary = parseSummary(seal);
     const facts = summary.source_facts;
     const ledgerMode = facts?.search.trial_ledger_mode ?? null;
@@ -694,7 +699,7 @@ export class ResearchCurrentSourceService {
         throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "The fold filter names no retained fold of this run.", 400);
       }
       const all = inputs.trials;
-      const matched = all.filter((row) => trialCoversFold(asTrial(row).trial_facts, fold));
+      const matched = all.filter((row) => trialCoversFold(parsedTrial(row).trial_facts, fold));
       matchedRows = matched.length;
       page = this.pageInMemory(scope.workspaceId, runId, currentRevision, operation, matched, query);
     }
@@ -702,9 +707,9 @@ export class ResearchCurrentSourceService {
     const allTrials = inputs.trials;
     let space = declaredSpace(seal.profileId, summary.selection.parameters, DEFAULT_PARAMETER_BINDING_REGISTRY,
       importedRetainedBinding(seal.profileId,seal.runDeclarationInputs) ?? undefined);
-    const roles = selectionRoles(facts, summary.selection,summary.optimizer_disclosure);
+    const roles = selectionRoles(facts, summary.selection, summary.optimizer_disclosure, inputs.candidates.map(asCandidate));
     const surfaceTrials: SurfaceTrial[] = allTrials.map((row) => {
-      const trial = asTrial(row);
+      const trial = parsedTrial(row);
       return {
         sourceOrdinal: row.sourceOrdinal,
         trialId: trial.trial_id,
@@ -733,7 +738,7 @@ export class ResearchCurrentSourceService {
           const selected = retainedFoldSelection(outerFold);
           if (!selected) throw new RangeError("An outer study selection was not retained.");
           const members = allTrials.flatMap((row, index) => {
-            const trial = asTrial(row), trialFacts = trial.trial_facts;
+            const trial = parsedTrial(row), trialFacts = trial.trial_facts;
             if (trialFacts?.study_id !== selected.study_id || trialFacts.fold_scope.fold_id !== outerFold.fold_id) return [];
             if (!["FOLD", "PER_FOLD_STUDY"].includes(trialFacts.fold_scope.kind)
               || !isCausalStageATrial(trial)) {
@@ -746,7 +751,11 @@ export class ResearchCurrentSourceService {
         });
         studySurfaces = searchStudySurfaces(seal.profileId, studies,
           isDecaySeal(seal) ? "OUTER_FOLD_DECAY_STUDY" : isMode4CausalSeal(seal) ? "IS_ONLY_OUTER_STUDY" : "INNER_VALIDATION_OUTER_STUDY",
-          patience === null ? null : {requestedTrials: configuredTrials, patience});
+          patience === null ? null : {requestedTrials: configuredTrials, patience},
+          // Leave room for the complete 200-row trial page and candidate
+          // page inside 1 MiB. This samples chart points only; statistical
+          // distributions and retained ledger/selection facts stay complete.
+          allTrials.length > 400 ? 320 : undefined);
         // Declared ranges are common; this singleton's values belong only to
         // the final deployment, not a run-global theta used by earlier folds.
         space = { ...space, selection_scope: "LAST_FOLD_DEPLOYMENT", fold_id: last.fold_id, study_id: retainedFoldSelection(last)!.study_id };
@@ -754,7 +763,16 @@ export class ResearchCurrentSourceService {
         throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Causal study surfaces do not match exact retained fold and trial identities.", 503);
       }
     }
-    const firstFacts = allTrials.length > 0 ? asTrial(allTrials[0]!).trial_facts : undefined;
+    const firstFacts = allTrials.length > 0 ? parsedTrial(allTrials[0]!).trial_facts : undefined;
+    // A large pool must not duplicate >1 MiB of candidate facts into every
+    // trial page. Keep historical small pools whole; large pools have an
+    // independent 50-row opaque keyset. All calculations above/below still
+    // use the FULL seal-bound population, not this transport page.
+    const candidateOperation = "research.current-source.search.candidates.v1";
+    const candidateLimit = inputs.candidates.length <= 200 ? Math.max(1, inputs.candidates.length) : 50;
+    const candidatePage = this.pageInMemory(scope.workspaceId, runId, currentRevision, candidateOperation,
+      inputs.candidates, { limit: candidateLimit,
+        ...("candidate_cursor" in query && query.candidate_cursor ? {cursor: query.candidate_cursor} : {}) }, "CANDIDATE");
     // E5: the pool and θ*'s per-fold decay read every retained trial and fold row.
     const poolFolds = inputs.folds;
     const pool = searchPool({
@@ -762,7 +780,7 @@ export class ResearchCurrentSourceService {
       sourceAdapterId: seal.sourceAdapterId,
       sourceProfileId: seal.profileId,
       trials: allTrials.map((row) => {
-        const trial = asTrial(row);
+        const trial = parsedTrial(row);
         return { trialId: trial.trial_id, state: typedTrialState(trial.state), objective: trial.objective, facts: trial.trial_facts };
       }),
       candidates: inputs.candidates.map((row) => {
@@ -787,7 +805,7 @@ export class ResearchCurrentSourceService {
         state: "AVAILABLE" as const,
         selected_trial_id: summary.selection.trial_id,
         ...selectedTrialPresentation(summary.selection.trial_id, seal.profileId,
-          allTrials.map(asTrial).filter(trial => trial.trial_id === summary.selection.trial_id)
+          allTrials.map(parsedTrial).filter(trial => trial.trial_id === summary.selection.trial_id)
             .map(trial => trial.trial_facts ? { trial_id: trial.trial_id, ...trial.trial_facts } : undefined)[0]),
         objective: summary.selection.objective,
         parameters: summary.selection.parameters,
@@ -805,7 +823,7 @@ export class ResearchCurrentSourceService {
         source_trial_count: seal.tableRows.TRIAL,
         returned_rows: page.rows.length,
         trials: page.rows.map((row) => {
-          const { trial_facts: rowFacts, ...trial } = asTrial(row);
+          const { trial_facts: rowFacts, ...trial } = parsedTrial(row);
           const state = typedTrialState(trial.state);
           return {
             source_ordinal: row.sourceOrdinal,
@@ -825,7 +843,7 @@ export class ResearchCurrentSourceService {
       },
       candidates: {
         source_candidate_count: seal.tableRows.CANDIDATE,
-        rows: inputs.candidates.map((row) => {
+        rows: candidatePage.rows.map((row) => {
           const { trial_facts: rowFacts, ...candidate } = asCandidate(row);
           return {
             source_ordinal: row.sourceOrdinal,
@@ -841,6 +859,8 @@ export class ResearchCurrentSourceService {
           };
         }),
         availability: available(),
+        returned_rows: candidatePage.rows.length,
+        page: this.page(scope.workspaceId, runId, currentRevision, "CANDIDATE", candidateLimit, candidatePage, candidateOperation),
       },
       diagnostics: searchDiagnostics(facts),
       sampler_evidence: readSamplerEvidence(inputs.requestedSpec, seal.requestedSpecDigest, seal.tableRows.TRIAL, facts?.search.sampler_trace),
@@ -1698,8 +1718,9 @@ export class ResearchCurrentSourceService {
     operation: string,
     rows: CurrentSourceStoredRow[],
     query: ResearchCurrentSourcePageQuery | ResearchCurrentSourceSearchQuery,
+    tableKind: CurrentSourceTableKind = "TRIAL",
   ): CurrentSourcePage {
-    const resourceId = `${operation}:${runId}:${currentRevision}:TRIAL`;
+    const resourceId = `${operation}:${runId}:${currentRevision}:${tableKind}`;
     const fingerprint = queryFingerprint({ resourceId, limit: query.limit, filters: [], sort: [] });
     const ordered = [...rows].sort((left, right) => left.sourceOrdinal - right.sourceOrdinal);
     let window: CurrentSourceStoredRow[];
@@ -1710,7 +1731,7 @@ export class ResearchCurrentSourceService {
       const before = this.decodeCursor(workspaceId, resourceId, fingerprint, "before", query.before);
       window = ordered.filter((row) => row.sourceOrdinal < before).slice(-query.limit);
     } else {
-      const at = this.selectedOrdinal(workspaceId, runId, currentRevision, "TRIAL", query);
+      const at = this.selectedOrdinal(workspaceId, runId, currentRevision, tableKind, query);
       window = ordered.filter((row) => at === null || row.sourceOrdinal >= at).slice(0, query.limit);
     }
     const first = window[0]?.sourceOrdinal;

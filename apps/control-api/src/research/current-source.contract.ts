@@ -109,6 +109,8 @@ export const ResearchCurrentSourceSearchQuerySchema = ResearchCurrentSourceReadQ
   at: OpaqueCursorSchema.optional(),
   limit: z.coerce.number().int().min(1).max(200).default(100),
   fold: SourceIdentifierSchema.optional(),
+  /** Independent candidate keyset, never a trial ledger/playback cursor. */
+  candidate_cursor: OpaqueCursorSchema.optional(),
 }).strict().superRefine((value, context) => {
   if ([value.cursor, value.before, value.at].filter((entry) => entry !== undefined).length > 1) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["cursor"], message: "cursor, before and at are mutually exclusive" });
@@ -942,6 +944,9 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
     source_candidate_count: z.number().int().min(1).max(CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS),
     rows: z.array(CandidateSchema).min(1).max(CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS),
     availability: ResearchCurrentSourceAvailabilitySchema,
+    /** Additive transport page; the immutable source census remains complete. */
+    returned_rows: z.number().int().nonnegative().max(200).optional(),
+    page: PageSchema.optional(),
   }).strict(),
   diagnostics: z.object({
     candidates: ResearchCurrentSourceFactSchema,

@@ -94,6 +94,34 @@ def test_summary_budget_keeps_independently_bounded_enrichment() -> None:
     assert failure.value.code == "RESEARCH_CURRENT_SOURCE_METADATA_TOO_LARGE"
 
 
+def test_large_population_reference_keeps_all_6400_ids_and_core_budget() -> None:
+    adapter = object.__new__(CurrentSourceArtifactAdapter)
+    ids = sorted(f"study_fold{i // 400}.trial_{i % 400}" for i in range(6400))
+    candidates = [{"candidate_id": key, "payload_json": "{}"} for key in ids]
+    summary = {"source_facts": {"search": {"candidate_source_trial_ids": ids}}, "authority": "unchanged"}
+    assert len(json.dumps(summary).encode()) > 65_536
+    adapter._reference_candidate_population(summary, candidates)
+    adapter._fit_summary_budget(summary, [])
+    ref = summary["source_facts"]["search"]["candidate_source_trial_ids_ref"]
+    assert ref["source_field"] == "candidate_id" and ref["count"] == 6400
+    assert ref["sha256"] == hashlib.sha256(json.dumps(ids, separators=(",", ":")).encode()).hexdigest()
+    assert summary["authority"] == "unchanged" and len(candidates) == 6400
+
+
+def test_population_reference_preserves_global_source_trial_identity_and_refuses_mismatch() -> None:
+    ids = sorted(str(i) for i in range(400))
+    candidates = [{"candidate_id": f"candidate_{i}", "payload_json": json.dumps({"trial_facts": {"source_trial_id": str(i)}})} for i in range(400)]
+    summary = {"source_facts": {"search": {"candidate_source_trial_ids": ids}}}
+    CurrentSourceArtifactAdapter._reference_candidate_population(summary, candidates)
+    assert summary["source_facts"]["search"]["candidate_source_trial_ids_ref"]["source_field"] == "trial_facts.source_trial_id"
+    with pytest.raises(CurrentSourceArtifactError, match="does not bind"):
+        CurrentSourceArtifactAdapter._reference_candidate_population({"source_facts": {"search": {"candidate_source_trial_ids": ids}}}, candidates[:-1])
+    small = {"source_facts": {"search": {"candidate_source_trial_ids": ["0"]}}}
+    before = json.dumps(small)
+    CurrentSourceArtifactAdapter._reference_candidate_population(small, [])
+    assert json.dumps(small) == before
+
+
 def _market() -> PreparedMarketData:
     return PreparedMarketData(
         frame=build_market_frame(),

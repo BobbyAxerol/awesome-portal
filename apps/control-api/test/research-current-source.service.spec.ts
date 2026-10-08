@@ -121,6 +121,33 @@ function service(repository: Record<string, unknown>) {
 }
 
 describe("RS-02 retained current-source named read models", () => {
+  it("pages a 620-member candidate census separately without losing trial rows or accepting a trial cursor", async () => {
+    const source = {...seal, tableRows:{...seal.tableRows,CANDIDATE:620}};
+    const retained = Array.from({length:620},(_,n)=>({...candidates[0]!,sourceOrdinal:n,
+      sourceId:`candidate-${n}`,payload:{...candidates[0]!.payload,candidate_id:`candidate-${n}`}}));
+    const current = new ResearchCurrentSourceService({searchForRead:vi.fn().mockResolvedValue({seal:source,
+      inputs:{requestedSpec:null,trials,candidates:retained,folds,stageEvents:p11StageEvents()}})} as never,{
+      FEATURE_RESEARCH_CURRENT_SOURCE:"true", QUERY_CURSOR_ACTIVE_KEY_ID:"query-k1",
+      QUERY_CURSOR_KEYS_JSON:'{"query-k1":"current-source-test-key-is-at-least-32-bytes"}',
+      QUERY_CURSOR_TTL_SECONDS:900,
+    } as never);
+    const first = sealed(await current.search(scope,source.runId,{limit:1}));
+    expect(first.candidates).toMatchObject({source_candidate_count:620,returned_rows:50,
+      page:{limit:50,has_more:true,has_previous:false}});
+    expect(first.ledger.source_trial_count).toBe(2);
+    const ids = [...first.candidates.rows.map(row=>row.candidate_id)];
+    let cursor = first.candidates.page!.next_cursor;
+    while(cursor){
+      const next=sealed(await current.search(scope,source.runId,{limit:1,candidate_cursor:cursor}));
+      ids.push(...next.candidates.rows.map(row=>row.candidate_id));
+      cursor=next.candidates.page!.next_cursor;
+    }
+    expect(ids).toHaveLength(620);expect(new Set(ids).size).toBe(620);
+    await expect(current.search(scope,source.runId,{limit:1,candidate_cursor:first.ledger.page.next_cursor!}))
+      .rejects.toMatchObject({status:400});
+    await expect(current.search(scope,source.runId,{limit:1,cursor:first.candidates.page!.next_cursor!}))
+      .rejects.toMatchObject({status:400});
+  });
   it("Evidence reads a complete expanded candidate pool beyond64 without widening old seal bounds", async () => {
     const recipe = executionRecipes.find(r => r.descriptor.schema_version === "research.expanded-trial-profile.v1"
       && r.public_profile.optimization_mode === "mode_5_full_robust" && r.public_profile.timeframe === "1h")!;

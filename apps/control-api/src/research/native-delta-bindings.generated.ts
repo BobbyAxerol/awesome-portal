@@ -809,5 +809,95 @@ export const NATIVE_DELTA_BINDING_TABLE = [
       "slpercent": 1.3
     },
     "adapter_contract_digest": "ff592163a4f64e8bd6ad5ca10e56ad238ac3fc0914926545217e97663943d329"
+  },
+  {
+    "schema_version": "research.native-delta-binding.v1",
+    "alpha_id": "delta-rsi-polynomial-alpha",
+    "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_12",
+    "declared_contract": {
+      "schema_version": "research.alpha-source.v1",
+      "version": "1.0.12",
+      "entrypoint": "strategy.delta_rsi:generate_signals",
+      "required_columns": [
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume"
+      ],
+      "timeframes": [
+        "1h"
+      ],
+      "warmup_bars": 300,
+      "determinism": {
+        "seed_required": false,
+        "external_io": false
+      },
+      "parameter_space": {
+        "window": {
+          "minimum": 20,
+          "maximum": 60,
+          "step": 2
+        },
+        "rsi_l": {
+          "minimum": 12,
+          "maximum": 30,
+          "step": 1
+        },
+        "signalLength": {
+          "minimum": 3,
+          "maximum": 20,
+          "step": 1
+        },
+        "len_atr1": {
+          "minimum": 5,
+          "maximum": 20,
+          "step": 1
+        },
+        "len_atr2": {
+          "minimum": 25,
+          "maximum": 60,
+          "step": 1
+        },
+        "rvol": {
+          "minimum": 1,
+          "maximum": 2.5,
+          "step": 0.1
+        },
+        "len_vol": {
+          "minimum": 8,
+          "maximum": 40,
+          "step": 2
+        },
+        "slpercent": {
+          "minimum": 0.7,
+          "maximum": 2.5,
+          "step": 0.1
+        }
+      },
+      "execution": {
+        "adapter_id": "full03.delta-rsi.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "event_driven",
+        "protocol": "three_window_decay",
+        "parameter_mode": "FIXED_NATIVE_LIMIT_OCO_DELTA_V1"
+      },
+      "provenance": {
+        "protected_kernel_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
+        "specification_sha256": "3a4f7e5beb79eecebda61f46a8501d0128bffa0b29508ee1826835b1eeb59730",
+        "native_adapter_sha256": "10453d3e2ab548371df4344c46601241501fff76e4fe109a0e3c91068a29b118"
+      }
+    },
+    "fixed_parameters": {
+      "window": 32,
+      "rsi_l": 20,
+      "signalLength": 9,
+      "len_atr1": 10,
+      "len_atr2": 42,
+      "rvol": 1.6,
+      "len_vol": 16,
+      "slpercent": 1.3
+    },
+    "adapter_contract_digest": "915da40aee3724cf17443b2027685ff5d9c29801ee332fa487aeca2e6e90f4b5"
   }
 ];

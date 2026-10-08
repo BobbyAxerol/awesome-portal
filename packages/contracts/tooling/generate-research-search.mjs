@@ -19,6 +19,23 @@ point.properties.parameters = {
 const componentLine = /^      "SurfacePoint": [^\n]+,$/m;
 if (!componentLine.test(original)) throw new Error("SurfacePoint component layout changed; refusing an unrelated rewrite");
 let updated = original.replace(componentLine, `      "SurfacePoint": ${JSON.stringify(point)},`);
+// BR-S02-22: the full pool remains retained; transport uses its own opaque
+// cursor when a 620-member pool would overflow the one-MiB named response.
+const search = document.components.schemas.Search;
+const candidates = search.allOf.find(part=>part.properties?.candidates).properties.candidates;
+candidates.properties.returned_rows = {type:"integer",minimum:0,maximum:200};
+candidates.properties.page = {$ref:"#/components/schemas/Page"};
+candidates.description = "Complete source_candidate_count; rows are one independent candidate page. Large pools use 50 rows, small historical pools remain whole. Follow page.next_cursor as candidate_cursor; no trial cursor can address this relation. Selection/pool calculations always use all retained candidates.";
+updated = replaceComponent(updated,"Search",search,updated.indexOf('"schemas": {'));
+const operation = document.paths["/api/v1/quantbt/runs/{runId}/current-source/search"].get;
+const candidateCursor = {name:"candidate_cursor",in:"query",required:false,
+  schema:{$ref:"#/components/schemas/OpaqueCursor"},description:"Independent candidate-page cursor, scoped to this workspace/run/revision/operation/table. Never a TRIAL cursor."};
+const params = [...operation.parameters.filter(p=>p.name!=="candidate_cursor"),candidateCursor];
+const operationStart = updated.indexOf('"/api/v1/quantbt/runs/{runId}/current-source/search"');
+const parameterStart = updated.indexOf('"parameters":',operationStart);
+const parameterEnd = updated.indexOf('\n',parameterStart);
+if(parameterStart<0||parameterEnd<0)throw new Error("Missing compact Search parameters layout");
+updated = updated.slice(0,parameterStart)+`"parameters": ${JSON.stringify(params)},`+updated.slice(parameterEnd);
 // BR-S02-20: source partial pruning-step metrics are not completed objectives.
 const prunedMetric = {
   type: "object", additionalProperties: false, required: ["value", "reason_code"],

@@ -11,6 +11,8 @@
  * typed absence, never a zero.
  */
 
+import { createHash } from "node:crypto";
+import { ResearchCurrentSourceError } from "./current-source.error";
 import type {
   CurrentSourceCausalSelection,
   CurrentSourceProtocolDisclosure,
@@ -420,8 +422,24 @@ export function trialCoversFold(facts: CurrentSourceTrialFacts | undefined, fold
 
 const CENTROID_SELECTORS = new Set(["is_plateau_robust", "full_plateau_robust", "plateau", "flat"]);
 
+/** Resolve the exact seal-bound population, never just the current ledger page. */
+export function candidatePopulationIds(facts: CurrentSourceFacts | undefined,
+  candidates: ReadonlyArray<{ candidate_id: string; trial_facts?: CurrentSourceTrialFacts }> = []): string[] {
+  const search = facts?.search;
+  if (!search?.candidate_source_trial_ids_ref) return search?.candidate_source_trial_ids ?? [];
+  const ref = search.candidate_source_trial_ids_ref;
+  const raw = candidates.map(row => ref.source_field === "candidate_id"
+    ? row.candidate_id : row.trial_facts?.source_trial_id).filter((id): id is string => id != null);
+  const ids = [...new Set(raw)].sort();
+  if (ids.length !== ref.count || createHash("sha256").update(JSON.stringify(ids)).digest("hex") !== ref.sha256) {
+    throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained candidate population does not match its sealed reference.", 503);
+  }
+  return ids;
+}
+
 /** Raw IS best vs the selected candidate vs a centroid (CG-P15-03). */
-export function selectionRoles(facts: CurrentSourceFacts | undefined, selection: { trial_id: string | null; objective: string | null; scope?: "LAST_FOLD_DEPLOYMENT"; fold_id?: string }, disclosure?: CurrentSourceOptimizerDisclosure) {
+export function selectionRoles(facts: CurrentSourceFacts | undefined, selection: { trial_id: string | null; objective: string | null; scope?: "LAST_FOLD_DEPLOYMENT"; fold_id?: string }, disclosure?: CurrentSourceOptimizerDisclosure,
+  candidates: ReadonlyArray<{ candidate_id: string; trial_facts?: CurrentSourceTrialFacts }> = []) {
   const search = facts?.search;
   const selected = {
     state: "AVAILABLE" as const,
@@ -456,7 +474,7 @@ export function selectionRoles(facts: CurrentSourceFacts | undefined, selection:
     centroid,
     raw_best_is_equals_selected: selection.scope === "LAST_FOLD_DEPLOYMENT" || search.raw_best_is_trial_id === null || selection.trial_id === null
       ? null : search.raw_best_is_trial_id === selection.trial_id,
-    candidate_source_trial_ids: search.candidate_source_trial_ids,
+    candidate_source_trial_ids: candidatePopulationIds(facts, candidates),
   };
 }
 

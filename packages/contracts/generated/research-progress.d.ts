@@ -843,7 +843,7 @@ export interface components {
                 /** @constant */
                 authority: "PINNED_QUANTBT_ACCOUNTING_NOT_PORTAL_PNL";
                 /** @enum {unknown} */
-                input_protocol: "DELTA_CLOSE_BRACKET_INTENTS_V1" | "DELTA_CLOSE_STATEFUL_CALLBACK_V1" | "DELTA_CLOSE_ORDER_COMMANDS_V1";
+                input_protocol: "DELTA_CLOSE_BRACKET_INTENTS_V1" | "DELTA_CLOSE_STATEFUL_CALLBACK_V1" | "DELTA_CLOSE_ORDER_COMMANDS_V1" | "DELTA_CLOSE_LIMIT_OCO_COMMANDS_V1";
                 /** @enum {unknown} */
                 clock: "KNOWN_CLOSE_NEXT_BAR_INTRABAR" | "KNOWN_CLOSE_NEXT_BAR_CLOSE";
                 /** @constant */
@@ -907,6 +907,13 @@ export interface components {
                 execution_route?: "event_driven";
                 /** @constant */
                 input_protocol?: "DELTA_CLOSE_ORDER_COMMANDS_V1";
+                /** @constant */
+                clock?: "KNOWN_CLOSE_NEXT_BAR_CLOSE";
+            } | {
+                /** @constant */
+                execution_route?: "event_driven";
+                /** @constant */
+                input_protocol?: "DELTA_CLOSE_LIMIT_OCO_COMMANDS_V1";
                 /** @constant */
                 clock?: "KNOWN_CLOSE_NEXT_BAR_CLOSE";
             });

@@ -529,6 +529,26 @@
                     "const": "5404ead81e967be03a5347d3c1f20774699fe808a29ed6c334d186be4b68cb88"
                   }
                 }
+              },
+              {
+                "properties": {
+                  "execution_profile_id": {
+                    "const": "p10.delta-intrabar-bracket-fixed-1h.v4"
+                  },
+                  "execution_profile_digest": {
+                    "const": "b6a17c962f64c462fd7db2859160f2ef37547903e0084d00694ecc8dea5e20f0"
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "execution_profile_id": {
+                    "const": "p10.delta-event-driven-limit-oco-fixed-1h.v1"
+                  },
+                  "execution_profile_digest": {
+                    "const": "bd8fb94a6298ccc54278a8fe7e2cd707205721c52cda8adcbc9e51b5e49a2c88"
+                  }
+                }
               }
             ]
           }

@@ -20,6 +20,8 @@ import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "../tokens";
 import { acquireResearchPoolClient, BoundedResearchReadAdmission } from "./bounded-read";
 import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from "./contracts";
 import { ResearchCurrentSourceError } from "./current-source.error";
+import { candidatePopulationIds } from "./current-source-facts";
+import { CurrentSourceSummarySchema, CurrentSourceCandidatePayloadSchema } from "./current-source.payload";
 import { sha256ResearchJson } from "./preflight.service";
 import { p11StageEvents, type P11StageEvents } from "./p11-stage-events";
 import { ResearchRetainedAnalyticsV2Schema, type ResearchRetainedAnalyticsV2 } from "./retained-analytics-v2.contract";
@@ -625,6 +627,18 @@ export class ResearchCurrentSourceRepository {
           [scope.workspaceId,input.runId,input.artifactRevision,sealRelationLimit]);
         assertFull04SealConsistency(input,retained.rows.map(row=>({tableKind:row.table_kind,sourceOrdinal:asSafeNonNegative(row.source_ordinal,"optimizer source ordinal"),
           sourceId:row.source_id,payload:asJsonRecord(row.payload,"optimizer source payload")})),stoppingAuthority);
+      }
+      const rawPopulation = input.summary.source_facts as { search?: { candidate_source_trial_ids_ref?: unknown } } | undefined;
+      if (rawPopulation?.search?.candidate_source_trial_ids_ref) {
+        const population = CurrentSourceSummarySchema.parse(input.summary).source_facts!;
+        const retained = await client.query<{ payload: JsonColumn }>(
+          `SELECT payload FROM research.current_source_rows_v1
+            WHERE workspace_id=$1 AND run_id=$2 AND artifact_revision=$3 AND table_kind='CANDIDATE'
+            ORDER BY source_ordinal LIMIT 6401`, [scope.workspaceId, input.runId, input.artifactRevision]);
+        if (retained.rows.length !== input.tableRows.CANDIDATE || retained.rows.length > 6400) {
+          throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Candidate population exceeds its retained census.", 400);
+        }
+        candidatePopulationIds(population, retained.rows.map(row => CurrentSourceCandidatePayloadSchema.parse(asJsonRecord(row.payload, "candidate population"))));
       }
       await client.query(
         `INSERT INTO research.current_source_seals_v1

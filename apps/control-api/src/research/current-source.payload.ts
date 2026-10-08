@@ -168,11 +168,22 @@ export const CurrentSourceFactsSchema = z.object({
     raw_best_is_trial_id: FactTokenSchema.nullable(),
     raw_best_is_objective: CurrentSourceDecimalSchema.nullable(),
     selected_trial_id: FactTokenSchema.nullable(),
-    candidate_source_trial_ids: z.array(FactTokenSchema).max(6400),
+    candidate_source_trial_ids: z.array(FactTokenSchema).max(6400).optional(),
+    candidate_source_trial_ids_ref: z.object({
+      schema_version: z.literal("research.retained-candidate-population.v1"),
+      table: z.literal("CANDIDATE"),
+      source_field: z.enum(["candidate_id", "trial_facts.source_trial_id"]),
+      count: z.number().int().min(1).max(6400),
+      sha256: z.string().regex(/^[a-f0-9]{64}$/),
+    }).strict().optional(),
     pruned_trial_count: FactCountSchema,
     objective_probe: z.object({ rows: FactCountSchema, verified_rows: FactCountSchema }).strict(),
     sampler_trace: ResearchSamplerCaptureSchema.optional(),
-  }).strict(),
+  }).strict().superRefine((search, ctx) => {
+    if ((search.candidate_source_trial_ids !== undefined) === (search.candidate_source_trial_ids_ref !== undefined)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "candidate population requires exactly one inline array or retained reference" });
+    }
+  }),
   execution: z.object({
     engine_id: FactTokenSchema.nullable(),
     signal_phase: FactTokenSchema.nullable(),

@@ -8376,3 +8376,30 @@ rerun/UI edit/migration/runtime rebuild/remote push. Claude takes the next
 clean preview/API consumer receipt on the existing 400/390-trial runs; this
 does not claim the unseen 6,400-row lane or P24 release acceptance.
 [Precise backend receipt and consumer handoff](./research_loop/evidence/P15/BR_S02_20_PRUNED_METRIC_ABSENCE_2026-10-08.md).
+
+2026-10-08 Bobby-approved backend follow-up: **BR-S02-22 → BR-S02-21 / IN_PROGRESS**.
+Repair bounded summary/admission without discarding 16-fold/6,400-trial
+authority, then deliver and product-qualify an additive Delta Limit/OCO recipe.
+AI Native authentication unchanged; Parquet compaction/retention changes remain
+discussion-only. [Exact scope, tests, capacity decision and landing rules](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#49--br-s02-22--br-s02-21-implementation--bobby-approved-2026-10-08).
+
+**Delivery, 2026-10-08 — BACKEND_PRODUCT_QUALIFIED / DELIVERED_SOURCE.**
+The new ordinary product run `rrun_3062d7a…` completed 16 folds / 6,400 trials;
+32 trial pages and 13 candidate pages prove all 620 source candidates. Core
+63,492 bytes and Search max 1,000,181 bytes stay inside unchanged bounds;
+Freeze integrity and Stage 4 binding MATCH. Exact digest-bound population,
+batch index, progress catch-up and named-read fixes preserve full retained
+authority and original failures. No admitted maxima were reduced.
+
+New immutable Limit/OCO profile/Alpha qualified on BTC/ETH/SOL: each actual
+run has LIMIT entry, real parent/OCO IDs, two activated exits, TP fill and
+SL sibling cancellation. Setup plus fresh preflight pass on the final compiled
+candidate **without qualification selector**; migration 124 binds the frozen
+real receipt. Contract/types/fixture/snapshot parity and backend builds pass.
+All 22 test sessions revoked; 21 non-owner identities disabled; exact 8096
+project stopped without deleting volumes, receipts or shared runtime resources.
+No remote push/dev/main/release, FE design change or Parquet compaction.
+
+Claude follows the [precise S06/S08 consumer and browser handoff](./research_loop/evidence/P24/SUMMARY_LIMIT_OCO_BACKEND_CLOSEOUT_2026-10-08.md);
+the proof run IDs are in the owned cell, not the shared preview DB. Backend
+qualification does not silently close P24/owner visual or browser acceptance.

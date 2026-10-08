@@ -66,6 +66,10 @@ def test_rf03_cpu_float_and_typed_resource_failure_remain_visible() -> None:
     assert DurableQuantWorker._classify(
         ResearchRunProducerError("P10 isolated Delta qualification failed")
     ) == "ENGINE_ERROR"
+    from portal_api.services.current_source_artifacts import CurrentSourceArtifactError
+    assert DurableQuantWorker._classify(CurrentSourceArtifactError(
+        "RESEARCH_CURRENT_SOURCE_METADATA_TOO_LARGE", "The sealed summary is outside its bound."
+    )) == "RESEARCH_CURRENT_SOURCE_METADATA_TOO_LARGE"
 
 
 def test_attempt_claim_heartbeat_and_terminal_transitions(tmp_path: Path) -> None:

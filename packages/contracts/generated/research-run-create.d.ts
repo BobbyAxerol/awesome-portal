@@ -227,7 +227,7 @@ export interface components {
                 engine_release_id: string;
                 config_digest: string;
             };
-        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
         /**
          * Research requested specification v2
          * @description CG-P02-02: v1 plus requested-spec fields for rolling train width, temporal guards (label horizon, purge, embargo) and causal Mode 1 inner folds on an advanced walk-forward. Additive and versioned: every v1 document is unchanged. P08 validates each field against the pinned QuantBT engine and refuses what it cannot build with a typed reason and field path.
@@ -338,7 +338,7 @@ export interface components {
                 engine_release_id: string;
                 config_digest: string;
             };
-        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
     };
     responses: {
         /** @description Typed same-origin refusal. No worker lease, broker, source path, HMD row, secret, internal principal, or private upstream detail is disclosed. */

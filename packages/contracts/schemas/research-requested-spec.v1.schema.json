@@ -1089,6 +1089,37 @@
           }
         }
       }
+    },
+    {
+      "if": {
+        "required": [
+          "alpha_binding"
+        ],
+        "properties": {
+          "alpha_binding": {
+            "type": "object",
+            "required": [
+              "alpha_version_id"
+            ],
+            "properties": {
+              "alpha_version_id": {
+                "const": "av_delta_rsi_polynomial_alpha_1_0_12"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "execution_route": {
+            "const": "event_driven"
+          },
+          "route_params": {
+            "type": "object",
+            "maxProperties": 0
+          }
+        }
+      }
     }
   ]
 }

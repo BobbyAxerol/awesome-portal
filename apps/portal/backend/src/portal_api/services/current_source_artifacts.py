@@ -1013,6 +1013,7 @@ class CurrentSourceArtifactAdapter:
                 "end_ms": enriched["scope"]["last_at_utc_ms"] + recipe["descriptor"]["source_clock"]["bar_interval_ms"],
                 "bounds_semantics": "START_INCLUSIVE_END_EXCLUSIVE",
                 "source_locator": "P05.native_full_sample_fold.train_start..test_end"}
+        self._reference_candidate_population(summary, candidates)
         self._fit_summary_budget(summary, observations, exact_display_sampling=recipe is not None)
         writer = self._retained_artifacts.begin_write(
             identity=identity,
@@ -2303,6 +2304,40 @@ class CurrentSourceArtifactAdapter:
             "fold_segments": segments,
             "candle_overview": self._candle_overview(observations) if has_candle else None,
         }
+
+    @staticmethod
+    def _reference_candidate_population(summary: dict[str, Any], candidates: list[dict[str, Any]]) -> None:
+        """Bound summary metadata without dropping any sealed candidate fact.
+
+        Large study populations already live in the CANDIDATE table. Replace
+        only their duplicate identity array with a versioned, exact digest
+        reference. Small/historical layouts retain their original shape.
+        Readers must validate and resolve this reference, never display it as
+        an empty population or infer identity from a ledger page.
+        """
+        facts = summary.get("source_facts")
+        search = facts.get("search") if isinstance(facts, dict) else None
+        ids = search.get("candidate_source_trial_ids") if isinstance(search, dict) else None
+        if not isinstance(ids, list) or len(ids) <= 256:
+            return
+        if len(ids) > 6400 or ids != sorted(set(ids)):
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_ARTIFACT_INVALID", "Candidate population identities are invalid.")
+        candidate_ids = sorted({row["candidate_id"] for row in candidates})
+        if candidate_ids == ids:
+            source_field = "candidate_id"
+        else:
+            trial_ids = sorted({str(payload["trial_facts"]["source_trial_id"])
+                for row in candidates for payload in [json.loads(row["payload_json"])]
+                if isinstance(payload.get("trial_facts"), dict) and payload["trial_facts"].get("source_trial_id") is not None})
+            if trial_ids != ids:
+                raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_ARTIFACT_INVALID", "Candidate population does not bind to its retained rows.")
+            source_field = "trial_facts.source_trial_id"
+        search["candidate_source_trial_ids_ref"] = {
+            "schema_version": "research.retained-candidate-population.v1",
+            "table": "CANDIDATE", "source_field": source_field, "count": len(ids),
+            "sha256": hashlib.sha256(json.dumps(ids, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest(),
+        }
+        del search["candidate_source_trial_ids"]
 
     def _fit_summary_budget(self, summary: dict[str, Any], observations: list[dict[str, Any]],
                             *, exact_display_sampling: bool = False) -> None:

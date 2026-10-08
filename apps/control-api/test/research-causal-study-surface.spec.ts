@@ -141,6 +141,15 @@ describe("bounded causal study surfaces", () => {
       expect(study.surface.points.some(point => point.trial_id === populations[index]!.selectedTrialId)).toBe(true);
       expect(study.surface.points.some(point => point.trial_id === `study_${index}.trial_399`)).toBe(true);
     });
+    const bounded = searchStudySurfaces(profile.current_source.profile_id,populations,"INNER_VALIDATION_OUTER_STUDY",null,320);
+    expect(bounded.reduce((sum,study)=>sum+study.surface.points.length,0)).toBeLessThanOrEqual(320);
+    bounded.forEach((study,index)=>{
+      expect(study.surface.points.some(point=>point.trial_id===populations[index]!.selectedTrialId)).toBe(true);
+      expect(study.surface.distributions).toEqual(result[index]!.surface.distributions);
+      expect(study.surface.importance).toEqual(result[index]!.surface.importance);
+      expect(study.surface.complete_trial_count).toBe(400);
+      expect(study.surface.sampling).toBe("STRIDE_KEEPING_SELECTED_AND_BEST_V1");
+    });
   });
   it("keeps actual independently stopped study populations without padding; null stays strict", () => {
     const populations = studies();

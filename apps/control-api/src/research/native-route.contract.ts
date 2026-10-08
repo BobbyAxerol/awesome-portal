@@ -9,7 +9,7 @@ const Cost=z.object({state:z.enum(['AVAILABLE','NOT_PUBLISHED']),total:Decimal.n
 export const ResearchNativeRouteResultSchema=z.object({schema_version:z.literal('research.native-route-result.v1'),
   execution_route:z.enum(['intrabar_bracket','reactive','event_driven']),
   authority:z.literal('PINNED_QUANTBT_ACCOUNTING_NOT_PORTAL_PNL'),
-  input_protocol:z.enum(['DELTA_CLOSE_BRACKET_INTENTS_V1','DELTA_CLOSE_STATEFUL_CALLBACK_V1','DELTA_CLOSE_ORDER_COMMANDS_V1']),
+  input_protocol:z.enum(['DELTA_CLOSE_BRACKET_INTENTS_V1','DELTA_CLOSE_STATEFUL_CALLBACK_V1','DELTA_CLOSE_ORDER_COMMANDS_V1','DELTA_CLOSE_LIMIT_OCO_COMMANDS_V1']),
   clock:z.enum(['KNOWN_CLOSE_NEXT_BAR_INTRABAR','KNOWN_CLOSE_NEXT_BAR_CLOSE']),
   position_unit:z.literal('CONTRACT_QUANTITY'),target_notional:z.literal('2000'),
   fees:Cost,funding:Cost,cost_scope:z.literal('FULL_CHILD_TAPE'),
@@ -18,6 +18,6 @@ export const ResearchNativeRouteResultSchema=z.object({schema_version:z.literal(
   const protocol={intrabar_bracket:'DELTA_CLOSE_BRACKET_INTENTS_V1',
    reactive:'DELTA_CLOSE_STATEFUL_CALLBACK_V1',event_driven:'DELTA_CLOSE_ORDER_COMMANDS_V1'}[v.execution_route];
   const clock=v.execution_route==='intrabar_bracket'?'KNOWN_CLOSE_NEXT_BAR_INTRABAR':'KNOWN_CLOSE_NEXT_BAR_CLOSE';
-  if(v.input_protocol!==protocol||v.clock!==clock)
+  if((v.input_protocol!==protocol && !(v.execution_route==='event_driven'&&v.input_protocol==='DELTA_CLOSE_LIMIT_OCO_COMMANDS_V1'))||v.clock!==clock)
    c.addIssue({code:z.ZodIssueCode.custom,message:'Native route, protocol and execution clock disagree'});
 });

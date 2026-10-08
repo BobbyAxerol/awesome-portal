@@ -1194,7 +1194,18 @@ class DurableQuantWorker:
                     or len(study_counts)!=len(folds) or not counts_match
                     or not all(1<=count<=400 for count in study_counts.values())):
                 raise DurableRunError("P11 retained per-fold study counts do not match")
-            for index in range(live + 1, total + 1):
+            # BR-S02-22: P11 is a compact progress journal, not a second
+            # complete TRIAL ledger. Replaying thousands of missed callbacks
+            # synchronously starves heartbeat/relay and can expire a run whose
+            # P05 seal is already valid. For a large catch-up publish the
+            # exact last retained ordinal of EACH remaining study; the dense
+            # sealed table remains the authority for all individual trials.
+            # Never synthesize a live observation, objective or trial state.
+            catchup = range(live + 1, total + 1)
+            if total - live > 400:
+                catchup = [index for index in catchup
+                    if index == total or trials[index]["study_id"] != trials[index - 1]["study_id"]]
+            for index in catchup:
                 source = trials[index - 1]
                 journal.emit("trial_completed", {"study": "PER_FOLD_STUDY", "trial": index, "eta_s": None,
                     "study_id": source["study_id"], "source_trial_id": source["source_trial_id"],

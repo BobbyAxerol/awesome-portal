@@ -53,11 +53,12 @@ function publicHarness(rows=Array.from({length:201},(_,i)=>replayRow(i))) {
 describe("transactional P05-bound fixed replay custody",()=>{
   it("admits each exact native route/edition and refuses wrong route, clock, edition or digest without weakening legacy custody",async()=>{
     const native=executionRecipes.filter(row=>row.descriptor.schema_version==='research.native-route-profile.v1');
-    // All nine historical route/edition bindings remain readable. Bracket V4
-    // is additive; the separate policy gate determines current intake.
-    expect(native).toHaveLength(10);
+    // All nine historical bindings remain readable. Bracket V4 and Limit/OCO
+    // are additive; the separate qualification gate determines current intake.
+    expect(native).toHaveLength(11);
     expect(native.slice(0,9).map(row=>row.profile_id)).not.toContain('p10.delta-intrabar-bracket-fixed-1h.v4');
     expect(native[9]?.profile_id).toBe('p10.delta-intrabar-bracket-fixed-1h.v4');
+    expect(native[10]?.profile_id).toBe('p10.delta-event-driven-limit-oco-fixed-1h.v1');
     for(const profile of native)for(const mutation of ['none','route','timeframe','edition','digest']){
       const h=privateHarness([],true),hash=(s:string)=>createHash('sha256').update(s).digest('hex');
       const receipt={...JSON.parse(h.seal.run_receipt_json),execution_profile_id:profile.profile_id,

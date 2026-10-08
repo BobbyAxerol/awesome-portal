@@ -2918,3 +2918,85 @@ The CPU cost of the verification is small: **2.4 s for the real 46,377 rows** (J
 
 **Still open (for Codex / Bobby):** (a) a run that fails after sealing leaves its sealed window-execution companion (this run: 46 MB heap) — there is no cleanup path and I did not add one (immutable custody); (b) the other per-fold ingest endpoints (`child-audit`, `fixed-replay`, current-source) use the same `authority()` pattern: they append in bounded batches so their transactions are short, but any other O(rows) call inside `authority()` has the same hazard;
 (c) BR-S02-22's 64 KiB core-summary limit at 16 folds is independent of this and stays with §49.
+
+### §49 — BR-S02-22 → BR-S02-21 implementation — Bobby approved 2026-10-08
+
+Order and scope: repair summary/admission first, then qualify one immutable
+Delta `event_driven` Limit-entry / parent-bound SL–TP OCO recipe through the
+ordinary Portal producer, isolated child, retention and named Replay reads.
+AI Native Loop authentication is unchanged. Storage compaction, retention
+changes and Parquet repacking are **DISCUSSION_ONLY / NOT_IN_SCOPE**.
+
+- **BR-S02-22:** the failed child source was already cleared by normal scratch
+  teardown; its summary byte breakdown cannot be recovered from the retained
+  attempt/progress receipts. Reproduce the exact 16-fold/6,400-trial source in
+  a new owned cell (never repair the failed run); remove duplicated
+  summary populations only with a typed, digest-bound reference to full
+  retained rows and a parity-tested reader. Preserve all trials, folds,
+  candidate identity, selected parameters and existing 64-KiB core bound.
+  Admit only inputs whose retention layout is supported; expose any remaining
+  retention refusal as a typed source reason, not a generic engine failure.
+  Preserve the original failed run and seal history; prove a new real run.
+- **BR-S02-21:** additive recipe/adapter/binding identity, fixed Delta defaults,
+  1h historical tape, one trial, known-close/next-bar clock. Engine owns Limit
+  matching, parent activation, reduce-only exits and OCO cancellation. No
+  user-provided order tape, synthetic fills, broker replay or new engine pin.
+  Positive receipt requires actual LIMIT and fill/cancel, activated SL/TP
+  children with real parent/OCO IDs, one exit fill and sibling cancellation.
+  Missing source facts remain typed; no frontend design changes.
+- **Tests/closeout:** focused serializer/reader/admission/refusal and native
+  engine regressions; generated schema/type parity; scoped database proof;
+  one bounded application build and ordinary product receipts with exact
+  source/image identity, then one grouped normal commit hook. Record the
+  delivered fields, truthful remaining absences and Claude's S08 browser
+  handoff; do not relabel P24/owner review as complete.
+- **Capacity decision:** root 99 GiB free of 621 GiB (85% used), measured before
+  work. Reuse existing installed engine/test images and build cache; backend
+  incremental builds only, serial, no frontend rebuild, maximum 5-GiB extra
+  working footprint. Recheck before build; stop if that budget cannot hold.
+  No prune, business-data deletion, broad cleanup or Execution/production
+  change. Test resources get exact scoped teardown; evidence/rollback images
+  stay retained. No remote push or dev/main promotion.
+
+Status: **BACKEND_PRODUCT_QUALIFIED / DELIVERED_SOURCE**, 2026-10-08; normal
+grouped commit hook passed (contracts 318/318; Control API 2,424 PASS,
+3 SKIP; PostgreSQL restore PASS), then ff-only source landing. No remote
+push is authorized.
+
+- **BR-S02-22 PASS:** new ordinary Portal run `rrun_3062d7a…` completed with
+  16 folds / 6,400 real retained trials, 32 unique trial pages and all 620
+  candidates over 13 pages. Core 63,492 bytes; largest Search page 1,000,181
+  bytes. Existing admission maxima and 64-KiB/1-MiB bounds remain unchanged.
+  Digest-bound population reference, exact batch index, bounded retained
+  progress catch-up and read-projection fixes close the measured upper-bound
+  failures; original failed runs/seals remain immutable.
+- **BR-S02-21 PASS:** exact new immutable Limit/OCO recipe, BTC/ETH/SOL runs
+  `rrun_eea1b8e4…`, `rrun_b5aab0fc…`, `rrun_8d26584c…`; each has 3 orders,
+  2 actual fills, SL/TP parent-full-fill activation and TP-fill/SL-cancel OCO.
+  Frozen receipt binds product qualification; migration 124 is additive.
+  Compiled setup/preflight PASS for all three symbols **without** a candidate
+  selector; no additional engine child was run for that metadata check.
+- Regenerated types/fixtures/digests. Consolidated contracts: 317 unaffected
+  PASS; one obsolete native-profile count corrected and its 18-test file
+  retaken PASS (**318 distinct tests now pass**). Focused source/Control tests,
+  generator checks and backend builds PASS. Keep this correction distinct
+  from re-recording a visual baseline; no frontend file was edited.
+- Integration review retains Claude's concurrent `05b11981` seal-lock/timeout
+  fix and both §48 addenda, including the correction that the earlier small
+  proof was 3 folds × 3 trials, not 3 × 400. On the combined source, the
+  affected repository files pass 11/11 and seal-timeout tests pass 3/3.
+  The 16 × 400 receipt has its own exact image pins; it is not a rerun or
+  relabelling of Claude's failed 8-fold attempt. Failed-run retained custody
+  is preserved; cleanup/repacking remains a separately approved future scope.
+- Exact cleanup done: 21 non-owner identities disabled, all 22 test sessions
+  revoked, owner anchor preserved, consumed activation credentials removed.
+  Only the owned 8096 project was stopped; zero remaining project containers,
+  all four volumes/receipts preserved. Root available 101,579,800,576 bytes,
+  within the recorded extra-footprint cap. **NO_ACTION_NEEDED** for destructive
+  cleanup; no compact/repack/prune.
+- Claude still owns S06 independent candidate paging and S08 real Limit/OCO
+  browser acceptance after the normal shared-preview rebuild. These proof
+  run IDs are in the isolated cell, not the shared preview DB. No P24/owner
+  review, release, dev/main/remote promotion or shared-preview rollout claimed.
+
+[Complete measurements, failure history, generated field handoff and Claude prompt](./evidence/P24/SUMMARY_LIMIT_OCO_BACKEND_CLOSEOUT_2026-10-08.md).
