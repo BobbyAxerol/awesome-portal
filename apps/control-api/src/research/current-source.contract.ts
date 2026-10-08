@@ -1209,7 +1209,7 @@ export const ResearchCurrentSourceNotApplicableResponseSchema = z.object({
   lane: z.object({
     state: z.literal("NOT_APPLICABLE"),
     operation: ResearchCurrentSourceOperationSchema,
-    run_profile: z.enum(["P04_FIXED_QUALIFICATION", "IMPORTED_FIXED_QUALIFICATION", "VN_OBSERVED_FIXED_QUALIFICATION", "NATIVE_FIXED_QUALIFICATION"]),
+    run_profile: z.enum(["P04_FIXED_QUALIFICATION", "IMPORTED_FIXED_QUALIFICATION", "VN_OBSERVED_FIXED_QUALIFICATION", "NATIVE_FIXED_QUALIFICATION", "NATIVE_IS_OPTIMIZATION"]),
     run_adapter_contract_digest: DigestSchema,
     // Enum of both RS-02 profiles for forward compatibility; the P04 fixed
     // qualification keeps emitting rs02.delta-wfo-global.v1 byte-for-byte.

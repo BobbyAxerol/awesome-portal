@@ -140,7 +140,7 @@ export class ResearchRunCreateService {
     // The P04 branch below is byte-for-byte the pre-W1 construction (golden
     // tests pin both digests). The WFO branch is a separate versioned shape:
     // it carries the pinned profile identity and never a P04 parameter map.
-    const workDigest = native ? digest({schema_version:'research.native-fixed-work.v1',
+    const workDigest = native ? digest({schema_version:recipe.work_schema_version,
         requested_spec_digest:manifest.requestedSpecDigest,effective_spec_digest:manifest.effectiveSpecDigest,
         dataset_binding_digest:manifest.datasetBindingDigest,manifest_digest:manifest.manifestDigest,
         snapshot:{snapshot_id:this.stringFact(manifest.snapshot,'snapshot_id'),snapshot_content_hash:this.stringFact(manifest.snapshot,'snapshot_content_hash')},

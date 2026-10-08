@@ -594,7 +594,9 @@ class ResearchRunProducerExecutor:
                         "execution_profile_digest": research.execution_profile_digest,
                         "source_observation": research.source_observation.model_dump(mode="json")} if vn_observed else {}),
                     **({'execution_profile_id':research.execution_profile_id,'execution_profile_digest':research.execution_profile_digest,
-                        'native_symbol':research.requested_spec['data']['symbol']} if native else {}),
+                        'native_symbol':research.requested_spec['data']['symbol'],
+                        **({'native_optimization':{k:research.requested_spec[k] for k in ('optuna_trials','random_seed','early_stopping')}}
+                           if native_profile(research.execution_profile_id,research.execution_profile_digest)['public_profile']['trial_count']['max']>1 else {})} if native else {}),
                 )
             # P10 has one server-installed fixed qualification, not a generic
             # optimizer.  S2 therefore records preparation of that exact one
@@ -651,7 +653,23 @@ class ResearchRunProducerExecutor:
             # A fixed profile has no search: one fold, one trial, no
             # objective. The percentage is derived by the journal from these
             # facts, not supplied here.
-            progress("trial_completed", {
+            native_optimizer=child.native_execution.get('optimization') if child.native_execution else None
+            if native_optimizer is not None:
+                from portal_api.services.research_native_optimization import verify
+                if child.native_optimization_path is None:
+                    raise ResearchRunProducerError('native optimizer omitted its verified trial source')
+                population=verify(child.native_optimization_path,native_optimizer).to_pylist()
+                target=artifact_root/request.run_id/'research'
+                target.mkdir(mode=0o700,parents=True,exist_ok=True)
+                shutil.copyfile(child.native_optimization_path,target/'native-optimizer-trials.parquet')
+                os.chmod(target/'native-optimizer-trials.parquet',0o600)
+                for ordinal,trial in enumerate(population,1):
+                    progress('trial_completed',{'study':'GLOBAL','trial':ordinal,
+                        'state':{'COMPLETE':'COMPLETE','PRUNED':'PRUNED','FAIL':'FAILED','FAILED':'FAILED'}[trial['state']],
+                        'eta_s':None,'objective':trial['objective'],
+                        'tqdm_line':f'native IS trial {ordinal}/{len(population)} · verified engine population (not observed live)'})
+            else:
+                progress("trial_completed", {
                 "fold": 1,
                 "trial": 1,
                 "state": "COMPLETE",
@@ -667,11 +685,11 @@ class ResearchRunProducerExecutor:
             progress("fold_completed", {
                 "fold": 1,
                 "selection": {
-                    "scope": "IMPORTED_FIXED_PROFILE" if imported else "FIXED_PROFILE",
-                    "trial": 1,
-                    "objective": None,
+                    "scope": "GLOBAL_STUDY" if native_optimizer is not None else "IMPORTED_FIXED_PROFILE" if imported else "FIXED_PROFILE",
+                    "trial": native_optimizer['selected_trial_number']+1 if native_optimizer is not None else 1,
+                    "objective": native_optimizer['selected_objective'] if native_optimizer is not None else None,
                     "params_digest": parameter_bundle_digest(dict(
-                        research.imported_parameters if imported else research.p04_parameters or {}
+                        native_optimizer['selected_parameters'] if native_optimizer is not None else research.imported_parameters if imported else research.p04_parameters or {}
                     )),
                 },
             })
@@ -786,6 +804,10 @@ class ResearchRunProducerExecutor:
                 if isinstance(child.evidence_source, dict) else None
             ),
         )
+        if native and child.native_execution.get('optimization') is not None:
+            split_source['protocol']['selection'].update(state='NATIVE_OPTIMIZATION_SEALED_SEPARATELY',
+                native_optimization=child.native_execution['optimization'],
+                parameter_bundle_digest=parameter_bundle_digest(child.native_execution['optimization']['selected_parameters']))
         receipt_document["split_source"] = split_source
         if child.evidence_source is not None:
             # The evidence receipt is generated while the confined child owns

@@ -40,6 +40,10 @@ describe("P14 split source and reader contracts", () => {
       source_absences: {},
     };
     expect(ResearchSplitResponseSchema.safeParse(response).success).toBe(true);
+    // Native IS optimizer receipts are not re-labelled as fixed/no-search.
+    const native={...response,protocol:{...response.protocol,selection:{...response.protocol.selection,
+      state:'NATIVE_OPTIMIZATION_SEALED_SEPARATELY'}}};
+    expect(ResearchSplitResponseSchema.safeParse(native).success).toBe(true);
     expect(ResearchSplitResponseSchema.safeParse({
       ...response,
       windows: { ...response.windows, holdout: { ...response.windows.holdout, result_exposure_state: "EXPOSED" } },

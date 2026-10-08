@@ -223,7 +223,7 @@ export interface components {
         RecipePresentation: {
             key: string;
             /** @enum {unknown} */
-            family: "THREE_WINDOW_FIXED" | "THREE_WINDOW_OPTIMIZED" | "ADVANCED_WFO" | "FULL_SAMPLE" | "NATIVE_FIXED";
+            family: "THREE_WINDOW_FIXED" | "THREE_WINDOW_OPTIMIZED" | "ADVANCED_WFO" | "FULL_SAMPLE" | "NATIVE_FIXED" | "NATIVE_OPTIMIZED";
             label: string;
             recommended_rank: number;
             /** @constant */
@@ -331,8 +331,20 @@ export interface components {
                 /** @constant */
                 funding_enabled: false;
             };
-            /** @constant */
-            optimizer: "NOT_APPLICABLE_FIXED_DELTA_INPUT_NOT_SCALAR_OPTIMIZER";
+            /** @enum {unknown} */
+            optimizer: "NOT_APPLICABLE_FIXED_DELTA_INPUT_NOT_SCALAR_OPTIMIZER" | "PINNED_QUANTBT_NATIVE_IS_SHARPE_V1";
+            cycle_policy?: {
+                /** @constant */
+                schema_version: "research.native-limit-oco-cycle-policy.v1";
+                /** @constant */
+                cycle_bars: 48;
+                /** @constant */
+                entry_expiry_bars: 24;
+                /** @constant */
+                boundary_policy: "EXPIRE_CANCEL_AND_ENGINE_REDUCE_ONLY_CLOSE_BEFORE_REENTRY";
+                /** @constant */
+                max_span_days: 365;
+            };
         };
         WindowPatch: {
             /** @constant */

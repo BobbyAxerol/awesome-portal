@@ -878,6 +878,8 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
             from portal_api.adapters import research_native_bracket_v4 as research_native_routes
         elif native_row['profile_id'] == 'p10.delta-event-driven-limit-oco-fixed-1h.v1':
             from portal_api.adapters import research_native_limit_oco_v1 as research_native_routes
+        elif native_row['profile_id'] == 'p10.delta-event-driven-limit-oco-search-1h.v1':
+            from portal_api.adapters import research_native_limit_oco_search_v1 as research_native_routes
         actual_hash=hashlib.sha256(Path(research_native_routes.__file__).read_bytes()).hexdigest()
         if qualification_binding is not None or native_row['descriptor']['native_input']['adapter_sha256'] != actual_hash:
             raise ValueError('native implementation/release differs from its immutable declaration')
@@ -929,6 +931,23 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
         symbol=receipt.get('native_symbol')
         if symbol not in {'BTCUSDT','ETHUSDT','SOLUSDT'}:
             raise ValueError('native child requires exact P08 source symbol')
+        optimization_summary = None
+        if native_row['descriptor']['native_input']['optimizer'] == 'PINNED_QUANTBT_NATIVE_IS_SHARPE_V1':
+            controls=receipt.get('native_optimization')
+            if (not isinstance(controls,dict) or set(controls)!={'optuna_trials','random_seed','early_stopping'}
+                    or receipt_dir is None):
+                raise ValueError('native optimization requires exact controls and source custody')
+            from portal_api.services.research_native_optimization import capture
+            from portal_api.domain.research_early_stopping import admitted_early_stopping
+            optimization=research_native_routes.optimize_native(market=market,is_end_utc_ms=receipt['oos_start_utc_ms'],
+                symbol=symbol,trials=controls['optuna_trials'],seed=controls['random_seed'],gateway=gateway,
+                baseline=dict(parameters),early_stopping=admitted_early_stopping(controls))
+            optimization_summary=capture(optimization,output_directory=receipt_dir,
+                requested_trials=controls['optuna_trials'],is_end_utc_ms=receipt['oos_start_utc_ms'],
+                train_start_utc_ms=int(market.index[0].value//1_000_000))
+            parameters=dict(optimization.selected_params)
+        elif receipt.get('native_optimization') is not None:
+            raise ValueError('fixed native recipe cannot accept optimizer controls')
         result=run_native_delta(route=native_row['descriptor']['execution_route'],market=market,
             symbol=symbol,parameters=dict(parameters),gateway=gateway)
     else:
@@ -949,6 +968,8 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
     if native:
         output.update(execution_profile_id=native_row['profile_id'],execution_profile_digest=native_row['profile_digest'],
             native_execution=native_result_facts(route=native_row['descriptor']['execution_route'],result=result))
+        if optimization_summary is not None:
+            output['native_execution']['optimization']=optimization_summary
         from portal_api.services.research_window_execution import capture_native_windows
         output["window_execution_source"] = capture_native_windows(result=result, market=market,
             route=native_row["descriptor"]["execution_route"], symbol=symbol,

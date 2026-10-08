@@ -327,7 +327,20 @@ export class ResearchProgressService {
     const profile = ingressScope.executionProfileId;
     const installedRecipe = (() => { try { return profile ? executionRecipe(profile) : null; } catch { return null; } })();
     const pair = installedRecipe && currentSourceExecutionPair(installedRecipe.profile_id,installedRecipe.profile_digest);
-    if (!pair && ingressScope.executionProfileId !== WHATIF_PROFILE_ID) {
+    if (installedRecipe?.work_schema_version === 'research.native-optimized-work.v1') {
+      // The source's real generic native IS optimization is not a fixed-P04
+      // freeze and not an RS-02 scalar WFO report. A typed report refusal must
+      // not invalidate verified child/P05/P13/P14 terminal evidence. Preserve
+      // the existing strict fixed-report path for every historical edition.
+      try {
+        await this.reports.materializeTerminal(ingressScope, input);
+      } catch (error) {
+        if (!(typeof error === 'object' && error !== null && 'code' in error
+          && error.code === 'RESEARCH_REPORT_NOT_READY')) throw error;
+        process.stderr.write(`${JSON.stringify({event:'research_native_report_not_applicable',run_id:input.run_id,
+          code:'NATIVE_IS_OPTIMIZATION_NOT_FIXED_P04_REPORT'})}\n`);
+      }
+    } else if (!pair && ingressScope.executionProfileId !== WHATIF_PROFILE_ID) {
       await this.reports.materializeTerminal(ingressScope, input);
     } else if (ingressScope.executionProfileId !== WHATIF_PROFILE_ID) {
       // W6a (P18 over current-source): the WFO report is sealed from the

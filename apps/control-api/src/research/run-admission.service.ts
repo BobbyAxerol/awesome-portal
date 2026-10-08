@@ -277,7 +277,9 @@ export class ResearchRunAdmissionService {
         alphaVersionId: eligibility.alphaVersionId,
         adapterId: eligibility.binding!.adapterId as NonNullable<ResearchRunAdmission["alpha"]>["adapterId"],
         adapterContractDigest: eligibility.binding!.contractDigest,
-        fixedParameters: (wfo || optimized) && !vnObserved ? null : P04_DELTA_FIXED_PARAMETERS,
+        // Native optimization carries these as the pinned initial trial, not
+        // as the selected result. The child publishes its own selected params.
+        fixedParameters: (wfo || optimized) && !vnObserved && !native ? null : P04_DELTA_FIXED_PARAMETERS,
         importedParameters: null,
         sourceDigest: null,
         entrypoint: eligibility.entrypoint,
@@ -296,15 +298,17 @@ export class ResearchRunAdmissionService {
     row:ReturnType<typeof executionRecipe>):string|null {
     if(row.descriptor.schema_version!=='research.native-route-profile.v1')return 'Exact native Delta recipe required.';
     const p=row.descriptor;
+    const optimized=p.native_input.optimizer==='PINNED_QUANTBT_NATIVE_IS_SHARPE_V1';
     const reason=executionRecipeActivationReason(row,this.config,{engine_release_id:spec.client.engine_release_id,verified:true});
     if(reason)return `Native route is unavailable: ${reason}.`;
     if(spec.schema_version!=='research.requested-spec.v1'||spec.protocol!=='three_window_decay'||spec.walk_forward
       ||spec.execution_route!==p.execution_route||spec.data.dataset_id!==p.dataset_id||spec.data.timeframe!=='1h'
-      ||!['BTCUSDT','ETHUSDT','SOLUSDT'].includes(spec.data.symbol)||spec.optuna_trials!==1
-      ||spec.optimization_mode!=='mode_1_decay'||spec.optimization_schedule!=='global'||spec.random_seed!==null
-      ||spec.early_stopping!==null||Object.keys(spec.route_params??{}).length||Object.keys(spec.optimization_config??{}).length
+      ||!['BTCUSDT','ETHUSDT','SOLUSDT'].includes(spec.data.symbol)||!recipeTrialCountAdmitted(row,spec.optuna_trials,this.config)
+      ||spec.optimization_mode!==(optimized?'mode_4_is_only_robust':'mode_1_decay')||spec.optimization_schedule!=='global'||spec.random_seed!==(optimized?42:null)
+      ||!optimized&&spec.early_stopping!==null||Object.keys(spec.route_params??{}).length||Object.keys(spec.optimization_config??{}).length
       ||spec.parameter_space_overrides.length||!spec.windows)
-      return 'Native Delta admits one fixed three-window run, exact 1h source, no scalar optimizer/overrides.';
+      return optimized ? 'Native Limit/OCO admits 2–400 IS-native trials, seed 42, exact 1h source, no overrides.'
+        : 'Native Delta admits one fixed three-window run, exact 1h source, no scalar optimizer/overrides.';
     const source=this.full03SourceReason(row,spec,manifest);if(source)return source;
     const values=[spec.windows.is.start,spec.windows.is.end_exclusive,spec.windows.oos.start,
       spec.windows.oos.end_exclusive,spec.windows.holdout.start,spec.windows.holdout.end_exclusive];
@@ -314,7 +318,7 @@ export class ResearchRunAdmissionService {
       ||edges.some(v=>!Number.isFinite(v)||v%3600000!==0)||!(edges[0]!<edges[1]!)||edges[1]!==edges[2]
       ||!(edges[2]!<edges[3]!)||edges[3]!==edges[4]||!(edges[4]!<edges[5]!)
       ||edges[5]!-edges[0]!>p.max_span_days*86400000)
-      return 'Native fixed windows require contiguous half-open UTC 1h edges within92 days.';
+      return `Native windows require contiguous half-open UTC 1h edges within ${p.max_span_days} days.`;
     return null;
   }
 

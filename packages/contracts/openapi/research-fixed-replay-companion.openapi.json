@@ -549,6 +549,16 @@
                     "const": "bd8fb94a6298ccc54278a8fe7e2cd707205721c52cda8adcbc9e51b5e49a2c88"
                   }
                 }
+              },
+              {
+                "properties": {
+                  "execution_profile_id": {
+                    "const": "p10.delta-event-driven-limit-oco-search-1h.v1"
+                  },
+                  "execution_profile_digest": {
+                    "const": "2b69015b8975e3097cc797999188a6d6b75e29ce52fc3ad2d4c35026ab7f0d73"
+                  }
+                }
               }
             ]
           }

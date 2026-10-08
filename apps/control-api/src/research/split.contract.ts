@@ -9,6 +9,7 @@
 
 import { z } from "zod";
 import { ResearchRunDeclarationSchema } from "./run-declaration.contract";
+import { NativeOptimizationSchema } from "./native-route.contract";
 
 export const ResearchSplitRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
@@ -171,7 +172,8 @@ export const ResearchSplitResponseSchema = z.object({
   protocol: z.object({
     kind: z.literal("THREE_WINDOW_CURRENT").nullable(),
     selection: z.object({
-      state: z.enum(["FIXED_PROFILE_NO_SEARCH", "NOT_PUBLISHED"]),
+      state: z.enum(["FIXED_PROFILE_NO_SEARCH", "NATIVE_OPTIMIZATION_SEALED_SEPARATELY", "NOT_PUBLISHED"]),
+      native_optimization: NativeOptimizationSchema.optional(),
       parameter_bundle_digest: DigestSchema.nullable(),
       strict_outer_oos: AbsentFactSchema,
     }).strict(),

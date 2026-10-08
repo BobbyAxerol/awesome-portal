@@ -1555,7 +1555,8 @@
               "THREE_WINDOW_OPTIMIZED",
               "ADVANCED_WFO",
               "FULL_SAMPLE",
-              "NATIVE_FIXED"
+              "NATIVE_FIXED",
+              "NATIVE_OPTIMIZED"
             ]
           },
           "label": {
@@ -2006,7 +2007,38 @@
             }
           },
           "optimizer": {
-            "const": "NOT_APPLICABLE_FIXED_DELTA_INPUT_NOT_SCALAR_OPTIMIZER"
+            "enum": [
+              "NOT_APPLICABLE_FIXED_DELTA_INPUT_NOT_SCALAR_OPTIMIZER",
+              "PINNED_QUANTBT_NATIVE_IS_SHARPE_V1"
+            ]
+          },
+          "cycle_policy": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "schema_version",
+              "cycle_bars",
+              "entry_expiry_bars",
+              "boundary_policy",
+              "max_span_days"
+            ],
+            "properties": {
+              "schema_version": {
+                "const": "research.native-limit-oco-cycle-policy.v1"
+              },
+              "cycle_bars": {
+                "const": 48
+              },
+              "entry_expiry_bars": {
+                "const": 24
+              },
+              "boundary_policy": {
+                "const": "EXPIRE_CANCEL_AND_ENGINE_REDUCE_ONLY_CLOSE_BEFORE_REENTRY"
+              },
+              "max_span_days": {
+                "const": 365
+              }
+            }
           }
         }
       },

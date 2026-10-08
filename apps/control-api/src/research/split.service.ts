@@ -312,6 +312,7 @@ export class ResearchSplitService {
         selection: {
           state: source.protocol.selection.state,
           parameter_bundle_digest: source.protocol.selection.parameter_bundle_digest,
+          ...(source.protocol.selection.native_optimization ? {native_optimization:source.protocol.selection.native_optimization} : {}),
           strict_outer_oos: sourceAbsence(source.protocol.selection.strict_outer_oos),
         },
         fold_plan: sourceAbsence(source.protocol.fold_plan),

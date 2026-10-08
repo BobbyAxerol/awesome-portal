@@ -66,7 +66,10 @@ const operations = [
 
 describe("RF-05 CG-P13-09 · P04 fixed profile is NOT_APPLICABLE, answered as a typed 200", () => {
   it("native fixed routes never claim pending WFO output; both immutable profile and contract digest are required", async () => {
-    for (const row of executionRecipes.filter(r => r.descriptor.schema_version === "research.native-route-profile.v1")) {
+    const fixed = executionRecipes.filter(r => r.descriptor.schema_version === "research.native-route-profile.v1"
+      && r.descriptor.native_input.optimizer === "NOT_APPLICABLE_FIXED_DELTA_INPUT_NOT_SCALAR_OPTIMIZER");
+    expect(fixed).toHaveLength(11);
+    for (const row of fixed) {
       const binding = NATIVE_DELTA_BINDINGS.find(b => b.adapterContractDigest === row.descriptor.adapter_contract_digest)!;
       expect(binding).toBeTruthy();
       const {service, repository} = build({status: "COMPLETED", executionProfileId: row.profile_id,
@@ -77,6 +80,31 @@ describe("RF-05 CG-P13-09 · P04 fixed profile is NOT_APPLICABLE, answered as a 
       const wrong = build({status: "COMPLETED", executionProfileId: row.profile_id, adapterContractDigest: "0".repeat(64)});
       await expect(wrong.service.search(scope, "run_p04", {limit: 100})).rejects.toMatchObject({status: 409});
     }
+  });
+  it("labels the distinct native IS optimizer without inventing scalar WFO rows, and refuses a wrong binding", async () => {
+    const rows = executionRecipes.filter(r => r.descriptor.schema_version === "research.native-route-profile.v1"
+      && r.descriptor.native_input.optimizer === "PINNED_QUANTBT_NATIVE_IS_SHARPE_V1");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.profile_id).toBe("p10.delta-event-driven-limit-oco-search-1h.v1");
+    const row = rows[0]!;
+    const binding = NATIVE_DELTA_BINDINGS.find(b => b.adapterContractDigest === row.descriptor.adapter_contract_digest)!;
+    expect(binding).toBeTruthy();
+    for (const status of ["COMPLETED", "RUNNING", "CANCELLED"]) {
+      const {service, repository} = build({status, executionProfileId: row.profile_id,
+        adapterContractDigest: binding.adapterContractDigest});
+      for (const [operation, read] of operations) {
+        const answer = await read(service);
+        expect(ResearchCurrentSourceNotApplicableResponseSchema.safeParse(answer).success, operation).toBe(true);
+        expect(answer).toMatchObject({availability: {state: "NOT_APPLICABLE"},
+          lane: {operation, run_profile: "NATIVE_IS_OPTIMIZATION",
+            reason_code: "RS02_SCALAR_WFO_LANE_NOT_APPLICABLE_TO_NATIVE_IS_OPTIMIZATION"}});
+      }
+      expect(repository.rows).not.toHaveBeenCalled();
+      expect(repository.observationSeries).not.toHaveBeenCalled();
+      expect(repository.verifyRetainedImport).not.toHaveBeenCalled();
+    }
+    const wrong = build({status: "COMPLETED", executionProfileId: row.profile_id, adapterContractDigest: "0".repeat(64)});
+    for (const [, read] of operations) await expect(read(wrong.service)).rejects.toMatchObject({status: 409});
   });
   it("E17 fixed runs never claim pending WFO retention, including after completion", async () => {
     for (const status of ["COMPLETED", "RUNNING"]) {

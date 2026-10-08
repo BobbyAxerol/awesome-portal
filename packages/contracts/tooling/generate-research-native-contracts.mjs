@@ -25,14 +25,23 @@ const nullable=s=>({anyOf:[s,{type:'null'}]}),en=(...v)=>({enum:v});
 const cost=obj({state:en('AVAILABLE','NOT_PUBLISHED'),total:nullable({type:'string',pattern:'^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$',maxLength:96}),reason_code:nullable(en('NATIVE_RESULT_SERIES_NOT_PUBLISHED'))});
 cost.oneOf=[{properties:{state:{const:'AVAILABLE'},total:{type:'string'},reason_code:{type:'null'}}},{properties:{state:{const:'NOT_PUBLISHED'},total:{type:'null'},reason_code:{type:'string'}}}];
 const result=obj({schema_version:{const:'research.native-route-result.v1'},execution_route:en('intrabar_bracket','reactive','event_driven'),
- authority:{const:'PINNED_QUANTBT_ACCOUNTING_NOT_PORTAL_PNL'},input_protocol:en('DELTA_CLOSE_BRACKET_INTENTS_V1','DELTA_CLOSE_STATEFUL_CALLBACK_V1','DELTA_CLOSE_ORDER_COMMANDS_V1','DELTA_CLOSE_LIMIT_OCO_COMMANDS_V1'),
+ authority:{const:'PINNED_QUANTBT_ACCOUNTING_NOT_PORTAL_PNL'},input_protocol:en('DELTA_CLOSE_BRACKET_INTENTS_V1','DELTA_CLOSE_STATEFUL_CALLBACK_V1','DELTA_CLOSE_ORDER_COMMANDS_V1','DELTA_CLOSE_LIMIT_OCO_COMMANDS_V1','DELTA_CLOSE_MULTICYCLE_LIMIT_OCO_COMMANDS_V1'),
  clock:en('KNOWN_CLOSE_NEXT_BAR_INTRABAR','KNOWN_CLOSE_NEXT_BAR_CLOSE'),position_unit:{const:'CONTRACT_QUANTITY'},target_notional:{const:'2000'},
  fees:cost,funding:cost,cost_scope:{const:'FULL_CHILD_TAPE'},fills_count:{type:'integer',minimum:0,maximum:100000},orders_count:nullable({type:'integer',minimum:0,maximum:100000}),replay_authority:{const:'RETAINED_ENGINE_AUDIT_ONLY_NOT_BROKER_EVENTS'}});
 result.oneOf=[['intrabar_bracket','DELTA_CLOSE_BRACKET_INTENTS_V1','KNOWN_CLOSE_NEXT_BAR_INTRABAR'],
  ['reactive','DELTA_CLOSE_STATEFUL_CALLBACK_V1','KNOWN_CLOSE_NEXT_BAR_CLOSE'],
  ['event_driven','DELTA_CLOSE_ORDER_COMMANDS_V1','KNOWN_CLOSE_NEXT_BAR_CLOSE'],
- ['event_driven','DELTA_CLOSE_LIMIT_OCO_COMMANDS_V1','KNOWN_CLOSE_NEXT_BAR_CLOSE']]
+ ['event_driven','DELTA_CLOSE_LIMIT_OCO_COMMANDS_V1','KNOWN_CLOSE_NEXT_BAR_CLOSE'],
+ ['event_driven','DELTA_CLOSE_MULTICYCLE_LIMIT_OCO_COMMANDS_V1','KNOWN_CLOSE_NEXT_BAR_CLOSE']]
  .map(([route,protocol,clock])=>({properties:{execution_route:{const:route},input_protocol:{const:protocol},clock:{const:clock}}}));
+const trialCount={type:'integer',minimum:1,maximum:400},decimal={type:'string',pattern:'^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$',maxLength:96};
+result.properties.optimization=obj({schema_version:{const:'research.native-optimization.v1'},authority:{const:'PINNED_QUANTBT_NATIVE_IS_SHARPE'},
+ scope:{const:'P08_WARMUP_PLUS_IS_ONLY'},objective_name:{const:'sharpe'},selection_method:{const:'QUANTBT_GENERIC_ROBUST_PLATEAU_NOT_SCALAR_WFO_V1'},
+ requested_trials:{...trialCount,minimum:2},completed_trials:trialCount,retained_trials:trialCount,distinct_parameter_sets:trialCount,
+ selected_trial_number:{type:'integer',minimum:0,maximum:399},selected_parameters:{type:'object',additionalProperties:decimal,maxProperties:8},
+ selected_objective:decimal,train_start_utc_ms:{type:'integer',minimum:0},train_end_exclusive_utc_ms:{type:'integer',minimum:0},holdout_used:{const:false},
+ table_kind:{const:'native_optimizer_trials'},table_schema_version:{const:'research.native-optimizer-trial-table.v1'},sha256:{type:'string',pattern:'^[a-f0-9]{64}$'}});
+result.allOf=[{if:{properties:{input_protocol:{const:'DELTA_CLOSE_MULTICYCLE_LIMIT_OCO_COMMANDS_V1'}}},then:{required:['optimization']},else:{not:{required:['optimization']}}}];
 for(const file of ['research-foundation','research-run-create','research-progress','research-evidence','research-split','research-search','research-freeze','research-replay','research-report','research-attempt-lineage','research-current-source']){
  const path=new URL(`packages/contracts/openapi/${file}.openapi.json`,root),old=readFileSync(path,'utf8'),doc=JSON.parse(old);let next=old;
  for(const [name,raw]of Object.entries(doc.components.schemas)){
@@ -42,6 +51,14 @@ for(const file of ['research-foundation','research-run-create','research-progres
    if(node.enum?.includes('p04.delta-rsi.v1')&&node.enum.includes('p17.imported-signal-notional.v1')&&!node.enum.includes('full03.delta-rsi.v1')){node.enum.push('full03.delta-rsi.v1');changed=true;}
    if(node.properties?.execution_adapter_id&&file==='research-progress'){node.properties.native_execution=result;changed=true;}
    if(node.properties?.source_adapter_id&&name==='EvidenceHub'){node.properties.native_execution=result;changed=true;}
+   if(node.properties?.state?.const==='FIXED_PROFILE_NO_SEARCH'&&node.properties?.parameter_bundle_digest){
+    delete node.properties.state.const;
+    node.properties.state.enum=['FIXED_PROFILE_NO_SEARCH','NATIVE_OPTIMIZATION_SEALED_SEPARATELY'];
+    node.properties.native_optimization=result.properties.optimization;changed=true;
+   }else if(node.properties?.state?.enum?.includes('FIXED_PROFILE_NO_SEARCH')&&node.properties?.parameter_bundle_digest){
+    if(!node.properties.state.enum.includes('NATIVE_OPTIMIZATION_SEALED_SEPARATELY'))node.properties.state.enum.push('NATIVE_OPTIMIZATION_SEALED_SEPARATELY');
+    node.properties.native_optimization=result.properties.optimization;changed=true;
+   }
    if(file==='research-replay'&&node.properties?.replay_contract){
     const ids=node.properties.id, contracts=node.properties.replay_contract;
     const add=(s,values)=>{if(s?.const==='signal_notional'){delete s.const;s.enum=['signal_notional',...values];changed=true;}
@@ -54,6 +71,9 @@ for(const file of ['research-foundation','research-run-create','research-progres
   };walk(value);
   if(name==='LaneNotApplicable'&&!value.properties.lane.properties.run_profile.enum.includes('NATIVE_FIXED_QUALIFICATION')){
    value.properties.lane.properties.run_profile.enum.push('NATIVE_FIXED_QUALIFICATION');changed=true;
+  }
+  if(name==='LaneNotApplicable'&&!value.properties.lane.properties.run_profile.enum.includes('NATIVE_IS_OPTIMIZATION')){
+   value.properties.lane.properties.run_profile.enum.push('NATIVE_IS_OPTIMIZATION');changed=true;
   }
   if(name==='PortalAdmission'){
    const profiles=value.properties.profiles;

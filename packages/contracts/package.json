@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Portal canonical contract workspace (U09): schemas, fixtures, generated types",
   "scripts": {
+    "generate:research-limit-oco-search": "node tooling/generate-research-limit-oco-search.mjs && npm run generate:research-expanded-native",
     "generate:research-window-execution": "node tooling/generate-research-window-execution.mjs && openapi-typescript openapi/research-window-execution.openapi.json -o generated/research-window-execution.d.ts",
     "generate:research-execution-recipes": "node tooling/generate-research-execution-recipes.mjs && npm run generate:research-dataset-index && npm run generate:research-run-setup && openapi-typescript openapi/research-preflight.openapi.json -o generated/research-preflight.d.ts",
     "generate:research-run-setup": "node tooling/generate-research-run-setup.mjs && openapi-typescript openapi/research-run-setup.openapi.json -o generated/research-run-setup.d.ts",

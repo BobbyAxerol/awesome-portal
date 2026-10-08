@@ -395,7 +395,8 @@ class DurableQuantWorker:
                     lease_epoch=research_request.lease_epoch,
                     planned_trials=(
                         0 if is_final_audit else len(whatif_job.evaluations) if whatif_job is not None
-                        else wfo_trials if is_delta_wfo else 1
+                        else wfo_trials if is_delta_wfo else research_request.research.requested_spec['optuna_trials']
+                        if research_request.research.is_native_fixed else 1
                     ),
                     cpu_cap_seconds=progress_cpu_cap,
                     profile=(
@@ -598,7 +599,8 @@ class DurableQuantWorker:
                 self._emit_whatif_trials(progress_journal, results)
             elif is_research_producer:
                 p04_parameters = research_request.research.p04_parameters
-                if p04_parameters is not None:
+                native_optimizer=result.get('research_receipt',{}).get('native_execution',{}).get('optimization')
+                if p04_parameters is not None and native_optimizer is None:
                     # The fixed profile hands over its one fold, its one
                     # trial and the exact parameter bundle P14 digests.
                     handoff_cursor = {
@@ -635,6 +637,8 @@ class DurableQuantWorker:
                         ),
                         **({"window_execution_path": engine_root / research_request.run_id / "research" / "window-execution.parquet"}
                            if receipt.get("window_execution_source") is not None else {}),
+                        **({'native_optimization_path':engine_root/run_id/'research'/'native-optimizer-trials.parquet'}
+                           if native_optimizer is not None else {}),
                         **({"audit_source_root": engine_root / WFO_SOURCE_DIRNAME / run_id} if is_final_audit else {}),
                     )
             split_digest: str | None = None

@@ -318,6 +318,8 @@ export class ResearchSearchService {
     // shares the P04 executor digest but is not the fixed qualification.
     const vnObserved = row.executionProfileId === VN_OBSERVED_FIXED_PROFILE_ID;
     const native = isNativeReadBinding(row.executionProfileId, row.adapterContractDigest);
+    if(source.protocol.selection.state==='NATIVE_OPTIMIZATION_SEALED_SEPARATELY')
+      return this.absentDetail(row,availability('NOT_APPLICABLE','NATIVE_OPTIMIZER_POPULATION_SEALED_IN_P05_NOT_SCALAR_WFO_LEDGER'),requestedFold);
     const compatible = (imported !== null || vnObserved || native || (row.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID) === P04_FIXED_QUALIFICATION_PROFILE_ID)
       && binding !== null
       && (!native || source.source.execution_adapter_id === 'full03.delta-rsi.v1')

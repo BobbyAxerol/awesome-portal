@@ -247,6 +247,8 @@ export class ResearchFreezeService {
     if (!projection || row.kind !== "DURABLE") return this.absentDetail(row, fallback, requestedFold, bytes);
 
     const source = projection.source;
+    if(source.protocol.selection.state==='NATIVE_OPTIMIZATION_SEALED_SEPARATELY')
+      return this.absentDetail(row,availability('NOT_APPLICABLE','NATIVE_OPTIMIZER_SELECTION_PUBLISHED_IN_NATIVE_RECEIPT_NOT_FIXED_P04_BUNDLE'),requestedFold,bytes);
     // A10b: the run's own historical binding, by its exact adapter digest.
     const imported = importedAlphaReadBinding(row);
     if (row.executionProfileId === IMPORTED_ALPHA_PROFILE_ID && source.source.execution_adapter_id !== "p17.imported-signal-notional.v1") {

@@ -73,6 +73,18 @@ describe("S02 Alpha-bound setup without admission widening",()=>{
     expect(build().profiles[1].recipe).toMatchObject({family:"ADVANCED_WFO"});
     const fixed=build().profiles[0];
     expect(recipePresentation({...fixed,trial_count:{min:2,max:400}}).key).not.toBe(fixed.recipe!.key);
+    expect(recipePresentation({execution_route:"event_driven",protocol:"three_window_decay",
+      optimization_mode:"mode_4_is_only_robust",optimization_schedule:"global",trial_count:{min:2,max:400}}))
+      .toMatchObject({family:"NATIVE_OPTIMIZED",label:"Limit/OCO · native IS optimization"});
+  });
+  it("projects native optimizer seed/span from its immutable executor, without rewriting the old fixed recipe",()=>{
+    const flags={...config as any,FEATURE_RESEARCH_FULL06_PROFILE:"true"};
+    const before=JSON.stringify(executionRecipes),profiles=researchPortalAdmission(flags,{release_id:"er_quantbt_111",verified:true});
+    const row=profiles.profiles.find(p=>p.profile_id==="p10.delta-event-driven-limit-oco-search-1h.v1")!;
+    expect(row).toMatchObject({seed_policy:"LOCKED",random_seed:42,max_span_days:365,trial_count:{min:2,max:400},trial_default:100});
+    const old=profiles.profiles.find(p=>p.profile_id==="p10.delta-event-driven-limit-oco-fixed-1h.v1")!;
+    expect(old).toMatchObject({seed_policy:"FORBIDDEN",random_seed:null,max_span_days:92,trial_count:{min:1,max:1}});
+    expect(JSON.stringify(executionRecipes)).toBe(before);
   });
   it("keeps compatible imported DRAFT timeframes separate from nonnumeric search and dataset grants",()=>{
     const v={...version,lifecycleState:"DRAFT" as const,sourceDigest:"b".repeat(64),

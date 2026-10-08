@@ -3058,3 +3058,48 @@ No many-trial/multi-cycle Limit/OCO claim; no P24/owner/release claim.
 Sessions revoked, zero active children, accounts/data/images preserved;
 no destructive cleanup needed.
 [Exact run link, measures, private hashes and Claude handoff](./evidence/P24/SHARED_PREVIEW_LIMIT_OCO_90D_2026-10-08.md).
+
+### §51 — Limit/OCO multi-cycle native optimization — Bobby approved 2026-10-08
+
+The one-trial/one-cycle recipe was a minimal qualification, not comprehensive
+stress coverage. Preserve its immutable descriptor, Alpha binding and receipt.
+Add a distinct recipe with 2–400 real parameter trials (default 100), seed 42,
+bounded serial CPU/wall/scratch limits, and repeated causal Limit-entry / SL–TP
+OCO cycles. Trial scoring must call the pinned QuantBT native matcher/accounting
+through its public generic optimizer; never optimize a scalar surrogate and
+call it native. Select on IS only; no Holdout rows enter this child. Publish the
+exact optimization scope and retain the complete engine trial population in
+Parquet, separately from the bounded public summary. OOS remains evaluation,
+not selection. Preserve exact values, source identities and opaque paging.
+
+Qualification: ordinary admission → isolated child → P05 seal → named reads on
+long real historical data with 100 requested trials; measure distinct parameter
+sets, actual cycles, orders/fills/cancels/expiry and parent/OCO activation.
+Do not promise particular profitability or fabricate an event to meet a count.
+Rebuild the Research preview web from current Claude source, then verify real
+journal rendering at 1280/660 px. No frontend redesign, production/dev/main,
+manual SQL writes, unrelated candidate activation, remote push or compaction.
+
+Capacity before edits: root available 99,916,795,904 bytes (85% used). Serial
+incremental scoped builds, existing caches, at most 5 GiB additional footprint;
+preserve current/rollback images and all original evidence. Group focused tests
+and one mandatory normal commit hook, not a full gate per small edit.
+Status: **IMPLEMENTING**; not yet product-qualified.
+
+**Backend delivery, 2026-10-08 — PRODUCT_RUN_QUALIFIED / SHARED_PREVIEW_READY.**
+Additive 1.0.13/native IS optimizer supports 2–400 trials/default 100 and
+48-bar cycles; original fixed recipe/receipts stay immutable. BTC/ETH/SOL
+ordinary 90-day runs each COMPLETED/READY with all 100 trials byte-verified
+in P05. Counts: 21/15/16 parent cycles, 84/60/64 orders, 42/30/32 fills;
+no OCO sibling double-fill, real fill/cancel pairs retained.
+Migration 125/126 safely opens only the exact qualified recipe on shared
+Research preview without a candidate selector. Shared new BTC run
+`rrun_ee50cb82d6de9e495e10b32323b62f8c` completed 100 trials/21 cycles.
+Claude web containing `1ab33e3f` rebuilt; affected S08 browser1280/660 passes.
+Setup seed/span presentation is corrected from immutable executor facts,
+not by changing a historic recipe. Narrow FE type/Parameters mapping is
+explicit in the handoff; scalar native Search/Freeze/full Report and P24
+are not falsely declared complete. No production/dev/main/remote push,
+compaction or source-data changes. Owned QA identity revoked/cell stopped.
+[Frozen source proof](./evidence/P10/LIMIT_OCO_MULTICYCLE_PRODUCT_QUALIFICATION_2026-10-08.md) ·
+[Shared run, actual receipts and exact Claude handoff](./evidence/P24/LIMIT_OCO_MULTICYCLE_SHARED_PREVIEW_AND_CLAUDE_HANDOFF_2026-10-08.md).

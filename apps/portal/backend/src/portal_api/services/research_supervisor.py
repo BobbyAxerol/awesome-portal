@@ -115,7 +115,8 @@ class ResearchChildLimits:
             from portal_api.domain.research_execution_recipes import execution_recipe
             from portal_api.domain.research_trial_budget import expanded_trials
             row=execution_recipe(recipe_profile_id)
-            expanded_budget=expanded_trials(row) and all(getattr(self,k)<=row['budgets'][k]
+            native_search = row['descriptor'].get('native_input',{}).get('optimizer') == 'PINNED_QUANTBT_NATIVE_IS_SHARPE_V1'
+            expanded_budget=(expanded_trials(row) or native_search) and all(getattr(self,k)<=row['budgets'][k]
                 for k in ('memory_bytes','cpu_seconds','wall_seconds','scratch_bytes','file_bytes','fd_limit'))
         if not (2 * 1024 * 1024 * 1024 <= self.memory_bytes <= 8 * 1024 * 1024 * 1024):
             raise ResearchSupervisorError("memory_bytes is outside P06's bounded child range")
@@ -157,6 +158,7 @@ class ResearchChildReceipt:
     source_observation: dict[str, Any] | None = None
     qualification_binding: dict[str, Any] | None = None
     native_symbol: str | None = None
+    native_optimization: dict[str, Any] | None = None
 
     def as_payload(self) -> dict[str, Any]:
         payload = {
@@ -188,6 +190,11 @@ class ResearchChildReceipt:
                 if self.native_symbol not in {'BTCUSDT','ETHUSDT','SOLUSDT'}:
                     raise ResearchSupervisorError('native fixed child must carry exact P08 symbol')
                 payload.update(execution_profile_id=row['profile_id'], execution_profile_digest=row['profile_digest'],native_symbol=self.native_symbol)
+                optimized = row['descriptor']['native_input']['optimizer'] == 'PINNED_QUANTBT_NATIVE_IS_SHARPE_V1'
+                if optimized != (self.native_optimization is not None):
+                    raise ResearchSupervisorError('native optimizer controls must match the exact installed recipe')
+                if optimized:
+                    payload['native_optimization'] = self.native_optimization
                 return payload
             from portal_api.domain.research_vn_observed_fixed_profile import VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST
             from portal_api.domain.research_run_producer import VnSourceObservation
@@ -195,7 +202,7 @@ class ResearchChildReceipt:
                 raise ResearchSupervisorError("fixed child requires its exact observed-date profile and provenance")
             payload.update(execution_profile_id=self.execution_profile_id, execution_profile_digest=self.execution_profile_digest,
                 source_observation=VnSourceObservation.model_validate(self.source_observation).model_dump(mode="json"))
-        elif self.execution_profile_digest is not None or self.source_observation is not None or self.native_symbol is not None:
+        elif self.execution_profile_digest is not None or self.source_observation is not None or self.native_symbol is not None or self.native_optimization is not None:
             raise ResearchSupervisorError("legacy fixed child cannot carry another profile's provenance")
         if self.qualification_binding is not None:
             from portal_api.domain.research_engine_qualification import validate_engine_qualification_binding
@@ -228,6 +235,7 @@ class ResearchChildResult:
     fixed_replay_source: dict[str, Any] | None = None
     fixed_replay_path: Path | None = None
     native_execution: dict[str, Any] | None = None
+    native_optimization_path: Path | None = None
     window_execution_source: dict[str, Any] | None = None
     window_execution_path: Path | None = None
     # Opt-in operator qualification only; these fields never enter the
@@ -762,9 +770,9 @@ class IsolatedResearchSupervisor:
         limits: ResearchChildLimits = ResearchChildLimits(),
         on_child_alive: Callable[[], None] | None = None,
     ) -> ResearchChildResult:
-        limits.validate()
         from portal_api.domain.research_native_profile import is_native_profile, native_profile
         native = receipt.execution_profile_id is not None and is_native_profile(receipt.execution_profile_id)
+        limits.validate(recipe_profile_id=receipt.execution_profile_id if native else None)
         cap = native_profile(receipt.execution_profile_id,receipt.execution_profile_digest)['budgets'] if native else {'cpu_seconds':45,'wall_seconds':90}
         fields = ('memory_bytes','cpu_seconds','wall_seconds','scratch_bytes','file_bytes','fd_limit') if native else ('cpu_seconds','wall_seconds')
         if receipt.execution_profile_id is not None and any(getattr(limits, field) > cap[field] for field in fields):
@@ -792,6 +800,14 @@ class IsolatedResearchSupervisor:
             if (not isinstance(facts, dict) or facts.get('execution_route') != native_profile(receipt.execution_profile_id,receipt.execution_profile_digest)['descriptor']['execution_route']
                     or facts != payload.get('evidence_source',{}).get('source',{}).get('native_execution')):
                 raise ResearchSupervisorError('native route result must match its exact retained child source')
+        native_optimization_path=None
+        if receipt.native_optimization is not None:
+            from portal_api.services.research_native_optimization import verify
+            summary=payload['native_execution'].get('optimization')
+            native_optimization_path=self._scratch_root/receipt.job_id/receipt.worker_attempt_id/'native-optimizer-trials.parquet'
+            if not isinstance(summary,dict) or summary.get('requested_trials')!=receipt.native_optimization['optuna_trials'] or summary.get('train_end_exclusive_utc_ms')!=receipt.oos_start_utc_ms:
+                raise ResearchSupervisorError('native optimization source differs from admission')
+            verify(native_optimization_path,summary)
         if receipt.execution_profile_id is not None:
             if (payload.get("execution_profile_id") != receipt.execution_profile_id
                     or payload.get("execution_profile_digest") != receipt.execution_profile_digest
@@ -835,6 +851,7 @@ class IsolatedResearchSupervisor:
             enforced_limits=launch.enforced_limits,
             evidence_source=evidence_source if isinstance(evidence_source, dict) else None,
             native_execution=payload.get('native_execution') if native else None,
+            native_optimization_path=native_optimization_path,
             window_execution_source=window_source,
             window_execution_path=window_path,
             fixed_replay_source=fixed_replay_source,

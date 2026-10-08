@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {NATIVE_DELTA_BINDINGS,isNativeReadBinding,nativeDeltaRecipe} from '../src/research/native-delta.binding';
 import {executionRecipe,executionRecipeQualification,executionRecipeActivationReason} from '../src/research/execution-recipes';
-import {ResearchNativeRouteResultSchema} from '../src/research/native-route.contract';
+import {ResearchNativeRouteResultSchema,NativeOptimizationSchema} from '../src/research/native-route.contract';
 import {ResearchRunAdmissionService} from '../src/research/run-admission.service';
 import {admissionRepository,flagConfig,manifestFor,p04Requested,w1Admin,w1Scope} from './research-w1-wfo.fixture';
 const contractsRoot=process.env.PORTAL_CONTRACTS_DIR??resolve(__dirname,'../../../packages/contracts');
@@ -35,6 +35,10 @@ describe('native Delta input and historical binding',()=>{
   const spec=p04Requested({alpha_binding:{alpha_id:binding.alphaId,alpha_version_id:binding.alphaVersionId},
    execution_route:binding.declaredContract.execution.execution_route as never});
   const row=nativeDeltaRecipe(spec)!;expect(row).toBeTruthy();
+  if(row.work_schema_version==='research.native-optimized-work.v1'){
+   spec.optimization_mode=row.public_profile.optimization_mode as typeof spec.optimization_mode;
+   spec.optuna_trials=100;spec.random_seed=42;
+  }
   const manifest=manifestFor(spec),start=Date.parse(spec.windows!.is.start)-300*3600000;
   manifest.datasetBinding={...manifest.datasetBinding,...spec.data,timezone:'UTC',source_manifest_digest:'d'.repeat(64),range_start_utc_ms:start,
    range_end_exclusive_utc_ms:Date.parse(spec.windows!.holdout.end_exclusive),closed_bar_policy:'CLOSED_BARS_ONLY',
@@ -45,7 +49,8 @@ describe('native Delta input and historical binding',()=>{
    binding:{adapterId:binding.adapterId,contractDigest:binding.adapterContractDigest},sourceDigest:null};
   const admission=new ResearchRunAdmissionService(admissionRepository(manifest,version) as never,flags as never);
   const admitted=await admission.require(w1Admin,w1Scope,manifest.preflightToken,spec);
-  expect(admitted.profile?.id).toBe(row.profile_id);expect(admitted.alpha?.fixedParameters).not.toBeNull();
+  expect(admitted.profile?.id).toBe(row.profile_id);
+  expect(admitted.alpha?.fixedParameters).not.toBeNull(); // pinned first trial; selected params remain engine-owned
   expect(isNativeReadBinding(row.profile_id,binding.adapterContractDigest)).toBe(true);
   expect(isNativeReadBinding(row.profile_id,'f'.repeat(64))).toBe(false);
   expect(isNativeReadBinding(null,null)).toBe(false);
@@ -57,5 +62,19 @@ describe('native Delta input and historical binding',()=>{
   expect(ResearchNativeRouteResultSchema.safeParse({...result,funding:{state:'NOT_PUBLISHED',total:'0',reason_code:'NATIVE_RESULT_SERIES_NOT_PUBLISHED'}}).success).toBe(false);
   expect(ResearchNativeRouteResultSchema.safeParse({...result,input_protocol:'DELTA_CLOSE_ORDER_COMMANDS_V1'}).success).toBe(false);
   expect(ResearchNativeRouteResultSchema.safeParse({...result,clock:'KNOWN_CLOSE_NEXT_BAR_INTRABAR'}).success).toBe(false);
+ });
+ it('requires a bounded source selection and never attaches optimization to an old fixed protocol',()=>{
+  const optimization={schema_version:'research.native-optimization.v1',authority:'PINNED_QUANTBT_NATIVE_IS_SHARPE',
+   scope:'P08_WARMUP_PLUS_IS_ONLY',objective_name:'sharpe',selection_method:'QUANTBT_GENERIC_ROBUST_PLATEAU_NOT_SCALAR_WFO_V1',
+   requested_trials:100,retained_trials:100,completed_trials:99,distinct_parameter_sets:100,selected_trial_number:42,
+   selected_parameters:{rvol:'1.6'},selected_objective:'0.5',train_start_utc_ms:1,train_end_exclusive_utc_ms:2,
+   holdout_used:false,table_kind:'native_optimizer_trials',table_schema_version:'research.native-optimizer-trial-table.v1',sha256:'a'.repeat(64)};
+  expect(NativeOptimizationSchema.safeParse(optimization).success).toBe(true);
+  for(const bad of [{requested_trials:401},{holdout_used:true},{retained_trials:101},{completed_trials:101},{selected_trial_number:100}])
+   expect(NativeOptimizationSchema.safeParse({...optimization,...bad}).success).toBe(false);
+  const native={...result,execution_route:'event_driven',input_protocol:'DELTA_CLOSE_MULTICYCLE_LIMIT_OCO_COMMANDS_V1',optimization};
+  expect(ResearchNativeRouteResultSchema.safeParse(native).success).toBe(true);
+  expect(ResearchNativeRouteResultSchema.safeParse({...native,optimization:undefined}).success).toBe(false);
+  expect(ResearchNativeRouteResultSchema.safeParse({...native,input_protocol:'DELTA_CLOSE_LIMIT_OCO_COMMANDS_V1'}).success).toBe(false);
  });
 });

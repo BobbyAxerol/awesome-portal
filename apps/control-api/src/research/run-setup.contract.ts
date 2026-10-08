@@ -10,7 +10,7 @@ export const SetupRefusalSchema = z.object({ reason_code: Reason, field_path: Se
 export type SetupRefusal = z.infer<typeof SetupRefusalSchema>;
 export const RecipePresentationSchema = z.object({
   key: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/),
-  family: z.enum(["THREE_WINDOW_FIXED", "THREE_WINDOW_OPTIMIZED", "ADVANCED_WFO", "FULL_SAMPLE", "NATIVE_FIXED"]),
+  family: z.enum(["THREE_WINDOW_FIXED", "THREE_WINDOW_OPTIMIZED", "ADVANCED_WFO", "FULL_SAMPLE", "NATIVE_FIXED", "NATIVE_OPTIMIZED"]),
   label: z.string().min(1).max(120), recommended_rank: z.number().int().min(0).max(999),
   scope: z.literal("DISPLAY_ORDER_NOT_OPTIMAL_SETUP_OR_AUTHORIZATION"),
 }).strict();
@@ -56,7 +56,10 @@ export const NativeDeltaInputSchema=z.object({schema_version:z.literal('research
   execution_clock:z.enum(['KNOWN_CLOSE_NEXT_BAR_INTRABAR','KNOWN_CLOSE_NEXT_BAR_CLOSE']),
   bracket:z.object({stop_fraction:z.literal('0.013'),take_profit_fraction:z.literal('0.026'),level_mode:z.literal('percent_distance')}).strict().nullable(),
   account:z.object({initial_capital:z.literal('20000'),leverage:z.literal('3'),one_way_fee_rate:z.literal('0.0005'),funding_enabled:z.literal(false)}).strict(),
-  optimizer:z.literal('NOT_APPLICABLE_FIXED_DELTA_INPUT_NOT_SCALAR_OPTIMIZER')}).strict();
+  optimizer:z.enum(['NOT_APPLICABLE_FIXED_DELTA_INPUT_NOT_SCALAR_OPTIMIZER','PINNED_QUANTBT_NATIVE_IS_SHARPE_V1']),
+  cycle_policy:z.object({schema_version:z.literal('research.native-limit-oco-cycle-policy.v1'),cycle_bars:z.literal(48),
+    entry_expiry_bars:z.literal(24),boundary_policy:z.literal('EXPIRE_CANCEL_AND_ENGINE_REDUCE_ONLY_CLOSE_BEFORE_REENTRY'),
+    max_span_days:z.literal(365)}).strict().optional()}).strict();
 export const RunSetupBudgetSchema = z.object({
   scope: z.literal("DECLARED_CAPS_NOT_RESERVATION_OR_ESTIMATE"), recipe_digest: Digest,
   profile_digest: Digest.nullable(), qualification: z.enum(["LEGACY_EXACT_BINDING", "CANDIDATE_NOT_QUALIFIED", "PRODUCT_RUN_QUALIFIED"]),

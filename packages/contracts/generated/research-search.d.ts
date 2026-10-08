@@ -84,13 +84,43 @@ export interface components {
             bound_warning: components["schemas"]["BoundWarning"];
         };
         FixedProfile: {
-            /** @constant */
-            state: "FIXED_PROFILE_NO_SEARCH";
+            /** @enum {unknown} */
+            state: "FIXED_PROFILE_NO_SEARCH" | "NATIVE_OPTIMIZATION_SEALED_SEPARATELY";
             adapter_contract_digest: components["schemas"]["Digest"];
             parameter_bundle_digest: components["schemas"]["Digest"];
             parameters: components["schemas"]["Parameter"][];
             strict_outer_oos: components["schemas"]["SourceGap"];
             availability: components["schemas"]["Availability"];
+            native_optimization?: {
+                /** @constant */
+                schema_version: "research.native-optimization.v1";
+                /** @constant */
+                authority: "PINNED_QUANTBT_NATIVE_IS_SHARPE";
+                /** @constant */
+                scope: "P08_WARMUP_PLUS_IS_ONLY";
+                /** @constant */
+                objective_name: "sharpe";
+                /** @constant */
+                selection_method: "QUANTBT_GENERIC_ROBUST_PLATEAU_NOT_SCALAR_WFO_V1";
+                requested_trials: number;
+                completed_trials: number;
+                retained_trials: number;
+                distinct_parameter_sets: number;
+                selected_trial_number: number;
+                selected_parameters: {
+                    [key: string]: string;
+                };
+                selected_objective: string;
+                train_start_utc_ms: number;
+                train_end_exclusive_utc_ms: number;
+                /** @constant */
+                holdout_used: false;
+                /** @constant */
+                table_kind: "native_optimizer_trials";
+                /** @constant */
+                table_schema_version: "research.native-optimizer-trial-table.v1";
+                sha256: string;
+            };
         };
         UnavailableFixedProfile: {
             /** @constant */

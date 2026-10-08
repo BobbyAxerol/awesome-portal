@@ -89,6 +89,18 @@ function subject(options?: { evidenceFailsOnce?: boolean; current?: Record<strin
 }
 
 describe("RS-01 terminal materialization and retry recovery", () => {
+  it('does not strand verified native optimizer completion on a fixed-P04 report refusal',async()=>{
+    const target=subject({scope:{executionProfileId:'p10.delta-event-driven-limit-oco-search-1h.v1'},reportRefuses:true});
+    const stderr=vi.spyOn(process.stderr,'write').mockImplementation(()=>true);
+    try{await target.service.ingest(terminalIngress as never);}finally{stderr.mockRestore();}
+    expect(target.evidence.ingest).toHaveBeenCalledOnce();expect(target.split.ingest).toHaveBeenCalledOnce();
+    expect(target.progress.markTerminalMaterialized).toHaveBeenCalledOnce();
+    // Untyped/primary sidecar errors must still refuse the checkpoint.
+    const bad=subject({scope:{executionProfileId:'p10.delta-event-driven-limit-oco-search-1h.v1'}});
+    bad.reports.materializeTerminal.mockRejectedValueOnce(new Error('unexpected primary loss'));
+    await expect(bad.service.ingest(terminalIngress as never)).rejects.toThrow('unexpected primary loss');
+    expect(bad.progress.markTerminalMaterialized).not.toHaveBeenCalled();
+  });
   it("accepts old-engine evidence only on its exact immutable qualification pin", async () => {
     const input = { ...terminalIngress, evidence: { source: { engine_version: "1.1.0" } } };
     const binding = { ...ENGINE_110_QUALIFICATION_BINDING, binding_digest: ENGINE_110_QUALIFICATION_BINDING_DIGEST };

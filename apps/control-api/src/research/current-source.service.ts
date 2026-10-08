@@ -1445,8 +1445,9 @@ export class ResearchCurrentSourceService {
     const vnObserved = executionProfileId === VN_OBSERVED_FIXED_PROFILE_ID &&
       adapterContractDigest === P04_DELTA_ADAPTER_CONTRACT_DIGEST;
     const native = isNativeReadBinding(executionProfileId, adapterContractDigest);
+    const nativeOptimized = native && executionProfileId === 'p10.delta-event-driven-limit-oco-search-1h.v1';
     if (!p04 && !imported && !vnObserved && !native) return null;
-    const reason = native ? "RS02_RETAINED_WFO_LANE_NOT_APPLICABLE_TO_NATIVE_FIXED_QUALIFICATION" : imported
+    const reason = nativeOptimized ? "RS02_SCALAR_WFO_LANE_NOT_APPLICABLE_TO_NATIVE_IS_OPTIMIZATION" : native ? "RS02_RETAINED_WFO_LANE_NOT_APPLICABLE_TO_NATIVE_FIXED_QUALIFICATION" : imported
       ? "RS02_RETAINED_WFO_LANE_NOT_APPLICABLE_TO_IMPORTED_FIXED_QUALIFICATION"
       : vnObserved ? "RS02_RETAINED_WFO_LANE_NOT_APPLICABLE_TO_VN_OBSERVED_FIXED_QUALIFICATION"
       : P04_FIXED_PROFILE_NOT_RETAINABLE_REASON;
@@ -1467,7 +1468,7 @@ export class ResearchCurrentSourceService {
       lane: {
         state: "NOT_APPLICABLE",
         operation,
-        run_profile: native ? "NATIVE_FIXED_QUALIFICATION" : imported ? "IMPORTED_FIXED_QUALIFICATION" : vnObserved ? "VN_OBSERVED_FIXED_QUALIFICATION" : "P04_FIXED_QUALIFICATION",
+        run_profile: nativeOptimized ? "NATIVE_IS_OPTIMIZATION" : native ? "NATIVE_FIXED_QUALIFICATION" : imported ? "IMPORTED_FIXED_QUALIFICATION" : vnObserved ? "VN_OBSERVED_FIXED_QUALIFICATION" : "P04_FIXED_QUALIFICATION",
         run_adapter_contract_digest: adapterContractDigest,
         // Byte-stable: P04 N/A keeps naming the original Advanced-WFO lane.
         retainable_profile_id: RS02_DELTA_WFO_GLOBAL_PROFILE_ID,

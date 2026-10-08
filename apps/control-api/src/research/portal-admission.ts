@@ -37,6 +37,16 @@ export function researchPortalAdmission(
       // The checked image-owned JSON is copied, not a second mutable policy.
       const {profile_id, ...facts} = JSON.parse(JSON.stringify(row.public_profile)) as
         Omit<ResearchPortalAdmission["profiles"][number], "state" | "reason">;
+      // Native IS optimizer admission reads the immutable execution descriptor.
+      // Its initial additive public template inherited fixed-native presentation
+      // (FORBIDDEN seed / 92 days). Correct the read representation, never the
+      // persisted recipe identity or already-issued run/qualification digest.
+      if ("native_input" in row.descriptor && "random_seed" in row.descriptor
+          && row.descriptor.native_input.optimizer === "PINNED_QUANTBT_NATIVE_IS_SHARPE_V1") {
+        facts.seed_policy = "LOCKED";
+        facts.random_seed = row.descriptor.random_seed;
+        facts.max_span_days = row.descriptor.max_span_days;
+      }
       // Atlas's historical ETag hashes wire JSON, not a sorted object. Keep
       // the original prefix/key insertion order as well as semantic facts.
       return {profile_id, state:reason ? "DISABLED" : "ENABLED", reason,

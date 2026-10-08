@@ -31,11 +31,16 @@ def native_enabled(profile_id: str, env: dict[str, str]) -> bool:
 
 def validate_native_spec(spec: dict[str, Any], row: dict[str, Any]) -> None:
     p = row['descriptor']
+    optimized = p['native_input']['optimizer'] == 'PINNED_QUANTBT_NATIVE_IS_SHARPE_V1'
     if (spec.get('schema_version') != p['requested_spec_version']
             or spec.get('execution_route') != p['execution_route'] or spec.get('protocol') != p['protocol']
-            or spec.get('optimization_mode') != 'mode_1_decay' or spec.get('optimization_schedule') != 'global'
-            or type(spec.get('optuna_trials')) is not int or spec['optuna_trials'] != 1
-            or any(spec.get(k) is not None for k in ('walk_forward', 'random_seed', 'early_stopping'))
+            or spec.get('optimization_mode') != ('mode_4_is_only_robust' if optimized else 'mode_1_decay')
+            or spec.get('optimization_schedule') != 'global'
+            or type(spec.get('optuna_trials')) is not int
+            or not row['public_profile']['trial_count']['min'] <= spec['optuna_trials'] <= row['public_profile']['trial_count']['max']
+            or spec.get('walk_forward') is not None
+            or spec.get('random_seed') != (42 if optimized else None)
+            or not optimized and spec.get('early_stopping') is not None
             or any(spec.get(k) for k in ('route_params', 'optimization_config', 'parameter_space_overrides'))
             or spec.get('client', {}).get('engine_release_id') != 'er_quantbt_111'
             or spec.get('data', {}).get('dataset_id') != p['dataset_id']
@@ -65,12 +70,12 @@ def validate_native_spec(spec: dict[str, Any], row: dict[str, Any]) -> None:
         if any(t.microsecond != 0 or int(t.timestamp()) % 3600 for t in pair) or pair[0] >= pair[1]:
             raise ValueError('native fixed window requires closed UTC 1h edges')
         edges.extend(pair)
-    if edges[1] != edges[2] or edges[3] != edges[4] or (edges[5]-edges[0]).total_seconds() > 92*86400:
+    if edges[1] != edges[2] or edges[3] != edges[4] or (edges[5]-edges[0]).total_seconds() > p['max_span_days']*86400:
         raise ValueError('native fixed chronology/span does not match its bounded recipe')
 
 
 def native_work_payload(research: Any) -> dict[str, Any]:
-    return dict(schema_version='research.native-fixed-work.v1',
+    return dict(schema_version=native_profile(research.execution_profile_id, research.execution_profile_digest)['work_schema_version'],
         requested_spec_digest=research.requested_spec_digest, effective_spec_digest=research.effective_spec_digest,
         dataset_binding_digest=research.dataset_binding_digest, manifest_digest=research.manifest_digest,
         snapshot=dict(snapshot_id=research.snapshot_id, snapshot_content_hash=research.snapshot_content_hash),

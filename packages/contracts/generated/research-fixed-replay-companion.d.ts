@@ -158,6 +158,11 @@ export interface components {
             execution_profile_id?: "p10.delta-event-driven-limit-oco-fixed-1h.v1";
             /** @constant */
             execution_profile_digest?: "bd8fb94a6298ccc54278a8fe7e2cd707205721c52cda8adcbc9e51b5e49a2c88";
+        } | {
+            /** @constant */
+            execution_profile_id?: "p10.delta-event-driven-limit-oco-search-1h.v1";
+            /** @constant */
+            execution_profile_digest?: "2b69015b8975e3097cc797999188a6d6b75e29ce52fc3ad2d4c35026ab7f0d73";
         });
         /** @description Complete source population is at most 20,000 retained rows; each response is at most 200 rows/1 MiB. Opaque renewable cursor binds workspace, actor, run, immutable revision and limit. Exact source_ordinal playhead is mutually exclusive with cursor. No rows or fake folds/orders/fills/trades/holdout are synthesized. NOT_RECORDED conservatively covers old or fresh unrecorded custody; it does not infer a historical run from absent parts. */
         FixedReplayPage: {

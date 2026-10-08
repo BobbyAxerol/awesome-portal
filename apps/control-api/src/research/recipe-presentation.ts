@@ -18,14 +18,14 @@ export function recipePresentation(profile: {
   };
   const native = ["intrabar_bracket", "reactive", "event_driven"].includes(profile.execution_route);
   const fixed = !native && profile.protocol === "three_window_decay" && profile.trial_count.max === 1;
-  const family = native ? "NATIVE_FIXED" : fixed ? "THREE_WINDOW_FIXED"
+  const family = native ? (profile.trial_count.max > 1 ? "NATIVE_OPTIMIZED" : "NATIVE_FIXED") : fixed ? "THREE_WINDOW_FIXED"
     : profile.optimization_mode === "mode_5_full_robust" ? "FULL_SAMPLE"
     : profile.protocol === "advanced" ? "ADVANCED_WFO" : "THREE_WINDOW_OPTIMIZED";
   const mode = modes[profile.optimization_mode], schedule = schedules[profile.optimization_schedule];
   const nativeLabels: Record<string, string> = { intrabar_bracket: "Intrabar bracket", reactive: "Reactive", event_driven: "Event driven" };
   return {
     key: `${family.toLowerCase()}.${profile.execution_route}.${profile.protocol}.${profile.optimization_mode}.${profile.optimization_schedule}`,
-    family, label: native ? nativeLabels[profile.execution_route] : fixed ? "Fixed Three Window"
+    family, label: native ? (profile.trial_count.max > 1 ? "Limit/OCO · native IS optimization" : nativeLabels[profile.execution_route]) : fixed ? "Fixed Three Window"
       : `${mode?.label ?? profile.optimization_mode} · ${schedule?.label ?? profile.optimization_schedule}`,
     recommended_rank: native ? 400 : fixed ? 0 : (profile.protocol === "advanced" ? 100 : 50)
       + (mode?.rank ?? 0) * 10 + (schedule?.rank ?? 0),

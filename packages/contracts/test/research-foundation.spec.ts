@@ -334,13 +334,17 @@ describe("P09 published Research foundation contract", () => {
     expect(publishedIds.slice(97,160)).toEqual(full06.map((row: any) => row.profile_id));
     const expanded=registry.recipes.filter((row:any)=>row.descriptor.schema_version==='research.expanded-trial-profile.v1');
     const native=registry.recipes.filter((row:any)=>row.descriptor.schema_version==='research.native-route-profile.v1');
-    expect(expanded).toHaveLength(153);expect(native).toHaveLength(11);
+    expect(expanded).toHaveLength(153);expect(native).toHaveLength(12);
     expect(native.slice(0, 9).map((row: any) => row.profile_id))
       .not.toContain("p10.delta-intrabar-bracket-fixed-1h.v4");
     expect(native[9]).toMatchObject({ profile_id: "p10.delta-intrabar-bracket-fixed-1h.v4" });
     expect(native[10]).toMatchObject({profile_id:"p10.delta-event-driven-limit-oco-fixed-1h.v1",
       descriptor:{alpha_binding_requirements:{alpha_version_id:"av_delta_rsi_polynomial_alpha_1_0_12"}}});
     expect(registry.qualification_references.find((row:any)=>row.profile_id===native[10].profile_id))
+      .toMatchObject({kind:"PRODUCT_RUN_QUALIFIED",receipt_sha256:expect.stringMatching(/^[a-f0-9]{64}$/)});
+    expect(native[11]).toMatchObject({profile_id:"p10.delta-event-driven-limit-oco-search-1h.v1",
+      descriptor:{alpha_binding_requirements:{alpha_version_id:"av_delta_rsi_polynomial_alpha_1_0_13"}}});
+    expect(registry.qualification_references.find((row:any)=>row.profile_id===native[11].profile_id))
       .toMatchObject({kind:"PRODUCT_RUN_QUALIFIED",receipt_sha256:expect.stringMatching(/^[a-f0-9]{64}$/)});
     expect(publishedIds.slice(160)).toEqual([...expanded,...native].map((row:any)=>row.profile_id));
     expect(new Set(publishedIds).size).toBe(publishedIds.length);

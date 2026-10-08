@@ -90,6 +90,8 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
     const importedSearch=recipe.adapter_kind==="IMPORTED_SEARCH";
     const temporal = row.protocol === "advanced";
     const optimized = executionRecipe(row.profile_id).adapter_kind === "DELTA_THREE_WINDOW_OPTIMIZED";
+    const nativeOptimized = "native_input" in recipe.descriptor
+      && recipe.descriptor.native_input.optimizer === "PINNED_QUANTBT_NATIVE_IS_SHARPE_V1";
     const refusals = [...common, ...refusal(versionProfileReason(version, declaration, row), ["alpha_binding"]),
       ...refusal(row.dataset_id ? row.dataset_id !== context.dataset_id ? "PROFILE_DATASET_NOT_ADMITTED" : null
         : context.dataset_id === "vn-stock-daily" ? "PROFILE_DATASET_NOT_ADMITTED" : null, ["data", "dataset_id"]),
@@ -111,8 +113,8 @@ export function runSetupOptions(user: PortalUser, config: ControlApiConfig, vers
       max_span_days: row.max_span_days, fold_bounds: row.fold_bounds,
       frequencies: row.frequencies ?? (row.frequency ? [row.frequency] : []),
       window_modes: (row.window_modes ?? (row.window_mode ? [row.window_mode] : [])) as RunSetupProfile["window_modes"],
-      parameter_policy: importedSearch?"DECLARED_SEARCH_WITH_PINS":temporal || optimized ? "DELTA_SEARCH_WITH_QUALIFIED_PINS" : "FIXED_NO_OVERRIDES",
-      allowed_pin_names: importedSearch?Object.keys(declaration.parameter_space):(temporal || optimized) && row.optimization_schedule !== "per_fold_decay"
+      parameter_policy: nativeOptimized?"DELTA_SEARCH_WITH_QUALIFIED_PINS":importedSearch?"DECLARED_SEARCH_WITH_PINS":temporal || optimized ? "DELTA_SEARCH_WITH_QUALIFIED_PINS" : "FIXED_NO_OVERRIDES",
+      allowed_pin_names: nativeOptimized?[]:importedSearch?Object.keys(declaration.parameter_space):(temporal || optimized) && row.optimization_schedule !== "per_fold_decay"
         ? WHATIF_PROFILE.axes.map(axis => axis.parameter) : [],
       inner_validation: row.inner_validation ?? "NOT_APPLICABLE", inner_constraints: row.inner_constraints ?? null,
       temporal_guards: { policy: temporal ? "V1_ABSENT_V2_EXPLICIT" : "NOT_APPLICABLE", defaults: temporal ? guards : null,

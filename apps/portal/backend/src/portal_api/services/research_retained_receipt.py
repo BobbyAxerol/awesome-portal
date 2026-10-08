@@ -83,9 +83,19 @@ class ResearchRetainedReceiptClient:
         fence_validator: Callable[[ArtifactFence], bool],
         fixed_replay_path: Path | None = None,
         window_execution_path: Path | None = None,
+        native_optimization_path: Path | None = None,
         audit_source_root: Path | None = None,
     ) -> str:
         research = request.research
+        native_optimizer=receipt.get('native_execution',{}).get('optimization')
+        native_trials=None
+        if native_optimizer is not None:
+            if native_optimization_path is None or not research.is_native_fixed:
+                raise ResearchRetainedReceiptError('native optimizer requires its exact confined source bytes')
+            from portal_api.services.research_native_optimization import verify
+            native_trials=verify(native_optimization_path,native_optimizer)
+        elif native_optimization_path is not None:
+            raise ResearchRetainedReceiptError('native trial source file has no bound engine receipt')
         from portal_api.services.research_window_execution import (
             ROW_SCHEMA as window_schema, TABLE as window_table, TABLE_VERSION as window_version,
             read_rows as window_read_rows, verify_source as verify_window_source, storage_batch as window_batch,
@@ -182,6 +192,10 @@ class ResearchRetainedReceiptClient:
         if window_rows is not None:
             definitions.append(ArtifactTableSchema(table_kind=window_table, schema_version=window_version,
                 arrow_schema=window_schema, sequence_column="source_ordinal", id_column="source_ordinal"))
+        if native_trials is not None:
+            from portal_api.services.research_native_optimization import TABLE,VERSION,ROW_SCHEMA
+            definitions.append(ArtifactTableSchema(table_kind=TABLE,schema_version=VERSION,
+                arrow_schema=ROW_SCHEMA,sequence_column='source_ordinal',id_column='trial_number'))
         if audit_output is not None:
             definitions.extend(table.definition for table in audit_output.tables)
         registry = ArtifactSchemaRegistry(definitions)
@@ -211,6 +225,10 @@ class ResearchRetainedReceiptClient:
                     pa.array([receipt_digest], type=pa.string()),
                 ], schema=_RECEIPT_SCHEMA))
                 writer.write_small_document("run_receipt", canonicalize(receipt))
+                if native_trials is not None:
+                    for batch in native_trials.to_batches(max_chunksize=128):
+                        writer.append_batch(TABLE,batch)
+                    writer.write_small_document('native_optimization',native_optimizer)
                 if window_rows is not None:
                     for start in range(0, len(window_rows), 8192):
                         writer.append_batch(window_table, window_batch(window_rows[start:start + 8192]))
@@ -243,6 +261,10 @@ class ResearchRetainedReceiptClient:
         manifest, digest = store._load_and_verify_manifest(identity.artifact_id, verify_parts=True)
         tables = {table.get("table_kind"): table for table in manifest.get("tables", [])}
         expected_tables = {"run_receipt", "fixed_replay"} if replay_available else {"run_receipt"}
+        if native_trials is not None:
+            expected_tables.add(TABLE)
+            if tables.get(TABLE,{}).get('rows')!=native_trials.num_rows or tables[TABLE].get('schema_version')!=VERSION:
+                raise ResearchRetainedReceiptError('native optimizer sealed table population changed')
         if window_rows is not None:
             expected_tables.add(window_table)
             if tables.get(window_table, {}).get("rows") != len(window_rows):

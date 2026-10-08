@@ -32,6 +32,8 @@ TRACKED = (
     "tooling/research-window-views.mjs",
     "fixtures/research-native-route-result.valid.json",
     "fixtures/research-native-limit-oco-result.valid.json",
+    "fixtures/research-native-optimization-result.valid.json",
+    "tooling/generate-research-limit-oco-search.mjs",
     "tooling/append-research-expanded-trial-recipes.mjs",
     "tooling/append-research-native-route-recipes.mjs",
     "tooling/generate-research-expanded-trial-contracts.mjs",

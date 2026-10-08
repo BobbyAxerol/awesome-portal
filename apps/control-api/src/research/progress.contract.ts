@@ -9,7 +9,7 @@
  */
 
 import { z } from "zod";
-import {ResearchNativeRouteResultSchema} from './native-route.contract';
+import {ResearchNativeRouteResultSchema,NativeOptimizationSchema} from './native-route.contract';
 import { ResearchEnrichedAnalysisSchema } from "./enriched-analysis.contract";
 import { currentSourceExecutionPair, currentSourceRetainedMethod } from "./current-source-profile";
 import { executionRecipe } from "./execution-recipes";
@@ -568,7 +568,8 @@ export const ResearchSplitSourceSchema = z.object({
     kind: z.literal("THREE_WINDOW_CURRENT"),
     fold_plan: ResearchSplitAbsenceSchema,
     selection: z.object({
-      state: z.literal("FIXED_PROFILE_NO_SEARCH"),
+      state: z.enum(["FIXED_PROFILE_NO_SEARCH","NATIVE_OPTIMIZATION_SEALED_SEPARATELY"]),
+      native_optimization:NativeOptimizationSchema.optional(),
       parameter_bundle_digest: DigestSchema,
       strict_outer_oos: z.object({
         state: z.literal("NOT_ASSERTED"),

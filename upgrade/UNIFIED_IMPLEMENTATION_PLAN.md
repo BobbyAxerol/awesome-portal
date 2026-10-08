@@ -8425,3 +8425,25 @@ Claude `1ab33e3f` and lacks the new journal columns. Claude rebuilds web and
 retakes the source parent/OCO/event rendering on this run; no engine rerun.
 Exact recipe remains one fixed trial/one cycle, not many-order stress proof.
 [Receipt and direct Claude handoff](./research_loop/evidence/P24/SHARED_PREVIEW_LIMIT_OCO_90D_2026-10-08.md).
+# 2026-10-08 owner addendum — multi-cycle Limit/OCO
+
+Bobby requests more than the previous one-trial/one-cycle minimal proof.
+[Backend queue §51](research_loop/CODEX_BACKEND_GAPS_2026-09-30.md) owns the
+additive multi-cycle native optimizer implementation and long real-run
+qualification, plus current Claude web rebuild on Research preview only.
+Historical recipe/receipts stay immutable; no promotion/release is implied.
+
+**§51 backend delivered — PRODUCT_RUN_QUALIFIED / SHARED_PREVIEW_READY.**
+New exact Limit/OCO optimizer: 2–400 real trials, default100, causal 48-bar
+cycles. BTC/ETH/SOL each completed100 trials on90 days; 21/15/16 real parent
+cycles and42/30/32 fills, full100-row P05 byte/selection custody. Only the new
+exact recipe receives migration126 authority; immutable old recipe preserved.
+Shared preview ordinary run `rrun_ee50cb82d6de9e495e10b32323b62f8c` is
+COMPLETED/READY (100 trials,21 cycles,84 orders,42 fills). Current Claude web
+rebuilt and S08 checked1280/660; no new engine run for old browser captures.
+Native optimization summary is public on Progress/Evidence/Split; scalar
+Search/Freeze/full native Report are typed unsupported, not invented. Narrow
+FE type/Parameters mapping remains separately tracked in the handoff.
+No production/dev/main/remote push or compaction; temporary QA identity
+revoked and exact QA cell stopped, all data/evidence/rollback images kept.
+[Complete shared receipt, limitations and Claude consumer prompt](./research_loop/evidence/P24/LIMIT_OCO_MULTICYCLE_SHARED_PREVIEW_AND_CLAUDE_HANDOFF_2026-10-08.md).

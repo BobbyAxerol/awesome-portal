@@ -17,13 +17,15 @@ const nativeInput=obj({schema_version:{const:'research.native-delta-input.v1'},a
   execution_clock:en('KNOWN_CLOSE_NEXT_BAR_INTRABAR','KNOWN_CLOSE_NEXT_BAR_CLOSE'),
   bracket:nullable(obj({stop_fraction:{const:'0.013'},take_profit_fraction:{const:'0.026'},level_mode:{const:'percent_distance'}})),
   account:obj({initial_capital:{const:'20000'},leverage:{const:'3'},one_way_fee_rate:{const:'0.0005'},funding_enabled:{const:false}}),
-  optimizer:{const:'NOT_APPLICABLE_FIXED_DELTA_INPUT_NOT_SCALAR_OPTIMIZER'}});
+  optimizer:en('NOT_APPLICABLE_FIXED_DELTA_INPUT_NOT_SCALAR_OPTIMIZER','PINNED_QUANTBT_NATIVE_IS_SHARPE_V1')});
+nativeInput.properties.cycle_policy=obj({schema_version:{const:'research.native-limit-oco-cycle-policy.v1'},cycle_bars:{const:48},
+  entry_expiry_bars:{const:24},boundary_policy:{const:'EXPIRE_CANCEL_AND_ENGINE_REDUCE_ONLY_CLOSE_BEFORE_REENTRY'},max_span_days:{const:365}});
 const fieldPath={type:"array",minItems:1,maxItems:8,items:{type:"string",pattern:"^[A-Za-z_][A-Za-z0-9_]*$|^[0-9]+$"}};
 const refusal=obj({reason_code:reason,field_path:fieldPath});
 const recipeTable=JSON.parse(readFileSync(new URL("../../apps/portal/registry/research-execution-recipes.v1.json",root)));
 const maximumProfiles=recipeTable.setup_bounds.maximum_profiles;
 const presentation=obj({key:{...str,pattern:"^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$"},
-  family:en("THREE_WINDOW_FIXED","THREE_WINDOW_OPTIMIZED","ADVANCED_WFO","FULL_SAMPLE","NATIVE_FIXED"),
+  family:en("THREE_WINDOW_FIXED","THREE_WINDOW_OPTIMIZED","ADVANCED_WFO","FULL_SAMPLE","NATIVE_FIXED","NATIVE_OPTIMIZED"),
   label:{...str,minLength:1,maxLength:120},recommended_rank:{type:"integer",minimum:0,maximum:999},
   scope:{const:"DISPLAY_ORDER_NOT_OPTIMAL_SETUP_OR_AUTHORIZATION"}});
 const versionContext=obj({workspace_id:id,alpha_id:id,alpha_version_id:id});

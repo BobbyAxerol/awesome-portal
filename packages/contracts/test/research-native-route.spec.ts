@@ -10,8 +10,8 @@ describe('native edition input and typed result boundaries',()=>{
   const validate=new Ajv2020({strict:false,allErrors:true}).compile(read('schemas/research-requested-spec.v1.schema.json'));
   const base=read('fixtures/research-run-create.reproduction.valid.json').requested_spec;
   const bindings=read('../../apps/portal/registry/research-native-delta-bindings.v1.json');
-  expect(bindings.length).toBe(10);
-  expect(bindings.at(-1).alpha_version_id).toBe('av_delta_rsi_polynomial_alpha_1_0_12');
+  expect(bindings.length).toBe(11);
+  expect(bindings.at(-1).alpha_version_id).toBe('av_delta_rsi_polynomial_alpha_1_0_13');
   for(const binding of bindings){
    const spec={...base,alpha_binding:{alpha_id:binding.alpha_id,alpha_version_id:binding.alpha_version_id},
     execution_route:binding.declared_contract.execution.execution_route};
@@ -60,5 +60,20 @@ describe('native edition input and typed result boundaries',()=>{
   expect(validate(fixture),JSON.stringify(validate.errors)).toBe(true);
   expect(validate({...fixture,funding:{...fixture.funding,total:'0'}})).toBe(false);
   expect(validate({...fixture,clock:'KNOWN_CLOSE_NEXT_BAR_INTRABAR'})).toBe(false);
+ });
+ it('validates the real 100-trial multi-cycle source without changing old fixed receipts',()=>{
+  // Actual rrun_89c83c64caa0be6bc53559b2ecb5517f; source/custody in the
+  // P10 multi-cycle qualification packet, not a substitute engine receipt.
+  const fixture=read('fixtures/research-native-optimization-result.valid.json');
+  for(const [file,schema]of [['evidence','EvidenceHub'],['progress','ProgressRead']]){
+   const root=read(`openapi/research-${file}.openapi.json`).components.schemas[schema];
+   const boundary=file==='evidence'?root.properties.core.properties.native_execution:root.properties.native_execution;
+   const validate=new Ajv2020({strict:false,allErrors:true}).compile(boundary);
+   expect(validate(fixture),JSON.stringify(validate.errors)).toBe(true);
+   expect(validate({...fixture,optimization:undefined})).toBe(false);
+   expect(validate({...fixture,input_protocol:'DELTA_CLOSE_LIMIT_OCO_COMMANDS_V1'})).toBe(false);
+   expect(validate({...fixture,optimization:{...fixture.optimization,holdout_used:true}})).toBe(false);
+   expect(validate({...fixture,optimization:{...fixture.optimization,requested_trials:401}})).toBe(false);
+  }
  });
 });

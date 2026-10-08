@@ -42405,6 +42405,114 @@ EXECUTION_RECIPE_TABLE = json.loads(r'''{
         "max_warmup_bars": 300
       },
       "preview_override": null
+    },
+    {
+      "profile_id": "p10.delta-event-driven-limit-oco-search-1h.v1",
+      "profile_digest": "2b69015b8975e3097cc797999188a6d6b75e29ce52fc3ad2d4c35026ab7f0d73",
+      "descriptor": {
+        "schema_version": "research.native-route-profile.v1",
+        "profile_id": "p10.delta-event-driven-limit-oco-search-1h.v1",
+        "adapter_id": "full03.delta-rsi.v1",
+        "adapter_contract_digest": "eb357785783f1fc919a926a5d53c19c514422a9a87c6dc45d3425e42da21d202",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "event_driven",
+        "requested_spec_version": "research.requested-spec.v1",
+        "protocol": "three_window_decay",
+        "timeframe": "1h",
+        "dataset_id": "crypto-binance-1m",
+        "max_span_days": 365,
+        "child_limits": {
+          "cpu_seconds": 1800,
+          "wall_seconds": 3600,
+          "scratch_bytes": 536870912
+        },
+        "alpha_binding_requirements": {
+          "alpha_id": "delta-rsi-polynomial-alpha",
+          "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_13",
+          "adapter_id": "full03.delta-rsi.v1",
+          "adapter_contract_digest": "eb357785783f1fc919a926a5d53c19c514422a9a87c6dc45d3425e42da21d202",
+          "warmup_bars": 300
+        },
+        "source_clock": {
+          "bar_interval_ms": 3600000,
+          "clock_basis": "FIXED_UTC_INTERVAL_V1",
+          "source_timezone": "UTC",
+          "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1"
+        },
+        "native_input": {
+          "schema_version": "research.native-delta-input.v1",
+          "adapter_sha256": "230ef1366045ce2253b16df0fc045c515968c5ab1d3afdd040c3df332bb852a2",
+          "symbol_policy": "BTC_ETH_SOL_SINGLE_SYMBOL",
+          "signal_authority": "PROTECTED_DELTA_CLOSE_ONLY",
+          "target_notional": "2000",
+          "position_unit": "CONTRACT_QUANTITY",
+          "execution_clock": "KNOWN_CLOSE_NEXT_BAR_CLOSE",
+          "bracket": null,
+          "account": {
+            "initial_capital": "20000",
+            "leverage": "3",
+            "one_way_fee_rate": "0.0005",
+            "funding_enabled": false
+          },
+          "optimizer": "PINNED_QUANTBT_NATIVE_IS_SHARPE_V1",
+          "cycle_policy": {
+            "schema_version": "research.native-limit-oco-cycle-policy.v1",
+            "cycle_bars": 48,
+            "entry_expiry_bars": 24,
+            "boundary_policy": "EXPIRE_CANCEL_AND_ENGINE_REDUCE_ONLY_CLOSE_BEFORE_REENTRY",
+            "max_span_days": 365
+          }
+        },
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "random_seed": 42
+      },
+      "adapter_kind": "DELTA_FIXED",
+      "work_schema_version": "research.native-optimized-work.v1",
+      "resource_class": "research-native-optimized-v1",
+      "queue_class": "INTERACTIVE",
+      "public_profile": {
+        "profile_id": "p10.delta-event-driven-limit-oco-search-1h.v1",
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "event_driven",
+        "protocol": "three_window_decay",
+        "optimization_mode": "mode_4_is_only_robust",
+        "optimization_schedule": "global",
+        "timeframe": "1h",
+        "trial_count": {
+          "min": 2,
+          "max": 400
+        },
+        "random_seed": 42,
+        "max_span_days": 92,
+        "fold_bounds": null,
+        "frequency": null,
+        "window_mode": null,
+        "requested_spec_versions": [
+          "research.requested-spec.v1"
+        ],
+        "seed_policy": "FORBIDDEN",
+        "trial_default": 100,
+        "early_stopping_policy": "FORBIDDEN",
+        "dataset_id": "crypto-binance-1m"
+      },
+      "feature_flags": [
+        "FEATURE_RESEARCH_RUN_PRODUCER",
+        "FEATURE_RESEARCH_FULL06_PROFILE"
+      ],
+      "source_requirement": "FULL03_IMMUTABLE_DELTA_BINDING",
+      "budgets": {
+        "memory_bytes": 4294967296,
+        "cpu_seconds": 1800,
+        "wall_seconds": 3600,
+        "scratch_bytes": 536870912,
+        "io_bytes": 536870912,
+        "file_bytes": 16777216,
+        "fd_limit": 128,
+        "planning_max_bars": 20000,
+        "max_warmup_bars": 300
+      },
+      "preview_override": null
     }
   ],
   "qualification_references": [
@@ -44682,6 +44790,13 @@ EXECUTION_RECIPE_TABLE = json.loads(r'''{
       "kind": "PRODUCT_RUN_QUALIFIED",
       "receipt_path": "upgrade/research_loop/evidence/P10/LIMIT_OCO_PRODUCT_QUALIFICATION_2026-10-08.md",
       "receipt_sha256": "f21cd2d548513bb70947897240bc17ec2cfd6145c1af4632cbdae3f1b80cf84a"
+    },
+    {
+      "profile_id": "p10.delta-event-driven-limit-oco-search-1h.v1",
+      "recipe_digest": "017a39eab7a402c9f1f9fdc1cc78dc77105728be398ab76fc81c54f7b25659d3",
+      "kind": "PRODUCT_RUN_QUALIFIED",
+      "receipt_path": "upgrade/research_loop/evidence/P10/LIMIT_OCO_MULTICYCLE_PRODUCT_QUALIFICATION_2026-10-08.md",
+      "receipt_sha256": "c130b772b3a9e654a8de7d96fc0408a8cb4ae699bea3fae7d889a5166a910a76"
     }
   ],
   "preflight_policy": {
@@ -44694,4 +44809,4 @@ EXECUTION_RECIPE_TABLE = json.loads(r'''{
     "maximum_bytes": 1048576
   }
 }''')
-EXECUTION_RECIPE_REVISION = "965574d9cac97ea5476a8e30ec99b49a02be57f55838111002a7f1b8f6a3df69"
+EXECUTION_RECIPE_REVISION = "ff19f01eb36b310a82b6065805339cdf530c65040abd9c18cb23dbf96a402384"

@@ -1093,7 +1093,7 @@ export interface components {
                 fold_navigation?: components["schemas"]["FoldNavigation"];
                 /** @description Optional during a bounded rolling deployment; legacy P04 runs return the documented typed absence. */
                 market_overview?: components["schemas"]["MarketOverview"];
-                native_execution?: {
+                native_execution?: ({
                     /** @constant */
                     schema_version: "research.native-route-result.v1";
                     /** @enum {unknown} */
@@ -1101,7 +1101,7 @@ export interface components {
                     /** @constant */
                     authority: "PINNED_QUANTBT_ACCOUNTING_NOT_PORTAL_PNL";
                     /** @enum {unknown} */
-                    input_protocol: "DELTA_CLOSE_BRACKET_INTENTS_V1" | "DELTA_CLOSE_STATEFUL_CALLBACK_V1" | "DELTA_CLOSE_ORDER_COMMANDS_V1" | "DELTA_CLOSE_LIMIT_OCO_COMMANDS_V1";
+                    input_protocol: "DELTA_CLOSE_BRACKET_INTENTS_V1" | "DELTA_CLOSE_STATEFUL_CALLBACK_V1" | "DELTA_CLOSE_ORDER_COMMANDS_V1" | "DELTA_CLOSE_LIMIT_OCO_COMMANDS_V1" | "DELTA_CLOSE_MULTICYCLE_LIMIT_OCO_COMMANDS_V1";
                     /** @enum {unknown} */
                     clock: "KNOWN_CLOSE_NEXT_BAR_INTRABAR" | "KNOWN_CLOSE_NEXT_BAR_CLOSE";
                     /** @constant */
@@ -1146,7 +1146,37 @@ export interface components {
                     orders_count: number | null;
                     /** @constant */
                     replay_authority: "RETAINED_ENGINE_AUDIT_ONLY_NOT_BROKER_EVENTS";
-                } & ({
+                    optimization?: {
+                        /** @constant */
+                        schema_version: "research.native-optimization.v1";
+                        /** @constant */
+                        authority: "PINNED_QUANTBT_NATIVE_IS_SHARPE";
+                        /** @constant */
+                        scope: "P08_WARMUP_PLUS_IS_ONLY";
+                        /** @constant */
+                        objective_name: "sharpe";
+                        /** @constant */
+                        selection_method: "QUANTBT_GENERIC_ROBUST_PLATEAU_NOT_SCALAR_WFO_V1";
+                        requested_trials: number;
+                        completed_trials: number;
+                        retained_trials: number;
+                        distinct_parameter_sets: number;
+                        selected_trial_number: number;
+                        selected_parameters: {
+                            [key: string]: string;
+                        };
+                        selected_objective: string;
+                        train_start_utc_ms: number;
+                        train_end_exclusive_utc_ms: number;
+                        /** @constant */
+                        holdout_used: false;
+                        /** @constant */
+                        table_kind: "native_optimizer_trials";
+                        /** @constant */
+                        table_schema_version: "research.native-optimizer-trial-table.v1";
+                        sha256: string;
+                    };
+                } & unknown) & ({
                     /** @constant */
                     execution_route?: "intrabar_bracket";
                     /** @constant */
@@ -1172,6 +1202,13 @@ export interface components {
                     execution_route?: "event_driven";
                     /** @constant */
                     input_protocol?: "DELTA_CLOSE_LIMIT_OCO_COMMANDS_V1";
+                    /** @constant */
+                    clock?: "KNOWN_CLOSE_NEXT_BAR_CLOSE";
+                } | {
+                    /** @constant */
+                    execution_route?: "event_driven";
+                    /** @constant */
+                    input_protocol?: "DELTA_CLOSE_MULTICYCLE_LIMIT_OCO_COMMANDS_V1";
                     /** @constant */
                     clock?: "KNOWN_CLOSE_NEXT_BAR_CLOSE";
                 });
