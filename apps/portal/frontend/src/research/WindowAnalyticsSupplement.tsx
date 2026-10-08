@@ -37,7 +37,7 @@ export function WindowAnalyticsSupplement({ runId, workspaceId, sealedRevision }
 
   return (
     <details
-      className="rounded-[8px] border px-4 py-3"
+      className="no-print rounded-[8px] border px-4 py-3"
       style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
       open={open}
       onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}

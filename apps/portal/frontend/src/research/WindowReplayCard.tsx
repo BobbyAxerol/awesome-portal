@@ -195,7 +195,7 @@ export function WindowReplayCard({ runId, workspaceId, defaultOpen = false }: { 
 
   return (
     <details
-      className="rounded-[8px] border px-4 py-3"
+      className="no-print rounded-[8px] border px-4 py-3"
       style={{ borderColor: "var(--line)", background: "var(--paper-raised)", boxShadow: "var(--shadow-e1)" }}
       open={open}
       onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}

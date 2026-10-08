@@ -127,7 +127,7 @@ export function WindowCompareSection({
   const [foldDraft, setFoldDraft] = useState(scope?.foldId ?? "");
   const pick = (window: WindowName) => onScope(scope?.window === window ? null : { window, foldId: window === "IS" ? scope?.foldId ?? null : null });
   return (
-    <section className="cp-card" data-window-compare data-window-compare-state={state.state} data-window-selected={scope?.window ?? ""} aria-label="compare on a window">
+    <section className="cp-card no-print" data-window-compare data-window-compare-state={state.state} data-window-selected={scope?.window ?? ""} aria-label="compare on a window">
       <h3 className="t" aria-level={2}>
         <span>Compare on a window</span>
         <span className="cp-faint">complete retained accounts · independent · not forward-filled</span>
