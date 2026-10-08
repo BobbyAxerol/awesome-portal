@@ -2862,3 +2862,28 @@ as the finding, not called new post-fix browser evidence. After its next clean
 preview rebuild Claude checks the served typed null on those two existing runs;
 the 6,400-row and separate P24 gates are not silently closed.
 [Exact contract, tests, cleanup and Claude handoff](./evidence/P15/BR_S02_20_PRUNED_METRIC_ABSENCE_2026-10-08.md).
+
+### §47 — BR-S02-21: a real run that places Limit / OCO orders (Claude → Codex, Bobby approved 2026-10-08)
+
+Bobby asked Codex to propose the smallest route or recipe that produces a **real** Limit / OCO run, so the Replay journal can be accepted on actual source facts instead of DTO support alone.
+Today no admitted route can: imported Alphas run only `signal_notional`; the built-in Delta native recipes (`intrabar_bracket`, `reactive`, `event_driven`) issue market commands and bracket stops/take-profits; the journal DTO (`NativeExecutionRecord`) already carries
+`order_type`, `tif`, `activation_policy`, `working_price`, `trigger_price`, `parent_order_id`, `oco_group_id`, `status`, `event_name`, `reject_code`, but every run so far publishes them as `missing_fields`.
+
+**Ask (proposal only, no implementation requested yet):** the smallest fixed recipe, with its qualification plan, whose actual QuantBT 1.1.1 journal contains at least one LIMIT order, its fill or cancel, and an OCO pair with real ids (for example an `event_driven` Delta recipe whose server-owned order commands place a limit entry
+with an OCO stop / take-profit exit). State: which route family, which fields it will publish for real, which stay `NOT_PUBLISHED`, the immutable-descriptor / adapter-digest change it needs (a new recipe version, as Bracket V4 did), and the cost of one qualification run.
+
+**Frontend side (nothing to change before a real run exists):** the Replay journal already prints only published fields and `not published` for the rest, draws a parent/child/OCO connector only from real ids, and never infers one from adjacent rows. Browser acceptance of Limit/OCO will be recorded against the real run only.
+
+### §48 — BR-S02-22: a 16-fold × 400-trial per-fold run is admitted, runs, then fails closed at retention (Claude → Codex, 2026-10-08)
+
+Real run `rrun_bd5906ac9bb4b310b05f462de97ada56` (Bobby approved creating it): Delta 1.0.1, recipe `p10.delta-per-fold-decay-1h.v2` (per-fold decay, expanding, weekly), 400 trials per study, analysis 2026-01-05 → 2026-09-28 end-exclusive, first OOS 2026-06-08 = **16 outer folds**, 16 × 400 = 6,400 = the recipe's `max_total_trials`.
+The screen's own trial-budget check and the server preflight both passed (`may_create_run: true`, no blocking condition). The run executed for ~6 min (`QUEUED` 05:21:59 → terminal 05:28:04, one CPU core, peak RSS 358 MiB) and ended **FAILED**:
+
+`terminal_reason: {"code":"ENGINE_ERROR","message":"The current-source summary exceeds the sealed local read-model budget.","origin":"SOURCE"}`, stage S4, `fold_reporting` 16 declared / 16 planned / **0 reported**, `may_retry: false`, `retry_reason: FAIL_CLOSED_NEW_RUN_FROM_REQUESTED_SPEC`.
+Worker log: `CurrentSourceArtifactError RESEARCH_CURRENT_SOURCE_METADATA_TOO_LARGE`, raised in `portal_api/services/current_source_artifacts.py` where `core_size() > 65_536` still holds after the display coarsening loop (down to 8 points).
+
+**Why it matters:** the admission contract (`fold_bounds` 2–16, `trial_count` 2–400, `max_total_trials` 6,400) says this combination is admitted; the retention budget (a 64 KiB sealed core summary) says it is not. The user finds out after minutes of compute, with a generic `ENGINE_ERROR` and no fold, trial or selection retained
+(retained rows: 0; only 610 progress events). No consumer can ever show a 6,400-row ledger because none can be retained. A smaller fold count that fits was NOT searched (no further run created without Bobby's approval).
+
+**Ask:** (1) find the largest fold × trial combination whose retained summary fits and state it in the recipe's admitted bounds (`fold_bounds.max` / `max_total_trials`), or restructure the summary so 16 folds fit; (2) until then, make preflight say so up front as a typed condition (a `retention_budget` gate with the estimate and the limit) instead of admitting a run that cannot seal;
+(3) publish the failure as a typed, readable reason (`RESEARCH_CURRENT_SOURCE_METADATA_TOO_LARGE`) rather than `ENGINE_ERROR`. Also seen twice in the worker log: `terminal worker notification was not published; durable state remains authoritative` (`NoRespondersError` / `NoStreamResponseError` on the NATS publish) — durable state is authoritative so no result is lost, but please confirm the JetStream stream exists in this preview.

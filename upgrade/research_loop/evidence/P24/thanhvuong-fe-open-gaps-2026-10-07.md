@@ -53,3 +53,10 @@ verified at1280/660. No frontend source/layout/token/baseline was edited.
   optional Progress/Atlas field consumption remain the frontend lane. Backend
   repair is delivered, not delegated back to Claude. Bobby's product/release
   decision and no-publication boundary are unchanged.
+
+## Update 2026-10-08 (real-run gates) — see [FE_REAL_RUN_GATES_AND_CAPACITY_2026-10-08.md](./FE_REAL_RUN_GATES_AND_CAPACITY_2026-10-08.md)
+
+- **Pending-run Holdout:** PASSED on a real run (`RUN_NOT_COMPLETED_WINDOW_PROTECTED` while RUNNING/FINISHING, `AVAILABLE` on COMPLETED). Closed.
+- **6,400-row ledger:** a real 16-fold × 400-trial run was admitted and executed, then FAILED at retention (`RESEARCH_CURRENT_SOURCE_METADATA_TOO_LARGE`, 64 KiB sealed summary). Not verifiable; new Codex request **BR-S02-22** (§48).
+- **Limit / OCO:** Codex asked to propose the smallest recipe with a real Limit/OCO journal (**BR-S02-21**, §47).
+- **Agent authentication (AI Native Loop):** Bobby deferred; keep the current permission model while the QuantBT loop is finished.
