@@ -23,7 +23,7 @@
  * the read published it (DQ-15).
  */
 
-import { NativeSearchPanel } from "./NativeSearchPanel";
+import { NativeClaimNote, NativeSearchPanel } from "./NativeSearchPanel";
 import { useNativeSearchPages } from "./useNativeSearchPages";
 import { OrchestrationClocks } from "./OrchestrationClocks";
 import { useEffect, useId, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
@@ -2195,6 +2195,9 @@ export function SearchScreen({
             {/* F2: an imported alpha's served identity; a built-in alpha publishes none, so nothing is drawn. */}
             <ImportedAlphaLine binding={detail.imported_alpha} />
             {/* --------------------------------------- mode × schedule card */}
+            {native ? (
+              <NativeClaimNote reasonCode={detail.source_profile.reason_code} readiness={detail.readiness} />
+            ) : (
             <section className="rounded-[6px] border" style={RAISED_STYLE} data-source-strip={detail.source_profile.state}>
               <div className="flex flex-wrap items-center gap-2 border-b px-[14px] py-[9px]" style={{ borderColor: "var(--line-soft)" }}>
                 <span className={LABEL} style={{ color: "var(--ink-faint)" }} title={SELECTOR_LAYERS_HELP} data-selector-layers>
@@ -2426,6 +2429,7 @@ export function SearchScreen({
                 )}
               </div>
             </section>
+            )}
 
             <ProvenanceStrip provenance={lane ? retainedProvenance(lane, detail) : detail.provenance} />
 

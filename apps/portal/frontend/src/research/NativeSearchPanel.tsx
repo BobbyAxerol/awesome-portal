@@ -171,3 +171,21 @@ export function NativeSearchPanel({ native, rows, hasMore, loading, error, onMor
     </section>
   );
 }
+
+/**
+ * The scalar claim strip (mode, schedule, validation, chronology, OOS use, scoring, selector, profile, strict outer OOS, "what this mode
+ * reads") describes a Walk-forward study; a native search has none of it. It is one line with the server's one reason, instead of ten
+ * fields repeating the same typed absence.
+ */
+export function NativeClaimNote({ reasonCode, readiness }: { reasonCode: string | null; readiness: string }) {
+  return (
+    <section className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-[6px] border px-[14px] py-2" style={{ ...CARD, boxShadow: "none" }} data-native-claim-note data-readiness={readiness.toLowerCase()}>
+      <span className={LABEL} style={{ color: "var(--ink-faint)" }}>claim</span>
+      <span className="text-[12px]" style={{ color: "var(--ink)" }}>No Walk-forward claim fields apply to a native search.</span>
+      <span className="mono text-[10.5px]" style={{ color: "var(--ink-faint)" }} title="Why the scalar fields are absent, as the server states it">
+        <Absence reason={reasonCode} state="NOT_APPLICABLE" />
+      </span>
+      <span className="mono ml-auto text-[10.5px]" style={{ color: "var(--ink-soft)" }} data-native-readiness>readiness {readiness.toLowerCase()}</span>
+    </section>
+  );
+}

@@ -1323,3 +1323,33 @@ describe("F3 · S06 — search cinema placeholder", () => {
     expect(container.querySelector("[data-panel='search-cinema']")).toBeNull();
   });
 });
+
+describe("a natively searched run (§55)", () => {
+  const NATIVE = JSON.parse(readFileSync(join(process.cwd(), "..", "..", "..", "packages", "contracts", "fixtures", "research-native-search.valid.json"), "utf8")) as NonNullable<SearchDetail["native_search"]>;
+  const nativeDetail = () =>
+    detail({
+      native_search: NATIVE,
+      source_profile: {
+        state: "NOT_PUBLISHED",
+        reason_code: "NATIVE_OPTIMIZER_POPULATION_SEALED_IN_P05_NOT_SCALAR_WFO_LEDGER",
+        availability: { state: "NOT_APPLICABLE", reason_code: "NATIVE_OPTIMIZER_POPULATION_SEALED_IN_P05_NOT_SCALAR_WFO_LEDGER" },
+      } as SearchDetail["source_profile"],
+    });
+
+  it("draws the native search and ONE claim line, not ten scalar fields repeating the same absence", () => {
+    const { container } = view({ detail: nativeDetail() });
+    expect(container.querySelector("[data-native-search]")).not.toBeNull();
+    const note = container.querySelectorAll("[data-native-claim-note]");
+    expect(note).toHaveLength(1);
+    expect(note[0]!.textContent).toContain("No Walk-forward claim fields apply to a native search.");
+    expect(container.querySelector("[data-claim-row], [data-mode-reads], [data-stage-grid]")).toBeNull();
+    /* the server's one reason is kept (tooltip), not printed ten times */
+    expect((container.textContent ?? "").split("NATIVE_OPTIMIZER_POPULATION_SEALED_IN_P05_NOT_SCALAR_WFO_LEDGER").length - 1).toBeLessThanOrEqual(1);
+  });
+
+  it("a scalar run keeps its claim strip untouched", () => {
+    const { container } = view();
+    expect(container.querySelector("[data-native-claim-note]")).toBeNull();
+    expect(container.querySelector("[data-claim-row]")).not.toBeNull();
+  });
+});
