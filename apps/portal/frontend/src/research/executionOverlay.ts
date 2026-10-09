@@ -58,6 +58,10 @@ export interface OverlayBracket {
   entryText: string | null;
   startMs: number;
   endMs: number | null;
+  /** The bracket began before this page of bars (its left end is the page edge, not its start). */
+  continuesLeft: boolean;
+  /** It was still working at the page's last bar or later (its right end is the page edge, not its resolution). */
+  continuesRight: boolean;
   legs: OverlayLeg[];
 }
 
@@ -171,7 +175,16 @@ export function buildOverlay(tracks: readonly OrderTrack[], fills: readonly Fill
             : "favourable";
       legs.push({ orderId: leg.orderId, level, levelText: leg.level, side, word: leg.orderType === null ? "order" : (WORDS[leg.orderType] ?? leg.orderType.replace(/_/g, " ")), state: leg.state, endMs: leg.endMs });
     }
-    if (legs.length > 0) brackets.push({ groupId: group.groupId, entryPrice: entryPrice !== null && Number.isFinite(entryPrice) ? entryPrice : null, entryText, startMs, endMs, legs });
+    if (legs.length > 0) brackets.push({
+        groupId: group.groupId,
+        entryPrice: entryPrice !== null && Number.isFinite(entryPrice) ? entryPrice : null,
+        entryText,
+        startMs,
+        endMs,
+        continuesLeft: startMs < windowStartMs,
+        continuesRight: endMs === null || endMs >= windowEndMs,
+        legs,
+      });
   }
 
   /* a trade link joins an entry fill to a later fill only when that fill names the entry as its explicit parent */

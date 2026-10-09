@@ -179,6 +179,22 @@ export class ExecutionOverlayPrimitive implements ISeriesPrimitive<Time> {
         c.lineTo(box.x1, y);
         c.stroke();
         c.setLineDash([]);
+        /* a box cut by the page edge says so: a small chevron where the edge runs on */
+        c.lineWidth = 1.5;
+        if (bracket.continuesRight) {
+          c.beginPath();
+          c.moveTo(box.x1 - 4, y - 3.5);
+          c.lineTo(box.x1, y);
+          c.lineTo(box.x1 - 4, y + 3.5);
+          c.stroke();
+        }
+        if (bracket.continuesLeft) {
+          c.beginPath();
+          c.moveTo(box.x0 + 4, y - 3.5);
+          c.lineTo(box.x0, y);
+          c.lineTo(box.x0 + 4, y + 3.5);
+          c.stroke();
+        }
         const text = `${leg.word} ${priceText(leg.level)}`;
         const width = c.measureText(text).width + 10;
         if (box.x1 - box.x0 < width + 12) continue;
