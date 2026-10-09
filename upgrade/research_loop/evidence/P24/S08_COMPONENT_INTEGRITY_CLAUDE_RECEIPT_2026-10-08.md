@@ -53,3 +53,23 @@ Still open: market (`entry-close`) orders have no price so they are listed in th
 ## Addendum — native optimization summary (§51 consumer)
 
 `NativeOptimizationSummary.tsx` is one component for Progress and Evidence (inside `NativeExecutionPanel`) and Split (`protocol.selection.native_optimization`). It prints the served facts exactly (optimizer authority, selection method "QuantBT generic robust plateau — not the scalar Walk-forward algorithm", warm-up + in-sample scope, train window, Holdout not used, 100 requested / 100 completed / 100 retained, 98 distinct parameter sets, engine trial number 41 as its 0-based id and objective `4.0101541621991`, the eight selected parameters) and states that the trial table is sealed separately and that no scalar Search ledger, sampler trace, freeze certificate or Report exists for the recipe. The old "optimizer: not applicable — fixed input" line is shown only when no optimization is published (fixed native). The Search hub publishes `NOT_PUBLISHED` with `NATIVE_OPTIMIZER_POPULATION_SEALED_IN_P05_NOT_SCALAR_WFO_LEDGER` and no summary, so Search keeps that typed absence and has no consumer. Tests: `nativeOptimizationSummary.test.tsx` (3, on the published fixture). Real API 1280 and 660 px: present on Progress, Evidence, Split; absent on Search; 0 console messages; no overflow. Not built: a native S06/S07/Report reader (§51 does not deliver one).
+
+## Addendum 2026-10-09 — account levels, transport, HiFi comparison
+
+**Account stop / take-profit on a run that publishes them.** Scanning the 96 Library runs for completed windows with `active_level_availability = AVAILABLE` found two (`rrun_c2329924a32a26e8d9d5bf9d5c1f809a`, `rrun_7b87e80e7dd7f7991dd0394fe889c714`; OOS, 53 bars each, native fixed bracket route). Real API, 1280 and 660 px: the legend offers "account stop" / "account take-profit"; the disclosure says `53 bars drawn · 115 not applicable (position flat)` for each level; the two dotted lines run only while the position is open (stop `62730.8577`, take-profit `65209.5846` as served), break at flat, and are never drawn from an order price; the opening fill is a ▲ and the take-profit exit a ▼ carrying "TP" because the source named `exit_reason`; the readout at an open bar lists both levels exactly as served. 0 console messages, no overflow.
+
+**Transport.** The one-chart native Replay now shares the accepted `ReplayTransport` / `TransportBar` (play, step, 1×/4×/16×/64×, seek, hidden-tab pause) and keyboard (Space, ←/→, Shift ±10). Real API at 1280 and 660: step 00:00→01:00, Shift+→ 11:00, 16× for 2 s advanced to 2026-08-09 07:00 with **0 extra requests during playback**; the playhead is a bar of the page in hand; readout follows the playhead unless the pointer is over the chart.
+
+**HiFi comparison (`QuantBT 08 S4 Execute Replay.dc.html`, route tweaks `intrabar_bracket_v1`, `event_lifecycle_v2`, 1280 and 660 px; the HiFi overflows at 660 itself: document width 752).** Deviation checklist for the owner — what matches, what differs and why:
+
+| HiFi element | Product (native Limit/OCO route) | Verdict |
+|---|---|---|
+| Candle chart (lightweight-charts), same host/palette/axis, price + position + equity panes, crosshair on the playhead | same component family, same panes, crosshair follows the transport | matches |
+| Markers S/T/O/F letters on the candle | ▲ buy / ▼ sell fill at its own price; order levels as segments; cancel/expire marks; leg word only where the source named it | differs by design: the native journal publishes orders and fills, not signal/target events |
+| Transport bar, 1×/4×/16×/64×, seek, readout | accepted transport, bar-level, readout line | matches (added 2026-10-09) |
+| OCO armed / sibling cancelled as chain links | OCO groups: parent, legs, filled leg, expired/cancelled legs struck through with the instant | different grammar, same facts (spec §2.9 describes a tree; HiFi shows chain links) |
+| Event ledger (one tape), trade blotter, trade tape, MAE × MFE, PnL distribution, per-fill causal chain (signal → order → fill) | journal relations as tabs (ORDER / FILL / TRADE / COMMAND / ORDER_REPORT / LIFECYCLE), TRADE 0 rows; the rest listed under "not published by this read" | **absent by data, not by omission**: native routes publish no trades, MAE/MFE or signal events (typed absence) |
+| Stitched account fold strip, fold switcher | Stitched account — retrospective equity samples (native routes have no folds) | differs by data |
+| Cost timeline absent panel | fees / funding facts in the native execution panel | different placement |
+
+Not concluded: whether the owner accepts the differences marked "by design" / "by data". That is a visual-review decision (P24-T15), not mine; no baseline was changed.
