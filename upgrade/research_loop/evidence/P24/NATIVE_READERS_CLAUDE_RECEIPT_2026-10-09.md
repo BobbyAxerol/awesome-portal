@@ -29,7 +29,7 @@ Protocol decisions: a native run is one study with no fold and the server answer
 
 ## Not verified / open (named, not claimed)
 
-- Paging past the first page is covered by unit tests on the real fixture and by the request shape (`native_limit=200` + `native_cursor`, never a `fold`), but **not exercised in the browser**: this run has 100 trials, below the 200-row page.
+- Paging: **exercised in the browser at 1280 and 660 px** with the server's own cursors by rewriting the UI's `native_limit` to 40 (the cursor binds the limit, so every request carried 40): 40 → 80 → 100 rows, 100 unique trials, caption `100 of 100 loaded`, the θ* row loaded on the last page (a hint says where it is until then), the "more" control gone at the end, no `fold` on any request, 0 console messages. Not exercised: a real run with more than 200 trials (the preview has only this 100-trial native run) — the 200-row page itself is the contract's bound.
 - Neighbour trial identities and the sampler trace were not retained by the native source (typed absences); a native S06 "cinema" is not drawn.
 - The scalar claim strip at the top of S06 still repeats `NATIVE_OPTIMIZER_POPULATION_SEALED_IN_P05_NOT_SCALAR_WFO_LEDGER` for several fields; honest but noisy — a follow-up if the owner wants it collapsed.
-- Matrix, P24 and release are not claimed here.
+- Matrix: 73 cells · 682 checks = 613 PASS / 0 FAIL / 69 NA on the bundle with these consumers (see the matrix note); the served image was built from the uncommitted tree of the same source (stamped dirty). P24 and release are not claimed here.
