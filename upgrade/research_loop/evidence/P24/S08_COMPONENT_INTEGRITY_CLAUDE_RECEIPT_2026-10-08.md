@@ -73,3 +73,17 @@ Still open: market (`entry-close`) orders have no price so they are listed in th
 | Cost timeline absent panel | fees / funding facts in the native execution panel | different placement |
 
 Not concluded: whether the owner accepts the differences marked "by design" / "by data". That is a visual-review decision (P24-T15), not mine; no baseline was changed.
+
+## Addendum 2026-10-09 (owner's design direction) — the chart's drawing language, redone
+
+Bobby's review of the first one-chart version (reference: a TradingView strategy chart): the arrows were too big, the colours did not fit, the order / OCO / limit / price / stop / take-profit drawing was scattered and had no design intent. Replaced the DOM-free marker plugin and the per-order line series with one painter and a pure model:
+
+- `executionOverlay.ts` (model, tested on the real journal + edges) and `ExecutionOverlayPrimitive.ts` (a lightweight-charts series primitive: shares the chart's coordinates, zoom and repaint; two layers — washes under the candles, edges/chips/fills over them).
+- **Fill** = one 8 px triangle at its own price (▲ buy, ▼ sell) with a 3 px surface halo, one theme hue (`accent`), and a small pill label (`buy 0.03095`, `sell 0.03147 · TP` only where the source named the exit reason) that stays inside the plot and flips side at an edge; labels are drawn only while ≤ 14 fills are in view.
+- **OCO bracket** = a box from the instant the source activated the legs to the instant it resolved them, washed between the entry price (the parent's actual fill) and each leg: red on the adverse side of the entry, green on the favourable side, **decided from the published prices and the parent's fill direction**, not from a name; the leg that traded has a solid edge, a cancelled or expired leg a faded dashed edge; one price chip per edge (`stop 65,648.6`, `limit 62,547.1`) in the leg's colour, a withdrawn leg's chip outlined. A short entry correctly puts the stop above (red) and the limit below (green).
+- **Entry limit order** = a thin working line to its fill (faded dashes when it never traded); **trade link** = a dotted path only where a fill names the entry as its explicit parent. The legend shows only the marks present; the caption is one short line (`4 fills here · 7 on other pages · 8 orders`).
+- Readout: long exact decimals are shortened in the cell (`position -0.031843`, `equity 20,273.00`) with the exact string in the tooltip and `data-exact`.
+- Theme: colours come from the canvas tokens per theme; checked in Research Light and Operations Dark. Roles are not named from IDs: a leg is called by its order type.
+- A first build threw `maximumFractionDigits value is out of range` in the painter (the overlay layer drew nothing); found by looking at the real page, fixed, and the page's console is clean (0 messages) at 1280 and 660 px on `rrun_ee50cb82…` and on `rrun_c2329924…` (account levels).
+
+Tests: `executionOverlay.test.ts` (9), `windowReplay.test.tsx`, `executionTracks.test.ts`; `tsc` clean. The canvas painting itself is verified by looking at the real chart (screenshots private), not by a unit test.

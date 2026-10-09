@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PortalApiError } from "../lib/api";
 import { WindowReplayCard, activeLevel, levelDisclosure, servedLevel } from "./WindowReplayCard";
-import { barIndexAt, fillDirection, fillMarkers, fillsCaption, legLabel } from "./WindowFillCandles";
+import { fillDirection, fillsCaption, legLabel } from "./WindowFillCandles";
 import { windowExecutionApi, type WindowExecutionPage } from "./windowExecutionClient";
 import limitOco from "./windowLimitOco.fixture.json";
 
@@ -77,20 +77,9 @@ describe("the protective levels", () => {
     expect([legLabel("take_profit"), legLabel("stop_loss"), legLabel("stop"), legLabel("trailing_stop"), legLabel("entry"), legLabel("anything"), legLabel(null)]).toEqual(["TP", "SL", "SL", "TRAIL", "", "", ""]);
   });
   it("says three different things apart: fills on these bars, fills on other pages of bars, fills the journal has not delivered", () => {
-    expect(fillsCaption(4, 11, 11)).toBe("4 fills on these bars · 7 more on other pages of bars · exit-leg word only where the source named it");
-    expect(fillsCaption(1, 1, 250)).toBe("1 fill on these bars · 249 more on later journal pages · exit-leg word only where the source named it");
-    expect(fillsCaption(0, 0, 0)).toBe("0 fills on these bars");
-  });
-  it("puts each fill on the bar that holds it, at its own price, and drops one before the first bar", () => {
-    const bars = [0, 1, 2].map((i) => ({ at_utc_ms: T0 + i * H, open: "1", high: "1", low: "1", close: "1", active_stop: null, active_take_profit: null }));
-    expect(barIndexAt(bars, T0 - 1)).toBe(-1);
-    expect(barIndexAt(bars, T0 + H + 5)).toBe(1);
-    const marks = fillMarkers(bars, [
-      { at_utc_ms: T0 + H + 5, price: "63557.1", qty: "1", side: "buy", exit_reason: null },
-      { at_utc_ms: T0 - 1, price: "9", qty: "1", side: "sell", exit_reason: null },
-      { at_utc_ms: T0 + 2 * H, price: "65209.5846", qty: "1", side: "sell", exit_reason: "take_profit" },
-    ]);
-    expect(marks.map((m) => [m.time, m.price, m.direction, m.text])).toEqual([[(T0 + H) / 1000, 63557.1, "buy", ""], [(T0 + 2 * H) / 1000, 65209.5846, "sell", "TP"]]);
+    expect(fillsCaption(4, 11, 11)).toBe("4 fills here · 7 on other pages");
+    expect(fillsCaption(1, 1, 250)).toBe("1 fill here · 249 not loaded yet");
+    expect(fillsCaption(0, 0, 0)).toBe("0 fills here");
   });
 });
 

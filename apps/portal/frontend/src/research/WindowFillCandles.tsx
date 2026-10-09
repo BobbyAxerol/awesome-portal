@@ -1,22 +1,24 @@
 /**
- * Screen 08 · the complete window's candles, with the engine's fills — the accepted candle component (lightweight-charts, the
- * `FixedCandleChart` host, palette and axis), not a second renderer.
+ * Screen 08 · the complete window's candles with the engine journal drawn on them — the accepted candle component (lightweight-charts,
+ * the `FixedCandleChart` host, palette and axis), not a second renderer.
  *
- * It draws what the source published and no more: the retained candles, every fill at its actual fill price on the bar that holds it,
- * and the account-active stop / take-profit as step lines that BREAK where the engine published none. A fill's glyph is its DIRECTION
- * (buy ▲, sell ▼, drawn in ink so it reads on a green and on a red candle); it is never called an entry or an exit from the side alone — a leg word (TP, SL, TRAIL, TIME) is printed only when the
- * source named the exit reason. Nothing is inferred: no parent/child connector, no PnL, no level from a tag.
- *
- * The values live in the readout above the plot (the bar under the pointer and the fills it holds, exact strings as served), so no
- * label sits on the canvas to collide with another.
+ * The journal is painted by `ExecutionOverlayPrimitive` from the pure model in `executionOverlay.ts`: fills as small triangles at their
+ * own price, entry limit orders as thin working lines, OCO brackets as a washed box between the entry price and each leg, explicit
+ * trade links. The account-active stop / take-profit stay step lines that BREAK where the engine published none. Nothing is inferred:
+ * no relation from an ID suffix or adjacency, no PnL, no level from a tag; a leg word is the order type, and TP / SL only where the
+ * source named the exit reason. The exact values live in the readout above the plot (the bar under the playhead or pointer and the
+ * orders and fills it holds, strings as served).
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { paletteNow } from "../charts/theme";
+import { canvasTokens, activeTheme } from "../styles/tokens";
 import { smokeMotionAllowed } from "../execution/smokeMotion";
 import { AXIS_END_ROOM_BARS, chartPrice, loadLib, paddedRange, sec } from "./ExecuteCandleReplay";
-import { trackStyle, trackWords, type OrderTrack } from "./executionTracks";
+import { ExecutionOverlayPrimitive, type OverlayPalette } from "./ExecutionOverlayPrimitive";
+import { barIndexAt, buildOverlay, directionOf } from "./executionOverlay";
+import { trackWords, type OrderTrack } from "./executionTracks";
 import { ReplayTransport, replayKeyDown, useTransport } from "./replayTransport";
 import { iso } from "./utcMinute";
 
@@ -48,85 +50,67 @@ export interface ReplayFill {
 export type FillDirection = "buy" | "sell" | "unknown";
 
 /** The engine serves `buy` / `sell`; a case or spelling the reader does not know is `unknown`, never guessed. */
-export function fillDirection(side: string | null): FillDirection {
-  const word = (side ?? "").trim().toLowerCase();
-  return word === "buy" ? "buy" : word === "sell" ? "sell" : "unknown";
-}
-
-const LEG_WORDS: Record<string, string> = { take_profit: "TP", stop_loss: "SL", stop: "SL", trailing_stop: "TRAIL", trail: "TRAIL", time: "TIME", time_exit: "TIME" };
-
-/** The exit-leg label of a fill: only when the source named the reason, and only a reason this screen has a word for. */
-export function legLabel(exitReason: string | null): string {
-  return exitReason === null ? "" : (LEG_WORDS[exitReason] ?? "");
-}
-
-/** The index of the bar holding an instant: the last bar that starts at or before it. -1 when it precedes every bar. */
-export function barIndexAt(bars: readonly { at_utc_ms: number }[], at: number): number {
-  let low = 0;
-  let high = bars.length - 1;
-  let found = -1;
-  while (low <= high) {
-    const mid = (low + high) >> 1;
-    if (bars[mid]!.at_utc_ms <= at) {
-      found = mid;
-      low = mid + 1;
-    } else high = mid - 1;
-  }
-  return found;
-}
-
-export interface FillMarker {
-  time: number;
-  price: number;
-  direction: FillDirection;
-  text: string;
-  id: string;
-}
-
-/** One marker per fill, on the bar that holds it, at its own price. */
-export function fillMarkers(bars: readonly ReplayBar[], fills: readonly ReplayFill[]): FillMarker[] {
-  const out: FillMarker[] = [];
-  fills.forEach((fill, at) => {
-    const bar = barIndexAt(bars, fill.at_utc_ms);
-    const price = Number(fill.price);
-    if (bar < 0 || !Number.isFinite(price)) return;
-    out.push({ time: Math.floor(bars[bar]!.at_utc_ms / 1000), price, direction: fillDirection(fill.side), text: legLabel(fill.exit_reason), id: `fill-${at}` });
-  });
-  return out;
-}
-
-const SHAPE: Record<FillDirection, "arrowUp" | "arrowDown" | "circle"> = { buy: "arrowUp", sell: "arrowDown", unknown: "circle" };
+export const fillDirection = (side: string | null): FillDirection => directionOf(side);
+export { barIndexAt, legLabel } from "./executionOverlay";
 
 /**
  * What the plot shows against what exists: fills on THESE bars, fills the journal read already holds but that sit on other pages of
  * bars, and fills the journal has not delivered yet (a later journal page). Three different things, never one "x of y".
  */
 export function fillsCaption(plotted: number, loaded: number, total: number | null): string {
-  const parts = [`${plotted.toLocaleString("en-US")} ${plotted === 1 ? "fill" : "fills"} on these bars`];
-  if (loaded > plotted) parts.push(`${(loaded - plotted).toLocaleString("en-US")} more on other pages of bars`);
-  if (total !== null && total > loaded) parts.push(`${(total - loaded).toLocaleString("en-US")} more on later journal pages`);
-  if (plotted > 0) parts.push("exit-leg word only where the source named it");
+  const parts = [`${plotted.toLocaleString("en-US")} ${plotted === 1 ? "fill" : "fills"} here`];
+  if (loaded > plotted) parts.push(`${(loaded - plotted).toLocaleString("en-US")} on other pages`);
+  if (total !== null && total > loaded) parts.push(`${(total - loaded).toLocaleString("en-US")} not loaded yet`);
   return parts.join(" · ");
 }
 
-type LegendKind = "buy" | "sell" | "stop" | "take" | "entry" | "order-stop" | "order-exit" | "canceled";
+type LegendKind = "buy" | "sell" | "bracket" | "withdrawn" | "limit-order" | "stop" | "take";
 
+/** The legend's marks are the chart's own, drawn at the same weight. */
 function Glyph({ kind }: { kind: LegendKind }) {
+  const svg = { "aria-hidden": true as const, style: { display: "inline-block", verticalAlign: "-2px" } };
   if (kind === "buy" || kind === "sell") {
     return (
-      <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" style={{ display: "inline-block", verticalAlign: "-1px" }}>
-        <path d={kind === "buy" ? "M5 1 L9 9 L1 9 Z" : "M5 9 L9 1 L1 1 Z"} fill="var(--ink)" />
+      <svg width="10" height="10" viewBox="0 0 10 10" {...svg}>
+        <path d={kind === "buy" ? "M5 1 L9 9 L1 9 Z" : "M5 9 L9 1 L1 1 Z"} fill="var(--accent)" />
       </svg>
     );
   }
-  const color = kind === "stop" || kind === "order-stop" ? "var(--bad)" : kind === "take" || kind === "order-exit" ? "var(--good)" : kind === "entry" ? "var(--accent)" : "var(--ink-faint)";
-  const dash = kind === "entry" ? undefined : kind === "canceled" ? "1 3" : "2 2";
+  if (kind === "bracket") {
+    return (
+      <svg width="22" height="12" viewBox="0 0 22 12" {...svg}>
+        <rect x="0.5" y="0.5" width="21" height="5" fill="var(--good)" fillOpacity="0.14" />
+        <rect x="0.5" y="6.5" width="21" height="5" fill="var(--bad)" fillOpacity="0.14" />
+        <line x1="0" y1="6" x2="22" y2="6" stroke="var(--accent)" strokeOpacity="0.5" />
+        <line x1="0" y1="0.8" x2="22" y2="0.8" stroke="var(--good)" strokeWidth="1.4" />
+        <line x1="0" y1="11.2" x2="22" y2="11.2" stroke="var(--bad)" strokeWidth="1.4" strokeDasharray="3 3" />
+      </svg>
+    );
+  }
+  if (kind === "limit-order") {
+    return (
+      <svg width="16" height="10" viewBox="0 0 16 10" {...svg}>
+        <line x1="0" y1="5" x2="16" y2="5" stroke="var(--accent)" strokeWidth="1.2" />
+      </svg>
+    );
+  }
+  if (kind === "stop" || kind === "take") {
+    return (
+      <svg width="16" height="10" viewBox="0 0 16 10" {...svg}>
+        <line x1="0" y1="5" x2="16" y2="5" stroke={kind === "stop" ? "var(--bad)" : "var(--good)"} strokeWidth="1.2" strokeDasharray="1 2" />
+      </svg>
+    );
+  }
   return (
-    <svg width="14" height="10" viewBox="0 0 14 10" aria-hidden="true" style={{ display: "inline-block", verticalAlign: "-1px" }}>
-      <line x1="0" y1="5" x2="14" y2="5" stroke={color} strokeWidth="1.5" strokeDasharray={dash} />
+    <svg width="16" height="10" viewBox="0 0 16 10" {...svg}>
+      <line x1="0" y1="5" x2="16" y2="5" stroke="var(--ink-faint)" strokeWidth="1.2" strokeDasharray="3 3" />
     </svg>
   );
 }
+
+/** A long served decimal in a readout cell: a few significant digits; the exact string stays in the cell's tooltip and `data-exact`. */
+const briefDecimal = (text: string, digits: number) => (Number.isFinite(Number(text)) ? String(Number(Number(text).toPrecision(digits))) : text);
+const money2 = (text: string) => (Number.isFinite(Number(text)) ? Number(text).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : text);
 
 const fillWords = (fill: ReplayFill) =>
   `${fill.side ?? "side not published"}${fill.exit_reason ? ` ${fill.exit_reason}` : ""} ${fill.qty ?? "qty not published"} @ ${fill.price}${fill.order_id ? ` · ${fill.order_id}` : ""}`;
@@ -145,9 +129,6 @@ export function trackReadout(track: OrderTrack): string {
 export function tracksAt(tracks: readonly OrderTrack[], at: number): OrderTrack[] {
   return tracks.filter((track) => track.startMs !== null && track.startMs <= at && (track.endMs === null || at < track.endMs));
 }
-
-/** One series per drawn order; a window with more orders than this draws the first ones and says how many were left out. */
-const MAX_DRAWN_ORDERS = 150;
 
 export function WindowFillCandles({
   bars,
@@ -179,8 +160,7 @@ export function WindowFillCandles({
     take: Api;
     position: Api;
     equity: Api;
-    lanes: Api[];
-    markers: import("lightweight-charts").ISeriesMarkersPluginApi<import("lightweight-charts").Time>;
+    overlay: ExecutionOverlayPrimitive;
   } | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   const [probe, setProbe] = useState<number | null>(null);
@@ -221,7 +201,8 @@ export function WindowFillCandles({
           api.addSeries(lib.LineSeries, { color, lineWidth: 1, lineStyle: lib.LineStyle.Dotted, lineType: lib.LineType.WithSteps, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
         const stop = level(pal.bad);
         const take = level(pal.good);
-        const markers = lib.createSeriesMarkers(candles, []);
+        const overlay = new ExecutionOverlayPrimitive();
+        candles.attachPrimitive(overlay);
         const position = api.addSeries(lib.LineSeries, { color: pal.accent, lineWidth: 1, lineType: lib.LineType.WithSteps, priceLineVisible: false, lastValueVisible: false }, 1);
         const equity = api.addSeries(lib.LineSeries, { color: pal.ink, lineWidth: 1, priceLineVisible: false, lastValueVisible: false }, 2);
         equity.applyOptions({
@@ -238,7 +219,7 @@ export function WindowFillCandles({
         } catch {
           /* pane sizing is cosmetic */
         }
-        chart.current = { lib, api, candles, stop, take, position, equity, lanes: [], markers };
+        chart.current = { lib, api, candles, stop, take, position, equity, overlay };
         try {
           api.subscribeCrosshairMove?.((param: { time?: unknown }) => {
             const at = typeof param?.time === "number" ? timeIndex.current.get(param.time) : undefined;
@@ -306,89 +287,20 @@ export function WindowFillCandles({
     }
   }, [bars, status]);
 
-  /* The orders the journal published, drawn as horizontal segments from the instant the source made them working to the instant it
-     filled or cancelled them (or to the window's end). Tracks of one style that overlap share no series: each takes its own lane. */
-  const inWindow = useMemo(() => {
-    if (bars.length === 0) return [];
-    const spanMs = bars.length > 1 ? Math.max(1, bars[1]!.at_utc_ms - bars[0]!.at_utc_ms) : 3_600_000;
-    const first = bars[0]!.at_utc_ms;
-    const end = bars[bars.length - 1]!.at_utc_ms + spanMs;
-    return tracks.filter((track) => track.startMs !== null && track.level !== null && Number.isFinite(Number(track.level)) && track.startMs < end && (track.endMs === null || track.endMs >= first));
-  }, [bars, tracks]);
+  /* The orders working on this page (for the readout) and the overlay the canvas paints for them: fills, entry limit orders, OCO
+     brackets, explicit trade links. The model is pure (`executionOverlay.ts`); the primitive only paints it. */
+  const spanMs = bars.length > 1 ? Math.max(1, bars[1]!.at_utc_ms - bars[0]!.at_utc_ms) : 3_600_000;
+  const windowStart = bars.length > 0 ? bars[0]!.at_utc_ms : 0;
+  const windowEnd = bars.length > 0 ? bars[bars.length - 1]!.at_utc_ms + spanMs : 0;
+  const inWindow = useMemo(() => tracks.filter((track) => track.startMs !== null && track.startMs < windowEnd && (track.endMs === null || track.endMs >= windowStart)), [tracks, windowStart, windowEnd]);
+  const overlay = useMemo(() => buildOverlay(tracks, fills, windowStart, windowEnd), [tracks, fills, windowStart, windowEnd]);
   useEffect(() => {
     const c = chart.current;
     if (status !== "ready" || !c) return;
-    const pal = paletteNow();
-    for (const lane of c.lanes) c.api.removeSeries(lane);
-    c.lanes = [];
-    if (bars.length === 0) return;
-    const spanMs = bars.length > 1 ? Math.max(1, bars[1]!.at_utc_ms - bars[0]!.at_utc_ms) : 3_600_000;
-    const windowEnd = bars[bars.length - 1]!.at_utc_ms;
-    const snap = (ms: number) => sec(bars[Math.max(0, barIndexAt(bars, ms))]!.at_utc_ms);
-    const stepSec = Math.max(1, Math.floor(spanMs / 1000));
-    /* One two-point series per order: a line never connects two different orders, whatever their order of time or price. */
-    for (const track of inWindow.slice(0, MAX_DRAWN_ORDERS)) {
-      const style = trackStyle(track);
-      const color = style === "stop" ? pal.bad : style === "exit-limit" ? pal.good : style === "entry" ? pal.accent : pal.inkFaint;
-      const withdrawn = track.state === "canceled" || track.state === "expired" || track.state === "rejected";
-      const from = snap(track.startMs!);
-      const reach = track.endMs === null ? sec(windowEnd) : snap(Math.min(track.endMs, windowEnd));
-      /* an order that ended on its own bar still shows its level for one bar */
-      const to = Math.max(reach as number, (from as number) + stepSec) as import("lightweight-charts").UTCTimestamp;
-      const value = Number(track.level);
-      const series = c.api.addSeries(c.lib.LineSeries, {
-        /* a withdrawn order is grey: it did not trade */
-        color: withdrawn ? pal.inkFaint : color,
-        lineWidth: 1,
-        lineStyle: style === "entry" && !withdrawn ? c.lib.LineStyle.Solid : c.lib.LineStyle.Dashed,
-        priceLineVisible: false,
-        lastValueVisible: false,
-        crosshairMarkerVisible: false,
-      });
-      series.setData([{ time: from, value }, { time: to, value }]);
-      c.lanes.push(series);
-    }
-  }, [bars, inWindow, status, theme]);
-
-  const marks = useMemo(() => fillMarkers(bars, fills), [bars, fills]);
-  const cancels = useMemo(
-    () =>
-      inWindow.flatMap((track) => {
-        const at = track.events.find((event) => event.name === "cancel")?.at;
-        const bar = at === undefined ? -1 : barIndexAt(bars, at);
-        return at !== undefined && bar >= 0 && Number.isFinite(Number(track.level)) ? [{ time: Math.floor(bars[bar]!.at_utc_ms / 1000), price: Number(track.level), id: `cancel-${track.orderId}` }] : [];
-      }),
-    [bars, inWindow],
-  );
-  useEffect(() => {
-    const c = chart.current;
-    if (status !== "ready" || !c) return;
-    const pal = paletteNow();
-    const list = [
-      ...marks.map((mark) => ({
-        time: mark.time as import("lightweight-charts").UTCTimestamp,
-        position: "atPriceMiddle" as const,
-        price: mark.price,
-        shape: SHAPE[mark.direction],
-        /* ink, not the candle colours: the glyph must stay visible on a green and on a red body; its SHAPE is the direction */
-        color: mark.direction === "unknown" ? pal.inkFaint : pal.ink,
-        text: mark.text,
-        id: mark.id,
-        size: 2,
-      })),
-      ...cancels.map((cancel) => ({
-        time: cancel.time as import("lightweight-charts").UTCTimestamp,
-        position: "atPriceMiddle" as const,
-        price: cancel.price,
-        shape: "square" as const,
-        color: pal.inkFaint,
-        text: "cancel",
-        id: cancel.id,
-        size: 0.6,
-      })),
-    ].sort((a, b) => (a.time as number) - (b.time as number));
-    c.markers.setMarkers(list);
-  }, [marks, cancels, status, theme]);
+    const t = canvasTokens(activeTheme());
+    const palette: OverlayPalette = { ink: t.ink, inkSoft: t.inkSoft, inkFaint: t.inkFaint, accent: t.accent, good: t.good, bad: t.bad, surface: t.paperRaised };
+    c.overlay.setData(overlay, bars, palette);
+  }, [overlay, bars, status, theme]);
 
   /* The playhead: the crosshair sits on the bar, and the visible range slides to follow it (a zoom the reader set is kept until the
      playhead leaves it). A transport move clears the pointer's override. */
@@ -421,24 +333,28 @@ export function WindowFillCandles({
     return fills.filter((fill) => barIndexAt(bars, fill.at_utc_ms) === at);
   }, [bar, bars, fills]);
   const working = useMemo(() => (bar ? tracksAt(inWindow, bar.at_utc_ms) : []), [bar, inWindow]);
-  const plotted = marks.length;
-  const styles = new Set(inWindow.map(trackStyle));
-  const withdrawn = inWindow.some((track) => track.state === "canceled" || track.state === "expired" || track.state === "rejected");
+  const plotted = overlay.fills.length;
+  const hasBrackets = overlay.brackets.length > 0;
+  const hasEntries = overlay.entries.length > 0;
+  const hasWithdrawn = overlay.brackets.some((bracket) => bracket.legs.some((leg) => leg.state === "canceled" || leg.state === "expired" || leg.state === "rejected")) || overlay.entries.some((entry) => entry.state === "canceled" || entry.state === "expired");
 
   return (
     <div className="relative" data-chart="window-replay" data-chart-status={status} data-fills-plotted={plotted} data-order-tracks={inWindow.length}>
       <div className="mono mb-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px]" style={{ color: "var(--ink-soft)" }} data-window-legend>
-        <span className="whitespace-nowrap"><Glyph kind="buy" /> buy fill</span>
-        <span className="whitespace-nowrap"><Glyph kind="sell" /> sell fill</span>
-        {styles.has("entry") ? <span className="whitespace-nowrap" data-legend="entry"><Glyph kind="entry" /> limit order</span> : null}
-        {styles.has("stop") ? <span className="whitespace-nowrap" data-legend="order-stop"><Glyph kind="order-stop" /> stop order · reduce-only</span> : null}
-        {styles.has("exit-limit") ? <span className="whitespace-nowrap" data-legend="order-exit"><Glyph kind="order-exit" /> limit order · reduce-only</span> : null}
-        {withdrawn ? <span className="whitespace-nowrap" data-legend="canceled"><Glyph kind="canceled" /> cancelled / expired, did not trade</span> : null}
+        {plotted > 0 ? (
+          <>
+            <span className="whitespace-nowrap" data-legend="buy"><Glyph kind="buy" /> buy</span>
+            <span className="whitespace-nowrap" data-legend="sell"><Glyph kind="sell" /> sell</span>
+          </>
+        ) : null}
+        {hasEntries ? <span className="whitespace-nowrap" data-legend="limit-order"><Glyph kind="limit-order" /> limit order</span> : null}
+        {hasBrackets ? <span className="whitespace-nowrap" data-legend="bracket" title="From the parent's fill to the instant the source resolved the pair. A wash runs from the entry price to each leg: red on the adverse side, green on the favourable side; the leg that traded has the solid edge."><Glyph kind="bracket" /> OCO bracket</span> : null}
+        {hasWithdrawn ? <span className="whitespace-nowrap" data-legend="withdrawn"><Glyph kind="withdrawn" /> cancelled / expired</span> : null}
         {bars.some((b) => b.active_stop !== null) ? <span className="whitespace-nowrap"><Glyph kind="stop" /> account stop</span> : null}
         {bars.some((b) => b.active_take_profit !== null) ? <span className="whitespace-nowrap"><Glyph kind="take" /> account take-profit</span> : null}
-        <span style={{ color: "var(--ink-faint)" }} data-fills-caption>
+        <span style={{ color: "var(--ink-faint)" }} data-fills-caption title="A leg word (TP, SL) is printed only where the source named the exit reason. Fills on other pages of bars are on the next / previous bar page; fills not loaded yet are on a later journal page.">
           {fillsCaption(plotted, fillsLoaded ?? fills.length, fillTotal)}
-          {inWindow.length > 0 ? ` · ${inWindow.length.toLocaleString("en-US")} orders on these bars${inWindow.length > MAX_DRAWN_ORDERS ? ` (first ${MAX_DRAWN_ORDERS} drawn)` : ""}` : ""}
+          {inWindow.length > 0 ? ` · ${inWindow.length.toLocaleString("en-US")} orders` : ""}
           {journalNote ? ` · ${journalNote}` : ""}
         </span>
       </div>
@@ -449,8 +365,8 @@ export function WindowFillCandles({
           <span><span style={{ color: "var(--ink-faint)" }}>H </span>{bar.high}</span>
           <span><span style={{ color: "var(--ink-faint)" }}>L </span>{bar.low}</span>
           <span><span style={{ color: "var(--ink-faint)" }}>C </span>{bar.close}</span>
-          {hasPosition ? <span data-readout-position><span style={{ color: "var(--ink-faint)" }}>position </span>{bar.position ?? "not published"}</span> : null}
-          {hasEquity ? <span data-readout-equity><span style={{ color: "var(--ink-faint)" }}>equity </span>{bar.equity ?? "not published"}</span> : null}
+          {hasPosition ? <span data-readout-position title={bar.position ?? undefined} data-exact={bar.position ?? undefined}><span style={{ color: "var(--ink-faint)" }}>position </span>{bar.position == null ? "not published" : briefDecimal(bar.position, 5)}</span> : null}
+          {hasEquity ? <span data-readout-equity title={bar.equity ?? undefined} data-exact={bar.equity ?? undefined}><span style={{ color: "var(--ink-faint)" }}>equity </span>{bar.equity == null ? "not published" : money2(bar.equity)}</span> : null}
           {bar.active_stop ? <span data-readout-level="stop"><span style={{ color: "var(--ink-faint)" }}>account stop </span>{bar.active_stop}</span> : null}
           {bar.active_take_profit ? <span data-readout-level="take-profit"><span style={{ color: "var(--ink-faint)" }}>account take-profit </span>{bar.active_take_profit}</span> : null}
         </div>
