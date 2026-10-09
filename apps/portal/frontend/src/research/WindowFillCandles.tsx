@@ -17,6 +17,7 @@ import { paletteNow } from "../charts/theme";
 import { smokeMotionAllowed } from "../execution/smokeMotion";
 import { AXIS_END_ROOM_BARS, chartPrice, loadLib, paddedRange, sec } from "./ExecuteCandleReplay";
 import { trackStyle, trackWords, type OrderTrack } from "./executionTracks";
+import { ReplayTransport, replayKeyDown, useTransport } from "./replayTransport";
 import { iso } from "./utcMinute";
 
 export interface ReplayBar {
@@ -155,6 +156,7 @@ export function WindowFillCandles({
   fillsLoaded = null,
   fillTotal = null,
   journalNote = null,
+  transport = null,
 }: {
   bars: readonly ReplayBar[];
   fills: readonly ReplayFill[];
@@ -164,6 +166,8 @@ export function WindowFillCandles({
   fillTotal?: number | null;
   /** A sentence about records the journal read could not deliver (a bounded read stopped), shown in the legend row. */
   journalNote?: string | null;
+  /** The accepted transport (play / step / speed / seek): its index is the playhead; the pointer overrides it while it is over the chart. */
+  transport?: ReplayTransport | null;
 }) {
   type Api = import("lightweight-charts").ISeriesApi<"Line">;
   const host = useRef<HTMLDivElement | null>(null);
@@ -183,6 +187,14 @@ export function WindowFillCandles({
   const [theme, setTheme] = useState(0);
   const timeIndex = useRef<Map<number, number>>(new Map());
   const fitted = useRef<readonly ReplayBar[] | null>(null);
+  const justFitted = useRef(false);
+  /* The playhead: the accepted transport when the screen supplies one, else a private one (a bare chart still steps by keyboard). */
+  const [own] = useState(() => new ReplayTransport());
+  const tp = transport ?? own;
+  useEffect(() => {
+    if (transport === null) own.load(bars.length, 0);
+  }, [transport, own, bars.length]);
+  const { index } = useTransport(tp);
 
   const hasEquity = useMemo(() => bars.some((bar) => bar.equity !== null && bar.equity !== undefined), [bars]);
   const hasPosition = useMemo(() => bars.some((bar) => bar.position !== null && bar.position !== undefined), [bars]);
@@ -288,6 +300,7 @@ export function WindowFillCandles({
     c.equity.setData(bars.map((bar) => (bar.equity === null || bar.equity === undefined ? { time: sec(bar.at_utc_ms) } : { time: sec(bar.at_utc_ms), value: Number(bar.equity) })));
     if (fitted.current !== bars) {
       fitted.current = bars;
+      justFitted.current = true;
       c.api.timeScale().fitContent();
       c.api.timeScale().setVisibleLogicalRange?.({ from: -AXIS_END_ROOM_BARS, to: bars.length - 1 + AXIS_END_ROOM_BARS });
     }
@@ -377,28 +390,31 @@ export function WindowFillCandles({
     c.markers.setMarkers(list);
   }, [marks, cancels, status, theme]);
 
-  /* The playhead is keyboard-steppable: ← → one bar, Shift ten, Home / End the ends. It moves the readout and the crosshair only. */
-  const [cursor, setCursor] = useState<number | null>(null);
-  const move = (event: React.KeyboardEvent) => {
-    if (bars.length === 0) return;
-    const at = cursor ?? probe ?? bars.length - 1;
-    const step = event.shiftKey ? 10 : 1;
-    const next = event.key === "ArrowRight" ? at + step : event.key === "ArrowLeft" ? at - step : event.key === "Home" ? 0 : event.key === "End" ? bars.length - 1 : null;
-    if (next === null) return;
-    event.preventDefault();
-    const clamped = Math.max(0, Math.min(bars.length - 1, next));
-    setCursor(clamped);
-    setProbe(clamped);
+  /* The playhead: the crosshair sits on the bar, and the visible range slides to follow it (a zoom the reader set is kept until the
+     playhead leaves it). A transport move clears the pointer's override. */
+  useEffect(() => {
+    setProbe(null);
+  }, [index]);
+  useEffect(() => {
+    const c = chart.current;
+    const row = bars[index];
+    if (status !== "ready" || !c || !row) return;
     try {
-      const bar = bars[clamped]!;
-      chart.current?.api.setCrosshairPosition(Number(bar.close), sec(bar.at_utc_ms), chart.current.candles);
+      c.api.setCrosshairPosition(Number(row.close), sec(row.at_utc_ms), c.candles);
+      const range = c.api.timeScale().getVisibleLogicalRange();
+      if (justFitted.current) {
+        justFitted.current = false;
+      } else if (range && (index < range.from || index > range.to)) {
+        const span = range.to - range.from;
+        const from = Math.max(-2, index - span * 0.7);
+        c.api.timeScale().setVisibleLogicalRange({ from, to: from + span });
+      }
     } catch {
       /* the crosshair is a convenience */
     }
-  };
+  }, [index, bars, status]);
 
-  const last = bars.length - 1;
-  const bar = bars[probe ?? last];
+  const bar = bars[probe ?? Math.min(index, bars.length - 1)];
   const barFills = useMemo(() => {
     if (!bar) return [];
     const at = barIndexAt(bars, bar.at_utc_ms);
@@ -427,7 +443,7 @@ export function WindowFillCandles({
         </span>
       </div>
       {bar ? (
-        <div className="mono flex min-h-[18px] flex-wrap items-center gap-x-3 gap-y-0.5 pb-1 text-[10px]" style={{ color: "var(--ink)" }} data-window-readout={probe === null ? "last" : "pointer"}>
+        <div className="mono flex min-h-[18px] flex-wrap items-center gap-x-3 gap-y-0.5 pb-1 text-[10px]" style={{ color: "var(--ink)" }} data-window-readout={probe === null ? "playhead" : "pointer"}>
           <span style={{ color: "var(--ink-soft)" }}>{iso(bar.at_utc_ms)}</span>
           <span><span style={{ color: "var(--ink-faint)" }}>O </span>{bar.open}</span>
           <span><span style={{ color: "var(--ink-faint)" }}>H </span>{bar.high}</span>
@@ -462,8 +478,8 @@ export function WindowFillCandles({
       <div
         role="application"
         tabIndex={0}
-        aria-label={`${bars.length} retained bars with ${plotted} engine fills and ${inWindow.length} orders; arrow keys step the readout, exact values in the journal below`}
-        onKeyDown={move}
+        aria-label={`${bars.length} retained bars with ${plotted} engine fills and ${inWindow.length} orders; Space plays, arrow keys step, Shift jumps ten; exact values in the journal below`}
+        onKeyDown={replayKeyDown(tp)}
         style={{ outline: "none" }}
         data-window-chart-region
       >

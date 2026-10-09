@@ -455,7 +455,8 @@ function Playhead({ transport, length }: { transport: ReplayTransport; length: n
 
 /* ------------------------------------------------------------- transport */
 
-function TransportBar({
+/** The accepted transport bar (play / step / speed / seek); also drives the one-chart native Replay (`WindowFillCandles`). */
+export function TransportBar({
   transport,
   items,
   total,

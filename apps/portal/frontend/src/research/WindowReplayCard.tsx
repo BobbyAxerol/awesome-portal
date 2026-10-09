@@ -20,6 +20,8 @@ import { PortalApiError } from "../lib/api";
 import { reasonCodeSentence } from "./researchRefusal";
 import { authorityWords, windowWords } from "./windowAnalyticsView";
 import { buildTracks } from "./executionTracks";
+import { TransportBar } from "./ExecuteDetail";
+import { ReplayTransport } from "./replayTransport";
 import { OcoTree } from "./OcoTree";
 import {
   RECORD_KINDS,
@@ -233,6 +235,22 @@ export function WindowReplayCard({ runId, workspaceId, defaultOpen = false }: { 
           ),
     [page],
   );
+  /* The one transport of this chart: its playhead is a retained bar of the page in hand. A new page is a new playhead; a hidden tab pauses. */
+  const [transport] = useState(() => new ReplayTransport());
+  useEffect(() => {
+    transport.load(bars.length, 0);
+  }, [bars, transport]);
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") transport.hide();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      transport.dispose();
+    };
+  }, [transport]);
+  const barItems = useMemo(() => bars.map((bar, at) => ({ playback_ordinal: at, at_utc_ms: bar.at_utc_ms })), [bars]);
   const fillRows = allFills?.state === "ready" ? allFills.rows : fills?.state === "ready" ? executionRows(fills.page) : [];
   const spanMs = bars.length > 1 ? Math.max(1, bars[1]!.at_utc_ms - bars[0]!.at_utc_ms) : 3_600_000;
   const first = bars[0]?.at_utc_ms ?? null;
@@ -325,11 +343,12 @@ export function WindowReplayCard({ runId, workspaceId, defaultOpen = false }: { 
             {authority?.caution ? <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-window-caution>{authority.caution}</p> : null}
             {bars.length > 0 ? (
               <Suspense fallback={<div className="mono text-[10px] italic" style={{ height: 320, color: "var(--ink-faint)" }} data-chart-loading>drawing…</div>}>
-                <WindowFillCandles bars={bars} fills={marks} tracks={tracks} fillsLoaded={fillRows.length} fillTotal={allFills?.state === "ready" ? allFills.total : fills?.state === "ready" ? (fills.page.counts.matching ?? null) : null} journalNote={truncatedNote} />
+                <WindowFillCandles bars={bars} fills={marks} tracks={tracks} transport={transport} fillsLoaded={fillRows.length} fillTotal={allFills?.state === "ready" ? allFills.total : fills?.state === "ready" ? (fills.page.counts.matching ?? null) : null} journalNote={truncatedNote} />
               </Suspense>
             ) : (
               <p className="mono text-[11px] italic" style={{ color: "var(--ink-faint)" }} data-window-no-bars>no candle was published for this page</p>
             )}
+            {bars.length > 0 ? <TransportBar transport={transport} items={barItems} total={page?.counts.matching ?? null} noun="bar" ordinalLabel={(at) => `bar ${at.playback_ordinal + 1} of ${bars.length.toLocaleString("en-US")} on this page`} /> : null}
             {tracks.length > 0 ? <OcoTree tracks={tracks} /> : null}
             {page !== null && bars.length > 0 ? <LevelDisclosure rows={observationRows(page)} /> : null}
             <div className="flex flex-wrap items-center gap-2" data-window-paging>

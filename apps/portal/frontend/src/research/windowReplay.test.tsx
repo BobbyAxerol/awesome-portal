@@ -349,6 +349,15 @@ describe("one chart for the orders, fills and OCO of a window (BR-S02-21)", () =
     expect(legs[1]!.querySelector("[data-leg-end]")!.textContent).toContain("filled @ 65209.482");
   });
 
+  it("the chart shares the accepted transport: a bar-level transport bar sits under it and the chart gets the same transport", async () => {
+    serve();
+    const { container } = render(<WindowReplayCard runId="rrun_x" defaultOpen />);
+    await waitFor(() => expect(container.querySelector("[data-transport]")).not.toBeNull());
+    expect(container.querySelector('[data-transport] [aria-label="window start"]')).not.toBeNull();
+    expect((charts.last as { transport?: unknown }).transport).toBeTruthy();
+    expect(container.textContent).toContain("bar 1 of 10 on this page");
+  });
+
   it("an order relation the server did not publish draws no track and no OCO tree, and says nothing was invented", async () => {
     vi.spyOn(windowExecutionApi, "observations").mockResolvedValue(page(rows10()));
     vi.spyOn(windowExecutionApi, "records").mockImplementation(async (_run, _scope, options) =>
