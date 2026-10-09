@@ -88,3 +88,18 @@ Thêm giới hạn tài nguyên trong compose (`mem_limit`, `pids_limit`) cho Po
 
 ## 6. Việc đã làm trong tài liệu này
 `scripts/postgres-bloat-report.sh` (mới); thu hồi 81 GB ở probe. Không đổi code ứng dụng, cấu hình compose, hay stack khác.
+
+## Outcome (2026-10-09, Claude — implemented, replaces the proposals above where they differ)
+
+| Layer | Delivered | Evidence |
+|---|---|---|
+| L1 config | `deploy/postgres/portal.conf` mounted read-only by `compose.yaml` and `deploy/compose.production.yaml` (`command: config_file=…`, `mem_limit 4g`, `shm_size 256m`) | `docker compose config` valid; config validated in an ephemeral container |
+| L2 write path | `complete()` keeps the stored body when the etag is equal (`CASE WHEN cache.etag = EXCLUDED.etag`) — zero new TOAST chunks for an unchanged refresh | test compares the TOAST chunk id across refreshes; reverting the CASE makes it fail |
+| L2 storage | migration `1723680000129`: `SET UNLOGGED` + table/TOAST autovacuum by absolute threshold (5000 dead, scale 0, cost 2000); Down resets and `SET LOGGED` | applied on a fresh DB: `relpersistence=u`, options on table and TOAST; Down verified. A first version without the `-- Up Migration` marker was recorded as applied but did nothing — marker added |
+| L2 guard | `EXECUTION_SHARED_READ_CACHE_PHYSICAL_LIMIT_BYTES` (default 1 GiB, 0 off); the sweeper, after draining, TRUNCATEs only when the file is over the limit and no live entry exists (1 s lock timeout); reported as `physicalReclaim` | 2 new real-PG tests; N21 static gate green |
+| L3 | `scripts/postgres-bloat-report.sh`; `preview.sh status` runs it with `--fail-over-gb 5` | ran on every Postgres container |
+| Reclaim | stable −829 MB, dev −849 MB (rows 0, live-entry check inside the lock) → 24 kB each; probe −81 GB earlier | before/after sizes |
+
+Soak (55 writes/s, 2 MiB bodies): defaults grow linearly; unlogged + autovacuum options + tuned config plateau ~420 MB; CASE reuse writes no new chunks for unchanged content. Decision change: **Postgres is kept** (no NATS KV), and the logical cap at write was **not** added — the physical guard is what actually prevents disk growth.
+
+Not done (needs Bobby): applying `ALTER SYSTEM` / the table DDL directly to the running dev, stable and probe databases was blocked by the permission classifier, so those DBs still run default config until their next deploy (migration 129 + compose mount) or until Bobby allows the commands in `scratchpad/live-config.sql` / `live-table.sql`. Moving `portal-probe-pg` into a compose project was not started.
