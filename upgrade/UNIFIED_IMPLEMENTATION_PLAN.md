@@ -8512,3 +8512,8 @@ Native Freeze ETag follow-up removes read-clock churn without hiding new byte
 receipts. No frontend or web rebuild; DB/NATS/artifact volumes preserved.
 Initial source commit748e241b; exact follow-up is in this addendum's commit.
 See runtime receipt for committed checkout/image identity and full responses.
+
+## 2026-10-09 Claude frontend addendum — native S06 / S07 / S09 consumed (§55)
+
+`FRONTEND_CONSUMED / REAL_API_RECEIPT_ATTACHED / OWNER_VISUAL_REVIEW_OPEN` — not P24 / release closed. Wired on `docs/research-loop-plan`: `native_search` → `NativeSearchPanel` (S06), `native_freeze` + the explicit Verify → `NativeFreezePanel` (S07), `frozen_core.native_report` + the existing JSON / CSV export flow → `NativeReportBlock` (S09); the S08 chart is unchanged. A native run has no fold (the server answers 400 to any `fold`), so the screens learn it from Progress first. Real API at 1280 / 660 on `rrun_ee50cb82…`: θ* trial 41 / ordinal 42 of 100, a fresh byte receipt `MATCH` after Verify, exports whose SHA-256 equals the job's (62,301 / 12,920 bytes), three fixed-native Reports with no optimizer blocks; 0 console messages. Open: paging past 200 trials is unit-tested but not browser-exercised (this run has 100); neighbour identities and the sampler trace stay typed absences; the repeated scalar claim strip on S06 is honest but noisy.
+[Receipt, defects found and open items](./research_loop/evidence/P24/NATIVE_READERS_CLAUDE_RECEIPT_2026-10-09.md).

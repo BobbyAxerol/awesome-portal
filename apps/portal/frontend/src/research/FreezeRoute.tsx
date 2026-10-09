@@ -7,6 +7,7 @@
  * hiding the question.
  */
 
+import { useRunNative } from "./useRunNative";
 import { useParams, useSearchParams } from "react-router-dom";
 
 import { FreezeScreen } from "./FreezeDetail";
@@ -25,7 +26,9 @@ export function FreezeRoute({ embedded = false }: { embedded?: boolean } = {}) {
 
 function FreezeRouteBody({ runId, workspaceId, embedded }: { runId: string; workspaceId?: string; embedded: boolean }) {
   const { cursor, problems } = useEvidenceCursor({ stage: "freeze" });
-  const freeze = useFreeze(runId, cursor.fold, workspaceId);
+  /* §55: a natively searched run is one study with no fold; its Freeze read must not carry one. */
+  const native = useRunNative(runId, workspaceId);
+  const freeze = useFreeze(runId, native === true ? null : cursor.fold, workspaceId, native !== null);
   /* W3b: the run identity (schedule, folds, readiness) a retained answer is read against. */
   const identity = useRunIdentity(runId, workspaceId, freeze.laneRetained);
 

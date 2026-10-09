@@ -111,7 +111,7 @@ export function searchState(detail: SearchDetail | null, refusal: SearchRefusal 
   return researchState({ kind: "ok", rowCount: Math.max(1, detail.fixed_profile.parameters.length) });
 }
 
-export function useSearch(runId: string, fold: number | null, workspaceId?: string): SearchController {
+export function useSearch(runId: string, fold: number | null, workspaceId?: string, ready = true): SearchController {
   const key = cacheKey(runId, fold, workspaceId);
   const reads = useEvidenceReadsAllowed(runId, DENY_NOT_STARTED_OR_CANCELLED, workspaceId);
   const [held, setHeld] = useState<{ key: string; detail: SearchDetail } | null>(() => {
@@ -127,6 +127,8 @@ export function useSearch(runId: string, fold: number | null, workspaceId?: stri
   const currentRefusal = refusal?.key === key ? refusal.refusal : null;
 
   useEffect(() => {
+    /* §55: a native run has no fold, and the screen has not yet learned whether this one is native: wait, never send a request the server would refuse. */
+    if (!ready) return undefined;
     const controller = new AbortController();
     const inHand = accepted.get(key) ?? null;
     searchApi
@@ -145,7 +147,7 @@ export function useSearch(runId: string, fold: number | null, workspaceId?: stri
         setRefusal({ key, refusal: toSearchRefusal(error) });
       });
     return () => controller.abort();
-  }, [fold, generation, key, runId, workspaceId]);
+  }, [fold, generation, key, ready, runId, workspaceId]);
 
   const runKey = `${workspaceId ?? ""}|${runId}`;
   const ensureLedger = useCallback(() => {

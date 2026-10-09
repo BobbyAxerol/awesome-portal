@@ -5,7 +5,7 @@
  * the DOM. Two layers: UNDER the candles the quiet washes (bracket zones, the entry baseline); OVER them the edges, the price chips,
  * the trade links and the fills. Everything is thin, small and tied to a price: 8 px triangles with a surface halo, 1 px lines, one
  * 15 px chip per bracket edge. Text is drawn in text tokens; a colour only fills the mark beside it (a chip is the one filled label,
- * its text chosen by the fill's luminance).
+ * its text the surface colour).
  */
 
 import type { IChartApi, ISeriesApi, ISeriesPrimitive, Logical, SeriesAttachedParameter, Time } from "lightweight-charts";
@@ -39,15 +39,6 @@ const LABEL_FONT = "9.5px ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo,
 const MAX_LABELLED_FILLS = 14;
 
 const priceText = (value: number) => value.toLocaleString("en-US", value >= 1000 ? { minimumFractionDigits: 1, maximumFractionDigits: 1 } : { minimumFractionDigits: 2, maximumFractionDigits: 4 });
-
-/** White on a dark fill, ink on a light one — the one place text sits inside a coloured mark. */
-function contrastOn(hex: string, light: string, dark: string): string {
-  const v = hex.replace("#", "");
-  const full = v.length === 3 ? v.replace(/./g, (c) => c + c) : v;
-  const [r, g, b] = [0, 2, 4].map((i) => Number.parseInt(full.slice(i, i + 2), 16) / 255);
-  const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-  return 0.2126 * lin(r!) + 0.7152 * lin(g!) + 0.0722 * lin(b!) > 0.4 ? dark : light;
-}
 
 const withdrawn = (leg: OverlayLeg) => leg.state === "canceled" || leg.state === "expired" || leg.state === "rejected";
 
@@ -212,7 +203,8 @@ export class ExecutionOverlayPrimitive implements ISeriesPrimitive<Time> {
           c.fillStyle = color;
           c.fill();
         }
-        c.fillStyle = faded ? p.inkSoft : contrastOn(color, "#ffffff", "#1c2532");
+        /* text on a filled chip wears the surface colour: light on the dark-theme-light fill and dark on the light-theme-dark fill — never a literal */
+        c.fillStyle = faded ? p.inkSoft : p.surface;
         c.textAlign = "left";
         c.fillText(text, left + 5, cy + 0.5);
       }

@@ -23,6 +23,7 @@
  * fold change, no slider move and no re-render ever sends either.
  */
 
+import { NativeFreezePanel } from "./NativeFreezePanel";
 import { useEffect } from "react";
 import { ResearchScopedLink as Link, ResearchScopedLineageLink as LineageLink } from "./ResearchScopedLink";
 
@@ -1637,6 +1638,8 @@ export function FreezeScreen({
   const handedOff = hubDelegates(detail) && retained.state !== "not-applicable";
   const freeze = lane === null && !handedOff ? detail?.freeze : undefined;
   const blocked = freeze?.integrity.state === "BLOCKED";
+  /* §55: a natively searched run freezes the parameters its optimizer selected; the scalar sections would only repeat typed absences. */
+  const nativeFreeze = detail?.native_freeze ?? null;
   /* A10a: the newest byte answer — this verify's own, else the read's receipt. */
   const bytes: ArtifactBytes | null =
     (verify.state === "done"
@@ -1736,7 +1739,7 @@ export function FreezeScreen({
       {/* F2: an imported alpha's served identity; a built-in alpha publishes none, so nothing is drawn. */}
       {detail && freeze ? <ImportedAlphaLine binding={detail.imported_alpha} /> : null}
 
-      {detail && freeze ? (
+      {detail && freeze && !nativeFreeze ? (
         <div
           className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[6px] border px-3.5 py-2"
           data-freeze-strip={freeze.source_profile.state}
@@ -1799,7 +1802,9 @@ export function FreezeScreen({
           ) : undefined
         }
       >
-        {detail && freeze ? (
+        {nativeFreeze ? (
+          <NativeFreezePanel native={nativeFreeze} bytes={bytes} verifying={verify.state === "verifying"} verification={verify.state === "done" ? verify.verification : null} refusal={verify.state === "refused" ? <RefusalNote refusal={verify.refusal} /> : null} onVerify={onVerify} />
+        ) : detail && freeze ? (
           <div className="flex flex-col gap-3">
             <section
               className="flex flex-col gap-2 rounded-[8px] border px-4 py-3"

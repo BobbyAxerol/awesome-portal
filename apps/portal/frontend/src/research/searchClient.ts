@@ -35,6 +35,8 @@ export type ClaimTokenFact = SearchSchemas["ClaimTokenFact"];
 export type OosColumn = SearchSchemas["OosColumn"];
 export type ScoringBackend = SearchSchemas["ScoringBackend"];
 
+/** §55: the native optimizer's own search read — the trials, the complete evaluation population and the selection evidence of a natively searched recipe. */
+export type NativeSearch = NonNullable<SearchDetail["native_search"]>;
 export type CurrentSourceSearch = SourceSchemas["Search"];
 export type SourceTrial = SourceSchemas["Trial"];
 export type SourceCandidate = SourceSchemas["Candidate"];
@@ -52,10 +54,13 @@ export type Fresh<T> = T | typeof NOT_MODIFIED;
  * a fold as a trial. Nothing else — no relation, cursor, revision or command —
  * is ever assembled here.
  */
-function query(options: { workspaceId?: string; fold?: number | null }): string {
+function query(options: { workspaceId?: string; fold?: number | null; nativeLimit?: number | null; nativeCursor?: string | null }): string {
   const params = new URLSearchParams();
   if (options.workspaceId) params.set("workspace_id", options.workspaceId);
   if (typeof options.fold === "number") params.set("fold", String(options.fold));
+  /* §55: a native run is one IS study with no outer fold — the server refuses any `fold` (400). Its ledger pages on `native_cursor`, always with the same `native_limit` it was issued for. */
+  if (typeof options.nativeLimit === "number") params.set("native_limit", String(options.nativeLimit));
+  if (options.nativeCursor) params.set("native_cursor", options.nativeCursor);
   const serialized = params.toString();
   return serialized ? `?${serialized}` : "";
 }
@@ -76,7 +81,7 @@ export const searchApi = {
   /** `researchSearchDetailGetV1` */
   detail: (
     runId: string,
-    options: { workspaceId?: string; fold?: number | null; etag?: string | null; signal?: AbortSignal } = {},
+    options: { workspaceId?: string; fold?: number | null; nativeLimit?: number | null; nativeCursor?: string | null; etag?: string | null; signal?: AbortSignal } = {},
   ) =>
     call<SearchDetail>(
       `${RUNS}/${encodeURIComponent(runId)}/search${query(options)}`,

@@ -12,6 +12,7 @@
  * rather than forwarded into every link (FE-S06-05).
  */
 
+import { useRunNative } from "./useRunNative";
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 
@@ -52,7 +53,9 @@ function SearchRouteBody({ runId, workspaceId, embedded }: { runId: string; work
   const target = known && known.length > 0 ? clampFold(cursor.fold, known).fold : cursor.fold;
   const clamped = target !== cursor.fold;
   const inRange = target >= 1 && target <= SEARCH_FOLD_MAX;
-  const search = useSearch(runId, inRange ? target : DEFAULT_CURSOR.fold, workspaceId);
+  /* §55: a natively searched run is one study with no fold; the read must not carry one. */
+  const native = useRunNative(runId, workspaceId);
+  const search = useSearch(runId, native === true ? null : inRange ? target : DEFAULT_CURSOR.fold, workspaceId, native !== null);
   /* W3b: a retained WFO run is read against its own identity and declared space. */
   const retainedRun = useRetainedRunFacts(runId, workspaceId, search.ledger);
   /* G8: the fold plan and the Atlas, for the "what this mode reads" strip — asked only on a retained run. */

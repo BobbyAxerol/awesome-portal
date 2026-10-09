@@ -77,7 +77,7 @@ export function readsRetainedLane(
   return hubDelegates(detail) && retained.state === "ready" && isRetainedAnswer(retained.freeze);
 }
 
-export function useFreeze(runId: string, fold: number | null, workspaceId?: string): FreezeController {
+export function useFreeze(runId: string, fold: number | null, workspaceId?: string, ready = true): FreezeController {
   const reads = useEvidenceReadsAllowed(runId, DENY_NOT_STARTED_OR_CANCELLED, workspaceId);
   const [detail, setDetail] = useState<FreezeDetail | null>(null);
   const [refusal, setRefusal] = useState<FreezeRefusal | null>(null);
@@ -95,6 +95,8 @@ export function useFreeze(runId: string, fold: number | null, workspaceId?: stri
   const [evaluate, setEvaluate] = useState<WhatIfEvaluateSlot>({ state: "idle" });
 
   useEffect(() => {
+    /* §55: a native run has no fold and the screen may not yet know whether this one is native: wait, never send a request the server would refuse. */
+    if (!ready) return undefined;
     const controller = new AbortController();
     freezeApi
       .detail(runId, { workspaceId, fold, etag: detailRef.current?.etag ?? null, signal: controller.signal })
@@ -108,7 +110,7 @@ export function useFreeze(runId: string, fold: number | null, workspaceId?: stri
         setRefusal(toFreezeRefusal(error));
       });
     return () => controller.abort();
-  }, [fold, generation, runId, workspaceId]);
+  }, [fold, generation, ready, runId, workspaceId]);
 
   const runVerify = useCallback(() => {
     /* A second click while the first is in flight would race two answers into
@@ -234,7 +236,11 @@ export function useFreeze(runId: string, fold: number | null, workspaceId?: stri
           : // A BLOCKED snapshot empties the frozen table on purpose; its
             // checks are the answer, so they — not the parameters — decide
             // whether the read came back empty.
-            { kind: "ok", rowCount: detail.freeze.integrity.checks.length },
+            {
+              kind: "ok",
+              /* §55: a native run has no scalar integrity checks; the frozen selection's parameters (and the integrity row) are its rows. */
+              rowCount: detail.native_freeze ? Object.keys(detail.native_freeze.selected_parameters).length + 1 : detail.freeze.integrity.checks.length,
+            },
       );
 
   return {

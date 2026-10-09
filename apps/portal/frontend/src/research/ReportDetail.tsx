@@ -19,6 +19,7 @@
  *    export panel are `no-print`, and printing sends no request.
  */
 
+import { NativeReportBlock } from "./NativeReportBlock";
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { markRunUnknown } from "../app/researchRunCrumb";
 import { ResearchScopedLink as Link, ResearchScopedAnchor } from "./ResearchScopedLink";
@@ -61,7 +62,7 @@ import { foldLabel, formatMetric, shortDigest, typographicMinus } from "./resear
 import { reasonCodeSentence } from "./researchRefusal";
 import { equitySvg } from "./reportEquity";
 import { RunExitBar } from "./RunExitBar";
-import { executeHref, hubHref, lineageRunHref, newRunHref, progressHref, libraryHref, rcHref, withWorkspace, type LinkCursor } from "./runLinks";
+import { executeHref, searchHref, hubHref, lineageRunHref, newRunHref, progressHref, libraryHref, rcHref, withWorkspace, type LinkCursor } from "./runLinks";
 import { runStatusWord, runTerminalState, type RunTerminalState } from "./runTerminalState";
 import { NATIVE_REPORT_BANNER, type ReportController } from "./useReport";
 import type { ReportExportController } from "./useReportExport";
@@ -1855,6 +1856,7 @@ export function ReportScreen({ runId, workspaceId, linkedAudit, supplement, curs
             <Passport core={core} />
             <HeadlineRow core={core} />
             <Metrics core={core} />
+            {coreV2(core)?.native_report ? <NativeReportBlock native={coreV2(core)!.native_report!} searchHref={searchHref(runId, { ...link, workspaceId })} /> : null}
             <EquityFigure equity={core.equity} folds={core.folds} equityIs={coreV2(core)?.equity_is ?? null} sourceFallback={sourceFallback} />
             <FoldVerdicts folds={core.folds} verdictRule={core.provenance.verdict_rule_revision} />
             <StageChain core={core} />

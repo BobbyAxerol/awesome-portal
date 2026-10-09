@@ -23,6 +23,8 @@
  * the read published it (DQ-15).
  */
 
+import { NativeSearchPanel } from "./NativeSearchPanel";
+import { useNativeSearchPages } from "./useNativeSearchPages";
 import { OrchestrationClocks } from "./OrchestrationClocks";
 import { useEffect, useId, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { ResearchScopedLink as Link } from "./ResearchScopedLink";
@@ -2032,6 +2034,9 @@ export function SearchScreen({
   /* D9: choosing the picked trial again lets it go, so a pick is never a one-way door. */
   const onPick = (trialId: string) => (trialId === pick ? onClear() : pickTrial(trialId));
   const profile = detail?.fixed_profile;
+  /* §55: a natively searched run answers its own trials, population and selection; the scalar stages below it would only repeat typed absences. */
+  const native = detail?.native_search ?? null;
+  const nativePages = useNativeSearchPages(runId, native, workspaceId);
   const parameters = profile?.parameters ?? [];
   const fixed = detail?.source_profile.state === "FIXED_PROFILE_NO_SEARCH";
   const hubAbsences = detail ? Object.entries(detail.source_absences).filter(([name]) => !SHOWN_GAPS.has(name)) : [];
@@ -2425,7 +2430,7 @@ export function SearchScreen({
             <ProvenanceStrip provenance={lane ? retainedProvenance(lane, detail) : detail.provenance} />
 
             {/* The search cinema: a selection story over the served artifacts. A fixed profile has none; where the surface is not served one typed line holds its place. */}
-            {fixed ? null : (() => {
+            {fixed || native ? null : (() => {
               const studies = lane?.surfaces_by_study ?? [];
               const study = lane && studies.length > 0 ? activeStudy(studies, cursor.fold) : null;
               const cinemaSurface = study ? study.surface : lane?.surface;
@@ -2487,6 +2492,10 @@ export function SearchScreen({
               </div>
             ) : null}
 
+            {native ? (
+              <NativeSearchPanel native={native} rows={nativePages.rows} hasMore={nativePages.hasMore} loading={nativePages.loading} error={nativePages.error} onMore={nativePages.loadMore} />
+            ) : (
+              <>
             {/* ------------------------------------ Stage A · freeze · Stage B */}
             <div
               className={fixedOnly ? "grid grid-cols-1 gap-3" : "grid grid-cols-1 gap-3 min-[1100px]:grid-cols-[1.08fr_52px_1fr] min-[1100px]:gap-0"}
@@ -2739,6 +2748,8 @@ export function SearchScreen({
 
             {/* ------------------------------------------ ledger, full width */}
             <LedgerPanel slot={ledgerSlot} detail={detail} onNeeded={ensureLedger} pick={pick} onPick={onPick} onClear={onClear} foldNote={foldNote} more={ledgerMore} candidateMore={candidateMore} />
+              </>
+            )}
 
             {absences.length > 0 ? (
               <section className="flex flex-wrap gap-x-5 gap-y-1.5 px-1" data-source-absences>

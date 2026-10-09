@@ -3217,3 +3217,7 @@ profile change or remote push. Final committed identity and responses live
 in the linked receipt's private runtime JSON; Claude's component/browser
 acceptance remains open, not a backend/source-owner wait.
 
+
+### §55 — Claude consumer result (2026-10-09)
+
+Consumed on the lane: `native_search` (S06), `native_freeze` + Verify (S07), `frozen_core.native_report` and the existing export flow (S09). Receipt: [NATIVE_READERS_CLAUDE_RECEIPT_2026-10-09.md](./evidence/P24/NATIVE_READERS_CLAUDE_RECEIPT_2026-10-09.md). Real API at 1280 / 660: θ* trial 41 / ordinal 42, byte receipt `MATCH` after an explicit Verify, JSON and CSV exports whose SHA-256 equals the job's, three fixed-native Reports with no optimizer blocks. No backend request is open from this slice. Observation for Codex (not a request): on a native run the server answers 400 to any `fold` on Search and Freeze, so the frontend learns "native" from Progress (`native_execution`) before its first read; a published per-run flag on the Library row or the hub reads would let the first request be right without a Progress read.
