@@ -37,7 +37,9 @@ export class ResearchSearchController {
     const body = await this.service.detail(
       { workspaceId, actorUserId: request.portalUser.userId },
       runId,
-      { ...(query.data.fold === undefined ? {} : { fold: query.data.fold }) },
+      { ...(query.data.fold === undefined ? {} : { fold: query.data.fold }),
+        ...(query.data.native_cursor === undefined ? {} : { native_cursor: query.data.native_cursor }),
+        ...(query.data.native_limit === undefined ? {} : { native_limit: query.data.native_limit }) },
     );
     // RF-05 CG-P15-02: the service's ETag already names the requested fold,
     // so fold 1's validator can never 304 a fold-3 request.

@@ -2,7 +2,7 @@
 
 import { createHash } from "node:crypto";
 
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { enrichedAvailability } from "./enriched-analysis.contract";
 
 import { ControlApiConfig } from "../config";
@@ -55,6 +55,10 @@ import { ResearchSplitService } from "./split.service";
 import { memoizedResearchJsonDigest } from "./memoized-json-digest";
 import { ExactJsonCalculationMemo } from "./exact-json-calculation-memo";
 import { finalAuditTargetApplicable } from "./final-audit.contract";
+import { ResearchNativeReadService } from "./native-read.service";
+import { ResearchWindowExecutionService } from "./window-execution.service";
+import { NativeCustodySchema } from "./native-read.contract";
+import { sha256ResearchJson } from "./preflight.service";
 
 /** Which sealed read model a report is assembled from; the run's P10 profile decides. */
 export type ResearchReportLane = "P04_FIXED_PROFILE" | "RS02_RETAINED_CURRENT_SOURCE";
@@ -85,6 +89,8 @@ export class ResearchReportService {
     private readonly replay: ResearchReplayService,
     private readonly currentSource: ResearchCurrentSourceService,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() @Inject(ResearchNativeReadService) private readonly nativeRead?: ResearchNativeReadService,
+    @Optional() @Inject(ResearchWindowExecutionService) private readonly windows?: ResearchWindowExecutionService,
   ) {}
 
   /**
@@ -103,6 +109,12 @@ export class ResearchReportService {
     if (this.config.FEATURE_RESEARCH_REPORTS !== "true") return false;
     if (input.event.event_type === "run_failed") return this.materializeFailureBestEffort(scope, input);
     if (input.event.event_type !== "run_completed") return false;
+    if (this.nativeRead) {
+      const run=await this.repository.runContext(scope,input.run_id);
+      if(run?.profileId && executionRecipe(run.profileId,run.profileDigest).descriptor.schema_version==="research.native-route-profile.v1") {
+        await this.nativeRead.prepare(scope,input.run_id);
+      }
+    }
     if (lane === "RS02_RETAINED_CURRENT_SOURCE" && this.config.FEATURE_RESEARCH_CURRENT_SOURCE !== "true") return false;
     if (lane === "RS02_RETAINED_CURRENT_SOURCE") {
       try {
@@ -307,11 +319,63 @@ export class ResearchReportService {
       },
       replay: { revision: replay.revision!, routeState: replay.route.state },
     });
-    return {
+    const base = {
       ...core,
       final_audit: fixedFinalAudit(runId, await this.auditRelation(scope, runId), {
         split: split.revision!, freeze: freeze.revision!, replay: replay.revision!,
       }),
+    };
+    const native = this.nativeRead ? await this.nativeRead.read(scope,runId) : null;
+    const execution=evidenceBundle.hub.core.native_execution;
+    if (!native && !execution) return base;
+    if(execution?.optimization&&!native)
+      throw new ResearchReportError("RESEARCH_REPORT_NOT_READY","Native optimizer custody is not prepared.",409);
+    if(!execution)throw new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE","Native execution facts are not published.",503);
+    if (!this.windows) throw new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE","Native window reads are not configured.",503);
+    const custody=native?NativeCustodySchema.parse(native.custody):null;
+    if(freeze.freeze.integrity.state==="BLOCKED")
+      throw new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE","Native Report integrity is blocked.",503);
+    if (custody&&(evidenceBundle.hub.core.requested_spec_digest!==custody.requested_spec_digest
+      ||evidenceBundle.hub.core.effective_spec_digest!==custody.effective_spec_digest
+      ||evidenceBundle.hub.core.dataset_binding_digest!==custody.dataset_binding_digest))
+      throw new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE","Native Report source revisions disagree.",503);
+    // Three finite local ANALYTICS reads; no market rows, file reads or engine.
+    const windowReads=[];
+    for (const window of ["IS","OOS","HOLDOUT"] as const) {
+      const read=await this.windows.read(scope,runId,{window},"ANALYTICS");
+      const analysis=read.rows.find(r=>r.kind==="ANALYTICS");
+      if(read.availability.state==="AVAILABLE"&&!analysis)
+        throw new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE","Native window analytics is incomplete.",503);
+      windowReads.push({window,availability:read.availability,analysis:analysis?.kind==="ANALYTICS"?analysis.payload:null});
+    }
+    const oos=windowReads.find(w=>w.window==="OOS")!.analysis;
+    const metricNames:Record<string,string>={OOS_SHARPE:"sharpe",MAX_DRAWDOWN:"max_drawdown_fraction",TRADES:"trade_count",WIN_RATE:"win_rate",NET_RETURN:"return_fraction",
+      MAX_DRAWDOWN_FRACTION:"max_drawdown_fraction",TRADE_COUNT:"trade_count",NET_RETURN_FRACTION:"return_fraction"};
+    const fromWindow=(key:string)=>oos?.metrics[metricNames[key]!] as {value:string|null;state:string;reason_code:string|null}|undefined;
+    return {...base,report_source:"NATIVE_RETAINED_ENGINE_AUDIT",
+      native_report:{schema_version:"research.native-report.v1",kind:native?"NATIVE_OPTIMIZED":"NATIVE_FIXED",execution,
+        optimization:custody?.summary??null,freeze:native?this.nativeRead!.freeze(native):null,
+        population:custody&&native?{total:custody.trials.length,digest:native.digest,detail_operation:"researchSearchDetailGetV1",pagination:"NATIVE_CURSOR_200_ROW_BOUND"}:null,
+        windows:windowReads,authority:"RETAINED_NATIVE_ENGINE_ACCOUNT_AND_IS_OPTIMIZATION_NOT_BROKER_OR_SCALAR_WFO"},
+      identity:base.identity.map(p=>custody&&p.key==="selected_params"?{...p,value:custody.selected_parameters_digest,availability:AVAILABLE}:
+        custody&&p.key==="optimization"?{...p,qualifier:null}:p),
+      passport:base.passport.map(p=>custody&&p.key==="source_profile"?{...p,state:"AVAILABLE",text:custody.execution_profile_id,reason_code:null,availability:AVAILABLE}:
+        custody&&p.key==="integrity"?{...p,state:"AVAILABLE",text:"MATCH_AT_PREPARATION",reason_code:null,availability:AVAILABLE}:p),
+      headline:base.headline.map(h=>{
+        const f=fromWindow(h.key);return f?{...h,scope:"OOS",value:f.value,availability:f.value===null?NOT_PUBLISHED(f.reason_code??"NATIVE_WINDOW_METRIC_NOT_RETAINED"):AVAILABLE}:h;
+      }),
+      metrics:base.metrics.map(m=>{
+        const f=fromWindow(m.key);return f?{...m,value:f.value,scope:"OOS",origin:"SOURCE_DERIVED",
+          availability:f.value===null?NOT_PUBLISHED(f.reason_code??"NATIVE_WINDOW_METRIC_NOT_RETAINED"):AVAILABLE}:m;
+      }),
+      headline_footnote:"Native engine account metrics retain their explicit windows; selected parameters use warmup + IS only. No scalar-WFO certificate or broker history is inferred.",
+      artifacts:base.artifacts.map(a=>custody&&a.key==="SELECTION_TRACE"?{...a,digest:custody.summary.sha256,state:"SEALED",part_count:custody.source_parts.length,availability:AVAILABLE}:a),
+      provenance:{...base.provenance,line:custody&&native?`Native Report sealed from exact P05 manifest ${custody.manifest_digest} and local population ${native.digest}; account windows and engine journal are not broker lifecycle history.`:
+        `Fixed native Report sealed from persisted execution/account windows; no optimizer selection or broker lifecycle is inferred.`},
+      source_absences:{...base.source_absences,
+        replay_execution_state:{state:"NOT_APPLICABLE",text:null,reason_code:"NATIVE_ENGINE_JOURNAL_IS_NOT_BROKER_LIFECYCLE",availability:{state:"NOT_APPLICABLE",reason_code:"NATIVE_ENGINE_JOURNAL_IS_NOT_BROKER_LIFECYCLE"}}},
+      final_audit:{...base.final_audit,kind:"NOT_APPLICABLE",reason_code:"NATIVE_PROTOCOL_IS_NOT_SCALAR_WFO",
+        final_audit_run_id:null,audited_run_id:null,relationship:null,optimizer_reinvoked:null,optimizer_basis:null,source_refs:[],folds:[]},
     };
   }
 
@@ -355,20 +419,35 @@ export class ResearchReportService {
 
   async requestExport(scope: ResearchScope, runId: string, format: ResearchReportExportFormat): Promise<ResearchReportExportStatus> {
     this.requireEnabled();
-    if (!await this.repository.read(scope, runId) && await this.nativeReportAbsence(scope, runId)) {
-      throw new ResearchReportError("NATIVE_REPORT_NOT_DELIVERED", "A sealed Report is not published for this native execution profile.", 409);
+    if (!await this.repository.read(scope, runId)) {
+      const native=await this.nativeReportAbsence(scope,runId);
+      if(native?.schema_version==="research.report-unavailable.v1")
+        throw new ResearchReportError("NATIVE_REPORT_NOT_DELIVERED", "A sealed Report is not published for this native execution profile.", 409);
     }
     const created = await this.repository.requestExport(scope, runId, format);
     return this.exportStatus(created, scope.workspaceId);
   }
 
-  private async nativeReportAbsence(scope: ResearchScope, runId: string): Promise<ResearchReportUnavailableResponse | null> {
+  private async nativeReportAbsence(scope: ResearchScope, runId: string): Promise<ResearchReportReadResponse | null> {
     const run = await this.repository.runContext(scope, runId);
     if (!run?.profileId) return null;
     let recipe;
     try { recipe = executionRecipe(run.profileId, run.profileDigest); }
     catch { throw new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", "The run's execution profile is incompatible.", 503); }
     if (recipe.descriptor.schema_version !== "research.native-route-profile.v1") return null;
+    // A prepared native read model permits the existing bounded local repair;
+    // GET never prepares private bytes. Unknown/missing old custody stays typed.
+    const native=this.nativeRead ? await this.nativeRead.read(scope,runId):null;
+    if(native || recipe.public_profile.trial_count.max===1 && this.windows){
+      if(await this.repository.claimMissingWfo(scope,runId,[run.profileId])) {
+        try{await this.materialize(scope,runId);await this.repository.markRepairOutcome(scope,runId,"SEALED",null);}
+        catch(e){await this.repository.markRepairOutcome(scope,runId,"FAILED","RESEARCH_REPORT_UNAVAILABLE");throw e;}
+      }
+      const report=await this.repository.read(scope,runId);
+      if(report)return this.detail(report);
+      // A concurrent bounded repair is not a missing run or a GET conflict.
+      // Return the existing typed not-yet-delivered representation below.
+    }
     const body = {
       schema_version: "research.report-unavailable.v1" as const,
       read_authority: "PORTAL_PERSISTED_RESEARCH" as const,
@@ -516,6 +595,27 @@ export class ResearchReportService {
 
   private csv(payload: { frozen_core: ResearchReportFrozenCore; approval_annotation: ClaimedResearchReportExport["annotation"] }): string {
     const lines = ["section,key,label,value,state,reason_code"];
+    if(payload.frozen_core.schema_version==="research.report-frozen-core.v2"&&payload.frozen_core.native_report){
+      const native=payload.frozen_core.native_report;
+      if(native.freeze&&native.optimization){
+      for(const [key,value] of Object.entries(native.freeze.selected_parameters))
+        lines.push(["native_parameters",key,key,value,"AVAILABLE",null].map(csvCell).join(","));
+      for(const [key,value] of Object.entries({selected_trial_number:String(native.freeze.selected_trial_number),
+        selected_trial_ordinal:String(native.freeze.selected_trial_ordinal),selected_trial_scope:native.freeze.selected_trial_scope,
+        selected_parameters_digest:native.freeze.selected_parameters_digest,manifest_digest:native.freeze.artifact.manifest_digest,
+        selection_method:native.optimization.selection_method,verification_scope:native.freeze.integrity.verification_scope}))
+        lines.push(["native_selection",key,key,value,"AVAILABLE",null].map(csvCell).join(","));
+      }
+      if(native.execution)for(const [key,value] of Object.entries({execution_route:native.execution.execution_route,input_protocol:native.execution.input_protocol,
+        fills_count:String(native.execution.fills_count),orders_count:native.execution.orders_count===null?null:String(native.execution.orders_count),
+        fees:native.execution.fees.total,funding:native.execution.funding.total,cost_scope:native.execution.cost_scope}))
+        lines.push(["native_execution",key,key,value,value===null?"NOT_PUBLISHED":"AVAILABLE",value===null?"NATIVE_RESULT_SERIES_NOT_PUBLISHED":null].map(csvCell).join(","));
+      for(const window of native.windows){
+        lines.push(["native_window",window.window,window.window,null,window.availability.state,window.availability.reason_code].map(csvCell).join(","));
+        if(window.analysis)for(const [key,fact] of Object.entries(window.analysis.metrics) as Array<[string,{value:string|null;state:string;reason_code:string|null}]>)
+          lines.push([`native_${window.window}`,key,key,fact.value,fact.state,fact.reason_code].map(csvCell).join(","));
+      }
+    }
     if (payload.frozen_core.schema_version === "research.report-failed-core.v1") {
       // X2: a failed-run sheet exports its outcome, identity, stages and artifacts — no metric exists.
       const failed = payload.frozen_core;

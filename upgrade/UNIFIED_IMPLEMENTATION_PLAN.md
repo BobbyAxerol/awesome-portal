@@ -8481,3 +8481,26 @@ and scoped same-candidate rebuild/receipt. Two reported FAILED runs are bound,
 sealed forensic evidence (0 orphan window batches), preserved without lifecycle
 rewrite or deletion. Queue§53 keeps16 folds/6,400 total; optionB30 is future,
 not opened. [Response, source proof, inventory and Claude handoff](./research_loop/evidence/P18/NATIVE_REPORT_ABSENCE_AND_FAILED_CUSTODY_2026-10-09.md).
+
+## 2026-10-09 §55 — Native Search, Freeze and full Report/export
+
+**BACKEND_SOURCE_DELIVERED / REAL_RETAINED_CANDIDATE_PASS**. Supersedes §54's
+native reader limitation for qualified/prepared data, not its unknown-run,
+tenant or immutable-seal protections. Codex edited backend/contracts only;
+preserved Claude S08 implementation at6fb34bd5.
+
+Native S06 has bounded complete trial population and source plateau/medoid
+metadata; S07 has selected params/digests, scoped integrity and native fields
+also on Verify; full Report + JSON/CSV reuse the existing authenticated job
+flow. 100 actual retained trials/98 distinct/θ*41 (ordinal42), all pages and
+cross-screen digests/checksum-download PASS; three fixed-native Report
+regressions also PASS. Migration127/128 append local versioned projection,
+not artifact/source history. Old P05/WFO Report and lifecycle pins unchanged.
+
+Shared preview backend-only compatible rebuild uses the existing safe helper;
+flags, DB/NATS, production/dev/main and Claude web source are untouched.
+Frontend mapping/affected browser+visual receipt remains Claude-owned; no
+P24/product/release claim. Native source-not-executed Holdout and unavailable
+sampler/member identity/wall-clock facts stay explicitly typed.
+[Backend proof, gates and capacity decision](./research_loop/evidence/P18/NATIVE_SEARCH_FREEZE_REPORT_DELIVERY_2026-10-09.md).
+[Claude exact contract/UI handoff](./research_loop/evidence/P18/NATIVE_READERS_CLAUDE_HANDOFF_2026-10-09.md).

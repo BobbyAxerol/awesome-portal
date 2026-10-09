@@ -3160,3 +3160,50 @@ no deletion or FAILED→COMPLETED rewrite. §53's current keep16/≤6,400 remain
 future option B toward30 is not activated by this delivery.
 
 [Exact response, private proof hash, scoped inventory, gates and Claude prompt](./evidence/P18/NATIVE_REPORT_ABSENCE_AND_FAILED_CUSTODY_2026-10-09.md).
+# §55 — Native Search, Freeze and complete Report/export — Bobby approved 2026-10-09
+
+Owner assigns Codex backend only. Preserve Claude's accepted components and
+all scalar/Three Window/WFO representations. This is a Portal integration
+slice, not an engine/source upgrade and not P24/product-release approval.
+
+## Delivery plan and exit gates
+
+1. Project the P05 native optimizer population and its exact selection into a
+   bounded append-only, workspace/artifact/profile-bound local read model.
+   Verify original manifest/part/document bytes in a private preparation path;
+   never reopen artifact bytes or run QuantBT during browser GETs. Historical
+   preparation must preserve the original seal and reject mismatches.
+2. Publish additive typed `native_search` on S06 (complete retained trial
+   population, source metrics, exact selected identity, engine selection
+   evidence) and `native_freeze` on S07 (selected parameters/digests, P05
+   provenance, explicit verification scope and unsupported scalar claims).
+   Native optimization is IS + warmup only, generic robust plateau, not scalar
+   WFO. Trial number and display ordinal remain separately typed.
+3. Assemble a native Report from these local readers plus existing native
+   window/account facts. Reuse immutable Report sealing and authenticated
+   prepare/job/download JSON/CSV. Old Report cores stay byte-identical.
+4. Test schema/generated parity, custody/tamper/replay and tenant isolation,
+   missing/null/pruned facts, exact identity/digests, immutable Report/export,
+   bounded reads and old WFO/fixed regressions. Obtain a real retained-native
+   candidate receipt; fixture/unit results alone are not product acceptance.
+5. Record generated names/example/hashes and hand off to Claude. No frontend,
+   baseline, remote push, dev/main/production mutation. Shared-preview changes,
+   if required for the real receipt, remain scoped to backend forward migration
+   and its source image; no database reset or engine rerun.
+
+Status: BACKEND_SOURCE_DELIVERED / REAL_RETAINED_CANDIDATE_PASS.
+Frontend consumer/browser acceptance is separate; not P24/release.
+
+Published additive `SearchDetail.native_search`, `FreezeDetail.native_freeze`,
+`FreezeVerification.native_freeze` and `FrozenCoreV2.native_report`; regenerate
+with `npm --prefix packages/contracts run generate:research-native-read`.
+Existing route names, scalar consumers and immutable old Report cores remain.
+Canonical native Search/Freeze/Report fixtures come from actual P05 bytes.
+100-trial run: θ*41 (ordinal42), 98 distinct sets, complete pagination and
+JSON/CSV checksum-download PASS. Three fixed-native Reports also PASS.
+The sidecar preserves transform versions (127/128), exact bindings and RLS;
+GETs never read Parquet or call the engine. Sampler/member identities and
+freeze wall-clock absence remain typed; P08 and P05 manifest hashes are distinct.
+[Receipt, resource decision and scoped runtime evidence](./evidence/P18/NATIVE_SEARCH_FREEZE_REPORT_DELIVERY_2026-10-09.md).
+[Claude consumer prompt and exact mappings](./evidence/P18/NATIVE_READERS_CLAUDE_HANDOFF_2026-10-09.md).
+

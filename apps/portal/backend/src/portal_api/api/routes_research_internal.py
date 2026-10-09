@@ -67,6 +67,35 @@ class ArtifactByteObservationRequest(BaseModel):
     part_paths: tuple[str, ...] = Field(min_length=1, max_length=256)
 
 
+class NativeReadPreparationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    workspace_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$")
+    run_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$")
+    artifact_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$")
+    artifact_revision: int = Field(ge=1)
+    manifest_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    requested_spec_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    effective_spec_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    dataset_binding_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    execution_profile_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$")
+    execution_profile_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+
+
+@router.post("/native-read/prepare")
+def prepare_native_read_models(request: Request, body: NativeReadPreparationRequest) -> dict[str, Any]:
+    try:
+        principal = require_internal_principal(request.headers)
+    except InternalPrincipalError as exc:
+        raise HTTPException(status_code=401, detail="private service authentication failed") from exc
+    if principal.role != "ADMIN" or "research_native_read_prepare" not in principal.authn_methods:
+        raise HTTPException(status_code=403, detail="private native preparation is not authorized")
+    from portal_api.services.research_native_read import prepare_native_read
+    try:
+        return prepare_native_read(retained_artifact_root(), body.model_dump())
+    except (ResearchArtifactError, OSError, ValueError, TypeError, KeyError) as exc:
+        raise HTTPException(status_code=409, detail="native retained evidence is missing or incompatible") from exc
+
+
 def retained_artifact_root() -> Path:
     """The P05 retained store the durable worker writes (``durable-store/research-retained``)."""
 

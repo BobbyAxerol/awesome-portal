@@ -33,6 +33,7 @@ import { ResearchFreezeError } from "./freeze.error";
 import { ResearchSplitError } from "./split.error";
 import { ResearchSplitRepository, type SplitHubRow } from "./split.repository";
 import { fixedStage4Binding, parameterAuthority } from "./stage4-binding";
+import { ResearchNativeReadService } from "./native-read.service";
 
 type AvailabilityState =
   | "AVAILABLE"
@@ -130,6 +131,7 @@ export class ResearchFreezeService {
     private readonly bindings: ResearchParameterBindingRegistry = DEFAULT_PARAMETER_BINDING_REGISTRY,
     @Optional() @Inject(ResearchArtifactVerifyService)
     private readonly bytes?: ResearchArtifactVerifyService,
+    @Optional() @Inject(ResearchNativeReadService) private readonly nativeRead?: ResearchNativeReadService,
   ) {}
 
   async detail(
@@ -141,7 +143,20 @@ export class ResearchFreezeService {
     const row = await this.row(scope, runId);
     // A10a: the newest durable byte receipt; a GET never re-reads bytes.
     const bytes = await this.latestBytes(scope, runId);
-    const response = this.mapDetail(row, query.fold ?? null, bytes);
+    let response = this.mapDetail(row, query.fold ?? null, bytes) as Record<string,unknown>;
+    const native=this.nativeRead&&isNativeReadBinding(row.executionProfileId,row.adapterContractDigest)
+      ? await this.nativeRead.read(scope,runId).catch(error=>{throw new ResearchFreezeError(error.status===403?"RESEARCH_FREEZE_FORBIDDEN":"RESEARCH_FREEZE_UNAVAILABLE",
+        error.status===403?"Access denied.":"Native Freeze evidence is unavailable.",error.status===403?403:503);}):null;
+    if(native){
+      if(row.requestedSpecDigest!==native.custody.requested_spec_digest
+        ||row.effectiveSpecDigest!==native.custody.effective_spec_digest||row.datasetBindingDigest!==native.custody.dataset_binding_digest)
+        throw new ResearchFreezeError("RESEARCH_FREEZE_UNAVAILABLE","Native Freeze source revisions disagree.",503);
+      if(query.fold!==undefined)throw new ResearchFreezeError("RESEARCH_FREEZE_INVALID","Native IS study has no outer fold selector.",400);
+      response={...response,native_freeze:this.nativeRead!.freeze(native),availability:availability("AVAILABLE",null),readiness:"PARTIAL",
+        revision:`p16r1_${sha256ResearchJson({native:native.digest})}`};
+      const {etag:_etag,...representation}=response;
+      response.etag=`"p16r1_${sha256ResearchJson(representation)}"`;
+    }
     const parsed = ResearchFreezeResponseSchema.safeParse(response);
     if (!parsed.success) {
       throw new ResearchFreezeError("RESEARCH_FREEZE_UNAVAILABLE", "Freeze response is incompatible.", 503);
@@ -179,6 +194,7 @@ export class ResearchFreezeService {
       verification_scope: verificationScope,
       integrity: detail.freeze.integrity,
       artifact_bytes: bytes,
+      ...(detail.native_freeze ? {native_freeze:detail.native_freeze} : {}),
     };
     const parsed = ResearchFreezeVerificationResponseSchema.safeParse(response);
     if (!parsed.success) {

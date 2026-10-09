@@ -1,0 +1,83 @@
+{
+  "schema_version": "research.native-freeze.v1",
+  "selection_evidence": {
+    "selector": "robust_plateau",
+    "objective_index": 0,
+    "medoid_trial_number": 41,
+    "cluster_center_trial": 41,
+    "top_trials": 10,
+    "feasible_trials": 100,
+    "neighbor_count": 3,
+    "min_neighbor_count": 3,
+    "seed_consensus": 1,
+    "seed_consensus_count": 1,
+    "top_quantile": "0.1",
+    "neighborhood_radius": "0.1",
+    "plateau_score": "4.503687527770931",
+    "median_objective": "3.672721919589781",
+    "worst_objective": "3.4855045982064747",
+    "objective_std": "0.2170939399266663",
+    "param_names": [
+      "len_atr1",
+      "len_atr2",
+      "len_vol",
+      "rsi_l",
+      "rvol",
+      "signalLength",
+      "slpercent",
+      "window"
+    ],
+    "fallback_reasons": []
+  },
+  "authority": "SEALED_NATIVE_SELECTED_PARAMETERS_NOT_SCALAR_WFO_CERTIFICATE",
+  "revision": "108e382df483633880d4e658975fcbd681bed4e589b71aa58e2fbe261272c9ac",
+  "selected_parameters": {
+    "rvol": "1.1",
+    "rsi_l": "21",
+    "window": "34",
+    "len_vol": "10",
+    "len_atr1": "14",
+    "len_atr2": "51",
+    "slpercent": "1.6",
+    "signalLength": "12"
+  },
+  "selected_parameters_digest": "a376293b5fd90f390314f632f8450a6d6bc009c4ed263698d7a58288ea2c353f",
+  "selected_trial_number": 41,
+  "selected_trial_ordinal": 42,
+  "selected_trial_scope": "NATIVE_IS_STUDY",
+  "selected_objective": "4.0101541621991",
+  "execution_profile": {
+    "id": "p10.delta-event-driven-limit-oco-search-1h.v1",
+    "digest": "2b69015b8975e3097cc797999188a6d6b75e29ce52fc3ad2d4c35026ab7f0d73"
+  },
+  "artifact": {
+    "revision": 1,
+    "manifest_digest": "ad0e21ef0e34020412a425b2a85efdbbf22a950a4ade66cd5129303e7837585c",
+    "source_parts": [
+      {
+        "ordinal": 1,
+        "sha256": "a0dc7bd3bed6cd7eb8acfdad5d631c271a2359d677bf9a3c8a63c0514c7e109a",
+        "rows": 100,
+        "bytes": 17267
+      }
+    ],
+    "source_table_digest": "71f2241fd827388ea9f5adb5b1260184800fc8e012d0e74ac175920388f8dbb3",
+    "source_table_digest_scope": "ORIGINAL_CHILD_PARQUET_BYTES_NOT_REWRITTEN_P05_PARTS"
+  },
+  "integrity": {
+    "state": "MATCH_AT_PREPARATION",
+    "verification_scope": "P05_MANIFEST_ALL_PARTS_AND_DOCUMENTS_AT_PREPARATION",
+    "checked_at_utc_ms": 1791544632349,
+    "current_bytes_rechecked": false,
+    "selected_identity_match": true,
+    "selected_parameter_digest_match": true
+  },
+  "scalar_wfo_certificate": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "NATIVE_PROTOCOL_IS_NOT_SCALAR_WFO"
+  },
+  "chronology": {
+    "state": "NOT_PUBLISHED",
+    "reason_code": "NATIVE_SOURCE_DID_NOT_RETAIN_FREEZE_WALL_CLOCK_EVENTS"
+  }
+}

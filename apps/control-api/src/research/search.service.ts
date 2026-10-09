@@ -23,6 +23,7 @@ import { ResearchSearchResponseSchema, type ResearchSearchResponse } from "./sea
 import { ResearchSearchError } from "./search.error";
 import { ResearchSplitError } from "./split.error";
 import { ResearchSplitRepository, type SplitHubRow } from "./split.repository";
+import { ResearchNativeReadService } from "./native-read.service";
 
 type AvailabilityState =
   | "AVAILABLE"
@@ -272,12 +273,13 @@ export class ResearchSearchService {
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Optional() @Inject(RESEARCH_PARAMETER_BINDINGS)
     private readonly bindings: ResearchParameterBindingRegistry = DEFAULT_PARAMETER_BINDING_REGISTRY,
+    @Optional() @Inject(ResearchNativeReadService) private readonly nativeRead?: ResearchNativeReadService,
   ) {}
 
   async detail(
     scope: ResearchScope,
     runId: string,
-    query: { fold?: number },
+    query: { fold?: number; native_cursor?:string; native_limit?:number },
   ): Promise<ResearchSearchResponse> {
     this.requireEnabled();
     let row: SplitHubRow | null;
@@ -294,10 +296,28 @@ export class ResearchSearchService {
       throw error;
     }
     if (!row) throw new ResearchSearchError("RESEARCH_SEARCH_NOT_FOUND", "Research run was not found.", 404);
-    const response = this.mapDetail(row, query.fold ?? null);
+    let response = this.mapDetail(row, query.fold ?? null) as Record<string,unknown>;
+    const native = this.nativeRead && isNativeReadBinding(row.executionProfileId,row.adapterContractDigest)
+      ? await this.nativeRead.read(scope,runId).catch(error=>{throw new ResearchSearchError(error.status===403?"RESEARCH_SEARCH_FORBIDDEN":"RESEARCH_SEARCH_UNAVAILABLE",
+        error.status===403?"Access denied.":"Native Search evidence is unavailable.",error.status===403?403:503);}) : null;
+    if(native){
+      // row.manifestDigest is the P08 preflight manifest; custody.manifest_digest
+      // is P05 artifact bytes. They are distinct authorities, not equal hashes.
+      if(row.requestedSpecDigest!==native.custody.requested_spec_digest
+        ||row.effectiveSpecDigest!==native.custody.effective_spec_digest||row.datasetBindingDigest!==native.custody.dataset_binding_digest)
+        throw new ResearchSearchError("RESEARCH_SEARCH_UNAVAILABLE","Native Search source revisions disagree.",503);
+      if(query.fold!==undefined)throw new ResearchSearchError("RESEARCH_SEARCH_INVALID","Native IS study has no outer fold selector.",400);
+      const data=this.nativeRead!.search(scope,native,query.native_cursor,query.native_limit);
+      response={...response,native_search:data,availability:availability("AVAILABLE",null),readiness:"PARTIAL",
+        revision:`p15r1_${sha256ResearchJson({native:native.digest})}`};
+      response.etag=representationEtag(response as {etag:string|null});
+    }else if(query.native_cursor!==undefined||query.native_limit!==undefined)
+      throw new ResearchSearchError("RESEARCH_SEARCH_INVALID","Native ledger is not retained for this run.",400);
     const parsed = ResearchSearchResponseSchema.safeParse(response);
     if (!parsed.success) {
-      throw new ResearchSearchError("RESEARCH_SEARCH_UNAVAILABLE", "Search response is incompatible.", 503);
+      const error=new ResearchSearchError("RESEARCH_SEARCH_UNAVAILABLE", "Search response is incompatible.", 503);
+      (error as Error & {cause:unknown}).cause=parsed.error;
+      throw error;
     }
     return parsed.data;
   }

@@ -71,3 +71,11 @@ Portal read.
 The explicit verification result now carries its own top-level scope, so the
 consumer never borrows that qualification from a separately cached detail
 snapshot.
+
+## 2026-10-09 §55 native Freeze addendum
+
+`native_freeze` on detail and explicit Verify publishes exact retained native
+selection/parameter/part digests and preparation-time scope. Existing fresh
+`artifact_bytes` remains separate; no scalar-WFO certificate is inferred.
+[Receipt](../P18/NATIVE_SEARCH_FREEZE_REPORT_DELIVERY_2026-10-09.md) ·
+[Claude mapping](../P18/NATIVE_READERS_CLAUDE_HANDOFF_2026-10-09.md).

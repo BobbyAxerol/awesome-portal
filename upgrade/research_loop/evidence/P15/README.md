@@ -69,6 +69,12 @@ P15 backend or make a generic optimizer appear from frontend fixtures.
 
 ## 2026-09-23 candidate-selection metric amendment
 
+Later §55 native-reader delivery (2026-10-09) is additive to this historical
+P04 packet: `native_search` publishes retained native trial population and
+engine selection metadata. Scalar-WFO pool semantics are not reused.
+[Receipt](../P18/NATIVE_SEARCH_FREEZE_REPORT_DELIVERY_2026-10-09.md) ·
+[Claude mapping](../P18/NATIVE_READERS_CLAUDE_HANDOFF_2026-10-09.md).
+
 `CG-P15-01` is closed by the typed
 [candidate-selection metric amendment](./contract-amendment-candidate-selection-metric.md).
 Current P04 declared-but-not-executed requests publish `NOT_PUBLISHED` with a

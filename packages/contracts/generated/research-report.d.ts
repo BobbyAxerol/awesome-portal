@@ -82,6 +82,644 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        NativeReport: {
+            /** @constant */
+            schema_version: "research.native-report.v1";
+            /** @enum {string} */
+            kind?: "NATIVE_OPTIMIZED" | "NATIVE_FIXED";
+            execution?: {
+                /** @constant */
+                schema_version: "research.native-route-result.v1";
+                /** @enum {string} */
+                execution_route: "intrabar_bracket" | "reactive" | "event_driven";
+                /** @constant */
+                authority: "PINNED_QUANTBT_ACCOUNTING_NOT_PORTAL_PNL";
+                /** @enum {string} */
+                input_protocol: "DELTA_CLOSE_BRACKET_INTENTS_V1" | "DELTA_CLOSE_STATEFUL_CALLBACK_V1" | "DELTA_CLOSE_ORDER_COMMANDS_V1" | "DELTA_CLOSE_LIMIT_OCO_COMMANDS_V1" | "DELTA_CLOSE_MULTICYCLE_LIMIT_OCO_COMMANDS_V1";
+                /** @enum {string} */
+                clock: "KNOWN_CLOSE_NEXT_BAR_INTRABAR" | "KNOWN_CLOSE_NEXT_BAR_CLOSE";
+                /** @constant */
+                position_unit: "CONTRACT_QUANTITY";
+                /** @constant */
+                target_notional: "2000";
+                fees: {
+                    /** @enum {string} */
+                    state: "AVAILABLE" | "NOT_PUBLISHED";
+                    total: string | null;
+                    reason_code: "NATIVE_RESULT_SERIES_NOT_PUBLISHED" | null;
+                };
+                funding: {
+                    /** @enum {string} */
+                    state: "AVAILABLE" | "NOT_PUBLISHED";
+                    total: string | null;
+                    reason_code: "NATIVE_RESULT_SERIES_NOT_PUBLISHED" | null;
+                };
+                /** @constant */
+                cost_scope: "FULL_CHILD_TAPE";
+                fills_count: number;
+                orders_count: number | null;
+                /** @constant */
+                replay_authority: "RETAINED_ENGINE_AUDIT_ONLY_NOT_BROKER_EVENTS";
+                optimization?: {
+                    /** @constant */
+                    schema_version: "research.native-optimization.v1";
+                    /** @constant */
+                    authority: "PINNED_QUANTBT_NATIVE_IS_SHARPE";
+                    /** @constant */
+                    scope: "P08_WARMUP_PLUS_IS_ONLY";
+                    /** @constant */
+                    objective_name: "sharpe";
+                    /** @constant */
+                    selection_method: "QUANTBT_GENERIC_ROBUST_PLATEAU_NOT_SCALAR_WFO_V1";
+                    requested_trials: number;
+                    completed_trials: number;
+                    retained_trials: number;
+                    distinct_parameter_sets: number;
+                    selected_trial_number: number;
+                    selected_parameters: {
+                        [key: string]: string;
+                    };
+                    selected_objective: string;
+                    train_start_utc_ms: number;
+                    train_end_exclusive_utc_ms: number;
+                    /** @constant */
+                    holdout_used: false;
+                    /** @constant */
+                    table_kind: "native_optimizer_trials";
+                    /** @constant */
+                    table_schema_version: "research.native-optimizer-trial-table.v1";
+                    sha256: string;
+                };
+            };
+            optimization: {
+                /** @constant */
+                schema_version: "research.native-optimization.v1";
+                /** @constant */
+                authority: "PINNED_QUANTBT_NATIVE_IS_SHARPE";
+                /** @constant */
+                scope: "P08_WARMUP_PLUS_IS_ONLY";
+                /** @constant */
+                objective_name: "sharpe";
+                /** @constant */
+                selection_method: "QUANTBT_GENERIC_ROBUST_PLATEAU_NOT_SCALAR_WFO_V1";
+                requested_trials: number;
+                completed_trials: number;
+                retained_trials: number;
+                distinct_parameter_sets: number;
+                selected_trial_number: number;
+                selected_parameters: {
+                    [key: string]: string;
+                };
+                selected_objective: string;
+                train_start_utc_ms: number;
+                train_end_exclusive_utc_ms: number;
+                /** @constant */
+                holdout_used: false;
+                /** @constant */
+                table_kind: "native_optimizer_trials";
+                /** @constant */
+                table_schema_version: "research.native-optimizer-trial-table.v1";
+                sha256: string;
+            } | null;
+            freeze: {
+                /** @constant */
+                schema_version: "research.native-freeze.v1";
+                selection_evidence?: {
+                    /** @constant */
+                    selector: "robust_plateau";
+                    /** @constant */
+                    objective_index: 0;
+                    medoid_trial_number: number;
+                    cluster_center_trial: number;
+                    top_trials: number;
+                    feasible_trials: number;
+                    neighbor_count: number;
+                    min_neighbor_count: number;
+                    seed_consensus: number;
+                    seed_consensus_count: number;
+                    top_quantile: string;
+                    neighborhood_radius: string;
+                    plateau_score: string;
+                    median_objective: string;
+                    worst_objective: string;
+                    objective_std: string;
+                    param_names: string[];
+                    fallback_reasons: string[];
+                } | null;
+                /** @constant */
+                authority: "SEALED_NATIVE_SELECTED_PARAMETERS_NOT_SCALAR_WFO_CERTIFICATE";
+                revision: string;
+                selected_parameters: {
+                    [key: string]: string;
+                };
+                selected_parameters_digest: string;
+                selected_trial_number: number;
+                selected_trial_ordinal: number;
+                /** @constant */
+                selected_trial_scope: "NATIVE_IS_STUDY";
+                selected_objective: string;
+                execution_profile: {
+                    id: string;
+                    digest: string;
+                };
+                artifact: {
+                    revision: number;
+                    manifest_digest: string;
+                    source_parts: {
+                        ordinal: number;
+                        sha256: string;
+                        rows: number;
+                        bytes: number;
+                    }[];
+                    source_table_digest: string;
+                    /** @constant */
+                    source_table_digest_scope: "ORIGINAL_CHILD_PARQUET_BYTES_NOT_REWRITTEN_P05_PARTS";
+                };
+                integrity: {
+                    /** @constant */
+                    state: "MATCH_AT_PREPARATION";
+                    /** @constant */
+                    verification_scope: "P05_MANIFEST_ALL_PARTS_AND_DOCUMENTS_AT_PREPARATION";
+                    checked_at_utc_ms: number;
+                    /** @constant */
+                    current_bytes_rechecked: false;
+                    /** @constant */
+                    selected_identity_match: true;
+                    /** @constant */
+                    selected_parameter_digest_match: true;
+                };
+                scalar_wfo_certificate: {
+                    /** @constant */
+                    state: "NOT_APPLICABLE";
+                    /** @constant */
+                    reason_code: "NATIVE_PROTOCOL_IS_NOT_SCALAR_WFO";
+                };
+                chronology: {
+                    /** @constant */
+                    state: "NOT_PUBLISHED";
+                    /** @constant */
+                    reason_code: "NATIVE_SOURCE_DID_NOT_RETAIN_FREEZE_WALL_CLOCK_EVENTS";
+                };
+            } | null;
+            population: {
+                total: number;
+                digest: string;
+                /** @constant */
+                detail_operation: "researchSearchDetailGetV1";
+                /** @constant */
+                pagination: "NATIVE_CURSOR_200_ROW_BOUND";
+            } | null;
+            windows: {
+                /** @enum {string} */
+                window: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                availability: {
+                    /** @enum {string} */
+                    state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                    reason_code: string | null;
+                };
+                analysis: {
+                    /** @constant */
+                    schema_version: "research.window-analytics.v1";
+                    /** @enum {string} */
+                    window: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                    fold_id: string | null;
+                    /** @constant */
+                    basis: "ALL_TIME";
+                    input_digest: string;
+                    observation_count: number;
+                    start_utc_ms: number;
+                    end_exclusive_utc_ms: number;
+                    first_observed_utc_ms: number;
+                    last_observed_utc_ms: number;
+                    metrics: {
+                        sharpe: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        sortino: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        cagr_fraction: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        profit_factor: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        long_hit_rate_fraction: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        short_hit_rate_fraction: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        volatility_fraction: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        skew: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        excess_kurtosis: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        beta: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        correlation: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        benchmark_return_fraction: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        max_drawdown_duration_days: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        sharpe_decay: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        exposure_long_fraction: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        exposure_short_fraction: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        exposure_flat_fraction: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        win_rate: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        payoff_ratio: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        average_hold_seconds: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        max_consecutive_losses: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        turnover_notional: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        return_fraction: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        max_drawdown_fraction: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                        trade_count: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                            reason_code: string | null;
+                            value: string | null;
+                            /** @enum {string} */
+                            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+                            /** @enum {string} */
+                            scope: "IS" | "OOS" | "HOLDOUT" | "FULL_SAMPLE";
+                            input_digest: string;
+                            /** @constant */
+                            source_ref: "FULL_RETAINED_WINDOW_ACCOUNT_V1";
+                        };
+                    };
+                    curves: {
+                        sampling: {
+                            source_observation_count: number;
+                            emitted_point_count: number;
+                            /** @constant */
+                            method: "EXTREMA_BUCKET_V1";
+                        };
+                        strategy_rebased_100: {
+                            at_utc_ms: number;
+                            value: string;
+                        }[];
+                        benchmark_rebased_100: {
+                            at_utc_ms: number;
+                            value: string;
+                        }[];
+                        drawdown_fraction: {
+                            at_utc_ms: number;
+                            value: string;
+                        }[];
+                    };
+                    monthly_returns: {
+                        /** @enum {string} */
+                        state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                        reason_code: string | null;
+                        /** @constant */
+                        origin: "PORTAL_DERIVED";
+                        /** @constant */
+                        includes_partial_months: true;
+                        /** @enum {string} */
+                        sampling: "FULL" | "TAIL_WINDOW_V1";
+                        total_period_count: number;
+                        omitted_transport_period_count: number;
+                        /** @constant */
+                        definition_id: "WINDOW_MONTH_CLOSE_OVER_FIRST_WINDOW_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1";
+                        values: {
+                            month_start_utc_ms: number;
+                            return_fraction: string;
+                            observation_count: number;
+                            expected_observation_count: number;
+                            partial: boolean;
+                            /** @enum {string} */
+                            basis: "FIRST_WINDOW_CLOSE" | "PREVIOUS_OBSERVED_MONTH_CLOSE";
+                            base_at_utc_ms: number;
+                            close_at_utc_ms: number;
+                        }[];
+                    };
+                    return_distribution: {
+                        /** @enum {string} */
+                        state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                        reason_code: string | null;
+                        /** @constant */
+                        origin: "PORTAL_DERIVED";
+                        /** @constant */
+                        sampling: "UTC_DAY";
+                        observation_count: number;
+                        /** @constant */
+                        bucket_basis: "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1";
+                        statistics_policy: {
+                            /** @constant */
+                            quantile_method: "LINEAR_TYPE_7";
+                            /** @constant */
+                            probability: "0.95";
+                            /** @constant */
+                            risk_variable: "LOSS_FRACTION_NEGATIVE_RETURN";
+                            /** @constant */
+                            risk_sign: "SIGNED_LOSS_FRACTION";
+                            /** @constant */
+                            tail: "LOSS_GTE_VAR_INCLUSIVE";
+                            /** @constant */
+                            minimum_observations: 2;
+                        };
+                        buckets: {
+                            lower_inclusive: string;
+                            upper: string;
+                            /** @enum {string} */
+                            upper_inclusive: "true" | "false";
+                            count: number;
+                        }[];
+                    };
+                    drawdown_episodes: {
+                        /** @enum {string} */
+                        state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                        reason_code: string | null;
+                        /** @constant */
+                        origin: "PORTAL_DERIVED";
+                        total: number;
+                        open_episode_present: boolean;
+                        longest_open: boolean;
+                        values: {
+                            start_utc_ms: number;
+                            trough_utc_ms: number;
+                            recovery_utc_ms: number | null;
+                            depth_fraction: string;
+                            duration_seconds: number;
+                            label?: string;
+                        }[];
+                    };
+                } | null;
+            }[];
+            /** @constant */
+            authority: "RETAINED_NATIVE_ENGINE_ACCOUNT_AND_IS_OPTIMIZATION_NOT_BROKER_OR_SCALAR_WFO";
+        };
         /** @description Narrow schema_version before reading frozen_core. A missing native Report is a typed 200, not an invented seal. Existing immutable Reports take precedence. Unknown/foreign runs remain 404; permissions and feature refusal remain unchanged. */
         ReportRead: components["schemas"]["ReportDetail"] | components["schemas"]["ReportUnavailable"];
         ReportUnavailable: {
@@ -1070,7 +1708,7 @@ export interface components {
             /** @constant */
             schema_version: "research.report-frozen-core.v2";
             /** @enum {unknown} */
-            report_source: "P13_P17_FIXED_PROFILE" | "RS02_RETAINED_CURRENT_SOURCE";
+            report_source: "P13_P17_FIXED_PROFILE" | "RS02_RETAINED_CURRENT_SOURCE" | "NATIVE_RETAINED_ENGINE_AUDIT";
             source_revisions: {
                 evidence_revision: string;
                 split_revision: string;
@@ -1115,6 +1753,7 @@ export interface components {
             final_audit?: components["schemas"]["FinalAudit"];
             protocol_disclosure?: components["schemas"]["ProtocolDisclosure"];
             optimizer_disclosure?: components["schemas"]["OptimizerDisclosure"];
+            native_report?: components["schemas"]["NativeReport"];
         };
         /** @description X2 · P18-T10 (guide §5.6): the report's final audit. REUSED_ORIGINAL — the run is its own audit; on the retained WFO lane each fold's out-of-sample generation child is checked to be the frozen candidate (QuantBT child audit), so `optimizer_reinvoked` is false only when every fold matched. LINKED_CHILD — a READY AUDIT_OF_SELECTION run in the P19 lineage. NOT_PUBLISHED when the lineage relation was not read. */
         FinalAudit: {

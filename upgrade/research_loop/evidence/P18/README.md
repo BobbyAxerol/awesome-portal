@@ -8,6 +8,12 @@ Read [phase-report.md](./phase-report.md) and [frontend-handoff-claude.md](./fro
 
 ## Published same-origin operations
 
+Later §55 delivery (2026-10-09) adds complete native optimized/fixed Report,
+IS/OOS/Holdout analyses and JSON/CSV export without replacing old cores.
+The initial feature-dark/absence statements above remain historical.
+[Native receipt](./NATIVE_SEARCH_FREEZE_REPORT_DELIVERY_2026-10-09.md) ·
+[Claude handoff](./NATIVE_READERS_CLAUDE_HANDOFF_2026-10-09.md).
+
 | Generated operation | Route | Bound behaviour |
 | --- | --- | --- |
 | `researchReportDetailGetV1` | `GET /api/v1/quantbt/runs/{runId}/report` | Caller/workspace-scoped immutable report. Supports exact private ETag/304 only for the sealed revision. |

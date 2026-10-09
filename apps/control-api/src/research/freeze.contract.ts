@@ -8,6 +8,7 @@
  */
 
 import { z } from "zod";
+import { NativeFreezeSchema } from "./native-read.contract";
 import { ImportedAlphaReadBindingSchema } from "./imported-alpha.read-binding";
 
 import { ArtifactByteVerificationSchema } from "./artifact-verify.contract";
@@ -175,6 +176,7 @@ const FreezeDetailShape = z.object({
 }).strict();
 
 export const ResearchFreezeResponseSchema = z.object({
+  native_freeze: NativeFreezeSchema.optional(),
   schema_version: z.literal("research.freeze-detail.v1"),
   read_authority: z.literal("PORTAL_PERSISTED_RESEARCH"),
   run_id: ResearchFreezeRunIdSchema,
@@ -213,6 +215,7 @@ export const ResearchFreezeResponseSchema = z.object({
 }).strict();
 
 export const ResearchFreezeVerificationResponseSchema = z.object({
+  native_freeze:NativeFreezeSchema.optional(),
   schema_version: z.literal("research.freeze-verification.v1"),
   read_authority: z.literal("PORTAL_PERSISTED_RESEARCH"),
   run_id: ResearchFreezeRunIdSchema,

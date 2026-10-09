@@ -1,0 +1,4891 @@
+{
+  "schema_version": "research.native-search.v1",
+  "authority": "SEALED_PINNED_QUANTBT_NATIVE_IS_OPTIMIZATION",
+  "revision": "108e382df483633880d4e658975fcbd681bed4e589b71aa58e2fbe261272c9ac",
+  "summary": {
+    "schema_version": "research.native-optimization.v1",
+    "authority": "PINNED_QUANTBT_NATIVE_IS_SHARPE",
+    "scope": "P08_WARMUP_PLUS_IS_ONLY",
+    "objective_name": "sharpe",
+    "selection_method": "QUANTBT_GENERIC_ROBUST_PLATEAU_NOT_SCALAR_WFO_V1",
+    "requested_trials": 100,
+    "completed_trials": 100,
+    "retained_trials": 100,
+    "distinct_parameter_sets": 98,
+    "selected_trial_number": 41,
+    "selected_parameters": {
+      "rvol": "1.1",
+      "rsi_l": "21",
+      "window": "34",
+      "len_vol": "10",
+      "len_atr1": "14",
+      "len_atr2": "51",
+      "slpercent": "1.6",
+      "signalLength": "12"
+    },
+    "selected_objective": "4.0101541621991",
+    "train_start_utc_ms": 1779192000000,
+    "train_end_exclusive_utc_ms": 1785715200000,
+    "holdout_used": false,
+    "table_kind": "native_optimizer_trials",
+    "table_schema_version": "research.native-optimizer-trial-table.v1",
+    "sha256": "71f2241fd827388ea9f5adb5b1260184800fc8e012d0e74ac175920388f8dbb3"
+  },
+  "selected_trial_number": 41,
+  "selected_trial_ordinal": 42,
+  "selected_trial_scope": "NATIVE_IS_STUDY",
+  "selected_parameters_digest": "a376293b5fd90f390314f632f8450a6d6bc009c4ed263698d7a58288ea2c353f",
+  "ledger": {
+    "total": 100,
+    "rows": [
+      {
+        "source_ordinal": 0,
+        "trial_number": 0,
+        "trial_ordinal": 1,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.6",
+          "rsi_l": "20",
+          "window": "32",
+          "len_vol": "16",
+          "len_atr1": "10",
+          "len_atr2": "42",
+          "slpercent": "1.3",
+          "signalLength": "9"
+        },
+        "objective": {
+          "value": "-1.0504306281207954",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-1.0504306281207954",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "17.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.6904699869331752",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 1,
+        "trial_number": 1,
+        "trial_ordinal": 2,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.2",
+          "rsi_l": "30",
+          "window": "34",
+          "len_vol": "8",
+          "len_atr1": "14",
+          "len_atr2": "30",
+          "slpercent": "2.3",
+          "signalLength": "16"
+        },
+        "objective": {
+          "value": "-1.666917792349582",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-1.666917792349582",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "25.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.9809446776543536",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 2,
+        "trial_number": 2,
+        "trial_ordinal": 3,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.3",
+          "rsi_l": "25",
+          "window": "44",
+          "len_vol": "14",
+          "len_atr1": "20",
+          "len_atr2": "54",
+          "slpercent": "1.0",
+          "signalLength": "3"
+        },
+        "objective": {
+          "value": "-1.0001917774542064",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-1.0001917774542064",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "33.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.8983967169341458",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 3,
+        "trial_number": 3,
+        "trial_ordinal": 4,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.2",
+          "rsi_l": "21",
+          "window": "32",
+          "len_vol": "16",
+          "len_atr1": "9",
+          "len_atr2": "47",
+          "slpercent": "1.3",
+          "signalLength": "10"
+        },
+        "objective": {
+          "value": "2.723757557759181",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "2.723757557759181",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "21.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.24523411856232957",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 4,
+        "trial_number": 4,
+        "trial_ordinal": 5,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.0",
+          "rsi_l": "26",
+          "window": "38",
+          "len_vol": "28",
+          "len_atr1": "13",
+          "len_atr2": "46",
+          "slpercent": "1.0",
+          "signalLength": "6"
+        },
+        "objective": {
+          "value": "-0.8763329679375625",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-0.8763329679375625",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "21.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.8605107763334868",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 5,
+        "trial_number": 5,
+        "trial_ordinal": 6,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.1",
+          "rsi_l": "30",
+          "window": "22",
+          "len_vol": "30",
+          "len_atr1": "17",
+          "len_atr2": "35",
+          "slpercent": "1.5",
+          "signalLength": "20"
+        },
+        "objective": {
+          "value": "-1.2037378592446346",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-1.2037378592446346",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "25.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.7087728079622809",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 6,
+        "trial_number": 6,
+        "trial_ordinal": 7,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "2.0",
+          "rsi_l": "21",
+          "window": "24",
+          "len_vol": "18",
+          "len_atr1": "19",
+          "len_atr2": "34",
+          "slpercent": "1.6",
+          "signalLength": "3"
+        },
+        "objective": {
+          "value": "-3.917958028409281",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-3.917958028409281",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "23.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "1.1818813543104492",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 7,
+        "trial_number": 7,
+        "trial_ordinal": 8,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "2.4000000000000004",
+          "rsi_l": "15",
+          "window": "42",
+          "len_vol": "28",
+          "len_atr1": "17",
+          "len_atr2": "58",
+          "slpercent": "2.4000000000000004",
+          "signalLength": "20"
+        },
+        "objective": {
+          "value": "2.674308732420097",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "2.674308732420097",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "13.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.6577222173281639",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 8,
+        "trial_number": 8,
+        "trial_ordinal": 9,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.4",
+          "rsi_l": "15",
+          "window": "22",
+          "len_vol": "36",
+          "len_atr1": "10",
+          "len_atr2": "38",
+          "slpercent": "1.3",
+          "signalLength": "3"
+        },
+        "objective": {
+          "value": "2.3047495810092937",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "2.3047495810092937",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "23.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.3280036740556641",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 9,
+        "trial_number": 9,
+        "trial_ordinal": 10,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "2.5",
+          "rsi_l": "22",
+          "window": "30",
+          "len_vol": "34",
+          "len_atr1": "17",
+          "len_atr2": "27",
+          "slpercent": "1.0",
+          "signalLength": "5"
+        },
+        "objective": {
+          "value": "-1.0215234292661093",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-1.0215234292661093",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "15.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.4808991080357654",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 10,
+        "trial_number": 10,
+        "trial_ordinal": 11,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.9",
+          "rsi_l": "12",
+          "window": "56",
+          "len_vol": "22",
+          "len_atr1": "5",
+          "len_atr2": "49",
+          "slpercent": "1.9000000000000001",
+          "signalLength": "12"
+        },
+        "objective": {
+          "value": "-0.8061057962660347",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-0.8061057962660347",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "37.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "1.1418016139014726",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 11,
+        "trial_number": 11,
+        "trial_ordinal": 12,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "2.4000000000000004",
+          "rsi_l": "17",
+          "window": "46",
+          "len_vol": "24",
+          "len_atr1": "7",
+          "len_atr2": "59",
+          "slpercent": "2.4000000000000004",
+          "signalLength": "14"
+        },
+        "objective": {
+          "value": "0.10156687276932437",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "0.10156687276932437",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "9.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.512780855300695",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 12,
+        "trial_number": 12,
+        "trial_ordinal": 13,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "2.2",
+          "rsi_l": "17",
+          "window": "52",
+          "len_vol": "40",
+          "len_atr1": "9",
+          "len_atr2": "58",
+          "slpercent": "2.0",
+          "signalLength": "19"
+        },
+        "objective": {
+          "value": "-0.19131014293237658",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-0.19131014293237658",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "31.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "1.0339394503225452",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 13,
+        "trial_number": 13,
+        "trial_ordinal": 14,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.7000000000000002",
+          "rsi_l": "12",
+          "window": "42",
+          "len_vol": "8",
+          "len_atr1": "15",
+          "len_atr2": "51",
+          "slpercent": "0.7",
+          "signalLength": "11"
+        },
+        "objective": {
+          "value": "2.0155858573592167",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "2.0155858573592167",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "11.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.1879676208034038",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 14,
+        "trial_number": 14,
+        "trial_ordinal": 15,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.5",
+          "rsi_l": "18",
+          "window": "38",
+          "len_vol": "22",
+          "len_atr1": "11",
+          "len_atr2": "44",
+          "slpercent": "2.0",
+          "signalLength": "17"
+        },
+        "objective": {
+          "value": "-2.65825080696006",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-2.65825080696006",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "15.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "1.290933278029585",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 15,
+        "trial_number": 15,
+        "trial_ordinal": 16,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "2.2",
+          "rsi_l": "24",
+          "window": "28",
+          "len_vol": "28",
+          "len_atr1": "7",
+          "len_atr2": "54",
+          "slpercent": "2.5",
+          "signalLength": "8"
+        },
+        "objective": {
+          "value": "-4.00307734782926",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-4.00307734782926",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "11.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "1.0061523755501354",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 16,
+        "trial_number": 16,
+        "trial_ordinal": 17,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.9",
+          "rsi_l": "15",
+          "window": "46",
+          "len_vol": "12",
+          "len_atr1": "16",
+          "len_atr2": "60",
+          "slpercent": "1.7",
+          "signalLength": "13"
+        },
+        "objective": {
+          "value": "-0.14457252390487868",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-0.14457252390487868",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "9.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.5021318661975515",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 17,
+        "trial_number": 17,
+        "trial_ordinal": 18,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "2.3",
+          "rsi_l": "27",
+          "window": "50",
+          "len_vol": "20",
+          "len_atr1": "12",
+          "len_atr2": "53",
+          "slpercent": "2.2",
+          "signalLength": "15"
+        },
+        "objective": {
+          "value": "-0.30183778857119264",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-0.30183778857119264",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "19.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.6681737941482851",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 18,
+        "trial_number": 18,
+        "trial_ordinal": 19,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "2.0",
+          "rsi_l": "19",
+          "window": "38",
+          "len_vol": "32",
+          "len_atr1": "18",
+          "len_atr2": "48",
+          "slpercent": "1.3",
+          "signalLength": "10"
+        },
+        "objective": {
+          "value": "-2.965634817995202",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-2.965634817995202",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "11.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.8022434686319694",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 19,
+        "trial_number": 19,
+        "trial_ordinal": 20,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.7000000000000002",
+          "rsi_l": "15",
+          "window": "60",
+          "len_vol": "26",
+          "len_atr1": "7",
+          "len_atr2": "42",
+          "slpercent": "1.8",
+          "signalLength": "18"
+        },
+        "objective": {
+          "value": "0.2956072362717067",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "0.2956072362717067",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "17.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.9079451210324635",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 20,
+        "trial_number": 20,
+        "trial_ordinal": 21,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.4",
+          "rsi_l": "23",
+          "window": "26",
+          "len_vol": "12",
+          "len_atr1": "14",
+          "len_atr2": "56",
+          "slpercent": "2.2",
+          "signalLength": "7"
+        },
+        "objective": {
+          "value": "0.8230809455618219",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "0.8230809455618219",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "35.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.9110919368082742",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 21,
+        "trial_number": 21,
+        "trial_ordinal": 22,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.3",
+          "rsi_l": "15",
+          "window": "20",
+          "len_vol": "38",
+          "len_atr1": "9",
+          "len_atr2": "35",
+          "slpercent": "1.3",
+          "signalLength": "4"
+        },
+        "objective": {
+          "value": "-2.093286157636962",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-2.093286157636962",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "25.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.7695076029228834",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 22,
+        "trial_number": 22,
+        "trial_ordinal": 23,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.5",
+          "rsi_l": "14",
+          "window": "34",
+          "len_vol": "36",
+          "len_atr1": "11",
+          "len_atr2": "38",
+          "slpercent": "1.5",
+          "signalLength": "8"
+        },
+        "objective": {
+          "value": "-1.4819522576519724",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-1.4819522576519724",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "27.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.589737915886909",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 23,
+        "trial_number": 23,
+        "trial_ordinal": 24,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.1",
+          "rsi_l": "13",
+          "window": "26",
+          "len_vol": "36",
+          "len_atr1": "9",
+          "len_atr2": "40",
+          "slpercent": "1.2",
+          "signalLength": "11"
+        },
+        "objective": {
+          "value": "-3.839001944688156",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-3.839001944688156",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "17.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.8745583021350163",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 24,
+        "trial_number": 24,
+        "trial_ordinal": 25,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.3",
+          "rsi_l": "17",
+          "window": "34",
+          "len_vol": "32",
+          "len_atr1": "5",
+          "len_atr2": "38",
+          "slpercent": "0.7999999999999999",
+          "signalLength": "6"
+        },
+        "objective": {
+          "value": "-1.2001092768095072",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-1.2001092768095072",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "23.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.36045080744076424",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 25,
+        "trial_number": 25,
+        "trial_ordinal": 26,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.5",
+          "rsi_l": "19",
+          "window": "20",
+          "len_vol": "26",
+          "len_atr1": "12",
+          "len_atr2": "31",
+          "slpercent": "1.1",
+          "signalLength": "13"
+        },
+        "objective": {
+          "value": "0.1477087901275703",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "0.1477087901275703",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "35.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.6396733515579506",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 26,
+        "trial_number": 26,
+        "trial_ordinal": 27,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.0",
+          "rsi_l": "16",
+          "window": "30",
+          "len_vol": "40",
+          "len_atr1": "8",
+          "len_atr2": "46",
+          "slpercent": "1.5",
+          "signalLength": "16"
+        },
+        "objective": {
+          "value": "-3.3735661102270633",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-3.3735661102270633",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "27.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.8906401113726679",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 27,
+        "trial_number": 27,
+        "trial_ordinal": 28,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.2",
+          "rsi_l": "21",
+          "window": "40",
+          "len_vol": "20",
+          "len_atr1": "11",
+          "len_atr2": "49",
+          "slpercent": "1.4",
+          "signalLength": "9"
+        },
+        "objective": {
+          "value": "-0.06884084640815019",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-0.06884084640815019",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "23.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.9793903336609909",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 28,
+        "trial_number": 28,
+        "trial_ordinal": 29,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.8",
+          "rsi_l": "28",
+          "window": "50",
+          "len_vol": "32",
+          "len_atr1": "13",
+          "len_atr2": "38",
+          "slpercent": "1.7",
+          "signalLength": "20"
+        },
+        "objective": {
+          "value": "-2.4371016296604004",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-2.4371016296604004",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "21.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "1.0407731907872766",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 29,
+        "trial_number": 29,
+        "trial_ordinal": 30,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.6",
+          "rsi_l": "20",
+          "window": "32",
+          "len_vol": "16",
+          "len_atr1": "8",
+          "len_atr2": "43",
+          "slpercent": "1.2",
+          "signalLength": "9"
+        },
+        "objective": {
+          "value": "3.4151340753979644",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "3.4151340753979644",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "13.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.2843602407079235",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 30,
+        "trial_number": 30,
+        "trial_ordinal": 31,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.6",
+          "rsi_l": "19",
+          "window": "36",
+          "len_vol": "14",
+          "len_atr1": "6",
+          "len_atr2": "43",
+          "slpercent": "0.8999999999999999",
+          "signalLength": "10"
+        },
+        "objective": {
+          "value": "1.0194272872787542",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "1.0194272872787542",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "19.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.42631375117967857",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 31,
+        "trial_number": 31,
+        "trial_ordinal": 32,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.6",
+          "rsi_l": "20",
+          "window": "28",
+          "len_vol": "16",
+          "len_atr1": "10",
+          "len_atr2": "40",
+          "slpercent": "1.2",
+          "signalLength": "9"
+        },
+        "objective": {
+          "value": "-0.10602570346265065",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-0.10602570346265065",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "21.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.7391353644493427",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 32,
+        "trial_number": 32,
+        "trial_ordinal": 33,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.4",
+          "rsi_l": "23",
+          "window": "32",
+          "len_vol": "18",
+          "len_atr1": "10",
+          "len_atr2": "45",
+          "slpercent": "1.2",
+          "signalLength": "7"
+        },
+        "objective": {
+          "value": "3.504653245163096",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "3.504653245163096",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "13.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.21102582931657723",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 33,
+        "trial_number": 33,
+        "trial_ordinal": 34,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.4",
+          "rsi_l": "23",
+          "window": "32",
+          "len_vol": "16",
+          "len_atr1": "8",
+          "len_atr2": "46",
+          "slpercent": "1.2",
+          "signalLength": "8"
+        },
+        "objective": {
+          "value": "2.613486084000809",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "2.613486084000809",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "11.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.28500995249379946",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 34,
+        "trial_number": 34,
+        "trial_ordinal": 35,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.3",
+          "rsi_l": "24",
+          "window": "42",
+          "len_vol": "18",
+          "len_atr1": "10",
+          "len_atr2": "51",
+          "slpercent": "1.1",
+          "signalLength": "6"
+        },
+        "objective": {
+          "value": "-1.4305403121476115",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-1.4305403121476115",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "27.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.9576709635943355",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 35,
+        "trial_number": 35,
+        "trial_ordinal": 36,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.2",
+          "rsi_l": "22",
+          "window": "34",
+          "len_vol": "10",
+          "len_atr1": "20",
+          "len_atr2": "44",
+          "slpercent": "1.4",
+          "signalLength": "10"
+        },
+        "objective": {
+          "value": "3.5957592087801116",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "3.5957592087801116",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "29.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.43560399386953547",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 36,
+        "trial_number": 36,
+        "trial_ordinal": 37,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.2",
+          "rsi_l": "22",
+          "window": "32",
+          "len_vol": "10",
+          "len_atr1": "8",
+          "len_atr2": "44",
+          "slpercent": "1.4",
+          "signalLength": "7"
+        },
+        "objective": {
+          "value": "1.2631351324967928",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "1.2631351324967928",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "21.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.5399770685235203",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 37,
+        "trial_number": 37,
+        "trial_ordinal": 38,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.1",
+          "rsi_l": "25",
+          "window": "36",
+          "len_vol": "14",
+          "len_atr1": "20",
+          "len_atr2": "41",
+          "slpercent": "0.8999999999999999",
+          "signalLength": "10"
+        },
+        "objective": {
+          "value": "-2.8147696841851744",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-2.8147696841851744",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "17.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.6978739966985588",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 38,
+        "trial_number": 38,
+        "trial_ordinal": 39,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.0",
+          "rsi_l": "21",
+          "window": "32",
+          "len_vol": "8",
+          "len_atr1": "9",
+          "len_atr2": "47",
+          "slpercent": "1.4",
+          "signalLength": "12"
+        },
+        "objective": {
+          "value": "2.7785863016745656",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "2.7785863016745656",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "21.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.3912187483007129",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 39,
+        "trial_number": 39,
+        "trial_ordinal": 40,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.0",
+          "rsi_l": "20",
+          "window": "30",
+          "len_vol": "8",
+          "len_atr1": "6",
+          "len_atr2": "45",
+          "slpercent": "1.4",
+          "signalLength": "13"
+        },
+        "objective": {
+          "value": "-4.013995063128647",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-4.013995063128647",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "25.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "1.012430714269649",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 40,
+        "trial_number": 40,
+        "trial_ordinal": 41,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.0",
+          "rsi_l": "21",
+          "window": "34",
+          "len_vol": "10",
+          "len_atr1": "14",
+          "len_atr2": "50",
+          "slpercent": "1.6",
+          "signalLength": "12"
+        },
+        "objective": {
+          "value": "3.4855045982064747",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "3.4855045982064747",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "33.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.562803429730942",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 41,
+        "trial_number": 41,
+        "trial_ordinal": 42,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.1",
+          "rsi_l": "21",
+          "window": "34",
+          "len_vol": "10",
+          "len_atr1": "14",
+          "len_atr2": "51",
+          "slpercent": "1.6",
+          "signalLength": "12"
+        },
+        "objective": {
+          "value": "4.0101541621991",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "4.0101541621991",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "31.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.562803429730942",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": true
+      },
+      {
+        "source_ordinal": 42,
+        "trial_number": 42,
+        "trial_ordinal": 43,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.1",
+          "rsi_l": "22",
+          "window": "36",
+          "len_vol": "12",
+          "len_atr1": "14",
+          "len_atr2": "51",
+          "slpercent": "1.6",
+          "signalLength": "9"
+        },
+        "objective": {
+          "value": "1.581415121387765",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "1.581415121387765",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "27.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.92975254245064",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 43,
+        "trial_number": 43,
+        "trial_ordinal": 44,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.2",
+          "rsi_l": "23",
+          "window": "34",
+          "len_vol": "10",
+          "len_atr1": "19",
+          "len_atr2": "49",
+          "slpercent": "1.7",
+          "signalLength": "11"
+        },
+        "objective": {
+          "value": "3.1603410738328876",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "3.1603410738328876",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "31.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.6424745772146769",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 44,
+        "trial_number": 44,
+        "trial_ordinal": 45,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.3",
+          "rsi_l": "22",
+          "window": "28",
+          "len_vol": "10",
+          "len_atr1": "15",
+          "len_atr2": "54",
+          "slpercent": "1.5",
+          "signalLength": "12"
+        },
+        "objective": {
+          "value": "-1.1415123454625153",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-1.1415123454625153",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "21.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "1.1340318342038131",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 45,
+        "trial_number": 45,
+        "trial_ordinal": 46,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.1",
+          "rsi_l": "25",
+          "window": "40",
+          "len_vol": "16",
+          "len_atr1": "16",
+          "len_atr2": "43",
+          "slpercent": "1.1",
+          "signalLength": "14"
+        },
+        "objective": {
+          "value": "0.38636093449698355",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "0.38636093449698355",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "19.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.4001071360891713",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 46,
+        "trial_number": 46,
+        "trial_ordinal": 47,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.4",
+          "rsi_l": "24",
+          "window": "36",
+          "len_vol": "12",
+          "len_atr1": "14",
+          "len_atr2": "52",
+          "slpercent": "1.6",
+          "signalLength": "10"
+        },
+        "objective": {
+          "value": "2.4598880390032143",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "2.4598880390032143",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "23.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.6231028210920199",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 47,
+        "trial_number": 47,
+        "trial_ordinal": 48,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.0",
+          "rsi_l": "20",
+          "window": "30",
+          "len_vol": "14",
+          "len_atr1": "19",
+          "len_atr2": "56",
+          "slpercent": "1.8",
+          "signalLength": "7"
+        },
+        "objective": {
+          "value": "-2.763650003150706",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-2.763650003150706",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "31.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.9872855215988611",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 48,
+        "trial_number": 48,
+        "trial_ordinal": 49,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.2",
+          "rsi_l": "18",
+          "window": "24",
+          "len_vol": "18",
+          "len_atr1": "13",
+          "len_atr2": "48",
+          "slpercent": "1.2",
+          "signalLength": "5"
+        },
+        "objective": {
+          "value": "-3.9607496886173204",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-3.9607496886173204",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "25.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "1.228482911269476",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 49,
+        "trial_number": 49,
+        "trial_ordinal": 50,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.5",
+          "rsi_l": "26",
+          "window": "38",
+          "len_vol": "10",
+          "len_atr1": "15",
+          "len_atr2": "45",
+          "slpercent": "1.8",
+          "signalLength": "14"
+        },
+        "objective": {
+          "value": "-3.993034969796837",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-3.993034969796837",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "13.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.9465003151938071",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 50,
+        "trial_number": 50,
+        "trial_ordinal": 51,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.1",
+          "rsi_l": "20",
+          "window": "32",
+          "len_vol": "8",
+          "len_atr1": "18",
+          "len_atr2": "50",
+          "slpercent": "1.0",
+          "signalLength": "11"
+        },
+        "objective": {
+          "value": "3.1248451789173735",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "3.1248451789173735",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "17.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.1912340827047045",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 51,
+        "trial_number": 51,
+        "trial_ordinal": 52,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.2",
+          "rsi_l": "23",
+          "window": "34",
+          "len_vol": "10",
+          "len_atr1": "19",
+          "len_atr2": "49",
+          "slpercent": "1.9000000000000001",
+          "signalLength": "11"
+        },
+        "objective": {
+          "value": "1.3623299333998913",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "1.3623299333998913",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "31.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "1.1145660058683213",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 52,
+        "trial_number": 52,
+        "trial_ordinal": 53,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.2",
+          "rsi_l": "22",
+          "window": "34",
+          "len_vol": "12",
+          "len_atr1": "19",
+          "len_atr2": "48",
+          "slpercent": "1.7",
+          "signalLength": "9"
+        },
+        "objective": {
+          "value": "4.408936830644604",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "4.408936830644604",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "33.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.47913056203250476",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 53,
+        "trial_number": 53,
+        "trial_ordinal": 54,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.4",
+          "rsi_l": "21",
+          "window": "38",
+          "len_vol": "12",
+          "len_atr1": "18",
+          "len_atr2": "47",
+          "slpercent": "1.3",
+          "signalLength": "9"
+        },
+        "objective": {
+          "value": "-2.965634817995202",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-2.965634817995202",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "11.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.8022434686319694",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 54,
+        "trial_number": 54,
+        "trial_ordinal": 55,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.2",
+          "rsi_l": "22",
+          "window": "28",
+          "len_vol": "14",
+          "len_atr1": "20",
+          "len_atr2": "42",
+          "slpercent": "1.6",
+          "signalLength": "8"
+        },
+        "objective": {
+          "value": "-1.1974924511981222",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-1.1974924511981222",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "37.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.9509760141340424",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 55,
+        "trial_number": 55,
+        "trial_ordinal": 56,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.3",
+          "rsi_l": "18",
+          "window": "34",
+          "len_vol": "18",
+          "len_atr1": "17",
+          "len_atr2": "44",
+          "slpercent": "1.7",
+          "signalLength": "12"
+        },
+        "objective": {
+          "value": "1.7130284165566754",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "1.7130284165566754",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "27.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.6051931347121484",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 56,
+        "trial_number": 56,
+        "trial_ordinal": 57,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.6",
+          "rsi_l": "21",
+          "window": "30",
+          "len_vol": "16",
+          "len_atr1": "12",
+          "len_atr2": "56",
+          "slpercent": "1.9000000000000001",
+          "signalLength": "13"
+        },
+        "objective": {
+          "value": "-1.2940613074929486",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-1.2940613074929486",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "21.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.9093366390587967",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 57,
+        "trial_number": 57,
+        "trial_ordinal": 58,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.1",
+          "rsi_l": "19",
+          "window": "26",
+          "len_vol": "20",
+          "len_atr1": "16",
+          "len_atr2": "53",
+          "slpercent": "1.5",
+          "signalLength": "10"
+        },
+        "objective": {
+          "value": "-1.1031468418309984",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-1.1031468418309984",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "27.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "1.1643224274418695",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 58,
+        "trial_number": 58,
+        "trial_ordinal": 59,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.7000000000000002",
+          "rsi_l": "24",
+          "window": "32",
+          "len_vol": "12",
+          "len_atr1": "20",
+          "len_atr2": "45",
+          "slpercent": "1.4",
+          "signalLength": "8"
+        },
+        "objective": {
+          "value": "-1.755053786192044",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-1.755053786192044",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "13.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.8397421276337963",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 59,
+        "trial_number": 59,
+        "trial_ordinal": 60,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.0",
+          "rsi_l": "22",
+          "window": "44",
+          "len_vol": "8",
+          "len_atr1": "11",
+          "len_atr2": "40",
+          "slpercent": "2.0",
+          "signalLength": "6"
+        },
+        "objective": {
+          "value": "-3.631932700821402",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-3.631932700821402",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "37.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "1.945762277201393",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 60,
+        "trial_number": 60,
+        "trial_ordinal": 61,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.3",
+          "rsi_l": "23",
+          "window": "36",
+          "len_vol": "14",
+          "len_atr1": "18",
+          "len_atr2": "48",
+          "slpercent": "1.6",
+          "signalLength": "15"
+        },
+        "objective": {
+          "value": "3.243495603722228",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "3.243495603722228",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "21.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.4536121583554308",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 61,
+        "trial_number": 61,
+        "trial_ordinal": 62,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.3",
+          "rsi_l": "23",
+          "window": "36",
+          "len_vol": "14",
+          "len_atr1": "18",
+          "len_atr2": "48",
+          "slpercent": "1.6",
+          "signalLength": "15"
+        },
+        "objective": {
+          "value": "3.243495603722228",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "3.243495603722228",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "21.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.4536121583554308",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 62,
+        "trial_number": 62,
+        "trial_ordinal": 63,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.5",
+          "rsi_l": "20",
+          "window": "34",
+          "len_vol": "10",
+          "len_atr1": "19",
+          "len_atr2": "50",
+          "slpercent": "1.7",
+          "signalLength": "9"
+        },
+        "objective": {
+          "value": "2.0749888454874137",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "2.0749888454874137",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "33.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.5357712017611878",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 63,
+        "trial_number": 63,
+        "trial_ordinal": 64,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.3",
+          "rsi_l": "25",
+          "window": "40",
+          "len_vol": "12",
+          "len_atr1": "16",
+          "len_atr2": "25",
+          "slpercent": "1.5",
+          "signalLength": "17"
+        },
+        "objective": {
+          "value": "0.28004679754116135",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "0.28004679754116135",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "19.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.8084833566234283",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 64,
+        "trial_number": 64,
+        "trial_ordinal": 65,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.1",
+          "rsi_l": "21",
+          "window": "36",
+          "len_vol": "14",
+          "len_atr1": "17",
+          "len_atr2": "47",
+          "slpercent": "1.8",
+          "signalLength": "14"
+        },
+        "objective": {
+          "value": "-2.6502081083008817",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-2.6502081083008817",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "21.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "1.2872576154157946",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 65,
+        "trial_number": 65,
+        "trial_ordinal": 66,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.8",
+          "rsi_l": "24",
+          "window": "38",
+          "len_vol": "22",
+          "len_atr1": "19",
+          "len_atr2": "52",
+          "slpercent": "1.3",
+          "signalLength": "7"
+        },
+        "objective": {
+          "value": "-1.7826593156324064",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-1.7826593156324064",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "23.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.7399951175601007",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 66,
+        "trial_number": 66,
+        "trial_ordinal": 67,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.4",
+          "rsi_l": "22",
+          "window": "32",
+          "len_vol": "18",
+          "len_atr1": "20",
+          "len_atr2": "46",
+          "slpercent": "1.6",
+          "signalLength": "11"
+        },
+        "objective": {
+          "value": "1.7713572198806153",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "1.7713572198806153",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "19.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.44073264992352984",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 67,
+        "trial_number": 67,
+        "trial_ordinal": 68,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.2",
+          "rsi_l": "23",
+          "window": "34",
+          "len_vol": "12",
+          "len_atr1": "13",
+          "len_atr2": "50",
+          "slpercent": "1.7",
+          "signalLength": "15"
+        },
+        "objective": {
+          "value": "3.672721919589781",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "3.672721919589781",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "33.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.8175626162589935",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 68,
+        "trial_number": 68,
+        "trial_ordinal": 69,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.0",
+          "rsi_l": "21",
+          "window": "28",
+          "len_vol": "10",
+          "len_atr1": "13",
+          "len_atr2": "50",
+          "slpercent": "1.7",
+          "signalLength": "12"
+        },
+        "objective": {
+          "value": "-0.6520403777521487",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-0.6520403777521487",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "29.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.6220422591683615",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 69,
+        "trial_number": 69,
+        "trial_ordinal": 70,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.1",
+          "rsi_l": "19",
+          "window": "30",
+          "len_vol": "12",
+          "len_atr1": "13",
+          "len_atr2": "53",
+          "slpercent": "1.2",
+          "signalLength": "16"
+        },
+        "objective": {
+          "value": "-1.5393025092224966",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-1.5393025092224966",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "19.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.35911418475476403",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 70,
+        "trial_number": 70,
+        "trial_ordinal": 71,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.2",
+          "rsi_l": "26",
+          "window": "34",
+          "len_vol": "8",
+          "len_atr1": "14",
+          "len_atr2": "43",
+          "slpercent": "2.1",
+          "signalLength": "10"
+        },
+        "objective": {
+          "value": "-0.05461832847104532",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-0.05461832847104532",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "25.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.9637498007512062",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 71,
+        "trial_number": 71,
+        "trial_ordinal": 72,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.2",
+          "rsi_l": "23",
+          "window": "36",
+          "len_vol": "16",
+          "len_atr1": "12",
+          "len_atr2": "48",
+          "slpercent": "1.5",
+          "signalLength": "15"
+        },
+        "objective": {
+          "value": "0.9101250809280379",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "0.9101250809280379",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "19.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.49003888492232806",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 72,
+        "trial_number": 72,
+        "trial_ordinal": 73,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.3",
+          "rsi_l": "22",
+          "window": "38",
+          "len_vol": "12",
+          "len_atr1": "15",
+          "len_atr2": "45",
+          "slpercent": "1.8",
+          "signalLength": "17"
+        },
+        "objective": {
+          "value": "-3.3992716056592798",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-3.3992716056592798",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "11.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.8778147346556976",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 73,
+        "trial_number": 73,
+        "trial_ordinal": 74,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.2",
+          "rsi_l": "24",
+          "window": "32",
+          "len_vol": "14",
+          "len_atr1": "10",
+          "len_atr2": "41",
+          "slpercent": "1.4",
+          "signalLength": "15"
+        },
+        "objective": {
+          "value": "0.7671779571529931",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "0.7671779571529931",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "21.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.3912088835839036",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 74,
+        "trial_number": 74,
+        "trial_ordinal": 75,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.4",
+          "rsi_l": "23",
+          "window": "40",
+          "len_vol": "10",
+          "len_atr1": "18",
+          "len_atr2": "51",
+          "slpercent": "1.9000000000000001",
+          "signalLength": "16"
+        },
+        "objective": {
+          "value": "-0.49870024120695133",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-0.49870024120695133",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "25.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "1.1094126259383288",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 75,
+        "trial_number": 75,
+        "trial_ordinal": 76,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.5",
+          "rsi_l": "22",
+          "window": "32",
+          "len_vol": "24",
+          "len_atr1": "8",
+          "len_atr2": "47",
+          "slpercent": "1.7",
+          "signalLength": "18"
+        },
+        "objective": {
+          "value": "2.069969793628569",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "2.069969793628569",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "17.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.47913287603243965",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 76,
+        "trial_number": 76,
+        "trial_ordinal": 77,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.6",
+          "rsi_l": "21",
+          "window": "36",
+          "len_vol": "14",
+          "len_atr1": "14",
+          "len_atr2": "49",
+          "slpercent": "1.1",
+          "signalLength": "13"
+        },
+        "objective": {
+          "value": "3.9920199348518857",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "3.9920199348518857",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "17.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.2600656527720249",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 77,
+        "trial_number": 77,
+        "trial_ordinal": 78,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.7000000000000002",
+          "rsi_l": "20",
+          "window": "30",
+          "len_vol": "10",
+          "len_atr1": "15",
+          "len_atr2": "55",
+          "slpercent": "0.8999999999999999",
+          "signalLength": "12"
+        },
+        "objective": {
+          "value": "1.0171380094128657",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "1.0171380094128657",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "19.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.34348600622810366",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 78,
+        "trial_number": 78,
+        "trial_ordinal": 79,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.9",
+          "rsi_l": "20",
+          "window": "34",
+          "len_vol": "16",
+          "len_atr1": "14",
+          "len_atr2": "50",
+          "slpercent": "1.1",
+          "signalLength": "13"
+        },
+        "objective": {
+          "value": "0.5025703231949509",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "0.5025703231949509",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "21.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.5033261574247483",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 79,
+        "trial_number": 79,
+        "trial_ordinal": 80,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.6",
+          "rsi_l": "19",
+          "window": "38",
+          "len_vol": "12",
+          "len_atr1": "13",
+          "len_atr2": "46",
+          "slpercent": "1.3",
+          "signalLength": "13"
+        },
+        "objective": {
+          "value": "-1.0985238739822811",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-1.0985238739822811",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "15.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.7366158060240743",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 80,
+        "trial_number": 80,
+        "trial_ordinal": 81,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.6",
+          "rsi_l": "21",
+          "window": "36",
+          "len_vol": "8",
+          "len_atr1": "10",
+          "len_atr2": "52",
+          "slpercent": "1.1",
+          "signalLength": "9"
+        },
+        "objective": {
+          "value": "0.8619411495231882",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "0.8619411495231882",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "17.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.44379121736670585",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 81,
+        "trial_number": 81,
+        "trial_ordinal": 82,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.1",
+          "rsi_l": "22",
+          "window": "36",
+          "len_vol": "14",
+          "len_atr1": "12",
+          "len_atr2": "49",
+          "slpercent": "1.5",
+          "signalLength": "14"
+        },
+        "objective": {
+          "value": "1.28742950541042",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "1.28742950541042",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "23.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.489406148979073",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 82,
+        "trial_number": 82,
+        "trial_ordinal": 83,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.3",
+          "rsi_l": "23",
+          "window": "34",
+          "len_vol": "16",
+          "len_atr1": "14",
+          "len_atr2": "48",
+          "slpercent": "1.6",
+          "signalLength": "11"
+        },
+        "objective": {
+          "value": "3.160632978207898",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "3.160632978207898",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "31.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.6229446836346876",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 83,
+        "trial_number": 83,
+        "trial_ordinal": 84,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.0",
+          "rsi_l": "21",
+          "window": "32",
+          "len_vol": "14",
+          "len_atr1": "13",
+          "len_atr2": "44",
+          "slpercent": "1.2",
+          "signalLength": "15"
+        },
+        "objective": {
+          "value": "2.086097020933042",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "2.086097020933042",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "21.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.28000090105765846",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 84,
+        "trial_number": 84,
+        "trial_ordinal": 85,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.2",
+          "rsi_l": "24",
+          "window": "34",
+          "len_vol": "12",
+          "len_atr1": "11",
+          "len_atr2": "47",
+          "slpercent": "1.3",
+          "signalLength": "10"
+        },
+        "objective": {
+          "value": "2.1781728063674963",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "2.1781728063674963",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "29.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.8261209476093582",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 85,
+        "trial_number": 85,
+        "trial_ordinal": 86,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.5",
+          "rsi_l": "21",
+          "window": "36",
+          "len_vol": "20",
+          "len_atr1": "20",
+          "len_atr2": "51",
+          "slpercent": "1.0",
+          "signalLength": "13"
+        },
+        "objective": {
+          "value": "3.047541487656645",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "3.047541487656645",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "15.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.2508241639659699",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 86,
+        "trial_number": 86,
+        "trial_ordinal": 87,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.1",
+          "rsi_l": "23",
+          "window": "42",
+          "len_vol": "18",
+          "len_atr1": "6",
+          "len_atr2": "49",
+          "slpercent": "1.7",
+          "signalLength": "12"
+        },
+        "objective": {
+          "value": "-1.0204631053599549",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-1.0204631053599549",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "41.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "1.5425270767394428",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 87,
+        "trial_number": 87,
+        "trial_ordinal": 88,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.4",
+          "rsi_l": "25",
+          "window": "30",
+          "len_vol": "10",
+          "len_atr1": "11",
+          "len_atr2": "42",
+          "slpercent": "1.4",
+          "signalLength": "14"
+        },
+        "objective": {
+          "value": "-5.963798688114449",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-5.963798688114449",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "23.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "1.2824307142696671",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 88,
+        "trial_number": 88,
+        "trial_ordinal": 89,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.7000000000000002",
+          "rsi_l": "22",
+          "window": "34",
+          "len_vol": "14",
+          "len_atr1": "7",
+          "len_atr2": "46",
+          "slpercent": "1.6",
+          "signalLength": "8"
+        },
+        "objective": {
+          "value": "-0.5844486124651382",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-0.5844486124651382",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "27.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "1.0408709199584",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 89,
+        "trial_number": 89,
+        "trial_ordinal": 90,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.4",
+          "rsi_l": "29",
+          "window": "38",
+          "len_vol": "12",
+          "len_atr1": "14",
+          "len_atr2": "48",
+          "slpercent": "1.4",
+          "signalLength": "11"
+        },
+        "objective": {
+          "value": "-1.730801642552673",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-1.730801642552673",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "17.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.9254214874482589",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 90,
+        "trial_number": 90,
+        "trial_ordinal": 91,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.8",
+          "rsi_l": "20",
+          "window": "32",
+          "len_vol": "16",
+          "len_atr1": "9",
+          "len_atr2": "32",
+          "slpercent": "1.2",
+          "signalLength": "5"
+        },
+        "objective": {
+          "value": "2.3340602693840053",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "2.3340602693840053",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "11.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.1379888713673108",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 91,
+        "trial_number": 91,
+        "trial_ordinal": 92,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.3",
+          "rsi_l": "23",
+          "window": "36",
+          "len_vol": "14",
+          "len_atr1": "18",
+          "len_atr2": "48",
+          "slpercent": "1.6",
+          "signalLength": "15"
+        },
+        "objective": {
+          "value": "3.243495603722228",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "3.243495603722228",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "21.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.4536121583554308",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 92,
+        "trial_number": 92,
+        "trial_ordinal": 93,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.3",
+          "rsi_l": "24",
+          "window": "36",
+          "len_vol": "12",
+          "len_atr1": "18",
+          "len_atr2": "50",
+          "slpercent": "1.5",
+          "signalLength": "16"
+        },
+        "objective": {
+          "value": "3.0159716549938755",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "3.0159716549938755",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "23.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.44537833136257715",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 93,
+        "trial_number": 93,
+        "trial_ordinal": 94,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.2",
+          "rsi_l": "22",
+          "window": "32",
+          "len_vol": "10",
+          "len_atr1": "19",
+          "len_atr2": "52",
+          "slpercent": "1.7",
+          "signalLength": "14"
+        },
+        "objective": {
+          "value": "2.3504086599016514",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "2.3504086599016514",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "23.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.5988489954823398",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 94,
+        "trial_number": 94,
+        "trial_ordinal": 95,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.3",
+          "rsi_l": "23",
+          "window": "34",
+          "len_vol": "8",
+          "len_atr1": "17",
+          "len_atr2": "45",
+          "slpercent": "1.6",
+          "signalLength": "7"
+        },
+        "objective": {
+          "value": "1.7563720562863419",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "1.7563720562863419",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "35.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "1.067784222938669",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 95,
+        "trial_number": 95,
+        "trial_ordinal": 96,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.2",
+          "rsi_l": "21",
+          "window": "38",
+          "len_vol": "14",
+          "len_atr1": "15",
+          "len_atr2": "41",
+          "slpercent": "1.8",
+          "signalLength": "15"
+        },
+        "objective": {
+          "value": "-2.0686041091227536",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-2.0686041091227536",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "15.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "1.187043760014303",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 96,
+        "trial_number": 96,
+        "trial_ordinal": 97,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.5",
+          "rsi_l": "23",
+          "window": "58",
+          "len_vol": "26",
+          "len_atr1": "16",
+          "len_atr2": "49",
+          "slpercent": "1.5",
+          "signalLength": "8"
+        },
+        "objective": {
+          "value": "-2.0459112974612044",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-2.0459112974612044",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "25.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "1.1151736077291",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 97,
+        "trial_number": 97,
+        "trial_ordinal": 98,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.1",
+          "rsi_l": "22",
+          "window": "36",
+          "len_vol": "18",
+          "len_atr1": "20",
+          "len_atr2": "46",
+          "slpercent": "1.7",
+          "signalLength": "9"
+        },
+        "objective": {
+          "value": "-0.18755044936506432",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-0.18755044936506432",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "23.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.7874711978290218",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 98,
+        "trial_number": 98,
+        "trial_ordinal": 99,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "2.1",
+          "rsi_l": "21",
+          "window": "30",
+          "len_vol": "12",
+          "len_atr1": "19",
+          "len_atr2": "43",
+          "slpercent": "1.1",
+          "signalLength": "16"
+        },
+        "objective": {
+          "value": "-0.12799265671866644",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "-0.12799265671866644",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "25.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.45804008853229367",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      },
+      {
+        "source_ordinal": 99,
+        "trial_number": 99,
+        "trial_ordinal": 100,
+        "scope": "NATIVE_IS_STUDY",
+        "state": "COMPLETE",
+        "parameters": {
+          "rvol": "1.0",
+          "rsi_l": "20",
+          "window": "34",
+          "len_vol": "14",
+          "len_atr1": "18",
+          "len_atr2": "44",
+          "slpercent": "1.3",
+          "signalLength": "13"
+        },
+        "objective": {
+          "value": "0.462211591236843",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "metrics": {
+          "sharpe": {
+            "value": "0.462211591236843",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "num_trades": {
+            "value": "31.0",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          },
+          "max_drawdown_pct": {
+            "value": "0.6938830563003219",
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            }
+          }
+        },
+        "selected": false
+      }
+    ],
+    "next_cursor": null
+  },
+  "candidates": {
+    "population": "COMPLETE_NATIVE_TRIAL_EVALUATIONS_NOT_SCALAR_WFO_POOL",
+    "total": 100,
+    "plateau_membership": "NOT_PUBLISHED",
+    "plateau_membership_reason_code": "NATIVE_SOURCE_DID_NOT_RETAIN_NEIGHBOR_TRIAL_IDENTITIES"
+  },
+  "selection_process": {
+    "method": "QUANTBT_GENERIC_ROBUST_PLATEAU_NOT_SCALAR_WFO_V1",
+    "retained_source_metadata": {
+      "selector": "robust_plateau",
+      "objective_index": 0,
+      "medoid_trial_number": 41,
+      "cluster_center_trial": 41,
+      "top_trials": 10,
+      "feasible_trials": 100,
+      "neighbor_count": 3,
+      "min_neighbor_count": 3,
+      "seed_consensus": 1,
+      "seed_consensus_count": 1,
+      "top_quantile": "0.1",
+      "neighborhood_radius": "0.1",
+      "plateau_score": "4.503687527770931",
+      "median_objective": "3.672721919589781",
+      "worst_objective": "3.4855045982064747",
+      "objective_std": "0.2170939399266663",
+      "param_names": [
+        "len_atr1",
+        "len_atr2",
+        "len_vol",
+        "rsi_l",
+        "rvol",
+        "signalLength",
+        "slpercent",
+        "window"
+      ],
+      "fallback_reasons": []
+    },
+    "metadata_reason_code": null,
+    "objective": "IS_SHARPE",
+    "training_scope": "P08_WARMUP_PLUS_IS_ONLY",
+    "holdout_used": false,
+    "evidence": "ENGINE_MEDOID_IDENTITY_MATCHES_RETAINED_TRIAL_AND_PARAMETERS",
+    "sampler_trace": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "NATIVE_SAMPLER_INTERNAL_TRACE_NOT_RETAINED"
+    }
+  }
+}

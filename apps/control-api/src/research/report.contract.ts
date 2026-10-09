@@ -11,6 +11,8 @@ import { z } from "zod";
 import { ResearchEnrichedAnalysisSchema, ResearchEnrichedAvailabilitySchema } from "./enriched-analysis.contract";
 import { VerifiedPinnedAuditSchema } from "./final-audit.contract";
 import { CurrentSourceProtocolDisclosureSchema, CurrentSourceOptimizerDisclosureSchema } from "./current-source.payload";
+import { ResearchNativeReportSchema } from "./native-report.contract";
+export {ResearchNativeReportSchema} from "./native-report.contract";
 
 export const ResearchReportRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 export const ResearchReportExportJobIdSchema = z.string().regex(/^rpex_[0-9A-HJKMNP-TV-Z]{26}$/);
@@ -345,10 +347,11 @@ export const ReportFinalAuditSchema = z.object({
 }).strict();
 
 export const ResearchReportFrozenCoreV2Schema = z.object({
+  native_report: ResearchNativeReportSchema.optional(),
   protocol_disclosure: CurrentSourceProtocolDisclosureSchema.optional(),
   optimizer_disclosure: CurrentSourceOptimizerDisclosureSchema.optional(),
   schema_version: z.literal("research.report-frozen-core.v2"),
-  report_source: z.enum(["P13_P17_FIXED_PROFILE", "RS02_RETAINED_CURRENT_SOURCE"]),
+  report_source: z.enum(["P13_P17_FIXED_PROFILE", "RS02_RETAINED_CURRENT_SOURCE", "NATIVE_RETAINED_ENGINE_AUDIT"]),
   source_revisions: z.object({
     evidence_revision: SourceRevisionV2Schema,
     split_revision: SourceRevisionV2Schema,

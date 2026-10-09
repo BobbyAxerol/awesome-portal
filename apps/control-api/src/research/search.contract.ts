@@ -11,6 +11,7 @@
 
 import { z } from "zod";
 import { ImportedAlphaReadBindingSchema } from "./imported-alpha.read-binding";
+import { NativeSearchSchema } from "./native-read.contract";
 
 import { BoundWarningSchema } from "./bound-warning";
 
@@ -29,6 +30,8 @@ export const ResearchSearchReadQuerySchema = z.object({
   // grows later. P04 publishes no optimizer fold; the response returns a
   // typed non-applicable inspection state instead of guessing fold one.
   fold: z.coerce.number().int().min(1).max(256).optional(),
+  native_cursor: z.string().min(1).max(4096).optional(),
+  native_limit: z.coerce.number().int().min(1).max(200).optional(),
 }).strict();
 
 export const ResearchSearchAvailabilitySchema = z.object({
@@ -199,6 +202,7 @@ const ClaimRowSchema = z.object({
 }).strict();
 
 export const ResearchSearchResponseSchema = z.object({
+  native_search: NativeSearchSchema.optional(),
   schema_version: z.literal("research.search-detail.v1"),
   read_authority: z.literal("PORTAL_PERSISTED_RESEARCH"),
   run_id: ResearchSearchRunIdSchema,

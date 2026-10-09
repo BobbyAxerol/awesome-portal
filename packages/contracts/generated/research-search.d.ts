@@ -25,6 +25,133 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        NativeSearch: {
+            /** @constant */
+            schema_version: "research.native-search.v1";
+            /** @constant */
+            authority: "SEALED_PINNED_QUANTBT_NATIVE_IS_OPTIMIZATION";
+            revision: string;
+            summary: {
+                /** @constant */
+                schema_version: "research.native-optimization.v1";
+                /** @constant */
+                authority: "PINNED_QUANTBT_NATIVE_IS_SHARPE";
+                /** @constant */
+                scope: "P08_WARMUP_PLUS_IS_ONLY";
+                /** @constant */
+                objective_name: "sharpe";
+                /** @constant */
+                selection_method: "QUANTBT_GENERIC_ROBUST_PLATEAU_NOT_SCALAR_WFO_V1";
+                requested_trials: number;
+                completed_trials: number;
+                retained_trials: number;
+                distinct_parameter_sets: number;
+                selected_trial_number: number;
+                selected_parameters: {
+                    [key: string]: string;
+                };
+                selected_objective: string;
+                train_start_utc_ms: number;
+                train_end_exclusive_utc_ms: number;
+                /** @constant */
+                holdout_used: false;
+                /** @constant */
+                table_kind: "native_optimizer_trials";
+                /** @constant */
+                table_schema_version: "research.native-optimizer-trial-table.v1";
+                sha256: string;
+            };
+            selected_trial_number: number;
+            selected_trial_ordinal: number;
+            /** @constant */
+            selected_trial_scope: "NATIVE_IS_STUDY";
+            selected_parameters_digest: string;
+            ledger: {
+                total: number;
+                rows: {
+                    source_ordinal: number;
+                    trial_number: number;
+                    trial_ordinal: number;
+                    /** @constant */
+                    scope: "NATIVE_IS_STUDY";
+                    /** @enum {string} */
+                    state: "COMPLETE" | "PRUNED" | "FAIL" | "WAITING" | "RUNNING";
+                    parameters: {
+                        [key: string]: string;
+                    };
+                    objective: {
+                        value: string | null;
+                        availability: {
+                            /** @enum {string} */
+                            state: "AVAILABLE" | "NOT_PUBLISHED";
+                            reason_code: string | null;
+                        };
+                    };
+                    metrics: {
+                        [key: string]: {
+                            value: string | null;
+                            availability: {
+                                /** @enum {string} */
+                                state: "AVAILABLE" | "NOT_PUBLISHED";
+                                reason_code: string | null;
+                            };
+                        };
+                    };
+                    selected: boolean;
+                }[];
+                next_cursor: string | null;
+            };
+            candidates: {
+                /** @constant */
+                population: "COMPLETE_NATIVE_TRIAL_EVALUATIONS_NOT_SCALAR_WFO_POOL";
+                total: number;
+                /** @constant */
+                plateau_membership: "NOT_PUBLISHED";
+                /** @constant */
+                plateau_membership_reason_code: "NATIVE_SOURCE_DID_NOT_RETAIN_NEIGHBOR_TRIAL_IDENTITIES";
+            };
+            selection_process: {
+                /** @constant */
+                method: "QUANTBT_GENERIC_ROBUST_PLATEAU_NOT_SCALAR_WFO_V1";
+                retained_source_metadata: {
+                    /** @constant */
+                    selector: "robust_plateau";
+                    /** @constant */
+                    objective_index: 0;
+                    medoid_trial_number: number;
+                    cluster_center_trial: number;
+                    top_trials: number;
+                    feasible_trials: number;
+                    neighbor_count: number;
+                    min_neighbor_count: number;
+                    seed_consensus: number;
+                    seed_consensus_count: number;
+                    top_quantile: string;
+                    neighborhood_radius: string;
+                    plateau_score: string;
+                    median_objective: string;
+                    worst_objective: string;
+                    objective_std: string;
+                    param_names: string[];
+                    fallback_reasons: string[];
+                } | null;
+                metadata_reason_code: "NATIVE_SOURCE_SELECTION_METADATA_NOT_RETAINED" | null;
+                /** @constant */
+                objective: "IS_SHARPE";
+                /** @constant */
+                training_scope: "P08_WARMUP_PLUS_IS_ONLY";
+                /** @constant */
+                holdout_used: false;
+                /** @constant */
+                evidence: "ENGINE_MEDOID_IDENTITY_MATCHES_RETAINED_TRIAL_AND_PARAMETERS";
+                sampler_trace: {
+                    /** @constant */
+                    state: "NOT_PUBLISHED";
+                    /** @constant */
+                    reason_code: "NATIVE_SAMPLER_INTERNAL_TRACE_NOT_RETAINED";
+                };
+            };
+        };
         ImportedAlphaReadBinding: {
             /** @constant */
             schema_version: "research.imported-alpha-read-binding.v1";
@@ -318,6 +445,7 @@ export interface components {
             source_absences: {
                 [key: string]: components["schemas"]["SourceGap"];
             };
+            native_search?: components["schemas"]["NativeSearch"];
         };
     };
     responses: {
@@ -356,6 +484,8 @@ export interface operations {
                 workspace_id?: components["parameters"]["WorkspaceId"];
                 /** @description Requested inspection fold. Current P04 has no optimizer fold; response returns typed NOT_APPLICABLE rather than treating one as a trial fold. */
                 fold?: components["parameters"]["Fold"];
+                native_cursor?: string;
+                native_limit?: number;
             };
             header?: {
                 /** @description Entity-tag list or *; W/ prefixes are compared weakly. */

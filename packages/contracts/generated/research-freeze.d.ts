@@ -42,6 +42,86 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        NativeFreeze: {
+            /** @constant */
+            schema_version: "research.native-freeze.v1";
+            selection_evidence?: {
+                /** @constant */
+                selector: "robust_plateau";
+                /** @constant */
+                objective_index: 0;
+                medoid_trial_number: number;
+                cluster_center_trial: number;
+                top_trials: number;
+                feasible_trials: number;
+                neighbor_count: number;
+                min_neighbor_count: number;
+                seed_consensus: number;
+                seed_consensus_count: number;
+                top_quantile: string;
+                neighborhood_radius: string;
+                plateau_score: string;
+                median_objective: string;
+                worst_objective: string;
+                objective_std: string;
+                param_names: string[];
+                fallback_reasons: string[];
+            } | null;
+            /** @constant */
+            authority: "SEALED_NATIVE_SELECTED_PARAMETERS_NOT_SCALAR_WFO_CERTIFICATE";
+            revision: string;
+            selected_parameters: {
+                [key: string]: string;
+            };
+            selected_parameters_digest: string;
+            selected_trial_number: number;
+            selected_trial_ordinal: number;
+            /** @constant */
+            selected_trial_scope: "NATIVE_IS_STUDY";
+            selected_objective: string;
+            execution_profile: {
+                id: string;
+                digest: string;
+            };
+            artifact: {
+                revision: number;
+                manifest_digest: string;
+                source_parts: {
+                    ordinal: number;
+                    sha256: string;
+                    rows: number;
+                    bytes: number;
+                }[];
+                source_table_digest: string;
+                /** @constant */
+                source_table_digest_scope: "ORIGINAL_CHILD_PARQUET_BYTES_NOT_REWRITTEN_P05_PARTS";
+            };
+            integrity: {
+                /** @constant */
+                state: "MATCH_AT_PREPARATION";
+                /** @constant */
+                verification_scope: "P05_MANIFEST_ALL_PARTS_AND_DOCUMENTS_AT_PREPARATION";
+                checked_at_utc_ms: number;
+                /** @constant */
+                current_bytes_rechecked: false;
+                /** @constant */
+                selected_identity_match: true;
+                /** @constant */
+                selected_parameter_digest_match: true;
+            };
+            scalar_wfo_certificate: {
+                /** @constant */
+                state: "NOT_APPLICABLE";
+                /** @constant */
+                reason_code: "NATIVE_PROTOCOL_IS_NOT_SCALAR_WFO";
+            };
+            chronology: {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "NATIVE_SOURCE_DID_NOT_RETAIN_FREEZE_WALL_CLOCK_EVENTS";
+            };
+        };
         ImportedAlphaReadBinding: {
             /** @constant */
             schema_version: "research.imported-alpha-read-binding.v1";
@@ -238,6 +318,7 @@ export interface components {
             artifact_bytes: components["schemas"]["ArtifactByteVerification"];
             stage4_binding?: components["schemas"]["Stage4Binding"];
             parameter_authority?: components["schemas"]["ParameterAuthority"];
+            native_freeze?: components["schemas"]["NativeFreeze"];
         };
         Stage4BindingRow: {
             /** @enum {unknown} */
@@ -351,6 +432,7 @@ export interface components {
             verification_scope: "PORTAL_RETAINED_DIGEST_BINDING_ONLY" | "PORTAL_RETAINED_DIGEST_BINDING_AND_P05_ARTIFACT_BYTES" | "P05_ARTIFACT_BYTES_ONLY" | "NONE";
             integrity: components["schemas"]["Integrity"];
             artifact_bytes: components["schemas"]["ArtifactByteVerification"];
+            native_freeze?: components["schemas"]["NativeFreeze"];
         };
         Problem: {
             error: {

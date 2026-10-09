@@ -17,6 +17,7 @@ import type { ReportAuditRelation } from "./report-core-v2";
 import { readPinnedAuditProofs } from "./final-audit.read";
 import { ExactJsonCalculationMemo } from "./exact-json-calculation-memo";
 import { currentSourceExecutionRecipes } from "./current-source-profile";
+import { executionRecipes } from "./execution-recipes";
 import {
   ResearchReportFrozenCoreSchema,
   type ResearchReportExportFormat,
@@ -221,7 +222,9 @@ export class ResearchReportRepository {
            AND research.run_report_materialization_retries_v1.next_attempt_at <= now()
          RETURNING run_id`,
         [scope.workspaceId, runId, typeof profileId === "string" ? [profileId] : profileId,
-          JSON.stringify(currentSourceExecutionRecipes().map(row => ({profile_id:row.profile_id,profile_digest:row.profile_digest})))],
+          JSON.stringify([...currentSourceExecutionRecipes(),...executionRecipes.filter(row =>
+            row.descriptor.schema_version==="research.native-route-profile.v1")]
+            .map(row => ({profile_id:row.profile_id,profile_digest:row.profile_digest})))],
       );
       return result.rowCount === 1;
     });

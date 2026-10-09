@@ -177,6 +177,8 @@ import { ResearchWindowExecutionService } from "./research/window-execution.serv
 import { ResearchReportController } from "./research/report.controller";
 import { ResearchReportRepository } from "./research/report.repository";
 import { ResearchReportService } from "./research/report.service";
+import { ResearchNativeReadRepository } from "./research/native-read.repository";
+import { ResearchNativeReadService } from "./research/native-read.service";
 import { ResearchLineageController } from "./research/lineage.controller";
 import { ResearchLineageRepository } from "./research/lineage.repository";
 import { ResearchLineageService } from "./research/lineage.service";
@@ -362,6 +364,8 @@ export class AppModule {
         ResearchWindowExecutionService,
         ResearchReportRepository,
         ResearchReportService,
+        ResearchNativeReadRepository,
+        ResearchNativeReadService,
         ResearchLineageRepository,
         ResearchLineageService,
         ResearchCompareRepository,
