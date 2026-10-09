@@ -40,6 +40,15 @@ export interface StoredResearchReport {
   };
 }
 
+export interface ResearchReportRunContext {
+  runId: string;
+  state: string;
+  displayLabel: string | null;
+  profileId: string | null;
+  profileDigest: string | null;
+  updatedAtUtcMs: number;
+}
+
 export interface SealedArtifactParts {
   artifactRevision: number;
   manifestDigest: string | null;
@@ -318,6 +327,32 @@ export class ResearchReportRepository {
         () => new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", "Stored analytics supplement is incompatible.", 503));
       return { ...this.toStored(result.rows[0]!), ...(enrichedAnalysis ? { enrichedAnalysis } : {}),
         displayLabel: runDisplayLabel(display?.display_profile_id, runDisplayOrdinal(display?.display_ordinal)) };
+    });
+  }
+
+  /** Metadata only, under the same membership/RLS boundary as sealed Reports. */
+  async runContext(scope: ResearchScope, runId: string): Promise<ResearchReportRunContext | null> {
+    return this.withTransaction(scope.workspaceId, scope.actorUserId, true, async (client) => {
+      await this.requireMembership(client, scope);
+      const result = await client.query<{
+        run_id: string; state: string; profile_id: string | null; profile_digest: string | null;
+        display_ordinal: string | null; updated_at_utc_ms: string;
+      }>(
+        `SELECT run.run_id, run.state, producer.execution_profile_id AS profile_id,
+                producer.execution_profile_digest AS profile_digest,
+                ${runDisplayOrdinalSql("run", "producer")} AS display_ordinal,
+                floor(extract(epoch FROM run.updated_at) * 1000)::bigint::text AS updated_at_utc_ms
+           FROM research.runs run
+           LEFT JOIN research.run_producers producer
+             ON producer.workspace_id = run.workspace_id AND producer.run_id = run.run_id
+          WHERE run.workspace_id = $1 AND run.run_id = $2`,
+        [scope.workspaceId, runId],
+      );
+      const row = result.rows[0];
+      if (!row) return null;
+      return { runId: row.run_id, state: row.state, profileId: row.profile_id, profileDigest: row.profile_digest,
+        displayLabel: runDisplayLabel(row.profile_id, runDisplayOrdinal(row.display_ordinal)),
+        updatedAtUtcMs: Number(row.updated_at_utc_ms) };
     });
   }
 

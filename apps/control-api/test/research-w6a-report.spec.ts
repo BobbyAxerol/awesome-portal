@@ -162,6 +162,7 @@ function subject(options: {
       return stored;
     }),
     read: vi.fn(async () => stored ?? null),
+    runContext: vi.fn().mockResolvedValue(null),
     claimMissingWfo: vi.fn().mockResolvedValue(false),
     markRepairOutcome: vi.fn().mockResolvedValue(undefined),
     repairStatus: vi.fn().mockResolvedValue(null),

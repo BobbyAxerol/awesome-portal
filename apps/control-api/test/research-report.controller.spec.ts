@@ -15,6 +15,24 @@ function request(overrides: Record<string, unknown> = {}) {
 }
 
 describe("P18 same-origin Report controller boundary", () => {
+  it("§54 sends native absence as a revalidatable 200, never authorizes by ETag", async () => {
+    const body = { schema_version: "research.report-unavailable.v1", etag: `"p18a1_${"b".repeat(64)}"`,
+      availability: { state: "NOT_PUBLISHED", reason_code: "NATIVE_REPORT_NOT_DELIVERED" }, may_export: false };
+    const service = { read: vi.fn().mockResolvedValue(body) };
+    const workspaces = { isMember: vi.fn().mockResolvedValue(true) };
+    const controller = new ResearchReportController(service as never, workspaces as never, config as never);
+    const reply = { header: vi.fn().mockReturnThis(), send: vi.fn(), code: vi.fn().mockReturnThis() };
+    await controller.detail(request() as never, reply as never, "rrun_native_report", {});
+    expect(reply.send).toHaveBeenCalledWith(body);
+    expect(reply.code).not.toHaveBeenCalledWith(404);
+    await controller.detail(request({ headers: { "if-none-match": body.etag } }) as never, reply as never, "rrun_native_report", {});
+    expect(reply.code).toHaveBeenCalledWith(304);
+    workspaces.isMember.mockResolvedValue(false);
+    await expect(controller.detail(request({ headers: { "if-none-match": body.etag } }) as never, reply as never,
+      "rrun_native_report", {})).rejects.toMatchObject({ status: 404 });
+    expect(service.read).toHaveBeenCalledTimes(2);
+  });
+
   it("does not cache personalized export status", () => {
     expect(Reflect.getMetadata(HEADERS_METADATA, ResearchReportController.prototype.exportStatus))
       .toContainEqual({ name: "Cache-Control", value: "private, no-store" });

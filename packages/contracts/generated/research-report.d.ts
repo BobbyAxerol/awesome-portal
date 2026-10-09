@@ -13,7 +13,7 @@ export interface paths {
         };
         /**
          * Read the latest sealed immutable report core for a run
-         * @description Never 409: a run whose report is not sealed yet (or never will be) answers 404 RESEARCH_REPORT_NOT_FOUND. Only export creation/download can answer 409.
+         * @description Known native execution runs without a sealed Report return 200 ReportUnavailable (NOT_PUBLISHED / NATIVE_REPORT_NOT_DELIVERED), authorized by the exact immutable execution-profile id and digest. Existing sealed Reports return ReportDetail unchanged. Unknown or foreign runs answer 404 RESEARCH_REPORT_NOT_FOUND. No engine call, seal, repair claim or export is made for native absence. Narrow schema_version before accessing frozen_core. Only export creation/download can answer 409.
          */
         get: operations["researchReportDetailGetV1"];
         put?: never;
@@ -82,6 +82,35 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Narrow schema_version before reading frozen_core. A missing native Report is a typed 200, not an invented seal. Existing immutable Reports take precedence. Unknown/foreign runs remain 404; permissions and feature refusal remain unchanged. */
+        ReportRead: components["schemas"]["ReportDetail"] | components["schemas"]["ReportUnavailable"];
+        ReportUnavailable: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            schema_version: "research.report-unavailable.v1";
+            /** @constant */
+            read_authority: "PORTAL_PERSISTED_RESEARCH";
+            run_id: components["schemas"]["RunId"];
+            display_label: string | null;
+            /** @enum {unknown} */
+            run_state: "DRAFT" | "QUEUED" | "RUNNING" | "SEALING" | "READY" | "FAILED" | "CANCELLED" | "RECOVERY_REQUIRED";
+            availability: {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "NATIVE_REPORT_NOT_DELIVERED";
+            };
+            execution_profile: {
+                id: string;
+                digest: string;
+            };
+            as_of_utc_ms: components["schemas"]["UtcMilliseconds"];
+            etag: string;
+            /** @constant */
+            may_export: false;
+        };
         /** @description Source-retained optimizer evidence. Native objective and selector ranking score are separate. Bootstrap statistics are synthetic proxy, not realized OOS. A centroid has parameters and null trial identity; Mode 4 uses IS only without fabricated inner folds; Mode 5 is full-sample calibration, never untouched OOS. */
         OptimizerDisclosure: {
             /** @constant */
@@ -1168,7 +1197,10 @@ export interface components {
         ReportDetail: {
             enriched_analysis_availability?: components["schemas"]["EnrichedAnalysisAvailability"];
             enriched_analysis?: components["schemas"]["EnrichedAnalysis"];
-            /** @constant */
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
             schema_version: "research.report-detail.v1";
             /** @constant */
             read_authority: "PORTAL_PERSISTED_RESEARCH";
@@ -1279,7 +1311,7 @@ export interface components {
     };
     requestBodies: never;
     headers: {
-        /** @description Quoted private validator of the delivered Report representation, including presentation label and approval annotation; report_revision remains the immutable core identity. */
+        /** @description Quoted private validator of the authorized Report or typed absence representation. A native absence has p18a1, not a forged sealed-core p18r1 identity. Authorization precedes revalidation. */
         ReportEtag: string;
     };
     pathItems: never;
@@ -1301,17 +1333,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Sealed Report with a private ETag. */
+            /** @description Sealed Report or typed native absence, with a private representation ETag. */
             200: {
                 headers: {
                     ETag: components["headers"]["ReportEtag"];
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ReportDetail"];
+                    "application/json": components["schemas"]["ReportRead"];
                 };
             };
-            /** @description Exact immutable report revision remains current. */
+            /** @description Exact authorized Report/absence representation remains current; authorization precedes revalidation. */
             304: {
                 headers: {
                     [name: string]: unknown;

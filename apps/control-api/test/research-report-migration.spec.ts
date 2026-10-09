@@ -205,6 +205,13 @@ describe("P18 disposable PostgreSQL migration proof", () => {
       const scope = await seedRun(database, "_repo");
       const repository = new ResearchReportRepository(database);
       const core = sealedCore();
+      // §54: report absence must still prove real run/workspace membership.
+      expect(await repository.runContext(scope, scope.runId)).toMatchObject({ runId: scope.runId, state: "READY", profileId: null });
+      expect(await repository.runContext(scope, "rrun_unknown")).toBeNull();
+      await expect(repository.runContext({ ...scope, actorUserId: "unknown_p18" }, scope.runId))
+        .rejects.toMatchObject({ code: "RESEARCH_REPORT_FORBIDDEN", status: 403 });
+      const foreign = await seedRun(database, "_context_other");
+      expect(await repository.runContext(scope, foreign.runId)).toBeNull();
       const sealed = await repository.seal(scope, scope.runId, core);
       expect(sealed.frozenCore).toEqual(core);
       expect(sealed.frozenCoreDigest).toMatch(/^[0-9a-f]{64}$/);

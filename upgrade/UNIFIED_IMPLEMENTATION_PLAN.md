@@ -8468,3 +8468,16 @@ Commits on the FE lane: `95b9e736` (shared candle component, readout labels, fil
 Bobby's direction that the chart itself must draw orders, fills, conditional orders and order types replaced the separate "OOS observation" panel on native routes; the other fixed routes keep it. Every order, relation and end state comes from the journal's explicit `order_id` / `parent_order_id` / `oco_group_id` and lifecycle events; no role (entry / SL / TP) is stated that the source did not name. Real API on `rrun_ee50cb82…` at 1280 and 660 px: no overlapping labels, no horizontal overflow, 0 console messages, 0 responses ≥ 400; IS / OOS / Holdout (typed `FIXED_NATIVE_PROFILE_DID_NOT_EXECUTE_HOLDOUT`), bar paging and the six journal relations read. Native optimization summary on Progress, Evidence and Split (trial 41, objective as served, 100 / 100 / 100); Search keeps its typed `NATIVE_OPTIMIZER_POPULATION_SEALED_IN_P05_NOT_SCALAR_WFO_LEDGER` absence. S06: 620 / 620 candidates in 12 pages on the 16 × 400 run, candidate cursor sent alone.
 Open: HiFi equivalence is not claimed (the HiFi file demonstrates `close_target_v2`); active SL/TP account levels unverified on a run that publishes them; the 73-cell matrix and visual baselines not retaken; `market` orders have no price and appear as fills/journal rows, not levels.
 [Receipt, defects found on the real run and open items](./research_loop/evidence/P24/S08_COMPONENT_INTEGRITY_CLAUDE_RECEIPT_2026-10-08.md).
+
+**§54 native Report / FAILED custody — 2026-10-09, BACKEND_SOURCE_DELIVERED:**
+Codex adds generated `ReportRead` (`ReportDetail | ReportUnavailable`); exact
+authorized native runs with no Report return200 typed
+`NOT_PUBLISHED / NATIVE_REPORT_NOT_DELIVERED`, not a fake seal or missing run.
+Existing Reports and revisions are unchanged; scope/ETag/export stay fail-closed.
+Compiled candidate read on the actual preview DB PASS; no deployed HTTP/browser
+claim or runtime rebuild ahead of Claude's union consumer. No frontend or
+baseline edited. S01 native-first Report console gate remains pending consumer
+and scoped same-candidate rebuild/receipt. Two reported FAILED runs are bound,
+sealed forensic evidence (0 orphan window batches), preserved without lifecycle
+rewrite or deletion. Queue§53 keeps16 folds/6,400 total; optionB30 is future,
+not opened. [Response, source proof, inventory and Claude handoff](./research_loop/evidence/P18/NATIVE_REPORT_ABSENCE_AND_FAILED_CUSTODY_2026-10-09.md).

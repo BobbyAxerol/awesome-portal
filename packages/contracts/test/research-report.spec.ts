@@ -8,6 +8,24 @@ const openApiPath = join(ROOT, "openapi", "research-report.openapi.json");
 const generatedPath = join(ROOT, "generated", "research-report.d.ts");
 
 describe("P18 published Research Report contract", () => {
+  it("§54 adds a discriminated typed absence without inventing a native frozen Report", () => {
+    const document = JSON.parse(readFileSync(openApiPath, "utf8"));
+    const schemas = document.components.schemas;
+    expect(document.paths["/api/v1/quantbt/runs/{runId}/report"].get.responses["200"].content["application/json"].schema)
+      .toEqual({ $ref: "#/components/schemas/ReportRead" });
+    expect(schemas.ReportRead.oneOf).toEqual([
+      { $ref: "#/components/schemas/ReportDetail" }, { $ref: "#/components/schemas/ReportUnavailable" },
+    ]);
+    expect(schemas.ReportUnavailable.properties.availability.properties.reason_code.const).toBe("NATIVE_REPORT_NOT_DELIVERED");
+    expect(schemas.ReportUnavailable.properties).not.toHaveProperty("frozen_core");
+    const etag = new RegExp(document.components.headers.ReportEtag.schema.pattern);
+    expect(etag.test(`"p18a1_${"a".repeat(64)}"`)).toBe(true);
+    expect(etag.test(`"p18r1_${"a".repeat(64)}"`)).toBe(true);
+    const fixture = JSON.parse(readFileSync(join(ROOT, "fixtures/research-report.native-unavailable.valid.json"), "utf8"));
+    expect(fixture).toMatchObject({ schema_version: "research.report-unavailable.v1", may_export: false });
+    expect(readFileSync(generatedPath, "utf8")).toContain('ReportRead: components["schemas"]["ReportDetail"] | components["schemas"]["ReportUnavailable"]');
+  });
+
   it("publishes only the immutable report and caller-bound bounded-export operations", () => {
     const openApi = JSON.parse(readFileSync(openApiPath, "utf8")) as {
       paths: Record<string, Record<string, unknown>>;

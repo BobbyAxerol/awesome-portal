@@ -10,6 +10,7 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import type { ResearchScope } from "./contracts";
 import { ResearchCurrentSourcePageQuerySchema, type ResearchCurrentSourceNotApplicableResponse } from "./current-source.contract";
 import { currentSourceExecutionRecipes } from "./current-source-profile";
+import { executionRecipe } from "./execution-recipes";
 import { ResearchCurrentSourceError } from "./current-source.error";
 import { ResearchCurrentSourceService } from "./current-source.service";
 import { ResearchEvidenceSeriesKindSchema } from "./evidence.contract";
@@ -34,7 +35,10 @@ import {
   ResearchReportExportStatusSchema,
   ResearchReportFrozenCoreFailedSchema,
   ResearchReportFrozenCoreV2Schema,
+  ResearchReportUnavailableResponseSchema,
   type ResearchReportDetailResponse,
+  type ResearchReportReadResponse,
+  type ResearchReportUnavailableResponse,
   type ResearchReportExportFormat,
   type ResearchReportExportStatus,
   type ResearchReportFrozenCore,
@@ -311,10 +315,13 @@ export class ResearchReportService {
     };
   }
 
-  async read(scope: ResearchScope, runId: string): Promise<ResearchReportDetailResponse> {
+  async read(scope: ResearchScope, runId: string): Promise<ResearchReportReadResponse> {
     this.requireEnabled();
     const stored = await this.repository.read(scope, runId);
     if (stored) return this.detail(stored, (await this.auditRelation(scope,runId))?.verifiedAudit ?? undefined);
+
+    const absence = await this.nativeReportAbsence(scope, runId);
+    if (absence) return absence;
 
     // LW-02: an old or newly completed WFO terminal may have missed its
     // best-effort report sidecar. Repair only a SUCCEEDED, profile-bound run,
@@ -348,8 +355,30 @@ export class ResearchReportService {
 
   async requestExport(scope: ResearchScope, runId: string, format: ResearchReportExportFormat): Promise<ResearchReportExportStatus> {
     this.requireEnabled();
+    if (!await this.repository.read(scope, runId) && await this.nativeReportAbsence(scope, runId)) {
+      throw new ResearchReportError("NATIVE_REPORT_NOT_DELIVERED", "A sealed Report is not published for this native execution profile.", 409);
+    }
     const created = await this.repository.requestExport(scope, runId, format);
     return this.exportStatus(created, scope.workspaceId);
+  }
+
+  private async nativeReportAbsence(scope: ResearchScope, runId: string): Promise<ResearchReportUnavailableResponse | null> {
+    const run = await this.repository.runContext(scope, runId);
+    if (!run?.profileId) return null;
+    let recipe;
+    try { recipe = executionRecipe(run.profileId, run.profileDigest); }
+    catch { throw new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", "The run's execution profile is incompatible.", 503); }
+    if (recipe.descriptor.schema_version !== "research.native-route-profile.v1") return null;
+    const body = {
+      schema_version: "research.report-unavailable.v1" as const,
+      read_authority: "PORTAL_PERSISTED_RESEARCH" as const,
+      run_id: run.runId, display_label: run.displayLabel, run_state: run.state,
+      availability: { state: "NOT_PUBLISHED" as const, reason_code: "NATIVE_REPORT_NOT_DELIVERED" as const },
+      execution_profile: { id: run.profileId, digest: run.profileDigest },
+      as_of_utc_ms: run.updatedAtUtcMs, may_export: false as const,
+    };
+    return ResearchReportUnavailableResponseSchema.parse({ ...body,
+      etag: `"p18a1_${createHash("sha256").update(canonicalResearchJson(body)).digest("hex")}"` });
   }
 
   async readExport(scope: ResearchScope, runId: string, jobId: string): Promise<ResearchReportExportStatus> {

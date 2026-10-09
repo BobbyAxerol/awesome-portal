@@ -500,6 +500,28 @@ export const ResearchReportDetailResponseSchema = z.object({
   }).strict(),
 }).strict();
 
+/** A known run with no Report is not a missing run or a fabricated seal. */
+export const ResearchReportUnavailableResponseSchema = z.object({
+  schema_version: z.literal("research.report-unavailable.v1"),
+  read_authority: z.literal("PORTAL_PERSISTED_RESEARCH"),
+  run_id: ResearchReportRunIdSchema,
+  display_label: z.string().regex(/^R-[A-Z0-9]{1,8}-[0-9]{3,6}$/).nullable(),
+  run_state: z.enum(["DRAFT", "QUEUED", "RUNNING", "SEALING", "READY", "FAILED", "CANCELLED", "RECOVERY_REQUIRED"]),
+  availability: z.object({
+    state: z.literal("NOT_PUBLISHED"),
+    reason_code: z.literal("NATIVE_REPORT_NOT_DELIVERED"),
+  }).strict(),
+  execution_profile: z.object({ id: z.string().min(1).max(192), digest: DigestSchema }).strict(),
+  as_of_utc_ms: UtcMsSchema,
+  etag: z.string().regex(/^"p18a1_[0-9a-f]{64}"$/),
+  may_export: z.literal(false),
+}).strict();
+
+/** Existing ReportDetail and frozen revisions are unchanged; narrow by schema_version. */
+export const ResearchReportReadResponseSchema = z.discriminatedUnion("schema_version", [
+  ResearchReportDetailResponseSchema, ResearchReportUnavailableResponseSchema,
+]);
+
 export const ResearchReportExportStatusSchema = z.object({
   schema_version: z.literal("research.report-export.v1"),
   job_id: ResearchReportExportJobIdSchema,
@@ -522,4 +544,6 @@ export type ResearchReportFrozenCoreV2 = z.infer<typeof ResearchReportFrozenCore
 export type ResearchReportFrozenCoreFailed = z.infer<typeof ResearchReportFrozenCoreFailedSchema>;
 export type ResearchReportFinalAudit = z.infer<typeof ReportFinalAuditSchema>;
 export type ResearchReportDetailResponse = z.infer<typeof ResearchReportDetailResponseSchema>;
+export type ResearchReportUnavailableResponse = z.infer<typeof ResearchReportUnavailableResponseSchema>;
+export type ResearchReportReadResponse = z.infer<typeof ResearchReportReadResponseSchema>;
 export type ResearchReportExportStatus = z.infer<typeof ResearchReportExportStatusSchema>;

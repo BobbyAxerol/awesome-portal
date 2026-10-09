@@ -103,6 +103,7 @@ function subject() {
       return stored;
     }),
     read: vi.fn().mockImplementation(async () => stored ?? null),
+    runContext: vi.fn().mockResolvedValue(null),
     requestExport: vi.fn(), readExport: vi.fn(), download: vi.fn(), claimOne: vi.fn(), completeClaim: vi.fn(), failClaim: vi.fn(),
     sealedArtifactParts: vi.fn().mockResolvedValue(null),
     // X2 · P18-T10: a PRIMARY run with no AUDIT_OF_SELECTION child.
@@ -122,7 +123,7 @@ describe("P18 immutable Report and bounded reproducible export", () => {
     const enriched = JSON.parse(readFileSync(resolve(process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts"), "fixtures/research-enriched-analysis.healthy.valid.json"), "utf8"));
     value.stored!.enrichedAnalysis = enriched;
     value.readers.evidence.bundle.mockRejectedValue(new Error("no source refresh on Report GET"));
-    const after = await value.service.read(scope, "run_p18");
+    const after = ResearchReportDetailResponseSchema.parse(await value.service.read(scope, "run_p18"));
     expect(after.enriched_analysis).toEqual(enriched);
     expect(after.enriched_analysis_availability).toEqual({ state: "AVAILABLE", reason_code: null });
     expect(after.frozen_core).toEqual(before.frozen_core);
@@ -162,7 +163,7 @@ describe("P18 immutable Report and bounded reproducible export", () => {
     expect(core.metrics.find((item) => item.key === "OOS_BETA")?.value).toBe(analytics.metrics.beta.value);
     openApiValidator("research-report.openapi.json", "ReportDetail").assert(report);
     value.readers.evidence.bundle.mockRejectedValue(new Error("sealed report must not reopen Evidence"));
-    expect((await value.service.read(scope, "run_p18")).frozen_core).toEqual(core);
+    expect(ResearchReportDetailResponseSchema.parse(await value.service.read(scope, "run_p18")).frozen_core).toEqual(core);
   });
 
   it("E14 seals the new FIXED engine OOS fact without replacing the broader Hub metric or resealing old reports", async () => {
@@ -178,7 +179,7 @@ describe("P18 immutable Report and bounded reproducible export", () => {
     expect(core.metrics.find(item => item.key === "NET_OOS_RETURN_FRACTION")).toMatchObject({ value: "0.012", scope: "OOS", origin: "ENGINE_DIRECT" });
     openApiValidator("research-report.openapi.json", "ReportDetail").assert(report);
     value.readers.evidence.bundle.mockRejectedValue(new Error("An immutable report must not reopen its readers"));
-    expect((await value.service.read(scope, "run_p18")).frozen_core).toEqual(core);
+    expect(ResearchReportDetailResponseSchema.parse(await value.service.read(scope, "run_p18")).frozen_core).toEqual(core);
   });
 
   it("P18-T01/T02/T07/T09 seals exact P13--P17 identity once without engine rerun or unsupported metric claims", async () => {
@@ -328,12 +329,12 @@ describe("P18 immutable Report and bounded reproducible export", () => {
     const value = subject();
     const sealed = await value.service.materialize(scope, "run_p18");
     value.stored!.displayLabel = "R-P04-001";
-    const read = await value.service.read(scope, "run_p18");
+    const read = ResearchReportDetailResponseSchema.parse(await value.service.read(scope, "run_p18"));
     expect(read.display_label).toBe("R-P04-001");
     expect(read.frozen_core).toEqual(sealed.frozen_core);
     expect(read.etag).not.toBe(sealed.etag);
     value.stored!.annotation = { state: "AVAILABLE", text: "Approval annotation changed.", sourceUpdatedAtUtcMs: 1_727_000_003_000 };
-    const annotated = await value.service.read(scope, "run_p18");
+    const annotated = ResearchReportDetailResponseSchema.parse(await value.service.read(scope, "run_p18"));
     expect(annotated.etag).not.toBe(read.etag);
     expect(annotated.report_revision).toBe(sealed.report_revision);
   });
