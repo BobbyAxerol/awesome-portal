@@ -8,6 +8,8 @@ import {ResearchNativeReportSchema} from "../src/research/native-report.contract
 import {readFileSync} from "node:fs";
 import {resolve} from "node:path";
 import {openApiValidator} from "./research-rf05-openapi";
+import {ResearchFreezeService} from "../src/research/freeze.service";
+import {notYet} from "../src/research/artifact-verify.contract";
 const scope={workspaceId:"ws_native",actorUserId:"usr_native"},recipe=executionRecipe("p10.delta-event-driven-limit-oco-search-1h.v1");
 const config={QUERY_CURSOR_ACTIVE_KEY_ID:"k1",QUERY_CURSOR_KEYS_JSON:JSON.stringify({k1:"native-test-query-key-at-least-32-bytes"}),QUERY_CURSOR_TTL_SECONDS:900};
 export function nativeCustody(n=300){
@@ -57,6 +59,29 @@ describe("§55 complete bounded native read custody",()=>{
   it("reads never prepare files, enqueue compute or write a sidecar",async()=>{
     const v=subject();await v.service.read(scope,"rrun_native");
     expect(v.repo.read).toHaveBeenCalledOnce();expect(v.repo.binding).not.toHaveBeenCalled();expect(v.repo.store).not.toHaveBeenCalled();
+  });
+  it("native Freeze ETag uses persisted observations, not the read transaction clock",async()=>{
+    const v=subject(3),c=v.stored.custody;
+    const row={kind:"DURABLE",runId:c.run_id,executionProfileId:c.execution_profile_id,
+      adapterContractDigest:recipe.descriptor.adapter_contract_digest,requestedSpecDigest:c.requested_spec_digest,
+      effectiveSpecDigest:c.effective_spec_digest,datasetBindingDigest:c.dataset_binding_digest,
+      manifestDigest:c.manifest_digest,projection:null,jobState:"SUCCEEDED",
+      sourceAsOfUtcMs:v.stored.checkedAtUtcMs-1000,asOfUtcMs:v.stored.checkedAtUtcMs+1000};
+    const repository={hub:vi.fn().mockImplementation(async()=>({...row,asOfUtcMs:row.asOfUtcMs++}))};
+    const bytes={latest:vi.fn().mockResolvedValue(notYet("NOT_VERIFIED","P05_BYTES_NOT_VERIFIED"))};
+    const service=new ResearchFreezeService(repository as never,{FEATURE_RESEARCH_FREEZE:"true"} as never,
+      undefined,bytes as never,v.service);
+    const first=await service.detail(scope,c.run_id,{}),second=await service.detail(scope,c.run_id,{});
+    expect(first.as_of_utc_ms).toBe(v.stored.checkedAtUtcMs);
+    expect(second).toEqual(first);
+    bytes.latest.mockResolvedValue({...notYet("NOT_VERIFIED","P05_BYTES_NOT_VERIFIED"),state:"MATCH",
+      reason_code:null,receipt_id:`rabv_${"1".repeat(32)}`,verified_at_utc_ms:v.stored.checkedAtUtcMs+5000,
+      artifact_revision:1,expected_manifest_digest:c.manifest_digest,observed_manifest_digest:c.manifest_digest,
+      parts_checked:1,documents_checked:1});
+    const changed=await service.detail(scope,c.run_id,{});
+    expect(changed.as_of_utc_ms).toBe(v.stored.checkedAtUtcMs+5000);
+    expect(changed.etag).not.toBe(first.etag);
+    expect(changed.artifact_bytes.state).toBe("MATCH");
   });
   it("rejects forged identity, partial population and changed parameters",()=>{
     const source=nativeCustody(3);

@@ -1,6 +1,6 @@
 # Native S06/S07/Report — Claude consumer handoff (§55)
 
-Status: BACKEND_SOURCE_AND_REAL_RETAINED_DATA_DELIVERED. Frontend integration,
+Status: BACKEND_DELIVERED / DEPLOYED_PREVIEW_HTTP_PASS. Frontend integration,
 visual/browser acceptance and P24/release are separate. Preserve the accepted
 HiFi/components, especially the S08 chart at `6fb34bd5`; Codex edited no frontend.
 
@@ -53,6 +53,9 @@ do not make a new route or hand-parse its server strings.
   names the P05-rewritten parts. Parameter digest hashes canonical parameters.
 - `native_freeze.integrity` says `MATCH_AT_PREPARATION`, publishes scope/time
   and explicitly says `current_bytes_rechecked=false`.
+- Native Freeze `as_of_utc_ms` is the newest persisted source/preparation/byte
+  observation, not browser refresh time. ETag revalidates unchanged GETs;
+  explicit Verify invalidates it with its new durable byte receipt.
 - Keep scalar certification `NOT_APPLICABLE` and missing source wall-clock
   chronology `NOT_PUBLISHED`; no source bytes become a method certificate.
 - Native Report windows are `IS`, `OOS`, `HOLDOUT`; display the source's

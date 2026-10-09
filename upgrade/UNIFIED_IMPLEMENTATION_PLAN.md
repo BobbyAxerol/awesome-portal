@@ -8484,7 +8484,7 @@ not opened. [Response, source proof, inventory and Claude handoff](./research_lo
 
 ## 2026-10-09 §55 — Native Search, Freeze and full Report/export
 
-**BACKEND_SOURCE_DELIVERED / REAL_RETAINED_CANDIDATE_PASS**. Supersedes §54's
+**BACKEND_DELIVERED / DEPLOYED_PREVIEW_HTTP_PASS**. Supersedes §54's
 native reader limitation for qualified/prepared data, not its unknown-run,
 tenant or immutable-seal protections. Codex edited backend/contracts only;
 preserved Claude S08 implementation at6fb34bd5.
@@ -8504,3 +8504,11 @@ P24/product/release claim. Native source-not-executed Holdout and unavailable
 sampler/member identity/wall-clock facts stay explicitly typed.
 [Backend proof, gates and capacity decision](./research_loop/evidence/P18/NATIVE_SEARCH_FREEZE_REPORT_DELIVERY_2026-10-09.md).
 [Claude exact contract/UI handoff](./research_loop/evidence/P18/NATIVE_READERS_CLAUDE_HANDOFF_2026-10-09.md).
+
+Actual signed private transport and24 API readback calls PASS, including
+100 trials, fresh Verify MATCH, native/fixed Report JSON/CSV downloads,
+conditional304, workspace/cursor/auth negatives and own-session revocation.
+Native Freeze ETag follow-up removes read-clock churn without hiding new byte
+receipts. No frontend or web rebuild; DB/NATS/artifact volumes preserved.
+Initial source commit748e241b; exact follow-up is in this addendum's commit.
+See runtime receipt for committed checkout/image identity and full responses.

@@ -1,6 +1,6 @@
 # §55 — Native Search / Freeze / Report backend delivery
 
-Status: BACKEND_SOURCE_DELIVERED / REAL_RETAINED_CANDIDATE_PASS;
+Status: BACKEND_DELIVERED / DEPLOYED_PREVIEW_HTTP_PASS;
 FRONTEND_CONSUMER_AND_BROWSER_ACCEPTANCE_PENDING. Not P24/release.
 
 ## Implementation
@@ -71,6 +71,46 @@ values. Public fixtures include no filesystem locator/principal/lease/key.
   snapshot parity:348 files match; generator --check idempotent.
 - 400-row unit proof includes selection beyond the first200-row page.
 - Normal repository hook once for the coherent delivery; no bypass.
+
+Initial delivery commit: `748e241b` (45 files, +9,137/−72; fixture/generated
+data accounts for most lines; no frontend). Its normal hook passed323
+contracts tests and2,447 Control API tests (3 skipped), the disposable
+PostgreSQL restore drill, route census270/collisions0/protected kernel MATCH,
+and the repository's N29/EDS12/static/security checks.
+
+The deployed readback found native Freeze included the read transaction's
+clock in its representation, preventing conditional304. The follow-up uses
+the newest persisted source/preparation/byte-verification timestamp instead.
+No timestamp claims files were read during GET. Regression checks cover
+stable repeat GETs and ETag invalidation by a new Verify receipt:17 focused
+Search/Freeze tests PASS; Control API build PASS. The readback's Ajv uses the
+repository-compatible non-Unicode regex mode for existing quoted ETag patterns.
+
+### Actual backend HTTP result
+
+Installed signed preparation → authenticated Search/Freeze/Report →100 trials
+over5pages → conditional304 → fresh explicit Verify (`artifact_bytes=MATCH`)
+→ changed Freeze ETag →304 on the new representation →3 fixed-native Reports
+→ authenticated JSON/CSV checksum downloads all PASS. Foreign workspace404,
+anonymous401 and forged cursor400 PASS. WFO Report core remains unchanged.
+Own test session was revoked. No engine rerun or web build.
+
+Pre-commit deployed check (24 recorded API calls, plus login/private CLI,
+anonymous rejection/logout) is preserved separately at
+`/home/bobby/.local/state/portal-research-p23/20261009-native-read-report-http-etag-candidate.json`,
+SHA-256 `b42d28719805a4cc231ea531e38ad2be612f4e9340962dce1f54a5174528978c`.
+It tested the exact follow-up source before commit; its older source stamp is
+not represented as final committed-image evidence. The final readback below
+records the committed checkout and actual runtime identity after landing.
+
+Runtime image content at this check: Control API
+`sha256:fb5be5a9964cb6d6d2c3bab314b8b32c50db0f782d7bc106f5c7a973929ad58f`;
+Portal API/worker
+`sha256:20da76618efb92e1b8930339a6797aba3b5bc72849bdf5173c62617cf554b2b5`.
+The web image remains
+`sha256:09c5644103afbf598ff304c82501624b4accead80205c4625c1f7c5276f8291f`.
+Web/DB/NATS container identities and mount sets were preserved; backend mount
+sets, artifact and DB volumes are unchanged. Runtime JSON records final IDs.
 
 Deployed acceptance script: `scripts/research-preview/native-read-report-readback.mjs`.
 It checks installed signed preparation, authenticated S06/S07/Report,100-row

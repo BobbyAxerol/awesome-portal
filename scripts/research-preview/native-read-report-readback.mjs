@@ -20,7 +20,7 @@ const identity=JSON.parse(readFileSync('/home/bobby/.config/portal-research-prev
 assert.equal(identity.project,'portal-research-preview');
 const origin=readFileSync('/home/bobby/.config/portal-research-preview/preview.env','utf8').match(/^PORTAL_PUBLIC_ORIGIN=(.+)$/m)?.[1];
 assert(origin);
-const validators={},ajv=new Ajv({strict:false,allErrors:true});
+const validators={},ajv=new Ajv({strict:false,allErrors:true,unicodeRegExp:false});
 for(const [file,names] of [['search',['SearchDetail']],['freeze',['FreezeDetail','FreezeVerification']],['report',['ReportDetail']]]){
   const d=JSON.parse(readFileSync(resolve(root,`packages/contracts/openapi/research-${file}.openapi.json`)));
   for(const name of names)validators[name]=ajv.compile({$ref:`#/components/schemas/${name}`,components:d.components});
@@ -67,6 +67,10 @@ try{
   assert.equal(verify.native_freeze.selected_parameters_digest,freeze.native_freeze.selected_parameters_digest);
   assert.equal(verify.artifact_bytes.state,'MATCH');
   calls.push({method:'POST',path:at(run,'freeze/verify'),status:200});
+  const verifiedFreeze=await get(at(run,'freeze'),'FreezeDetail');
+  assert.equal(verifiedFreeze.artifact_bytes.receipt_id,verify.artifact_bytes.receipt_id);
+  assert.notEqual(verifiedFreeze.etag,freeze.etag,'FRESH_VERIFY_INVALIDATES_PREVIOUS_FREEZE_ETAG');
+  await get(at(run,'freeze'),null,304,{'if-none-match':verifiedFreeze.etag});
   const fixed=[];
   for(const f of proof.fixed_native_reports){const r=await get(at(f.run_id,'report'),'ReportDetail');
     assert.equal(r.frozen_core.native_report.kind,'NATIVE_FIXED');assert.equal(r.frozen_core.native_report.optimization,null);
@@ -94,7 +98,8 @@ try{
   assert.equal(wfoDigest,proof.wfo_digest_unchanged,'WFO_REPORT_CORE_IMMUTABLE');
   result={at_utc:new Date().toISOString(),result:'PASS',authority:'DEPLOYED_SHARED_PREVIEW_AUTHENTICATED_HTTP_AND_INSTALLED_PRIVATE_SIGNED_TRANSPORT',
     identity,calls,run_id:run,workspace_id:workspace,selected_trial_number:41,selected_trial_ordinal:42,trials_seen:ids.length,
-    parameter_digest:freeze.native_freeze.selected_parameters_digest,report_revision:report.report_revision,verify,fixed_native_reports:fixed,exports,
+    parameter_digest:freeze.native_freeze.selected_parameters_digest,report_revision:report.report_revision,
+    responses:{search,freeze:verifiedFreeze,report},verify,fixed_native_reports:fixed,exports,
     wfo_frozen_core_digest_unchanged:wfoDigest,engine_rerun:false,frontend_visual_acceptance:'PENDING_CLAUDE_CONSUMER',production_dev_main_changed:false};
 }finally{
   if(csrf){const logout=await context.request.post(base+'/api/auth/logout',{headers:{origin,'x-portal-csrf':csrf}});assert(logout.ok(),'OWN_REVIEW_SESSION_REVOKED');}

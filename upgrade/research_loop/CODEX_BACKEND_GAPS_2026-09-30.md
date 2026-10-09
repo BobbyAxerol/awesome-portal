@@ -3191,7 +3191,7 @@ slice, not an engine/source upgrade and not P24/product-release approval.
    if required for the real receipt, remain scoped to backend forward migration
    and its source image; no database reset or engine rerun.
 
-Status: BACKEND_SOURCE_DELIVERED / REAL_RETAINED_CANDIDATE_PASS.
+Status: BACKEND_DELIVERED / DEPLOYED_PREVIEW_HTTP_PASS.
 Frontend consumer/browser acceptance is separate; not P24/release.
 
 Published additive `SearchDetail.native_search`, `FreezeDetail.native_freeze`,
@@ -3206,4 +3206,14 @@ GETs never read Parquet or call the engine. Sampler/member identities and
 freeze wall-clock absence remain typed; P08 and P05 manifest hashes are distinct.
 [Receipt, resource decision and scoped runtime evidence](./evidence/P18/NATIVE_SEARCH_FREEZE_REPORT_DELIVERY_2026-10-09.md).
 [Claude consumer prompt and exact mappings](./evidence/P18/NATIVE_READERS_CLAUDE_HANDOFF_2026-10-09.md).
+
+Runtime follow-up: actual signed private transport and24 authenticated API
+calls PASS, including100-trial paging, S06/S07/Report hash parity, fresh byte
+Verify, conditional304, fixed-native Reports and JSON/CSV checksums; security
+negative matrix and own-session revoke PASS. Fixed a native Freeze ETag clock
+bug caught by readback; it now uses persisted observation times. Backend-only
+preview rollout preserves web/DB/NATS/mounts; no engine rerun, frontend edit,
+profile change or remote push. Final committed identity and responses live
+in the linked receipt's private runtime JSON; Claude's component/browser
+acceptance remains open, not a backend/source-owner wait.
 

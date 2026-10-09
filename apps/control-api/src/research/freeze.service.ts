@@ -153,6 +153,10 @@ export class ResearchFreezeService {
         throw new ResearchFreezeError("RESEARCH_FREEZE_UNAVAILABLE","Native Freeze source revisions disagree.",503);
       if(query.fold!==undefined)throw new ResearchFreezeError("RESEARCH_FREEZE_INVALID","Native IS study has no outer fold selector.",400);
       response={...response,native_freeze:this.nativeRead!.freeze(native),availability:availability("AVAILABLE",null),readiness:"PARTIAL",
+        // Native GET observes persisted evidence, not freshly re-read files.
+        // A transaction clock would change its representation/ETag on every
+        // request and falsely make unchanged custody look fresh.
+        as_of_utc_ms:Math.max(row.sourceAsOfUtcMs,native.checkedAtUtcMs,bytes.verified_at_utc_ms??0),
         revision:`p16r1_${sha256ResearchJson({native:native.digest})}`};
       const {etag:_etag,...representation}=response;
       response.etag=`"p16r1_${sha256ResearchJson(representation)}"`;
