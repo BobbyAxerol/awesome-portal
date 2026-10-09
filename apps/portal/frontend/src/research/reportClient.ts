@@ -37,6 +37,14 @@ import type { ResearchState } from "./state";
 type ReportSchemas = ReportComponents["schemas"];
 
 export type ReportDetail = ReportSchemas["ReportDetail"];
+/** §54: a KNOWN run whose full Report is not delivered answers 200 with this typed absence, never a 404 and never a Report. */
+export type ReportUnavailable = ReportSchemas["ReportUnavailable"];
+/** What `researchReportDetailGetV1` answers; narrow on `schema_version` before touching `frozen_core`. */
+export type ReportRead = ReportSchemas["ReportRead"];
+
+export function isReportUnavailable(read: ReportRead): read is ReportUnavailable {
+  return read.schema_version === "research.report-unavailable.v1";
+}
 /** Every sealed core shape, including a failed run's sheet (X2 · spec 09 T06). */
 export type AnyFrozenCore = ReportSchemas["FrozenCore"];
 /** X2: the sheet of a run that FAILED or was cancelled — no claim, no metric. */
@@ -181,7 +189,7 @@ export function enrichedAbsenceOfReport(report: ReportDetail | null | undefined)
 export const reportApi = {
   /** `researchReportDetailGetV1` */
   detail: (runId: string, options: { workspaceId?: string; etag?: string | null; signal?: AbortSignal } = {}) =>
-    call<ReportDetail>(`${runPath(runId)}${query(options.workspaceId)}`, {
+    call<ReportRead>(`${runPath(runId)}${query(options.workspaceId)}`, {
       etag: options.etag,
       signal: options.signal,
     }).then((answer) => {

@@ -19,8 +19,11 @@ import {
   reportApi,
   reportState,
   toReportRefusal,
+  isReportUnavailable,
   type ReportDetail,
+  type ReportRead,
   type ReportRefusal,
+  type ReportUnavailable,
 } from "./reportClient";
 import { researchState, type ResearchState } from "./state";
 
@@ -28,12 +31,15 @@ import { researchState, type ResearchState } from "./state";
  * The last exact copy per `workspace|run`. In memory only — nothing the
  * reader can edit, and nothing that survives a reload.
  */
-const held = new Map<string, ReportDetail>();
+const held = new Map<string, ReportRead>();
 
 /** For tests: forget every held copy. */
 export function forgetHeldReports(): void {
   held.clear();
 }
+
+/** The sentence for a known run whose full Report is not delivered (§54); the server's reason code stays in the tooltip. */
+export const NATIVE_REPORT_BANNER = "A full Report is not delivered for this recipe.";
 
 const UNEXPECTED_304: ReportRefusal = {
   code: null,
@@ -47,6 +53,8 @@ const UNEXPECTED_304: ReportRefusal = {
 
 export interface ReportController {
   report: ReportDetail | null;
+  /** §54: the typed absence of a known run's full Report (native recipe); null when a Report or a refusal answered. */
+  unavailable?: ReportUnavailable | null;
   refusal: ReportRefusal | null;
   state: ResearchState;
   inFlight: boolean;
@@ -62,12 +70,13 @@ export function useReport(runId: string, options: { workspaceId?: string } = {})
   const { workspaceId } = options;
   const key = `${workspaceId ?? ""}|${runId}`;
   const [report, setReport] = useState<ReportDetail | null>(null);
+  const [unavailable, setUnavailable] = useState<ReportUnavailable | null>(null);
   const [refusal, setRefusal] = useState<ReportRefusal | null>(null);
   const [inFlight, setInFlight] = useState(true);
   const [notModified, setNotModified] = useState(false);
   const [requestCount, setRequestCount] = useState(0);
   const [generation, setGeneration] = useState(0);
-  const current = useRef<ReportDetail | null>(null);
+  const current = useRef<ReportRead | null>(null);
   const reads = useEvidenceReadsAllowed(runId, DENY_NO_REPORT, workspaceId);
 
   useEffect(() => {
@@ -78,6 +87,7 @@ export function useReport(runId: string, options: { workspaceId?: string } = {})
       held.delete(key);
       current.current = null;
       setReport(null);
+      setUnavailable(null);
       setRefusal(toReportRefusal(new PortalApiError("Research report was not found.", 404, "RESEARCH_REPORT_NOT_FOUND", null), "report"));
       setInFlight(false);
       return;
@@ -96,14 +106,26 @@ export function useReport(runId: string, options: { workspaceId?: string } = {})
             return;
           }
           current.current = copy;
-          setReport(copy);
+          if (isReportUnavailable(copy)) {
+            setReport(null);
+            setUnavailable(copy);
+          } else {
+            setUnavailable(null);
+            setReport(copy);
+          }
           setNotModified(true);
           setRefusal(null);
           return;
         }
         held.set(key, answer);
         current.current = answer;
-        setReport(answer);
+        if (isReportUnavailable(answer)) {
+          setReport(null);
+          setUnavailable(answer);
+        } else {
+          setUnavailable(null);
+          setReport(answer);
+        }
         setNotModified(false);
         setRefusal(null);
       })
@@ -126,6 +148,8 @@ export function useReport(runId: string, options: { workspaceId?: string } = {})
   const keeps = refusal !== null && report !== null && !refusal.terminal;
   const state: ResearchState = refusal
     ? { state: refusal.state, reason: refusal.message, mayRetry: refusal.mayRetry, retainsContent: keeps }
+    : unavailable !== null && !inFlight
+      ? { state: "empty", reason: NATIVE_REPORT_BANNER, detail: unavailable.availability.reason_code, mayRetry: false, retainsContent: false }
     : report === null
       ? researchState({ kind: "in-flight", hasAcceptedResponse: false })
       : inFlight
@@ -134,6 +158,7 @@ export function useReport(runId: string, options: { workspaceId?: string } = {})
 
   return {
     report: refusal && !keeps ? null : report,
+    unavailable: refusal ? null : unavailable,
     refusal,
     state,
     inFlight,

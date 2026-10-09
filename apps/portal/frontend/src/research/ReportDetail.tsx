@@ -53,6 +53,7 @@ import {
   type FrozenCoreV2,
   type ReportAvailability,
   type ReportDetail,
+  type ReportUnavailable,
   type ReportEquity,
   type ReportFolds,
 } from "./reportClient";
@@ -62,7 +63,7 @@ import { equitySvg } from "./reportEquity";
 import { RunExitBar } from "./RunExitBar";
 import { executeHref, hubHref, lineageRunHref, newRunHref, progressHref, libraryHref, rcHref, withWorkspace, type LinkCursor } from "./runLinks";
 import { runStatusWord, runTerminalState, type RunTerminalState } from "./runTerminalState";
-import type { ReportController } from "./useReport";
+import { NATIVE_REPORT_BANNER, type ReportController } from "./useReport";
 import type { ReportExportController } from "./useReportExport";
 import { iso } from "./utcMinute";
 import { FailedSheet, FinalAuditBlock } from "./ReportFailedSheet";
@@ -1704,6 +1705,24 @@ function reportExit(status: string | null): RunTerminalState {
   };
 }
 
+/**
+ * §54: a KNOWN run whose full Report is not delivered (a native recipe) answers 200 with a typed absence. It is drawn on the same exit
+ * face as a run with no sealed report — the server's sentence in the banner, its reason code, the execution profile and the run id in the
+ * tooltip — with no sheet, no metric, no seal and no export (`may_export` is false). Nothing here names a recipe: the face is the server's.
+ */
+export function reportUnavailableExit(unavailable: ReportUnavailable): RunTerminalState {
+  const terminal = runTerminalState({ status: null, read: "ok" });
+  const { state, reason_code } = unavailable.availability;
+  return {
+    ...terminal,
+    phase: "completed",
+    banner: NATIVE_REPORT_BANNER,
+    tip: `The server answered this run's Report as ${state.toLowerCase().replace(/_/g, " ")} (${reason_code}) for execution profile ${unavailable.execution_profile.id}. This run's results are in Evidence, Execute and Split; no Report is sealed and none can be exported.`,
+    tone: "quiet",
+    exits: ["progress", "hub", "library"],
+  };
+}
+
 export type ReportFace = { kind: "sheet" } | { kind: "exit"; terminal: RunTerminalState };
 
 /**
@@ -1765,6 +1784,30 @@ export function ReportScreen({ runId, workspaceId, linkedAudit, supplement, curs
   useEffect(() => {
     if (unknownRun) markRunUnknown(runId);
   }, [unknownRun, runId]);
+
+  if (controller.unavailable) {
+    const typed = controller.unavailable;
+    return (
+      <div className="rr-page" data-screen="run-report" data-run={runId} data-report-state="empty" data-report-unavailable={typed.availability.reason_code} data-run-phase="completed" data-report-revision="">
+        <style>{SHEET_CSS}</style>
+        <article className="rr-sheet" aria-label="Run report sheet">
+          <header className="rr-head" data-panel="header">
+            <div className="rr-head-text">
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <h1 className="rr-title" data-report-title>
+                  Run report
+                </h1>
+                <span className="rr-runchip rr-long" data-run-chip>
+                  <ShortId id={runId} label="run" />
+                </span>
+              </div>
+            </div>
+          </header>
+          <RunExitBar runId={runId} state={reportUnavailableExit(typed)} cursor={cursor} />
+        </article>
+      </div>
+    );
+  }
 
   if (face.kind === "exit") {
     const unavailable = face.terminal.phase === "unavailable";
