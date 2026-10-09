@@ -292,7 +292,11 @@ export class ExecutionSharedReadRepository {
          ON CONFLICT (cache_key) DO UPDATE SET
            etag=EXCLUDED.etag, authority=EXCLUDED.authority,
            freshness=EXCLUDED.freshness, completeness=EXCLUDED.completeness,
-           as_of=EXCLUDED.as_of, response_body=EXCLUDED.response_body,
+           as_of=EXCLUDED.as_of,
+           -- same etag = same bytes: keep the stored value so an unchanged refresh writes no new TOAST chunks
+           response_body=CASE WHEN execution_shared_read_cache.etag = EXCLUDED.etag
+                              THEN execution_shared_read_cache.response_body
+                              ELSE EXCLUDED.response_body END,
            response_bytes=EXCLUDED.response_bytes, stored_at=EXCLUDED.stored_at,
            expires_at=EXCLUDED.expires_at
          RETURNING response_body,etag,authority,freshness,completeness,as_of,stored_at,expires_at
@@ -630,6 +634,42 @@ export class ExecutionSharedReadRepository {
         this.config.EXECUTION_EDGE_CURRENT_SOURCE_LEASE_TTL_MS],
     );
     return { kind: "ACCEPTED", waitMs };
+  }
+
+  /**
+   * Return the cache's disk space when its file has outgrown `limitBytes` and nothing in it is still live.
+   * VACUUM only marks space reusable, so a rewrite burst leaves the file at its high-water mark; TRUNCATE is the cheap
+   * way back and is safe here because every row is recomputable. A live entry or a short lock wait defers the reclaim
+   * to the next sweep instead of blocking readers.
+   */
+  async reclaimPhysicalSpace(limitBytes: number): Promise<{ reclaimed: boolean; physicalBytes: number; reason: "WITHIN_LIMIT" | "LIVE_ENTRIES" | "LOCKED" | "RECLAIMED" }> {
+    if (!Number.isInteger(limitBytes) || limitBytes < 1) throw new Error("shared-read cache physical limit is invalid");
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SET LOCAL lock_timeout = '1s'");
+      const size = await client.query<{ bytes: string }>("SELECT pg_total_relation_size('execution_shared_read_cache')::bigint AS bytes");
+      const physicalBytes = safeCount(size.rows[0]?.bytes ?? "0", "shared-read cache physical bytes");
+      if (physicalBytes <= limitBytes) {
+        await client.query("ROLLBACK");
+        return { reclaimed: false, physicalBytes, reason: "WITHIN_LIMIT" };
+      }
+      await client.query("LOCK TABLE execution_shared_read_cache IN ACCESS EXCLUSIVE MODE");
+      const live = await client.query<{ live: boolean }>("SELECT EXISTS (SELECT 1 FROM execution_shared_read_cache WHERE expires_at > clock_timestamp()) AS live");
+      if (live.rows[0]?.live) {
+        await client.query("ROLLBACK");
+        return { reclaimed: false, physicalBytes, reason: "LIVE_ENTRIES" };
+      }
+      await client.query("TRUNCATE execution_shared_read_cache");
+      await client.query("COMMIT");
+      return { reclaimed: true, physicalBytes, reason: "RECLAIMED" };
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      if ((error as { code?: string }).code === "55P03") return { reclaimed: false, physicalBytes: 0, reason: "LOCKED" };
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   /**

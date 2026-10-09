@@ -226,6 +226,8 @@ cmd_status() {
   local port
   port="$(sed -n 's/^PORTAL_HTTP_PORT=//p' "$ENV_FILE")"
   curl -fsS -o /dev/null -w "web :$port → %{http_code}\n" "http://127.0.0.1:$port/" || true
+  # Postgres size guard: a table over 5 GB is a bloat signal (see HOTFIX_REQUEST_2026-10-09_POSTGRES_CACHE_BLOAT.md)
+  "$ROOT/scripts/postgres-bloat-report.sh" --fail-over-gb 5 || echo "preview: POSTGRES SIZE WARNING above" >&2
 }
 
 cmd_down() { compose down; }

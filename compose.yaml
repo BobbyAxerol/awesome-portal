@@ -233,8 +233,14 @@ services:
       POSTGRES_USER: portal
       POSTGRES_PASSWORD: portal
       POSTGRES_DB: portal_control
+    # One reviewed Postgres config for every stack (deploy/postgres/portal.conf): the default config let the
+    # Execution cache TOAST grow to 92 GB. Memory-limited so shared_buffers/effective_cache_size stay truthful.
+    command: ["postgres", "-c", "config_file=/etc/postgresql/portal.conf"]
+    mem_limit: 4g
+    shm_size: 256m
     volumes:
       - portal-postgres-data:/var/lib/postgresql/data
+      - ./deploy/postgres/portal.conf:/etc/postgresql/portal.conf:ro
     expose:
       - "5432"
     networks:

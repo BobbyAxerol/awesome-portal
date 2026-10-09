@@ -18,6 +18,8 @@ export interface SharedReadCacheSweepReport {
   deletedRows: number;
   deletedBytes: number;
   profiles: SharedReadCacheSweepProfile[];
+  /** Set when the cache file had outgrown its physical limit: whether the sweep gave the space back, and why not if it did not. */
+  physicalReclaim: { reclaimed: boolean; physicalBytes: number; reason: "DISABLED" | "WITHIN_LIMIT" | "LIVE_ENTRIES" | "LOCKED" | "RECLAIMED" };
   before: SharedReadCacheInventory;
   after: SharedReadCacheInventory;
 }
@@ -60,6 +62,7 @@ export async function runSharedReadCacheSweep(
       deletedRows: 0,
       deletedBytes: 0,
       profiles: [],
+      physicalReclaim: { reclaimed: false, physicalBytes: before.physicalBytes, reason: "DISABLED" },
       before,
       after: before,
     };
@@ -92,6 +95,8 @@ export async function runSharedReadCacheSweep(
     deletedBytes += batch.deletedBytes;
     mergeProfiles(profiles, batch);
   }
+  const limit = config.EXECUTION_SHARED_READ_CACHE_PHYSICAL_LIMIT_BYTES;
+  const physicalReclaim = outcome === "DRAINED" && limit > 0 ? await repository.reclaimPhysicalSpace(limit) : { reclaimed: false, physicalBytes: before.physicalBytes, reason: "DISABLED" as const };
   return {
     cacheClass: "N21_SHARED_READ",
     workerId,
@@ -103,6 +108,7 @@ export async function runSharedReadCacheSweep(
     deletedRows,
     deletedBytes,
     profiles: [...profiles.values()].sort((left, right) => left.profileId.localeCompare(right.profileId)),
+    physicalReclaim,
     before,
     after: await repository.inventory(config.EXECUTION_SHARED_READ_CACHE_SWEEPER_BATCH_ROWS),
   };

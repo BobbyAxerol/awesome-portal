@@ -207,8 +207,14 @@ services:
       POSTGRES_USER: ${PORTAL_CONTROL_DB_USER:-portal}
       POSTGRES_PASSWORD: ${PORTAL_CONTROL_DB_PASSWORD:?Set PORTAL_CONTROL_DB_PASSWORD}
       POSTGRES_DB: ${PORTAL_CONTROL_DB_NAME:-portal_control}
+    # One reviewed Postgres config for every stack (deploy/postgres/portal.conf): the default config let the
+    # Execution cache TOAST grow to 92 GB. Memory-limited so shared_buffers/effective_cache_size stay truthful.
+    command: ["postgres", "-c", "config_file=/etc/postgresql/portal.conf"]
+    mem_limit: 4g
+    shm_size: 256m
     volumes:
       - portal-postgres-data:/var/lib/postgresql/data
+      - ./postgres/portal.conf:/etc/postgresql/portal.conf:ro
     expose:
       - "5432"
     networks:

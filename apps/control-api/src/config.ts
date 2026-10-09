@@ -399,6 +399,9 @@ const EnvSchema = z.object({
   // uncacheable flight.  Expired rows are handled only by the worker below.
   EXECUTION_SHARED_READ_CACHE_MAXIMUM_ROWS: z.coerce.number().int().min(128).max(500_000).default(20_000),
   EXECUTION_SHARED_READ_CACHE_MAXIMUM_BYTES: z.coerce.number().int().min(8 * 1024 * 1024).max(1024 * 1024 * 1024).default(256 * 1024 * 1024),
+  // Physical-size guard: ordinary VACUUM never returns file space, so a burst once left this recomputable cache at 92 GB.
+  // When the table's on-disk size exceeds this and holds no live entry, the sweeper reclaims it (TRUNCATE). 0 disables.
+  EXECUTION_SHARED_READ_CACHE_PHYSICAL_LIMIT_BYTES: z.coerce.number().int().min(0).max(1024 * 1024 * 1024 * 1024).default(1024 * 1024 * 1024),
   OUTBOX_MAX_RESPONSE_BYTES: z.coerce.number().int().positive().default(64 * 1024),
 });
 
