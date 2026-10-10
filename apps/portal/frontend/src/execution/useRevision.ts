@@ -6,6 +6,8 @@
  */
 import { useEffect, useRef, useState } from "react";
 
+import { retainedEpoch, retainedStatic, subscribeRetained } from "./retainedReview";
+
 
 /** Increments every time `key` changes to a new non-null value; 0 until the first value. */
 export function useRevisionBeat(key: string | number | null | undefined): { beat: number; changedAtMs: number | null } {
@@ -34,18 +36,27 @@ export function pollAllowed(): boolean {
   return true;
 }
 
-/** A tick every `intervalMs` while polling is allowed and the tab is visible — used only to re-read a source, never to animate. */
-export function usePollTick(intervalMs: number, active = true): number {
+/**
+ * A tick every `intervalMs` while polling is allowed and the tab is visible — used only to re-read a source, never to animate.
+ *
+ * In an Execution retained review (UDB-03) the source is a set of earlier observations that cannot change: the interval is off, and the
+ * tick advances only when the reader asks for a refresh. `scope: "always"` is for work that is not Execution source reading (Research jobs).
+ */
+export function usePollTick(intervalMs: number, active = true, scope: "execution" | "always" = "execution"): number {
   const [tick, setTick] = useState(0);
+  const [epoch, setEpoch] = useState(retainedEpoch);
+  const [frozen, setFrozen] = useState(retainedStatic);
+  useEffect(() => subscribeRetained(() => { setEpoch(retainedEpoch()); setFrozen(retainedStatic()); }), []);
+  const stopped = scope === "execution" && frozen;
   useEffect(() => {
-    if (!active || !pollAllowed() || intervalMs <= 0) return undefined;
+    if (!active || stopped || !pollAllowed() || intervalMs <= 0) return undefined;
     const id = window.setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
       setTick((t) => t + 1);
     }, intervalMs);
     return () => window.clearInterval(id);
-  }, [intervalMs, active]);
-  return tick;
+  }, [intervalMs, active, stopped]);
+  return tick + (scope === "execution" ? epoch : 0);
 }
 
 /**

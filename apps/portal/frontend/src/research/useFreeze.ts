@@ -210,7 +210,7 @@ export function useFreeze(runId: string, fold: number | null, workspaceId?: stri
    */
   const jobActive = retained.state === "ready"
     && WHATIF_ACTIVE_JOB_STATES.has(retained.freeze.what_if?.job?.state ?? "");
-  const pollTick = usePollTick(5_000, jobActive);
+  const pollTick = usePollTick(5_000, jobActive, "always");
   useEffect(() => {
     if (pollTick === 0 || !jobActive) return;
     retainedAsked.current = false;

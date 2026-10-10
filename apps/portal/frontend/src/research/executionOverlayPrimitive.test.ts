@@ -3,6 +3,7 @@
  * can say what is drawn, in which colour, at which price — the regression a screenshot cannot give without a baseline.
  */
 import { describe, expect, it } from "vitest";
+import { canvasTokens, withAlpha } from "../styles/tokens";
 
 import { ExecutionOverlayPrimitive, type OverlayPalette } from "./ExecutionOverlayPrimitive";
 import { buildOverlay } from "./executionOverlay";
@@ -10,7 +11,8 @@ import type { OrderTrack } from "./executionTracks";
 
 const HOUR = 3_600_000;
 const bars = Array.from({ length: 24 }, (_, i) => ({ at_utc_ms: i * HOUR }));
-const PALETTE: OverlayPalette = { ink: "#111111", inkSoft: "#444444", inkFaint: "#888888", accent: "#0f4c5c", good: "#1e7b4f", bad: "#b43a3a", surface: "#ffffff" };
+const T = canvasTokens("research");
+const PALETTE: OverlayPalette = { ink: T.ink, inkSoft: T.inkSoft, inkFaint: T.inkFaint, accent: T.accent, good: T.good, bad: T.bad, surface: T.paperRaised };
 
 interface Call { name: string; args: unknown[]; fill: string; stroke: string; width: number; dash: number[] }
 
@@ -77,8 +79,8 @@ describe("the painter", () => {
     const rects = under.filter((c) => c.name === "fillRect").map((c) => ({ y: c.args[1], h: c.args[3], fill: c.fill }));
     /* y(110)=890, y(100)=900, y(90)=910 */
     expect(rects).toEqual([
-      { y: 890, h: 10, fill: "rgba(180, 58, 58, 0.05)" },
-      { y: 900, h: 10, fill: "rgba(30, 123, 79, 0.1)" },
+      { y: 890, h: 10, fill: withAlpha(PALETTE.bad, 0.05) },
+      { y: 900, h: 10, fill: withAlpha(PALETTE.good, 0.1) },
     ]);
   });
 
@@ -86,7 +88,7 @@ describe("the painter", () => {
     const { over } = paint(model);
     const strokes = over.filter((c) => c.name === "stroke");
     expect(strokes.some((c) => c.width === 1.5 && c.dash.length === 0 && c.stroke === PALETTE.good)).toBe(true);
-    expect(strokes.some((c) => c.width === 1 && c.dash.join() === "3,3" && c.stroke.startsWith("rgba(180, 58, 58"))).toBe(true);
+    expect(strokes.some((c) => c.width === 1 && c.dash.join() === "3,3" && c.stroke === withAlpha(PALETTE.bad, 0.6))).toBe(true);
     const texts = over.filter((c) => c.name === "fillText").map((c) => c.args[0]);
     expect(texts).toContain("stop 110.00");
     expect(texts).toContain("limit 90.00");

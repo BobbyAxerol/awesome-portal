@@ -7,8 +7,9 @@
  * resnapshot/reconnect; auth expiry and transport errors never loop.
  */
 import { useEffect, useState } from "react";
+import { useRetainedReview } from "./retainedReview";
 
-export type ProfileRealtimePhase = "idle" | "connecting" | "live" | "recovering" | "auth_expired" | "closed";
+export type ProfileRealtimePhase = "idle" | "connecting" | "live" | "recovering" | "auth_expired" | "closed" | "retained";
 
 /**
  * The Portal source coordinator's own health, published beside the transport by
@@ -66,6 +67,9 @@ const INITIAL: ProfileRealtimeState = {
   phase: "idle", refreshKey: 0, cursor: null, reason: null, source: SOURCE_UNKNOWN,
 };
 
+/** The channel of a retained review: closed by design, not by failure. */
+const RETAINED: ProfileRealtimeState = { ...INITIAL, phase: "retained", reason: "RETAINED_NO_STREAM" };
+
 function oneOf<T extends string>(raw: unknown, allowed: readonly T[], fallback: T): T {
   return typeof raw === "string" && (allowed as readonly string[]).includes(raw) ? raw as T : fallback;
 }
@@ -122,10 +126,15 @@ const realtimeHubs = new Map<Environment, RealtimeHub>();
 /** One connection/bootstrap per profile per tab; destroyed when its last reader leaves. */
 export function useProfileRealtime(environment: Environment | null, screenId?: string): ProfileRealtimeState {
   const [bound, setBound] = useState<{ environment: Environment | null; state: ProfileRealtimeState }>({ environment: null, state: INITIAL });
+  const retained = useRetainedReview().status;
   useEffect(() => {
     if (!environment || typeof EventSource === "undefined") {
       setBound({ environment, state: INITIAL }); return;
     }
+    // UDB-03: the retained-review context says before any request whether a stream exists. While it is being read nothing is opened;
+    // once it says retained, nothing ever is — no bootstrap, no EventSource, no heartbeat invented for the reader.
+    if (retained === "loading") { setBound({ environment, state: INITIAL }); return; }
+    if (retained === "retained") { setBound({ environment, state: RETAINED }); return; }
     let hub = realtimeHubs.get(environment);
     if (!hub) {
       hub = { state: INITIAL, listeners: new Set(), stop: () => undefined };
@@ -149,7 +158,7 @@ export function useProfileRealtime(environment: Environment | null, screenId?: s
       active.listeners.delete(listener);
       if (!active.listeners.size) { active.stop(); if (realtimeHubs.get(environment) === active) realtimeHubs.delete(environment); }
     };
-  }, [environment, screenId]);
+  }, [environment, screenId, retained]);
   return bound.environment === environment ? bound.state : INITIAL;
 }
 
@@ -268,6 +277,11 @@ function startProfileRealtime(environment: Environment, setState: (update: State
       if (disposed) return;
       if (response.status === 401 || response.status === 403) {
         setState((current) => ({ ...current, phase: "auth_expired", reason: "SESSION_EXPIRED", source: SOURCE_UNKNOWN }));
+        return;
+      }
+      if (response.status === 204) {
+        // an intentional "no cursor": this profile publishes no stream (retained review)
+        setState((current) => ({ ...current, phase: "retained", reason: "RETAINED_NO_STREAM" }));
         return;
       }
       if (!response.ok) {

@@ -154,6 +154,18 @@
   max-width: 72ch;
 }
 
+.exec-preview-refresh {
+  margin-left: var(--space-3);
+  padding: 0 var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--ink-faint);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.exec-preview-refresh:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+
 .exec-preview-banner strong,
 .exec-preview-banner code {
   font: var(--exec-font-num); font-variant-numeric: tabular-nums;

@@ -39,6 +39,8 @@ const FLAGS: Record<string, { dangerous: boolean; why: string }> = {
   // the source, so an unreadable one must be assumed open — a screen that says
   // "the relay is shut" on the strength of a field it could not parse is
   // telling an operator the safest-sounding thing rather than the true one.
+  // UDB-03 retained-review context: a page is declared retained-static only when every one of these bits reads exactly false.
+  stream_enabled: { dangerous: true, why: "an unreadable stream bit must be assumed open, so the page is never declared retained-static on a guess" },
   relay_active: { dangerous: true, why: "an unreadable relay must be assumed open, not shut" },
   // `governance.paper-exit.v1` activation_plan. PREVIEW_ONLY by contract; the
   // reader keeps absent as false and the screen prints "none requested" — a

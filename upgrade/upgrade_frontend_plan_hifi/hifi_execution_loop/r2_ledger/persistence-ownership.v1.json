@@ -735,6 +735,42 @@
       "reached_via": "profile-projection.worker.ts"
     },
     {
+      "table": "execution_retained_imports",
+      "writer_owner": "NEEDS_CODEX_REVIEW",
+      "ingress": "UNCLASSIFIED",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "added after UDB-02/03 by the frontend ledger gate (static SQL grep only); owner, ingress and retention are Codex's to classify",
+      "reached_via": "retained-store-transfer.ts"
+    },
+    {
+      "table": "execution_retained_review_access",
+      "writer_owner": "NEEDS_CODEX_REVIEW",
+      "ingress": "UNCLASSIFIED",
+      "verbs": {
+        "insert": 1,
+        "update": 1,
+        "delete": 0,
+        "read": 2
+      },
+      "readers": 2,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "added after UDB-02/03 by the frontend ledger gate (static SQL grep only); owner, ingress and retention are Codex's to classify",
+      "reached_via": "retained-review-access.ts,workspaces.ts"
+    },
+    {
       "table": "execution_shared_admission_leases",
       "writer_owner": "TRADING_SYSTEM_READ",
       "ingress": "ROUTE,WORKER",
@@ -807,6 +843,24 @@
       "reached_via": "activation.controller.ts,admin.controller.ts"
     },
     {
+      "table": "execution_store_migrations",
+      "writer_owner": "NEEDS_CODEX_REVIEW",
+      "ingress": "UNCLASSIFIED",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "added after UDB-02/03 by the frontend ledger gate (static SQL grep only); owner, ingress and retention are Codex's to classify",
+      "reached_via": "store-schema.ts"
+    },
+    {
       "table": "execution_timeseries_history",
       "writer_owner": "TRADING_SYSTEM_READ",
       "ingress": "WORKER",
@@ -823,6 +877,24 @@
       "disposal_decision": "PENDING_OWNER",
       "note": "local mirror/projection of Trading System facts",
       "reached_via": "profile-projection.worker.ts"
+    },
+    {
+      "table": "execution_workspace_references",
+      "writer_owner": "NEEDS_CODEX_REVIEW",
+      "ingress": "UNCLASSIFIED",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 0
+      },
+      "readers": 0,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "added after UDB-02/03 by the frontend ledger gate (static SQL grep only); owner, ingress and retention are Codex's to classify",
+      "reached_via": "retained-store-transfer.ts"
     },
     {
       "table": "external_identity_bindings",
@@ -1191,6 +1263,24 @@
       "reached_via": "governance.controller.ts -> GovernanceReviewCaptureService (review-capture.service.ts)"
     },
     {
+      "table": "governance_review_captures",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "IMMUTABLE_GOVERNANCE_AUDIT",
+      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
+      "note": "BE-R2-8: append-only idempotency response journal, atomic with review rows and product audit; immutable trigger. Not a projection/cache/TS table.",
+      "reached_via": "governance.controller.ts -> GovernanceReviewCaptureService.capture"
+    },
+    {
       "table": "governance_sandbox_certification_events",
       "writer_owner": "PORTAL_WORKFLOW",
       "ingress": "ROUTE,WORKER",
@@ -1441,24 +1531,6 @@
       "disposal_decision": "PENDING_OWNER",
       "note": "write method exists but the call graph does not reach a controller or worker",
       "reached_via": "-"
-    },
-    {
-      "table": "governance_review_captures",
-      "writer_owner": "PORTAL_WORKFLOW",
-      "ingress": "ROUTE",
-      "verbs": {
-        "insert": 1,
-        "update": 0,
-        "delete": 0,
-        "read": 1
-      },
-      "readers": 1,
-      "rows_dev": null,
-      "rows_stable": null,
-      "retention": "IMMUTABLE_GOVERNANCE_AUDIT",
-      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
-      "note": "BE-R2-8: append-only idempotency response journal, atomic with review rows and product audit; immutable trigger. Not a projection/cache/TS table.",
-      "reached_via": "governance.controller.ts -> GovernanceReviewCaptureService.capture"
     }
   ],
   "views_note": "PostgreSQL reports four views in public. They are read by the control-api, so they are listed; a view never has its own writer.",
