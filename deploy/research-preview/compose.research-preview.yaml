@@ -16,6 +16,16 @@
 # Execution product UI and local governance/Command Center reads here. This
 # does NOT activate the inter-cell source, projection writer, SSE or commands.
 services:
+  portal-postgres:
+    command: ["postgres", "-c", "config_file=/etc/postgresql/preview.conf"]
+    mem_limit: 1536m
+    memswap_limit: 1536m
+    cpus: 2
+    pids_limit: 128
+    shm_size: 128m
+    volumes:
+      - ./deploy/postgres/preview.conf:/etc/postgresql/preview.conf:ro
+
   portal-web:
     build:
       args:

@@ -2016,3 +2016,12 @@ contracts/focused tests and one normal grouped hook gate landing; C4 exact cell
 teardown, no volumes/data/images pruned. [Receipt and Claude W5 mapping](../research_loop/evidence/P14/BR_F3_02_APPLIED_GUARDS_AND_W5_NAVIGATION_2026-10-03.md).
 No frontend/shared preview/production/remote changes; W5 browser and P23/P24
 retain their own gates, not reopened source upgrades.
+
+**2026-10-10 UDB-01 checkpoint:** preview-only PostgreSQL profiles/pinned16.15,
+forward129/130 and physical-pressure admission delivered;95/95 real-PG gates,
+7 config cases and hash-preserved Core/Research custody. No UI/identity policy/
+source activation/dev/stable change. Bobby-approved bounded qualification
+PASS:8,969 changed near2MiB writes,119 vacuum cycles,physical max304MiB,
+PG sampled charge529MiB/no OOM;exact fixture cleanup done.24h is optional
+release confidence,not a fabricated PASS. **UDB-01 PASS / no in-scope debt**.
+[Report, FK/resource/identity manifest and proof](../research_loop/evidence/UDB-01/README.md).

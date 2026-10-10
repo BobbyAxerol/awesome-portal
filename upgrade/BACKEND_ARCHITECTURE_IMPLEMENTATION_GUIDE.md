@@ -2297,3 +2297,21 @@ Generated types and [Claude's exact W5 handoff](./research_loop/evidence/P14/BR_
 are available. One normal grouped hook gates landing; C4 removes only the owned
 cell/network, no volumes/data. No frontend/shared preview/production/push;
 W5 browser and P23/P24 acceptance remain separate.
+
+### 14.1.15 UDB-01 PostgreSQL and shared identity checkpoint (2026-10-10)
+
+Preview PostgreSQL profiles and existing16.15 image pin applied with normal
+forward129/130;160tables/312FKs inventoried,Core credentials/activation/session/
+owner/grants/membership and Research run/seal/RC/publication byte hashes
+unchanged.95/95 real-PG tests include historical no-op129 repair,quota/TOAST/
+lock deferral and actual cache-only crash loss;7 config cases. P23 remains
+4.6GB declared long-running/5GB aggregate with a900MB PG/128MiB buffer profile,
+not the common1GiB buffers. Existing row/byte reservations retained plus
+physical-pressure leader backpressure without evicting fresh hits.
+[Packet and bounded qualification](./research_loop/evidence/UDB-01/README.md).
+No endpoint/UI/auth-policy change,domain DB split,source/SSE/command activation,
+dev/stable/remote/release operation. UDB-01 is **PASS_PREVIEW_STORAGE_BASELINE**:
+Bobby-approved bounded load8,969 changed near2MiB writes/119 vacuum cycles,
+physical max318,799,872B/PG sampled charge554,508,288B/no OOM,pressure/hit/
+recovery predicates pass and exact fixture cleanup complete. No24h PASS or
+productGO inferred;UDB-02…04 still require individual approval.

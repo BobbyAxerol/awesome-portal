@@ -3637,6 +3637,20 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P24](#rl-p24) | P23 | mọi màn | 12 | **LATEST 2026-10-04 / v7:** [cinema/parameter closeout](./research_loop/evidence/P24/P24_CINEMA_CURRENT_SOURCE_CLOSEOUT_2026-10-04.md), [24 dispositions](./research_loop/evidence/P24/P24_REMAINING_SCENARIO_ACCEPTANCE_2026-10-04.md), [candidate v7](./research_loop/evidence/P24/current-source-candidate-manifest.v7.json): exact selected350 beyondpage100, immutable S03–S05 parameters, truthful sampler and centroid/no-trial; real audit GUI retry VERIFIED9fold/2508bars/optimizer0;439 affected FE cases. Current-source scenario slice READY_FOR_BOBBY_REVIEW; technical/refused/reused scopes remain explicit, not24enginePASS. QA4disabled/session0/C4complete. Local clean FF/helper preview only; owner visual/signed Portal2.0.0 remain separate. **Previous v6 checkpoint retained:** [candidate v6](./research_loop/evidence/P24/current-source-candidate-manifest.v6.json) / [actual closeout](./research_loop/evidence/P24/P24_CURRENT_CANDIDATE_CLOSEOUT_2026-10-04.md): affected reads56/56; actual Portal110→111→old reproduction3/3 and nine retained files verified; exact fixed imported GUI→one confined111 child→READY PASS with real config/byte equality; two-actor draft/actor-local CAS and late preflight/ACK PASS; publication ACK-loss/retry one intent/oneR1; post-child export/reference graph26/26 PASS. Archived Report companion-revision compatibility verifies all five source pins. Claude design/history preserved. Owner-approved exact-three exception keeps strict83/86. Remaining full24-scenario variants, owner visual review and signed release OPEN; no remote/shared preview/production operation. **Historical checkpoint retained:** [v4](./research_loop/evidence/P24/current-source-candidate-manifest.v4.json) restored-read scope; **128276d7 / 2026-10-03:** [v3](./research_loop/evidence/P24/current-source-candidate-manifest.v3.json) inherited P23 load/restore/rollback and C4; [P24 packet](./research_loop/evidence/P24/README.md) historical disposition matrix/checklist. Old engine/imported-GUI/manifest-approval blockers superseded only at the actual v6 scope. |
 
 <a id="rl-fe-w1-w7"></a>
+**UDB cross-loop upgrade board — planning approval only, 2026-10-10.**
+Bobby giao ghi kế hoạch nâng cấp **cả Research và Execution Loop** vào Unified
+trước khi duyệt triển khai. Thứ tự duy nhất: **UDB-01 → UDB-02 → UDB-03 → UDB-04**.
+Các hàng này không mở lại hoặc thay kết quả lịch sử P01–P24; chúng bổ sung
+điều kiện storage/identity/integration cho candidate mới. Chi tiết và phạm vi
+phê duyệt tại [UDB addendum](#udb-upgrade-2026-10-10).
+
+| Phase | Dependency | Màn | Checkpoint | State / implementer / evidence |
+|---|---|---|---|---|
+| [UDB-01](#udb-01) | Bobby duyệt UDB-01 2026-10-10 +bounded-gate refinement | Cả hai loop, nền identity/storage | UDB-1 | **PASS — PREVIEW_STORAGE_BASELINE** · 95/95 real-PG +7 config cases;8,969 changed-body writes/119 vacuum cycles/602.478s;custody unchanged,C4 done;[packet](./research_loop/evidence/UDB-01/README.md). No in-scope open debt;dev/stable/UI không đổi |
+| [UDB-02](#udb-02) | UDB-01 đạt + Bobby duyệt UDB-02 | Execution read models + Research publication | UDB-2 | **PLANNED / AWAITING_IMPLEMENTATION_APPROVAL** · DB/pool Execution riêng; Core identity/Governance thống nhất; hydration preview có custody/rollback |
+| [UDB-03](#udb-03) | UDB-02 đạt + Bobby duyệt UDB-03 | Execution screens/subpanels, Research → RC → R1 | UDB-3 | **PLANNED / AWAITING_IMPLEMENTATION_APPROVAL** · bật maximum retained reads; contract/resource-access matrix; Claude FE nhận typed handoff, giữ UI đã duyệt |
+| [UDB-04](#udb-04) | UDB-01…03 đạt + Bobby duyệt UDB-04 | Cả hai loop + Governance | UDB-4 | **PLANNED / AWAITING_IMPLEMENTATION_APPROVAL** · cross-loop load/auth/DR/browser acceptance + exact preview rebuild; không tự merge/deploy/release |
+
 **Frontend board rows 2026-10-04 (FE campaign W1–W7, Claude/Thanhvuong; Codex slice marked):** sống tại [FE-W1-W5 packet](./research_loop/evidence/FE-W1-W5/thanhvuong-frontend-receipt.md); chi tiết ở [§13.4.2](#rl-fe-w1-w7-note). Mọi hàng dưới đây là `NOT_VERIFIED` ở mức sản phẩm cho tới khi Bobby rà bằng mắt; không hàng nào là `OWNER_ACCEPTED`.
 
 | Phase | Màn | FE state | Evidence / blocker |
@@ -8574,3 +8588,381 @@ the existing R1 mobile sticky rail overlap. Claude retains UI refinement and
 visual acceptance. R2/Canary/Live are review surfaces, not a fabricated
 promotion chain. C4 local cleanup/session revocation done, rollback images
 retained; no engine rerun or visual baseline rewrite.
+
+<a id="udb-upgrade-2026-10-10"></a>
+## 2026-10-10 UDB upgrade plan — Shared identity, PostgreSQL and Research/Execution integration
+
+**Planning snapshot: PLAN_WRITTEN / AWAITING_IMPLEMENTATION_APPROVAL.** Tại
+lượt planning Bobby chỉ duyệt ghi phương án vào **file này**, chưa giao triển
+khai UDB nào. Snapshot planning không sửa code/OpenAPI/config/migration/hooks/
+env/runtime. Sau đó Bobby đã giao UDB-01 và duyệt refinement gate ngắn;
+trạng thái hiện hành ở board và implementation/closeout addendum cuối file.
+Mỗi phase chỉ bắt đầu khi Bobby duyệt phase đó; không tự chạy tiếp vì thứ tự
+đã được ghi. Branch chung giữ `docs/research-loop-plan`, không push remote,
+merge dev/main hoặc rollout stable nếu chưa được giao.
+
+**Mục tiêu:** đưa PostgreSQL/storage/resource hardening và unified identity
+vào lần nâng cấp Portal v2.0.0 của **cả Research Loop lẫn Execution Loop**;
+preview `https://research-portal.primusspark.com` hiển thị tối đa dữ liệu
+Execution đã retained, giữ rich UI và luồng Research → RC → Governance.
+Không đợi nguồn Trading System mới để dùng dữ liệu hiện có. Portal release
+version không phải engine version hoặc PostgreSQL major version.
+
+**Authority / supersession:** khi được duyệt triển khai, UDB thay giới hạn
+preview cũ về local readers/DB restart/migrations đúng phạm vi phase được
+duyệt. Giữ nguyên receipt lịch sử ngày 2026-10-10 ở trên; không sửa nó thành
+đã có dữ liệu hoặc đã nghiệm thu full flow. Preview không yêu cầu Cloudflare
+Access; production identity, TLS verification, signed release và dev/main
+promotion vẫn theo rules. SSL hết hạn không phải boundary isolation và không
+cho phép `verify=false` hoặc loop retry không giới hạn.
+
+### UDB baseline và nguồn bắt buộc
+
+- Đọc [AGENTS](../AGENTS.md), [Research working rules](./research_loop/CLAUDE-FOR-thanhvuong.md#research-working-rules),
+  §13.3/§13.6/§13.7 của Unified, [dual-cell guide](./RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md),
+  [backend architecture](./BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md) và
+  [cleanup C4](../docs/production-feature-profile-and-cleanup.md#c4--self-hosted-runner-docker-worktree-and-cache-hygiene).
+- Kế thừa [PostgreSQL/cache hotfix + implemented outcome](./upgrade_frontend_plan_hifi/hifi_execution_loop/HOTFIX_REQUEST_2026-10-09_POSTGRES_CACHE_BLOAT.md),
+  config `deploy/postgres/portal.conf`, migration `1723680000129`, commits
+  `c823bda9`/`99a2eb73` và [unified preview receipt](./research_loop/evidence/P24/UNIFIED_RESEARCH_EXECUTION_PREVIEW_2026-10-10.md).
+  Không viết lại bản vá đã có hoặc suy deployed từ việc file đã commit.
+- Đọc code auth/owner/grants/workspace, `auth/governance-access.ts`,
+  `execution/local-read-authority.ts`, `execution/delegation.ts`, resource BFFs,
+  P03/P22/P23/P24 packets và các contract TS/Edge hiện được publish trước khi
+  chạm đúng surface đó. TS Portfolio/Account upgrade chưa publish contract
+  thì ghi riêng phần future capability, không suy đã có resource ACL.
+- Read-only baseline 2026-10-10: preview/dev/stable PostgreSQL **16.15**, config
+  mặc định, container chưa có hard memory cap; cache còn `relpersistence=p`,
+  không table/TOAST options của migration129. Cần kiểm tra lại ledger **và**
+  trạng thái DDL; migration từng ghi applied nhưng thiếu marker không được
+  sửa bằng cách rewrite migration history hoặc chạy bootstrap.
+- Config mới trong repo có `shared_buffers=1GB`/PG `mem_limit=4g`, nhưng
+  `compose.research-p23-5gb.yaml` giới hạn PG **900,000,000 bytes**. Không áp
+  config đó nguyên trạng vào P23. Research strict gate vẫn tổng
+  **5,000,000,000 bytes**, bao gồm DB/queue/worker/query/page cache/one-shots.
+- Dev có 3 profile snapshots, 1,078 dòng Alpha Fleet projection, 10 Portfolio,
+  765 Binding; stable tương ứng 3/618/6/417; preview đều 0. Đây là **dòng
+  projection**, không phải số tài nguyên duy nhất. Paper snapshot giữ 6,321
+  item qua 6 relation, nguồn cuối 27/09; Sandbox/Live current snapshots không
+  có item. Không dùng absence đó làm authoritative empty hoặc full coverage.
+- Cache **đã có** admission reservation `hasCacheCapacityReservation()` trong
+  `begin()` và advisory lock cross-replica. Prose hotfix nói thiếu logical cap
+  không thắng code này. Physical reclaim chỉ TRUNCATE khi không có live entry;
+  cần đo sustained churn/live-entry case, không tuyên bố hard disk cap chỉ vì
+  một lần cache rỗng thu hồi thành công.
+
+### UDB invariant — Một Portal identity, nhiều domain stores
+
+1. **Một identity/authorization authority trong mỗi environment**, dùng chung
+   cho Research và Execution: user IDs, credential/activation/session,
+   owner anchor, membership, grants và audit. Không dựng login/user/grants
+   riêng trong Execution DB; không dùng chung auth DB của preview/dev/stable.
+2. Giữ Core + Research trên DB hiện có trong lần này. P22 publication đang
+   có FK tới `portal_users`, Governance approval và Research pack; không
+   tách chúng cơ học rồi mất atomicity/receipt/idempotency hoặc thêm 2PC.
+   Không rename Core tables/schema chỉ để đạt sơ đồ target.
+3. Tách **Portal-owned Execution data/read-model DB**: process/container,
+   named volume, role, migration inventory, connection pool và resource budget
+   riêng. Đây không phải Trading System authoritative DB ở AWS. BFF resolve
+   principal/scope qua Core, rồi query domain repository; không SQL/FDW/dblink
+   qua WAN hay để browser chọn database/relation/credentials.
+4. Bobby owner được nhận diện bằng owner anchor gắn với immutable `user_id`;
+   preserve toàn quyền quản trị/capability đã thiết kế, không suy owner từ
+   username hay role `ADMIN`. Các rule self-approval/quorum/evidence/risk
+   không bị xóa để làm flow xanh. Inventory owner-vs-membership semantics
+   hiện có; không âm thầm thêm membership/grant hoặc đổi owner khi migrate.
+5. Một cơ chế policy, nhưng **quyền khác nhau theo action/resource**. Research
+   create/export không tự cấp Execution management hoặc Governance decide.
+   TS `account_id` là trading account, không phải Portal user; TS `owner`
+   hoặc endpoint đã public không tự tạo Portal grant.
+6. Resource mapping phải rõ: Portal `user_id/workspace_id` → authorized action
+   → TS Portfolio/Account/Binding ID → environment/profile/contract revision.
+   Server kiểm tra object scope **trước** query/cache/export/command. Upstream
+   service identity/projection worker không đại diện quyền của browser actor.
+7. Disable user, revoke session/token hoặc thu hồi grant áp dụng cho cả loop,
+   cache/download và stream đang mở. TTL delegated token phải được ghi rõ;
+   không hứa revoke upstream tức thời nếu Edge hiện chỉ kiểm JWT ngắn hạn.
+   UI nhận effective permissions từ server, không tự suy theo role hoặc copy.
+8. Cache keys/pools/query contexts giữ workspace/profile/resource/actor scope
+   cần thiết; response không được đổi provenance workspace thành personal
+   workspace của viewer. `FRESH` phải dựa đúng source fact, không timestamp
+   worker vừa chạy. Retained preview có `as_of` thật, stale/partial/coverage
+   rõ, không được dùng để chứng minh live eligibility hay source acceptance.
+
+<a id="udb-01"></a>
+### UDB-01 — Shared identity preservation, PostgreSQL profiles and bounded storage baseline
+
+**Implementation approval:** Bobby giao UDB-01 ngày 2026-10-10. Chỉ phase này
+được triển khai; UDB-02…04 vẫn chờ duyệt. Packet: [UDB-01](./research_loop/evidence/UDB-01/README.md).
+
+**Entry:** Bobby duyệt UDB-01; read baseline/rules/packets ở trên; lấy exact
+source/runtime/migration/role/volume/resource inventory, không đang deploy,
+backup hoặc migration đồng thời. Scope execution và shared infra chỉ theo
+allowlist được ghi trong phase, không thay consumer contract/UI đã nghiệm thu.
+
+**Goal:** chuẩn hóa PostgreSQL cho cả loop, bảo toàn auth/owner/Governance và
+đóng configuration/resource mismatch trước khi tách dữ liệu.
+
+**To-do BE/infra:**
+
+- Inventory dependency/FK/transaction theo bảng: Core auth/Governance và
+  Research authority ở lại; Execution read data/cache/history có thể tách;
+  tables workflow/command/audit có dependencies Core không tự move hàng loạt.
+  Ghi mapping role/capability/workspace và quyền owner hiện có, kèm source/test.
+- Reuse hotfix129/config/ETag body reuse/quota reservation. Thiết kế common
+  config + overrides theo preview/P23/dev/stable resource envelope; không
+  `1GB shared_buffers × mọi stack`. Budget gồm work_mem theo query concurrency,
+  autovacuum workers/maintenance, pool tổng replicas/worker/migrator, WAL/IO,
+  shm/pids/CPU/timeouts và headroom cho host/builds. Giá trị là đo được, không
+  tự nới P23 SLO/5GB. Không thêm PgBouncer/Redis/NATS KV nếu chưa cần bằng số đo.
+- Config versioned/read-only + PG image pin; apply/restart trước trên preview
+  theo helper, không đổi major version hoặc sửa tay production release dir.
+  Migration forward kiểm legacy ledger/DDL, lock timeout và backup; migration
+  repair dùng path kiểm chứng/idempotent, không chỉ nhìn migration number.
+- Verify cache capacity/reuse/sweeper dưới nhiều replica và body đổi liên tục;
+  logical quota khác physical disk size. Fix đúng thiếu sót được test chứng
+  minh; chỉ cache recomputable có thể UNLOGGED/reclaim, không seals/audit/history.
+  Không lấy threshold TRUNCATE làm hard cap khi live entry tồn tại mãi.
+- Query/bloat/IO/pool/timeout alerts có safe metadata; retention được phân loại
+  cache/scratch vs business/evidence. Runtime PostgreSQL thừa hoặc volume ẩn danh
+  chỉ inventory/đề xuất target, chưa tự chuyển/xóa stack ngoài preview.
+
+**Tests / exit gate:** `UDB01-T01` owner/users/password hashes/activation/session/
+grant/membership preservation, Bobby/Stan/non-owner negative matrix;
+`T02` fresh + historical forward DDL/ledger/restart actual config;
+`T03` same-body TOAST reuse, body-change churn, quota concurrency, sweeper
+lock/live-entry, cache crash loss không mất durable facts;
+`T04` per-profile peak RAM/WAL/IO/connection/physical cache bounds trong budget.
+**Bobby-approved gate refinement, 2026-10-10:** thay điều kiện chờ24h bằng
+qualification theo điều kiện: ghi body gần2MiB đổi liên tục ở15requests/s qua
+hai repository/pool, giữ một entry sống để không dùng TRUNCATE; ít nhất ba
+chu kỳ TOAST autovacuum và plateau kích thước trong cửa sổ cuối5phút, không
+vượt1GiB/row/byte/cgroup budgets. Negative pressure phải chặn leader mới nhưng
+giữ fresh hit, rồi phục hồi admission khi pressure được gỡ. Dùng bounded lane
+tối đa20phút, có thể kết thúc từ10phút khi đủ mọi điều kiện (≥14 measured rps).
+Không đạt thì FAIL/sửa, không kéo dài để kiếm PASS. Reuse focused quota/lock/
+crash/identity receipts đúng hash/input; không gọi short lane là24h soak PASS.
+Extended24h chỉ là release-confidence bổ sung, không chặn UDB-01. Lane cũ
+được dừng/retain dưới disposition SUPERSEDED_NOT_24H_PASS và cleanup exact.
+Có thể dùng owned background lane, không lặp full suite mỗi edit.
+Code/schema/auth đổi thì chạy affected gates; docs-only không rebuild engine/UI.
+
+**Rollback/handoff:** restore config/image đã pin, pause intake đúng scope;
+không down-migrate business data hoặc bootstrap lại user. Report chỉ rõ config
+chưa áp ở dev/stable và resource budget bàn giao UDB-02; phase chỉ đóng khi
+required tests/C4 đạt. Owner preview review không tự là production rollout.
+
+<a id="udb-02"></a>
+### UDB-02 — Isolated Execution data store, explicit pools and retained preview hydration
+
+**Entry:** UDB-01 đạt + Bobby duyệt UDB-02. DB/table ownership, constraints,
+pool/budget/migration manifest và authorized target workspace đã chốt.
+
+**Goal:** Research và Execution data độc lập về tải/lifecycle, nhưng cùng
+Portal principal/policy; dùng local data hiện có trên preview, không mất RC/R1.
+
+**To-do BE/infra:**
+
+- Provision Execution PostgreSQL/private network/named volume/limited roles
+  và explicit domain pool; Core + Research giữ DB/pool hiện tại. Không đổi
+  global `DATABASE_URL` để redirect tất cả auth/repos sang DB mới; sửa singleton
+  pool wiring nơi cần để nhiều pool thật không thay lẫn nhau hoặc leak clients.
+  Không clone Core FK/grants/passwords sang Execution store để tránh sửa boundary.
+- Repositories projection/current entities/timeseries/query cursors/read cache
+  chuyển theo manifest; authorization vẫn qua Core. Domain tables có FK tới
+  Core phải có phương án reference/receipt riêng, không bỏ constraint âm thầm.
+  Giữ publication/approval/idempotency/audit authority hiện có; không duplicate
+  Governance hoặc command state machine thành hệ thống quyền thứ hai.
+- Snapshot read-only Portal-owned Execution data từ nguồn local được inventory
+  (ưu tiên đủ coverage), import vào target preview bằng tool/forward migration
+  có transaction/checksum/run ID; giữ environment/profile/workspace/catalogue,
+  exact decimals/UTC/source timestamps/digests. Không SQL tay sửa authority,
+  fabricate rows, promote approval, hoặc copy TS DB, secrets/users/session/grants.
+- Nếu cần workspace cho viewer: normal Core provisioning API theo owner scope,
+  record/audit trước sau; không đổi data workspace để khớp personal workspace.
+  Chỉ chọn một compatible history reader sau count/content/range parity; không
+  bật mirror reads chỉ vì mirror có rows, không nhân đôi history vô lý.
+- Import bounded current/resource/history data cho màn cần review, không copy
+  cache/leases/flights/cursors upstream đã hết hạn như live runtime state.
+  Có source manifest, counts/hash/size/coverage và exact target rollback.
+
+**Tests / exit gate:** `UDB02-T01` manifest/count/digest/provenance parity và
+forward migration rerun; `T02` Core custody unchanged + own/wrong workspace/
+account/profile negatives trên cả stores; `T03` pool separation/bounded queue,
+Research load không lấy connection budget Execution; `T04` restart từng DB,
+restore target và readback actual BFF, rollback preserve Research/artifact/auth.
+Expected source gaps explicit, không coi sparse snapshot là full population.
+
+**Rollback/handoff:** retain original store/volumes, switch reviewed pool/read
+profile về baseline và stop only new preview intake; không delete source/data
+để rollback. Giao UDB-03 actual row/window coverage và missing-source matrix.
+
+<a id="udb-03"></a>
+### UDB-03 — Maximum retained Execution reads, unified resource access and rich-screen handoff
+
+**Entry:** UDB-02 đạt + Bobby duyệt UDB-03; source/profile/resource scope và
+read envelopes đã freeze. Claude có thể nối presentation ngay khi DTO stable.
+
+**Goal:** preview review được mọi panel có dữ liệu local trên cả loop, không
+generic unavailable do reader bị tắt; chuẩn bị resource authorization cho
+Portfolio/Account TS upgrade mà không invent upstream support.
+
+**To-do BE/contracts:**
+
+- Tách local reader enablement khỏi source refresh worker/upstream config;
+  chế độ retained-review phải là versioned explicit profile, không giả flag
+  live hoặc source qualification. Bật các named BFF/query/analytics có dữ liệu
+  cho Command Center, Fleet/detail/Alpha360, Portfolio360, Account/Binding,
+  Paper/Sandbox/Live/Canary composition, Blotter/Ops/Governance trong preview.
+  Không unconditionally enable every flag hoặc dựa SSL expired để ngăn writes.
+- Upstream unavailable vẫn hiển thị retained history với source `as_of`,
+  stale/partial/coverage đúng; không update source clock hoặc mở risk/live
+  eligibility bằng preview data. Source pause/circuit/backoff có limit, không
+  browser read-through/retry storm; không đổi TLS verification, không TS direct DB.
+  Execution command relay/mutations chưa thuộc approval này. SSE source/auth
+  activation vẫn theo dev/main rules; không giả heartbeat thành dữ liệu mới.
+- Freeze unified access matrix: user/session/workspace + action + resource +
+  environment/profile; owner capabilities bảo toàn, non-owner deny mặc định
+  nơi chưa có resource grant. Resource object resolution không thay authorization.
+  Existing workspace access giữ compatibility theo matrix đã review; không
+  thay quyền production cũ hay auto-grant management trong migration.
+- Inventory new TS Portfolio/Account named operations/DTO/version/capability
+  từ published owner contract khi có; BFF maps actor + resource identity đúng.
+  Nếu contract chưa có, chỉ thiếu đúng feature đó, không chặn existing reads.
+  Portal-controlled grants và TS resource/policy authority không nhập làm một;
+  Edge JWT/scope narrowing phải compatible, không tự thêm claim Edge chưa hiểu.
+- Trả effective per-action permissions typed, stale/source flags, denied vs
+  unavailable rõ; update OpenAPI/schema/generated/fixtures khi cần. Chốt
+  TTL/revoke semantics HTTP/cache/download/stream/delegation trước consumer.
+  Nối RC/R1 deep link giữ explicit workspace; không đổi P22 sealed/publication
+  semantics hoặc giả chuỗi R1→R2→Canary→Live đã được approve.
+
+**FE handoff:** Claude giữ component/layout/theme/baseline HiFi đã duyệt;
+chỉ bind named DTO vào panel + đúng states/permission controls, không replace
+rich UI bằng envelope. Bao gồm R1 mobile rail đã ghi trong preview receipt;
+visual change vẫn cần scope duyệt riêng. Every screen/subtab có matrix
+`operation → resource scope → panel/state → permission → browser assertion`.
+Contract available chỉ đóng sau `READ → MAPPED → CONSUMED → BROWSER_VERIFIED`.
+
+**Tests / exit gate:** `UDB03-T01` actual retained BFF/pagination/filter/query/
+UTC/decimal/coverage oracle; `T02` effective permission/action vs direct API,
+wrong-resource/environment/profile, revoke/disable/cache/download and delegated
+expiry tests; `T03` missing/stale nguồn không gây polling/request storm hoặc
+hidden source jobs; `T04` browser1280/660 + deep-link/workspace/refresh trên
+existing rich routes/subpanels. Actual empty khác not configured/source absent.
+Chỉ gọi `RETAINED_PREVIEW_REVIEW_READY`, không source-live/Product GO.
+
+**Rollback/handoff:** rollback preview read profile/pool binding không mutate
+grants/artifacts/business data; preserve source/data manifest. Giao Claude
+typed examples+source locators và UDB-04 exact candidate/affected-screen list.
+
+<a id="udb-04"></a>
+### UDB-04 — Cross-loop authorization, performance/DR acceptance and exact preview rebuild
+
+**Entry:** UDB-01…03 đạt + Bobby duyệt UDB-04; một reviewed candidate/config/
+image/migration set và FE consumer receipts khớp backend. Không qualify trên
+nhiều dirty images rồi gọi là một candidate.
+
+**Goal:** chứng minh storage upgrade + unified rights + hai loop integration
+đủ cho Bobby review preview, chuẩn bị P23/P24/release packet, không tự rollout.
+
+**To-do / tests:**
+
+- `UDB04-T01` cross-stack authorization: Bobby owner, scoped Stan/reviewer,
+  researcher/read-only/disabled/revoked users; Research → RC → real existing
+  R1 + authorized R2/Canary/Live surfaces. HTTP direct vs UI eligibility,
+  cross-workspace/object/profile negatives, IDOR, CSRF/idempotency/self-approval,
+  cache/stream revoke và upstream TTL khác nhau phải có disposition rõ.
+- `T02` mixed load: existing P23 twenty-viewer/one-heavy+queued work và
+  concurrent Execution reads; Research aggregate ≤5GB, Execution budget riêng,
+  whole-host RAM/pagecache/CPU/IO/pool/disk headroom đo được. Giữ latency SLO
+  đã khóa; không lấy total host free RAM hoặc Docker working set thay cgroup peak.
+- `T03` fault/DR: từng PG restart/outage/restore, durable artifact bytes + pins,
+  auth/owner/grants/publication preservation, Execution offline retained
+  continuity và source-backoff. Không restore core snapshot cũ để vô tình hồi
+  sinh session/grant bị revoke; cutover cần auth custody/current-state check.
+  Ba historical manifest exceptions giữ đúng phạm vi Bobby đã chốt, không
+  manufacture bytes hoặc đổi strict denominator.
+- `T04` exact preview rebuild qua helper, current commit/images/bundle/routes
+  + config/actual DDL receipt. Browser real API hai loop, affected mobile/
+  keyboard/a11y/console/deep-link/export; giữ fixture/real/retained-live lanes
+  riêng và ghi mọi remaining gap. Không chạy lại engine/UI gates không đổi;
+  reuse receipt phải exact hash/input/config, storage/auth đổi invalidate phần đó.
+- `T05` C4 teardown/capacity/retention: exact owned test resources, protect
+  active/rollback images, named volumes, backup/evidence; no broad prune,
+  no VACUUM FULL/no business delete. Backend/FE report và row board cùng scope.
+
+**Exit gate:** mọi required applicable UDB tests đạt + affected P23/P24 gates
+được đối chiếu/retake, custody/rollback và cross-loop browser receipts đầy đủ.
+Kết quả tối đa `CROSS_LOOP_PREVIEW_READY_FOR_BOBBY_REVIEW`, không
+`OWNER_ACCEPTED`, `PRODUCT_ACTIVE` hoặc signed-release PASS từ preview.
+Known in-scope fail phải fix trước đóng; source unsupported/ops/owner decisions
+ghi đúng ID/disposition, không gọi technical debt đã xong chỉ vì UI hiện shell.
+
+**Release boundary / report:** Bobby review research-portal trước; chỉ sau
+lệnh mới được push/PR/dev/main. Cloudflare Access, mTLS/certificate renewal,
+profile/source activation, SSE, signed images/SBOM/provenance, stable volumes/
+accounts/Roadmap and forward migrations theo existing release workflow,
+không config tay release dir. Postgres/cache/isolation changes được đóng gói
+trong cùng release v2.0.0 candidate, không bỏ lại thành "cleanup sau".
+
+### UDB planning receipt — 2026-10-10
+
+**Scope thực hiện lượt này:** chỉ bổ sung bốn row vào §13.4 và addendum này
+trong `upgrade/UNIFIED_IMPLEMENTATION_PLAN.md`. Không sửa frontend/backend,
+config/migration/auth/grants, không restart/build/seed/copy DB, không TLS/
+Cloudflare/command/SSE change, không push/merge/release. Validation docs-only:
+diff whitespace, internal anchors/local references, bốn phase đúng thứ tự và
+đủ entry/goal/to-do/tests/exit/rollback/handoff. Implementation tests còn
+`NOT_RUN / AWAITING_PHASE_APPROVAL`, không lấy planning validation làm phase PASS.
+
+### UDB-01 implementation checkpoint — 2026-10-10
+
+**Historical checkpoint:** trạng thái/gate24h dưới đây đã được Bobby-approved
+bounded qualification và closeout sau đó supersede;giữ để audit chronology.
+
+Bobby đã giao UDB-01 sau planning snapshot trên. Codex làm trên cùng
+`docs/research-loop-plan`, parent9745b9ef; không UI hoặc domain DB split.
+Shared preview PostgreSQL16.15 đã áp `preview.conf` (256MiB buffers,
+1.5GiB cgroup,60 connections,32MiB ×2 autovacuum), migrations129–130.
+Core identity/grants/membership/password/activation/session và Research run/
+seal/RC/publication SHA-256 trước/sau **khớp byte**,125 ledger entries sau
+forward (trước123); không rewrite lịch sử hoặc bootstrap/reset tài khoản.
+
+Focused real-PG95/95 + config/preview6/6 PASS; actual crash recovery mất
+recomputable cache nhưng giữ identity/durable marker. P23 rendered long-running
+budget4.6GB không đổi, PG128MiB buffers dưới900,000,000B cap. Existing quota/
+ETag reuse được giữ; thêm physical-pressure leader reservation trước source I/O,
+fresh hit không bị evict. Backup private0600, rollback render cùng volume và
+prior image IDs; APIs/Web200 sau restart. Dev/stable PG IDs/start times vẫn cũ.
+
+**Còn đúng gate của phase:** ≥24h cache-fixture real-PG soak đang chạy từ
+2026-10-10T08:58:11.923Z, fixed15 requests/s; không Edge/TS/engine call. Lúc
+09:06UTC:7,134 requests,0 denial/error, observed physical peak158,580,736B.
+Đây là checkpoint, **không24h PASS**. Collector user service giới hạn25h,
+đo actual cgroup charge và tự collect/teardown đúng owned test project khi
+writer terminal, giữ report/backup/rollback evidence. Host không có memory.peak;
+không lấy Docker working set hoặc invented kernel peak để đóng gate.
+
+[Phase report / FK manifest / test and rollback evidence](./research_loop/evidence/UDB-01/phase-report.md).
+State `IMPLEMENTED_PREVIEW / SOAK_24H_RUNNING`; required pending soak/cleanup
+không được gọi phase hoàn tất. UDB-02…04 chưa được giao; chưa push/merge/release.
+
+### UDB-01 closeout — bounded qualification approved and passed,2026-10-10
+
+Bobby duyệt bỏ24h khỏi exit gate;dùng sustained changed near2MiB payloads,
+real vacuum/plateau,pressure negatives,cgroup/custody/crash proofs. Final lane
+16:35→16:45ICT:8,969 writes/602.478s,119 TOAST autovacuum cycles;physical max
+318,799,872B <1GiB,PG sampled charge554,508,288B <899,997,696B,OOM0.
+Fresh sentinel không mất,no TRUNCATE;pressure denies new leader but serves hit,
+normal admission recovers. All predicates PASS,writer/collector exit0,hashes
+verified. Exact fixture containers/network/volume đã dọn;private reports,
+0600 backup và rollback image IDs giữ30days. Extended24h không được gọi PASS.
+
+95/95 focused real-PG +7 config cases PASS,reuse đúng source/hash không chạy
+lại engine/UI gates. Preview129–130/Profile đã applied,custody16tables
+unchanged;common dev/stable config chỉ versioned,không rollout. Grouped local
+commit qua normal hook,no bypass/push. **UDB-01 PASS / zero known in-scope
+debt**;UDB-02…04 vẫn chờ Bobby duyệt từng phase. Đây không phải hydration,
+cross-loop product acceptance hoặc releaseGO.
+[Full test/resource/file manifest and Claude handoff](./research_loop/evidence/UDB-01/phase-report.md).

@@ -19,6 +19,10 @@ services:
     memswap_limit: 650000000
     pids_limit: 128
   portal-postgres:
+    command: ["postgres", "-c", "config_file=/etc/postgresql/p23.conf"]
+    volumes:
+      - ./deploy/postgres/p23.conf:/etc/postgresql/p23.conf:ro
+    shm_size: 64m
     mem_limit: 900000000
     memswap_limit: 900000000
     pids_limit: 128

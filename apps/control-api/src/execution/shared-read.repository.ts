@@ -681,6 +681,8 @@ export class ExecutionSharedReadRepository {
     const result = await client.query<{
       reserved_rows: string;
       reserved_bytes: string;
+      active_flights: string;
+      physical_bytes: string;
     }>(
       `WITH reference AS (SELECT clock_timestamp() AS now),
          active_cache AS (
@@ -697,13 +699,26 @@ export class ExecutionSharedReadRepository {
          )
        SELECT (active_cache.row_count + active_flights.row_count)::bigint AS reserved_rows,
               (active_cache.byte_count +
-               active_flights.row_count * $1::bigint)::bigint AS reserved_bytes
+               active_flights.row_count * $1::bigint)::bigint AS reserved_bytes,
+              active_flights.row_count::bigint AS active_flights,
+              pg_total_relation_size('execution_shared_read_cache')::bigint AS physical_bytes
        FROM active_cache CROSS JOIN active_flights`,
       [this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_RESPONSE_BYTES],
     );
     const row = result.rows[0];
     if (!row) throw new Error("N21 shared-read cache capacity reservation missing");
-    return safeCount(row.reserved_rows, "shared-read cache reserved rows") <=
+    // UDB-01: TTL bounds live bytes, not dead heap/TOAST. If a live key keeps
+    // TRUNCATE deferred, stop admitting new leaders before physical pressure
+    // exhausts disk. Cache hits still work; sweeper/autovacuum can catch up.
+    // Reserve conservative JSONB/TOAST/index expansion and one MiB fixed
+    // slack for all in-flight responses (including this leader). This is a
+    // measured high-water backpressure policy, not a filesystem quota.
+    const physicalLimit = this.config.EXECUTION_SHARED_READ_CACHE_PHYSICAL_LIMIT_BYTES;
+    const physicalReservation = safeCount(row.physical_bytes, "shared-read cache physical bytes") +
+      safeCount(row.active_flights, "shared-read cache active flights") *
+        this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_RESPONSE_BYTES * 16 + 1_048_576;
+    return (physicalLimit === 0 || physicalReservation <= physicalLimit) &&
+      safeCount(row.reserved_rows, "shared-read cache reserved rows") <=
       this.config.EXECUTION_SHARED_READ_CACHE_MAXIMUM_ROWS &&
       safeCount(row.reserved_bytes, "shared-read cache reserved bytes") <=
       this.config.EXECUTION_SHARED_READ_CACHE_MAXIMUM_BYTES;

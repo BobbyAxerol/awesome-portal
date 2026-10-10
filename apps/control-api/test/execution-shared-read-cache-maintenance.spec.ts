@@ -218,6 +218,38 @@ describe("BE-R2-1 bounded shared-read cache lifecycle", () => {
     await expect(rowCount(pool, "true", "execution_shared_read_flights")).resolves.toBe(0);
   });
 
+  it("backpressures new leaders under physical pressure without evicting live hits", async () => {
+    const freshScope = { ...scope, requestPath: `${scope.requestPath}&physical=live` };
+    await insertScopeCache(pool, freshScope, 950, 30_000);
+    const guarded = new ExecutionSharedReadRepository(pool, config({
+      EXECUTION_SHARED_READ_CACHE_PHYSICAL_LIMIT_BYTES: "1048576",
+    }));
+    await expect(guarded.begin(freshScope)).resolves.toMatchObject({ kind: "CACHE_HIT" });
+    const miss = { ...scope, requestPath: `${scope.requestPath}&physical=miss` };
+    const denied = await guarded.begin(miss);
+    expect(denied).toMatchObject({ kind: "DENIED", reasonCode: "N21_SHARED_CACHE_CAPACITY_EXHAUSTED" });
+    await expect(rowCount(pool, "expires_at > clock_timestamp()")).resolves.toBe(1);
+    expect((await pool.query("SELECT count(*)::integer AS count FROM execution_shared_read_flights")).rows[0].count).toBe(0);
+    const unguarded = new ExecutionSharedReadRepository(pool, config({
+      EXECUTION_SHARED_READ_CACHE_PHYSICAL_LIMIT_BYTES: "0",
+    }));
+    const accepted = await unguarded.begin(miss);
+    expect(accepted.kind).toBe("LEADER");
+    if (accepted.kind === "LEADER") await unguarded.fail(accepted);
+  });
+
+  it("defers physical reclaim at a short lock timeout and leaves cache rows intact", async () => {
+    await insertCache(pool, 951, "PAPER_BINANCE_USDM", -4_000);
+    const blocker = await pool.connect();
+    try {
+      await blocker.query("BEGIN");
+      await blocker.query("LOCK TABLE execution_shared_read_cache IN ACCESS SHARE MODE");
+      const repository = new ExecutionSharedReadRepository(pool, config());
+      await expect(repository.reclaimPhysicalSpace(1)).resolves.toMatchObject({ reclaimed: false, reason: "LOCKED" });
+      await expect(rowCount(pool, "true")).resolves.toBe(1);
+    } finally { await blocker.query("ROLLBACK"); blocker.release(); }
+  });
+
   it("keeps the operational lifecycle disabled by default and honorably stops on shutdown", async () => {
     const disabled = new ExecutionSharedReadCacheMaintenanceWorker(
       config(), new ExecutionSharedReadRepository(pool, config()),
