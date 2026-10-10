@@ -736,8 +736,8 @@
     },
     {
       "table": "execution_retained_imports",
-      "writer_owner": "NEEDS_CODEX_REVIEW",
-      "ingress": "UNCLASSIFIED",
+      "writer_owner": "PORTAL_PROJECTION",
+      "ingress": "OWNER_OPERATOR_IMPORT",
       "verbs": {
         "insert": 1,
         "update": 0,
@@ -747,15 +747,15 @@
       "readers": 1,
       "rows_dev": null,
       "rows_stable": null,
-      "retention": "UNDECLARED",
-      "disposal_decision": "PENDING_OWNER",
-      "note": "added after UDB-02/03 by the frontend ledger gate (static SQL grep only); owner, ingress and retention are Codex's to classify",
+      "retention": "RETAINED_DATASET_LINEAGE_LIFETIME",
+      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
+      "note": "Codex UDB-03 review: importRetainedStore is an owner-operated, digest-verified transactional import; append-only idempotency/parity receipt, not a cache or Trading System writer. Keep with the retained dataset and its restore/rollback evidence; dataset disposal requires a separately approved scope.",
       "reached_via": "retained-store-transfer.ts"
     },
     {
       "table": "execution_retained_review_access",
-      "writer_owner": "NEEDS_CODEX_REVIEW",
-      "ingress": "UNCLASSIFIED",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "OWNER_OPERATOR_GRANT_REVOKE",
       "verbs": {
         "insert": 1,
         "update": 1,
@@ -765,9 +765,9 @@
       "readers": 2,
       "rows_dev": null,
       "rows_stable": null,
-      "retention": "UNDECLARED",
-      "disposal_decision": "PENDING_OWNER",
-      "note": "added after UDB-02/03 by the frontend ledger gate (static SQL grep only); owner, ingress and retention are Codex's to classify",
+      "retention": "ACCESS_EXPIRY_MAX_30_DAYS_KEEP_REVOKE_HISTORY",
+      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
+      "note": "Codex UDB-03 review: Core-only local GET grant, issued/revoked by provisionRetainedReviewAccess with product_audit_events; canReadExecution checks active user and expiry/revocation on each request. Expiry invalidates access, not the row; retain expired/revoked records to prevent implicit reissue. Not membership, Research/Governance permission, cache or upstream delegation.",
       "reached_via": "retained-review-access.ts,workspaces.ts"
     },
     {
@@ -844,8 +844,8 @@
     },
     {
       "table": "execution_store_migrations",
-      "writer_owner": "NEEDS_CODEX_REVIEW",
-      "ingress": "UNCLASSIFIED",
+      "writer_owner": "MIGRATION_ONLY",
+      "ingress": "OWNER_OPERATOR_MIGRATION",
       "verbs": {
         "insert": 1,
         "update": 0,
@@ -855,9 +855,9 @@
       "readers": 1,
       "rows_dev": null,
       "rows_stable": null,
-      "retention": "UNDECLARED",
-      "disposal_decision": "PENDING_OWNER",
-      "note": "added after UDB-02/03 by the frontend ledger gate (static SQL grep only); owner, ingress and retention are Codex's to classify",
+      "retention": "EXECUTION_DATABASE_SCHEMA_LIFETIME",
+      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
+      "note": "Codex UDB-03 review: migrateExecutionStore records immutable schema-input version/digest under an advisory transaction lock and refuses Core/drift targets. No normal request/worker writer; retained for migration, restore and rollback integrity throughout this database's lifetime.",
       "reached_via": "store-schema.ts"
     },
     {
@@ -880,8 +880,8 @@
     },
     {
       "table": "execution_workspace_references",
-      "writer_owner": "NEEDS_CODEX_REVIEW",
-      "ingress": "UNCLASSIFIED",
+      "writer_owner": "PORTAL_PROJECTION",
+      "ingress": "OWNER_OPERATOR_IMPORT_CORE_REFERENCE",
       "verbs": {
         "insert": 1,
         "update": 0,
@@ -891,9 +891,9 @@
       "readers": 0,
       "rows_dev": null,
       "rows_stable": null,
-      "retention": "UNDECLARED",
-      "disposal_decision": "PENDING_OWNER",
-      "note": "added after UDB-02/03 by the frontend ledger gate (static SQL grep only); owner, ingress and retention are Codex's to classify",
+      "retention": "REFERENCING_EXECUTION_DATASET_LIFETIME",
+      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
+      "note": "Codex UDB-03 review: importRetainedStore verifies the workspace against Core, then registers only its reference receipt for domain-local foreign keys. This is NOT identity/membership/resource authority and must never grant access. Keep while referencing retained data/import receipts exist; no automatic delete.",
       "reached_via": "retained-store-transfer.ts"
     },
     {

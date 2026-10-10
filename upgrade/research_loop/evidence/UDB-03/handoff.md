@@ -117,3 +117,16 @@ cross-stack ProductGO or UDB-04 acceptance. Ask Bobby before visual changes.
 UDB-04 still requires Bobby's separate approval and an exact reviewed clean
 candidate/image/config/migration set. Reuse unchanged UDB-01/02 custody and
 storage/import/restart/rollback proofs; retake only dependency-affected gates.
+
+## Consumer return / review correction — 2026-10-11
+
+Claude landed13f64a3a/1c01aefb. Bobby approved Codex's three review fixes:
+session-bound context, no reopening stream/poll on failure, strict published
+boundary/UTC handling. Effective permissions become null/not revalidated on
+a failed retained refresh; that is not a false denial or old-owner grant.
+Four persistence owners/retention records are now classified from their real
+operator/migration paths. Wire contract unchanged; no regenerate needed.
+[Consumer refinement and exact preview receipt](./codex-consumer-refinement.md).
+Existing Claude design, banner and wrap fixes stay; no baseline re-record.
+No new backend request blocks this scoped consumer return. Full HiFi/real RC
+positive/cross-loop/load/DR remain UDB-04, not implied by these affected tests.

@@ -6,7 +6,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 
-import { retainedEpoch, retainedStatic, subscribeRetained } from "./retainedReview";
+import { useRetainedReview } from "./retainedReview";
 
 
 /** Increments every time `key` changes to a new non-null value; 0 until the first value. */
@@ -44,10 +44,8 @@ export function pollAllowed(): boolean {
  */
 export function usePollTick(intervalMs: number, active = true, scope: "execution" | "always" = "execution"): number {
   const [tick, setTick] = useState(0);
-  const [epoch, setEpoch] = useState(retainedEpoch);
-  const [frozen, setFrozen] = useState(retainedStatic);
-  useEffect(() => subscribeRetained(() => { setEpoch(retainedEpoch()); setFrozen(retainedStatic()); }), []);
-  const stopped = scope === "execution" && frozen;
+  const { epoch, status } = useRetainedReview();
+  const stopped = scope === "execution" && status !== "idle" && status !== "absent";
   useEffect(() => {
     if (!active || stopped || !pollAllowed() || intervalMs <= 0) return undefined;
     const id = window.setInterval(() => {

@@ -37,7 +37,8 @@ export function RetainedBannerBody({ review }: { review: RetainedReview }) {
           <div>
             <dt>your access</dt>
             <dd>
-              read{review.permissions.query ? " and query" : ""} in this profile only{review.permissions.isOwner ? " · workspace owner" : ""}; no manage, download or command
+              {review.permissions ? <>read{review.permissions.query ? " and query" : ""} in this profile only{review.permissions.isOwner ? " · workspace owner" : ""}; no manage, download or command</>
+                : "Context refresh failed · access not revalidated; no action is enabled"}
             </dd>
           </div>
           <div>

@@ -2784,3 +2784,16 @@ sudo grep -rn '/home/bobby/portal' /srv/portal/*.env
 
 Clean and merged describes the tracked tree. It says nothing about what the host
 mounts out of the untracked half.
+
+## UDB-03 consumer review refinement — 2026-10-11
+
+Claude13f64a3a/1c01aefb preserved. Bobby approved Codex to finish three review
+findings, keeping design/banner/wrap fixes and baseline. Context now binds
+principal/session and clears on expiry/logout; failed Refresh remains retained
+without revalidated permissions, no stream/poll; invalid schema/UTC cannot
+reach banner rendering. Four persistence tables classified by Codex; existing
+contract/fixtures unchanged.91targeted tests/typecheck and6real-preview cells
++3explicit context fault/recovery cases verified; web-only rebuild,3owned
+sessions revoked. [Full receipt](../../../upgrade/research_loop/evidence/UDB-03/codex-consumer-refinement.md).
+No new consumer/backend request in this slice; full HiFi/cross-loop/UDB-04,
+owner visual acceptance and source-live/release still outside scope.

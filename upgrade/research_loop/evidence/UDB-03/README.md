@@ -1,6 +1,6 @@
 # UDB-03 — Retained Execution reads and unified resource policy
 
-2026-10-10 · **BACKEND_PASS / RETAINED_PREVIEW_REVIEW_READY / FE_HANDOFF_PENDING**
+2026-10-10 backend · 2026-10-11 consumer · **BACKEND_PASS / RETAINED_PREVIEW_REVIEW_READY / SCOPED_FE_CONSUMER_VERIFIED**
 · `docs/research-loop-plan` · parent `56f2250b`.
 
 Bobby approved this phase only. Follow [Unified UDB-03](../../../UNIFIED_IMPLEMENTATION_PLAN.md#udb-03)
@@ -36,6 +36,19 @@ No known backend implementation debt in this approved retained-read scope.
 - [Claude's exact three consumer handoff tasks](./handoff.md)
 - [Debt / consumer / external disposition register](./debt-register.json)
 
-The new context is published/generated, not yet a product consumer receipt.
-UDB-04 remains unopened: request Bobby approval after Claude supplies the
-consumer mapping/browser receipts. This is not source-live/Product GO.
+## Consumer refinement — 2026-10-11 (Asia/Saigon)
+
+Claude's two consumer commits `13f64a3a`/`1c01aefb` are preserved. Bobby then
+approved Codex to finish three review findings and classify four UDB tables.
+Session-bound context, fail-closed context failures and strict UTC/schema
+reading are verified by91 targeted tests/typecheck and6 affected real-preview
+cells plus explicitly injected503/invalid-clock/401 recovery. Existing design
+and baseline unchanged, web-only preview rebuilt. All3 test sessions revoked.
+[Exact refinement receipt / images / hashes / historical helper failures](./codex-consumer-refinement.md).
+Consumer handoff is implemented and verified within this scoped slice, not a
+new full68-cell HiFi or UDB-04 acceptance.
+
+The old READ/GENERATED-only note above is superseded by Claude's
+[consumer receipt](./claude-consumer-receipt.md) and the refinement receipt.
+UDB-04 remains unopened and needs Bobby's separate approval for cross-loop
+candidate acceptance. This is not source-live/Product GO.

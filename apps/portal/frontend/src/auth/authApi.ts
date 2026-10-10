@@ -14,6 +14,8 @@
  *     or cookie is written anywhere by this module.
  */
 
+import { reportSessionEnded } from "./sessionExpiry";
+
 /** States `/api/auth/context` can report. */
 export type AuthState =
   | "AUTHENTICATED"
@@ -241,7 +243,12 @@ export async function changePassword(
 
 /** Ends the app session. Access (Cloudflare) session is separate — see 01B. */
 export async function logout(): Promise<void> {
-  await post("/api/auth/logout", undefined, csrfTokenFromCookie());
+  try {
+    await post("/api/auth/logout", undefined, csrfTokenFromCookie());
+  } finally {
+    // Even an uncertain logout must not leave the previous actor's read context displayed.
+    reportSessionEnded();
+  }
 }
 
 /**

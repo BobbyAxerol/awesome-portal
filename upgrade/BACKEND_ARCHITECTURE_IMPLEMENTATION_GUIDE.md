@@ -2359,3 +2359,20 @@ and rollback protected,no volume/shared-cache prune. [Full receipt](./research_l
 and [Claude consumer matrix/handoff](./research_loop/evidence/UDB-03/handoff.md).
 New context is READ/GENERATED,not consumed/accepted;no source-live/ProductGO.
 UDB-04 requires separate approval and FE/cross-loop candidate acceptance.
+
+### 14.1.18 UDB-03 consumer refinement and persistence ownership — 2026-10-11
+
+Bobby approved completing review of Claude13f64a3a/1c01aefb without redesign.
+Context is principal/session-bound; logout/expiry and obsolete reads cannot
+carry old-owner display state. Auth/transient/malformed failures do not turn
+retained reads into live polling/stream; failed Refresh removes unverified
+permissions, exact UTC bounds are checked before render. Wire schema, Core
+server enforcement and API image unchanged. Four operator-owned UDB tables
+classified in persistence ledger: import/workspace receipts are projection
+lineage, schema ledger migration-only, read grants Core workflow with ≤30day
+validity and retained revoke/expiry tombstones. No automatic deletion or grant.
+91targeted tests/typecheck and6affected browser cells +3injected fault cases
+verified; web-only preview update,3owned sessions revoked, no shared prune.
+[Exact scoped receipt](./research_loop/evidence/UDB-03/codex-consumer-refinement.md).
+This supersedes the earlier new-context READ/GENERATED-only status, not source
+qualification/full HiFi/UDB-04/dev/stable/release acceptance.

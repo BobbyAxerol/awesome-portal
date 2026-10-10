@@ -6,7 +6,7 @@
  * financial data for a fixture on a product route; screens whose contract is
  * not published render a typed unavailable state instead.
  */
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, type ReactNode } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   CommandCenterSnapshotContainer,
@@ -29,7 +29,8 @@ import { reviewRouteFor } from "./screens/ApprovalInbox";
 import { usePresentation } from "../app/presentation";
 import { PanelState } from "./components/states";
 import { RetainedBannerBody } from "./RetainedBanner";
-import { ensureRetainedReview, useRetainedReview } from "./retainedReview";
+import { ensureRetainedReview, retainedSessionKey, useRetainedReview } from "./retainedReview";
+import { useSession } from "../auth/session";
 
 import { createHttpApi } from "./api/httpApi";
 import { contractFor, useExecutionRuntime } from "./useExecutionRuntime";
@@ -142,8 +143,9 @@ export function PreviewBanner({ profile, screenId, registryWord }: { profile: st
   );
 }
 function PreviewFrame({ screenId, profile, children }: { screenId: string; profile?: string | null; children: ReactNode }) {
-  // UDB-03: one read of the retained-review context, started while rendering so it precedes every child effect that would open a stream.
-  useState(ensureRetainedReview);
+  const sessionKey = retainedSessionKey(useSession().principal);
+  // Bind before children's passive effects; never fetch or notify another component during render.
+  useLayoutEffect(() => { ensureRetainedReview(sessionKey); }, [sessionKey]);
   // "Refresh" in a retained review re-reads the screen once: the subtree is remounted, so every reader — ticked or not — reads again.
   const refreshEpoch = useRetainedReview().epoch;
   const kind: ExecutionSurfaceKind = GOVERNANCE_SCREENS.has(screenId)

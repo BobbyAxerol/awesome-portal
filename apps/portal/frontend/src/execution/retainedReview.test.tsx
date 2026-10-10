@@ -6,6 +6,10 @@ import fixture from "../../../../../packages/contracts/fixtures/execution-retain
 import { RetainedBannerBody } from "./RetainedBanner";
 import { ensureRetainedReview, readRetainedReview, refreshRetainedReview, resetRetainedReviewForTests, retainedStatic } from "./retainedReview";
 import { liveDot } from "./sourceTone";
+import { SessionProvider } from "../auth/session";
+import { logout, type AuthPrincipal } from "../auth/authApi";
+import { reportSessionExpired } from "../auth/sessionExpiry";
+import { retainedSessionKey, useRetainedReview } from "./retainedReview";
 import { useProfileRealtime } from "./profileRealtime";
 import { usePollTick } from "./useRevision";
 
@@ -35,6 +39,48 @@ describe("readRetainedReview", () => {
     const bad = structuredClone(fixture) as typeof fixture;
     (bad.profiles[0]!.panels[0] as Record<string, unknown>).history_row_count = 12.5;
     expect(readRetainedReview(bad)).toBeNull();
+  });
+  it.each([
+    ["empty profiles", { profiles: [] }],
+    ["duplicate environment", { profiles: [fixture.profiles[0], fixture.profiles[0], fixture.profiles[2]] }],
+    ["manage permission", { permissions: { ...fixture.permissions, manage: true } }],
+    ["missing command permission", { permissions: { ...fixture.permissions, command: undefined } }],
+    ["live eligibility", { live_eligibility: true }],
+    ["wrong authority", { authority: "TRADING_SYSTEM" }],
+    ["permission cache", { revocation: { ...fixture.revocation, permission_cache_seconds: 60 } }],
+    ["missing resource reason", { future_resource_management: {} }],
+    ["empty workspace", { workspace_id: "" }],
+    ["unknown field", { unexpected: true }],
+  ])("rejects %s rather than claiming a safe context", (_name, patch) => {
+    expect(readRetainedReview({ ...fixture, ...patch })).toBeNull();
+  });
+  it.each([Number.MAX_VALUE, -1, 1.5, "1788220800123", undefined, NaN])("rejects invalid clock %s before a banner can throw", (clock) => {
+    const bad = structuredClone(fixture);
+    (bad.profiles[0] as Record<string, unknown>).source_as_of_ms = clock;
+    expect(readRetainedReview(bad)).toBeNull();
+    (bad.profiles[0] as Record<string, unknown>).source_as_of_ms = null;
+    (bad.profiles[0]!.panels[0] as Record<string, unknown>).newest_available_ms = clock;
+    expect(readRetainedReview(bad)).toBeNull();
+  });
+  it("rejects missing required fields at every object boundary", () => {
+    for (const group of ["root", "profile", "panel", "permissions", "revocation", "management"]) {
+      const original = group === "root" ? fixture : group === "profile" ? fixture.profiles[0] : group === "panel" ? fixture.profiles[0]!.panels[0]
+        : group === "management" ? fixture.future_resource_management : fixture[group as "permissions" | "revocation"];
+      for (const field of Object.keys(original!)) {
+        const bad = structuredClone(fixture);
+        const object = group === "root" ? bad : group === "profile" ? bad.profiles[0] : group === "panel" ? bad.profiles[0]!.panels[0]
+          : group === "management" ? bad.future_resource_management : bad[group as "permissions" | "revocation"];
+        delete (object as Record<string, unknown>)[field];
+        expect(readRetainedReview(bad), group + "." + field).toBeNull();
+      }
+    }
+  });
+  it("rejects negative, excessive and noncanonical counts", () => {
+    for (const patch of [{ current_row_count: -1 }, { current_row_count: 10_001 }, { history_row_count: "00" }]) {
+      const bad = structuredClone(fixture);
+      Object.assign(bad.profiles[0]!.panels[0]!, patch);
+      expect(readRetainedReview(bad)).toBeNull();
+    }
   });
 });
 
@@ -94,6 +140,91 @@ describe("a retained review stays still until the reader refreshes", () => {
     const tick = renderHook(() => usePollTick(1_000));
     act(() => { vi.advanceTimersByTime(3_000); });
     expect(tick.result.current).toBe(3);
+  });
+  it.each([503, 502, 404])("does not reactivate polling or streaming after a retained refresh returns %s", async (status) => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(ok(fixture)).mockResolvedValue(new Response("{}", { status }));
+    vi.stubGlobal("fetch", fetchMock);
+    const events = vi.fn(); vi.stubGlobal("EventSource", events);
+    ensureRetainedReview();
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    const tick = renderHook(() => usePollTick(1_000));
+    const channel = renderHook(() => useProfileRealtime("paper"));
+    const context = renderHook(() => useRetainedReview());
+    act(refreshRetainedReview);
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    expect(tick.result.current).toBe(1);
+    expect(channel.result.current.phase).toBe("retained");
+    expect(context.result.current.review?.permissions).toBeNull();
+    expect(context.result.current.error).toBe(`UDB_CONTEXT_HTTP_${status}`);
+    expect(fetchMock).toHaveBeenCalledTimes(2); expect(events).not.toHaveBeenCalled();
+    render(<RetainedBannerBody review={context.result.current.review!} />);
+    expect(screen.getByText(/access not revalidated/)).toBeTruthy();
+  });
+  it.each(["network", "invalid"])("keeps retained mode and permits explicit recovery after %s failure", async (failure) => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(ok(fixture));
+    if (failure === "network") fetchMock.mockRejectedValueOnce(new TypeError("network"));
+    else fetchMock.mockResolvedValueOnce(ok({ ...fixture, profiles: [] }));
+    fetchMock.mockResolvedValue(ok(fixture)); vi.stubGlobal("fetch", fetchMock);
+    ensureRetainedReview(); await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    const context = renderHook(() => useRetainedReview());
+    act(refreshRetainedReview); await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(context.result.current.status).toBe("retained"); expect(context.result.current.review?.permissions).toBeNull();
+    act(refreshRetainedReview); await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(context.result.current.error).toBeNull(); expect(context.result.current.review?.permissions?.read).toBe(true);
+  });
+  it.each([401, 403, 503])("does not open legacy transport on initial HTTP %s", async (status) => {
+    const fetchMock = vi.fn(async () => new Response("{}", { status })); vi.stubGlobal("fetch", fetchMock);
+    const events = vi.fn(); vi.stubGlobal("EventSource", events);
+    ensureRetainedReview(); await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    const tick = renderHook(() => usePollTick(1_000)); renderHook(() => useProfileRealtime("paper"));
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    expect(tick.result.current).toBe(0); expect(fetchMock).toHaveBeenCalledTimes(1); expect(events).not.toHaveBeenCalled();
+  });
+  it("does not interpret a workspace-hidden 404 as an unsupported endpoint", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: { code: "WORKSPACE_NOT_FOUND" } }), { status: 404 })));
+    ensureRetainedReview(); await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(renderHook(() => useRetainedReview()).result.current.status).toBe("denied");
+  });
+  it("bounds a stalled context read at ten seconds without enabling legacy polling", async () => {
+    vi.stubGlobal("fetch", vi.fn((_url: string, init: RequestInit) => new Promise((_resolve, reject) => {
+      init.signal!.addEventListener("abort", () => reject(new DOMException("abort", "AbortError")));
+    })));
+    ensureRetainedReview(); const context = renderHook(() => useRetainedReview());
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_001); });
+    expect(context.result.current.status).toBe("unavailable"); expect(context.result.current.error).toBe("UDB_CONTEXT_READ_TIMEOUT");
+  });
+  it("clears contexts on expiry and logout, including failed logout", async () => {
+    const fetchMock = vi.fn(async () => ok(fixture)); vi.stubGlobal("fetch", fetchMock);
+    ensureRetainedReview(); await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    act(reportSessionExpired); expect(retainedStatic()).toBe(false);
+    ensureRetainedReview(); await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    await act(async () => { await logout(); }); expect(retainedStatic()).toBe(false);
+    ensureRetainedReview(); await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    fetchMock.mockRejectedValueOnce(new TypeError("network"));
+    await act(async () => { await expect(logout()).rejects.toThrow(); }); expect(retainedStatic()).toBe(false);
+  });
+  it("does not expose the previous owner or accept a late response when the principal/session changes", async () => {
+    const principal = (id: string, session: string): AuthPrincipal => ({ principalId: id, sessionId: session, username: "test", role: "ADMIN", mustChangePassword: false, authnMethods: [], issuedAt: "test", exp: 0 });
+    let actor = principal("owner", "session-a");
+    let late: (response: Response) => void = () => {};
+    const owner = { ...fixture, permissions: { ...fixture.permissions, is_owner: true } };
+    const fetchMock = vi.fn(async (url: string) => String(url).includes("access/self") ? ok({}) : ok(owner));
+    vi.stubGlobal("fetch", fetchMock);
+    ensureRetainedReview(retainedSessionKey(actor)); await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    const wrapper = ({ children }: { children: React.ReactNode }) => <SessionProvider principal={actor}>{children}</SessionProvider>;
+    const context = renderHook(() => useRetainedReview(), { wrapper });
+    expect(context.result.current.review?.permissions?.isOwner).toBe(true);
+    fetchMock.mockImplementationOnce(async () => new Promise<Response>(resolve => { late = resolve; }));
+    act(refreshRetainedReview);
+    actor = principal("reviewer", "session-b"); context.rerender();
+    expect(context.result.current.review).toBeNull(); expect(context.result.current.status).toBe("loading");
+    fetchMock.mockImplementation(async (url: string) => String(url).includes("access/self") ? ok({}) : ok(fixture));
+    act(() => ensureRetainedReview(retainedSessionKey(actor)));
+    await act(async () => { late(ok(owner)); await vi.advanceTimersByTimeAsync(0); });
+    expect(context.result.current.review?.permissions?.isOwner).toBe(false);
+    const oldReadCount = fetchMock.mock.calls.filter(([url]) => String(url).includes("retained-review")).length;
+    act(() => ensureRetainedReview(retainedSessionKey(actor)));
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes("retained-review"))).toHaveLength(oldReadCount);
   });
 });
 

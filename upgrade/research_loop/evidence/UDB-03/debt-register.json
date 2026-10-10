@@ -4,9 +4,9 @@
   "landing_gate":"NORMAL_GROUPED_COMMIT_HOOK_REQUIRED",
   "known_backend_implementation_debt":[],
   "consumer_handoff":[
-    {"id":"FE-UDB03-01","owner":"Claude","state":"READ_GENERATED_NOT_CONSUMER_ACCEPTED","task":"Typed retained context/per-action permissions/source-state labels in existing rich panels; no global rights inference","locator":"handoff.md"},
-    {"id":"FE-UDB03-02","owner":"Claude","state":"HANDOFF_READY","task":"Consume stream_enabled=false and stop retained periodic drains; do not label intentional204 as invalid source snapshot","locator":"handoff.md"},
-    {"id":"FE-UDB03-03","owner":"Claude/Bobby","state":"VISUAL_REVIEW_REQUIRED","task":"Inspect existing Alpha3601280 overflow and R1 mobile rail without unapproved design/baseline changes","locator":"handoff.md"}
+    {"id":"FE-UDB03-01","owner":"Claude/Codex","state":"SCOPED_CONSUMER_VERIFIED","task":"Retained context, session binding, exact clocks, failures and permissions mapped; no global rights inference","locator":"codex-consumer-refinement.md"},
+    {"id":"FE-UDB03-02","owner":"Claude/Codex","state":"SCOPED_CONSUMER_VERIFIED","task":"No retained stream/poll; failed refresh stays static; Research polling preserved; explicit recovery verified","locator":"codex-consumer-refinement.md"},
+    {"id":"FE-UDB03-03","owner":"Claude/Bobby","state":"WRAP_FIX_VERIFIED_BROAD_VISUAL_ACCEPTANCE_UDB04","task":"Claude wrap fixes preserved, affected preview1280/660 verified. Not a full68-cell HiFi or owner visual acceptance; R1/mobile/cross-loop reviewed in UDB04","locator":"codex-consumer-refinement.md"}
   ],
   "external_dispositions":[
     {"id":"UDB-FUTURE-TS-MANAGEMENT","state":"NOT_PUBLISHED","reason":"TS_RESOURCE_MANAGEMENT_CONTRACT_NOT_PUBLISHED","blocks_existing_reads":false},

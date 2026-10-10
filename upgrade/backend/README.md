@@ -2049,3 +2049,12 @@ remote push/dev/stable. [Packet](../research_loop/evidence/UDB-03/README.md) ·
 [Claude consumer tasks](../research_loop/evidence/UDB-03/handoff.md).
 READ/GENERATED is not CONSUMED/BROWSER_VERIFIED for the new context;UDB-04
 and product/release acceptance remain separate,not implicitly completed.
+
+**2026-10-11 UDB-03 consumer review finished (Bobby-approved):** preserve
+Claude's two landed commits/design; fix session-bound context, failure-safe
+static reads and strict UTC/schema guards. Classify four UDB persistence
+tables with real operator/migration ownership and non-destructive retention.
+91targeted tests/typecheck,6affected browser cells and3explicit context faults
+verified; web-only preview updated, API/DB unchanged,3/3test sessions revoked.
+[Refinement receipt and handoff](../research_loop/evidence/UDB-03/codex-consumer-refinement.md).
+Normal grouped commit; no remote push or UDB-04/product/release activation.

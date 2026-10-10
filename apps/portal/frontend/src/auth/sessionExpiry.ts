@@ -18,6 +18,17 @@
 type Listener = () => void;
 
 const listeners = new Set<Listener>();
+const endListeners = new Set<Listener>();
+
+/** Clear session-bound read contexts on logout as well as authentication expiry. */
+export function onSessionEnded(listener: Listener): () => void {
+  endListeners.add(listener);
+  return () => { endListeners.delete(listener); };
+}
+
+export function reportSessionEnded(): void {
+  for (const listener of [...endListeners]) listener();
+}
 
 export function onSessionExpired(listener: Listener): () => void {
   listeners.add(listener);
@@ -27,5 +38,6 @@ export function onSessionExpired(listener: Listener): () => void {
 }
 
 export function reportSessionExpired(): void {
+  reportSessionEnded();
   for (const listener of [...listeners]) listener();
 }

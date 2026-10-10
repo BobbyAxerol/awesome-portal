@@ -7,7 +7,7 @@
  * resnapshot/reconnect; auth expiry and transport errors never loop.
  */
 import { useEffect, useState } from "react";
-import { useRetainedReview } from "./retainedReview";
+import { retainedLoading, useRetainedReview } from "./retainedReview";
 
 export type ProfileRealtimePhase = "idle" | "connecting" | "live" | "recovering" | "auth_expired" | "closed" | "retained";
 
@@ -126,15 +126,19 @@ const realtimeHubs = new Map<Environment, RealtimeHub>();
 /** One connection/bootstrap per profile per tab; destroyed when its last reader leaves. */
 export function useProfileRealtime(environment: Environment | null, screenId?: string): ProfileRealtimeState {
   const [bound, setBound] = useState<{ environment: Environment | null; state: ProfileRealtimeState }>({ environment: null, state: INITIAL });
-  const retained = useRetainedReview().status;
+  const { status: retained, error: contextError } = useRetainedReview();
   useEffect(() => {
     if (!environment || typeof EventSource === "undefined") {
       setBound({ environment, state: INITIAL }); return;
     }
     // UDB-03: the retained-review context says before any request whether a stream exists. While it is being read nothing is opened;
     // once it says retained, nothing ever is — no bootstrap, no EventSource, no heartbeat invented for the reader.
-    if (retained === "loading") { setBound({ environment, state: INITIAL }); return; }
+    if (retainedLoading() || retained === "loading") { setBound({ environment, state: INITIAL }); return; }
     if (retained === "retained") { setBound({ environment, state: RETAINED }); return; }
+    if (retained === "auth_expired" || retained === "denied" || retained === "unavailable") {
+      setBound({ environment, state: { ...INITIAL, phase: retained === "auth_expired" ? "auth_expired" : "closed", reason: contextError } });
+      return;
+    }
     let hub = realtimeHubs.get(environment);
     if (!hub) {
       hub = { state: INITIAL, listeners: new Set(), stop: () => undefined };
@@ -158,7 +162,7 @@ export function useProfileRealtime(environment: Environment | null, screenId?: s
       active.listeners.delete(listener);
       if (!active.listeners.size) { active.stop(); if (realtimeHubs.get(environment) === active) realtimeHubs.delete(environment); }
     };
-  }, [environment, screenId, retained]);
+  }, [environment, screenId, retained, contextError]);
   return bound.environment === environment ? bound.state : INITIAL;
 }
 

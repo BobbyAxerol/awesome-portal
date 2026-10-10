@@ -3648,7 +3648,7 @@ phê duyệt tại [UDB addendum](#udb-upgrade-2026-10-10).
 |---|---|---|---|---|
 | [UDB-01](#udb-01) | Bobby duyệt UDB-01 2026-10-10 +bounded-gate refinement | Cả hai loop, nền identity/storage | UDB-1 | **PASS — PREVIEW_STORAGE_BASELINE** · 95/95 real-PG +7 config cases;8,969 changed-body writes/119 vacuum cycles/602.478s;custody unchanged,C4 done;[packet](./research_loop/evidence/UDB-01/README.md). No in-scope open debt;dev/stable/UI không đổi |
 | [UDB-02](#udb-02) | UDB-01 PASS + Bobby giao 2026-10-10 | Execution read models + Research publication | UDB-2 | **PASS — ISOLATED_STORE_HYDRATED_PREVIEW** ·38/38 real-PG +7 config assertions;49,421 history/4,136 current entities,10-table parity;Core custody/independent restart/restore/rollback/C4 PASS;[packet](./research_loop/evidence/UDB-02/README.md). Retained activation/handoff hiện thuộc UDB-03 bên dưới |
-| [UDB-03](#udb-03) | UDB-02 PASS + Bobby giao 2026-10-10 | Execution screens/subpanels, Research → RC → R1 | UDB-3 | **BACKEND_PASS / RETAINED_PREVIEW_REVIEW_READY / FE_CONSUMER_LANDED (Claude, 2026-10-10: retained context, no stream/poll, Refresh, banner; browser 1280/660)** ·222 actual API+68 existing rich browser cells PASS;54 named aliases ×3profiles,Core policy/revoke/custody/C4;no upstream/SSE/command/UI change;[packet](./research_loop/evidence/UDB-03/README.md) · [Claude handoff](./research_loop/evidence/UDB-03/handoff.md) · [Claude consumer receipt](./research_loop/evidence/UDB-03/claude-consumer-receipt.md);UDB-04 chưa mở |
+| [UDB-03](#udb-03) | UDB-02 PASS + Bobby giao 2026-10-10 | Execution screens/subpanels, Research → RC → R1 | UDB-3 | **BACKEND_PASS / RETAINED_PREVIEW_REVIEW_READY / SCOPED_FE_CONSUMER_VERIFIED** · Claude13f64a3a/1c01aefb retained; Codex2026-10-11 session/failure/UTC refinement +4table owners,91targeted tests/typecheck +6affected browser cells and3explicit faults;222API/68old route gates reused only unchanged scope. No source/SSE/command/dev/stable;existing banner kept,no redesign/baseline change. [packet](./research_loop/evidence/UDB-03/README.md) · [consumer receipt](./research_loop/evidence/UDB-03/claude-consumer-receipt.md) · [review fixes](./research_loop/evidence/UDB-03/codex-consumer-refinement.md);UDB-04 chưa mở |
 | [UDB-04](#udb-04) | UDB-01…03 đạt + Bobby duyệt UDB-04 | Cả hai loop + Governance | UDB-4 | **PLANNED / AWAITING_IMPLEMENTATION_APPROVAL** · cross-loop load/auth/DR/browser acceptance + exact preview rebuild; không tự merge/deploy/release |
 
 **Frontend board rows 2026-10-04 (FE campaign W1–W7, Claude/Thanhvuong; Codex slice marked):** sống tại [FE-W1-W5 packet](./research_loop/evidence/FE-W1-W5/thanhvuong-frontend-receipt.md); chi tiết ở [§13.4.2](#rl-fe-w1-w7-note). Mọi hàng dưới đây là `NOT_VERIFIED` ở mức sản phẩm cho tới khi Bobby rà bằng mắt; không hàng nào là `OWNER_ACCEPTED`.
@@ -9041,3 +9041,21 @@ Alpha360desktop/R1mobile visual review). No frontend design/baseline edits.
 [Claude prompt/handoff](./research_loop/evidence/UDB-03/handoff.md).
 UDB04 chỉ mở sau Bobby giao và exact FE/candidate acceptance. No remote push,
 dev/main/stable/AWS/Edge/TS/source/SSE/command/ProductGO/release activation.
+
+### UDB-03 consumer review refinement — 2026-10-11 (Asia/Saigon)
+
+Bobby approved finishing Codex's review of Claude13f64a3a/1c01aefb. Those
+commits are preserved on the same Research branch. Delivered: context scoped
+to principal/session, expiry/logout/late-response cleanup, strict published
+schema/UTC reading, no stream/poll on auth/transient/malformed context failure,
+and four formerly NEEDS_CODEX_REVIEW persistence tables classified by actual
+owner/operator/migration call graph. No backend logic/migration/source change.
+
+91targeted FE tests +typecheck PASS; web-only preview rebuilt with existing
+design/banner, no baseline change.6affected browser cells1280/660 and3explicit
+context fault injections verified; final raw receipt preserved and telemetry
+classification verified separately. All3 owned test sessions revoked. No full
+engine/frontend/68-cell rerun for unchanged dependencies; normal grouped
+commit hook required, no bypass/push. [Exact report/images/hashes/C4](./research_loop/evidence/UDB-03/codex-consumer-refinement.md).
+State **SCOPED_FE_CONSUMER_VERIFIED / RETAINED_PREVIEW_REVIEW_READY**;
+UDB-04/cross-loop HiFi/ProductGO/dev/stable/release remain separately unopened.
