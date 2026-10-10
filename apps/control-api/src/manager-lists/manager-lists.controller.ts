@@ -69,7 +69,7 @@ export class ManagerListsController {
 
   private async workspace(request: ManagerListRequest, raw: unknown): Promise<string> {
     const workspaceId = typeof raw === "string" && raw ? raw : request.portalWorkspaceId;
-    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId))) {
       throw new ManagerListsError("WORKSPACE_NOT_FOUND", 404);
     }
     return workspaceId;

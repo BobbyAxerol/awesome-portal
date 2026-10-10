@@ -1,6 +1,8 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
-import { EXECUTION_DATA_POOL } from "../tokens";
+import { EXECUTION_DATA_POOL, CONTROL_API_CONFIG } from "../tokens";
+import type { ControlApiConfig } from "../config";
+import { retainedReview } from "./retained-read-profile";
 import { ProjectionEnvironment } from "./profile-projection.repository";
 
 export const FINANCIAL_SUBJECT_KINDS = ["alpha", "deployment", "account", "portfolio"] as const;
@@ -99,19 +101,21 @@ export interface DurableFinancialSeriesRead {
  */
 @Injectable()
 export class ExecutionDurableFinancialRepository {
-  constructor(@Inject(EXECUTION_DATA_POOL) private readonly pool: Pool) {}
+  constructor(@Inject(EXECUTION_DATA_POOL) private readonly pool: Pool,
+    @Optional() @Inject(CONTROL_API_CONFIG) private readonly config?: ControlApiConfig) {}
 
   async series(input: DurableFinancialSeriesInput): Promise<DurableFinancialSeriesRead> {
     validateInput(input);
     return this.stableRead(async (client) => {
-      const context = await loadContext(client, input);
+      const retained = retainedReview(this.config);
+      const context = await loadContext(client, input, retained);
       if (context.kind === "MISSING_REVISION") return unavailable("EDS07_MIRROR_NOT_READY");
       if (context.kind === "MISSING_RELATION") return unavailable("EDS07_RELATION_NOT_MIRRORED", context.revision);
       if (context.observation.availability === "UNAVAILABLE") {
         return unavailable(context.reasonCode ?? "EDS07_RELATION_UNAVAILABLE", context.revision, context.observation);
       }
 
-      const subject = await resolveSubject(client, input, input.subject, context.revision);
+      const subject = await resolveSubject(client, input, input.subject, context.revision, retained);
       if (subject.state === "UNAVAILABLE") {
         return unavailable(subject.reasonCode ?? "EDS07_SUBJECT_UNAVAILABLE", context.revision, context.observation);
       }
@@ -119,7 +123,8 @@ export class ExecutionDurableFinancialRepository {
         return empty(context.revision, context.observation, subject.reasonCode);
       }
 
-      const base = buildBaseQuery(input, subject.resource);
+      const table = retained ? "execution_timeseries_history" : "execution_durable_mirror_range_rows";
+      const base = buildBaseQuery(input, subject.resource, table);
       const meta = await client.query<{
         source_rows: string;
         numeric_rows: string;
@@ -132,7 +137,7 @@ export class ExecutionDurableFinancialRepository {
                 count(DISTINCT CASE WHEN ${base.validPredicate} THEN ${base.seriesKey} END)::text AS series_count,
                 min(ts) FILTER (WHERE ${base.validPredicate}) AS oldest_available_at,
                 max(ts) FILTER (WHERE ${base.validPredicate}) AS newest_available_at
-           FROM execution_durable_mirror_range_rows
+           FROM ${table}
           WHERE ${base.where.join(" AND ")}`,
         base.values,
       );
@@ -145,8 +150,8 @@ export class ExecutionDurableFinancialRepository {
       const observationState = context.observation.completeness === "PARTIAL" ? "PARTIAL" : "AVAILABLE";
       if (numericRows === "0") {
         return {
-          state: sourceRows === "0" ? "EMPTY" : "PARTIAL",
-          reasonCode: sourceRows === "0" ? null : "EDS07_NON_NUMERIC_OR_CURRENCY_ROW_EXCLUDED",
+          state: sourceRows === "0" ? (retained ? "UNAVAILABLE" : "EMPTY") : "PARTIAL",
+          reasonCode: sourceRows === "0" ? (retained ? "UDB_RETAINED_SUBJECT_HISTORY_NOT_CAPTURED" : null) : "EDS07_NON_NUMERIC_OR_CURRENCY_ROW_EXCLUDED",
           revision: context.revision,
           observation: context.observation,
           sourceRows,
@@ -218,7 +223,7 @@ export class ExecutionDurableFinancialRepository {
     return this.stableRead(async (client) => {
       const revision = await loadCurrentRevision(client, scope);
       if (!revision) return { state: "UNAVAILABLE", reasonCode: "EDS07_MIRROR_NOT_READY", resource: null };
-      return resolveSubject(client, scope, subject, revision);
+      return resolveSubject(client, scope, subject, revision, retainedReview(this.config));
     });
   }
 
@@ -325,8 +330,11 @@ interface BaseQuery {
 function buildBaseQuery(
   input: DurableFinancialSeriesInput,
   subject: { kind: FinancialStoredSubjectKind; id: string },
+  table: "execution_timeseries_history" | "execution_durable_mirror_range_rows" = "execution_durable_mirror_range_rows",
 ): BaseQuery {
-  const subjectColumn = SUBJECT_COLUMNS[subject.kind];
+  const legacy = table === "execution_timeseries_history";
+  const subjectColumn = legacy ? `fields->>'${SUBJECT_COLUMNS[subject.kind]}'` : SUBJECT_COLUMNS[subject.kind];
+  const accountColumn = legacy ? "fields->>'account_id'" : "account_id";
   const values: unknown[] = [input.workspaceId, input.environment, input.profileId, input.relationKey];
   const where = ["workspace_id=$1", "environment=$2", "profile_id=$3", "relation_key=$4"];
   if (input.fromMs !== null) {
@@ -345,10 +353,10 @@ function buildBaseQuery(
   const value = `fields->>${valueParameter}`;
   const currency = `fields->>${currencyParameter}`;
   const validPredicate = `(${value} ~ '${EXACT_DECIMAL_SQL}' AND length(${value}) <= ${MAX_DECIMAL_LENGTH} AND ${currency} ~ '${CURRENCY_SQL}')`;
-  const seriesKey = `concat(COALESCE(NULLIF(account_id, ''), 'scope'), '|', ${currency})`;
+  const seriesKey = `concat(COALESCE(NULLIF(${accountColumn}, ''), 'scope'), '|', ${currency})`;
   const validCte = `WITH scoped AS (
-      SELECT row_id, ts, account_id, ${value} AS value, ${currency} AS currency, ${seriesKey} AS series_key
-        FROM execution_durable_mirror_range_rows
+      SELECT row_id, ts, ${accountColumn} AS account_id, ${value} AS value, ${currency} AS currency, ${seriesKey} AS series_key
+        FROM ${table}
        WHERE ${where.join(" AND ")}
     ), valid AS (
       SELECT row_id, ts, account_id, value, currency, series_key
@@ -361,6 +369,7 @@ function buildBaseQuery(
 async function loadContext(
   client: PoolClient,
   input: DurableFinancialScope & { relationKey: string },
+  retained = false,
 ): Promise<
   | { kind: "MISSING_REVISION" }
   | { kind: "MISSING_RELATION"; revision: DurableFinancialRevision }
@@ -368,6 +377,14 @@ async function loadContext(
 > {
   const current = await loadCurrentRevision(client, input);
   if (!current) return { kind: "MISSING_REVISION" };
+  if (retained) {
+    const coverage = await client.query(`SELECT count(*)::text AS n FROM execution_timeseries_history
+      WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND relation_key=$4`,
+      [input.workspaceId,input.environment,input.profileId,input.relationKey]);
+    if (coverage.rows[0]?.n === "0") return { kind: "MISSING_RELATION", revision: current };
+    return {kind:"READY",revision:current,reasonCode:"UDB_RETAINED_OBSERVATION_NOT_CURRENT_SOURCE",
+      observation:{availability:"AVAILABLE",freshness:"STALE",completeness:"PARTIAL",asOf:null,receivedAt:current.receivedAt}};
+  }
   const observation = await client.query<{
     availability: "AVAILABLE" | "UNAVAILABLE";
     reason_code: string | null;
@@ -434,6 +451,7 @@ async function resolveSubject(
   scope: DurableFinancialScope,
   subject: { kind: FinancialSubjectKind; id: string },
   revision: DurableFinancialRevision,
+  retained = false,
 ): Promise<DurableFinancialSubjectResolution> {
   if (subject.kind !== "alpha") {
     return { state: "AVAILABLE", reasonCode: null, resource: { kind: subject.kind, id: subject.id } };
@@ -452,7 +470,7 @@ async function resolveSubject(
     [revision.readModelRevision, scope.workspaceId, scope.environment, scope.profileId, relationKey],
   );
   const observed = observation.rows[0];
-  if (!observed || observed.availability === "UNAVAILABLE") {
+  if (!retained && (!observed || observed.availability === "UNAVAILABLE")) {
     return {
       state: "UNAVAILABLE",
       reasonCode: observed?.reason_code ?? "EDS07_ALPHA_IDENTITY_NOT_MIRRORED",
@@ -463,11 +481,11 @@ async function resolveSubject(
     `SELECT DISTINCT strategy_id
        FROM execution_durable_mirror_current_entities
       WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND relation_key=$4
-        AND last_read_model_revision=$5::uuid AND strategy_id IS NOT NULL
+        AND ($7::boolean OR last_read_model_revision=$5::uuid) AND strategy_id IS NOT NULL
         AND (strategy_id=$6 OR fields->>'alpha_id'=$6)
       ORDER BY strategy_id ASC
       LIMIT 2`,
-    [scope.workspaceId, scope.environment, scope.profileId, relationKey, revision.readModelRevision, subject.id],
+    [scope.workspaceId, scope.environment, scope.profileId, relationKey, revision.readModelRevision, subject.id, retained],
   );
   if (identities.rows.length === 1) {
     return { state: "AVAILABLE", reasonCode: null, resource: { kind: "strategy", id: identities.rows[0]!.strategy_id } };
@@ -476,8 +494,8 @@ async function resolveSubject(
     return { state: "UNAVAILABLE", reasonCode: "EDS07_ALPHA_SUBJECT_AMBIGUOUS", resource: null };
   }
   return {
-    state: observed.completeness === "COMPLETE" ? "EMPTY" : "UNAVAILABLE",
-    reasonCode: observed.completeness === "COMPLETE"
+    state: !retained && observed?.completeness === "COMPLETE" ? "EMPTY" : "UNAVAILABLE",
+    reasonCode: !retained && observed?.completeness === "COMPLETE"
       ? "EDS07_ALPHA_SUBJECT_NOT_FOUND"
       : "EDS07_ALPHA_SUBJECT_UNRESOLVED_PARTIAL",
     resource: null,

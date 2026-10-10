@@ -72,7 +72,7 @@ export class ExecutionSubjectActivityController {
     }
     const workspaceId = query.data.workspace_id ?? this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ?? request.portalWorkspaceId;
     if (workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ||
-      !(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+      !(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId))) {
       throw new HttpException({ error: { code: "WORKSPACE_NOT_FOUND" } }, 404);
     }
     try {

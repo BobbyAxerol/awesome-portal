@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { ControlApiConfig, querySigningKeys } from "../config";
+import { localProfileReadable, projectionExpired } from "./retained-read-profile";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { KeysetCursorCodec, QueryContractError, queryFingerprint } from "../query";
 import { AnalyticsPrincipal, AnalyticsProxyError, QueryAnalyticsSubjectKind } from "./analytics.proxy";
@@ -212,7 +213,7 @@ export class LocalQueryAnalyticsService {
     }
     const snapshot = await this.repository.snapshot(workspaceId, environment, profileId);
     if (!snapshot) throw new AnalyticsProxyError("PHASE2_PROJECTION_NOT_READY", 503);
-    if (Date.now() - snapshot.lastSuccessfulRefreshAt.valueOf() > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
+    if (projectionExpired(this.config, snapshot.lastSuccessfulRefreshAt)) {
       throw new AnalyticsProxyError("PHASE2_PROJECTION_STALE_CEILING_EXCEEDED", 503);
     }
     return { snapshot, environment, workspaceId, profileId };
@@ -1491,9 +1492,7 @@ function observedSubjectKind(kind: ObservedTimelineSubjectKind): "DEPLOYMENT" | 
 }
 
 function profileFeatureEnabled(config: ControlApiConfig, environment: ProjectionEnvironment): boolean {
-  return environment === "paper" ? config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER === "true"
-    : environment === "sandbox" ? config.FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX === "true"
-      : config.FEATURE_EXECUTION_CURRENT_SOURCE_LIVE === "true";
+  return localProfileReadable(config, environment);
 }
 
 function fieldEpochMs(row: Fact, field: string): number | null {

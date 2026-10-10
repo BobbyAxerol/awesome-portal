@@ -274,6 +274,7 @@ const EnvSchema = z.object({
   // is the second, deployment-review gate after that intake is accepted.
   FEATURE_EXECUTION_MARKET_CONTEXT: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_LOCAL_PROJECTION: z.enum(["true", "false"]).default("false"),
+  EXECUTION_READ_PROFILE: z.enum(["source_current_v1", "retained_review_v1"]).default("source_current_v1"),
   // EDS-06 stays storage/change-window gated even when the source projection
   // itself is active. Browser reads are a later, per-screen cutover.
   FEATURE_EXECUTION_DURABLE_MIRROR: z.enum(["true", "false"]).default("false"),
@@ -672,6 +673,24 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
   if (config.FEATURE_EXECUTION_COMMAND_RELAY === "true") {
     throw new Error("FEATURE_EXECUTION_COMMAND_RELAY is not commissioned in EX-BE-05b/F0");
   }
+  if (config.EXECUTION_READ_PROFILE === "retained_review_v1") {
+    if (config.PORTAL_ENV !== "local" || config.AUTH_MODE !== "dev" || !config.EXECUTION_DATABASE_URL ||
+      config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true" || !config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ||
+      !config.EXECUTION_EDGE_PAPER_PROFILE_ID || !config.EXECUTION_EDGE_SANDBOX_PROFILE_ID || !config.EXECUTION_EDGE_LIVE_PROFILE_ID) {
+      throw new Error("UDB_RETAINED_REVIEW_REQUIRES_ISOLATED_LOCAL_PROFILE");
+    }
+    const forbidden = ["FEATURE_EXECUTION_EDGE", "FEATURE_EXECUTION_CURRENT_SOURCE_PAPER",
+      "FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE", "FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX",
+      "FEATURE_EXECUTION_CURRENT_SOURCE_LIVE", "FEATURE_EXECUTION_DURABLE_MIRROR",
+      "FEATURE_EXECUTION_DURABLE_MIRROR_READS", "FEATURE_EXECUTION_REALTIME_SSE",
+      "FEATURE_EXECUTION_ANALYTICS_QUERY", "FEATURE_EXECUTION_SHADOW_QUERY",
+      "FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW", "FEATURE_EXECUTION_MARKET_CONTEXT",
+      "FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES", "FEATURE_EXECUTION_COMMAND_RELAY", "FEATURE_EXECUTION_LOCAL_R0_TASKS"] as const;
+    if (forbidden.some(key => config[key] === "true")) throw new Error("UDB_RETAINED_REVIEW_FORBIDS_SOURCE_STREAM_AND_MUTATION");
+    if (config.EXECUTION_EDGE_PAPER_PROFILE_ID !== "PAPER_BINANCE_USDM" ||
+      config.EXECUTION_EDGE_SANDBOX_PROFILE_ID !== "SANDBOX_BINANCE_USDM" ||
+      config.EXECUTION_EDGE_LIVE_PROFILE_ID !== "LIVE_BINANCE_USDM") throw new Error("UDB_RETAINED_REVIEW_PROFILE_MISMATCH");
+  }
   if (config.FEATURE_EXECUTION_LOCAL_R0_TASKS === "true") {
     const missing = [
       ["EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID", config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID],
@@ -771,7 +790,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
         "FEATURE_EXECUTION_LOCAL_PROJECTION=true requires EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID",
       );
     }
-    if (!currentSourceProfiles.some((profile) => profile.feature === "true")) {
+    if (config.EXECUTION_READ_PROFILE !== "retained_review_v1" && !currentSourceProfiles.some((profile) => profile.feature === "true")) {
       throw new Error("local execution projection requires at least one current-source profile");
     }
     if (

@@ -42,7 +42,7 @@ export class MaximumDataOperationController {
     const query = DeploymentPageQuerySchema.safeParse(raw);
     if (!query.success) throw new MaximumDataOperationError("EDS01_OPERATION_QUERY_INVALID", 400);
     const workspaceId = query.data.workspace_id ?? request.portalWorkspaceId;
-    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId, query.data.environment))) {
       throw new MaximumDataOperationError("WORKSPACE_NOT_FOUND", 404);
     }
     return this.operations.deploymentPage(
@@ -81,7 +81,7 @@ export class MaximumDataOperationController {
     const query = DeploymentPageQuerySchema.safeParse(raw);
     if (!query.success) throw new MaximumDataOperationError("EDS11R_OPERATION_QUERY_INVALID", 400);
     const workspaceId = query.data.workspace_id ?? request.portalWorkspaceId;
-    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId, query.data.environment))) {
       throw new MaximumDataOperationError("WORKSPACE_NOT_FOUND", 404);
     }
     return this.operations.relationPage(

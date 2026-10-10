@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { freshnessPolicies } from "../execution/environment-parity";
+import { retainedReview } from "../execution/retained-read-profile";
 import { AuthSession, PortalUser } from "../domain";
 import { ControlApiConfig, querySigningKeys } from "../config";
 import { ExecutionProductReadSource } from "../execution/product-read-source";
@@ -339,6 +340,10 @@ export class ManagerListsService {
     refreshAllowed: boolean,
   ): Promise<ProjectionSnapshot> {
     const existing = await this.repository.snapshot(principal.workspaceId, environment, kind);
+    if (retainedReview(this.config)) {
+      if (existing) return existing;
+      throw new ManagerListsError("UDB_RETAINED_LIST_NOT_IMPORTED", 503);
+    }
     if (!refreshAllowed || (existing && Date.now() - existing.refreshedAt.valueOf() <= SNAPSHOT_MAX_AGE_MS)) {
       if (existing) return existing;
       throw new ManagerListsError("BR72_PROJECTION_NOT_AVAILABLE", 503);

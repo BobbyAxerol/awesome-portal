@@ -55,7 +55,7 @@ export class ExecutionDurableMirrorIntegrityController {
     // a workspace outside the local projection, or one the caller is not a
     // member of, is not found rather than empty.
     if (workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID
-      || !(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+      || !(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId, environment))) {
       throw new HttpException({ error: { code: "WORKSPACE_NOT_FOUND" } }, 404);
     }
     const profileId = this.profileFor(environment);

@@ -2,6 +2,7 @@ import { Controller, Get, Inject, Param, Query, Req, UseGuards } from "@nestjs/c
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { ControlApiConfig } from "../config";
+import { coreExecutionRead } from "./retained-read-profile";
 import type { AuthSession, PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
 import { WorkspacesRepository } from "../repos/workspaces";
@@ -109,7 +110,9 @@ export class OperationalCompositionController {
     if (!parsed.success) throw new PortalDerivationError("EDS05_QUERY_INVALID", 400, "Invalid composition query.");
     // An unqualified read means the projection's own workspace, not the
     // session's personal one (DR-30); membership still decides access.
+    const core = coreExecutionRead(request.url.split("?")[0]);
     const workspaceId = parsed.data.workspace_id
+      ?? (core ? request.portalWorkspaceId : undefined)
       ?? this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID
       ?? request.portalWorkspaceId;
     // Portal-owned composition remains useful before a local projection is
@@ -117,11 +120,12 @@ export class OperationalCompositionController {
     // projection workspace exists, it is the only permitted source-bound
     // composition scope.  Comparing against `undefined` previously made all
     // dark/local Portal reads return a misleading 404.
-    if (this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID &&
+    if (!core && this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID &&
         workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID) {
       throw new PortalDerivationError("EDS05_PROJECTION_WORKSPACE_NOT_FOUND", 404, "Workspace not found.");
     }
-    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+    if (!(core ? await this.workspaces.isMember(workspaceId, request.portalUser.userId)
+      : await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId))) {
       throw new PortalDerivationError("WORKSPACE_NOT_FOUND", 404, "Workspace not found.");
     }
     return { user: request.portalUser, session: request.portalSession, workspaceId };

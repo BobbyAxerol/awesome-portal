@@ -3647,8 +3647,8 @@ phê duyệt tại [UDB addendum](#udb-upgrade-2026-10-10).
 | Phase | Dependency | Màn | Checkpoint | State / implementer / evidence |
 |---|---|---|---|---|
 | [UDB-01](#udb-01) | Bobby duyệt UDB-01 2026-10-10 +bounded-gate refinement | Cả hai loop, nền identity/storage | UDB-1 | **PASS — PREVIEW_STORAGE_BASELINE** · 95/95 real-PG +7 config cases;8,969 changed-body writes/119 vacuum cycles/602.478s;custody unchanged,C4 done;[packet](./research_loop/evidence/UDB-01/README.md). No in-scope open debt;dev/stable/UI không đổi |
-| [UDB-02](#udb-02) | UDB-01 PASS + Bobby giao 2026-10-10 | Execution read models + Research publication | UDB-2 | **PASS — ISOLATED_STORE_HYDRATED_PREVIEW** ·38/38 real-PG +7 config assertions;49,421 history/4,136 current entities,10-table parity;Core custody/independent restart/restore/rollback/C4 PASS;[packet](./research_loop/evidence/UDB-02/README.md). UDB-03 activation/FE chưa mở |
-| [UDB-03](#udb-03) | UDB-02 đạt + Bobby duyệt UDB-03 | Execution screens/subpanels, Research → RC → R1 | UDB-3 | **PLANNED / AWAITING_IMPLEMENTATION_APPROVAL** · bật maximum retained reads; contract/resource-access matrix; Claude FE nhận typed handoff, giữ UI đã duyệt |
+| [UDB-02](#udb-02) | UDB-01 PASS + Bobby giao 2026-10-10 | Execution read models + Research publication | UDB-2 | **PASS — ISOLATED_STORE_HYDRATED_PREVIEW** ·38/38 real-PG +7 config assertions;49,421 history/4,136 current entities,10-table parity;Core custody/independent restart/restore/rollback/C4 PASS;[packet](./research_loop/evidence/UDB-02/README.md). Retained activation/handoff hiện thuộc UDB-03 bên dưới |
+| [UDB-03](#udb-03) | UDB-02 PASS + Bobby giao 2026-10-10 | Execution screens/subpanels, Research → RC → R1 | UDB-3 | **BACKEND_PASS / RETAINED_PREVIEW_REVIEW_READY / FE_HANDOFF_PENDING** ·222 actual API+68 existing rich browser cells PASS;54 named aliases ×3profiles,Core policy/revoke/custody/C4;no upstream/SSE/command/UI change;[packet](./research_loop/evidence/UDB-03/README.md) · [Claude handoff](./research_loop/evidence/UDB-03/handoff.md);UDB-04 chưa mở |
 | [UDB-04](#udb-04) | UDB-01…03 đạt + Bobby duyệt UDB-04 | Cả hai loop + Governance | UDB-4 | **PLANNED / AWAITING_IMPLEMENTATION_APPROVAL** · cross-loop load/auth/DR/browser acceptance + exact preview rebuild; không tự merge/deploy/release |
 
 **Frontend board rows 2026-10-04 (FE campaign W1–W7, Claude/Thanhvuong; Codex slice marked):** sống tại [FE-W1-W5 packet](./research_loop/evidence/FE-W1-W5/thanhvuong-frontend-receipt.md); chi tiết ở [§13.4.2](#rl-fe-w1-w7-note). Mọi hàng dưới đây là `NOT_VERIFIED` ở mức sản phẩm cho tới khi Bobby rà bằng mắt; không hàng nào là `OWNER_ACCEPTED`.
@@ -8804,6 +8804,12 @@ profile về baseline và stop only new preview intake; không delete source/dat
 <a id="udb-03"></a>
 ### UDB-03 — Maximum retained Execution reads, unified resource access and rich-screen handoff
 
+**Implementation approval:** Bobby giao UDB-03 ngày 2026-10-10; parent
+`56f2250b`, same `docs/research-loop-plan` branch. Only this phase is opened:
+UDB-04, remote push, dev/main/stable, source/SSE/command activation and visual
+changes remain outside scope. Read-only baseline/rules and UDB-02 handoff
+reviewed before implementation; reader flags must not start a refresh worker.
+
 **Entry:** UDB-02 đạt + Bobby duyệt UDB-03; source/profile/resource scope và
 read envelopes đã freeze. Claude có thể nối presentation ngay khi DTO stable.
 
@@ -9002,3 +9008,36 @@ backup/evidence/rollback aliases retain30days,no broad prune. **UDB-02 PASS /no
 known in-scope debt**;UDB-03/04 chờ Bobby giao. No public DTO/UI/remote push,
 dev/main/stable/source/SSE/command activation. Future split P23 budget chỉ
 versioned,không lấy old qualification làm combined-stack PASS.
+
+### UDB-03 backend closeout — retained reads / Core policy / rich handoff,2026-10-10
+
+Addendum sau thắng trạng thái approval-pending của UDB03 trong notes lịch sử;
+không đổi UDB04 thành được duyệt. Parent56f2250b,nhánh Research chung.
+Preview `retained_review_v1` tách readers khỏi source workers: các resource/
+stage/query/history/composition và54 named aliases đọc local across3profiles,
+giữ nguyên source clock/refusal/digest,STALE/PARTIAL/uncaptured typed đúng.
+Opaque page≤200rows/1MiB,exact decimals/UTC,no upstream selector/read-through.
+Core forward132 thêm một audited30day GET-only grant,không clone role/grants/
+membership/password; mỗi request kiểm Core session/user/resource/workspace/
+profile/action. Research RC→R1 vẫn explicit workspace gốc. No-store,permission
+cache0,data memo2s/max3profiles/8MiB,pool6/queue12;busy503 có Retry-After.
+
+Final API image ac7bb295…healthy,web index-hBXCtrBk.js **không đổi**.
+UDB03-T01…04 backend/existing-rich receipt PASS:222HTTP(181named pages
+validate schema),68browser cells1280/660,console/fail/pageerror/stream/write/
+external0. p95serial396ms **không** mixed-load/SLO. Core authority+Research
+hash giữ nguyên,19,047originalsessions hash giữ nguyên,9/9review sessions revoked;
+identity authority unchanged sau tách last_seen telemetry;ledger125→126 chỉ132.
+OwnedPG/tool containers0,dọn đúng3unusedUDB03images,current+rollbackprotected,
+không prune shared cache/volume. Một normal grouped commit hook gates landing.
+
+**BACKEND_PASS / RETAINED_PREVIEW_REVIEW_READY / FE_HANDOFF_PENDING**;
+không có known in-scope backend implementation debt. Không giả frontend đã
+READ→MAPPED→CONSUMED→BROWSER_VERIFIED cho context mới: Claude nhận
+FE-UDB03-01(state/permission binding),02(no stream/retained polling),03(existing
+Alpha360desktop/R1mobile visual review). No frontend design/baseline edits.
+[Report + private evidence hashes](./research_loop/evidence/UDB-03/phase-report.md) ·
+[Per-screen matrix](./research_loop/evidence/UDB-03/screen-matrix.md) ·
+[Claude prompt/handoff](./research_loop/evidence/UDB-03/handoff.md).
+UDB04 chỉ mở sau Bobby giao và exact FE/candidate acceptance. No remote push,
+dev/main/stable/AWS/Edge/TS/source/SSE/command/ProductGO/release activation.

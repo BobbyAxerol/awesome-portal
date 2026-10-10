@@ -120,7 +120,7 @@ export class ExecutionFinancialChartController {
     if (workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID) {
       throw new FinancialChartError("EDS07_PROJECTION_WORKSPACE_NOT_FOUND", 404);
     }
-    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId))) {
       throw new FinancialChartError("WORKSPACE_NOT_FOUND", 404);
     }
     return workspaceId;

@@ -1,5 +1,10 @@
 import { createHash } from "node:crypto";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import type { ControlApiConfig } from "../config";
+import { CONTROL_API_CONFIG } from "../tokens";
+import { ExecutionProfileProjectionRepository } from "./profile-projection.repository";
+import { retainedReview } from "./retained-read-profile";
+import { retainedOperationPage } from "./retained-operation-page";
 import { AuthSession, PortalUser } from "../domain";
 import { ExecutionCurrentSourceProxy } from "./current-source.proxy";
 import {
@@ -17,6 +22,7 @@ import {
   managerRelationOperationByRoute,
   managerRelationOperationPolicy,
   managerRelationProfileBinding,
+  managerRelationOperationByRelation,
 } from "./eds11r-manager-relation.registry";
 import { MAXIMUM_DATA_INTAKE_V1, MaximumDataEnvironment } from "./maximum-data-intake";
 
@@ -60,6 +66,8 @@ export class MaximumDataOperationService {
     @Inject(ExecutionCurrentSourceProxy) private readonly currentSource: ExecutionCurrentSourceProxy,
     @Inject(MaximumDataContinuationRepository)
     private readonly continuations: MaximumDataContinuationRepository,
+    @Optional() @Inject(CONTROL_API_CONFIG) private readonly config?: ControlApiConfig,
+    @Optional() @Inject(ExecutionProfileProjectionRepository) private readonly projection?: ExecutionProfileProjectionRepository,
   ) {}
 
   async deploymentPage(
@@ -69,6 +77,13 @@ export class MaximumDataOperationService {
     const operation = MAXIMUM_DATA_DEPLOYMENT_OPERATION;
     if (!Number.isInteger(query.limit) || query.limit < 1 || query.limit > operation.pageBounds.maximumRows) {
       throw new MaximumDataOperationError("EDS01_OPERATION_QUERY_INVALID", 400);
+    }
+    if (retainedReview(this.config)) {
+      const page = await retainedOperationPage(this.config!, this.projection!, principal,
+        managerRelationOperationByRelation(operation.relation)!, query);
+      return { ...page, schema_version: "portal.execution.maximum-data.deployment-page.v1",
+        publication_revision: operation.publicationRevision, logical_operation_id: operation.logicalOperationId,
+        field_id: operation.fieldId, records: page.records.map(row => row.values) };
     }
     const binding = maximumDataDeploymentBinding(query.environment);
     const scope = continuationScope(principal, query.environment);
@@ -103,6 +118,7 @@ export class MaximumDataOperationService {
     if (!Number.isInteger(query.limit) || query.limit < 1 || query.limit > MAXIMUM_DATA_INTAKE_V1.pageBounds.maximumRows) {
       throw new MaximumDataOperationError("EDS11R_OPERATION_QUERY_INVALID", 400);
     }
+    if (retainedReview(this.config)) return retainedOperationPage(this.config!, this.projection!, principal, operation, query);
     const binding = managerRelationProfileBinding(query.environment);
     const scope = relationContinuationScope(principal, query.environment, operation);
     const sourceCursor = query.cursor

@@ -96,7 +96,7 @@ export class PaperReadController {
 
   private async workspace(request: PaperReadRequest, requested?: string): Promise<string> {
     const workspaceId = requested ?? request.portalWorkspaceId;
-    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId, "paper"))) {
       throw new PaperReadError("WORKSPACE_NOT_FOUND", "Workspace not found.", 404);
     }
     return workspaceId;

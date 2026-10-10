@@ -1,5 +1,6 @@
 import { canonicalOrderStatus } from "../paper-read/order-status-map";
 import { freshnessPolicies } from "./environment-parity";
+import { retainedReview, projectionExpired } from "./retained-read-profile";
 import { Inject, Injectable } from "@nestjs/common";
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -127,6 +128,7 @@ export class ExecutionProductReadSource {
       if (
         error instanceof CurrentSourceProxyError &&
         error.code === "N31_PROJECTION_NOT_READY" &&
+        !retainedReview(this.config) &&
         !hasLocalQuery(query)
       ) {
         return this.namedCurrentRelation(principal, environment, screenId, sourceId, relation, query);
@@ -350,7 +352,7 @@ export class ExecutionProductReadSource {
         authority: "EXECUTION_CELL",
         profile_id: profileId,
         availability: "AVAILABLE",
-        freshness: freshness(ageMs, this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS),
+        freshness: retainedReview(this.config) ? "STALE" : freshness(ageMs, this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS),
         completeness: projected.completeness,
         as_of: projected.as_of,
         data: {
@@ -402,7 +404,7 @@ export class ExecutionProductReadSource {
     // be false, which used to read as FRESH.
     const refreshedAt = snapshot.lastSuccessfulRefreshAt.valueOf();
     const ageMs = Number.isFinite(refreshedAt) ? Date.now() - refreshedAt : null;
-    if (ageMs !== null && ageMs > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
+    if (ageMs !== null && projectionExpired(this.config, snapshot.lastSuccessfulRefreshAt)) {
       throw new CurrentSourceProxyError("N31_PROJECTION_STALE_CEILING_EXCEEDED", 503, {
         availability: "UNAVAILABLE", retryable: true,
       });

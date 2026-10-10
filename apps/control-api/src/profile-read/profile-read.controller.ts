@@ -44,7 +44,7 @@ export class ProfileReadController {
       throw new ProfileReadError("PHASE2_ACCOUNT_QUERY_INVALID", 400);
     }
     const workspaceId = query.data.workspace_id ?? request.portalWorkspaceId;
-    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId, query.data.environment))) {
       throw new ProfileReadError("WORKSPACE_NOT_FOUND", 404);
     }
     return this.profiles.accountBroker({
@@ -81,7 +81,7 @@ export class ProfileReadController {
     const query = ProfileOverviewQuerySchema.safeParse(raw);
     if (!query.success) throw new ProfileReadError("N23_QUERY_INVALID", 400);
     const workspaceId = query.data.workspace_id ?? request.portalWorkspaceId;
-    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId, environment))) {
       throw new ProfileReadError("WORKSPACE_NOT_FOUND", 404);
     }
     return this.profiles.overview({

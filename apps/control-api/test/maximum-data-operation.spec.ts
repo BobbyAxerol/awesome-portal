@@ -271,7 +271,7 @@ describe("EDS-01 sealed Manager-v2 deployment operation", () => {
   it("rejects cursor/path injection at the same-origin controller before an operation is selected", async () => {
     const controller = new MaximumDataOperationController(
       { deploymentPage: async () => ({ ok: true }) } as unknown as MaximumDataOperationService,
-      { isMember: async () => true } as never,
+      { canReadExecution: async () => true } as never,
     );
     const request = { portalUser: principal.user, portalSession: principal.session, portalWorkspaceId: principal.workspaceId } as never;
     await expect(controller.deployments(request, {

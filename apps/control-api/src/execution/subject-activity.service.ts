@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { ControlApiConfig, querySigningKeys } from "../config";
+import { localProfileReadable, projectionExpired, retainedReview } from "./retained-read-profile";
 import { KeysetCursorCodec, QueryContractError, queryFingerprint } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
@@ -11,6 +12,7 @@ import {
 } from "./profile-projection.repository";
 import { ExecutionDurableMirrorRepository } from "./durable-mirror.repository";
 import { durableMirrorReadEnabled } from "./durable-mirror-mode";
+import { profileProjectionCatalog } from "./profile-projection.catalog";
 
 const SUBJECT_ID = /^[A-Za-z0-9._:@-]{1,191}$/;
 /**
@@ -94,7 +96,7 @@ export class ExecutionSubjectActivityService {
     if (!profileId) throw new SubjectActivityError("EDS12_SUBJECT_ACTIVITY_PROFILE_NOT_CONFIGURED", 503);
     const snapshot = await this.repository.snapshot(workspaceId, request.environment, profileId);
     if (!snapshot) throw new SubjectActivityError("EDS12_SUBJECT_ACTIVITY_PROJECTION_NOT_READY", 503);
-    if (Date.now() - snapshot.lastSuccessfulRefreshAt.valueOf() > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
+    if (projectionExpired(this.config, snapshot.lastSuccessfulRefreshAt)) {
       throw new SubjectActivityError("EDS12_SUBJECT_ACTIVITY_PROJECTION_STALE", 503);
     }
 
@@ -122,7 +124,7 @@ export class ExecutionSubjectActivityService {
     const nextCursor = page.hasMore && last
       ? this.encodeCursor(principal, request, snapshot, profileId, limit, last.ts, last.rowId)
       : null;
-    const state = coverage.rowCount === 0
+    const state = coverage.rowCount === 0 && !retainedReview(this.config)
       ? "AUTHORITATIVE_EMPTY"
       : relation.completeness === "COMPLETE" ? "AVAILABLE" : "PARTIAL";
 
@@ -156,7 +158,8 @@ export class ExecutionSubjectActivityService {
         has_more: page.hasMore,
         next_cursor: nextCursor,
       },
-      records: page.rows.map((row) => ({ record_id: row.rowId, values: row.fields })),
+      records: page.rows.map((row) => ({ record_id: row.rowId, values: retainedReview(this.config)
+        ? retainedPublicFields(relationKey(request.relation), row.fields) : row.fields })),
       projection: projectionMetadata(snapshot),
     };
   }
@@ -164,7 +167,7 @@ export class ExecutionSubjectActivityService {
   private assertEnabled(environment: ProjectionEnvironment): void {
     if (
       this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true" ||
-      !durableMirrorReadEnabled(this.config) ||
+      (!durableMirrorReadEnabled(this.config) && !retainedReview(this.config)) ||
       !profileEnabled(this.config, environment)
     ) {
       throw new SubjectActivityError("EDS12_SUBJECT_ACTIVITY_NOT_ACTIVATED", 404);
@@ -239,9 +242,7 @@ function profileIdFor(config: ControlApiConfig, environment: ProjectionEnvironme
 }
 
 function profileEnabled(config: ControlApiConfig, environment: ProjectionEnvironment): boolean {
-  return environment === "paper" ? config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER === "true"
-    : environment === "sandbox" ? config.FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX === "true"
-      : config.FEATURE_EXECUTION_CURRENT_SOURCE_LIVE === "true";
+  return localProfileReadable(config, environment);
 }
 
 function relationKey(relation: SubjectActivityRelation): string {
@@ -391,4 +392,14 @@ function cursorFingerprint(resourceId: string, limit: number): string {
     filters: [{ field: "subject", op: "eq", value: resourceId, values: [resourceId] }],
     sort: [{ field: "observed_at", direction: "desc" }, { field: "record_id", direction: "desc" }],
   });
+}
+
+const retainedFields = new Map<string, Set<string>>();
+for (const binding of (["paper", "sandbox", "live"] as const).flatMap(env => profileProjectionCatalog(env))) {
+  const key = `${binding.sourceId}:${binding.relation}`, fields = retainedFields.get(key) ?? new Set<string>();
+  binding.fields.forEach(field => fields.add(field)); retainedFields.set(key, fields);
+}
+function retainedPublicFields(key: string, fields: Record<string, ProjectionScalar>) {
+  const allowed = retainedFields.get(key);
+  return Object.fromEntries(Object.entries(fields).filter(([field]) => allowed?.has(field)));
 }

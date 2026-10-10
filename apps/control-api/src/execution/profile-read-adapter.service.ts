@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { ControlApiConfig } from "../config";
+import { projectionExpired } from "./retained-read-profile";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
   ExecutionProfileProjectionRepository,
@@ -135,7 +136,7 @@ export class ExecutionProfileReadAdapterService {
     const snapshot = await this.repository.snapshot(projectionWorkspaceId, environment, profileId);
     if (!snapshot) throw new ProjectionAdapterError("N32_PROJECTION_NOT_READY", 503);
     const ageMs = Date.now() - snapshot.lastSuccessfulRefreshAt.valueOf();
-    if (ageMs > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
+    if (projectionExpired(this.config, snapshot.lastSuccessfulRefreshAt)) {
       throw new ProjectionAdapterError("N32_PROJECTION_STALE_CEILING_EXCEEDED", 503);
     }
     const relations: Record<string, AdapterGroup> = {};

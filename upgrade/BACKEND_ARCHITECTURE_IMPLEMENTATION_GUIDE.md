@@ -2333,3 +2333,29 @@ and [UDB-03/Claude handoff](./research_loop/evidence/UDB-02/handoff.md).
 No public DTO/UI/source/SSE/command/dev/stable/push change. Combined P23 caps
 versioned only,not qualified. UDB-03 retained readers/resource policy and
 UDB-04 cross-loop acceptance require their own approval;no productGO implied.
+
+### 14.1.17 UDB-03 retained local reads and Core access — 2026-10-10
+
+**BACKEND_PASS / RETAINED_PREVIEW_REVIEW_READY / FE_HANDOFF_PENDING**.
+Explicit preview-only `retained_review_v1` activates existing rich-screen,
+history/query/analytics readers and54 static named aliases without Edge,
+refresh worker,SSE,command relay or mirror-read activation. Original source
+payloads/clocks/refusals remain immutable; older retained observations are
+explicit STALE/PARTIAL, uncaptured panels typed UNAVAILABLE, not invented empty.
+Exact decimals/UTC preserved; signed opaque relation-bound pages≤200rows/1MiB.
+
+Core migration132 supplies one audited30-day GET-only review grant; no
+identity/role/workspace membership clone. Each request checks Core user,
+session/workspace/resource/profile/action; immutable owner anchor retained.
+HTTP private/no-store, permission-cache0; bounded retained-data memo2s/8MiB,
+pool6/queue12 unchanged, overload typed503. Delegation and streams disabled.
+Research/RC→R1 retains its explicit Core workspace, not source-workspace rights.
+
+Actual222 HTTP checks and68 existing rich route/tab browser cells1280/660
+PASS;9test sessions revoked,original19,047sessions and Core/Research custody
+preserved. Normal grouped hook gates landing. Only preview API rebuilt;
+approved frontend unchanged. Exact three stale build images cleaned, current
+and rollback protected,no volume/shared-cache prune. [Full receipt](./research_loop/evidence/UDB-03/phase-report.md)
+and [Claude consumer matrix/handoff](./research_loop/evidence/UDB-03/handoff.md).
+New context is READ/GENERATED,not consumed/accepted;no source-live/ProductGO.
+UDB-04 requires separate approval and FE/cross-loop candidate acceptance.

@@ -1,0 +1,16 @@
+{
+  "phase":"UDB-03",
+  "backend_scope":"BACKEND_PASS_RETAINED_PREVIEW_REVIEW_READY",
+  "landing_gate":"NORMAL_GROUPED_COMMIT_HOOK_REQUIRED",
+  "known_backend_implementation_debt":[],
+  "consumer_handoff":[
+    {"id":"FE-UDB03-01","owner":"Claude","state":"READ_GENERATED_NOT_CONSUMER_ACCEPTED","task":"Typed retained context/per-action permissions/source-state labels in existing rich panels; no global rights inference","locator":"handoff.md"},
+    {"id":"FE-UDB03-02","owner":"Claude","state":"HANDOFF_READY","task":"Consume stream_enabled=false and stop retained periodic drains; do not label intentional204 as invalid source snapshot","locator":"handoff.md"},
+    {"id":"FE-UDB03-03","owner":"Claude/Bobby","state":"VISUAL_REVIEW_REQUIRED","task":"Inspect existing Alpha3601280 overflow and R1 mobile rail without unapproved design/baseline changes","locator":"handoff.md"}
+  ],
+  "external_dispositions":[
+    {"id":"UDB-FUTURE-TS-MANAGEMENT","state":"NOT_PUBLISHED","reason":"TS_RESOURCE_MANAGEMENT_CONTRACT_NOT_PUBLISHED","blocks_existing_reads":false},
+    {"id":"UDB04","state":"NOT_OPENED","reason":"Requires separate Bobby approval, exact candidate and consumer/cross-loop/performance/DR acceptance"},
+    {"id":"SOURCE_LIVE","state":"NOT_APPROVED","reason":"Retained preview is not Edge/source/TLS/SSE/command activation or production release"}
+  ]
+}

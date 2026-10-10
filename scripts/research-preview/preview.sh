@@ -48,6 +48,11 @@ compose() {
       echo 'preview: Execution store marker is restricted to the fixed shared preview' >&2; return 1; }
     domain_overlay=(-f "$ROOT/deploy/research-preview/compose.execution-store.yaml")
   fi
+  if [[ -f "$ENV_DIR/execution-retained.enabled" ]]; then
+    [[ "$ENV_DIR" == /home/bobby/.config/portal-research-preview && -f "$ENV_DIR/execution-store.enabled" ]] || {
+      echo 'preview: retained review requires the fixed isolated Execution store' >&2; return 1; }
+    domain_overlay+=(-f "$ROOT/deploy/research-preview/compose.retained-review.yaml")
+  fi
   if [[ "${DOCKER[0]}" == sudo ]]; then
     compose_docker=(sudo -n env "PORTAL_BUILD_COMMIT=${PORTAL_BUILD_COMMIT:-unknown}" \
       "PORTAL_BUILD_DIRTY=${PORTAL_BUILD_DIRTY:-false}" docker)

@@ -204,7 +204,7 @@ describe("EDS-07 retained financial chart and risk-query BFF", () => {
       chart: vi.fn().mockResolvedValue({ schema_version: "test" }),
       decisionRecords: vi.fn(),
     };
-    const workspaces = { isMember: vi.fn().mockResolvedValue(true) };
+    const workspaces = { canReadExecution: vi.fn().mockResolvedValue(true) };
     const controller = new ExecutionFinancialChartController(charts as never, workspaces as never, config);
     const request = {
       portalUser: principal().user,
@@ -226,7 +226,7 @@ describe("EDS-07 retained financial chart and risk-query BFF", () => {
       subject_kind: "alpha",
       subject_id: "alpha_eds07",
     })).rejects.toMatchObject({ code: "EDS07_PROJECTION_WORKSPACE_NOT_FOUND", status: 404 });
-    expect(workspaces.isMember).not.toHaveBeenCalled();
+    expect(workspaces.canReadExecution).not.toHaveBeenCalled();
   });
 });
 

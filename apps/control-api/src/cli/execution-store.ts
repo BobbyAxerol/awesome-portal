@@ -4,6 +4,7 @@ import {loadConfig} from "../config";
 import {migrateExecutionStore} from "../execution/store-schema";
 import {importRetainedStore} from "../execution/retained-store-transfer";
 import {provisionRetainedWorkspace} from "../execution/retained-workspace";
+import {provisionRetainedReviewAccess} from "../execution/retained-review-access";
 
 async function main() {
   const [operation,value]=process.argv.slice(2),cfg=loadConfig();
@@ -14,8 +15,10 @@ async function main() {
   try {
     if(operation==="migrate"&&!value) console.log(JSON.stringify({schema_digest:await migrateExecutionStore(target)}));
     else if(operation==="provision"&&value) console.log(JSON.stringify(await provisionRetainedWorkspace(core,cfg,value)));
+    else if(operation==="grant-review"&&value) console.log(JSON.stringify(await provisionRetainedReviewAccess(core,cfg,value)));
+    else if(operation==="revoke-review"&&value) console.log(JSON.stringify(await provisionRetainedReviewAccess(core,cfg,value,true)));
     else if(operation==="import"&&value) console.log(JSON.stringify(await importRetainedStore(target,core,value)));
-    else throw new Error("USAGE_execution-store_migrate_provision_import");
+    else throw new Error("USAGE_execution-store_migrate_provision_import_grant-review_revoke-review");
   }finally{await Promise.all([target.end(),core.end()]);}
 }
 void main().catch(error=>{console.error(JSON.stringify({error:/^[A-Z0-9_]+$/.test(error.message)?error.message:"UDB02_OPERATION_FAILED",code:/^[A-Z0-9]{5}$/.test(error.code??"")?error.code:null}));process.exitCode=1;});

@@ -7,6 +7,7 @@ import { createControlApiApp } from "../src/app";
 import { ControlApiConfig } from "../src/config";
 
 export const TEST_TABLES = [
+  "execution_retained_review_access",
   "research.window_execution_seals_v1",
   "research.window_execution_rows_v1",
   "research.window_execution_batches_v1",

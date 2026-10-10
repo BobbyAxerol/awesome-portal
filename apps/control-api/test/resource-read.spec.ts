@@ -108,7 +108,7 @@ describe("EDS-04 named resource BFFs", () => {
     const read = vi.fn();
     const controller = new ResourceReadController(
       { read } as unknown as ResourceReadService,
-      { isMember: vi.fn(async () => true) } as never,
+      { canReadExecution: vi.fn(async () => true) } as never,
       config(),
     );
     const request = { portalUser: user, portalWorkspaceId: "ws_other", portalSession: session } as never;
@@ -122,16 +122,16 @@ describe("EDS-04 named resource BFFs", () => {
 
   it("reads the projection's own workspace when the caller names none, whatever the session's personal workspace is (DR-30)", async () => {
     const read = vi.fn(async () => ({ ok: true }));
-    const isMember = vi.fn(async () => true);
+    const canReadExecution = vi.fn(async () => true);
     const controller = new ResourceReadController(
       { read } as unknown as ResourceReadService,
-      { isMember } as never,
+      { canReadExecution } as never,
       config(),
     );
     const request = { portalUser: user, portalWorkspaceId: "ws_personal_of_another_member", portalSession: session } as never;
 
     await controller.alpha(request, "alpha_target", {});
-    expect(isMember).toHaveBeenCalledWith(workspaceId, user.userId);
+    expect(canReadExecution).toHaveBeenCalledWith(workspaceId, user.userId, undefined);
     expect(read).toHaveBeenCalledWith(
       expect.objectContaining({ workspaceId }),
       "ALPHA",
@@ -144,7 +144,7 @@ describe("EDS-04 named resource BFFs", () => {
     const read = vi.fn();
     const controller = new ResourceReadController(
       { read } as unknown as ResourceReadService,
-      { isMember: vi.fn(async () => false) } as never,
+      { canReadExecution: vi.fn(async () => false) } as never,
       config(),
     );
     const request = { portalUser: user, portalWorkspaceId: "ws_other", portalSession: session } as never;

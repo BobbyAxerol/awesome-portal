@@ -194,7 +194,7 @@ describe("EDS-05 Portal derivations and operational composition", () => {
     const sourceHealth = vi.fn();
     const controller = new PortalDerivationsController(
       { sourceHealth } as unknown as PortalDerivationsService,
-      { isMember: vi.fn(async () => true) } as never,
+      { canReadExecution: vi.fn(async () => true) } as never,
       config(),
     );
     const request = { portalUser: user, portalWorkspaceId: "ws_other", portalSession: session } as never;
@@ -206,20 +206,20 @@ describe("EDS-05 Portal derivations and operational composition", () => {
 
   it("reads the projection's own workspace when the caller names none (DR-30), and still refuses a non-member", async () => {
     const sourceHealth = vi.fn(async () => ({ ok: true }));
-    const isMember = vi.fn(async () => true);
+    const canReadExecution = vi.fn(async () => true);
     const controller = new PortalDerivationsController(
       { sourceHealth } as unknown as PortalDerivationsService,
-      { isMember } as never,
+      { canReadExecution } as never,
       config(),
     );
     const request = { portalUser: user, portalWorkspaceId: "ws_personal_of_another_member", portalSession: session } as never;
     await controller.sourceHealth(request, {});
-    expect(isMember).toHaveBeenCalledWith(workspaceId, user.userId);
+    expect(canReadExecution).toHaveBeenCalledWith(workspaceId, user.userId);
     expect(sourceHealth.mock.calls[0]?.[0]).toMatchObject({ workspaceId });
 
     const denied = new PortalDerivationsController(
       { sourceHealth: vi.fn() } as unknown as PortalDerivationsService,
-      { isMember: vi.fn(async () => false) } as never,
+      { canReadExecution: vi.fn(async () => false) } as never,
       config(),
     );
     await expect(denied.sourceHealth(request, {})).rejects.toMatchObject({

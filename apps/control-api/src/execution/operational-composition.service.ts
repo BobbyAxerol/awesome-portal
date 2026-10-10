@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { WorkspacesRepository } from "../repos/workspaces";
 import { CommandCenterError, CommandCenterService } from "../command-center/command-center.service";
 import { ControlApiConfig } from "../config";
 import { GovernanceService } from "../governance/governance.service";
@@ -9,6 +10,7 @@ import { IncidentService } from "../operations/incident.service";
 import { ExecutionOperationsService } from "../operations/operations.service";
 import { OperationsWorkflowService } from "../operations/workflow.service";
 import { CONTROL_API_CONFIG } from "../tokens";
+import { retainedReview } from "./retained-read-profile";
 import {
   ExecutionProfileProjectionRepository,
   type ProjectionEnvironment,
@@ -56,6 +58,7 @@ export class OperationalCompositionService {
     @Inject(IncidentService) private readonly incidents: IncidentService,
     @Inject(CommandCenterService) private readonly commandCenter: CommandCenterService,
     @Inject(ExecutionOperationsService) private readonly operations: ExecutionOperationsService,
+    @Optional() @Inject(WorkspacesRepository) private readonly workspaces?: WorkspacesRepository,
   ) {}
 
   async approval(
@@ -69,7 +72,10 @@ export class OperationalCompositionService {
     let acceptedFacts: Record<string, unknown> | null = null;
     if (view === "live") {
       const deploymentId = deploymentIdFromGovernance(governance);
-      if (!deploymentId) {
+      if (retainedReview(this.config) && this.workspaces && (!this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ||
+        !await this.workspaces.canReadExecution(this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID,principal.user.userId))) {
+        acceptedFacts = unavailable("WORKSPACE_NOT_FOUND");
+      } else if (!deploymentId) {
         acceptedFacts = unavailable("EDS05_LIVE_REVIEW_DEPLOYMENT_NOT_RESOLVED");
       } else {
         try {
@@ -161,8 +167,12 @@ export class OperationalCompositionService {
     body: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
     const readAt = new Date();
-    const sourceHealth = await this.derivations.sourceHealth(principal);
-    const journal = await this.redactedCommandJournal();
+    const allowed = !retainedReview(this.config) || !this.workspaces || (!!this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID &&
+      await this.workspaces.canReadExecution(this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID,principal.user.userId));
+    const sourceHealth = allowed ? await this.derivations.sourceHealth(principal)
+      : {input_digest:digest("WORKSPACE_NOT_FOUND"),...unavailable("WORKSPACE_NOT_FOUND")};
+    const journal = allowed ? await this.redactedCommandJournal()
+      : {digest:digest("WORKSPACE_NOT_FOUND"),...unavailable("WORKSPACE_NOT_FOUND")};
     const lineage = {
       source_health_input_digest: sourceHealth.input_digest,
       command_journal_digest: journal.digest,

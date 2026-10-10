@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { ControlApiConfig } from "../config";
+import { projectionExpired } from "./retained-read-profile";
 import type { AuthSession, PortalUser } from "../domain";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
@@ -90,7 +91,7 @@ export class PortalDerivationsService {
         profileId,
       );
       if (!snapshot) return healthEntry(environment, profileId, null, "UNAVAILABLE", "N31_PROJECTION_NOT_READY", readAt);
-      if (ageMs(snapshot, readAt) > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
+      if (projectionExpired(this.config, snapshot.lastSuccessfulRefreshAt)) {
         return healthEntry(environment, profileId, snapshot, "UNAVAILABLE", "N31_PROJECTION_STALE_CEILING_EXCEEDED", readAt);
       }
       return healthEntry(environment, profileId, snapshot, healthState(snapshot), null, readAt);
@@ -359,7 +360,7 @@ export class PortalDerivationsService {
     const snapshot = await this.repository.snapshot(workspaceId, environment, profileId);
     if (!snapshot) throw new PortalDerivationError("N31_PROJECTION_NOT_READY", 503, "Execution projection is not ready.");
     const readAt = new Date();
-    if (ageMs(snapshot, readAt) > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
+    if (projectionExpired(this.config, snapshot.lastSuccessfulRefreshAt)) {
       throw new PortalDerivationError("N31_PROJECTION_STALE_CEILING_EXCEEDED", 503, "Execution projection is stale.");
     }
     return { snapshot, profileId, readAt };

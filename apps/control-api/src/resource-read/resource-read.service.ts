@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { ControlApiConfig } from "../config";
 import { utcEpochMs } from "../execution/contract-authority";
+import { projectionExpired } from "../execution/retained-read-profile";
 import {
   ExecutionProfileProjectionRepository,
   ProfileProjectionSnapshot,
@@ -220,7 +221,7 @@ export class ResourceReadService {
     if (!snapshot) {
       return { environment, profileId, snapshot: null, state: "UNAVAILABLE", reasonCode: "N31_PROJECTION_NOT_READY" };
     }
-    if (Date.now() - snapshot.lastSuccessfulRefreshAt.valueOf() > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
+    if (projectionExpired(this.config, snapshot.lastSuccessfulRefreshAt)) {
       return { environment, profileId, snapshot: null, state: "UNAVAILABLE", reasonCode: "N31_PROJECTION_STALE_CEILING_EXCEEDED" };
     }
     return { environment, profileId, snapshot, state: "AVAILABLE", reasonCode: null };

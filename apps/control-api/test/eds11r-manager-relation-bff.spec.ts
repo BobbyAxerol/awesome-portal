@@ -262,7 +262,7 @@ describe("EDS-11R1 generated named Manager relation authority", () => {
   it("keeps the HTTP boundary named: generic source/relation parameters are rejected before a BFF call", async () => {
     const controller = new MaximumDataOperationController(
       { relationPage: async () => ({ accepted: true }) } as unknown as MaximumDataOperationService,
-      { isMember: async () => true } as never,
+      { canReadExecution: async () => true } as never,
     );
     const request = {
       portalUser: user,

@@ -41,7 +41,7 @@ export class ScreenBffController {
 
   private async workspace(request: ScreenBffRequest, requested?: string): Promise<string> {
     const workspaceId = requested ?? request.portalWorkspaceId;
-    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId))) {
       throw new ScreenBffError("WORKSPACE_NOT_FOUND", "Workspace not found.", 404);
     }
     return workspaceId;

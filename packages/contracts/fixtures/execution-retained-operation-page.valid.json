@@ -1,0 +1,13 @@
+{
+  "schema_version":"portal.execution.eds11r.manager-relation-page.v1",
+  "publication_revision":"portal.execution.eds11r.named-operation-manifest.v1",
+  "logical_operation_id":"executionManagerAccountEquitySnapshotsCurrentPageV1","field_id":"accountEquitySnapshots",
+  "record_authority":"PORTAL_CONTROL_API","read_profile":"retained_review_v1","record_basis":"PORTAL_RETAINED_OBSERVATION",
+  "environment":"paper","profile_id":"PAPER_BINANCE_USDM","source_contract_revision":"synthetic-contract-fixture",
+  "source_catalogue_sha256":null,"source_history_semantics":"BOUNDED_RETAINED_OBSERVATIONS_NOT_AUTHORITATIVE_REPLAY",
+  "source_retention_semantics":"LOCAL_CAPTURE_ONLY_NO_TOTAL_HISTORY_CLAIM","reason_code":"UDB_RETAINED_OBSERVATION_NOT_CURRENT_SOURCE",
+  "source_health":{"availability":"UNAVAILABLE","freshness":"STALE","completeness":"PARTIAL","as_of_ms":null,"global_sequence":null,
+    "retention_floor_ms":null,"retention_floor_status":"UNDECLARED_BY_MANAGER_ENVELOPE","correction_observability":"NOT_OBSERVABLE_FROM_MANAGER_PAGE","replay_eligible":false},
+  "page":{"next_cursor":null,"has_more":false,"total_unknown":true,"maximum_page_rows":200,"maximum_response_bytes":1048576,"truncated":false},
+  "state":"PARTIAL","records":[{"resource_id":"por1_0000000000000000000000000000000000000000000000000000000000000000","values":{"account_id":"synthetic-account","equity":"1234567890.1234567890123456789","ts":1788220800123}}]
+}

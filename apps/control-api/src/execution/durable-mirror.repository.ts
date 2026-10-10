@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
 import { ControlApiConfig, querySigningKeys } from "../config";
+import { retainedReview } from "./retained-read-profile";
 import { CONTROL_API_CONFIG, EXECUTION_DATA_POOL } from "../tokens";
 import { KeysetCursorCodec, queryFingerprint } from "../query";
 import {
@@ -133,14 +134,17 @@ const SUBJECT_ENTITY_COLUMNS: Readonly<Record<string, string>> = {
  * Every identifier below comes from these two checked-in tables — never from a
  * request — so the SQL that embeds them cannot be steered by a caller.
  */
-function subjectStorageShape(relationKey: string):
+function subjectStorageShape(relationKey: string, retained = false):
   | { kind: "RANGE"; table: string; rowIdColumn: string; tsExpression: string }
   | { kind: "CURRENT"; table: string; rowIdColumn: string; tsExpression: string; timestampField: string }
   | null {
+  if (retained && (RANGE_RELATIONS[relationKey] || SUBJECT_CURRENT_RELATIONS[relationKey])) {
+    return {kind:"RANGE",table:"execution_timeseries_history",rowIdColumn:"row_id",tsExpression:"ts"};
+  }
   if (RANGE_RELATIONS[relationKey]) {
     return {
       kind: "RANGE",
-      table: "execution_durable_mirror_range_rows",
+      table: retained ? "execution_timeseries_history" : "execution_durable_mirror_range_rows",
       rowIdColumn: "row_id",
       tsExpression: "ts",
     };
@@ -381,14 +385,14 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
       limit: number;
     },
   ): Promise<{ rows: Array<{ rowId: string; ts: string; fields: Record<string, ProjectionScalar> }>; hasMore: boolean }> {
-    const shape = subjectStorageShape(relationKey);
+    const shape = subjectStorageShape(relationKey, retainedReview(this.config));
     if (!shape) return { rows: [], hasMore: false };
     const values: unknown[] = [scope.workspaceId, scope.environment, scope.profileId, relationKey];
     const conditions = ["workspace_id=$1", "environment=$2", "profile_id=$3", "relation_key=$4"];
     const entityColumn = subjectEntityColumn(query.entity);
     if (entityColumn) {
       values.push(query.entity!.value);
-      conditions.push(`${entityColumn} = $${values.length}`);
+      conditions.push(`${shape.table === "execution_timeseries_history" ? `fields->>'${entityColumn}'` : entityColumn} = $${values.length}`);
     }
     if (shape.kind === "CURRENT") conditions.push(`fields->>'${shape.timestampField}' ~ '${CASTABLE_TIMESTAMP}'`);
     if (query.after) {
@@ -418,14 +422,14 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
     relationKey: string,
     entity: { field: string; value: string } | null = null,
   ): Promise<{ rowCount: number; oldestTs: string | null; newestTs: string | null }> {
-    const shape = subjectStorageShape(relationKey);
+    const shape = subjectStorageShape(relationKey, retainedReview(this.config));
     if (!shape) return { rowCount: 0, oldestTs: null, newestTs: null };
     const values: unknown[] = [scope.workspaceId, scope.environment, scope.profileId, relationKey];
     const conditions = ["workspace_id=$1", "environment=$2", "profile_id=$3", "relation_key=$4"];
     const entityColumn = subjectEntityColumn(entity);
     if (entityColumn) {
       values.push(entity!.value);
-      conditions.push(`${entityColumn} = $${values.length}`);
+      conditions.push(`${shape.table === "execution_timeseries_history" ? `fields->>'${entityColumn}'` : entityColumn} = $${values.length}`);
     }
     if (shape.kind === "CURRENT") conditions.push(`fields->>'${shape.timestampField}' ~ '${CASTABLE_TIMESTAMP}'`);
     const result = await this.pool.query<{ row_count: string; oldest_ts: string | null; newest_ts: string | null }>(
@@ -451,7 +455,16 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
     return this.stableRead(async (client) => {
     const revision = await this.currentRevision(client, input);
     if (!revision) return emptyRange("EDS06_MIRROR_NOT_READY");
-    const observation = await this.observationForCurrentRevision(client, input, revision.read_model_revision, input.relationKey);
+    let observation = await this.observationForCurrentRevision(client, input, revision.read_model_revision, input.relationKey);
+    const retained = retainedReview(this.config);
+    const table = retained ? "execution_timeseries_history" : "execution_durable_mirror_range_rows";
+    if (retained) {
+      const captured = await client.query(`SELECT 1 FROM execution_timeseries_history
+        WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND relation_key=$4 LIMIT 1`,
+        [input.workspaceId,input.environment,input.profileId,input.relationKey]);
+      if (captured.rowCount) observation = {availability:"AVAILABLE",reason_code:"UDB_RETAINED_OBSERVATION_NOT_CURRENT_SOURCE",
+        freshness:"STALE",completeness:"PARTIAL",as_of:observation?.as_of??null};
+    }
     if (!observation) return emptyRange("EDS06_RELATION_NOT_MIRRORED", revision);
     if (observation.availability === "UNAVAILABLE") {
       return emptyRange(observation.reason_code ?? "EDS06_RELATION_UNAVAILABLE", revision, observation);
@@ -473,14 +486,14 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
     const where = ["workspace_id=$1", "environment=$2", "profile_id=$3", "relation_key=$4"];
     if (range.from) { values.push(range.from); where.push(`ts >= $${values.length}::timestamptz`); }
     if (range.to) { values.push(range.to); where.push(`ts <= $${values.length}::timestamptz`); }
-    if (resource) { values.push(resource.id); where.push(`${resource.column}=$${values.length}`); }
+    if (resource) { values.push(resource.id); where.push(`${retained ? `fields->>'${resource.column}'` : resource.column}=$${values.length}`); }
     const coverage = await client.query<{
       retained_total: string;
       oldest_available_at: Date | null;
       newest_available_at: Date | null;
     }>(
       `SELECT count(*)::text AS retained_total,min(ts) AS oldest_available_at,max(ts) AS newest_available_at
-         FROM execution_durable_mirror_range_rows
+         FROM ${table}
         WHERE ${where.join(" AND ")}`,
       values,
     );
@@ -491,7 +504,7 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
     values.push(limit + 1);
     const result = await client.query<{ row_id: string; ts: Date; fields: Record<string, ProjectionScalar> }>(
       `SELECT row_id, ts, fields
-         FROM execution_durable_mirror_range_rows
+         FROM ${table}
         WHERE ${where.join(" AND ")}
         ORDER BY ts ASC, row_id ASC
         LIMIT $${values.length}`,

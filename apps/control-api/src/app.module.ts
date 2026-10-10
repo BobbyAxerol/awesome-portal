@@ -1,6 +1,7 @@
 import { ResearchRunSyncService } from "./facade/run-sync.service";
 import { ExecutionDurableMirrorIntegrityController } from "./execution/durable-mirror-integrity.controller";
 import { ExecutionLocalReadAuthority } from "./execution/local-read-authority";
+import { ExecutionRetainedReviewController } from "./execution/retained-review.controller";
 import { DynamicModule, Module } from "@nestjs/common";
 import { Pool } from "pg";
 import { AuthController } from "./auth/auth.controller";
@@ -203,6 +204,7 @@ export class AppModule {
     return {
       module: AppModule,
       controllers: [
+        ExecutionRetainedReviewController,
         HealthController,
         AuthController,
         // A4-2 retired the six /api/admin/users* routes. They mutated
@@ -484,9 +486,9 @@ export class AppModule {
         },
         {
           provide: SessionGuard,
-          useFactory: (auth: AuthService, workspaces: WorkspacesRepository) =>
-            new SessionGuard(auth, workspaces),
-          inject: [AuthService, WorkspacesRepository],
+          useFactory: (auth: AuthService, workspaces: WorkspacesRepository, config: ControlApiConfig) =>
+            new SessionGuard(auth, workspaces, config),
+          inject: [AuthService, WorkspacesRepository, CONTROL_API_CONFIG],
         },
         AdminGuard,
         OwnerAccessGuard,

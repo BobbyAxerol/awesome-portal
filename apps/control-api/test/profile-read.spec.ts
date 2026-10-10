@@ -424,7 +424,7 @@ describe("N23 Sandbox and Live profile reads", () => {
 
   it("rejects unknown query fields and foreign workspaces before source access", async () => {
     const reads = { overview: vi.fn(), accountBroker: vi.fn() };
-    const memberships = { isMember: vi.fn().mockResolvedValue(false) };
+    const memberships = { canReadExecution: vi.fn().mockResolvedValue(false) };
     const controller = new ProfileReadController(
       reads as unknown as ProfileReadService,
       memberships as unknown as WorkspacesRepository,

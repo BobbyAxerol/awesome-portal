@@ -74,7 +74,7 @@ export class ResourceReadController {
     if (workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID) {
       throw new ResourceReadError("EDS04_PROJECTION_WORKSPACE_NOT_FOUND", 404);
     }
-    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId, query.data.environment))) {
       throw new ResourceReadError("WORKSPACE_NOT_FOUND", 404);
     }
     return this.resources.read(

@@ -2036,3 +2036,16 @@ Original source workspace provisioned through Core owner/audit,not remapped.
 [Full phase packet and exact Claude/UDB-03 handoff](../research_loop/evidence/UDB-02/README.md).
 No UI/public DTO/dev/stable/remote/source activation. UDB-03/04 not started;
 retained freshness/partial/source gaps stay explicit,not full-product PASS.
+
+**2026-10-10 UDB-03 backend PASS / retained-preview review ready:** existing
+rich Execution data readers/query/history and54 named aliases use isolated
+local retained observations across Paper/Sandbox/Live. Immutable source clocks
+and refusals preserved; no upstream/source worker/SSE/commands/mirror activation.
+Core owner/session/workspace/resource/action authority with one audited GET-only
+preview grant, zero permission cache, private/no-store, bounded2s data memo.
+Actual222 HTTP checks+68browser cells PASS;Core/Research preserved,all9test
+sessions revoked,C4 exact unused build-image cleanup. No frontend design edit,
+remote push/dev/stable. [Packet](../research_loop/evidence/UDB-03/README.md) ·
+[Claude consumer tasks](../research_loop/evidence/UDB-03/handoff.md).
+READ/GENERATED is not CONSUMED/BROWSER_VERIFIED for the new context;UDB-04
+and product/release acceptance remain separate,not implicitly completed.

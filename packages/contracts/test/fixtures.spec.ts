@@ -64,6 +64,8 @@ const analyticsFixtureSchemas: Record<string, string> = {
 };
 
 const schemaIds: Record<string, string> = {
+  "execution-retained-review.valid.json": "portal.execution.retained-review.v1",
+  "execution-retained-operation-page.valid.json": "portal.execution.retained-operation-page.v1",
   "research-all-time-distributions.valid.json":
     "https://schemas.primusspark.com/portal/research-retained-analytics.v2.schema.json#/$defs/Distributions",
   "research-artifact-manifest.valid.json":

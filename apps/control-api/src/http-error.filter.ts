@@ -60,6 +60,11 @@ export class HttpErrorFilter implements ExceptionFilter {
     const request = context.getRequest<FastifyRequest>();
     const requestId =
       (request.headers["x-request-id"] as string | undefined) ?? "unknown";
+    if (exception instanceof Error && (exception as Error & {code?:string}).code === "EXECUTION_POOL_BUSY") {
+      // Bounded local admission, not a source failure or an opaque 500.
+      void reply.header("Retry-After","1").status(503).send({error:{code:"EXECUTION_LOCAL_READ_BUSY",message:"Local retained read capacity is busy."},request_id:requestId});
+      return;
+    }
 
     if (
       exception instanceof AuthError ||

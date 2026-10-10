@@ -1,0 +1,39 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"portal.execution.retained-operation-page.v1",
+  "title":"Retained named operation page (existing EDS11R wire envelope)",
+  "description":"Preview retained response only. Named Portal aliases, no source selectors. Availability in source_health is not requalification; records are separately labelled local observations. Null as_of is preserved. Partial rows never claim total source history.",
+  "type":"object","additionalProperties":false,
+  "required":["schema_version","publication_revision","logical_operation_id","field_id","record_authority","read_profile","record_basis","environment","profile_id","source_contract_revision","source_catalogue_sha256","source_history_semantics","source_retention_semantics","reason_code","source_health","page","state","records"],
+  "properties":{
+    "schema_version":{"const":"portal.execution.eds11r.manager-relation-page.v1"},
+    "publication_revision":{"const":"portal.execution.eds11r.named-operation-manifest.v1"},
+    "logical_operation_id":{"type":"string","maxLength":128},"field_id":{"type":"string","maxLength":128},
+    "record_authority":{"const":"PORTAL_CONTROL_API"},"read_profile":{"const":"retained_review_v1"},
+    "record_basis":{"const":"PORTAL_RETAINED_OBSERVATION"},"environment":{"enum":["paper","sandbox","live"]},
+    "profile_id":{"enum":["PAPER_BINANCE_USDM","SANDBOX_BINANCE_USDM","LIVE_BINANCE_USDM"]},
+    "source_contract_revision":{"type":"string"},"source_catalogue_sha256":{"type":["string","null"]},
+    "source_history_semantics":{"const":"BOUNDED_RETAINED_OBSERVATIONS_NOT_AUTHORITATIVE_REPLAY"},
+    "source_retention_semantics":{"const":"LOCAL_CAPTURE_ONLY_NO_TOTAL_HISTORY_CLAIM"},
+    "reason_code":{"enum":["UDB_RETAINED_OBSERVATION_NOT_CURRENT_SOURCE","UDB_RETAINED_PANEL_NOT_CAPTURED"]},
+    "state":{"enum":["PARTIAL","UNAVAILABLE"]},
+    "source_health":{"type":"object","additionalProperties":false,
+      "required":["availability","freshness","completeness","as_of_ms","global_sequence","retention_floor_ms","retention_floor_status","correction_observability","replay_eligible"],
+      "properties":{
+        "availability":{"enum":["AVAILABLE","UNAVAILABLE"]},"freshness":{"const":"STALE"},"completeness":{"const":"PARTIAL"},
+        "as_of_ms":{"type":["integer","null"]},"global_sequence":{"type":"null"},"retention_floor_ms":{"type":"null"},
+        "retention_floor_status":{"const":"UNDECLARED_BY_MANAGER_ENVELOPE"},"correction_observability":{"const":"NOT_OBSERVABLE_FROM_MANAGER_PAGE"},"replay_eligible":{"const":false}
+      }},
+    "page":{"type":"object","additionalProperties":false,
+      "required":["next_cursor","has_more","total_unknown","maximum_page_rows","maximum_response_bytes","truncated"],
+      "properties":{
+        "next_cursor":{"type":["string","null"],"maxLength":128},"has_more":{"type":"boolean"},"total_unknown":{"const":true},
+        "maximum_page_rows":{"const":200},"maximum_response_bytes":{"const":1048576},"truncated":{"const":false}
+      }},
+    "records":{"type":"array","maxItems":200,"items":{"type":"object","additionalProperties":false,
+      "required":["resource_id","values"],"properties":{
+        "resource_id":{"type":"string","pattern":"^por1_[0-9a-f]{64}$"},
+        "values":{"type":"object","description":"Only operation allowlisted scalar fields. Decimal and integer strings are exact; timestamps are UTC milliseconds. No arbitrary JSON or source key.","additionalProperties":{"anyOf":[{"type":"string","maxLength":4096},{"type":"integer"},{"type":"boolean"},{"type":"null"}]}}
+      }}}
+  }
+}

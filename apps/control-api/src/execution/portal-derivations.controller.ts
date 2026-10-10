@@ -77,7 +77,7 @@ export class PortalDerivationsController {
     if (workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID) {
       throw new PortalDerivationError("EDS05_PROJECTION_WORKSPACE_NOT_FOUND", 404, "Workspace not found.");
     }
-    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId))) {
       throw new PortalDerivationError("WORKSPACE_NOT_FOUND", 404, "Workspace not found.");
     }
     if (requireEnvironment && !parsed.data.environment) {

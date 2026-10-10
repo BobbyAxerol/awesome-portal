@@ -1,4 +1,7 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { ExecutionProfileProjectionRepository } from "../execution/profile-projection.repository";
+import { retainedReview } from "../execution/retained-read-profile";
+import { WorkspacesRepository } from "../repos/workspaces";
 import { Pool, PoolClient } from "pg";
 import { ControlApiConfig } from "../config";
 import { PortalUser } from "../domain";
@@ -109,6 +112,8 @@ export class CommandCenterRepository {
     @Inject(CONTROL_API_POOL) private readonly pool: Pool,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(EXECUTION_DATA_POOL) private readonly executionPool: Pool = pool,
+    @Optional() @Inject(ExecutionProfileProjectionRepository) private readonly projections?: ExecutionProfileProjectionRepository,
+    @Optional() @Inject(WorkspacesRepository) private readonly workspaces?: WorkspacesRepository,
   ) {}
 
   async read(workspaceId: string, actor: PortalUser, readAt: Date): Promise<CommandCenterInputs> {
@@ -125,7 +130,11 @@ export class CommandCenterRepository {
       // One projection read feeds fleet health, reconciliation triage and the
       // journal window from one projection query; Core and domain are separate.
       // Domain data has its own pool/snapshot; never pretend cross-DB atomicity.
-      const projection = await this.projectionState(this.executionPool, readAt);
+      const retainedAccess = !retainedReview(this.config) || (!!this.workspaces &&
+        !!this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID &&
+          await this.workspaces.canReadExecution(this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID,actor.userId));
+      const projection: ProjectionState = retainedAccess ? await this.projectionState(this.executionPool, readAt)
+        : {rows:[],reason:"WORKSPACE_NOT_FOUND",ageMs:0};
       const fleet = this.projectionFleet(projection, readAt);
       const reconciliation = this.reconciliationTriage(projection, readAt);
       const journal = this.journalToday(projection, readAt);
@@ -295,7 +304,13 @@ export class CommandCenterRepository {
     }
     const newestRefresh = latestDate(result.rows.map((row) => row.last_successful_refresh_at));
     const ageMs = newestRefresh ? Math.max(0, readAt.valueOf() - newestRefresh.valueOf()) : Number.MAX_SAFE_INTEGER;
-    if (ageMs > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
+    if (retainedReview(this.config) && this.projections) {
+      for (const row of result.rows) {
+        const view = await this.projections.snapshot(projectionWorkspaceId,row.environment,row.profile_id);
+        if(view) { row.payload = view.document; row.completeness = "PARTIAL"; }
+      }
+    }
+    if (!retainedReview(this.config) && ageMs > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
       return { rows: result.rows, reason: "PHASE2_PROJECTION_STALE_CEILING_EXCEEDED", ageMs };
     }
     return { rows: result.rows, reason: null, ageMs };

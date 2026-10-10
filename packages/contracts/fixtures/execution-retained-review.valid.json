@@ -1,0 +1,13 @@
+{
+  "schema_version":"portal.execution.retained-review.v1","read_profile":"retained_review_v1","workspace_id":"ws_fixture_review",
+  "authority":"PORTAL_RETAINED_OBSERVATION","upstream_enabled":false,"source_refresh_enabled":false,"stream_enabled":false,
+  "mutation_enabled":false,"live_eligibility":false,"history_semantics":"BOUNDED_RETAINED_OBSERVATIONS_NOT_AUTHORITATIVE_REPLAY",
+  "permissions":{"read":true,"query":true,"download":false,"manage":false,"command":false,"stream":false,"research_create":false,"governance_decide":false,"is_owner":false},
+  "revocation":{"http":"EACH_REQUEST_CORE_SESSION_AND_ACCESS","permission_cache_seconds":0,"data_view_cache_milliseconds":2000,"data_view_cache_maximum_serialized_bytes":8388608,"delegated_jwt_ttl_seconds":45,"delegation_enabled":false,"upstream_revocation":"SHORT_LIVED_TOKEN_EXPIRY_NOT_INSTANT_REVOCATION"},
+  "profiles":[
+    {"environment":"paper","profile_id":"PAPER_BINANCE_USDM","source_as_of_ms":null,"snapshot_observed_ms":1788220800123,"source_payload_digest":null,"freshness":"STALE","completeness":"PARTIAL","panels":[{"panel_id":"accounts","screen_id":"paper","retained_state":"PARTIAL","current_row_count":1,"history_row_count":"20","source_availability":"UNAVAILABLE","source_reason_code":"MANAGER_V2_SOURCE_CONTRACT_REJECTED","source_as_of_ms":null,"source_freshness":"UNKNOWN","observed_at_ms":1788220800123,"oldest_available_ms":1788220800123,"newest_available_ms":1788224400123,"reason_code":"UDB_RETAINED_OBSERVATION_NOT_CURRENT_SOURCE"}]},
+    {"environment":"sandbox","profile_id":"SANDBOX_BINANCE_USDM","source_as_of_ms":null,"snapshot_observed_ms":null,"source_payload_digest":null,"freshness":"STALE","completeness":"PARTIAL","panels":[]},
+    {"environment":"live","profile_id":"LIVE_BINANCE_USDM","source_as_of_ms":null,"snapshot_observed_ms":null,"source_payload_digest":null,"freshness":"STALE","completeness":"PARTIAL","panels":[]}
+  ],
+  "future_resource_management":{"state":"NOT_PUBLISHED","reason_code":"TS_RESOURCE_MANAGEMENT_CONTRACT_NOT_PUBLISHED"}
+}

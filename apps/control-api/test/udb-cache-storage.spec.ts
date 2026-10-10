@@ -55,7 +55,10 @@ describe('UDB01-T01/T02 append-only cache storage repair', () => {
       expect((await pool.query("SELECT relpersistence FROM pg_class WHERE oid='execution_shared_read_cache'::regclass")).rows[0].relpersistence).toBe('p');
       await runControlApiMigrations(urlFor(database), source, () => {});
       expect(await custody()).toEqual(before);
-      expect((await pool.query('SELECT * FROM pgmigrations WHERE name <> $1 ORDER BY id', [repair])).rows).toEqual(ledger);
+      // Later additive migrations (UDB03's132 and future phases) may append.
+      // Every historical row, including id/name/run_on, must remain byte-exact.
+      expect((await pool.query('SELECT * FROM pgmigrations WHERE id=ANY($1::integer[]) ORDER BY id',
+        [ledger.map(row => row.id)])).rows).toEqual(ledger);
       const ddl = (await pool.query(`SELECT c.relpersistence,c.reloptions,t.reloptions AS toast_options
         FROM pg_class c JOIN pg_class t ON t.oid=c.reltoastrelid WHERE c.oid='execution_shared_read_cache'::regclass`)).rows[0];
       expect(ddl.relpersistence).toBe('u');

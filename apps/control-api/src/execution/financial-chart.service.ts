@@ -24,6 +24,7 @@ import {
   type FinancialQueryCursorScope,
 } from "./financial-query-cursor.repository";
 import { durableMirrorReadEnabled } from "./durable-mirror-mode";
+import { retainedReview } from "./retained-read-profile";
 import type { ProjectionEnvironment, ProjectionScalar } from "./profile-projection.repository";
 
 export const EDS07_FINANCIAL_METRICS = [
@@ -331,7 +332,10 @@ export class ExecutionFinancialChartService {
     read: DurableFinancialSeriesRead,
     targetPoints: number,
   ) {
-    const state = chartState(read);
+    // The shared panel has one primary state: retain the explicit partial
+    // reason/coverage, but do not conceal stale preview observations behind
+    // PARTIAL alone when their captured points are being drawn.
+    const state = retainedReview(this.config) && read.points.length > 0 ? "STALE" : chartState(read);
     const data = state === "READY" || state === "PARTIAL" || state === "STALE"
       ? chartData(query, metric, read, targetPoints)
       : null;
@@ -608,7 +612,7 @@ function profileIdFor(config: ControlApiConfig, environment: ProjectionEnvironme
 }
 
 function durableMirrorReadDisabled(config: ControlApiConfig): boolean {
-  return !durableMirrorReadEnabled(config);
+  return !durableMirrorReadEnabled(config) && !retainedReview(config);
 }
 
 function clocks(observation: DurableFinancialObservation | { asOf: Date | null; receivedAt: Date | null } | null) {

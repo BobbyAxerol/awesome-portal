@@ -43,6 +43,7 @@ import { ExecutionProfileProjectionRepository, ProjectionEnvironment } from "./p
 import { CONTROL_API_CONFIG } from "../tokens";
 import type { ControlApiConfig } from "../config";
 import type { AuthSession, PortalUser } from "../domain";
+import { retainedReview } from "./retained-read-profile";
 
 export interface Portfolio360Principal {
   user: PortalUser;
@@ -279,7 +280,7 @@ export class Portfolio360LocalService {
       inputAsOf: asOf,
       inputFreshness: freshness,
       inputCompleteness: complete && entryCount === rows.length ? "COMPLETE" : "PARTIAL",
-      panelState: entryCount > 0 ? "ok" : "empty",
+      panelState: entryCount > 0 ? "ok" : reason ? "unavailable" : "empty",
       version,
       readAt,
       windowDays: null,
@@ -341,6 +342,11 @@ export class Portfolio360LocalService {
       }
       const records = Array.isArray(response.records) ? response.records : [];
       const metadata = (response.source_health ?? {}) as Record<string, unknown>;
+      if (retainedReview(this.config)) {
+        complete = false;
+        reason = typeof response.reason_code === "string" ? response.reason_code : "UDB_RETAINED_OBSERVATION_NOT_CURRENT_SOURCE";
+        if (response.state === "UNAVAILABLE") return result(false);
+      }
       if (metadata.freshness === "STALE") freshness = "STALE";
       else if (metadata.freshness !== "FRESH" && metadata.freshness !== "AGING" && freshness !== "STALE") freshness = "UNKNOWN";
       complete = complete && metadata.completeness === "COMPLETE";

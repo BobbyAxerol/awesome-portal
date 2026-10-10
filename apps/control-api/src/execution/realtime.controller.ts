@@ -30,6 +30,7 @@ import {
 } from "./realtime.proxy";
 import { ExecutionCurrentSourceProxy } from "./current-source.proxy";
 import { ExecutionLocalReadAuthority } from "./local-read-authority";
+import { retainedReview } from "./retained-read-profile";
 
 interface RealtimeRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -121,9 +122,19 @@ export class ExecutionRealtimeController {
   async profileSnapshot(
     @Req() request: RealtimeRequest,
     @Param("environment") rawEnvironment: string,
+    @Res({ passthrough: true }) reply?: FastifyReply,
   ) {
     const { environment, profileId, workspaceId } = localScope(this.config, rawEnvironment);
     await this.readAuthority.authorize(request, environment);
+    if (retainedReview(this.config)) {
+      // No resumable cursor exists in this profile. A 204 is intentional
+      // absence, not a successful heartbeat or an upstream error. Older
+      // consumers stop here; the typed review context tells newer consumers
+      // not to start the realtime bootstrap at all.
+      reply?.code(204).header("Cache-Control", "private, no-store")
+        .header("X-Portal-Realtime-State", "UDB_RETAINED_STREAM_DISABLED");
+      return;
+    }
     try {
       return await this.localRealtime.snapshot(workspaceId, environment, profileId);
     } catch (error) {
@@ -138,6 +149,7 @@ export class ExecutionRealtimeController {
     @Param("environment") rawEnvironment: string,
     @Query("cursor") rawCursor?: unknown,
   ): Promise<void> {
+    if (retainedReview(this.config)) throw new HttpException({code:"UDB_RETAINED_STREAM_DISABLED",message:"Streaming is disabled in retained review."},404);
     let cleanup = () => undefined as void;
     try {
       const { environment, profileId, workspaceId } = localScope(this.config, rawEnvironment);
@@ -226,6 +238,7 @@ export class ExecutionRealtimeController {
     @Res() reply: FastifyReply,
     @Query("cursor") rawSnapshotCursor?: unknown,
   ): Promise<void> {
+    if (retainedReview(this.config)) throw new HttpException({code:"UDB_RETAINED_STREAM_DISABLED",message:"Streaming is disabled in retained review."},404);
     try {
       const snapshotCursor = singleValue(rawSnapshotCursor);
       const upstream = await this.proxy.open({
@@ -267,7 +280,11 @@ export class ExecutionRealtimeController {
   }
 
   @Get("/command-center/realtime-snapshot")
-  async commandCenterSnapshot(@Req() request: RealtimeRequest) {
+  async commandCenterSnapshot(@Req() request: RealtimeRequest, @Res({passthrough:true}) reply?: FastifyReply) {
+    if (retainedReview(this.config)) {
+      reply?.code(204).header("Cache-Control","private, no-store").header("X-Portal-Realtime-State","UDB_RETAINED_STREAM_DISABLED");
+      return;
+    }
     try {
       return await this.proxy.snapshot({
         user: request.portalUser,
