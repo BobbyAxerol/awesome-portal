@@ -3,6 +3,27 @@ import { createHash } from "node:crypto";
 import type { ProfileProjectionSnapshot, ProjectionEnvironment, ProjectionRow } from "./profile-projection.repository";
 import { profileProjectionCatalog } from "./profile-projection.catalog";
 
+/** Scalar validator of the SAME scoped inputs as retainedSnapshot. Never loads
+ * the multi-MiB payload just to confirm an unchanged retained observation.
+ * Digests are writer-owned immutable content facts, not access/freshness facts. */
+export async function retainedRevision(pool: Pool, workspace: string,
+  environment: ProjectionEnvironment, profile: string): Promise<string | null> {
+  const result=await pool.query<{retained_revision:string}>(`WITH entities AS (
+    SELECT e.relation_key,e.entity_key,e.source_row_digest,b.source_contract_revision,b.source_catalogue_sha256
+    FROM execution_durable_mirror_current_entities e
+    JOIN execution_durable_mirror_batches b ON b.batch_id=e.last_observed_batch_id
+    WHERE e.workspace_id=$1 AND e.environment=$2 AND e.profile_id=$3
+      AND b.workspace_id=e.workspace_id AND b.environment=e.environment AND b.profile_id=e.profile_id
+    ORDER BY e.relation_key,e.entity_key LIMIT 10001
+  ) SELECT encode(sha256(convert_to(jsonb_build_array(s.payload_digest,s.source_epoch,s.source_cursor,
+    s.source_as_of,s.received_at,s.last_successful_refresh_at,s.completeness,s.projection_epoch,
+    s.projection_sequence,s.source_catalogue_sha256,
+    (SELECT jsonb_agg(to_jsonb(e) ORDER BY relation_key,entity_key) FROM entities e))::text,'UTF8')),'hex') AS retained_revision
+    FROM execution_profile_projection_snapshots s
+    WHERE s.workspace_id=$1 AND s.environment=$2 AND s.profile_id=$3`,[workspace,environment,profile]);
+  return result.rows[0]?.retained_revision ?? null;
+}
+
 /** Immutable read view; never writes a source snapshot, clock or acceptance. */
 export async function retainedSnapshot(pool: Pool, snapshot: ProfileProjectionSnapshot,
   workspace: string, environment: ProjectionEnvironment, profile: string): Promise<ProfileProjectionSnapshot> {

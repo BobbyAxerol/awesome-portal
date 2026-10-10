@@ -54,6 +54,7 @@ describe("P22 strict publication contract", () => {
     ]));
     expect(fixture.mirror.typed_optional_fields).toContain("assignee_pool");
     expect(fixture.mirror.typed_required_fields).toContain("assignee_pool_availability");
+    expect(fixture.mirror.href).toBe("/governance/approvals/apr_p22_fixture/r1?workspace_id=ws_p22");
     expect(fixture.mirror.promotion_pick_states).toEqual(["PENDING_APPROVAL", "WRITTEN", "REJECTED"]);
   });
 
@@ -86,6 +87,15 @@ describe("P22 strict publication contract", () => {
       },
     };
     expect(ResearchReleaseCandidatePublicationResponseSchema.safeParse(delivered).success).toBe(true);
+    const scoped = { ...delivered, approval: { ...delivered.approval,
+      href: "/governance/approvals/apr_p22/r1?workspace_id=ws_p22" } };
+    expect(ResearchReleaseCandidatePublicationResponseSchema.safeParse(scoped).success).toBe(true);
+    for(const href of ["https://wrong.example/r1", "/governance/approvals/apr_p22/r1?workspace_id=ws_p22&role=ADMIN",
+      "/governance/approvals/apr_p22/r1?workspace_id=ws_p22#authority"]){
+      expect(ResearchReleaseCandidatePublicationResponseSchema.safeParse({ ...scoped,
+        approval:{...scoped.approval,href} }).success).toBe(false);
+      expect(ResearchReleaseCandidatePublicationResponseSchema.safeParse({...base,conflicting_approval_href:href}).success).toBe(false);
+    }
     expect(delivered.pack_digest).not.toBe(delivered.source.legacy_artifact_sha256.slice(7));
     expect(delivered.pack_digest).not.toBe(delivered.approval.evidence_set_hash.slice(7));
     expect(ResearchAlphaVersionPublicationResponseSchema.safeParse({

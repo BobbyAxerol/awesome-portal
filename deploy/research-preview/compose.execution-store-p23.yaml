@@ -1,10 +1,19 @@
 # UDB04 candidate combines the private domain store with the unchanged 5GB
-# envelope: replace the former 900MB PG allocation by 650MB Core + 250MB Exec.
+# envelope: 900MB Core + 512MiB Exec + 500MB Python API. The unqualified 250MB Exec candidate
+# OOM-killed a backend during UDB04 twenty-viewer reads. Eight services total
+# 4,536,870,912B; one 350MB operator still fits below5GB. Core650MB caused
+# measured memory.max reclaim during mixed reads; reserve the original P23
+# Core900MB budget, rebalance the lightly used API, then requalify the child.
+# Optional MinIO and
+# an operator must NOT run together in this combined profile.
 # This overlay is not applied to shared preview or old P23 receipt stacks.
 services:
   portal-postgres:
-    mem_limit: 650000000
-    memswap_limit: 650000000
+    mem_limit: 900000000
+    memswap_limit: 900000000
   execution-postgres:
-    mem_limit: 250000000
-    memswap_limit: 250000000
+    mem_limit: 536870912
+    memswap_limit: 536870912
+  portal-api:
+    mem_limit: 500000000
+    memswap_limit: 500000000

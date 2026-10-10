@@ -64,7 +64,7 @@ export function readPrivateManifest(path) {
 }
 
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
-async function consumeBounded(response) {
+export async function consumeBounded(response) {
   if (!response.body || !response.headers?.get('content-type')?.toLowerCase().includes('application/json')) {
     throw new Error('NAMED_READ_JSON_RESPONSE_REQUIRED');
   }

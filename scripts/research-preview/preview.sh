@@ -198,10 +198,19 @@ record_identity() {
 cmd_up() {
   local sha
   sha="$(git -C "$ROOT" rev-parse HEAD)"
+  local recreate=()
+  if [[ "${1:-}" == --force-recreate ]]; then
+    shift
+    [[ $# -gt 0 ]] || { echo "preview: force-recreate needs explicit application services" >&2; return 1; }
+    # A new OCI index can contain the same runtime config (e.g. changed build
+    # attestation). Compose may otherwise keep .Image on the previous index.
+    # Exact-image acceptance can request replacement, still with no deps/DB.
+    recreate=(--force-recreate)
+  fi
   if [[ $# -gt 0 ]]; then
     local service
     for service in "$@"; do
-      case "$service" in control-api|portal-web|portal-api|quant-worker-py) ;;
+      case "$service" in control-api|portal-web|portal-api|quant-worker-py|roadmap-task-board-api) ;;
         *) echo "preview: scoped application rollout excludes DB/NATS/migrations/bootstrap" >&2; return 1;;
       esac
     done
@@ -220,7 +229,7 @@ cmd_up() {
     # Explicit application services only: no migration/bootstrap or DB/NATS
     # dependency restart. Before an API/worker change the operator must verify
     # there is no in-flight admitted child; never cancel work to deploy.
-    PORTAL_BUILD_COMMIT="$sha" compose up -d --no-build --no-deps "$@"
+    PORTAL_BUILD_COMMIT="$sha" compose up -d --no-build --no-deps "${recreate[@]}" "$@"
   else
     PORTAL_BUILD_COMMIT="$sha" compose up -d --no-build portal-web quant-worker-py
   fi

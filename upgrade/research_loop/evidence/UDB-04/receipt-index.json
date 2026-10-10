@@ -1,0 +1,222 @@
+{
+  "schema_version": "portal.udb04.receipt-index.v1",
+  "phase": "UDB-04",
+  "verdict": "ACCEPTANCE_OPEN_NOT_PHASE_PASS",
+  "at_utc": "2026-10-10T21:58:06.678Z",
+  "private_evidence_directory": "/home/bobby/.local/state/portal-udb04/acceptance-20261011",
+  "latest_private_evidence_directory": "/home/bobby/.local/state/portal-udb04/acceptance-final-20261011",
+  "retention_days": 30,
+  "source_parent": "16f2c18ca22c6ff11a016a2f171da5eaf104d2ba",
+  "runtime_images": {
+    "portal-postgres": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+    "execution-postgres": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+    "portal-nats": "sha256:b83efabe3e7def1e0a4a31ec6e078999bb17c80363f881df35edc70fcb6bb927",
+    "roadmap-task-board-api": "sha256:e32bd3220153caaead4828495f2fc8580973a4266182cd3aae261ca0687fca59",
+    "portal-api": "sha256:20da76618efb92e1b8930339a6797aba3b5bc72849bdf5173c62617cf554b2b5",
+    "control-api": "sha256:4278509ab934b444df92a37b2fb06f3c6367f74776cdeeceddaa3362a2142803",
+    "quant-worker-py": "sha256:20da76618efb92e1b8930339a6797aba3b5bc72849bdf5173c62617cf554b2b5",
+    "portal-web": "sha256:ae86a99c9aff2eeb05be0ea9d987b332d224799408e70fce5d342791ea672d3d"
+  },
+  "control_build_inputs": {
+    "sha256": "7d20d6eb68d8cff85f1dd515d2ca01fc1a42d293e742aafee4c5847414d24fba",
+    "files": 549,
+    "source_commit": "16f2c18ca22c6ff11a016a2f171da5eaf104d2ba"
+  },
+  "flags": {
+    "EXECUTION_READ_PROFILE": "retained_review_v1",
+    "FEATURE_EXECUTION_EDGE": "false",
+    "FEATURE_EXECUTION_REALTIME_SSE": "false",
+    "FEATURE_EXECUTION_COMMAND_RELAY": "false",
+    "FEATURE_EXECUTION_DURABLE_MIRROR": "false",
+    "FEATURE_EXECUTION_DURABLE_MIRROR_READS": "false",
+    "FEATURE_EXECUTION_MARKET_CONTEXT": "false",
+    "EXECUTION_DATABASE_POOL_MAX": 6,
+    "EXECUTION_DATABASE_POOL_QUEUE_MAX": 12
+  },
+  "qualification": {
+    "authority": {
+      "passed": true,
+      "cases": 28,
+      "real_stan_tested": false
+    },
+    "mixed_load": {
+      "passed": false,
+      "control_image": "sha256:ccff1b9edee397d61b39f41e98b90d648df81f2ceb12e1429c9408be1ee03a01",
+      "distinct_principals": 20,
+      "full_body_reads": 1000,
+      "http_errors": 0,
+      "heavy_trials": 64,
+      "queued_jobs": 4,
+      "warm_p95_ms": {
+        "library": 833,
+        "progress": 657,
+        "evidence": 617,
+        "search": 436,
+        "report": 501,
+        "replay": 613,
+        "retained_context": 331,
+        "fleet": 356,
+        "bindings": 443,
+        "command_center": 524
+      },
+      "note": "Earlier failed load candidate does not qualify latest Control image."
+    },
+    "db_restore": {
+      "passed": true,
+      "current_auth_cutover_verified": true,
+      "stale_auth_restore_rejected": true,
+      "execution_table_hashes": 27,
+      "manifest_byte_parity": 77,
+      "manifest_denominator": 77,
+      "file_count": 3564,
+      "bytes": 75945892,
+      "scope": "DB restore plus unchanged cloned-artifact byte parity; not final artifact archive restore."
+    },
+    "artifact_backup_restore": {
+      "passed": true,
+      "manifest_denominator": 68,
+      "verified": 68,
+      "file_count": 3168,
+      "bytes": 71984287,
+      "archive_sha256": "0b3a16d189110a2823991d0e4e49bd26bf6d92c4669ba7a57da8d048576b0e58",
+      "tree_sha256": "4e32fba23d73fd20fc32fb08c3c18c4a9f92263398415d938b440641ff448191",
+      "source_volume_mounted": false,
+      "later_test_outputs_backed_up": false,
+      "scope": "ORIGINAL_PREVIEW_BACKUP_NOT_LATER_DISPOSABLE_LOAD_OUTPUT"
+    },
+    "combined_final_backup_restore": {
+      "state": "SCOPED_REAL_RECOVERY_PASS",
+      "control_image": "sha256:c18099d253febfe34f5c5679a036e48add4614050660e5ccf848fd3b16d4c557",
+      "passed": true,
+      "authority_cases": 28,
+      "stale_auth_restore_rejected": true,
+      "execution_table_hashes": 27,
+      "manifest_verified": 69,
+      "manifest_denominator": 69,
+      "file_count": 3212,
+      "bytes": 72511079,
+      "archive_bytes": 38390882,
+      "archive_sha256": "4f1e0f347db3d22d0c48d959c2ac563a18a676a8a6faee70dc8ed4d216ff3264",
+      "restored_tree_sha256": "10ef09c03270811bf91cf8b0363773fa573ebfdbc4c48d1eeafcbbf1f4d05605",
+      "fresh_clone_volume_restore_performed": true,
+      "scope": "Actual final archive/current-auth/Core/Execution restore on named DNS-corrected candidate, not final-image full-load/browser qualification."
+    },
+    "export": {
+      "passed": true,
+      "bytes": 82416,
+      "sha256": "839b8db076074cb67587a2224e92fdb4a36e55b6970170ac2fe8f6f3016255b1",
+      "wrong_workspace_or_actor_status": 404
+    },
+    "source_custody": {
+      "passed": true,
+      "core_groups": 16,
+      "roadmap_tables": 6,
+      "authority_and_business_bytes_unchanged": true
+    },
+    "owned_cleanup": {
+      "users_disabled": 23,
+      "grants_revoked": 20,
+      "services_removed": 8,
+      "clone_volumes_removed": 5,
+      "source_data_removed": false,
+      "images_pruned": false
+    }
+  },
+  "latest_mixed_load": {
+    "control_image": "sha256:195f098a6e9f47e7c1e5e5005f559025b2bc6d7ab5cc677f4a269aa8b0f5fdbb",
+    "passed": false,
+    "distinct_principals": 20,
+    "full_body_reads": 1000,
+    "heavy_trials": 64,
+    "queued_jobs": 4,
+    "http_errors": 0,
+    "oom_kills": 0,
+    "observed_cgroup_max_bytes": 1787994112,
+    "enforced_aggregate_cap_bytes": 4536870912,
+    "kernel_lifetime_peak_available": false,
+    "warm_p95_ms": {"library":679,"progress":631,"evidence":744,"command_center":626,"report":441,"search":337,"replay":493,"retained_context":328,"fleet":344,"bindings":417},
+    "note": "Four summary SLO failures at500ms; final runtime and8MiB cap not single-candidate accepted."
+  },
+  "final_cleanup": {
+    "users_disabled":23,
+    "active_test_sessions":0,
+    "active_test_grants":0,
+    "exact_original_user_sessions_revoked":2,
+    "services_removed":8,
+    "clone_volumes_removed":5,
+    "remaining_owned_containers":0,
+    "remaining_owned_volumes":0,
+    "source_core_custody_groups":16,
+    "source_roadmap_tables":6,
+    "source_custody_passed":true,
+    "final_archive_restored_and_retained_days":30,
+    "source_data_removed":false,
+    "images_pruned":false
+  },
+  "latest_files": [
+    {"name":"mixed-load.json","bytes":232373,"sha256":"33e96244b163fd1437d6cd9da97afb12bd80de77c6930dc365cbcab8fd222094"},
+    {"name":"authorization-dr.json","bytes":44550,"sha256":"b88dafa2ab8ba78b0f2e428fe67896ba10c503742bdb48e52c8a52eb341443b2"},
+    {"name":"identity-cleanup.json","bytes":401,"sha256":"46d449a27357d18f01d65c23e8cd2e6f9f3ecfc9127633a06f1c99e8ef96f53a"},
+    {"name":"teardown.json","bytes":349,"sha256":"45606b0f93709a27a708c1ee7fdc3167cd8aacfe0d1a1a29845f881975d8884a"},
+    {"name":"source-after.json","bytes":149248,"sha256":"558101abb687eb2f264bc6d9706c8da86ec4508228e2bff81c9bb7dc144596c3"},
+    {"name":"final-runtime.json","bytes":3422,"sha256":"3f5820a3ec2915d295919d5a9c56072fbbdf4fbbd02f0a8bd44278f13cb53a04"},
+    {"name":"capacity-after.json","bytes":342,"sha256":"231d73fe31f10e36d47ac1b62ec0f1d788dea8f907db83d10038ce02d378cc8a"}
+  ],
+  "files": [
+    {
+      "name": "mixed-load.json",
+      "bytes": 220056,
+      "sha256": "070b0a4438f281645e4df71d855c1fbcb20dacfee7d9d9ecf5903334c642f599"
+    },
+    {
+      "name": "authorization-dr.json",
+      "bytes": 47415,
+      "sha256": "fa10fc1a8e8ff2da8ce5b18b7df627a28c9c4dcdd7d7d0dada63ed010ada04e0"
+    },
+    {
+      "name": "original-artifact-restore.json",
+      "bytes": 12415,
+      "sha256": "4849b930a7a4c98dafc4b5478ab61c104c6d3c8bae53c6f6307efca9585d6f02"
+    },
+    {
+      "name": "export.json",
+      "bytes": 397,
+      "sha256": "cabe88ccc0964842b5e569ff29c7ef5ea4f4d5ffd6368e15ee8ee8570c19fa30"
+    },
+    {
+      "name": "browser-summary.json",
+      "bytes": 29488,
+      "sha256": "d1d59f14750324f6ac853bf0a919d872bc32cac0a0340d0af4d5bae02a78ab8d"
+    },
+    {
+      "name": "exact-web-smoke.json",
+      "bytes": 1130,
+      "sha256": "806e086be0d6882e2c228ec5fd3f998322f7e1bdf8648557d994167a8711b49d"
+    },
+    {
+      "name": "web-exact-image.json",
+      "bytes": 405,
+      "sha256": "3479af24872e7935c99fbf0a73d2e40d95c3e95d36c6f77ef51724b257e1d23b"
+    },
+    {
+      "name": "source-after.json",
+      "bytes": 149248,
+      "sha256": "202913bcc06663f2fc01a0416fd83e62262e66d19bec1fd361c1888437c6c4ba"
+    },
+    {
+      "name": "identity-cleanup.json",
+      "bytes": 401,
+      "sha256": "f019fcdef5d9417ded55b54ce11866b338f8b280d8a3e3af3a2d202a1337d1e4"
+    },
+    {
+      "name": "teardown.json",
+      "bytes": 349,
+      "sha256": "93269c4d5c011131c123cf6c683a988e5664c601b30b7690ace7973762390a86"
+    },
+    {
+      "name": "final-runtime.json",
+      "bytes": 3150,
+      "sha256": "da41eb9a44f60cf786b2069270a6aa70d69fc075ecb5104f8a6999098ec7313d"
+    }
+  ]
+}

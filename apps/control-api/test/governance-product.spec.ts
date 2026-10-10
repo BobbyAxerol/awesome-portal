@@ -550,15 +550,37 @@ describe("N29 governance product closeout", () => {
       state: "LAPSED",
       blocking: true,
     }));
-    const commandCenter = await request(
+    // Membership/requester identity is not a Governance read grant. Command
+    // Center must enforce the same condition visibility as the register.
+    const ungrantedConditions = await request(
+      stan,
+      `/api/v1/execution/governance/waivers?workspace_id=${workspaceId}`,
+    );
+    // The existing list contract is a scoped empty page, not the 403 used
+    // by an individual R1 detail read. Counts must hide the records too.
+    expect(ungrantedConditions.statusCode).toBe(200);
+    expect(ungrantedConditions.json().page.rows).toEqual([]);
+    expect(ungrantedConditions.json().page.total_count).toBe(0);
+    expect(ungrantedConditions.json().page.filtered_count).toBe(0);
+    const ungrantedCommandCenter = await request(
       stan,
       `/api/v1/execution/command-center?workspace_id=${workspaceId}`,
     );
-    expect(commandCenter.statusCode).toBe(200);
-    expect(commandCenter.json().panels.today.items).toContainEqual(expect.objectContaining({
-      id: "condition:lim_lapsed",
-      kind: "CONDITION_EXPIRY",
-      href: "/governance/waivers",
-    }));
+    expect(ungrantedCommandCenter.statusCode).toBe(200);
+    expect(ungrantedCommandCenter.json().panels.today.items).not.toContainEqual(
+      expect.objectContaining({ id: "condition:lim_lapsed" }),
+    );
+    for (const reader of [bobby, lan]) {
+      const commandCenter = await request(
+        reader,
+        `/api/v1/execution/command-center?workspace_id=${workspaceId}`,
+      );
+      expect(commandCenter.statusCode).toBe(200);
+      expect(commandCenter.json().panels.today.items).toContainEqual(expect.objectContaining({
+        id: "condition:lim_lapsed",
+        kind: "CONDITION_EXPIRY",
+        href: "/governance/waivers",
+      }));
+    }
   });
 });

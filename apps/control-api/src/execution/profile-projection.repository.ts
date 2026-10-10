@@ -15,7 +15,7 @@ import {
 } from "./profile-projection.catalog";
 import { durableMirrorReadEnabled } from "./durable-mirror-mode";
 import { retainedReview } from "./retained-read-profile";
-import { retainedSnapshot } from "./retained-snapshot";
+import { retainedSnapshot, retainedRevision } from "./retained-snapshot";
 
 export type ProjectionEnvironment = "paper" | "sandbox" | "live";
 export type ProjectionCompleteness = "COMPLETE" | "PARTIAL" | "UNKNOWN";
@@ -822,32 +822,49 @@ export class ExecutionProfileProjectionRepository {
     // briefly across the many panels of one rich-screen mount. No cache/job
     // table writes; every HTTP request still rechecks Core access/session.
     if (retainedReview(this.config)) {
-      const now=Date.now();
-      for(const [scope,value] of this.retainedViews) if(value.expiresAt<=now) this.retainedViews.delete(scope);
-      const cached=this.retainedViews.get(key);if(cached)return cached.snapshot;
+      const cached=this.retainedViews.get(key);if(cached&&cached.expiresAt>Date.now())return cached.snapshot;
     }
     const pending = this.snapshotFlights.get(key);
     if (pending) return pending;
     if (this.snapshotFlights.size >= 16) throw new Error("N31_LOCAL_READ_CAPACITY");
-    const read = this.readSnapshot(workspaceId,environment,profileId,reader).then(snapshot =>
-      snapshot && retainedReview(this.config) ? retainedSnapshot(this.pool,snapshot,workspaceId,environment,profileId) : snapshot);
-    this.snapshotFlights.set(key,read);
-    try {
-      const snapshot=await read;
-      if(snapshot&&retainedReview(this.config)) {
-        const bytes=Buffer.byteLength(JSON.stringify(snapshot));
-        if(bytes<=8*1024*1024){
-          const total=()=>[...this.retainedViews.values()].reduce((n,entry)=>n+entry.bytes,0);
-          while(this.retainedViews.size && (this.retainedViews.size>=3 || total()+bytes>8*1024*1024)) this.retainedViews.delete(this.retainedViews.keys().next().value!);
-          this.retainedViews.set(key,{snapshot,bytes,expiresAt:Date.now()+2000});
-        }
+    const read = (async()=>{
+      if(!retainedReview(this.config))return this.readSnapshot(workspaceId,environment,profileId,reader);
+      const revision=await retainedRevision(this.pool,workspaceId,environment,profileId);
+      const cached=this.retainedViews.get(key);
+      if(revision && cached?.revision===revision){
+        // A successful database validation renews DATA TTL only. A DB failure
+        // never renews this entry or its original clocks; auth is not cached.
+        cached.expiresAt=Date.now()+2000;return cached.snapshot;
+      }
+      this.retainedViews.delete(key);
+      const raw=await this.readSnapshot(workspaceId,environment,profileId,reader);
+      const snapshot=raw?await retainedSnapshot(this.pool,raw,workspaceId,environment,profileId):null;
+      if(!snapshot)return null;
+      // Mixed inputs observed across a concurrent writer must not be retained
+      // as a validated view. The next request reads again, not a stale token.
+      const stableRevision=revision===await retainedRevision(this.pool,workspaceId,environment,profileId)?revision:null;
+      if(!stableRevision)return snapshot;
+      const bytes=Buffer.byteLength(JSON.stringify(snapshot));
+      // Keep the published v1 bound and its strict browser consumer aligned.
+      // A larger measured Paper document may be shared while in flight, but
+      // cannot become a retained cache entry without a coordinated contract
+      // and consumer change. HTTP data remains bounded by each named BFF.
+      const cacheBudgetBytes=8*1024*1024;
+      if(bytes<=cacheBudgetBytes){
+        const total=()=>[...this.retainedViews.values()].reduce((n,entry)=>n+entry.bytes,0);
+        while(this.retainedViews.size && (this.retainedViews.size>=3 || total()+bytes>cacheBudgetBytes)) this.retainedViews.delete(this.retainedViews.keys().next().value!);
+        this.retainedViews.set(key,{snapshot,bytes,revision:stableRevision,expiresAt:Date.now()+2000});
       }
       return snapshot;
+    })();
+    this.snapshotFlights.set(key,read);
+    try {
+      return await read;
     } finally { if (this.snapshotFlights.get(key) === read) this.snapshotFlights.delete(key); }
   }
 
   private readonly snapshotFlights = new Map<string, Promise<ProfileProjectionSnapshot | null>>();
-  private readonly retainedViews = new Map<string,{snapshot:ProfileProjectionSnapshot;bytes:number;expiresAt:number}>();
+  private readonly retainedViews = new Map<string,{snapshot:ProfileProjectionSnapshot;bytes:number;revision:string;expiresAt:number}>();
 
   private async readSnapshot(
     workspaceId: string,

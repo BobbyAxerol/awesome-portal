@@ -68,7 +68,7 @@ export class ResearchReleaseCandidatePublicationService {
     if (!intent) {
       const ready = await this.readiness(scope, user, id, true, this.intakeOpen);
       return this.response({
-        id, ready, state: "NOT_PUBLISHED", mayPublish: ready.blocked === null,
+        id, workspaceId: scope.workspaceId, ready, state: "NOT_PUBLISHED", mayPublish: ready.blocked === null,
         blocked: ready.blocked, published: null, approvalRead: "NOT_PUBLISHED", approval: null,
         replayed: false,
       });
@@ -98,7 +98,7 @@ export class ResearchReleaseCandidatePublicationService {
                 : ready.blocked === "P22_CURRENT_SOURCE_CHANGED" ? ready.blocked
                   : !sourceMatches ? "P22_SOURCE_PIN_CHANGED" : ready.blocked;
     return this.response({
-      id, ready: { ...ready, relation }, state: intent.state, mayPublish: canRetry, blocked,
+      id, workspaceId: scope.workspaceId, ready: { ...ready, relation }, state: intent.state, mayPublish: canRetry, blocked,
       published, approvalRead: mirror.state, approval: mirror.approval, replayed: false, intent,
     });
   }
@@ -162,13 +162,13 @@ export class ResearchReleaseCandidatePublicationService {
     if (ready.packDigest !== input.expected_pack_digest) this.conflict();
     if (ready.blocked !== null) {
       return this.response({
-        id, ready, state: "NOT_PUBLISHED", mayPublish: false, blocked: ready.blocked,
+        id, workspaceId: scope.workspaceId, ready, state: "NOT_PUBLISHED", mayPublish: false, blocked: ready.blocked,
         published: null, approvalRead: "NOT_PUBLISHED", approval: null, replayed: false,
       });
     }
     if (!ready.source.eligible_methodology_claim_ids.includes(input.methodology_claim_id)) {
       return this.response({
-        id, ready, state: "NOT_PUBLISHED", mayPublish: false, blocked: "P22_METHODOLOGY_CLAIM_NOT_PUBLISHED",
+        id, workspaceId: scope.workspaceId, ready, state: "NOT_PUBLISHED", mayPublish: false, blocked: "P22_METHODOLOGY_CLAIM_NOT_PUBLISHED",
         published: null, approvalRead: "NOT_PUBLISHED", approval: null, replayed: false,
       });
     }
@@ -434,7 +434,9 @@ export class ResearchReleaseCandidatePublicationService {
         evidence_set_hash: approval.evidence_set_hash,
         sla_due_at: approval.sla_due_at, expires_at: approval.expires_at,
         created_at: approval.created_at, read_at: result.read_at, conditions,
-        href: "/governance/approvals/" + intent.approvalId + "/r1",
+        // Navigation carries the SAME authorized Core workspace; never use
+        // retained Execution's data workspace or the viewer's default.
+        href: `/governance/approvals/${intent.approvalId}/r1?workspace_id=${encodeURIComponent(scope.workspaceId)}`,
         assignee_pool_availability: assigneePoolPublished
           ? { state: "AVAILABLE", reason_code: null }
           : { state: "NOT_PUBLISHED", reason_code: "P22_GOVERNANCE_ASSIGNEE_POOL_NOT_PUBLISHED" },
@@ -462,7 +464,7 @@ export class ResearchReleaseCandidatePublicationService {
   }
 
   private response(input: {
-    id: string; ready: Ready; state: ResearchReleaseCandidatePublicationResponse["state"];
+    id: string; workspaceId: string; ready: Ready; state: ResearchReleaseCandidatePublicationResponse["state"];
     mayPublish: boolean; blocked: string | null; published: ResearchReleaseCandidatePublicationResponse["published"];
     approvalRead: ResearchReleaseCandidatePublicationResponse["approval_read"];
     approval: ResearchReleaseCandidatePublicationResponse["approval"]; replayed: boolean;
@@ -478,7 +480,8 @@ export class ResearchReleaseCandidatePublicationService {
       approval: input.approval, as_of_utc_ms: Date.now(), replayed: input.replayed,
       attempt_count: input.intent?.attemptCount ?? 0,
       conflicting_approval_id: input.intent?.conflictingApprovalId ?? null,
-      conflicting_approval_href: input.intent?.conflictingApprovalId ? `/governance/approvals/${input.intent.conflictingApprovalId}/r1` : null,
+      conflicting_approval_href: input.intent?.conflictingApprovalId
+        ? `/governance/approvals/${input.intent.conflictingApprovalId}/r1?workspace_id=${encodeURIComponent(input.workspaceId)}` : null,
       downstream_code: input.intent?.downstreamCode ?? null,
       publication_created_at: input.intent?.createdAtUtcMs ? new Date(input.intent.createdAtUtcMs).toISOString() : null,
       // No publication intent exists yet: an observation time is not an update.

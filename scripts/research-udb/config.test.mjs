@@ -57,7 +57,11 @@ test('domain PG and future combined P23 envelope remain bounded, never activate 
   assert.match(config,/autovacuum_work_mem = 16MB/);assert.match(config,/max_parallel_workers_per_gather = 0/);
   const candidate=read('deploy/research-preview/compose.execution-store-p23.yaml');
   const caps=[...candidate.matchAll(/mem_limit: (\d+)/g)].map(x=>Number(x[1]));
-  assert.deepEqual(caps,[650000000,250000000]);assert.equal(caps.reduce((a,b)=>a+b),900000000);
+  assert.deepEqual(caps,[900000000,536870912,500000000]);
+  const otherRequiredServices=2600000000;
+  assert.equal(caps.reduce((a,b)=>a+b)+otherRequiredServices,4536870912);
+  assert(caps.reduce((a,b)=>a+b)+otherRequiredServices+350000000<=5000000000);
+  assert(caps.reduce((a,b)=>a+b)+otherRequiredServices+300000000+350000000>5000000000);
   assert.doesNotMatch(read('scripts/research-preview/preview.sh'),/compose.execution-store-p23.yaml/);
 });
 test('domain schema and hydration do not copy Core authority or live cursors', () => {
@@ -69,4 +73,17 @@ test('domain schema and hydration do not copy Core authority or live cursors', (
   assert.match(transfer,/READ ONLY/);assert.match(transfer,/live_state_imported:false/);
   assert.match(transfer,/n<=20000/);assert.match(transfer,/UDB_TRANSFER_CONTENT_PARITY_FAILED/);
   assert.match(transfer,/environment,profile_id,relation_key,row_id/);
+});
+
+test('acceptance retakes preserve terminal evidence and stay in owned directories', () => {
+  const harness=read('scripts/research-udb/acceptance-cell.mjs');
+  assert.match(harness,/UDB04_RECEIPT_DIRECTORY_OUTSIDE_OWNED_ALLOWLIST/);
+  assert.match(harness,/TERMINAL_CELL_REQUIRES_A_NEW_APPROVED_RECEIPT_DIRECTORY/);
+  assert.match(harness,/INIT_ONCE_NEVER_OVERWRITE/);
+  assert.match(harness,/source_candidate:buildInputs\.source_commit/);
+  assert.match(harness,/control_build_inputs:buildInputs/);
+  const allowed=/^\/home\/bobby\/\.local\/state\/portal-udb04\/acceptance(?:-final)?-\d{8}$/;
+  assert(allowed.test('/home/bobby/.local/state/portal-udb04/acceptance-final-20261011'));
+  for(const path of ['/tmp/acceptance-final-20261011','/home/bobby',
+    '/home/bobby/.local/state/portal-udb04/acceptance-final-20261011/../other'])assert(!allowed.test(path));
 });

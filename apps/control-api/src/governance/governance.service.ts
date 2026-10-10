@@ -1072,7 +1072,7 @@ function approvalDecisionPredicate(
  * capability for it.  SANDBOX_EXIT has no published reader/decision contract,
  * so only the Portal owner can inspect its historical rows until one exists.
  */
-function approvalReadGates(
+export function approvalReadGates(
   user: PortalUser,
   access: EffectiveAccess,
   workspaceId: string,

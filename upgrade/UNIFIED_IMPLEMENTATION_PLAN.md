@@ -3648,8 +3648,8 @@ phê duyệt tại [UDB addendum](#udb-upgrade-2026-10-10).
 |---|---|---|---|---|
 | [UDB-01](#udb-01) | Bobby duyệt UDB-01 2026-10-10 +bounded-gate refinement | Cả hai loop, nền identity/storage | UDB-1 | **PASS — PREVIEW_STORAGE_BASELINE** · 95/95 real-PG +7 config cases;8,969 changed-body writes/119 vacuum cycles/602.478s;custody unchanged,C4 done;[packet](./research_loop/evidence/UDB-01/README.md). No in-scope open debt;dev/stable/UI không đổi |
 | [UDB-02](#udb-02) | UDB-01 PASS + Bobby giao 2026-10-10 | Execution read models + Research publication | UDB-2 | **PASS — ISOLATED_STORE_HYDRATED_PREVIEW** ·38/38 real-PG +7 config assertions;49,421 history/4,136 current entities,10-table parity;Core custody/independent restart/restore/rollback/C4 PASS;[packet](./research_loop/evidence/UDB-02/README.md). Retained activation/handoff hiện thuộc UDB-03 bên dưới |
-| [UDB-03](#udb-03) | UDB-02 PASS + Bobby giao 2026-10-10 | Execution screens/subpanels, Research → RC → R1 | UDB-3 | **BACKEND_PASS / RETAINED_PREVIEW_REVIEW_READY / SCOPED_FE_CONSUMER_VERIFIED** · Claude13f64a3a/1c01aefb retained; Codex2026-10-11 session/failure/UTC refinement +4table owners,91targeted tests/typecheck +6affected browser cells and3explicit faults;222API/68old route gates reused only unchanged scope. No source/SSE/command/dev/stable;existing banner kept,no redesign/baseline change. [packet](./research_loop/evidence/UDB-03/README.md) · [consumer receipt](./research_loop/evidence/UDB-03/claude-consumer-receipt.md) · [review fixes](./research_loop/evidence/UDB-03/codex-consumer-refinement.md);UDB-04 chưa mở |
-| [UDB-04](#udb-04) | UDB-01…03 đạt + Bobby duyệt UDB-04 | Cả hai loop + Governance | UDB-4 | **PLANNED / AWAITING_IMPLEMENTATION_APPROVAL** · cross-loop load/auth/DR/browser acceptance + exact preview rebuild; không tự merge/deploy/release |
+| [UDB-03](#udb-03) | UDB-02 PASS + Bobby giao 2026-10-10 | Execution screens/subpanels, Research → RC → R1 | UDB-3 | **BACKEND_PASS / RETAINED_PREVIEW_REVIEW_READY / SCOPED_FE_CONSUMER_VERIFIED** · Claude13f64a3a/1c01aefb retained; Codex2026-10-11 session/failure/UTC refinement +4table owners,91targeted tests/typecheck +6affected browser cells and3explicit faults;222API/68old route gates reused only unchanged scope. No source/SSE/command/dev/stable;existing banner kept,no redesign/baseline change. [packet](./research_loop/evidence/UDB-03/README.md) · [consumer receipt](./research_loop/evidence/UDB-03/claude-consumer-receipt.md) · [review fixes](./research_loop/evidence/UDB-03/codex-consumer-refinement.md);UDB-04 mở riêng2026-10-11, không mở rộng verdict UDB-03 thành full acceptance |
+| [UDB-04](#udb-04) | UDB-01…03 đạt + Bobby giao UDB-04 ngày 2026-10-11 (Asia/Saigon) | Cả hai loop + Governance | UDB-4 | **ACCEPTANCE_OPEN — NOT_PHASE_PASS** ·28real auth cases/current-auth cutover PASS; fresh-volume combined archive recovery69/69+27Execution hashes PASS; historical68/77proofs and83/86exceptions separate. Latest20readers+64trial HEAVY/4queued:0HTTP/OOM,hardcap4,536,870,912B;4summary SLO FAIL679/631/744/626ms vs500,Report441PASS.68browser cells:0overflow/page errors/writes,realRC→R1 scope PASS;Portfolio503/CC bootstrap/6a11y cells OPEN. Final Control4278509a/cache8MiB app-only rollout;not single-image acceptance.23test identities/20grants revoked,8services/5clone volumes removed,remaining0;source16Core/6Roadmap unchanged. [packet](./research_loop/evidence/UDB-04/README.md) · [report](./research_loop/evidence/UDB-04/phase-report.md) · [handoff](./research_loop/evidence/UDB-04/handoff.md). No push/dev/main/stable/source/SSE/command/release |
 
 **Frontend board rows 2026-10-04 (FE campaign W1–W7, Claude/Thanhvuong; Codex slice marked):** sống tại [FE-W1-W5 packet](./research_loop/evidence/FE-W1-W5/thanhvuong-frontend-receipt.md); chi tiết ở [§13.4.2](#rl-fe-w1-w7-note). Mọi hàng dưới đây là `NOT_VERIFIED` ở mức sản phẩm cho tới khi Bobby rà bằng mắt; không hàng nào là `OWNER_ACCEPTED`.
 
@@ -8869,6 +8869,13 @@ typed examples+source locators và UDB-04 exact candidate/affected-screen list.
 <a id="udb-04"></a>
 ### UDB-04 — Cross-loop authorization, performance/DR acceptance and exact preview rebuild
 
+**Implementation approval:** Bobby giao UDB-04 ngày 2026-10-11 (Asia/Saigon).
+Codex làm trên `docs/research-loop-plan`, base `16f2c18c`, giữ nguyên toàn bộ
+consumer/design của Claude. [Execution packet](./research_loop/evidence/UDB-04/README.md)
+ghi candidate, test allowlist, reuse/disposition và bounded teardown. Approval
+chỉ mở phase preview này, không mở dev/main/stable, remote push, nguồn Edge,
+SSE, command hoặc signed release.
+
 **Entry:** UDB-01…03 đạt + Bobby duyệt UDB-04; một reviewed candidate/config/
 image/migration set và FE consumer receipts khớp backend. Không qualify trên
 nhiều dirty images rồi gọi là một candidate.
@@ -9059,3 +9066,46 @@ engine/frontend/68-cell rerun for unchanged dependencies; normal grouped
 commit hook required, no bypass/push. [Exact report/images/hashes/C4](./research_loop/evidence/UDB-03/codex-consumer-refinement.md).
 State **SCOPED_FE_CONSUMER_VERIFIED / RETAINED_PREVIEW_REVIEW_READY**;
 UDB-04/cross-loop HiFi/ProductGO/dev/stable/release remain separately unopened.
+
+### UDB-04 acceptance checkpoint — 2026-10-11
+
+Supersedes only the historical "UDB-04 chưa mở" state above: Bobby has opened
+UDB-04, not dev/main/stable/source/release. [Packet](./research_loop/evidence/UDB-04/README.md)
+records delivered auth/data-cost/outage/workspace-link fixes, exact preview,
+actual receipts, reusable byte hashes, failed attempts and bounded teardown.
+28auth cases/current-auth DB cutover PASS;20reader mixed load still fails5
+summary SLOs;68browser cells retain Portfolio burst, CC bootstrap and6Axe
+failures. Original artifact backup68/68restore is distinct from77clone-byte
+parity; next final candidate must retake corrected final archive/recovery.
+No final phase/owner/P23/P24/release PASS. Source16Core/6Roadmap custody and
+original identities preserved;23owned test users/20grants revoked and8services/
+5clone volumes removed, original backups30days. Codex owns BE/DR remaining;
+[Claude](./research_loop/evidence/UDB-04/handoff.md) owns scoped FE correction.
+Normal grouped hook/commit, no remote push; post-commit actual COPY hash binds
+the existing compiled image without unnecessary docs-only rebuild.
+
+### UDB-04 later acceptance checkpoint — 2026-10-11
+
+The [packet](./research_loop/evidence/UDB-04/phase-report.md#later-checkpoint--same-scope-new-real-evidence)
+supersedes only the earlier NOT_RETAKEN artifact state. One new real64trial
+child+4queued intents,20principals/1,000GETs:HTTPerrors0/OOM0,observed cgroup
+charge1,787,994,112B/hard cap4,536,870,912B. Four summary paths still FAIL
+500ms:Library679/Progress631/Evidence744/CC626;Report441msPASS. No SLO relaxation.
+
+Core outage revealed Docker DNS`EAI_AGAIN`→500; fixed to sanitized authority
+503, with12unit tests and actual outage retake.28auth cases +current-auth
+cutover/stale-backup rejection +27Execution table hashes +fresh-volume final
+archive recovery **69/69manifests**,3,212files/72,511,079B PASS. Original68/77
+proofs and83/86historical exceptions remain separate. Failed attempts/backups
+preserved; final cache bound remains8MiB to match published context/FE.
+
+Still **ACCEPTANCE_OPEN / NOT_PHASE_PASS**: four SLOs,Portfolio/context burst,
+Claude retained CC bootstrap and6Axe cells; final one-candidate reconciliation.
+No FE edit, source/SSE/command activation, remote push,dev/main/stable/release.
+
+Final scoped runtime: Control4278509a/COPY7d20d6eb(549files),app-only
+research preview rollout21:57UTC,cache8MiB; no shared PG restart/migration.
+Final clone teardown8services/5volumes,remaining0;23test identities and20grants
+revoked. Current-auth and final69manifest archive retained30days. Final shared
+custody16Coregroups/6Roadmaptables PASS; disk free26.80%,no broad/image prune.
+Normal root hook required for checkpoint commit; no failed gate relabelled PASS.

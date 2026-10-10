@@ -2,6 +2,8 @@ import { Inject, Injectable, Optional } from "@nestjs/common";
 import { ExecutionProfileProjectionRepository } from "../execution/profile-projection.repository";
 import { retainedReview } from "../execution/retained-read-profile";
 import { WorkspacesRepository } from "../repos/workspaces";
+import { OwnerAccessService } from "../auth/owner-access.service";
+import { approvalReadGates } from "../governance/governance.service";
 import { Pool, PoolClient } from "pg";
 import { ControlApiConfig } from "../config";
 import { PortalUser } from "../domain";
@@ -114,27 +116,36 @@ export class CommandCenterRepository {
     @Inject(EXECUTION_DATA_POOL) private readonly executionPool: Pool = pool,
     @Optional() @Inject(ExecutionProfileProjectionRepository) private readonly projections?: ExecutionProfileProjectionRepository,
     @Optional() @Inject(WorkspacesRepository) private readonly workspaces?: WorkspacesRepository,
+    @Optional() @Inject(OwnerAccessService) private readonly ownerAccess: OwnerAccessService = new OwnerAccessService(pool),
   ) {}
 
   async read(workspaceId: string, actor: PortalUser, readAt: Date): Promise<CommandCenterInputs> {
+    // Domain reads and Core authorization must not run while holding a Core
+    // transaction/connection. Twenty mounts can otherwise exhaust the pool
+    // waiting for their own nested canReadExecution query (and starve Research).
+    // The independent domain snapshot is deliberately not cross-DB atomic.
+    const retainedAccess = !retainedReview(this.config) || (!!this.workspaces &&
+      !!this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID &&
+        await this.workspaces.canReadExecution(this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID,actor.userId));
+    let projection: ProjectionState = retainedAccess ? await this.projectionState(this.executionPool, readAt)
+      : {rows:[],reason:"WORKSPACE_NOT_FOUND",ageMs:0};
+    if(retainedAccess && retainedReview(this.config) && !await this.workspaces!.canReadExecution(
+      this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!,actor.userId))
+      projection={rows:[],reason:"WORKSPACE_NOT_FOUND",ageMs:0};
+    const visibleGates=approvalReadGates(actor,await this.ownerAccess.effectiveAccess(actor.userId),workspaceId);
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
       await client.query("SET LOCAL statement_timeout = '1000ms'");
       await client.query("SET LOCAL idle_in_transaction_session_timeout = '2000ms'");
-      const governance = await this.governanceTriage(client, workspaceId, actor, readAt);
-      const today = await this.governanceToday(client, workspaceId, readAt);
+      const governance = await this.governanceTriage(client, workspaceId, actor, readAt,visibleGates);
+      const today = await this.governanceToday(client, workspaceId, readAt,visibleGates);
       const incidents = await this.incidentTriage(client, workspaceId, readAt);
       const operations = await this.operationTriage(client, workspaceId, readAt);
       const verifiedOperations = await this.verifiedOperationsToday(client, workspaceId, readAt);
       // One projection read feeds fleet health, reconciliation triage and the
       // journal window from one projection query; Core and domain are separate.
       // Domain data has its own pool/snapshot; never pretend cross-DB atomicity.
-      const retainedAccess = !retainedReview(this.config) || (!!this.workspaces &&
-        !!this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID &&
-          await this.workspaces.canReadExecution(this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID,actor.userId));
-      const projection: ProjectionState = retainedAccess ? await this.projectionState(this.executionPool, readAt)
-        : {rows:[],reason:"WORKSPACE_NOT_FOUND",ageMs:0};
       const fleet = this.projectionFleet(projection, readAt);
       const reconciliation = this.reconciliationTriage(projection, readAt);
       const journal = this.journalToday(projection, readAt);
@@ -290,6 +301,25 @@ export class CommandCenterRepository {
     if (!projectionWorkspaceId || this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true") {
       return { rows: [], reason: "PHASE2_LOCAL_PROJECTION_DISABLED", ageMs: 0 };
     }
+    if(retainedReview(this.config)&&this.projections){
+      // The repository already supplies source metadata and the scoped,
+      // single-flight retained document. Do not de-TOAST the same three raw
+      // snapshots again for every viewer before immediately replacing them.
+      const views=await Promise.all((["paper","sandbox","live"] as const).map(async environment=>{
+        const profile=environment==="paper"?this.config.EXECUTION_EDGE_PAPER_PROFILE_ID
+          :environment==="sandbox"?this.config.EXECUTION_EDGE_SANDBOX_PROFILE_ID:this.config.EXECUTION_EDGE_LIVE_PROFILE_ID;
+        if(!profile)return null;
+        const view=await this.projections!.snapshot(projectionWorkspaceId,environment,profile);
+        return view?{environment,profile_id:profile,source_cursor:view.sourceCursor,source_as_of:view.sourceAsOf,
+          received_at:view.receivedAt,last_successful_refresh_at:view.lastSuccessfulRefreshAt,
+          completeness:"PARTIAL" as const,projection_epoch:view.projectionEpoch,
+          projection_sequence:String(view.projectionSequence),payload:view.document}:null;
+      }));
+      const rows=views.filter((row):row is NonNullable<typeof row>=>row!==null);
+      const newest=latestDate(rows.map(row=>row.last_successful_refresh_at));
+      return {rows,reason:rows.length?null:"PHASE2_PROJECTION_NOT_READY",
+        ageMs:newest?Math.max(0,readAt.valueOf()-newest.valueOf()):Number.MAX_SAFE_INTEGER};
+    }
     const result = await client.query<ProjectionSnapshotRow>(
       `SELECT environment, profile_id, source_cursor, source_as_of, received_at,
               last_successful_refresh_at, completeness, projection_epoch::text,
@@ -304,12 +334,6 @@ export class CommandCenterRepository {
     }
     const newestRefresh = latestDate(result.rows.map((row) => row.last_successful_refresh_at));
     const ageMs = newestRefresh ? Math.max(0, readAt.valueOf() - newestRefresh.valueOf()) : Number.MAX_SAFE_INTEGER;
-    if (retainedReview(this.config) && this.projections) {
-      for (const row of result.rows) {
-        const view = await this.projections.snapshot(projectionWorkspaceId,row.environment,row.profile_id);
-        if(view) { row.payload = view.document; row.completeness = "PARTIAL"; }
-      }
-    }
     if (!retainedReview(this.config) && ageMs > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
       return { rows: result.rows, reason: "PHASE2_PROJECTION_STALE_CEILING_EXCEEDED", ageMs };
     }
@@ -458,6 +482,7 @@ export class CommandCenterRepository {
     workspaceId: string,
     actor: PortalUser,
     readAt: Date,
+    visibleGates: string[],
   ): Promise<ExactSourceSlice<TriageCandidate>> {
     const result = await client.query<GovernanceTriageRow>(
       `WITH actionable AS (
@@ -474,6 +499,7 @@ export class CommandCenterRepository {
                 END AS severity_rank
            FROM governance_approval_requests request
           WHERE request.workspace_id = $1
+            AND request.gate=ANY($4::text[])
             AND request.status = 'PENDING'
             AND request.expires_at > $3
             AND request.requester_user_id <> $2
@@ -487,13 +513,14 @@ export class CommandCenterRepository {
          FROM actionable
         ORDER BY severity_rank, sla_due_at, created_at, approval_id
         LIMIT 10`,
-      [workspaceId, actor.userId, readAt],
+      [workspaceId, actor.userId, readAt,visibleGates],
     );
     const total = result.rows[0] ? Number(result.rows[0].total_count) : await this.actionableCount(
       client,
       workspaceId,
       actor.userId,
       readAt,
+      visibleGates,
     );
     const asOf = result.rows.reduce<Date | null>(
       (latest, row) => latest === null || row.updated_at > latest ? row.updated_at : latest,
@@ -525,11 +552,13 @@ export class CommandCenterRepository {
     workspaceId: string,
     actorId: string,
     readAt: Date,
+    visibleGates: string[],
   ): Promise<number> {
     const result = await client.query<{ total_count: string }>(
       `SELECT count(*) AS total_count
          FROM governance_approval_requests request
         WHERE request.workspace_id = $1
+          AND request.gate=ANY($4::text[])
           AND request.status = 'PENDING'
           AND request.expires_at > $3
           AND request.requester_user_id <> $2
@@ -537,7 +566,7 @@ export class CommandCenterRepository {
           AND NOT ($2 = ANY(request.decision_actor_ids))
           AND request.evidence_complete = true
           AND request.blocker_count = 0`,
-      [workspaceId, actorId, readAt],
+      [workspaceId, actorId, readAt,visibleGates],
     );
     return Number(result.rows[0]?.total_count ?? 0);
   }
@@ -546,6 +575,7 @@ export class CommandCenterRepository {
     client: PoolClient,
     workspaceId: string,
     readAt: Date,
+    visibleGates: string[],
   ): Promise<ExactSourceSlice<TodayCandidate>> {
     const result = await client.query<TodayRow>(
       `WITH upcoming AS (
@@ -561,6 +591,7 @@ export class CommandCenterRepository {
                 updated_at
            FROM governance_approval_requests
           WHERE workspace_id = $1
+            AND gate=ANY($3::text[])
             AND status = 'PENDING'
             AND expires_at > $2
             AND sla_due_at <= $2 + interval '48 hours'
@@ -570,6 +601,7 @@ export class CommandCenterRepository {
                 '/governance/waivers', updated_at
            FROM governance_conditions_register
           WHERE workspace_id = $1
+            AND gate=ANY($3::text[])
             AND condition_state IN ('EXPIRING', 'LAPSED')
             AND due_at IS NOT NULL
             AND due_at BETWEEN $2 - interval '30 days' AND $2 + interval '48 hours'
@@ -578,7 +610,7 @@ export class CommandCenterRepository {
          FROM upcoming
         ORDER BY scheduled_at, kind, item_id
         LIMIT 12`,
-      [workspaceId, readAt],
+      [workspaceId, readAt,visibleGates],
     );
     const total = result.rows[0]
       ? Number(result.rows[0].total_count)
@@ -586,15 +618,17 @@ export class CommandCenterRepository {
         `SELECT (
            (SELECT count(*) FROM governance_approval_requests
              WHERE workspace_id = $1 AND status = 'PENDING'
+               AND gate=ANY($3::text[])
                AND expires_at > $2 AND sla_due_at <= $2 + interval '48 hours')
            +
            (SELECT count(*) FROM governance_conditions_register
              WHERE workspace_id = $1
+               AND gate=ANY($3::text[])
                AND condition_state IN ('EXPIRING', 'LAPSED')
                AND due_at IS NOT NULL
                AND due_at BETWEEN $2 - interval '30 days' AND $2 + interval '48 hours')
          ) AS total_count`,
-        [workspaceId, readAt],
+        [workspaceId, readAt,visibleGates],
       )).rows[0]?.total_count ?? 0);
     const asOf = result.rows.reduce<Date | null>(
       (latest, row) => latest === null || row.updated_at > latest ? row.updated_at : latest,

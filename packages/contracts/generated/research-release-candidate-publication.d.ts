@@ -121,6 +121,7 @@ export interface components {
             /** Format: date-time */
             read_at: string;
             conditions: components["schemas"]["Condition"][];
+            /** @description Server-produced links include the authorized Core workspace_id for deep links and reload. Legacy unscoped links remain readable, never grant access. */
             href: string;
             subject_label?: string;
             /** @enum {string} */

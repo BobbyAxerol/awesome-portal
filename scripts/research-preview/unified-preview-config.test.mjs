@@ -35,6 +35,9 @@ test('preview helper still fixes project/overlay and supports no-dependency appl
   const script = readFileSync(new URL('./preview.sh', import.meta.url), 'utf8');
   assert.match(script, /PROJECT="portal-research-preview"/);
   assert.match(script, /-f "\$ROOT\/deploy\/research-preview\/compose\.research-preview\.yaml"/);
-  assert.match(script, /compose up -d --no-build --no-deps "\$@"/);
+  assert.match(script, /compose up -d --no-build --no-deps "\$\{recreate\[@\]\}" "\$@"/);
+  assert.match(script, /force-recreate needs explicit application services/);
+  assert.match(script, /recreate=\(--force-recreate\)/);
   assert.match(script, /scoped application rollout excludes DB\/NATS\/migrations\/bootstrap/);
+  assert.match(script, /case "\$service" in control-api\|portal-web\|portal-api\|quant-worker-py\|roadmap-task-board-api\)/);
 });

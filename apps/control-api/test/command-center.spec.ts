@@ -328,6 +328,7 @@ describe("PRE-IAM-03 PostgreSQL repository and session-bound API", () => {
     );
     admin = new AdminService(ctx.pool, ctx.config, auth);
     bobbyId = (await admin.createUser({ username: "bobby", displayName: "Bobby", role: "ADMIN" })).userId;
+    await ctx.pool.query("INSERT INTO portal_owner_anchor(anchor_id,user_id) VALUES('PORTAL_OWNER',$1)",[bobbyId]);
     stanId = (await admin.createUser({ username: "stan", displayName: "Stan", role: "USER" })).userId;
     const { activationToken } = await admin.resetCredential(bobbyId);
     const activationSession = await auth.login({

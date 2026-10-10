@@ -7,7 +7,7 @@ import {
   Optional,
 } from "@nestjs/common";
 import { FastifyRequest } from "fastify";
-import { AuthService } from "../auth/auth.service";
+import { AuthService, AuthError } from "../auth/auth.service";
 import { sessionTokenFrom } from "../auth/cookies";
 import { PortalUser } from "../domain";
 import { WorkspacesRepository } from "../repos/workspaces";
@@ -15,6 +15,7 @@ import type { ControlApiConfig } from "../config";
 import { retainedReview, coreExecutionRead } from "../execution/retained-read-profile";
 import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { CONTROL_API_CONFIG } from "../tokens";
+import {isReadStoreUnavailable} from "../db/read-unavailable";
 
 /**
  * Authenticated-session guard for façade routes. Attaches the portal user
@@ -30,6 +31,15 @@ export class SessionGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    try { return await this.authorize(context); }
+    catch(error){
+      if (isReadStoreUnavailable(error))
+        throw new AuthError("PORTAL_AUTHORITY_UNAVAILABLE","Portal identity authority is temporarily unavailable.",503);
+      throw error;
+    }
+  }
+
+  private async authorize(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
     const token = sessionTokenFrom(request);
     if (!token) {

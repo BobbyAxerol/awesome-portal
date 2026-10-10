@@ -90,7 +90,11 @@ describe("UDB03 retained reader and Core-only read delegation",()=>{
     try{
       expect(await repository.snapshot(ws,"paper",profile)).toBe(first);expect(query).not.toHaveBeenCalled();
       const now=Date.now();const clock=vi.spyOn(Date,"now").mockReturnValue(now+2001);
-      try{expect(await repository.snapshot(ws,"paper",profile)).not.toBe(first);expect(query).toHaveBeenCalledTimes(2);}finally{clock.mockRestore();}
+      try{expect(await repository.snapshot(ws,"paper",profile)).toBe(first);expect(query).toHaveBeenCalledTimes(1);
+        await domain.query("UPDATE execution_durable_mirror_current_entities SET source_row_digest=$1 WHERE workspace_id=$2",["sha256:"+"9".repeat(64),ws]);
+        query.mockClear();clock.mockReturnValue(now+4002);
+        expect(await repository.snapshot(ws,"paper",profile)).not.toBe(first);expect(query).toHaveBeenCalledTimes(4);
+      }finally{clock.mockRestore();}
       const tx=await domain.connect();try{expect((await repository.snapshot(ws,"paper",profile,tx))?.document.relations[key].availability).toBe("UNAVAILABLE");}finally{tx.release();}
     }finally{query.mockRestore();}
   });
@@ -157,7 +161,10 @@ describe("UDB03 retained reader and Core-only read delegation",()=>{
         expect(response.statusCode).toBe(503);expect(response.headers["retry-after"]).toBe("1");
         expect(response.json().error.code).toBe("EXECUTION_LOCAL_READ_BUSY");
       }finally{busy.mockRestore();}
+      const projectionQueries=vi.spyOn(domain,"query");
       const center=await get("/api/v1/execution/command-center");expect(center.statusCode).toBe(200);
+      expect(projectionQueries.mock.calls.some(([q])=>typeof q==="string"&&/SELECT environment, profile_id, source_cursor/.test(q))).toBe(false);
+      projectionQueries.mockRestore();
       expect(center.json().workspace_id).not.toBe(ws);
       await core.query("UPDATE execution_retained_review_access SET created_at=now()-interval '1 day',expires_at=now()-interval '1 hour' WHERE user_id='usr_review'");
       expect((await get("/api/v1/execution/retained-review")).statusCode).toBe(404);

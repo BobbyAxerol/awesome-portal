@@ -20,6 +20,9 @@ export function projectionExpired(config: ControlApiConfig, refreshedAt: Date): 
 
 /** Core workflow scope is NOT the retained source workspace. */
 export function coreExecutionRead(path: string): boolean {
+  // Existing Core-owned gate envelopes keep the caller's workflow workspace;
+  // they are not Manager deployment reads from the retained source workspace.
+  if (/^\/api\/v1\/execution\/deployments\/[^/]+\/(?:canary|live)$/.test(path)) return true;
   // These are Core-owned catalogues, not source data or delegated authority.
   if (/^\/api\/v1\/execution\/(?:activation\/capabilities|commands\/(?:catalog|tasks))$/.test(path)) return true;
   return /^\/api\/v1\/execution\/(?:command-center(?:\/|$)|governance(?:\/|$)|operations(?:\/|$)|incidents(?:\/|$)|compositions\/(?:command-center|approvals|exit-reviews|waivers|operations|incidents)(?:\/|$))/.test(path);

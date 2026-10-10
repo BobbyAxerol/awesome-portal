@@ -49,6 +49,7 @@ import { ResearchReportError } from "./research/report.error";
 import { ResearchLineageError } from "./research/lineage.error";
 import { ResearchCompareError } from "./research/compare.error";
 import { ResearchReleaseCandidateError } from "./research/release-candidate.error";
+import {isReadStoreUnavailable} from "./db/read-unavailable";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -159,6 +160,14 @@ export class HttpErrorFilter implements ExceptionFilter {
         },
         request_id: requestId,
       });
+      return;
+    }
+    if (["GET","HEAD"].includes(request.method) && isReadStoreUnavailable(exception)) {
+      // Core authorization has already succeeded, but a local read store
+      // disconnected. Refuse without stale fallback, private exception text
+      // or an opaque500. This is NOT permission to retry a mutation.
+      void reply.header("Cache-Control","private, no-store").header("Retry-After","1").status(503).send({
+        error:{code:"PORTAL_READ_STORE_UNAVAILABLE",message:"Portal read store is temporarily unavailable."},request_id:requestId});
       return;
     }
     this.logger.error(exception);

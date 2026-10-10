@@ -7,6 +7,10 @@ const action = {
   description: "Server-owned guidance, not mutation authority. CREATE_NEW_RUN_AND_SEAL uses the existing new-run flow and a new candidate; it never reopens or reseals the old actor/run draft. NONE does not imply permission.",
 };
 const nullable = value => ({ anyOf: [value, { type: "null" }] });
+const approvalHref = {
+  type: "string", pattern: "^/governance/approvals/[A-Za-z0-9._-]+/r1(?:\\?workspace_id=[A-Za-z0-9._~-]{3,96})?$",
+  description: "Server-produced links include the authorized Core workspace_id for deep links and reload. Legacy unscoped links remain readable, never grant access.",
+};
 const presentation = {
   selected_trial_ordinal: nullable({ type: "integer", minimum: 1, maximum: Number.MAX_SAFE_INTEGER }),
   selected_trial_ordinal_scope: nullable({ enum: ["RUN_GLOBAL", "STUDY_LOCAL"] }),
@@ -26,18 +30,21 @@ const railRule = {
 };
 for (const [name, components] of [
   ["research-release-candidate", ["ComposeActions", "ComposeRailNode", "ComposeResponse"]],
-  ["research-release-candidate-publication", ["PublicationResponse"]],
+  ["research-release-candidate-publication", ["PublicationResponse", "ApprovalMirror"]],
 ]) {
   const path = new URL(`../openapi/${name}.openapi.json`, import.meta.url);
   const old = readFileSync(path, "utf8");
   let next = old;
   for (const component of components) {
-    const schema = structuredClone(JSON.parse(next).components.schemas[component]);
+    const current = JSON.parse(next).components.schemas[component];
+    const schema = structuredClone(current);
     if (component === "PublicationResponse") {
       schema.properties.blocked_action = action;
       schema.properties.updated_at_utc_ms = { ...nullable({ type: "integer", minimum: 0, maximum: Number.MAX_SAFE_INTEGER }),
         description: "Persisted publication intent update time; null before an intent exists. as_of_utc_ms is the observation time, never substituted for this fact." };
+      schema.properties.conflicting_approval_href=nullable(approvalHref);
     }
+    else if(component==="ApprovalMirror")schema.properties.href=approvalHref;
     else if (component === "ComposeActions") schema.properties.publish.properties.blocked_action = action;
     else if (component === "ComposeRailNode") {
       Object.assign(schema.properties, presentation);
@@ -50,7 +57,10 @@ for (const [name, components] of [
       schema.properties.rail.items.allOf = [railRule];
       schema.properties.rail.items.description = "Only selected_params carries the complete native trial presentation: nulls plus reason when absent; ordinal plus scope when present. Display-only, never a cursor or identity. Existing selected_params.selected_trial_number remains the same ordinal alias.";
     }
-    next = replaceComponent(next, component, schema, next.indexOf('"schemas": {'));
+    // Do not churn unrelated, already-canonical components into compact
+    // formatting on an additive contract regeneration.
+    if(JSON.stringify(current)!==JSON.stringify(schema))
+      next = replaceComponent(next, component, schema, next.indexOf('"schemas": {'));
   }
   if (process.argv.includes("--check")) {
     if (old !== next) throw new Error(`${name}: publish guidance drift`);

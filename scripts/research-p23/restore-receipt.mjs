@@ -153,7 +153,7 @@ async function databaseSnapshot() {
     FROM research.artifacts a WHERE a.state='SEALED') s`);
   return { data, roles, memberships, structure, constraints, policies, sequences, functions, artifacts, parts, artifact_links };
 }
-const VERIFY_ARTIFACTS = String.raw`
+export const VERIFY_ARTIFACTS = String.raw`
 import hashlib,json,os,sys
 from pathlib import Path
 from portal_api.services.research_artifacts import ResearchArtifactStore

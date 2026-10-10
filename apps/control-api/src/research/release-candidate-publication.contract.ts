@@ -42,7 +42,7 @@ export const ResearchReleaseCandidateApprovalMirrorSchema = z.object({
     statement: z.string().min(1).max(2_000),
     expires_at: Timestamp.nullable(),
   }).strict()).max(128),
-  href: z.string().regex(/^\/governance\/approvals\/[A-Za-z0-9._-]+\/r1$/),
+  href: z.string().regex(/^\/governance\/approvals\/[A-Za-z0-9._-]+\/r1(?:\?workspace_id=[A-Za-z0-9._~-]{3,96})?$/),
   // OL-07: mirror only facts Governance actually publishes; absence is typed.
   subject_label: z.string().min(1).max(256).optional(),
   effective_status: z.enum(["PENDING", "APPROVED", "APPROVED_WITH_CONDITION", "DENIED", "CHANGES_REQUESTED", "EXPIRED"]).optional(),
@@ -106,7 +106,7 @@ export const ResearchReleaseCandidatePublicationResponseSchema = z.object({
   // OL-03/07/09: additive P22 facts; nullable means source absence.
   attempt_count: z.number().int().nonnegative().max(32).optional(),
   conflicting_approval_id: z.string().min(1).max(191).nullable().optional(),
-  conflicting_approval_href: z.string().regex(/^\/governance\/approvals\/[A-Za-z0-9._-]+\/r1$/).nullable().optional(),
+  conflicting_approval_href: z.string().regex(/^\/governance\/approvals\/[A-Za-z0-9._-]+\/r1(?:\?workspace_id=[A-Za-z0-9._~-]{3,96})?$/).nullable().optional(),
   downstream_code: Reason.nullable().optional(),
   publication_created_at: Timestamp.nullable().optional(),
   updated_at_utc_ms: UtcMs.nullable().optional(),

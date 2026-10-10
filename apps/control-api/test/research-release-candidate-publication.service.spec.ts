@@ -163,6 +163,7 @@ describe("P22 actor-bound publication over existing R1", () => {
       state: "DELIVERED", candidate_relation: "CURRENT", may_publish: false,
       published: { approval_id: "apr_p22" },
       approval_read: "AVAILABLE", approval: {
+        href: "/governance/approvals/apr_p22/r1?workspace_id=ws_p22",
         status: "PENDING", effective_status: "PENDING", evidence_set_hash: evidenceHash,
         subject_label: "Alpha P22", quorum: { required: 2, met: 1 }, approval_version: 3,
         blocker_count: 0, condition_count: 1, rc_superseded: false,

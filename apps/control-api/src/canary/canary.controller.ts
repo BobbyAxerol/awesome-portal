@@ -56,7 +56,10 @@ export class CanaryController {
     const workspaceId = raw === undefined || raw === null || raw === ""
       ? request.portalWorkspaceId
       : typeof raw === "string" && raw.length <= 96 ? raw : null;
-    if (!workspaceId || !(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId, "canary"))) {
+    // The envelope belongs to Core Governance, not the retained source
+    // workspace. Membership resolves its scope; the service then separately
+    // enforces the exact governance.canary.read/decide capability.
+    if (!workspaceId || !(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
       throw new GovernanceError("WORKSPACE_NOT_FOUND", "Workspace not found.", 404);
     }
     return workspaceId;
