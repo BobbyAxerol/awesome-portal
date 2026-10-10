@@ -4952,7 +4952,7 @@
 .exec-strip-figure { white-space: normal; }
 /* KPI figure + unit: the unit wraps under a wide figure instead of overflowing the cell (audit: "125,000 / 200,000 USDT"). */
 .exec-alpha-kpi > div:last-child { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 0.3em; min-width: 0; }
-.exec-alpha-kpi .exec-num { white-space: normal; }
+.exec-alpha-kpi .exec-num { white-space: normal; overflow-wrap: anywhere; }
 .exec-alpha-kpi { border: 0; border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); }
 .exec-alpha-kpis { gap: var(--space-3); }
 
@@ -5277,6 +5277,8 @@
    Execution API is ever called. Per-screen retirement: see
    DESIGN_GRAMMAR_V3.md §8. */
 .exec-preview-banner { display: none; }
+/* UDB-03: the one banner that stays visible — a retained review must say, on the page, that its values are earlier observations. */
+.exec-preview-banner[data-execution-preview="retained"] { display: grid; }
 /* Narrow hosts: hi-fi 5a/4d are desktop compositions; below 768px the page scrolls inside itself and long mono titles wrap. */
 .exec-cc-paneltitle, .exec-inc2-paneltitle { overflow-wrap: anywhere; white-space: normal; min-width: 0; }
 @media (max-width: 767px) { .exec-cc-page, .exec-inc2-page { overflow-x: auto; } .exec-cc-panelhead > h2 { flex: 1 1 100%; } }
@@ -7124,3 +7126,8 @@ tr[data-arrived="true"] > :first-child,
   letter-spacing: 0;
 }
 .exec-empty-frame .exec-state-reason { text-align: left; }
+
+/* The Insight Charts tile facts carry whole sentences (e.g. "sandbox: deployed, but published no equity in the window · …") in an .exec-num cell, which is nowrap by default
+   and pushed the page 113px wider than a 1280 viewport (299px at 660). The sentence wraps; the figures keep their mono, tabular look. */
+.exec-tile-facts { width: 100%; }
+.exec-tile-facts td.exec-num { white-space: normal; overflow-wrap: anywhere; }

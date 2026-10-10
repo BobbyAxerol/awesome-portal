@@ -1,5 +1,5 @@
 /** UDB-03 · FE-UDB03-01/02 — the retained-review context: strict reading, no periodic poll, no stream, explicit refresh. */
-import { act, cleanup, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import fixture from "../../../../../packages/contracts/fixtures/execution-retained-review.valid.json";

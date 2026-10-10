@@ -6,7 +6,7 @@
  * financial data for a fixture on a product route; screens whose contract is
  * not published render a typed unavailable state instead.
  */
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   CommandCenterSnapshotContainer,
@@ -144,6 +144,8 @@ export function PreviewBanner({ profile, screenId, registryWord }: { profile: st
 function PreviewFrame({ screenId, profile, children }: { screenId: string; profile?: string | null; children: ReactNode }) {
   // UDB-03: one read of the retained-review context, started while rendering so it precedes every child effect that would open a stream.
   useState(ensureRetainedReview);
+  // "Refresh" in a retained review re-reads the screen once: the subtree is remounted, so every reader — ticked or not — reads again.
+  const refreshEpoch = useRetainedReview().epoch;
   const kind: ExecutionSurfaceKind = GOVERNANCE_SCREENS.has(screenId)
     ? "governance"
     : "deployments";
@@ -161,7 +163,7 @@ function PreviewFrame({ screenId, profile, children }: { screenId: string; profi
           amendment is codex's (consolidated request); shown in the inspector
           as drift, never used to pick a data source. */}
       <PreviewBanner profile="http" screenId={screenId} registryWord={profile} />
-      {children}
+      <Fragment key={refreshEpoch}>{children}</Fragment>
     </ExecutionSurface>
   );
 }
