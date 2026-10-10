@@ -12,8 +12,16 @@
 # back): each Research read and producer S00–S14 need, the approved historical
 # market data read-only, and — through the env file — replay, reports, lineage,
 # compare, release candidates + publication, imported execution, artifact byte
-# verify and the what-if lane. Execution flags stay off; they are not Research.
+# verify and the what-if lane. Bobby 2026-10-10 also approves the existing
+# Execution product UI and local governance/Command Center reads here. This
+# does NOT activate the inter-cell source, projection writer, SSE or commands.
 services:
+  portal-web:
+    build:
+      args:
+        # Build-time router switch, not a source/command authorization flag.
+        EXECUTION_PREVIEW_ENABLED: "true"
+
   portal-api:
     environment:
       PORTAL_HISTORICAL_DATA_MODE: ${PORTAL_HISTORICAL_DATA_MODE:?preview needs PORTAL_HISTORICAL_DATA_MODE}
@@ -43,6 +51,26 @@ services:
       # Quick-look preview: no login screen; the browser is signed in as this
       # user. The Control API refuses it outside AUTH_MODE=dev + PORTAL_ENV=local.
       PREVIEW_AUTO_LOGIN_USERNAME: ${PREVIEW_AUTO_LOGIN_USERNAME:-}
+      # Highest-precedence, preview-only offline boundary. A host env copied
+      # from dev must not silently reconnect AWS or activate execution writes.
+      # Research flags and its own run-progress transport are unchanged.
+      FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT: "true"
+      FEATURE_EXECUTION_EDGE: "false"
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "false"
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE: "false"
+      FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX: "false"
+      FEATURE_EXECUTION_CURRENT_SOURCE_LIVE: "false"
+      FEATURE_EXECUTION_LOCAL_PROJECTION: "false"
+      FEATURE_EXECUTION_DURABLE_MIRROR: "false"
+      FEATURE_EXECUTION_DURABLE_MIRROR_READS: "false"
+      FEATURE_EXECUTION_REALTIME_SSE: "false"
+      FEATURE_EXECUTION_ANALYTICS_QUERY: "false"
+      FEATURE_EXECUTION_SHADOW_QUERY: "false"
+      FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW: "false"
+      FEATURE_EXECUTION_MARKET_CONTEXT: "false"
+      FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES: "false"
+      FEATURE_EXECUTION_COMMAND_RELAY: "false"
+      FEATURE_EXECUTION_LOCAL_R0_TASKS: "false"
 
   # The preview's own bootstrap list: the owner plus one automation account
   # for the real-API browser receipt. No credential is in this file; the

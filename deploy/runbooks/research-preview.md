@@ -12,8 +12,9 @@ Approved by Bobby as Q6 on 2026-09-23. Tracked in Unified §13 RF-02.
 | Env / secrets | `~/.config/portal-research-preview/preview.env` (mode 0600, outside the checkout) |
 | Data | `/srv/primus/historical-market-data/storage`, read-only, group `primus-market-data-readers` |
 | State | its own PostgreSQL, NATS, MinIO and artifact volumes (`portal-research-preview_*`) |
-| Flags on | run producer, progress, run library, evidence, split, search, freeze, current source |
-| Flags off | P17–P21 (replay, reports, lineage, compare, release candidates) |
+| Research flags | Host-bound qualified profile: producer/progress, library, evidence, split/search/freeze, retained/current-source, replay/reports/lineage/compare, RC/publication and qualified recipes; preserved by scoped rollouts. |
+| Execution preview | Existing product routes compiled; local Command Center snapshot and governance reads enabled (Bobby, 2026-10-10). |
+| Execution external flags | Source/profile reads, projection/mirror writers/reads, Execution SSE, upstream analytics/market feeds and commands/R0 remain explicitly off in the preview overlay. |
 | Accounts | `bobby` (owner, ADMIN) and `claude-preview` (ADMIN, for the automated receipt) |
 
 ## Commands
@@ -82,6 +83,15 @@ không đụng dev hay main"). Same shape as `dev-portal`:
 4. Check: `https://research-portal.primusspark.com` → 200, and
    `RESEARCH_PREVIEW_ORIGIN=https://research-portal.primusspark.com npx playwright test -c playwright.research-preview.config.ts`.
 
+**Current owner exception (2026-10-10):** `research-portal` is a public review
+preview without Cloudflare Access and with the existing preview auto-login.
+Do not infer production security from this exception or expose execution
+source credentials, reconnect AWS, enable broker commands or renew TLS/SLA.
+Research-local writes remain constrained by the existing workspace/session,
+Origin/CSRF and admission contracts; review data must not contain production
+secrets. Cloudflare/security/source/release qualification belongs to an
+explicit later dev/main promotion, not this preview build.
+
 With the public origin set, harness calls must use that origin too; a write
 from `http://localhost:8095` is refused by the Origin check.
 
@@ -93,3 +103,45 @@ from `http://localhost:8095` is refused by the Origin check.
   matches the commit under review. Fixture-lane receipts stay separate.
 - When the review is over, record the decision in the RF-02 packet: keep
   (running, for Bobby) or teardown (with the command output).
+
+## Unified Research + Execution review — 2026-10-10
+
+The tracked preview overlay, not an edit in a release directory, enables
+`EXECUTION_PREVIEW_ENABLED=true` **at web build time**. Merely changing a
+runtime env value cannot mount the router in an already-built bundle. The
+Control API already contains the Execution BFFs; the overlay enables only
+the local Command Center snapshot, alongside existing local governance.
+
+Use the narrow existing helper from the reviewed Research checkout:
+
+```bash
+node --test scripts/research-preview/unified-preview-config.test.mjs scripts/research-preview/preview-source-stamps.test.mjs
+scripts/research-preview/preview.sh build control-api portal-web
+scripts/research-preview/preview.sh up control-api portal-web
+```
+
+The scoped `up` path excludes DB/NATS/worker, migrations and bootstrap. Never
+run `activate` just to rebuild: it rotates already-issued user credentials.
+Preserve all host env Research recipe flags and private keys. Record both
+source commit and actual image IDs; unchanged private services retain their
+previous images. Keep the prior web/Control API images for rollback.
+
+Review `/research/quantbt/runs`, `/execution`, `/execution/operations`,
+`/governance/approvals`, `/governance/waivers`, `/deployments/alphas`,
+`/deployments/portfolios`, `/deployments/accounts`, `/deployments/paper`,
+`/deployments/sandbox`, `/deployments/live`, `/deployments/blotter` and
+`/administration/actions`. An existing published Research RC's actual R1
+link is the integration proof; do not manufacture an approval or promote it
+through R2/Canary/Live just for screenshots.
+
+**Data truth:** this independent preview was measured with zero Execution
+projection snapshots. Source-disabled panels are expected and remain typed;
+they are not authoritative empty Trading System records. Product routes use
+same-origin BFF consumers, never `createFixtureApi`. Existing
+`/execution/_fixtures` is a separate labelled design lab, not product data.
+No claim of live freshness, streaming or operational gate activation follows
+from opening the UI. The expired upstream Manager TLS chain remains a
+separate inter-cell qualification issue.
+
+[Owner approval, scope and exit gate](../../upgrade/UNIFIED_IMPLEMENTATION_PLAN.md#2026-10-10-owner-addendum--unified-research--execution-review-preview) ·
+[Actual browser/runtime receipt](../../upgrade/research_loop/evidence/P24/UNIFIED_RESEARCH_EXECUTION_PREVIEW_2026-10-10.md).

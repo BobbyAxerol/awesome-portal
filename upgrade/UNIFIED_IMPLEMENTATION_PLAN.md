@@ -8517,3 +8517,44 @@ See runtime receipt for committed checkout/image identity and full responses.
 
 `FRONTEND_CONSUMED / REAL_API_RECEIPT_ATTACHED / OWNER_VISUAL_REVIEW_OPEN` — not P24 / release closed. Wired on `docs/research-loop-plan`: `native_search` → `NativeSearchPanel` (S06), `native_freeze` + the explicit Verify → `NativeFreezePanel` (S07), `frozen_core.native_report` + the existing JSON / CSV export flow → `NativeReportBlock` (S09); the S08 chart is unchanged. A native run has no fold (the server answers 400 to any `fold`), so the screens learn it from Progress first. Real API at 1280 / 660 on `rrun_ee50cb82…`: θ* trial 41 / ordinal 42 of 100, a fresh byte receipt `MATCH` after Verify, exports whose SHA-256 equals the job's (62,301 / 12,920 bytes), three fixed-native Reports with no optimizer blocks; 0 console messages. Open: paging past 200 trials is unit-tested but not browser-exercised (this run has 100); neighbour identities and the sampler trace stay typed absences; the repeated scalar claim strip on S06 is honest but noisy.
 [Receipt, defects found and open items](./research_loop/evidence/P24/NATIVE_READERS_CLAUDE_RECEIPT_2026-10-09.md).
+
+## 2026-10-10 owner addendum — Unified Research + Execution review preview
+
+**Bobby-approved / IN_PROGRESS.** Review all existing Research and Execution
+UI on `https://research-portal.primusspark.com` from the shared
+`docs/research-loop-plan` branch. No Cloudflare Access setup in this preview.
+This overrides the older preview-only rule that Execution routes remain dark,
+not production identity, source authority or release safeguards.
+
+**Goal / scope:** compile the already-reviewed Execution product router;
+enable the existing local Command Center snapshot and governance APIs alongside
+Research. Preserve Claude's components, themes, registry, Research run/artifact
+history, identities and named volumes. All stable Execution commits are already
+ancestors of this branch; no main/dev merge is needed. The preview currently
+has 112 Research runs and **zero** Execution projection snapshots; absence is
+not a fresh/complete empty Trading System result. Do not seed fake operational
+data or replace product BFFs with fixtures.
+
+**To-do / operational boundary:** use the fixed `portal-research-preview`
+helper and rebuild only web + Control API, then scoped `up` (no DB/NATS/worker
+restart, bootstrap reset or migrations). The preview overlay pins external
+Execution source/profile reads, projection/mirror writers and reads, Execution
+SSE, upstream analytics/market feeds and command relay/R0 tasks off. Local
+Research publication → existing R1 read remains available; R2/Canary/Live are
+review surfaces, not fabricated operational transitions. Existing Research
+progress is unchanged. TLS/SLA renewal, inter-cell activation, Cloudflare,
+signed images and release acceptance happen only in separately approved
+dev/main promotion under the established production rules.
+
+**Exit gate:** configuration isolation tests; clean source/image/bundle
+identity; real browser at1280/660 across Research, Execution and governance
+routes, deep-link/refresh, same-origin reads and honest source-disabled
+panels; an existing Research RC → actual local R1 link; no upstream stream or
+command requests; preserved Research row/hash and volume/container identity.
+Reuse prior engine/visual evidence because no strategy, contract or component
+changes. Record named preview limitations, rollback images and C4 capacity/
+cleanup in the linked receipt. This is `PREVIEW_REVIEW_READY`, not P24,
+production activation or owner visual acceptance.
+
+[Preview runbook](../deploy/runbooks/research-preview.md) ·
+[Runtime receipt](./research_loop/evidence/P24/UNIFIED_RESEARCH_EXECUTION_PREVIEW_2026-10-10.md).
