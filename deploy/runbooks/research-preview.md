@@ -145,3 +145,13 @@ separate inter-cell qualification issue.
 
 [Owner approval, scope and exit gate](../../upgrade/UNIFIED_IMPLEMENTATION_PLAN.md#2026-10-10-owner-addendum--unified-research--execution-review-preview) ·
 [Actual browser/runtime receipt](../../upgrade/research_loop/evidence/P24/UNIFIED_RESEARCH_EXECUTION_PREVIEW_2026-10-10.md).
+
+Read-only receipt helper: `scripts/research-preview/unified-preview-receipt.mjs`.
+Use `--before` **before** the scoped rollout to capture custody/container IDs,
+then run it without that option for actual route/API checks. It uses the
+public auto-login, writes private timestamped attempts and revokes its own
+session. Do not overwrite a prior baseline to conceal a custody discrepancy.
+Only the normal owner API may issue scoped preview gate-read grants; do not
+reset users, seed SQL grants or use Bobby as public auto-login. The current
+receipt distinguishes source-off HTTP noise and the R1 workspace-link/mobile
+limitations from functional rendering; it is not full visual/product approval.

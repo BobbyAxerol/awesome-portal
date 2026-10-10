@@ -8558,3 +8558,19 @@ production activation or owner visual acceptance.
 
 [Preview runbook](../deploy/runbooks/research-preview.md) ·
 [Runtime receipt](./research_loop/evidence/P24/UNIFIED_RESEARCH_EXECUTION_PREVIEW_2026-10-10.md).
+
+**2026-10-10 outcome:** `PREVIEW_REVIEW_READY / FUNCTIONAL_ROUTES_PASS` on
+config commit `6640c7f9`, bundle `index-hBXCtrBk.js`. 16 routes ×1280/660 =32
+rendered cells; actual existing RC→R1, required local APIs and R1 refresh PASS.
+Only preview-scoped governance **read** grants were issued through the normal
+owner API; no decisions/commands or broader admin rights. All112 runs/37 seals/
+4 packs/2 publication row hashes and DB/NATS/worker/mount identities preserved.
+AWS/source reads, Execution SSE and mutation flags remain off. No frontend
+source, production/dev/main, TLS/SLA or Cloudflare Access changes.
+
+The receipt names limitations, not a hidden full-product PASS: source-disabled
+HTTP/console noise, bare R1 href's unproven cross-workspace propagation and
+the existing R1 mobile sticky rail overlap. Claude retains UI refinement and
+visual acceptance. R2/Canary/Live are review surfaces, not a fabricated
+promotion chain. C4 local cleanup/session revocation done, rollback images
+retained; no engine rerun or visual baseline rewrite.
