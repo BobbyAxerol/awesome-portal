@@ -1,0 +1,65 @@
+# Enabled only by the fixed preview helper after the UDB-02 change window.
+services:
+  execution-postgres:
+    image: postgres:16.15-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: exec_owner
+      POSTGRES_PASSWORD_FILE: /run/secrets/execution/owner-password
+      POSTGRES_DB: portal_execution
+    command: ["postgres", "-c", "config_file=/etc/postgresql/execution.conf"]
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: 1
+    pids_limit: 96
+    shm_size: 64m
+    volumes:
+      - execution-postgres-data:/var/lib/postgresql/data
+      - ./deploy/postgres/portal.conf:/etc/postgresql/portal.conf:ro
+      - ./deploy/postgres/execution.conf:/etc/postgresql/execution.conf:ro
+      - ./deploy/postgres/execution-init.sh:/docker-entrypoint-initdb.d/execution-init.sh:ro
+      - /home/bobby/.config/portal-research-preview/execution-store/owner-password:/run/secrets/execution/owner-password:ro
+      - /home/bobby/.config/portal-research-preview/execution-store/runtime-password:/run/secrets/execution/runtime-password:ro
+    networks: [execution-data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U exec_owner -d portal_execution"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  control-api:
+    environment:
+      EXECUTION_DATABASE_URL_FILE: /run/secrets/execution/runtime-url
+      EXECUTION_DATABASE_POOL_MAX: "6"
+      EXECUTION_DATABASE_POOL_QUEUE_MAX: "12"
+    volumes:
+      - /home/bobby/.config/portal-research-preview/execution-store/runtime-url:/run/secrets/execution/runtime-url:ro
+    networks: [portal, execution-data]
+
+  execution-store-admin:
+    image: ${PORTAL_IMAGE_PREFIX:-local/portal-research-preview}-control-api:${PORTAL_IMAGE_TAG:-rf02}
+    profiles: [udb-operator]
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 350000000
+    memswap_limit: 350000000
+    pids_limit: 64
+    environment:
+      NODE_ENV: production
+      PORTAL_ENV: local
+      AUTH_MODE: dev
+      DATABASE_URL: postgres://portal:portal@portal-postgres:5432/portal_control
+      EXECUTION_DATABASE_URL_FILE: /run/secrets/execution/owner-url
+    volumes:
+      - /home/bobby/.config/portal-research-preview/execution-store/owner-url:/run/secrets/execution/owner-url:ro
+      - /home/bobby/.local/state/portal-udb02/transfer:/var/lib/udb-transfer:ro
+    networks: [portal, execution-data]
+    command: ["node", "dist/cli/execution-store.js", "migrate"]
+
+networks:
+  execution-data:
+    internal: true
+volumes:
+  execution-postgres-data:

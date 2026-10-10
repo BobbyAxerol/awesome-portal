@@ -28,6 +28,10 @@ const EnvSchema = z.object({
   PORTAL_ENV: z.enum(["local", "research", "paper", "sandbox", "live"]).default("research"),
   AUTH_MODE: z.enum(AUTH_MODES).default("cloudflare_access_local_password"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+  EXECUTION_DATABASE_URL: z.preprocess(v => v === "" ? undefined : v,
+    z.string().url().refine(v => ["postgres:", "postgresql:"].includes(new URL(v).protocol)).optional()),
+  EXECUTION_DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(10).default(6),
+  EXECUTION_DATABASE_POOL_QUEUE_MAX: z.coerce.number().int().min(0).max(32).default(12),
   PORTAL_PUBLIC_ORIGIN: z.string().min(1).default("http://localhost:8080"),
   /**
    * Research preview only (research-portal): the user a browser without a
@@ -464,7 +468,20 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     "GOVERNANCE_APPLY_KEYS_JSON",
     "GOVERNANCE_APPLY_KEYS_FILE",
   );
+  if (env.EXECUTION_DATABASE_URL_FILE) {
+    if (env.EXECUTION_DATABASE_URL || !/^\/run\/secrets\/[A-Za-z0-9_./-]+$/.test(env.EXECUTION_DATABASE_URL_FILE)
+        || env.EXECUTION_DATABASE_URL_FILE.includes("..")) throw new Error("EXECUTION_DATABASE_FILE_INVALID");
+    resolved.EXECUTION_DATABASE_URL = readFileSync(env.EXECUTION_DATABASE_URL_FILE, "utf8").trim();
+  }
   const config = EnvSchema.parse(resolved);
+  if (config.EXECUTION_DATABASE_URL) {
+    const core = new URL(config.DATABASE_URL), domain = new URL(config.EXECUTION_DATABASE_URL);
+    // Changing a role, URL spelling or omitted default port is not isolation.
+    if (core.hostname === domain.hostname && (core.port || "5432") === (domain.port || "5432") &&
+        decodeURIComponent(core.pathname) === decodeURIComponent(domain.pathname)) {
+      throw new Error("EXECUTION_DATABASE_MUST_BE_ISOLATED");
+    }
+  }
   if (config.RESEARCH_ENGINE_QUALIFICATION_VERSION !== undefined
       && (config.PORTAL_ENV !== "local" || config.AUTH_MODE !== "dev")) {
     throw new Error("RESEARCH_ENGINE_QUALIFICATION_VERSION is isolated-only (PORTAL_ENV=local and AUTH_MODE=dev)");

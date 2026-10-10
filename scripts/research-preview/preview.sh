@@ -42,6 +42,12 @@ compose() {
   # sudo strips caller environment. Forward only these non-secret source
   # stamps, including cmd_build's temporary assignment, not the whole env.
   local compose_docker=("${DOCKER[@]}")
+  local domain_overlay=()
+  if [[ -f "$ENV_DIR/execution-store.enabled" ]]; then
+    [[ "$ENV_DIR" == /home/bobby/.config/portal-research-preview ]] || {
+      echo 'preview: Execution store marker is restricted to the fixed shared preview' >&2; return 1; }
+    domain_overlay=(-f "$ROOT/deploy/research-preview/compose.execution-store.yaml")
+  fi
   if [[ "${DOCKER[0]}" == sudo ]]; then
     compose_docker=(sudo -n env "PORTAL_BUILD_COMMIT=${PORTAL_BUILD_COMMIT:-unknown}" \
       "PORTAL_BUILD_DIRTY=${PORTAL_BUILD_DIRTY:-false}" docker)
@@ -49,7 +55,7 @@ compose() {
   "${compose_docker[@]}" compose -p "$PROJECT" --project-directory "$ROOT" --env-file "$ENV_FILE" \
     -f "$ROOT/compose.yaml" \
     -f "$ROOT/deploy/compose.research-progress.yaml" \
-    -f "$ROOT/deploy/research-preview/compose.research-preview.yaml" "$@"
+    -f "$ROOT/deploy/research-preview/compose.research-preview.yaml" "${domain_overlay[@]}" "$@"
 }
 
 cmd_init() {
@@ -133,6 +139,20 @@ cmd_build() {
     case "$service" in portal-api|control-api|portal-web|roadmap-task-board-api) ;;
       *) echo "preview: unsupported build service $service" >&2; return 1;;
     esac
+  done
+  # Retain a resolvable image name BEFORE replacing a floating preview tag.
+  # An OCI index may disappear from the local image-name store once untagged,
+  # even while an old container still records that index as its .Image.
+  # C4 retains these exact rollback aliases30days; never prune them blindly.
+  local container previous alias
+  for service in "${services[@]}"; do
+    container="$(compose ps -aq "$service" | head -n1)"
+    [[ -n "$container" ]] || continue
+    previous="$("${DOCKER[@]}" inspect -f '{{.Image}}' "$container")"
+    "${DOCKER[@]}" image inspect "$previous" >/dev/null || {
+      echo "preview: original $service image is not resolvable; recover rollback before build" >&2;return 1; }
+    alias="local/portal-research-preserved-$service:${previous#sha256:}"
+    "${DOCKER[@]}" image tag "$previous" "$alias"
   done
   # The approved Historical Market Data reader is a code-only wheel staged into
   # the ignored vendor/hmd-reader directory; the image refuses to build

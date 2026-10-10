@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { Pool } from "pg";
 import { ControlApiConfig } from "../config";
-import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "../tokens";
+import { CONTROL_API_CONFIG, EXECUTION_DATA_POOL } from "../tokens";
 import { MaximumDataEnvironment } from "./maximum-data-intake";
 
 const CONTINUATION_PREFIX = "mdc1.";
@@ -37,7 +37,7 @@ export class MaximumDataContinuationError extends Error {
 @Injectable()
 export class MaximumDataContinuationRepository {
   constructor(
-    @Inject(CONTROL_API_POOL) private readonly pool: Pool,
+    @Inject(EXECUTION_DATA_POOL) private readonly pool: Pool,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {}
 

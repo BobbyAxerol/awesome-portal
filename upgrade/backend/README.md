@@ -2025,3 +2025,14 @@ PASS:8,969 changed near2MiB writes,119 vacuum cycles,physical max304MiB,
 PG sampled charge529MiB/no OOM;exact fixture cleanup done.24h is optional
 release confidence,not a fabricated PASS. **UDB-01 PASS / no in-scope debt**.
 [Report, FK/resource/identity manifest and proof](../research_loop/evidence/UDB-01/README.md).
+
+**2026-10-10 UDB-02 PASS:** isolated private Portal-owned Execution PG/pool/
+limited role/forward ledger;Core identity/Governance/Research authority preserved.
+Two bounded local retained imports,10table count/hash parity,49,421history +
+4,136current entities/FK receipts,no mirror-history duplicate or live cursors.
+38/38 real-PG +7config assertions,independent restart,final restored/live BFF,
+actual rollback/reapply and C4 PASS;12test sessions revoked,no reset/clone.
+Original source workspace provisioned through Core owner/audit,not remapped.
+[Full phase packet and exact Claude/UDB-03 handoff](../research_loop/evidence/UDB-02/README.md).
+No UI/public DTO/dev/stable/remote/source activation. UDB-03/04 not started;
+retained freshness/partial/source gaps stay explicit,not full-product PASS.

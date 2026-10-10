@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
 import { ControlApiConfig } from "../config";
-import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "../tokens";
+import { CONTROL_API_CONFIG, EXECUTION_DATA_POOL } from "../tokens";
 
 const SOURCE_ID = /^[a-z][a-z0-9.-]{1,127}$/;
 const PROFILE_ID = /^[A-Z][A-Z0-9_]{2,127}$/;
@@ -150,7 +150,7 @@ interface SharedReadIdentity {
 @Injectable()
 export class ExecutionSharedReadRepository {
   constructor(
-    @Inject(CONTROL_API_POOL) private readonly pool: Pool,
+    @Inject(EXECUTION_DATA_POOL) private readonly pool: Pool,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {}
 

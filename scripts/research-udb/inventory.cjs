@@ -16,9 +16,25 @@ async function main() {
       LEFT JOIN pg_class t ON t.oid=c.reltoastrelid
       WHERE c.relkind='r' AND n.nspname IN ('public','research') ORDER BY n.nspname,c.relname`)).rows;
     const custody = {};
+    const originalWorkspaceCustody = {};
+    let reviewSessionCustody;
     for (const table of sensitive.filter(name => tables.some(t => t.schema === 'public' && t.name === name))) {
       const rows = (await pool.query(`SELECT to_jsonb(t) AS row FROM public.${table} t ORDER BY to_jsonb(t)::text`)).rows;
       custody[table] = { count: rows.length, sha256: createHash('sha256').update(JSON.stringify(rows)).digest('hex') };
+      if(table==='auth_sessions'&&process.env.UDB_REVIEW_SESSION_SINCE){
+        const since=Date.parse(process.env.UDB_REVIEW_SESSION_SINCE);
+        if(!Number.isFinite(since))throw Error('UDB_REVIEW_SESSION_BOUND_INVALID');
+        const original=rows.filter(({row})=>Date.parse(row.created_at)<=since);
+        const review=rows.filter(({row})=>Date.parse(row.created_at)>since);
+        reviewSessionCustody={since:process.env.UDB_REVIEW_SESSION_SINCE,original_count:original.length,
+          original_sha256:createHash('sha256').update(JSON.stringify(original)).digest('hex'),
+          added:review.length,revoked:review.filter(({row})=>row.state==='REVOKED').length};
+      }
+      if (process.env.UDB_REVIEW_WORKSPACE_ID && ['workspaces','workspace_members'].includes(table)) {
+        const originals=rows.filter(({row})=>row.workspace_id!==process.env.UDB_REVIEW_WORKSPACE_ID);
+        originalWorkspaceCustody[table]={count:originals.length,
+          sha256:createHash('sha256').update(JSON.stringify(originals)).digest('hex')};
+      }
     }
     for (const table of ['runs','jobs','run_producers','current_source_seals_v1','release_candidate_packs_v1','release_candidate_publications_v1']) {
       if (!tables.some(t => t.schema === 'research' && t.name === table)) continue;
@@ -37,7 +53,8 @@ async function main() {
     const activity = (await pool.query(`SELECT state,count(*)::integer AS count FROM pg_stat_activity GROUP BY state`)).rows;
     const activeJobs = (await pool.query("SELECT count(*)::integer AS n FROM research.jobs WHERE state IN ('CLAIMED','RUNNING','CANCEL_REQUESTED')")).rows[0].n;
     await pool.query('COMMIT');
-    console.log(JSON.stringify({ captured_at: new Date().toISOString(), custody, tables, foreignKeys, settings, migrations, activity, activeJobs }, null, 2));
+    console.log(JSON.stringify({ captured_at: new Date().toISOString(), custody, originalWorkspaceCustody,reviewSessionCustody,
+      tables, foreignKeys, settings, migrations, activity, activeJobs }, null, 2));
   } finally { await pool.end(); }
 }
 main().catch(error => { console.error(JSON.stringify({ error: 'UDB_INVENTORY_FAILED', code: error.code ?? 'UNKNOWN' })); process.exitCode = 1; });

@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
-import { CONTROL_API_POOL } from "../tokens";
+import { EXECUTION_DATA_POOL } from "../tokens";
 import { AlphaFleetEnvironment, ManagerListEnvironment } from "./contracts";
 
 type ProjectionEnvironment = AlphaFleetEnvironment;
@@ -106,7 +106,7 @@ export interface BindingProjectionRecord {
 
 @Injectable()
 export class ManagerListsRepository {
-  constructor(@Inject(CONTROL_API_POOL) readonly pool: Pool) {}
+  constructor(@Inject(EXECUTION_DATA_POOL) readonly pool: Pool) {}
 
   async snapshot(
     workspaceId: string,

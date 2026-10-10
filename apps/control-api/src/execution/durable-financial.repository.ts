@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
-import { CONTROL_API_POOL } from "../tokens";
+import { EXECUTION_DATA_POOL } from "../tokens";
 import { ProjectionEnvironment } from "./profile-projection.repository";
 
 export const FINANCIAL_SUBJECT_KINDS = ["alpha", "deployment", "account", "portfolio"] as const;
@@ -99,7 +99,7 @@ export interface DurableFinancialSeriesRead {
  */
 @Injectable()
 export class ExecutionDurableFinancialRepository {
-  constructor(@Inject(CONTROL_API_POOL) private readonly pool: Pool) {}
+  constructor(@Inject(EXECUTION_DATA_POOL) private readonly pool: Pool) {}
 
   async series(input: DurableFinancialSeriesInput): Promise<DurableFinancialSeriesRead> {
     validateInput(input);

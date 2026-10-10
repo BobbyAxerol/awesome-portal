@@ -1,0 +1,10 @@
+# UDB04 candidate combines the private domain store with the unchanged 5GB
+# envelope: replace the former 900MB PG allocation by 650MB Core + 250MB Exec.
+# This overlay is not applied to shared preview or old P23 receipt stacks.
+services:
+  portal-postgres:
+    mem_limit: 650000000
+    memswap_limit: 650000000
+  execution-postgres:
+    mem_limit: 250000000
+    memswap_limit: 250000000

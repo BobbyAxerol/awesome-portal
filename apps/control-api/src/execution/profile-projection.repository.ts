@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
-import { CONTROL_API_POOL, CONTROL_API_CONFIG, EXECUTION_DURABLE_MIRROR_WRITER } from "../tokens";
+import { EXECUTION_DATA_POOL, CONTROL_API_CONFIG, EXECUTION_DURABLE_MIRROR_WRITER } from "../tokens";
 import type { ControlApiConfig } from "../config";
 import type {
   DurableMirrorRelationCursor,
@@ -146,7 +146,7 @@ export interface ProjectionCommitInput {
 @Injectable()
 export class ExecutionProfileProjectionRepository {
   constructor(
-    @Inject(CONTROL_API_POOL) readonly pool: Pool,
+    @Inject(EXECUTION_DATA_POOL) readonly pool: Pool,
     @Optional() @Inject(EXECUTION_DURABLE_MIRROR_WRITER)
     private readonly durableMirror?: DurableMirrorWriter,
     @Optional() @Inject(CONTROL_API_CONFIG)

@@ -2315,3 +2315,21 @@ Bobby-approved bounded load8,969 changed near2MiB writes/119 vacuum cycles,
 physical max318,799,872B/PG sampled charge554,508,288B/no OOM,pressure/hit/
 recovery predicates pass and exact fixture cleanup complete. No24h PASS or
 productGO inferred;UDB-02…04 still require individual approval.
+
+### 14.1.16 UDB-02 isolated Execution store — 2026-10-10
+
+**PASS_ISOLATED_STORE_HYDRATED_PREVIEW**. Private PG16.15/512MiB,limited
+runtime role,explicit Execution pool6/queue12;Core identity/Governance and all
+Research/RC→R1 remain original. Independent hash-pinned domain ledger131;
+Core-validated reference receipts replace three cross-store workspace FKs
+without cloning authority.10table immutable import parity:49,421 bounded
+legacy-history rows plus4,136 current entities/necessary internal-FK closure;
+mirror range0,no duplicated history/cache/live resume state.38/38 focused
+real-PG +7config assertions and actual restart/restore/BFF/rollback PASS;
+12review sessions revoked,original19,035sessions/passwords/grants/owner/Research
+custody unchanged. One audited source-workspace OWNER membership added.
+[Report / known historical attempts / C4](./research_loop/evidence/UDB-02/phase-report.md)
+and [UDB-03/Claude handoff](./research_loop/evidence/UDB-02/handoff.md).
+No public DTO/UI/source/SSE/command/dev/stable/push change. Combined P23 caps
+versioned only,not qualified. UDB-03 retained readers/resource policy and
+UDB-04 cross-loop acceptance require their own approval;no productGO implied.

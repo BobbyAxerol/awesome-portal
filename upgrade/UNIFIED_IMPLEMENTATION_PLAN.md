@@ -3647,7 +3647,7 @@ phê duyệt tại [UDB addendum](#udb-upgrade-2026-10-10).
 | Phase | Dependency | Màn | Checkpoint | State / implementer / evidence |
 |---|---|---|---|---|
 | [UDB-01](#udb-01) | Bobby duyệt UDB-01 2026-10-10 +bounded-gate refinement | Cả hai loop, nền identity/storage | UDB-1 | **PASS — PREVIEW_STORAGE_BASELINE** · 95/95 real-PG +7 config cases;8,969 changed-body writes/119 vacuum cycles/602.478s;custody unchanged,C4 done;[packet](./research_loop/evidence/UDB-01/README.md). No in-scope open debt;dev/stable/UI không đổi |
-| [UDB-02](#udb-02) | UDB-01 đạt + Bobby duyệt UDB-02 | Execution read models + Research publication | UDB-2 | **PLANNED / AWAITING_IMPLEMENTATION_APPROVAL** · DB/pool Execution riêng; Core identity/Governance thống nhất; hydration preview có custody/rollback |
+| [UDB-02](#udb-02) | UDB-01 PASS + Bobby giao 2026-10-10 | Execution read models + Research publication | UDB-2 | **PASS — ISOLATED_STORE_HYDRATED_PREVIEW** ·38/38 real-PG +7 config assertions;49,421 history/4,136 current entities,10-table parity;Core custody/independent restart/restore/rollback/C4 PASS;[packet](./research_loop/evidence/UDB-02/README.md). UDB-03 activation/FE chưa mở |
 | [UDB-03](#udb-03) | UDB-02 đạt + Bobby duyệt UDB-03 | Execution screens/subpanels, Research → RC → R1 | UDB-3 | **PLANNED / AWAITING_IMPLEMENTATION_APPROVAL** · bật maximum retained reads; contract/resource-access matrix; Claude FE nhận typed handoff, giữ UI đã duyệt |
 | [UDB-04](#udb-04) | UDB-01…03 đạt + Bobby duyệt UDB-04 | Cả hai loop + Governance | UDB-4 | **PLANNED / AWAITING_IMPLEMENTATION_APPROVAL** · cross-loop load/auth/DR/browser acceptance + exact preview rebuild; không tự merge/deploy/release |
 
@@ -8755,6 +8755,10 @@ required tests/C4 đạt. Owner preview review không tự là production rollou
 <a id="udb-02"></a>
 ### UDB-02 — Isolated Execution data store, explicit pools and retained preview hydration
 
+**Implementation approval:** Bobby giao UDB-02 ngày 2026-10-10. Supersedes
+earlier approval-pending notes for this phase only. UDB-03/04, dev/stable,
+upstream source/SSE/command activation and remote push remain outside scope.
+
 **Entry:** UDB-01 đạt + Bobby duyệt UDB-02. DB/table ownership, constraints,
 pool/budget/migration manifest và authorized target workspace đã chốt.
 
@@ -8966,3 +8970,35 @@ commit qua normal hook,no bypass/push. **UDB-01 PASS / zero known in-scope
 debt**;UDB-02…04 vẫn chờ Bobby duyệt từng phase. Đây không phải hydration,
 cross-loop product acceptance hoặc releaseGO.
 [Full test/resource/file manifest and Claude handoff](./research_loop/evidence/UDB-01/phase-report.md).
+
+### UDB-02 closeout — isolated store and retained hydration,2026-10-10
+
+Bobby giao UDB-02;parent4a79429a,nhánh Research chung. Preview có private
+Execution PG16.15/512MiB/64MiB buffers,role hạn chế/pool6+queue12;Core +Research
+giữ DSN/volume/authority. Independent ledger131.execution-store.v1 reuse16
+hash-pinned DDL;27domain tables/14FKs,workspace references không là quyền.
+Seven data repositories +Command Center projection dùng domain pool riêng;
+auth/Governance/command/RC→R1 vẫn Core,không giả cross-DB atomicity.
+
+Hai local-Portal read-only imports có run ID/count/hash/transaction/rerun:
+3profile/6manager snapshots,254fleet rows(206unique All),174bindings,2portfolios,
+49,421 bounded legacy history;thêm4,136 current entities với100batches/7revisions/
+1,808observation receipts cần cho FK. Mirror history0,không duplicate history,
+không cache/lease/flight/live resume state. Latest source-refused snapshots và
+source_as_of null được giữ;older current facts chỉ là retained observation.
+
+38/38 focused real-PG +7config assertions/build/syntax PASS;final live14BFF
+cases +restored13cases và10-table hashes PASS. Each DB restart independent;
+actual reconstructed-parent rollback/reapply giữ cả volumes/Research artifacts.
+Original auth/owner/grants/19,035sessions byte hashes,112runs/37seals/4packs/
+2publications/125migration entries unchanged. Chỉ thêm1audited owner workspace/
+membership;12ordinary test sessions đều REVOKED,không reset account/password.
+Normal grouped commit hook;no engine/visual/24h retake.
+
+[Full receipt, historical failures/fixes and C4](./research_loop/evidence/UDB-02/phase-report.md) ·
+[UDB-03/Claude exact coverage handoff](./research_loop/evidence/UDB-02/handoff.md).
+Owned disposable cells/temp rollback worktree đã dọn;root27%free(~180GB),
+backup/evidence/rollback aliases retain30days,no broad prune. **UDB-02 PASS /no
+known in-scope debt**;UDB-03/04 chờ Bobby giao. No public DTO/UI/remote push,
+dev/main/stable/source/SSE/command activation. Future split P23 budget chỉ
+versioned,không lấy old qualification làm combined-stack PASS.

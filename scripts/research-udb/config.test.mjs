@@ -40,3 +40,33 @@ test('bounded qualification does not disguise a short lane as an extended soak',
   assert.match(script,/randomBytes\(1535\*1024\)/);
   assert.match(read('scripts/research-udb/soak.sh'),/portal-udb01-soak_pg-data/);
 });
+
+test('Execution store is private and only mounts runtime credentials into the API', () => {
+  const overlay=read('deploy/research-preview/compose.execution-store.yaml');
+  assert.doesNotMatch(overlay,/^\s*ports:/m);
+  assert.match(overlay,/execution-data:\s*\n\s+internal: true/);
+  const runtime=overlay.split('  control-api:')[1].split('  execution-store-admin:')[0];
+  assert.match(runtime,/EXECUTION_DATABASE_URL_FILE: \/run\/secrets\/execution\/runtime-url/);
+  assert.doesNotMatch(runtime,/owner-url|owner-password|DATABASE_URL:/);
+  assert.match(overlay,/execution-postgres-data:\/var\/lib\/postgresql\/data/);
+  assert.match(read('deploy/postgres/execution-init.sh'),/NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION/);
+});
+test('domain PG and future combined P23 envelope remain bounded, never activate old gates', () => {
+  const config=read('deploy/postgres/execution.conf');
+  assert.match(config,/shared_buffers = 64MB/);assert.match(config,/max_connections = 24/);
+  assert.match(config,/autovacuum_work_mem = 16MB/);assert.match(config,/max_parallel_workers_per_gather = 0/);
+  const candidate=read('deploy/research-preview/compose.execution-store-p23.yaml');
+  const caps=[...candidate.matchAll(/mem_limit: (\d+)/g)].map(x=>Number(x[1]));
+  assert.deepEqual(caps,[650000000,250000000]);assert.equal(caps.reduce((a,b)=>a+b),900000000);
+  assert.doesNotMatch(read('scripts/research-preview/preview.sh'),/compose.execution-store-p23.yaml/);
+});
+test('domain schema and hydration do not copy Core authority or live cursors', () => {
+  const schema=read('apps/control-api/src/execution/store-schema.ts');
+  assert.match(schema,/EXECUTION_SCHEMA_CORE_TARGET_REFUSED/);
+  assert.match(schema,/REFERENCES execution_workspace_references\(workspace_id\)/);
+  assert.doesNotMatch(schema,/CREATE TABLE (portal_users|workspaces|auth_sessions|research\.)/);
+  const transfer=read('apps/control-api/src/execution/retained-store-transfer.ts');
+  assert.match(transfer,/READ ONLY/);assert.match(transfer,/live_state_imported:false/);
+  assert.match(transfer,/n<=20000/);assert.match(transfer,/UDB_TRANSFER_CONTENT_PARITY_FAILED/);
+  assert.match(transfer,/environment,profile_id,relation_key,row_id/);
+});

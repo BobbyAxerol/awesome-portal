@@ -1,0 +1,23 @@
+{
+  "schema_version": "udb.phase-debt-register.v1",
+  "phase": "UDB-02",
+  "status": "PASS_ISOLATED_STORE_HYDRATED_PREVIEW",
+  "known_open_in_scope": [],
+  "closed": [
+    {"id": "UDB02-ISOLATION", "resolution": "Private PG/volume/limited roles, explicit domain pool and independent ledger; Core authority unchanged"},
+    {"id": "UDB02-HYDRATION", "resolution": "Two immutable bounded imports;10 tables with exact hashes and FK closure;no mirror-history duplication"},
+    {"id": "UDB02-CUSTODY", "resolution": "Original credentials/owner/grants/sessions/Research hashes preserved;one audited owner workspace;12 review sessions revoked"},
+    {"id": "UDB02-DR", "resolution": "Independent PG restarts,final10-table restored parity/actual BFF and real rollback/reapply PASS"},
+    {"id": "UDB02-ROLLBACK-PIN", "resolution": "Recovered exact parent source with new documented image;prebuild immutable aliases and fail-before-stop rollback guard"},
+    {"id": "UDB02-C4", "resolution": "Owned disposable cells/restore volume/temp worktree removed;intentional domain/private evidence/rollback retention30days"}
+  ],
+  "historical_attempts": [
+    {"id": "ROLE_INIT_104744Z", "disposition": "FAILED_THEN_FIXED", "reason": "umask password readability corrected;idempotent versioned recovery"},
+    {"id": "GATEWAY_ORDER", "disposition": "FAILED_THEN_FIXED", "reason": "Python DNS restored before gateway validation;recorded resume"},
+    {"id": "OLD_OCI_ROLLBACK_REFERENCE", "disposition": "UNRESOLVABLE_RECONSTRUCTED_BASELINE_PROVED", "reason": "new image is not claimed as original OCI artifact;original record preserved"}
+  ],
+  "source_limits": ["retained observations stale/null source_as_of", "partial bounded legacy history", "latest source-contract-refused relations", "legacy source fill timestamp anomaly"],
+  "not_in_scope": ["UDB-03 retained screen activation/resource policy/Claude UI", "UDB-04 combined P23/browser/product gates", "new source writer identity or activation", "dev/main/stable/release/push", "global Docker/cache maintenance"],
+  "receipt": "phase-report.md",
+  "handoff": "handoff.md"
+}

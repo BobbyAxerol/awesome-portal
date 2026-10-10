@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
 import { ControlApiConfig, querySigningKeys } from "../config";
-import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "../tokens";
+import { CONTROL_API_CONFIG, EXECUTION_DATA_POOL } from "../tokens";
 import { KeysetCursorCodec, queryFingerprint } from "../query";
 import {
   DurableMirrorCommitInput,
@@ -198,7 +198,7 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
 
   constructor(
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
-    @Inject(CONTROL_API_POOL) private readonly pool: Pool,
+    @Inject(EXECUTION_DATA_POOL) private readonly pool: Pool,
   ) {
     this.cursorCodec = new KeysetCursorCodec({
       activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,

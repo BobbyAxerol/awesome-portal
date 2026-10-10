@@ -18,7 +18,8 @@ import { OwnerAccessGuard } from "./admin/owner-access.guard";
 import { OwnerAccessService } from "./auth/owner-access.service";
 import { HealthController } from "./health/health.controller";
 import { ControlApiConfig } from "./config";
-import { CONTROL_API_CONFIG, CONTROL_API_POOL, EXECUTION_DURABLE_MIRROR_WRITER } from "./tokens";
+import { CONTROL_API_CONFIG, CONTROL_API_POOL, EXECUTION_DATA_POOL, EXECUTION_DURABLE_MIRROR_WRITER } from "./tokens";
+import { buildExecutionPool } from "./db/pool";
 import { FacadeController } from "./facade/facade.controller";
 import { PlanningFacadeController } from "./facade/planning.controller";
 import { PortalProxyService } from "./facade/proxy.service";
@@ -196,7 +197,9 @@ import { P22PublicationBridgeService } from "./research/p22-publication-bridge.s
 
 @Module({})
 export class AppModule {
-  static register(config: ControlApiConfig, pool: Pool): DynamicModule {
+  static register(config: ControlApiConfig, pool: Pool, executionPool?: Pool): DynamicModule {
+    const ownsExecutionPool = !executionPool && !!config.EXECUTION_DATABASE_URL;
+    const domainPool = executionPool ?? (config.EXECUTION_DATABASE_URL ? buildExecutionPool(config) : pool);
     return {
       module: AppModule,
       controllers: [
@@ -272,6 +275,10 @@ export class AppModule {
         ExecutionLocalReadAuthority,
         { provide: CONTROL_API_CONFIG, useValue: config },
         { provide: CONTROL_API_POOL, useValue: pool },
+        { provide: EXECUTION_DATA_POOL, useValue: domainPool },
+        { provide: "EXECUTION_POOL_LIFECYCLE", useValue: {
+          onApplicationShutdown: async () => { if (ownsExecutionPool) await domainPool.end(); },
+        } },
         {
           provide: AuthService,
           useFactory: (cfg: ControlApiConfig, db: Pool) =>

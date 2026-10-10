@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
 import { ControlApiConfig } from "../config";
 import { PortalUser } from "../domain";
-import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "../tokens";
+import { CONTROL_API_CONFIG, CONTROL_API_POOL, EXECUTION_DATA_POOL } from "../tokens";
 import {
   CommandCenterInputs,
   ExactSourceSlice,
@@ -108,6 +108,7 @@ export class CommandCenterRepository {
   constructor(
     @Inject(CONTROL_API_POOL) private readonly pool: Pool,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Inject(EXECUTION_DATA_POOL) private readonly executionPool: Pool = pool,
   ) {}
 
   async read(workspaceId: string, actor: PortalUser, readAt: Date): Promise<CommandCenterInputs> {
@@ -122,8 +123,9 @@ export class CommandCenterRepository {
       const operations = await this.operationTriage(client, workspaceId, readAt);
       const verifiedOperations = await this.verifiedOperationsToday(client, workspaceId, readAt);
       // One projection read feeds fleet health, reconciliation triage and the
-      // journal window — the panels join what already exists, atomically.
-      const projection = await this.projectionState(client, readAt);
+      // journal window from one projection query; Core and domain are separate.
+      // Domain data has its own pool/snapshot; never pretend cross-DB atomicity.
+      const projection = await this.projectionState(this.executionPool, readAt);
       const fleet = this.projectionFleet(projection, readAt);
       const reconciliation = this.reconciliationTriage(projection, readAt);
       const journal = this.journalToday(projection, readAt);
@@ -274,7 +276,7 @@ export class CommandCenterRepository {
     };
   }
 
-  private async projectionState(client: PoolClient, readAt: Date): Promise<ProjectionState> {
+  private async projectionState(client: Pick<Pool, "query"> | PoolClient, readAt: Date): Promise<ProjectionState> {
     const projectionWorkspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
     if (!projectionWorkspaceId || this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true") {
       return { rows: [], reason: "PHASE2_LOCAL_PROJECTION_DISABLED", ageMs: 0 };

@@ -13,9 +13,10 @@ import { HttpErrorFilter } from "./http-error.filter";
 export async function createControlApiApp(
   config: ControlApiConfig,
   pool: Pool,
+  executionPool?: Pool,
 ): Promise<NestFastifyApplication> {
   const app = await NestFactory.create<NestFastifyApplication>(
-    AppModule.register(config, pool),
+    AppModule.register(config, pool, executionPool),
     new FastifyAdapter({ trustProxy: true }),
     // Route-discovery logs drown the actual Vitest result in CI. Production
     // keeps Nest logging; only the isolated test application is silent.
