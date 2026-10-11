@@ -240,7 +240,25 @@ export function readChecklistItem(raw: unknown): ChecklistItem | null {
     // reader can see what the server actually said.
     return { label: `${label} — server reported "${outcome.raw}"`, outcome: "insufficient" };
   }
-  return { label, outcome: outcome.value, suggestion: str(o.suggestion) };
+  return { label, outcome: outcome.value, suggestion: str(o.suggestion), ...readEvidenceRef(o) };
+}
+
+const REF_KINDS = ["REPORT", "RUN", "FREEZE", "AUDIT"] as const;
+const SAFE_ID = /^[A-Za-z0-9_.:-]{1,191}$/;
+
+/**
+ * §56: the Research source a finding rests on, when the server recorded one it could verify. A reference names its ACTUAL kind (a run is not a
+ * report); anything unreadable or unsafe becomes a typed absence, and no destination is ever inferred from a label, hash or id prefix.
+ */
+function readEvidenceRef(o: Record<string, unknown>): { ref?: { kind: (typeof REF_KINDS)[number]; runId: string } | null; refReason?: string | null } {
+  if (!("evidence_ref" in o) && !("evidence_ref_reason" in o)) return {};
+  const raw = obj(o.evidence_ref);
+  const reason = str(o.evidence_ref_reason);
+  if (raw === null) return { ref: null, refReason: reason };
+  const kind = REF_KINDS.find((k) => k === raw.kind);
+  const runId = str(raw.run_id);
+  if (!kind || !runId || !SAFE_ID.test(runId)) return { ref: null, refReason: "R1_EVIDENCE_SOURCE_NOT_LINKABLE" };
+  return { ref: { kind, runId }, refReason: null };
 }
 
 /**

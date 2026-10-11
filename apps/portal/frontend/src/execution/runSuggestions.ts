@@ -7,11 +7,24 @@
  */
 import { useEffect, useState } from "react";
 
+export interface RunClaim {
+  id: string;
+  /** Source-bound metadata only: the server returns `null` for a grade/state it cannot tie to this id, and nothing here fills it in. */
+  grade: string | null;
+  state: string | null;
+}
+
 export interface RunOption {
   runId: string;
   alphaId: string;
   alphaName: string | null;
   createdMs: number | null;
+  /**
+   * The R1 methodology claims the Run Library lists for this run (§56). Three different answers, kept apart:
+   * `undefined` = a legacy response without the field · `null` = the server says it cannot list them (`claimsReason`) · `[]` = it listed none.
+   */
+  claims?: readonly RunClaim[] | null;
+  claimsReason?: string | null;
 }
 
 export type RunSuggestions =
@@ -35,9 +48,28 @@ export function readRunOptions(raw: unknown): RunOption[] {
       alphaId: binding.alpha_id,
       alphaName: typeof binding.alpha_name === "string" ? binding.alpha_name : null,
       createdMs: typeof r.created_at_utc_ms === "number" ? r.created_at_utc_ms : null,
+      ...readClaims(r),
     });
   }
   return out;
+}
+
+function readClaims(r: Record<string, unknown>): { claims?: readonly RunClaim[] | null; claimsReason?: string | null } {
+  const ids = r.eligible_methodology_claim_ids;
+  const availability = rec(r.methodology_claims_availability);
+  if (ids === undefined && availability === null) return {};
+  if (!Array.isArray(ids)) {
+    return { claims: null, claimsReason: typeof availability?.reason_code === "string" ? availability.reason_code : "R1_CLAIMS_NOT_PUBLISHED" };
+  }
+  const meta = new Map<string, RunClaim>();
+  if (Array.isArray(r.methodology_claims)) {
+    for (const item of r.methodology_claims) {
+      const c = rec(item);
+      if (c && typeof c.id === "string") meta.set(c.id, { id: c.id, grade: typeof c.grade === "string" ? c.grade : null, state: typeof c.state === "string" ? c.state : null });
+    }
+  }
+  const claims = ids.filter((id): id is string => typeof id === "string" && id !== "").map((id) => meta.get(id) ?? { id, grade: null, state: null });
+  return { claims, claimsReason: null };
 }
 
 export function useRunSuggestions(enabled = true): RunSuggestions {

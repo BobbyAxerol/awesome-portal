@@ -37,6 +37,23 @@ export interface ChecklistItem {
   outcome: EvidenceMark;
   suggestion?: string | null;
   evidence?: { label: string; href?: string };
+  /** §56: the Research source this finding rests on (`null` = none, with `refReason`); absent on historical responses. */
+  ref?: { kind: "REPORT" | "RUN" | "FREEZE" | "AUDIT"; runId: string } | null;
+  refReason?: string | null;
+}
+
+const REF_LABEL = { REPORT: "Report", RUN: "Run", FREEZE: "Freeze", AUDIT: "Audit" } as const;
+const REF_TAIL = { REPORT: "report", RUN: "overview", FREEZE: "freeze", AUDIT: "audit" } as const;
+const REF_REASON: Record<string, string> = {
+  R1_FINDING_SOURCE_NOT_RECORDED: "the finding recorded no source",
+  R1_FINDING_EVIDENCE_NOT_IN_MANIFEST: "its evidence is not in the verified manifest",
+  R1_FINDING_MULTIPLE_EVIDENCE_SOURCES: "it rests on several sources, so none is linked",
+  R1_EVIDENCE_SOURCE_NOT_LINKABLE: "its source is not a Research screen",
+};
+/** The run screen that proves a finding, keeping the approval's own workspace on the link. */
+export function refHref(ref: NonNullable<ChecklistItem["ref"]>, workspaceId: string | null | undefined): string {
+  const path = `/research/quantbt/runs/${encodeURIComponent(ref.runId)}/${REF_TAIL[ref.kind]}`;
+  return workspaceId ? `${path}?workspace_id=${encodeURIComponent(workspaceId)}` : path;
 }
 /** HiFi "Selection & Known Limitations" — one row per statement, typed. */
 export interface LimitationRow {
@@ -99,6 +116,7 @@ export function GateR1Review({
   eligibility,
   conditions,
   evidence,
+  evidenceWorkspaceId = null,
   policyChip,
   note,
   onNoteChange,
@@ -143,6 +161,8 @@ export function GateR1Review({
   conditions?: readonly TypedCondition[];
   /** Research evidence body (IS/OOS/holdout, WFO). Absent = not published. */
   evidence?: ReactNode;
+  /** The approval's own workspace, kept on every source link so a Research screen reads the same record. */
+  evidenceWorkspaceId?: string | null;
   policyChip?: string;
   /** Reviewer note — becomes the decision reason. */
   note?: string;
@@ -365,6 +385,11 @@ export function GateR1Review({
               <span key={item.label} data-mark={item.outcome}>
                 <b>{item.outcome === "pass" ? "✓" : item.outcome === "watch" ? "!" : item.outcome === "fail" ? "✕" : "…"}</b> {item.label}
                 {item.suggestion ? <span className="exec-gate-note"> — {item.suggestion}</span> : null}
+                {item.ref ? (
+                  <a className="exec-gate-note" href={refHref(item.ref, evidenceWorkspaceId)} data-evidence-ref={item.ref.kind}> · {REF_LABEL[item.ref.kind]} · {item.ref.runId} ▸</a>
+                ) : item.refReason ? (
+                  <span className="exec-gate-note" data-evidence-ref-absent title={REF_REASON[item.refReason] ?? item.refReason}> · no source link</span>
+                ) : null}
                 {item.evidence ? (
                   item.evidence.href ? (
                     <a className="exec-gate-note" href={item.evidence.href}> · {item.evidence.label} ▸</a>

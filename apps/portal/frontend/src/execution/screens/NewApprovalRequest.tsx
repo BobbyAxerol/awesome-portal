@@ -84,6 +84,7 @@ export function NewApprovalRequestScreen({
   const [summary, setSummary] = useState("");
 
   const alpha = alphaOptions.find((a) => a.id === alphaId) ?? null;
+  const pickedRun = runOptions.find((o) => o.runId === runId) ?? null;
   // Every field the server needs, and none of them guessed on the reader's behalf.
   const ready = summary.trim().length >= MIN_SUMMARY
     && alphaId.trim().length > 0 && runId.trim().length > 0 && claimId.trim().length > 0;
@@ -186,6 +187,8 @@ export function NewApprovalRequestScreen({
                       if (!picked) return;
                       setRunId(picked.runId);
                       setAlphaId(picked.alphaId);
+                      // a claim the list named is a choice the server can verify; exactly one listed is taken, several or none are left to the reader
+                      setClaimId(picked.claims && picked.claims.length === 1 ? picked.claims[0]!.id : "");
                     }}
                   >
                     <option value="">— pick a completed run —</option>
@@ -204,7 +207,20 @@ export function NewApprovalRequestScreen({
               </span>
               <span className="exec-gov-k">methodology claim</span>
               <span className="exec-gov-v">
-                {/* No candidate list is published for this; the id is typed and the POST validates it. */}
+                {pickedRun?.claims && pickedRun.claims.length > 0 ? (
+                  <select className="exec-role-control" value={pickedRun.claims.some((c) => c.id === claimId) ? claimId : ""} aria-label="Pick a methodology claim for this run" disabled={submitting}
+                    onChange={(e) => setClaimId(e.target.value)}>
+                    <option value="">— pick a claim —</option>
+                    {pickedRun.claims.map((c) => (
+                      <option key={c.id} value={c.id}>{[c.id, c.grade, c.state].filter(Boolean).join(" · ")}</option>
+                    ))}
+                  </select>
+                ) : pickedRun && pickedRun.claims !== undefined ? (
+                  <span className="exec-gate-note" data-claims-note>
+                    {pickedRun.claims === null ? `the Run Library cannot list claims for this run (${pickedRun.claimsReason ?? "not published"}) — type the id` : "the Run Library lists no eligible claim for this run — the server will refuse a typed one that is not eligible"}
+                  </span>
+                ) : null}
+                {/* The listed claims save a copy-paste; the id stays editable and the POST is the authority. */}
                 <input className="exec-role-control" value={claimId} onChange={(e) => setClaimId(e.target.value)} aria-label="Methodology claim" disabled={submitting}
                   placeholder="type the id" />
               </span>

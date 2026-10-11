@@ -510,6 +510,7 @@ export function GateR1ReviewContainer({ api, approvalId, workspaceId }: { api: E
         approvalId={detail?.approvalId ?? approvalId}
         alphaLabel={detail?.alphaLabel ?? approvalId}
         releaseCandidate={detail?.releaseCandidate ?? undefined}
+        evidenceWorkspaceId={detail?.workspaceId ?? workspaceId ?? null}
         quorumMet={detail?.quorumMet ?? 0}
         quorumRequired={detail?.quorumRequired ?? 0}
         policyVersion={detail?.policyVersion ?? "unversioned"}

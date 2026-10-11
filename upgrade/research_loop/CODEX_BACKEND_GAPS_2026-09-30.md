@@ -3270,3 +3270,11 @@ consumer/preview/browser acceptance remains separate and is not declared PASS.
 Hook attempt1 caught a new PG seed missing required artifact pins; corrected
 only the seed, with the exact PG case retaken PASS. Existing DB constraint and
 backend authority stay unchanged; failed log retained, ordinary-hook retry required.
+
+### §56 — Claude consumer result (2026-10-11)
+
+Consumed from `0159987c` (`P22/GOVERNANCE_UX_OPTIONAL_SOURCES_2026-10-11.md`), generated types + the published synthetic fixture (loaded by the test, not copied):
+
+- **R1 checklist source** — `readChecklistItem` keeps `evidence_ref` with its actual kind and a typed `evidence_ref_reason`; an unreadable/unsafe ref becomes `R1_EVIDENCE_SOURCE_NOT_LINKABLE`, never a guessed destination. The finding row links `Run · run_5512 ▸` (RUN → `/research/quantbt/runs/:id/overview`, REPORT/FREEZE/AUDIT → their own screen) with the approval's own `workspace_id` kept; a null ref shows a quiet "no source link" whose tooltip is the reason in words. A RUN is never worded as a Report. Historical responses (no field) render as before.
+- **Claims per run** — the New request picker reads `eligible_methodology_claim_ids` / `methodology_claims`: listed ids become a claim select (id plus only non-null source-bound grade/state); exactly one listed id is taken on picking the run, several are left to the reader; `[]`, `null`+reason and omitted (legacy) are three different notes. The id stays editable and the POST stays the authority; a stale pick still gets its typed refusal.
+- Tests: 5 new (fixture-driven), frontend run + research 3960 pass; preview web rebuilt, real-route browser pass at 1280/660 (0 overflow, 0 page errors). **Not observed:** the new fields on a real response — the preview control-api is not rebuilt with §56, so no real positive lane exists yet; the screens fall back to today's behaviour (verified).
