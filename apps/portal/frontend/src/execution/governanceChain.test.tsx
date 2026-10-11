@@ -120,11 +120,12 @@ describe.each(ROLES)("role matrix · %s", (role) => {
 });
 
 describe("sticky decision bar", () => {
-  it("prints the first lock inline and folds the rest behind a count", () => {
+  it("prints every lock on one line beside the buttons — nothing folds behind a count", () => {
     r1({ actorId: "u_minh", actor: "Minh", locks: ["EXPIRED"], eligibility: NONE });
     const bar = screen.getByRole("region", { name: /Gate R1 decision/ });
     expect(within(bar).getByText(/self-approval prohibited/)).toBeTruthy();
-    expect(within(bar).getByText(/more reasons?/)).toBeTruthy();
+    expect(within(bar).getByText(/This request expired/)).toBeTruthy();
+    expect(within(bar).queryByText(/more reasons?/)).toBeNull();
     expect(bar.className).toContain("exec-decision-bar");
   });
   it("carries the reviewer note into the decision reason", async () => {

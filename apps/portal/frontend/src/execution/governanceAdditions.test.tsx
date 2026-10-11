@@ -111,8 +111,9 @@ describe("loop entry — the create consumer", () => {
     if (out.kind === "failed") expect(out.reason).toContain("alpha_id mystery");
   });
 
-  it("says the digest is pinned server-side — the form never carries one", () => {
-    render(<NewApprovalRequestContainer api={createFixtureApi()} />);
+  it("says the digest is pinned server-side — the form never carries one", async () => {
+    vi.stubGlobal("fetch", async () => new Response(JSON.stringify({ items: [] }), { status: 200 }));
+    await act(async () => { render(<NewApprovalRequestContainer api={createFixtureApi()} />); });
     expect(screen.getByText(/pinned SERVER-side from the run registry/)).toBeTruthy();
     expect(document.querySelector('input[name*="digest" i], [aria-label*="digest" i]')).toBeNull();
   });
@@ -317,12 +318,13 @@ describe("phase 1 · a dead submit button carries its own reason", () => {
   const submitButton = () =>
     [...document.querySelectorAll("button")].find((b) => /Submit for R1 review/.test(b.textContent ?? ""))!;
 
-  it("points at the sentence that explains the lock, and names it in the title", () => {
+  it("points at the sentence that explains the lock, and names it in the title", async () => {
     // A reason printed a few lines above a dead button is not attached to it.
     // The 25-screen sweep found this button by looking for exactly that: a
     // disabled control with no describedby, no title and no reason element
     // inside its own block.
-    render(<NewApprovalRequestContainer api={createFixtureApi()} />);
+    vi.stubGlobal("fetch", async () => new Response(JSON.stringify({ items: [] }), { status: 200 }));
+    await act(async () => { render(<NewApprovalRequestContainer api={createFixtureApi()} />); });
     const button = submitButton();
     expect(button.disabled).toBe(true);
     const describedBy = button.getAttribute("aria-describedby");

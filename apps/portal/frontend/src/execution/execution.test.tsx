@@ -1904,7 +1904,7 @@ describe("Approval Inbox", () => {
     // Em dash, matching the hi-fi: "0 — observation gate met" reads as an
     // apposition ("nought, namely: the gate is met"), where the arrow read as
     // a transition into a blocker that is not there.
-    expect(screen.getByText("0 — observation gate met")).toBeTruthy();
+    expect(screen.getByText("no blocker — observation gate met")).toBeTruthy();
   });
 });
 
@@ -3375,7 +3375,8 @@ describe("Approval Inbox — the footer strip explains the dimmed rows", () => {
         filter="INBOX"
       />,
     );
-    expect(screen.getByText("visibility ≠ authority")).toBeTruthy();
+    // the internal slogan is gone from the surface; the counts stay
+    expect(screen.queryByText("visibility ≠ authority")).toBeNull();
     expect(screen.getByText(/1 overdue · 1 due soon/)).toBeTruthy();
   });
 
@@ -4841,7 +4842,7 @@ describe("figures nobody published are stated, not substituted", () => {
         counts={null}
       />,
     );
-    expect(screen.getByText(/quorum not published/)).toBeTruthy();
+    expect(screen.getByText(/approvers not published/)).toBeTruthy();
     expect(screen.queryByText("0/2")).toBeNull();
   });
 

@@ -3,8 +3,8 @@
  * (handoff EL-V2-05 supplement: "đang quyết định" is shown by a sticky bar
  * with verdict + reason + buttons and elevation, never by a light surface).
  *
- * It renders what it is given: a verdict chip, the lock reasons (first one
- * inline, the rest behind a disclosure), an optional reviewer note that
+ * It renders what it is given: a verdict chip, every lock reason on one line
+ * beside the buttons (nothing folded away), an optional reviewer note that
  * becomes the decision's reason, the action buttons and the decision trail.
  * It never decides anything itself.
  */
@@ -35,7 +35,6 @@ export interface DecisionBarProps {
 }
 
 export function ExecutionDecisionBar({ verdict, tone, reasons = [], note, actions, trail, footnote, label, reasonsId }: DecisionBarProps) {
-  const [first, ...rest] = reasons;
   return (
     <div className="exec-decision-bar" role="region" aria-label={label} data-tone={tone}>
       <div className="exec-decision-bar-row">
@@ -55,19 +54,11 @@ export function ExecutionDecisionBar({ verdict, tone, reasons = [], note, action
         ) : null}
         <div className="exec-decision-bar-actions">{actions}</div>
       </div>
-      {first ? (
+      {reasons.length > 0 ? (
         <div className="exec-decision-bar-reasons exec-role-body" id={reasonsId}>
-          <span>{first}</span>
-          {rest.length ? (
-            <details>
-              <summary>{rest.length} more {rest.length === 1 ? "reason" : "reasons"}</summary>
-              <ul>
-                {rest.map((r) => (
-                  <li key={r}>{r}</li>
-                ))}
-              </ul>
-            </details>
-          ) : null}
+          {reasons.map((r) => (
+            <span key={r}>{r}</span>
+          ))}
         </div>
       ) : null}
       {footnote ? <div className="exec-decision-bar-foot exec-role-meta">{footnote}</div> : null}

@@ -101,3 +101,14 @@ Sau đó Live gate / Exit review / Waivers dùng lại khung A.
 2. **Thanh quyết định:** một nút chính + menu "Chưa duyệt ▾" (khuyến nghị, ít chữ) hay giữ cả 4 nút ngang như hiện tại?
 3. **Mã nội bộ (BR-EX-*, WF):** (khuyến nghị) ẩn khỏi mặt chính, chỉ ở Details/Inspector — đồng ý?
 Khi chốt, tôi dựng mock tĩnh (HTML) của Inbox + R1 để duyệt hình trước khi viết code.
+
+## 8. Đã giao (2026-10-11, Bobby duyệt A → B → C, một nút chính + menu "Not yet ▾", ẩn mã nội bộ)
+
+| Lát | Giao | Ghi chú trung thực |
+|---|---|---|
+| A | `components/gateFrame.tsx` (thanh bước · Verdict · một dòng vắng mặt · nút quyết định) áp cho **R1 và R2**; passport gập, checklist + giới hạn một hàng; mọi lý do khoá nằm một dòng cạnh nút (bỏ "n more reasons") | Verdict chỉ đếm các dấu server đã trả; không có verdict mới. Live gate / Exit review / Waivers chưa chuyển sang khung này |
+| B | Inbox: subject dẫn đầu, một cột "what's next" (cần bạn / không phải bạn / chờ người khác / blocker), SLA là câu ("overdue 2h", "22h left"), 3 điều khiển lọc (Mine·All, gate ▾, Overdue) cùng 9 view của server, "Recently decided" gập, trạng thái trống chỉ bước kế | Lọc vẫn là một view server mỗi lần; không nhóm lại phía client (sẽ nói dối về số đếm) — "nhóm" được thể hiện bằng cột what's next |
+| C | Request mới: dòng nói lối vào thường là publish RC ở Research (đã có sẵn, tạo R1 kèm evidence pack); chọn **run đã COMPLETED từ Run Library** (điền cả alpha); `?alpha=&run=&claim=` điền sẵn | Phát hiện: nút "Đưa sang R1" **đã tồn tại** (publish ở màn RC). Claim vẫn gõ vì Research chỉ liệt kê claim theo từng RC; danh sách claim theo run vẫn là backend request nếu muốn bỏ hẳn bước gõ |
+| chung | WF xx ẩn khỏi mặt chính (CSS), BR-EX-xx chỉ còn trong Policy & references / dòng vắng mặt | Selector e2e/Playwright bấm Deny/Request changes (nếu có) cần mở menu; không có spec nào bấm hiện nay |
+
+Evidence: vitest frontend 384 file / 6495 pass; tsc -b sạch; browser (research preview, 1280/660): Inbox, New request, R1/R2/Inbox trên fixtures, 0 tràn ngang, 0 lỗi trang. Baseline hình Execution **chưa** ghi lại — các màn này đổi hình, cần chạy quy trình baseline riêng khi Bobby duyệt hình.

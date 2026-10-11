@@ -20,6 +20,7 @@ import {
   type TypedCondition,
 } from "../components/conditions";
 import { ExecutionDecisionBar } from "../components/decisionBar";
+import { GateAbsences, GateDecisionActions, GateStepper, GateVerdict, type AbsenceItem } from "../components/gateFrame";
 import { EmptyRecordFrame } from "../components/EmptyRecordFrame";
 import { PanelState } from "../components/states";
 import { shortDigest } from "../components/workspace";
@@ -256,6 +257,12 @@ export function GateR2Review({
       ? Math.max(0, Math.round((sla.budgetMinutes - sla.ageMinutes) / 60))
       : null;
 
+  const absences: AbsenceItem[] = [
+    ...(fitPanel ? [] : [{ label: "portfolio fit", reason: "portfolio_fit is not published on governance.r2-review.v1 yet (BR-EX-67). Nothing here estimates it client-side." }]),
+    ...(criteriaPanel ? [] : [{ label: "gate criteria", reason: "gate_criteria are POLICY DATA computed server-side and are not published yet (BR-EX-67). The browser never re-derives a verdict." }]),
+    ...(stageChips ? [] : [{ label: "stage eligibility", reason: "stage_eligibility is not published yet (BR-EX-67) — no chip is invented for it." }]),
+  ];
+
   return (
     <section className="exec-gate exec-gov" aria-label={`Gate R2 review ${approvalId}`} data-hifi-exact="gate-r2-1b">
       <div className="exec-gov-head">
@@ -263,8 +270,8 @@ export function GateR2Review({
         <h1 className="exec-gov-h1">Operational Readiness <span className="exec-gov-dim">—</span> {subject}</h1>
         {status === "stale" ? <span className="exec-gov-chip" data-fill="bad">STALE</span> : null}
         {status === "partial" ? <span className="exec-gov-chip" data-fill="warn">PARTIAL</span> : null}
-        <span className="exec-gov-wf">WF 1b</span>
       </div>
+      <GateStepper current="r2" done={r1State === "APPROVED" || r1State === "APPROVED_WITH_CONDITION" ? ["report", "rc", "r1"] : releaseCandidate ? ["report", "rc"] : []} />
       <div className="exec-gov-metaline">
         <span className="exec-gov-chip" data-fill={r1State === "APPROVED" || r1State === "APPROVED_WITH_CONDITION" ? "good" : "bad"}>
           R1 {r1State}
@@ -287,7 +294,6 @@ export function GateR2Review({
           </span>
         ) : null}
         <span>policy {policyVersion}</span>
-        <span data-tone={selfApproval ? "bad" : "warn"}>{sodLine}</span>
         <span className="exec-gov-meta">
           R1 evidence {r1Digest ? shortDigest(r1Digest) : <span className="exec-gate-unverified">not published</span>}
         </span>
@@ -296,13 +302,25 @@ export function GateR2Review({
           {r1Expiry ?? <span className="exec-gate-unverified">not published</span>}
           {r1DecidedBy ? ` · decided by ${r1DecidedBy}${r1DecidedAt ? ` ${r1DecidedAt}` : ""}` : ""}
         </span>
-        <span className="exec-gov-spacer" />
-        <span className="exec-gov-meta">
-          PENDING {quorumMet}/{quorumRequired}
-          {slaRemaining !== null ? ` · SLA ${slaRemaining}h remaining` : ""}
-          {capitalEnvelope?.asOf ? ` · preview as_of ${utcStamp(capitalEnvelope.asOf)}` : ""}
-        </span>
       </div>
+      <GateVerdict
+        tone={locked && conditionLocked ? "bad" : "mute"}
+        headline={
+          blockedReason
+            ? `R1 approval is ${r1State.toLowerCase().replace(/_/g, " ")} — this gate is locked`
+            : locked && conditionLocked
+              ? "You cannot approve this now"
+              : "Nothing blocks your decision — review the readiness below"
+        }
+        detail={null}
+        facts={[
+          <span data-tone={selfApproval ? "bad" : "good"}>{sodLine}</span>,
+          `your decision is 1 of ${quorumRequired} required (${quorumMet} so far)`,
+          slaRemaining !== null ? `SLA ${slaRemaining}h remaining` : null,
+          capitalEnvelope?.asOf ? `capital preview as_of ${utcStamp(capitalEnvelope.asOf)}` : null,
+          breach ? <span data-tone="bad">capital limit breached</span> : null,
+        ].filter((fact) => fact !== null)}
+      />
       {blockedReason ? (
         <div className="exec-gate-banner exec-gate-blocking" role="status">
           <strong className="exec-gate-blocking-lead">Blocked — R1 approval {r1State.toLowerCase().replace(/_/g, " ")}</strong>{" "}
@@ -320,12 +338,7 @@ export function GateR2Review({
         </div>
       ) : null}
       <div className="exec-gov-grid2">
-        {fitPanel ?? (
-          <div className="exec-gov-panel">
-            <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">Portfolio fit</span></div>
-            <PanelState status="unavailable" reason="portfolio_fit is not published on governance.r2-review.v1 yet (BR-EX-67). Nothing here estimates it client-side." />
-          </div>
-        )}
+        {fitPanel ?? null}
         {readiness.map((group) => (
           <div className="exec-gov-panel" key={group.title}>
             <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">{group.title}</span></div>
@@ -344,18 +357,9 @@ export function GateR2Review({
         ))}
         {readiness.length === 0 ? <PanelState status="empty" reason="No readiness groups were published." /> : null}
       </div>
-      {criteriaPanel ?? (
-        <div className="exec-gov-panel">
-          <div className="exec-gov-panelhead">
-            <span className="exec-gov-paneltitle">Gate criteria — policy vs evidence</span>
-            <span className="exec-gate-policychip" title="The versioned gate policy ships with BR-EX-67.">gate policy not published · BR-EX-67</span>
-          </div>
-          <PanelState status="unavailable" reason="gate_criteria are POLICY DATA computed server-side and are not published yet (BR-EX-67). The browser never re-derives a verdict." />
-        </div>
-      )}
-      {stageChips ?? (
-        <p className="exec-role-meta">stage_eligibility is not published yet (BR-EX-67) — no chip is invented for it.</p>
-      )}
+      {criteriaPanel ?? null}
+      {stageChips ?? null}
+      <GateAbsences items={absences} />
       <div className="exec-gov-grid2" data-ratio="1.35">
         {capital.length > 0 ? (
           <div className="exec-preview-panel exec-gov-inverse">
@@ -474,40 +478,23 @@ export function GateR2Review({
         }
         trail={trail}
         actions={
-          <>
-            <button
-              type="button"
-              className="exec-role-control exec-btn-ghost"
-              disabled={requestChangesLocked}
-              title={
-                !serverAllowsRequestChanges || !onRequestChanges
-                  ? REQUEST_CHANGES_DENIED_REASON
-                  : !noteReady
-                    ? REQUEST_CHANGES_NOTE_REASON
-                    : undefined
-              }
-              onClick={onRequestChanges}
-            >
-              Request changes
-            </button>
-            <button type="button" className="exec-role-control exec-btn-ghost" disabled={denyLocked}
-              title={denyLocked ? (denyReasons.join(" · ") || DECISION_CLOSED) : undefined} onClick={onDeny}>
-              Deny
-            </button>
-            <button
-              type="button"
-              className="exec-role-control exec-btn-ghost"
-              disabled={conditionLocked || (conditions?.length ?? 0) === 0}
-              title={(conditions?.length ?? 0) === 0 ? "Attach at least one condition first — this decision carries nothing without one" : undefined}
-              onClick={onRequestCondition}
-            >
-              Approve with condition
-            </button>
-            <button type="button" className="exec-role-control exec-btn-apply" disabled={locked}
-              title={locked ? (approveReasons.join(" · ") || DECISION_CLOSED) : undefined} onClick={onApprove}>
-              Approve
-            </button>
-          </>
+          <GateDecisionActions
+            conditionCount={conditions?.length ?? 0}
+            approve={{ label: "Approve", locked, title: locked ? (approveReasons.join(" · ") || DECISION_CLOSED) : undefined, onClick: onApprove }}
+            condition={{
+              label: "Approve with condition",
+              locked: conditionLocked || (conditions?.length ?? 0) === 0,
+              title: (conditions?.length ?? 0) === 0 ? "Attach at least one condition first — this decision carries nothing without one" : undefined,
+              onClick: onRequestCondition,
+            }}
+            deny={{ label: "Deny", locked: denyLocked, title: denyLocked ? (denyReasons.join(" · ") || DECISION_CLOSED) : undefined, onClick: onDeny }}
+            requestChanges={{
+              label: "Request changes",
+              locked: requestChangesLocked,
+              title: !serverAllowsRequestChanges || !onRequestChanges ? REQUEST_CHANGES_DENIED_REASON : !noteReady ? REQUEST_CHANGES_NOTE_REASON : undefined,
+              onClick: onRequestChanges,
+            }}
+          />
         }
       />
     </section>

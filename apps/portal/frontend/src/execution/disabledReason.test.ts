@@ -96,7 +96,7 @@ const STRUCTURAL: Readonly<Record<string, string>> = {
   "execution/lab/adminCliDemo.tsx|disabled": "fixture lab, not a product route",
   "features/runs/CancelRunButton.tsx|disabled={cancel.pending}": "cancel is disabled only while its own request is in flight",
   "auth/LoginScreen.tsx|disabled={submitting}": "submit greyed while submitting; the label itself changes to 'Signing in…'",
-  "execution/screens/ApprovalInbox.tsx|disabled={status === \"loading\" || status === \"denied\" || status === \"unavailable\"}": "filter chip, not a mutation; inert only while the read is loading, denied or unavailable — the state panel beside it carries the reason",
+  "execution/screens/ApprovalInbox.tsx|disabled={filtersDisabled}": "filter chip, not a mutation; inert only while the read is loading, denied or unavailable — the state panel beside it carries the reason",
   "execution/screens/ApprovalInbox.tsx|disabled={!onLoadOlderDecided}": "pagination into decided history",
   "execution/screens/profileContainers.tsx|disabled={!prevCursor}": "pagination: no previous cursor",
   "execution/screens/profileContainers.tsx|disabled={!nextCursor}": "pagination: no next cursor",

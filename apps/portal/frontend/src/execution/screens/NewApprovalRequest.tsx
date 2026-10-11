@@ -18,6 +18,7 @@ import { useRef, useState } from "react";
 
 import type { ApprovalCreateOutcome, ExecutionApi } from "../api/ports";
 import { ExecutionDecisionBar } from "../components/decisionBar";
+import { useRunSuggestions, type RunOption } from "../runSuggestions";
 
 const MIN_SUMMARY = 8;
 
@@ -58,6 +59,9 @@ export function NewApprovalRequestScreen({
   onReset,
   alphaOptions = [],
   alphaOptionsReason = null,
+  runOptions = [],
+  runOptionsReason = null,
+  initial,
 }: {
   /** The container's port call. The screen never touches fetch. */
   onSubmit: (fields: { alphaId: string; evidenceRunId: string; methodologyClaimId: string; summary: string }) => void;
@@ -68,10 +72,15 @@ export function NewApprovalRequestScreen({
   alphaOptions?: readonly ApprovalAlphaOption[];
   /** Why the list is empty, in the server's words, shown where the list would have been. */
   alphaOptionsReason?: string | null;
+  /** Completed Research runs the reader may pick; picking one fills the alpha and the run together. */
+  runOptions?: readonly RunOption[];
+  runOptionsReason?: string | null;
+  /** Ids a link from Research already named (`?alpha=&run=&claim=`). */
+  initial?: { alphaId?: string; runId?: string; claimId?: string };
 }) {
-  const [alphaId, setAlphaId] = useState<string>("");
-  const [runId, setRunId] = useState<string>("");
-  const [claimId, setClaimId] = useState<string>("");
+  const [alphaId, setAlphaId] = useState<string>(initial?.alphaId ?? "");
+  const [runId, setRunId] = useState<string>(initial?.runId ?? "");
+  const [claimId, setClaimId] = useState<string>(initial?.claimId ?? "");
   const [summary, setSummary] = useState("");
 
   const alpha = alphaOptions.find((a) => a.id === alphaId) ?? null;
@@ -98,6 +107,10 @@ export function NewApprovalRequestScreen({
   return (
     <section className="exec-gate exec-gov" aria-label="New approval request" data-hifi-exact="new-request-entry">
       <div className="exec-gate-kicker">LOOP ENTRY · Research → Gate R1</div>
+      <p className="exec-gate-note" role="note" data-entry-hint>
+        The usual way in is from Research: publish a Release Candidate from a frozen run and its R1 request is created with the evidence pack attached.
+        Use this form for a request that did not come from a Release Candidate. <a href="/research/quantbt/runs">Open the Run Library</a>
+      </p>
       <div className="exec-gov-head">
         <h1 className="exec-gov-h1">New approval request <span className="exec-gov-dim">—</span> evidence first, capital later</h1>
       </div>
@@ -163,7 +176,30 @@ export function NewApprovalRequestScreen({
               </span>
               <span className="exec-gov-k">evidence run</span>
               <span className="exec-gov-v">
-                {/* No candidate list is published for this; the id is typed and the POST validates it. */}
+                {runOptions.length > 0 ? (
+                  <select
+                    className="exec-role-control"
+                    value={runOptions.some((o) => o.runId === runId) ? runId : ""}
+                    aria-label="Pick a completed run from Research"
+                    disabled={submitting}
+                    onChange={(e) => {
+                      const picked = runOptions.find((o) => o.runId === e.target.value);
+                      if (!picked) return;
+                      setRunId(picked.runId);
+                      setAlphaId(picked.alphaId);
+                    }}
+                  >
+                    <option value="">— pick a completed run —</option>
+                    {runOptions.map((o) => (
+                      <option key={o.runId} value={o.runId}>
+                        {`${o.alphaName ?? o.alphaId} · ${o.runId.slice(0, 18)}${o.createdMs ? ` · ${new Date(o.createdMs).toISOString().slice(0, 10)}` : ""}`}
+                      </option>
+                    ))}
+                  </select>
+                ) : runOptionsReason ? (
+                  <span className="exec-gate-note">{runOptionsReason}</span>
+                ) : null}
+                {/* The id stays editable: the POST validates the pair, the list only saves a copy-paste. */}
                 <input className="exec-role-control" value={runId} onChange={(e) => setRunId(e.target.value)} aria-label="Evidence run (from the run library)" disabled={submitting}
                   placeholder="type the id" />
               </span>
@@ -300,6 +336,16 @@ export function NewApprovalRequestScreen({
  * the payload is unchanged (so a retry replays), discarded on edit or reset.
  */
 export function NewApprovalRequestContainer({ api }: { api: ExecutionApi }) {
+  // Read once from the address bar: no router dependency, and a later edit of the form is never overwritten by the URL.
+  const [initial] = useState(() => {
+    const params = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search);
+    return {
+      alphaId: params.get("alpha") ?? undefined,
+      runId: params.get("run") ?? undefined,
+      claimId: params.get("claim") ?? undefined,
+    };
+  });
+  const suggestions = useRunSuggestions();
   const [outcome, setOutcome] = useState<ApprovalCreateOutcome | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const intent = useRef<{ payload: string; key: string } | null>(null);
@@ -309,6 +355,9 @@ export function NewApprovalRequestContainer({ api }: { api: ExecutionApi }) {
 
   return (
     <NewApprovalRequestScreen
+      initial={initial}
+      runOptions={suggestions.options}
+      runOptionsReason={suggestions.reason}
       outcome={outcome}
       submitting={submitting}
       onReset={() => {
