@@ -9164,3 +9164,21 @@ Verdict tối đa `CROSS_LOOP_PREVIEW_READY_FOR_BOBBY_REVIEW`; không owner visu
 acceptance, nguồn/Edge/SSE/command/livecapture, push/dev/main/stable/release.
 ActualStan absent→NOT_TESTED; downstreamcapture thiếu vẫn typed. Bobby review
 research-portal trước khi quyết phase/release tiếp; không tự mở scope mới.
+
+### Governance UX §56 — Optional backend source metadata (2026-10-11)
+
+Claude's request at [backend queue §56](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#56--governance-ux-consumer-two-optional-fields-so-r1-can-name-its-sources-and-the-new-request-entry-can-stop-typing-claims-claude-2026-10-11)
+implemented on `docs/research-loop-plan`, parent`b70d0559`; delivery is gated by
+one ordinary root-hook commit. [Receipt/handoff](./research_loop/evidence/P22/GOVERNANCE_UX_OPTIONAL_SOURCES_2026-10-11.md).
+
+Existing R1 checklist gets hash-bound `evidence_ref` or null+typed reason;
+existing Library gets the exact workspace/run-bound R1 intake claim ids and
+typed metadata absence. No fabricated Report link, grade/state or eligible claim;
+GET does not run the P22 bridge or change authorization. SQL join happens after
+the bounded page, in the existing fresh authorized read-only snapshot; migration
+045's existing SELECT grant suffices. No new route/migration, gate/verdict change,
+frontend design/edit, engine run, runtime rebuild, Edge/SSE/command activation,
+remote push, dev/main/stable/release. Backend71 and contract6 focused tests PASS;
+new real-PG regressions run in the mandatory normal hook. Claude consumes generated
+types and preserves workspace on navigation, then supplies affected browser receipt.
+This is not a P24/product/owner acceptance or release amendment.

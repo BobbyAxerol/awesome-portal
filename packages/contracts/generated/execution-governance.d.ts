@@ -659,6 +659,29 @@ export interface components {
             complete: boolean;
             entries: components["schemas"]["EvidenceManifestEntry"][];
         };
+        /** @description Hash-bound Research navigation only, not access authority. Preserve the approval workspace when following run_id; target readers enforce authorization again. id is the recorded artifact identity, or run_id for RUN. */
+        R1EvidenceReference: {
+            /** @enum {unknown} */
+            kind: "REPORT" | "RUN" | "FREEZE" | "AUDIT";
+            id: string;
+            run_id: string;
+        };
+        /** @description Existing finding with optional additive hash-bound source metadata. No new verdict or gate ordering; historical responses may omit both source fields. */
+        R1ChecklistItem: {
+            finding_id?: components["schemas"]["$defs-Identifier"];
+            ordinal?: number;
+            label?: string;
+            outcome?: string;
+            suggestion?: string | null;
+            blocking?: boolean;
+            policy_version?: string;
+            formula_version?: string;
+            basis_hashes?: components["schemas"]["Hash"][];
+            evaluated_at?: components["schemas"]["Timestamp"];
+            evidence_ref?: components["schemas"]["R1EvidenceReference"] | null;
+            /** @enum {unknown} */
+            evidence_ref_reason?: null | "R1_FINDING_SOURCE_NOT_RECORDED" | "R1_FINDING_EVIDENCE_NOT_IN_MANIFEST" | "R1_FINDING_MULTIPLE_EVIDENCE_SOURCES" | "R1_EVIDENCE_SOURCE_NOT_LINKABLE";
+        } & (unknown & unknown);
         R1ReviewResponse: {
             /** @constant */
             schema_version: "governance.r1-review.v1";
@@ -673,7 +696,7 @@ export interface components {
                 eligibility: components["schemas"]["Eligibility"];
                 known_limitations: components["schemas"]["KnownLimitation"][];
                 evidence_manifest: components["schemas"]["EvidenceManifest"];
-                checklist: Record<string, never>[];
+                checklist: components["schemas"]["R1ChecklistItem"][];
                 decisions: Record<string, never>[];
                 linked_panels: Record<string, never>[];
             };

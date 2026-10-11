@@ -107,6 +107,14 @@ const FieldAvailabilitySchema = z.object({
   reason_code: z.string().min(1).max(160).nullable(),
 }).strict();
 
+export const ResearchRunMethodologyClaimSchema = z.object({
+  id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,190}$/),
+  // R1 intake records ids, not a per-id association to the run certificate.
+  grade: z.enum(["A", "B", "C", "D"]).nullable(),
+  state: z.enum(["FORECAST", "NOT_ISSUED", "ISSUED"]).nullable(),
+  metadata_availability: FieldAvailabilitySchema,
+}).strict();
+
 const StageCellSchema = z.object({
   key: z.enum(["S1", "S2", "S3", "S4", "S5"]),
   state: z.enum(["done", "cap", "blocked", "run", "pend"]),
@@ -193,6 +201,10 @@ const ComparisonSchema = z.object({
 }).strict();
 
 export const ResearchRunLibraryItemSchema = z.object({
+  /** Exact current R1-intake ids, not permission or a future acceptance promise. */
+  eligible_methodology_claim_ids: z.array(ResearchRunMethodologyClaimSchema.shape.id).max(64).nullable().optional(),
+  methodology_claims: z.array(ResearchRunMethodologyClaimSchema).max(64).nullable().optional(),
+  methodology_claims_availability: FieldAvailabilitySchema.optional(),
   analytics_all_time: ResearchAnalyticsAllTimeSchema.optional(),
   enriched_analysis_availability: ResearchEnrichedAvailabilitySchema.optional(),
   run_id: ResearchRunIdSchema,

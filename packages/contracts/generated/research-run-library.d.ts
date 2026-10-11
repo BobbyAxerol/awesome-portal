@@ -815,6 +815,14 @@ export interface components {
             parent_run_id: components["schemas"]["RunId"] | null;
             technical_retry_count: number;
         };
+        RunMethodologyClaim: {
+            id: string;
+            /** @enum {unknown} */
+            grade: "A" | "B" | "C" | "D" | null;
+            /** @enum {unknown} */
+            state: "FORECAST" | "NOT_ISSUED" | "ISSUED" | null;
+            metadata_availability: components["schemas"]["Availability"];
+        };
         RunLibraryItem: {
             enriched_analysis_availability?: components["schemas"]["EnrichedAnalysisAvailability"];
             analytics_all_time?: components["schemas"]["EnrichedAnalysisLibrarySummary"];
@@ -884,6 +892,11 @@ export interface components {
             /** @description The persisted P13 projection revision the COMPLETED stats and sparkline come from. */
             evidence_revision: string | null;
             source_updated_at_utc_ms: components["schemas"]["UtcMilliseconds"];
+            /** @description Optional current ids recorded in the workspace/run-bound R1 intake read model. Not caller permission or a promise of later acceptance; POST rechecks source and authority. null means not published; [] means a recorded empty list. */
+            eligible_methodology_claim_ids?: string[] | null;
+            /** @description One-for-one with eligible_methodology_claim_ids. Grade/state remain null with typed metadata absence when the R1 source stores only ids; the run-level certificate is not assigned to each id. */
+            methodology_claims?: components["schemas"]["RunMethodologyClaim"][] | null;
+            methodology_claims_availability?: components["schemas"]["Availability"];
         };
         RunLibraryResponse: {
             /** @constant */

@@ -1,0 +1,32 @@
+{
+  "linked_checklist": {
+    "finding_id": "finding_1",
+    "ordinal": 0,
+    "label": "Pinned run evidence",
+    "outcome": "pass",
+    "evidence_ref": { "kind": "RUN", "id": "run_5512", "run_id": "run_5512" },
+    "evidence_ref_reason": null
+  },
+  "absent_checklist": {
+    "finding_id": "finding_2",
+    "evidence_ref": null,
+    "evidence_ref_reason": "R1_FINDING_SOURCE_NOT_RECORDED"
+  },
+  "claims": {
+    "eligible_methodology_claim_ids": ["claim_1"],
+    "methodology_claims": [{
+      "id": "claim_1", "grade": null, "state": null,
+      "metadata_availability": { "state": "NOT_PUBLISHED", "reason_code": "R1_CLAIM_GRADE_STATE_NOT_RECORDED" }
+    }],
+    "methodology_claims_availability": { "state": "AVAILABLE", "reason_code": null }
+  },
+  "absent_claims": {
+    "eligible_methodology_claim_ids": null,
+    "methodology_claims": null,
+    "methodology_claims_availability": { "state": "NOT_PUBLISHED", "reason_code": "R1_INTAKE_RUN_NOT_PUBLISHED" }
+  },
+  "empty_claims": {
+    "eligible_methodology_claim_ids": [], "methodology_claims": [],
+    "methodology_claims_availability": { "state": "AVAILABLE", "reason_code": null }
+  }
+}

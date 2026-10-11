@@ -3232,3 +3232,41 @@ Context: the Governance screens (Inbox, Gate R1/R2/Live, New request) were resha
 | 2 | A read that lists methodology claims for a run (id, grade, state), e.g. an `eligible_methodology_claim_ids` array on the Run Library item (it exists today only on a sealed RC publication) | "New approval request" offers the completed-run picker already (Run Library); the claim is still typed | Typed id, validated by the POST (typed 422) |
 
 Both are additive and nullable; no Execution-side change. Ask Bobby before re-ordering gates or changing the R1/R2 verdict vocabulary.
+
+#### Codex delivery plan — 2026-10-11
+
+- Keep both existing reads and authorization: R1 checklist references come only
+  from hash-matched entries in the verified immutable evidence manifest; ambiguous,
+  unsupported or unrecorded sources return a null reference with a typed reason.
+  Do not infer a Report link from a checklist label or change gate/verdict order.
+- Library reads the exact workspace/run-bound `run_read_models.methodology_claim_ids`
+  that R1 POST validates, in the existing bounded authorized page snapshot. No
+  bridge materialization, writes, source refresh, new endpoint or authority cache
+  on GET. Missing source stays typed absent; an authoritative empty list stays empty.
+  Per-id grade/state not associated by that source stay null with a typed reason;
+  the existing run-level certificate is not reassigned to each claim.
+- Publish additive Zod/schema/OpenAPI/generated types, canonical examples and
+  focused mapping/contract/real-PostgreSQL regression tests. One normal commit
+  hook after the coherent slice; no engine/load/DR rerun or runtime rebuild for
+  this metadata-only change. Handoff explains workspace-preserving navigation
+  and that R1 POST remains the final eligibility/permission enforcer.
+- Scope excludes frontend design/copy, Edge/TS, SSE, commands, profiles,
+  production/dev/main, remote push and release. Status: `IN_PROGRESS`.
+
+#### Codex backend delivery — 2026-10-11
+
+Both additive contracts implemented; delivery requires the ordinary commit hook.
+[Receipt and Claude handoff](./evidence/P22/GOVERNANCE_UX_OPTIONAL_SOURCES_2026-10-11.md)
+contains the generated names, examples, source/absence semantics and test boundary.
+Checklist exposes `R1ChecklistItem.evidence_ref`/`evidence_ref_reason`; Library
+exposes `RunLibraryItem.eligible_methodology_claim_ids`, `methodology_claims` and
+`methodology_claims_availability`. No new route, migration, frontend edit or rollout.
+Known ids are available; per-id grade/state absent in the authoritative intake
+model stay null with `R1_CLAIM_GRADE_STATE_NOT_RECORDED`, not a fabricated grade.
+Missing intake stays null, recorded empty stays `[]`; GET never grants eligibility.
+Focused backend71/71 and contract6/6 PASS. The delivery commit containing this
+section is gated by normal root-hook security/real-PG verification. Claude's
+consumer/preview/browser acceptance remains separate and is not declared PASS.
+Hook attempt1 caught a new PG seed missing required artifact pins; corrected
+only the seed, with the exact PG case retaken PASS. Existing DB constraint and
+backend authority stay unchanged; failed log retained, ordinary-hook retry required.

@@ -154,6 +154,53 @@ function row(overrides: Partial<RunLibraryRow> = {}): RunLibraryRow {
   };
 }
 
+describe("§56 Library current R1 claim facts", () => {
+  const service = () => new ResearchRunLibraryService({} as never, config);
+  const source = (): Partial<RunLibraryRow> => ({
+    governance_run_id: "rrun_unit", governance_run_status: "COMPLETED",
+    governance_alpha_id: "alpha_unit", governance_methodology_claim_ids: ["claim_1", "claim_2", "claim_1"],
+  });
+  it("publishes exact ids without assigning the run certificate to individual claims", () => {
+    const item = service().mapRow(row(source()));
+    expect(item.eligible_methodology_claim_ids).toEqual(["claim_1", "claim_2"]);
+    expect(item.methodology_claims).toEqual(["claim_1", "claim_2"].map(id => ({
+      id, grade: null, state: null,
+      metadata_availability: { state: "NOT_PUBLISHED", reason_code: "R1_CLAIM_GRADE_STATE_NOT_RECORDED" },
+    })));
+    expect(item.methodology_claims_availability).toEqual({ state: "AVAILABLE", reason_code: null });
+  });
+  it("distinguishes an authoritative empty list from absent intake, never writes on GET", () => {
+    expect(service().mapRow(row({ ...source(), governance_methodology_claim_ids: [] })))
+      .toMatchObject({ eligible_methodology_claim_ids: [], methodology_claims: [], methodology_claims_availability: { state: "AVAILABLE" } });
+    expect(service().mapRow(row())).toMatchObject({
+      eligible_methodology_claim_ids: null, methodology_claims: null,
+      methodology_claims_availability: { state: "NOT_PUBLISHED", reason_code: "R1_INTAKE_RUN_NOT_PUBLISHED" },
+    });
+  });
+  it.each([
+    [{ governance_run_id: "run_other" }, "R1_INTAKE_RUN_BINDING_MISMATCH"],
+    [{ alpha_id: "alpha_other" }, "R1_INTAKE_RUN_BINDING_MISMATCH"],
+    [{ governance_run_status: "RUNNING" }, "R1_INTAKE_RUN_NOT_COMPLETED"],
+    [{ effective_status: "FAILED" }, "R1_INTAKE_RUN_NOT_COMPLETED"],
+  ] as const)("preserves typed absence when current intake is not eligible %j", (override, reason) => {
+    expect(service().mapRow(row({ ...source(), ...override }))).toMatchObject({
+      eligible_methodology_claim_ids: null, methodology_claims: null,
+      methodology_claims_availability: { state: "NOT_PUBLISHED", reason_code: reason },
+    });
+  });
+  it.each([null, ["../private"], Array(65).fill("claim_1"), "claim_1"])("fails closed on malformed/bound-breaking source ids %j", ids => {
+    expect(() => service().mapRow(row({ ...source(), governance_methodology_claim_ids: ids })))
+      .toThrow("Stored R1 claim identifiers are incompatible.");
+  });
+  it("memoizes only exact current bytes, so changed ids invalidate pure mapping", () => {
+    const mapper = service() as any;
+    const first = mapper.mapPageRow(freezeReadValue(row(source())));
+    const changed = mapper.mapPageRow(freezeReadValue(row({ ...source(), governance_methodology_claim_ids: ["claim_new"] })));
+    expect(changed).not.toBe(first);
+    expect(changed.eligible_methodology_claim_ids).toEqual(["claim_new"]);
+  });
+});
+
 function page(rows: RunLibraryRow[]) {
   return {
     rows,

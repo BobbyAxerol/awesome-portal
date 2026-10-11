@@ -21,6 +21,24 @@ export const R1_DECISIONS = [
   "DENY",
   "REQUEST_CHANGES",
 ] as const;
+/** Additive presentation pointers; they never grant access or alter R1 findings. */
+export const R1EvidenceReferenceSchema = z.object({
+  kind: z.enum(["REPORT", "RUN", "FREEZE", "AUDIT"]),
+  id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/),
+  run_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/),
+}).strict();
+export const R1EvidenceReferenceFieldsSchema = z.object({
+  evidence_ref: R1EvidenceReferenceSchema.nullable(),
+  evidence_ref_reason: z.enum([
+    "R1_FINDING_SOURCE_NOT_RECORDED",
+    "R1_FINDING_EVIDENCE_NOT_IN_MANIFEST",
+    "R1_FINDING_MULTIPLE_EVIDENCE_SOURCES",
+    "R1_EVIDENCE_SOURCE_NOT_LINKABLE",
+  ]).nullable(),
+}).strict().refine((value) => (value.evidence_ref === null) !== (value.evidence_ref_reason === null), {
+  message: "A checklist reference is either linked or explicitly absent.",
+});
+export type R1EvidenceReferenceFields = z.infer<typeof R1EvidenceReferenceFieldsSchema>;
 export const PAPER_EXIT_DECISIONS = ["PROMOTE", "EXTEND_OBSERVATION", "REJECT"] as const;
 
 export type ApprovalGate = (typeof APPROVAL_GATES)[number];

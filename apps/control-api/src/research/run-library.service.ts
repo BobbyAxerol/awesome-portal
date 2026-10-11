@@ -20,6 +20,7 @@ import { enrichedAvailability } from "./enriched-analysis.contract";
 import {
   ResearchRunIdSchema,
   ResearchRunLibraryItemSchema,
+  ResearchRunMethodologyClaimSchema,
   ResearchRunLibraryResponseSchema,
   ResearchRunLibrarySparklineResponseSchema,
   type ResearchRunLibraryItem,
@@ -851,6 +852,7 @@ export class ResearchRunLibraryService {
     const fixedAnalytics = fixedInput == null ? null : ResearchRetainedAnalyticsV2Schema.safeParse(fixedInput);
     const analyticsV2 = retained?.analyticsV2 ?? (fixedAnalytics?.success ? fixedAnalytics.data : null);
     const item = {
+      ...this.methodologyClaims(row),
       ...(enriched ? { analytics_all_time: enriched.library_summary } : {}),
       enriched_analysis_availability: enrichedAvailability(enriched, Boolean(retained || row.evidence_revision || row.evidence_projection)),
       run_id: row.run_id,
@@ -934,6 +936,36 @@ export class ResearchRunLibraryService {
 
   private requestedSpec(value: RunLibraryRow["requested_spec"]): ResearchRequestedSpec | null {
     return this.parseRequestedSpec(value);
+  }
+
+  private methodologyClaims(row: RunLibraryRow) {
+    const absent = (reason: string) => ({
+      eligible_methodology_claim_ids: null, methodology_claims: null,
+      methodology_claims_availability: unavailable("NOT_PUBLISHED", reason),
+    });
+    if (row.governance_run_id == null) return absent("R1_INTAKE_RUN_NOT_PUBLISHED");
+    if (row.governance_run_id !== row.run_id || !row.governance_alpha_id
+        || (row.alpha_id !== null && row.alpha_id !== row.governance_alpha_id)) {
+      return absent("R1_INTAKE_RUN_BINDING_MISMATCH");
+    }
+    if (safeStatus(row.effective_status) !== "COMPLETED"
+        || !["COMPLETED", "SUCCEEDED", "COMPLETE"].includes(row.governance_run_status ?? "")) {
+      return absent("R1_INTAKE_RUN_NOT_COMPLETED");
+    }
+    const parsed = ResearchRunMethodologyClaimSchema.shape.id.array().max(64)
+      .safeParse(row.governance_methodology_claim_ids);
+    if (!parsed.success) {
+      throw new ResearchRunLibraryError("RESEARCH_RUN_LIBRARY_UNAVAILABLE", "Stored R1 claim identifiers are incompatible.", 503);
+    }
+    const ids = [...new Set(parsed.data)];
+    return {
+      eligible_methodology_claim_ids: ids,
+      methodology_claims: ids.map((id) => ({
+        id, grade: null, state: null,
+        metadata_availability: unavailable("NOT_PUBLISHED", "R1_CLAIM_GRADE_STATE_NOT_RECORDED"),
+      })),
+      methodology_claims_availability: available(),
+    };
   }
 
   private progress(value: RunLibraryRow["progress_snapshot"]): ResearchProgressSnapshot | null {

@@ -104,12 +104,51 @@
             "eligibility": { "$ref": "#/$defs/Eligibility" },
             "known_limitations": { "type": "array", "maxItems": 64, "items": { "$ref": "#/$defs/KnownLimitation" } },
             "evidence_manifest": { "$ref": "#/$defs/EvidenceManifest" },
-            "checklist": { "type": "array", "maxItems": 128, "items": { "type": "object" } },
+            "checklist": { "type": "array", "maxItems": 128, "items": { "$ref": "#/$defs/R1ChecklistItem" } },
             "decisions": { "type": "array", "maxItems": 8, "items": { "type": "object" } },
             "linked_panels": { "type": "array", "maxItems": 8, "items": { "type": "object" } }
           }
         }
       }
+    },
+    "R1EvidenceReference": {
+      "type": "object", "additionalProperties": false,
+      "description": "Hash-bound Research navigation only, not access authority. Preserve the approval workspace when following run_id; target readers enforce authorization again. id is the recorded artifact identity, or run_id for RUN.",
+      "required": ["kind", "id", "run_id"],
+      "properties": {
+        "kind": { "enum": ["REPORT", "RUN", "FREEZE", "AUDIT"] },
+        "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$" },
+        "run_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" }
+      }
+    },
+    "R1ChecklistItem": {
+      "type": "object",
+      "description": "Existing finding with optional additive hash-bound source metadata. No new verdict or gate ordering; historical responses may omit both source fields.",
+      "properties": {
+        "finding_id": { "$ref": "#/$defs/Identifier" },
+        "ordinal": { "type": "integer", "minimum": 0 },
+        "label": { "type": "string" },
+        "outcome": { "type": "string" },
+        "suggestion": { "type": ["string", "null"] },
+        "blocking": { "type": "boolean" },
+        "policy_version": { "type": "string" },
+        "formula_version": { "type": "string" },
+        "basis_hashes": { "type": "array", "items": { "$ref": "#/$defs/Hash" } },
+        "evaluated_at": { "$ref": "#/$defs/Timestamp" },
+        "evidence_ref": { "oneOf": [{ "$ref": "#/$defs/R1EvidenceReference" }, { "type": "null" }] },
+        "evidence_ref_reason": { "enum": [null, "R1_FINDING_SOURCE_NOT_RECORDED", "R1_FINDING_EVIDENCE_NOT_IN_MANIFEST", "R1_FINDING_MULTIPLE_EVIDENCE_SOURCES", "R1_EVIDENCE_SOURCE_NOT_LINKABLE"] }
+      },
+      "dependentRequired": { "evidence_ref": ["evidence_ref_reason"], "evidence_ref_reason": ["evidence_ref"] },
+      "allOf": [
+        {
+          "if": { "required": ["evidence_ref"], "properties": { "evidence_ref": { "type": "null" } } },
+          "then": { "properties": { "evidence_ref_reason": { "type": "string" } } }
+        },
+        {
+          "if": { "required": ["evidence_ref"], "properties": { "evidence_ref": { "type": "object" } } },
+          "then": { "properties": { "evidence_ref_reason": { "type": "null" } } }
+        }
+      ]
     },
     "Approval": {
       "type": "object", "additionalProperties": false,

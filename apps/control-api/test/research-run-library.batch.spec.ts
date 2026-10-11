@@ -80,6 +80,10 @@ describe("P12 bounded in-flight page coalescing", () => {
     expect(statements.filter((sql) => sql.includes("AS filtered_rows"))).toHaveLength(1);
     expect(release).toHaveBeenCalledTimes(1);
     const pageSql = statements.find((sql) => sql.includes("WITH library_page AS MATERIALIZED"))!;
+    expect(pageSql).toContain("LEFT JOIN public.run_read_models governance_run");
+    expect(pageSql).toContain("governance_run.workspace_id = library.workspace_id");
+    expect(pageSql).toContain("governance_run.run_id = library.run_id");
+    expect(pageSql.indexOf("LIMIT")).toBeLessThan(pageSql.indexOf("LEFT JOIN public.run_read_models governance_run"));
     expect(pageSql).not.toContain("current_setting('research.actor_user_id'");
     expect(pageSql).not.toContain("rc_draft ON true");
     expect(pageSql).toContain("NULL::text AS rc_draft_id");

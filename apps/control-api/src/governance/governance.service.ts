@@ -1,4 +1,5 @@
 import { ResearchRunSyncService } from "../facade/run-sync.service";
+import { checklistEvidenceReference } from "./evidence-reference";
 import { createHash } from "crypto";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { constantTimeEqual } from "../auth/argon";
@@ -564,6 +565,7 @@ export class GovernanceService {
           })),
         },
         checklist: findings.map((item) => ({
+          ...checklistEvidenceReference(item.basisHashes, evidence),
           finding_id: item.findingId,
           ordinal: item.ordinal,
           label: item.label,

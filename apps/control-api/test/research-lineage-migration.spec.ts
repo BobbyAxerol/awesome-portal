@@ -237,6 +237,33 @@ describe("P19 disposable PostgreSQL migration and retained-lineage proof", () =>
     }
   });
 
+  it("§56 reads only current workspace-bound R1 ids under the existing read-only runtime role", async () => {
+    const database = new Pool({ connectionString: databaseUrlFor(databaseName) });
+    try {
+      const row = await seed(database, "-r1-claims", { ready: true });
+      const foreign = await seed(database, "-r1-foreign", { ready: true });
+      const repo = new ResearchRunLibraryRepository(database);
+      const scope = { workspaceId: row.workspaceId, actorUserId: row.userId };
+      const query = ResearchRunLibraryQuerySchema.parse({ ids: row.runId });
+      const read = async () => (await repo.list(scope, query, null)).rows[0];
+      // A matching run_id in another workspace cannot supply claim authority.
+      await database.query(`INSERT INTO run_read_models
+        (run_id,workspace_id,owner_user_id,status,strategy_id,methodology_claim_ids,
+         artifact_sha256,artifact_schema_version,artifact_creator_user_id)
+        VALUES ($1,$2,$3,'COMPLETED',$4,ARRAY['claim_foreign'],$5,'quant.run-artifact.v1',$3)`,
+      [row.runId, foreign.workspaceId, foreign.userId, row.alphaId, `sha256:${digest}`]);
+      expect((await read()).governance_run_id).toBeNull();
+      await database.query(`UPDATE run_read_models SET workspace_id=$2,owner_user_id=$3,artifact_creator_user_id=$3,
+        methodology_claim_ids=ARRAY['claim_1'] WHERE run_id=$1`, [row.runId, row.workspaceId, row.userId]);
+      expect(await read()).toMatchObject({ governance_run_id: row.runId,
+        governance_alpha_id: row.alphaId, governance_run_status: "COMPLETED", governance_methodology_claim_ids: ["claim_1"] });
+      await database.query(`UPDATE run_read_models SET methodology_claim_ids=ARRAY['claim_2'] WHERE run_id=$1`, [row.runId]);
+      expect((await read()).governance_methodology_claim_ids).toEqual(["claim_2"]);
+      await database.query(`DELETE FROM workspace_members WHERE workspace_id=$1 AND user_id=$2`, [row.workspaceId, row.userId]);
+      await expect(read()).rejects.toMatchObject({ code: "RESEARCH_RUN_LIBRARY_FORBIDDEN", status: 403 });
+    } finally { await database.end(); }
+  });
+
   it("BR-S11-01 reads only source-writer-attested P22 approval/RC/run pins without Governance SELECT authority", async () => {
     const database = new Pool({ connectionString: databaseUrlFor(databaseName) });
     try {

@@ -38,6 +38,11 @@ export interface RunLibraryBoundary {
 }
 
 export interface RunLibraryRow {
+  /** Same-snapshot R1 intake source, joined after the bounded Library page. */
+  governance_run_id?: string | null;
+  governance_run_status?: string | null;
+  governance_alpha_id?: string | null;
+  governance_methodology_claim_ids?: unknown;
   enriched_analysis?: JsonColumn;
   enriched_digest?: string | null;
   workspace_id: string;
@@ -791,7 +796,10 @@ export class ResearchRunLibraryRepository {
    */
   /** Shared with the P19 lineage reader (W6b CG-P19-05), which reads the same rows in its own snapshot. */
   static pageJoins(includeActorDraft = true): string {
-    return `LEFT JOIN LATERAL (
+    return `LEFT JOIN public.run_read_models governance_run
+             ON governance_run.workspace_id = library.workspace_id
+            AND governance_run.run_id = library.run_id
+           LEFT JOIN LATERAL (
              SELECT enrichment.enriched,enrichment.enriched_digest
                FROM (SELECT library.workspace_id,library.run_id) wanted
                ${enrichedJoin("wanted.workspace_id", "wanted.run_id")}
@@ -902,6 +910,10 @@ export class ResearchRunLibraryRepository {
               library.progress_snapshot, library.progress_received_at, library.source_latest_sequence,
               library.retention_floor_sequence, library.job_state, library.current_worker_ordinal,
               library.alpha_filter_key, library.mode_key, library.job_terminal_reason,
+              governance_run.run_id AS governance_run_id,
+              governance_run.status AS governance_run_status,
+              governance_run.strategy_id AS governance_alpha_id,
+              governance_run.methodology_claim_ids AS governance_methodology_claim_ids,
               ${CREATED_AT_CURSOR_SQL} AS created_at_cursor,
               evidence.projection_revision AS evidence_revision,
               -- Verification still checks the entire current JSON/hash. Text

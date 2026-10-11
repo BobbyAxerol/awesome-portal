@@ -220,6 +220,7 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     quorumRequired?: number;
     blocker?: boolean;
     evidenceComplete?: boolean;
+    basisHashes?: string[];
   }) {
     const requester = input.requester ?? stan;
     const creator = input.creator ?? stan;
@@ -315,7 +316,7 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
          ($4, $2, 1, $5, $6, $7, $8,
           'approval.v3', 'capacity.v1', $3, now())`,
       [
-        `${input.approvalId}-finding-1`, input.approvalId, [HASH_A, HASH_B],
+        `${input.approvalId}-finding-1`, input.approvalId, input.basisHashes ?? [HASH_A, HASH_B],
         `${input.approvalId}-finding-2`,
         blocker ? "outer OOS policy failed" : "capacity evidence limited",
         blocker ? "FAIL" : "WATCH",
@@ -500,6 +501,8 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
       access_policy: "WORKSPACE_APPROVER",
     });
     expect(body.data.checklist.map((item: { outcome: string }) => item.outcome)).toEqual(["pass", "watch"]);
+    expect(body.data.checklist.every((item: { evidence_ref: unknown; evidence_ref_reason: string }) =>
+      item.evidence_ref === null && item.evidence_ref_reason === "R1_EVIDENCE_SOURCE_NOT_LINKABLE")).toBe(true);
     expect(body.data.known_limitations).toMatchObject([{
       limitation_id: "limit-ap-detail-1",
       kind: "restriction",
@@ -514,6 +517,19 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
           SET statement = 'Forbidden rewrite.'
         WHERE limitation_id = 'limit-ap-detail-1'`,
     )).rejects.toThrow(/append-only/i);
+  });
+
+  it("§56 links a real hash-bound R1 finding without rewriting evidence or eligibility", async () => {
+    const seeded = await seedApproval({ approvalId: "AP-SOURCE-REF", basisHashes: [HASH_A] });
+    const response = await inject(bobby,
+      `/api/v1/execution/governance/approvals/AP-SOURCE-REF/r1?workspace_id=${workspaceId}`);
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.data.approval.evidence_set_hash).toBe(seeded.manifestHash);
+    expect(body.data.checklist[0]).toMatchObject({
+      evidence_ref: { kind: "RUN", id: "run_5512", run_id: "run_5512" }, evidence_ref_reason: null, outcome: "pass",
+    });
+    expect(body.data.eligibility.can_approve).toBe(true);
   });
 
   it("closes REQUEST_CHANGES as one immutable attempt and exposes keyset approval history", async () => {
