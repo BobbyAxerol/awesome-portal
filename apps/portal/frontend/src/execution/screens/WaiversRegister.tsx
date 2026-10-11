@@ -198,8 +198,7 @@ export function WaiversRegisterScreen({
           <span className="exec-gov-chip" data-fill="warn" title={reason ?? "The source returned part of the register."}>PARTIAL</span>
         ) : null}
         <span className="exec-gov-meta">
-          governance.conditions-register.v1 · PORTAL_CONTROL · states computed server-side — this
-          screen renders them and never re-derives · a condition closes only by a decision
+          states are computed by the server and only shown here · a condition closes only by a decision
         </span>
       </div>
 
@@ -415,7 +414,6 @@ export function WaiversRegisterContainer({ api }: { api: ExecutionApi }) {
           authority that explains why every waiver control is dark, the redacted
           journal of what has run, per-profile source health and the canary twin
           comparison — all four were being fetched and none shown. */}
-      <CrossEvidence composition={composition} label="Command authority, journal and cross-profile evidence" />
     <WaiversRegisterScreen
       page={page}
       counts={counts}
@@ -429,6 +427,11 @@ export function WaiversRegisterContainer({ api }: { api: ExecutionApi }) {
       status={status}
       reason={reason}
     />
+      {/* The register is what this page is for; the command authority and source health that explain why its controls are dark come second, folded. */}
+      <details className="exec-gf-details exec-gf-evidence-fold">
+        <summary>Command authority, source health and journal</summary>
+        <CrossEvidence composition={composition} label="Command authority, journal and cross-profile evidence" />
+      </details>
     </>
   );
 }

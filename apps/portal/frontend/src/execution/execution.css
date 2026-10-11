@@ -7202,3 +7202,5 @@ details.exec-gf-details > summary.exec-gov-panelhead { cursor: pointer; list-sty
 details.exec-gf-details > summary.exec-gov-panelhead::-webkit-details-marker { display: none; }
 details.exec-gf-details > summary.exec-gov-panelhead::before { content: "▸"; color: var(--ink-mute); margin-right: var(--space-2); }
 details.exec-gf-details[open] > summary.exec-gov-panelhead::before { content: "▾"; }
+.exec-gf-evidence-fold { margin-top: var(--space-4); }
+.exec-gf-evidence-fold > summary { padding: var(--space-2) 0; }

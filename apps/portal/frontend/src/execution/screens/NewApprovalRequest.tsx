@@ -107,18 +107,17 @@ export function NewApprovalRequestScreen({
   return (
     <section className="exec-gate exec-gov" aria-label="New approval request" data-hifi-exact="new-request-entry">
       <div className="exec-gate-kicker">LOOP ENTRY · Research → Gate R1</div>
+      <div className="exec-gov-head">
+        <h1 className="exec-gov-h1">New approval request <span className="exec-gov-dim">—</span> evidence first, capital later</h1>
+      </div>
       <p className="exec-gate-note" role="note" data-entry-hint>
         The usual way in is from Research: publish a Release Candidate from a frozen run and its R1 request is created with the evidence pack attached.
         Use this form for a request that did not come from a Release Candidate. <a href="/research/quantbt/runs">Open the Run Library</a>
       </p>
-      <div className="exec-gov-head">
-        <h1 className="exec-gov-h1">New approval request <span className="exec-gov-dim">—</span> evidence first, capital later</h1>
-      </div>
       <div className="exec-gov-metaline">
         <span className="exec-gov-chip" data-fill="warn">ENTRY</span>
         <span className="exec-gov-meta">
-          governance.approval-create-request.v1 · opens a PENDING row in the Approval Inbox · a quant
-          reviewer decides at R1 · the SLA clock starts at submit
+          opens a PENDING row in the Approval Inbox · a quant reviewer decides at R1 · the SLA clock starts at submit
         </span>
       </div>
       <div className="exec-gate-stagechips" role="group" aria-label="Where this request sits in the loop">
@@ -224,8 +223,9 @@ export function NewApprovalRequestScreen({
                 * fields and contradicted them. The second half was always the
                 * real guarantee, and it still holds.
                 */}
-              no candidate list is published for these, so each id is typed · an id the server
-              registry does not know is a typed 422, never a silent guess
+              {runOptions.length > 0
+                ? "completed runs come from the Run Library; the methodology claim is typed · an id the server registry does not know is a typed 422, never a silent guess"
+                : "no candidate list is available, so each id is typed · an id the server registry does not know is a typed 422, never a silent guess"}
             </p>
             <label className="exec-px-note">
               <span className="exec-px-notelabel">Summary (required — the reviewer&apos;s first sentence)</span>

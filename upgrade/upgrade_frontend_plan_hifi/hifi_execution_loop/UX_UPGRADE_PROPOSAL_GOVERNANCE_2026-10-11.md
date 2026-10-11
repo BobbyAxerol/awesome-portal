@@ -112,3 +112,9 @@ Khi chốt, tôi dựng mock tĩnh (HTML) của Inbox + R1 để duyệt hình t
 | chung | WF xx ẩn khỏi mặt chính (CSS), BR-EX-xx chỉ còn trong Policy & references / dòng vắng mặt | Selector e2e/Playwright bấm Deny/Request changes (nếu có) cần mở menu; không có spec nào bấm hiện nay |
 
 Evidence: vitest frontend 384 file / 6495 pass; tsc -b sạch; browser (research preview, 1280/660): Inbox, New request, R1/R2/Inbox trên fixtures, 0 tràn ngang, 0 lỗi trang. Baseline hình Execution **chưa** ghi lại — các màn này đổi hình, cần chạy quy trình baseline riêng khi Bobby duyệt hình.
+
+## 9. Vòng refine thứ hai (2026-10-11) — soi lại trên route thật (Governance Light), không chỉ fixture
+
+Sửa ngay (đã giao): menu "Not yet ▾" **không đóng bằng Escape / bấm ra ngoài / Tab đi chỗ khác** (đo: sau Escape vẫn `open`) → đóng được cả ba cách; Waivers mở đầu bằng khối "Command authority / source health / journal" khổng lồ với mã thô trước cả sổ nghĩa vụ → sổ lên đầu, khối chứng cứ gập ở dưới; Request mới còn câu "no candidate list is published" dù đã có danh sách run, và dòng schema id → câu đúng theo trạng thái, bỏ schema id; gate không đọc được in mã thô `WORKSPACE_NOT_FOUND` → câu thường + mã trong ngoặc + link về Approval Inbox.
+
+Chưa sửa, cần Bobby quyết (đụng quyết định Phase 8 "giữ khung panel khi record vắng"): xem phần trả lời.

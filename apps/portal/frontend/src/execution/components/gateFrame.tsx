@@ -8,7 +8,7 @@
  *
  * Nothing here decides: every lock, reason and handler arrives as a prop from the screen that already derived it.
  */
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 export type GateStepId = "report" | "rc" | "r1" | "r2" | "paper" | "sandbox" | "canary" | "live";
 const STEPS: readonly { id: GateStepId; label: string }[] = [
@@ -107,6 +107,23 @@ export function GateDecisionActions({
   conditionCount: number;
 }) {
   const menu = useRef<HTMLDetailsElement>(null);
+  // A menu that stays open until its own button is pressed again covers the decision dock: Escape, a click elsewhere or tabbing away closes it.
+  useEffect(() => {
+    const el = menu.current;
+    if (!el) return undefined;
+    const shut = () => { el.open = false; };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && el.open) { shut(); el.querySelector("summary")?.focus(); } };
+    const onPointer = (e: Event) => { if (el.open && !el.contains(e.target as Node)) shut(); };
+    const onFocusOut = (e: FocusEvent) => { if (el.open && e.relatedTarget instanceof Node && !el.contains(e.relatedTarget)) shut(); };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointer);
+    el.addEventListener("focusout", onFocusOut);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointer);
+      el.removeEventListener("focusout", onFocusOut);
+    };
+  }, []);
   const close = (handler?: () => void) => () => {
     if (menu.current) menu.current.open = false;
     handler?.();

@@ -40,6 +40,25 @@ export function framesAbsence(status: AbsentStatus): boolean {
   return status !== "denied" && status !== "loading";
 }
 
+/** The contract codes a reader actually meets, in plain words; the code stays after it for the person who quotes it. */
+const PLAIN: Readonly<Record<string, string>> = {
+  WORKSPACE_NOT_FOUND: "This record is not in the workspace named in the link",
+  APPROVAL_NOT_FOUND: "No approval with this id is visible to you",
+  EXIT_REVIEW_NOT_FOUND: "No exit review with this id is visible to you",
+  INCIDENT_NOT_FOUND: "No incident with this id is visible to you",
+};
+export function plainReason(reason: string): string {
+  const match = /^([A-Z][A-Z0-9_]{5,}):\s*(.*)$/.exec(reason);
+  const sentence = match ? PLAIN[match[1]!] : undefined;
+  return match && sentence ? `${sentence} (${match[1]}${match[2] ? `: ${match[2]}` : ""})` : reason;
+}
+
+const BACK: Readonly<Partial<Record<EmptyRecordScreen, { href: string; label: string }>>> = {
+  "gate-r1": { href: "/governance/approvals", label: "Back to the Approval Inbox" },
+  "gate-r2": { href: "/governance/approvals", label: "Back to the Approval Inbox" },
+  "gate-live": { href: "/governance/approvals", label: "Back to the Approval Inbox" },
+};
+
 export function EmptyRecordFrame({
   screen,
   status,
@@ -54,7 +73,7 @@ export function EmptyRecordFrame({
   controls?: ReactNode;
 }) {
   const spec = EMPTY_COMPOSITION[screen];
-  const why = reason ?? "This record cannot be shown.";
+  const why = plainReason(reason ?? "This record cannot be shown.");
   if (!framesAbsence(status)) {
     // `PanelState` already prints the reason. The first version printed it
     // again underneath, so a refusal said the same sentence twice — the exact
@@ -65,6 +84,7 @@ export function EmptyRecordFrame({
   return (
     <>
       <PanelState status={status} reason={why} />
+      {BACK[screen] ? <p className="exec-role-meta"><a href={BACK[screen]!.href}>{BACK[screen]!.label} →</a></p> : null}
       {controls}
       {/* The one sentence, and only the part `PanelState` does not already
           say. `absenceReason` prefixes the contract's own code, which the
