@@ -140,7 +140,8 @@
   flex-basis: 100%;
 }
 
-.exec-preview-inspector summary { cursor: pointer; color: var(--ink-mute); font: var(--exec-font-meta); }
+.exec-preview-inspector summary { cursor: pointer; color: var(--ink-soft); font: var(--exec-font-meta); }
+.exec-preview-details > summary { color: var(--ink-soft); }
 .exec-preview-inspector[open] { flex-basis: 100%; }
 .exec-preview-inspector-list { margin: 4px 0 0; display: flex; gap: var(--space-3); flex-wrap: wrap; }
 .exec-preview-inspector-list div { display: flex; gap: var(--space-1); }
@@ -717,6 +718,7 @@
 
 .exec-state[data-status="denied"] .exec-state-title { color: var(--state-denied); }
 .exec-state[data-status="unavailable"] .exec-state-title { color: var(--state-unavailable); }
+.exec-gov .exec-state[data-status="unavailable"] .exec-state-title { color: var(--ink-soft); }
 .exec-state[data-status="stale"] .exec-state-title { color: var(--fresh-stale); }
 .exec-state[data-status="partial"] .exec-state-title { color: var(--warn); }
 .exec-state[data-status="terminal"] .exec-state-title { color: var(--bad); }
@@ -5536,7 +5538,9 @@ p.exec-oq-emptyrow { margin: var(--space-3) 0 0; font: 400 10px/14px var(--font-
 .exec-af-table th[data-numeric="true"], .exec-af-table td[data-numeric="true"] { text-align: right; }
 .exec-af-th-mark { width: 26px; } .exec-af-th-go { width: 34px; }
 .exec-af-table tbody td { padding: 8px 10px; vertical-align: top; }
-.exec-af-row[role="button"] { cursor: pointer; }
+.exec-af-row[data-expandable="true"] { cursor: pointer; }
+.exec-af-toggle { appearance: none; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.exec-af-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .exec-af-row[data-dim="true"], .exec-af-note[data-dim="true"] { opacity: 0.75; }
 .exec-af-mark { padding-right: 0 !important; color: var(--accent); }
 .exec-af-sub { font: 400 9px/12px var(--font-mono); color: var(--ink-mute); }

@@ -192,7 +192,7 @@ export function SourceHealthBoard({ reads }: { reads: readonly DerivationRead<So
       </div>
       <div className="exec-deriv-body">
         {rows.length > 0 ? (
-          <div className="exec-scroll-x">
+          <div className="exec-scroll-x" role="region" aria-label="Source health by profile table" tabIndex={0}>
             <table className="exec-deriv-table">
               <thead>
                 <tr>
@@ -329,7 +329,7 @@ export function SourceHealthPanel({ health, transport, reason }: { health: Sourc
   return (
     <DerivationTile title="Source health" envelope={health} transport={transport} reason={reason} ariaLabel="Source health by profile">
       {health && health.data.profiles.length > 0 ? (
-        <div className="exec-scroll-x">
+        <div className="exec-scroll-x" role="region" aria-label="Source health by profile table" tabIndex={0}>
           <table className="exec-deriv-table">
             <thead>
               <tr>

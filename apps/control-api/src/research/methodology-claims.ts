@@ -26,6 +26,9 @@ export type MethodologyClaim = z.infer<typeof MethodologyClaimSchema>;
 const KINDS = ["VALIDATION", "CHRONOLOGY", "CAUSALITY", "OOS_SELECTION"] as const;
 type Kind = typeof KINDS[number];
 type ClaimText = Partial<Record<Kind, string>>;
+// These claims do not depend on sampler/population/analytics. SQL projects the
+// exact source groups; reuse their canonical validators, not hand-made types.
+const ClaimFactsSchema = CurrentSourceFactsSchema.pick({ schema_version: true, claims: true, execution: true }).strip();
 type ClaimIdentity = { releaseId: string | null; mode: string | null; schedule: string | null;
   routeId?: string | null; executionProfileId?: string | null };
 
@@ -44,7 +47,7 @@ function forecast(atlas: ResearchEngineAtlasPrivate | null, releaseId: string | 
 
 function issued(summary: Record<string, unknown> | null): ClaimText {
   const factBlock = summary?.source_facts;
-  const parsed = CurrentSourceFactsSchema.safeParse(factBlock);
+  const parsed = ClaimFactsSchema.safeParse(factBlock);
   const claims = parsed.success ? parsed.data.claims : undefined;
   if (!claims) return {};
   return {
@@ -86,7 +89,7 @@ export function projectEvidenceClaimStrip(
   identity: ClaimIdentity,
 ): MethodologyClaim[] {
   const four = new Map(projectMethodologyClaims(atlas, summary, identity).map((claim) => [claim.kind, claim]));
-  const parsed = CurrentSourceFactsSchema.safeParse(summary?.source_facts);
+  const parsed = ClaimFactsSchema.safeParse(summary?.source_facts);
   const execution = parsed.success ? parsed.data.execution : null;
   const route = atlas && identity.releaseId === atlas.current_release.release_id && identity.routeId
     ? atlas.routes.find((item) => item.route_id === identity.routeId) : null;
@@ -125,7 +128,8 @@ export class ResearchMethodologyClaimsService {
   ) {}
 
   async read(user: PortalUser, scope: ResearchScope, runId: string, identity: ClaimIdentity,
-    completed: boolean, screen: "PROGRESS" | "EVIDENCE" = "PROGRESS"): Promise<MethodologyClaim[]> {
+    completed: boolean, screen: "PROGRESS" | "EVIDENCE" = "PROGRESS",
+    sameSnapshot?: Record<string, unknown> | null): Promise<MethodologyClaim[]> {
     // A short per-principal cache bounds the private Atlas cost during five-second
     // progress polling. It is never an authorization cache: the caller has
     // already passed the run-scoped DB read and the Atlas principal is rebuilt
@@ -144,7 +148,7 @@ export class ResearchMethodologyClaimsService {
     if (completed) {
       // A sealed WFO source can issue facts. P04's singular P11 claim cannot
       // be expanded into four issued claims; absent seal stays forecast/typed.
-      try { summary = (await this.retained.sealForRead(scope, runId))?.summary ?? null; }
+      try { summary = sameSnapshot === undefined ? await this.retained.claimFactsForRead(scope, runId) : sameSnapshot; }
       catch { summary = null; }
     }
     return screen === "EVIDENCE" ? projectEvidenceClaimStrip(atlas, summary, identity)

@@ -1,0 +1,266 @@
+{
+  "schema_version": "portal.udb04.closeout-index.v1",
+  "phase": "UDB-04",
+  "verdict": "CROSS_LOOP_PREVIEW_READY_FOR_BOBBY_REVIEW",
+  "source_parent": "734f5c36ffe79db2019c2e57a6f1fee90d41cba5",
+  "branch": "docs/research-loop-plan",
+  "private_evidence_directory": "/home/bobby/.local/state/portal-udb04/acceptance-closeout-20261011",
+  "retention_days": 30,
+  "commit_gate": "REQUIRED_NORMAL_HOOK_SUCCESSFUL_COHERENT_COMMIT_IS_RECEIPT",
+  "failed_hook_attempt": {"control_tests_passed":2505,"skipped":3,"failed":1,"reason":"OLD_ADMISSION_MOCK_SQL_STRING_VS_PG_PREPARED_QUERY_CONFIG","corrected_targeted_admission_passed":2,"app_source_bytes_changed_by_test_fix":false},
+  "runtime": {
+    "origin": "https://research-portal.primusspark.com",
+    "control_image": "sha256:5e55197160422c704844fd0e94120cde0a6c19887901a560bb4f0c44ac46ead7",
+    "web_image": "sha256:2b5846bb6ff0f0dce3da33b7a0e3adf010eccf8fa7d1c7a2f352ccb3f362ceb3",
+    "web_bundle": "/assets/index-CcYTFVZV.js",
+    "control_copy_inputs_sha256": "2e318ff7a5dec92779dafe6a5d9d4ee1573970ad8433bf54a957cc5059b260b1",
+    "control_copy_input_files": 550,
+    "built_before_coherent_commit": true,
+    "post_commit_identical_copy_input_check_required": true,
+    "source_flags_unchanged_off": true,
+    "unchanged_shared_non_app_containers": 6,
+    "shared_db_restart_migration_bootstrap": false
+  },
+  "mixed_load": {
+    "passed": true,
+    "distinct_principals": 20,
+    "measured_cold_reads": 240,
+    "measured_warm_reads": 1200,
+    "consumption": "LOCKED_P23_FULL_JSON_BODY_2MIB_NO_HEADERS_ONLY",
+    "real_heavy_trials": 64,
+    "real_heavy_run": "rrun_95040380ee01328ea62dce0708d78a48",
+    "heavy_terminal_state": "SUCCEEDED",
+    "durable_queued_jobs_cancelled": 4,
+    "http_errors": 0,
+    "oom_kills": 0,
+    "warm_summary_target_p95_ms": 500,
+    "warm_p95_ms": {
+      "library": 445,
+      "progress": 224,
+      "evidence": 327,
+      "report": 265,
+      "command_center": 448,
+      "retained_context": 265,
+      "fleet": 171,
+      "bindings": 205,
+      "portfolio_list": 210,
+      "portfolio_detail": 371,
+      "search": 250,
+      "replay": 370
+    },
+    "cold_and_warm_all_slos_passed": true,
+    "observed_periodic_cgroup_max_bytes": 1527185408,
+    "hard_aggregate_cap_bytes": 4536870912,
+    "kernel_lifetime_peak_available": false,
+    "memory_includes_pagecache": true,
+    "unchanged_control_receipt_reused_for_later_web_only_focus_and_retained_loader_fixes": true,
+    "original_owned_cell_identity_preserved_not_relabelled_as_final_web": true
+  },
+  "fresh_authority": {
+    "passed": true,
+    "cases": 32,
+    "permission_cache_seconds": 0,
+    "actual_stan_tested": false
+  },
+  "affected_outage_restart": {
+    "passed": true,
+    "http_checks": 13,
+    "execution_pg_independently_ready": true,
+    "whole_db_restore_rerun": false
+  },
+  "export": {
+    "passed": true,
+    "bytes": 82416,
+    "sha256": "839b8db076074cb67587a2224e92fdb4a36e55b6970170ac2fe8f6f3016255b1",
+    "wrong_actor_status": 404,
+    "engine_started": false
+  },
+  "browser": {
+    "passed": true,
+    "cells": 68,
+    "viewport_widths": [
+      1280,
+      660
+    ],
+    "axe_cells": 8,
+    "violations": 0,
+    "overflow": 0,
+    "application_errors_or_warnings": 0,
+    "unexpected_http_errors": 0,
+    "streams_or_bootstrap": 0,
+    "source_candle_reads": 0,
+    "business_writes": 0,
+    "idle_seconds": 16,
+    "idle_api_reads": 0,
+    "refresh_get_only": true,
+    "refresh_context_reads": 1,
+    "rc_r1_workspace_click_reload": true,
+    "logout_status": 201,
+    "baseline_rerecorded": false,
+    "receipt_lane": "isolated-source-closed-browser",
+    "prior_shared_preview_attempt_preserved_as_fail": true,
+    "prior_shared_preview_context_503_count": 1,
+    "prior_refusal_body_not_captured": true
+  },
+  "browser_faults": {
+    "passed": true,
+    "cases": 4,
+    "statuses": [
+      503,
+      200,
+      401,
+      403
+    ],
+    "injected_not_backend_authority": true,
+    "pending_context_ms": 300,
+    "bootstrap_or_stream_calls": 0,
+    "auth401_unmounts_protected_shell": true
+  },
+  "recovery_reuse": {
+    "dependency_bound_not_latest_image_full_restore_claim": true,
+    "unchanged_since_commit": "458215806b0b681c18074558b90a932ef533c0a2",
+    "auth_migrations_artifact_storage_verifier_restore_and_worker_unchanged": true,
+    "earlier_fresh_volume_manifests_verified": 69,
+    "earlier_fresh_volume_manifest_denominator": 69,
+    "earlier_files": 3212,
+    "earlier_bytes": 72511079,
+    "earlier_execution_hashes": 27,
+    "historical_p23_strict": "83/86_WITH_EXACT_THREE_OWNER_ACCEPTED_TEST_EXCEPTIONS",
+    "distinct_original_archive_and_parity_populations": [
+      68,
+      77
+    ]
+  },
+  "custody": {
+    "passed": true,
+    "core_groups": 16,
+    "roadmap_tables": 6,
+    "migrations_foreign_keys_binding_authority_unchanged": true
+  },
+  "cleanup": {
+    "passed": true,
+    "test_users_disabled": 23,
+    "retained_grants_revoked": 20,
+    "active_test_sessions": 0,
+    "active_test_grants": 0,
+    "exact_original_clone_sessions_revoked": 2,
+    "original_credentials_or_global_sessions_reset": false,
+    "services_removed": 8,
+    "labelled_clone_volumes_removed": 5,
+    "remaining_owned_containers": 0,
+    "remaining_owned_volumes": 0,
+    "post_cleanup_auth_dump_sha256": "424a9358c487f3540fccd9c7fe37f9350b7c5ff8d7538d0016dac14b35080b45",
+    "later_artifact_archive_bytes": 39588265,
+    "later_artifact_archive_sha256": "545476ccd1ef6ca02afb3b05f2cfe8204db64ba269b649f36faa4f5ebfe06f6a",
+    "later_archive_scope": "BACKUP_CUSTODY_NOT_NEW_RESTORE_PROOF",
+    "disk_free_bytes": 176870891520,
+    "disk_size_bytes": 665811062784,
+    "disk_free_percent": 26.5647,
+    "distinct_current_rollback_images_verified": 9,
+    "images_pruned": false,
+    "followup": "C4_QUIET_WINDOW_CANDIDATE_IMAGE_INVENTORY_AFTER_30_DAY_EVIDENCE_RETENTION"
+  },
+  "dispositions": [
+    "ACTUAL_STAN_ABSENT_NOT_TESTED",
+    "MISSING_DOWNSTREAM_CAPTURE_NOT_AN_APPROVED_R2_CANARY_LIVE_CHAIN",
+    "RETAINED_REPLAY_SOURCE_BOOTSTRAP_BLOCKED_SOURCE_ENABLED_WORKSPACE_QUALIFICATION_SEPARATE",
+    "BOBBY_VISUAL_ACCEPTANCE_AND_DEV_MAIN_PRODUCTION_SOURCE_COMMAND_SSE_RELEASE_SEPARATE"
+  ],
+  "files": [
+    {
+      "name": "identity.json",
+      "bytes": 3184,
+      "sha256": "2764e7b9d2b7dd020d8ed403dafa4cde97e0bf975c8e4b5ed64cded79255c9a1"
+    },
+    {
+      "name": "inputs.json",
+      "bytes": 1543,
+      "sha256": "14a03c78dd9e2789cd9aaa9c0929446fdd9685acf2019a50a90ee002c379051c"
+    },
+    {
+      "name": "mixed-load-final.json",
+      "bytes": 227532,
+      "sha256": "f3e00ee7b2fe87598c6f4c81b8d023c5849dfd50d6d7aa83a76da6506be3a383"
+    },
+    {
+      "name": "mixed-load-terminal-jobs.json",
+      "bytes": 448,
+      "sha256": "22e66e1b083d9e55bd346dfb113c523ede8dfec66540988307db7dbe4039215b"
+    },
+    {
+      "name": "resources.json",
+      "bytes": 109424,
+      "sha256": "de90a41c3411b7566152989e0f7df67c0fc0d58cab69560b85028fb62979233a"
+    },
+    {
+      "name": "authorization-closeout.json",
+      "bytes": 4918,
+      "sha256": "e1095ea11eefba9fb5ac8a414f25d64c3b602a6f19548b2e1d2dcf994f9a1da2"
+    },
+    {
+      "name": "outage-closeout.json",
+      "bytes": 4837,
+      "sha256": "d5120a3795b7637bd068c2324816e6a8081c29092d47a6a32668a627f97b4fab"
+    },
+    {
+      "name": "export.json",
+      "bytes": 397,
+      "sha256": "9a9ab9e74008bbed6f64428099045009c25c9856e1f1f5dfd2a63b4cbc19f8c0"
+    },
+    {
+      "name": "isolated-source-closed-browser-summary.json",
+      "bytes": 227,
+      "sha256": "b0cdaec21096d986ba15ecc50350fbd2d9a310d13cce20a12530d2ca3330c2f8"
+    },
+    {
+      "name": "isolated-source-closed-browser/browser.json",
+      "bytes": 17452,
+      "sha256": "21114aacf5ee6e6c20eaef8ef20d27e89f7eac5266f219b15aa171d428d40b1e"
+    },
+    {
+      "name": "context-browser-faults.json",
+      "bytes": 1307,
+      "sha256": "503e36bf25087315ebee4dd4edda9a534e66e73e44cce3353becc44578e22305"
+    },
+    {
+      "name": "identity-cleanup.json",
+      "bytes": 651,
+      "sha256": "8459857ff9b5abfedc4bccbc781df5f4a4dd9a12ca3f488509a63b7b54d28192"
+    },
+    {
+      "name": "teardown.json",
+      "bytes": 349,
+      "sha256": "eb2894f1abc71c38a03a93fa9c2073578a97bec19fc2b353f38d4f893d61a8c2"
+    },
+    {
+      "name": "capacity-after.json",
+      "bytes": 2684,
+      "sha256": "4fbc660a4416d9517a842eabc2e4ad770c6bfee63f004c5c3c60c472c762d56a"
+    },
+    {
+      "name": "preview-final-runtime.json",
+      "bytes": 2261,
+      "sha256": "7a8374a78e21e11c1f8bc2927b97c01726c5ed93717ed36e6af2644dc6c432f4"
+    },
+    {
+      "name": "source-after.json",
+      "bytes": 149248,
+      "sha256": "f68d9f7e7816ac1d8654ea060be2f0b80ff4c58696f458153924fd2cb39885c1"
+    },
+    {
+      "name": "source-closed-browser-summary.json",
+      "bytes": 619,
+      "sha256": "c5c96cf2b7aca6d5e34ba52c60d602e430092cef1f9767fa2e8c2117ac3fdd01"
+    },
+    {
+      "name": "source-closed-browser/browser.json",
+      "bytes": 17844,
+      "sha256": "11f88d759cfc64ddf036b412ef8d7b7864d4b98b3388285011dba996ebf1f281"
+    },
+    {
+      "name": "commit-hook-attempt1.log",
+      "bytes": 160137,
+      "sha256": "9b6a7c7de227cbbadf32e43cbf6bd83da4b664b80f511d70cf3c74496ad124b6"
+    }
+  ]
+}

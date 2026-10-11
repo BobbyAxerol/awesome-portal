@@ -260,6 +260,8 @@ interface SharedPageRead {
 // Four Library + four P03 operations leave two of the unchanged ten pooled
 // connections for identity/other work. Admit one finite twenty-viewer burst.
 export const RUN_LIBRARY_READ_LIMITS = Object.freeze({ maximumActive: 4, maximumQueued: 16 });
+/** Small bounded window covers measured auth/worker skew; no settled page cache. */
+export const RUN_LIBRARY_PAGE_BATCH_WAIT_MS = 40;
 /** E11: a page is at most 50 rows plus the keyset probe row. */
 const MAXIMUM_RETAINED_FACT_RUNS = 51;
 
@@ -335,7 +337,7 @@ export class ResearchRunLibraryRepository {
     return new Promise<RunLibraryPage>((resolve, reject) => {
       let batch = this.pendingPages.get(key);
       if (!batch) {
-        batch = { query, boundary, entries: [], timer: setTimeout(() => this.flushPageBatch(key), 20) };
+        batch = { query, boundary, entries: [], timer: setTimeout(() => this.flushPageBatch(key), RUN_LIBRARY_PAGE_BATCH_WAIT_MS) };
         this.pendingPages.set(key, batch);
       }
       batch.entries.push({ scope, resolve, reject });
@@ -902,7 +904,11 @@ export class ResearchRunLibraryRepository {
               library.alpha_filter_key, library.mode_key, library.job_terminal_reason,
               ${CREATED_AT_CURSOR_SQL} AS created_at_cursor,
               evidence.projection_revision AS evidence_revision,
-              enriched.enriched AS enriched_analysis, enriched.enriched_digest,
+              -- Verification still checks the entire current JSON/hash. Text
+              -- avoids pg eagerly cloning all chart/distribution graphs on
+              -- this card-only path; the bounded exact-byte verifier parses
+              -- once and shares immutable calculation children, never auth.
+              enriched.enriched::text AS enriched_analysis, enriched.enriched_digest,
               evidence.projection AS evidence_projection,
               evidence.equity_state AS evidence_equity_state,
               evidence.equity_reason AS evidence_equity_reason,

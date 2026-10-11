@@ -70,8 +70,11 @@ function exactPlainJsonText(value: unknown): string {
   if (!value || typeof value !== "object") return JSON.stringify(value)!;
   const cached = immutableJsonText.get(value);
   if (cached !== undefined) return cached;
-  if (Array.isArray(value)) return `[${value.map(exactPlainJsonText).join(",")}]`;
-  return `{${Object.keys(value).map(key => `${JSON.stringify(key)}:${exactPlainJsonText((value as Record<string, unknown>)[key])}`).join(",")}}`;
+  // The caller has already rejected Date/class/toJSON/nonfinite values.
+  // Native encoding preserves the SAME exact key/order/escaping bytes without
+  // allocating thousands of JS fragments for each fresh rich Library card.
+  // Only our privately cloned roots may reuse their stored encoded text.
+  return JSON.stringify(value)!;
 }
 function isPlainFiniteJson(value: unknown): boolean {
   if (value === null || typeof value === "string" || typeof value === "boolean") return true;

@@ -347,8 +347,8 @@ function FleetRows({ row, pnl, expandable, isOpen, onToggle, j, syncAge, inSessi
   const health = row.health;
   return (
     <>
-      <tr className="exec-af-row" data-dim={row.dim ? "true" : undefined} onClick={expandable ? onToggle : undefined} role={expandable ? "button" : undefined} tabIndex={expandable ? 0 : undefined} aria-expanded={expandable ? isOpen : undefined} onKeyDown={expandable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } } : undefined}>
-        <td className="exec-af-mark">{expandable ? (isOpen ? "▾" : "▸") : ""}</td>
+      <tr className="exec-af-row" data-expandable={expandable ? "true" : undefined} data-dim={row.dim ? "true" : undefined} onClick={expandable ? (e) => { if (!(e.target as Element).closest("a,button,input,select,textarea")) onToggle(); } : undefined}>
+        <td className="exec-af-mark">{expandable ? <button type="button" className="exec-af-toggle" aria-label={`Deployments for ${row.alpha}`} aria-expanded={isOpen} onClick={onToggle}>{isOpen ? "▾" : "▸"}</button> : ""}</td>
         <td><A href={row.href} bold>{row.alpha}</A><div className="exec-af-sub"><A href={row.href}>{row.id}</A> · {row.digest}{row.status ? ` · ${row.status}` : ""}</div></td>
         <td className="exec-af-dim">{row.owner}{row.portfolios.length ? <div className="exec-af-sub exec-af-sub-link">{row.portfolios.map((p, i) => <span key={p.label}>{i ? " → " : ""}<A href={p.href}>{p.label}</A></span>)}</div> : null}</td>
         <td><span className="exec-af-stages">{row.stages.map((c) => <Chip key={c.label} chip={c} />)}</span></td>
@@ -442,8 +442,8 @@ function FleetItemRows({ item, href, expandable, isOpen, onToggle, equity, arriv
     : `/deployments/live/${encodeURIComponent(d.deploymentId)}`;
   return (
     <>
-      <tr className="exec-af-row" data-arrived={arrived ? "true" : undefined} onClick={expandable ? onToggle : undefined} role={expandable ? "button" : undefined} tabIndex={expandable ? 0 : undefined} aria-expanded={expandable ? isOpen : undefined} onKeyDown={expandable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } } : undefined}>
-        <td className="exec-af-mark">{expandable ? (isOpen ? "▾" : "▸") : ""}</td>
+      <tr className="exec-af-row" data-expandable={expandable ? "true" : undefined} data-arrived={arrived ? "true" : undefined} onClick={expandable ? (e) => { if (!(e.target as Element).closest("a,button,input,select,textarea")) onToggle(); } : undefined}>
+        <td className="exec-af-mark">{expandable ? <button type="button" className="exec-af-toggle" aria-label={`Deployments for ${item.alphaLabel}`} aria-expanded={isOpen} onClick={onToggle}>{isOpen ? "▾" : "▸"}</button> : ""}</td>
         <td><A href={href} bold>{item.alphaLabel}</A><div className="exec-af-sub"><A href={href}>{item.alphaId}</A> · v{item.version}</div></td>
         <td className="exec-af-dim">{item.owner ?? notPublished}{item.portfolios.length ? <div className="exec-af-sub exec-af-sub-link">{item.portfolios.map((portfolio, index) => <span key={portfolio.portfolioId}>{index ? " · " : ""}<A href={`/deployments/portfolios/${encodeURIComponent(portfolio.portfolioId)}`}>{portfolio.name}</A></span>)}</div> : null}</td>
         <td><span className="exec-af-stages">{item.stages.map((stage) => <Chip key={stage} chip={stageChip(stage)} />)}</span></td>

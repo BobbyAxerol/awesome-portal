@@ -100,8 +100,8 @@
     "br72_registry_public_sha256": "sha256:086238c0b5aa550d188c5c9c966a0f033f4f3b350b40f41a99a3085fd3029c95",
     "br72_frontend_test_sha256": "sha256:adfcb239d2f7aba5ccf5ec1f83132267cf813031e1761d487b01172d5c11257a",
     "br72_frontend_containers_sha256": "sha256:a78b235bf75762ca2136be20e0ac457af774cc8eea020bbeaa9701a9384c12eb",
-    "br72_frontend_alpha_fleet_sha256": "sha256:09179cea55180b8527ecd4a02aff1e365397645ebeca29b76ac0c1b74e38c801",
-    "br72_frontend_recompose_sha256": "sha256:142d28f5ef7cc8a7d67f2ee7af22c735efb293d399d9975d758de392d19a3699",
+    "br72_frontend_alpha_fleet_sha256": "sha256:1511b26ed29c3e1798dfa263f268df1090936b94ac538f5f336f8d405989ea75",
+    "br72_frontend_recompose_sha256": "sha256:99c0c3f4587f9d6daba1dd61c2358ce70d29e155b1fcccf05d130cbc9bc0e69f",
     "br72_frontend_registry_sha256": "sha256:66e6fbf3b9dfcfe8b915e1b6b4b88ab17305290b74f100af4d95a29fd17b33f0"
   },
   "rehearsals": {

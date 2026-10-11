@@ -10,6 +10,7 @@ import {
 } from "../src/execution/profile-projection.repository";
 import { ResourceReadService } from "../src/resource-read/resource-read.service";
 import { ResourceReadController, ResourceReadError } from "../src/resource-read/resource-read.controller";
+import { wireStageValue } from "../src/execution/stage-screen-wire";
 import { testConfig } from "./harness";
 
 type Row = Record<string, ProjectionScalar>;
@@ -104,6 +105,120 @@ function service(relations: Record<string, ProjectionRelation>) {
 function principal() { return { user, session, workspaceId }; }
 
 describe("EDS-04 named resource BFFs", () => {
+  it("reuses only bounded DATA after a fresh snapshot load, never actor/clocks or an outage fallback", async () => {
+    const fact = snapshot({ [RELATION.portfolios]: relation("portfolios", [{ portfolio_id: "pf_target", name: "Target" }]) });
+    const repo = new ExecutionProfileProjectionRepository({ query: vi.fn() } as any, undefined,
+      { EXECUTION_READ_PROFILE: "retained_review_v1" });
+    const load = vi.spyOn(repo, "snapshot").mockResolvedValue(fact);
+    const reader = new ResourceReadService({ ...config(), EXECUTION_READ_PROFILE: "retained_review_v1" }, repo);
+    const prepare = vi.spyOn(reader as any, "prepare");
+    const first = await reader.read(principal(), "PORTFOLIO", "pf_target", "paper") as any;
+    const next = await reader.read({ ...principal(), user: { ...user, userId: "viewer", username: "reviewer", role: "USER" } },
+      "PORTFOLIO", "pf_target", "paper") as any;
+    expect(prepare).toHaveBeenCalledTimes(1);
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(next.actor).toEqual({ user_id: "viewer", username: "reviewer", roles: ["USER"] });
+    expect(first.actor.user_id).toBe(user.userId);
+    expect(next.panels.positions.clocks.read_at_ms).toBe(next.read_at_ms);
+    expect(next.read_at_ms).toBeGreaterThan(0);
+    load.mockRejectedValueOnce(new Error("DOMAIN_OUTAGE"));
+    await expect(reader.read(principal(), "PORTFOLIO", "pf_target", "paper")).rejects.toThrow("DOMAIN_OUTAGE");
+    // Even an unchanged document/digest with changed accepted clocks is a
+    // different exact representation key, not a hit on prior metadata.
+    fact.receivedAt = new Date(fact.receivedAt.getTime() + 1);
+    await reader.read(principal(), "PORTFOLIO", "pf_target", "paper");
+    expect(prepare).toHaveBeenCalledTimes(2);
+  });
+
+  it("coalesces only pending exact retained documents and attaches every actor/current read clock independently", async () => {
+    const fact = snapshot({ [RELATION.portfolios]: relation("portfolios", [{ portfolio_id: "pf_target", name: "Target" }]) });
+    const repository = new FakeProjectionRepository(new Map([["paper:PAPER_PROFILE", fact]]));
+    const reader = new ResourceReadService({ ...config(), EXECUTION_READ_PROFILE: "retained_review_v1" },
+      repository as unknown as ExecutionProfileProjectionRepository);
+    const prepare = vi.spyOn(reader as any, "prepare");
+    const values = await Promise.all(Array.from({ length: 20 }, (_, index) => reader.read({ ...principal(),
+      user: { ...user, userId: `actor_${index}`, username: `reader_${index}`, role: index === 0 ? "ADMIN" : "USER" } },
+      "PORTFOLIO", "pf_target", "paper")));
+    expect(prepare).toHaveBeenCalledTimes(1);
+    values.forEach((value, index) => {
+      expect(value.actor).toEqual({ user_id: `actor_${index}`, username: `reader_${index}`, roles: [index === 0 ? "ADMIN" : "USER"] });
+      expect(value.read_at_ms).toBeGreaterThan(0);
+      for (const panel of Object.values(value.panels as Record<string, any>)) expect(panel.clocks.read_at_ms).toBe(value.read_at_ms);
+      expect(Buffer.byteLength(JSON.stringify(value))).toBeLessThanOrEqual(1024 * 1024);
+    });
+    // A completed result is NEVER a cache entry. Changes on the same object,
+    // including an unchanged digest, must be recomputed on the next batch.
+    fact.document.relations[RELATION.portfolios].items[0].fields.name = "Changed";
+    const next = await reader.read(principal(), "PORTFOLIO", "pf_target", "paper") as any;
+    expect(prepare).toHaveBeenCalledTimes(2);
+    expect(next.data.portfolio.name).toBe("Changed");
+    expect(next.actor.user_id).toBe(user.userId);
+    expect(next.read_at_ms).toBeGreaterThan(values[0].read_at_ms as number);
+  });
+
+  it("isolates workspace/resource/profile/document identity and clears failed preparations", async () => {
+    const first = snapshot({ [RELATION.portfolios]: relation("portfolios", [{ portfolio_id: "pf_target", name: "First" }]) });
+    const second = snapshot({ [RELATION.portfolios]: relation("portfolios", [{ portfolio_id: "pf_target", name: "Second" }]) });
+    const repo = { snapshot: vi.fn().mockResolvedValueOnce(first).mockResolvedValueOnce(second).mockResolvedValue(first) };
+    const reader = new ResourceReadService({ ...config(), EXECUTION_READ_PROFILE: "retained_review_v1" }, repo as any);
+    const prepare = vi.spyOn(reader as any, "prepare");
+    const values = await Promise.all([
+      reader.read(principal(), "PORTFOLIO", "pf_target", "paper"),
+      reader.read(principal(), "PORTFOLIO", "pf_target", "paper"),
+      reader.read({ ...principal(), workspaceId: "ws_other" }, "PORTFOLIO", "pf_target", "paper"),
+      reader.read(principal(), "PORTFOLIO", "pf_missing", "paper"),
+      reader.read(principal(), "PORTFOLIO", "pf_target", "sandbox"),
+    ]) as any[];
+    expect(prepare).toHaveBeenCalledTimes(5);
+    expect(values[0].data.portfolio.name).toBe("First");
+    expect(values[1].data.portfolio.name).toBe("Second");
+    expect(values[2].workspace_id).toBe("ws_other");
+    prepare.mockImplementationOnce(() => { throw new Error("TEST_PREPARATION_FAILED"); });
+    await expect(reader.read(principal(), "PORTFOLIO", "pf_target", "paper")).rejects.toThrow("TEST_PREPARATION_FAILED");
+    await expect(reader.read(principal(), "PORTFOLIO", "pf_target", "paper")).resolves.toMatchObject({ data: { portfolio: { name: "First" } } });
+  });
+
+  it("bounds pending followers with the existing typed capacity refusal, without retaining the refusal", async () => {
+    const reader = new ResourceReadService({ ...config(), EXECUTION_READ_PROFILE: "retained_review_v1" },
+      new FakeProjectionRepository(new Map([["paper:PAPER_PROFILE", snapshot({})]])) as any);
+    const values = await Promise.allSettled(Array.from({ length: 65 }, () => reader.read(principal(), "PORTFOLIO", "missing", "paper")));
+    expect(values.filter(value => value.status === "fulfilled")).toHaveLength(64);
+    expect(values.find(value => value.status === "rejected")).toMatchObject({ reason: { code: "EXECUTION_POOL_BUSY" } });
+    await expect(reader.read(principal(), "PORTFOLIO", "missing", "paper")).resolves.toBeDefined();
+  });
+
+  it("memoizes wire facts only in the supplied per-read graph", () => {
+    const value = { updated_at: "2026-09-05T12:00:00.000Z", price: "10.000000000000000001" };
+    const memo = new WeakMap<object, unknown>();
+    const a = wireStageValue(value, memo) as any;
+    expect(wireStageValue(value, memo)).toBe(a);
+    expect(a.updated_at_ms).toBe(Date.parse(value.updated_at));
+    expect(a.price).toBe(value.price);
+    value.price = "12";
+    expect(wireStageValue(value)).toEqual({ ...a, price: "12" });
+    expect(wireStageValue(value, new WeakMap())).not.toBe(a);
+  });
+
+  it("scopes/counts all retained rows but copies only the 200-row public prefix", async () => {
+    let copied = 0;
+    const positions: Row[] = Array.from({ length: 5000 }, (_, index) => {
+      const row: Row = { position_id: `p_${index}`, deployment_id: "dep_target", mode: "paper" };
+      Object.defineProperty(row, "notional", { enumerable: true, get: () => { copied++; return "10"; } });
+      return row;
+    });
+    const value = await service({
+      [RELATION.portfolios]: relation("portfolios", [{ portfolio_id: "pf_target", name: "Target" }]),
+      [RELATION.deployments]: relation("strategy_deployments", [{ deployment_id: "dep_target",
+        strategy_id: "str_target", account_id: "acc_target", mode: "paper", venue: "BINANCE", portfolio_id: "pf_target" }]),
+      [RELATION.positions]: relation("positions_v2", positions),
+    }).read(principal(), "PORTFOLIO", "pf_target", "paper") as Record<string, any>;
+    expect(copied).toBe(200);
+    expect(value.data.positions).toHaveLength(200);
+    expect(value.panels.positions.coverage).toMatchObject({ source_total: "5000", filtered_total: "5000",
+      returned_count: 200, truncated: true, has_more: true, next_cursor: null });
+    expect(value.panels.positions.reason_code).toBe("EDS04_RESOURCE_RELATION_ROW_BOUND");
+    expect(JSON.stringify(value)).not.toContain("p_201");
+  });
   it("refuses a named foreign workspace, so the projection is never relabelled", async () => {
     const read = vi.fn();
     const controller = new ResourceReadController(
@@ -252,7 +367,9 @@ describe("EDS-04 named resource BFFs", () => {
   });
 
   it("keeps a resolved resource within the 200-row and 1 MiB browser bounds without minting a cursor", async () => {
-    const longInstrument = "BTCUSDT_".padEnd(12_000, "x");
+    // Includes UTF-8 multibyte + JSON escaping: the byte bound is not a
+    // character count or an estimate of just one duplicated data branch.
+    const longInstrument = "BTCUSDT_" + '漢字😀"\\\n'.repeat(1200);
     const positions: Row[] = Array.from({ length: 200 }, (_, index) => ({
       position_id: `pos_${index.toString().padStart(3, "0")}`,
       deployment_id: "dep_target", strategy_id: "str_target", account_id: "acc_target",

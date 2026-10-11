@@ -22,6 +22,35 @@ import { testConfig } from "./harness";
 import { SEALED_PERFORMANCE_DEFINITIONS } from "../src/research/source-aware-metric-resolver";
 import { freezeReadValue } from "../src/research/immutable-read-json";
 
+describe("UDB04 exact-current Library card calculations", () => {
+  it("reuses pure mapping across fresh identical snapshots, never changed draft/state/date/bytes", () => {
+    const service = new ResearchRunLibraryService({} as never, config);
+    const source = row();
+    const first = freezeReadValue(source);
+    const map = (value: RunLibraryRow) => (service as any).mapPageRow(value);
+    const a = map(first);
+    const same = freezeReadValue({ ...source, created_at: new Date(source.created_at), updated_at: new Date(source.updated_at) });
+    expect(map(same)).toBe(a);
+    expect(Object.isFrozen(a)).toBe(true);
+    const privateDraft = freezeReadValue({ ...source, rc_draft_id: "rcd_other" });
+    expect(map(privateDraft)).not.toBe(a);
+    const changedState = freezeReadValue({ ...source, effective_status: "FAILED" });
+    expect(map(changedState).status).toBe("FAILED");
+    expect(map(freezeReadValue({ ...source, created_at: new Date(source.created_at.getTime()+1) })).created_at_utc_ms)
+      .toBe(a.created_at_utc_ms+1);
+    expect(() => map(freezeReadValue({ ...source, enriched_analysis: '{"run_id":"other"}', enriched_digest: "a".repeat(64) })))
+      .toThrow("Stored analytics supplement is incompatible.");
+    expect(map(freezeReadValue({ ...source }))).toBe(a);
+  });
+  it("does not memoize caller-owned mutable rows", () => {
+    const service = new ResearchRunLibraryService({} as never, config), source = row();
+    const a = (service as any).mapPageRow(source);
+    source.effective_status = "FAILED";
+    const b = (service as any).mapPageRow(source);
+    expect(b).not.toBe(a); expect(b.status).toBe("FAILED");
+  });
+});
+
 /**
  * RF-05 / P12 service units over rows shaped from the isolated QuantBT 1.1.1
  * preview (captured read-only 2026-09-24).  The PostgreSQL lane proves the

@@ -15,7 +15,7 @@ export const ORIGIN='http://127.0.0.1:8097';
 // private receipt directory instead of clearing its teardown marker or
 // overwriting the failed candidate's evidence.
 export const HOME=process.env.PORTAL_UDB04_RECEIPT_DIR??'/home/bobby/.local/state/portal-udb04/acceptance-20261011';
-assert(/^\/home\/bobby\/\.local\/state\/portal-udb04\/acceptance(?:-final)?-\d{8}$/.test(HOME),
+assert(/^\/home\/bobby\/\.local\/state\/portal-udb04\/acceptance(?:-final|-closeout)?-\d{8}$/.test(HOME),
   'UDB04_RECEIPT_DIRECTORY_OUTSIDE_OWNED_ALLOWLIST');
 export const SERVICES=['portal-postgres','execution-postgres','portal-nats','roadmap-task-board-api',
   'portal-api','control-api','quant-worker-py','portal-web'];
@@ -171,7 +171,7 @@ function reprofileExecution(){
   compose(['up','-d','--no-build','--no-deps','--pull','never','--wait','--wait-timeout','90','execution-postgres']);identity();
   console.log('Only cloned Execution PG recreated with512MiB; original failed candidate preserved.');
 }
-function adoptControl(){
+function adoptControl(includeWeb=false){
   assert.equal(Number(docker(['exec',owned('portal-postgres'),'psql','-X','-U','portal','-d','portal_control','-Atc',"SELECT count(*) FROM research.jobs WHERE state IN ('CLAIMED','RUNNING','CANCEL_REQUESTED')"]).trim()),0);
   const cfg=readPrivate('compose.json'),input=readPrivate('inputs.json');
   const previous='before-control-'+input.images['control-api'].slice(7,19)+'.json';
@@ -181,12 +181,17 @@ function adoptControl(){
   // Keep the exact OCI index reachable across subsequent BuildKit tag moves.
   docker(['tag',image,'local/portal-udb04-control:'+image.slice(7,19)]);
   cfg.services['control-api'].image=image;input.images['control-api']=image;privateWrite('compose.json',cfg);
+  if(includeWeb){
+    const web=docker(['image','inspect','-f','{{.Id}}','local/portal-research-preview-portal-web:rf02']).trim();
+    docker(['tag',web,'local/portal-udb04-web:'+web.slice(7,19)]);
+    cfg.services['portal-web'].image=web;input.images['portal-web']=web;privateWrite('compose.json',cfg);
+  }
   input.control_build_inputs=controlBuildInputs();
   input.config_sha256=createHash('sha256').update(readFileSync(join(HOME,'compose.json'))).digest('hex');
   privateWrite('inputs.json',input);
-  compose(['up','-d','--no-build','--no-deps','--pull','never','--wait','--wait-timeout','90','control-api']);
+  compose(['up','-d','--no-build','--no-deps','--pull','never','--wait','--wait-timeout','90','control-api',...(includeWeb?['portal-web']:[])]);
   docker(['exec',owned('portal-web'),'nginx','-s','reload']);identity();
-  console.log('Only owned Control API updated; exact images/config recorded, immutable previous candidate retained.');
+  console.log('Only owned application images updated; exact images/config recorded, immutable previous candidate retained.');
 }
 function reprofileCore(){
   assert.equal(Number(docker(['exec',owned('portal-postgres'),'psql','-X','-U','portal','-d','portal_control','-Atc',"SELECT count(*) FROM research.jobs WHERE state IN ('CLAIMED','RUNNING','CANCEL_REQUESTED')"]).trim()),0);
@@ -208,9 +213,10 @@ async function down(){
   console.log('UDB04 owned cell removed; private backups/evidence retained30days; no image pruning.');
 }
 if(process.argv[1]===fileURLToPath(import.meta.url)){
-  const command=process.argv[2];assert(['init','up','identity','down','recover-roadmap','reprofile-execution','reprofile-core','adopt-control'].includes(command));
+  const command=process.argv[2];assert(['init','up','identity','down','recover-roadmap','reprofile-execution','reprofile-core','adopt-control','adopt-apps'].includes(command));
   if(command==='reprofile-core')reprofileCore();
   if(command==='adopt-control')adoptControl();
+  if(command==='adopt-apps')adoptControl(true);
   if(command==='reprofile-execution')reprofileExecution();
   if(command==='recover-roadmap')recoverRoadmap();
   if(command==='init')await init();if(command==='up')await up();if(command==='identity')identity();if(command==='down')await down();

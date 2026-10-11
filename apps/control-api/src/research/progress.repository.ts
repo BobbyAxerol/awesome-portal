@@ -43,6 +43,7 @@ interface IngressRow {
 }
 
 interface ReadRunRow {
+  claim_facts?: Record<string, unknown> | null;
   native_execution?: Record<string, unknown> | null;
   bound_requested_spec?: Record<string, unknown> | null;
   alpha_declared_contract?: Record<string, unknown> | null;
@@ -260,6 +261,8 @@ export interface ProgressRequestedSpec {
 }
 
 export interface ProgressRunRead {
+  /** Private facts from this authorized snapshot, never a DTO/auth cache. */
+  claimSummary?: Record<string, unknown> | null;
   nativeExecution?: z.infer<typeof ResearchNativeRouteResultSchema>;
   runId: string;
   jobState: string;
@@ -534,6 +537,7 @@ export class ResearchProgressRepository {
                 producer.alpha_id, alpha.name AS alpha_name, producer.alpha_version_id,
                 producer.execution_profile_id, producer.requested_spec_digest,
                 evidence.source_payload->'source'->'native_execution' AS native_execution,
+                retained.claim_facts,
                 preflight.requested_spec AS bound_requested_spec,
                 version.declared_contract AS alpha_declared_contract, version.entrypoint AS alpha_entrypoint,
                 preflight.requested_spec->>'protocol' AS spec_protocol,
@@ -586,6 +590,14 @@ export class ResearchProgressRepository {
             AND evidence.worker_attempt_id = producer.worker_attempt_id
             AND evidence.source_event_sequence = snapshot.source_latest_sequence
             AND evidence.source_evidence_digest = latest_event.event_payload->>'evidence_digest'
+          LEFT JOIN LATERAL (
+            SELECT jsonb_build_object('schema_version', summary->'source_facts'->'schema_version',
+                     'claims', summary->'source_facts'->'claims',
+                     'execution', summary->'source_facts'->'execution') AS claim_facts
+              FROM research.current_source_seals_v1
+             WHERE workspace_id=producer.workspace_id AND run_id=producer.run_id
+             ORDER BY artifact_revision DESC LIMIT 1
+          ) retained ON true
           WHERE producer.workspace_id = $1 AND producer.run_id = $2
           ORDER BY producer.created_at DESC
           LIMIT 1`,
@@ -654,6 +666,7 @@ export class ResearchProgressRepository {
         throw new ResearchProgressError("RESEARCH_PROGRESS_CONFLICT", "Research native receipt is incompatible with the scoped run.", 409);
       }
       return {
+        claimSummary: row.claim_facts ? { source_facts: row.claim_facts } : null,
         ...(native?.success ? { nativeExecution: native.data } : {}),
         runId: row.run_id,
         jobState: row.job_state,

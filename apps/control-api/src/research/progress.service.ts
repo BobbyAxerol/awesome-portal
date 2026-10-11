@@ -369,7 +369,7 @@ export class ResearchProgressService {
       response.claims = await this.methodologyClaims.read(user, scope, runId, {
         releaseId: identity?.engineReleaseId ?? null, mode: identity?.mode ?? null, schedule: identity?.schedule ?? null,
         executionProfileId: identity?.executionProfileId ?? null,
-      }, response.current.effective_status === "COMPLETED");
+      }, response.current.effective_status === "COMPLETED", "PROGRESS", current.claimSummary);
     }
     return response;
   }

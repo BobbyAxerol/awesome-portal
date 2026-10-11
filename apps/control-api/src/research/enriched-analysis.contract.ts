@@ -236,11 +236,13 @@ const verifiedObjects = new WeakMap<object, {
   digest: string; runId: string; parsed: ResearchEnrichedAnalysis;
 }>();
 const verifiedCalculations = new ExactJsonCalculationMemo<ResearchEnrichedAnalysis>();
+const privatelyFrozenEnrichedNodes = new WeakSet<object>();
 
 function freezeJson(value: unknown): void {
-  if (!value || typeof value !== "object") return;
+  if (!value || typeof value !== "object" || privatelyFrozenEnrichedNodes.has(value)) return;
   for (const nested of Object.values(value)) freezeJson(nested);
   Object.freeze(value);
+  privatelyFrozenEnrichedNodes.add(value);
 }
 
 export function verifiedEnriched(value: unknown, digest: string | null | undefined, runId: string): ResearchEnrichedAnalysis | undefined {
@@ -266,11 +268,15 @@ export function verifiedEnriched(value: unknown, digest: string | null | undefin
   });
   // Preserve the former per-DB-object identity boundary; only exact-byte
   // calculation work is shared, not mutable projection objects or authority.
-  const parsed = structuredClone(verified);
+  // The calculation memo owns a deeply immutable private clone. Keep a
+  // distinct root for each fresh DB object, but share its immutable children
+  // rather than copying every curve/month/episode for every Library reader.
+  // An over-budget (unmemoized) result is made immutable before sharing too.
+  const parsed = { ...verified };
   if (object) {
     freezeJson(object);
-    freezeJson(parsed);
     verifiedObjects.set(object, { digest: digest!, runId, parsed });
   }
+  freezeJson(parsed);
   return parsed;
 }

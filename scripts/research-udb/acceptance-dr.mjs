@@ -113,6 +113,15 @@ async function authMatrix(){
   await check('profile-selector-refused',reader,'GET','/api/v1/execution/retained-review?profile_id=LIVE_BAD',undefined,[400]);
   await check('missing-object-hidden',reader,'GET','/api/v1/execution/broker-bindings/missing?environment=paper',undefined,[404]);
   await check('retained-reader-not-research-member',other,'GET',`/api/v1/quantbt/runs/${publication.run_id}/report?workspace_id=${publication.workspace_id}`,undefined,[404]);
+  // The lightweight claim projection must retain the same fresh RLS/Core
+  // boundary as the full seal, even when a prior authorized read was warm.
+  for(const [label,path] of [
+    ['progress',`/api/v1/research/runs/${publication.run_id}/progress`],
+    ['evidence',`/api/v1/quantbt/runs/${publication.run_id}/evidence`],
+  ]){
+    await check(label+'-claim-scope-wrong-workspace',reader,'GET',path+'?workspace_id=ws_wrong',undefined,[404]);
+    await check(label+'-claim-scope-nonmember',other,'GET',path+'?workspace_id='+publication.workspace_id,undefined,[404]);
+  }
   await check('non-owner-settings',other,'GET','/api/admin/profile-access',undefined,[403]);
   await check('anonymous',client({username:'udb04-anonymous',cookies:{}}),'GET','/api/v1/execution/retained-review',undefined,[401]);
   await check('no-execution-stream',reader,'GET','/api/v1/execution/profiles/paper/stream',undefined,[404]);
@@ -262,4 +271,10 @@ async function resumeReads(){
     execution_tables:Object.keys(result.domain_after).length,artifacts:result.artifacts_after.strict_verified,
     denominator:result.artifacts_after.strict_denominator,missing:result.artifacts_after.missing_manifests.length,stale_auth_cutover_rejected:true}));
 }
-if(process.argv.includes('--resume-reads'))await resumeReads();else await main();
+if(process.argv.includes('--auth-only')) {
+  // Scoped retake after read-path changes; do not repeat unchanged DB/artifact
+  // fault drills. This records actual auth, never calls it a new DR receipt.
+  await refreshSessions();
+  const result=await authMatrix();privateWrite('authorization-closeout.json',result);
+  console.log(JSON.stringify({passed:result.passed,auth_cases:result.checks.length,dr_reused_not_rerun:true}));
+} else if(process.argv.includes('--resume-reads'))await resumeReads();else await main();

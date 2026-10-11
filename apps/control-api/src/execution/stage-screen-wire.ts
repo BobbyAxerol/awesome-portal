@@ -24,22 +24,26 @@ const TIMESTAMP_KEYS = new Set([
  * key lets existing specialised screen DTOs remain backwards-compatible while
  * their containers move to the generated UTC reader.
  */
-export function wireStageValue(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(wireStageValue);
+export function wireStageValue(value: unknown, memo?: WeakMap<object, unknown>): unknown {
+  if (value && typeof value === "object" && memo?.has(value)) return memo.get(value);
+  if (Array.isArray(value)) {
+    const rows = value.map(row => wireStageValue(row, memo)); memo?.set(value, rows); return rows;
+  }
   if (!isRecord(value)) return value;
   const output: Record<string, unknown> = {};
   for (const [key, nested] of Object.entries(value)) {
-    output[key] = wireStageValue(nested);
+    output[key] = wireStageValue(nested, memo);
     if (TIMESTAMP_KEYS.has(key) && typeof nested === "string") {
       const milliseconds = Date.parse(nested);
       if (Number.isSafeInteger(milliseconds)) output[`${key}_ms`] = utcEpochMs(milliseconds);
     }
   }
+  memo?.set(value, output);
   return output;
 }
 
-export function wireStageRows(rows: readonly Record<string, unknown>[]): Record<string, unknown>[] {
-  return rows.map((row) => wireStageValue(row) as Record<string, unknown>);
+export function wireStageRows(rows: readonly Record<string, unknown>[], memo?: WeakMap<object, unknown>): Record<string, unknown>[] {
+  return rows.map((row) => wireStageValue(row, memo) as Record<string, unknown>);
 }
 
 /**
@@ -59,13 +63,13 @@ export function oldestStageAsOfMs(relations: readonly StageRelation[]): number |
   return values.length === 0 ? null : utcEpochMs(Math.min(...values));
 }
 
-export function stagePanels(relations: readonly StageRelation[], readAtMs: number): Record<string, PanelEnvelope<unknown>> {
-  return Object.fromEntries(relations.map((relation) => [relation.key, stagePanel(relation, readAtMs)]));
+export function stagePanels(relations: readonly StageRelation[], readAtMs: number, memo?: WeakMap<object, unknown>): Record<string, PanelEnvelope<unknown>> {
+  return Object.fromEntries(relations.map((relation) => [relation.key, stagePanel(relation, readAtMs, memo)]));
 }
 
-export function stagePanel(relation: StageRelation, readAtMs: number): PanelEnvelope<unknown> {
+export function stagePanel(relation: StageRelation, readAtMs: number, memo?: WeakMap<object, unknown>): PanelEnvelope<unknown> {
   const sourceAsOfMs = epochMs(relation.page?.asOf ?? null);
-  const rows = relation.page ? wireStageRows(relation.page.items as Record<string, unknown>[]) : [];
+  const rows = relation.page ? wireStageRows(relation.page.items as Record<string, unknown>[], memo) : [];
   const state = relation.state === "UNAVAILABLE" ? "UNAVAILABLE" as const
     : relation.state === "EMPTY" ? "EMPTY" as const
       : relation.state === "PARTIAL" ? "PARTIAL" as const

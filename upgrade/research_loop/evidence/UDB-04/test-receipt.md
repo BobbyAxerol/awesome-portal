@@ -1,5 +1,53 @@
 # UDB-04 — Test / reuse receipt
 
+## Latest remaining-work verification — 2026-10-11
+
+See [closeout](./closeout-amendment.md) / [hash index](./closeout-index.json).
+One grouped normal-hook commit, not a full hook for each repair. Tests below
+overlap, so suite counts are not added as a unique total.
+
+- Latest affected backend batch/cache/resource22/22PASS; Evidence
+  transaction/readiness/service59/59PASS; exactJSON/Library24/24PASS.
+  Earlier claim/enrichment/wiring/data-flight scopes retained in closeout.
+- FEstream/Fleet37PASS; actualSourceHealthBoard13PASS; retainedReplay/Insight
+ 15PASS, including the explicit-absent source lane. Webtsc/buildPASS.
+  No blanket visual rerecord or full engine suite for an accessibility wrapper.
+- Final mixed load:20distinct authenticated principals, measured240cold+
+ 1200warm bounded full-body HTTP reads, real64trial child+4queued.
+  All unchanged cold/warmSLOsPASS,0HTTP/0OOM; periodic cgroup observedmax
+ 1,527,185,408B, hardcap4,536,870,912B; lifetimepeak unavailable.
+- Fresh current-authority32casesPASS. Owned actual PGoutage/restart13HTTP+
+  independent ExecutionPG readinessPASS. Prepare→worker→download82,416B
+  verifiedSHA +wrongactor404PASS. No fresh whole restore claim.
+- Actual preview68route/tab/viewport cells,8Axe0violations, keyboard/overflow/
+  realRC→R1workspace/Refresh/idlePASS.4explicit fault casesPASS;401 unmount
+  is required existing auth behavior, not a missing protected shell.
+  Final bundle `index-CcYTFVZV.js`, standalone browser lane0HTTP/console/
+  source-candle requests. Previous shared-preview one-context503 attempt stays
+  FAIL, with nearby pool-capacity logs; no blanket refusal/console allowlist.
+- Six other shared containers unchanged,16Corecustodygroups/6Roadmaptables/
+  migrations/FKs/bindingauthorityPASS.23identities/20grants revoked,
+  only2exact original-clone sessions revoked;8services/5ownedvolumes gone.
+  Current-auth/later-test-artifact backup30days retained; no broadprune.
+
+Earlier failed load/browser measurements remain private and in the closeout
+chronology. Reuse of unchanged DB/artifact recovery is explicitly dependency-
+bound; historical83/86 exceptions and68/77/69 recovery populations do not mix.
+The successful ordinary commit is the mandatory full-hook receipt; its SHA
+and exit are reported to Bobby, never inferred from these focused checks.
+
+The first mandatory hook's Control suite had2505PASS/3skip/1FAIL. The single
+failure was the inspection admission fixture calling`sql.includes` on the new
+pg prepared-query config (`TypeError`), not changed2active/18queued admission.
+The mock now reads `input.text` and additionally asserts the actual prepared
+name on every Evidence client. Original peak/overflow/release assertions stay.
+Corrected targeted admission2/2PASS.
+No app source/image changed; passed load/browser/auth/DR/export are not rerun.
+The failed hook log is retained as `commit-hook-attempt1.log`, separately
+from `commit-hook.log` for the required successful ordinary commit.
+
+## Historical receipts
+
 **Later scoped amendment:** [16 MiB cache contract/validator tests](./cache-limit-amendment.md)
 supersede only old8MiB compatibility assertions below. Older receipts remain
 historical; neither unit PASS nor this cache change qualifies mixed load.

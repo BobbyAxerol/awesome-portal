@@ -2,10 +2,10 @@
 
 import { Inject, Injectable } from "@nestjs/common";
 import { createHash } from "node:crypto";
-import { readEnriched } from "./enriched-analysis.read";
+import { enrichedJoin } from "./enriched-analysis.read";
 import type { RunDeclarationInputs } from "./run-declaration.read";
 import type { ResearchEnrichedAnalysis } from "./enriched-analysis.contract";
-import { ResearchEnrichedAnalysisSchema } from "./enriched-analysis.contract";
+import { ResearchEnrichedAnalysisSchema, verifiedEnriched } from "./enriched-analysis.contract";
 import { sha256ResearchJson } from "./preflight.service";
 import type { Pool, PoolClient } from "pg";
 
@@ -57,6 +57,8 @@ export interface EvidenceProjectionWrite {
 }
 
 export interface EvidenceHubRow {
+  /** Private same-transaction fact projection; null is an authoritative absence. */
+  claimSummary?: Record<string, unknown> | null;
   runDeclarationInputs?: RunDeclarationInputs;
   /** Private same-snapshot proof; never infer readiness from enrichment alone. */
   retainedSource?: {
@@ -123,6 +125,9 @@ export interface EvidenceReadBundle {
 }
 
 interface HubQueryRow {
+  enriched_analysis?: string | null;
+  enriched_digest?: string | null;
+  claim_facts?: Record<string, unknown> | null;
   retained_protocol_disclosure?: unknown;
   retained_run_id?: string | null;
   retained_source_adapter_id?: string | null;
@@ -401,8 +406,14 @@ export class ResearchEvidenceRepository {
   }
 
   private async readHub(client: PoolClient, scope: ResearchScope, runId: string): Promise<EvidenceHubRow | null> {
-      const durable = await client.query<HubQueryRow>(
-        `SELECT floor(extract(epoch FROM transaction_timestamp()) * 1000)::bigint AS as_of_utc_ms,
+      const durable = await client.query<HubQueryRow>({
+        // Fixed prepared SQL shares query planning only, never rows or authority.
+        // The supplement is bound to this same snapshot and newest source;
+        // exact current JSON bytes still pass full run/digest verification.
+        name: "research_evidence_hub_udb04_v1",
+        text: `SELECT floor(extract(epoch FROM transaction_timestamp()) * 1000)::bigint AS as_of_utc_ms,
+                enrichment.enriched::text AS enriched_analysis,
+                enrichment.enriched_digest,
                 producer.run_id,
                 durable_run.state AS run_state,
                 floor(extract(epoch FROM durable_run.created_at) * 1000)::bigint AS run_created_at_utc_ms,
@@ -432,6 +443,7 @@ export class ResearchEvidenceRepository {
                 retained.artifact_revision AS retained_artifact_revision,
                 retained.retained_import_digest,
                 retained.protocol_disclosure AS retained_protocol_disclosure,
+                retained.claim_facts,
                 retained.manifest_digest AS retained_manifest_digest,
                 sealed_artifact.manifest_digest AS retained_artifact_manifest_digest,
                 sealed_artifact.artifact_revision AS retained_artifact_sealed_revision,
@@ -473,6 +485,9 @@ export class ResearchEvidenceRepository {
            LEFT JOIN LATERAL (
              SELECT run_id, source_adapter_id, profile_id, artifact_revision, retained_import_digest,
                     summary->'protocol_disclosure' AS protocol_disclosure,
+                    jsonb_build_object('schema_version', summary->'source_facts'->'schema_version',
+                      'claims', summary->'source_facts'->'claims',
+                      'execution', summary->'source_facts'->'execution') AS claim_facts,
                     manifest_digest, requested_spec_digest, effective_spec_digest, dataset_binding_digest
                FROM research.current_source_seals_v1
               WHERE workspace_id = producer.workspace_id AND run_id = producer.run_id
@@ -494,16 +509,19 @@ export class ResearchEvidenceRepository {
               ORDER BY received_at DESC, projection_revision DESC
               LIMIT 1
            ) projection ON true
+           ${enrichedJoin("producer.workspace_id", "producer.run_id")}
           WHERE producer.workspace_id = $1 AND producer.run_id = $2
           ORDER BY producer.created_at DESC
           LIMIT 1`,
-        [scope.workspaceId, runId],
-      );
+        values: [scope.workspaceId, runId],
+      });
       const row = durable.rows[0];
       if (row) {
-        const enrichedAnalysis = await readEnriched(client, scope.workspaceId, runId,
-          () => new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Stored analytics supplement is incompatible.", 503));
+        let enrichedAnalysis: ResearchEnrichedAnalysis | undefined;
+        try { enrichedAnalysis = verifiedEnriched(row.enriched_analysis, row.enriched_digest, runId); }
+        catch { throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Stored analytics supplement is incompatible.", 503); }
         return {
+          claimSummary: row.claim_facts ? { source_facts: row.claim_facts } : null,
           ...(row.retained_run_id && row.retained_source_adapter_id && row.retained_profile_id
             && row.retained_import_digest && row.retained_manifest_digest && row.retained_requested_spec_digest
             && row.retained_effective_spec_digest && row.retained_dataset_binding_digest && row.lifecycle_status

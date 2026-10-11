@@ -1,5 +1,36 @@
 # UDB-04 — Claude consumer / browser handoff
 
+## Latest Codex closeout — no consumer redesign required
+
+Bobby assigned the remaining scoped fixes; landed implementation preserves
+Claude's design/baselines. [Closeout](./closeout-amendment.md) / [hash index](./closeout-index.json).
+
+- `UDB04-BE-01/02`: final mixed20principals/1440GET/64trial childPASS;
+  Library445/Progress224/Evidence327/Report265/CC448/Portfolio371/context265ms,
+  no SLO/admission relaxation or permission cache. Same aggregate16MiB/2s.
+- `FE-UDB04-01`: separateCommandCenterStream is blocked during retained,
+  pending/malformed/denied context; late bootstrap/withdrawal tests retained.
+  Actual browser0bootstrap/stream, idle0API, explicitRefreshGET/contextonce;
+ 4explicit fault casesPASS.401 uses the existing session-expiry auth boundary.
+- `FE-UDB04-02`: Fleet realtable/nativechevronbutton with independent links,
+  bothSourceHealthBoard/Panel named keyboard scroll regions; only existing
+  banner/R1selectors use existing readabletoken.68cells/8Axe0violations,
+ 1280/660 keyboard/overflowPASS, realRC→R1workspace+reloadPASS.
+- Preview web `2b5846bb6ff0`, bundle `/assets/index-CcYTFVZV.js`; Control
+ `5e5519716042`. No new schema/type/endpoint/visual baseline to consume.
+  Retained Replay now blocks both fresh Manager/venue candle loaders and
+  paging on retained/pending/failed context.15affected testsPASS. An earlier
+  attempt's404 was WORKSPACE_NOT_FOUND, not proof of source activation;
+  source-enabled workspace qualification remains a separate reopening gate.
+
+23ownedaccounts/session/grants expired/revoked and isolated cell removed;
+sharedidentity/business/Roadmap hashes unchanged. Recovery reuse/dispositions
+stay explicit. No remaining assigned FE gate needs Claude to hide a failure,
+redo an engine run or rerecord baseline. Bobby visual review, actualStan
+identity/captures/source/SSE/command/release remain outside this closeout.
+
+## Historical handoff (superseded only for the named fixes above)
+
 [Unified](../../../UNIFIED_IMPLEMENTATION_PLAN.md#udb-04), [report](./phase-report.md),
 [gaps](./debt-register.json). Same Research branch; the initial checkpoint
 changed no FE file. The later [approved cache amendment](./cache-limit-amendment.md)

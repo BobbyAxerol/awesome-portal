@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { COMMAND_CENTER_STREAM, streamGate, type CommandCenter } from "./commandCenter";
 import { openStream, type SseFactory, type StreamHandle } from "./sse";
+import { retainedLoading, useRetainedReview } from "./retainedReview";
 import {
   INITIAL_SUBSCRIPTION,
   resnapshotDecision,
@@ -69,7 +70,13 @@ export function useCommandCentreStream({
   const [live, setLive] = useState<SubscriptionState | null>(null);
   const handle = useRef<StreamHandle | null>(null);
   const gate = streamGate(snapshot);
-  const allowed = gate.allowed && factory !== null;
+  const context = useRetainedReview();
+  // CC uses a separate transport from profileRealtime. A previously published
+  // cursor never overrides today's retained context or a failed authority read.
+  // `idle` is only the unwired fixture/legacy hook; a session-bound reader is
+  // loading until the frame explicitly receives an absent (404) context.
+  const contextAllowsStream = !retainedLoading() && (context.status === "absent" || context.status === "idle");
+  const allowed = contextAllowsStream && gate.allowed && factory !== null;
   const seed = snapshot?.workspaceId ?? "";
 
   useEffect(() => {
@@ -113,5 +120,6 @@ export function useCommandCentreStream({
     };
   }, [allowed, factory, fetchSnapshot, seed, now]);
 
-  return { live, reason: gate.reason };
+  return { live: allowed ? live : null, reason: context.status === "retained" ? "RETAINED_NO_STREAM"
+    : contextAllowsStream ? gate.reason : context.error ?? "Retained context is not available." };
 }

@@ -1,10 +1,20 @@
 # UDB-04 — Delivery and acceptance checkpoint
 
+**Latest: CROSS_LOOP_PREVIEW_READY_FOR_BOBBY_REVIEW.**
+[Remaining-work closeout](./closeout-amendment.md) supersedes the named SLO/
+burst/bootstrap/accessibility failures with final candidate receipts. Warm
+p95Library445/Progress224/Evidence327/Report265/CC448/Portfolio371/context265ms;
+500ms summary SLO unchanged.20principals/1440GET/real64trial child,0HTTP/OOM;
+68browser/8Axe/4fault casesPASS,32freshauthcases, current fault/export and
+custodyPASS.23testidentities/20grants revoked,8services/5volumes removed.
+Normal-hook successful commit is the final gate; no remote/release promotion.
+Historical failed measurements and distinct recovery populations below remain.
+
 **Later amendment:** Bobby approved the [16 MiB coordinated cache limit](./cache-limit-amendment.md)
 on2026-10-11. This supersedes historical8MiB/not-activated statements below,
 not their failed load/browser results or the overall OPEN verdict.
 
-2026-10-11 Asia/Saigon · `docs/research-loop-plan` · parent `16f2c18c`.
+**Historical checkpoint:**2026-10-11 Asia/Saigon · `docs/research-loop-plan` · parent `16f2c18c`.
 **ACCEPTANCE_OPEN — NOT_PHASE_PASS**. [Unified](../../../UNIFIED_IMPLEMENTATION_PLAN.md#udb-04),
 [tests](./test-receipt.md), [gaps](./debt-register.json), [Claude handoff](./handoff.md).
 

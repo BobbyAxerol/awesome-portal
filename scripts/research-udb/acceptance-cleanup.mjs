@@ -30,7 +30,16 @@ const result=coreQuery(`SELECT
 assert.deepEqual(result,{active_users:0,active_sessions:0,active_grants:0});
 const bytes=execFileSync('sudo',['-n','docker','exec',owned('portal-postgres'),'pg_dump','-U','portal','-d','portal_control','-Fc'],{maxBuffer:512*1024*1024});
 writeFileSync(join(HOME,'core-post-cleanup-auth.dump'),bytes,{mode:0o600});
+// Include this lane's later disposable output, not only the archive taken
+// before its mixed-load children ran. This is custody/backup, not a new DR
+// restore claim; old manifest exceptions and recovery denominators stay exact.
+const artifactBytes=execFileSync('sudo',['-n','docker','exec',owned('portal-api'),
+  'tar','-C','/var/lib/portal/artifacts','-czf','-','.'],{maxBuffer:512*1024*1024,timeout:180000});
+writeFileSync(join(HOME,'artifacts-post-cleanup.tar.gz'),artifactBytes,{mode:0o600});
 privateWrite('identity-cleanup.json',{passed:true,identities,...result,exact_original_user_sessions_revoked:2,
   original_credentials_changed:false,original_global_sessions_revoked:false,backup_days:30,
-  post_cleanup_backup_sha256:createHash('sha256').update(bytes).digest('hex')});
+  post_cleanup_backup_sha256:createHash('sha256').update(bytes).digest('hex'),
+  later_test_artifacts_backed_up:true,artifact_archive_bytes:artifactBytes.length,
+  artifact_archive_sha256:createHash('sha256').update(artifactBytes).digest('hex'),
+  artifact_backup_scope:'OWNED_TERMINAL_LANE_NOT_NEW_RECOVERY_PROOF'});
 console.log(JSON.stringify({passed:true,disabled:23,retained_grants_revoked:20,...result}));

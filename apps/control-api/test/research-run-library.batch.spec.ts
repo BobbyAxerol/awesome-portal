@@ -1,7 +1,7 @@
 import type { Pool } from "pg";
 import { describe, expect, it, vi } from "vitest";
 
-import { ResearchRunLibraryRepository } from "../src/research/run-library.repository";
+import { ResearchRunLibraryRepository, RUN_LIBRARY_PAGE_BATCH_WAIT_MS } from "../src/research/run-library.repository";
 import { ResearchRunLibraryQuerySchema } from "../src/research/run-library.contract";
 
 const workspaceId = "workspace-batch";
@@ -15,6 +15,27 @@ const counters = Object.fromEntries([
 ].map((key) => [key, "0"]));
 
 describe("P12 bounded in-flight page coalescing", () => {
+  it("bounds the measured stagger window at40ms without caching a settled page", async () => {
+    vi.useFakeTimers();
+    try {
+      const client={release:vi.fn(),query:vi.fn(async(input:string|{text:string})=>{
+        const sql=typeof input==='string'?input:input.text;
+        if(sql.startsWith('SELECT 1 FROM workspace_members'))return {rows:[{}],rowCount:1};
+        if(sql.startsWith('SELECT user_id FROM workspace_members'))return {rows:[{user_id:'a'},{user_id:'b'}],rowCount:2};
+        if(sql.includes('AS filtered_rows'))return {rows:[{...counters,as_of_utc_ms:'1790000000000',alphas:[],modes:[]}],rowCount:1};
+        return {rows:[],rowCount:0};
+      })};
+      const connect=vi.fn(async()=>client),repo=new ResearchRunLibraryRepository({connect} as unknown as Pool);
+      expect(RUN_LIBRARY_PAGE_BATCH_WAIT_MS).toBe(40);
+      const a=repo.list(scope('a'),query,null);
+      await vi.advanceTimersByTimeAsync(30);expect(connect).not.toHaveBeenCalled();
+      const b=repo.list(scope('b'),query,null);
+      await vi.advanceTimersByTimeAsync(9);expect(connect).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);await Promise.all([a,b]);expect(connect).toHaveBeenCalledTimes(1);
+      const fresh=repo.list(scope('a'),query,null);
+      await vi.advanceTimersByTimeAsync(40);await fresh;expect(connect).toHaveBeenCalledTimes(2);
+    }finally{vi.useRealTimers();}
+  });
   it("shares one exact snapshot but returns only each authorized actor's draft", async () => {
     const statements: string[] = [];
     const release = vi.fn();

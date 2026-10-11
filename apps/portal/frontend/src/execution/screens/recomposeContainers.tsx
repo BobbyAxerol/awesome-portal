@@ -46,6 +46,7 @@ import type { RangePreset } from "../../charts/financial/financialData";
 import { MARKET_CANDLES_MAX_LIMIT, MARKET_CANDLE_INTERVALS, MARKET_CANDLE_INTERVAL_MS, type MarketCandle, type MarketCandleInterval, type MarketCandlesPayload, fittingInterval, marketVenueOf, mergeCandles, publishedTimeframe, timeframeFromStrategyId } from "../api/marketCandles";
 import { candleProvenanceLine, candleRefusalLine, type MarketContextCandles } from "../api/marketContext";
 import { unavailable } from "../api/ports";
+import { retainedLoading, useRetainedReview } from "../retainedReview";
 import { AlphaActivityTile, ExecutionQualityTile, PortfolioCapitalBoard } from "../components/DerivationTile";
 import { financialChartView, type FinancialChartPayload } from "../api/financialChart";
 import type { AlphaActivity, DeploymentQuality, PortfolioCapital } from "../api/derivations";
@@ -1400,6 +1401,13 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
    * says which source it drew.
    */
   environment?: "paper" | "sandbox" | "live" | null }) {
+  const retainedContext = useRetainedReview();
+  // Retained review explicitly disables source refresh. Do not bootstrap
+  // Manager or venue candles from retained order/fill timestamps. An absent
+  // context preserves the existing separately qualified source-enabled lane.
+  const sourceReadsAllowed = !retainedLoading() && (retainedContext.status === "idle" || retainedContext.status === "absent");
+  const sourceReadReason = retainedContext.status === "retained" ? "UDB_RETAINED_OBSERVATION_NOT_CURRENT_SOURCE"
+    : retainedContext.error ?? "UDB_CONTEXT_NOT_READY";
   const subject = subjectId ?? alphaId ?? "subject";
   const accountScope = alphaId === null ? subjectId ?? null : null;
   // G9: the drained relation page set is the source once orders and fills have been read; the N25 page stands in before that and when the BFF is unavailable
@@ -1438,7 +1446,8 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
   // the finding, not a rendering problem to smooth over. The footer names
   // whichever one was drawn.
   const context = useApiRead<MarketContextCandles>(
-    (signal) => !activeSymbol || !range || !venue || !environment
+    (signal) => !sourceReadsAllowed ? Promise.resolve(unavailable(sourceReadReason))
+      : !activeSymbol || !range || !venue || !environment
       ? Promise.resolve(unavailable("No symbol, range or environment to read the Trading System's candles for."))
       : scopedReadApi(api, signal).getMarketContextCandles({
           environment,
@@ -1449,22 +1458,23 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
           toMs: range.hi,
           pointLimit: Math.min(2000, limit),
         }),
-    [api, activeSymbol, interval, range?.lo, range?.hi, limit, venue, environment],
-    { keepValue: true },
+    [api, activeSymbol, interval, range?.lo, range?.hi, limit, venue, environment, sourceReadsAllowed, sourceReadReason],
+    { keepValue: sourceReadsAllowed },
   );
   const market = useApiRead<MarketCandlesPayload>(
-    (signal) => !activeSymbol || !range
+    (signal) => !sourceReadsAllowed ? Promise.resolve(unavailable(sourceReadReason))
+      : !activeSymbol || !range
       ? Promise.resolve(unavailable("No symbol among this alpha's events to read candles for."))
       : venue === null
         ? Promise.resolve(unavailable(`No public klines for venue ${events.venue ?? "(not published)"} — MARKET_CANDLES_VENUE_UNSUPPORTED.`))
         : scopedReadApi(api, signal).getMarketCandles({ environment: relationValue?.environment ?? "paper", venue, symbol: activeSymbol, interval, fromMs: range.lo, toMs: range.hi, limit }),
-    [api, activeSymbol, interval, range?.lo, range?.hi, limit, venue, events.venue, relationValue?.environment],
-    { keepValue: true },
+    [api, activeSymbol, interval, range?.lo, range?.hi, limit, venue, events.venue, relationValue?.environment, sourceReadsAllowed, sourceReadReason],
+    { keepValue: sourceReadsAllowed },
   );
   // Edge paging: when the reader reaches an end of the loaded candles, one
   // more page is read on that side and merged; a page that comes back empty
   // marks that side exhausted. Pages are keyed by symbol|interval.
-  const pageKey = `${activeSymbol ?? ""}|${interval}|${venue ?? ""}`;
+  const pageKey = `${sourceReadsAllowed ? "source" : "retained"}|${activeSymbol ?? ""}|${interval}|${venue ?? ""}`;
   const [pages, setPages] = useState<{ key: string; candles: (readonly MarketCandle[])[]; exhausted: { left: boolean; right: boolean }; loading: "left" | "right" | null }>({ key: pageKey, candles: [], exhausted: { left: false, right: false }, loading: null });
   const merged = useMemo(() => {
     const base = market.value && market.value.state === "READY" ? market.value.candles : [];
@@ -1474,7 +1484,7 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
   }, [market.value, pages, pageKey]);
   const onRangeEdge = (edge: "left" | "right") => {
     if ((window as Window & { __replayDebug?: boolean }).__replayDebug) console.debug("[replay] edge", JSON.stringify({ edge, activeSymbol, venue, merged: merged.length, loading: pages.loading, exhausted: pages.exhausted, key: pages.key === pageKey }));
-    if (!activeSymbol || venue === null || merged.length === 0 || pages.loading) return;
+    if (!sourceReadsAllowed || !activeSymbol || venue === null || merged.length === 0 || pages.loading) return;
     if (pages.key === pageKey && pages.exhausted[edge]) return;
     const first = merged[0]!, last = merged[merged.length - 1]!;
     const stepMs = MARKET_CANDLE_INTERVAL_MS[interval];

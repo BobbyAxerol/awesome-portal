@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { ControlApiConfig } from "../config";
 import { utcEpochMs } from "../execution/contract-authority";
-import { projectionExpired } from "../execution/retained-read-profile";
+import { projectionExpired, retainedReview } from "../execution/retained-read-profile";
 import {
   ExecutionProfileProjectionRepository,
   ProfileProjectionSnapshot,
@@ -162,6 +162,9 @@ interface RelationSelection {
  */
 @Injectable()
 export class ResourceReadService {
+  private readonly documentIds = new WeakMap<object, number>();
+  private nextDocumentId = 0;
+  private readonly preparationFlights = new Map<string, { promise: Promise<Record<string, unknown>>; readers: number }>();
   constructor(
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ExecutionProfileProjectionRepository) private readonly repository: ExecutionProfileProjectionRepository,
@@ -176,33 +179,89 @@ export class ResourceReadService {
     const environments: readonly ResourceEnvironment[] = requestedEnvironment
       ? [requestedEnvironment] : ["paper", "sandbox", "live"];
     const loaded = await Promise.all(environments.map((environment) => this.load(environment)));
+    let template: Record<string, unknown>;
+    if (retainedReview(this.config)) {
+      // Coalesce DATA only while a bounded batch is pending. Exact document
+      // identities, scope and metadata are required; no digest-only, actor,
+      // permission, read-time or completed response can enter this flight.
+      const key = JSON.stringify([principal.workspaceId, kind, resourceId, requestedEnvironment,
+        loaded.map(profile => {
+          const snapshot = profile.snapshot;
+          if (!snapshot) return [profile.environment, profile.profileId, profile.state, profile.reasonCode];
+          let id = this.documentIds.get(snapshot.document);
+          if (id === undefined) { id = ++this.nextDocumentId; this.documentIds.set(snapshot.document, id); }
+          return [profile.environment, profile.profileId, id, snapshot.payloadDigest, snapshot.projectionEpoch,
+            snapshot.projectionSequence, snapshot.sourceAsOf?.toISOString(), snapshot.receivedAt.toISOString(),
+            snapshot.lastSuccessfulRefreshAt.toISOString(), snapshot.completeness];
+        })]);
+      const cached = this.repository.retainedResourceTemplate?.(key);
+      let pending = this.preparationFlights.get(key);
+      if (pending && pending.readers >= 64) throw Object.assign(new Error("EXECUTION_POOL_BUSY"), { code: "EXECUTION_POOL_BUSY" });
+      if (!cached && !pending && this.preparationFlights.size < 16) {
+        const promise = new Promise<Record<string, unknown>>((resolve, reject) => setTimeout(() => {
+          try {
+            const data=this.prepare(loaded, principal.workspaceId, kind, resourceId, requestedEnvironment);
+            this.repository.retainResourceTemplate?.(key,data,loaded.flatMap(profile=>profile.snapshot?[profile.snapshot]:[])); resolve(data);
+          }
+          catch (error) { reject(error); }
+        }, 20));
+        pending = { promise, readers: 0 }; this.preparationFlights.set(key, pending);
+        // Cleanup success AND failure without retaining a result or producing
+        // an unhandled rejection from a discarded finally() promise.
+        void promise.then(() => this.preparationFlights.delete(key), () => this.preparationFlights.delete(key));
+      }
+      if (cached) template = cached;
+      else if (pending) { pending.readers++; template = await pending.promise; }
+      else template = this.prepare(loaded, principal.workspaceId, kind, resourceId, requestedEnvironment);
+    } else template = this.prepare(loaded, principal.workspaceId, kind, resourceId, requestedEnvironment);
+    const readAtMs = utcEpochMs(Date.now());
+    return { ...template, read_at_ms: readAtMs, read_at: new Date(readAtMs).toISOString(),
+      actor: { user_id: principal.user.userId, username: principal.user.username, roles: [principal.user.role] },
+      panels: Object.fromEntries(Object.entries(template.panels as Record<string, Record<string, unknown>>)
+        .map(([key, panel]) => [key, { ...panel, clocks: { ...(panel.clocks as object), read_at_ms: readAtMs } }])) };
+  }
+
+  private prepare(loaded: readonly LoadedProfile[], workspaceId: string, kind: ResourceKind,
+    resourceId: string, requestedEnvironment?: ResourceEnvironment): Record<string, unknown> {
     const selections = loaded.map((profile) => this.select(profile, kind, resourceId));
     const found = selections.filter((selection) => selection.resolution.state === "FOUND");
-    const readAtMs = Date.now();
+    const readAtMs = 0;
     const branches = RESOURCE_RELATIONS[kind].flatMap((alias) =>
       selections.map((selection) => this.selectRelation(selection, alias)));
+    // One immutable-in-this-read field graph feeds both panel + compatibility
+    // DTOs and survives geometric bounds. Never retain this memo across reads:
+    // no clocks, caller, permission or stale snapshot result can be reused.
+    const wireMemo = new WeakMap<object, unknown>();
     let merged = mergeRelations(branches);
     let response = composeResourceResponse({
-      config: this.config, principal, kind, resourceId, requestedEnvironment,
-      selections, found, merged, readAtMs,
+      config: this.config, workspaceId, kind, resourceId, requestedEnvironment,
+      selections, found, merged, readAtMs, wireMemo,
     });
+    // Local to this read, not a response/auth cache. Unchanged relation arrays
+    // recur while the largest relation is halved; serialize each array once,
+    // not twice per sort comparison on every bounding iteration.
+    const relationBytes = new WeakMap<object, number>();
+    const responseByteMemo = new WeakMap<object, number>();
+    const scalarByteMemo = new Map<unknown, number>();
 
     // The browser receives a product DTO, not an unbounded projection export.
     // Applying this after exact identity/scope resolution means a target beyond
     // a global source page remains addressable while a pathological current
     // payload cannot turn one rich screen read into a multi-megabyte transfer.
-    while (responseBytes(response) > RESOURCE_RESPONSE_BYTE_LIMIT) {
-      const bounded = trimLargestRelation(merged);
+    // Reserve bounded space for the per-request actor/current UTC fields.
+    while (jsonWireBytes(response, responseByteMemo, scalarByteMemo) > RESOURCE_RESPONSE_BYTE_LIMIT - 1024) {
+      const bounded = trimLargestRelation(merged, relationBytes);
       if (!bounded) {
-        return resourcePayloadBoundedShell({
-          config: this.config, principal, kind, resourceId, requestedEnvironment,
+        response = resourcePayloadBoundedShell({
+          config: this.config, workspaceId, kind, resourceId, requestedEnvironment,
           selections, found, merged, readAtMs,
         });
+        break;
       }
       merged = bounded;
       response = composeResourceResponse({
-        config: this.config, principal, kind, resourceId, requestedEnvironment,
-        selections, found, merged, readAtMs,
+        config: this.config, workspaceId, kind, resourceId, requestedEnvironment,
+        selections, found, merged, readAtMs, wireMemo,
       });
     }
     return response;
@@ -254,7 +313,7 @@ export class ResourceReadService {
 
 interface ResourceResponseInput {
   readonly config: ControlApiConfig;
-  readonly principal: ResourceReadPrincipal;
+  readonly workspaceId: string;
   readonly kind: ResourceKind;
   readonly resourceId: string;
   readonly requestedEnvironment: ResourceEnvironment | undefined;
@@ -262,10 +321,11 @@ interface ResourceResponseInput {
   readonly found: readonly ResourceSelection[];
   readonly merged: ReadonlyMap<RelationAlias, MergedRelation>;
   readonly readAtMs: number;
+  readonly wireMemo?: WeakMap<object, unknown>;
 }
 
 function composeResourceResponse(input: ResourceResponseInput): Record<string, unknown> {
-  const { config, principal, kind, resourceId, requestedEnvironment, selections, found, merged, readAtMs } = input;
+  const { config, workspaceId, kind, resourceId, requestedEnvironment, selections, found, merged, readAtMs } = input;
   const state = productState(found.length > 0, selections, merged);
   const asOf = oldestAsOf(merged);
   const asOfMs = asOf ? Date.parse(asOf) : null;
@@ -306,7 +366,7 @@ function composeResourceResponse(input: ResourceResponseInput): Record<string, u
     record_authority: "PORTAL_CONTROL",
     source_authority: "TRADING_SYSTEM",
     delivery_profile: requestedEnvironment ? profileIdFor(requestedEnvironment, config) : "MULTI_EXECUTION_PROFILES",
-    workspace_id: principal.workspaceId,
+    workspace_id: workspaceId,
     requested_environment: requestedEnvironment ?? "all",
     selected_environment: selectedEnvironment,
     resource: found.length === 0 ? { kind, id: resourceId } : resourceIdentity(kind, resourceId, found),
@@ -318,7 +378,6 @@ function composeResourceResponse(input: ResourceResponseInput): Record<string, u
     freshness: mergedFreshness(merged),
     completeness: mergedCompleteness(merged),
     projection: projectionMetadata(found),
-    actor: { user_id: principal.user.userId, username: principal.user.username, roles: [principal.user.role] },
     capabilities: [
       {
         capability_id: `resource.${kind.toLowerCase()}.identity`,
@@ -329,8 +388,8 @@ function composeResourceResponse(input: ResourceResponseInput): Record<string, u
       },
       ...capabilityRows,
     ],
-    panels: stagePanels(stageRelations, readAtMs),
-    data: wireStageValue(data),
+    panels: stagePanels(stageRelations, readAtMs, input.wireMemo),
+    data: wireStageValue(data, input.wireMemo),
     unavailable_branches: unavailableBranches,
   };
 }
@@ -342,7 +401,7 @@ function composeResourceResponse(input: ResourceResponseInput): Record<string, u
  * source field still prevents a safe product-sized response.
  */
 function resourcePayloadBoundedShell(input: ResourceResponseInput): Record<string, unknown> {
-  const { config, principal, kind, resourceId, requestedEnvironment, selections, found, merged, readAtMs } = input;
+  const { config, workspaceId, kind, resourceId, requestedEnvironment, selections, found, merged, readAtMs } = input;
   const reasonCode = "EDS04_RESOURCE_RESPONSE_BYTE_BOUND";
   const stageRelations: StageRelation[] = RESOURCE_RELATIONS[kind].map((key) => ({
     key, state: "PARTIAL", reasonCode, page: null, truncated: true,
@@ -353,7 +412,7 @@ function resourcePayloadBoundedShell(input: ResourceResponseInput): Record<strin
     record_authority: "PORTAL_CONTROL",
     source_authority: "TRADING_SYSTEM",
     delivery_profile: requestedEnvironment ? profileIdFor(requestedEnvironment, config) : "MULTI_EXECUTION_PROFILES",
-    workspace_id: principal.workspaceId,
+    workspace_id: workspaceId,
     requested_environment: requestedEnvironment ?? "all",
     selected_environment: chosenEnvironment(found),
     resource: found.length === 0 ? { kind, id: resourceId } : resourceIdentity(kind, resourceId, found),
@@ -365,7 +424,6 @@ function resourcePayloadBoundedShell(input: ResourceResponseInput): Record<strin
     freshness: mergedFreshness(merged),
     completeness: "PARTIAL",
     projection: projectionMetadata(found),
-    actor: { user_id: principal.user.userId, username: principal.user.username, roles: [principal.user.role] },
     capabilities: [
       {
         capability_id: `resource.${kind.toLowerCase()}.identity`,
@@ -401,6 +459,40 @@ function resourcePayloadBoundedShell(input: ResourceResponseInput): Record<strin
 
 function responseBytes(value: unknown): number {
   return Buffer.byteLength(JSON.stringify(value), "utf8");
+}
+
+/** Exact native-JSON UTF-8 size for this plain wire graph. Its same fact rows
+ * appear in panels AND the legacy data branch and survive several bounds.
+ * Count those immutable-in-this-preparation nodes once, not serialize the
+ * entire multi-MiB DTO on every geometric trim. No memo survives preparation.
+ * Undefined object fields are omitted; array holes become null, as in JSON.
+ */
+function jsonWireBytes(value: unknown, objects: WeakMap<object, number>, scalars: Map<unknown, number>): number {
+  if (value === null) return 4;
+  if (typeof value !== "object") {
+    const cached = scalars.get(value);
+    if (cached !== undefined) return cached;
+    const encoded = JSON.stringify(value);
+    if (encoded === undefined) return 4;
+    const bytes = Buffer.byteLength(encoded, "utf8");
+    if (scalars.size < 32_768) scalars.set(value, bytes);
+    return bytes;
+  }
+  const cached = objects.get(value); if (cached !== undefined) return cached;
+  // Wire DTOs are plain JSON, but retain native handling of an unexpected
+  // Date/class rather than miscount its toJSON representation.
+  if (typeof (value as { toJSON?: unknown }).toJSON === "function") return responseBytes(value);
+  let bytes = 2;
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index++) bytes += (index ? 1 : 0) + jsonWireBytes(value[index], objects, scalars);
+  } else {
+    let count = 0;
+    for (const [key, child] of Object.entries(value)) {
+      if (["undefined", "function", "symbol"].includes(typeof child)) continue;
+      bytes += (count++ ? 1 : 0) + jsonWireBytes(key, objects, scalars) + 1 + jsonWireBytes(child, objects, scalars);
+    }
+  }
+  objects.set(value, bytes); return bytes;
 }
 
 function resolveScope(
@@ -592,9 +684,11 @@ function scopedRelation(
   const rows = source.items.map((row) => row.fields).filter((row) => rowInEnvironment(row, environment));
   const scoped = rowsForScope(alias, rows, scope, environment);
   const relationPartial = source.completeness !== "COMPLETE";
-  const visibleRows = scoped.rows.map((row) => copyFact(alias, row, environment));
-  const truncated = visibleRows.length > RESOURCE_RELATION_ROW_LIMIT;
-  const items = visibleRows.slice(0, RESOURCE_RELATION_ROW_LIMIT);
+  const truncated = scoped.rows.length > RESOURCE_RELATION_ROW_LIMIT;
+  // Scope ALL rows first so identity/ambiguity/counts stay exact. Only copy
+  // the bounded public prefix: previously thousands of discarded rows were
+  // allowlisted/cloned per viewer before slicing them down to200.
+  const items = scoped.rows.slice(0, RESOURCE_RELATION_ROW_LIMIT).map((row) => copyFact(alias, row, environment));
   const boundReason = truncated ? "EDS04_RESOURCE_RELATION_ROW_BOUND" : null;
   const state: CapabilityState = scoped.reasonCode || relationPartial || truncated
     ? "PARTIAL" : scoped.rows.length === 0 ? "EMPTY" : "AVAILABLE";
@@ -605,8 +699,8 @@ function scopedRelation(
     completeness: source.completeness,
     items,
     nextCursor: null,
-    exactTotal: visibleRows.length,
-    filteredTotal: visibleRows.length,
+    exactTotal: scoped.rows.length,
+    filteredTotal: scoped.rows.length,
     scope: { state: reasonCode ? "PARTIAL" : "EXACT", reasonCode },
     projection: {
       epoch: snapshot.projectionEpoch,
@@ -795,11 +889,16 @@ function mergeRelations(selections: readonly RelationSelection[]): ReadonlyMap<R
  * cursor is minted here: the browser receives an honest partial current view
  * and the full accepted snapshot stays server-side.
  */
-function trimLargestRelation(relations: ReadonlyMap<RelationAlias, MergedRelation>): ReadonlyMap<RelationAlias, MergedRelation> | null {
+function trimLargestRelation(relations: ReadonlyMap<RelationAlias, MergedRelation>, bytes: WeakMap<object, number>): ReadonlyMap<RelationAlias, MergedRelation> | null {
+  const size = (rows: readonly Fact[]) => {
+    const cached = bytes.get(rows); if (cached !== undefined) return cached;
+    const value = responseBytes(rows); bytes.set(rows, value); return value;
+  };
   const candidates = [...relations.entries()]
     .filter(([, relation]) => relation.rows.length > 0)
-    .sort(([, left], [, right]) => responseBytes(right.rows) - responseBytes(left.rows));
-  const target = candidates[0];
+    .map(entry => ({ entry, bytes: size(entry[1].rows) }))
+    .sort((left, right) => right.bytes - left.bytes);
+  const target = candidates[0]?.entry;
   if (!target) return null;
   const [alias, relation] = target;
   const keep = Math.floor(relation.rows.length / 2);
@@ -829,7 +928,8 @@ function dedupeFacts(rows: readonly Fact[]): Fact[] {
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
-  }).sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
+  }).map(row => ({ row, key: JSON.stringify(row) }))
+    .sort((left, right) => left.key.localeCompare(right.key)).map(({ row }) => row);
 }
 
 function mergedState(states: readonly CapabilityState[], rowCount: number): CapabilityState {

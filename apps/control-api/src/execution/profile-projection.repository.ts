@@ -1,6 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
+import type { QueryResult, QueryResultRow } from "pg";
+import { RetainedDataFlights } from "./retained-data-flights";
 import { EXECUTION_DATA_POOL, CONTROL_API_CONFIG, EXECUTION_DURABLE_MIRROR_WRITER } from "../tokens";
 import type { ControlApiConfig } from "../config";
 import type {
@@ -404,7 +406,7 @@ export class ExecutionProfileProjectionRepository {
       conditions.push(`fields->>($${values.length - 1}) = $${values.length}`);
     }
     values.push(query.limit + 1);
-    const result = await this.pool.query<{ row_id: string; ts: string; fields: Record<string, ProjectionScalar> }>(
+    const result = await this.retainedDataQuery<{ row_id: string; ts: string; fields: Record<string, ProjectionScalar> }>(
       `SELECT row_id, to_char(ts AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS ts, fields
          FROM ${this.historyTable()}
         WHERE ${conditions.join(" AND ")}
@@ -525,7 +527,7 @@ export class ExecutionProfileProjectionRepository {
     relationKey: string,
     query: { from: string; valueField: string; strategyIds?: readonly string[] },
   ): Promise<Array<{ strategyId: string; accountId: string; day: string; value: string }>> {
-    const result = await this.pool.query<{ strategy_id: string; account_id: string; day: string; value: string }>(
+    const result = await this.retainedDataQuery<{ strategy_id: string; account_id: string; day: string; value: string }>(
       `SELECT DISTINCT ON (fields->>'strategy_id', fields->>'account_id', date_trunc('day', ts))
               fields->>'strategy_id' AS strategy_id,
               fields->>'account_id' AS account_id,
@@ -572,7 +574,7 @@ export class ExecutionProfileProjectionRepository {
     firstEquity: string; lastEquity: string; netPnl: string | null;
     points: number; firstTs: string; lastTs: string;
   }>> {
-    const result = await this.pool.query<{
+    const result = await this.retainedDataQuery<{
       portfolio_id: string; currency: string | null;
       first_equity: string; last_equity: string; net_pnl: string | null;
       points: string; first_ts: Date; last_ts: Date;
@@ -638,7 +640,7 @@ export class ExecutionProfileProjectionRepository {
       values.push(entity.field, entity.value);
       conditions.push(`fields->>($${values.length - 1}) = $${values.length}`);
     }
-    const result = await this.pool.query<{ row_count: string; oldest_ts: string | null; newest_ts: string | null }>(
+    const result = await this.retainedDataQuery<{ row_count: string; oldest_ts: string | null; newest_ts: string | null }>(
       `SELECT count(*)::text AS row_count,
               to_char(min(ts) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS oldest_ts,
               to_char(max(ts) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS newest_ts
@@ -850,6 +852,9 @@ export class ExecutionProfileProjectionRepository {
       // HTTP data remains bounded independently by each named BFF.
       const cacheBudgetBytes=RETAINED_DATA_VIEW_CACHE_MAXIMUM_SERIALIZED_BYTES;
       if(bytes<=cacheBudgetBytes){
+        this.expireRetainedResources();
+        while(this.retainedResources.size && this.retainedCachedBytes()+bytes>cacheBudgetBytes)
+          this.retainedResources.delete(this.retainedResources.keys().next().value!);
         const total=()=>[...this.retainedViews.values()].reduce((n,entry)=>n+entry.bytes,0);
         while(this.retainedViews.size && (this.retainedViews.size>=3 || total()+bytes>cacheBudgetBytes)) this.retainedViews.delete(this.retainedViews.keys().next().value!);
         this.retainedViews.set(key,{snapshot,bytes,revision:stableRevision,expiresAt:Date.now()+2000});
@@ -863,7 +868,65 @@ export class ExecutionProfileProjectionRepository {
   }
 
   private readonly snapshotFlights = new Map<string, Promise<ProfileProjectionSnapshot | null>>();
+  private readonly retainedDataFlights = new RetainedDataFlights();
+  private retainedDataQuery<T extends QueryResultRow>(text: string, values: unknown[]): Promise<QueryResult<T>> {
+    return retainedReview(this.config) ? this.retainedDataFlights.query<T>(this.pool, text, values) : this.pool.query<T>(text, values);
+  }
   private readonly retainedViews = new Map<string,{snapshot:ProfileProjectionSnapshot;bytes:number;revision:string;expiresAt:number}>();
+  private readonly retainedResources = new Map<string,{data:Record<string,unknown>;bytes:number;expiresAt:number;
+    sources:readonly WeakRef<ProfileProjectionSnapshot>[]}>();
+
+  /** Internal DATA-only representation of an already-loaded exact document.
+   * Callers must load/validate the snapshots first and bind their identities
+   * and metadata in the key. Authority/actor/current read clocks are excluded.
+   * Documents + at most4 prepared DTOs share ONE published16MiB budget.
+   */
+  retainedResourceTemplate(key: string): Record<string,unknown> | undefined {
+    if (!retainedReview(this.config)) return undefined;
+    const entry=this.retainedResources.get(key);
+    if(entry&&entry.expiresAt<=Date.now()){
+      // Lookup follows loading CURRENT snapshots. Only their successful DB
+      // revision validation may renew DATA, as in snapshot() above. Ordinary
+      // hits, evicted/changed documents and authority/DB failures never renew.
+      const validatedUntil=this.resourceSourceDeadline(entry.sources);
+      if(validatedUntil>entry.expiresAt&&validatedUntil>Date.now())entry.expiresAt=validatedUntil;
+    }
+    this.expireRetainedResources();
+    return this.retainedResources.get(key)?.data;
+  }
+  retainResourceTemplate(key: string, data: Record<string,unknown>, snapshots:readonly ProfileProjectionSnapshot[]=[]): void {
+    if (!retainedReview(this.config)) return;
+    if ('actor' in data || data.read_at_ms !== 0) throw new Error('RETAINED_RESOURCE_DATA_ONLY_REQUIRED');
+    this.expireRetainedResources(); this.retainedResources.delete(key);
+    const bytes=Buffer.byteLength(key)+Buffer.byteLength(JSON.stringify(data));
+    if(bytes>1024*1024)return;
+    while(this.retainedResources.size && (this.retainedResources.size>=4
+      || this.retainedCachedBytes()+bytes>RETAINED_DATA_VIEW_CACHE_MAXIMUM_SERIALIZED_BYTES))
+      this.retainedResources.delete(this.retainedResources.keys().next().value!);
+    if(this.retainedCachedBytes()+bytes>RETAINED_DATA_VIEW_CACHE_MAXIMUM_SERIALIZED_BYTES)return;
+    const seen=new WeakSet<object>();
+    const freeze=(value:unknown):void=>{if(!value||typeof value!=='object'||seen.has(value))return;
+      seen.add(value);for(const child of Object.values(value))freeze(child);Object.freeze(value);};
+    freeze(data);
+    const sources=snapshots.map(snapshot=>new WeakRef(snapshot));
+    const validatedUntil=this.resourceSourceDeadline(sources);
+    this.retainedResources.set(key,{data,bytes,sources,
+      expiresAt:Math.min(Date.now()+2000,validatedUntil||Date.now()+2000)});
+  }
+  private resourceSourceDeadline(sources:readonly WeakRef<ProfileProjectionSnapshot>[]): number {
+    if(!sources.length)return 0;
+    const entries=[...this.retainedViews.values()];let until=Number.MAX_SAFE_INTEGER;
+    for(const weak of sources){const snapshot=weak.deref(),entry=snapshot&&entries.find(e=>e.snapshot===snapshot);
+      if(!entry)return 0;until=Math.min(until,entry.expiresAt);}
+    return until;
+  }
+  private expireRetainedResources(): void {
+    const now=Date.now();for(const [key,entry] of this.retainedResources)
+      if(entry.expiresAt<=now)this.retainedResources.delete(key);
+  }
+  private retainedCachedBytes(): number {
+    return [...this.retainedViews.values(),...this.retainedResources.values()].reduce((n,entry)=>n+entry.bytes,0);
+  }
 
   private async readSnapshot(
     workspaceId: string,

@@ -3649,7 +3649,7 @@ phê duyệt tại [UDB addendum](#udb-upgrade-2026-10-10).
 | [UDB-01](#udb-01) | Bobby duyệt UDB-01 2026-10-10 +bounded-gate refinement | Cả hai loop, nền identity/storage | UDB-1 | **PASS — PREVIEW_STORAGE_BASELINE** · 95/95 real-PG +7 config cases;8,969 changed-body writes/119 vacuum cycles/602.478s;custody unchanged,C4 done;[packet](./research_loop/evidence/UDB-01/README.md). No in-scope open debt;dev/stable/UI không đổi |
 | [UDB-02](#udb-02) | UDB-01 PASS + Bobby giao 2026-10-10 | Execution read models + Research publication | UDB-2 | **PASS — ISOLATED_STORE_HYDRATED_PREVIEW** ·38/38 real-PG +7 config assertions;49,421 history/4,136 current entities,10-table parity;Core custody/independent restart/restore/rollback/C4 PASS;[packet](./research_loop/evidence/UDB-02/README.md). Retained activation/handoff hiện thuộc UDB-03 bên dưới |
 | [UDB-03](#udb-03) | UDB-02 PASS + Bobby giao 2026-10-10 | Execution screens/subpanels, Research → RC → R1 | UDB-3 | **BACKEND_PASS / RETAINED_PREVIEW_REVIEW_READY / SCOPED_FE_CONSUMER_VERIFIED** · Claude13f64a3a/1c01aefb retained; Codex2026-10-11 session/failure/UTC refinement +4table owners,91targeted tests/typecheck +6affected browser cells and3explicit faults;222API/68old route gates reused only unchanged scope. No source/SSE/command/dev/stable;existing banner kept,no redesign/baseline change. [packet](./research_loop/evidence/UDB-03/README.md) · [consumer receipt](./research_loop/evidence/UDB-03/claude-consumer-receipt.md) · [review fixes](./research_loop/evidence/UDB-03/codex-consumer-refinement.md);UDB-04 mở riêng2026-10-11, không mở rộng verdict UDB-03 thành full acceptance |
-| [UDB-04](#udb-04) | UDB-01…03 đạt + Bobby giao UDB-04 ngày 2026-10-11 (Asia/Saigon) | Cả hai loop + Governance | UDB-4 | **ACCEPTANCE_OPEN — NOT_PHASE_PASS** ·28real auth cases/current-auth cutover PASS; fresh-volume combined archive recovery69/69+27Execution hashes PASS; historical68/77proofs and83/86exceptions separate. Latest20readers+64trial HEAVY/4queued:0HTTP/OOM,hardcap4,536,870,912B;4summary SLO FAIL679/631/744/626ms vs500,Report441PASS.68browser cells:0overflow/page errors/writes,realRC→R1 scope PASS;Portfolio503/CC bootstrap/6a11y cells OPEN. Bobby-approved16MiB contract/strict-validator amendment: Control1fa9b8be/web a460de6b app-only,4scoped browser cellsPASS,real11,184,215B Paper warm0queries;6other containers unchanged;not single-image mixed-load acceptance.23test identities/20grants revoked,8services/5clone volumes removed,remaining0;source16Core/6Roadmap unchanged. [packet](./research_loop/evidence/UDB-04/README.md) · [report](./research_loop/evidence/UDB-04/phase-report.md) · [handoff](./research_loop/evidence/UDB-04/handoff.md) · [cache amendment](./research_loop/evidence/UDB-04/cache-limit-amendment.md). No push/dev/main/stable/source/SSE/command/release |
+| [UDB-04](#udb-04) | UDB-01…03 đạt + Bobby giao UDB-04 ngày 2026-10-11 (Asia/Saigon) | Cả hai loop + Governance | UDB-4 | **CROSS_LOOP_PREVIEW_READY_FOR_BOBBY_REVIEW** · final20realprincipals/1440full-bodyGET+64trialHEAVY/4queued: warm p95Library445/Progress224/Evidence327/Report265/CC448/Portfolio371/context265ms,500msSLO unchanged,HTTP/OOM0,hardcap4,536,870,912B.68browser/8Axe/4faultcases+32authcases/affectedfault/exportPASS;0bootstrap/stream,scopeddesign/baselinespreserved,realRC→R1workspace/reloadPASS.16MiBaggregate/2s/freshCoreauth unchanged;recovery69/69+27hashes reused only unchangedstorage/auth dependencies,83/86+exact3exceptions separate.23testidentities/20grants revoked,8services/5clonevolumes removed,remaining0;16Core/6Roadmapcustody unchanged,sixothercontainers unchanged. Normal-hook coherent commit required; image/COPY binding in [closeout](./research_loop/evidence/UDB-04/closeout-amendment.md) · [index](./research_loop/evidence/UDB-04/closeout-index.json) · [handoff](./research_loop/evidence/UDB-04/handoff.md). Prior FAILs preserved. No push/dev/main/stable/source/SSE/command/release;Bobby visualreview separate |
 
 **Frontend board rows 2026-10-04 (FE campaign W1–W7, Claude/Thanhvuong; Codex slice marked):** sống tại [FE-W1-W5 packet](./research_loop/evidence/FE-W1-W5/thanhvuong-frontend-receipt.md); chi tiết ở [§13.4.2](#rl-fe-w1-w7-note). Mọi hàng dưới đây là `NOT_VERIFIED` ở mức sản phẩm cho tới khi Bobby rà bằng mắt; không hàng nào là `OWNER_ACCEPTED`.
 
@@ -8869,6 +8869,12 @@ typed examples+source locators và UDB-04 exact candidate/affected-screen list.
 <a id="udb-04"></a>
 ### UDB-04 — Cross-loop authorization, performance/DR acceptance and exact preview rebuild
 
+**Remaining-work approval (2026-10-11):** Bobby giao Codex xử lý bốn summary
+SLO, Portfolio/context burst và đúng bootstrap/accessibility trong handoff
+Claude, giữ rich design. [Closeout amendment](./research_loop/evidence/UDB-04/closeout-amendment.md)
+records scope, affected tests and final evidence; previous FAILs stay open
+until actually retaken. No push/dev/main/stable/source/release authority added.
+
 **Implementation approval:** Bobby giao UDB-04 ngày 2026-10-11 (Asia/Saigon).
 Codex làm trên `docs/research-loop-plan`, base `16f2c18c`, giữ nguyên toàn bộ
 consumer/design của Claude. [Execution packet](./research_loop/evidence/UDB-04/README.md)
@@ -9116,3 +9122,45 @@ Final clone teardown8services/5volumes,remaining0;23test identities and20grants
 revoked. Current-auth and final69manifest archive retained30days. Final shared
 custody16Coregroups/6Roadmaptables PASS; disk free26.80%,no broad/image prune.
 Normal root hook required for checkpoint commit; no failed gate relabelled PASS.
+
+### UDB-04 remaining-work closeout — 2026-10-11
+
+Bobby giao xử lý bốn summary SLO, Portfolio/context và đúng phần bootstrap/
+accessibility; parent734f5c36, cùng `docs/research-loop-plan`.
+[Receipt](./research_loop/evidence/UDB-04/closeout-amendment.md) /
+[sanitized hash index](./research_loop/evidence/UDB-04/closeout-index.json)
+supersede các OPEN/FAIL đã định danh, giữ nguyên lịch sử phép đo thất bại.
+
+Backend: narrow claim+current enrichment trong cùng authorized snapshot,
+bounded pending-only batch và exact-byte pure math reuse; Portfolio chỉ wire
+200publicrows và đếm UTF8/giới hạn1MiB chính xác; aggregate16MiB/2s có
+source-revision revalidation, không authority cache/TTL trượt/quota/SLO nới.
+20principals/1440full-bodyGET +real64trial child/4queued: Library445,
+Progress224,Evidence327,Report265,CC448,Portfolio371/context265ms p95PASS;
+HTTP/OOM0,observedcgroup1,527,185,408B≠lifetimepeak,hardcap4,536,870,912B.
+
+FE: retained/pending/denied/malformed context chặn CC bootstrap và Replay
+Manager/venue source loaders/paging; không mở quyền để chữa source404.
+Fleet native disclosure, SourceHealthBoard/Panel keyboard scroll region,
+existing named banner/R1 contrasttokens; giữ layout/design/baselines của Claude.
+68route/tab/mobilecells,8Axe,4explicitcontextfaultcasesPASS;401 unmount theo
+authgate cũ,0bootstrap/stream/idleAPI/overflow/app errors,RefreshGET/contextonce.
+32freshauthcases,affectedownedPGoutage/restart/exportPASS. Recovery69/69/
+27hashes reuse theo unchangedstorage/auth/workerbytes,không chạy lạiengine/
+restore hay trộn83/86+3exception/68/77population thành một denominator.
+
+Preview chỉ cập nhật Control/web qua helper,6non-appcontainers không đổi,
+16Core/6Roadmap/migration/FK/bindingauthoritycustodyPASS.23testidentities/
+20grants revoked,2exactcloned-owner sessions revoked,không resetpassword;
+8services/5ownedvolumes removed,remaining0/0,backup/evidence30days.
+Không broadprune/VACUUMFULL; C4quiet-window candidateimage inventory sau
+retention riêng,protectcurrent/rollback. Normal-hook commit và exactCOPYhash
+check là gate cuối; không rebuild app vì thay markdown alone.
+Hook attempt1 có đúng1FAIL ở admission mock chỉ nhận SQLstring; đã nhận pg
+queryconfig và assert preparedname,giữ2active/18queued/overflow;targeted2/2PASS.
+LogFAIL giữ riêng; retryordinaryhook,không rerunengine/load/browser/DR vìtestonly.
+
+Verdict tối đa `CROSS_LOOP_PREVIEW_READY_FOR_BOBBY_REVIEW`; không owner visual
+acceptance, nguồn/Edge/SSE/command/livecapture, push/dev/main/stable/release.
+ActualStan absent→NOT_TESTED; downstreamcapture thiếu vẫn typed. Bobby review
+research-portal trước khi quyết phase/release tiếp; không tự mở scope mới.

@@ -16,7 +16,8 @@ describe("P23 finite twenty-principal inspection burst", () => {
         connect: vi.fn(async () => {
           active++; peak = Math.max(peak, active);
           const client = {
-            query: vi.fn(async (sql: string) => {
+            query: vi.fn(async (input: string | { text: string; name?: string }) => {
+              const sql = typeof input === "string" ? input : input.text;
               if (sql === "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY") await hold;
               if (sql.includes("AS as_of_utc_ms")) return { rows: [{ as_of_utc_ms: "1" }], rowCount: 1 };
               if (sql.startsWith("SELECT 1 FROM workspace_members")) return { rows: [{}], rowCount: 1 };
@@ -40,6 +41,8 @@ describe("P23 finite twenty-principal inspection burst", () => {
       await expect(Promise.all(burst)).resolves.toHaveLength(20);
       expect(peak).toBe(2); expect(active).toBe(0);
       expect(clients.every(client => client.release.mock.calls.length === 1)).toBe(true);
+      if (lane === "evidence") expect(clients.every(client => client.query.mock.calls.some(([input]) =>
+        typeof input !== "string" && input.name === "research_evidence_hub_udb04_v1"))).toBe(true);
     });
   }
 });

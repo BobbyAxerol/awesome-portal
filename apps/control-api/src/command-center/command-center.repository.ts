@@ -110,6 +110,12 @@ function portalSourceStatus(asOf: Date | null, readAt: Date): SourceStatus {
 
 @Injectable()
 export class CommandCenterRepository {
+  // Pure timestamp parsing only. Keyed by the exact retained field object AND
+  // current string: mutable test/active projections cannot reuse stale facts.
+  // The read-time 24h predicate and per-request permissions are never cached.
+  private readonly journalStamps = new WeakMap<object, {
+    value: string | null; parsed: { iso: string; at: number } | null;
+  }>();
   constructor(
     @Inject(CONTROL_API_POOL) private readonly pool: Pool,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
@@ -444,8 +450,12 @@ export class CommandCenterRepository {
     const stamp = (row: Record<string, unknown>) => {
       const value = typeof row.updated_at === "string" ? row.updated_at
         : typeof row.created_at === "string" ? row.created_at : null;
+      const cached = this.journalStamps.get(row);
+      if (cached && cached.value === value) return cached.parsed;
       const parsed = value ? Date.parse(value) : Number.NaN;
-      return Number.isNaN(parsed) ? null : { iso: new Date(parsed).toISOString(), at: parsed };
+      const result = Number.isNaN(parsed) ? null : { iso: new Date(parsed).toISOString(), at: parsed };
+      this.journalStamps.set(row, { value, parsed: result });
+      return result;
     };
     const windowed = projection.rows.flatMap((snapshot) =>
       projectionRows(snapshot, "manager.command-journal:command_journal").flatMap((row) => {

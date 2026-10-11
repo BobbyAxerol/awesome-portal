@@ -717,6 +717,22 @@ export class ResearchCurrentSourceRepository {
     return this.withScopedRead(scope, (client) => this.readSeal(client, scope, runId, true), signal);
   }
 
+  /** S03/S04 methodology needs only two source fact groups, not all-time
+   * distributions, declarations or the enriched Report. Keep fresh scoped RLS
+   * authorization and read the latest immutable seal in this transaction. */
+  async claimFactsForRead(scope: ResearchScope, runId: string): Promise<Record<string, unknown> | null> {
+    return this.withScopedRead(scope, async client => {
+      const result = await client.query<{ facts: Record<string, unknown> | null }>(
+        `SELECT jsonb_build_object('schema_version', seal.summary->'source_facts'->'schema_version',
+                  'claims', seal.summary->'source_facts'->'claims',
+                  'execution', seal.summary->'source_facts'->'execution') AS facts
+           FROM research.current_source_seals_v1 seal
+          WHERE seal.workspace_id=$1 AND seal.run_id=$2
+          ORDER BY seal.artifact_revision DESC LIMIT 1`, [scope.workspaceId, runId]);
+      return result.rows[0] ? { source_facts: result.rows[0].facts } : null;
+    });
+  }
+
   /** The S06 seal and its finite inputs belong to ONE authorized snapshot.
    * S06 does not serve B6 analytics, so it must not fetch that separate block.
    */

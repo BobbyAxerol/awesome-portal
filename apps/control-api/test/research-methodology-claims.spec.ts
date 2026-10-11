@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { ResearchEngineAtlasPrivateSchema } from "../src/research/foundation.contract";
-import { MethodologyClaimSchema, projectEvidenceClaimStrip, projectMethodologyClaims } from "../src/research/methodology-claims";
+import { MethodologyClaimSchema, ResearchMethodologyClaimsService, projectEvidenceClaimStrip, projectMethodologyClaims } from "../src/research/methodology-claims";
 
 // The isolated Control API cell mounts the canonical contracts at /contracts.
 const atlasFixturePath = process.env.PORTAL_CONTRACTS_DIR
@@ -15,6 +15,27 @@ const sealFixture = JSON.parse(readFileSync(new URL("./research-w3-real-hmd-seal
 const identity = { releaseId: "er_quantbt_111", mode: "mode_1_decay", schedule: "global" };
 
 describe("CG-FG-S03-02/S04-01 shared methodology claim projection", () => {
+  it("uses authorized same-snapshot facts, including absence, without a second read", async () => {
+    const claimFactsForRead = vi.fn().mockResolvedValue(sealFixture.summary);
+    const service = new ResearchMethodologyClaimsService({ read: vi.fn().mockResolvedValue(atlas) } as never,
+      { claimFactsForRead } as never);
+    const actor = { userId: "caller", role: "USER" } as never, scope = { workspaceId: "ws_claim", actorUserId: "caller" };
+    expect(await service.read(actor, scope, "run_claim", identity, true, "PROGRESS", sealFixture.summary))
+      .toEqual(projectMethodologyClaims(atlas, sealFixture.summary, identity));
+    expect((await service.read(actor, scope, "run_claim", identity, true, "PROGRESS", null))
+      .every(c => c.state !== "ISSUED")).toBe(true);
+    expect(claimFactsForRead).not.toHaveBeenCalled();
+    await service.read(actor, scope, "run_claim", identity, true);
+    expect(claimFactsForRead).toHaveBeenCalledOnce();
+  });
+  it("projects the same claims from the narrow sealed groups without fetching analytics", () => {
+    const full = sealFixture.summary.source_facts!;
+    const narrow = { source_facts: { schema_version: full.schema_version, claims: full.claims, execution: full.execution } };
+    expect(projectMethodologyClaims(atlas, narrow, identity)).toEqual(projectMethodologyClaims(atlas, sealFixture.summary, identity));
+    expect(projectEvidenceClaimStrip(atlas, narrow, identity)).toEqual(projectEvidenceClaimStrip(atlas, sealFixture.summary, identity));
+    expect(projectMethodologyClaims(atlas, { source_facts: { ...narrow.source_facts, claims: {} } }, identity)
+      .every(claim => claim.state !== "ISSUED")).toBe(true);
+  });
   it('never forecasts WFO optimization from a fixed native compatibility mode',()=>{
     const claims=projectMethodologyClaims(atlas,null,{...identity,executionProfileId:'p10.delta-reactive-fixed-1h.v1'});
     expect(claims.map(c=>c.state)).toEqual(['NOT_PUBLISHED','NOT_PUBLISHED','NOT_PUBLISHED','NOT_APPLICABLE']);

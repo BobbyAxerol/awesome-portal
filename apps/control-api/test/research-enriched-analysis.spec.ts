@@ -70,6 +70,18 @@ describe("B6 shared enriched analysis", () => {
     const fresh = read("healthy");
     expect(verifiedEnriched(fresh, digest, fresh.run_id)).not.toBe(first);
   });
+  it("shares only immutable verified children for exact current JSON text", () => {
+    const block = read("healthy"), digest = sha256ResearchJson(block), text = JSON.stringify(block);
+    const first = verifiedEnriched(text, digest, block.run_id)!;
+    const next = verifiedEnriched(text, digest, block.run_id)!;
+    expect(next).not.toBe(first);
+    expect(next).toEqual(first);
+    expect(next.curves).toBe(first.curves);
+    expect(Object.isFrozen(next.curves.strategy_rebased_100)).toBe(true);
+    expect(() => { next.curves.strategy_rebased_100[0]!.value = "999"; }).toThrow();
+    const changed = read("healthy"); changed.curves.strategy_rebased_100[0].value = "999";
+    expect(() => verifiedEnriched(JSON.stringify(changed), digest, block.run_id)).toThrow();
+  });
   it("preserves legacy immutable v1 shapes/hashes without chart defaults", () => {
     const block = read("healthy"), digest = sha256ResearchJson(block);
     const parsed = ResearchEnrichedAnalysisSchema.parse(block);

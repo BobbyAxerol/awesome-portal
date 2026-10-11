@@ -38,12 +38,18 @@ export function resourceSnapshot(){
 export async function readLoad(paths,readers,rounds=5){
   assert.equal(readers.length,20);assert.equal(new Set(readers.map(r=>r.id)).size,20);
   for(const u of readers){const context=(await client(u).call('GET','/api/auth/context')).body;
-    assert.equal(context.principal.principalId,u.id,'DISTINCT_REAL_PRINCIPAL_BARRIER');}
+    assert.equal(context.state,'AUTHENTICATED','AUTHENTICATED_PRINCIPAL_REQUIRED');
+    assert.equal(context.principal?.principalId,u.id,'DISTINCT_REAL_PRINCIPAL_BARRIER');}
   // Full JSON bodies are consumed within the normal 2MiB bound; neither
   // response headers nor deliberately empty personal libraries qualify.
+  // Validate the DTO oracle, then warm EVERY real principal: Atlas is scoped
+  // per principal. Warming only reader01 mislabels the other19 cold Atlas
+  // reads as a warm summary SLO. Preserve their first reads as a separate
+  // measured cold lane rather than dropping them or changing the warm gate.
   for(const path of paths)await client(readers[0]).call('GET',path);
   const samples=Object.fromEntries(paths.map(p=>[p,[]])),errors=[];
-  await Promise.all(readers.map(async u=>{const c=client(u);for(let i=0;i<rounds;i++)for(const path of paths){
+  async function measure(target,iterations){
+  await Promise.all(readers.map(async u=>{const c=client(u);for(let i=0;i<iterations;i++)for(const path of paths){
     const start=performance.now();try{
       // The locked P23 SLO measures FULL bounded JSON transport, not twenty
       // browsers' JSON.parse work serialized on this one generator thread.
@@ -52,14 +58,21 @@ export async function readLoad(paths,readers,rounds=5){
         accept:'application/json',origin:ORIGIN,'x-dev-access-email':u.username+'@azdag.com',
         cookie:Object.entries(c.user.cookies).map(([k,v])=>k+'='+v).join('; ')}});
       const {errorCode}=await consumeBounded(response);assert.equal(response.status,200,errorCode??'HTTP_REFUSAL');
-      samples[path].push(performance.now()-start);
+      target[path].push(performance.now()-start);
     }
     catch(e){errors.push({path,user_id:u.id,message:e.message});}
   }}));
-  const byPath=Object.fromEntries(Object.entries(samples).map(([path,ms])=>{ms.sort((a,b)=>a-b);
+  }
+  const coldSamples=Object.fromEntries(paths.map(p=>[p,[]]));
+  await measure(coldSamples,1);await measure(samples,rounds);
+  const summarize=values=>Object.fromEntries(Object.entries(values).map(([path,ms])=>{ms.sort((a,b)=>a-b);
     return [path,{count:ms.length,p50_ms:Math.ceil(percentile(ms,.5)),p95_ms:Math.ceil(percentile(ms,.95)),
       p99_ms:Math.ceil(percentile(ms,.99)),max_ms:Math.ceil(ms.at(-1))}];}));
-  return {distinct_principals:20,rounds,consumption:'LOCKED_P23_FULL_JSON_BODY_2MIB_NO_HEADERS_ONLY',by_path:byPath,errors,slo:evaluateReadSlo({temperature:'warm',by_path:byPath})};
+  const byPath=summarize(samples),cold=summarize(coldSamples);
+  return {distinct_principals:20,rounds,consumption:'LOCKED_P23_FULL_JSON_BODY_2MIB_NO_HEADERS_ONLY',
+    warmup_basis:'ONE_MEASURED_READ_PER_PATH_PER_REAL_PRINCIPAL',cold_by_path:cold,
+    cold_slo:evaluateReadSlo({temperature:'cold',by_path:cold}),by_path:byPath,errors,
+    slo:evaluateReadSlo({temperature:'warm',by_path:byPath})};
 }
 async function main(){
   await refreshSessions();
@@ -79,11 +92,15 @@ await p.query('COMMIT');console.log(JSON.stringify({members:q.rowCount,workspace
   for(const reader of readers)docker(['exec',owned('control-api'),'node','dist/cli/execution-store.js','grant-review',reader.username]);
   privateWrite('reader-authority.json',{membership,retained_only_grants:20,product_authority_changed:false,publication:pub});
   const suffix='workspace_id='+encodeURIComponent(pub.workspace_id),r=pub.run_id;
+  const portfolios=(await client(readers[0]).call('GET','/api/v1/execution/portfolios?environment=all')).body;
+  assert(portfolios.items.length>0,'RETAINED_PORTFOLIO_REQUIRED');
+  const portfolio=encodeURIComponent(portfolios.items[0].portfolio_id);
   const paths=[`/api/v1/quantbt/runs?${suffix}&limit=20`,`/api/v1/research/runs/${r}/progress?${suffix}`,
     `/api/v1/quantbt/runs/${r}/evidence?${suffix}`,`/api/v1/quantbt/runs/${r}/search?${suffix}`,
     `/api/v1/quantbt/runs/${r}/report?${suffix}`,`/api/v1/quantbt/runs/${r}/execute/replay?${suffix}`,
     '/api/v1/execution/retained-review','/api/v1/execution/alphas?environment=all&limit=20',
-    '/api/v1/execution/broker-bindings?environment=paper&limit=20','/api/v1/execution/command-center'];
+    '/api/v1/execution/broker-bindings?environment=paper&limit=20','/api/v1/execution/command-center',
+    '/api/v1/execution/portfolios?environment=all',`/api/v1/execution/resources/portfolios/${portfolio}`];
   assert.equal(coreQuery("SELECT count(*)::int n FROM research.jobs WHERE state IN ('CLAIMED','RUNNING','CANCEL_REQUESTED')").rows[0].n,0);
   const operator=namedClient('udb04-operator'),receipt={project:PROJECT,identity:original,started_at_utc:new Date().toISOString(),
     archived_read_run:r,archived_workspace:pub.workspace_id,jobs:[],before:resourceSnapshot(),passed:false};
@@ -124,7 +141,7 @@ await p.query('COMMIT');console.log(JSON.stringify({members:q.rowCount,workspace
     const stateSource=readFileSync(new URL('./store-inventory.cjs',import.meta.url),'utf8');
     receipt.execution=inControl(stateSource);assert.equal(receipt.execution.empty.execution_shared_read_cache,0);
     assert.equal(receipt.execution.empty.execution_shared_read_flights,0);
-    receipt.passed=receipt.load.slo.passed&&receipt.load.errors.length===0&&
+    receipt.passed=receipt.load.slo.passed&&receipt.load.cold_slo.passed&&receipt.load.errors.length===0&&
       [...receipt.resources,receipt.before,receipt.after].every(s=>s.rows.every(row=>row.no_oom_kill));
     privateWrite('mixed-load.json',receipt);
   }finally{

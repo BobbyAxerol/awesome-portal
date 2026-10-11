@@ -8,10 +8,12 @@ import { ResearchEvidenceRepository } from "../src/research/evidence.repository"
 const scope = { workspaceId: "ws-evidence", actorUserId: "usr-evidence" };
 
 function harness(member: boolean, legacy = false, durableRow?: Record<string, unknown>) {
-  const calls: Array<{ sql: string; values: unknown[] | undefined }> = [];
+  const calls: Array<{ sql: string; values: unknown[] | undefined; name?: string }> = [];
   const client = {
-    query: vi.fn(async (sql: string, values?: unknown[]) => {
-      calls.push({ sql, values });
+    query: vi.fn(async (input: string | { text: string; values: unknown[]; name: string }, values?: unknown[]) => {
+      const sql = typeof input === "string" ? input : input.text;
+      values = typeof input === "string" ? values : input.values;
+      calls.push({ sql, values, ...(typeof input === "string" ? {} : { name: input.name }) });
       if (sql.includes("FROM workspace_members")) return { rows: member ? [{ one: 1 }] : [], rowCount: member ? 1 : 0 };
       if (sql.includes("FROM research.run_producers producer")) return { rows: durableRow ? [durableRow] : [], rowCount: durableRow ? 1 : 0 };
       if (sql.includes("FROM public.run_read_models")) return legacy
@@ -108,7 +110,11 @@ describe("P23 W06 · Evidence transaction setup", () => {
     expect(sql).not.toMatch(/materialized_at|head\.received_at|snapshot\.received_at|now\(\)/);
     expect(calls[0]!.sql).toBe("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
     expect(calls.findIndex(({ sql }) => sql.includes("FROM workspace_members"))).toBeLessThan(calls.indexOf(read));
-    expect(calls.filter(({ sql }) => sql.includes("FROM (SELECT $1::text AS workspace_id,$2::text AS run_id) wanted"))).toHaveLength(1);
+    expect(read.name).toBe("research_evidence_hub_udb04_v1");
+    expect(sql).toContain("enrichment.enriched::text AS enriched_analysis");
+    expect(sql).toContain("FROM research.enriched_analysis_v1 original");
+    expect(sql).toContain("enrichment.workspace_id=producer.workspace_id AND enrichment.run_id=producer.run_id");
+    expect(calls.filter(({ sql }) => sql.includes("FROM (SELECT $1::text AS workspace_id,$2::text AS run_id) wanted"))).toHaveLength(0);
     expect(calls.at(-1)!.sql).toBe("COMMIT");
     expect(hub?.retainedSource).toEqual({
       runId: "rrun-evidence", sourceAdapterId: "rs02.quantbt-signal-notional-wfo.v1", profileId: "rs02.delta-signal-notional-wfo.v1",
@@ -134,6 +140,18 @@ describe("P23 W06 · Evidence transaction setup", () => {
     const hub = await harness(true, false, row).repository.hub(scope, "rrun-evidence");
     expect(hub?.retainedSource).toBeUndefined();
     expect(hub?.kind).toBe("DURABLE");
+  });
+
+  it("rejects incompatible current supplement bytes instead of trusting its advertised digest", async () => {
+    const row = retainedRow();
+    row.enriched_analysis = '{"run_id":"other-run"}';
+    row.enriched_digest = "7".repeat(64);
+    const { repository, calls, client } = harness(true, false, row);
+    await expect(repository.hub(scope, "rrun-evidence")).rejects.toMatchObject({
+      code: "RESEARCH_EVIDENCE_UNAVAILABLE", status: 503,
+    });
+    expect(calls.at(-1)?.sql).toBe("ROLLBACK");
+    expect(client.release).toHaveBeenCalledTimes(1);
   });
 
   it("keeps artifact proof absent when an exact SEALED revision/manifest artifact was not joined", async () => {

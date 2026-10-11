@@ -298,6 +298,7 @@ const StoredProjectionSchema = z.object({
 });
 
 function parseProjection(value: unknown): StoredProjection | null {
+  if (value == null) return null;
   const parsed = StoredProjectionSchema.safeParse(value);
   return parsed.success ? parsed.data as StoredProjection : null;
 }
@@ -305,11 +306,15 @@ function parseProjection(value: unknown): StoredProjection | null {
 function candleOverviewOf(projection: StoredProjection | null): EvidenceCandleOverview {
   const stored = projection?.candle_overview;
   if (stored === undefined) return { state: "NOT_PUBLISHED", reason_code: PREDATES_CANDLE_OVERVIEW, value: null };
-  const legacy = ResearchEvidenceCandleOverviewSchema.safeParse(stored);
+  // Canonical sources have an explicit state; the strict legacy schema does
+  // not. Do not generate hundreds of per-bucket legacy errors for a valid
+  // canonical tape before validating that same tape in its actual schema.
+  const legacy = stored && typeof stored === "object" && !("state" in stored)
+    ? ResearchEvidenceCandleOverviewSchema.safeParse(stored) : null;
   // Read already-retained OHLC, never reload/backfill a tape. Legacy numeric
   // transitions counted position changes, not executions; the canonical
   // marker vocabulary must keep them null rather than relabel them as fills.
-  const canonical = legacy.success ? {
+  const canonical = legacy?.success ? {
     ...legacy.data,
     state: "AVAILABLE",
     reason_code: null,
@@ -329,14 +334,16 @@ function candleOverviewOf(projection: StoredProjection | null): EvidenceCandleOv
 function marketOverviewOf(projection: StoredProjection | null) {
   const overview = candleOverviewOf(projection);
   const value = overview.value;
-  const legacy = ResearchEvidenceCandleOverviewSchema.safeParse(projection?.candle_overview);
+  const stored = projection?.candle_overview;
+  const legacy = stored && typeof stored === "object" && !("state" in stored)
+    ? ResearchEvidenceCandleOverviewSchema.safeParse(stored) : null;
   const reason = overview.reason_code === PREDATES_CANDLE_OVERVIEW
     ? "P04_SOURCE_PREDATES_E16_CANDLE_OVERVIEW" : overview.reason_code;
   return {
     state: overview.state,
     reason_code: reason,
     semantics: "BOUNDED_SOURCE_OVERVIEW_NOT_PER_BAR_REPLAY" as const,
-    data: value ? legacy.success ? legacy.data : {
+    data: value ? legacy?.success ? legacy.data : {
       source_bar_count: value.source_bar_count!,
       emitted_bucket_count: value.emitted_bucket_count,
       bucket_bars: value.bucket_bars!,
@@ -394,7 +401,7 @@ export class ResearchEvidenceService {
       schedule: requested.success ? requested.data.optimization_schedule : null,
       routeId: requested.success ? requested.data.execution_route : null,
       executionProfileId: requested.success ? nativeDeltaRecipe(requested.data)?.profile_id ?? null : null,
-    }, row.runState === "READY" || row.jobState === "SUCCEEDED", "EVIDENCE") : undefined;
+    }, row.runState === "READY" || row.jobState === "SUCCEEDED", "EVIDENCE", row.claimSummary) : undefined;
     const response = this.mapHub(row, claims);
     const parsed = ResearchEvidenceHubResponseSchema.safeParse(response);
     if (!parsed.success) {

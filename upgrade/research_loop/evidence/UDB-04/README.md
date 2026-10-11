@@ -1,6 +1,15 @@
 # UDB-04 — Cross-loop authorization, performance/DR and exact preview
 
-2026-10-11 (Asia/Saigon) · Bobby approved UDB-04 · **ACCEPTANCE_OPEN — NOT_PHASE_PASS**.
+**Latest verdict: CROSS_LOOP_PREVIEW_READY_FOR_BOBBY_REVIEW.**
+[Closeout amendment](./closeout-amendment.md) and [exact receipt index](./closeout-index.json)
+close the assigned summary/Portfolio/context and bootstrap/accessibility work:
+1440full-body reads/20realprincipals+64trial child,68browser/8Axe/4context
+fault cells,32authcases, affected outage/export, custody and owned cleanupPASS.
+The coherent normal-hook commit is required and supplies the final gate SHA.
+Earlier OPEN/FAIL checkpoints below are historical, not relabelled. No owner
+visual acceptance/dev/main/production/source/release promotion or remote push.
+
+**Historical checkpoint:**2026-10-11 (Asia/Saigon) · Bobby approved UDB-04 · **ACCEPTANCE_OPEN — NOT_PHASE_PASS**.
 Worktree `/home/bobby/portal-research`, shared `docs/research-loop-plan`,
 parent runtime `16f2c18ca22c6ff11a016a2f171da5eaf104d2ba`.
 Final image and exact Docker COPY-input hash are recorded separately, not

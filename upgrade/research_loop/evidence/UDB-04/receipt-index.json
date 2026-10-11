@@ -1,7 +1,9 @@
 {
   "schema_version": "portal.udb04.receipt-index.v1",
   "phase": "UDB-04",
-  "verdict": "ACCEPTANCE_OPEN_NOT_PHASE_PASS",
+  "verdict": "CROSS_LOOP_PREVIEW_READY_FOR_BOBBY_REVIEW",
+  "latest_closeout_index": "closeout-index.json",
+  "historical_verdict": "ACCEPTANCE_OPEN_NOT_PHASE_PASS",
   "at_utc": "2026-10-10T21:58:06.678Z",
   "private_evidence_directory": "/home/bobby/.local/state/portal-udb04/acceptance-20261011",
   "latest_private_evidence_directory": "/home/bobby/.local/state/portal-udb04/acceptance-final-20261011",

@@ -12,14 +12,21 @@ const {default:AxeBuilder}=await import(new URL('../../apps/portal/frontend/node
 const publication=JSON.parse(docker(['exec',SOURCE+'-portal-postgres-1','psql','-X','-U','portal','-d','portal_control','-Atc',
   "SELECT row_to_json(x) FROM (SELECT run_id,workspace_id,approval_id,release_candidate_id FROM research.release_candidate_publications_v1 WHERE actor_username='claude-preview' AND state='DELIVERED' ORDER BY published_at DESC LIMIT 1)x"]));
 const browser=await chromium.launch({headless:true}),context=await browser.newContext(),page=await context.newPage();
-const receipt={origin,browser:browser.version(),cells:[],errors:[],console:[],failed:[],streams:[],writes:[],external:[],a11y:[],passed:false};let cell='entry';
+const marketContextFlag=docker(['exec',SOURCE+'-control-api-1','printenv','FEATURE_EXECUTION_MARKET_CONTEXT']).trim();
+assert.equal(marketContextFlag,'false','SOURCE_ACTIVATION_OUTSIDE_RETAINED_ACCEPTANCE');
+const receipt={origin,browser:browser.version(),cells:[],errors:[],console:[],failed:[],streams:[],writes:[],external:[],a11y:[],
+  source_reads:[],passed:false};let cell='entry';const refusalReads=[];
 page.on('pageerror',e=>receipt.errors.push({cell,message:e.message}));
-page.on('console',m=>{if(['warning','error'].includes(m.type()))receipt.console.push({cell,type:m.type(),text:m.text()});});
+page.on('console',m=>{if(['warning','error'].includes(m.type()))receipt.console.push({cell,type:m.type(),text:m.text(),url:m.location().url});});
 page.on('request',r=>{const u=new URL(r.url());if(/\/(?:stream|realtime-snapshot)$/.test(u.pathname))receipt.streams.push({cell,path:u.pathname});
+  if(/^\/api\/v1\/execution\/market\/(?:candles|venue-candles)$/.test(u.pathname))receipt.source_reads.push({cell,path:u.pathname});
   if(u.pathname.startsWith('/api/')&&!['GET','HEAD','OPTIONS'].includes(r.method())&&
     !(u.pathname==='/api/auth/logout'&&r.method()==='POST'))receipt.writes.push({cell,path:u.pathname,method:r.method()});
   if(u.origin!==origin&&!['blob:','data:'].includes(u.protocol)&&u.origin!=='https://static.cloudflareinsights.com')receipt.external.push({cell,origin:u.origin});});
-page.on('response',r=>{const u=new URL(r.url());if(u.origin===origin&&u.pathname.startsWith('/api/')&&r.status()>=400)receipt.failed.push({cell,path:u.pathname,status:r.status()});});
+page.on('response',r=>{const u=new URL(r.url());if(u.origin===origin&&u.pathname.startsWith('/api/')&&r.status()>=400){
+  const refusal={cell,path:u.pathname,status:r.status()};receipt.failed.push(refusal);
+  refusalReads.push(r.json().then(body=>{refusal.code=body.error?.code??null;}).catch(()=>{refusal.code='BODY_UNAVAILABLE';}));
+}});
 async function api(path){const result=await page.evaluate(async path=>{const r=await fetch(path,{credentials:'same-origin'});return {status:r.status,body:await r.json()};},path);
   assert.equal(result.status,200,path);return result.body;}
 try{
@@ -63,6 +70,24 @@ try{
           overflow:await page.evaluate(()=>Math.max(0,document.documentElement.scrollWidth-innerWidth))});
       }
       if(path===r1){await page.reload({waitUntil:'networkidle'});assert.equal(new URL(page.url()).searchParams.get('workspace_id'),publication.workspace_id);}
+      if(path==='/deployments/alphas'){
+        const toggle=page.getByRole('button',{name:/^Deployments for /}).first();
+        assert.equal(await toggle.count(),1,'FLEET_NATIVE_TOGGLE_REQUIRED');
+        await toggle.focus();await page.keyboard.press('Enter');
+        assert.equal(await toggle.getAttribute('aria-expanded'),'true');
+        await page.keyboard.press('Space');assert.equal(await toggle.getAttribute('aria-expanded'),'false');
+        item.expansion_keyboard={enter_expands:true,space_collapses:true};
+      }
+      if(path==='/execution'){
+        const scroll=page.getByRole('region',{name:'Source health by profile table'});
+        assert.equal(await scroll.count(),1,'NAMED_SCROLL_REGION_REQUIRED');
+        await scroll.focus();assert(await scroll.evaluate(e=>e===document.activeElement));
+        item.source_health_keyboard_focus=true;
+        const details=page.locator('.exec-preview-details > summary').first();
+        await details.focus();await page.keyboard.press('Enter');
+        assert(await details.evaluate(e=>e.parentElement?.open),'RETAINED_DETAILS_KEYBOARD_REQUIRED');
+        await page.keyboard.press('Enter');
+      }
       if(['/deployments/alphas','/execution',rc,r1].includes(path)){
         await page.keyboard.press('Tab');const focus=await page.evaluate(()=>({tag:document.activeElement?.tagName,
           text:document.activeElement?.textContent?.trim().slice(0,80)}));assert(focus.tag&&focus.tag!=='BODY','KEYBOARD_FOCUS_MISSING');
@@ -77,7 +102,18 @@ try{
   await page.goto(origin+'/deployments/alphas',{waitUntil:'networkidle'});let idleCalls=0;
   const watch=r=>{if(new URL(r.url()).pathname.startsWith('/api/'))idleCalls++;};page.on('request',watch);
   await page.waitForTimeout(16000);page.off('request',watch);receipt.idle_api_calls=idleCalls;assert.equal(idleCalls,0);
+  await page.goto(origin+'/execution',{waitUntil:'networkidle'});const refreshReads=[];
+  const refreshWatch=r=>{const u=new URL(r.url());if(u.pathname.startsWith('/api/'))refreshReads.push({path:u.pathname,method:r.method()});};
+  page.on('request',refreshWatch);await page.getByRole('button',{name:'Refresh',exact:true}).click();
+  await page.waitForLoadState('networkidle');page.off('request',refreshWatch);
+  receipt.refresh_reads=refreshReads;
+  assert(refreshReads.length>0,'EXPLICIT_REFRESH_MUST_READ');
+  assert(refreshReads.every(r=>r.method==='GET'),'REFRESH_IS_READ_ONLY');
+  assert(refreshReads.every(r=>!/(?:stream|realtime-snapshot)$/.test(r.path)),'REFRESH_MUST_NOT_BOOTSTRAP');
+  assert.equal(refreshReads.filter(r=>r.path==='/api/v1/execution/retained-review').length,1,'REFRESH_CONTEXT_ONCE');
+  await Promise.all(refusalReads);
   assert.deepEqual(receipt.errors,[]);assert.deepEqual(receipt.console,[]);assert.deepEqual(receipt.failed,[]);
+  assert.deepEqual(receipt.source_reads,[],'RETAINED_REPLAY_MUST_NOT_BOOTSTRAP_SOURCE_CANDLES');
   assert.deepEqual(receipt.streams,[]);assert.deepEqual(receipt.writes,[]);assert.deepEqual(receipt.external,[]);
   receipt.passed=receipt.cells.every(c=>c.overflow===0)&&receipt.a11y.every(c=>c.violations.length===0);
 }finally{
@@ -87,7 +123,8 @@ try{
   writeFileSync(join(out,'browser.json'),JSON.stringify(receipt,null,2),{mode:0o600});privateWrite(label+'-summary.json',
     {passed:receipt.passed,cells:receipt.cells.length,overflow:receipt.cells.filter(c=>c.overflow>0),
       a11y:receipt.a11y.filter(c=>c.violations.length),console:receipt.console,failed:receipt.failed,
-      errors:receipt.errors,streams:receipt.streams.length,writes:receipt.writes.length,logout:receipt.logout,bundle:receipt.bundle});
+      errors:receipt.errors,streams:receipt.streams.length,writes:receipt.writes.length,logout:receipt.logout,bundle:receipt.bundle,
+      source_reads:receipt.source_reads.length});
   await browser.close();console.log(JSON.stringify({passed:receipt.passed,cells:receipt.cells.length,
     overflow:receipt.cells.filter(c=>c.overflow>0).length,a11y:receipt.a11y.filter(c=>c.violations.length).length,
     console:receipt.console.length,failed:receipt.failed.length,logout:receipt.logout}));

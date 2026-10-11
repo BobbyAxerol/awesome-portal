@@ -2,6 +2,7 @@
 
 import { createHash } from "node:crypto";
 import { freezeReadValue, immutableReadJsonParser } from "./immutable-read-json";
+import { ExactJsonCalculationMemo } from "./exact-json-calculation-memo";
 import { verifiedEnriched } from "./enriched-analysis.contract";
 import { Inject, Injectable } from "@nestjs/common";
 
@@ -88,8 +89,8 @@ export function retainedCardFacts(row: RunLibraryRetainedFacts): RetainedCardFac
   const complete =
     Number.isSafeInteger(folds) && folds > 0 && counted === folds && sum !== null && Number.isSafeInteger(sum) && sum >= 0;
   const observations = Number(row.observation_count);
-  const analytics = ResearchRetainedAnalyticsV2Schema.safeParse(row.analytics_v2);
-  if (row.analytics_v2_digest && (!analytics.success
+  const analytics = row.analytics_v2 == null ? null : ResearchRetainedAnalyticsV2Schema.safeParse(row.analytics_v2);
+  if (row.analytics_v2_digest && (!analytics?.success
     || sha256ResearchJson(analytics.data) !== row.analytics_v2_digest)) {
     throw new ResearchRunLibraryError(
       "RESEARCH_RUN_LIBRARY_UNAVAILABLE", "Retained analytics sidecar digest is incompatible.", 503,
@@ -106,7 +107,7 @@ export function retainedCardFacts(row: RunLibraryRetainedFacts): RetainedCardFac
         ? "RS02_SEAL_RETAINED_NO_FOLD_ROWS"
         : "QUANTBT_DID_NOT_RETAIN_EVERY_FOLD_OOS_TRADE_COUNT",
     observationCount: Number.isSafeInteger(observations) && observations >= 0 ? observations : 0,
-    analyticsV2: analytics.data ?? null,
+    analyticsV2: analytics?.data ?? null,
   };
 }
 
@@ -409,6 +410,12 @@ export class ResearchRunLibraryService {
   private readonly pageCardMemo = new WeakMap<RunLibraryRow, {
     times: string; item: ResearchRunLibraryItem;
   }>();
+  // The repository freezes identical in-flight data after checking EVERY
+  // actor. Reuse only its exact fact object, not an authority or history key.
+  private readonly retainedCardMemo = new WeakMap<RunLibraryRetainedFacts, RetainedCardFacts | null>();
+  // Pure mapping of exact CURRENT DB bytes, not Library/authority caching.
+  // Small staggered read batches used to revalidate identical rich cards.
+  private readonly cardCalculations = new ExactJsonCalculationMemo<ResearchRunLibraryItem>();
 
   constructor(
     private readonly repository: ResearchRunLibraryRepository,
@@ -441,7 +448,7 @@ export class ResearchRunLibraryService {
     const retained = page.retainedFacts === undefined
       ? await this.retainedFor(scope, page.rows)
       : new Map(page.retainedFacts.flatMap((fact) => {
-        const mapped = retainedCardFacts(fact);
+        const mapped = this.retainedPageFact(fact);
         return mapped ? [[fact.run_id, mapped] as const] : [];
       }));
     const items = page.rows.map((row) => this.mapPageRow(row, retained.get(row.run_id)));
@@ -810,9 +817,21 @@ export class ResearchRunLibraryService {
       .map(value => value?.getTime() ?? null).join(":");
     const prior = this.pageCardMemo.get(row);
     if (prior?.times === times) return prior.item;
-    const item = freezeReadValue(this.mapRow(row, retained));
+    const item = this.cardCalculations.calculate({
+      row: { ...row, created_at: row.created_at.getTime(), updated_at: row.updated_at.getTime(),
+        progress_received_at: row.progress_received_at?.getTime() ?? null },
+      retained: retained ?? null,
+    }, () => freezeReadValue(this.mapRow(row, retained)));
     this.pageCardMemo.set(row, { times, item });
     return item;
+  }
+
+  private retainedPageFact(fact: RunLibraryRetainedFacts): RetainedCardFacts | null {
+    if (!Object.isFrozen(fact)) return retainedCardFacts(fact);
+    if (this.retainedCardMemo.has(fact)) return this.retainedCardMemo.get(fact)!;
+    const result = freezeReadValue(retainedCardFacts(fact));
+    this.retainedCardMemo.set(fact, result);
+    return result;
   }
 
   mapRow(row: RunLibraryRow, retained?: RetainedCardFacts): ResearchRunLibraryItem {
@@ -828,8 +847,9 @@ export class ResearchRunLibraryService {
     const currentOrdinal = positiveOrdinal(row.current_worker_ordinal);
     const sourceUpdated = row.progress_received_at ?? row.updated_at;
     const status = safeStatus(row.effective_status);
-    const fixedAnalytics = ResearchRetainedAnalyticsV2Schema.safeParse(asObject(row.evidence_projection)?.summary_analytics_v2);
-    const analyticsV2 = retained?.analyticsV2 ?? (fixedAnalytics.success ? fixedAnalytics.data : null);
+    const fixedInput = asObject(row.evidence_projection)?.summary_analytics_v2;
+    const fixedAnalytics = fixedInput == null ? null : ResearchRetainedAnalyticsV2Schema.safeParse(fixedInput);
+    const analyticsV2 = retained?.analyticsV2 ?? (fixedAnalytics?.success ? fixedAnalytics.data : null);
     const item = {
       ...(enriched ? { analytics_all_time: enriched.library_summary } : {}),
       enriched_analysis_availability: enrichedAvailability(enriched, Boolean(retained || row.evidence_revision || row.evidence_projection)),

@@ -71,20 +71,21 @@ export class ExecutionRetainedReviewController {
     for(const environment of ["paper","sandbox","live"] as const) {
       const profile=environment==="paper"?this.config.EXECUTION_EDGE_PAPER_PROFILE_ID!
         :environment==="sandbox"?this.config.EXECUTION_EDGE_SANDBOX_PROFILE_ID!:this.config.EXECUTION_EDGE_LIVE_PROFILE_ID!;
-      const [snapshot,entities,history]=await Promise.all([
-        this.pool.query(`SELECT s.source_as_of,s.last_successful_refresh_at,s.payload_digest,s.completeness,
+      // A cold context shares one flight across viewers but used to consume
+      // three domain clients at once, competing with a rich Portfolio mount.
+      // Sequential bounded metadata reads keep its peak occupancy at one.
+      const snapshot=await this.pool.query(`SELECT s.source_as_of,s.last_successful_refresh_at,s.payload_digest,s.completeness,
           (SELECT jsonb_object_agg(key,jsonb_build_object('availability',value->>'availability',
             'reason_code',value->>'reason_code','as_of',value->>'as_of','freshness',value->>'freshness',
             'completeness',value->>'completeness','count',jsonb_array_length(value->'items')))
             FROM jsonb_each(s.payload->'relations')) AS source_groups
-          FROM execution_profile_projection_snapshots s WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3`,[workspace,environment,profile]),
-        this.pool.query(`SELECT relation_key,count(*)::text AS n,min(last_observed_at) AS oldest,max(last_observed_at) AS newest
+          FROM execution_profile_projection_snapshots s WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3`,[workspace,environment,profile]);
+      const entities=await this.pool.query(`SELECT relation_key,count(*)::text AS n,min(last_observed_at) AS oldest,max(last_observed_at) AS newest
           FROM execution_durable_mirror_current_entities WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3
-          GROUP BY relation_key`,[workspace,environment,profile]),
-        this.pool.query(`SELECT relation_key,count(*)::text AS n,min(ts) AS oldest,max(ts) AS newest
+          GROUP BY relation_key`,[workspace,environment,profile]);
+      const history=await this.pool.query(`SELECT relation_key,count(*)::text AS n,min(ts) AS oldest,max(ts) AS newest
           FROM execution_timeseries_history WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3
-          GROUP BY relation_key`,[workspace,environment,profile]),
-      ]);
+          GROUP BY relation_key`,[workspace,environment,profile]);
       const source=snapshot.rows[0];
       const current=new Map(entities.rows.map(row=>[row.relation_key,row]));
       const ranges=new Map(history.rows.map(row=>[row.relation_key,row]));
