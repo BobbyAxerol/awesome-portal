@@ -11,7 +11,7 @@
  * "Request changes" has no published verb and is therefore disabled with
  * its reason — BR-EX-36.
  */
-import { Fragment, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { ApprovalId, EvidenceMark, PanelStatus, Sla } from "../contracts";
 import {
   ConditionComposer,
@@ -21,7 +21,7 @@ import {
   type TypedCondition,
 } from "../components/conditions";
 import { ExecutionDecisionBar } from "../components/decisionBar";
-import { GateAbsences, GateDecisionActions, GateStepper, GateVerdict, type AbsenceItem } from "../components/gateFrame";
+import { CheckStrip, GateAbsences, GateDecisionActions, GateStepper, GateVerdict, ProvenanceChain, type AbsenceItem } from "../components/gateFrame";
 
 import { EmptyRecordFrame } from "../components/EmptyRecordFrame";
 import { PanelState } from "../components/states";
@@ -298,7 +298,6 @@ export function GateR1Review({
         }
         detail={decided ? `by ${decided.by} at ${decided.at}` : null}
         facts={[
-          checklist.length > 0 ? `${checklist.filter((c) => c.outcome === "pass").length} of ${checklist.length} checks passed` : null,
           blocking > 0 ? <span data-tone="bad">{blocking} blocking</span> : null,
           warnings > 0 ? <span data-tone="warn">{warnings} warning{warnings === 1 ? "" : "s"}</span> : null,
           insufficient > 0 ? <span data-tone="warn">{insufficient} insufficient</span> : null,
@@ -307,6 +306,7 @@ export function GateR1Review({
           decided ? null : slaRemaining !== null ? `SLA ${slaRemaining}h remaining` : sla ? null : "SLA not published",
         ].filter((fact) => fact !== null)}
       >
+        <CheckStrip checks={checklist.map((c) => ({ label: c.label, outcome: c.outcome }))} />
         <details className="exec-gf-details">
           <summary>Policy &amp; references</summary>
           <p className="exec-gov-meta">
@@ -358,22 +358,7 @@ export function GateR1Review({
             }
           />
         ) : null}
-        <div className="exec-gov-kv">
-          {passport.map((entry) => (
-            <Fragment key={entry.label}>
-              <span className="exec-gov-k">{entry.label}</span>
-              <span className="exec-gov-v">
-                {entry.value}
-                {entry.note ? <span className="exec-gate-note"> {entry.note}</span> : null}{" "}
-                {entry.verification ? (
-                  <span className="exec-gov-verified">{entry.verification}</span>
-                ) : (
-                  <span className="exec-gate-unverified">not verified</span>
-                )}
-              </span>
-            </Fragment>
-          ))}
-        </div>
+        {passport.length > 0 ? <ProvenanceChain nodes={passport.map((entry) => ({ label: entry.label, value: entry.value, verification: entry.verification, note: entry.note }))} /> : null}
       </details>
       <div className="exec-gov-grid2" data-ratio="1.15">
         <div className="exec-gov-panel">

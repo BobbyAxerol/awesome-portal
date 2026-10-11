@@ -23,6 +23,7 @@
 import { slaOverdue, type ApprovalId, type KeysetPage, type PanelStatus, type Sla } from "../contracts";
 import { emptyScopeLine, emptyScopeTitle } from "../readTruthCopy";
 import { StatusChip } from "../components/badges";
+import { GateTrack } from "../components/gateFrame";
 import { KeysetTable, type Column } from "../components/table";
 import { PanelState } from "../components/states";
 import { preciseAge, useAgeTick } from "../liveTick";
@@ -276,7 +277,17 @@ const COLUMNS: readonly Column<ApprovalRow>[] = [
       </span>
     ),
   },
-  { key: "gate", header: "gate", width: "8rem", render: (r) => <span className="exec-inbox-gate" data-gate={r.gate}>{r.gate === "LIVE_GATE" ? "LIVE · CANARY" : r.gate}</span> },
+  {
+    key: "gate",
+    header: "gate",
+    width: "8rem",
+    render: (r) => (
+      <span className="exec-inbox-gatecell">
+        <span className="exec-inbox-gate" data-gate={r.gate}>{r.gate === "LIVE_GATE" ? "LIVE · CANARY" : r.gate}</span>
+        <GateTrack at={r.gate === "R1" ? "R1" : r.gate === "R2" ? "R2" : r.gate === "PAPER_EXIT" ? "PAPER" : r.gate === "SANDBOX_EXIT" ? "SANDBOX" : "LIVE"} />
+      </span>
+    ),
+  },
   { key: "next", header: "what's next", width: "18rem", render: (r) => <Next row={r} /> },
   { key: "sla", header: "SLA", width: "9rem", render: (r) => <SlaPhrase sla={r.sla} /> },
 ];

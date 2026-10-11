@@ -63,6 +63,8 @@
   --exec-font-caption: 400 11px/14px var(--font-body);
   /* Governance titles speak in the Research loop's display voice (owner 2026-10-11: Execution follows the Research look). */
   --exec-font-display: 300 22px/26px var(--font-display);
+  /* One label role for governance: panel titles, field names, table heads — mono, small, tracked. */
+  --exec-font-label: 500 11px/16px var(--font-mono);
   /* Prose measure (§5.2): a readable line is about 72 characters. */
   --exec-measure: 72ch;
   /* Financial chart colours (`--exec-chart-*`) live in styles/tokens.css with
@@ -7217,3 +7219,68 @@ details.exec-gf-details[open] > summary.exec-gov-panelhead::before { content: "�
 .exec-gov .exec-gov-panel, .exec-gov .exec-gf-verdict, .exec-gov .exec-pf2-panel, .exec-gov .exec-inbox-next-step { border-radius: var(--radius-md); }
 .exec-gov .exec-gf-steps { margin-top: calc(var(--space-1) * -1); }
 .exec-gov .exec-empty-fold { padding: var(--space-2) 0; }
+
+
+/* ---------------------------------------------------------------------------
+ * Governance type system — five voices, no others (owner 2026-10-11: sizes were not in step).
+ *   display  Newsreader 22 · the page title            body   sans 13 · every sentence
+ *   meta     sans 12 · secondary sentences, facts       label  mono 11 tracked · panel titles, field names, column heads
+ *   data     mono 12 · ids, digests, numbers
+ * Prose is never mono; mono is only for labels and data.
+ * ------------------------------------------------------------------------ */
+.exec-gov .exec-gate-note, .exec-gov .exec-gate-checklines, .exec-gov .exec-gov-v, .exec-gov .exec-disabled-reason, .exec-gov .exec-gate-decisionbody,
+.exec-gov .exec-gate-banner, .exec-gov .exec-inbox-next-step, .exec-gov .exec-px-note, .exec-gov .exec-inbox-partial, .exec-gov .exec-gate-obsbody { font: var(--exec-font-body); }
+.exec-gov .exec-gov-meta, .exec-gov .exec-gov-metaline, .exec-gov .exec-inbox-strip, .exec-gov .exec-gate-checkfoot, .exec-gov .exec-decision-bar-foot,
+.exec-gov .exec-inbox-decidedmeta, .exec-gov .exec-gate-criteriafoot, .exec-gov .exec-gov-reglink, .exec-gov .exec-wv-debtrow, .exec-gov .exec-gate-stagechips + .exec-gov-meta { font: var(--exec-font-meta); }
+.exec-gov .exec-gov-k, .exec-gov .exec-gov-paneltitle, .exec-gov .exec-role-th, .exec-gov .exec-px-notelabel, .exec-gov .exec-table thead th, .exec-gov table thead th { font: var(--exec-font-label); letter-spacing: 0.06em; }
+.exec-gov .exec-num, .exec-gov code { font: var(--exec-font-id); }
+.exec-gov .exec-role-control, .exec-gov select, .exec-gov input, .exec-gov textarea, .exec-gov .exec-px-notebox { font: var(--exec-font-control); }
+.exec-gov .exec-gov-chip, .exec-gov .exec-inbox-gate, .exec-gov .exec-gate-stagechip, .exec-gov .exec-gate-policychip { font: var(--exec-font-label); }
+.exec-gov .exec-gov-k { color: var(--ink-mute); text-transform: uppercase; }
+.exec-gov .exec-table table, .exec-gov .exec-gate-criteria { font: var(--exec-font-body); }
+.exec-gov .exec-gov-panelhead { padding: var(--space-2) var(--space-4); }
+.exec-gov .exec-gov-kv { gap: var(--space-2) var(--space-4); padding: var(--space-3) var(--space-4); }
+
+/* Check strip — a segment per check, in the server's own marks */
+.exec-gf-strip { display: flex; align-items: center; gap: var(--space-3); }
+.exec-gf-strip-count { font: var(--exec-font-section); color: var(--ink); font-variant-numeric: tabular-nums; }
+.exec-gf-strip-count b { font-weight: 700; }
+.exec-gf-strip-bar { display: flex; gap: 3px; flex: 1 1 auto; max-width: 360px; }
+.exec-gf-strip-bar i { flex: 1 1 0; height: 8px; border-radius: 2px; background: var(--line-strong); }
+.exec-gf-strip-bar i[data-mark="pass"] { background: var(--good); }
+.exec-gf-strip-bar i[data-mark="watch"] { background: var(--warn); }
+.exec-gf-strip-bar i[data-mark="insufficient"] { background: var(--warn); opacity: 0.45; }
+.exec-gf-strip-bar i[data-mark="fail"] { background: var(--bad); }
+
+/* Provenance chain — the passport as linked facts */
+.exec-gf-chain { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: var(--space-2); margin: 0; padding: var(--space-3) var(--space-4); list-style: none; counter-reset: chain; }
+.exec-gf-chain li { position: relative; display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-2); border-left: 3px solid var(--warn); }
+.exec-gf-chain li[data-verified="true"] { border-left-color: var(--good); }
+.exec-gate-chainlabel { font: var(--exec-font-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-mute); }
+.exec-gf-chain-value { font: var(--exec-font-id); color: var(--ink); overflow-wrap: anywhere; }
+.exec-gf-chain-state { font: var(--exec-font-meta); color: var(--ink-soft); }
+.exec-gf-chain li[data-verified="false"] .exec-gf-chain-state { color: var(--warn); }
+
+/* Gate track — where a request sits on the five-gate loop */
+.exec-inbox-gatecell { display: inline-flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.exec-gf-track { display: inline-flex; align-items: center; gap: 4px; }
+.exec-gf-track i { width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--line-strong); background: transparent; }
+.exec-gf-track i + i { margin-left: 2px; }
+.exec-gf-track i[data-state="done"] { background: var(--ink-faint); border-color: var(--ink-faint); }
+.exec-gf-track i[data-state="current"] { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* Waivers: the states are the filters */
+.exec-wv-lanes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); align-items: stretch; }
+.exec-wv-lane { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; text-align: left; padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--paper-raised); color: var(--ink); cursor: pointer; border-top: 3px solid var(--line-strong); }
+.exec-wv-lane[data-tone="bad"] { border-top-color: var(--bad); }
+.exec-wv-lane[data-tone="warn"] { border-top-color: var(--warn); }
+.exec-wv-lane[data-tone="good"] { border-top-color: var(--good); }
+.exec-wv-lane[data-active="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.exec-wv-lane-n { font: var(--exec-font-kpi); font-variant-numeric: tabular-nums; }
+.exec-wv-lane-label { font: var(--exec-font-control); }
+.exec-wv-lane-note { font: var(--exec-font-meta); color: var(--ink-mute); }
+.exec-wv-readat { grid-column: 1 / -1; }
+@media (max-width: 767px) { .exec-wv-lanes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.exec-wv-lane-n { min-height: 32px; }
+.exec-gov .exec-gate-criteriafoot { padding: var(--space-3) var(--space-4); margin: 0; border-top: 1px solid var(--line-soft); color: var(--ink-mute); }
+.exec-gov .exec-gf-facts { gap: var(--space-1) var(--space-5); }

@@ -35,6 +35,8 @@ const SCALE: Record<string, { size: number; line: number; family: "body" | "mono
   caption: { size: 11, line: 14, family: "body", weight: 400 },
   // Owner 2026-10-11: governance titles take the Research loop's display face. One role, used by `.exec-gov-h1` only.
   display: { size: 22, line: 26, family: "display", weight: 300 },
+  // Governance label: panel titles, field names, column heads.
+  label: { size: 11, line: 16, family: "mono", weight: 500 },
 };
 
 describe("the locked role scale", () => {

@@ -223,7 +223,7 @@ describe("a panel with no rows still says which kind of nothing", () => {
         checklist={[]} onRequestCondition={() => undefined}
       />,
     );
-    expect(container.querySelector(".exec-gov-kv")?.textContent).toContain("sha256:abc");
+    expect(container.querySelector("[data-provenance]")?.textContent).toContain("sha256:abc");
     expect(screen.queryByText(/No artifact passport was published/)).toBeNull();
   });
 });

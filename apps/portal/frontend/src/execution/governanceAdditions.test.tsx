@@ -169,7 +169,7 @@ describe("waivers — the register consumer", () => {
     render(<WaiversRegisterContainer api={api} />);
     await awaitRows();
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "LAPSED" }));
+      fireEvent.click(screen.getByRole("button", { name: /Lapsed/ }));
     });
     await waitFor(() => {
       const rows = document.querySelectorAll("tr.exec-wv-row");
@@ -212,7 +212,7 @@ describe("waivers — the register consumer", () => {
     await awaitRows();
     expect(screen.getAllByText(/\d+d \d{2}:\d{2}:\d{2}/).length).toBeGreaterThan(0);
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "LAPSED" }));
+      fireEvent.click(screen.getByRole("button", { name: /Lapsed/ }));
     });
     // cn_108 due 2026-08-24, read_at 2026-08-31 → lapsed 7d, from server times.
     await waitFor(() => expect(registerText()).toContain("lapsed 7d"));

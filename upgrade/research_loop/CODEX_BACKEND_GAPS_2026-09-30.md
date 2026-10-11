@@ -3278,3 +3278,14 @@ Consumed from `0159987c` (`P22/GOVERNANCE_UX_OPTIONAL_SOURCES_2026-10-11.md`), g
 - **R1 checklist source** — `readChecklistItem` keeps `evidence_ref` with its actual kind and a typed `evidence_ref_reason`; an unreadable/unsafe ref becomes `R1_EVIDENCE_SOURCE_NOT_LINKABLE`, never a guessed destination. The finding row links `Run · run_5512 ▸` (RUN → `/research/quantbt/runs/:id/overview`, REPORT/FREEZE/AUDIT → their own screen) with the approval's own `workspace_id` kept; a null ref shows a quiet "no source link" whose tooltip is the reason in words. A RUN is never worded as a Report. Historical responses (no field) render as before.
 - **Claims per run** — the New request picker reads `eligible_methodology_claim_ids` / `methodology_claims`: listed ids become a claim select (id plus only non-null source-bound grade/state); exactly one listed id is taken on picking the run, several are left to the reader; `[]`, `null`+reason and omitted (legacy) are three different notes. The id stays editable and the POST stays the authority; a stale pick still gets its typed refusal.
 - Tests: 5 new (fixture-driven), frontend run + research 3960 pass; preview web rebuilt, real-route browser pass at 1280/660 (0 overflow, 0 page errors). **Not observed:** the new fields on a real response — the preview control-api is not rebuilt with §56, so no real positive lane exists yet; the screens fall back to today's behaviour (verified).
+
+### §56 — real-API receipt on the research preview (Claude, 2026-10-11, Bobby ordered the rollout)
+
+`preview.sh build control-api` + scoped `up control-api portal-web` from `a13e4d03` (no DB/migrations/bootstrap; running image == tag `sha256:ee7a13f6…`, and the container holds `dist/governance/evidence-reference.js`). Logged in as `claude-preview`, 1280/660.
+
+| Check | Observed on the real stack |
+|---|---|
+| Run Library `limit=50` (96 runs) | 2 COMPLETED runs `AVAILABLE` with `eligible_methodology_claim_ids=[1]` (e.g. `rrun_73bc…` → `claim:sha256:cab7…922a`, `grade:null`, `state:null`, `R1_CLAIM_GRADE_STATE_NOT_RECORDED`); 38 COMPLETED + 7 FAILED `NOT_PUBLISHED R1_INTAKE_RUN_NOT_COMPLETED`; 2 FAILED + 1 QUEUED `R1_INTAKE_RUN_NOT_PUBLISHED`; no legacy-omitted item |
+| New request, pick `rrun_73bc…` | claim prefilled with the listed id, alpha `delta-rsi-polynomial-alpha` filled, caption "the Run Library lists this one claim for the run" (1280 and 660) |
+| New request, pick another completed run | typed absence: "the Run Library cannot list claims for this run (R1_INTAKE_RUN_NOT_COMPLETED) — type the id" |
+| R1 checklist `evidence_ref` | **Not observable**: the preview has no R1 approval (Inbox 0) and, per the handoff, current requests persist no findings (`checklist: []`). Creating an approval only to look at an empty checklist was not done. Covered by the published synthetic fixture test; a real positive lane needs a request with persisted findings |

@@ -207,14 +207,16 @@ export function NewApprovalRequestScreen({
               </span>
               <span className="exec-gov-k">methodology claim</span>
               <span className="exec-gov-v">
-                {pickedRun?.claims && pickedRun.claims.length > 0 ? (
+                {pickedRun?.claims && pickedRun.claims.length > 1 ? (
                   <select className="exec-role-control" value={pickedRun.claims.some((c) => c.id === claimId) ? claimId : ""} aria-label="Pick a methodology claim for this run" disabled={submitting}
                     onChange={(e) => setClaimId(e.target.value)}>
                     <option value="">— pick a claim —</option>
                     {pickedRun.claims.map((c) => (
-                      <option key={c.id} value={c.id}>{[c.id, c.grade, c.state].filter(Boolean).join(" · ")}</option>
+                      <option key={c.id} value={c.id} title={c.id}>{[c.id.length > 28 ? `${c.id.slice(0, 18)}…${c.id.slice(-6)}` : c.id, c.grade, c.state].filter(Boolean).join(" · ")}</option>
                     ))}
                   </select>
+                ) : pickedRun?.claims?.length === 1 ? (
+                  <span className="exec-gate-note" data-claims-note>the Run Library lists this one claim for the run</span>
                 ) : pickedRun && pickedRun.claims !== undefined ? (
                   <span className="exec-gate-note" data-claims-note>
                     {pickedRun.claims === null ? `the Run Library cannot list claims for this run (${pickedRun.claimsReason ?? "not published"}) — type the id` : "the Run Library lists no eligible claim for this run — the server will refuse a typed one that is not eligible"}

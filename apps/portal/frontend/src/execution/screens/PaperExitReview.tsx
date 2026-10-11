@@ -26,7 +26,7 @@ import { ConditionList, type TypedCondition } from "../components/conditions";
 import { EvidencePanel, SlaCell, type EvidenceRow } from "../components/evidence";
 import { LifecycleRail, type RailStep } from "../components/lifecycle";
 import { EmptyRecordFrame } from "../components/EmptyRecordFrame";
-import { GateStepper } from "../components/gateFrame";
+import { GatePrimaryWithMenu, GateStepper, GateVerdict } from "../components/gateFrame";
 import { PanelState } from "../components/states";
 import { useState } from "react";
 import type { PaperDemo } from "../paper.smoke";
@@ -358,33 +358,15 @@ export function PaperExitReview({
       {EXIT_OUTCOME[decided.outcome].writes}.
     </div>
   ) : (
-    <div className="exec-gate-decision">
-      <button
-        type="button"
-        className="exec-role-control exec-btn-apply"
-        disabled={promoteBlocked}
-        onClick={() => onDecide?.("PROMOTE")}
-      >
-        {EXIT_OUTCOME.PROMOTE.label}
-      </button>
-      {/* Not blocked by the gate — blocked only by authority. */}
-      <button
-        type="button"
-        className="exec-role-control exec-btn-ghost"
-        disabled={extendBlocked}
-        onClick={() => onDecide?.("EXTEND_OBSERVATION")}
-      >
-        {EXIT_OUTCOME.EXTEND_OBSERVATION.label}
-      </button>
-      <button
-        type="button"
-        className="exec-role-control exec-btn-ghost"
-        disabled={rejectBlocked}
-        onClick={() => onDecide?.("REJECT")}
-      >
-        {EXIT_OUTCOME.REJECT.label}
-      </button>
-    </div>
+    <GatePrimaryWithMenu
+      menuLabel="Other decisions ▾"
+      primary={{ label: EXIT_OUTCOME.PROMOTE.label, locked: promoteBlocked, title: promoteBlocked ? (decisionReasons[0] ?? undefined) : undefined, onClick: () => onDecide?.("PROMOTE") }}
+      others={[
+        // Not blocked by the gate — blocked only by authority.
+        { label: EXIT_OUTCOME.EXTEND_OBSERVATION.label, locked: extendBlocked, onClick: () => onDecide?.("EXTEND_OBSERVATION") },
+        { label: EXIT_OUTCOME.REJECT.label, locked: rejectBlocked, onClick: () => onDecide?.("REJECT") },
+      ]}
+    />
   );
   const contextRail = (
     <ExecutionContextRail
@@ -431,6 +413,23 @@ export function PaperExitReview({
   return (
     <section className="exec-exit exec-px exec-gov" data-hifi-exact={smoke ? "paper-exit-review" : undefined} aria-label={`Paper exit review ${reviewId}`}>
       <GateStepper current="paper" />
+      <GateVerdict
+        tone={decided ? (decided.outcome === "REJECT" ? "bad" : "good") : promoteBlocked ? "warn" : "good"}
+        headline={
+          decided
+            ? `${EXIT_OUTCOME[decided.outcome].label} — this review is closed`
+            : promoteBlocked
+              ? "Promotion is blocked — extending or rejecting stays available"
+              : `Gate met — ready to promote to ${promoteTo}`
+        }
+        detail={decided ? `by ${decided.by} at ${decided.at}` : null}
+        facts={[
+          gateSummary ?? null,
+          blocking > 0 ? <span data-tone="bad">{blocking} blocking</span> : null,
+          unread.length > 0 ? <span data-tone="warn">{unread.length} panel{unread.length === 1 ? "" : "s"} not read</span> : null,
+          `approvers ${quorumMet} of ${quorumRequired}`,
+        ].filter((fact) => fact !== null)}
+      />
       <ExecutionWorkspace layout="balanced" rail={contextRail}>
         {smoke ? (
           <>

@@ -131,3 +131,18 @@ Chưa sửa, cần Bobby quyết (đụng quyết định Phase 8 "giữ khung p
 | Backend | §56 trong `CODEX_BACKEND_GAPS_2026-09-30.md`: `evidence_ref` cho từng dòng checklist R1; danh sách claim theo run |
 
 Chưa làm (cần chốt riêng): khung Verdict + nút chính/menu cho **Exit review ok-path** (phòng review có giải phẫu riêng `exec-px`, chỉ thêm thanh bước); nhóm lại màn Waivers theo bước nghiệp vụ.
+
+## 11. Vòng bốn — đẹp, sạch, cùng một hệ chữ (2026-10-11)
+
+**Hệ chữ governance: năm giọng, không hơn** (role CSS, scoped `.exec-gov`; trước đó R1 có 16 tổ hợp phông/cỡ, Request mới viết câu dài bằng mono 12): display (Newsreader 22) tiêu đề · body (sans 13) mọi câu · meta (sans 12) câu phụ/fact · label (mono 11, role mới `--exec-font-label`) tên panel/trường/đầu cột · data (mono 12) id, digest, số. Câu chữ không bao giờ mono; mono chỉ cho nhãn và dữ liệu.
+
+| Màn | Thay đổi |
+|---|---|
+| R1 | Verdict có **thanh kiểm tra** (một đoạn mỗi check, đúng dấu của server; bỏ dòng "5 of 6" trùng); passport thành **chuỗi provenance** (mỗi dữ kiện một thẻ, viền xanh nếu server đã xác minh, vàng + "not verified" nếu chưa) |
+| Inbox | cột gate có **đường đi 5 cổng** (R1 · R2 · Paper · Sandbox · Live): cổng trước đã qua, cổng hiện tại sáng — thứ tự là quy tắc workflow (R2 chỉ mở từ R1 đã duyệt) |
+| Exit review | Verdict (gate met / bị chặn nhưng vẫn extend/reject được) + **một nút chính "Approve promotion" + menu "Other decisions ▾"** (Extend, Reject) |
+| Waivers | 5 ô trạng thái (Lapsed · Expiring · Open · Waived · All) **là bộ lọc** — bỏ dải số riêng + hàng pill lặp lại; Runway/"debt row" chỉ hiện khi có dòng |
+| Request mới | một claim duy nhất do Library liệt kê thì tự lấy; nhiều thì chọn; nhãn claim dài rút gọn |
+| Backend §56 | đã rollout lên preview theo lệnh Bobby; receipt thật trong `CODEX_BACKEND_GAPS` (claim: lane dương + lane vắng có kiểu quan sát được; `evidence_ref` R1: chưa quan sát được vì preview không có approval có findings) |
+
+Chưa làm: ghi baseline hình (chờ Bobby duyệt hình); Exit review ok-path chưa có Verdict trên dữ liệu thật vì preview không có exit review.

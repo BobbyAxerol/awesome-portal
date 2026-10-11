@@ -19,7 +19,6 @@ import { readConditionsPage } from "../api/rows";
 import { CrossEvidence } from "../components/CrossEvidence";
 import type { OperationalComposition } from "../operationalComposition";
 import { useAgeTick } from "../liveTick";
-import { ExecutionDecisionStrip } from "../components/workspace";
 import { PanelState } from "../components/states";
 import { reviewRouteFor, type ApprovalGate } from "./ApprovalInbox";
 import type { PanelStatus } from "../contracts";
@@ -202,50 +201,48 @@ export function WaiversRegisterScreen({
         </span>
       </div>
 
-      <ExecutionDecisionStrip
-        metrics={[
-          // A cell whose count could not be read stays absent rather than
-          // summing to a number that is missing one of its parts.
-          { label: "Open + expiring", value: countOf(open) !== null && countOf(expiring) !== null ? String(countOf(open)! + countOf(expiring)!) : null, tone: (countOf(open) ?? 0) + (countOf(expiring) ?? 0) > 0 ? "warn" : "good" },
-          { label: "Lapsed (blocking)", value: countOf(lapsed) !== null ? String(countOf(lapsed)) : null, tone: (countOf(lapsed) ?? 0) > 0 ? "bad" : "good" },
-          { label: "Active waivers", value: countOf(waived) !== null ? String(countOf(waived)) : null, tone: "good" },
-          { label: "Register total", value: counts.total !== null ? String(counts.total) : null },
-          { label: "Read at", value: readAt ? readAt.slice(11, 19) + " UTC" : null },
-        ]}
-      />
+      {/* One row: the register's states ARE its filters. Each lane is a count and a button — "what is blocking, what is about to, what is open, what is waived" —
+          instead of a strip of numbers followed by a second row of pills that repeated them. */}
+      <div role="group" aria-label="Filter by state" className="exec-wv-lanes">
+        {([
+          { f: "LAPSED", label: "Lapsed", note: "blocking", n: countOf(lapsed), tone: "bad" },
+          { f: "EXPIRING", label: "Expiring", note: "needs a decision", n: countOf(expiring), tone: "warn" },
+          { f: "OPEN", label: "Open", note: "owed, not yet due", n: countOf(open), tone: "mute" },
+          { f: "WAIVED", label: "Waived", note: "granted by policy", n: countOf(waived), tone: "good" },
+          { f: "ALL", label: "All", note: "the whole register", n: counts.total, tone: "mute" },
+        ] as const).map((lane) => (
+          <button
+            key={lane.f}
+            type="button"
+            className="exec-wv-lane"
+            data-tone={lane.n !== null && lane.n > 0 ? lane.tone : "mute"}
+            aria-pressed={lane.f === filter}
+            data-active={lane.f === filter ? "true" : undefined}
+            onClick={() => onFilter(lane.f)}
+          >
+            <span className="exec-wv-lane-n">{lane.n}</span>
+            <span className="exec-wv-lane-label">{lane.label}</span>
+            <span className="exec-wv-lane-note">{lane.n === null ? "not counted" : lane.note}</span>
+          </button>
+        ))}
+        <span className="exec-gov-meta exec-wv-readat">{readAt ? `read ${readAt.slice(11, 19)} UTC` : "read time not published"}</span>
+      </div>
 
       {status !== "ok" && status !== "partial" ? (
         <PanelState status={status} reason={reason} />
       ) : (
         <>
-          <Runway rows={rows} readAt={readAt} tick={tick} />
+          {rows.length > 0 ? <Runway rows={rows} readAt={readAt} tick={tick} /> : null}
 
+          {bySubject.length > 0 ? (
           <div className="exec-wv-debtrow" role="group" aria-label="Obligations by subject">
             <span className="exec-gov-meta">on this page, the debt sits with:</span>
             {bySubject.map(([label, n]) => (
               <span className="exec-wv-debtchip" key={label}>{label} <b>{n}</b></span>
             ))}
-            <span className="exec-gov-meta">· WAIVED excluded · exact fleet totals live in the strip above</span>
+            <span className="exec-gov-meta">· WAIVED excluded · exact fleet totals are the lanes above</span>
           </div>
-
-          {/* The hi-fi puts the state filters on their own row between the header
-              and the table, where the Approval Inbox already puts them. Inside
-              the panel head they were pushed to the far right and read as a
-              property of the panel's title rather than of the register. */}
-          <div role="group" aria-label="Filter by state" className="exec-inbox-filters">
-            {FILTERS.map((f) => (
-              <button
-                key={f}
-                type="button"
-                className="exec-inbox-filter"
-                aria-pressed={f === filter}
-                data-active={f === filter ? "true" : undefined}
-                onClick={() => onFilter(f)}
-              >
-                {f === "ALL" ? `All${counts.total !== null ? ` (${counts.total})` : ""}` : f}
-              </button>
-            ))}
-          </div>
+          ) : null}
 
           <div className="exec-gov-panel">
             <div className="exec-gov-panelhead">
