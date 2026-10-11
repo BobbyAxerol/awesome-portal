@@ -29,7 +29,8 @@ describe("UDB04 retained context bounded cost without cached authority",()=>{
     expect(f.query).toHaveBeenCalledTimes(9);expect(f.canReadExecution).toHaveBeenCalledTimes(40);
     expect(f.effectiveAccess).toHaveBeenCalledTimes(20);
     expect(contexts[0].permissions.is_owner).toBe(true);expect(contexts.slice(1).every(c=>!c.permissions.is_owner)).toBe(true);
-    expect(contexts.every(c=>!c.stream_enabled&&!c.mutation_enabled&&c.revocation.permission_cache_seconds===0)).toBe(true);
+    expect(contexts.every(c=>!c.stream_enabled&&!c.mutation_enabled&&c.revocation.permission_cache_seconds===0
+      &&c.revocation.data_view_cache_maximum_serialized_bytes===16777216)).toBe(true);
   });
   it("rechecks a revoke on a warm cache before exposing a source view",async()=>{
     const f=fixture();await f.controller.context(f.request("owner"),{});f.query.mockClear();
@@ -55,8 +56,8 @@ describe("UDB04 retained context bounded cost without cached authority",()=>{
       expect(after.profiles).toEqual(before.profiles);expect(after.profiles.every(p=>p.source_as_of_ms===null)).toBe(true);
     }finally{clock.mockRestore();}
   });
-  it("keeps the published8MiB bound and never retains a larger Paper view",async()=>{
-    for(const [size,cached] of [[7,true],[9,false]] as const){
+  it("retains measured-sized Paper views within16MiB, not a17MiB document",async()=>{
+    for(const [size,cached] of [[7,true],[9,true],[15,true],[17,false]] as const){
       const row={payload:{relations:{},test_padding:"x".repeat(size*1024*1024)},
         source_epoch:"e",source_cursor:"c",source_as_of:null,received_at:new Date(),
         last_successful_refresh_at:new Date(),completeness:"PARTIAL",projection_epoch:"e",
@@ -67,6 +68,35 @@ describe("UDB04 retained context bounded cost without cached authority",()=>{
       const second=await repository.snapshot("ws_scope","paper","PAPER_BINANCE_USDM");
       expect(second===first).toBe(cached);expect(query).toHaveBeenCalledTimes(cached?0:4);
     }
+  });
+  it("admits the exact serialized16MiB boundary but not one byte more",async()=>{
+    let row={payload:{relations:{},test_padding:""},source_epoch:"e",source_cursor:"c",source_as_of:null,
+      received_at:new Date(),last_successful_refresh_at:new Date(),completeness:"PARTIAL",projection_epoch:"e",
+      projection_sequence:"1",payload_digest:"sha256:"+"0".repeat(64),source_catalogue_sha256:null};
+    const query=vi.fn().mockImplementation(async(sql:string)=>({rows:sql.includes("SELECT payload")?[row]:sql.includes("retained_revision")?[{retained_revision:"r1"}]:[]}));
+    const repository=()=>new ExecutionProfileProjectionRepository({query} as never,undefined,fixture().cfg);
+    const overhead=Buffer.byteLength(JSON.stringify(await repository().snapshot("ws_scope","paper","PAPER_BINANCE_USDM")));
+    for(const extra of [0,1]){
+      row={...row,payload:{relations:{},test_padding:"x".repeat(16777216-overhead+extra)}};
+      const repo=repository(),first=await repo.snapshot("ws_scope","paper","PAPER_BINANCE_USDM");query.mockClear();
+      expect(Buffer.byteLength(JSON.stringify(first))).toBe(16777216+extra);
+      expect(await repo.snapshot("ws_scope","paper","PAPER_BINANCE_USDM")===first).toBe(extra===0);
+      expect(query).toHaveBeenCalledTimes(extra===0?0:4);
+    }
+  });
+  it("bounds all cached profiles together at16MiB rather than allowing three16MiB entries",async()=>{
+    const row={payload:{relations:{},test_padding:"x".repeat(9*1024*1024)},
+      source_epoch:"e",source_cursor:"c",source_as_of:null,received_at:new Date(),
+      last_successful_refresh_at:new Date(),completeness:"PARTIAL",projection_epoch:"e",
+      projection_sequence:"1",payload_digest:"sha256:"+"0".repeat(64),source_catalogue_sha256:null};
+    const query=vi.fn().mockImplementation(async(sql:string)=>({rows:sql.includes("SELECT payload")?[row]:sql.includes("retained_revision")?[{retained_revision:"r1"}]:[]}));
+    const repository=new ExecutionProfileProjectionRepository({query} as never,undefined,fixture().cfg);
+    const paper=await repository.snapshot("ws_scope","paper","PAPER_BINANCE_USDM");
+    const sandbox=await repository.snapshot("ws_scope","sandbox","SANDBOX_BINANCE_USDM");query.mockClear();
+    expect(await repository.snapshot("ws_scope","sandbox","SANDBOX_BINANCE_USDM")).toBe(sandbox);
+    expect(query).not.toHaveBeenCalled();
+    expect(await repository.snapshot("ws_scope","paper","PAPER_BINANCE_USDM")).not.toBe(paper);
+    expect(query).toHaveBeenCalledTimes(4);
   });
   it("DB outage after data TTL refuses even an unchanged view; recovery validates without loading its bytes",async()=>{
     const f=fixture(),row={payload:{relations:{}},source_epoch:"e",source_cursor:"c",source_as_of:null,

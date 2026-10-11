@@ -27,7 +27,7 @@
         "http": {"const": "EACH_REQUEST_CORE_SESSION_AND_ACCESS"},
         "permission_cache_seconds": {"const": 0},
         "data_view_cache_milliseconds": {"const": 2000},
-        "data_view_cache_maximum_serialized_bytes": {"const": 8388608},
+        "data_view_cache_maximum_serialized_bytes": {"const": 16777216, "description": "Aggregate serialized retained snapshot data budget, not per entry, HTTP response, heap size or cached permission. Metadata has a separately bounded single entry; caller authority is rechecked on every request."},
         "delegated_jwt_ttl_seconds": {"type": "integer", "minimum": 1, "maximum": 60},
         "delegation_enabled": {"const": false},
         "upstream_revocation": {"const": "SHORT_LIVED_TOKEN_EXPIRY_NOT_INSTANT_REVOCATION"}

@@ -2,7 +2,7 @@
   "phase": "UDB-04",
   "verdict": "ACCEPTANCE_OPEN_NOT_PHASE_PASS",
   "remaining": [
-    {"id":"UDB04-BE-01","owner":"Codex","state":"OPEN","task":"Optimize four summary paths; one final-image mixed-load retake with published8MiB bound, no SLO relaxation","evidence":"phase-report.md:latest679/631/744/626ms vs500; Report441msPASS"},
+    {"id":"UDB04-BE-01","owner":"Codex","state":"OPEN","task":"Optimize four summary paths; one final-image mixed-load retake with Bobby-approved16MiB contract/consumer bound, no SLO relaxation","evidence":"phase-report.md:latest679/631/744/626ms vs500; Report441msPASS; cache-limit-amendment.md does not qualify mixed load"},
     {"id":"UDB04-BE-02","owner":"Codex","state":"OPEN","task":"Reproduce/fix Portfolio/context bounded-pool burst; passing small probes does not close full matrix","evidence":"phase-report.md:3HTTP503; EXECUTION_POOL_BUSY observed; pool6/queue12 retained"},
     {"id":"UDB04-DR-01","owner":"Codex","state":"SCOPED_REAL_RECOVERY_PASS","task":"Reconcile named DNS-corrected DR receipt with final candidate; do not fabricate overall phase PASS","evidence":"phase-report.md:actual69/69fresh-volume archive recovery,current-auth barrier,27Execution hashes"},
     {"id":"FE-UDB04-01","owner":"Claude","state":"OPEN","task":"Retained Command Center makes zero realtime bootstrap calls including failure paths","evidence":"handoff.md:actual2bootstrap GETs and exact-web smoke"},
@@ -13,7 +13,7 @@
     {"id":"DOWNSTREAM_CAPTURE","state":"NOT_CAPTURED","reason":"Actual R1 exists; authorized R2/Canary/Live404 does not prove an approved chain"},
     {"id":"HISTORICAL_MANIFESTS","state":"ACCEPTED_EXACT_EXCEPTION_UNCHANGED","reason":"Original83/86 with exactly3historical test exceptions, no manufactured bytes"},
     {"id":"SOURCE_RELEASE","state":"NOT_APPROVED","reason":"Edge/renewal/SSE/command/dev/main/stable/release separate"},
-    {"id":"CACHE_LIMIT_AMENDMENT","state":"NOT_ACTIVATED","reason":"16MiB diagnostic candidate did not close SLOs; finalcode8MiB matches v1 schema and strict FE reader until coordinated approval"}
+    {"id":"CACHE_LIMIT_AMENDMENT","state":"DELIVERED_SCOPED_PREVIEW_VERIFIED","reason":"Bobby2026-10-11 approves exactly16,777,216serialized bytes; backend/schema/generated fixture/strict validator synchronized without redesign; targeted tests and4real browser cellsPASS; actual11,184,215B Paper view warm0queries; mixed-load acceptance remainsOPEN","evidence":"cache-limit-amendment.md"}
   ],
   "cleanup": {
     "state":"OWNED_IDENTITIES_AND_CELL_REMOVED",

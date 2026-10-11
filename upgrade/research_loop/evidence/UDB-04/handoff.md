@@ -1,8 +1,9 @@
 # UDB-04 — Claude consumer / browser handoff
 
 [Unified](../../../UNIFIED_IMPLEMENTATION_PLAN.md#udb-04), [report](./phase-report.md),
-[gaps](./debt-register.json). Same Research branch; Codex changed **no FE
-file**. Preserve approved rich components/layout/theme; no blanket baseline
+[gaps](./debt-register.json). Same Research branch; the initial checkpoint
+changed no FE file. The later [approved cache amendment](./cache-limit-amendment.md)
+changes only the strict validator literal and its tests. Preserve approved rich components/layout/theme; no blanket baseline
 re-record, fixture as real proof, zero from null or repeated engine build.
 
 ## Contract delivered, no new composition needed
@@ -66,9 +67,19 @@ Core DNS outage now returns typed503`PORTAL_AUTHORITY_UNAVAILABLE` instead
 of500. Combined current-auth DB + fresh-volume artifact recovery is proven
 69/69 on the named DNS-corrected image; this does not turn browser/load green.
 
-The tested16MiB data-cache proposal is **not the final setting**: backend
+**Historical, superseded by the approved amendment below:** the tested16MiB data-cache proposal was **not the final setting**: backend
 retains the published8MiB limit so your current strict context parser remains
 valid. Larger Paper views coalesce only in flight. Do not change the limit
 unilaterally or interpret it as a permission/response-size/source authority.
 If Bobby approves16MiB later, Codex and Claude must coordinate schema/types,
 canonical fixture, exact validator and affected browser receipt together.
+
+## Bobby-approved cache amendment — 2026-10-11
+
+Approved: Codex synchronizes backend, schema/OpenAPI reference, generated
+types, canonical fixture and strict validator to **16,777,216 serialized
+bytes**, without changing design. [Amendment/test receipt](./cache-limit-amendment.md)
+records the coordinated result. Aggregate snapshot budget, not a per-entry
+or permission/response-size limit; TTL2s and fresh Core authorization unchanged.
+This supersedes only the old8MiB/not-activated statement, not any SLO/Axe FAIL
+or remaining bootstrap/burst work above. No extra consumer design work needed.

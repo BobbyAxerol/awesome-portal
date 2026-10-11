@@ -10,6 +10,9 @@ combined final-artifact recovery is now proven on its named image, not pending.
 Read [report](./phase-report.md), [tests](./test-receipt.md),
 [Claude handoff](./handoff.md), [remaining gaps](./debt-register.json) and
 [sanitized receipt index](./receipt-index.json).
+The later Bobby-approved [16 MiB cache amendment](./cache-limit-amendment.md)
+supersedes the old8MiB/not-activated cache setting only. Its narrow validator
+change preserves the design and does not close outstanding load/browser gates.
 Follow [Unified UDB-04](../../../UNIFIED_IMPLEMENTATION_PLAN.md#udb-04),
 [UDB-03 consumer fixes](../UDB-03/codex-consumer-refinement.md),
 [Core/domain isolation](../UDB-02/phase-report.md) and cleanup C4.

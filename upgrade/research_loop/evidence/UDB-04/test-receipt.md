@@ -1,5 +1,9 @@
 # UDB-04 — Test / reuse receipt
 
+**Later scoped amendment:** [16 MiB cache contract/validator tests](./cache-limit-amendment.md)
+supersede only old8MiB compatibility assertions below. Older receipts remain
+historical; neither unit PASS nor this cache change qualifies mixed load.
+
 See [report](./phase-report.md); private hashes in [index](./receipt-index.json).
 
 ## Focused validation

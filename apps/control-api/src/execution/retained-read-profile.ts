@@ -1,6 +1,9 @@
 import type { ControlApiConfig } from "../config";
 import type { ProjectionEnvironment } from "./profile-projection.repository";
 
+/** Aggregate serialized DATA budget, not a heap, response or authority limit. */
+export const RETAINED_DATA_VIEW_CACHE_MAXIMUM_SERIALIZED_BYTES = 16 * 1024 * 1024;
+
 /** Reader selection is not source qualification, a worker flag or a stale TTL. */
 export function retainedReview(config?: { EXECUTION_READ_PROFILE?: string }): boolean {
   return config?.EXECUTION_READ_PROFILE === "retained_review_v1";

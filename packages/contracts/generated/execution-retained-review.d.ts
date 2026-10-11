@@ -142,8 +142,11 @@ export interface components {
                 permission_cache_seconds: 0;
                 /** @constant */
                 data_view_cache_milliseconds: 2000;
-                /** @constant */
-                data_view_cache_maximum_serialized_bytes: 8388608;
+                /**
+                 * @description Aggregate serialized retained snapshot data budget, not per entry, HTTP response, heap size or cached permission. Metadata has a separately bounded single entry; caller authority is rechecked on every request.
+                 * @constant
+                 */
+                data_view_cache_maximum_serialized_bytes: 16777216;
                 delegated_jwt_ttl_seconds: number;
                 /** @constant */
                 delegation_enabled: false;

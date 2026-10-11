@@ -1,5 +1,9 @@
 # UDB-04 — Delivery and acceptance checkpoint
 
+**Later amendment:** Bobby approved the [16 MiB coordinated cache limit](./cache-limit-amendment.md)
+on2026-10-11. This supersedes historical8MiB/not-activated statements below,
+not their failed load/browser results or the overall OPEN verdict.
+
 2026-10-11 Asia/Saigon · `docs/research-loop-plan` · parent `16f2c18c`.
 **ACCEPTANCE_OPEN — NOT_PHASE_PASS**. [Unified](../../../UNIFIED_IMPLEMENTATION_PLAN.md#udb-04),
 [tests](./test-receipt.md), [gaps](./debt-register.json), [Claude handoff](./handoff.md).

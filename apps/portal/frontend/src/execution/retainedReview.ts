@@ -67,7 +67,7 @@ const POLICY = {
 } as const satisfies Partial<WireReview>;
 const RIGHTS = { read: true, query: true, download: false, manage: false, command: false, stream: false, research_create: false, governance_decide: false } as const satisfies Partial<WireReview["permissions"]>;
 const REVOCATION = { http: "EACH_REQUEST_CORE_SESSION_AND_ACCESS", permission_cache_seconds: 0, data_view_cache_milliseconds: 2000,
-  data_view_cache_maximum_serialized_bytes: 8388608, delegation_enabled: false,
+  data_view_cache_maximum_serialized_bytes: 16777216, delegation_enabled: false,
   upstream_revocation: "SHORT_LIVED_TOKEN_EXPIRY_NOT_INSTANT_REVOCATION" } as const satisfies Partial<WireReview["revocation"]>;
 const MANAGEMENT = { state: "NOT_PUBLISHED", reason_code: "TS_RESOURCE_MANAGEMENT_CONTRACT_NOT_PUBLISHED" } as const satisfies WireReview["future_resource_management"];
 

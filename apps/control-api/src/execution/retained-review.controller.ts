@@ -7,7 +7,7 @@ import { WorkspacesRepository } from "../repos/workspaces";
 import { OwnerAccessService } from "../auth/owner-access.service";
 import { CONTROL_API_CONFIG, EXECUTION_DATA_POOL } from "../tokens";
 import type { ExecutionReadRequest } from "./local-read-authority";
-import { retainedReview } from "./retained-read-profile";
+import { retainedReview, RETAINED_DATA_VIEW_CACHE_MAXIMUM_SERIALIZED_BYTES } from "./retained-read-profile";
 import { profileProjectionCatalog } from "./profile-projection.catalog";
 import { LocalRealtimeError } from "./profile-realtime.service";
 
@@ -42,7 +42,7 @@ export class ExecutionRetainedReviewController {
       permissions:{read:true,query:true,download:false,manage:false,command:false,stream:false,
         research_create:false,governance_decide:false,is_owner:access.isOwner},
       revocation:{http:"EACH_REQUEST_CORE_SESSION_AND_ACCESS",permission_cache_seconds:0,
-        data_view_cache_milliseconds:2000,data_view_cache_maximum_serialized_bytes:8388608,
+        data_view_cache_milliseconds:2000,data_view_cache_maximum_serialized_bytes:RETAINED_DATA_VIEW_CACHE_MAXIMUM_SERIALIZED_BYTES,
         delegated_jwt_ttl_seconds:this.config.EXECUTION_EDGE_DELEGATION_TTL_SECONDS,delegation_enabled:false,
         upstream_revocation:"SHORT_LIVED_TOKEN_EXPIRY_NOT_INSTANT_REVOCATION"},profiles,
       future_resource_management:{state:"NOT_PUBLISHED",reason_code:"TS_RESOURCE_MANAGEMENT_CONTRACT_NOT_PUBLISHED"}};
@@ -61,7 +61,7 @@ export class ExecutionRetainedReviewController {
     const read=this.readProfiles(workspace);this.profileFlight={key,read};
     try{
       const profiles=await read;
-      if(Buffer.byteLength(JSON.stringify(profiles))<=8388608)this.profileCache={key,profiles,expiresAt:Date.now()+2000};
+      if(Buffer.byteLength(JSON.stringify(profiles))<=RETAINED_DATA_VIEW_CACHE_MAXIMUM_SERIALIZED_BYTES)this.profileCache={key,profiles,expiresAt:Date.now()+2000};
       return profiles;
     }finally{if(this.profileFlight?.read===read)this.profileFlight=undefined;}
   }

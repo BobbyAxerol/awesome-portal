@@ -25,6 +25,10 @@ describe("readRetainedReview", () => {
       expect(panel.sourceAsOfMs === null || Number.isFinite(panel.sourceAsOfMs)).toBe(true);
     }
     expect(review!.managementReason).toBe("TS_RESOURCE_MANAGEMENT_CONTRACT_NOT_PUBLISHED");
+    expect(fixture.revocation.data_view_cache_maximum_serialized_bytes).toBe(16777216);
+  });
+  it.each([0, 8388608, 16777217, "16777216", null])("rejects an unapproved data-cache bound %s", (bytes) => {
+    expect(readRetainedReview({ ...fixture, revocation: { ...fixture.revocation, data_view_cache_maximum_serialized_bytes: bytes } })).toBeNull();
   });
   it.each([
     ["stream enabled", { stream_enabled: true }],
@@ -178,6 +182,17 @@ describe("a retained review stays still until the reader refreshes", () => {
     ensureRetainedReview(); await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     const tick = renderHook(() => usePollTick(1_000)); renderHook(() => useProfileRealtime("paper"));
     await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    expect(tick.result.current).toBe(0); expect(fetchMock).toHaveBeenCalledTimes(1); expect(events).not.toHaveBeenCalled();
+  });
+  it("does not start polling or streaming on a stale8MiB context during the coordinated rollout", async () => {
+    const stale = { ...fixture, revocation: { ...fixture.revocation, data_view_cache_maximum_serialized_bytes: 8388608 } };
+    const fetchMock = vi.fn(async () => ok(stale)); vi.stubGlobal("fetch", fetchMock);
+    const events = vi.fn(); vi.stubGlobal("EventSource", events);
+    ensureRetainedReview(); await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    const context = renderHook(() => useRetainedReview());
+    const tick = renderHook(() => usePollTick(1_000)); renderHook(() => useProfileRealtime("paper"));
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    expect(context.result.current.status).toBe("unavailable"); expect(context.result.current.review).toBeNull();
     expect(tick.result.current).toBe(0); expect(fetchMock).toHaveBeenCalledTimes(1); expect(events).not.toHaveBeenCalled();
   });
   it("does not interpret a workspace-hidden 404 as an unsupported endpoint", async () => {

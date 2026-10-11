@@ -14,7 +14,7 @@ import {
   profileObservationRevalidation,
 } from "./profile-projection.catalog";
 import { durableMirrorReadEnabled } from "./durable-mirror-mode";
-import { retainedReview } from "./retained-read-profile";
+import { retainedReview, RETAINED_DATA_VIEW_CACHE_MAXIMUM_SERIALIZED_BYTES } from "./retained-read-profile";
 import { retainedSnapshot, retainedRevision } from "./retained-snapshot";
 
 export type ProjectionEnvironment = "paper" | "sandbox" | "live";
@@ -845,11 +845,10 @@ export class ExecutionProfileProjectionRepository {
       const stableRevision=revision===await retainedRevision(this.pool,workspaceId,environment,profileId)?revision:null;
       if(!stableRevision)return snapshot;
       const bytes=Buffer.byteLength(JSON.stringify(snapshot));
-      // Keep the published v1 bound and its strict browser consumer aligned.
-      // A larger measured Paper document may be shared while in flight, but
-      // cannot become a retained cache entry without a coordinated contract
-      // and consumer change. HTTP data remains bounded by each named BFF.
-      const cacheBudgetBytes=8*1024*1024;
+      // Shared with the published context and strict consumer. The budget
+      // bounds ALL retained views together, not each of the three entries.
+      // HTTP data remains bounded independently by each named BFF.
+      const cacheBudgetBytes=RETAINED_DATA_VIEW_CACHE_MAXIMUM_SERIALIZED_BYTES;
       if(bytes<=cacheBudgetBytes){
         const total=()=>[...this.retainedViews.values()].reduce((n,entry)=>n+entry.bytes,0);
         while(this.retainedViews.size && (this.retainedViews.size>=3 || total()+bytes>cacheBudgetBytes)) this.retainedViews.delete(this.retainedViews.keys().next().value!);

@@ -20,6 +20,18 @@ it("UDB03 generated GET contract exposes no browser profile/relation/source cred
   const generated=readFileSync(join(root,"generated/execution-retained-review.d.ts"),"utf8");
   for(const name of ["executionRetainedReviewV1","RetainedReviewResponse","RetainedReviewProfile","RetainedReviewPanel"])expect(generated).toContain(name);
 });
+it("UDB04 publishes exactly the approved16MiB data bound, never permission caching",()=>{
+  const validate=new Ajv({strict:true,allErrors:true}).compile(schema);
+  const value=fixture();expect(value.revocation.data_view_cache_maximum_serialized_bytes).toBe(16777216);
+  expect(validate(value),JSON.stringify(validate.errors)).toBe(true);
+  for(const bytes of [0,8388608,16777217,"16777216",null]){
+    const wrong=fixture();wrong.revocation.data_view_cache_maximum_serialized_bytes=bytes;
+    expect(validate(wrong)).toBe(false);
+  }
+  const authority=fixture();authority.revocation.permission_cache_seconds=2;expect(validate(authority)).toBe(false);
+  const generated=readFileSync(join(root,"generated/execution-retained-review.d.ts"),"utf8");
+  expect(generated).toContain("data_view_cache_maximum_serialized_bytes: 16777216;");
+});
 it("named retained page keeps rejected source separate and publishes bounded exact-value fields",()=>{
   const validate=new Ajv({strict:true,allErrors:true}).compile(json("schemas/execution-retained-operation-page.v1.schema.json"));
   const example=json("fixtures/execution-retained-operation-page.valid.json");
