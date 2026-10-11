@@ -16,7 +16,7 @@ const tokens = readFileSync(join(__dirname, "../styles/tokens.css"), "utf8");
 const base = readFileSync(join(__dirname, "../styles/base.css"), "utf8");
 
 /** §5.2, verbatim. */
-const SCALE: Record<string, { size: number; line: number; family: "body" | "mono"; weight: number }> = {
+const SCALE: Record<string, { size: number; line: number; family: "body" | "mono" | "display"; weight: number }> = {
   title: { size: 24, line: 32, family: "body", weight: 400 },
   subtitle: { size: 14, line: 20, family: "body", weight: 400 },
   section: { size: 15, line: 22, family: "body", weight: 600 },
@@ -33,12 +33,14 @@ const SCALE: Record<string, { size: number; line: number; family: "body" | "mono
   id: { size: 12, line: 16, family: "mono", weight: 400 },
   term: { size: 12, line: 18, family: "mono", weight: 400 },
   caption: { size: 11, line: 14, family: "body", weight: 400 },
+  // Owner 2026-10-11: governance titles take the Research loop's display face. One role, used by `.exec-gov-h1` only.
+  display: { size: 22, line: 26, family: "display", weight: 300 },
 };
 
 describe("the locked role scale", () => {
   it("defines every §5.2 role with exactly the published size, line, weight and family", () => {
     for (const [role, spec] of Object.entries(SCALE)) {
-      const m = new RegExp(`--exec-font-${role}:\\s*(\\d+)\\s+(\\d+)px/(\\d+)px\\s+var\\(--font-(body|mono)\\);`).exec(css);
+      const m = new RegExp(`--exec-font-${role}:\\s*(\\d+)\\s+(\\d+)px/(\\d+)px\\s+var\\(--font-(body|mono|display)\\);`).exec(css);
       expect(m, `--exec-font-${role} missing or malformed`).not.toBeNull();
       expect(Number(m![1]), `${role} weight`).toBe(spec.weight);
       expect(Number(m![2]), `${role} size`).toBe(spec.size);

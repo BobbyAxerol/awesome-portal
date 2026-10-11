@@ -23,6 +23,7 @@ import type { BranchCapability, ProfileEnvelope } from "../api/profileRead";
 import { LinesChart } from "../components/marketChart";
 import { ExecutionDecisionBar } from "../components/decisionBar";
 import { EmptyRecordFrame } from "../components/EmptyRecordFrame";
+import { GateStepper, GateVerdict } from "../components/gateFrame";
 import { PanelState } from "../components/states";
 import type { PanelStatus, Sla } from "../contracts";
 import { SlaCell } from "../components/evidence";
@@ -107,6 +108,16 @@ export function GateLiveReview({
       <div className="exec-gov-head">
         <h1 className="exec-gov-h1">Canary Evidence Approval <span className="exec-gov-dim">—</span> {subject ?? canaryDeploymentId ?? approvalId}</h1>
       </div>
+      <GateStepper current="live" done={canaryDeploymentId ? ["canary"] : []} />
+      <GateVerdict
+        tone={locked && denyLocked ? "bad" : "mute"}
+        headline={locked && denyLocked ? "You cannot decide this — your role holds no grant for it" : "Dual approval — your decision counts once"}
+        facts={[
+          `approvers ${quorumMet} of ${quorumRequired}`,
+          `reviewer ${actor}`,
+          sla && sla.budgetMinutes > 0 && sla.ageMinutes >= 0 ? `SLA ${Math.max(0, Math.round((sla.budgetMinutes - sla.ageMinutes) / 60))}h remaining` : null,
+        ].filter((fact) => fact !== null)}
+      />
       <div className="exec-gov-metaline">
         {smoke ? <span className="exec-gov-chip" data-fill="good">R2 {smoke.r2Ref.id}</span> : null}
         <span className="exec-gov-meta">
@@ -292,7 +303,7 @@ export function GateLiveReview({
         tone={locked && denyLocked ? "bad" : "warn"}
         reasons={[
           locked && denyLocked
-            ? "your role holds no grant for this decision — visibility ≠ authority"
+            ? "your role holds no grant for this decision"
             : "dual approval — your decision counts once; the second approver sees the same evidence",
         ]}
         note={{ value: note, onChange: onNoteChange, disabled: locked && denyLocked }}

@@ -118,3 +118,16 @@ Evidence: vitest frontend 384 file / 6495 pass; tsc -b sạch; browser (research
 Sửa ngay (đã giao): menu "Not yet ▾" **không đóng bằng Escape / bấm ra ngoài / Tab đi chỗ khác** (đo: sau Escape vẫn `open`) → đóng được cả ba cách; Waivers mở đầu bằng khối "Command authority / source health / journal" khổng lồ với mã thô trước cả sổ nghĩa vụ → sổ lên đầu, khối chứng cứ gập ở dưới; Request mới còn câu "no candidate list is published" dù đã có danh sách run, và dòng schema id → câu đúng theo trạng thái, bỏ schema id; gate không đọc được in mã thô `WORKSPACE_NOT_FOUND` → câu thường + mã trong ngoặc + link về Approval Inbox.
 
 Chưa sửa, cần Bobby quyết (đụng quyết định Phase 8 "giữ khung panel khi record vắng"): xem phần trả lời.
+
+## 10. Vòng ba — theo giọng Research (2026-10-11, Bobby: cứ làm theo đề xuất, thiết kế theo Research nhiều hơn)
+
+| Việc | Giao |
+|---|---|
+| Gate vắng record | Một thẻ trạng thái + câu thường + link về Inbox; phần "màn này sẽ hiện gì khi có record" gập thành một dòng (R1/R2/Live/Exit). Live ở 660px: ~1500px → ~420px |
+| Exit review không tồn tại | Bỏ 4 nút xám (không còn nút chết); chỉ còn câu "No decision can be taken…" |
+| Khung gate chung | Live gate và Exit review có thanh bước; Live có Verdict (`approvers 1 of 2 · reviewer · SLA`); bỏ "visibility ≠ authority" |
+| Giọng Research | Tiêu đề governance dùng display (Newsreader 300 22px — role mới `--exec-font-display`, một role, cập nhật gate typeRoles), bo góc `--radius-md`, nhịp 12px, kicker dịu |
+| Request mới | Cột phải còn 3 dòng (digest · ai quyết · nếu đã tồn tại); thanh DRAFT → INCOMPLETE |
+| Backend | §56 trong `CODEX_BACKEND_GAPS_2026-09-30.md`: `evidence_ref` cho từng dòng checklist R1; danh sách claim theo run |
+
+Chưa làm (cần chốt riêng): khung Verdict + nút chính/menu cho **Exit review ok-path** (phòng review có giải phẫu riêng `exec-px`, chỉ thêm thanh bước); nhóm lại màn Waivers theo bước nghiệp vụ.

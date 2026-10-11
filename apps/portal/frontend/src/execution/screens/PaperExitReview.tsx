@@ -26,6 +26,7 @@ import { ConditionList, type TypedCondition } from "../components/conditions";
 import { EvidencePanel, SlaCell, type EvidenceRow } from "../components/evidence";
 import { LifecycleRail, type RailStep } from "../components/lifecycle";
 import { EmptyRecordFrame } from "../components/EmptyRecordFrame";
+import { GateStepper } from "../components/gateFrame";
 import { PanelState } from "../components/states";
 import { useState } from "react";
 import type { PaperDemo } from "../paper.smoke";
@@ -135,7 +136,6 @@ function Findings({ panel }: { panel: EvidencePanelSpec }) {
 }
 
 /** The four decisions this screen carries, in the reviewed order. */
-const EXIT_DECISIONS = ["Approve promotion", "Extend observation +14d", "Reject — back to Paper HELD", "Copy provenance"] as const;
 
 /** The evidence a published review shows. Named even when there is none, so an
  *  empty register reads as empty rather than as a screen that failed to load. */
@@ -263,18 +263,8 @@ export function PaperExitReview({
           status={status}
           reason={why}
           controls={
-            <>
-              <div className="exec-gate-decision" role="group" aria-label="Exit review decisions">
-                {EXIT_DECISIONS.map((label) => (
-                  <button key={label} type="button" className="exec-role-control exec-btn-ghost" disabled title={why}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <p className="exec-disabled-reason">
-                No decision can be taken on a review that is not published.
-              </p>
-            </>
+            // No dead buttons: with no review there is nothing to decide, and four greyed verbs read as a screen that failed rather than a record that is not there.
+            <p className="exec-disabled-reason">No decision can be taken on a review that is not published.</p>
           }
         />
       </section>
@@ -440,6 +430,7 @@ export function PaperExitReview({
   );
   return (
     <section className="exec-exit exec-px exec-gov" data-hifi-exact={smoke ? "paper-exit-review" : undefined} aria-label={`Paper exit review ${reviewId}`}>
+      <GateStepper current="paper" />
       <ExecutionWorkspace layout="balanced" rail={contextRail}>
         {smoke ? (
           <>

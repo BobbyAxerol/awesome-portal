@@ -57,6 +57,7 @@ const BACK: Readonly<Partial<Record<EmptyRecordScreen, { href: string; label: st
   "gate-r1": { href: "/governance/approvals", label: "Back to the Approval Inbox" },
   "gate-r2": { href: "/governance/approvals", label: "Back to the Approval Inbox" },
   "gate-live": { href: "/governance/approvals", label: "Back to the Approval Inbox" },
+  "paper-exit-review": { href: "/governance/approvals", label: "Back to the Approval Inbox" },
 };
 
 export function EmptyRecordFrame({
@@ -92,6 +93,9 @@ export function EmptyRecordFrame({
           appear twice on every empty screen, which is the exact shape of
           boilerplate this phase exists to remove. */}
       <p className="exec-disabled-reason">{producerSentence(spec.recordKind)}</p>
+      {/* One card says the record is not there; what the screen would hold is a folded list, not a wall of empty frames (Research states an absence once). */}
+      <details className="exec-gf-absences exec-empty-fold">
+        <summary>When a record exists this screen shows: {spec.panels.map((panel) => panel.title).join(" · ")}</summary>
       <div className="exec-inc2-grid exec-empty-frame">
         {spec.panels.map((panel) => (
           <section className="exec-pf2-panel" key={panel.title} aria-label={panel.title}>
@@ -112,6 +116,7 @@ export function EmptyRecordFrame({
           </section>
         ))}
       </div>
+      </details>
     </>
   );
 }

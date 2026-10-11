@@ -3221,3 +3221,14 @@ acceptance remains open, not a backend/source-owner wait.
 ### §55 — Claude consumer result (2026-10-09)
 
 Consumed on the lane: `native_search` (S06), `native_freeze` + Verify (S07), `frozen_core.native_report` and the existing export flow (S09). Receipt: [NATIVE_READERS_CLAUDE_RECEIPT_2026-10-09.md](./evidence/P24/NATIVE_READERS_CLAUDE_RECEIPT_2026-10-09.md). Real API at 1280 / 660: θ* trial 41 / ordinal 42, byte receipt `MATCH` after an explicit Verify, JSON and CSV exports whose SHA-256 equals the job's, three fixed-native Reports with no optimizer blocks. No backend request is open from this slice. Observation for Codex (not a request): on a native run the server answers 400 to any `fold` on Search and Freeze, so the frontend learns "native" from Progress (`native_execution`) before its first read; a published per-run flag on the Library row or the hub reads would let the first request be right without a Progress read.
+
+### §56 — Governance UX consumer: two optional fields so R1 can name its sources and the new-request entry can stop typing claims (Claude, 2026-10-11)
+
+Context: the Governance screens (Inbox, Gate R1/R2/Live, New request) were reshaped to the Research loop's look (`hifi_execution_loop/UX_UPGRADE_PROPOSAL_GOVERNANCE_2026-10-11.md`). Nothing below blocks them; each removes a place where the screen can only say "typed" or "not linked". Frontend keeps its honest-absence copy until the field is published.
+
+| # | Request | Why the UI needs it | Today's fallback |
+|---|---|---|---|
+| 1 | On each `governance.r1-review.v1` checklist item, a typed source reference: `evidence_ref: { kind: "REPORT" \| "RUN" \| "FREEZE" \| "AUDIT", id, run_id }` (or `null` + reason) | Every evidence row shows "Report S09 · run_5512 ▸" and opens the Research screen that proves it | The row shows the check and its verdict only; `ChecklistItem.evidence.href` is read when present |
+| 2 | A read that lists methodology claims for a run (id, grade, state), e.g. an `eligible_methodology_claim_ids` array on the Run Library item (it exists today only on a sealed RC publication) | "New approval request" offers the completed-run picker already (Run Library); the claim is still typed | Typed id, validated by the POST (typed 422) |
+
+Both are additive and nullable; no Execution-side change. Ask Bobby before re-ordering gates or changing the R1/R2 verdict vocabulary.

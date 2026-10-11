@@ -61,6 +61,8 @@
   --exec-font-id: 400 12px/16px var(--font-mono);
   --exec-font-term: 400 12px/18px var(--font-mono);
   --exec-font-caption: 400 11px/14px var(--font-body);
+  /* Governance titles speak in the Research loop's display voice (owner 2026-10-11: Execution follows the Research look). */
+  --exec-font-display: 300 22px/26px var(--font-display);
   /* Prose measure (§5.2): a readable line is about 72 characters. */
   --exec-measure: 72ch;
   /* Financial chart colours (`--exec-chart-*`) live in styles/tokens.css with
@@ -7204,3 +7206,14 @@ details.exec-gf-details > summary.exec-gov-panelhead::before { content: "▸"; c
 details.exec-gf-details[open] > summary.exec-gov-panelhead::before { content: "▾"; }
 .exec-gf-evidence-fold { margin-top: var(--space-4); }
 .exec-gf-evidence-fold > summary { padding: var(--space-2) 0; }
+
+/* ---------------------------------------------------------------------------
+ * Governance in the Research loop's voice: serif display title, softer corners, one 12px rhythm, quieter kicker.
+ * Scoped to .exec-gov (Inbox, R1, R2, Live, Exit, Waivers, New request); the Carbon deployment screens are untouched.
+ * ------------------------------------------------------------------------ */
+.exec-gov { gap: var(--space-3); }
+.exec-gov .exec-gov-h1 { font: var(--exec-font-display); letter-spacing: -0.01em; }
+.exec-gov .exec-gate-kicker { letter-spacing: 0.04em; color: var(--ink-mute); }
+.exec-gov .exec-gov-panel, .exec-gov .exec-gf-verdict, .exec-gov .exec-pf2-panel, .exec-gov .exec-inbox-next-step { border-radius: var(--radius-md); }
+.exec-gov .exec-gf-steps { margin-top: calc(var(--space-1) * -1); }
+.exec-gov .exec-empty-fold { padding: var(--space-2) 0; }

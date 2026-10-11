@@ -245,14 +245,10 @@ export function NewApprovalRequestScreen({
             <div className="exec-gov-kv">
               <span className="exec-gov-k">artifact digest</span>
               <span className="exec-gov-v">pinned SERVER-side from the run registry at submit — never taken from this form</span>
-              <span className="exec-gov-k">window roles</span>
-              <span className="exec-gov-v">fixed by {claimId} — immutable after submit</span>
-              <span className="exec-gov-k">separation of duty</span>
-              <span className="exec-gov-v">the requester is recorded and can never approve — the Inbox dims the row for you</span>
-              <span className="exec-gov-k">duplicates</span>
-              <span className="exec-gov-v">open work for the same alpha × run is rejected with the EXISTING approval id — no twins</span>
-              <span className="exec-gov-k">retry</span>
-              <span className="exec-gov-v">a failed submit retries with the SAME request key — a submit that landed replays instead of duplicating</span>
+              <span className="exec-gov-k">who decides</span>
+              <span className="exec-gov-v">a quant reviewer, never you — the requester is recorded and can never approve</span>
+              <span className="exec-gov-k">if it already exists</span>
+              <span className="exec-gov-v">open work for the same alpha × run is refused with the existing approval id; a failed submit retries safely and never duplicates</span>
             </div>
           </div>
         </div>
@@ -287,7 +283,7 @@ export function NewApprovalRequestScreen({
       <ExecutionDecisionBar
         label="Submit decision"
         reasonsId={LOCK_REASON_ID}
-        verdict={settled ? "SUBMITTED" : submitting ? "SENDING" : ready ? "READY" : "DRAFT"}
+        verdict={settled ? "SUBMITTED" : submitting ? "SENDING" : ready ? "READY" : "INCOMPLETE"}
         tone={settled ? "good" : submitting ? "warn" : ready ? "good" : "mute"}
         reasons={[
           settled
