@@ -1825,9 +1825,9 @@ describe("Approval Inbox", () => {
     );
     // One row is loaded and five are pending. The header chips describe the
     // queue; due-soon lives in the table strip (hi-fi 4a).
-    const header = container.querySelector(".exec-gov-head");
-    expect(header?.textContent).toContain("5 PENDING");
-    expect(header?.textContent).toContain("1 OVERDUE");
+    const header = container.querySelector(".exec-inbox-head");
+    expect(header?.textContent).toContain("5 pending");
+    expect(header?.textContent).toContain("1 overdue");
     expect(container.querySelector(".exec-inbox-strip")?.textContent).toContain("1 due soon");
   });
 
@@ -1839,7 +1839,7 @@ describe("Approval Inbox", () => {
         filter="INBOX"
       />,
     );
-    expect(container.querySelector('.exec-state[data-status="empty"]')).not.toBeNull();
+    expect(container.querySelector(".exec-inbox-empty")).not.toBeNull();
     // §8.59: this page carries no `read_truth`, so the screen may say only what
     // came back, never that the inbox is clear.
     expect(screen.getByText(/did not state whether any exist outside this response/)).toBeTruthy();
@@ -1874,7 +1874,7 @@ describe("Approval Inbox", () => {
         actorRoles={["Quant Reviewer", "Ops Approver"]}
       />,
     );
-    expect(screen.getByText(/policy approval\.v3 · you are Lan · Quant Reviewer \+ Ops Approver/)).toBeTruthy();
+    expect(screen.getByText(/You are Lan · Quant Reviewer \+ Ops Approver · policy approval\.v3/)).toBeTruthy();
   });
 
   it("offers the hi-fi's filters and marks the active one", () => {
@@ -2136,7 +2136,7 @@ describe("Approval Inbox — the full state set", () => {
     render(
       <ApprovalInbox onCopyProvenance={vi.fn()} page={inboxPage([inboxRow()])} counts={counts} filter="INBOX" status="partial" />,
     );
-    expect(screen.getByRole("button", { name: "Overdue" })).toHaveProperty("disabled", false);
+    expect(screen.getByRole("button", { name: /^Overdue/ })).toHaveProperty("disabled", false);
   });
 });
 
@@ -3084,7 +3084,7 @@ describe("containers — the port meets the screens", () => {
     expect(await screen.findByText("AP-352")).toBeTruthy();
     // Four rows are on screen and five are pending. The header describes the
     // queue, the rows describe the page, and both are the server's numbers.
-    expect(container.querySelector(".exec-gov-head")?.textContent).toContain("5 PENDING");
+    expect(container.querySelector(".exec-inbox-head")?.textContent).toContain("5 pending");
     // Three rows in the INBOX view and five in the queue: the header describes
     // the queue, the view describes what is mine. The container asks for a full
     // page (100), so the view is not truncated here.
@@ -4120,7 +4120,7 @@ describe("the filter chips filter (EX-BE-05a §3's eight views)", () => {
         filter="OVERDUE"
       />,
     );
-    expect(screen.getByText(/No record matches Overdue/)).toBeTruthy();
+    expect(screen.getByText(/Nothing matches Overdue/)).toBeTruthy();
     expect(screen.getByText(/5 pending outside this view/)).toBeTruthy();
     // The server's count *is* the scope qualifier here, so the generic one
     // stands down rather than stacking a second "outside this view" beside it.
@@ -4144,9 +4144,10 @@ describe("the filter chips filter (EX-BE-05a §3's eight views)", () => {
         filter="INBOX"
       />,
     );
-    expect(screen.getByText(/No record matches/)).toBeTruthy();
-    expect(screen.getByText(/NO_MATCHING_PORTAL_GOVERNANCE_RECORDS/)).toBeTruthy();
-    expect(screen.getByText(/may exist outside this view/)).toBeTruthy();
+    expect(screen.getByText(/Nothing matches Mine/)).toBeTruthy();
+    // the server's own code is evidence, not copy: it rides on the sentence as a tooltip instead of being printed
+    expect(screen.getByTitle("NO_MATCHING_PORTAL_GOVERNANCE_RECORDS")).toBeTruthy();
+    expect(screen.getByText(/Other views may still have requests/)).toBeTruthy();
   });
 });
 

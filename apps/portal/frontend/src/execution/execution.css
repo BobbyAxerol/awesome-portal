@@ -7284,3 +7284,116 @@ details.exec-gf-details[open] > summary.exec-gov-panelhead::before { content: "�
 .exec-wv-lane-n { min-height: 32px; }
 .exec-gov .exec-gate-criteriafoot { padding: var(--space-3) var(--space-4); margin: 0; border-top: 1px solid var(--line-soft); color: var(--ink-mute); }
 .exec-gov .exec-gf-facts { gap: var(--space-1) var(--space-5); }
+
+/* ---------------------------------------------------------------------------
+ * Governance component kit — drawn controls, one radius language (pill for toggles, 8 for buttons, 10 for cards), sans controls, tokens only.
+ * ------------------------------------------------------------------------ */
+.exec-gov .exec-btn-apply, .exec-gov .exec-btn-ghost, .exec-gov .exec-gov-cta { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: 34px; padding: 0 var(--space-4); border-radius: 8px; font: var(--exec-font-control); text-decoration: none; transition: background 120ms, border-color 120ms; }
+.exec-gov .exec-btn-apply { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+.exec-gov .exec-btn-apply:hover:not([disabled]) { background: var(--accent-strong); border-color: var(--accent-strong); }
+.exec-gov .exec-btn-ghost { background: var(--paper-raised); border: 1px solid var(--line-strong); color: var(--ink); }
+.exec-gov .exec-btn-ghost:hover:not([disabled]) { border-color: var(--accent); color: var(--accent); }
+.exec-gov .exec-btn-apply[disabled], .exec-gov .exec-btn-ghost[disabled] { background: var(--surface-2); border-color: var(--line); color: var(--ink-mute); }
+.exec-gov .exec-btn-apply:focus-visible, .exec-gov .exec-btn-ghost:focus-visible, .exec-gov .exec-seg-item:focus-visible, .exec-gov .exec-cm-trigger:focus-visible, .exec-gov .exec-cm-search:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.exec-gov-quiet { font: var(--exec-font-control); color: var(--ink-soft); text-decoration: none; padding: 0 var(--space-2); }
+.exec-gov-quiet:hover { color: var(--accent); }
+.exec-gov .exec-gov-chip { border-radius: var(--radius-pill); padding: 2px 10px; font: var(--exec-font-th); letter-spacing: 0; text-transform: none; }
+
+/* Segmented control */
+.exec-seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: var(--radius-pill); }
+.exec-seg-item { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 14px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--ink-soft); font: var(--exec-font-control); cursor: pointer; }
+.exec-seg-item:hover:not([disabled]):not([data-active]) { color: var(--ink); }
+.exec-seg-item[data-active="true"] { background: var(--paper-raised); color: var(--ink); box-shadow: var(--shadow-e1); }
+.exec-seg-item[disabled] { color: var(--ink-faint); cursor: not-allowed; }
+.exec-seg-count { min-width: 18px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--line-soft); color: var(--ink-soft); font: var(--exec-font-caption); text-align: center; }
+.exec-seg-item[data-tone="bad"] .exec-seg-count { background: var(--bad-bg); color: var(--bad); }
+
+/* Choice menu — a drawn listbox */
+.exec-cm { position: relative; display: inline-block; }
+.exec-cm-trigger { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 34px; max-width: 100%; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-pill); background: var(--paper-raised); color: var(--ink); font: var(--exec-font-control); cursor: pointer; text-align: left; }
+.exec-cm-trigger:hover:not([disabled]) { border-color: var(--accent); }
+.exec-cm[data-open="true"] .exec-cm-trigger { border-color: var(--accent); }
+.exec-cm-trigger[disabled] { color: var(--ink-faint); cursor: not-allowed; background: var(--surface-2); }
+.exec-cm-trigger[data-empty="true"] .exec-cm-value { color: var(--ink-mute); }
+.exec-cm-prefix { color: var(--ink-mute); font: var(--exec-font-meta); }
+.exec-cm-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.exec-cm-chevron { flex: none; color: var(--ink-mute); }
+.exec-cm-pop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; min-width: 100%; width: max-content; max-width: min(440px, 90vw); padding: 6px; background: var(--paper-raised); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-e3); }
+.exec-cm-search { width: 100%; box-sizing: border-box; margin-bottom: 6px; padding: 7px 10px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-2); color: var(--ink); font: var(--exec-font-control); }
+.exec-cm-list { max-height: 280px; overflow: auto; margin: 0; padding: 0; list-style: none; outline: none; }
+.exec-cm-list li[role="option"] { display: flex; align-items: baseline; gap: var(--space-3); padding: 8px 10px; border-radius: var(--radius-md); font: var(--exec-font-body); color: var(--ink); cursor: pointer; }
+.exec-cm-list li[data-active="true"] { background: var(--accent-soft); }
+.exec-cm-list li[aria-selected="true"] .exec-cm-opt-label { font-weight: 600; }
+.exec-cm-opt-label { min-width: 0; overflow-wrap: anywhere; }
+.exec-cm-opt-hint { margin-left: auto; color: var(--ink-mute); font: var(--exec-font-caption); white-space: nowrap; }
+.exec-cm-tick { margin-left: var(--space-2); color: var(--accent); }
+.exec-cm-none { padding: 10px; color: var(--ink-mute); font: var(--exec-font-meta); }
+
+/* Approval Inbox */
+.exec-inbox-head { display: flex; flex-direction: column; gap: var(--space-1); }
+.exec-inbox-titlerow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.exec-inbox-titlerow .exec-gov-spacer { flex: 1 1 auto; }
+.exec-inbox-policy { margin: 0; }
+.exec-inbox-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.exec-inbox-card { padding: 0; border-radius: var(--radius-lg); }
+.exec-inbox-card .exec-table { border: 0; }
+.exec-inbox-card .exec-table thead th { background: var(--surface-2); padding: 10px 16px; }
+.exec-inbox-card .exec-table tbody td { padding: 14px 16px; }
+.exec-inbox-card .exec-table tbody tr:hover td { background: var(--surface-2); }
+.exec-inbox-card .exec-inbox-strip { border-top: 1px solid var(--line-soft); padding: 10px 16px; }
+.exec-inbox-empty { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: 56px var(--space-5) 48px; text-align: center; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--paper-raised); }
+.exec-inbox-empty-icon { display: grid; place-items: center; width: 56px; height: 56px; margin-bottom: var(--space-2); border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+.exec-inbox-empty-title { margin: 0; font: var(--exec-font-display); letter-spacing: -0.01em; color: var(--ink); }
+.exec-inbox-empty-line { margin: 0; max-width: 46ch; font: var(--exec-font-body); color: var(--ink-soft); }
+.exec-inbox-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); margin-top: var(--space-3); }
+.exec-inbox-quiet { margin: 0; padding: 0 var(--space-1); }
+
+/* The retained-review notice: one quiet row, not a banner block */
+.exec-preview-banner[data-execution-preview="retained"] { grid-template-columns: auto minmax(0, 1fr) auto auto; gap: var(--space-2) var(--space-3); padding: 6px 12px; margin: 0 0 var(--space-3); border-radius: var(--radius-pill); background: var(--warn-bg); }
+.exec-preview-banner[data-execution-preview="retained"] strong { font: var(--exec-font-label); letter-spacing: 0.06em; }
+.exec-preview-banner[data-execution-preview="retained"] > span { font: var(--exec-font-meta); }
+.exec-preview-banner .exec-preview-refresh { margin-left: var(--space-3); min-height: 24px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-pill); background: var(--paper-raised); color: var(--ink); font: var(--exec-font-meta); }
+.exec-preview-banner .exec-preview-refresh:hover { border-color: var(--accent); color: var(--accent); }
+.exec-preview-banner .exec-preview-details summary, .exec-preview-banner .exec-preview-inspector summary { font: var(--exec-font-meta); }
+
+/* Governance follows the Research loop's soft geometry (owner 2026-10-11, superseding the 2026-08-25 square-corner rule for these screens only). */
+.exec-gov { --radius-sm: 3px; --radius-md: 6px; --radius-lg: 10px; --radius-pill: 999px; }
+.exec-preview-banner[data-execution-preview="retained"] { border-radius: 999px; }
+
+/* New approval request — one form column, one "what happens next" aside */
+.exec-nr-head { display: flex; flex-direction: column; gap: var(--space-2); }
+.exec-nr-head .exec-gate-kicker { margin: 0; }
+.exec-nr-lede { margin: 0; max-width: 72ch; font: var(--exec-font-body); color: var(--ink-soft); }
+.exec-nr-steps { margin-top: var(--space-1); }
+.exec-nr { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr); gap: var(--space-4); align-items: start; }
+.exec-nr-form { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-5); border-radius: var(--radius-lg); }
+.exec-nr-field { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.exec-nr-field .exec-role-th { color: var(--ink-mute); text-transform: uppercase; letter-spacing: 0.06em; }
+.exec-nr-help { margin: 0; font: var(--exec-font-meta); color: var(--ink-mute); }
+.exec-nr-field .exec-cm { display: block; }
+.exec-nr-field .exec-cm-trigger { width: 100%; min-height: 40px; border-radius: var(--radius-lg); }
+.exec-nr-field .exec-cm-value { flex: 1 1 auto; }
+.exec-nr-field .exec-cm-pop { width: 100%; max-width: none; }
+.exec-gov input.exec-role-control, .exec-gov .exec-px-notebox { width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--paper-raised); color: var(--ink); }
+.exec-gov input.exec-role-control::placeholder, .exec-gov .exec-px-notebox::placeholder { color: var(--ink-faint); }
+.exec-gov input.exec-role-control:focus, .exec-gov .exec-px-notebox:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus-ring); }
+.exec-nr-aside { border-radius: var(--radius-lg); position: sticky; top: var(--space-4); }
+.exec-nr-next { margin: 0; padding: var(--space-3) var(--space-4) var(--space-4); list-style: none; display: flex; flex-direction: column; gap: var(--space-3); counter-reset: nr; }
+.exec-nr-next li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 2px var(--space-2); counter-increment: nr; }
+.exec-nr-next li::before { content: counter(nr); grid-row: 1 / span 2; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font: var(--exec-font-label); }
+.exec-nr-next b { font: var(--exec-font-control); color: var(--ink); }
+.exec-nr-next span { font: var(--exec-font-meta); color: var(--ink-soft); }
+@media (max-width: 900px) { .exec-nr { grid-template-columns: minmax(0, 1fr); } .exec-nr-aside { position: static; } }
+
+/* The decision dock as a floating card */
+.exec-gov .exec-decision-bar { border-radius: var(--radius-lg); background: var(--paper-raised); border: 1px solid var(--line); border-left-width: 3px; border-top-width: 1px; box-shadow: var(--shadow-e2); padding: var(--space-3) var(--space-4); }
+.exec-gov .exec-decision-bar .exec-status-chip, .exec-gov .exec-decision-bar .exec-chip { border-radius: var(--radius-pill); }
+.exec-nr-manual { border: 1px dashed var(--line-strong); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3); }
+.exec-nr-manual > summary { cursor: pointer; font: var(--exec-font-meta); color: var(--ink-mute); }
+.exec-nr-manual[open] { display: flex; flex-direction: column; gap: var(--space-3); padding-bottom: var(--space-3); }
+.exec-nr-claim { display: flex; flex-direction: column; gap: 2px; padding: 9px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-lg); background: var(--surface-2); }
+.exec-nr-claim-id { font: var(--exec-font-id); color: var(--ink); overflow-wrap: anywhere; }
+.exec-nr-lede { max-width: 90ch; }
+.exec-nr-steps { margin: var(--space-2) 0 var(--space-1); }
+.exec-inbox-card { overflow: hidden; }
+.exec-gov .exec-inbox-gate { border-radius: var(--radius-md); padding: 1px 8px; }

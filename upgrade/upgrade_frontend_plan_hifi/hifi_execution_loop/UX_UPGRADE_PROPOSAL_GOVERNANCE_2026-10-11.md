@@ -146,3 +146,14 @@ Chưa làm (cần chốt riêng): khung Verdict + nút chính/menu cho **Exit re
 | Backend §56 | đã rollout lên preview theo lệnh Bobby; receipt thật trong `CODEX_BACKEND_GAPS` (claim: lane dương + lane vắng có kiểu quan sát được; `evidence_ref` R1: chưa quan sát được vì preview không có approval có findings) |
 
 Chưa làm: ghi baseline hình (chờ Bobby duyệt hình); Exit review ok-path chưa có Verdict trên dữ liệu thật vì preview không có exit review.
+
+## 12. Vòng năm — control tự vẽ, bỏ chữ thừa (2026-10-12, Bobby: "vẫn xấu, nhiều chữ, choose box dùng built-in làm gì")
+
+| Vấn đề Bobby chỉ ra | Làm |
+|---|---|
+| `<select>` của trình duyệt | `ChoiceMenu` (components/choiceMenu.tsx): listbox tự vẽ — nút + popover bo góc, ↑↓ Home End Enter Esc, gõ để lọc khi danh sách dài, đóng khi bấm ngoài/Tab đi; dùng cho Gate (Inbox), Evidence run, Alpha, Claim. `Segmented`: Mine / All / Overdue (kèm số) thành một thanh phân đoạn bo tròn. Test: 5 mới + helper `choose()` |
+| Inbox trống: 3 câu mono + mã + khung nét đứt + panel "Recently decided" lặp 3 lần | Một thẻ rỗng: biểu tượng, tiêu đề display, **một câu** ("Nothing matches Mine. Other views may still have requests."), mã server thành tooltip; nút "Start from a Research run" chỉ khi **cả hàng đợi** rỗng (không khi bộ lọc che); dải "0 overdue · 0 due soon" ẩn khi không có gì; "Recently decided" rỗng = một dòng nhỏ, không panel |
+| Nút/chip/thẻ chưa đẹp | Bộ kit scoped `.exec-gov`: nút 8px (chính = accent đặc, phụ = viền), chip pill chữ sans, thẻ bo 10px, dock quyết định thành thẻ nổi, trạng thái retained thành một hàng pill. Bo góc trả về cho governance (token `--radius-*` ghi đè trong `.exec-gov`; quy tắc "góc vuông" 2026-08-25 vẫn giữ cho màn Carbon) |
+| Request mới | một cột form + một cột "What happens next" (3 mục, có số); Evidence run là menu chính; ids gập vào "Ids — edit by hand" (mở sẵn khi không có danh sách); một claim duy nhất hiện dạng thẻ chỉ-đọc; lý do khoá một câu ("Still needed: a methodology claim.") |
+
+Số liệu: frontend execution 2044 test pass (122 file); preview web rebuild, 0 tràn ngang ở 1280/660.

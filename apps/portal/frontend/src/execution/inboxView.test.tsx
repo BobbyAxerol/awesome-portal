@@ -9,7 +9,7 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { INBOX_FILTERS } from "./screens/ApprovalInbox";
@@ -69,7 +69,9 @@ describe("the chips are exactly the views the server serves", () => {
     for (const view of INBOX_FILTERS) {
       // a view is a button (Mine / All / Overdue) or an option of the gate select (R1, R2, Paper, …)
       const asButton = screen.getAllByRole("button").some((b) => b.getAttribute("data-filter") === view);
-      const asOption = screen.queryAllByRole("option").some((o) => (o as HTMLOptionElement).value === view);
+      // the gate menu is a drawn listbox: its options exist once it is opened
+      if (!screen.queryAllByRole("option").length) fireEvent.click(screen.getByRole("button", { name: "Gate" }));
+      const asOption = screen.queryAllByRole("option").some((o) => o.textContent === ({ R1: "Research · R1", R2: "Ops · R2", PAPER: "Paper", SANDBOX: "Sandbox", LIVE_GATES: "Live gates", EXIT_REVIEWS: "Exit reviews" } as Record<string, string>)[view]);
       expect(asButton || asOption, view).toBe(true);
     }
   });

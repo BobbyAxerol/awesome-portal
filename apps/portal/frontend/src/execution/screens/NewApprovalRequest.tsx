@@ -19,6 +19,7 @@ import { useRef, useState } from "react";
 import type { ApprovalCreateOutcome, ExecutionApi } from "../api/ports";
 import { ExecutionDecisionBar } from "../components/decisionBar";
 import { useRunSuggestions, type RunOption } from "../runSuggestions";
+import { ChoiceMenu } from "../components/choiceMenu";
 
 const MIN_SUMMARY = 8;
 
@@ -101,32 +102,25 @@ export function NewApprovalRequestScreen({
     claimId.trim() ? null : "a methodology claim",
   ].filter(Boolean) as string[];
   const blocker = missing.length > 0
-    ? `name ${missing.join(", ")} — the request is those ids`
+    ? `Still needed: ${missing.join(", ")}.`
     : `summary needs at least ${MIN_SUMMARY} characters — it is the reviewer's first sentence`;
   const settled = outcome !== null && (outcome.kind === "created" || outcome.kind === "replayed");
 
   return (
     <section className="exec-gate exec-gov" aria-label="New approval request" data-hifi-exact="new-request-entry">
-      <div className="exec-gate-kicker">LOOP ENTRY · Research → Gate R1</div>
-      <div className="exec-gov-head">
-        <h1 className="exec-gov-h1">New approval request <span className="exec-gov-dim">—</span> evidence first, capital later</h1>
-      </div>
-      <p className="exec-gate-note" role="note" data-entry-hint>
-        The usual way in is from Research: publish a Release Candidate from a frozen run and its R1 request is created with the evidence pack attached.
-        Use this form for a request that did not come from a Release Candidate. <a href="/research/quantbt/runs">Open the Run Library</a>
-      </p>
-      <div className="exec-gov-metaline">
-        <span className="exec-gov-chip" data-fill="warn">ENTRY</span>
-        <span className="exec-gov-meta">
-          opens a PENDING row in the Approval Inbox · a quant reviewer decides at R1 · the SLA clock starts at submit
-        </span>
-      </div>
-      <div className="exec-gate-stagechips" role="group" aria-label="Where this request sits in the loop">
-        <span className="exec-gate-stagechip" data-state="eligible">1 · DECLARE — you, now</span>
-        <span className="exec-gate-stagechip">2 · R1 — a quant reviewer, not you</span>
-        <span className="exec-gate-stagechip">3 · R2 — capital, only after R1 approves</span>
-        <span className="exec-gov-meta">the request you submit is step 1 of 3 — nothing trades until both gates say yes</span>
-      </div>
+      <header className="exec-nr-head">
+        <p className="exec-gate-kicker">Loop entry · Research → Gate R1</p>
+        <h1 className="exec-gov-h1">New approval request</h1>
+        <p className="exec-nr-lede" role="note" data-entry-hint>
+          Usually this starts in Research: publish a Release Candidate from a frozen run and its R1 request is created for you.
+          This form is for a request that did not come from one. <a href="/research/quantbt/runs">Run Library →</a>
+        </p>
+        <ol className="exec-gf-steps exec-nr-steps" aria-label="Where this request sits in the loop">
+          <li data-state="current" aria-current="step">Declare · you, now</li>
+          <li data-state="ahead">R1 · a quant reviewer, not you</li>
+          <li data-state="ahead">R2 · capital, only after R1 approves</li>
+        </ol>
+      </header>
 
       {settled && (outcome.kind === "created" || outcome.kind === "replayed") ? (
         <div className="exec-gov-panel">
@@ -155,98 +149,97 @@ export function NewApprovalRequestScreen({
           </p>
         </div>
       ) : (
-        <div className="exec-gov-grid2" data-ratio="1.15">
-          <div className="exec-gov-panel">
-            <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">Target &amp; evidence — declare before submit</span></div>
-            <div className="exec-gov-kv">
-              <span className="exec-gov-k">alpha</span>
-              <span className="exec-gov-v">
-                {alphaOptions.length > 0 ? (
-                  <select className="exec-role-control" value={alphaId} onChange={(e) => setAlphaId(e.target.value)} aria-label="Alpha (from the alpha registry)" disabled={submitting}
-                    title={submitting ? "The request is in flight." : undefined}>
-                    <option value="">— pick an alpha —</option>
-                    {alphaOptions.map((a) => (
-                      <option key={a.id} value={a.id}>{a.label}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <input className="exec-role-control" value={alphaId} onChange={(e) => setAlphaId(e.target.value)} aria-label="Alpha (from the alpha registry)" disabled={submitting}
-                    placeholder={alphaOptionsReason ?? "type the id"} />
-                )}
-              </span>
-              <span className="exec-gov-k">evidence run</span>
-              <span className="exec-gov-v">
-                {runOptions.length > 0 ? (
-                  <select
-                    className="exec-role-control"
-                    value={runOptions.some((o) => o.runId === runId) ? runId : ""}
-                    aria-label="Pick a completed run from Research"
-                    disabled={submitting}
-                    onChange={(e) => {
-                      const picked = runOptions.find((o) => o.runId === e.target.value);
-                      if (!picked) return;
-                      setRunId(picked.runId);
-                      setAlphaId(picked.alphaId);
-                      // a claim the list named is a choice the server can verify; exactly one listed is taken, several or none are left to the reader
-                      setClaimId(picked.claims && picked.claims.length === 1 ? picked.claims[0]!.id : "");
-                    }}
-                  >
-                    <option value="">— pick a completed run —</option>
-                    {runOptions.map((o) => (
-                      <option key={o.runId} value={o.runId}>
-                        {`${o.alphaName ?? o.alphaId} · ${o.runId.slice(0, 18)}${o.createdMs ? ` · ${new Date(o.createdMs).toISOString().slice(0, 10)}` : ""}`}
-                      </option>
-                    ))}
-                  </select>
-                ) : runOptionsReason ? (
-                  <span className="exec-gate-note">{runOptionsReason}</span>
-                ) : null}
-                {/* The id stays editable: the POST validates the pair, the list only saves a copy-paste. */}
-                <input className="exec-role-control" value={runId} onChange={(e) => setRunId(e.target.value)} aria-label="Evidence run (from the run library)" disabled={submitting}
-                  placeholder="type the id" />
-              </span>
-              <span className="exec-gov-k">methodology claim</span>
-              <span className="exec-gov-v">
-                {pickedRun?.claims && pickedRun.claims.length > 1 ? (
-                  <select className="exec-role-control" value={pickedRun.claims.some((c) => c.id === claimId) ? claimId : ""} aria-label="Pick a methodology claim for this run" disabled={submitting}
-                    onChange={(e) => setClaimId(e.target.value)}>
-                    <option value="">— pick a claim —</option>
-                    {pickedRun.claims.map((c) => (
-                      <option key={c.id} value={c.id} title={c.id}>{[c.id.length > 28 ? `${c.id.slice(0, 18)}…${c.id.slice(-6)}` : c.id, c.grade, c.state].filter(Boolean).join(" · ")}</option>
-                    ))}
-                  </select>
-                ) : pickedRun?.claims?.length === 1 ? (
-                  <span className="exec-gate-note" data-claims-note>the Run Library lists this one claim for the run</span>
-                ) : pickedRun && pickedRun.claims !== undefined ? (
-                  <span className="exec-gate-note" data-claims-note>
-                    {pickedRun.claims === null ? `the Run Library cannot list claims for this run (${pickedRun.claimsReason ?? "not published"}) — type the id` : "the Run Library lists no eligible claim for this run — the server will refuse a typed one that is not eligible"}
-                  </span>
-                ) : null}
-                {/* The listed claims save a copy-paste; the id stays editable and the POST is the authority. */}
-                <input className="exec-role-control" value={claimId} onChange={(e) => setClaimId(e.target.value)} aria-label="Methodology claim" disabled={submitting}
-                  placeholder="type the id" />
-              </span>
-              <span className="exec-gov-k">gate</span>
-              <span className="exec-gov-v">R1 — research evidence. R2 (capital) requires an approved R1 and opens from its decision.</span>
+        <div className="exec-nr">
+          <div className="exec-nr-form exec-gov-panel">
+            <div className="exec-nr-field">
+              <span className="exec-role-th">Evidence run</span>
+              <span className="exec-nr-help">The completed Research run this request rests on.</span>
+              {runOptions.length > 0 ? (
+                <ChoiceMenu
+                  label="Pick a completed run from Research"
+                  value={runOptions.some((o) => o.runId === runId) ? runId : ""}
+                  disabled={submitting}
+                  placeholder="Pick a completed run"
+                  options={runOptions.map((o) => ({
+                    value: o.runId,
+                    label: o.alphaName ?? o.alphaId,
+                    hint: `${o.runId.slice(0, 14)}…${o.createdMs ? ` · ${new Date(o.createdMs).toISOString().slice(0, 10)}` : ""}`,
+                  }))}
+                  onChange={(next) => {
+                    const picked = runOptions.find((o) => o.runId === next);
+                    if (!picked) return;
+                    setRunId(picked.runId);
+                    setAlphaId(picked.alphaId);
+                    // a claim the list named is a choice the server can verify; exactly one listed is taken, several or none are left to the reader
+                    setClaimId(picked.claims && picked.claims.length === 1 ? picked.claims[0]!.id : "");
+                  }}
+                />
+              ) : runOptionsReason ? (
+                <span className="exec-nr-help">{runOptionsReason}</span>
+              ) : null}
             </div>
-            <div className="exec-gov-kvfoot">
+            {alphaOptions.length > 0 ? (
+              <div className="exec-nr-field">
+                <span className="exec-role-th">Alpha</span>
+                <ChoiceMenu
+                  label="Alpha (from the alpha registry)"
+                  value={alphaId}
+                  disabled={submitting}
+                  placeholder="Pick an alpha"
+                  title={submitting ? "The request is in flight." : undefined}
+                  options={alphaOptions.map((o) => ({ value: o.id, label: o.label }))}
+                  onChange={setAlphaId}
+                />
+              </div>
+            ) : null}
+            <div className="exec-nr-field">
+              <span className="exec-role-th">Methodology claim</span>
+              {pickedRun?.claims && pickedRun.claims.length > 1 ? (
+                <ChoiceMenu
+                  label="Pick a methodology claim for this run"
+                  value={pickedRun.claims.some((c) => c.id === claimId) ? claimId : ""}
+                  disabled={submitting}
+                  placeholder="Pick a claim"
+                  options={pickedRun.claims.map((c) => ({ value: c.id, label: c.id.length > 28 ? `${c.id.slice(0, 18)}…${c.id.slice(-6)}` : c.id, hint: [c.grade, c.state].filter(Boolean).join(" · ") || undefined }))}
+                  onChange={setClaimId}
+                />
+              ) : pickedRun?.claims?.length === 1 ? (
+                <span className="exec-nr-claim" data-claims-note title={claimId}>
+                  <span className="exec-nr-claim-id">{claimId.length > 28 ? `${claimId.slice(0, 18)}…${claimId.slice(-6)}` : claimId}</span>
+                  <span className="exec-nr-help">the only claim the Run Library lists for this run</span>
+                </span>
+              ) : pickedRun && pickedRun.claims !== undefined ? (
+                <span className="exec-nr-help" data-claims-note>
+                  {pickedRun.claims === null ? `The Run Library cannot list claims for this run (${pickedRun.claimsReason ?? "not published"}) — type the id below.` : "The Run Library lists no eligible claim for this run; the server will refuse a typed one that is not eligible."}
+                </span>
+              ) : (
+                <span className="exec-nr-help">Pick a run first, or type the claim id below.</span>
+              )}
+            </div>
             {alpha && alpha.label.includes("already in the loop") ? (
               <p className="exec-gate-note" data-tone="warn" role="note">! {alpha.label}</p>
             ) : null}
-            <p className="exec-gate-note">
-              {/*
-                * This said "ids picked from registries — never free-typed",
-                * which stopped being true the moment the invented picker was
-                * removed. Seen on the screen it sat directly under three text
-                * fields and contradicted them. The second half was always the
-                * real guarantee, and it still holds.
-                */}
-              {runOptions.length > 0
-                ? "completed runs come from the Run Library; the methodology claim is typed · an id the server registry does not know is a typed 422, never a silent guess"
-                : "no candidate list is available, so each id is typed · an id the server registry does not know is a typed 422, never a silent guess"}
-            </p>
-            <label className="exec-px-note">
-              <span className="exec-px-notelabel">Summary (required — the reviewer&apos;s first sentence)</span>
+            {/* The ids themselves: always editable, the server is the authority. Open when there is no list to pick from, or the id typed is not one of the picks. */}
+            <details className="exec-nr-manual" open={runOptions.length === 0 || (runId !== "" && pickedRun === null) ? true : undefined}>
+              <summary>Ids{runOptions.length > 0 ? " — edit by hand" : ""}</summary>
+              <label className="exec-nr-field">
+                <span className="exec-nr-help">Evidence run id</span>
+                <input className="exec-role-control" value={runId} onChange={(e) => setRunId(e.target.value)} aria-label="Evidence run (from the run library)" disabled={submitting} placeholder="run id" />
+              </label>
+              {alphaOptions.length === 0 ? (
+                <label className="exec-nr-field">
+                  <span className="exec-nr-help">Alpha id</span>
+                  <input className="exec-role-control" value={alphaId} onChange={(e) => setAlphaId(e.target.value)} aria-label="Alpha (from the alpha registry)" disabled={submitting} placeholder={alphaOptionsReason ?? "alpha id"} />
+                </label>
+              ) : null}
+              <label className="exec-nr-field">
+                <span className="exec-nr-help">Methodology claim id</span>
+                <input className="exec-role-control" value={claimId} onChange={(e) => setClaimId(e.target.value)} aria-label="Methodology claim" disabled={submitting} placeholder="claim id" />
+              </label>
+              <p className="exec-nr-help" data-ids-note>An id the server does not know is refused, never guessed.</p>
+            </details>
+            <label className="exec-px-note exec-nr-field">
+              <span className="exec-role-th exec-px-notelabel">Summary · the reviewer&apos;s first sentence</span>
               <textarea
                 className="exec-px-notebox"
                 value={summary}
@@ -256,19 +249,15 @@ export function NewApprovalRequestScreen({
                 onChange={(e) => setSummary(e.target.value)}
               />
             </label>
-            </div>
           </div>
-          <div className="exec-gov-panel">
-            <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">What R1 will review</span></div>
-            <div className="exec-gov-kv">
-              <span className="exec-gov-k">artifact digest</span>
-              <span className="exec-gov-v">pinned SERVER-side from the run registry at submit — never taken from this form</span>
-              <span className="exec-gov-k">who decides</span>
-              <span className="exec-gov-v">a quant reviewer, never you — the requester is recorded and can never approve</span>
-              <span className="exec-gov-k">if it already exists</span>
-              <span className="exec-gov-v">open work for the same alpha × run is refused with the existing approval id; a failed submit retries safely and never duplicates</span>
-            </div>
-          </div>
+          <aside className="exec-nr-aside exec-gov-panel" aria-label="What happens next">
+            <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">What happens next</span></div>
+            <ol className="exec-nr-next">
+              <li><b>Digest</b><span>Artifact digest — pinned SERVER-side from the run registry at submit, never taken from this form.</span></li>
+              <li><b>Reviewer</b><span>A quant reviewer decides — never you. The SLA clock starts at submit.</span></li>
+              <li><b>Duplicates</b><span>Open work for the same alpha × run is refused with the existing approval id; a failed submit retries safely.</span></li>
+            </ol>
+          </aside>
         </div>
       )}
 

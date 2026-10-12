@@ -259,7 +259,7 @@ describe("Approval Inbox rail and strip", () => {
       <ApprovalInbox onCopyProvenance={vi.fn()} page={{ rows: [row()], totalCount: 1 }} decided={{ rows: [decided()], totalCount: 1, hasMore: false }} counts={{ pending: 1, overdue: 0, dueSoon: 0 }} filter="INBOX" />,
     );
     expect(screen.queryByRole("button", { name: /Full history/ })).toBeNull();
-    expect(screen.getByText(/full history loaded · 1 decisions/)).toBeTruthy();
+    expect(screen.getByText(/last 30 days · 1 decision/)).toBeTruthy();
     unmount();
     const onOlder = vi.fn();
     render(
@@ -313,7 +313,7 @@ describe("Approval Inbox rail and strip", () => {
   it("counts Mine over the whole queue and ticks toward the next SLA breach", async () => {
     render(<ApprovalInboxContainer api={createFixtureApi()} />);
     await screen.findByText("AP-352");
-    expect(screen.getByRole("button", { name: "Mine (3)" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Mine\s*3$/ })).toBeTruthy();
     expect(screen.getByText(/next SLA breach in/)).toBeTruthy();
   });
 });

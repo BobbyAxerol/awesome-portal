@@ -334,7 +334,7 @@ describe("phase 1 · a dead submit button carries its own reason", () => {
      * ids, not its summary — the screen used to open with a reviewed-cast alpha
      * already chosen, so the summary was the only thing left to say.
      */
-    expect(document.getElementById(describedBy!)?.textContent).toContain("name an alpha");
+    expect(document.getElementById(describedBy!)?.textContent).toContain("Still needed: an alpha");
     expect(button.getAttribute("title")).toContain("an alpha");
 
     // With the ids named, the summary becomes the blocker and says so.

@@ -102,6 +102,7 @@ const STRUCTURAL: Readonly<Record<string, string>> = {
   "execution/screens/profileContainers.tsx|disabled={!nextCursor}": "pagination: no next cursor",
   "features/command-center/CommandCenter.tsx|disabled={summary.isFetching}": "refresh greyed while its own fetch is in flight",
   "research/NativeSearchPanel.tsx|disabled={loading}": "\"more\" is greyed only while its own page is loading; the label itself reads \"loading…\"",
+  "execution/components/choiceMenu.tsx|disabled={disabled}": "a menu or segment is inert only while its own list is loading, denied or unavailable — the state beside it says why",
   "research/LinkedAuditConsumer.tsx|disabled={busy}": "linked-audit buttons are greyed only while their own read/create request is in flight",
 };
 

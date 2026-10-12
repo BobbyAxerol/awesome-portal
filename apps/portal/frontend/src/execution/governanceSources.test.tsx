@@ -1,5 +1,6 @@
 /** §56 consumer — checklist source links and per-run claim choices, from the published synthetic fixture (not copied). */
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
+import { choose } from "./choiceTestUtil";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import fixture from "../../../../../packages/contracts/fixtures/governance-review-sources.synthetic.valid.json";
@@ -49,16 +50,16 @@ describe("claims per run", () => {
   const base = { onSubmit: vi.fn(), outcome: null, submitting: false, onReset: vi.fn() } as const;
   it("picking a run with exactly one eligible claim takes it; several are left to the reader; none says so", () => {
     render(<NewApprovalRequestScreen {...base} runOptions={readRunOptions(withRun(fixture.claims))} />);
-    fireEvent.change(screen.getByLabelText("Pick a completed run from Research"), { target: { value: "rrun_a" } });
+    choose("Pick a completed run from Research", /alpha_rsi/);
     expect((screen.getByLabelText("Methodology claim") as HTMLInputElement).value).toBe("claim_1");
     cleanup();
     render(<NewApprovalRequestScreen {...base} runOptions={readRunOptions(withRun({ ...fixture.claims, eligible_methodology_claim_ids: ["c1", "c2"], methodology_claims: [] }))} />);
-    fireEvent.change(screen.getByLabelText("Pick a completed run from Research"), { target: { value: "rrun_a" } });
+    choose("Pick a completed run from Research", /alpha_rsi/);
     expect((screen.getByLabelText("Methodology claim") as HTMLInputElement).value).toBe("");
-    expect(screen.getByLabelText("Pick a methodology claim for this run")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Pick a methodology claim for this run" })).toBeTruthy();
     cleanup();
     render(<NewApprovalRequestScreen {...base} runOptions={readRunOptions(withRun(fixture.empty_claims))} />);
-    fireEvent.change(screen.getByLabelText("Pick a completed run from Research"), { target: { value: "rrun_a" } });
+    choose("Pick a completed run from Research", /alpha_rsi/);
     expect(document.querySelector("[data-claims-note]")!.textContent).toMatch(/lists no eligible claim/);
   });
 });

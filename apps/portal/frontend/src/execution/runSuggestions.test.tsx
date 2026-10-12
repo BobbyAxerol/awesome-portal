@@ -1,5 +1,6 @@
 /** Slice C · the new-request entry offers completed Research runs, keeps ids editable, and says what the usual way in is. */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { choose } from "./choiceTestUtil";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { NewApprovalRequestScreen } from "./screens/NewApprovalRequest";
@@ -36,11 +37,11 @@ describe("New approval request entry", () => {
 
   it("picking a run fills the run and its alpha together, and both stay editable", () => {
     render(<NewApprovalRequestScreen {...base} runOptions={readRunOptions(LIST)} />);
-    fireEvent.change(screen.getByLabelText("Pick a completed run from Research"), { target: { value: "rrun_a" } });
+    choose("Pick a completed run from Research", /RSI v1\.7/);
     expect((screen.getByLabelText("Evidence run (from the run library)") as HTMLInputElement).value).toBe("rrun_a");
     expect((screen.getByLabelText("Alpha (from the alpha registry)") as HTMLInputElement).value).toBe("alpha_rsi");
     fireEvent.change(screen.getByLabelText("Evidence run (from the run library)"), { target: { value: "rrun_other" } });
-    expect((screen.getByLabelText("Pick a completed run from Research") as HTMLSelectElement).value).toBe("");
+    expect(screen.getByRole("button", { name: "Pick a completed run from Research" }).getAttribute("data-empty")).toBe("true");
   });
 
   it("a link from Research can name the ids; an unreadable list is stated, not hidden", () => {
