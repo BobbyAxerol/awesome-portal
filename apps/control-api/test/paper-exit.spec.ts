@@ -10,6 +10,7 @@ import {
   evaluatePaperExit,
 } from "../src/governance/paper-exit.service";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
+import { assertReviewContextContract } from "./contract-validator";
 
 const DATABASE_URL = process.env.TEST_DATABASE_URL ??
   "postgres://portal:portal@127.0.0.1:5432/portal_control_test";
@@ -336,6 +337,21 @@ describe("PRE-IAM-02 Paper Exit Review", () => {
     expect(JSON.stringify(body)).toContain("1842.000000000000000001");
     expect(body.data.evaluation.carried_finding_ids).toEqual(["EX-MET-finding-2"]);
     expect(body.data.evaluation.warnings).toContainEqual({ code: "INSUFFICIENT_DATA_CARRIED_FORWARD" });
+    const context = body.data.decision_context;
+    assertReviewContextContract(context, "PaperExitDecisionContext");
+    expect(context).toMatchObject({ gate: "PAPER_EXIT", workspace_id: workspaceId, review_id: "EX-MET",
+      expected_review_version: 1, evidence_hashes: HASHES, evidence_set_hash: body.data.evidence_set_hash,
+      source_snapshot_hash: body.data.source_snapshot_hash, command_type: "GOVERNANCE_PAPER_EXIT_DECISION",
+      availability: { state: "AVAILABLE", reason_code: null }, source_side_effect_requested: false });
+    // The manifest contains four evidence hashes. Lineage contains only three and two nulls.
+    const lineageHashes = [...new Set(body.data.lineage.map((item: { digest: string | null }) => item.digest).filter(Boolean))];
+    expect(lineageHashes).not.toEqual(context.evidence_hashes);
+    const wrongPayload = planPayload("EX-MET", "PROMOTE");
+    wrongPayload.payload.evidence_hashes = lineageHashes as string[];
+    const mismatch = await mutation(reviewer, context.plan_path, wrongPayload);
+    expect(mismatch.statusCode).toBe(201);
+    expect(mismatch.json().blockers).toContainEqual({ code: "EVIDENCE_HASH_MISMATCH" });
+    expect(mismatch.json().apply_token).toBeNull();
   });
 
   it.each([
@@ -369,8 +385,16 @@ describe("PRE-IAM-02 Paper Exit Review", () => {
 
   it("records PROMOTE as a Portal grant only, idempotently, with no execution command", async () => {
     await seedExitReview({ reviewId: "EX-PROMOTE" });
+    const read = await inject(reviewer, `/api/v1/execution/governance/exit-reviews/EX-PROMOTE?workspace_id=${workspaceId}`);
+    const context = read.json().data.decision_context;
     const payload = planPayload("EX-PROMOTE", "PROMOTE");
-    const first = await mutation(reviewer, "/api/v1/execution/commands/plans", payload);
+    payload.schema_version = context.request_schema_version;
+    payload.command_type = context.command_type;
+    payload.workspace_id = context.workspace_id;
+    payload.target.review_id = context.review_id;
+    payload.expected_review_version = context.expected_review_version;
+    payload.payload.evidence_hashes = context.evidence_hashes;
+    const first = await mutation(reviewer, context.plan_path, payload);
     expect(first.statusCode).toBe(201);
     expect(first.json()).toMatchObject({
       command_type: "GOVERNANCE_PAPER_EXIT_DECISION",
@@ -405,6 +429,24 @@ describe("PRE-IAM-02 Paper Exit Review", () => {
     expect(counts.rows[0]).toMatchObject({
       decisions: "1", grants: "1", audits: "1", outbox: "1", execution_commands: "0",
     });
+    const closed = await inject(reviewer, `/api/v1/execution/governance/exit-reviews/EX-PROMOTE?workspace_id=${workspaceId}`);
+    expect(closed.json().data.decision_context).toMatchObject({ expected_review_version: 2,
+      evidence_hashes: context.evidence_hashes,
+      availability: { state: "BLOCKED", reason_code: "EXIT_REVIEW_NOT_PENDING" } });
+  });
+
+  it("publishes role/quorum context refusals without changing safe decisions or self-promotion policy", async () => {
+    await seedExitReview({ reviewId: "EX-CONTEXT-ROLE" });
+    const memberRead = await inject(member, `/api/v1/execution/governance/exit-reviews/EX-CONTEXT-ROLE?workspace_id=${workspaceId}`);
+    expect(memberRead.statusCode).toBe(200);
+    assertReviewContextContract(memberRead.json().data.decision_context, "PaperExitDecisionContext");
+    expect(memberRead.json().data.decision_context.availability).toEqual({ state: "BLOCKED", reason_code: "APPROVER_ROLE_REQUIRED" });
+    const selfRead = await inject(owner, `/api/v1/execution/governance/exit-reviews/EX-CONTEXT-ROLE?workspace_id=${workspaceId}`);
+    expect(selfRead.json().data).toMatchObject({ decision_context: { availability: { state: "AVAILABLE", reason_code: null } },
+      eligibility: { can_approve: false, can_extend_observation: true, can_reject: true } });
+    await seedExitReview({ reviewId: "EX-CONTEXT-QUORUM", quorumRequired: 2 });
+    const quorumRead = await inject(reviewer, `/api/v1/execution/governance/exit-reviews/EX-CONTEXT-QUORUM?workspace_id=${workspaceId}`);
+    expect(quorumRead.json().data.decision_context.availability).toEqual({ state: "BLOCKED", reason_code: "PAPER_EXIT_QUORUM_UNSUPPORTED" });
   });
 
   it.each([

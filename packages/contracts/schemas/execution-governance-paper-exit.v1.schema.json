@@ -249,6 +249,7 @@
             "evidence_set_hash": { "$ref": "#/$defs/Hash" },
             "source_snapshot_hash": { "$ref": "#/$defs/Hash" },
             "eligibility": { "$ref": "#/$defs/Eligibility" },
+            "decision_context": {"$ref":"execution-governance-review-context.v1.schema.json#/$defs/PaperExitDecisionContext"},
             "lineage": { "type": "array", "minItems": 0, "maxItems": 16, "items": { "$ref": "#/$defs/Lineage" } },
             "panels": { "type": "array", "minItems": 0, "maxItems": 4, "items": { "$ref": "#/$defs/Panel" } },
             "evaluation": { "$ref": "#/$defs/Evaluation" },

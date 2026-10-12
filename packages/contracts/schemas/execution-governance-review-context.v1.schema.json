@@ -476,6 +476,163 @@
           }
         }
       ]
+    },
+    "PaperExitDecisionContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gate",
+        "workspace_id",
+        "review_id",
+        "expected_review_version",
+        "evidence_set_hash",
+        "source_snapshot_hash",
+        "evidence_hashes",
+        "command_type",
+        "request_schema_version",
+        "plan_path",
+        "availability",
+        "source_side_effect_requested"
+      ],
+      "properties": {
+        "gate": {
+          "const": "PAPER_EXIT"
+        },
+        "workspace_id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 96
+        },
+        "review_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._-]{1,128}$"
+        },
+        "expected_review_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "evidence_set_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "source_snapshot_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "evidence_hashes": {
+          "oneOf": [
+            {
+              "type": "array",
+              "maxItems": 128,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "command_type": {
+          "const": "GOVERNANCE_PAPER_EXIT_DECISION"
+        },
+        "request_schema_version": {
+          "const": "governance.paper-exit-decision-plan-request.v1"
+        },
+        "plan_path": {
+          "const": "/api/v1/execution/commands/plans"
+        },
+        "availability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "reason_code"
+          ],
+          "properties": {
+            "state": {
+              "enum": [
+                "AVAILABLE",
+                "BLOCKED"
+              ]
+            },
+            "reason_code": {
+              "enum": [
+                null,
+                "APPROVER_ROLE_REQUIRED",
+                "EXIT_REVIEW_NOT_PENDING",
+                "EXIT_REVIEW_EXPIRED",
+                "ACTOR_ALREADY_DECIDED",
+                "PAPER_EXIT_QUORUM_UNSUPPORTED",
+                "EVIDENCE_HASH_LIMIT_EXCEEDED"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "state": {
+                    "const": "AVAILABLE"
+                  }
+                },
+                "required": [
+                  "state"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "reason_code": {
+                    "type": "null"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "reason_code": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "source_side_effect_requested": {
+          "const": false
+        }
+      },
+      "description": "Verified same-read Paper Exit manifest pins, not lineage/finding digests. AVAILABLE allows planning only in intersection with existing per-verb eligibility; self-promotion and unmet evidence remain blocked by PROMOTE policy, while safe extend/reject retain their policy. This records a Portal decision/grant only, never TS activation.",
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "availability": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "const": "AVAILABLE"
+                  }
+                },
+                "required": [
+                  "state"
+                ]
+              }
+            },
+            "required": [
+              "availability"
+            ]
+          },
+          "then": {
+            "properties": {
+              "evidence_hashes": {
+                "type": "array"
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

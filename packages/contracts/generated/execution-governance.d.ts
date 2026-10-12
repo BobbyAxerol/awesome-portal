@@ -315,6 +315,31 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Verified same-read Paper Exit manifest pins, not lineage/finding digests. AVAILABLE allows planning only in intersection with existing per-verb eligibility; self-promotion and unmet evidence remain blocked by PROMOTE policy, while safe extend/reject retain their policy. This records a Portal decision/grant only, never TS activation. */
+        PaperExitDecisionContext: {
+            /** @constant */
+            gate: "PAPER_EXIT";
+            workspace_id: string;
+            review_id: string;
+            expected_review_version: number;
+            evidence_set_hash: string;
+            source_snapshot_hash: string;
+            evidence_hashes: string[] | null;
+            /** @constant */
+            command_type: "GOVERNANCE_PAPER_EXIT_DECISION";
+            /** @constant */
+            request_schema_version: "governance.paper-exit-decision-plan-request.v1";
+            /** @constant */
+            plan_path: "/api/v1/execution/commands/plans";
+            availability: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "BLOCKED";
+                /** @enum {unknown} */
+                reason_code: null | "APPROVER_ROLE_REQUIRED" | "EXIT_REVIEW_NOT_PENDING" | "EXIT_REVIEW_EXPIRED" | "ACTOR_ALREADY_DECIDED" | "PAPER_EXIT_QUORUM_UNSUPPORTED" | "EVIDENCE_HASH_LIMIT_EXCEEDED";
+            } & unknown;
+            /** @constant */
+            source_side_effect_requested: false;
+        } & unknown;
         /** @description Immutable evidence pins for the existing R1 command. Executor availability is not permission to bypass per-verb eligibility. R2 has no commissioned executor: null command/path and typed refusal, never an R1 alias. */
         DecisionContext: {
             /** @enum {unknown} */
@@ -1171,6 +1196,7 @@ export interface components {
                 evidence_set_hash: components["schemas"]["Hash"];
                 source_snapshot_hash: components["schemas"]["Hash"];
                 eligibility: components["schemas"]["$defs-Eligibility"];
+                decision_context?: components["schemas"]["PaperExitDecisionContext"];
                 lineage: components["schemas"]["Lineage"][];
                 panels: components["schemas"]["Panel"][];
                 evaluation: components["schemas"]["Evaluation"];

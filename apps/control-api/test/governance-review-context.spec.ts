@@ -4,10 +4,11 @@ import type { ControlApiConfig } from "../src/config";
 import type { PortalUser } from "../src/domain";
 import type { ApprovalRecord, EvidenceRecord, R2LineageRecord } from "../src/governance/governance.repository";
 import type { ProfileProjectionSnapshot, ExecutionProfileProjectionRepository } from "../src/execution/profile-projection.repository";
-import type { PaperExitRepository } from "../src/governance/paper-exit.repository";
+import type { PaperExitRepository, PaperExitSnapshot } from "../src/governance/paper-exit.repository";
 import { GovernanceReviewCaptureService } from "../src/governance/review-capture.service";
 import type { OwnerAccessService } from "../src/auth/owner-access.service";
-import { CaptureContextSchema, DecisionContextSchema, decisionContext, paperCaptureContext } from "../src/governance/review-context";
+import { CaptureContextSchema, DecisionContextSchema, PaperExitDecisionContextSchema,
+  decisionContext, paperCaptureContext, paperExitDecisionContext } from "../src/governance/review-context";
 
 const HASH_A = `sha256:${"a".repeat(64)}`;
 const HASH_B = `sha256:${"b".repeat(64)}`;
@@ -49,6 +50,12 @@ function lineage(): R2LineageRecord & { portfolioId: string } {
     grantId: "risk_test", grantName: "Observed reference", approverRole: "ADMIN", planAuthorUserId: "usr_author",
     planAuthorUsername: "author", portfolioId: "pf_test" };
 }
+function exitSnapshot(): PaperExitSnapshot {
+  return { approval: approval(),
+    review: { workspaceId: "ws_test", reviewId: "exit_test", reviewVersion: 3, sourceSnapshotHash: HASH_B } as PaperExitSnapshot["review"],
+    evidence: [evidence(HASH_B), evidence(HASH_A), evidence(HASH_B)],
+    lineage: [], panels: [], findings: [], decisions: [], promotionGrant: null };
+}
 function harness(split = false) {
   const config = { FEATURE_EXECUTION_LOCAL_PROJECTION: "true", FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true",
     EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: "ws_test", EXECUTION_EDGE_PAPER_PROFILE_ID: "paper_test",
@@ -63,6 +70,26 @@ function harness(split = false) {
 }
 
 describe("Governance review context — bounded inputs, not source execution authority", () => {
+  it("pins the Paper Exit review version and its complete manifest, independently from lineage", () => {
+    expect(paperExitDecisionContext(exitSnapshot(), null)).toMatchObject({ gate: "PAPER_EXIT", workspace_id: "ws_test",
+      review_id: "exit_test", expected_review_version: 3, evidence_set_hash: HASH_A, source_snapshot_hash: HASH_B,
+      evidence_hashes: [HASH_A, HASH_B], command_type: "GOVERNANCE_PAPER_EXIT_DECISION",
+      availability: { state: "AVAILABLE", reason_code: null } });
+  });
+  it("blocks oversized Paper Exit evidence instead of silently truncating plan inputs", () => {
+    const snap = exitSnapshot();
+    snap.evidence = Array.from({ length: 129 }, (_, n) => evidence(`sha256:${n.toString(16).padStart(64, "0")}`));
+    expect(paperExitDecisionContext(snap, null)).toMatchObject({ evidence_hashes: null,
+      availability: { state: "BLOCKED", reason_code: "EVIDENCE_HASH_LIMIT_EXCEEDED" } });
+  });
+  it("keeps Paper Exit command identity strict and typed refusal distinct from per-verb eligibility", () => {
+    const context = paperExitDecisionContext(exitSnapshot(), null);
+    expect(PaperExitDecisionContextSchema.safeParse({ ...context, command_type: "GOVERNANCE_R1_DECISION" }).success).toBe(false);
+    expect(PaperExitDecisionContextSchema.safeParse({ ...context, evidence_hashes: null }).success).toBe(false);
+    expect(PaperExitDecisionContextSchema.safeParse({ ...context, evidence_hashes: [HASH_A, HASH_A] }).success).toBe(false);
+    expect(PaperExitDecisionContextSchema.safeParse({ ...context, availability: { state: "BLOCKED", reason_code: null } }).success).toBe(false);
+    expect(paperExitDecisionContext(exitSnapshot(), "EXIT_REVIEW_EXPIRED").availability).toEqual({ state: "BLOCKED", reason_code: "EXIT_REVIEW_EXPIRED" });
+  });
   it("publishes sorted, unique hashes and exact parent pins for R1", () => {
     const parent = { ...approval(), status: "PENDING" };
     expect(decisionContext(parent, [evidence(HASH_B), evidence(HASH_A), evidence(HASH_B)], true)).toMatchObject({

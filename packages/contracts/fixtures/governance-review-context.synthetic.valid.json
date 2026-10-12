@@ -34,6 +34,26 @@
       "reason_code": "R2_EXECUTION_DECISION_NOT_COMMISSIONED"
     }
   },
+  "paper_exit": {
+    "gate": "PAPER_EXIT",
+    "workspace_id": "ws_example",
+    "review_id": "exit_example",
+    "expected_review_version": 3,
+    "evidence_set_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "source_snapshot_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "evidence_hashes": [
+      "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    ],
+    "command_type": "GOVERNANCE_PAPER_EXIT_DECISION",
+    "request_schema_version": "governance.paper-exit-decision-plan-request.v1",
+    "plan_path": "/api/v1/execution/commands/plans",
+    "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    },
+    "source_side_effect_requested": false
+  },
   "capture": {
     "action": "R2_CREATE",
     "workspace_id": "ws_example",

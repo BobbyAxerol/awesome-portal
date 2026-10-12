@@ -521,6 +521,7 @@
       }
     },
     "schemas": {
+      "PaperExitDecisionContext": {"$ref":"../schemas/execution-governance-review-context.v1.schema.json#/$defs/PaperExitDecisionContext"},
       "DecisionContext": {"$ref":"../schemas/execution-governance-review-context.v1.schema.json#/$defs/DecisionContext"},
       "CaptureContext": {"$ref":"../schemas/execution-governance-review-context.v1.schema.json#/$defs/CaptureContext"},
       "Identifier": {

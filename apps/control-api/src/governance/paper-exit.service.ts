@@ -8,6 +8,7 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import { GovernanceApplyTokenSigner } from "./apply-token";
 import { PaperExitDecision } from "./contracts";
 import { computeEvidenceManifestHash, GovernanceError } from "./governance.service";
+import { paperExitDecisionContext } from "./review-context";
 import {
   PaperExitEvaluationState,
   PaperExitPlanRecord,
@@ -277,6 +278,10 @@ export class PaperExitService {
         formula_version: review.evaluationFormulaVersion,
         evidence_set_hash: approval.evidenceSetHash,
         source_snapshot_hash: review.sourceSnapshotHash,
+        decision_context: paperExitDecisionContext(snapshot, !role ? "APPROVER_ROLE_REQUIRED"
+          : expired ? "EXIT_REVIEW_EXPIRED" : !open ? "EXIT_REVIEW_NOT_PENDING"
+            : alreadyDecided ? "ACTOR_ALREADY_DECIDED"
+              : approval.quorumRequired !== 1 ? "PAPER_EXIT_QUORUM_UNSUPPORTED" : null),
         eligibility: {
           can_approve: canPromote,
           can_approve_with_condition: canSafeDecide,

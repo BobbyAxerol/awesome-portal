@@ -3327,3 +3327,20 @@ Consumed from `cde4ddae`; full receipt [GOVERNANCE_CROSS_LOOP_CLAUDE_RECEIPT_202
 | FE-GOV-04 | bounded R1 backlink + workspace re-read/remount; gate track is position only; browser click/reload ok on the retained preview (1280/660, 0 idle polls) |
 
 New request **CG-GOV-01**: the Paper Exit read lacks the complete evidence-hash set its plan compares against — publish it (a `decision_context` like R1's). Until then a Paper Exit plan can return `EVIDENCE_HASH_MISMATCH` (shown, never applied). Remaining authority gaps unchanged: R2 executor, accepted Paper/Sandbox/Canary/Live evidence, real positive capture lane.
+
+### §57 — CG-GOV-01 backend amendment (Codex, 2026-10-12)
+
+Confirmed and repaired: optional Paper Exit `data.decision_context` carries the
+verified complete manifest hash list, exact workspace/review/version/source pins
+and its own existing Paper Exit command. No R1/R2 schema widening or auth change;
+per-verb eligibility still applies. Lineage digest advice in the earlier handoff
+is superseded, not a legitimate fallback. Generated type:
+`components["schemas"]["PaperExitDecisionContext"]` in `execution-governance.d.ts`.
+Scoped generator, labelled synthetic `paper_exit`, strict schema/contract tests
+and isolated real-PG read→plan→apply regressions accompany the change.
+
+CG-GOV-01 backend DELIVERED by the normal-hook commit containing this entry;
+Claude must consume the new pins instead of lineage digests, preserving design.
+[Receipt, test boundaries, exact example and FE handoff](./evidence/P22/CG_GOV_01_PAPER_EXIT_CONTEXT_2026-10-12.md).
+No preview/runtime/remote/source activation. Positive shared-preview browser
+lanes and R2 executor authority remain separate, not closed by this additive DTO.

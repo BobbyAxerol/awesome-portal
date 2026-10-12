@@ -2,6 +2,7 @@
 import { z } from "zod";
 import type { ApprovalRecord, EvidenceRecord, R2LineageRecord } from "./governance.repository";
 import type { ProfileProjectionSnapshot } from "../execution/profile-projection.repository";
+import type { PaperExitSnapshot } from "./paper-exit.repository";
 
 const identifier = z.string().regex(/^[A-Za-z0-9._:-]{1,192}$/);
 const hash = z.string().regex(/^sha256:[0-9a-f]{64}$/);
@@ -38,6 +39,43 @@ export const DecisionContextSchema = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Decision executor does not match this gate." });
   }
 });
+export const PAPER_EXIT_CONTEXT_REASONS = [
+  "APPROVER_ROLE_REQUIRED", "EXIT_REVIEW_NOT_PENDING", "EXIT_REVIEW_EXPIRED",
+  "ACTOR_ALREADY_DECIDED", "PAPER_EXIT_QUORUM_UNSUPPORTED", "EVIDENCE_HASH_LIMIT_EXCEEDED",
+] as const;
+export const PaperExitDecisionContextSchema = z.object({
+  gate: z.literal("PAPER_EXIT"), workspace_id: z.string().min(3).max(96),
+  review_id: z.string().regex(/^[A-Za-z0-9._-]{1,128}$/),
+  expected_review_version: z.number().int().positive(), evidence_set_hash: hash,
+  source_snapshot_hash: hash, evidence_hashes: z.array(hash).max(128).nullable(),
+  command_type: z.literal("GOVERNANCE_PAPER_EXIT_DECISION"),
+  request_schema_version: z.literal("governance.paper-exit-decision-plan-request.v1"),
+  plan_path: z.literal("/api/v1/execution/commands/plans"),
+  availability: z.object({ state: z.enum(["AVAILABLE", "BLOCKED"]),
+    reason_code: z.enum(PAPER_EXIT_CONTEXT_REASONS).nullable() }).strict(),
+  source_side_effect_requested: z.literal(false),
+}).strict().superRefine((value, ctx) => {
+  if ((value.availability.state === "AVAILABLE") !== (value.availability.reason_code === null)
+    || value.availability.state === "AVAILABLE" && value.evidence_hashes === null
+    || value.evidence_hashes !== null && new Set(value.evidence_hashes).size !== value.evidence_hashes.length) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Paper Exit decision inputs must match their availability." });
+  }
+});
+
+/** Only call after verifying the manifest and source snapshot; lineage is not its evidence set. */
+export function paperExitDecisionContext(snapshot: PaperExitSnapshot,
+  blockedReason: typeof PAPER_EXIT_CONTEXT_REASONS[number] | null) {
+  const hashes = [...new Set(snapshot.evidence.map(item => item.sha256))].sort();
+  const reason = blockedReason ?? (hashes.length > 128 ? "EVIDENCE_HASH_LIMIT_EXCEEDED" : null);
+  return PaperExitDecisionContextSchema.parse({ gate: "PAPER_EXIT", workspace_id: snapshot.review.workspaceId,
+    review_id: snapshot.review.reviewId, expected_review_version: snapshot.review.reviewVersion,
+    evidence_set_hash: snapshot.approval.evidenceSetHash, source_snapshot_hash: snapshot.review.sourceSnapshotHash,
+    evidence_hashes: hashes.length > 128 ? null : hashes, command_type: "GOVERNANCE_PAPER_EXIT_DECISION",
+    request_schema_version: "governance.paper-exit-decision-plan-request.v1",
+    plan_path: "/api/v1/execution/commands/plans",
+    availability: { state: reason === null ? "AVAILABLE" : "BLOCKED", reason_code: reason },
+    source_side_effect_requested: false });
+}
 export const CaptureContextSchema = z.object({
   action: z.enum(["R2_CREATE", "PAPER_EXIT_CREATE"]), workspace_id: identifier,
   parent_approval_id: identifier, expected_parent_version: z.number().int().positive(),

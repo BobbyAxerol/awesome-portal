@@ -11,6 +11,7 @@ for (const name of readdirSync(join(root, "schemas"))) ajv.addSchema(load(`schem
 const id = "https://schemas.primusspark.com/portal/execution-governance-review-context.v1.schema.json";
 const decision = ajv.compile({ $ref: `${id}#/$defs/DecisionContext` });
 const capture = ajv.compile({ $ref: `${id}#/$defs/CaptureContext` });
+const paperExit = ajv.compile({ $ref: `${id}#/$defs/PaperExitDecisionContext` });
 const fixture = load("fixtures/governance-review-context.synthetic.valid.json");
 
 describe("Governance action context canonical and generated contracts", () => {
@@ -57,5 +58,29 @@ describe("Governance action context canonical and generated contracts", () => {
     expect(validate(response), JSON.stringify(validate.errors)).toBe(true);
     response.data.r1_reference.href += "&redirect=https://outside.example";
     expect(validate(response)).toBe(false);
+  });
+  it("publishes a separate, optional Paper Exit context without widening the R1/R2 command schema", () => {
+    expect(paperExit(fixture.paper_exit), JSON.stringify(paperExit.errors)).toBe(true);
+    expect(decision(fixture.paper_exit)).toBe(false);
+    const schema = load("schemas/execution-governance-paper-exit.v1.schema.json").$defs.PaperExitReviewResponse;
+    expect(schema.properties.data.properties.decision_context.$ref).toContain("#/$defs/PaperExitDecisionContext");
+    expect(schema.properties.data.required).not.toContain("decision_context");
+    const response = load("fixtures/execution-governance.paper-exit-review.valid.json");
+    const validate = ajv.compile({ $ref: "https://schemas.primusspark.com/portal/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitReviewResponse" });
+    expect(validate(response), JSON.stringify(validate.errors)).toBe(true);
+    response.data.decision_context = fixture.paper_exit;
+    expect(validate(response), JSON.stringify(validate.errors)).toBe(true);
+    const generated = readFileSync(join(root, "generated/execution-governance.d.ts"), "utf8");
+    expect(generated).toContain("PaperExitDecisionContext:");
+    expect(generated).toContain('command_type: "GOVERNANCE_PAPER_EXIT_DECISION";');
+  });
+  it("rejects Paper Exit unbound/duplicated/oversize hashes, wrong command and incoherent availability", () => {
+    expect(paperExit({ ...fixture.paper_exit, evidence_hashes: null })).toBe(false);
+    expect(paperExit({ ...fixture.paper_exit, evidence_hashes: Array(129).fill(fixture.paper_exit.evidence_hashes[0]) })).toBe(false);
+    expect(paperExit({ ...fixture.paper_exit, evidence_hashes: [...fixture.paper_exit.evidence_hashes, ...fixture.paper_exit.evidence_hashes] })).toBe(false);
+    expect(paperExit({ ...fixture.paper_exit, command_type: "GOVERNANCE_R1_DECISION" })).toBe(false);
+    expect(paperExit({ ...fixture.paper_exit, availability: { state: "BLOCKED", reason_code: null } })).toBe(false);
+    expect(paperExit({ ...fixture.paper_exit, source_side_effect_requested: true })).toBe(false);
+    expect(paperExit({ ...fixture.paper_exit, availability: { state: "BLOCKED", reason_code: "EXIT_REVIEW_EXPIRED" } }), JSON.stringify(paperExit.errors)).toBe(true);
   });
 });

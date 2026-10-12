@@ -9226,3 +9226,15 @@ browser on the retained preview 1280/660 (workspace kept on reload, 0 idle polls
 owns consumer hash/condition binding, captures, no R1 alias for R2, workspace and
 gate-track truth. R2/source promotion remains explicitly uncommissioned; not a
 P24/owner/full-chain GO. Delivery SHA is the commit containing this entry; no push.
+
+**CG-GOV-01 backend amendment (Codex, 2026-10-12; parent`5df904bd`):** Paper Exit
+now emits its own optional verified `decision_context` with exact manifest hash
+list, workspace/review/version/source pins and named Paper Exit command. Earlier
+lineage-pin guidance is superseded. Existing eligibility/policy and R1/R2 types
+unchanged; safe extend/reject is not disabled merely because promotion is blocked.
+Focused19 backend/7 contract tests PASS; isolated real-PG read→plan→apply and
+lineage-set mismatch regression run once in the ordinary delivery hook.
+[Receipt and Claude binding handoff](./research_loop/evidence/P22/CG_GOV_01_PAPER_EXIT_CONTEXT_2026-10-12.md).
+CG-GOV-01 backend delivery is the commit containing this entry; FE mapping and
+positive shared-preview browser lanes remain OPEN. No FE design edit, migration,
+new rights, runtime rebuild, upstream activation, remote push or dev/main/release.

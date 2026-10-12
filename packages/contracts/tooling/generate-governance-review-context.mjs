@@ -32,6 +32,23 @@ decision.allOf = [{ if: { properties: { gate: { const: "R1" } }, required: ["gat
     evidence_hashes: { type: "null" }, availability: { type: "object", properties: { state: { const: "BLOCKED" }, reason_code: { const: "R2_EXECUTION_DECISION_NOT_COMMISSIONED" } } } } } },
   { if: { properties: { availability: { type: "object", properties: { state: { const: "AVAILABLE" } }, required: ["state"] } }, required: ["availability"] },
     then: { properties: { evidence_hashes: { type: "array" } } } }];
+const paperExitDecision = object({ gate: { const: "PAPER_EXIT" },
+  workspace_id: { type: "string", minLength: 3, maxLength: 96 },
+  review_id: { type: "string", pattern: "^[A-Za-z0-9._-]{1,128}$" },
+  expected_review_version: { type: "integer", minimum: 1 }, evidence_set_hash: hash,
+  source_snapshot_hash: hash,
+  evidence_hashes: nullable({ type: "array", maxItems: 128, uniqueItems: true, items: hash }),
+  command_type: { const: "GOVERNANCE_PAPER_EXIT_DECISION" },
+  request_schema_version: { const: "governance.paper-exit-decision-plan-request.v1" },
+  plan_path: { const: "/api/v1/execution/commands/plans" },
+  availability: object({ state: { enum: ["AVAILABLE", "BLOCKED"] }, reason_code: { enum: [null,
+    "APPROVER_ROLE_REQUIRED", "EXIT_REVIEW_NOT_PENDING", "EXIT_REVIEW_EXPIRED", "ACTOR_ALREADY_DECIDED",
+    "PAPER_EXIT_QUORUM_UNSUPPORTED", "EVIDENCE_HASH_LIMIT_EXCEEDED"] } }),
+  source_side_effect_requested: { const: false } });
+paperExitDecision.description = "Verified same-read Paper Exit manifest pins, not lineage/finding digests. AVAILABLE allows planning only in intersection with existing per-verb eligibility; self-promotion and unmet evidence remain blocked by PROMOTE policy, while safe extend/reject retain their policy. This records a Portal decision/grant only, never TS activation.";
+paperExitDecision.properties.availability.allOf = availability.allOf;
+paperExitDecision.allOf = [{ if: { properties: { availability: { type: "object", properties: { state: { const: "AVAILABLE" } }, required: ["state"] } }, required: ["availability"] },
+  then: { properties: { evidence_hashes: { type: "array" } } } }];
 const candidate = object({ deployment_id: id, portfolio_id: id, risk_grant_id: nullable(id),
   currency: nullable({ type: "string", pattern: "^[A-Z0-9]{2,12}$" }) });
 const capture = object({ action: { enum: ["R2_CREATE", "PAPER_EXIT_CREATE"] }, workspace_id: id,
@@ -48,7 +65,8 @@ capture.allOf = [{ if: { properties: { availability: { type: "object", propertie
 const schemaPath = "schemas/execution-governance-review-context.v1.schema.json";
 save(schemaPath, { $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://schemas.primusspark.com/portal/execution-governance-review-context.v1.schema.json",
-  title: "Portal Governance review action context v1", $defs: { DecisionContext: decision, CaptureContext: capture } });
+  title: "Portal Governance review action context v1", $defs: { DecisionContext: decision, CaptureContext: capture,
+    PaperExitDecisionContext: paperExitDecision } });
 const reference = name => ({ $ref: `../schemas/execution-governance-review-context.v1.schema.json#/$defs/${name}` });
 // Relative refs resolve both offline OpenAPI files and the canonical AJV $id registry.
 const schemaRef = name => ({ $ref: `execution-governance-review-context.v1.schema.json#/$defs/${name}` });
@@ -81,6 +99,12 @@ if (load(r2Path).$defs.r1_reference.properties.href.pattern === oldHref) {
 }
 insert("openapi/execution-governance.openapi.json", value => !!value.components.schemas.DecisionContext,
   '"schemas": {', `\n      "DecisionContext": ${JSON.stringify(reference("DecisionContext"))},\n      "CaptureContext": ${JSON.stringify(reference("CaptureContext"))},`);
+insert("schemas/execution-governance-paper-exit.v1.schema.json",
+  value => !!value.$defs.PaperExitReviewResponse.properties.data.properties.decision_context,
+  '"eligibility": { "$ref": "#/$defs/Eligibility" },',
+  `\n            "decision_context": ${JSON.stringify(schemaRef("PaperExitDecisionContext"))},`);
+insert("openapi/execution-governance.openapi.json", value => !!value.components.schemas.PaperExitDecisionContext,
+  '"schemas": {', `\n      "PaperExitDecisionContext": ${JSON.stringify(reference("PaperExitDecisionContext"))},`);
 const sha = `sha256:${"a".repeat(64)}`;
 const base = { workspace_id: "ws_example", approval_id: "apr_example", expected_approval_version: 2,
   evidence_set_hash: sha, source_side_effect_requested: false };
@@ -91,6 +115,11 @@ save("fixtures/governance-review-context.synthetic.valid.json", {
     availability: { state: "AVAILABLE", reason_code: null } },
   r2: { ...base, gate: "R2", evidence_hashes: null, command_type: null, request_schema_version: null, plan_path: null,
     availability: { state: "BLOCKED", reason_code: "R2_EXECUTION_DECISION_NOT_COMMISSIONED" } },
+  paper_exit: { gate: "PAPER_EXIT", workspace_id: "ws_example", review_id: "exit_example", expected_review_version: 3,
+    evidence_set_hash: sha, source_snapshot_hash: `sha256:${"b".repeat(64)}`,
+    evidence_hashes: [sha, `sha256:${"c".repeat(64)}`], command_type: "GOVERNANCE_PAPER_EXIT_DECISION",
+    request_schema_version: "governance.paper-exit-decision-plan-request.v1", plan_path: "/api/v1/execution/commands/plans",
+    availability: { state: "AVAILABLE", reason_code: null }, source_side_effect_requested: false },
   capture: { action: "R2_CREATE", workspace_id: "ws_example", parent_approval_id: "apr_example", expected_parent_version: 2,
     expected_projection_digest: sha, availability: { state: "AVAILABLE", reason_code: null },
     candidates: [{ deployment_id: "dep_example", portfolio_id: "pf_example", risk_grant_id: "risk_example", currency: null }],
