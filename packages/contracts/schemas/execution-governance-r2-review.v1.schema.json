@@ -14,6 +14,7 @@
   ],
   "properties": {
     "schema_version": { "const": "governance.r2-review.v1" },
+    "workspace_id": {"type":"string","pattern":"^[A-Za-z0-9._:-]{1,192}$"},
     "record_authority": { "const": "PORTAL" },
     "delivery_profile": { "const": "fixture" },
     "read_at": { "$ref": "#/$defs/date_time" },
@@ -118,7 +119,7 @@
       "properties": {
         "approval_id": { "$ref": "#/$defs/identifier" },
         "state": { "enum": ["APPROVED", "APPROVED_WITH_CONDITION", "DENIED", "CHANGES_REQUESTED", "EXPIRED", "PENDING"] },
-        "href": { "type": "string", "pattern": "^/governance/approvals/[A-Za-z0-9._-]+/r1$" },
+        "href": { "type": "string", "pattern": "^/governance/approvals/[A-Za-z0-9._-]+/r1(?:\\?workspace_id=(?:[A-Za-z0-9._~-]|%[0-9A-Fa-f]{2}){1,576})?$" },
         "expiry": { "type": ["string", "null"], "format": "date-time" },
         "digest": { "oneOf": [{ "$ref": "#/$defs/hash" }, { "type": "null" }] },
         "decided_by": { "type": ["string", "null"], "maxLength": 128 },
@@ -172,6 +173,8 @@
       ],
       "properties": {
         "approval": { "$ref": "#/$defs/approval" },
+        "decision_context": {"$ref":"execution-governance-review-context.v1.schema.json#/$defs/DecisionContext"},
+        "capture_context": {"$ref":"execution-governance-review-context.v1.schema.json#/$defs/CaptureContext"},
         "actor": { "$ref": "#/$defs/review_actor" },
         "r1_reference": { "oneOf": [{ "$ref": "#/$defs/r1_reference" }, { "type": "null" }] },
         "r1_state": { "enum": ["APPROVED", "APPROVED_WITH_CONDITION", "DENIED", "CHANGES_REQUESTED", "EXPIRED", "PENDING", "MISSING"] },

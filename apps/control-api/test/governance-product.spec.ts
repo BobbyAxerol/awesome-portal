@@ -3,7 +3,7 @@ import { AdminService } from "../src/admin/admin.service";
 import { Argon2CredentialService } from "../src/auth/argon";
 import { AuthService } from "../src/auth/auth.service";
 import { projectionDigest } from "../src/execution/profile-projection.repository";
-import { assertCaptureContract } from "./contract-validator";
+import { assertCaptureContract, assertReviewContextContract } from "./contract-validator";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
 import { OwnerAccessRepository } from "../src/repos/owner-access";
 import { GovernanceGrantsRepository } from "../src/repos/governance-grants";
@@ -285,11 +285,22 @@ describe("N29 governance product closeout", () => {
     const created = await mutation(stan,"/api/v1/execution/governance/approvals",createPayload("ar06-r1"));
     expect(created.statusCode,JSON.stringify(created.json())).toBe(201);
     const r1Id=created.json().approval.approval_id;
-    const planned=await mutation(lan,"/api/v1/execution/commands/plans",{
-      schema_version:"governance.r1-decision-plan-request.v1",workspace_id:workspaceId,request_key:"ar06-r1-plan",
-      command_type:"GOVERNANCE_R1_DECISION",command_version:1,target:{ approval_id:r1Id },expected_approval_version:1,
-      payload:{ decision:"APPROVE",reason:"Independent accepted research evidence review.",evidence_hashes:[ARTIFACT_HASH] },
-    });
+    const initial = await request(lan, `/api/v1/execution/governance/approvals/${r1Id}/r1?workspace_id=${workspaceId}`);
+    expect(initial.statusCode).toBe(200);
+    const decision = initial.json().data.decision_context;
+    assertReviewContextContract(decision, "DecisionContext");
+    expect(decision).toMatchObject({ workspace_id: workspaceId, approval_id: r1Id, expected_approval_version: 1,
+      evidence_hashes: [ARTIFACT_HASH], availability: { state: "AVAILABLE", reason_code: null } });
+    const decisionInput = {
+      schema_version:decision.request_schema_version,workspace_id:decision.workspace_id,request_key:"ar06-r1-plan",
+      command_type:decision.command_type,command_version:1,target:{ approval_id:decision.approval_id },expected_approval_version:decision.expected_approval_version,
+      payload:{ decision:"APPROVE",reason:"Independent accepted research evidence review.",conditions:[],evidence_hashes:decision.evidence_hashes },
+    };
+    const missingHashes = await mutation(lan, decision.plan_path, { ...decisionInput, request_key: "ar06-empty-hashes",
+      payload: { ...decisionInput.payload, evidence_hashes: [] } });
+    expect(missingHashes.statusCode).toBe(201);
+    expect(missingHashes.json().blockers).toContainEqual({ code: "EVIDENCE_HASH_MISMATCH" });
+    const planned=await mutation(lan,decision.plan_path,decisionInput);
     expect(planned.statusCode,JSON.stringify(planned.json())).toBe(201);
     expect(planned.json().blockers).toEqual([]);
     const applied=await mutation(lan,`/api/v1/execution/operations/${planned.json().operation_id}/apply`,{
@@ -315,8 +326,27 @@ describe("N29 governance product closeout", () => {
        completeness,projection_epoch,projection_sequence,payload_digest,payload)
       VALUES ($1,'paper','PAPER_BINANCE_USDM','accepted-test-v1','epoch','cursor',now(),now(),now(),'COMPLETE',
        '00000000-0000-4000-8000-000000000086',1,$2,$3)`,[workspaceId,digest,JSON.stringify(document)]);
-    const r2Input={ workspace_id:workspaceId,request_key:"ar06-r2",summary:"Capture Portal review; no source verdict asserted.",
-      r1_approval_id:r1Id,expected_r1_version:2,portfolio_id:"pf_ar06",currency:"USDT",deployment_id:"dep_ar06",risk_grant_id:"risk_ar06",expected_projection_digest:digest };
+    const accepted = await request(bobby, `/api/v1/execution/governance/approvals/${r1Id}/r1?workspace_id=${workspaceId}`);
+    expect(accepted.statusCode).toBe(200);
+    const captureContext = accepted.json().data.capture_context;
+    assertReviewContextContract(captureContext, "CaptureContext");
+    expect(captureContext).toMatchObject({ action: "R2_CREATE", parent_approval_id: r1Id, expected_parent_version: 2,
+      expected_projection_digest: digest, availability: { state: "AVAILABLE", reason_code: null },
+      candidates: [{ deployment_id: "dep_ar06", portfolio_id: "pf_ar06", risk_grant_id: "risk_ar06", currency: null }] });
+    const candidate = captureContext.candidates[0];
+    const r2Input={ workspace_id:captureContext.workspace_id,request_key:"ar06-r2",summary:"Capture Portal review; no source verdict asserted.",
+      r1_approval_id:captureContext.parent_approval_id,expected_r1_version:captureContext.expected_parent_version,
+      portfolio_id:candidate.portfolio_id,currency:"USDT",deployment_id:candidate.deployment_id,risk_grant_id:candidate.risk_grant_id,
+      expected_projection_digest:captureContext.expected_projection_digest };
+    const ungrantedAdmin = await createActor("ungranted-capture-admin", "ADMIN");
+    await ctx.pool.query("INSERT INTO workspace_members(workspace_id,user_id,role) VALUES ($1,$2,'MEMBER')", [workspaceId, ungrantedAdmin.userId]);
+    expect((await mutation(ungrantedAdmin, "/api/v1/execution/governance/r2/capture", { ...r2Input, request_key: "ar06-ungranted-admin" })).statusCode).toBe(403);
+    await new GovernanceGrantsRepository(ctx.pool).insertGrant({ grantId: "grn_capture_r1_read_only", granteeUserId: ungrantedAdmin.userId,
+      capability: "governance.r1.read", workspaceId, issuedBy: bobby.userId });
+    const readOnlyParent = await request(ungrantedAdmin, `/api/v1/execution/governance/approvals/${r1Id}/r1?workspace_id=${workspaceId}`);
+    expect(readOnlyParent.statusCode).toBe(200);
+    expect(readOnlyParent.json().data.capture_context.availability.reason_code).toBe("GOVERNANCE_CAPABILITY_REQUIRED");
+    expect((await mutation(ungrantedAdmin, "/api/v1/execution/governance/r2/capture", { ...r2Input, request_key: "ar06-parent-read-only" })).statusCode).toBe(403);
     expect((await mutation(stan,"/api/v1/execution/governance/r2/capture",r2Input)).statusCode).toBe(403);
     expect((await mutation(bobby,"/api/v1/execution/governance/r2/capture",{ ...r2Input,workspace_id:"no-access" })).statusCode).toBe(404);
     expect((await mutation(bobby,"/api/v1/execution/governance/r2/capture",{ ...r2Input,risk_grant_id:"wrong-account" })).statusCode).toBe(422);
@@ -342,10 +372,24 @@ describe("N29 governance product closeout", () => {
     expect(parallel.filter(item=>!item.json().replayed)).toHaveLength(1);
     const r2=parallel[0].json();
     assertCaptureContract(r2);
-    expect((await request(bobby,`${r2.read_path}?workspace_id=${workspaceId}`)).statusCode).toBe(200);
+    const r2Review = await request(bobby,`${r2.read_path}?workspace_id=${workspaceId}`);
+    expect(r2Review.statusCode).toBe(200);
+    const r2Data = r2Review.json().data;
+    assertReviewContextContract(r2Data.decision_context, "DecisionContext");
+    assertReviewContextContract(r2Data.capture_context, "CaptureContext");
+    expect(r2Data.decision_context.availability.reason_code).toBe("R2_EXECUTION_DECISION_NOT_COMMISSIONED");
+    expect(r2Data.eligibility).toMatchObject({ can_approve: false, can_approve_with_condition: false, can_deny: false, can_request_changes: false });
+    expect(r2Data.r1_reference.href).toBe(`/governance/approvals/${r1Id}/r1?workspace_id=${workspaceId}`);
+    const mismatch = await mutation(bobby, "/api/v1/execution/commands/plans", {
+      ...decisionInput, request_key: "ar06-no-r1-alias", target: { approval_id: r2.approval_id }, expected_approval_version: 1,
+    });
+    expect(mismatch.statusCode).toBe(409);
+    expect(mismatch.json().error.code).toBe("GOVERNANCE_DECISION_GATE_MISMATCH");
     expect((await mutation(bobby,"/api/v1/execution/governance/r2/capture",{ ...r2Input,summary:"Changed intent must not replay previous result." })).statusCode).toBe(409);
-    const exitInput={ workspace_id:workspaceId,request_key:"ar06-exit",summary:"Insufficient accepted source evidence; record review, not promotion.",
-      r2_approval_id:r2.approval_id,expected_r2_version:1,deployment_id:"dep_ar06",expected_projection_digest:digest };
+    const exitContext = r2Data.capture_context;
+    const exitInput={ workspace_id:exitContext.workspace_id,request_key:"ar06-exit",summary:"Insufficient accepted source evidence; record review, not promotion.",
+      r2_approval_id:exitContext.parent_approval_id,expected_r2_version:exitContext.expected_parent_version,
+      deployment_id:exitContext.candidates[0].deployment_id,expected_projection_digest:exitContext.expected_projection_digest };
     const exit=await mutation(bobby,"/api/v1/execution/governance/paper-exit/create",exitInput);
     expect(exit.statusCode,JSON.stringify(exit.json())).toBe(201);
     assertCaptureContract(exit.json());

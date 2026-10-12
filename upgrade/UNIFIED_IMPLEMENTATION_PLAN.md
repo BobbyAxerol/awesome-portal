@@ -9182,3 +9182,42 @@ remote push, dev/main/stable/release. Backend71 and contract6 focused tests PASS
 new real-PG regressions run in the mandatory normal hook. Claude consumes generated
 types and preserves workspace on navigation, then supplies affected browser receipt.
 This is not a P24/product/owner acceptance or release amendment.
+
+### Governance cross-loop repair — Bobby-approved 2026-10-12
+
+**BACKEND_REPAIR_VERIFIED_AFTER_NORMAL_HOOK · FRONTEND_HANDOFF_OPEN.** Bobby approved
+repairing the gaps found by the read-only Research→RC→Inbox→R1→R2 audit on
+`docs/research-loop-plan`, base `be35972a`. No push, production/dev/main,
+preview rebuild, source/SSE/Trading System command or new grant activation.
+
+- Publish an additive, manifest-bound R1 decision context (workspace, version,
+  exact unique evidence hashes and the existing named plan operation); preserve
+  all CSRF/RBAC/self-approval/expiry/current-version checks on POST/apply.
+- R2/Live review must not advertise executable decisions when no such executor
+  exists. Publish a typed action refusal, align Inbox `needs_you`, and reject a
+  misaddressed R1 command with a precise gate-mismatch reason. Do not commission
+  an Execution authorization by reusing an R1 command.
+- Publish bounded R2/Paper Exit capture inputs from the existing exact parent
+  review and accepted Paper projection; source-off/retained/stale/missing facts
+  remain explicitly blocked. No guessed portfolio/currency/grant/digest.
+- Preserve explicit workspace on R2→R1 links. Give Claude a concrete handoff
+  for decision hashes, capture binding and workflow-position vs verified-state
+  rendering; Codex does not edit frontend source/design/baselines.
+- Capture preserves the existing ADMIN prerequisite and additionally checks
+  parent/target gate visibility in the exact workspace before write/replay.
+  A fresh shared owner/delegated-rights read is used, never a new capability or
+  cached permission. Separate UDB store reads use the Execution pool, not Core.
+- Test affected contracts, real PostgreSQL/API authority/negative/replay paths
+  and context bounding; regenerate types, run one ordinary coherent commit
+  hook, record scoped cleanup. Existing engine/load/DR proofs are reused only
+  where unchanged. Backend delivery is not browser or full active-chain proof.
+
+Delivery: GOV-BE-01…06 in queue§57; new `DecisionContext`/`CaptureContext`, scoped
+generation and canonical fixture. [Backend receipt](./research_loop/evidence/P22/GOVERNANCE_CROSS_LOOP_REPAIR_2026-10-12.md)
+records54/54 final real-PG/API tests, restore,139/139 contracts/fixtures, clean FE
+typecheck, first full-run test contamination and only affected retake, C4 and
+derived N29/EDS-12 digest refresh (`runtime_effect:NONE`).
+[Claude FE-GOV-01…04 handoff](./research_loop/evidence/P22/GOVERNANCE_CROSS_LOOP_CLAUDE_HANDOFF_2026-10-12.md)
+owns consumer hash/condition binding, captures, no R1 alias for R2, workspace and
+gate-track truth. R2/source promotion remains explicitly uncommissioned; not a
+P24/owner/full-chain GO. Delivery SHA is the commit containing this entry; no push.

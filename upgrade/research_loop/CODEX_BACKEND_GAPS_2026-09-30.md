@@ -3289,3 +3289,28 @@ Consumed from `0159987c` (`P22/GOVERNANCE_UX_OPTIONAL_SOURCES_2026-10-11.md`), g
 | New request, pick `rrun_73bc…` | claim prefilled with the listed id, alpha `delta-rsi-polynomial-alpha` filled, caption "the Run Library lists this one claim for the run" (1280 and 660) |
 | New request, pick another completed run | typed absence: "the Run Library cannot list claims for this run (R1_INTAKE_RUN_NOT_COMPLETED) — type the id" |
 | R1 checklist `evidence_ref` | **Not observable**: the preview has no R1 approval (Inbox 0) and, per the handoff, current requests persist no findings (`checklist: []`). Creating an approval only to look at an empty checklist was not done. Covered by the published synthetic fixture test; a real positive lane needs a request with persisted findings |
+
+### §57 — Governance cross-loop backend repair (Bobby approved, 2026-10-12)
+
+The audit found real integration defects, not proof that the whole downstream
+chain is active. Approved scope: backend repair/contracts/tests and Claude FE
+handoff; branch `docs/research-loop-plan`, base `be35972a`, no remote/runtime
+activation. [Backend receipt](./evidence/P22/GOVERNANCE_CROSS_LOOP_REPAIR_2026-10-12.md)
+and [Claude FE-GOV-01…04 handoff](./evidence/P22/GOVERNANCE_CROSS_LOOP_CLAUDE_HANDOFF_2026-10-12.md).
+
+| Id | Disposition |
+| --- | --- |
+| GOV-BE-01 R1 decision inputs | Additive `DecisionContext` with exact workspace/version/hash pins; API authority unchanged. FE hash binding still required. |
+| GOV-BE-02 R2/Live false affordance | No commissioned executor: all R2 verbs/Inbox decision hints locked; typed null-command context; R1→R2 command mismatch is explicit and permission-nondisclosing. Not a new Execution grant. |
+| GOV-BE-03 downstream capture inputs | Additive bounded `CaptureContext`; accepted candidate tuples only, source-off/retained/stale/scope/outage blocked. Multiple real grants preserved; currency absence stays null. |
+| GOV-BE-04 UDB capture pool | Separate Execution store reads use its own pool, never the Core transaction; Core review/audit writes retain rollback/idempotency. |
+| GOV-BE-05 workspace backlink | R2→R1 `href` keeps exact `workspace_id`; FE click/reload acceptance pending. |
+| GOV-BE-06 capture visibility | ADMIN additionally requires existing parent/target gate reads in the exact workspace, freshly checked before write/replay; no role-only bypass or new grant. |
+| FE-GOV-01…04 | Claude owns hash/condition binding, capture UI, no R1 alias for R2, workspace and truthful gate track. Source activation/new policy not part of this handoff. |
+
+New schema/Zod/OpenAPI/generated definitions and labelled synthetic fixture;
+target `npm run generate:governance-review-context`. Focused backend16/16 and
+contracts5/5 (139 including historical fixtures) PASS; API/normal hook final
+results linked in the receipt.
+Delivery commit is the commit containing this entry. Backend defect repair does
+not certify the FE buttons or commission R2/Paper/Sandbox/Canary/Live mutations.

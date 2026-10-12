@@ -11,6 +11,11 @@ import { type EvidenceRecord } from "./governance.repository";
 import { PaperExitRepository } from "./paper-exit.repository";
 import { computePaperExitSourceSnapshotHash } from "./paper-exit.service";
 import type { PaperExitCreate, R2Capture, SandboxReviewNote } from "./review-capture.contracts";
+import type { ApprovalRecord, R2LineageRecord } from "./governance.repository";
+import { blockedCapture, paperCaptureContext, type CaptureContext, type ReviewContextReason } from "./review-context";
+import { retainedReview } from "../execution/retained-read-profile";
+import { OwnerAccessService } from "../auth/owner-access.service";
+import { mayGovern } from "../auth/governance-access";
 
 const POLICY = "portal.review-capture.v1";
 const EXIT_PANELS = ["OBSERVATION_COVERAGE", "DRIFT", "LIMITS_HEALTH", "PORTFOLIO_FIT"] as const;
@@ -30,6 +35,7 @@ export class GovernanceReviewCaptureService {
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ExecutionProfileProjectionRepository) private readonly projections: ExecutionProfileProjectionRepository,
     @Inject(PaperExitRepository) private readonly exits: PaperExitRepository,
+    @Inject(OwnerAccessService) private readonly ownerAccess: OwnerAccessService,
   ) {}
 
   capabilities(user: PortalUser) {
@@ -46,19 +52,59 @@ export class GovernanceReviewCaptureService {
         ? { ...action,state:"UNAVAILABLE",reason_code:"ADMIN_ROLE_REQUIRED" } : action) };
   }
 
+  /** Inputs come from an already-authorized, verified parent read, never a browser-supplied parent. */
+  async context(user: PortalUser, action: CaptureContext["action"], approval: ApprovalRecord,
+    lineage?: (R2LineageRecord & { portfolioId: string }) | null): Promise<CaptureContext> {
+    const blocked = (reason: ReviewContextReason) => blockedCapture(approval, action, reason);
+    if (user.role !== "ADMIN") return blocked("ADMIN_ROLE_REQUIRED");
+    if (!await this.captureReadAllowed(user, action, approval.workspaceId)) return blocked("GOVERNANCE_CAPABILITY_REQUIRED");
+    if (approval.expiresAt <= new Date()) return blocked("APPROVAL_EXPIRED");
+    if (action === "R2_CREATE" && !["APPROVED", "APPROVED_WITH_CONDITION"].includes(approval.status)) return blocked("R1_APPROVAL_REQUIRED");
+    if (action === "R2_CREATE" && !approval.evidenceComplete) return blocked("R1_EVIDENCE_INCOMPLETE");
+    if (action === "PAPER_EXIT_CREATE") {
+      if (!["PENDING", "APPROVED", "APPROVED_WITH_CONDITION"].includes(approval.status)) return blocked("R2_REVIEW_CLOSED");
+      if (!lineage) return blocked("R2_ACCEPTED_LINEAGE_UNAVAILABLE");
+      if (!["APPROVED", "APPROVED_WITH_CONDITION"].includes(lineage.r1Status)) return blocked("R1_APPROVAL_REQUIRED");
+      if (lineage.r1ExpiresAt <= new Date()) return blocked("APPROVAL_EXPIRED");
+      if (!lineage.r1EvidenceComplete) return blocked("R1_EVIDENCE_INCOMPLETE");
+    }
+    if (retainedReview(this.config)) return blocked("CAPTURE_RETAINED_REVIEW_READ_ONLY");
+    if (this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true" || this.config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER !== "true"
+      || this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID !== approval.workspaceId || !this.config.EXECUTION_EDGE_PAPER_PROFILE_ID) {
+      return blocked("CAPTURE_PROJECTION_NOT_AUTHORIZED");
+    }
+    let snapshot: Awaited<ReturnType<ExecutionProfileProjectionRepository["snapshot"]>>;
+    try {
+      snapshot = await this.projections.snapshot(approval.workspaceId, "paper", this.config.EXECUTION_EDGE_PAPER_PROFILE_ID);
+    } catch {
+      // A domain-store outage must not break an otherwise readable Core R1.
+      // No cached permission, source reactivation or guessed candidate on failure.
+      return blocked("CAPTURE_PROJECTION_UNAVAILABLE");
+    }
+    if (!snapshot) return blocked("CAPTURE_PROJECTION_UNAVAILABLE");
+    if (snapshot.document.workspace_id !== approval.workspaceId || snapshot.document.environment !== "paper"
+      || snapshot.document.profile_id !== this.config.EXECUTION_EDGE_PAPER_PROFILE_ID) return blocked("CAPTURE_PROJECTION_SCOPE_MISMATCH");
+    if (Date.now() - snapshot.lastSuccessfulRefreshAt.valueOf() > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
+      return blocked("CAPTURE_PROJECTION_STALE");
+    }
+    return paperCaptureContext(approval, action, snapshot, lineage);
+  }
+
   async createR2(user: PortalUser, input: R2Capture, requestId: string) {
     return this.capture(user, input, "R2_CREATE", requestId, async client => {
       const r1 = await this.parent(client, input.workspace_id, input.r1_approval_id, "R1", input.expected_r1_version);
       if (!["APPROVED", "APPROVED_WITH_CONDITION"].includes(r1.status)) fail("R1_APPROVAL_REQUIRED", 422);
+      if (!r1.evidence_complete) fail("R1_EVIDENCE_INCOMPLETE", 422);
       const snapshot = await this.paperSnapshot(client, input.workspace_id, input.expected_projection_digest);
       const deployment = this.deployment(this.deploymentRows(snapshot),
         input.deployment_id, r1.subject_id, input.portfolio_id);
       const grant = snapshot.document.relations["manager.risk:risk_grants"];
-      if (!grant || grant.availability !== "AVAILABLE") fail("R2_RISK_GRANT_SOURCE_UNAVAILABLE", 422);
-      if (!grant.items.some(row => row.fields.risk_grant_id === input.risk_grant_id &&
+      if (!grant || grant.availability !== "AVAILABLE" || ["STALE", "UNKNOWN"].includes(grant.freshness)) fail("R2_RISK_GRANT_SOURCE_UNAVAILABLE", 422);
+      if (!this.scopedRows(snapshot, grant.items).some(row => row.fields.risk_grant_id === input.risk_grant_id &&
         row.fields.strategy_id === r1.subject_id && row.fields.account_id === deployment.account_id)) fail("R2_RISK_GRANT_SCOPE_NOT_FOUND", 422);
       const portfolios = snapshot.document.relations["manager.portfolios:portfolios"];
-      if (!portfolios || portfolios.availability !== "AVAILABLE" || !portfolios.items.some(row => row.fields.portfolio_id === input.portfolio_id)) fail("R2_PORTFOLIO_SCOPE_NOT_FOUND", 422);
+      if (!portfolios || portfolios.availability !== "AVAILABLE" || ["STALE", "UNKNOWN"].includes(portfolios.freshness)
+        || !this.scopedRows(snapshot, portfolios.items).some(row => row.fields.portfolio_id === input.portfolio_id)) fail("R2_PORTFOLIO_SCOPE_NOT_FOUND", 422);
       // Currency is the requested review scope, not an FX conversion or source balance.
       const id = newUlid("apr");
       const evidence = await this.copyEvidence(client, r1.approval_id, r1.evidence_set_hash);
@@ -92,6 +138,7 @@ export class GovernanceReviewCaptureService {
       if (!lineage) fail("R2_ACCEPTED_LINEAGE_UNAVAILABLE", 422);
       const r1 = await this.parent(client, input.workspace_id, lineage.r1_approval_id, "R1");
       if (!["APPROVED", "APPROVED_WITH_CONDITION"].includes(r1.status)) fail("R1_APPROVAL_REQUIRED", 422);
+      if (!r1.evidence_complete) fail("R1_EVIDENCE_INCOMPLETE", 422);
       const snapshot = await this.paperSnapshot(client, input.workspace_id, input.expected_projection_digest);
       const deployment = this.deployment(this.deploymentRows(snapshot),
         input.deployment_id,r1.subject_id,lineage.portfolio_id);
@@ -181,6 +228,10 @@ export class GovernanceReviewCaptureService {
     return withTransaction(this.pool,async client => {
       await client.query("SET LOCAL lock_timeout = '5s'");
       await client.query("SET LOCAL statement_timeout = '10s'");
+      if ((action === "R2_CREATE" || action === "PAPER_EXIT_CREATE")
+        && !await this.captureReadAllowed(user, action, input.workspace_id)) {
+        throw new GovernanceError("GOVERNANCE_CAPABILITY_REQUIRED", "Access denied.", 403);
+      }
       // DB-wide serialization of this retry identity, including multi-replica callers.
       await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[`${input.workspace_id}:${user.userId}:${input.request_key}`]);
       const prior = (await client.query(`SELECT * FROM governance_review_captures
@@ -205,6 +256,14 @@ export class GovernanceReviewCaptureService {
     });
   }
 
+  private async captureReadAllowed(user: PortalUser, action: "R2_CREATE" | "PAPER_EXIT_CREATE", workspaceId: string) {
+    const access = await this.ownerAccess.effectiveAccess(user.userId);
+    // Existing ADMIN capture authority is not a shortcut around parent/target
+    // gate visibility. Owner and exact delegated workspace scopes use one rule.
+    return mayGovern({ access, gate: "r2", mode: "read", workspaceId })
+      && (action === "PAPER_EXIT_CREATE" || mayGovern({ access, gate: "r1", mode: "read", workspaceId }));
+  }
+
   private async parent(client: PoolClient,workspace: string,id: string,gate: string,version?: number) {
     const row = (await client.query(`SELECT * FROM governance_approval_requests WHERE workspace_id=$1 AND approval_id=$2 AND gate=$3 FOR SHARE`,[workspace,id,gate])).rows[0];
     if (!row) fail("APPROVAL_NOT_FOUND",404);
@@ -214,9 +273,18 @@ export class GovernanceReviewCaptureService {
   }
 
   private async paperSnapshot(client: PoolClient,workspace: string,digest: string) {
+    if (retainedReview(this.config)) fail("CAPTURE_RETAINED_REVIEW_READ_ONLY",422);
     if (this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true" || this.config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER !== "true" ||
-      this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID !== workspace) fail("CAPTURE_PROJECTION_NOT_AUTHORIZED",404);
-    const snapshot = await this.projections.snapshot(workspace,"paper",this.config.EXECUTION_EDGE_PAPER_PROFILE_ID!,client);
+      this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID !== workspace || !this.config.EXECUTION_EDGE_PAPER_PROFILE_ID) fail("CAPTURE_PROJECTION_NOT_AUTHORIZED",404);
+    // UDB isolates Execution rows: a Core transaction must not query the domain table.
+    // In the legacy single-store profile retain transaction-local snapshot semantics.
+    const reader = this.projections.pool === this.pool ? client : this.projections.pool;
+    let snapshot: Awaited<ReturnType<ExecutionProfileProjectionRepository["snapshot"]>>;
+    try {
+      snapshot = await this.projections.snapshot(workspace,"paper",this.config.EXECUTION_EDGE_PAPER_PROFILE_ID,reader);
+    } catch {
+      fail("CAPTURE_PROJECTION_UNAVAILABLE",503);
+    }
     if (!snapshot) fail("CAPTURE_PROJECTION_UNAVAILABLE",422);
     if (snapshot.document.workspace_id !== workspace || snapshot.document.environment !== "paper" ||
         snapshot.document.profile_id !== this.config.EXECUTION_EDGE_PAPER_PROFILE_ID) fail("CAPTURE_PROJECTION_SCOPE_MISMATCH",422);
@@ -233,10 +301,15 @@ export class GovernanceReviewCaptureService {
 
   private deploymentRows(snapshot: NonNullable<Awaited<ReturnType<ExecutionProfileProjectionRepository["snapshot"]>>>) {
     const relation = snapshot.document.relations["manager.deployments:strategy_deployments"];
-    if (!relation || relation.availability !== "AVAILABLE" || relation.freshness === "STALE") {
+    if (!relation || relation.availability !== "AVAILABLE" || ["STALE", "UNKNOWN"].includes(relation.freshness)) {
       fail("CAPTURE_DEPLOYMENT_SOURCE_UNAVAILABLE",422);
     }
-    return relation.items;
+    return this.scopedRows(snapshot, relation.items);
+  }
+
+  private scopedRows(snapshot: NonNullable<Awaited<ReturnType<ExecutionProfileProjectionRepository["snapshot"]>>>, rows: readonly ProjectionRow[]) {
+    return rows.filter(row => row.lineage.workspace_id === snapshot.document.workspace_id
+      && row.lineage.profile_id === snapshot.document.profile_id);
   }
 
   private async copyEvidence(client: PoolClient,parent: string,expectedHash: string): Promise<EvidenceRecord[]> {

@@ -486,6 +486,9 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     expect(response.statusCode).toBe(200);
     const body = response.json();
     expect(body.data.approval.evidence_set_hash).toBe(seeded.manifestHash);
+    expect(body.data.decision_context).toMatchObject({ workspace_id: workspaceId, approval_id: "AP-DETAIL",
+      expected_approval_version: 1, evidence_set_hash: seeded.manifestHash, evidence_hashes: seeded.evidenceHashes,
+      command_type: "GOVERNANCE_R1_DECISION", availability: { state: "AVAILABLE", reason_code: null } });
     expect(body.data.evidence_manifest.entries).toHaveLength(2);
     expect(body.data.evidence_manifest.entries[0]).toMatchObject({
       evidence_id: "AP-DETAIL-ev-1",
@@ -815,7 +818,10 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
         approver_role: "ADMIN",
         plan_author: "stan",
         evidence_manifest: { complete: true, entries: expect.any(Array) },
-        eligibility: { can_approve: true, locks: [] },
+        decision_context: { gate: "R2", command_type: null, plan_path: null,
+          availability: { state: "BLOCKED", reason_code: "R2_EXECUTION_DECISION_NOT_COMMISSIONED" } },
+        eligibility: { can_approve: false, can_deny: false, can_request_changes: false,
+          locks: ["R2_EXECUTION_DECISION_NOT_COMMISSIONED"] },
       },
     });
 
@@ -906,6 +912,29 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     const expired = await inject(bobby, path);
     expect(expired.statusCode).toBe(404);
     expect(expired.json().error.code).toBe("APPROVAL_NOT_FOUND");
+  });
+
+  it("refuses an R1 command for an authorized R2, without leaking a gate to R1-only users", async () => {
+    await seedR2CapitalScope("AP-R2-NO-ALIAS");
+    const input = planPayload("AP-R2-NO-ALIAS", [HASH_A], { request_key: "r2:no-r1-alias" });
+    const owner = await plan(bobby, input);
+    expect(owner.statusCode).toBe(409);
+    expect(owner.json().error.code).toBe("GOVERNANCE_DECISION_GATE_MISMATCH");
+    // Other cases intentionally grant Stan R2 read; use an independent actor
+    // so the negative does not inherit that earlier accepted delegation.
+    const r1Only = await createActor("r1-only-mismatch", "USER");
+    await ctx.pool.query("INSERT INTO workspace_members(workspace_id,user_id,role) VALUES ($1,$2,'MEMBER')", [workspaceId, r1Only.userId]);
+    const grantId = "grn_r1_only_gate_mismatch";
+    await new GovernanceGrantsRepository(ctx.pool).insertGrant({ grantId, granteeUserId: r1Only.userId,
+      capability: "governance.r1.decide", workspaceId, issuedBy: bobby.userId });
+    try {
+      const narrow = await plan(r1Only, { ...input, request_key: "r2:hidden-to-r1-only" });
+      expect(narrow.statusCode).toBe(404);
+      expect(narrow.json().error.code).toBe("APPROVAL_NOT_FOUND");
+      expect((await ctx.pool.query("SELECT count(*)::int n FROM governance_decision_plans WHERE approval_id='AP-R2-NO-ALIAS'")).rows[0].n).toBe(0);
+    } finally {
+      await ctx.pool.query("DELETE FROM portal_capability_grants WHERE grant_id=$1", [grantId]);
+    }
   });
 
   it("publishes an explicit fail-closed R2 state when no R1 lineage was captured", async () => {
@@ -1377,7 +1406,7 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
       // `lan` is ADMIN and holds r1/r2 decide, but was never granted live.
       const needs = await needsYouByGate(lan, ["R1", "R2", "PAPER_EXIT"]);
       expect(needs.R1).toBe(true);
-      expect(needs.R2).toBe(true);
+      expect(needs.R2).toBe(false);
       // The Live row is not merely inert: it is not disclosed to a caller who
       // lacks the matching read capability.
       expect(needs).not.toHaveProperty("LIVE_GATE");
@@ -1386,8 +1415,8 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     it("gives the owner every gate the namespace covers", async () => {
       const needs = await needsYouByGate(bobby, GATES);
       expect(needs.R1).toBe(true);
-      expect(needs.R2).toBe(true);
-      expect(needs.LIVE_GATE).toBe(true);
+      expect(needs.R2).toBe(false);
+      expect(needs.LIVE_GATE).toBe(false);
     });
 
     it("keeps PAPER_EXIT on the role its own service still enforces", async () => {

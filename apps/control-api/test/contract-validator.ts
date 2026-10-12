@@ -5,6 +5,13 @@ import addFormats from "ajv-formats";
 import { expect } from "vitest";
 
 const root = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname,"../../../packages/contracts");
+export function assertReviewContextContract(value: unknown, definition: "DecisionContext" | "CaptureContext") {
+  const schema = JSON.parse(readFileSync(resolve(root,"schemas/execution-governance-review-context.v1.schema.json"),"utf8"));
+  const ajv = new Ajv2020({strict:true,allErrors:true});
+  ajv.addSchema(schema);
+  const validate = ajv.getSchema(`${schema.$id}#/$defs/${definition}`)!;
+  expect(validate(value),JSON.stringify(validate.errors)).toBe(true);
+}
 export function assertCaptureContract(value: unknown, definition = "CaptureResponse") {
   const schema = JSON.parse(readFileSync(resolve(root,"schemas/execution-governance-review-capture.v1.schema.json"),"utf8"));
   const ajv = new Ajv2020({strict:true,allErrors:true});

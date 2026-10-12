@@ -19,6 +19,7 @@
     "generate:research-retained-analytics": "node tooling/generate-research-retained-analytics.mjs && npm run generate:research-evidence && npm run generate:research-current-source",
     "generate:research-p11-stage-events": "node tooling/generate-research-p11-stage-events.mjs",
     "test": "vitest run",
+    "generate:governance-review-context": "node tooling/generate-governance-review-context.mjs && openapi-typescript openapi/execution-governance.openapi.json -o generated/execution-governance.d.ts && openapi-typescript openapi/execution-profile-read.openapi.json -o generated/execution-profile-read.d.ts",
     "generate:catalog": "node tooling/generate-execution-command-catalog.mjs",
     "generate:execution-retained-review": "openapi-typescript openapi/execution-retained-review.openapi.json -o generated/execution-retained-review.d.ts",
     "generate:research-alpha-import": "openapi-typescript openapi/research-alpha-import.openapi.json -o generated/research-alpha-import.d.ts",

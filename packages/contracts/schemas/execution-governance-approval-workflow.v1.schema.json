@@ -92,6 +92,7 @@
       "required": ["schema_version", "record_authority", "delivery_profile", "read_at", "data"],
       "properties": {
         "schema_version": { "const": "governance.r1-review.v1" },
+        "workspace_id": {"type":"string","pattern":"^[A-Za-z0-9._:-]{1,192}$"},
         "record_authority": { "const": "PORTAL" },
         "delivery_profile": { "const": "fixture" },
         "read_at": { "$ref": "#/$defs/Timestamp" },
@@ -100,6 +101,8 @@
           "required": ["approval", "actor", "eligibility", "known_limitations", "evidence_manifest", "checklist", "decisions", "linked_panels"],
           "properties": {
             "approval": { "$ref": "#/$defs/Approval" },
+            "decision_context": {"$ref":"execution-governance-review-context.v1.schema.json#/$defs/DecisionContext"},
+            "capture_context": {"$ref":"execution-governance-review-context.v1.schema.json#/$defs/CaptureContext"},
             "actor": { "$ref": "#/$defs/Actor" },
             "eligibility": { "$ref": "#/$defs/Eligibility" },
             "known_limitations": { "type": "array", "maxItems": 64, "items": { "$ref": "#/$defs/KnownLimitation" } },

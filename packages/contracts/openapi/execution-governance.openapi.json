@@ -521,6 +521,8 @@
       }
     },
     "schemas": {
+      "DecisionContext": {"$ref":"../schemas/execution-governance-review-context.v1.schema.json#/$defs/DecisionContext"},
+      "CaptureContext": {"$ref":"../schemas/execution-governance-review-context.v1.schema.json#/$defs/CaptureContext"},
       "Identifier": {
         "type": "string",
         "pattern": "^[A-Za-z0-9._-]{1,128}$"

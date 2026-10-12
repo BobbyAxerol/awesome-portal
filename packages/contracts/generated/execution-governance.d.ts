@@ -315,6 +315,56 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Immutable evidence pins for the existing R1 command. Executor availability is not permission to bypass per-verb eligibility. R2 has no commissioned executor: null command/path and typed refusal, never an R1 alias. */
+        DecisionContext: {
+            /** @enum {unknown} */
+            gate: "R1" | "R2";
+            workspace_id: string;
+            approval_id: string;
+            expected_approval_version: number;
+            evidence_set_hash: string;
+            evidence_hashes: string[] | null;
+            /** @enum {unknown} */
+            command_type: "GOVERNANCE_R1_DECISION" | null;
+            /** @enum {unknown} */
+            request_schema_version: "governance.r1-decision-plan-request.v1" | null;
+            /** @enum {unknown} */
+            plan_path: "/api/v1/execution/commands/plans" | null;
+            availability: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "BLOCKED";
+                /** @enum {unknown} */
+                reason_code: null | "GOVERNANCE_CAPABILITY_REQUIRED" | "ADMIN_ROLE_REQUIRED" | "APPROVAL_NOT_PENDING" | "APPROVAL_EXPIRED" | "EVIDENCE_HASH_LIMIT_EXCEEDED" | "R2_EXECUTION_DECISION_NOT_COMMISSIONED" | "R1_APPROVAL_REQUIRED" | "R1_EVIDENCE_INCOMPLETE" | "R2_ACCEPTED_LINEAGE_UNAVAILABLE" | "R2_REVIEW_CLOSED" | "CAPTURE_RETAINED_REVIEW_READ_ONLY" | "CAPTURE_PROJECTION_NOT_AUTHORIZED" | "CAPTURE_PROJECTION_UNAVAILABLE" | "CAPTURE_PROJECTION_SCOPE_MISMATCH" | "CAPTURE_PROJECTION_STALE" | "CAPTURE_DEPLOYMENT_SOURCE_UNAVAILABLE" | "R2_RISK_GRANT_SOURCE_UNAVAILABLE" | "R2_PORTFOLIO_SCOPE_NOT_FOUND" | "CAPTURE_DEPLOYMENT_SCOPE_NOT_FOUND" | "PAPER_VENUE_UNAVAILABLE";
+            } & unknown;
+            /** @constant */
+            source_side_effect_requested: false;
+        } & (unknown & unknown);
+        /** @description At most 50 accepted, parent/workspace/profile-bound capture choices; no Manager relations/cursors. Null currency is unrecorded, never USDT by default. Capture creates a Portal review, not execution authorization. Retained/source-off/stale/outage profiles are blocked. */
+        CaptureContext: {
+            /** @enum {unknown} */
+            action: "R2_CREATE" | "PAPER_EXIT_CREATE";
+            workspace_id: string;
+            parent_approval_id: string;
+            expected_parent_version: number;
+            expected_projection_digest: string | null;
+            availability: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "BLOCKED";
+                /** @enum {unknown} */
+                reason_code: null | "GOVERNANCE_CAPABILITY_REQUIRED" | "ADMIN_ROLE_REQUIRED" | "APPROVAL_NOT_PENDING" | "APPROVAL_EXPIRED" | "EVIDENCE_HASH_LIMIT_EXCEEDED" | "R2_EXECUTION_DECISION_NOT_COMMISSIONED" | "R1_APPROVAL_REQUIRED" | "R1_EVIDENCE_INCOMPLETE" | "R2_ACCEPTED_LINEAGE_UNAVAILABLE" | "R2_REVIEW_CLOSED" | "CAPTURE_RETAINED_REVIEW_READ_ONLY" | "CAPTURE_PROJECTION_NOT_AUTHORIZED" | "CAPTURE_PROJECTION_UNAVAILABLE" | "CAPTURE_PROJECTION_SCOPE_MISMATCH" | "CAPTURE_PROJECTION_STALE" | "CAPTURE_DEPLOYMENT_SOURCE_UNAVAILABLE" | "R2_RISK_GRANT_SOURCE_UNAVAILABLE" | "R2_PORTFOLIO_SCOPE_NOT_FOUND" | "CAPTURE_DEPLOYMENT_SCOPE_NOT_FOUND" | "PAPER_VENUE_UNAVAILABLE";
+            } & unknown;
+            candidates: {
+                deployment_id: string;
+                portfolio_id: string;
+                risk_grant_id: string | null;
+                currency: string | null;
+            }[];
+            candidates_truncated: boolean;
+            /** @constant */
+            currency_semantics: "REVIEWER_REQUESTED_NOT_FX_CONVERSION";
+            /** @constant */
+            source_side_effect_requested: false;
+        } & (unknown & unknown);
         Identifier: string;
         WorkspaceId: string;
         Currency: string;
@@ -685,6 +735,7 @@ export interface components {
         R1ReviewResponse: {
             /** @constant */
             schema_version: "governance.r1-review.v1";
+            workspace_id?: string;
             /** @constant */
             record_authority: "PORTAL";
             /** @constant */
@@ -692,6 +743,8 @@ export interface components {
             read_at: components["schemas"]["Timestamp"];
             data: {
                 approval: components["schemas"]["Approval"];
+                decision_context?: components["schemas"]["DecisionContext"];
+                capture_context?: components["schemas"]["CaptureContext"];
                 actor: components["schemas"]["Actor"];
                 eligibility: components["schemas"]["Eligibility"];
                 known_limitations: components["schemas"]["KnownLimitation"][];
@@ -825,6 +878,8 @@ export interface components {
         };
         review_data: {
             approval: components["schemas"]["approval"];
+            decision_context?: components["schemas"]["DecisionContext"];
+            capture_context?: components["schemas"]["CaptureContext"];
             actor: components["schemas"]["review_actor"];
             r1_reference: components["schemas"]["r1_reference"] | null;
             /** @enum {unknown} */
@@ -845,6 +900,7 @@ export interface components {
         "execution-governance-r2-review.v1.schema": {
             /** @constant */
             schema_version: "governance.r2-review.v1";
+            workspace_id?: string;
             /** @constant */
             record_authority: "PORTAL";
             /** @constant */
@@ -931,6 +987,8 @@ export interface components {
                 };
                 review_data: {
                     approval: components["schemas"]["approval"];
+                    decision_context?: components["schemas"]["DecisionContext"];
+                    capture_context?: components["schemas"]["CaptureContext"];
                     actor: components["schemas"]["review_actor"];
                     r1_reference: components["schemas"]["r1_reference"] | null;
                     /** @enum {unknown} */

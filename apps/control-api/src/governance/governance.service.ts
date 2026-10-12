@@ -1,5 +1,7 @@
 import { ResearchRunSyncService } from "../facade/run-sync.service";
 import { checklistEvidenceReference } from "./evidence-reference";
+import { decisionContext } from "./review-context";
+import { GovernanceReviewCaptureService } from "./review-capture.service";
 import { createHash } from "crypto";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { constantTimeEqual } from "../auth/argon";
@@ -169,6 +171,7 @@ export class GovernanceService {
     @Inject(ProfileReadService) private readonly profileReads: ProfileReadService,
     @Inject(OwnerAccessService) private readonly ownerAccess: OwnerAccessService,
     @Optional() @Inject(ResearchRunSyncService) private readonly runSync?: ResearchRunSyncService,
+    @Optional() @Inject(GovernanceReviewCaptureService) private readonly captures?: GovernanceReviewCaptureService,
   ) {
     const keys = querySigningKeys(config);
     this.query = new ControlPlaneQueryService(
@@ -524,6 +527,8 @@ export class GovernanceService {
       data: {
         approval: this.publicApproval(approval),
         actor: { user_id: user.userId, username: user.username, roles: [user.role] },
+        decision_context: decisionContext(approval, evidence, mayDecideR1),
+        ...(this.captures ? { capture_context: await this.captures.context(user, "R2_CREATE", approval) } : {}),
         eligibility: {
           can_approve: approval.status === "PENDING" && locks.length === 0,
           can_approve_with_condition: approval.status === "PENDING" && locks.length === 0,
@@ -641,6 +646,7 @@ export class GovernanceService {
     const expired = approval.expiresAt <= new Date();
     const mayDecideR2 = await this.governance(user, "r2", "decide", workspaceId);
     const locks = [
+      "R2_EXECUTION_DECISION_NOT_COMMISSIONED",
       ...(self ? ["SELF_APPROVAL"] : []),
       ...(expired ? ["EXPIRED"] : []),
       ...(!mayDecideR2 || alreadyDecided ? ["NOT_ELIGIBLE"] : []),
@@ -654,7 +660,7 @@ export class GovernanceService {
     const r1Reference = lineage === null ? null : {
       approval_id: lineage.r1ApprovalId,
       state: lineage.r1Status,
-      href: `/governance/approvals/${lineage.r1ApprovalId}/r1`,
+      href: `/governance/approvals/${lineage.r1ApprovalId}/r1?workspace_id=${encodeURIComponent(workspaceId)}`,
       expiry: lineage.r1ExpiresAt.toISOString(),
       digest: lineage.r1EvidenceSetHash,
       decided_by: lineage.r1DecidedByUsername,
@@ -673,6 +679,9 @@ export class GovernanceService {
           currency: scope.currency,
         },
         actor: { user_id: user.userId, username: user.username, roles: [user.role] },
+        decision_context: decisionContext(approval, evidence, mayDecideR2),
+        ...(this.captures ? { capture_context: await this.captures.context(user, "PAPER_EXIT_CREATE", approval,
+          lineage ? { ...lineage, portfolioId: scope.portfolioId } : null) } : {}),
         r1_reference: r1Reference,
         r1_state: lineage?.r1Status ?? "MISSING",
         r1_id: lineage?.r1ApprovalId ?? null,
@@ -697,9 +706,8 @@ export class GovernanceService {
         eligibility: {
           can_approve: approval.status === "PENDING" && locks.length === 0,
           can_approve_with_condition: approval.status === "PENDING" && locks.length === 0,
-          can_deny: approval.status === "PENDING" && !expired && mayDecideR2 && !alreadyDecided,
-          can_request_changes:
-            approval.status === "PENDING" && !expired && mayDecideR2 && !alreadyDecided && !self,
+          can_deny: false,
+          can_request_changes: false,
           locks,
           separation_of_duties: self ? "VIOLATION" : "OK",
         },
@@ -768,8 +776,18 @@ export class GovernanceService {
       throw new GovernanceError("GOVERNANCE_CAPABILITY_REQUIRED", "Access denied.", 403);
     }
     const snapshot = await this.repository.detail(input.workspaceId, input.approvalId);
-    if (!snapshot || snapshot.approval.gate !== "R1") {
+    if (!snapshot) {
       throw new GovernanceError("APPROVAL_NOT_FOUND", "Approval not found.", 404);
+    }
+    if (snapshot.approval.gate !== "R1") {
+      const readGate = snapshot.approval.gate === "R2" ? "r2"
+        : snapshot.approval.gate === "LIVE_GATE" ? "live" : null;
+      if (!readGate || !await this.governance(user, readGate, "read", input.workspaceId)) {
+        throw new GovernanceError("APPROVAL_NOT_FOUND", "Approval not found.", 404);
+      }
+      await this.rejected(user, input, requestId, "GOVERNANCE_DECISION_GATE_MISMATCH", "CONFLICT");
+      throw new GovernanceError("GOVERNANCE_DECISION_GATE_MISMATCH", "This command only decides Gate R1.", 409,
+        { requested_gate: "R1", actual_gate: snapshot.approval.gate, source_side_effect_requested: false });
     }
     const approval = snapshot.approval;
     if (computeEvidenceManifestHash(snapshot.evidence) !== approval.evidenceSetHash) {
@@ -1025,11 +1043,9 @@ export class GovernanceService {
  * One entry per gate in `APPROVAL_GATES`, each mirroring the authority that
  * gate's own decision path enforces — measured, not assumed:
  *
- *  - `R1` / `R2` / `LIVE_GATE` — `governance.service` guards their detail and
- *    decision paths with `assertGovernance(user, "r1" | "r2" | "live", ...)`,
- *    so the matching `*.decide` capability is the honest predicate. `LIVE_GATE`
- *    is `live`, not `r2`: it has its own route (`/approvals/:id/live`) and its
- *    own capability, even though Command Center links it at the R2 screen.
+ *  - `R1` has a commissioned local plan/apply executor. R2 and LIVE_GATE
+ *    have read permissions, not a matching executable decision path. A decide
+ *    grant alone must not advertise a verb which will be sent to the R1 executor.
  *  - `PAPER_EXIT` — still role-gated. `paper-exit.service.ts` throws
  *    `APPROVER_ROLE_REQUIRED` for a non-`ADMIN`, so for these rows `ADMIN` is
  *    the correct answer and a capability check would be the wrong one.
@@ -1052,9 +1068,8 @@ function approvalDecisionPredicate(
       case "R1":
         return mayGovern({ access, gate: "r1", mode: "decide", workspaceId });
       case "R2":
-        return mayGovern({ access, gate: "r2", mode: "decide", workspaceId });
       case "LIVE_GATE":
-        return mayGovern({ access, gate: "live", mode: "decide", workspaceId });
+        return false;
       case "PAPER_EXIT":
         return user.role === "ADMIN";
       case "SANDBOX_EXIT":
