@@ -7253,7 +7253,6 @@ details.exec-gf-details[open] > summary.exec-gov-panelhead::before { content: "â
 .exec-gf-track { display: inline-flex; align-items: center; gap: 4px; }
 .exec-gf-track i { width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--line-strong); background: transparent; }
 .exec-gf-track i + i { margin-left: 2px; }
-.exec-gf-track i[data-state="done"] { background: var(--ink-faint); border-color: var(--ink-faint); }
 .exec-gf-track i[data-state="current"] { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 
 /* Waivers: the states are the filters */
@@ -7432,3 +7431,11 @@ details.exec-gf-details[open] > summary.exec-gov-panelhead::before { content: "â
   .exec-ret-pill { width: 26px; padding: 0; justify-content: center; }
   .exec-ret-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
+
+/* Next-step capture (R1 â†’ R2 review, R2 â†’ Paper Exit review) */
+.exec-capnext { display: flex; flex-direction: column; gap: var(--space-3); }
+.exec-capnext-head { display: flex; align-items: center; gap: var(--space-3); }
+.exec-capnext-head strong { font: var(--exec-font-section); color: var(--ink); }
+.exec-capnext-controls { display: flex; flex-direction: column; gap: var(--space-3); }
+section.exec-capnext { padding: var(--space-3) var(--space-4); border: 1px dashed var(--line-strong); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: var(--space-2); }
+.exec-gov .exec-rc { border-radius: var(--radius-lg); }

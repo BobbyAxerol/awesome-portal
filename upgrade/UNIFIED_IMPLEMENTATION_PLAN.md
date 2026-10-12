@@ -9217,6 +9217,11 @@ generation and canonical fixture. [Backend receipt](./research_loop/evidence/P22
 records54/54 final real-PG/API tests, restore,139/139 contracts/fixtures, clean FE
 typecheck, first full-run test contamination and only affected retake, C4 and
 derived N29/EDS-12 digest refresh (`runtime_effect:NONE`).
+
+**Frontend consumer (Claude, 2026-10-12): FE-GOV-01…04 landed on `claude/fe-parity`** — R1 plan pins + request-changes conditions, Paper Exit digest pins,
+no decision path for R2/Live, capture next-step from `capture_context`, bounded R1 backlink + workspace re-read, gate track = position. Fixture/unit 2082 pass;
+browser on the retained preview 1280/660 (workspace kept on reload, 0 idle polls, 0 cross-origin). **Not observed:** real R1 plan/apply, positive capture,
+409 gate mismatch (no approval/candidate on the shared preview). Open: CG-GOV-01 (Paper Exit evidence-hash set). [Receipt](./research_loop/evidence/P22/GOVERNANCE_CROSS_LOOP_CLAUDE_RECEIPT_2026-10-12.md).
 [Claude FE-GOV-01…04 handoff](./research_loop/evidence/P22/GOVERNANCE_CROSS_LOOP_CLAUDE_HANDOFF_2026-10-12.md)
 owns consumer hash/condition binding, captures, no R1 alias for R2, workspace and
 gate-track truth. R2/source promotion remains explicitly uncommissioned; not a

@@ -29,7 +29,7 @@
  * duplicated) while an edited summary under the same key is a real conflict
  * the server refuses — and that refusal is shown, not swallowed.
  */
-import { Fragment, useMemo, useState, type JSX } from "react";
+import { Fragment, useMemo, useState, type JSX, type ReactNode } from "react";
 
 import { PanelState } from "./states";
 import type { ReviewCapture, ReviewCaptureCapabilities } from "../api/reviewCapture";
@@ -89,6 +89,8 @@ export function ReviewCapturePanel({
   identity,
   onCapture,
   disabledReason,
+  controls,
+  recordHref,
 }: {
   action: CaptureActionId;
   title: string;
@@ -100,6 +102,10 @@ export function ReviewCapturePanel({
   onCapture: (summary: string, requestKey: string) => Promise<CaptureOutcome>;
   /** A screen-level reason that outranks the server's, e.g. a read that failed. */
   disabledReason?: string | null;
+  /** Inputs the reviewer chooses, shown before the summary (a candidate, a currency). */
+  controls?: ReactNode;
+  /** The Portal screen that shows the recorded review, keeping its workspace. Without it the link is the raw read path. */
+  recordHref?: (capture: ReviewCapture) => string;
 }): JSX.Element {
   const [summary, setSummary] = useState("");
   const [busy, setBusy] = useState(false);
@@ -184,6 +190,7 @@ export function ReviewCapturePanel({
           </Fragment>
         ))}
       </div>
+      {controls}
       <label className="exec-px-note">
         <span className="exec-px-notelabel">Review summary (required — the sentence only you can write)</span>
         <textarea
@@ -214,7 +221,7 @@ export function ReviewCapturePanel({
             : "Recorded."}
           {" "}Workflow version {outcome.capture.workflow_version} ·{" "}
           {outcome.capture.decision_reason_code} ·{" "}
-          <a href={outcome.capture.read_path}>read the record</a>
+          <a href={recordHref ? recordHref(outcome.capture) : outcome.capture.read_path}>open the review</a>
         </p>
       ) : null}
       {outcome?.kind === "failed" ? (

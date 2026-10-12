@@ -108,7 +108,7 @@ export function GateLiveReview({
       <div className="exec-gov-head">
         <h1 className="exec-gov-h1">Canary Evidence Approval <span className="exec-gov-dim">—</span> {subject ?? canaryDeploymentId ?? approvalId}</h1>
       </div>
-      <GateStepper current="live" done={canaryDeploymentId ? ["canary"] : []} />
+      <GateStepper current="live" />
       <GateVerdict
         tone={locked && denyLocked ? "bad" : "mute"}
         headline={locked && denyLocked ? "You cannot decide this — your role holds no grant for it" : "Dual approval — your decision counts once"}

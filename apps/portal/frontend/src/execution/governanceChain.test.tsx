@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { GateR1Review, REQUEST_CHANGES_NOTE_REASON } from "./screens/GateR1Review";
+import { GateR1Review, REQUEST_CHANGES_NOTE_REASON, REQUEST_CHANGES_NO_CONDITION_REASON } from "./screens/GateR1Review";
 import { GateR2Review } from "./screens/GateR2Review";
 import { R1EvidenceSmoke, R2CriteriaSmoke, R2FitSmoke, R2StagesSmoke, R1_POLICY_CHIP } from "./lab/governanceDemo";
 import { ApprovalInbox, type ApprovalRow, type DecidedRow } from "./screens/ApprovalInbox";
@@ -287,6 +287,11 @@ describe("Approval Inbox rail and strip", () => {
     expect(btn().getAttribute("title")).toBe(REQUEST_CHANGES_NOTE_REASON);
     cleanup();
     r1({ eligibility: { ...ALL, canRequestChanges: true }, note: "holdout coverage is too thin", onRequestChanges });
+    // a reason alone is not enough: the schema also needs at least one remediation condition
+    expect(btn()).toHaveProperty("disabled", true);
+    expect(btn().getAttribute("title")).toBe(REQUEST_CHANGES_NO_CONDITION_REASON);
+    cleanup();
+    r1({ eligibility: { ...ALL, canRequestChanges: true }, note: "holdout coverage is too thin", onRequestChanges, conditions: [{ text: "extend the holdout by 30 days", owner: "Minh", blocking: true }] });
     expect(btn()).toHaveProperty("disabled", false);
     fireEvent.click(btn());
     expect(onRequestChanges).toHaveBeenCalled();
@@ -334,6 +339,7 @@ describe("zero fabricated write path", () => {
     expect(writes.sort()).toEqual(["applyPlan", "planDecision"]);
     // REQUEST_CHANGES is a published verb since N09 (governance-approval-workflow
     // schema); containers may send it, and only through planDecision.
-    expect(src.match(/decide\("REQUEST_CHANGES"|run\("REQUEST_CHANGES"/g)?.length).toBe(2);
+    // R1 only: R2 and the live gate have no commissioned decision executor, so their containers never plan anything (FE-GOV-02).
+    expect(src.match(/decide\("REQUEST_CHANGES"|run\("REQUEST_CHANGES"/g)?.length).toBe(1);
   });
 });

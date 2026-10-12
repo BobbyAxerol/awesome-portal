@@ -22,7 +22,10 @@ const STEPS: readonly { id: GateStepId; label: string }[] = [
   { id: "live", label: "Live" },
 ];
 
-/** `done` lists the steps the screen's own data says are behind this gate; nothing else is ticked. */
+/**
+ * Position, not acceptance. `current` marks where this gate sits on the loop; a tick (`done`) appears only for a step the screen's own data RECORDS
+ * (an explicit reference or status — e.g. a release candidate id, an R1 reference whose state is APPROVED). Earlier position never implies a tick.
+ */
 export function GateStepper({ current, done = [] }: { current: GateStepId; done?: readonly GateStepId[] }) {
   return (
     <ol className="exec-gf-steps" aria-label="Where this gate sits in the loop" data-current={current}>
@@ -205,13 +208,16 @@ const LOOP_GATES: readonly { id: string; label: string }[] = [
   { id: "LIVE", label: "Live" },
 ];
 
-/** Where a request sits on the five-gate loop, from the gate it is asking to pass; gates behind it are implied by the workflow (R2 opens only from an approved R1). */
+/**
+ * Where a request sits on the five-gate loop: the gate it is asking to pass, and nothing more. The other dots are neutral — they are not a history of
+ * accepted gates, and no lineage of Paper / Sandbox / Canary / Live acceptance is claimed from a position.
+ */
 export function GateTrack({ at }: { at: "R1" | "R2" | "PAPER" | "SANDBOX" | "LIVE" }) {
   const index = LOOP_GATES.findIndex((g) => g.id === at);
   return (
-    <span className="exec-gf-track" aria-label={`Gate ${LOOP_GATES[index]?.label ?? at} of the loop`} role="img">
+    <span className="exec-gf-track" aria-label={`Position: gate ${LOOP_GATES[index]?.label ?? at} of the loop`} role="img">
       {LOOP_GATES.map((gate, i) => (
-        <i key={gate.id} data-state={i < index ? "done" : i === index ? "current" : "ahead"} title={gate.label} />
+        <i key={gate.id} data-state={i === index ? "current" : "other"} title={i === index ? `${gate.label} — this request` : gate.label} />
       ))}
     </span>
   );

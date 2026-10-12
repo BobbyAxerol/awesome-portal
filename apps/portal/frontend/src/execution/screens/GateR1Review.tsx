@@ -78,6 +78,8 @@ const DENY_LOCK_REASON: Record<"EXPIRED" | "NOT_ELIGIBLE", string> = {
 /** The decision schema's floor: every verb, REQUEST_CHANGES included, needs a reason. */
 export const REQUEST_CHANGES_NOTE_REASON =
   "Request changes needs a reason — write it in the reviewer note first (the decision schema requires one, min 8 characters).";
+export const REQUEST_CHANGES_NO_CONDITION_REASON =
+  "Request changes needs at least one remediation condition — attach it first (the decision schema requires one).";
 export const REQUEST_CHANGES_DENIED_REASON =
   "Request changes — the server did not grant this verb for this actor.";
 
@@ -127,6 +129,7 @@ export function GateR1Review({
   onDeny,
   onRequestCondition,
   onRequestChanges,
+  children,
 }: {
   approvalId: ApprovalId;
   alphaLabel: string;
@@ -178,6 +181,8 @@ export function GateR1Review({
   onDeny?: () => void;
   onRequestCondition: () => void;
   onRequestChanges?: () => void;
+  /** Rendered above the decision dock: the next-step capture panel (R1 → R2 review). */
+  children?: ReactNode;
   /** Kept for the container; the hi-fi page has no provenance drawer. */
   onCopyProvenance?: (full: string) => void;
 }) {
@@ -211,10 +216,11 @@ export function GateR1Review({
   const serverAllowsDeny = eligibility?.canDeny === true;
   const serverAllowsRequestChanges = eligibility?.canRequestChanges === true;
   const noteReady = (note ?? "").trim().length >= 8;
-  const requestChangesLocked = !serverAllowsRequestChanges || !noteReady || !onRequestChanges;
+  const closedByContext = Boolean(decisionsBlockedReason);
+  const requestChangesLocked = !serverAllowsRequestChanges || !noteReady || !onRequestChanges || (conditions?.length ?? 0) === 0 || closedByContext;
   const approveLocked = locked || !serverAllowsApprove;
   const conditionLocked = locked || !serverAllowsCondition;
-  const denyLocked = denyLocks.length > 0 || !serverAllowsDeny;
+  const denyLocked = denyLocks.length > 0 || !serverAllowsDeny || closedByContext;
 
 
   /*
@@ -277,7 +283,7 @@ export function GateR1Review({
         {status === "stale" ? <span className="exec-gov-chip" data-fill="bad">STALE</span> : null}
         {status === "partial" ? <span className="exec-gov-chip" data-fill="warn">PARTIAL</span> : null}
       </div>
-      <GateStepper current="r1" done={releaseCandidate ? ["report", "rc"] : []} />
+      <GateStepper current="r1" done={releaseCandidate ? ["rc"] : []} />
       <div className="exec-gov-metaline">
         <span>request {approvalId}</span>
         {releaseCandidate ? <span>release candidate {releaseCandidate}</span> : null}
@@ -437,6 +443,7 @@ export function GateR1Review({
           </div>
         </div>
       </div>
+      {children}
       <ExecutionDecisionBar
         label={`Gate R1 decision ${approvalId}`}
         verdict={verdict}
@@ -460,7 +467,10 @@ export function GateR1Review({
               requestChanges={{
                 label: "Request changes",
                 locked: requestChangesLocked,
-                title: !serverAllowsRequestChanges || !onRequestChanges ? REQUEST_CHANGES_DENIED_REASON : !noteReady ? REQUEST_CHANGES_NOTE_REASON : undefined,
+                title: closedByContext ? decisionsBlockedReason ?? undefined
+                  : !serverAllowsRequestChanges || !onRequestChanges ? REQUEST_CHANGES_DENIED_REASON
+                    : !noteReady ? REQUEST_CHANGES_NOTE_REASON
+                      : (conditions?.length ?? 0) === 0 ? REQUEST_CHANGES_NO_CONDITION_REASON : undefined,
                 onClick: onRequestChanges,
               }}
             />

@@ -24,6 +24,7 @@
  * one.
  */
 import { readDecimal, readEnum, readId, readTimestamp, type MaybeKnown } from "../adapter";
+import { bindR1Decision, readCaptureContext, readDecisionContext, safeR1Href, type CaptureContext, type ContextRead, type DecisionContext, type R1Binding } from "./governanceContext";
 import type { ApprovalId, EvidenceMark, PromotionStage, Sla } from "../contracts";
 import type { ApprovalGate, ApprovalRow, DecidedRow, InertReason } from "../screens/ApprovalInbox";
 import type { ChecklistItem, DecisionLock, PassportEntry } from "../screens/GateR1Review";
@@ -331,6 +332,10 @@ export function readEligibility(raw: unknown): Eligibility {
 
 export interface GateR1Detail {
   approvalId: ApprovalId;
+  /** The exact pins an R1 decision may send, from this same read — or the reason it cannot be planned (FE-GOV-01). */
+  binding: R1Binding;
+  /** Pins for the R1 → R2 review capture (FE-GOV-03). `absent` on older reads. */
+  capture: ContextRead<CaptureContext>;
   /**
    * The workspace this review was read from, as the BFF publishes it.
    *
@@ -406,6 +411,9 @@ export function readGateR1Detail(raw: unknown): GateR1Detail | null {
     : Array.isArray(data.passport)
       ? data.passport
       : [];
+  const manifestPins = Array.isArray(manifest?.entries)
+    ? { entryCount: manifest.entries.length, sha256: manifest.entries.map((e) => str(obj(e)?.sha256)) }
+    : null;
   const passport = passportRaw
     .map(readPassportEntry)
     .filter((e): e is PassportEntry => e !== null);
@@ -442,7 +450,16 @@ export function readGateR1Detail(raw: unknown): GateR1Detail | null {
   const decidedRaw = decisions.length > 0 ? obj(decisions[decisions.length - 1]) : obj(data.decided);
   const decidedOutcome = decidedRaw ? readEnum(decidedRaw.outcome, DECIDED_OUTCOMES) : null;
 
+  const binding = bindR1Decision({
+    context: readDecisionContext(data.decision_context),
+    envelopeWorkspaceId: workspaceId,
+    approvalId,
+    manifest: manifestPins,
+    legacyVersion: int(approval.approval_version ?? data.approval_version),
+  });
   return {
+    binding,
+    capture: readCaptureContext(data.capture_context),
     workspaceId,
     approvalId,
     alphaLabel: str(approval.subject_label) ?? str(approval.alpha_label) ?? approvalId,
@@ -552,6 +569,10 @@ export function readReadinessGroup(raw: unknown): ReadinessGroup | null {
 }
 
 export interface GateR2Detail {
+  /** R2 has no commissioned decision executor: this is the server's typed statement of that (FE-GOV-02), or `absent`/`invalid` on older reads. */
+  decision: ContextRead<DecisionContext>;
+  /** Pins for the R2 → Paper Exit review capture (FE-GOV-03). */
+  capture: ContextRead<CaptureContext>;
   /** The workspace this review was read from; a decision must name the same
    *  one. `null` when the envelope carries none — the screen then disables the
    *  decision controls with a reason rather than writing into a workspace
@@ -650,6 +671,8 @@ export function readGateR2Detail(raw: unknown): GateR2Detail | null {
   }
 
   return {
+    decision: readDecisionContext(data.decision_context),
+    capture: readCaptureContext(data.capture_context),
     workspaceId,
     portfolioId: readId(approval.portfolio_id ?? data.portfolio_id),
     currency: str(approval.currency ?? data.currency),
@@ -661,7 +684,7 @@ export function readGateR2Detail(raw: unknown): GateR2Detail | null {
     // cannot understand is not a reference we may proceed on.
     r1State: r1Parsed?.known ? r1Parsed.value : "MISSING",
     r1LineagePublished,
-    r1Href: str(r1.href),
+    r1Href: safeR1Href(str(r1.href), workspaceId),
     r1Expiry: str(r1.expiry),
     r1Digest: str(r1.digest),
     r1DecidedBy: str(r1.decided_by),
@@ -759,6 +782,12 @@ export interface PaperExitDetail {
   sla: Sla | null;
   /** artifact · R1 · R2 · observation policy · evidence pack digest (§5). */
   lineage: readonly LineageRef[];
+  /**
+   * The evidence digests a Paper Exit decision pins (its own contract, from `lineage[].digest`) — unique and sorted — or `null` when a REQUIRED lineage
+   * entry published none, in which case the pins are incomplete and no plan is made rather than posting a subset or `[]`.
+   * NOTE: this read does not publish the full evidence-hash set the plan compares against; a plan can still come back `EVIDENCE_HASH_MISMATCH`, typed.
+   */
+  evidenceHashes: readonly string[] | null;
   panels: readonly EvidencePanelSpec[];
   recommendation: string | null;
   /**
@@ -793,12 +822,23 @@ export function readPaperExitDetail(raw: unknown): PaperExitDetail | null {
   if (!reviewId) return null;
 
   const gaps: string[] = [];
-  const lineage = (Array.isArray(data.lineage) ? data.lineage : []).flatMap((e) => {
+  const lineageRaw = Array.isArray(data.lineage) ? data.lineage : [];
+  const lineage = lineageRaw.flatMap((e) => {
     const eo = obj(e);
     const label = eo && str(eo.label);
     const value = eo && str(eo.value);
     return label && value ? [{ label, value, href: str(eo!.href) }] : [];
   });
+  const digestOf = (e: unknown): string | null => {
+    const d = str(obj(e)?.digest);
+    return d !== null && /^sha256:[0-9a-f]{64}$/.test(d) ? d : null;
+  };
+  // an unreadable `required` bit counts as required: a pin we cannot prove optional is a pin the plan needs
+  const pinsComplete = lineageRaw.every((e) => {
+    const mustPin = obj(e)?.required !== false;
+    return !mustPin || digestOf(e) !== null;
+  });
+  const evidenceHashes = pinsComplete ? [...new Set(lineageRaw.flatMap((e) => { const d = digestOf(e); return d ? [d] : []; }))].sort() : null;
 
   const panels = (Array.isArray(data.panels) ? data.panels : [])
     .map(readEvidencePanel)
@@ -833,6 +873,7 @@ export function readPaperExitDetail(raw: unknown): PaperExitDetail | null {
     approverRole: str(data.approver_role),
     sla: readSla(review.sla),
     lineage,
+    evidenceHashes,
     panels,
     recommendation: str(data.recommendation),
     activationPlan: (() => {

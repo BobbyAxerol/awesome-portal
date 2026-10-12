@@ -129,6 +129,7 @@ export function GateR2Review({
   onDeny,
   onRequestCondition,
   onRequestChanges,
+  children,
 }: {
   approvalId: ApprovalId;
   subject: string;
@@ -178,6 +179,8 @@ export function GateR2Review({
   onDeny?: () => void;
   onRequestCondition: () => void;
   onRequestChanges?: () => void;
+  /** Rendered above the decision dock: the next-step capture panel (R2 → Paper Exit review). */
+  children?: ReactNode;
   /** Kept for the container; the hi-fi page has no provenance drawer. */
   onCopyProvenance?: (full: string) => void;
 }) {
@@ -208,13 +211,14 @@ export function GateR2Review({
   const serverAllowsDeny = eligibility?.canDeny === true;
   const serverAllowsRequestChanges = eligibility?.canRequestChanges === true;
   const noteReady = (note ?? "").trim().length >= 8;
-  const requestChangesLocked = !serverAllowsRequestChanges || !noteReady || !onRequestChanges;
-  const locked = effectiveLocks.length > 0 || !serverAllowsApprove || Boolean(decisionsBlockedReason);
-  const conditionLocked = effectiveLocks.length > 0 || !serverAllowsCondition;
+  const closedByContext = Boolean(decisionsBlockedReason);
+  const requestChangesLocked = !serverAllowsRequestChanges || !noteReady || !onRequestChanges || closedByContext;
+  const locked = effectiveLocks.length > 0 || !serverAllowsApprove || closedByContext;
+  const conditionLocked = effectiveLocks.length > 0 || !serverAllowsCondition || closedByContext;
   const denyLocks = effectiveLocks.filter((lock): lock is "EXPIRED" | "NOT_ELIGIBLE" =>
     (DENY_BLOCKING_LOCKS as readonly string[]).includes(lock),
   );
-  const denyLocked = denyLocks.length > 0 || !serverAllowsDeny;
+  const denyLocked = denyLocks.length > 0 || !serverAllowsDeny || closedByContext;
   // The R1 sentence is printed once, in the banner; the bar points at it.
 
   /*
@@ -271,7 +275,7 @@ export function GateR2Review({
         {status === "stale" ? <span className="exec-gov-chip" data-fill="bad">STALE</span> : null}
         {status === "partial" ? <span className="exec-gov-chip" data-fill="warn">PARTIAL</span> : null}
       </div>
-      <GateStepper current="r2" done={r1State === "APPROVED" || r1State === "APPROVED_WITH_CONDITION" ? ["report", "rc", "r1"] : releaseCandidate ? ["report", "rc"] : []} />
+      <GateStepper current="r2" done={[...(releaseCandidate ? (["rc"] as const) : []), ...(r1State === "APPROVED" || r1State === "APPROVED_WITH_CONDITION" ? (["r1"] as const) : [])]} />
       <div className="exec-gov-metaline">
         <span className="exec-gov-chip" data-fill={r1State === "APPROVED" || r1State === "APPROVED_WITH_CONDITION" ? "good" : "bad"}>
           R1 {r1State}
@@ -458,6 +462,7 @@ export function GateR2Review({
           ) : null}
         </div>
       </div>
+      {children}
       <ExecutionDecisionBar
         label={`Gate R2 decision ${approvalId}`}
         verdict={verdict}
@@ -491,7 +496,7 @@ export function GateR2Review({
             requestChanges={{
               label: "Request changes",
               locked: requestChangesLocked,
-              title: !serverAllowsRequestChanges || !onRequestChanges ? REQUEST_CHANGES_DENIED_REASON : !noteReady ? REQUEST_CHANGES_NOTE_REASON : undefined,
+              title: closedByContext ? decisionsBlockedReason ?? undefined : !serverAllowsRequestChanges || !onRequestChanges ? REQUEST_CHANGES_DENIED_REASON : !noteReady ? REQUEST_CHANGES_NOTE_REASON : undefined,
               onClick: onRequestChanges,
             }}
           />

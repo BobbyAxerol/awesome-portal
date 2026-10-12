@@ -990,7 +990,7 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
         : unavailable("The binding exposure response could not be read.");
     },
 
-    async getPaperExit(reviewId: string) {
+    async getPaperExit(reviewId: string, _workspaceId?: string) {
       const blocked = gate<ReturnType<typeof readPaperExitDetail>>("getPaperExit");
       if (blocked) return blocked as Result<never>;
       const detail = readPaperExitDetail({

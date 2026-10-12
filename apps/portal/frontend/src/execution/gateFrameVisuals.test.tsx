@@ -29,8 +29,9 @@ describe("ProvenanceChain", () => {
 });
 
 describe("GateTrack", () => {
-  it("marks the gates behind a request done, its own gate current, and the rest ahead", () => {
+  it("marks only the request's own gate; the others are neutral — a position is not a history of accepted gates", () => {
     render(<GateTrack at="PAPER" />);
-    expect([...document.querySelectorAll(".exec-gf-track i")].map((i) => i.getAttribute("data-state"))).toEqual(["done", "done", "current", "ahead", "ahead"]);
+    expect([...document.querySelectorAll(".exec-gf-track i")].map((i) => i.getAttribute("data-state"))).toEqual(["other", "other", "current", "other", "other"]);
+    expect(document.querySelector(".exec-gf-track")!.getAttribute("aria-label")).toMatch(/Position/);
   });
 });

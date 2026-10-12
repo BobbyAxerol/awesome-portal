@@ -3753,9 +3753,10 @@ describe("Gate R2 and Paper Exit on the port", () => {
     );
     expect((await screen.findAllByText(/not current enough to decide against/)).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", true);
-    // Visible, diagnosable, and refusable.
+    // Visible and diagnosable. R2 has no commissioned decision executor, so every verb — Deny included — is closed with that reason (FE-GOV-02).
     expect(screen.getByText(/source balance snapshot is 3h 28m old/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", false);
+    expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", true);
+    expect(screen.getAllByText(/R2 decisions are not commissioned yet/).length).toBeGreaterThanOrEqual(1);
   });
 
   it("re-requests the preview when the requested amount changes", async () => {

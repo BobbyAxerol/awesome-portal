@@ -544,7 +544,7 @@ export interface ExecutionApi {
     request: CapitalPreviewInput,
   ): Promise<Result<{ preview: CapitalPreview; envelope: AnalyticsEnvelope }>>;
   /** `GET /api/v1/execution/governance/exit-reviews/{id}` */
-  getPaperExit(reviewId: string): Promise<Result<PaperExitDetail>>;
+  getPaperExit(reviewId: string, workspaceId?: string): Promise<Result<PaperExitDetail>>;
   /** `POST /api/v1/execution/governance/approvals/{id}/decision-plans` */
   /**
    * Plan a governance decision.
@@ -573,7 +573,7 @@ export interface ExecutionApi {
     /** The schema floor is eight characters; a one-word reason is refused. */
     reason: string;
     /**
-     * Required for `APPROVE_WITH_CONDITION`, refused for anything else.
+     * Required for `APPROVE_WITH_CONDITION` and `REQUEST_CHANGES` (the remediation asked for), refused for anything else.
      *
      * Typed objects, not a flattened string (BR-EX-29). The server checks each
      * one for an owner, compares its expiry against its deadline and rejects

@@ -1105,10 +1105,11 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
         : unavailable("The R2 review response could not be read.");
     },
 
-    async getPaperExit(reviewId: string) {
+    async getPaperExit(reviewId: string, workspaceId?: string) {
       const blocked = readBlocked();
       if (blocked) return unavailable(blocked);
-      const response = await get(`/governance/exit-reviews/${encodeURIComponent(reviewId)}`, signal);
+      const qs = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : "";
+      const response = await get(`/governance/exit-reviews/${encodeURIComponent(reviewId)}${qs}`, signal);
       if (!response.ok) return problem(response);
       const detail = readPaperExitDetail(await response.json());
       return detail
@@ -1152,12 +1153,16 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       if (isPaperExitDecision(input.decision) && supplied.length > 0) {
         return unavailable("A Paper Exit decision takes no conditions.");
       }
-      const wantsCondition = input.decision === "APPROVE_WITH_CONDITION";
+      // Typed conditions travel with exactly two verbs: approve-with-condition (what is accepted on condition) and request-changes (the remediation
+      // asked for). The server refuses either without at least one, and refuses conditions on any other verb.
+      const wantsCondition = input.decision === "APPROVE_WITH_CONDITION" || input.decision === "REQUEST_CHANGES";
       if (wantsCondition && supplied.length === 0) {
-        return unavailable("Approving with a condition requires the condition itself.");
+        return unavailable(input.decision === "REQUEST_CHANGES"
+          ? "Requesting changes requires at least one remediation condition."
+          : "Approving with a condition requires the condition itself.");
       }
       if (!wantsCondition && supplied.length > 0) {
-        return unavailable("Conditions may only accompany approve-with-condition.");
+        return unavailable("Conditions may only accompany approve-with-condition or request-changes.");
       }
       // Converted here rather than at the call site so every screen that plans
       // a decision gets the same checks and the same sentences.

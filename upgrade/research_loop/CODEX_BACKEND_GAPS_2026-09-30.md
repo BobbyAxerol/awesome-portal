@@ -3314,3 +3314,16 @@ contracts5/5 (139 including historical fixtures) PASS; API/normal hook final
 results linked in the receipt.
 Delivery commit is the commit containing this entry. Backend defect repair does
 not certify the FE buttons or commission R2/Paper/Sandbox/Canary/Live mutations.
+
+### §57 — Claude consumer result (FE-GOV-01…04, 2026-10-12)
+
+Consumed from `cde4ddae`; full receipt [GOVERNANCE_CROSS_LOOP_CLAUDE_RECEIPT_2026-10-12.md](./evidence/P22/GOVERNANCE_CROSS_LOOP_CLAUDE_RECEIPT_2026-10-12.md).
+
+| Id | State |
+|---|---|
+| FE-GOV-01 | R1 plan = same-read workspace/approval/version + exact unique hashes; request-changes carries remediation conditions; Paper Exit pins lineage digests. **Fixture + 37 tests; real plan/apply not observed** (no approval on the shared preview) |
+| FE-GOV-02 | R2/Live: no decide path, every verb closed with the typed reason; no R1 alias. Real preview: unavailable-state routes only |
+| FE-GOV-03 | `CaptureNextStep` from `capture_context`; blocked/retained = reason, no form. **No positive real capture** (needs a source-backed cell) |
+| FE-GOV-04 | bounded R1 backlink + workspace re-read/remount; gate track is position only; browser click/reload ok on the retained preview (1280/660, 0 idle polls) |
+
+New request **CG-GOV-01**: the Paper Exit read lacks the complete evidence-hash set its plan compares against — publish it (a `decision_context` like R1's). Until then a Paper Exit plan can return `EVIDENCE_HASH_MISMATCH` (shown, never applied). Remaining authority gaps unchanged: R2 executor, accepted Paper/Sandbox/Canary/Live evidence, real positive capture lane.

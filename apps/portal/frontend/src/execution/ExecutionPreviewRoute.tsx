@@ -311,19 +311,20 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       content = <NewApprovalRequestContainer api={api} />;
       break;
     case "EXECUTION_GATE_LIVE_REVIEW_SCREEN":
-      content = approvalId ? <GateLiveReviewContainer api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} /> : <MissingRouteId what="approval" />;
+      content = approvalId ? <GateLiveReviewContainer key={`${approvalId}|${routeWorkspaceId ?? ""}`} api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} /> : <MissingRouteId what="approval" />;
       break;
     case "EXECUTION_WAIVERS_REGISTER_SCREEN":
       content = <WaiversRegisterContainer api={api} />;
       break;
     case "EXECUTION_GATE_R1_REVIEW_SCREEN":
-      content = approvalId ? <GateR1ReviewContainer api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} /> : <MissingRouteId what="approval" />;
+      // keyed by approval AND workspace: a changed workspace remounts the screen, so a previous workspace's ready decision state can never survive into the next read
+      content = approvalId ? <GateR1ReviewContainer key={`${approvalId}|${routeWorkspaceId ?? ""}`} api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} /> : <MissingRouteId what="approval" />;
       break;
     case "EXECUTION_GATE_R2_REVIEW_SCREEN":
-      content = approvalId ? <GateR2ReviewContainer api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} /> : <MissingRouteId what="approval" />;
+      content = approvalId ? <GateR2ReviewContainer key={`${approvalId}|${routeWorkspaceId ?? ""}`} api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} /> : <MissingRouteId what="approval" />;
       break;
     case "EXECUTION_PAPER_EXIT_REVIEW_SCREEN":
-      content = <PaperExitReviewContainer api={api} reviewId={reviewId} />;
+      content = <PaperExitReviewContainer key={`${reviewId ?? ""}|${routeWorkspaceId ?? ""}`} api={api} reviewId={reviewId} workspaceId={routeWorkspaceId} />;
       break;
     case "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN":
       content = deploymentId ? <PaperWorkbenchRichContainer api={api} deploymentId={deploymentId} variant="vnm" /> : <MissingRouteId what="deployment" />;
