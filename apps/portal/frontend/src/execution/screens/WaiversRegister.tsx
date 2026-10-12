@@ -20,6 +20,7 @@ import { CrossEvidence } from "../components/CrossEvidence";
 import type { OperationalComposition } from "../operationalComposition";
 import { useAgeTick } from "../liveTick";
 import { PanelState } from "../components/states";
+import { QuietEmpty } from "../components/quietEmpty";
 import { reviewRouteFor, type ApprovalGate } from "./ApprovalInbox";
 import type { PanelStatus } from "../contracts";
 
@@ -176,30 +177,24 @@ export function WaiversRegisterScreen({
 
   return (
     <section className="exec-gate exec-gov" aria-label="Waivers and conditions register" data-hifi-exact="waivers-register">
-      <div className="exec-gate-kicker">GOVERNANCE · Obligations Register</div>
-      <div className="exec-gov-head">
-        <h1 className="exec-gov-h1">Waivers &amp; Conditions <span className="exec-gov-dim">—</span> what the fund owes, fleet-wide</h1>
-      </div>
-      <div className="exec-gov-metaline">
-        {/* The amber fill is the queue's attention role. An OPEN count of zero
-            is not a backlog, so it is drawn plain rather than in the colour
-            that means "something is waiting for you". */}
-        {countOf(open) !== null ? <span className="exec-gov-chip" data-fill={countOf(open)! > 0 ? "warn" : undefined}>{countOf(open)} OPEN</span> : null}
-        {countOf(expiring) ? <span className="exec-gov-chip" data-fill="bad" data-pulse="true">{countOf(expiring)} EXPIRING</span> : null}
-        {countOf(lapsed) ? <span className="exec-gov-chip" data-fill="bad">{countOf(lapsed)} LAPSED · BLOCKING</span> : null}
-        {countOf(waived) ? <span className="exec-gov-chip" data-fill="good">{countOf(waived)} WAIVED</span> : null}
-        {unreadable.length > 0 ? (
-          <span className="exec-gov-chip" title="The count query for these states did not return; the register below is still the server's page.">
-            {unreadable.join(" · ")} not counted
-          </span>
-        ) : null}
-        {status === "partial" ? (
-          <span className="exec-gov-chip" data-fill="warn" title={reason ?? "The source returned part of the register."}>PARTIAL</span>
-        ) : null}
-        <span className="exec-gov-meta">
-          states are computed by the server and only shown here · a condition closes only by a decision
-        </span>
-      </div>
+      <header className="exec-wv-head">
+        <div className="exec-wv-titlerow">
+          <h1 className="exec-gov-h1">Waivers &amp; conditions</h1>
+          {countOf(expiring) ? <span className="exec-gov-chip" data-fill="bad" data-pulse="true">{countOf(expiring)} expiring</span> : null}
+          {countOf(lapsed) ? <span className="exec-gov-chip" data-fill="bad">{countOf(lapsed)} lapsed · blocking</span> : null}
+          {unreadable.length > 0 ? (
+            <span className="exec-gov-chip" title="The count query for these states did not return; the register below is still the server's page.">
+              {unreadable.join(" · ")} not counted
+            </span>
+          ) : null}
+          {status === "partial" ? (
+            <span className="exec-gov-chip" data-fill="warn" title={reason ?? "The source returned part of the register."}>partial</span>
+          ) : null}
+          <span className="exec-gov-spacer" />
+          <span className="exec-gov-meta">{readAt ? `Updated ${readAt.slice(11, 16)} UTC` : "Update time not published"}</span>
+        </div>
+        <p className="exec-gov-meta">What the fund owes, fleet-wide. States are computed by the server; a condition closes only by a decision.</p>
+      </header>
 
       {/* One row: the register's states ARE its filters. Each lane is a count and a button — "what is blocking, what is about to, what is open, what is waived" —
           instead of a strip of numbers followed by a second row of pills that repeated them. */}
@@ -225,7 +220,6 @@ export function WaiversRegisterScreen({
             <span className="exec-wv-lane-note">{lane.n === null ? "not counted" : lane.note}</span>
           </button>
         ))}
-        <span className="exec-gov-meta exec-wv-readat">{readAt ? `read ${readAt.slice(11, 19)} UTC` : "read time not published"}</span>
       </div>
 
       {status !== "ok" && status !== "partial" ? (
@@ -244,10 +238,17 @@ export function WaiversRegisterScreen({
           </div>
           ) : null}
 
+          {rows.length === 0 && !page?.hasMore && !page?.hasPrevious ? (
+            <QuietEmpty
+              icon="scale"
+              label="Register"
+              title="No conditions"
+              line={filter === "ALL" ? "Nothing is on the register." : `Nothing is ${filter.toLowerCase()}.`}
+            />
+          ) : (
           <div className="exec-gov-panel">
             <div className="exec-gov-panelhead">
-              <span className="exec-gov-paneltitle">Register</span>
-              <span className="exec-gov-meta">click a row for its source decision</span>
+              <span className="exec-gov-paneltitle" title="A WAIVED row names the policy revision that granted it and expires with a policy change. LAPSED is blocking and enters Command Center today as CONDITION_EXPIRY — never a quiet default.">Register</span>
             </div>
             <div className="exec-gate-criteriawrap">
               <table className="exec-360-sync exec-gate-criteria exec-gate-wvtable">
@@ -307,11 +308,6 @@ export function WaiversRegisterScreen({
                       </Fragment>
                     );
                   })}
-                  {rows.length === 0 ? (
-                    <tr>
-                      <th scope="row" colSpan={7}>no conditions in this state — an empty filter is a fact, not a failure</th>
-                    </tr>
-                  ) : null}
                 </tbody>
               </table>
             </div>
@@ -322,22 +318,19 @@ export function WaiversRegisterScreen({
                 plainly rather than pretending to quote the server. */}
             {page ? (
               <div className="exec-wv-pager">
-                <button type="button" className="exec-inbox-filter" disabled={!page.hasPrevious} onClick={onPrev}
+                <button type="button" className="exec-btn-ghost" disabled={!page.hasPrevious} onClick={onPrev}
                   title={page.hasPrevious ? undefined : "this is the newest page in this filter"}>← newer</button>
                 <span className="exec-role-meta">
-                  {rows.length} of {page.filteredCount ?? "?"} in this state · register total {page.totalCount ?? "?"} · exact server counts, keyset paged
+                  {rows.length} of {page.filteredCount ?? "?"} shown
                 </span>
-                <button type="button" className="exec-inbox-filter" disabled={!page.hasMore} onClick={onNext}
+                <button type="button" className="exec-btn-ghost" disabled={!page.hasMore} onClick={onNext}
                   title={page.hasMore ? undefined : "no older page — the register ends here for this filter"}>older →</button>
               </div>
             ) : (
               <p className="exec-role-meta">No page was returned for this filter{reason ? ` — ${reason}` : ""}.</p>
             )}
-            <p className="exec-role-meta exec-gate-criteriafoot">
-              a WAIVED row names the policy revision that granted it and expires with a policy change ·
-              LAPSED is blocking and enters Command Center today as CONDITION_EXPIRY — never a quiet default
-            </p>
           </div>
+          )}
         </>
       )}
     </section>

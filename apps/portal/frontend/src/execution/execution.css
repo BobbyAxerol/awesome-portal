@@ -159,17 +159,6 @@
   max-width: 72ch;
 }
 
-.exec-preview-refresh {
-  margin-left: var(--space-3);
-  padding: 0 var(--space-2);
-  font: var(--exec-font-meta);
-  color: var(--ink);
-  background: transparent;
-  border: 1px solid var(--ink-faint);
-  border-radius: 3px;
-  cursor: pointer;
-}
-.exec-preview-refresh:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
 
 .exec-preview-banner strong,
 .exec-preview-banner code {
@@ -5283,8 +5272,6 @@
    Execution API is ever called. Per-screen retirement: see
    DESIGN_GRAMMAR_V3.md §8. */
 .exec-preview-banner { display: none; }
-/* UDB-03: the one banner that stays visible — a retained review must say, on the page, that its values are earlier observations. */
-.exec-preview-banner[data-execution-preview="retained"] { display: grid; }
 /* Narrow hosts: hi-fi 5a/4d are desktop compositions; below 768px the page scrolls inside itself and long mono titles wrap. */
 .exec-cc-paneltitle, .exec-inc2-paneltitle { overflow-wrap: anywhere; white-space: normal; min-width: 0; }
 @media (max-width: 767px) { .exec-cc-page, .exec-inc2-page { overflow-x: auto; } .exec-cc-panelhead > h2 { flex: 1 1 100%; } }
@@ -7341,24 +7328,16 @@ details.exec-gf-details[open] > summary.exec-gov-panelhead::before { content: "�
 .exec-inbox-card .exec-table tbody td { padding: 14px 16px; }
 .exec-inbox-card .exec-table tbody tr:hover td { background: var(--surface-2); }
 .exec-inbox-card .exec-inbox-strip { border-top: 1px solid var(--line-soft); padding: 10px 16px; }
-.exec-inbox-empty { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: 56px var(--space-5) 48px; text-align: center; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--paper-raised); }
-.exec-inbox-empty-icon { display: grid; place-items: center; width: 56px; height: 56px; margin-bottom: var(--space-2); border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
-.exec-inbox-empty-title { margin: 0; font: var(--exec-font-display); letter-spacing: -0.01em; color: var(--ink); }
-.exec-inbox-empty-line { margin: 0; max-width: 46ch; font: var(--exec-font-body); color: var(--ink-soft); }
-.exec-inbox-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); margin-top: var(--space-3); }
+.exec-qe { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: 56px var(--space-5) 48px; text-align: center; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--paper-raised); }
+.exec-qe-icon { display: grid; place-items: center; width: 56px; height: 56px; margin-bottom: var(--space-2); border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+.exec-qe-title { margin: 0; font: var(--exec-font-display); letter-spacing: -0.01em; color: var(--ink); }
+.exec-qe-line { margin: 0; max-width: 46ch; font: var(--exec-font-body); color: var(--ink-soft); }
+.exec-qe-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); margin-top: var(--space-3); }
 .exec-inbox-quiet { margin: 0; padding: 0 var(--space-1); }
 
-/* The retained-review notice: one quiet row, not a banner block */
-.exec-preview-banner[data-execution-preview="retained"] { grid-template-columns: auto minmax(0, 1fr) auto auto; gap: var(--space-2) var(--space-3); padding: 6px 12px; margin: 0 0 var(--space-3); border-radius: var(--radius-pill); background: var(--warn-bg); }
-.exec-preview-banner[data-execution-preview="retained"] strong { font: var(--exec-font-label); letter-spacing: 0.06em; }
-.exec-preview-banner[data-execution-preview="retained"] > span { font: var(--exec-font-meta); }
-.exec-preview-banner .exec-preview-refresh { margin-left: var(--space-3); min-height: 24px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-pill); background: var(--paper-raised); color: var(--ink); font: var(--exec-font-meta); }
-.exec-preview-banner .exec-preview-refresh:hover { border-color: var(--accent); color: var(--accent); }
-.exec-preview-banner .exec-preview-details summary, .exec-preview-banner .exec-preview-inspector summary { font: var(--exec-font-meta); }
 
 /* Governance follows the Research loop's soft geometry (owner 2026-10-11, superseding the 2026-08-25 square-corner rule for these screens only). */
 .exec-gov { --radius-sm: 3px; --radius-md: 6px; --radius-lg: 10px; --radius-pill: 999px; }
-.exec-preview-banner[data-execution-preview="retained"] { border-radius: 999px; }
 
 /* New approval request — one form column, one "what happens next" aside */
 .exec-nr-head { display: flex; flex-direction: column; gap: var(--space-2); }
@@ -7397,3 +7376,59 @@ details.exec-gf-details[open] > summary.exec-gov-panelhead::before { content: "�
 .exec-nr-steps { margin: var(--space-2) 0 var(--space-1); }
 .exec-inbox-card { overflow: hidden; }
 .exec-gov .exec-inbox-gate { border-radius: var(--radius-md); padding: 1px 8px; }
+
+/* Retained review — one pill in the top bar, a panel on demand */
+.exec-ret { position: relative; display: inline-flex; }
+.exec-ret-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--paper-raised); color: var(--ink-soft); font: var(--exec-font-meta); cursor: pointer; }
+.exec-ret-pill:hover, .exec-ret-pill[aria-expanded="true"] { border-color: var(--accent); color: var(--ink); }
+.exec-ret-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); }
+.exec-ret-pop { position: absolute; top: calc(100% + 8px); left: 0; z-index: 60; width: min(380px, 92vw); padding: var(--space-4); background: var(--paper-raised); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-e3); }
+.exec-ret-panel { display: flex; flex-direction: column; gap: var(--space-3); }
+.exec-ret-title { font: var(--exec-font-label); letter-spacing: 0.06em; color: var(--warn); }
+.exec-ret-line { margin: 0; font: var(--exec-font-meta); color: var(--ink-soft); }
+.exec-ret-list { margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.exec-ret-list > div { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: var(--space-2); }
+.exec-ret-list dt { font: var(--exec-font-label); letter-spacing: 0.04em; color: var(--ink-mute); }
+.exec-ret-list dd { margin: 0; font: var(--exec-font-meta); color: var(--ink); overflow-wrap: anywhere; }
+.exec-ret-refresh { align-self: flex-start; min-height: 30px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--paper-raised); color: var(--ink); font: var(--exec-font-control); cursor: pointer; }
+.exec-ret-refresh:hover { border-color: var(--accent); color: var(--accent); }
+.exec-qe-more { margin-top: var(--space-2); font: var(--exec-font-meta); color: var(--ink-mute); max-width: 60ch; }
+.exec-qe-more > summary { cursor: pointer; }
+.exec-qe-more > :not(summary) { margin: var(--space-2) 0 0; text-align: left; }
+.exec-qe-would { font: var(--exec-font-meta); color: var(--ink-mute); }
+
+/* Choice menu — field variant: full width, two-line trigger and options, status mark */
+.exec-cm[data-variant="field"] { display: block; }
+.exec-cm[data-variant="field"] .exec-cm-trigger { width: 100%; min-height: 52px; padding: 8px 14px; border-radius: var(--radius-lg); }
+.exec-cm[data-variant="field"] .exec-cm-value { display: flex; flex-direction: column; flex: 1 1 auto; line-height: 1.25; }
+.exec-cm-sub { font: var(--exec-font-id); color: var(--ink-mute); overflow: hidden; text-overflow: ellipsis; }
+.exec-cm[data-variant="field"] .exec-cm-pop { width: 100%; max-width: none; }
+.exec-cm-icon { display: inline-grid; place-items: center; flex: none; }
+.exec-cm-list li[role="option"] { align-items: center; }
+.exec-cm-opt-text { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.exec-cm-opt-hint { margin-left: 0; font: var(--exec-font-id); color: var(--ink-mute); white-space: normal; overflow-wrap: anywhere; }
+.exec-cm[data-variant="pill"] .exec-cm-opt-text { flex-direction: row; align-items: baseline; gap: var(--space-3); }
+.exec-cm[data-variant="pill"] .exec-cm-opt-hint { margin-left: auto; white-space: nowrap; font: var(--exec-font-caption); }
+.exec-mark { width: 8px; height: 8px; border-radius: 50%; background: var(--good); }
+.exec-mark[data-tone="warn"] { background: var(--warn); }
+.exec-mark[data-tone="mute"] { background: var(--line-strong); }
+
+/* Inbox gate chips */
+.exec-gatechips { display: inline-flex; flex-wrap: wrap; gap: 6px; padding-left: var(--space-3); border-left: 1px solid var(--line); }
+.exec-gatechip { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--paper-raised); color: var(--ink-soft); font: var(--exec-font-control); cursor: pointer; }
+.exec-gatechip i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.exec-gatechip[data-gate="PAPER"] i, .exec-gatechip[data-gate="SANDBOX"] i, .exec-gatechip[data-gate="EXIT_REVIEWS"] i { background: var(--gov-exit); }
+.exec-gatechip[data-gate="LIVE_GATES"] i { background: var(--bad); }
+.exec-gatechip:hover:not([disabled]) { border-color: var(--accent); color: var(--ink); }
+.exec-gatechip[data-active="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); font-weight: 600; }
+.exec-gatechip[disabled] { color: var(--ink-faint); cursor: not-allowed; }
+.exec-gatechip:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.exec-wv-head { display: flex; flex-direction: column; gap: var(--space-1); }
+.exec-wv-titlerow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.exec-wv-titlerow .exec-gov-spacer { flex: 1 1 auto; }
+
+/* The top bar is full at laptop widths: below 1500px the pill is a dot (the name is its tooltip and accessible label). */
+@media (max-width: 1500px) {
+  .exec-ret-pill { width: 26px; padding: 0; justify-content: center; }
+  .exec-ret-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}

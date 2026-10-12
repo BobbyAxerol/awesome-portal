@@ -257,15 +257,10 @@ export function PaperExitReview({
     // look like the room it is standing in.
     return (
       <section className="exec-exit exec-px exec-gov" aria-label={`Paper exit review ${reviewId}`}>
-        <div className="exec-gate-kicker">PAPER_EXIT · {reviewId}</div>
         <EmptyRecordFrame
           screen="paper-exit-review"
           status={status}
           reason={why}
-          controls={
-            // No dead buttons: with no review there is nothing to decide, and four greyed verbs read as a screen that failed rather than a record that is not there.
-            <p className="exec-disabled-reason">No decision can be taken on a review that is not published.</p>
-          }
         />
       </section>
     );

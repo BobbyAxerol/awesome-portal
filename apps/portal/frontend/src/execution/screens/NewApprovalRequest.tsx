@@ -160,10 +160,12 @@ export function NewApprovalRequestScreen({
                   value={runOptions.some((o) => o.runId === runId) ? runId : ""}
                   disabled={submitting}
                   placeholder="Pick a completed run"
+                  variant="field"
                   options={runOptions.map((o) => ({
                     value: o.runId,
                     label: o.alphaName ?? o.alphaId,
-                    hint: `${o.runId.slice(0, 14)}…${o.createdMs ? ` · ${new Date(o.createdMs).toISOString().slice(0, 10)}` : ""}`,
+                    hint: `${o.runId.slice(0, 22)}…${o.createdMs ? ` · ${new Date(o.createdMs).toISOString().slice(0, 10)}` : ""}`,
+                    icon: <i className="exec-mark" data-tone={o.claims && o.claims.length > 0 ? undefined : "mute"} title={o.claims && o.claims.length > 0 ? "completed · claim listed" : "completed · no claim listed"} />,
                   }))}
                   onChange={(next) => {
                     const picked = runOptions.find((o) => o.runId === next);
@@ -200,6 +202,7 @@ export function NewApprovalRequestScreen({
                   value={pickedRun.claims.some((c) => c.id === claimId) ? claimId : ""}
                   disabled={submitting}
                   placeholder="Pick a claim"
+                  variant="field"
                   options={pickedRun.claims.map((c) => ({ value: c.id, label: c.id.length > 28 ? `${c.id.slice(0, 18)}…${c.id.slice(-6)}` : c.id, hint: [c.grade, c.state].filter(Boolean).join(" · ") || undefined }))}
                   onChange={setClaimId}
                 />

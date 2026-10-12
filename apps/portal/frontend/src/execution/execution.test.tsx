@@ -1839,7 +1839,7 @@ describe("Approval Inbox", () => {
         filter="INBOX"
       />,
     );
-    expect(container.querySelector(".exec-inbox-empty")).not.toBeNull();
+    expect(container.querySelector(".exec-qe")).not.toBeNull();
     // §8.59: this page carries no `read_truth`, so the screen may say only what
     // came back, never that the inbox is clear.
     expect(screen.getByText(/did not state whether any exist outside this response/)).toBeTruthy();
@@ -2154,7 +2154,9 @@ describe("Gate R1 — the full state set", () => {
     for (const status of ["denied", "unavailable", "empty", "insufficient_data"] as const) {
       const { container } = render(gate({ status, reason: "because" }));
       expect(container.querySelector(".exec-gate-decision"), status).toBeNull();
-      expect(container.querySelector(".exec-state")?.getAttribute("data-status")).toBe(status);
+      // a refusal draws the shared state box; an absence draws one calm card (the record is not there), never a frame of ghost panels
+      if (status === "denied") expect(container.querySelector(".exec-state")?.getAttribute("data-status")).toBe("denied");
+      else expect(container.querySelector("[data-prominent-empty]"), status).not.toBeNull();
       cleanup();
     }
     // Loading is the same refusal with a different rendering: a skeleton, not a

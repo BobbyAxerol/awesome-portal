@@ -24,7 +24,8 @@ import { slaOverdue, type ApprovalId, type KeysetPage, type PanelStatus, type Sl
 import { emptyScopeLine, emptyScopeTitle } from "../readTruthCopy";
 import { StatusChip } from "../components/badges";
 import { GateTrack } from "../components/gateFrame";
-import { ChoiceMenu, Segmented } from "../components/choiceMenu";
+import { Segmented } from "../components/choiceMenu";
+import { QuietEmpty } from "../components/quietEmpty";
 import { serverSaysEmpty } from "../readTruthCopy";
 import { KeysetTable, type Column } from "../components/table";
 import { preciseAge, useAgeTick } from "../liveTick";
@@ -127,7 +128,8 @@ function CountLine({ counts, status }: { counts: InboxCounts | null; status: Pan
   );
 }
 
-/** The gate-scoped filters; the select shows whichever of them is active. */
+/** The gate-scoped filters, drawn as chips: one click to narrow, the same click to clear. */
+const GATE_CHIP_LABEL: Record<(typeof GATE_FILTERS)[number], string> = { R1: "R1", R2: "R2", PAPER: "Paper", SANDBOX: "Sandbox", LIVE_GATES: "Live", EXIT_REVIEWS: "Exit" };
 const GATE_FILTERS = ["R1", "R2", "PAPER", "SANDBOX", "LIVE_GATES", "EXIT_REVIEWS"] as const;
 
 /** The hi-fi's filter chips. Applied server-side (BR-EX-02), never in the browser. */
@@ -330,23 +332,6 @@ function emptySentence(readTruth: KeysetPage<ApprovalRow>["readTruth"], view: st
     : `Nothing matches ${view}. Other views may still have requests.`;
 }
 
-function EmptyInbox({ title, sentence, code, showActions }: { title: string; sentence: string; code: string | null; showActions: boolean }) {
-  return (
-    <section className="exec-inbox-empty" aria-label="Pending approvals" data-prominent-empty="true">
-      <span className="exec-inbox-empty-icon" aria-hidden="true">
-        <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M4 15h6l1.5 3h5L18 15h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /><path d="M6.5 15 9 6h10l2.5 9v6a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-6Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg>
-      </span>
-      <h2 className="exec-inbox-empty-title">{title}</h2>
-      <p className="exec-inbox-empty-line" title={code ?? undefined}>{sentence}</p>
-      {showActions ? (
-        <div className="exec-inbox-empty-actions" data-next-step>
-          <a className="exec-btn-apply exec-gov-cta" href="/research/quantbt/runs">Start from a Research run</a>
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
 export function ApprovalInbox({
   page,
   counts,
@@ -470,26 +455,34 @@ export function ApprovalInbox({
             { value: "OVERDUE", label: "Overdue", count: counts?.overdue && counts.overdue > 0 ? counts.overdue : null, tone: "bad" },
           ]}
         />
-        <ChoiceMenu
-          label="Gate"
-          prefix="Gate"
-          value={GATE_FILTERS.includes(filter as (typeof GATE_FILTERS)[number]) ? filter : ""}
-          disabled={filtersDisabled}
-          placeholder="Any"
-          onChange={(next) => {
-            if (next === "") { if (GATE_FILTERS.includes(filter as (typeof GATE_FILTERS)[number])) onFilterChange?.("ALL"); }
-            else onFilterChange?.(next as InboxFilter);
-          }}
-          options={[{ value: "", label: "Any gate" }, ...GATE_FILTERS.map((f) => ({ value: f, label: FILTER_LABEL[f] }))]}
-        />
+        <div className="exec-gatechips" role="group" aria-label="Gate">
+          {GATE_FILTERS.map((f) => (
+            <button
+              key={f}
+              type="button"
+              className="exec-gatechip"
+              data-filter={f}
+              data-gate={f}
+              data-active={f === filter ? "true" : undefined}
+              aria-pressed={f === filter}
+              disabled={filtersDisabled}
+              title={FILTER_LABEL[f]}
+              onClick={() => onFilterChange?.(f === filter ? "ALL" : f)}
+            >
+              <i aria-hidden="true" />
+              {GATE_CHIP_LABEL[f]}
+            </button>
+          ))}
+        </div>
       </div>
       {status === "ok" && page.rows.length === 0 ? (
-        <EmptyInbox
+        <QuietEmpty
+          label="Pending approvals"
           title={emptyScopeTitle(page.readTruth)}
-          sentence={emptySentence(page.readTruth, FILTER_LABEL[filter], counts?.pending ?? null)}
-          code={page.readTruth?.reasonCode ?? null}
+          line={emptySentence(page.readTruth, FILTER_LABEL[filter], counts?.pending ?? null)}
+          lineTitle={page.readTruth?.reasonCode ?? null}
           // the way in is offered when the whole queue is empty, not when a filter merely hides it
-          showActions={counts?.pending === 0}
+          actions={counts?.pending === 0 ? <a className="exec-btn-apply exec-gov-cta" href="/research/quantbt/runs">Start from a Research run</a> : null}
         />
       ) : (
         <div className="exec-gov-panel exec-inbox-card">

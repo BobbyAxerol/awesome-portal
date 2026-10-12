@@ -12,6 +12,7 @@ import { Link, useLocation } from "react-router-dom";
 
 import { isOwnerAccess, useSession } from "../auth/session";
 import { EnvironmentBadge } from "../components/semantic";
+import { RetainedPill } from "../execution/RetainedBanner";
 import type { PortalEnvironment } from "../portal/contracts";
 import type { Breadcrumb } from "../portal/navigation";
 import { useRunLabel } from "../research/runLabels";
@@ -85,6 +86,7 @@ export function TopBar({
       </span>
 
       {environment ? <EnvironmentBadge environment={environment} /> : null}
+      <RetainedPill />
 
       <nav aria-label="Breadcrumb" className={runCrumb ? "portal-breadcrumbs portal-breadcrumbs--run" : "portal-breadcrumbs"}>
         {breadcrumbs.map((crumb, index) => (

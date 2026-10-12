@@ -28,7 +28,6 @@ import { reviewRouteFor } from "./screens/ApprovalInbox";
 
 import { usePresentation } from "../app/presentation";
 import { PanelState } from "./components/states";
-import { RetainedBannerBody } from "./RetainedBanner";
 import { ensureRetainedReview, retainedSessionKey, useRetainedReview } from "./retainedReview";
 import { useSession } from "../auth/session";
 
@@ -113,19 +112,14 @@ export function PreviewBanner({ profile, screenId, registryWord }: { profile: st
     line: "Unrecognised delivery profile — treated as not live",
     detail: `The registry publishes delivery_profile "${profile}", which this build does not know. It is rendered as not live and nothing is sent anywhere.`,
   };
-  const retained = useRetainedReview();
   return (
-    <aside className="exec-preview-banner" role="status" data-execution-preview={retained.review ? "retained" : key}>
-      {retained.review ? <RetainedBannerBody review={retained.review} /> : (
-        <>
-          <strong>{copy.title}</strong>
-          <span>{copy.line}</span>
-          <details className="exec-preview-details">
-            <summary>Details</summary>
-            <p>{copy.detail}</p>
-          </details>
-        </>
-      )}
+    <aside className="exec-preview-banner" role="status" data-execution-preview={key}>
+      <strong>{copy.title}</strong>
+      <span>{copy.line}</span>
+      <details className="exec-preview-details">
+        <summary>Details</summary>
+        <p>{copy.detail}</p>
+      </details>
       {/* EL-V2-03 §4.3: implementation identity lives in an inspector the
           operator opens on purpose, never in the default scan path. */}
       <details className="exec-preview-inspector">

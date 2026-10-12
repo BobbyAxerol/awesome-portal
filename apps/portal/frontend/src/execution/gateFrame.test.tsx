@@ -49,9 +49,9 @@ describe("an unavailable gate", () => {
     expect(plainReason("SOMETHING_ELSE_ENTIRELY: x")).toBe("SOMETHING_ELSE_ENTIRELY: x");
     expect(plainReason("plain sentence")).toBe("plain sentence");
   });
-  it("offers a way back to the Approval Inbox on R1, R2 and Live", () => {
+  it("offers a way back to the Inbox on R1, R2 and Live", () => {
     render(<EmptyRecordFrame screen="gate-r1" status="unavailable" reason="APPROVAL_NOT_FOUND: Approval not found." />);
     expect(screen.getByText(/No approval with this id is visible to you/)).toBeTruthy();
-    expect(screen.getByRole("link", { name: /Back to the Approval Inbox/ }).getAttribute("href")).toBe("/governance/approvals");
+    expect(screen.getByRole("link", { name: /Back to the Inbox/ }).getAttribute("href")).toBe("/governance/approvals");
   });
 });

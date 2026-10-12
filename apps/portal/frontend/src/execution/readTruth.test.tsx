@@ -152,6 +152,6 @@ describe("§8.59 point 3 · a refusal is never rendered as an absence", () => {
     // there remains a compact panel fact: repeating the 22px primary outcome
     // would overwhelm a dense governance review.
     expect(container.querySelectorAll('[data-prominent-empty="true"]')).toHaveLength(1);
-    expect(container.querySelector('[data-prominent-empty="true"] .exec-inbox-empty-line')?.getAttribute("title")).toMatch(/NO_MATCHING_PORTAL_GOVERNANCE_RECORDS/);
+    expect(container.querySelector('[data-prominent-empty="true"] .exec-qe-line')?.getAttribute("title")).toMatch(/NO_MATCHING_PORTAL_GOVERNANCE_RECORDS/);
   });
 });

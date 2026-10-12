@@ -157,10 +157,11 @@ describe("waivers — the register consumer", () => {
     render(<WaiversRegisterContainer api={createFixtureApi()} />);
     await awaitRows();
     expect(registerText()).toContain("Capacity at target weight");
-    expect(await screen.findByText("4 OPEN")).toBeTruthy();
-    expect(screen.getByText("1 EXPIRING")).toBeTruthy();
-    expect(screen.getByText("1 LAPSED · BLOCKING")).toBeTruthy();
-    expect(screen.getByText("2 WAIVED")).toBeTruthy();
+    expect(await screen.findByRole("button", { name: /^4\s*Open/ })).toBeTruthy();
+    expect(screen.getByText("1 expiring")).toBeTruthy();
+    expect(screen.getByText("1 lapsed · blocking")).toBeTruthy();
+    // waived is not an alarm: its exact count is on its lane
+    expect(screen.getByRole("button", { name: /^2\s*Waived/ })).toBeTruthy();
   });
 
   it("filters are SERVER queries: the page narrows and the exact filtered count follows", async () => {
@@ -176,7 +177,7 @@ describe("waivers — the register consumer", () => {
       expect(rows.length).toBe(1);
     });
     expect(spy).toHaveBeenCalledWith(expect.objectContaining({ state: "LAPSED" }));
-    expect(screen.getByText(/1 of 1 in this state/)).toBeTruthy();
+    expect(screen.getByText(/1 of 1 shown/)).toBeTruthy();
     // The LAPSED row is a blocking finding, rendered as one — state and the
     // blocking bit both came from the server row.
     const lapsedRow = document.querySelector('tr[data-state="LAPSED"]');
@@ -186,18 +187,18 @@ describe("waivers — the register consumer", () => {
 
   it("keyset forward and back walk the register without losing the totals", async () => {
     render(<WaiversRegisterContainer api={createFixtureApi()} />);
-    await screen.findByText(/register total 8/);
+    await screen.findByRole("button", { name: /^8\s*All/ });
     const older = screen.getByRole("button", { name: "older →" });
     expect((screen.getByRole("button", { name: "← newer" }) as HTMLButtonElement).disabled).toBe(true);
     await act(async () => {
       fireEvent.click(older);
     });
-    expect(await screen.findByText(/3 of 8 in this state/)).toBeTruthy();
+    expect(await screen.findByText(/3 of 8 shown/)).toBeTruthy();
     expect((screen.getByRole("button", { name: "← newer" }) as HTMLButtonElement).disabled).toBe(false);
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "← newer" }));
     });
-    expect(await screen.findByText(/5 of 8 in this state/)).toBeTruthy();
+    expect(await screen.findByText(/5 of 8 shown/)).toBeTruthy();
   });
 
   it("every row links its source decision through the gate's own route", async () => {

@@ -157,3 +157,13 @@ Chưa làm: ghi baseline hình (chờ Bobby duyệt hình); Exit review ok-path 
 | Request mới | một cột form + một cột "What happens next" (3 mục, có số); Evidence run là menu chính; ids gập vào "Ids — edit by hand" (mở sẵn khi không có danh sách); một claim duy nhất hiện dạng thẻ chỉ-đọc; lý do khoá một câu ("Still needed: a methodology claim.") |
 
 Số liệu: frontend execution 2044 test pass (122 file); preview web rebuild, 0 tràn ngang ở 1280/660.
+
+## 13. Vòng sáu — bỏ thanh vàng, một thẻ "không có gì", chip thay hộp chọn (2026-10-12)
+
+| Bobby chỉ ra | Làm |
+|---|---|
+| Thanh vàng "RETAINED REVIEW" ở mỗi màn không phù hợp, có thể bỏ | **Bỏ khỏi mọi màn.** Trạng thái retained giờ là **một chấm/pill trong top bar**, chỉ hiện trên route Execution của stack retained (dưới 1500px chỉ còn chấm, để top bar không tràn); bấm mở panel nhỏ: nghĩa của chế độ, từng profile (giờ nguồn tách riêng, nullable), quyền của bạn, **Refresh**. Dấu STALE/PARTIAL từng panel vẫn ở từng panel. Handoff UDB-03 vẫn đủ: một lần đọc, không stream/poll, Refresh tường minh |
+| Waivers: nhiều chữ vô ích | tiêu đề "Waivers & conditions" + một dòng phụ; bỏ kicker, chip "0 OPEN", câu schema, "click a row…", dải đếm lặp, câu chân trang (thành tooltip trên "Register"); bảng rỗng → thẻ "No conditions / Nothing is on the register."; chỉ hiện bảng + phân trang khi có dòng; "Updated 05:44 UTC" gọn |
+| Exit review không tồn tại | một thẻ: biểu tượng, "No exit review to show", **một câu lý do**, nút "Back to the Inbox", "Why?" gập (câu ai ghi bản ghi + màn này sẽ hiện gì); bỏ kicker, bỏ câu "No decision can be taken…" trùng. Cùng thẻ cho R1/R2/Live/Incident/Canary/Certification/Workbench (`EmptyRecordFrame` → `QuietEmpty`) |
+| Hộp chọn nên đẹp/sáng tạo hơn | **Inbox: bộ lọc cổng thành chip có chấm màu** (R1 · R2 · Paper · Sandbox · Live · Exit) — một cú bấm để lọc, bấm lại để bỏ, thay cho dropdown; **Request mới: `ChoiceMenu` biến thể "field"** — trigger và option hai dòng (tên alpha + `rrun_… · ngày`), chấm trạng thái (xanh = có claim, xám = chưa), lọc khi gõ |
+| Ghi chú | `QuietEmpty` dùng chung (Inbox, Waivers, các màn vắng record); test mới: retained pill (3), QuietEmpty qua test cũ đã cập nhật; 2047 test execution pass |

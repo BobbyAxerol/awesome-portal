@@ -9,8 +9,10 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "rea
 export interface ChoiceOption {
   value: string;
   label: string;
-  /** A second, quieter line (a date, a count). */
+  /** A second, quieter line (a date, an id). */
   hint?: string;
+  /** A small mark before the label (a status dot). */
+  icon?: ReactNode;
 }
 
 export function ChoiceMenu({
@@ -24,6 +26,7 @@ export function ChoiceMenu({
   prefix,
   className = "",
   title,
+  variant = "pill",
 }: {
   /** The accessible name — what the control chooses. */
   label: string;
@@ -38,6 +41,8 @@ export function ChoiceMenu({
   prefix?: ReactNode;
   className?: string;
   title?: string;
+  /** `pill` is a compact filter control; `field` is a full-width form field whose trigger and options carry a second line. */
+  variant?: "pill" | "field";
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -92,7 +97,7 @@ export function ChoiceMenu({
   };
 
   return (
-    <div className={`exec-cm ${className}`.trim()} ref={root} data-open={open ? "true" : undefined}>
+    <div className={`exec-cm ${className}`.trim()} ref={root} data-open={open ? "true" : undefined} data-variant={variant}>
       <button
         type="button"
         className="exec-cm-trigger"
@@ -107,7 +112,11 @@ export function ChoiceMenu({
         onKeyDown={(e) => { if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) { e.preventDefault(); setOpen(true); } }}
       >
         {prefix ? <span className="exec-cm-prefix">{prefix}</span> : null}
-        <span className="exec-cm-value">{chosen ? chosen.label : placeholder}</span>
+        {variant === "field" && chosen?.icon ? <span className="exec-cm-icon" aria-hidden="true">{chosen.icon}</span> : null}
+        <span className="exec-cm-value">
+          {chosen ? chosen.label : placeholder}
+          {variant === "field" && chosen?.hint ? <span className="exec-cm-sub">{chosen.hint}</span> : null}
+        </span>
         <svg className="exec-cm-chevron" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>
       {open ? (
@@ -126,8 +135,11 @@ export function ChoiceMenu({
                 onMouseEnter={() => setActive(i)}
                 onClick={() => choose(o.value)}
               >
-                <span className="exec-cm-opt-label">{o.label}</span>
-                {o.hint ? <span className="exec-cm-opt-hint">{o.hint}</span> : null}
+                {o.icon ? <span className="exec-cm-icon" aria-hidden="true">{o.icon}</span> : null}
+                <span className="exec-cm-opt-text">
+                  <span className="exec-cm-opt-label">{o.label}</span>
+                  {o.hint ? <span className="exec-cm-opt-hint">{o.hint}</span> : null}
+                </span>
                 {o.value === value ? <span className="exec-cm-tick" aria-hidden="true">✓</span> : null}
               </li>
             ))}
