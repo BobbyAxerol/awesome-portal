@@ -53,7 +53,7 @@ import type { ProgressRead } from "./progressClient";
 import { retainedReadiness } from "./retainedLane";
 import { SplitBandNote, retainedSplitBand, type SplitBandSlot } from "./SplitBand";
 import { ACROSS_HELP, ACROSS_LABEL, pageRefusalWords, usePlayAcrossFolds, type PlayAcross } from "./usePlayAcrossFolds";
-import { RETAINED_WINDOW_MAX, type ChildAuditSlot, type ReplayController, type RetainedReplaySlot, type TransitionsSlot } from "./useReplay";
+import { foldWindowLimit, type ChildAuditSlot, type ReplayController, type RetainedReplaySlot, type TransitionsSlot } from "./useReplay";
 import { ChildAuditCompanionPanel } from "./ChildAuditCompanionPanel";
 import { iso } from "./utcMinute";
 
@@ -516,7 +516,7 @@ function useReplayRegion(o: {
 }
 
 /** Bars of earlier windows kept on the chart while play across folds runs. */
-const TRAIL_BARS_MAX = 600;
+const TRAIL_BARS_MAX = 4_000;
 /** §58: what the separator says about a fold boundary — only what the server published; a missing fact stays unsaid. */
 function boundaryWords(label: string, segment: FoldSegment | undefined, fact: NonNullable<CurrentSourceReplay["execution"]["fold_capital"]["boundaries"]>[number] | undefined): string {
   const parts = [`${label} begins`];
@@ -2196,7 +2196,7 @@ export function CandleReplayBody({
       return;
     }
     const owner = segments.find((candidate) => row.source_ordinal >= candidate.first_ordinal && row.source_ordinal <= candidate.last_ordinal);
-    if (owner && owner.bars <= RETAINED_WINDOW_MAX && controller.retainedFold) {
+    if (owner && foldWindowLimit(owner.bars, replay.replay.page.max_bars) >= owner.bars && controller.retainedFold) {
       pendingSeek.current = row.source_ordinal;
       controller.retainedFold(owner);
     } else {

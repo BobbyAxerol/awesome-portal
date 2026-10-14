@@ -161,8 +161,23 @@ export type TransitionsSlot =
   | { state: "ready"; ledger: ReplayTransitions; inFlight?: boolean }
   | { state: "refused"; message: string; mayRetry?: boolean };
 
-/** The largest window the retained lane serves; a fold longer than this pages. */
-export const RETAINED_WINDOW_MAX = 200;
+/** What a server that does not advertise `page.max_bars` has always served. */
+export const LEGACY_WINDOW_MAX = 200;
+
+/**
+ * The most bars this screen asks for in one read. Measured in Chromium (lightweight-charts, candles + 2 lines):
+ * setData 38–77 ms for 600–8,192 bars, a reveal tick 0.6 ms at 200 bars, 1.7 ms at 2,000, 5.2 ms at 8,192, memory flat.
+ * 2,000 keeps a tick under 2 ms and holds every real 168-bar fold whole; the server's own byte bound can shorten a read anyway.
+ */
+export const CLIENT_WINDOW_MAX = 2_000;
+
+/**
+ * Bars to request for one fold's window: the whole fold when it fits, never more than the server says it serves
+ * (`page.max_bars`, else the legacy 200) or than this screen draws. A fold that does not fit is read in cursor chunks.
+ */
+export function foldWindowLimit(bars: number, serverMax: number | null | undefined): number {
+  return Math.max(1, Math.min(bars, CLIENT_WINDOW_MAX, serverMax ?? LEGACY_WINDOW_MAX));
+}
 
 export function useReplay(
   runId: string,
@@ -291,7 +306,7 @@ export function useReplay(
           if (target) {
             setRetainedIntent({
               navigation: { kind: "at", token: target.start_cursor },
-              limit: Math.min(RETAINED_WINDOW_MAX, target.bars),
+              limit: foldWindowLimit(target.bars, answer.replay.page.max_bars),
             });
           }
         }
@@ -333,9 +348,10 @@ export function useReplay(
   const retainedPin = useCallback((playbackCursor: string) => {
     setRetainedIntent({ navigation: { kind: "at", token: playbackCursor }, limit: windowLimit });
   }, [windowLimit]);
+  const pageMaxBars = retainedPage?.max_bars ?? null;
   const retainedFold = useCallback((segment: FoldSegment) => {
-    setRetainedIntent({ navigation: { kind: "at", token: segment.start_cursor }, limit: Math.min(RETAINED_WINDOW_MAX, segment.bars) });
-  }, []);
+    setRetainedIntent({ navigation: { kind: "at", token: segment.start_cursor }, limit: foldWindowLimit(segment.bars, pageMaxBars) });
+  }, [pageMaxBars]);
   const retainedSeek = useCallback((playbackCursor: string) => {
     setRetainedIntent({ navigation: { kind: "at", token: playbackCursor }, limit: windowLimit });
   }, [windowLimit]);
