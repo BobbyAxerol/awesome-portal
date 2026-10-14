@@ -471,6 +471,10 @@ describe("D7 · the switch: off by default, a real switch, its label says it rea
     expect(m.ui.switch().disabled).toBe(true);
     expect(m.ui.switch().getAttribute("title")).toBe(ACROSS_FULL_WINDOW);
     expect(ACROSS_FULL_WINDOW).not.toMatch(/oos|hold/i);
+    /* The window switch is one "full sample" chip: no IS / OOS / holdout buttons, and the legend says the same. */
+    expect(m.container.querySelector("[data-window-switch='full-sample']")?.textContent).toBe("full sample");
+    expect(m.container.querySelector("[data-window='oos']")).toBeNull();
+    expect(m.container.querySelector("[data-overview-legend]")?.textContent).toContain("full sample");
   });
 });
 

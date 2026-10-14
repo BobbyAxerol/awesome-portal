@@ -960,6 +960,17 @@ function FoldStrip({
           stitched account{scrolls ? ` · ${capital.segments.length} folds` : ""}
         </span>
         {/* One control with the fold chain, same chip style: the window picks WHICH SPAN, the fold chips pick WHICH OOS SLICE. */}
+        {replay.execution.split_shape?.window_kind === "SINGLE_FULL_WINDOW" ? (
+          /* §58: train = test. One window, named as what it is — never an OOS or held-out slice. */
+          <span
+            className="mono rounded-[4px] border px-2 text-[10px] leading-[22px]"
+            style={{ borderColor: "var(--accent)", background: "var(--paper-sunken)", color: "var(--accent)" }}
+            title="Full sample — train equals test. This run has no held-out window."
+            data-window-switch="full-sample"
+          >
+            full sample
+          </span>
+        ) : (
         <span className="flex items-center gap-1" role="group" aria-label="window" data-window-switch={windowKey}>
           {EXEC_WINDOWS.map((key) => (
             <button
@@ -989,6 +1000,7 @@ function FoldStrip({
             </button>
           ))}
         </span>
+        )}
         <span aria-hidden="true" className="mono text-[10px]" style={{ color: "var(--line-strong)" }}>│</span>
         <div
           ref={strip}
@@ -1155,6 +1167,12 @@ function OverviewStrip({
       scope="whole run"
       label="whole-run price range with the IS, OOS and holdout windows"
       footer={
+        replay.execution.split_shape?.window_kind === "SINGLE_FULL_WINDOW" ? (
+          <span className="mono flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[9px]" style={{ color: "var(--ink-faint)" }} data-overview-legend data-legend-window="full-sample">
+            <i aria-hidden="true" className="inline-block h-[8px] w-[14px]" style={{ background: "var(--role-oos)", opacity: 0.5 }} />
+            full sample · train equals test
+          </span>
+        ) : (
         <span className="mono flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[9px]" style={{ color: "var(--ink-faint)" }} data-overview-legend>
           <span className="flex items-center gap-1" title={hasIs ? "IS — the active fold's train window" : isFact ? `IS not drawn — ${isFact.reasonCode ?? "not published"}` : "IS — needs the split read"} data-legend-window="is">
             <i aria-hidden="true" className="inline-block h-[8px] w-[14px]" style={{ background: "repeating-linear-gradient(135deg, var(--viz-train) 0 2px, transparent 2px 5px)", border: "1px solid var(--viz-train)" }} />
@@ -1175,6 +1193,7 @@ function OverviewStrip({
             {holdoutCode ? <span data-reason-code={holdoutCode} className="sr-only">{holdoutCode}</span> : null}
           </span>
         </span>
+        )
       }
     />
   );
