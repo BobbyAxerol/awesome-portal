@@ -58,6 +58,7 @@ generate_and_compare openapi/research-search.openapi.json generated/research-sea
 generate_and_compare openapi/research-freeze.openapi.json generated/research-freeze.d.ts
 generate_and_compare openapi/research-replay.openapi.json generated/research-replay.d.ts
 generate_and_compare openapi/research-current-source.openapi.json generated/research-current-source.d.ts
+node tooling/generate-research-replay-continuity.mjs --check
 generate_and_compare openapi/research-report.openapi.json generated/research-report.d.ts
 generate_and_compare openapi/research-attempt-lineage.openapi.json generated/research-attempt-lineage.d.ts
 generate_and_compare openapi/research-compare.openapi.json generated/research-compare.d.ts

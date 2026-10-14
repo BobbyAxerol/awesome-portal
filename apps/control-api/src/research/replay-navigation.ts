@@ -77,14 +77,21 @@ function foldWindow(window: "IS" | "OOS", folds: readonly ReplayRetainedFold[]):
     availability: bars !== null ? available : absent("REPLAY_RETAINED_FOLD_BAR_COUNTS_NOT_PUBLISHED") };
 }
 export function replayNavigation(identity: ReplayIdentity, analysis?: ResearchEnrichedAnalysis, folds?: readonly ReplayRetainedFold[],
-  completedCustody?: WindowExecutionManifest["source"]) {
+  completedCustody?: WindowExecutionManifest["source"], fullSample = false) {
   const facts = { identity,
     is_window: folds ? foldWindow("IS", folds) : declaredWindow("IS", analysis),
     oos_window: folds ? foldWindow("OOS", folds) : declaredWindow("OOS", analysis),
     holdout_window: folds ? noWindow("HOLDOUT", "REPLAY_HOLDOUT_NOT_EXPOSED") : declaredWindow("HOLDOUT", analysis) };
   // Only the completed-run repository may supply this verified P05 companion.
   // Source counts/curves never grant execution access before completion.
-  if(completedCustody?.protocol === "three_window_decay") {
+  if (fullSample) {
+    // Mode5 trains/selects on the same full sample. The separately served
+    // split_shape owns that span; old selectors must not call it held-out OOS.
+    for (const [key, role] of [["is_window", "IS"], ["oos_window", "OOS"], ["holdout_window", "HOLDOUT"]] as const) {
+      facts[key] = { ...noWindow(role, "FULL_SAMPLE_CALIBRATION_HAS_NO_INDEPENDENT_SPLIT_WINDOW"),
+        availability: { state: "NOT_APPLICABLE", reason_code: "FULL_SAMPLE_CALIBRATION_HAS_NO_INDEPENDENT_SPLIT_WINDOW" } };
+    }
+  } else if(completedCustody?.protocol === "three_window_decay") {
     for(const role of ["IS","OOS","HOLDOUT"] as const) {
       const d=completedCustody.windows.find(w=>w.window===role&&w.fold_id===null);
       if(d?.availability.state!=="AVAILABLE")continue;

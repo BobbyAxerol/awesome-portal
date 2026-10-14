@@ -4,6 +4,8 @@ import { Buffer } from "node:buffer";
 import { ResearchWindowExecutionService } from "./window-execution.service";
 import { selectedTrialPresentation } from "./selected-trial-presentation";
 import { replayNavigation, replayRequestedIdentity } from "./replay-navigation";
+import { REPLAY_MAX_BARS } from "./replay-continuity.contract";
+import { replayBoundaryFacts, replaySplitShape, replayWindowCursor } from "./replay-continuity";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { currentSourceWindowViews } from "./current-source-window-views";
 import { isCausalStageATrial } from "./causal-seal-consistency";
@@ -1066,11 +1068,31 @@ export class ResearchCurrentSourceService {
         if (!selection) throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Per-fold replay selection was not retained for an outer fold.", 503);
         return [fold.fold_id, selection] as const;
       })) : undefined;
+    const syntheticSelection = summary.optimizer_disclosure?.selection_target.kind === "SYNTHETIC_CENTROID";
+    const selectedTrialId = syntheticSelection ? null : summary.selection.trial_id;
+    const selectedTrial = !perFoldSelections && selectedTrialId
+      && typeof this.repository.rowBySourceId === "function"
+      ? await this.repository.rowBySourceId(scope, runId, seal.artifactRevision, "TRIAL", selectedTrialId, signal) : null;
+    const globalSelection = { trialId: selectedTrialId,
+      studyId: selectedTrial ? asTrial(selectedTrial).trial_facts?.study_id ?? null : null,
+      synthetic: syntheticSelection };
+    const execution = this.replayExecution(scope.workspaceId, runId, currentRevision, ledger, summary.source_facts ?? null,
+      Object.keys(summary.selection.parameters).length > 0 ? sha256ResearchJson(summary.selection.parameters) : null,
+      perFoldSelections);
+    const segments = execution.fold_capital.segments;
+    const splitShape = replaySplitShape(currentSourceRetainedMethod(seal.profileId, seal.sourceAdapterId), segments,
+      seal.tableRows.OBSERVATION, summary.optimizer_disclosure?.calibration_sample === "FULL_SAMPLE");
+    const replayPage = { ...this.page(scope.workspaceId, runId, currentRevision, "OBSERVATION", query.limit, page,
+      "research.current-source.replay.v1"), max_bars: REPLAY_MAX_BARS, byte_limited: false };
+    const resourceId = `research.current-source.replay.v1:${runId}:${currentRevision}:OBSERVATION`;
+    const fingerprint = queryFingerprint({ resourceId, limit: query.limit, filters: [], sort: [] });
+    const anchor = query.cursor ? { ordinal: this.decodeCursor(scope.workspaceId, resourceId, fingerprint, "after", query.cursor), direction: "after" as const }
+      : query.before ? { ordinal: this.decodeCursor(scope.workspaceId, resourceId, fingerprint, "before", query.before), direction: "before" as const } : undefined;
     const value = {
       schema_version: "research.current-source-replay.v1" as const,
       ...this.common("replay", seal, currentRevision),
       ...replayNavigation(replayRequestedIdentity(requested, seal.requestedSpecDigest), seal.enrichedAnalysis, replayFolds,
-        await this.windowExecution?.navigation(scope, runId, signal)),
+        await this.windowExecution?.navigation(scope, runId, signal), splitShape.window_kind === "SINGLE_FULL_WINDOW"),
       replay: {
         source_observation_count: seal.tableRows.OBSERVATION,
         rows: page.rows.map((row) => {
@@ -1088,7 +1110,8 @@ export class ResearchCurrentSourceService {
             playback_cursor: this.playbackCursor(scope.workspaceId, runId, currentRevision, "OBSERVATION", row.sourceOrdinal),
           };
         }),
-        page: this.page(scope.workspaceId, runId, currentRevision, "OBSERVATION", query.limit, page, "research.current-source.replay.v1"),
+        page: replayPage,
+        window_cursor: replayWindowCursor(segments, page.rows, replayPage, anchor),
         state_at_cursor: selected && selectedObservation ? {
           state: "AVAILABLE_RETAINED_MODEL_SAMPLE" as const,
           source_ordinal: selected.sourceOrdinal,
@@ -1110,13 +1133,24 @@ export class ResearchCurrentSourceService {
         },
       },
       route_capabilities: replayCapabilities(ledger, summary.source_facts ?? null),
-      execution: this.replayExecution(
-        scope.workspaceId, runId, currentRevision, ledger, summary.source_facts ?? null,
-        Object.keys(summary.selection.parameters).length > 0
-          ? sha256ResearchJson(summary.selection.parameters) : null,
-        perFoldSelections,
-      ),
+      execution: { ...execution, split_shape: splitShape, fold_capital: { ...execution.fold_capital,
+        boundaries: replayBoundaryFacts(segments, execution.fold_capital.policy, globalSelection) } },
     };
+    // 400 is a row ceiling, not permission to exceed the existing one-MiB
+    // envelope. Exact decimals/large sealed fold metadata may require a shorter
+    // page. Re-mint edges from the returned rows so nothing is skipped in either
+    // direction; keep the selected `at` row. No second DB/history scan.
+    let returned = page.rows;
+    while (Buffer.byteLength(JSON.stringify(value), "utf8") > RESPONSE_MAX_BYTES && returned.length > 1) {
+      const count = Math.max(1, Math.floor(returned.length / 2));
+      returned = query.before ? returned.slice(-count) : returned.slice(0, count);
+      value.replay.rows = query.before ? value.replay.rows.slice(-count) : value.replay.rows.slice(0, count);
+      const shortened = { ...page, rows: returned, hasMore: page.hasMore || !query.before,
+        hasPrevious: page.hasPrevious || Boolean(query.before) };
+      value.replay.page = { ...this.page(scope.workspaceId, runId, currentRevision, "OBSERVATION", query.limit, shortened,
+        "research.current-source.replay.v1"), max_bars: REPLAY_MAX_BARS, byte_limited: true };
+      value.replay.window_cursor = replayWindowCursor(segments, returned, value.replay.page, anchor);
+    }
     return this.valid(ResearchCurrentSourceReplayResponseSchema, value);
   }
 

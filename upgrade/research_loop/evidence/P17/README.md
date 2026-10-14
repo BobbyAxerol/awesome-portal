@@ -1,5 +1,12 @@
 # P17 backend and contract packet — route-aware current-source replay
 
+> **§58 backend addendum, 2026-10-14:** CG-RP-01…05 publish explicit Mode5
+> split shape, run-global forward/backward cursors, exact fold-boundary
+> selection/account-policy facts and a Replay-only 400-bar / 1-MiB ceiling.
+> [Contract delivery, test scope and Claude handoff](./CG_RP_01_05_REPLAY_CONTINUITY_2026-10-14.md).
+> No frontend design change or shared-preview activation; old source/RC/Report
+> pins remain unchanged. Consumer/browser acceptance is separate.
+
 > **Current integration acceptance (Codex, 2026-09-27):** incoming canonical
 > overview reconciled with the local producer/parent/legacy contracts. A real
 > P04 seals 168 OOS bars into 42 true-OHLC buckets; independent HMD oracle,

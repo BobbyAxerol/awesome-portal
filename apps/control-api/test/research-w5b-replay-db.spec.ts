@@ -185,6 +185,44 @@ describe("W5b · P17 replay ledger on PostgreSQL", () => {
     expect(Buffer.byteLength(JSON.stringify(body), "utf8")).toBeLessThan(1_048_576);
   });
 
+  it("§58: authenticated 400-bar SQL pages continue across folds, backwards too, with exact source identities", async () => {
+    const prefix = `/api/v1/quantbt/runs/${runId}/current-source/replay`;
+    const firstResponse = await get(`${prefix}?limit=400`);
+    expect(firstResponse.statusCode).toBe(200);
+    expect(firstResponse.headers["cache-control"]).toBe("private, no-store");
+    const first = firstResponse.json();
+    expect(first.replay.page).toMatchObject({ max_bars: 400, byte_limited: false });
+    expect(first.replay.rows).toHaveLength(400);
+    const secondResponse = await get(`${prefix}?limit=400&cursor=${encodeURIComponent(first.replay.window_cursor.next_window_cursor)}`);
+    expect(secondResponse.statusCode).toBe(200);
+    const second = secondResponse.json();
+    const thirdResponse = await get(`${prefix}?limit=400&cursor=${encodeURIComponent(second.replay.window_cursor.next_window_cursor)}`);
+    expect(thirdResponse.statusCode).toBe(200);
+    const third = thirdResponse.json();
+    expect(ResearchCurrentSourceReplayResponseSchema.safeParse(third).success).toBe(true);
+    expect(third.replay.window_cursor).toMatchObject({ crossed_fold_boundary: true, first_fold_id: "0", last_fold_id: "1", next_window_cursor: null });
+    expect([first, second, third].flatMap(p => p.replay.rows.map((r: any) => r.source_ordinal)))
+      .toEqual(real.rows.OBSERVATION.map(r => r.sourceOrdinal));
+    const backResponse = await get(`${prefix}?limit=400&before=${encodeURIComponent(third.replay.window_cursor.previous_window_cursor)}`);
+    expect(backResponse.statusCode).toBe(200);
+    expect(backResponse.json().replay.rows.map((r: any) => r.source_ordinal))
+      .toEqual(second.replay.rows.map((r: any) => r.source_ordinal));
+    expect(third.execution.split_shape).toMatchObject({ window_kind: "FOLD_WINDOWS", oos_applicable: true, independent_holdout: false });
+    const boundary = third.execution.fold_capital.boundaries[0];
+    expect(boundary).toMatchObject({ previous_fold_id: "0", fold_id: "1", params_digest_changed: false,
+      equity_start_policy: "CARRIED", position_start_policy: "CARRIED",
+      previous_end_equity: third.execution.fold_capital.segments[0].end_equity,
+      previous_selection: { selected_trial_id: (real.summary.selection as any).trial_id } });
+    const invalid = await get(`${prefix}?limit=401`);
+    expect(invalid.statusCode).toBe(400);
+    const changedLimit = await get(`${prefix}?limit=200&cursor=${encodeURIComponent(first.replay.window_cursor.next_window_cursor)}`);
+    expect(changedLimit.statusCode).toBe(400);
+    const journal = await get(`/api/v1/quantbt/runs/${runId}/current-source/replay/transitions?limit=201`);
+    expect(journal.statusCode).toBe(400);
+    // No compute is performed: only sealed SQL rows plus one selected-trial
+    // identity lookup. This test creates no engine jobs or source credentials.
+  });
+
   it("P17-T14: serves one fold's child audit by its original fold id, with an ETag", async () => {
     const response = await get(`/api/v1/quantbt/runs/${runId}/current-source/replay/child-audit?fold=1`);
     expect(response.statusCode).toBe(200);

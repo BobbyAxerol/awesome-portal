@@ -9238,3 +9238,28 @@ lineage-set mismatch regression run once in the ordinary delivery hook.
 CG-GOV-01 backend delivery is the commit containing this entry; FE mapping and
 positive shared-preview browser lanes remain OPEN. No FE design edit, migration,
 new rights, runtime rebuild, upstream activation, remote push or dev/main/release.
+
+### P17 / queue §58 — Explicit split, continuous Replay and boundary facts (2026-10-14)
+
+Codex implements CG-RP-01…05 on `docs/research-loop-plan`; concurrent Claude
+`0c1a6e42` preserved, no FE source/design edits. Backend delivery SHA is the
+normal-hook commit containing this entry.
+[Receipt and Claude handoff](./research_loop/evidence/P17/CG_RP_01_05_REPLAY_CONTINUITY_2026-10-14.md)
+· [request ledger §58](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#58--s08-execute-replay-continuous-cross-fold-play-mode-5-shape-boundary-facts-claude--codex-2026-10-14).
+
+- Exact served Mode5 `SINGLE_FULL_WINDOW` + full-sample ordinal span, no held-out
+  OOS/Holdout. Known other protocols retain fold windows; legacy absence typed.
+- Signed run-global next/previous page cursors and boundary crossing facts;
+  exact adjacent selected-parameter hashes/trial/study + retained account-policy
+  carry/reset/close facts. Chart appending does not imply account carry.
+- Replay-only max400 bars, existing1MiB cap; byte-limited windows preserve edge
+  continuity. Generic Search/journal limits remain200. Source/RC/Report revision
+  pins unchanged; no source/artifact mutation, migration or engine recompute.
+- Zod/OpenAPI/generated types, labelled synthetic fixtures and focused68backend /
+  4contract tests PASS; Replay24/24 after the full-reader Mode5 test. Disposable
+  PostgreSQL/authenticated API, build/restore/contracts run in one ordinary
+  coherent commit hook, not a new preview/engine/load/visual campaign.
+
+**Remaining owner: Claude** consumes additive fields/cursors and supplies the
+affected component/browser receipt while retaining chart/clipping/UI. Runtime
+preview rebuild/activation, product/owner acceptance and release are not claimed.

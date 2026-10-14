@@ -1,0 +1,10 @@
+{
+  "schema_version": "research.replay-split-shape.v1",
+  "state": "AVAILABLE",
+  "reason_code": null,
+  "window_kind": "SINGLE_FULL_WINDOW",
+  "oos_applicable": false,
+  "independent_holdout": false,
+  "ordinal_basis": "SEALED_ACCOUNT_OBSERVATION_ORDINALS",
+  "windows": [{ "fold_id": "full", "window": "FULL_SAMPLE", "first_ordinal": 0, "last_ordinal": 31, "bars": 32 }]
+}

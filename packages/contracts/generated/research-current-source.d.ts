@@ -160,6 +160,89 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Replay-only ceiling. May return fewer rows under the one-MiB envelope (byte_limited=true). Cursors bind the requested limit, not the returned count. Other readers retain their own 200-row caps. */
+        ReplayPage: {
+            limit: number;
+            next_cursor: components["schemas"]["OpaqueCursor"] | null;
+            prev_cursor: components["schemas"]["OpaqueCursor"] | null;
+            has_more: boolean;
+            has_previous: boolean;
+            /** @constant */
+            order: "SOURCE_TABLE_ORDINAL_ASC";
+            /** @constant */
+            max_bars?: 400;
+            byte_limited?: boolean;
+        };
+        /** @description Continue the run-global dense sealed observation relation using cursor=next_window_cursor or before=previous_window_cursor. Pages may span folds. next/previous_fold_id are the owners of the immediately adjacent bar, possibly the same fold; null also covers preparatory/unassigned bars. crossed_fold_boundary covers boundaries inside this page and the incoming cursor edge. Neither ordinal nor this presentation order asserts wall-clock density or cross-stream causal order. */
+        ReplayWindowCursor: {
+            /** @constant */
+            schema_version: "research.replay-window-cursor.v1";
+            /** @enum {string} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: string | null;
+            /** @constant */
+            order: "SOURCE_TABLE_ORDINAL_ASC";
+            crossed_fold_boundary: boolean | null;
+            first_fold_id: string | null;
+            last_fold_id: string | null;
+            next_fold_id: string | null;
+            previous_fold_id: string | null;
+            next_window_cursor: string | null;
+            previous_window_cursor: string | null;
+        } & unknown;
+        /** @description Read-side comparison of immutable selected-parameter digests, not proof of the replay child's runtime binding. Previous end values are retained observation facts, not invented reset starting capital. Carry/reset/close semantics come only from the source fold account policy; missing identities or policies remain typed. start_basis names an observed baseline and alone does not imply carry. */
+        ReplayBoundaryFact: {
+            previous_fold_id: string;
+            fold_id: string;
+            first_ordinal: number;
+            params_digest_changed: boolean | null;
+            params_digest_reason_code: string | null;
+            /** @constant */
+            comparison_basis: "SEALED_SELECTED_PARAMETERS_NOT_RUNTIME_BINDING";
+            previous_selection: {
+                params_digest: string | null;
+                selected_trial_id: string | null;
+                study_id: string | null;
+                selected_trial_reason_code: string | null;
+                study_reason_code: string | null;
+            } & (unknown & unknown);
+            selection: {
+                params_digest: string | null;
+                selected_trial_id: string | null;
+                study_id: string | null;
+                selected_trial_reason_code: string | null;
+                study_reason_code: string | null;
+            } & (unknown & unknown);
+            previous_end_equity: string;
+            previous_end_position: string;
+            /** @enum {string} */
+            start_basis: "PREVIOUS_OBSERVATION" | "FIRST_WINDOW_OBSERVATION";
+            /** @enum {string} */
+            equity_start_policy: "CARRIED" | "RESET" | "NOT_ASSERTED";
+            /** @enum {string} */
+            position_start_policy: "CARRIED" | "RESET_FLAT" | "CLOSED_AT_BOUNDARY" | "NOT_ASSERTED";
+            carry_policy_reason_code: string | null;
+        } & (unknown & unknown & unknown);
+        ReplaySplitShape: {
+            /** @constant */
+            schema_version: "research.replay-split-shape.v1";
+            /** @enum {string} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: string | null;
+            window_kind: ("FOLD_WINDOWS" | "SINGLE_FULL_WINDOW") | null;
+            oos_applicable: boolean | null;
+            independent_holdout: boolean | null;
+            /** @constant */
+            ordinal_basis: "SEALED_ACCOUNT_OBSERVATION_ORDINALS";
+            windows: {
+                fold_id: string;
+                /** @enum {string} */
+                window: "OOS" | "FULL_SAMPLE";
+                first_ordinal: number;
+                last_ordinal: number;
+                bars: number;
+            }[];
+        } & (unknown & unknown & unknown);
         PrunedTrialMetric: {
             value: null;
             /** @constant */
@@ -4182,7 +4265,7 @@ export interface components {
             replay: {
                 source_observation_count: number;
                 rows: components["schemas"]["Observation"][];
-                page: components["schemas"]["Page"];
+                page: components["schemas"]["ReplayPage"];
                 state_at_cursor: {
                     /** @enum {string} */
                     state: "NOT_SELECTED" | "AVAILABLE_RETAINED_MODEL_SAMPLE";
@@ -4195,6 +4278,7 @@ export interface components {
                     semantics: "NO_SELECTED_PLAYHEAD" | "RESEARCH_MODEL_SAMPLE_NOT_BROKER_EXECUTION_STATE";
                     availability: components["schemas"]["Availability"];
                 };
+                window_cursor?: components["schemas"]["ReplayWindowCursor"];
             };
             route_capabilities: {
                 model_positions: components["schemas"]["Fact"];
@@ -4604,6 +4688,7 @@ export interface components {
                     gap_bars: number | null;
                     policy: string | null;
                 }[];
+                boundaries?: components["schemas"]["ReplayBoundaryFact"][];
             };
             candle_overview: {
                 source_bar_count: number;
@@ -4649,6 +4734,7 @@ export interface components {
                 /** @constant */
                 cross_stream_order: "NOT_ASSERTED";
             };
+            split_shape?: components["schemas"]["ReplaySplitShape"];
         };
         TransitionRow: {
             /** @description Original bar ordinal; sparse across transitions, never renumbered. */
@@ -4806,6 +4892,7 @@ export interface components {
         };
     };
     parameters: {
+        ReplayLimit: number;
         RunId: components["schemas"]["RunId"];
         WorkspaceId: components["schemas"]["WorkspaceId"];
         /** @description Same-origin CSRF proof for the explicit what-if action. */
@@ -5033,7 +5120,7 @@ export interface operations {
                 before?: components["parameters"]["Before"];
                 /** @description Opaque playhead minted by this exact run/revision/relation. */
                 at?: components["parameters"]["At"];
-                limit?: components["parameters"]["Limit"];
+                limit?: components["parameters"]["ReplayLimit"];
             };
             header?: never;
             path: {

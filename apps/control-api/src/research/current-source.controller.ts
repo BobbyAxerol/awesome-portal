@@ -7,7 +7,7 @@ import { SessionGuard } from "../facade/session.guard";
 import { WorkspacesRepository } from "../repos/workspaces";
 import {
   ResearchCurrentSourceEvidenceSeriesQuerySchema,
-  ResearchCurrentSourcePageQuerySchema,
+  ResearchCurrentSourceReplayQuerySchema,
   ResearchCurrentSourceReadQuerySchema,
   ResearchCurrentSourceRunIdSchema,
   ResearchCurrentSourceSearchQuerySchema,
@@ -77,7 +77,7 @@ export class ResearchCurrentSourceController {
   @Get(":runId/current-source/replay")
   async replay(@Req() request: CurrentSourceRequest, @Res() reply: FastifyReply, @Param("runId") rawRunId: string, @Query() rawQuery: unknown) {
     const runId = this.runId(rawRunId);
-    const query = this.parse(ResearchCurrentSourcePageQuerySchema, rawQuery);
+    const query = this.parse(ResearchCurrentSourceReplayQuerySchema, rawQuery);
     const scope = await this.scope(request, query.workspace_id);
     // Cursor-bearing pages must not get a 304 that reuses a possibly expired
     // token. A full refetch remains cheap/bounded and is the correct renewal.

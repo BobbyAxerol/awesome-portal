@@ -101,6 +101,7 @@ cp -a "${ROOT_DIR}/apps/portal/registry/research-execution-recipes.v1.json" \
   "${WORKSPACE_DIR}/apps/portal/registry/"
 cp -a "${ROOT_DIR}/apps/control-api/src/research/execution-recipes.generated.ts" \
   "${ROOT_DIR}/apps/control-api/src/research/window-execution.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/research/replay-continuity.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/research/"
 cp -a "${ROOT_DIR}/apps/portal/backend/src/portal_api/domain/research_execution_recipes_generated.py" \
   "${WORKSPACE_DIR}/apps/portal/backend/src/portal_api/domain/"

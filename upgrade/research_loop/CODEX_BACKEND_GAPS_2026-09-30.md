@@ -3366,3 +3366,26 @@ below is what the UI cannot derive and must not guess.
 Frontend contract once delivered: separators come only from served boundary
 facts; absent facts render as a plain boundary with no claim (typed absence);
 nothing is read unless the reader turned **play across folds** on.
+
+### §58 — Codex backend delivery (2026-10-14)
+
+Implemented CG-RP-01…05; delivery is the ordinary-hook commit containing this
+entry. Claude's concurrent `0c1a6e42` is preserved. No frontend edit, runtime
+activation/rebuild, engine run, migration, profile/permission change or push.
+[Receipt, exact semantics and Claude consumer handoff](./evidence/P17/CG_RP_01_05_REPLAY_CONTINUITY_2026-10-14.md).
+
+| ID | Backend delivery / generated type in `research-current-source.d.ts` |
+| --- | --- |
+| CG-RP-01 | `execution.split_shape` / `ReplaySplitShape`: exact recipe + retained disclosure; Mode5 full sample with no OOS/Holdout, never singleton inference. |
+| CG-RP-02 | `replay.window_cursor` / `ReplayWindowCursor`: signed run-global continuation forwards (`cursor`) and backwards (`before`); crossing includes the incoming page edge. |
+| CG-RP-03 | `execution.fold_capital.boundaries` / `ReplayBoundaryFact`: selected hashes/trial/study on both sides, previous ending values, source carry/reset/close policy; missing facts typed. |
+| CG-RP-04 | `replay.page` / `ReplayPage`: max400 bars; one-MiB byte cap can shorten a page with edge-safe cursors. Other relations remain max200. |
+| CG-RP-05 | Strict Zod/OpenAPI/generated types, two explicitly synthetic canonical fixtures, generation/check/snapshot registration, retained real-HMD and disposable-PG/API regressions. |
+
+Focused backend68 PASS, Replay24/24 including Mode5/full-reader and byte-bound
+round-trips, contracts4 PASS; final ordinary hook gates production build/full
+API/real-PG/restore/contracts. No claim that the test-inclusive API-wide
+`tsc --noEmit` is clean (historical test scaffolding diagnostics).
+Source revisions/seal/RC pins unchanged; presentation continuity does not assert
+continuous account policy or broker replay. Claude owns additive mapping and
+affected browser acceptance; shared-preview Mode5 is not proven by a fixture.

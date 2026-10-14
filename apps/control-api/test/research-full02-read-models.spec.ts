@@ -184,6 +184,10 @@ describe("FULL-02 exact retained semantics (unit only)", () => {
     const replay = await service.replay(scope,f.run_id,{ limit: 10 }) as any;
     expect(replay.execution.fold_capital.segments.map((segment: any) => segment.params_digest))
       .toEqual(f.rows.FOLD.map((row: any) => row.payload.fold_selection.params_digest));
+    expect(replay.execution.fold_capital.boundaries[0]).toMatchObject({ params_digest_changed: true,
+      previous_selection: { study_id: "0", selected_trial_id: "study_0.trial_0" },
+      selection: { study_id: "1", selected_trial_id: "study_1.trial_0" },
+      equity_start_policy: "CARRIED", position_start_policy: "CARRIED" });
     const audit = retainedFinalAudit(f.run_id,{ relationship: "PRIMARY" } as never,freeze,search,replay);
     expect(audit.audit_target_kind).toBe("PER_FOLD_PARAMETER_SELECTIONS");
     expect(audit.optimizer_reinvoked).toBe(false);

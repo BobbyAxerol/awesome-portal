@@ -23,6 +23,7 @@ import {
   ResearchCurrentSourceChildAuditQuerySchema,
   ResearchCurrentSourceTransitionsQuerySchema,
   ResearchCurrentSourcePageQuerySchema,
+  ResearchCurrentSourceReplayQuerySchema,
   type ResearchCurrentSourceNotApplicableResponse,
   type ResearchCurrentSourceReplayResponse,
   type ResearchCurrentSourceReplayTransitionsResponse,
@@ -33,6 +34,7 @@ import { CurrentSourceSummarySchema, currentSourceRowMatchesKind } from "../src/
 import type { CurrentSourceSealRow, CurrentSourceStoredRow } from "../src/research/current-source.repository";
 import { ResearchCurrentSourceService } from "../src/research/current-source.service";
 import { sha256ResearchJson } from "../src/research/preflight.service";
+import { executionRecipes } from "../src/research/execution-recipes";
 import { openApiValidator } from "./research-rf05-openapi";
 
 type Kind = "OBSERVATION" | "FOLD" | "TRIAL" | "CANDIDATE" | "SELECTION";
@@ -120,7 +122,7 @@ function memory(seal: CurrentSourceSealRow, tables: Partial<Record<Kind, Current
 }
 
 const realSeal = sealRow(real.summary, real.table_rows);
-const page = (query: Record<string, unknown> = {}) => ResearchCurrentSourcePageQuerySchema.parse(query);
+const page = (query: Record<string, unknown> = {}) => ResearchCurrentSourceReplayQuerySchema.parse(query);
 const ledgerQuery = (query: Record<string, unknown> = {}) => ResearchCurrentSourceTransitionsQuerySchema.parse(query);
 const replayValidator = openApiValidator("research-current-source.openapi.json", "Replay");
 const transitionsValidator = openApiValidator("research-current-source.openapi.json", "ReplayTransitions");
@@ -299,7 +301,8 @@ describe("P17-T14 · child audit keeps QuantBT's isolation records and original 
     expect([...seen].sort((a, b) => a - b)).toEqual(Array.from({ length: 12 }, (_, index) => index));
     /* A fold switch + audit read touches only sealed local rows: no compute, no run-state read. */
     expect(repository.runState).not.toHaveBeenCalled();
-    expect(repository.rowBySourceId).toHaveBeenCalledTimes(2);
+    expect(repository.rowBySourceId).toHaveBeenCalledTimes(3);
+    expect(repository.rowBySourceId.mock.calls.filter(call => call[3] === "TRIAL")).toHaveLength(1);
   });
 
   it("an unknown fold is a 404; a seal without the table is a typed absence", async () => {
@@ -402,6 +405,10 @@ function synthetic(n: number, transitionsAt: readonly number[], sameTimestamp: r
   }
   const summary = structuredClone(real.summary);
   summary.replay.totals = { ...summary.replay.totals, bars: n, transitions: count, bars_with_turnover: count, fee: String(fee) };
+  // The synthetic tape is a different single-fold account, not the two-fold
+  // real fixture's 720..1055 segment spans.
+  summary.replay.fold_segments = [{ ...summary.replay.fold_segments[0], fold_id: "0",
+    first_ordinal: 0, last_ordinal: n - 1, bars: n, transitions: count }];
   return { rows, seal: sealRow(summary, { ...real.table_rows, OBSERVATION: n }) };
 }
 
@@ -452,14 +459,101 @@ describe("P17-T11 · same-timestamp rows keep source order", () => {
 });
 
 describe("P17-T06 · server-side bounds", () => {
-  it("a page is capped at 200 rows and one response stays under 1 MiB with every bar block", async () => {
+  it("§58: Mode5 full sample is served by the complete reader, not inferred from a single fold", async () => {
+    const f = synthetic(32, []);
+    const disclosures = JSON.parse(readFileSync(resolve(process.env.PORTAL_CONTRACTS_DIR ?? join(__dirname, "../../../packages/contracts"),
+      "fixtures/research-full04-optimizer-disclosure.valid.json"), "utf8"));
+    const disclosure = disclosures.fixtures.find((r: any) => r.method === "mode5-global").optimizer_disclosure;
+    f.seal.summary.optimizer_disclosure = disclosure;
+    f.seal.summary.derived_scope = "FULL_SAMPLE_CALIBRATION_INCLUSIVE_V1";
+    // No fake Mode5 analytics: the inherited WFO metrics are not this scope.
+    for (const key of ["summary_analytics", "summary_analytics_v2", "enriched_analysis", "execution_observation"])
+      delete f.seal.summary[key];
+    const recipe = executionRecipes.find(r => r.public_profile.optimization_mode === "mode_5_full_robust"
+      && r.descriptor.schema_version === "research.full04-delta-profile.v1")!;
+    const pair = (recipe.descriptor as { current_source: { profile_id: string; source_adapter_id: string } }).current_source;
+    f.seal.profileId = pair.profile_id; f.seal.sourceAdapterId = pair.source_adapter_id;
+    const { service } = memory(f.seal, { ...real.rows, OBSERVATION: f.rows });
+    const value = await replay(service);
+    expect(value.execution.split_shape).toMatchObject({ state: "AVAILABLE", window_kind: "SINGLE_FULL_WINDOW",
+      oos_applicable: false, independent_holdout: false,
+      windows: [{ fold_id: "0", window: "FULL_SAMPLE", first_ordinal: 0, last_ordinal: 31, bars: 32 }] });
+    for (const window of [value.is_window, value.oos_window, value.holdout_window])
+      expect(window).toMatchObject({ availability: { state: "NOT_APPLICABLE", reason_code: "FULL_SAMPLE_CALIBRATION_HAS_NO_INDEPENDENT_SPLIT_WINDOW" }, segments: [] });
+    expect(value.execution.fold_capital.boundaries).toEqual([]);
+  });
+  it("Replay advertises 400 rows; other pages retain 200 and every response stays under 1 MiB", async () => {
     expect(ResearchCurrentSourcePageQuerySchema.safeParse({ limit: 201 }).success).toBe(false);
     expect(ResearchCurrentSourceTransitionsQuerySchema.safeParse({ limit: 201 }).success).toBe(false);
     const { service } = memory(realSeal, real.rows);
-    const value = await replay(service, { limit: 200 });
-    expect(value.replay.rows).toHaveLength(200);
+    const value = await replay(service, { limit: 400 });
+    expect(value.replay.rows).toHaveLength(400);
+    expect(value.replay.page).toMatchObject({ max_bars: 400, byte_limited: false });
     expect(Buffer.byteLength(JSON.stringify(value), "utf8")).toBeLessThan(1_048_576);
     expect(value.execution.candle_overview!.emitted_bucket_count).toBeLessThanOrEqual(160);
+  });
+
+  it("§58: forward/backward page cursors span every original ordinal without duplicates or gaps", async () => {
+    const { service, repository } = memory(realSeal, real.rows);
+    const pages: ResearchCurrentSourceReplayResponse[] = [];
+    let next: string | null = null;
+    do {
+      const value = await replay(service, { limit: 400, ...(next ? { cursor: next } : {}) });
+      pages.push(value);
+      expect(value.replay.window_cursor!.next_window_cursor).toBe(value.replay.page.next_cursor);
+      expect(value.replay.window_cursor!.previous_window_cursor).toBe(value.replay.page.prev_cursor);
+      next = value.replay.window_cursor!.next_window_cursor;
+    } while (next && pages.length < 10);
+    expect(next).toBeNull();
+    expect(pages.flatMap(p => p.replay.rows.map(r => r.source_ordinal))).toEqual(real.rows.OBSERVATION.map(r => r.sourceOrdinal));
+    const last = pages.at(-1)!;
+    expect(last.replay.window_cursor!.crossed_fold_boundary).toBe(true);
+    const middle = await replay(service, { before: last.replay.window_cursor!.previous_window_cursor!, limit: 400 });
+    const first = await replay(service, { before: middle.replay.window_cursor!.previous_window_cursor!, limit: 400 });
+    expect([...first.replay.rows, ...middle.replay.rows, ...last.replay.rows].map(r => r.source_ordinal))
+      .toEqual(real.rows.OBSERVATION.map(r => r.sourceOrdinal));
+    // At an exact edge the next page still reports crossing, even though its
+    // own rows all belong to the new fold.
+    const head = pages[0]!.execution.fold_capital.segments[0]!;
+    const fold0 = await replay(service, { at: head.start_cursor, limit: 168 });
+    const fold1 = await replay(service, { cursor: fold0.replay.window_cursor!.next_window_cursor!, limit: 168 });
+    expect(fold1.replay.rows[0]!.source_ordinal).toBe(head.last_ordinal + 1);
+    expect(fold1.replay.window_cursor).toMatchObject({ crossed_fold_boundary: true, first_fold_id: "1", last_fold_id: "1" });
+    const back = await replay(service, { before: fold1.replay.window_cursor!.previous_window_cursor!, limit: 168 });
+    const facts = (p: ResearchCurrentSourceReplayResponse) => p.replay.rows.map(({ playback_cursor: _renewable, ...r }) => r);
+    expect(facts(back)).toEqual(facts(fold0));
+    expect(back.replay.window_cursor!.crossed_fold_boundary).toBe(true);
+    await expect(service.replay(scope, real.run_id, page({ cursor: fold0.replay.page.next_cursor!, limit: 169 })))
+      .rejects.toMatchObject({ code: "RESEARCH_CURRENT_SOURCE_INVALID" });
+    await expect(service.replay({ ...scope, workspaceId: "different" }, real.run_id, page({ cursor: fold0.replay.page.next_cursor!, limit: 168 })))
+      .rejects.toMatchObject({ code: "RESEARCH_CURRENT_SOURCE_INVALID" });
+    expect(repository.observationSeries).not.toHaveBeenCalled();
+    expect(repository.runState).not.toHaveBeenCalled();
+  });
+
+  it("§58: byte-limited exact decimals keep correct cursor edges in both directions", async () => {
+    const rows = structuredClone(real.rows);
+    const huge = "8".repeat(96);
+    for (const row of rows.OBSERVATION) {
+      const p = row.payload as any;
+      for (const key of ["equity", "return_fraction", "accepted_position", "drawdown_fraction", "signal_target"]) p[key] = huge;
+      for (const key of ["fee", "turnover", "funding", "position_before"]) p.bar[key] = huge;
+      for (const key of ["open", "high", "low", "close", "volume"]) p.bar.candle[key] = huge;
+      for (const key of ["cumulative_fee", "cumulative_turnover", "cumulative_funding"]) p.bar.checkpoint[key] = huge;
+    }
+    const { service } = memory(realSeal, rows);
+    const first = await replay(service, { limit: 400 });
+    expect(first.replay.page.byte_limited).toBe(true);
+    expect(first.replay.rows.length).toBeLessThan(400);
+    expect(first.replay.rows[0]!.equity).toBe(huge);
+    expect(Buffer.byteLength(JSON.stringify(first))).toBeLessThanOrEqual(1_048_576);
+    const next = await replay(service, { cursor: first.replay.window_cursor!.next_window_cursor!, limit: 400 });
+    expect(next.replay.rows[0]!.source_ordinal).toBe(first.replay.rows.at(-1)!.source_ordinal + 1);
+    const back = await replay(service, { before: next.replay.window_cursor!.previous_window_cursor!, limit: 400 });
+    expect(back.replay.rows.map(({ playback_cursor: _renewable, ...r }) => r))
+      .toEqual(first.replay.rows.map(({ playback_cursor: _renewable, ...r }) => r));
+    expect(back.replay.page.has_more).toBe(true);
+    expect(Buffer.byteLength(JSON.stringify(back))).toBeLessThanOrEqual(1_048_576);
   });
 
   it("the overview keeps the run's extrema and every transition", async () => {

@@ -1,0 +1,39 @@
+{
+  "split_shape": {
+    "schema_version": "research.replay-split-shape.v1", "state": "AVAILABLE", "reason_code": null,
+    "window_kind": "FOLD_WINDOWS", "oos_applicable": true, "independent_holdout": false,
+    "ordinal_basis": "SEALED_ACCOUNT_OBSERVATION_ORDINALS",
+    "windows": [
+      { "fold_id": "outer_0", "window": "OOS", "first_ordinal": 0, "last_ordinal": 167, "bars": 168 },
+      { "fold_id": "outer_1", "window": "OOS", "first_ordinal": 168, "last_ordinal": 335, "bars": 168 }
+    ]
+  },
+  "boundaries": [{
+    "previous_fold_id": "outer_0", "fold_id": "outer_1", "first_ordinal": 168,
+    "params_digest_changed": true, "params_digest_reason_code": null,
+    "comparison_basis": "SEALED_SELECTED_PARAMETERS_NOT_RUNTIME_BINDING",
+    "previous_selection": {
+      "params_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "selected_trial_id": "study_0.trial_2", "study_id": "0",
+      "selected_trial_reason_code": null, "study_reason_code": null
+    },
+    "selection": {
+      "params_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "selected_trial_id": "study_1.trial_1", "study_id": "1",
+      "selected_trial_reason_code": null, "study_reason_code": null
+    },
+    "previous_end_equity": "20123.456789012345", "previous_end_position": "-0.03123",
+    "start_basis": "PREVIOUS_OBSERVATION", "equity_start_policy": "CARRIED",
+    "position_start_policy": "CARRIED", "carry_policy_reason_code": null
+  }],
+  "window_cursor": {
+    "schema_version": "research.replay-window-cursor.v1", "state": "AVAILABLE", "reason_code": null,
+    "order": "SOURCE_TABLE_ORDINAL_ASC", "crossed_fold_boundary": true,
+    "first_fold_id": "outer_0", "last_fold_id": "outer_1", "next_fold_id": null, "previous_fold_id": null,
+    "next_window_cursor": null, "previous_window_cursor": null
+  },
+  "page": {
+    "limit": 400, "max_bars": 400, "byte_limited": false, "next_cursor": null, "prev_cursor": null,
+    "has_more": false, "has_previous": false, "order": "SOURCE_TABLE_ORDINAL_ASC"
+  }
+}

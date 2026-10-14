@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { REPLAY_MAX_BARS, ReplaySplitShapeSchema, ReplayBoundaryFactSchema, ReplayWindowCursorSchema } from "./replay-continuity.contract";
 import { ResearchCurrentSourceWindowViewsSchema } from "./current-source-window-views";
 import {currentSourceRecipePairs} from "./execution-recipes";
 import { ResearchRunDeclarationSchema } from "./run-declaration.contract";
@@ -101,6 +102,13 @@ export const ResearchCurrentSourcePageQuerySchema = ResearchCurrentSourceReadQue
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["cursor"], message: "cursor, before and at are mutually exclusive" });
   }
 });
+
+/** §58: only Replay observations may use a larger bounded window. */
+export const ResearchCurrentSourceReplayQuerySchema = ResearchCurrentSourceReadQuerySchema.extend({
+  cursor: OpaqueCursorSchema.optional(), before: OpaqueCursorSchema.optional(), at: OpaqueCursorSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(REPLAY_MAX_BARS).default(100),
+}).strict().refine(v => [v.cursor, v.before, v.at].filter(x => x !== undefined).length <= 1,
+  "cursor, before and at are mutually exclusive");
 
 /** W3: the search ledger page query also accepts a fold filter. */
 export const ResearchCurrentSourceSearchQuerySchema = ResearchCurrentSourceReadQuerySchema.extend({
@@ -249,6 +257,8 @@ const FoldSegmentSchema = z.object({
  */
 export const ResearchCurrentSourceReplayExecutionSchema = z.object({
   schema_version: z.literal("research.current-source-replay-execution.v1"),
+  /** Additive for older consumers; newly served responses always publish it. */
+  split_shape: ReplaySplitShapeSchema.optional(),
   state: z.enum(["AVAILABLE", "NOT_RETAINED_LEGACY"]),
   reason_code: ReasonCodeSchema.nullable(),
   route: z.object({
@@ -296,6 +306,7 @@ export const ResearchCurrentSourceReplayExecutionSchema = z.object({
     equity_continuity: z.enum(["CONTINUOUS_ACROSS_FOLDS", "RESET_PER_FOLD", "NOT_ASSERTED"]),
     reason_code: ReasonCodeSchema.nullable(),
     segments: z.array(FoldSegmentSchema).max(256),
+    boundaries: z.array(ReplayBoundaryFactSchema).max(255).optional(),
     boundary_events: z.array(z.object({
       previous_fold_id: TokenSchema.nullable(),
       fold_id: TokenSchema.nullable(),
@@ -1032,8 +1043,10 @@ export const ResearchCurrentSourceReplayResponseSchema = CommonSchema.extend({
   schema_version: z.literal("research.current-source-replay.v1"),
   replay: z.object({
     source_observation_count: z.number().int().positive().max(2_000_000),
-    rows: z.array(ObservationSchema).max(200),
-    page: PageSchema,
+    rows: z.array(ObservationSchema).max(REPLAY_MAX_BARS),
+    page: PageSchema.extend({ limit: z.number().int().min(1).max(REPLAY_MAX_BARS),
+      max_bars: z.literal(REPLAY_MAX_BARS).optional(), byte_limited: z.boolean().optional() }),
+    window_cursor: ReplayWindowCursorSchema.optional(),
     state_at_cursor: z.object({
       state: z.enum(["NOT_SELECTED", "AVAILABLE_RETAINED_MODEL_SAMPLE"]),
       source_ordinal: z.number().int().nonnegative().max(2_000_000).nullable(),
