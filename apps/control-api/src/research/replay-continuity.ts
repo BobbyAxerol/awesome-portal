@@ -75,12 +75,16 @@ export function replayWindowCursor(segments: readonly Segment[], rows: readonly 
   const first = rows[0]?.sourceOrdinal, last = rows.at(-1)?.sourceOrdinal;
   const firstOwner = owner(first), lastOwner = owner(last);
   const known = segments.length > 0;
-  const anchorOwner = owner(anchor?.ordinal);
-  const edgeOwner = anchor?.direction === "before" ? lastOwner : firstOwner;
+  // A page can start with unassigned preparation bars yet contain several
+  // folds, or its incoming cursor can be in a gap before a fold. Check the
+  // retained boundary ordinals, not only endpoint ownership, in both directions.
+  const start = anchor?.direction === "after" ? anchor.ordinal : first;
+  const end = anchor?.direction === "before" ? anchor.ordinal : last;
+  const crossed = rows.length > 0 && start !== undefined && end !== undefined
+    && segments.slice(1).some(s => start < s.first_ordinal && s.first_ordinal <= end);
   return { schema_version: "research.replay-window-cursor.v1", state: known ? "AVAILABLE" : "NOT_PUBLISHED",
     reason_code: known ? null : "REPLAY_SEAL_PREDATES_FOLD_SPANS", order: "SOURCE_TABLE_ORDINAL_ASC",
-    crossed_fold_boundary: known ? firstOwner !== null && lastOwner !== null && firstOwner !== lastOwner
-      || anchorOwner !== null && edgeOwner !== null && anchorOwner !== edgeOwner : null,
+    crossed_fold_boundary: known ? crossed : null,
     first_fold_id: firstOwner, last_fold_id: lastOwner,
     next_fold_id: page.next_cursor && last !== undefined ? owner(last + 1) : null,
     previous_fold_id: page.prev_cursor && first !== undefined ? owner(first - 1) : null,

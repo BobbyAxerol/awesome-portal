@@ -9263,3 +9263,10 @@ normal-hook commit containing this entry.
 **Remaining owner: Claude** consumes additive fields/cursors and supplies the
 affected component/browser receipt while retaining chart/clipping/UI. Runtime
 preview rebuild/activation, product/owner acceptance and release are not claimed.
+
+**§58 delivery update:** main commit`647cec8b` passed ordinary API2,562/3opt-in
+SKIP, contracts343, production build/generated/restore gates; frontend `tsc -b`
+PASS without FE edits. A final backend-only boundary refinement (preparation
+prefix/incoming gap;6derivation and24Replay tests PASS) goes through its own
+normal commit hook. C4 snapshot/teardown is recorded in the linked receipt.
+CG-RP-01…05 backend DELIVERED; Claude's consumer/browser lane remains separate.

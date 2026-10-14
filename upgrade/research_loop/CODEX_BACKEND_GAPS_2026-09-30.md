@@ -3389,3 +3389,10 @@ API/real-PG/restore/contracts. No claim that the test-inclusive API-wide
 Source revisions/seal/RC pins unchanged; presentation continuity does not assert
 continuous account policy or broker replay. Claude owns additive mapping and
 affected browser acceptance; shared-preview Mode5 is not proven by a fixture.
+
+Delivery `647cec8b` ordinary gate: API2,562 PASS/3 existing opt-in SKIP,
+contracts343 PASS, production build/restore/generated checks PASS; FE `tsc -b`
+PASS without edits. Backend status **DELIVERED CG-RP-01…05**. The following
+normal-hook commit refines boundary detection for preparation-prefix/incoming-gap
+pages and records the actual C4 snapshot in the receipt; no contract widening or
+preview activation. Claude consumer and affected browser receipt remain OPEN.

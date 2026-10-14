@@ -109,6 +109,10 @@ make segmented/reset accounts one continuously compounded account.
   400-bar reads, incoming boundary crossing, backwards round-trip, far seek and
   changed-scope/limit rejection use those retained facts, not an engine rerun.
   Large exact-decimal tests force the byte cap and prove contiguous edge cursors.
+- Final review adds the preparation-prefix case: the first row has no fold
+  owner but a later boundary lies inside the page. Crossing checks actual
+  boundary ordinals, not only page endpoint ownership; the regression keeps
+  the prefix unassigned while correctly reporting the internal crossing.
 - A new authenticated API test repeats the cross-fold 400-bar/forward/backward
   checks on **disposable PostgreSQL**, retaining exact source identity. It runs
   with the normal root commit hook alongside the production build, contract
@@ -150,7 +154,33 @@ make segmented/reset accounts one continuously compounded account.
 
 Only the normal test scripts' exact disposable DB/container/network are created;
 their trap owns teardown, including failure. No preview stack, engine job,
-credential, market data, image or business volume is created/deleted by §58.
+credential, market data or business volume is created/deleted by §58. The root
+hook's existing offline gates may refresh their reusable local test image;
+this is not an application/runtime image build or release.
 Pre-gate root free space ~160 GiB/621 GiB (~25%); no disk-intensive app build.
 Post-hook read-only capacity/owned-resource snapshot is required before handoff.
 No broad pruning, cache/data cleanup, runner restart or volume deletion.
+
+### Ordinary-hook result and final boundary refinement
+
+Main delivery `647cec8b`: production build PASS; Control API **2,562 PASS /
+3 existing opt-in SKIP**, contracts **343 PASS**, generated/snapshot verification
+and PostgreSQL restore drill PASS. Private hook log:
+`/tmp/research-rp-delivery-hook.log`, SHA-256
+`996943b7a7297e2f4a67b7e280cb2c92b3fef4dcaa2356136b040f3fee46b08f`.
+Frontend `tsc -b` also PASS; no frontend file changed.
+
+The follow-up commit containing this paragraph finishes the preparation-prefix /
+incoming-gap crossing refinement described above. Focused derivations6/6 and
+complete Replay reader24/24 PASS, including retained ordinals600…999. Its normal
+commit hook remains mandatory too; no bypass or claim that the first gate tested
+the subsequent code. Contract/data/revision pins remain unchanged by this fix.
+
+C4 after the main hook: **NO_ACTION_NEEDED for owned test resources** — zero
+Control API test containers/networks and zero contract-owner-labelled containers
+remain. Root available171,886,120,960 bytes (~25.8%); C4's <30% observation is
+recorded, still above its20% build stop. Docker read-only inventory: images88.69GB,
+volumes31.44GB, build cache195.3GB. Reclaimable estimates are **not** deletion
+authority; no prune, runtime/rollback image, volume or runner mutation. Existing
+offline test image is retained/reused under normal gate policy, not a new app
+release. Final hook repeats the exact test scripts' bounded trap cleanup.

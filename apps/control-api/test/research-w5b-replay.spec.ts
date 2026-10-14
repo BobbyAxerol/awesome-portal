@@ -512,6 +512,9 @@ describe("P17-T06 · server-side bounds", () => {
     const first = await replay(service, { before: middle.replay.window_cursor!.previous_window_cursor!, limit: 400 });
     expect([...first.replay.rows, ...middle.replay.rows, ...last.replay.rows].map(r => r.source_ordinal))
       .toEqual(real.rows.OBSERVATION.map(r => r.sourceOrdinal));
+    const prefix = await replay(service, { at: middle.replay.rows[200]!.playback_cursor, limit: 400 });
+    expect(prefix.replay.rows[0]!.source_ordinal).toBe(600);
+    expect(prefix.replay.window_cursor).toMatchObject({ crossed_fold_boundary: true, first_fold_id: null, last_fold_id: "1" });
     // At an exact edge the next page still reports crossing, even though its
     // own rows all belong to the new fold.
     const head = pages[0]!.execution.fold_capital.segments[0]!;

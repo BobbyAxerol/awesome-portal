@@ -71,6 +71,14 @@ describe("CG-RP-01/03/05 served replay semantics", () => {
       .toMatchObject({ crossed_fold_boundary: true, first_fold_id: "outer_1" });
     expect(replayWindowCursor(segments, [{ sourceOrdinal: 167 }], page, { ordinal: 168, direction: "before" }))
       .toMatchObject({ crossed_fold_boundary: true, last_fold_id: "outer_0" });
+    const shifted = segments.map((s: any) => ({ ...s, first_ordinal: s.first_ordinal + 100, last_ordinal: s.last_ordinal + 100 }));
+    expect(replayWindowCursor(shifted, [{ sourceOrdinal: 50 }, { sourceOrdinal: 300 }], page))
+      .toMatchObject({ crossed_fold_boundary: true, first_fold_id: null, last_fold_id: "outer_1" });
+    const gapped = shifted.map((s: any, i: number) => i ? { ...s, first_ordinal: s.first_ordinal + 32, last_ordinal: s.last_ordinal + 32 } : s);
+    expect(replayWindowCursor(gapped, [{ sourceOrdinal: 300 }], page, { ordinal: 299, direction: "after" }))
+      .toMatchObject({ crossed_fold_boundary: true, first_fold_id: "outer_1" });
+    expect(replayWindowCursor(gapped, [{ sourceOrdinal: 299 }], page, { ordinal: 300, direction: "before" }))
+      .toMatchObject({ crossed_fold_boundary: true, last_fold_id: null });
     const absent = replayWindowCursor([], [{ sourceOrdinal: 0 }], page);
     expect(absent).toMatchObject({ state: "NOT_PUBLISHED", crossed_fold_boundary: null });
     ReplayWindowCursorSchema.parse(absent);
