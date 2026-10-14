@@ -9,7 +9,8 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import { performance } from "node:perf_hooks";
 import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -191,7 +192,7 @@ describe("W5b · P17 replay ledger on PostgreSQL", () => {
     expect(firstResponse.statusCode).toBe(200);
     expect(firstResponse.headers["cache-control"]).toBe("private, no-store");
     const first = firstResponse.json();
-    expect(first.replay.page).toMatchObject({ max_bars: 400, byte_limited: false });
+    expect(first.replay.page).toMatchObject({ max_bars: 8192, byte_limited: false });
     expect(first.replay.rows).toHaveLength(400);
     const secondResponse = await get(`${prefix}?limit=400&cursor=${encodeURIComponent(first.replay.window_cursor.next_window_cursor)}`);
     expect(secondResponse.statusCode).toBe(200);
@@ -213,7 +214,7 @@ describe("W5b · P17 replay ledger on PostgreSQL", () => {
       equity_start_policy: "CARRIED", position_start_policy: "CARRIED",
       previous_end_equity: third.execution.fold_capital.segments[0].end_equity,
       previous_selection: { selected_trial_id: (real.summary.selection as any).trial_id } });
-    const invalid = await get(`${prefix}?limit=401`);
+    const invalid = await get(`${prefix}?limit=8193`);
     expect(invalid.statusCode).toBe(400);
     const changedLimit = await get(`${prefix}?limit=200&cursor=${encodeURIComponent(first.replay.window_cursor.next_window_cursor)}`);
     expect(changedLimit.statusCode).toBe(400);
@@ -222,6 +223,59 @@ describe("W5b · P17 replay ledger on PostgreSQL", () => {
     // No compute is performed: only sealed SQL rows plus one selected-trial
     // identity lookup. This test creates no engine jobs or source credentials.
   });
+
+  it("§59: authenticated large windows pack the actual 1056-bar HMD fixture and whole folds without loss", async () => {
+    const prefix = `/api/v1/quantbt/runs/${runId}/current-source/replay`;
+    const metrics: unknown[] = [];
+    for (const limit of [100, 200, 400, 800, 1056, 1600, 3200, 8192]) {
+      const times: number[] = [], byteCounts: number[] = [], rowCounts: number[] = [];
+      let shortened = 0;
+      const samples = process.env.REPLAY_FIXTURE_BENCH_OUTPUT ? 24 : 1;
+      for (let sample = 0; sample < samples; sample++) {
+        const start = performance.now(), response = await get(`${prefix}?limit=${limit}`);
+        expect(response.statusCode).toBe(200);
+        const body = response.json();
+        times.push(performance.now() - start);
+        byteCounts.push(Buffer.byteLength(response.body)); rowCounts.push(body.replay.rows.length);
+        shortened += Number(body.replay.page.byte_limited);
+        expect(Buffer.byteLength(response.body)).toBeLessThanOrEqual(1_048_576);
+        expect(body.replay.rows.length).toBeLessThanOrEqual(limit);
+      }
+      times.sort((a, b) => a - b);
+      metrics.push({ limit, samples, p50_ms: times[Math.ceil(samples * .5) - 1],
+        p95_ms: times[Math.ceil(samples * .95) - 1], payload_bytes_max: Math.max(...byteCounts),
+        returned_bars_min: Math.min(...rowCounts), byte_limited_rate: shortened / samples });
+    }
+    const first = (await get(`${prefix}?limit=8192`)).json();
+    expect(first.replay.page.byte_limited).toBe(true);
+    expect(first.replay.rows.length).toBeGreaterThan(400);
+    const sourceOrdinals: number[] = [], chunks = [];
+    let next: string | null = null;
+    do {
+      const response = await get(`${prefix}?limit=8192${next ? `&cursor=${encodeURIComponent(next)}` : ""}`);
+      expect(response.statusCode).toBe(200);
+      const body = response.json(); chunks.push(body);
+      sourceOrdinals.push(...body.replay.rows.map((r: any) => r.source_ordinal));
+      next = body.replay.page.next_cursor;
+    } while (next && chunks.length < 10);
+    expect(next).toBeNull();
+    expect(sourceOrdinals).toEqual(real.rows.OBSERVATION.map(r => r.sourceOrdinal));
+    for (const fold of first.execution.fold_capital.segments) {
+      const response = await get(`${prefix}?limit=${fold.bars}&at=${encodeURIComponent(fold.start_cursor)}`);
+      expect(response.statusCode).toBe(200);
+      expect(response.json().replay.page.byte_limited).toBe(false);
+      expect(response.json().replay.rows.map((r: any) => r.source_ordinal))
+        .toEqual(Array.from({ length: fold.bars }, (_, i) => fold.first_ordinal + i));
+    }
+    const last = chunks.at(-1)!;
+    const previous = await get(`${prefix}?limit=8192&before=${encodeURIComponent(last.replay.page.prev_cursor)}`);
+    expect(previous.statusCode).toBe(200);
+    expect(previous.json().replay.rows.at(-1).source_ordinal).toBe(last.replay.rows[0].source_ordinal - 1);
+    if (process.env.REPLAY_FIXTURE_BENCH_OUTPUT) writeFileSync(process.env.REPLAY_FIXTURE_BENCH_OUTPUT,
+      JSON.stringify({ scope: "DISPOSABLE_POSTGRES_AUTHENTICATED_FASTIFY_INJECT_REAL_HMD_FIXTURE_NOT_WAN",
+        source_run_id: real.run_id, observation_count: 1056, pages: chunks.length, metrics }, null, 2) + "\n",
+      { flag: "wx", mode: 0o600 });
+  }, 60_000);
 
   it("P17-T14: serves one fold's child audit by its original fold id, with an ETag", async () => {
     const response = await get(`/api/v1/quantbt/runs/${runId}/current-source/replay/child-audit?fold=1`);

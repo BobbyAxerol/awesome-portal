@@ -1,5 +1,12 @@
 # P17 backend and contract packet — route-aware current-source replay
 
+> **Latest §59 measurement addendum, 2026-10-14:** CG-RP-06…08 raise the
+> replay-only request ceiling to8,192 while keeping1MiB. Exact-byte packing
+> and a proven SQL upper bound retain all bars; full58,848/11,832 observation
+> chains PASS, final two-reader p95307/280ms. Whole folds use one read only
+> when both limits fit. [Measurements, test scope and Claude handoff](./CG_RP_06_08_REPLAY_WINDOW_MEASUREMENTS_2026-10-14.md).
+> This supersedes §58's400-bar ceiling only; no frontend/runtime activation.
+
 > **§58 backend addendum, 2026-10-14:** CG-RP-01…05 publish explicit Mode5
 > split shape, run-global forward/backward cursors, exact fold-boundary
 > selection/account-policy facts and a Replay-only 400-bar / 1-MiB ceiling.

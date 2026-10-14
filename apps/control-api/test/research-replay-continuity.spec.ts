@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ReplayBoundaryFactSchema, ReplaySplitShapeSchema, ReplayWindowCursorSchema } from "../src/research/replay-continuity.contract";
+import { REPLAY_MAX_BARS, ReplayBoundaryFactSchema, ReplaySplitShapeSchema, ReplayWindowCursorSchema } from "../src/research/replay-continuity.contract";
 import { replayBoundaryFacts, replaySplitShape, replayWindowCursor } from "../src/research/replay-continuity";
 import { ResearchCurrentSourcePageQuerySchema, ResearchCurrentSourceReplayQuerySchema } from "../src/research/current-source.contract";
 import { openApiValidator } from "./research-rf05-openapi";
@@ -83,10 +83,11 @@ describe("CG-RP-01/03/05 served replay semantics", () => {
     expect(absent).toMatchObject({ state: "NOT_PUBLISHED", crossed_fold_boundary: null });
     ReplayWindowCursorSchema.parse(absent);
   });
-  it("raises only Replay to 400; other relation pages and unscoped selector inputs remain rejected", () => {
+  it("§59 raises only Replay to the measured cap; other relation pages and unscoped selectors stay bounded", () => {
     expect(ResearchCurrentSourceReplayQuerySchema.parse({ limit: 400 }).limit).toBe(400);
+    expect(ResearchCurrentSourceReplayQuerySchema.parse({ limit: REPLAY_MAX_BARS }).limit).toBe(REPLAY_MAX_BARS);
     expect(ResearchCurrentSourcePageQuerySchema.safeParse({ limit: 201 }).success).toBe(false);
-    for (const query of [{ limit: 401 }, { limit: 0 }, { limit: 1.5 }, { fold_id: "0" }, { at_ordinal: 0 }])
+    for (const query of [{ limit: REPLAY_MAX_BARS + 1 }, { limit: 0 }, { limit: 1.5 }, { fold_id: "0" }, { at_ordinal: 0 }])
       expect(ResearchCurrentSourceReplayQuerySchema.safeParse(query).success).toBe(false);
   });
 });

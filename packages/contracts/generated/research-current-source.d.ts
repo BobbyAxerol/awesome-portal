@@ -160,7 +160,7 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description Replay-only ceiling. May return fewer rows under the one-MiB envelope (byte_limited=true). Cursors bind the requested limit, not the returned count. Other readers retain their own 200-row caps. */
+        /** @description Replay-only requested row ceiling, separate from the one-MiB logical JSON envelope. A full fold is one request only if both bounds fit; otherwise all bars remain accessible in contiguous signed cursor chunks. Cursors bind the requested limit, not SQL prefetch or the returned count. Other readers retain their own 200-row caps. */
         ReplayPage: {
             limit: number;
             next_cursor: components["schemas"]["OpaqueCursor"] | null;
@@ -169,8 +169,12 @@ export interface components {
             has_previous: boolean;
             /** @constant */
             order: "SOURCE_TABLE_ORDINAL_ASC";
-            /** @constant */
-            max_bars?: 400;
+            /**
+             * @description Admitted request ceiling, not a promise that this many wire rows fit. Request a full retained fold using its signed start_cursor and limit=fold.bars when within this ceiling.
+             * @constant
+             */
+            max_bars?: 8192;
+            /** @description True when the one-MiB logical JSON envelope shortened the requested window. Continue using the returned edges with the same requested limit; never infer end from rows.length. */
             byte_limited?: boolean;
         };
         /** @description Continue the run-global dense sealed observation relation using cursor=next_window_cursor or before=previous_window_cursor. Pages may span folds. next/previous_fold_id are the owners of the immediately adjacent bar, possibly the same fold; null also covers preparatory/unassigned bars. crossed_fold_boundary covers boundaries inside this page and the incoming cursor edge. Neither ordinal nor this presentation order asserts wall-clock density or cross-stream causal order. */

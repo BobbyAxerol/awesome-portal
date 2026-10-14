@@ -1,7 +1,8 @@
 /** §58: read-side facts only; never a new execution/accounting authority. */
 import { z } from "zod";
 
-export const REPLAY_MAX_BARS = 400;
+/** §59: bounded SQL input; the independent one-MiB wire cap can shorten it. */
+export const REPLAY_MAX_BARS = 8192;
 const Count = z.number().int().nonnegative().max(2_000_000);
 const Id = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/);
 const Digest = z.string().regex(/^[0-9a-f]{64}$/);

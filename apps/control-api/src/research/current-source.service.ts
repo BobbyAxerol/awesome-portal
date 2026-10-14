@@ -1052,7 +1052,17 @@ export class ResearchCurrentSourceService {
     const seal = await this.requireSeal(scope, runId, "replay", signal);
     if (!isSeal(seal)) return seal;
     const currentRevision = revision("replay", seal);
-    const page = await this.readPage(scope, runId, seal, "OBSERVATION", query, currentRevision, "research.current-source.replay.v1", signal);
+    // An upper bound, not an average-size estimate: every wire row contains
+    // these keys plus its signed cursor. Empty strings/zero/null deliberately
+    // UNDERSTATE all real values, and ordinal zero has the shortest token.
+    // Rows alone cannot fit more than this in one MiB, even before metadata.
+    // Avoid fetching thousands of rows that are mathematically unreturnable;
+    // retain the ORIGINAL requested limit in every cursor fingerprint.
+    const minimumRowBytes = Buffer.byteLength(JSON.stringify({ source_ordinal: 0, source_index_utc: "", at_utc_ms: 0,
+      equity: "", return_fraction: "", accepted_position: "", drawdown_fraction: "", signal_target: "", bar: null,
+      playback_cursor: this.playbackCursor(scope.workspaceId, runId, currentRevision, "OBSERVATION", 0) }), "utf8");
+    const readLimit = Math.min(query.limit, Math.max(1, Math.floor(RESPONSE_MAX_BYTES / minimumRowBytes)));
+    const page = await this.readPage(scope, runId, seal, "OBSERVATION", query, currentRevision, "research.current-source.replay.v1", signal, readLimit);
     assertDenseWindow(page.rows, seal.tableRows.OBSERVATION);
     const selectedOrdinal = this.selectedOrdinal(scope.workspaceId, runId, currentRevision, "OBSERVATION", query);
     const selected = selectedOrdinal === null ? null : page.rows.find((row) => row.sourceOrdinal === selectedOrdinal) ?? null;
@@ -1083,7 +1093,8 @@ export class ResearchCurrentSourceService {
     const splitShape = replaySplitShape(currentSourceRetainedMethod(seal.profileId, seal.sourceAdapterId), segments,
       seal.tableRows.OBSERVATION, summary.optimizer_disclosure?.calibration_sample === "FULL_SAMPLE");
     const replayPage = { ...this.page(scope.workspaceId, runId, currentRevision, "OBSERVATION", query.limit, page,
-      "research.current-source.replay.v1"), max_bars: REPLAY_MAX_BARS, byte_limited: false };
+      "research.current-source.replay.v1"), max_bars: REPLAY_MAX_BARS,
+      byte_limited: readLimit < query.limit && page.rows.length === readLimit && (query.before ? page.hasPrevious : page.hasMore) };
     const resourceId = `research.current-source.replay.v1:${runId}:${currentRevision}:OBSERVATION`;
     const fingerprint = queryFingerprint({ resourceId, limit: query.limit, filters: [], sort: [] });
     const anchor = query.cursor ? { ordinal: this.decodeCursor(scope.workspaceId, resourceId, fingerprint, "after", query.cursor), direction: "after" as const }
@@ -1095,21 +1106,7 @@ export class ResearchCurrentSourceService {
         await this.windowExecution?.navigation(scope, runId, signal), splitShape.window_kind === "SINGLE_FULL_WINDOW"),
       replay: {
         source_observation_count: seal.tableRows.OBSERVATION,
-        rows: page.rows.map((row) => {
-          const observation = asObservation(row);
-          return {
-            source_ordinal: row.sourceOrdinal,
-            source_index_utc: observation.source_index_utc,
-            at_utc_ms: observation.at_utc_ms,
-            equity: observation.equity,
-            return_fraction: observation.return_fraction,
-            accepted_position: observation.accepted_position,
-            drawdown_fraction: observation.drawdown_fraction,
-            signal_target: observation.signal_target,
-            bar: replayBar(observation.bar),
-            playback_cursor: this.playbackCursor(scope.workspaceId, runId, currentRevision, "OBSERVATION", row.sourceOrdinal),
-          };
-        }),
+        rows: [] as ResearchCurrentSourceReplayResponse["replay"]["rows"],
         page: replayPage,
         window_cursor: replayWindowCursor(segments, page.rows, replayPage, anchor),
         state_at_cursor: selected && selectedObservation ? {
@@ -1136,20 +1133,46 @@ export class ResearchCurrentSourceService {
       execution: { ...execution, split_shape: splitShape, fold_capital: { ...execution.fold_capital,
         boundaries: replayBoundaryFacts(segments, execution.fold_capital.policy, globalSelection) } },
     };
-    // 400 is a row ceiling, not permission to exceed the existing one-MiB
-    // envelope. Exact decimals/large sealed fold metadata may require a shorter
-    // page. Re-mint edges from the returned rows so nothing is skipped in either
-    // direction; keep the selected `at` row. No second DB/history scan.
-    let returned = page.rows;
-    while (Buffer.byteLength(JSON.stringify(value), "utf8") > RESPONSE_MAX_BYTES && returned.length > 1) {
-      const count = Math.max(1, Math.floor(returned.length / 2));
-      returned = query.before ? returned.slice(-count) : returned.slice(0, count);
-      value.replay.rows = query.before ? value.replay.rows.slice(-count) : value.replay.rows.slice(0, count);
+    // §59: pack exact serialized rows, not a half-empty page. SQL input is
+    // bounded separately; mint per-row HMACs and map at most one extra wire row
+    // after reaching the byte budget, even for a large requested fold. Traverse
+    // backwards from the anchor for `before`, then restore ascending order.
+    // Metadata with the original page edges is an exact baseline. Re-mint the
+    // shortened edges and recheck below (edge token lengths can differ).
+    const metadataBytes = Buffer.byteLength(JSON.stringify(value), "utf8");
+    let rowBytes = 0;
+    const wireRows: typeof value.replay.rows = [];
+    const orderedRows = query.before ? [...page.rows].reverse() : page.rows;
+    for (const row of orderedRows) {
+      const observation = asObservation(row);
+      const wireRow = {
+        source_ordinal: row.sourceOrdinal, source_index_utc: observation.source_index_utc,
+        at_utc_ms: observation.at_utc_ms, equity: observation.equity,
+        return_fraction: observation.return_fraction, accepted_position: observation.accepted_position,
+        drawdown_fraction: observation.drawdown_fraction, signal_target: observation.signal_target,
+        bar: replayBar(observation.bar),
+        playback_cursor: this.playbackCursor(scope.workspaceId, runId, currentRevision, "OBSERVATION", row.sourceOrdinal),
+      };
+      const bytes = Buffer.byteLength(JSON.stringify(wireRow), "utf8") + Number(wireRows.length > 0);
+      // Always retain at least the first/selected row; an impossible metadata
+      // or single-row budget fails through the normal typed response guard.
+      if (wireRows.length && metadataBytes + rowBytes + bytes > RESPONSE_MAX_BYTES) break;
+      wireRows.push(wireRow); rowBytes += bytes;
+    }
+    value.replay.rows = query.before ? wireRows.reverse() : wireRows;
+    let returned = query.before ? page.rows.slice(-wireRows.length) : page.rows.slice(0, wireRows.length);
+    const remintEdges = () => {
       const shortened = { ...page, rows: returned, hasMore: page.hasMore || !query.before,
         hasPrevious: page.hasPrevious || Boolean(query.before) };
       value.replay.page = { ...this.page(scope.workspaceId, runId, currentRevision, "OBSERVATION", query.limit, shortened,
         "research.current-source.replay.v1"), max_bars: REPLAY_MAX_BARS, byte_limited: true };
       value.replay.window_cursor = replayWindowCursor(segments, returned, value.replay.page, anchor);
+    };
+    if (returned.length !== page.rows.length) remintEdges();
+    while (Buffer.byteLength(JSON.stringify(value), "utf8") > RESPONSE_MAX_BYTES && returned.length > 1) {
+      returned = query.before ? returned.slice(1) : returned.slice(0, -1);
+      value.replay.rows = query.before ? value.replay.rows.slice(1) : value.replay.rows.slice(0, -1);
+      remintEdges();
     }
     return this.valid(ResearchCurrentSourceReplayResponseSchema, value);
   }
@@ -1576,6 +1599,7 @@ export class ResearchCurrentSourceService {
     currentRevision: string,
     operation: string,
     signal?: AbortSignal,
+    readLimit = query.limit,
   ): Promise<CurrentSourcePage> {
     const resourceId = `${operation}:${runId}:${currentRevision}:${tableKind}`;
     const fingerprint = queryFingerprint({ resourceId, limit: query.limit, filters: [], sort: [] });
@@ -1588,7 +1612,7 @@ export class ResearchCurrentSourceService {
       ...(afterOrdinal === undefined ? {} : { afterOrdinal }),
       ...(beforeOrdinal === undefined ? {} : { beforeOrdinal }),
       ...(atOrdinal === null ? {} : { atOrdinal }),
-      limit: query.limit,
+      limit: readLimit,
     }, signal);
   }
 

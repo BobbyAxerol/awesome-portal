@@ -482,15 +482,54 @@ describe("P17-T06 · server-side bounds", () => {
       expect(window).toMatchObject({ availability: { state: "NOT_APPLICABLE", reason_code: "FULL_SAMPLE_CALIBRATION_HAS_NO_INDEPENDENT_SPLIT_WINDOW" }, segments: [] });
     expect(value.execution.fold_capital.boundaries).toEqual([]);
   });
-  it("Replay advertises 400 rows; other pages retain 200 and every response stays under 1 MiB", async () => {
+  it("Replay advertises the measured cap; legacy 400-bar reads and other 200-row caps remain intact", async () => {
     expect(ResearchCurrentSourcePageQuerySchema.safeParse({ limit: 201 }).success).toBe(false);
     expect(ResearchCurrentSourceTransitionsQuerySchema.safeParse({ limit: 201 }).success).toBe(false);
     const { service } = memory(realSeal, real.rows);
     const value = await replay(service, { limit: 400 });
     expect(value.replay.rows).toHaveLength(400);
-    expect(value.replay.page).toMatchObject({ max_bars: 400, byte_limited: false });
+    expect(value.replay.page).toMatchObject({ max_bars: 8192, byte_limited: false });
     expect(Buffer.byteLength(JSON.stringify(value), "utf8")).toBeLessThan(1_048_576);
     expect(value.execution.candle_overview!.emitted_bucket_count).toBeLessThanOrEqual(160);
+  });
+
+  it("§59: a complete real fold is one signed seek, while the larger whole relation is byte-packed and contiguous", async () => {
+    const { service, repository } = memory(realSeal, real.rows);
+    const probe = await replay(service, { limit: 1 });
+    for (const fold of probe.execution.fold_capital.segments) {
+      const whole = await replay(service, { at: fold.start_cursor, limit: fold.bars });
+      expect(whole.replay.page.byte_limited).toBe(false);
+      expect(whole.replay.rows.map(r => r.source_ordinal))
+        .toEqual(Array.from({ length: fold.bars }, (_, i) => fold.first_ordinal + i));
+    }
+    const all: ResearchCurrentSourceReplayResponse[] = [];
+    let next: string | null = null;
+    do {
+      const body = await replay(service, { limit: 8192, ...(next ? { cursor: next } : {}) });
+      expect(Buffer.byteLength(JSON.stringify(body))).toBeLessThanOrEqual(1_048_576);
+      all.push(body); next = body.replay.page.next_cursor;
+    } while (next && all.length < 10);
+    expect(next).toBeNull();
+    expect(all[0]!.replay.page.byte_limited).toBe(true);
+    expect(all[0]!.replay.rows.length).toBeGreaterThan(400);
+    // Greedy packing uses the envelope; no half-size transport waste.
+    expect(Buffer.byteLength(JSON.stringify(all[0]))).toBeGreaterThan(1_040_000);
+    expect(all.flatMap(p => p.replay.rows.map(r => r.source_ordinal)))
+      .toEqual(real.rows.OBSERVATION.map(r => r.sourceOrdinal));
+    expect(repository.observationSeries).not.toHaveBeenCalled();
+    expect(repository.rows.mock.calls.filter(call => call[3] === "OBSERVATION")).toHaveLength(3 + all.length);
+    const sqlLimits = repository.rows.mock.calls.filter(call => call[3] === "OBSERVATION")
+      .map(call => call[4].limit);
+    expect(Math.max(...sqlLimits)).toBeGreaterThan(400);
+    expect(Math.max(...sqlLimits)).toBeLessThan(8192);
+    await expect(service.replay(scope, real.run_id, page({ cursor: all[0]!.replay.page.next_cursor!, limit: 8191 })))
+      .rejects.toMatchObject({ code: "RESEARCH_CURRENT_SOURCE_INVALID" });
+    const tail = all.at(-1)!;
+    const back = await replay(service, { before: tail.replay.page.prev_cursor!, limit: 8192 });
+    expect(back.replay.rows.at(-1)!.source_ordinal).toBe(tail.replay.rows[0]!.source_ordinal - 1);
+    expect(Buffer.byteLength(JSON.stringify(back))).toBeLessThanOrEqual(1_048_576);
+    const resumed = await replay(service, { cursor: back.replay.page.next_cursor!, limit: 8192 });
+    expect(resumed.replay.rows[0]!.source_ordinal).toBe(back.replay.rows.at(-1)!.source_ordinal + 1);
   });
 
   it("§58: forward/backward page cursors span every original ordinal without duplicates or gaps", async () => {

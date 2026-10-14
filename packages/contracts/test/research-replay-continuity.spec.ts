@@ -34,10 +34,11 @@ describe("§58 generated Replay contract", () => {
   });
   it("raises only the named observation Replay cap, leaves journal/Search/other readers untouched", () => {
     const multi = fixture("multifold");
-    expect(valid("ReplayPage", { ...multi.page, limit: 401 })).toBe(false);
+    expect(valid("ReplayPage", { ...multi.page, limit: 8192 })).toBe(true);
+    expect(valid("ReplayPage", { ...multi.page, limit: 8193 })).toBe(false);
     expect(valid("ReplayPage", { ...multi.page, max_bars: 200 })).toBe(false);
     expect(doc.components.parameters.Limit.schema.maximum).toBe(200);
-    expect(doc.components.parameters.ReplayLimit.schema.maximum).toBe(400);
+    expect(doc.components.parameters.ReplayLimit.schema.maximum).toBe(8192);
     const p = doc.paths["/api/v1/quantbt/runs/{runId}/current-source/replay"].get.parameters;
     expect(p).toContainEqual({ $ref: "#/components/parameters/ReplayLimit" });
     expect(doc.paths["/api/v1/quantbt/runs/{runId}/current-source/search"].get.parameters)

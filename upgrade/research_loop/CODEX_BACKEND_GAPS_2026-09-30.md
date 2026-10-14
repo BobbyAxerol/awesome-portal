@@ -3417,3 +3417,37 @@ Client half (Claude, after the numbers): replace the hard-coded 200 by
 of lightweight-charts with N bars (setData/redraw, marker overlay count, memory),
 and keep every read behind the reader's own switch. No preloading while
 play across folds is off.
+
+### §59 — Codex measurement lane (2026-10-14, owner approved)
+
+**IN_PROGRESS CG-RP-06…08.** Baseline `ac715e6a`; backend lane
+`codex/be-gaps`, eventual fast-forward landing only on `docs/research-loop-plan`.
+Measure 100/200/400 and larger requests against actual retained preview data,
+including the largest retained run (58,848 observations), plus the existing
+1,056-observation real-HMD fixture. Keep the one-MiB response ceiling,
+authorization, exact decimal strings, signed limit-bound bidirectional cursors
+and dense no-loss paging. Raise the replay-only row ceiling based on measured
+cost, not an arbitrary client trail. Whole-fold direct seek is allowed when
+that fold fits both the published row ceiling and byte budget. No frontend
+source/layout/baseline, engine rerun, production/dev/main, upstream connection
+or remote push. Preview SQL benchmarking enforces transaction read-only; the
+candidate reader runs from the lane, not by restarting the shared preview.
+
+### §59 — Delivery result / Claude handoff
+
+CG-RP-06…08 **BACKEND_IMPLEMENTED_AND_MEASURED**; delivered by the normal-hook
+commit containing [the complete packet](./evidence/P17/CG_RP_06_08_REPLAY_WINDOW_MEASUREMENTS_2026-10-14.md).
+`ReplayLimit` and generated `ReplayPage.max_bars`:8,192 requested;1MiB still
+binds returned rows. Whole real168-bar folds fit; actual2,160+bar folds require
+chunks. Final large-run request8,192 p95218ms, two readers307ms; all58,848 and
+11,832 ordinals traversed without gaps/duplicates. No SLO relaxation; initial
+520ms two-reader overfetch finding and its optimization remain in the packet.
+Example: request`limit=8192`, response`page.limit=8192,max_bars=8192,
+byte_limited=true`,856 actual rows/1,047,788B on the large run's first page.
+Cursor continuation keeps8192, not856. Other readers are not widened.
+
+Claude: consume served `max_bars` only after corresponding API build; full-fold
+seek when it fits, demand-driven chunks otherwise. Preserve approved charts;
+measure lightweight-charts trail/markers/memory separately rather than keeping
+an unmeasured600 or loading every page. Backend measurement is not FE/browser
+or deployment acceptance. No preview restart, engine job or remote push here.

@@ -60,7 +60,7 @@ const DisplayMode4SelectionSchema = CurrentSourceMode4SelectionSchema.extend(Sel
  * Read-side ceiling on retained TRIAL rows. The RS-02 seal still admits at
  * most 64 (current-source.repository.ts); only the research-preview long WFO
  * (FEATURE_RESEARCH_PREVIEW_LONG_WFO, AUTH_MODE=dev + PORTAL_ENV=local) seals
- * up to 400. A sealed artifact never exceeds what its own seal admitted.
+ * up to the measured replay-only cap. A sealed artifact never exceeds what its own seal admitted.
  */
 export const CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS = 6400;
 /**

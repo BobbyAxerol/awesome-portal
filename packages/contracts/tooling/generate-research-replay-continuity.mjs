@@ -66,9 +66,11 @@ export function amendReplayContinuity(original) {
   updates.ReplayBoundaryFact.description = "Read-side comparison of immutable selected-parameter digests, not proof of the replay child's runtime binding. Previous end values are retained observation facts, not invented reset starting capital. Carry/reset/close semantics come only from the source fold account policy; missing identities or policies remain typed. start_basis names an observed baseline and alone does not imply carry.";
   const page = updates.ReplayPage;
   page.properties.limit.maximum = schema.REPLAY_MAX_BARS;
-  page.properties.max_bars = { const: schema.REPLAY_MAX_BARS };
-  page.properties.byte_limited = { type: "boolean" };
-  page.description = "Replay-only ceiling. May return fewer rows under the one-MiB envelope (byte_limited=true). Cursors bind the requested limit, not the returned count. Other readers retain their own 200-row caps.";
+  page.properties.max_bars = { const: schema.REPLAY_MAX_BARS,
+    description: "Admitted request ceiling, not a promise that this many wire rows fit. Request a full retained fold using its signed start_cursor and limit=fold.bars when within this ceiling." };
+  page.properties.byte_limited = { type: "boolean",
+    description: "True when the one-MiB logical JSON envelope shortened the requested window. Continue using the returned edges with the same requested limit; never infer end from rows.length." };
+  page.description = "Replay-only requested row ceiling, separate from the one-MiB logical JSON envelope. A full fold is one request only if both bounds fit; otherwise all bars remain accessible in contiguous signed cursor chunks. Cursors bind the requested limit, not SQL prefetch or the returned count. Other readers retain their own 200-row caps.";
   const replay = updates.Replay.allOf.find(s => s.properties?.replay).properties.replay;
   replay.properties.rows.maxItems = schema.REPLAY_MAX_BARS;
   replay.properties.page = ref("ReplayPage");

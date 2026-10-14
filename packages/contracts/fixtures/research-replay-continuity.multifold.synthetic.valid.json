@@ -33,7 +33,7 @@
     "next_window_cursor": null, "previous_window_cursor": null
   },
   "page": {
-    "limit": 400, "max_bars": 400, "byte_limited": false, "next_cursor": null, "prev_cursor": null,
+    "limit": 400, "max_bars": 8192, "byte_limited": false, "next_cursor": null, "prev_cursor": null,
     "has_more": false, "has_previous": false, "order": "SOURCE_TABLE_ORDINAL_ASC"
   }
 }

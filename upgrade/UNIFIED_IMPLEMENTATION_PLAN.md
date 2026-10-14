@@ -9270,3 +9270,22 @@ PASS without FE edits. A final backend-only boundary refinement (preparation
 prefix/incoming gap;6derivation and24Replay tests PASS) goes through its own
 normal commit hook. C4 snapshot/teardown is recorded in the linked receipt.
 CG-RP-01…05 backend DELIVERED; Claude's consumer/browser lane remains separate.
+
+### P17 / queue §59 — Measured large Replay windows and whole-fold reads (2026-10-14)
+
+CG-RP-06…08 backend delivery is the ordinary-hook commit containing this entry.
+Baseline `ac715e6a`, lane `codex/be-gaps` → clean FF Research only. Current-source
+Replay admits8,192 requested bars, retains1MiB logical JSON and exact source;
+greedy packing replaces halving, proven minimum-row byte bound prevents SQL
+overfetch while cursor fingerprints still bind the original requested limit.
+Actual preview read-only full58,848/11,832 ordinal chains PASS in73/11responses;
+projection hashes unchanged through optimization. Final two-reader p95307/280ms
+replaces the observed pre-fix520ms finding, not a threshold waiver. Real-HMD
+1,056-row fixture exercised via authenticated disposable-PG BFF; complete168-bar
+folds fit one seek. Larger2,160+bar folds exceed1MiB and use contiguous chunks.
+[Measurements, pins, regressions, C4 and Claude instructions](./research_loop/evidence/P17/CG_RP_06_08_REPLAY_WINDOW_MEASUREMENTS_2026-10-14.md).
+No FE source/design, migration/profile, preview rebuild, engine/source call,
+push, dev/main or production change. Claude owns max_bars consumption, measured
+chart trail/markers/memory and affected browser receipt;600 trail not qualified
+by backend timings. Normal commit hook/landing and final C4 are required as
+recorded in the packet, not implied by the focused measurements.
