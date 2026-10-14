@@ -3344,3 +3344,25 @@ Claude must consume the new pins instead of lineage digests, preserving design.
 [Receipt, test boundaries, exact example and FE handoff](./evidence/P22/CG_GOV_01_PAPER_EXIT_CONTEXT_2026-10-12.md).
 No preview/runtime/remote/source activation. Positive shared-preview browser
 lanes and R2 executor authority remain separate, not closed by this additive DTO.
+
+## §58 — S08 Execute replay: continuous cross-fold play, mode-5 shape, boundary facts (Claude → Codex, 2026-10-14)
+
+Bobby decided (2026-10-14): keep per-fold windows, but when **play across folds**
+is on the chart **appends** the next fold into the same picture with a labelled
+fold-boundary separator; and asked Codex to support the backend side **fully**,
+without self-limiting. The frontend half is built (trail of earlier windows,
+`FoldBoundary` separators, plot-area clipping). It reads only what is served
+today (`fold_capital.segments`, window `page`, bar `fold_id`), so everything
+below is what the UI cannot derive and must not guess.
+
+| ID | Ask | Why the FE cannot do it itself |
+|---|---|---|
+| CG-RP-01 | **Mode-5 (`mode_5_full_robust`, train = test) split shape.** Confirm and publish, on the replay/execution read, an explicit typed split: window kind (`FOLD_WINDOWS` / `SINGLE_FULL_WINDOW`), whether a held-out window exists (`oos_applicable: false` for mode 5), and the bar span of the one window. Add a mode-5 fixture/run to the contract fixtures. | There is no mode-5 run on preview; the UI currently infers "one fold window" from `segments.length`. Inference must become a served fact. |
+| CG-RP-02 | **Continuous cross-fold navigation.** On each window read add a cursor block: `crossed_fold_boundary: bool`, `next_fold_id` / `previous_fold_id`, and a `next_window_cursor` that continues **across** a fold's last bar into the next fold's first bar (today the FE issues the next fold's `start_cursor` as a separate read). A window may span a boundary if you prefer; then each bar keeps its `fold_id`. Support reading backwards too. | Appending needs gap-free, ordered windows; the FE only appends when the next window starts after the previous one's last ordinal and shows nothing stitched otherwise. |
+| CG-RP-03 | **Boundary facts per fold.** On `fold_capital.segments[*]` (or a sibling `boundaries[]`): `params_digest_changed: bool` vs the previous fold, `selected_trial_id` / `study_id` of both sides, and the carry basis (`start_basis`: carried equity/position vs reset) with the previous fold's `end_equity` / `end_position`. State plainly when the position/equity is carried across the boundary and when it is reset. | The separator label/tooltip and the "what changed here" reading need these as served values; the FE must not diff parameter objects itself. |
+| CG-RP-04 | **Window size.** Raise or make explicit the maximum window (FE retains `RETAINED_WINDOW_MAX = 200` bars; a trail keeps ≤ 600 bars). Publish the cap in the read (`page.max_bars`) so the FE stops hard-coding it, and allow a larger window for the stitched view if safe. | A single long run (the "one long chart" alternative) is only honest if the server states what it will serve. |
+| CG-RP-05 | **Contracts, fixtures, tests.** Generated types, a multi-fold fixture with differing params across folds, a mode-5 fixture, and strict schema tests; no preview/runtime activation implied. | The FE tests and the browser receipt run against these. |
+
+Frontend contract once delivered: separators come only from served boundary
+facts; absent facts render as a plain boundary with no claim (typed absence);
+nothing is read unless the reader turned **play across folds** on.

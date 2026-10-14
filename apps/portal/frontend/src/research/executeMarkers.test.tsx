@@ -46,6 +46,7 @@ vi.mock("lightweight-charts", () => {
         fitContent: vi.fn(),
         subscribeVisibleLogicalRangeChange: vi.fn(),
         timeToCoordinate: (time: number) => (time % 1_000_000) / 100,
+        width: () => 20_000,
       }),
     }),
   };
@@ -128,7 +129,7 @@ const ALL: CandleMarker[] = [
   { ordinal: 50, at: 1_004_000, side: "SHORT", kind: "ENTRY", sideBefore: "FLAT", high: "104", low: "94", close: "99", fee: "1.00", turnover: "2000.00" },
   { ordinal: 60, at: 1_005_000, side: "FLAT", kind: "EXIT", sideBefore: "LONG", high: "105", low: "95", close: "100", fee: "1.00", turnover: "2000.00" },
 ];
-const HANDLES: ChartHandles = { timeX: (at) => (at % 1_000_000) / 10, priceY: (price) => 400 - price };
+const HANDLES: ChartHandles = { timeX: (at) => (at % 1_000_000) / 10, priceY: (price) => 200 - price };
 
 function layer(over: Partial<Parameters<typeof MarkerLayer>[0]> = {}) {
   const onHover = vi.fn();
@@ -241,6 +242,25 @@ describe("F2b · connectors, hover card, selection", () => {
   it("without chart coordinates (not drawn yet) the glyphs stay hidden rather than land at 0,0", () => {
     const { container } = layer({ handles: null });
     expect([...container.querySelectorAll("[data-marker-glyph]")].every((g) => g.getAttribute("visibility") === "hidden")).toBe(true);
+  });
+});
+
+describe("S08 · glyphs stay inside the plot area", () => {
+  it("a bar scrolled past the plot's right edge keeps its coordinate but its glyph is hidden, and the overlay clips to the plot", () => {
+    const { container } = layer({ handles: { ...HANDLES, plotWidth: () => 150 } });
+    const shown = [...container.querySelectorAll("[data-marker-glyph]")].filter((g) => g.getAttribute("visibility") !== "hidden");
+    expect(shown.length).toBeGreaterThan(0);
+    expect(shown.length).toBeLessThan(ALL.length);
+    expect(container.querySelector("svg")!.getAttribute("style")).toContain("overflow: hidden");
+    const clip = container.querySelector("clipPath rect")!;
+    expect(clip.getAttribute("width")).toBe("150");
+  });
+
+  it("draws a labelled fold boundary where the next fold's window begins", () => {
+    const { container } = layer({ boundaries: [{ atMs: 1_003_000, label: "fold_02", title: "fold_02 begins · trial t7" }] });
+    const line = container.querySelector("[data-fold-boundary]")!;
+    expect(line.textContent).toContain("fold_02");
+    expect(line.querySelector("title")!.textContent).toContain("trial t7");
   });
 });
 

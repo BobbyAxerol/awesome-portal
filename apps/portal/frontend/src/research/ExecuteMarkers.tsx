@@ -20,7 +20,7 @@
  * capability with the server's reason code.
  */
 
-import { type ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 
 import { smokeMotionAllowed } from "../execution/smokeMotion";
 import { reasonCodeSentence } from "./researchRefusal";
@@ -184,6 +184,15 @@ export function CapabilityStrip({ items }: { items: ReadonlyArray<{ name: string
 export interface ChartHandles {
   timeX: (atMs: number) => number | null;
   priceY: (price: number) => number | null;
+  /** The drawable width of the plot (the time scale), excluding the price axis. Absent in a test double: the layer then falls back to its own width. */
+  plotWidth?: () => number | null;
+}
+
+/** A fold boundary drawn across the stitched chart: where the next fold's window begins, and what it is. */
+export interface FoldBoundary {
+  atMs: number;
+  label: string;
+  title: string;
 }
 
 const PULSE_CSS = `
@@ -202,7 +211,10 @@ export function MarkerLayer({
   onPick,
   width,
   height,
+  boundaries = [],
 }: {
+  /** Fold boundaries of the stitched view (play across folds), each a dashed rule with its fold label. */
+  boundaries?: readonly FoldBoundary[];
   /** Markers inside the visible (revealed) window, in order. */
   markers: readonly CandleMarker[];
   /** Null while the chart is not drawn (or in a test double with no coordinates). */
@@ -216,13 +228,19 @@ export function MarkerLayer({
   height: number;
 }) {
   const s = glyphSize(barSpacing);
+  const clipId = `s08clip${useId().replace(/[^A-Za-z0-9_-]/g, "")}`;
+  /* Nothing is drawn outside the plot: a bar scrolled out of view still has a coordinate (negative or past the axis), and an unclipped layer
+     painted its glyphs over the sidebar. The clip is the plot rectangle; a glyph wholly outside it is hidden, so it is also not focusable. */
+  const plotW = handles?.plotWidth?.() ?? width;
+  const maxX = typeof plotW === "number" && plotW > 0 ? plotW : width;
+  const inside = (x: number | null, y: number | null) => x !== null && y !== null && x >= -s && x <= maxX + s && y >= -s && y <= height + s;
   const positioned = markers.map((marker) => {
     const x = handles ? handles.timeX(marker.at) : null;
     const edge = markerAbove(marker) ? marker.high : marker.low;
     const yEdge = handles && edge != null ? handles.priceY(Number(edge)) : null;
     const y = yEdge === null ? null : yEdge + (markerAbove(marker) ? -(s * 0.85) : s * 0.85);
     const yClose = handles && marker.close != null ? handles.priceY(Number(marker.close)) : null;
-    return { marker, x, y, yClose, shown: x !== null && y !== null };
+    return { marker, x, y, yClose, shown: inside(x, y) };
   });
   const byOrdinal = new Map(positioned.map((entry) => [entry.marker.ordinal, entry]));
   const links = pairTransitions(markers)
@@ -237,12 +255,27 @@ export function MarkerLayer({
         className="pointer-events-none absolute left-0 top-0 z-10"
         width={width}
         height={height}
-        style={{ overflow: "visible" }}
+        style={{ overflow: "hidden" }}
         data-marker-layer
         data-motion={motion ? "on" : "off"}
         aria-hidden="false"
       >
         <style>{PULSE_CSS}</style>
+        <defs>
+          <clipPath id={clipId}><rect x={0} y={0} width={maxX} height={height} /></clipPath>
+        </defs>
+        <g clipPath={`url(#${clipId})`}>
+        {boundaries.map((boundary) => {
+          const bx = handles ? handles.timeX(boundary.atMs) : null;
+          if (bx === null || bx < -1 || bx > maxX + 1) return null;
+          return (
+            <g key={boundary.atMs} data-fold-boundary={boundary.label}>
+              <title>{boundary.title}</title>
+              <line x1={bx} y1={0} x2={bx} y2={height} stroke="var(--ink-faint)" strokeWidth={1} strokeDasharray="4 3" />
+              <text x={bx + 5} y={11} fontSize={10} fontWeight={600} className="mono" fill="var(--ink-soft)" stroke="var(--paper-raised)" strokeWidth={3} paintOrder="stroke">{boundary.label}</text>
+            </g>
+          );
+        })}
         {links.map(({ pair, a, b }) =>
           a!.x !== null && b!.x !== null && a!.yClose !== null && b!.yClose !== null ? (
             <line
@@ -255,6 +288,8 @@ export function MarkerLayer({
             <line key={`${pair.from}-${pair.to}`} data-marker-pair={`${pair.from}-${pair.to}`} visibility="hidden" x1={0} y1={0} x2={0} y2={0} />
           ),
         )}
+        </g>
+        <g clipPath={`url(#${clipId})`}>
         {positioned.map(({ marker, x, y, shown }) => {
           const isSelected = selected === marker.ordinal;
           const isHover = hover === marker.ordinal;
@@ -317,6 +352,7 @@ export function MarkerLayer({
             </g>
           );
         })}
+        </g>
       </svg>
       {card && card.shown ? <MarkerCard marker={card.marker} x={card.x!} y={card.y!} width={width} /> : null}
     </>

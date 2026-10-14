@@ -30,7 +30,7 @@ import { paletteNow } from "../charts/theme";
 import { smokeMotionAllowed } from "../execution/smokeMotion";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { reasonCodeSentence } from "./researchRefusal";
-import { foldShort, formatCount, formatMetric, formatUtc, typographicMinus } from "./researchFormat";
+import { foldLabel, foldShort, formatCount, formatMetric, formatUtc, typographicMinus } from "./researchFormat";
 import { formatValue } from "./formatValue";
 import { humanise } from "./humanise";
 import type { CurrentSourceSplit } from "./splitClient";
@@ -44,7 +44,7 @@ import {
   type ChildAuditRecord,
 } from "./replayClient";
 import { ReplayTransport, SPEEDS, replayKeyDown, useTransport } from "./replayTransport";
-import { CapabilityStrip, GlyphShape, MarkerLayer, MarkerLegend, type CandleMarker, type ChartHandles } from "./ExecuteMarkers";
+import { CapabilityStrip, GlyphShape, MarkerLayer, MarkerLegend, type CandleMarker, type ChartHandles, type FoldBoundary } from "./ExecuteMarkers";
 import { EXEC_WINDOWS, bucketsInSpan, ordinalAt, type ExecWindow, type OverviewBand } from "./executeWindows";
 import { type EvidenceCursor } from "./evidenceCursor";
 import { runScreenHref } from "./runScreenHref";
@@ -515,6 +515,11 @@ function useReplayRegion(o: {
   return { merge, nodes };
 }
 
+/** Bars of earlier windows kept on the chart while play across folds runs. */
+const TRAIL_BARS_MAX = 600;
+const NO_ROWS: readonly CurrentSourceObservation[] = [];
+const NO_BOUNDARIES: readonly FoldBoundary[] = [];
+
 function CandleChart({
   rows,
   transport,
@@ -525,7 +530,13 @@ function CandleChart({
   onHover,
   onPick,
   onTransition,
+  lead = NO_ROWS,
+  boundaries = NO_BOUNDARIES,
 }: {
+  /** Windows already played, kept on the chart while play across folds runs (read-only context before this window; the transport still walks `rows`). */
+  lead?: readonly CurrentSourceObservation[];
+  /** Where each later fold's window begins in the stitched view. */
+  boundaries?: readonly FoldBoundary[];
   rows: readonly CurrentSourceObservation[];
   transport: ReplayTransport;
   /** PageUp / PageDown: the previous / next transition (the transport row's own handler). */
@@ -560,7 +571,11 @@ function CandleChart({
   const resizeObserver = useRef<ResizeObserver | null>(null);
   const justFitted = useRef(false);
   const { index } = useTransport(transport);
+  /* The chart draws `all` = earlier windows (while play across folds is on) + the current window; the transport and the readout walk the current window only. */
+  const all = useMemo(() => (lead.length > 0 ? [...lead, ...rows] : rows), [lead, rows]);
+  const offset = lead.length;
   const cut = reveal ? index + 1 : rows.length;
+  const cutAll = offset + cut;
 
   useEffect(() => {
     let disposed = false;
@@ -669,8 +684,9 @@ function CandleChart({
   useEffect(() => {
     const c = chart.current;
     if (status !== "ready" || !c) return;
-    const shown = rows.slice(0, cut).filter((row) => row.bar?.candle);
-    timeIndex.current = new Map(rows.slice(0, cut).map((row, at) => [sec(row.at_utc_ms), at]));
+    const upto = all.slice(0, cutAll);
+    const shown = upto.filter((row) => row.bar?.candle);
+    timeIndex.current = new Map(upto.map((row, at) => [sec(row.at_utc_ms), at]));
     c.candles.setData(shown.map((row) => ({
       time: sec(row.at_utc_ms),
       open: Number(row.bar!.candle!.open),
@@ -678,30 +694,33 @@ function CandleChart({
       low: Number(row.bar!.candle!.low),
       close: Number(row.bar!.candle!.close),
     })));
-    c.position.setData(rows.slice(0, cut).map((row) => ({ time: sec(row.at_utc_ms), value: Number(row.accepted_position) })));
-    c.equity.setData(rows.slice(0, cut).map((row) => ({ time: sec(row.at_utc_ms), value: Number(row.equity) })));
+    c.position.setData(upto.map((row) => ({ time: sec(row.at_utc_ms), value: Number(row.accepted_position) })));
+    c.equity.setData(upto.map((row) => ({ time: sec(row.at_utc_ms), value: Number(row.equity) })));
     if (fitted.current !== rows) {
-      /* A new window opens on the whole window; the playhead then scrolls it. */
       fitted.current = rows;
-      justFitted.current = true;
-      c.api.timeScale().fitContent();
-      /* F3 D10: leave a few bars of room each side so the end time labels are not cut at 660px. */
-      c.api.timeScale().setVisibleLogicalRange?.({ from: -AXIS_END_ROOM_BARS, to: rows.length - 1 + AXIS_END_ROOM_BARS });
+      if (offset === 0) {
+        /* A new window opens on the whole window; the playhead then scrolls it. */
+        justFitted.current = true;
+        c.api.timeScale().fitContent();
+        /* F3 D10: leave a few bars of room each side so the end time labels are not cut at 660px. */
+        c.api.timeScale().setVisibleLogicalRange?.({ from: -AXIS_END_ROOM_BARS, to: all.length - 1 + AXIS_END_ROOM_BARS });
+      }
+      /* A window that arrives with earlier ones kept (play across folds) keeps the reader's zoom and slides to the playhead. */
     }
     if (reveal !== revealed.current) {
       /* E2b (audit 8.15): cutting the data must not rescale the axis to the bars that are
          left — the window keeps its width and the future stays blank. */
       revealed.current = reveal;
-      c.api.timeScale().setVisibleLogicalRange({ from: -AXIS_END_ROOM_BARS, to: rows.length + AXIS_END_ROOM_BARS });
+      c.api.timeScale().setVisibleLogicalRange({ from: -AXIS_END_ROOM_BARS, to: all.length + AXIS_END_ROOM_BARS });
     }
     setGeometry((value) => value + 1);
-  }, [rows, cut, status, reveal]);
+  }, [all, rows, cutAll, offset, status, reveal]);
 
   /* Markers inside the revealed window, in order; coordinates come from the chart itself. */
   const visibleMarkers = useMemo(() => {
-    const at = new Map(rows.map((row, position) => [row.source_ordinal, position]));
-    return markers.filter((marker) => (at.get(marker.ordinal) ?? Infinity) < cut);
-  }, [markers, rows, cut]);
+    const at = new Map(all.map((row, position) => [row.source_ordinal, position]));
+    return markers.filter((marker) => (at.get(marker.ordinal) ?? Infinity) < cutAll);
+  }, [markers, all, cutAll]);
   const handles = useMemo<ChartHandles | null>(() => {
     const c = chart.current;
     if (status !== "ready" || !c || typeof c.candles.priceToCoordinate !== "function") return null;
@@ -713,6 +732,10 @@ function CandleChart({
       priceY: (price) => {
         const y = c.candles.priceToCoordinate(price);
         return y === null || y === undefined ? null : Number(y);
+      },
+      plotWidth: () => {
+        const w = c.api.timeScale().width?.();
+        return typeof w === "number" && w > 0 ? w : null;
       },
     };
     // `geometry` is the dependency that says the chart moved; the handles themselves are stable closures.
@@ -731,24 +754,25 @@ function CandleChart({
     const c = chart.current;
     const row = rows[index];
     if (status !== "ready" || !c || !row) return;
+    const at = offset + index;
     try {
       if (row.bar?.candle) c.api.setCrosshairPosition(Number(row.bar.candle.close), sec(row.at_utc_ms), c.candles);
       const range = c.api.timeScale().getVisibleLogicalRange();
       if (justFitted.current) {
         /* The range read straight after fitContent can still be the previous window's; a new window opens fit, so there is nothing to slide. */
         justFitted.current = false;
-      } else if (range && (index < range.from || index > range.to)) {
+      } else if (range && (at < range.from || at > range.to)) {
         /* Slide, never rescale: keep the reader's zoom and put the playhead at 70%. */
         const span = range.to - range.from;
-        const from = Math.max(-2, index - span * 0.7);
+        const from = Math.max(-2, at - span * 0.7);
         c.api.timeScale().setVisibleLogicalRange({ from, to: from + span });
       }
     } catch {
       /* the crosshair is a convenience */
     }
-  }, [index, rows, status]);
+  }, [index, rows, offset, status]);
 
-  const probeRow = probe !== null && probe < cut ? rows[probe] : undefined;
+  const probeRow = probe !== null && probe < cutAll ? all[probe] : undefined;
   const readoutRow = probeRow ?? (index < cut ? rows[index] : undefined);
   const readout = useMemo(() => (readoutRow ? crosshairReadout(readoutRow) : null), [readoutRow]);
   const xs = useMemo(() => {
@@ -811,7 +835,7 @@ function CandleChart({
           <ReadoutCell label="pos" value={readout.position} />
           <ReadoutCell label="equity" value={readout.equity} />
           <span className="ml-auto whitespace-nowrap" style={{ color: "var(--ink-faint)" }} data-bar-count title="Panes: candles with transition markers, model position (units), equity.">
-            {rows.length} bars
+            {offset > 0 ? `${all.length} bars · ${offset} from earlier folds` : `${rows.length} bars`}
           </span>
         </div>
       ) : null}
@@ -834,6 +858,7 @@ function CandleChart({
         onPick={onPick}
         width={box.width || 1}
         height={260}
+        boundaries={boundaries}
       />
       {/* More than SR_TABLE_MAX_ROWS rows: the chart summary + keyboard readout stand in, and the full table sits behind "Data". */}
       {rows.length > SR_TABLE_MAX_ROWS ? (
@@ -2055,6 +2080,43 @@ export function CandleReplayBody({
      across folds decides whether to go on. */
   const across = usePlayAcrossFolds({ transport, controller, replay, slot });
 
+  /* Play across folds keeps the windows it has already played on the chart, so the next fold continues the same picture;
+     a fold boundary is drawn where the next window begins. Nothing is stitched when the windows are not contiguous. */
+  const played = useRef<{ rows: typeof rows; trail: readonly (typeof rows)[] } | null>(null);
+  const trail = useMemo(() => {
+    const before = played.current;
+    let next: readonly (typeof rows)[] = [];
+    if (across.enabled && before) {
+      if (before.rows === rows) next = before.trail;
+      else {
+        const last = before.rows[before.rows.length - 1]?.source_ordinal;
+        const first = rows[0]?.source_ordinal;
+        if (last !== undefined && first !== undefined && first > last) next = [...before.trail, before.rows];
+      }
+    }
+    while (next.length > 0 && next.reduce((sum, w) => sum + w.length, 0) + rows.length > TRAIL_BARS_MAX) next = next.slice(1);
+    played.current = { rows, trail: next };
+    return next;
+  }, [rows, across.enabled]);
+  const lead = useMemo(() => trail.flat(), [trail]);
+  const boundaries = useMemo<FoldBoundary[]>(() => {
+    const wins = [...trail, rows];
+    const out: FoldBoundary[] = [];
+    const foldOf = (w: typeof rows) => w.find((row) => row.bar?.fold_id)?.bar?.fold_id ?? null;
+    for (let i = 1; i < wins.length; i += 1) {
+      const fold = foldOf(wins[i]!);
+      if (fold === null || fold === foldOf(wins[i - 1]!)) continue;
+      const segment = segments.find((candidate) => candidate.fold_id === fold);
+      const trial = segment?.selected_trial_id;
+      out.push({
+        atMs: wins[i]![0]!.at_utc_ms,
+        label: foldLabel(fold),
+        title: `${foldLabel(fold)} begins${trial ? ` · trial ${trial}` : ""}${segment ? ` · bars ${segment.first_ordinal}–${segment.last_ordinal}` : ""}`,
+      });
+    }
+    return out;
+  }, [trail, rows, segments]);
+
   const playRow = rows[snap.index];
   const activeFold = playRow?.bar?.fold_id ?? rows.find((row) => row.bar?.fold_id)?.bar?.fold_id ?? null;
   /* P17-T14: one child-audit read per fold window, never per tick. While play
@@ -2319,7 +2381,7 @@ export function CandleReplayBody({
           ) : (
           <>
             {rows.length > 0 ? (
-              <CandleChart rows={rows} transport={transport} onTransition={transitionStep} reveal={reveal} markers={markers} hover={hover} selected={selected?.source_ordinal ?? null} onHover={setHover} onPick={pickMarker} />
+              <CandleChart rows={rows} lead={lead} boundaries={boundaries} transport={transport} onTransition={transitionStep} reveal={reveal} markers={markers} hover={hover} selected={selected?.source_ordinal ?? null} onHover={setHover} onPick={pickMarker} />
             ) : null}
             <Transport
               transport={transport}
