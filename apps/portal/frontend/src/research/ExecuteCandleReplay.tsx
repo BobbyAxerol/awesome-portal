@@ -517,6 +517,23 @@ function useReplayRegion(o: {
 
 /** Bars of earlier windows kept on the chart while play across folds runs. */
 const TRAIL_BARS_MAX = 600;
+/** §58: what the separator says about a fold boundary — only what the server published; a missing fact stays unsaid. */
+function boundaryWords(label: string, segment: FoldSegment | undefined, fact: NonNullable<CurrentSourceReplay["execution"]["fold_capital"]["boundaries"]>[number] | undefined): string {
+  const parts = [`${label} begins`];
+  if (fact) {
+    if (fact.params_digest_changed === true) parts.push("parameters changed");
+    else if (fact.params_digest_changed === false) parts.push("same parameters");
+    const trial = fact.selection.selected_trial_id;
+    if (trial) parts.push(`trial ${trial}`);
+    const carry = { CARRIED: "carried", RESET: "reset", NOT_ASSERTED: null }[fact.equity_start_policy];
+    if (carry) parts.push(`equity ${carry}`);
+    const position = { CARRIED: "carried", RESET_FLAT: "reset flat", CLOSED_AT_BOUNDARY: "closed at boundary", NOT_ASSERTED: null }[fact.position_start_policy];
+    if (position) parts.push(`position ${position}`);
+  } else if (segment?.selected_trial_id) parts.push(`trial ${segment.selected_trial_id}`);
+  if (segment) parts.push(`bars ${segment.first_ordinal}–${segment.last_ordinal}`);
+  return parts.join(" · ");
+}
+
 const NO_ROWS: readonly CurrentSourceObservation[] = [];
 const NO_BOUNDARIES: readonly FoldBoundary[] = [];
 
@@ -2107,15 +2124,15 @@ export function CandleReplayBody({
       const fold = foldOf(wins[i]!);
       if (fold === null || fold === foldOf(wins[i - 1]!)) continue;
       const segment = segments.find((candidate) => candidate.fold_id === fold);
-      const trial = segment?.selected_trial_id;
+      const fact = execution.fold_capital.boundaries?.find((candidate) => candidate.fold_id === fold);
       out.push({
         atMs: wins[i]![0]!.at_utc_ms,
         label: foldLabel(fold),
-        title: `${foldLabel(fold)} begins${trial ? ` · trial ${trial}` : ""}${segment ? ` · bars ${segment.first_ordinal}–${segment.last_ordinal}` : ""}`,
+        title: boundaryWords(foldLabel(fold), segment, fact),
       });
     }
     return out;
-  }, [trail, rows, segments]);
+  }, [trail, rows, segments, execution.fold_capital.boundaries]);
 
   const playRow = rows[snap.index];
   const activeFold = playRow?.bar?.fold_id ?? rows.find((row) => row.bar?.fold_id)?.bar?.fold_id ?? null;

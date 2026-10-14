@@ -40,7 +40,7 @@ import { DEFAULT_CURSOR } from "./evidenceCursor";
 import { REPLAY_REFUSAL_COPY, type CurrentSourceReplay, type FoldSegment, type Replay, type ReplayChildAudit, type ReplayTransitions } from "./replayClient";
 import { ReplayTransport, type TransportScheduler } from "./replayTransport";
 import { forgetRunIdentities } from "./retainedLane";
-import { ACROSS_HELP, ACROSS_LABEL, ACROSS_SINGLE_FOLD, SEQUENCE_GAP_WORDS, decideBoundary } from "./usePlayAcrossFolds";
+import { ACROSS_FULL_WINDOW, ACROSS_HELP, ACROSS_LABEL, ACROSS_SINGLE_FOLD, SEQUENCE_GAP_WORDS, decideBoundary } from "./usePlayAcrossFolds";
 import { useReplay } from "./useReplay";
 import { SYNTHETIC_FOLDS, alignedFoldWindow, scaleToFolds, syntheticChildAudit, syntheticFoldCursor } from "./w5bFoldScale.fixture";
 
@@ -436,6 +436,15 @@ describe("D7 · the switch: off by default, a real switch, its label says it rea
     expect(m.ui.switch().getAttribute("title")).toBe(ACROSS_SINGLE_FOLD);
     expect(m.container.querySelector(`[id='${m.ui.switch().getAttribute("aria-describedby")}']`)?.textContent).toBe(ACROSS_SINGLE_FOLD);
     expect(m.ui.switch().getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("§58 a served full-sample (mode 5) window says so and never calls itself held-out", async () => {
+    const full = scaleToFolds(FOLD0, 1);
+    const shaped = { ...full, execution: { ...full.execution, split_shape: { schema_version: "research.replay-split-shape.v1", state: "AVAILABLE", reason_code: null, window_kind: "SINGLE_FULL_WINDOW", oos_applicable: false, independent_holdout: false, ordinal_basis: "SEALED_ACCOUNT_OBSERVATION_ORDINALS", windows: [] } } } as typeof full;
+    const m = await mountAcross(shaped);
+    expect(m.ui.switch().disabled).toBe(true);
+    expect(m.ui.switch().getAttribute("title")).toBe(ACROSS_FULL_WINDOW);
+    expect(ACROSS_FULL_WINDOW).not.toMatch(/oos|hold/i);
   });
 });
 

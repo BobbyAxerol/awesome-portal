@@ -50,6 +50,9 @@ export const ACROSS_HELP = "Off by default. Reads the next window when playback 
 
 export const ACROSS_SINGLE_FOLD = "One fold window — no next fold to read.";
 
+/** §58: a full-sample (mode 5, train = test) run is served as one window; it is never called held-out. */
+export const ACROSS_FULL_WINDOW = "One full-sample window — no next fold to read.";
+
 /** The retained lane's sequence gap, in the screen's words (also used for a plain window read). */
 export const SEQUENCE_GAP_WORDS =
   "The retained bars have a gap here, so this window is not replayed; nothing is filled in. The window below is the last one read.";
@@ -409,7 +412,12 @@ export function usePlayAcrossFolds({
     setEnabled,
     status,
     reads,
-    unavailable: segments.length < 2 ? ACROSS_SINGLE_FOLD : null,
+    unavailable:
+      replay.execution.split_shape?.window_kind === "SINGLE_FULL_WINDOW"
+        ? ACROSS_FULL_WINDOW
+        : segments.length < 2
+          ? ACROSS_SINGLE_FOLD
+          : null,
     running,
     holding,
   };
