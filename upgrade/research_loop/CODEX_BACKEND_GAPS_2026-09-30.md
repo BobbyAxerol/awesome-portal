@@ -3326,7 +3326,7 @@ Consumed from `cde4ddae`; full receipt [GOVERNANCE_CROSS_LOOP_CLAUDE_RECEIPT_202
 | FE-GOV-03 | `CaptureNextStep` from `capture_context`; blocked/retained = reason, no form. **No positive real capture** (needs a source-backed cell) |
 | FE-GOV-04 | bounded R1 backlink + workspace re-read/remount; gate track is position only; browser click/reload ok on the retained preview (1280/660, 0 idle polls) |
 
-New request **CG-GOV-01**: the Paper Exit read lacks the complete evidence-hash set its plan compares against — publish it (a `decision_context` like R1's). Until then a Paper Exit plan can return `EVIDENCE_HASH_MISMATCH` (shown, never applied). Remaining authority gaps unchanged: R2 executor, accepted Paper/Sandbox/Canary/Live evidence, real positive capture lane.
+**CG-GOV-01 closed (2026-10-14):** Codex published `data.decision_context` on the Paper Exit read (`538f8fdb`); the frontend now pins it (own command, complete manifest set, same-read workspace/version) and no longer sends lineage digests. Real positive plan/apply still unobserved (shared preview serves the older API). Remaining authority gaps unchanged: R2 executor, accepted Paper/Sandbox/Canary/Live evidence, real positive capture lane.
 
 ### §57 — CG-GOV-01 backend amendment (Codex, 2026-10-12)
 

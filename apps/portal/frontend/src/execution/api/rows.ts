@@ -24,7 +24,7 @@
  * one.
  */
 import { readDecimal, readEnum, readId, readTimestamp, type MaybeKnown } from "../adapter";
-import { bindR1Decision, readCaptureContext, readDecisionContext, safeR1Href, type CaptureContext, type ContextRead, type DecisionContext, type R1Binding } from "./governanceContext";
+import { bindExitDecision, bindR1Decision, readCaptureContext, readDecisionContext, readPaperExitDecisionContext, safeR1Href, type CaptureContext, type ContextRead, type DecisionContext, type ExitBinding, type R1Binding } from "./governanceContext";
 import type { ApprovalId, EvidenceMark, PromotionStage, Sla } from "../contracts";
 import type { ApprovalGate, ApprovalRow, DecidedRow, InertReason } from "../screens/ApprovalInbox";
 import type { ChecklistItem, DecisionLock, PassportEntry } from "../screens/GateR1Review";
@@ -782,12 +782,8 @@ export interface PaperExitDetail {
   sla: Sla | null;
   /** artifact · R1 · R2 · observation policy · evidence pack digest (§5). */
   lineage: readonly LineageRef[];
-  /**
-   * The evidence digests a Paper Exit decision pins (its own contract, from `lineage[].digest`) — unique and sorted — or `null` when a REQUIRED lineage
-   * entry published none, in which case the pins are incomplete and no plan is made rather than posting a subset or `[]`.
-   * NOTE: this read does not publish the full evidence-hash set the plan compares against; a plan can still come back `EVIDENCE_HASH_MISMATCH`, typed.
-   */
-  evidenceHashes: readonly string[] | null;
+  /** The exact pins of a Paper Exit decision from this same read's `decision_context` (its own command), or the reason it cannot be planned. */
+  binding: ExitBinding;
   panels: readonly EvidencePanelSpec[];
   recommendation: string | null;
   /**
@@ -829,16 +825,6 @@ export function readPaperExitDetail(raw: unknown): PaperExitDetail | null {
     const value = eo && str(eo.value);
     return label && value ? [{ label, value, href: str(eo!.href) }] : [];
   });
-  const digestOf = (e: unknown): string | null => {
-    const d = str(obj(e)?.digest);
-    return d !== null && /^sha256:[0-9a-f]{64}$/.test(d) ? d : null;
-  };
-  // an unreadable `required` bit counts as required: a pin we cannot prove optional is a pin the plan needs
-  const pinsComplete = lineageRaw.every((e) => {
-    const mustPin = obj(e)?.required !== false;
-    return !mustPin || digestOf(e) !== null;
-  });
-  const evidenceHashes = pinsComplete ? [...new Set(lineageRaw.flatMap((e) => { const d = digestOf(e); return d ? [d] : []; }))].sort() : null;
 
   const panels = (Array.isArray(data.panels) ? data.panels : [])
     .map(readEvidencePanel)
@@ -873,7 +859,7 @@ export function readPaperExitDetail(raw: unknown): PaperExitDetail | null {
     approverRole: str(data.approver_role),
     sla: readSla(review.sla),
     lineage,
-    evidenceHashes,
+    binding: bindExitDecision({ context: readPaperExitDecisionContext(data.decision_context), envelopeWorkspaceId: workspaceId, reviewId }),
     panels,
     recommendation: str(data.recommendation),
     activationPlan: (() => {

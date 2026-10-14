@@ -659,11 +659,6 @@ function useDecision(api: ExecutionApi, workspaceId: string | null) {
       const target = extra?.workspaceId ?? workspaceId;
       if (!target) return;
       dispatch({ type: "PLAN_REQUESTED" });
-      // A caller that passes `evidenceHashes: null` is saying the pins are incomplete: say so instead of posting a subset or `[]`.
-      if (extra && "evidenceHashes" in extra && extra.evidenceHashes === null) {
-        dispatch({ type: "PLAN_FAILED", error: "This review did not publish a digest for every required lineage entry, so its evidence pins are incomplete and no plan can be made safely. Reload for a current read." });
-        return;
-      }
       const planned = await api.planDecision({
         approvalId: subjectId,
         workspaceId: target,
@@ -928,6 +923,8 @@ export function PaperExitReviewContainer({ api, reviewId, workspaceId }: { api: 
         onCopyProvenance={(full) => void navigator.clipboard?.writeText(full)}
         trail={decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : undefined}
         eligibility={d?.eligibility}
+        // Every verb stays closed, with the reason, unless this read published the pins a decision needs; per-verb eligibility still applies on top.
+        decisionsClosedReason={d && d.binding.state !== "ready" ? d.binding.reason : null}
         reviewId={d?.reviewId ?? reviewId ?? "no review named"}
         deploymentId={d?.deploymentId ?? "unknown"}
         subject={d?.subject ?? reviewId ?? "the exit review register"}
@@ -967,7 +964,9 @@ export function PaperExitReviewContainer({ api, reviewId, workspaceId }: { api: 
           // No review named, nothing to decide on. The control is already
           // disabled in that state; this is the second lock.
           if (reviewId === null) return;
-          void decide(reviewId, outcome, `Exit review decision: ${outcome}.`, d?.expectedVersion ?? null, { evidenceHashes: d?.evidenceHashes ?? null });
+          // The exact pins of THIS read's Paper Exit decision context; with none ready the controls are closed and this is the second gate on the same fact.
+          if (!d || d.binding.state !== "ready") return;
+          void decide(d.binding.reviewId, outcome, `Exit review decision: ${outcome}.`, d.binding.expectedVersion, { workspaceId: d.binding.workspaceId, evidenceHashes: d.binding.evidenceHashes });
         }}
       />
     </>

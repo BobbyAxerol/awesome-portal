@@ -6,7 +6,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import fixture from "../../../../../packages/contracts/fixtures/governance-review-context.synthetic.valid.json";
-import { bindR1Decision, readCaptureContext, readDecisionContext, safeR1Href } from "./api/governanceContext";
+import { bindR1Decision, readCaptureContext, readDecisionContext, readPaperExitDecisionContext, safeR1Href } from "./api/governanceContext";
 import { readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "./api/rows";
 import { createFixtureApi } from "./api/fixtureApi";
 import { createHttpApi } from "./api/httpApi";
@@ -182,20 +182,62 @@ describe("FE-GOV-01 · the R1 command carries the exact pins and typed condition
     expect(plan).not.toHaveBeenCalled();
   });
 
-  it("a Paper Exit decision pins its lineage digests; incomplete pins plan nothing", async () => {
+  it("a Paper Exit decision pins its OWN decision_context (the complete manifest set), never lineage digests", async () => {
     const api = createFixtureApi();
     const plan = vi.spyOn(api, "planDecision");
     render(<PaperExitReviewContainer api={api} reviewId="EX-771" />);
     const promote = await screen.findByRole("button", { name: /Approve promotion/ });
     await act(async () => { promote.click(); });
     await waitFor(() => expect(plan).toHaveBeenCalled());
-    expect(plan.mock.calls[0]![0]).toMatchObject({ approvalId: "EX-771", decision: "PROMOTE", evidenceHashes: [H("e"), H("f")] });
+    expect(plan.mock.calls[0]![0]).toMatchObject({ approvalId: "EX-771", workspaceId: "ws_fixture_governance", decision: "PROMOTE", expectedApprovalVersion: 3, evidenceHashes: [H("1"), H("3"), H("4"), H("5")] });
+    // the lineage digests (e…, f…) are not the evidence set and are never sent
+    expect(plan.mock.calls[0]![0].evidenceHashes).not.toContain(H("e"));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
-    cleanup();
-    plan.mockClear();
-    const raw = clone(EXIT_DETAIL) as any;
-    delete raw.lineage[0].digest;
-    expect(readPaperExitDetail(raw)!.evidenceHashes).toBeNull();
+  });
+
+  it("Paper Exit: absent, blocked, mismatched or oversize contexts close every verb with the reason and plan nothing", async () => {
+    const variants: [string, (raw: any) => void, RegExp][] = [
+      ["an older read with no context", (raw) => { delete raw.decision_context; }, /published no decision context/],
+      ["a blocked context", (raw) => { raw.decision_context.availability = { state: "BLOCKED", reason_code: "EXIT_REVIEW_EXPIRED" }; }, /expired/],
+      ["pins that cannot be published (oversize)", (raw) => { raw.decision_context.evidence_hashes = null; raw.decision_context.availability = { state: "BLOCKED", reason_code: "EVIDENCE_HASH_LIMIT_EXCEEDED" }; }, /larger than one decision can pin/],
+      ["another review's context", (raw) => { raw.decision_context.review_id = "EX-999"; }, /does not match the review/],
+      ["another workspace's context", (raw) => { raw.decision_context.workspace_id = "ws_other"; }, /does not match the review/],
+    ];
+    for (const [name, tamper, words] of variants) {
+      const raw = clone(EXIT_DETAIL) as any;
+      tamper(raw);
+      const api = createFixtureApi();
+      vi.spyOn(api, "getPaperExit").mockResolvedValue({ ok: true, value: readPaperExitDetail(raw)!, warnings: [] });
+      const plan = vi.spyOn(api, "planDecision");
+      render(<PaperExitReviewContainer api={api} reviewId="EX-771" />);
+      const promote = await screen.findByRole("button", { name: /Approve promotion/ });
+      expect(promote, name).toHaveProperty("disabled", true);
+      for (const label of [/Extend observation/, /Reject/]) expect(screen.getByRole("button", { name: label }), name).toHaveProperty("disabled", true);
+      expect(screen.getAllByText(words).length, name).toBeGreaterThanOrEqual(1);
+      fireEvent.click(promote);
+      expect(plan, name).not.toHaveBeenCalled();
+      cleanup();
+    }
+  });
+
+  it("reads the published synthetic Paper Exit context and refuses a tampered one", () => {
+    expect(readPaperExitDecisionContext(fixture.paper_exit)).toMatchObject({ kind: "ok", value: { reviewId: "exit_example", expectedVersion: 3, evidenceHashes: [H("a"), H("c")] } });
+    expect(readPaperExitDecisionContext(undefined)).toEqual({ kind: "absent" });
+    for (const tamper of [
+      (c: any) => { c.gate = "R1"; },
+      (c: any) => { c.command_type = "GOVERNANCE_R1_DECISION"; },
+      (c: any) => { c.evidence_hashes = [H("a"), H("a")]; },
+      (c: any) => { c.evidence_hashes = null; },
+      (c: any) => { c.source_snapshot_hash = "nope"; },
+      (c: any) => { c.source_side_effect_requested = true; },
+    ]) {
+      const c = clone(fixture.paper_exit) as any;
+      tamper(c);
+      expect(readPaperExitDecisionContext(c), JSON.stringify(c).slice(0, 60)).toEqual({ kind: "invalid" });
+    }
+    // oversize: null pins are only valid when the context says BLOCKED
+    const blocked = { ...clone(fixture.paper_exit), evidence_hashes: null, availability: { state: "BLOCKED", reason_code: "EVIDENCE_HASH_LIMIT_EXCEEDED" } };
+    expect(readPaperExitDecisionContext(blocked)).toMatchObject({ kind: "ok", value: { evidenceHashes: null } });
   });
 });
 

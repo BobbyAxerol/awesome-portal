@@ -281,8 +281,22 @@ export const EXIT_DETAIL: Record<string, unknown> = {
     authority_semantics: "APPROVAL_CREATES_PROMOTION_GRANT_ONLY",
     external_side_effect_requested: false,
   },
+  // The exact pins of the Paper Exit decision command (its own context; labelled synthetic). The lineage digests are NOT this set.
+  decision_context: {
+    gate: "PAPER_EXIT",
+    workspace_id: "ws_fixture_governance",
+    review_id: "EX-771",
+    expected_review_version: 3,
+    evidence_set_hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    source_snapshot_hash: "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    evidence_hashes: ["sha256:1111111111111111111111111111111111111111111111111111111111111111", "sha256:3333333333333333333333333333333333333333333333333333333333333333", "sha256:4444444444444444444444444444444444444444444444444444444444444444", "sha256:5555555555555555555555555555555555555555555555555555555555555555"],
+    command_type: "GOVERNANCE_PAPER_EXIT_DECISION",
+    request_schema_version: "governance.paper-exit-decision-plan-request.v1",
+    plan_path: "/api/v1/execution/commands/plans",
+    availability: { state: "AVAILABLE", reason_code: null },
+    source_side_effect_requested: false,
+  },
   lineage: [
-    // `digest` is the pin a Paper Exit decision carries; `required: false` marks a reference that is not part of the pinned evidence.
     { label: "artifact", value: "sha256:41bb7d…c4", digest: "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", required: true },
     { label: "R1", value: "AP-118", href: "/governance/approvals/AP-118/r1", required: false },
     { label: "R2", value: "AP-152", href: "/governance/approvals/AP-152/r2", required: false },

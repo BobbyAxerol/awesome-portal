@@ -142,6 +142,7 @@ function Findings({ panel }: { panel: EvidencePanelSpec }) {
 
 export function PaperExitReview({
   eligibility,
+  decisionsClosedReason = null,
   reviewId,
   subject,
   promoteTo,
@@ -214,6 +215,8 @@ export function PaperExitReview({
   decided?: { outcome: ExitOutcome; by: string; at: string } | null;
   /** What the server says this actor may do. Absent is not permission. */
   eligibility?: Eligibility | null;
+  /** Set when the read published no usable decision pins: every verb is closed and this is the reason, beside the buttons. */
+  decisionsClosedReason?: string | null;
   onDecide?: (outcome: ExitOutcome) => void;
   /** provenance drawer Copy — simulated control, through the ledger */
   onCopyProvenance: (full: string) => void;
@@ -301,9 +304,10 @@ export function PaperExitReview({
   // pass", and leaving the button live contradicts its own banner.
   const evidenceIncomplete = status === "partial" || status === "stale" || unread.length > 0;
   const serverAllowsPromote = eligibility?.canApprove === true;
-  const promoteBlocked = !gateMet || blocking > 0 || !serverAllowsPromote || evidenceIncomplete;
-  const extendBlocked = eligibility?.canExtendObservation !== true;
-  const rejectBlocked = eligibility?.canReject !== true;
+  const closed = Boolean(decisionsClosedReason);
+  const promoteBlocked = !gateMet || blocking > 0 || !serverAllowsPromote || evidenceIncomplete || closed;
+  const extendBlocked = eligibility?.canExtendObservation !== true || closed;
+  const rejectBlocked = eligibility?.canReject !== true || closed;
 
   // Absent eligibility and a refusal look the same to a reader, so say which.
   const sodViolation = eligibility?.separationOfDuties === "VIOLATION";
@@ -314,6 +318,7 @@ export function PaperExitReview({
       : null;
 
   const decisionReasons: string[] = [];
+  if (decisionsClosedReason) decisionReasons.push(decisionsClosedReason);
   if (authorityNote) decisionReasons.push(authorityNote);
   if (!gateMet) decisionReasons.push("Promotion blocked — the observation gate is not met.");
   if (blocking > 0)

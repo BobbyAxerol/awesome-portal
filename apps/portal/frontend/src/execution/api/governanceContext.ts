@@ -113,6 +113,70 @@ export function readDecisionContext(raw: unknown): ContextRead<DecisionContext> 
   };
 }
 
+export interface PaperExitDecisionContext {
+  workspaceId: string;
+  reviewId: string;
+  expectedVersion: number;
+  evidenceSetHash: string;
+  sourceSnapshotHash: string;
+  /** The COMPLETE verified manifest hash set the plan compares against (sorted, unique, ≤ 128), or `null` when it could not be published (over the bound). */
+  evidenceHashes: readonly string[] | null;
+  availability: Availability;
+}
+
+/** `data.decision_context` of the Paper Exit read: its own command, its own pins — never R1's, never lineage or finding digests. */
+export function readPaperExitDecisionContext(raw: unknown): ContextRead<PaperExitDecisionContext> {
+  if (raw === undefined) return { kind: "absent" };
+  const c = obj(raw);
+  if (!c) return { kind: "invalid" };
+  const availability = readAvailability(c.availability);
+  if (!availability || c.gate !== "PAPER_EXIT" || !id(c.workspace_id) || !id(c.review_id) || !version(c.expected_review_version) || !hash(c.evidence_set_hash) ||
+      !hash(c.source_snapshot_hash) || c.source_side_effect_requested !== false) return { kind: "invalid" };
+  if (c.command_type !== "GOVERNANCE_PAPER_EXIT_DECISION" || c.request_schema_version !== "governance.paper-exit-decision-plan-request.v1" || c.plan_path !== "/api/v1/execution/commands/plans") return { kind: "invalid" };
+  let hashes: string[] | null = null;
+  if (c.evidence_hashes !== null) {
+    if (!Array.isArray(c.evidence_hashes) || c.evidence_hashes.length > 128 || !c.evidence_hashes.every(hash) || new Set(c.evidence_hashes).size !== c.evidence_hashes.length) return { kind: "invalid" };
+    hashes = [...(c.evidence_hashes as string[])];
+  }
+  // pins missing means blocked (oversize becomes null + blocked); an AVAILABLE context with no pins cannot exist
+  if (availability.available && hashes === null) return { kind: "invalid" };
+  return {
+    kind: "ok",
+    value: { workspaceId: c.workspace_id, reviewId: c.review_id, expectedVersion: c.expected_review_version, evidenceSetHash: c.evidence_set_hash, sourceSnapshotHash: c.source_snapshot_hash, evidenceHashes: hashes, availability },
+  };
+}
+
+/** What a screen may send for a Paper Exit decision: the exact pins of this read, or the reason it cannot plan. Per-verb eligibility still applies on top. */
+export type ExitBinding =
+  | { state: "ready"; workspaceId: string; reviewId: string; expectedVersion: number; evidenceHashes: readonly string[] }
+  | { state: "blocked"; reason: string; reasonCode: string | null }
+  | { state: "unavailable"; reason: string };
+
+export function bindExitDecision(input: { context: ContextRead<PaperExitDecisionContext>; envelopeWorkspaceId: string | null; reviewId: string }): ExitBinding {
+  const { context } = input;
+  if (context.kind === "invalid") return { state: "unavailable", reason: "The decision context in this read could not be validated. Reload to read it again." };
+  if (context.kind === "absent") {
+    // Older read: the full evidence set is not published anywhere else (lineage and finding digests are not it), so nothing is guessed.
+    return { state: "unavailable", reason: "This older read published no decision context, so the evidence set a plan must pin is unknown. Reload for a current read; nothing is guessed or defaulted." };
+  }
+  const c = context.value;
+  if (c.reviewId !== input.reviewId || (input.envelopeWorkspaceId !== null && c.workspaceId !== input.envelopeWorkspaceId)) {
+    return { state: "unavailable", reason: "The decision context does not match the review and workspace of this read. Reload before deciding." };
+  }
+  if (!c.availability.available) return { state: "blocked", reasonCode: c.availability.reasonCode, reason: `No decision can be planned: ${EXIT_REASON_WORDS[c.availability.reasonCode ?? ""] ?? reasonWords(c.availability.reasonCode)}.` };
+  if (c.evidenceHashes === null) return { state: "unavailable", reason: "The evidence pins for this decision were not published, so a plan cannot be made safely. Reload to read them again." };
+  return { state: "ready", workspaceId: c.workspaceId, reviewId: c.reviewId, expectedVersion: c.expectedVersion, evidenceHashes: c.evidenceHashes };
+}
+
+const EXIT_REASON_WORDS: Readonly<Record<string, string>> = {
+  APPROVER_ROLE_REQUIRED: "this needs an approver role",
+  EXIT_REVIEW_NOT_PENDING: "this exit review is no longer pending",
+  EXIT_REVIEW_EXPIRED: "this exit review has expired",
+  ACTOR_ALREADY_DECIDED: "you have already decided this review",
+  PAPER_EXIT_QUORUM_UNSUPPORTED: "this review's quorum is not supported by the decision command",
+  EVIDENCE_HASH_LIMIT_EXCEEDED: "the evidence set is larger than one decision can pin",
+};
+
 export interface CaptureCandidate {
   deploymentId: string;
   portfolioId: string;
