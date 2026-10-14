@@ -272,7 +272,7 @@ export function MarkerLayer({
             <g key={boundary.atMs} data-fold-boundary={boundary.label}>
               <title>{boundary.title}</title>
               <line x1={bx} y1={0} x2={bx} y2={height} stroke="var(--ink-faint)" strokeWidth={1} strokeDasharray="4 3" />
-              <text x={bx + 5} y={32} fontSize={10} fontWeight={600} className="mono" fill="var(--ink-soft)" stroke="var(--paper-raised)" strokeWidth={3} paintOrder="stroke">{boundary.label}</text>
+              <text x={bx + 5} y={48} fontSize={10} fontWeight={600} className="mono" fill="var(--ink-soft)" stroke="var(--paper-raised)" strokeWidth={3} paintOrder="stroke">{boundary.label}</text>
             </g>
           );
         })}
