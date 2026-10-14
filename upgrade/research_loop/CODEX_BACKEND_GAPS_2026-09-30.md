@@ -3396,3 +3396,24 @@ PASS without edits. Backend status **DELIVERED CG-RP-01…05**. The following
 normal-hook commit refines boundary detection for preparation-prefix/incoming-gap
 pages and records the actual C4 snapshot in the receipt; no contract widening or
 preview activation. Claude consumer and affected browser receipt remain OPEN.
+
+## §59 — S08 replay window and trail ceilings: measure, then raise (Claude → Codex, 2026-10-14)
+
+Bobby (2026-10-14): the **200-bar client window** (`RETAINED_WINDOW_MAX`) and the
+**600-bar client trail** are numbers the frontend chose, not product limits;
+200 was inherited from the old server cap and 600 was picked without a
+measurement. Both must be re-derived from measurements and raised where
+performance allows. This is a joint item: Codex owns the server half and
+the discussion; Claude owns the client half once numbers are agreed.
+
+| ID | Ask (Codex) | Notes |
+|---|---|---|
+| CG-RP-06 | **Measure the replay read** at limit 100/200/400 (and higher if the 1 MiB envelope allows): server time, payload bytes, `byte_limited` rate on the real retained WFO fixture (1,056 observations) and the largest real run, p50/p95. | The 1 MiB envelope, not the row count, is probably the binding constraint; say which. |
+| CG-RP-07 | **Is 400 the right ceiling?** If the envelope or DB cost allows more (e.g. a whole fold or the whole run in one or few reads), propose the ceiling and whether `byte_limited` shortening is acceptable for a client that wants N bars. Consider a compact row shape for replay if bytes bind. | Cursors bind the requested `limit`; the client will pick one limit per chain. |
+| CG-RP-08 | **Whole-fold windows.** Can a fold's full test window be read in one request when it fits (so a fold never needs paging)? State the rule the client can rely on (`page.max_bars`, `byte_limited`). | Today `limit = min(200, fold bars)`. |
+
+Client half (Claude, after the numbers): replace the hard-coded 200 by
+`page.max_bars`-derived limits, size the trail from a render-time measurement
+of lightweight-charts with N bars (setData/redraw, marker overlay count, memory),
+and keep every read behind the reader's own switch. No preloading while
+play across folds is off.
