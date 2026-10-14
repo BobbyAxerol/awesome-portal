@@ -138,8 +138,11 @@ interface Pending {
   actions: number;
   /** The source ordinal the window that answers must start at. */
   expectFirst: number;
-  from: FoldSegment;
+  /** The fold the window read from ended in, or null when it ended on a bar no fold owns (preparation bars). */
+  from: FoldSegment | null;
   to: FoldSegment | null;
+  /** §58: the read went along the run's own window cursor; whether it crossed a fold is known when it lands. */
+  cursor?: boolean;
   /** The line shown while this read is on its way. */
   text: string;
 }
@@ -275,6 +278,36 @@ export function usePlayAcrossFolds({
           stop("busy", "warn", "Play across folds did not read: a window was already loading when playback reached the end of this one.");
           return;
         }
+        /* §58: when the server publishes the run's own window cursor, it is the one way forward — it crosses a fold
+           boundary without a gap or a repeat, so no fold start is read separately. Without it, the fold rules below stand. */
+        const along = current.replay.window_cursor;
+        if (along?.state === "AVAILABLE" && live.retainedContinue) {
+          if (!along.next_window_cursor) {
+            stop("end", "info", "Reached the last bar the server offers for this run. Nothing is read past it.");
+            return;
+          }
+          const lastRow = liveRows.at(-1)!;
+          const here = current.execution.fold_capital.segments.find((segment) => segment.fold_id === lastRow.bar?.fold_id) ?? null;
+          const line = here ? `Reached the end of this window. Reading on from ${foldLabel(here.fold_id)}…` : "Reached the end of this window. Reading on…";
+          pending.current = {
+            kind: "window",
+            rows: liveRows,
+            refusal: liveSlot.pageRefusal ?? null,
+            actions: transport.userActions,
+            expectFirst: lastRow.source_ordinal + 1,
+            from: here,
+            to: null,
+            cursor: true,
+            text: line,
+          };
+          readsRef.current += 1;
+          setReads(readsRef.current);
+          chain.current = true;
+          setHolding(true);
+          note("reading", "info", line);
+          live.retainedContinue("next");
+          return;
+        }
         if (decision.kind === "last-fold") {
           stop(
             "end",
@@ -301,12 +334,12 @@ export function usePlayAcrossFolds({
           return;
         }
         const last = liveRows.at(-1)!.source_ordinal;
-        const from = decision.kind === "fold" ? decision.from : decision.segment;
+        const from: FoldSegment | null = decision.kind === "fold" ? decision.from : decision.segment;
         const to = decision.kind === "fold" ? decision.to : null;
         const text =
           decision.kind === "fold"
-            ? `Reached the last bar of ${foldLabel(from.fold_id)}. Reading the first window of ${foldLabel(decision.to.fold_id)}…`
-            : `Reached the end of this window. Reading the next window of ${foldLabel(from.fold_id)}…`;
+            ? `Reached the last bar of ${foldLabel(from!.fold_id)}. Reading the first window of ${foldLabel(decision.to.fold_id)}…`
+            : `Reached the end of this window. Reading the next window of ${foldLabel(from!.fold_id)}…`;
         pending.current = {
           kind: decision.kind,
           rows: liveRows,
@@ -332,12 +365,12 @@ export function usePlayAcrossFolds({
   useEffect(() => {
     const p = pending.current;
     if (p === null || slot.inFlight) return;
-    const target = p.to ? `the first window of ${foldLabel(p.to.fold_id)}` : `the next window of ${foldLabel(p.from.fold_id)}`;
+    const target = p.to ? `the first window of ${foldLabel(p.to.fold_id)}` : p.from ? `the next window of ${foldLabel(p.from.fold_id)}` : "the next window";
     if (slot.pageRefusal && slot.pageRefusal !== p.refusal) {
       stop(
         "refused",
         "warn",
-        `Play across folds stopped at the end of ${foldLabel(p.from.fold_id)}: the read of ${p.to ? foldLabel(p.to.fold_id) : "its next window"} was refused. ${pageRefusalWords(slot.pageRefusal)} Playback stays on the last bar of the window on screen. Play again to retry, or turn the switch off.`,
+        `Play across folds stopped at the end of ${p.from ? foldLabel(p.from.fold_id) : "the window"}: the read of ${p.to ? foldLabel(p.to.fold_id) : "its next window"} was refused. ${pageRefusalWords(slot.pageRefusal)} Playback stays on the last bar of the window on screen. Play again to retry, or turn the switch off.`,
         slot.pageRefusal,
       );
       return;
@@ -378,19 +411,25 @@ export function usePlayAcrossFolds({
     }
     transport.play();
     const capital = replay.execution.fold_capital;
-    const event = p.to
-      ? capital.boundary_events.find((entry) => entry.previous_fold_id === p.from.fold_id && entry.fold_id === p.to!.fold_id)
+    /* A cursor read crosses a fold without saying so beforehand: the fold the first new bar belongs to says so now. */
+    const enteredId = p.cursor ? (rows[0]?.bar?.fold_id ?? null) : null;
+    const crossedTo = p.to ?? (enteredId !== null && enteredId !== (p.from?.fold_id ?? null) ? (replay.execution.fold_capital.segments.find((segment) => segment.fold_id === enteredId) ?? null) : null);
+    const event = crossedTo && p.from
+      ? capital.boundary_events.find((entry) => entry.previous_fold_id === p.from!.fold_id && entry.fold_id === crossedTo.fold_id)
       : undefined;
     const count = readsRef.current;
     note(
       "crossed",
       "info",
       `${
-        p.to
-          ? `Entered ${foldLabel(p.to.fold_id)} · capital ${capital.policy ?? "not published"}, ${words(capital.equity_continuity)}${
+        crossedTo
+          ? `Entered ${foldLabel(crossedTo.fold_id)} · capital ${capital.policy ?? "not published"}, ${words(capital.equity_continuity)}${
               event && event.gap_bars !== null ? ` · ${event.gap_bars} ${event.gap_bars === 1 ? "bar" : "bars"} between the two test windows` : ""
             }`
-          : `Read the next window of ${foldLabel(p.from.fold_id)}`
+          : p.from
+            ? `Read the next window of ${foldLabel(p.from.fold_id)}`
+            : "Read the next window"
+
       } · ${count} ${count === 1 ? "window" : "windows"} read by play across folds`,
     );
   }, [rows, slot.inFlight, slot.pageRefusal, slot.recovered, replay, transport, stop, note, endChain]);

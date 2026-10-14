@@ -124,6 +124,8 @@ export interface ReplayController {
   /** Retained-lane window navigation, by the lane's own opaque tokens. */
   retainedNextWindow?: () => void;
   retainedPreviousWindow?: () => void;
+  /** §58: continue along the run's dense observation order, across a fold boundary, forwards or back (`window_cursor`, same limit). */
+  retainedContinue?: (direction: "next" | "previous") => void;
   retainedPin?: (playbackCursor: string) => void;
   retainedContext?: RetainedContext;
   /** W5b: read one fold's test window from its first bar (the lane's own cursor). */
@@ -318,6 +320,16 @@ export function useReplay(
   const retainedPreviousWindow = useCallback(() => {
     if (retainedPage?.prev_cursor) setRetainedIntent({ navigation: { kind: "before", token: retainedPage.prev_cursor }, limit: windowLimit });
   }, [retainedPage?.prev_cursor, windowLimit]);
+  const windowCursor = retained.state === "ready" && isRetainedReplay(retained.replay) ? retained.replay.replay.window_cursor : undefined;
+  const nextWindowToken = windowCursor?.state === "AVAILABLE" ? windowCursor.next_window_cursor : null;
+  const previousWindowToken = windowCursor?.state === "AVAILABLE" ? windowCursor.previous_window_cursor : null;
+  const retainedContinue = useCallback(
+    (direction: "next" | "previous") => {
+      const token = direction === "next" ? nextWindowToken : previousWindowToken;
+      if (token) setRetainedIntent({ navigation: { kind: direction === "next" ? "cursor" : "before", token }, limit: windowLimit });
+    },
+    [nextWindowToken, previousWindowToken, windowLimit],
+  );
   const retainedPin = useCallback((playbackCursor: string) => {
     setRetainedIntent({ navigation: { kind: "at", token: playbackCursor }, limit: windowLimit });
   }, [windowLimit]);
@@ -440,6 +452,7 @@ export function useReplay(
     retained: hubUnpublished && retained.state === "idle" ? { state: "loading" } : retained,
     ensureRetained,
     retainedNextWindow,
+    retainedContinue,
     retainedPreviousWindow,
     retainedPin,
     retainedContext: { identity, claim },

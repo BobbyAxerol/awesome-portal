@@ -117,6 +117,8 @@ interface ServerOptions {
   /** serve fold 0 as two windows (bars 1–100, then the rest) so a boundary can fall inside a fold;
    *  "no-next" serves only the first, with no continuation offered. */
   paged?: boolean | "no-next";
+  /** §58: the run publishes `window_cursor`; `cursor=ALONG` answers fold 2's window (the last one, no cursor onward). */
+  along?: boolean;
   /** HTTP status: a `cursor=` read (the reader's own ‹next window›) is refused. */
   refuseCursor?: number;
 }
@@ -134,7 +136,26 @@ interface Logged {
  * `?at=<fold start cursor>` answers that fold's window; `?cursor=` answers the
  * second slice of a paged fold 0.
  */
+const ALONG = {
+  schema_version: "research.replay-window-cursor.v1",
+  state: "AVAILABLE",
+  reason_code: null,
+  order: "SOURCE_TABLE_ORDINAL_ASC",
+  crossed_fold_boundary: null,
+  first_fold_id: null,
+  last_fold_id: null,
+  next_fold_id: null,
+  previous_fold_id: null,
+  next_window_cursor: null,
+  previous_window_cursor: null,
+} as const;
+
 function serve(base: CurrentSourceReplay, options: ServerOptions = {}) {
+  if (options.along) {
+    const canonical = alignedFoldWindow(base, 0);
+    canonical.replay.window_cursor = { ...ALONG, next_window_cursor: "ALONG" };
+    base = { ...base, replay: canonical.replay };
+  }
   const segments = base.execution.fold_capital.segments;
   const gates = new Map<number, Deferred>((options.hold ?? []).map((fold) => [fold, deferred()]));
   const log: Logged[] = [];
@@ -171,6 +192,11 @@ function serve(base: CurrentSourceReplay, options: ServerOptions = {}) {
         const cursor = url.searchParams.get("cursor");
         if (cursor !== null && options.refuseCursor) {
           return jsonResponse({ error: { code: "RESEARCH_CURRENT_SOURCE_UNAVAILABLE", message: "hidden" } }, options.refuseCursor);
+        }
+        if (cursor !== null && options.along) {
+          const next = alignedFoldWindow(base, 1);
+          next.replay.window_cursor = { ...ALONG, next_window_cursor: null, previous_window_cursor: "ALONG-BACK" };
+          return jsonResponse(next);
         }
         if (cursor !== null && options.paged) return jsonResponse(sliceOf(100, 168));
         if (at === null) return jsonResponse(base);
@@ -585,6 +611,23 @@ describe("D7 · ON, on the canonical two-fold run: one read at the boundary, non
     expect(m.ui.statusText()).toContain("Reached the last bar of fold_04, the last fold");
     /* The audits followed once, for the fold playback rested on. */
     expect(m.server.audits()).toEqual(["0", "3"]);
+  });
+
+  it("§58 with a served window cursor the boundary continues along it: one cursor read, no fold-start read, and the crossing is named", async () => {
+    const m = await mountAcross(FOLD0, { along: true });
+    const baseline = m.server.windows().length;
+    fireEvent.click(m.ui.switch());
+    fireEvent.click(m.ui.play());
+    await playAcrossOnce(m, "crossed");
+    expect(m.server.windows()).toHaveLength(baseline + 1);
+    expect(m.server.windows().at(-1)).toContain("cursor=ALONG");
+    expect(m.server.windows().at(-1)).not.toContain("at=");
+    expect(m.ui.foldOnScreen()).toBe("F2");
+    expect(m.ui.statusText()).toContain("Entered fold_02");
+    /* No cursor onward: that is the end of what the server offers. */
+    await playAcrossOnce(m, "end");
+    expect(m.server.windows()).toHaveLength(baseline + 1);
+    expect(m.ui.statusText()).toContain("Nothing is read past it");
   });
 
   it("a window that ends inside a fold reads that fold's next window (the very ‹next window› read), then crosses the fold boundary", async () => {
