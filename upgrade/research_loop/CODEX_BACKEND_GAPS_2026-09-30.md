@@ -3488,3 +3488,26 @@ eligibility, exact authority requirements, Live typed refusal and retained
 capture lock. Old decoder/client hard-code R1 and must be updated; no UI
 design file was modified by Codex. Final PG/preview results and P24 affected
 browser T02/T14 are recorded in the linked packet, never inferred from fixtures.
+
+### §60 — Coherent backend / actual retained preview return
+
+Delivered backend **`5ca9d167`**, landed on shared Research branch; no push.
+Full normal hook:Control API2,589 PASS /3 SKIP + build/PG dump-restore.
+Preview133 forward migration and exact new Control image passed protected
+state checks (13 tables), preserving7 other services/images and all flags.
+24 GET checks plus actual R1 browser1280/660 PASS narrow read smoke;
+Inbox p9524.153ms on2 rows/one reader, **not** a mixed-load replacement.
+All three probe sessions logged out201; no account/grant/business seed.
+
+Updated handoff **FE-GOV-C01…06** adds the global retained mutation lock:
+UDB's `retained_review_v1` blocks every Execution POST, even local Governance.
+Actual403 verifies that guard, not new R2 execution; do not remove it to pass
+acceptance. Core Governance retains its actual Research workspace; read the
+separately scoped retained runtime context without incorrectly overriding
+it with that Research ID. Source positive/Live parent remain blocked; Claude
+new consumer and affected P24 journey are still pending. P23 preserves old
+measurements, unresolved COPY/config custody and strict83/86 exception.
+[Current runtime/custody index](./evidence/P24/governance-preview-closeout-index.json),
+[affected preview report](./evidence/P24/GOVERNANCE_AFFECTED_PREVIEW_ACCEPTANCE_2026-10-15.md).
+C4-GOV-CAPACITY-01 is a named separate quiet-window cache inventory, not prune
+or permission to touch active/rollback images, DB volumes, data or evidence.

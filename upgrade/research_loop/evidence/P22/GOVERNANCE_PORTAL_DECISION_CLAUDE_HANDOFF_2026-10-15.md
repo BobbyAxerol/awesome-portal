@@ -93,6 +93,21 @@ remain blocked**. Do not invent Canary→Live linkage from a subject name.
   Never hide it or retrofit history. A new source-backed capture with a new
   request key is the valid path when source conditions become qualified.
   Retained preview continues to say capture is read-only/blocked.
+- **FE-GOV-C06:** combine the existing global retained-review runtime context
+  with gate-policy eligibility. `retained_review_v1` publishes
+  `mutation_enabled:false`; its SessionGuard refuses **every** Execution POST,
+  including Portal-local Governance decisions. A commissioned command or
+  eligible reviewer does not override this runtime restriction. Keep all
+  decision/capture controls read-only with the retained reason on this stack;
+  do not remove the guard or enable a flag to manufacture a positive receipt.
+  Core Research/Governance and the isolated retained Execution store have
+  different workspace IDs. The runtime probe reads retained context without a
+  Research workspace override, then keeps the actual Research workspace on
+  approval APIs/links. Do not convert a context404 caused by those different
+  scopes into permission to write, or switch Governance into the store's
+  workspace just to obtain its runtime context.
+  Source-independent plan/apply positives belong to the explicitly labelled
+  disposable technical lane until a write-enabled preview profile is approved.
 
 No layout, palette, typography, chart, baseline or HiFi redesign is requested.
 If a story adjustment needs visual changes, show Bobby the smallest proposal.

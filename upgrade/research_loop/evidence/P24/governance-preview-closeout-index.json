@@ -1,0 +1,255 @@
+{
+  "schema_version": "governance.preview-acceptance-index.v1",
+  "source_sha": "5ca9d167179e0c8469a804edf415766e14ea463c",
+  "project": "portal-research-preview",
+  "at_utc": "2026-10-15T08:04:12.345Z",
+  "migration": "1723680000133_governance-portal-decisions",
+  "images": {
+    "control-api": "sha256:d13cef069471be8b34c7d6f0cda4b6df55e892812c7ea8bf0f17846256e76e6d",
+    "portal-api": "sha256:20da76618efb92e1b8930339a6797aba3b5bc72849bdf5173c62617cf554b2b5",
+    "portal-web": "sha256:2aa8c19c4d0dcc89f98604da81ef6ef9a33d3f62bf4f649325c2e090f86b89d8",
+    "quant-worker-py": "sha256:20da76618efb92e1b8930339a6797aba3b5bc72849bdf5173c62617cf554b2b5",
+    "portal-postgres": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+    "execution-postgres": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+    "portal-nats": "sha256:b83efabe3e7def1e0a4a31ec6e078999bb17c80363f881df35edc70fcb6bb927",
+    "roadmap-task-board-api": "sha256:e32bd3220153caaead4828495f2fc8580973a4266182cd3aae261ca0687fca59"
+  },
+  "protected_tables_preserved": 13,
+  "protected_rows_preserved_after_all_probes": true,
+  "unchanged_non_control_services": 7,
+  "existing_feature_flags_preserved": true,
+  "source_active": false,
+  "stream_active": false,
+  "web_rebuilt": false,
+  "worker_restarted": false,
+  "tests": {
+    "control_api": {
+      "passed": 2589,
+      "skipped": 3,
+      "files_passed": 276,
+      "files_skipped": 2,
+      "includes_disposable_pg_restore": true
+    },
+    "targeted_cases": 106,
+    "targeted_scope": "Subset/scoped runs, not additional cases beyond the full suite",
+    "contract_unique_checks": 344,
+    "reconciler_tests": 14
+  },
+  "api": {
+    "checks": 24,
+    "population": 2,
+    "p95_ms": 24.153436000000056,
+    "scope": "Bounded single-reader read smoke, not a replacement for mixed-load qualification",
+    "refused_decision_post": {
+      "status": 403,
+      "code": "REQUEST_REJECTED",
+      "sha256": "b216bccea211ae2ff3fe56feafca5688772d0ef2e8f58788952aba590c801ec3",
+      "protected_state_unchanged": true,
+      "verification_scope": "RETAINED_PROFILE_MUTATION_GUARD_ONLY",
+      "request_scope": "A deliberately wrong R2 command for an existing R1 record; never a positive source capture"
+    }
+  },
+  "browser": {
+    "viewports": [
+      1280,
+      660
+    ],
+    "script_errors": 0,
+    "horizontal_overflow": 0,
+    "scope": "Existing R1 read/zero script errors/overflow only, not new R2/Live consumer or source-positive write acceptance"
+  },
+  "test_account_created": false,
+  "probe_sessions_logged_out": true,
+  "source_positive_capture": "BLOCKED_RETAINED_SOURCE_PROFILE",
+  "retained_execution_mutations": "ALL_DISABLED_BY_EXISTING_SESSION_GUARD",
+  "local_R2_executor": "TECHNICAL_API_PG_TESTED",
+  "live_decisions": "BLOCKED_LIVE_PARENT_NOT_PUBLISHED",
+  "final_p24": "PENDING_CLAUDE_CONSUMER",
+  "historical_strict_integrity": {
+    "verified": 83,
+    "population": 86,
+    "full_store_integrity": false
+  },
+  "owner_accepted": false,
+  "qualification_issued": false,
+  "release_authorized": false,
+  "remote_push": false,
+  "cleanup": "Test-cell EXIT traps; no broad prune, volume or business-row deletion. Capacity25% free: separate aged-cache inventory follow-up; preserve rollback aliases30days and private evidence.",
+  "private_evidence_root": "/home/bobby/.local/state/portal-research-p23/20261015/governance-continuation",
+  "files": [
+    {
+      "name": "after.json",
+      "bytes": 5562,
+      "sha256": "05b0c8f7f5056a91479c876cd0fc84464d29232d6f8b83b2c890b474bf586570",
+      "mode": "0600"
+    },
+    {
+      "name": "api-read-receipt.json",
+      "bytes": 10190,
+      "sha256": "33b022843419caca7534491cd92dfce29ceaaa7fc3376e22a49b254808471a4e",
+      "mode": "0600"
+    },
+    {
+      "name": "approval-inbox.json",
+      "bytes": 3471,
+      "sha256": "c5e889ef4c04e43f2046b235655cc64e48f30e772c86e5b2c1064ec2565099ff",
+      "mode": "0600"
+    },
+    {
+      "name": "backup-list.txt",
+      "bytes": 1573,
+      "sha256": "cdf20ab21726a152402bace45a294f56400ffb94588d177160403c78f0432fbd",
+      "mode": "0600"
+    },
+    {
+      "name": "before.json",
+      "bytes": 5486,
+      "sha256": "1db820b46af39341bcfb779ef30cf88b6b9b455d40ff137568c6b0a6f9590414",
+      "mode": "0600"
+    },
+    {
+      "name": "browser-read-smoke.json",
+      "bytes": 5183,
+      "sha256": "ad2d8b5f184e7621b5e693223ebacf9a2d974e6d87077dc1f174f55d3fafa5dd",
+      "mode": "0600"
+    },
+    {
+      "name": "build-inputs.json",
+      "bytes": 95947,
+      "sha256": "104fbc04a0d89c868415c97dcae2b6af2b91edbe39d4dc8a5211ed8abd50e78a",
+      "mode": "0600"
+    },
+    {
+      "name": "build-receipt.json",
+      "bytes": 485,
+      "sha256": "b6c19f927f03ac5120f1113402b3dcfdb97e24673e810f0f2de93828e9cb137b",
+      "mode": "0600"
+    },
+    {
+      "name": "build.log",
+      "bytes": 3585,
+      "sha256": "3ac09e1229c02c4de9200cb67a2c601f4cba7a0337cefed130c76e2b1fb3a952",
+      "mode": "0600"
+    },
+    {
+      "name": "capacity.txt",
+      "bytes": 546,
+      "sha256": "4b8aae6b8c4fe182cd2a9af47813e901a1fbadcf451d5529da0b31962073e299",
+      "mode": "0600"
+    },
+    {
+      "name": "capture-capabilities.json",
+      "bytes": 1142,
+      "sha256": "c78fb24911a000decaf9a003f34938ce75bf074967966f65b44f7915d5c6a976",
+      "mode": "0600"
+    },
+    {
+      "name": "governance-before-migration133.dump",
+      "bytes": 13686,
+      "sha256": "1321660a6941658054fdaf6b8221bee7850a5536884ee6418848cc0558625bed",
+      "mode": "0600"
+    },
+    {
+      "name": "hook-terminal-receipt.json",
+      "bytes": 6693,
+      "sha256": "fd7813fe546a738ccef20ef0dabf66a2d102d3a4f05c4a6456ebbaf9c8782808",
+      "mode": "0600"
+    },
+    {
+      "name": "live-refuses-r1-apr_06GG2K4A9Q3AHFVK0WV5GXNCY2.json",
+      "bytes": 144,
+      "sha256": "97c95fa52e63226aced23bdf1d9c54433be93a475a846126615a62a1e4145e2b",
+      "mode": "0600"
+    },
+    {
+      "name": "live-refuses-r1-apr_06GGAC00VHRN2Y9C34S55HEDC2.json",
+      "bytes": 144,
+      "sha256": "d28e65deeea4d605cbb011eef87743b2da2fd0dcfdf23aa51aeb399ba3b8db5d",
+      "mode": "0600"
+    },
+    {
+      "name": "migration133.log",
+      "bytes": 130,
+      "sha256": "4c5a2897ac6c236453e0020fb1288ec9a11df8bdc0e81843fc9640cf656f7f6c",
+      "mode": "0600"
+    },
+    {
+      "name": "operator-script.mjs",
+      "bytes": 19258,
+      "sha256": "27b17441e35c09566b597de881c749682b230ed9e8c7cb2a9acfc7e32b9c7b51",
+      "mode": "0600"
+    },
+    {
+      "name": "preparation.json",
+      "bytes": 494,
+      "sha256": "69cae7775e4e338e5d30ce17e4d246fe11e86e182d84ce6e8679af888d7af803",
+      "mode": "0600"
+    },
+    {
+      "name": "probe-session-cleanup.json",
+      "bytes": 91,
+      "sha256": "48f96c1cbb3095bb344cf0195b356223e6c2fd0fd3eaabf7cc2db751998196d3",
+      "mode": "0600"
+    },
+    {
+      "name": "r1-1280.png",
+      "bytes": 160629,
+      "sha256": "11ae45271e492d394a52bc54925da3731fd44418e936eb704027a5c5c822f2c8",
+      "mode": "0600"
+    },
+    {
+      "name": "r1-660.png",
+      "bytes": 92580,
+      "sha256": "f719d198ab917a2b0a698fb1c61588d423b759bb5977432f303d4fe844dd1ace",
+      "mode": "0600"
+    },
+    {
+      "name": "r1-apr_06GG2K4A9Q3AHFVK0WV5GXNCY2.json",
+      "bytes": 6123,
+      "sha256": "8e6d0a8229c9b67d41d6f91a4f9e1c35c7c49e1e73873a99ba22557a969ab716",
+      "mode": "0600"
+    },
+    {
+      "name": "r1-apr_06GGAC00VHRN2Y9C34S55HEDC2.json",
+      "bytes": 6123,
+      "sha256": "5408f394e3d4e6a3882054182c7db84889e3a1060c3c242d8b3208699a456019",
+      "mode": "0600"
+    },
+    {
+      "name": "r2-refuses-r1-apr_06GG2K4A9Q3AHFVK0WV5GXNCY2.json",
+      "bytes": 144,
+      "sha256": "727c22dcfef2409ee7d5a745cfe12c845e1f9df88b955707eb8a7b88735b7db3",
+      "mode": "0600"
+    },
+    {
+      "name": "r2-refuses-r1-apr_06GGAC00VHRN2Y9C34S55HEDC2.json",
+      "bytes": 144,
+      "sha256": "7db3b56d085d71e8fb0cba1fd271745e9dc97d42a96863d0f464fc6653851653",
+      "mode": "0600"
+    },
+    {
+      "name": "rendered-compose.private.json",
+      "bytes": 29303,
+      "sha256": "898a7dcbff35b745ea2dedee435191ea8a95cc14363dd393772f849c91f32fd8",
+      "mode": "0600"
+    },
+    {
+      "name": "retained-context.json",
+      "bytes": 34499,
+      "sha256": "514cdb3e9e83bf9a6560cc2caf3455b9e606d2250dd42269734c3e2bbb956514",
+      "mode": "0600"
+    },
+    {
+      "name": "scoped-control-up.log",
+      "bytes": 88,
+      "sha256": "21ca64513c35960af54500c0486c0e1b12c552902c193d216fa07c9ebcecfc05",
+      "mode": "0600"
+    },
+    {
+      "name": "wrong-gate-refusal.json",
+      "bytes": 508,
+      "sha256": "8c2944f29c7488ef2f2afccd13590965a1b4a27de8005ff5ccdbf8e771f1aedc",
+      "mode": "0600"
+    }
+  ]
+}

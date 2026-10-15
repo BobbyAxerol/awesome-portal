@@ -47,3 +47,26 @@ No test user/grant is provisioned in production or the shared preview.
 Do not stop shared collectors, remove DB/artifact volumes, globally prune
 images, or delete rollback aliases to claim cleanup. Private backups and
 receipts retain normal evidence/rollback policy.
+
+## Actual preview checkpoint — 2026-10-15 08:04 UTC
+
+[Machine-readable custody/status index](./governance-preview-closeout-index.json).
+Clean committed Control API candidate `5ca9d167`, additive migration133,
+actual image `sha256:d13cef069471be8b34c7d6f0cda4b6df55e892812c7ea8bf0f17846256e76e6d`.
+Seven non-Control services remain unchanged. All13 protected business/auth
+table fingerprints match both before/after migration **and after probes**.
+
+| Affected lane | Returned actual evidence | Current disposition |
+| --- | --- | --- |
+| T02 existing RC/approval read journey |24 GET checks; two real expired R1 approvals; same workspace200, foreign scope404; actual R1 page/bundle `index-DSF95uUV.js`1280/660, zero script errors/overflow | EXISTING_READ_SMOKE_PASS; new consumer/positive write not inferred |
+| T14 authority/reference preservation | Full normal hook2,589 PASS /3 SKIP plus dump/restore; actual133 preserved13 tables; wrong-gate read404; no new business records | AFFECTED_BACKEND_TECHNICAL_PASS; source-positive graph remains conditional |
+| Shared-preview decision POST |403 `REQUEST_REJECTED` from retained SessionGuard, before dispatch; protected data unchanged | EXPECTED_RETAINED_RUNTIME_REFUSAL, not R2 plan/apply acceptance |
+| Claude new R2/Live/Exit adapters/story | Generated contracts/fixture and FE-GOV-C01…06 published; Codex edited no frontend file | PENDING_CLAUDE_CONSUMER |
+| Source-positive capture / Live | Source profile retained/off; no immutable Live predecessor/policy published | BLOCKED, no flags/SQL seeded to force PASS |
+
+No `READY_FOR_BOBBY_REVIEW` for the whole P24 phase yet. Return the affected
+consumer receipt first; keep exact83/86 exception and historical origin
+custody limits. Nothing in this index signs a manifest or authorizes release.
+Probe sessions all logged out201; no test account/grant was created. C4
+capacity observation/follow-up is recorded in the P22 packet; no volume/data
+cleanup or unrelated service restart occurred.

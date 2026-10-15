@@ -170,3 +170,28 @@ including actual rollback and replay. Deliberately seeded source records are
 not a product-source capture; no fresh shared-preview browser is inferred.
 P23 whole-candidate qualification/custody and P24 consumer acceptance remain
 distinct from these scoped API/PG results.
+
+## 6. Coherent candidate and affected preview addendum
+
+`5ca9d167` normal hook returned **2,589 PASS /3 SKIP**, build and disposable
+whole-DB restore PASS. Actual preview Control API/image/migration133, exact
+COPY inputs/config bytes and13-table before/after preservation now have
+[their own custody index](../P24/governance-preview-closeout-index.json).
+The unchanged web/worker/DB/NATS images are listed separately, never relabelled
+as built from the Control API candidate.
+
+T01 affected Inbox smoke:24.153ms p95 for12 warm single-reader GETs against
+two existing expired records; correctness also exercised by the hook's real
+182k Inbox test. **Neither is a20-principal mixed-load retake.** Preserve the
+original load measurements/limits and their unresolved origin custody.
+T05/T09/T14 affected technical authority/transaction/reference tests passed;
+preview GET workspace/gate refusals and13-table preservation passed.
+The preview POST403 proves only the retained mutation guard, not dispatch to
+the new R2 executor. T15 new R2/Live/Exit consumer acceptance remains pending
+Claude; existing-R1 Chromium read at1280/660 passed its own narrow scope.
+
+The offline reconciler's14 tests verify its disposition rules, not the missing
+origin COPY/config/gate identities. No blanket `REUSED_VERIFIED`, fifteen
+same-image PASS, `P23_QUALIFIED` or new full-store integrity is issued. The
+historical exact-three exception remains83/86. Actual source-backed capture
+and Live predecessor policy are still explicit non-PASS boundaries.

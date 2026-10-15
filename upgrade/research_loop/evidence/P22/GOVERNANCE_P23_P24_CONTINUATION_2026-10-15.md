@@ -118,6 +118,62 @@ preview. Source activation/certificate/grant conditions remain unchanged.
 ## 6. Consumer and P24 handoff
 
 [Exact Claude contract/story/acceptance handoff](./GOVERNANCE_PORTAL_DECISION_CLAUDE_HANDOFF_2026-10-15.md)
-names five bounded consumer tasks. No frontend file is modified by Codex.
+names six bounded consumer tasks. No frontend file is modified by Codex.
 P24 may close only after the affected current-preview consumer/journey
 receipts; it is not owner acceptance, signing or production readiness.
+
+## 7. Coherent commit and actual preview return
+
+Backend commit **`5ca9d167179e0c8469a804edf415766e14ea463c`** landed by
+clean fast-forward on `docs/research-loop-plan`. Normal hook exit0: full
+Control API276 files PASS /2 files SKIP, **2,589 tests PASS /3 SKIP**, build and
+whole disposable PostgreSQL dump/restore PASS. The106 targeted cases above
+are a subset/scoped progression, not additional tests. Hook terminal capture
+is explicitly a **last output chunk**, not an invented complete raw log.
+
+Shared preview8095 now runs Control API image
+`sha256:d13cef069471be8b34c7d6f0cda4b6df55e892812c7ea8bf0f17846256e76e6d`,
+built from that clean committed source and the captured COPY-input manifest.
+Migration133 ran through the official one-shot job after a13,686-byte scoped
+backup; no bootstrap or manual business SQL. All13 protected table counts/
+content fingerprints match before migration and after all probes. Seven
+other services retain their original container/image IDs. Web bundle
+`index-DSF95uUV.js` and QuantBT worker were not rebuilt/restarted. Sources,
+SSE, relay and mirror flags remain off; existing feature configuration stayed.
+
+Actual ordinary API result:24 GET checks, two existing **expired R1** records,
+valid same-workspace reads200, wrong-workspace404 and R2/Live readers reject
+those R1 records404. Twelve warm Inbox reads p9524.153ms on **two rows and one
+reader**: bounded smoke only, not the20-principal mixed-load gate. One
+deliberately wrong command POST is stopped by the existing retained guard403
+**before gate dispatch**; it is not product proof of a new R2 mutation. No
+approval, grant, capture, account or candidate was inserted for this receipt.
+
+Actual Chromium existing-R1 read at1280/660: workspace-bound response200,
+zero script errors/overflow; visual inspection retained the accepted screen.
+This is neither new R2/Live UI acceptance nor a HiFi/baseline re-approval.
+All three probe sessions logged out201; no test account was provisioned.
+Initial preparation script quoting failed before any migration/write and was
+corrected. The scoped restart readiness helper retried two transient502s,
+then both health routes and all ordinary read probes passed.
+
+[Exact runtime/image/private-byte index](../P24/governance-preview-closeout-index.json)
+records29 actual0600 evidence files. Candidate is mixed-image by design, not
+an assertion that every service was rebuilt from this SHA. P24 affected
+consumer/journeys remain **PENDING_CLAUDE_CONSUMER**. The handoff now contains
+**FE-GOV-C01…06**, including the global retained mutation lock and distinct
+Core/retained-store workspaces. No remote push, dev/main merge or release.
+
+## 8. C4 bounded resource return
+
+Test cells removed their owned Node/PG containers/networks/temp trees through
+EXIT traps; the final capacity snapshot finds zero `control-api-test-*`
+containers. Root free169,306,398,720B (25%); Docker images88.79GB, build
+cache195.7GB, volumes31.89GB. Reclaimable totals are observations, **not
+deletion authority**. No matching host `actions.runner.*` unit was listed;
+this is not a claim about rootless/remote GitHub runner registrations.
+
+Named follow-up **C4-GOV-CAPACITY-01**, owner Bobby/ops: in a separate quiet
+window inventory only unused BuildKit cache older than7days under C4.3;
+check active jobs/retention first. Preserve active images/volumes,30-day
+rollback aliases and private backup/evidence. No broad prune or DB deletion.

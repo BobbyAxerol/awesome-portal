@@ -9324,3 +9324,28 @@ Claude's bounded contract/story tasks:
 P23 [dependency/custody dispositions](./research_loop/evidence/P23/GOVERNANCE_DEPENDENCY_DISPOSITION_2026-10-15.md)
 preserve unchanged numerical scopes, exact83/86 exception and unresolved
 image/COPY/config custody; they do not imply that all gates ran on one image.
+
+#### Governance continuation — coherent backend / preview return, 2026-10-15
+
+**`5ca9d167`** passed the normal grouped hook (Control API2,589 PASS /3 SKIP,
+build and real PG dump/restore) and landed by clean FF on this shared branch.
+Scoped Control-only preview rebuild/migration133 completed;13 protected table
+fingerprints match before/after all probes,7 other services/images unchanged,
+source/SSE/relay/mirror flags remain off.24 GET checks plus actual existing-R1
+browser1280/660 passed; Inbox24.153ms p95 is2 rows/one reader only, not the
+mixed-load gate. No web/worker rebuild, test account/grant or business seed.
+
+| Slice | Updated exit disposition |
+| --- | --- |
+| GOV-C1 | BACKEND_TECHNICAL_PASS_AND_EXISTING_PREVIEW_READ_PASS; independent plan/apply/quorum/rollback is real disposable-PG HTTP, not shared-source positive capture |
+| GOV-C2 | R2_LOCAL_EXECUTOR_TESTED; actual Live gate/own command/read, still LIVE_PARENT_NOT_PUBLISHED; no upstream effects |
+| GOV-C3 | SOURCE_CUSTODY_MATRIX_AND_VERIFIER_DELIVERED; affected technical regressions/current preview bound, no whole-candidate P23 certificate or invented receipt reuse; historical83/86 remains |
+| GOV-C4 | PENDING_CLAUDE_FE_GOV_C01_C06; actual shared preview remains entirely read-only for Execution POST; no whole-P24 READY or owner acceptance |
+
+[Runtime/image/private-byte custody index](./research_loop/evidence/P24/governance-preview-closeout-index.json)
+and [affected P24 return](./research_loop/evidence/P24/GOVERNANCE_AFFECTED_PREVIEW_ACCEPTANCE_2026-10-15.md).
+Claude consumes **FE-GOV-C01…06**, including retained runtime override and
+distinct Core/store workspace semantics, before affected browser acceptance.
+All probe sessions logged out201. C4-GOV-CAPACITY-01 is the named, separate
+cache inventory follow-up at25% root free; do not prune active/rollback assets.
+No remote push, dev/main merge, signed release or production/source activation.
