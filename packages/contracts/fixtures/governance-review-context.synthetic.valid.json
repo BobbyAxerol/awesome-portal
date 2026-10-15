@@ -25,13 +25,33 @@
     "evidence_set_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "source_side_effect_requested": false,
     "gate": "R2",
-    "evidence_hashes": null,
-    "command_type": null,
-    "request_schema_version": null,
-    "plan_path": null,
+    "evidence_hashes": [
+      "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "command_type": "GOVERNANCE_R2_DECISION",
+    "request_schema_version": "governance.r2-decision-plan-request.v1",
+    "plan_path": "/api/v1/execution/commands/plans",
+    "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    }
+  },
+  "live": {
+    "workspace_id": "ws_example",
+    "approval_id": "apr_example",
+    "expected_approval_version": 2,
+    "evidence_set_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "source_side_effect_requested": false,
+    "gate": "LIVE_GATE",
+    "evidence_hashes": [
+      "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "command_type": "GOVERNANCE_LIVE_DECISION",
+    "request_schema_version": "governance.live-decision-plan-request.v1",
+    "plan_path": "/api/v1/execution/commands/plans",
     "availability": {
       "state": "BLOCKED",
-      "reason_code": "R2_EXECUTION_DECISION_NOT_COMMISSIONED"
+      "reason_code": "LIVE_PARENT_NOT_PUBLISHED"
     }
   },
   "paper_exit": {

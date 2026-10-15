@@ -83,7 +83,8 @@ interface ProjectionSnapshotRow {
 
 function reviewHref(gate: GovernanceTriageRow["gate"], id: string): string {
   if (gate === "R1") return `/governance/approvals/${id}/r1`;
-  if (gate === "R2" || gate === "LIVE_GATE") return `/governance/approvals/${id}/r2`;
+  if (gate === "R2") return `/governance/approvals/${id}/r2`;
+  if (gate === "LIVE_GATE") return `/governance/approvals/${id}/live`;
   return `/governance/exit-reviews/${id}`;
 }
 
@@ -595,7 +596,8 @@ export class CommandCenterRepository {
                 sla_due_at AS scheduled_at,
                 CASE
                   WHEN gate = 'R1' THEN concat('/governance/approvals/', approval_id, '/r1')
-                  WHEN gate IN ('R2', 'LIVE_GATE') THEN concat('/governance/approvals/', approval_id, '/r2')
+                  WHEN gate = 'R2' THEN concat('/governance/approvals/', approval_id, '/r2')
+                  WHEN gate = 'LIVE_GATE' THEN concat('/governance/approvals/', approval_id, '/live')
                   ELSE concat('/governance/exit-reviews/', approval_id)
                 END AS href,
                 updated_at

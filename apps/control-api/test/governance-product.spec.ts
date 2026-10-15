@@ -7,6 +7,7 @@ import { assertCaptureContract, assertReviewContextContract } from "./contract-v
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
 import { OwnerAccessRepository } from "../src/repos/owner-access";
 import { GovernanceGrantsRepository } from "../src/repos/governance-grants";
+import { GovernanceReviewCaptureService } from "../src/governance/review-capture.service";
 
 const DATABASE_URL =
   process.env.TEST_DATABASE_URL ??
@@ -227,6 +228,35 @@ describe("N29 governance product closeout", () => {
     };
   }
 
+  it.each([
+    ["role", "ADMIN_ROLE_REQUIRED", 403],
+    ["grant", "GOVERNANCE_CAPABILITY_REQUIRED", 403],
+    ["session", "SESSION_REQUIRED", 401],
+    ["workspace", "WORKSPACE_ACCESS_DENIED", 403],
+  ] as const)("rechecks capture %s inside its transaction even when the HTTP actor was loaded earlier", async (change, code, status) => {
+    const actor = await createActor(`capture-fresh-${change}`, "ADMIN");
+    await ctx.pool.query("INSERT INTO workspace_members(workspace_id,user_id,role) VALUES ($1,$2,'MEMBER')", [workspaceId, actor.userId]);
+    const grants = new GovernanceGrantsRepository(ctx.pool);
+    for (const gate of ["r1", "r2"] as const) await grants.insertGrant({
+      grantId: `grn_capture_fresh_${change}_${gate}`, granteeUserId: actor.userId,
+      capability: `governance.${gate}.read`, workspaceId, issuedBy: bobby.userId,
+    });
+    const stale = (await auth.users.findById(actor.userId))!;
+    if (change === "role") await ctx.pool.query("UPDATE portal_users SET role='USER' WHERE user_id=$1", [actor.userId]);
+    if (change === "grant") await ctx.pool.query("DELETE FROM portal_capability_grants WHERE grantee_user_id=$1", [actor.userId]);
+    if (change === "session") await ctx.pool.query("UPDATE portal_users SET session_version=session_version+1 WHERE user_id=$1", [actor.userId]);
+    if (change === "workspace") await ctx.pool.query("DELETE FROM workspace_members WHERE workspace_id=$1 AND user_id=$2", [workspaceId, actor.userId]);
+    const captures = ctx.app.get(GovernanceReviewCaptureService);
+    await expect(captures.createR2(stale, {
+      workspace_id: workspaceId, request_key: `capture-stale-${change}`,
+      summary: "Technical negative authority regression; no source capture.",
+      r1_approval_id: "apr_not_read", expected_r1_version: 1, portfolio_id: "pf_not_read",
+      currency: "USDT", deployment_id: "dep_not_read", risk_grant_id: "risk_not_read",
+      expected_projection_digest: ARTIFACT_HASH,
+    }, `capture-stale-${change}`)).rejects.toMatchObject({ code, status });
+    expect((await ctx.pool.query("SELECT count(*)::integer AS count FROM governance_review_captures WHERE actor_user_id=$1", [actor.userId])).rows[0].count).toBe(0);
+  });
+
   it("pins server-owned evidence, is idempotent and rejects duplicate open work", async () => {
     const missingCsrf = await request(stan, "/api/v1/execution/governance/approvals", {
       method: "POST",
@@ -281,7 +311,7 @@ describe("N29 governance product closeout", () => {
     ]);
   });
 
-  it("BE-R2-8 creates R2 and Paper Exit through authenticated routes, then rejects safely without fabricating source evidence", async () => {
+  it("creates and independently decides Portal-local R2 before Paper Exit, without fabricating source evidence or executing upstream", async () => {
     const created = await mutation(stan,"/api/v1/execution/governance/approvals",createPayload("ar06-r1"));
     expect(created.statusCode,JSON.stringify(created.json())).toBe(201);
     const r1Id=created.json().approval.approval_id;
@@ -377,16 +407,58 @@ describe("N29 governance product closeout", () => {
     const r2Data = r2Review.json().data;
     assertReviewContextContract(r2Data.decision_context, "DecisionContext");
     assertReviewContextContract(r2Data.capture_context, "CaptureContext");
-    expect(r2Data.decision_context.availability.reason_code).toBe("R2_EXECUTION_DECISION_NOT_COMMISSIONED");
-    expect(r2Data.eligibility).toMatchObject({ can_approve: false, can_approve_with_condition: false, can_deny: false, can_request_changes: false });
+    expect(r2Data.decision_context).toMatchObject({ command_type: "GOVERNANCE_R2_DECISION",
+      request_schema_version: "governance.r2-decision-plan-request.v1",
+      evidence_hashes: [ARTIFACT_HASH], source_side_effect_requested: false });
+    // Bobby captured this review: owner authority does not waive its SoD.
+    expect(r2Data.eligibility).toMatchObject({ can_approve: false, can_approve_with_condition: false,
+      can_deny: true, can_request_changes: false, locks: expect.arrayContaining(["SELF_APPROVAL"]) });
+    expect(r2Data.approval).toMatchObject({ evidence_complete: true, blocker_count: 0, status: "PENDING" });
+    expect(r2Data.capture_context.availability).toEqual({ state: "BLOCKED", reason_code: "R2_APPROVAL_REQUIRED" });
     expect(r2Data.r1_reference.href).toBe(`/governance/approvals/${r1Id}/r1?workspace_id=${workspaceId}`);
+    expect(r2Data.decision_evidence_manifest.manifest_hash).toBe(r2Data.approval.evidence_set_hash);
+    expect(r2Data.decision_evidence_manifest.manifest_hash).not.toBe(r2Data.r1_reference.digest);
     const mismatch = await mutation(bobby, "/api/v1/execution/commands/plans", {
       ...decisionInput, request_key: "ar06-no-r1-alias", target: { approval_id: r2.approval_id }, expected_approval_version: 1,
     });
     expect(mismatch.statusCode).toBe(409);
     expect(mismatch.json().error.code).toBe("GOVERNANCE_DECISION_GATE_MISMATCH");
     expect((await mutation(bobby,"/api/v1/execution/governance/r2/capture",{ ...r2Input,summary:"Changed intent must not replay previous result." })).statusCode).toBe(409);
-    const exitContext = r2Data.capture_context;
+    const premature = await mutation(bobby, "/api/v1/execution/governance/paper-exit/create", {
+      workspace_id: workspaceId, request_key: "ar06-premature-exit", summary: "A pending R2 is not an accepted capital review.",
+      r2_approval_id: r2.approval_id, expected_r2_version: 1,
+      deployment_id: candidate.deployment_id, expected_projection_digest: digest,
+    });
+    expect(premature.statusCode).toBe(422);
+    expect(premature.json().error.code).toBe("R2_APPROVAL_REQUIRED");
+
+    // Use the independent reviewer's same-read command pins, not R1 command
+    // aliases or SQL transitions. This records Portal approval only.
+    const independent = await request(lan, `${r2.read_path}?workspace_id=${workspaceId}`);
+    expect(independent.statusCode).toBe(200);
+    expect(independent.json().data.eligibility).toMatchObject({ can_approve: true, locks: [] });
+    const r2Decision = independent.json().data.decision_context;
+    assertReviewContextContract(r2Decision, "DecisionContext");
+    const r2Plan = await mutation(lan, r2Decision.plan_path, {
+      schema_version: r2Decision.request_schema_version, workspace_id: r2Decision.workspace_id,
+      request_key: "ar06-r2-approve", command_type: r2Decision.command_type, command_version: 1,
+      target: { approval_id: r2Decision.approval_id }, expected_approval_version: r2Decision.expected_approval_version,
+      payload: { decision: "APPROVE", reason: "Independent Portal review accepts the immutable source references.",
+        conditions: [], evidence_hashes: r2Decision.evidence_hashes },
+    });
+    expect(r2Plan.statusCode, JSON.stringify(r2Plan.json())).toBe(201);
+    expect(r2Plan.json()).toMatchObject({ command_type: "GOVERNANCE_R2_DECISION", blockers: [] });
+    const r2Apply = await mutation(lan, `/api/v1/execution/operations/${r2Plan.json().operation_id}/apply`, {
+      schema_version: "governance.r2-decision-apply-request.v1", workspace_id: workspaceId,
+      apply_token: r2Plan.json().apply_token,
+    });
+    expect(r2Apply.statusCode, JSON.stringify(r2Apply.json())).toBe(202);
+    const acceptedR2 = await request(bobby, `${r2.read_path}?workspace_id=${workspaceId}`);
+    expect(acceptedR2.statusCode).toBe(200);
+    expect(acceptedR2.json().data.approval).toMatchObject({ status: "APPROVED", approval_version: 2 });
+    const exitContext = acceptedR2.json().data.capture_context;
+    assertReviewContextContract(exitContext, "CaptureContext");
+    expect(exitContext.availability).toEqual({ state: "AVAILABLE", reason_code: null });
     const exitInput={ workspace_id:exitContext.workspace_id,request_key:"ar06-exit",summary:"Insufficient accepted source evidence; record review, not promotion.",
       r2_approval_id:exitContext.parent_approval_id,expected_r2_version:exitContext.expected_parent_version,
       deployment_id:exitContext.candidates[0].deployment_id,expected_projection_digest:exitContext.expected_projection_digest };
@@ -410,6 +482,7 @@ describe("N29 governance product closeout", () => {
     });
     expect(rejected.statusCode,JSON.stringify(rejected.json())).toBe(202);
     expect((await ctx.pool.query("SELECT count(*)::int AS n FROM governance_promotion_authority_grants")).rows[0].n).toBe(0);
+    expect((await ctx.pool.query("SELECT count(*)::int AS n FROM governance_approval_decisions WHERE approval_id=$1", [r2.approval_id])).rows[0].n).toBe(1);
     expect((await ctx.pool.query("SELECT count(*)::int AS n FROM product_audit_events WHERE event_type='governance.review.captured'")).rows[0].n).toBe(2);
     await expect(ctx.pool.query("UPDATE governance_paper_exit_lineage SET label='tamper'")).rejects.toMatchObject({ code:"55000" });
     Object.assign(ctx.config,{ FEATURE_EXECUTION_LOCAL_PROJECTION:"false",FEATURE_EXECUTION_CURRENT_SOURCE_PAPER:"false" });

@@ -334,9 +334,13 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
   ) {
     const r1ApprovalId = `${approvalId}-R1`;
     let r1ManifestHash: string | null = null;
+    let childEvidence: EvidenceRecord[] = [];
     if (withLineage && targetWorkspaceId === workspaceId) {
       const r1 = await seedApproval({ approvalId: r1ApprovalId });
       r1ManifestHash = r1.manifestHash;
+      const snapshot = await new GovernanceRepository(ctx.pool).detail(workspaceId, r1ApprovalId);
+      expect(snapshot).not.toBeNull();
+      childEvidence = snapshot!.evidence.map(item => ({ ...item, evidenceId: `${approvalId}:${item.evidenceId}` }));
       await ctx.pool.query(
         `UPDATE governance_approval_requests
             SET status = 'APPROVED', quorum_met = 1, approval_version = 2,
@@ -357,8 +361,25 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
                'PAPER', 'R2 capital review', $3, $4, $3, $4, 'PENDING',
                'approval.v3', 1, $5, true, 0,
                now() + interval '6 hours', now() + interval '48 hours')`,
-      [approvalId, targetWorkspaceId, stan.userId, stan.username, HASH_A],
+      [approvalId, targetWorkspaceId, stan.userId, stan.username, computeEvidenceManifestHash(childEvidence)],
     );
+    if (childEvidence.length > 0) {
+      // The child owns a new immutable manifest: copied bytes do not make its
+      // evidence IDs or manifest identical to the referenced R1 approval.
+      await ctx.pool.query(
+        `INSERT INTO governance_approval_evidence
+           (evidence_id, approval_id, ordinal, kind, label, display_value, note,
+            verification, artifact_id, sha256, size_bytes, media_type, schema_version,
+            source_authority, source_reference, required, captured_at,
+            retention_class, access_policy)
+         SELECT $1 || ':' || evidence_id, $1, ordinal, kind, label, display_value, note,
+                verification, artifact_id, sha256, size_bytes, media_type, schema_version,
+                source_authority, source_reference, required, captured_at,
+                retention_class, access_policy
+           FROM governance_approval_evidence WHERE approval_id = $2`,
+        [approvalId, r1ApprovalId],
+      );
+    }
     await ctx.pool.query(
       `INSERT INTO governance_approval_analytics_scopes
          (approval_id, workspace_id, portfolio_id, currency)
@@ -818,12 +839,17 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
         approver_role: "ADMIN",
         plan_author: "stan",
         evidence_manifest: { complete: true, entries: expect.any(Array) },
-        decision_context: { gate: "R2", command_type: null, plan_path: null,
-          availability: { state: "BLOCKED", reason_code: "R2_EXECUTION_DECISION_NOT_COMMISSIONED" } },
-        eligibility: { can_approve: false, can_deny: false, can_request_changes: false,
-          locks: ["R2_EXECUTION_DECISION_NOT_COMMISSIONED"] },
+        decision_context: { gate: "R2", command_type: "GOVERNANCE_R2_DECISION",
+          request_schema_version: "governance.r2-decision-plan-request.v1",
+          plan_path: "/api/v1/execution/commands/plans", evidence_hashes: [HASH_A, HASH_B],
+          availability: { state: "AVAILABLE", reason_code: null } },
+        eligibility: { can_approve: true, can_deny: true, can_request_changes: true, locks: [] },
       },
     });
+    expect(response.json().data.decision_evidence_manifest.manifest_hash)
+      .toBe(response.json().data.approval.evidence_set_hash);
+    expect(response.json().data.decision_evidence_manifest.manifest_hash)
+      .not.toBe(response.json().data.r1_reference.digest);
 
     /*
      * A4-3 · workspace membership is not a Governance grant.
@@ -910,8 +936,38 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
         WHERE approval_id = 'AP-R2-DETAIL'`,
     );
     const expired = await inject(bobby, path);
-    expect(expired.statusCode).toBe(404);
-    expect(expired.json().error.code).toBe("APPROVAL_NOT_FOUND");
+    expect(expired.statusCode).toBe(200);
+    expect(expired.json().data.approval.status).toBe("EXPIRED");
+    expect(expired.json().data.eligibility).toMatchObject({ can_approve: false, can_deny: false,
+      locks: expect.arrayContaining(["EXPIRED"]) });
+    expect(expired.json().data.decision_context.availability)
+      .toEqual({ state: "BLOCKED", reason_code: "APPROVAL_EXPIRED" });
+  });
+
+  it("marks a commissioned independent R2 as needing its authorized reviewer, but not after its R1 parent expires", async () => {
+    const id = "AP-R2-NEEDS-ACTION";
+    await seedR2CapitalScope(id);
+    const path = `/api/v1/execution/governance/approvals?workspace_id=${workspaceId}&view=R2&limit=50`;
+    for (const actor of [bobby, lan]) {
+      const response = await inject(actor, path);
+      expect(response.statusCode).toBe(200);
+      const row = response.json().page.rows.find((item: { id: string }) => item.id === id);
+      expect(row).toMatchObject({ id, gate: "R2", needs_you: true });
+    }
+    // Changing the parent, not the reviewer's role or grant, removes current
+    // actionability. A stale parent must not produce an actionable Inbox row.
+    await ctx.pool.query(
+      `UPDATE governance_approval_requests
+          SET sla_due_at = now() - interval '2 minutes', expires_at = now() - interval '1 minute'
+        WHERE approval_id = $1`,
+      [`${id}-R1`],
+    );
+    for (const actor of [bobby, lan]) {
+      const response = await inject(actor, path);
+      expect(response.statusCode).toBe(200);
+      const row = response.json().page.rows.find((item: { id: string }) => item.id === id);
+      expect(row).toMatchObject({ id, gate: "R2", needs_you: false });
+    }
   });
 
   it("refuses an R1 command for an authorized R2, without leaking a gate to R1-only users", async () => {

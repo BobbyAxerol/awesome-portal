@@ -184,7 +184,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Plans a Portal-local R1 or Paper Exit decision. REQUEST_CHANGES closes only the current immutable approval attempt; it does not deny the governed gate or create a replacement request. */
+        /** @description Plans a named Portal-only R1, R2, Live or Paper Exit decision. Live remains typed blocked without an immutable commissioned parent policy. Never execution authorization. */
         post: operations["planGovernanceDecision"];
         delete?: never;
         options?: never;
@@ -216,7 +216,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Returns workflow status and verification_result separately for a Paper Exit decision operation. */
+        /** @description Reads an actor/workspace-bound Portal decision operation after fresh gate authorization. Poll settlement; an ACK is not terminal success. */
         get: operations["getPaperExitDecisionOperation"];
         put?: never;
         post?: never;
@@ -340,30 +340,30 @@ export interface components {
             /** @constant */
             source_side_effect_requested: false;
         } & unknown;
-        /** @description Immutable evidence pins for the existing R1 command. Executor availability is not permission to bypass per-verb eligibility. R2 has no commissioned executor: null command/path and typed refusal, never an R1 alias. */
+        /** @description Same-read immutable child manifest pins, with distinct named Portal-only R1/R2/Live commands. AVAILABLE permits planning, not a per-verb policy bypass. Live remains blocked until an explicit immutable predecessor policy is published. Never Trading System execution authority. */
         DecisionContext: {
             /** @enum {unknown} */
-            gate: "R1" | "R2";
+            gate: "R1" | "R2" | "LIVE_GATE";
             workspace_id: string;
             approval_id: string;
             expected_approval_version: number;
             evidence_set_hash: string;
             evidence_hashes: string[] | null;
             /** @enum {unknown} */
-            command_type: "GOVERNANCE_R1_DECISION" | null;
+            command_type: "GOVERNANCE_R1_DECISION" | "GOVERNANCE_R2_DECISION" | "GOVERNANCE_LIVE_DECISION";
             /** @enum {unknown} */
-            request_schema_version: "governance.r1-decision-plan-request.v1" | null;
-            /** @enum {unknown} */
-            plan_path: "/api/v1/execution/commands/plans" | null;
+            request_schema_version: "governance.r1-decision-plan-request.v1" | "governance.r2-decision-plan-request.v1" | "governance.live-decision-plan-request.v1";
+            /** @constant */
+            plan_path: "/api/v1/execution/commands/plans";
             availability: {
                 /** @enum {unknown} */
                 state: "AVAILABLE" | "BLOCKED";
                 /** @enum {unknown} */
-                reason_code: null | "GOVERNANCE_CAPABILITY_REQUIRED" | "ADMIN_ROLE_REQUIRED" | "APPROVAL_NOT_PENDING" | "APPROVAL_EXPIRED" | "EVIDENCE_HASH_LIMIT_EXCEEDED" | "R2_EXECUTION_DECISION_NOT_COMMISSIONED" | "R1_APPROVAL_REQUIRED" | "R1_EVIDENCE_INCOMPLETE" | "R2_ACCEPTED_LINEAGE_UNAVAILABLE" | "R2_REVIEW_CLOSED" | "CAPTURE_RETAINED_REVIEW_READ_ONLY" | "CAPTURE_PROJECTION_NOT_AUTHORIZED" | "CAPTURE_PROJECTION_UNAVAILABLE" | "CAPTURE_PROJECTION_SCOPE_MISMATCH" | "CAPTURE_PROJECTION_STALE" | "CAPTURE_DEPLOYMENT_SOURCE_UNAVAILABLE" | "R2_RISK_GRANT_SOURCE_UNAVAILABLE" | "R2_PORTFOLIO_SCOPE_NOT_FOUND" | "CAPTURE_DEPLOYMENT_SCOPE_NOT_FOUND" | "PAPER_VENUE_UNAVAILABLE";
+                reason_code: null | "GOVERNANCE_CAPABILITY_REQUIRED" | "ADMIN_ROLE_REQUIRED" | "APPROVAL_NOT_PENDING" | "APPROVAL_EXPIRED" | "EVIDENCE_HASH_LIMIT_EXCEEDED" | "R2_EXECUTION_DECISION_NOT_COMMISSIONED" | "R1_APPROVAL_REQUIRED" | "R1_EVIDENCE_INCOMPLETE" | "R2_ACCEPTED_LINEAGE_UNAVAILABLE" | "R2_REVIEW_CLOSED" | "CAPTURE_RETAINED_REVIEW_READ_ONLY" | "CAPTURE_PROJECTION_NOT_AUTHORIZED" | "CAPTURE_PROJECTION_UNAVAILABLE" | "CAPTURE_PROJECTION_SCOPE_MISMATCH" | "CAPTURE_PROJECTION_STALE" | "CAPTURE_DEPLOYMENT_SOURCE_UNAVAILABLE" | "R2_RISK_GRANT_SOURCE_UNAVAILABLE" | "R2_PORTFOLIO_SCOPE_NOT_FOUND" | "CAPTURE_DEPLOYMENT_SCOPE_NOT_FOUND" | "PAPER_VENUE_UNAVAILABLE" | "R2_APPROVAL_REQUIRED" | "LIVE_PARENT_NOT_PUBLISHED" | "R1_LINEAGE_UNPUBLISHED" | "R1_NOT_APPROVED" | "R1_EXPIRED" | "R1_EVIDENCE_MANIFEST_INTEGRITY_FAILED";
             } & unknown;
             /** @constant */
             source_side_effect_requested: false;
-        } & (unknown & unknown);
+        } & (unknown & unknown & unknown & unknown);
         /** @description At most 50 accepted, parent/workspace/profile-bound capture choices; no Manager relations/cursors. Null currency is unrecorded, never USDT by default. Capture creates a Portal review, not execution authorization. Retained/source-off/stale/outage profiles are blocked. */
         CaptureContext: {
             /** @enum {unknown} */
@@ -376,7 +376,7 @@ export interface components {
                 /** @enum {unknown} */
                 state: "AVAILABLE" | "BLOCKED";
                 /** @enum {unknown} */
-                reason_code: null | "GOVERNANCE_CAPABILITY_REQUIRED" | "ADMIN_ROLE_REQUIRED" | "APPROVAL_NOT_PENDING" | "APPROVAL_EXPIRED" | "EVIDENCE_HASH_LIMIT_EXCEEDED" | "R2_EXECUTION_DECISION_NOT_COMMISSIONED" | "R1_APPROVAL_REQUIRED" | "R1_EVIDENCE_INCOMPLETE" | "R2_ACCEPTED_LINEAGE_UNAVAILABLE" | "R2_REVIEW_CLOSED" | "CAPTURE_RETAINED_REVIEW_READ_ONLY" | "CAPTURE_PROJECTION_NOT_AUTHORIZED" | "CAPTURE_PROJECTION_UNAVAILABLE" | "CAPTURE_PROJECTION_SCOPE_MISMATCH" | "CAPTURE_PROJECTION_STALE" | "CAPTURE_DEPLOYMENT_SOURCE_UNAVAILABLE" | "R2_RISK_GRANT_SOURCE_UNAVAILABLE" | "R2_PORTFOLIO_SCOPE_NOT_FOUND" | "CAPTURE_DEPLOYMENT_SCOPE_NOT_FOUND" | "PAPER_VENUE_UNAVAILABLE";
+                reason_code: null | "GOVERNANCE_CAPABILITY_REQUIRED" | "ADMIN_ROLE_REQUIRED" | "APPROVAL_NOT_PENDING" | "APPROVAL_EXPIRED" | "EVIDENCE_HASH_LIMIT_EXCEEDED" | "R2_EXECUTION_DECISION_NOT_COMMISSIONED" | "R1_APPROVAL_REQUIRED" | "R1_EVIDENCE_INCOMPLETE" | "R2_ACCEPTED_LINEAGE_UNAVAILABLE" | "R2_REVIEW_CLOSED" | "CAPTURE_RETAINED_REVIEW_READ_ONLY" | "CAPTURE_PROJECTION_NOT_AUTHORIZED" | "CAPTURE_PROJECTION_UNAVAILABLE" | "CAPTURE_PROJECTION_SCOPE_MISMATCH" | "CAPTURE_PROJECTION_STALE" | "CAPTURE_DEPLOYMENT_SOURCE_UNAVAILABLE" | "R2_RISK_GRANT_SOURCE_UNAVAILABLE" | "R2_PORTFOLIO_SCOPE_NOT_FOUND" | "CAPTURE_DEPLOYMENT_SCOPE_NOT_FOUND" | "PAPER_VENUE_UNAVAILABLE" | "R2_APPROVAL_REQUIRED" | "LIVE_PARENT_NOT_PUBLISHED" | "R1_LINEAGE_UNPUBLISHED" | "R1_NOT_APPROVED" | "R1_EXPIRED" | "R1_EVIDENCE_MANIFEST_INTEGRITY_FAILED";
             } & unknown;
             candidates: {
                 deployment_id: string;
@@ -445,6 +445,355 @@ export interface components {
                 message: string;
             };
             request_id: string;
+        };
+        R1DecisionPlanRequest: {
+            /** @constant */
+            schema_version: "governance.r1-decision-plan-request.v1";
+            workspace_id: string;
+            request_key: string;
+            /** @constant */
+            command_type: "GOVERNANCE_R1_DECISION";
+            /** @constant */
+            command_version: 1;
+            target: {
+                approval_id: components["schemas"]["$defs-Identifier"];
+            };
+            expected_approval_version: number;
+            payload: {
+                /** @enum {unknown} */
+                decision: "APPROVE" | "APPROVE_WITH_CONDITION" | "DENY" | "REQUEST_CHANGES";
+                reason: string;
+                conditions: components["schemas"]["TypedCondition"][];
+                evidence_hashes: components["schemas"]["Hash"][];
+            } & unknown;
+        };
+        R1DecisionPlan: {
+            /** @constant */
+            schema_version: "governance.r1-decision-plan.v1";
+            operation_id: string;
+            /** @constant */
+            command_type: "GOVERNANCE_R1_DECISION";
+            /** @constant */
+            command_version: 1;
+            approval_id: string;
+            expected_approval_version: number;
+            payload_hash: string;
+            evidence_set_hash: string;
+            /** @constant */
+            risk_tier: "R1";
+            blockers: {
+                code: string;
+            }[];
+            warnings: {
+                code: string;
+            }[];
+            /** @description Legacy reviewer display/quorum summary, not an authorization rule. Use authority_requirements for exact capability/role and server per-verb eligibility; an ADMIN label does not grant access. */
+            required_approvers: {
+                /** @constant */
+                role: "ADMIN";
+                count: number;
+            }[];
+            authority_requirements: {
+                /** @constant */
+                capability: "governance.r1.decide";
+                role_constraint: null;
+                /** @constant */
+                workspace_membership_required: true;
+                /** @constant */
+                separation_of_duties_required: true;
+            };
+            /** @constant */
+            fresh_auth_required: false;
+            /** Format: date-time */
+            expires_at: string;
+            apply_token: string | null;
+            /** @enum {unknown} */
+            status: "PLANNED" | "APPLIED" | "EXPIRED";
+            replayed: boolean;
+        };
+        R1ApplyRequest: {
+            /** @constant */
+            schema_version: "governance.r1-decision-apply-request.v1";
+            workspace_id: string;
+            apply_token: string;
+        };
+        R1ApplyResponse: {
+            /** @constant */
+            schema_version: "governance.r1-decision-apply.v1";
+            operation_id: string;
+            receipt_id: string | null;
+            /** @constant */
+            status: "PENDING";
+            replayed: boolean;
+        };
+        R1DecisionOperation: {
+            /** @constant */
+            schema_version: "governance.r1-decision-operation.v1";
+            operation_id: string;
+            approval_id: string;
+            /** @constant */
+            command_type: "GOVERNANCE_R1_DECISION";
+            /** @enum {unknown} */
+            status: "SUCCEEDED" | "EXPIRED" | "PENDING";
+            /** @enum {unknown} */
+            verification_result: "SUCCEEDED" | "EXPIRED" | "PENDING";
+            blockers: {
+                code: string;
+            }[];
+            warnings: {
+                code: string;
+            }[];
+            expected_approval_version: number;
+            evidence_set_hash: string;
+            /** Format: date-time */
+            planned_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            applied_at: string | null;
+            receipt: {
+                [key: string]: unknown;
+            } | null;
+        };
+        R2DecisionPlanRequest: {
+            /** @constant */
+            schema_version: "governance.r2-decision-plan-request.v1";
+            workspace_id: string;
+            request_key: string;
+            /** @constant */
+            command_type: "GOVERNANCE_R2_DECISION";
+            /** @constant */
+            command_version: 1;
+            target: {
+                approval_id: components["schemas"]["$defs-Identifier"];
+            };
+            expected_approval_version: number;
+            payload: {
+                /** @enum {unknown} */
+                decision: "APPROVE" | "APPROVE_WITH_CONDITION" | "DENY" | "REQUEST_CHANGES";
+                reason: string;
+                conditions: components["schemas"]["TypedCondition"][];
+                evidence_hashes: components["schemas"]["Hash"][];
+            } & unknown;
+        };
+        R2DecisionPlan: {
+            /** @constant */
+            schema_version: "governance.r2-decision-plan.v1";
+            operation_id: string;
+            /** @constant */
+            command_type: "GOVERNANCE_R2_DECISION";
+            /** @constant */
+            command_version: 1;
+            approval_id: string;
+            expected_approval_version: number;
+            payload_hash: string;
+            evidence_set_hash: string;
+            /** @constant */
+            risk_tier: "R2";
+            blockers: {
+                code: string;
+            }[];
+            warnings: {
+                code: string;
+            }[];
+            /** @description Legacy reviewer display/quorum summary, not an authorization rule. Use authority_requirements for exact capability/role and server per-verb eligibility; an ADMIN label does not grant access. */
+            required_approvers: {
+                /** @constant */
+                role: "ADMIN";
+                count: number;
+            }[];
+            authority_requirements: {
+                /** @constant */
+                capability: "governance.r2.decide";
+                /** @constant */
+                role_constraint: "ADMIN";
+                /** @constant */
+                workspace_membership_required: true;
+                /** @constant */
+                separation_of_duties_required: true;
+            };
+            /** @constant */
+            fresh_auth_required: false;
+            /** Format: date-time */
+            expires_at: string;
+            apply_token: string | null;
+            /** @enum {unknown} */
+            status: "PLANNED" | "APPLIED" | "EXPIRED";
+            replayed: boolean;
+            /** @constant */
+            decision_authority: "PORTAL_ONLY";
+            /** @constant */
+            source_side_effect_requested: false;
+        };
+        R2ApplyRequest: {
+            /** @constant */
+            schema_version: "governance.r2-decision-apply-request.v1";
+            workspace_id: string;
+            apply_token: string;
+        };
+        R2ApplyResponse: {
+            /** @constant */
+            schema_version: "governance.r2-decision-apply.v1";
+            operation_id: string;
+            receipt_id: string | null;
+            /** @constant */
+            status: "PENDING";
+            replayed: boolean;
+            /** @constant */
+            decision_authority: "PORTAL_ONLY";
+            /** @constant */
+            source_side_effect_requested: false;
+        };
+        R2DecisionOperation: {
+            /** @constant */
+            schema_version: "governance.r2-decision-operation.v1";
+            operation_id: string;
+            approval_id: string;
+            /** @constant */
+            command_type: "GOVERNANCE_R2_DECISION";
+            /** @enum {unknown} */
+            status: "SUCCEEDED" | "EXPIRED" | "PENDING";
+            /** @enum {unknown} */
+            verification_result: "SUCCEEDED" | "EXPIRED" | "PENDING";
+            blockers: {
+                code: string;
+            }[];
+            warnings: {
+                code: string;
+            }[];
+            expected_approval_version: number;
+            evidence_set_hash: string;
+            /** Format: date-time */
+            planned_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            applied_at: string | null;
+            receipt: {
+                [key: string]: unknown;
+            } | null;
+            /** @constant */
+            decision_authority: "PORTAL_ONLY";
+            /** @constant */
+            source_side_effect_requested: false;
+        };
+        LiveDecisionPlanRequest: {
+            /** @constant */
+            schema_version: "governance.live-decision-plan-request.v1";
+            workspace_id: string;
+            request_key: string;
+            /** @constant */
+            command_type: "GOVERNANCE_LIVE_DECISION";
+            /** @constant */
+            command_version: 1;
+            target: {
+                approval_id: components["schemas"]["$defs-Identifier"];
+            };
+            expected_approval_version: number;
+            payload: {
+                /** @enum {unknown} */
+                decision: "APPROVE" | "APPROVE_WITH_CONDITION" | "DENY" | "REQUEST_CHANGES";
+                reason: string;
+                conditions: components["schemas"]["TypedCondition"][];
+                evidence_hashes: components["schemas"]["Hash"][];
+            } & unknown;
+        };
+        LiveDecisionPlan: {
+            /** @constant */
+            schema_version: "governance.live-decision-plan.v1";
+            operation_id: string;
+            /** @constant */
+            command_type: "GOVERNANCE_LIVE_DECISION";
+            /** @constant */
+            command_version: 1;
+            approval_id: string;
+            expected_approval_version: number;
+            payload_hash: string;
+            evidence_set_hash: string;
+            /** @constant */
+            risk_tier: "LIVE_GATE";
+            blockers: {
+                code: string;
+            }[];
+            warnings: {
+                code: string;
+            }[];
+            /** @description Legacy reviewer display/quorum summary, not an authorization rule. Use authority_requirements for exact capability/role and server per-verb eligibility; an ADMIN label does not grant access. */
+            required_approvers: {
+                /** @constant */
+                role: "ADMIN";
+                count: number;
+            }[];
+            authority_requirements: {
+                /** @constant */
+                capability: "governance.live.decide";
+                role_constraint: null;
+                /** @constant */
+                workspace_membership_required: true;
+                /** @constant */
+                separation_of_duties_required: true;
+            };
+            /** @constant */
+            fresh_auth_required: false;
+            /** Format: date-time */
+            expires_at: string;
+            apply_token: string | null;
+            /** @enum {unknown} */
+            status: "PLANNED" | "APPLIED" | "EXPIRED";
+            replayed: boolean;
+            /** @constant */
+            decision_authority: "PORTAL_ONLY";
+            /** @constant */
+            source_side_effect_requested: false;
+        };
+        LiveApplyRequest: {
+            /** @constant */
+            schema_version: "governance.live-decision-apply-request.v1";
+            workspace_id: string;
+            apply_token: string;
+        };
+        LiveApplyResponse: {
+            /** @constant */
+            schema_version: "governance.live-decision-apply.v1";
+            operation_id: string;
+            receipt_id: string | null;
+            /** @constant */
+            status: "PENDING";
+            replayed: boolean;
+            /** @constant */
+            decision_authority: "PORTAL_ONLY";
+            /** @constant */
+            source_side_effect_requested: false;
+        };
+        LiveDecisionOperation: {
+            /** @constant */
+            schema_version: "governance.live-decision-operation.v1";
+            operation_id: string;
+            approval_id: string;
+            /** @constant */
+            command_type: "GOVERNANCE_LIVE_DECISION";
+            /** @enum {unknown} */
+            status: "SUCCEEDED" | "EXPIRED" | "PENDING";
+            /** @enum {unknown} */
+            verification_result: "SUCCEEDED" | "EXPIRED" | "PENDING";
+            blockers: {
+                code: string;
+            }[];
+            warnings: {
+                code: string;
+            }[];
+            expected_approval_version: number;
+            evidence_set_hash: string;
+            /** Format: date-time */
+            planned_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            applied_at: string | null;
+            receipt: {
+                [key: string]: unknown;
+            } | null;
+            /** @constant */
+            decision_authority: "PORTAL_ONLY";
+            /** @constant */
+            source_side_effect_requested: false;
         };
         Capabilities: {
             /** @constant */
@@ -844,8 +1193,8 @@ export interface components {
             target_label: string;
             requester: components["schemas"]["portal_actor"];
             creator: components["schemas"]["portal_actor"];
-            /** @constant */
-            status: "PENDING";
+            /** @enum {unknown} */
+            status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
             policy_version: string;
             quorum_met: number;
             quorum_required: number;
@@ -858,8 +1207,8 @@ export interface components {
             expires_at: components["schemas"]["date_time"];
             created_at: components["schemas"]["date_time"];
             updated_at: components["schemas"]["date_time"];
-            portfolio_id: components["schemas"]["identifier"];
-            currency: string;
+            portfolio_id: components["schemas"]["identifier"] | null;
+            currency: string | null;
         };
         review_actor: {
             user_id: components["schemas"]["identifier"];
@@ -917,6 +1266,7 @@ export interface components {
             plan_author: string | null;
             evidence_manifest: components["schemas"]["evidence_manifest"] | null;
             eligibility: components["schemas"]["eligibility"];
+            decision_evidence_manifest?: components["schemas"]["evidence_manifest"];
         };
         /**
          * Portal Execution Governance R2 Review v1
@@ -958,8 +1308,8 @@ export interface components {
                     target_label: string;
                     requester: components["schemas"]["portal_actor"];
                     creator: components["schemas"]["portal_actor"];
-                    /** @constant */
-                    status: "PENDING";
+                    /** @enum {unknown} */
+                    status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
                     policy_version: string;
                     quorum_met: number;
                     quorum_required: number;
@@ -972,8 +1322,8 @@ export interface components {
                     expires_at: components["schemas"]["date_time"];
                     created_at: components["schemas"]["date_time"];
                     updated_at: components["schemas"]["date_time"];
-                    portfolio_id: components["schemas"]["identifier"];
-                    currency: string;
+                    portfolio_id: components["schemas"]["identifier"] | null;
+                    currency: string | null;
                 };
                 r1_reference: {
                     approval_id: components["schemas"]["identifier"];
@@ -1026,6 +1376,7 @@ export interface components {
                     plan_author: string | null;
                     evidence_manifest: components["schemas"]["evidence_manifest"] | null;
                     eligibility: components["schemas"]["eligibility"];
+                    decision_evidence_manifest?: components["schemas"]["evidence_manifest"];
                 };
             };
         };
@@ -1225,27 +1576,6 @@ export interface components {
             /** Format: date */
             expires_at: string | null;
             blocking: boolean;
-        };
-        R1DecisionPlanRequest: {
-            /** @constant */
-            schema_version: "governance.r1-decision-plan-request.v1";
-            workspace_id: string;
-            request_key: string;
-            /** @constant */
-            command_type: "GOVERNANCE_R1_DECISION";
-            /** @constant */
-            command_version: 1;
-            target: {
-                approval_id: components["schemas"]["$defs-Identifier"];
-            };
-            expected_approval_version: number;
-            payload: {
-                /** @enum {unknown} */
-                decision: "APPROVE" | "APPROVE_WITH_CONDITION" | "DENY" | "REQUEST_CHANGES";
-                reason: string;
-                conditions: components["schemas"]["TypedCondition"][];
-                evidence_hashes: components["schemas"]["Hash"][];
-            } & unknown;
         };
         PaperExitDecisionPlanRequest: {
             /** @constant */
@@ -2049,7 +2379,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["R1DecisionPlanRequest"] | components["schemas"]["PaperExitDecisionPlanRequest"];
+                "application/json": components["schemas"]["R1DecisionPlanRequest"] | components["schemas"]["R2DecisionPlanRequest"] | components["schemas"]["LiveDecisionPlanRequest"] | components["schemas"]["PaperExitDecisionPlanRequest"];
             };
         };
         responses: {
@@ -2059,7 +2389,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaperExitDecisionPlan"];
+                    "application/json": components["schemas"]["R1DecisionPlan"] | components["schemas"]["R2DecisionPlan"] | components["schemas"]["LiveDecisionPlan"] | components["schemas"]["PaperExitDecisionPlan"];
                 };
             };
             default: components["responses"]["Problem"];
@@ -2076,7 +2406,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PaperExitApplyRequest"];
+                "application/json": components["schemas"]["R1ApplyRequest"] | components["schemas"]["R2ApplyRequest"] | components["schemas"]["LiveApplyRequest"] | components["schemas"]["PaperExitApplyRequest"];
             };
         };
         responses: {
@@ -2086,7 +2416,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaperExitApplyResponse"];
+                    "application/json": components["schemas"]["R1ApplyResponse"] | components["schemas"]["R2ApplyResponse"] | components["schemas"]["LiveApplyResponse"] | components["schemas"]["PaperExitApplyResponse"];
                 };
             };
             default: components["responses"]["Problem"];
@@ -2111,7 +2441,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaperExitDecisionOperation"];
+                    "application/json": components["schemas"]["R1DecisionOperation"] | components["schemas"]["R2DecisionOperation"] | components["schemas"]["LiveDecisionOperation"] | components["schemas"]["PaperExitDecisionOperation"];
                 };
             };
             default: components["responses"]["Problem"];

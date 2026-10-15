@@ -23,7 +23,8 @@
         "gate": {
           "enum": [
             "R1",
-            "R2"
+            "R2",
+            "LIVE_GATE"
           ]
         },
         "workspace_id": {
@@ -61,20 +62,19 @@
         "command_type": {
           "enum": [
             "GOVERNANCE_R1_DECISION",
-            null
+            "GOVERNANCE_R2_DECISION",
+            "GOVERNANCE_LIVE_DECISION"
           ]
         },
         "request_schema_version": {
           "enum": [
             "governance.r1-decision-plan-request.v1",
-            null
+            "governance.r2-decision-plan-request.v1",
+            "governance.live-decision-plan-request.v1"
           ]
         },
         "plan_path": {
-          "enum": [
-            "/api/v1/execution/commands/plans",
-            null
-          ]
+          "const": "/api/v1/execution/commands/plans"
         },
         "availability": {
           "type": "object",
@@ -112,7 +112,13 @@
                 "R2_RISK_GRANT_SOURCE_UNAVAILABLE",
                 "R2_PORTFOLIO_SCOPE_NOT_FOUND",
                 "CAPTURE_DEPLOYMENT_SCOPE_NOT_FOUND",
-                "PAPER_VENUE_UNAVAILABLE"
+                "PAPER_VENUE_UNAVAILABLE",
+                "R2_APPROVAL_REQUIRED",
+                "LIVE_PARENT_NOT_PUBLISHED",
+                "R1_LINEAGE_UNPUBLISHED",
+                "R1_NOT_APPROVED",
+                "R1_EXPIRED",
+                "R1_EVIDENCE_MANIFEST_INTEGRITY_FAILED"
               ]
             }
           },
@@ -149,7 +155,7 @@
           "const": false
         }
       },
-      "description": "Immutable evidence pins for the existing R1 command. Executor availability is not permission to bypass per-verb eligibility. R2 has no commissioned executor: null command/path and typed refusal, never an R1 alias.",
+      "description": "Same-read immutable child manifest pins, with distinct named Portal-only R1/R2/Live commands. AVAILABLE permits planning, not a per-verb policy bypass. Live remains blocked until an explicit immutable predecessor policy is published. Never Trading System execution authority.",
       "allOf": [
         {
           "if": {
@@ -169,25 +175,50 @@
               },
               "request_schema_version": {
                 "const": "governance.r1-decision-plan-request.v1"
-              },
-              "plan_path": {
-                "const": "/api/v1/execution/commands/plans"
               }
             }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "gate": {
+                "const": "R2"
+              }
+            },
+            "required": [
+              "gate"
+            ]
           },
-          "else": {
+          "then": {
             "properties": {
               "command_type": {
-                "type": "null"
+                "const": "GOVERNANCE_R2_DECISION"
               },
               "request_schema_version": {
-                "type": "null"
+                "const": "governance.r2-decision-plan-request.v1"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "gate": {
+                "const": "LIVE_GATE"
+              }
+            },
+            "required": [
+              "gate"
+            ]
+          },
+          "then": {
+            "properties": {
+              "command_type": {
+                "const": "GOVERNANCE_LIVE_DECISION"
               },
-              "plan_path": {
-                "type": "null"
-              },
-              "evidence_hashes": {
-                "type": "null"
+              "request_schema_version": {
+                "const": "governance.live-decision-plan-request.v1"
               },
               "availability": {
                 "type": "object",
@@ -196,7 +227,7 @@
                     "const": "BLOCKED"
                   },
                   "reason_code": {
-                    "const": "R2_EXECUTION_DECISION_NOT_COMMISSIONED"
+                    "const": "LIVE_PARENT_NOT_PUBLISHED"
                   }
                 }
               }
@@ -313,7 +344,13 @@
                 "R2_RISK_GRANT_SOURCE_UNAVAILABLE",
                 "R2_PORTFOLIO_SCOPE_NOT_FOUND",
                 "CAPTURE_DEPLOYMENT_SCOPE_NOT_FOUND",
-                "PAPER_VENUE_UNAVAILABLE"
+                "PAPER_VENUE_UNAVAILABLE",
+                "R2_APPROVAL_REQUIRED",
+                "LIVE_PARENT_NOT_PUBLISHED",
+                "R1_LINEAGE_UNPUBLISHED",
+                "R1_NOT_APPROVED",
+                "R1_EXPIRED",
+                "R1_EVIDENCE_MANIFEST_INTEGRITY_FAILED"
               ]
             }
           },

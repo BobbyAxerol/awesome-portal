@@ -14,24 +14,27 @@ const reasons = ["GOVERNANCE_CAPABILITY_REQUIRED", "ADMIN_ROLE_REQUIRED", "APPRO
   "R2_ACCEPTED_LINEAGE_UNAVAILABLE", "R2_REVIEW_CLOSED", "CAPTURE_RETAINED_REVIEW_READ_ONLY", "CAPTURE_PROJECTION_NOT_AUTHORIZED",
   "CAPTURE_PROJECTION_UNAVAILABLE", "CAPTURE_PROJECTION_SCOPE_MISMATCH", "CAPTURE_PROJECTION_STALE",
   "CAPTURE_DEPLOYMENT_SOURCE_UNAVAILABLE", "R2_RISK_GRANT_SOURCE_UNAVAILABLE", "R2_PORTFOLIO_SCOPE_NOT_FOUND",
-  "CAPTURE_DEPLOYMENT_SCOPE_NOT_FOUND", "PAPER_VENUE_UNAVAILABLE"];
+  "CAPTURE_DEPLOYMENT_SCOPE_NOT_FOUND", "PAPER_VENUE_UNAVAILABLE", "R2_APPROVAL_REQUIRED", "LIVE_PARENT_NOT_PUBLISHED",
+  "R1_LINEAGE_UNPUBLISHED", "R1_NOT_APPROVED", "R1_EXPIRED", "R1_EVIDENCE_MANIFEST_INTEGRITY_FAILED"];
 const availability = object({ state: { enum: ["AVAILABLE", "BLOCKED"] }, reason_code: { enum: [null, ...reasons] } });
 availability.allOf = [{ if: { properties: { state: { const: "AVAILABLE" } }, required: ["state"] },
   then: { properties: { reason_code: { type: "null" } } }, else: { properties: { reason_code: { type: "string" } } } }];
-const decision = object({ gate: { enum: ["R1", "R2"] }, workspace_id: id, approval_id: id,
+const decision = object({ gate: { enum: ["R1", "R2", "LIVE_GATE"] }, workspace_id: id, approval_id: id,
   expected_approval_version: { type: "integer", minimum: 1 }, evidence_set_hash: hash,
   evidence_hashes: nullable({ type: "array", maxItems: 128, uniqueItems: true, items: hash }),
-  command_type: { enum: ["GOVERNANCE_R1_DECISION", null] },
-  request_schema_version: { enum: ["governance.r1-decision-plan-request.v1", null] },
-  plan_path: { enum: ["/api/v1/execution/commands/plans", null] }, availability,
+  command_type: { enum: ["GOVERNANCE_R1_DECISION", "GOVERNANCE_R2_DECISION", "GOVERNANCE_LIVE_DECISION"] },
+  request_schema_version: { enum: ["governance.r1-decision-plan-request.v1", "governance.r2-decision-plan-request.v1", "governance.live-decision-plan-request.v1"] },
+  plan_path: { const: "/api/v1/execution/commands/plans" }, availability,
   source_side_effect_requested: { const: false } });
-decision.description = "Immutable evidence pins for the existing R1 command. Executor availability is not permission to bypass per-verb eligibility. R2 has no commissioned executor: null command/path and typed refusal, never an R1 alias.";
-decision.allOf = [{ if: { properties: { gate: { const: "R1" } }, required: ["gate"] },
-  then: { properties: { command_type: { const: "GOVERNANCE_R1_DECISION" }, request_schema_version: { const: "governance.r1-decision-plan-request.v1" }, plan_path: { const: "/api/v1/execution/commands/plans" } } },
-  else: { properties: { command_type: { type: "null" }, request_schema_version: { type: "null" }, plan_path: { type: "null" },
-    evidence_hashes: { type: "null" }, availability: { type: "object", properties: { state: { const: "BLOCKED" }, reason_code: { const: "R2_EXECUTION_DECISION_NOT_COMMISSIONED" } } } } } },
-  { if: { properties: { availability: { type: "object", properties: { state: { const: "AVAILABLE" } }, required: ["state"] } }, required: ["availability"] },
-    then: { properties: { evidence_hashes: { type: "array" } } } }];
+decision.description = "Same-read immutable child manifest pins, with distinct named Portal-only R1/R2/Live commands. AVAILABLE permits planning, not a per-verb policy bypass. Live remains blocked until an explicit immutable predecessor policy is published. Never Trading System execution authority.";
+decision.allOf = [["R1", "r1", "GOVERNANCE_R1_DECISION"], ["R2", "r2", "GOVERNANCE_R2_DECISION"],
+  ["LIVE_GATE", "live", "GOVERNANCE_LIVE_DECISION"]].map(([gate, route, command]) => ({
+    if: { properties: { gate: { const: gate } }, required: ["gate"] },
+    then: { properties: { command_type: { const: command }, request_schema_version: { const: `governance.${route}-decision-plan-request.v1` },
+      ...(gate === "LIVE_GATE" ? { availability: { type: "object", properties: { state: { const: "BLOCKED" }, reason_code: { const: "LIVE_PARENT_NOT_PUBLISHED" } } } } : {}) } },
+  }));
+decision.allOf.push({ if: { properties: { availability: { type: "object", properties: { state: { const: "AVAILABLE" } }, required: ["state"] } }, required: ["availability"] },
+  then: { properties: { evidence_hashes: { type: "array" } } } });
 const paperExitDecision = object({ gate: { const: "PAPER_EXIT" },
   workspace_id: { type: "string", minLength: 3, maxLength: 96 },
   review_id: { type: "string", pattern: "^[A-Za-z0-9._-]{1,128}$" },
@@ -113,8 +116,12 @@ save("fixtures/governance-review-context.synthetic.valid.json", {
   r1: { ...base, gate: "R1", evidence_hashes: [sha], command_type: "GOVERNANCE_R1_DECISION",
     request_schema_version: "governance.r1-decision-plan-request.v1", plan_path: "/api/v1/execution/commands/plans",
     availability: { state: "AVAILABLE", reason_code: null } },
-  r2: { ...base, gate: "R2", evidence_hashes: null, command_type: null, request_schema_version: null, plan_path: null,
-    availability: { state: "BLOCKED", reason_code: "R2_EXECUTION_DECISION_NOT_COMMISSIONED" } },
+  r2: { ...base, gate: "R2", evidence_hashes: [sha], command_type: "GOVERNANCE_R2_DECISION",
+    request_schema_version: "governance.r2-decision-plan-request.v1", plan_path: "/api/v1/execution/commands/plans",
+    availability: { state: "AVAILABLE", reason_code: null } },
+  live: { ...base, gate: "LIVE_GATE", evidence_hashes: [sha], command_type: "GOVERNANCE_LIVE_DECISION",
+    request_schema_version: "governance.live-decision-plan-request.v1", plan_path: "/api/v1/execution/commands/plans",
+    availability: { state: "BLOCKED", reason_code: "LIVE_PARENT_NOT_PUBLISHED" } },
   paper_exit: { gate: "PAPER_EXIT", workspace_id: "ws_example", review_id: "exit_example", expected_review_version: 3,
     evidence_set_hash: sha, source_snapshot_hash: `sha256:${"b".repeat(64)}`,
     evidence_hashes: [sha, `sha256:${"c".repeat(64)}`], command_type: "GOVERNANCE_PAPER_EXIT_DECISION",
@@ -125,3 +132,117 @@ save("fixtures/governance-review-context.synthetic.valid.json", {
     candidates: [{ deployment_id: "dep_example", portfolio_id: "pf_example", risk_grant_id: "risk_example", currency: null }],
     candidates_truncated: false, currency_semantics: "REVIEWER_REQUESTED_NOT_FX_CONVERSION", source_side_effect_requested: false },
 });
+
+// Own commands share policy mechanics, never an R1 wire alias. Keep all response
+// unions published as well as requests: a 202 ACK is not terminal settlement.
+const workflow = load(workflowPath);
+const ref = name => ({ $ref: `#/$defs/${name}` });
+const externalWorkflowRefs = value => JSON.parse(JSON.stringify(value).replaceAll(
+  '"#/$defs/', '"execution-governance-approval-workflow.v1.schema.json#/$defs/'));
+function explicitArrayTypes(schema) {
+  if (!schema || typeof schema !== "object") return;
+  if (!Array.isArray(schema) && ("minItems" in schema || "maxItems" in schema || "uniqueItems" in schema) && !schema.type) schema.type = "array";
+  for (const value of Object.values(schema)) explicitArrayTypes(value);
+}
+const codeItems = { type: "array", items: object({ code: { type: "string", minLength: 1 } }) };
+const stamp = { type: "string", format: "date-time" };
+const operationId = { type: "string", minLength: 3, maxLength: 96 };
+const defs = {};
+for (const [route, gate, command] of [["r1", "R1", "GOVERNANCE_R1_DECISION"],
+  ["r2", "R2", "GOVERNANCE_R2_DECISION"], ["live", "LIVE_GATE", "GOVERNANCE_LIVE_DECISION"]]) {
+  const prefix = route === "live" ? "Live" : route.toUpperCase();
+  const request = externalWorkflowRefs(workflow.$defs.R1DecisionPlanRequest);
+  explicitArrayTypes(request);
+  request.properties.schema_version = { const: `governance.${route}-decision-plan-request.v1` };
+  request.properties.command_type = { const: command };
+  defs[`${prefix}DecisionPlanRequest`] = request;
+  const localOnly = route === "r1" ? {} : { decision_authority: { const: "PORTAL_ONLY" }, source_side_effect_requested: { const: false } };
+  defs[`${prefix}DecisionPlan`] = object({ schema_version: { const: `governance.${route}-decision-plan.v1` },
+    operation_id: operationId, command_type: { const: command }, command_version: { const: 1 },
+    approval_id: id, expected_approval_version: { type: "integer", minimum: 1 }, payload_hash: hash,
+    evidence_set_hash: hash, risk_tier: { const: gate }, blockers: codeItems, warnings: codeItems,
+    required_approvers: { type: "array", items: object({ role: { const: "ADMIN" }, count: { type: "integer", minimum: 1, maximum: 8 } }) },
+    authority_requirements: object({ capability: { const: `governance.${route}.decide` },
+      role_constraint: route === "r2" ? { const: "ADMIN" } : { type: "null" },
+      workspace_membership_required: { const: true }, separation_of_duties_required: { const: true } }),
+    fresh_auth_required: { const: false }, expires_at: stamp, apply_token: nullable({ type: "string" }),
+    status: { enum: ["PLANNED", "APPLIED", "EXPIRED"] }, replayed: { type: "boolean" }, ...localOnly });
+  defs[`${prefix}ApplyRequest`] = object({ schema_version: { const: `governance.${route}-decision-apply-request.v1` },
+    workspace_id: { type: "string", minLength: 3, maxLength: 96 },
+    apply_token: { type: "string", pattern: "^gat1\\.[A-Za-z0-9_-]{1,32}\\.[A-Za-z0-9_-]{3,96}\\.[A-Za-z0-9_-]{43}$" } });
+  defs[`${prefix}ApplyResponse`] = object({ schema_version: { const: `governance.${route}-decision-apply.v1` },
+    operation_id: operationId, receipt_id: nullable(id), status: { const: "PENDING" }, replayed: { type: "boolean" }, ...localOnly });
+  defs[`${prefix}DecisionOperation`] = object({ schema_version: { const: `governance.${route}-decision-operation.v1` },
+    operation_id: operationId, approval_id: id, command_type: { const: command },
+    status: { enum: ["SUCCEEDED", "EXPIRED", "PENDING"] }, verification_result: { enum: ["SUCCEEDED", "EXPIRED", "PENDING"] },
+    blockers: codeItems, warnings: codeItems, expected_approval_version: { type: "integer", minimum: 1 },
+    evidence_set_hash: hash, planned_at: stamp, expires_at: stamp, applied_at: nullable(stamp),
+    receipt: nullable({ type: "object", additionalProperties: true }), ...localOnly });
+}
+for (const name of ["R1DecisionPlan", "R2DecisionPlan", "LiveDecisionPlan"]) {
+  defs[name].properties.required_approvers.description = "Legacy reviewer display/quorum summary, not an authorization rule. Use authority_requirements for exact capability/role and server per-verb eligibility; an ADMIN label does not grant access.";
+}
+const decisionsPath = "schemas/execution-governance-portal-decisions.v1.schema.json";
+save(decisionsPath, { $schema: "https://json-schema.org/draft/2020-12/schema",
+  $id: "https://schemas.primusspark.com/portal/execution-governance-portal-decisions.v1.schema.json",
+  description: "Distinct Portal-only gate decision commands. No risk grant issuance, trading activation, broker or upstream side effects. LIVE_PARENT_NOT_PUBLISHED is not waived by owner role.", $defs: defs });
+const api = load("openapi/execution-governance.openapi.json");
+const decisionRef = name => ({ $ref: `../${decisionsPath}#/$defs/${name}` });
+const union = suffix => ({ oneOf: ["R1", "R2", "Live"].map(prefix => decisionRef(`${prefix}${suffix}`)) });
+for (const name of Object.keys(defs)) api.components.schemas[name] = decisionRef(name);
+const plans = api.paths["/api/v1/execution/commands/plans"].post;
+plans.description = "Plans a named Portal-only R1, R2, Live or Paper Exit decision. Live remains typed blocked without an immutable commissioned parent policy. Never execution authorization.";
+plans.requestBody.content["application/json"].schema = { oneOf: [...union("DecisionPlanRequest").oneOf,
+  { $ref: "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitDecisionPlanRequest" }] };
+plans.responses["201"].content["application/json"].schema = { oneOf: [...union("DecisionPlan").oneOf,
+  { $ref: "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitDecisionPlan" }] };
+const apply = api.paths["/api/v1/execution/operations/{operation_id}/apply"].post;
+apply.requestBody.content["application/json"].schema = { oneOf: [...union("ApplyRequest").oneOf,
+  { $ref: "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitApplyRequest" }] };
+apply.responses["202"].content["application/json"].schema = { oneOf: [...union("ApplyResponse").oneOf,
+  { $ref: "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitApplyResponse" }] };
+const operation = api.paths["/api/v1/execution/operations/{operation_id}"].get;
+operation.description = "Reads an actor/workspace-bound Portal decision operation after fresh gate authorization. Poll settlement; an ACK is not terminal success.";
+operation.responses["200"].content["application/json"].schema = { oneOf: [...union("DecisionOperation").oneOf,
+  { $ref: "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitDecisionOperation" }] };
+save("openapi/execution-governance.openapi.json", api);
+const r2 = load(r2Path);
+r2.$defs.review_data.properties.decision_evidence_manifest = { $ref: "#/$defs/evidence_manifest" };
+// Terminal records remain inspectable; only eligibility controls new decisions.
+r2.$defs.approval.properties.status = { enum: ["PENDING", "APPROVED", "APPROVED_WITH_CONDITION", "DENIED", "CHANGES_REQUESTED", "EXPIRED"] };
+for (const property of ["portfolio_id", "currency"]) {
+  const schema = r2.$defs.approval.properties[property];
+  if (!schema.oneOf?.some(item => item.type === "null")) r2.$defs.approval.properties[property] = nullable(schema);
+}
+save(r2Path, r2);
+const live = structuredClone(r2);
+live.$id = "https://schemas.primusspark.com/portal/governance-live-decision-review.v1.schema.json";
+live.properties.schema_version = { const: "governance.live-decision-review.v1" };
+live.$defs.approval.properties.gate = { const: "LIVE_GATE" };
+save("schemas/governance-live-decision-review.v1.schema.json", live);
+const liveEnvelopePath = "schemas/governance-live-review.v1.schema.json";
+const liveEnvelope = load(liveEnvelopePath);
+liveEnvelope.properties.governance_backbone = { $ref: "governance-live-decision-review.v1.schema.json" };
+liveEnvelope.properties.workspace_id = id;
+save(liveEnvelopePath, liveEnvelope);
+const liveFixturePath = "fixtures/governance-live-review.valid.json";
+const liveFixture = load(liveFixturePath);
+const backbone = liveFixture.governance_backbone;
+backbone.schema_version = "governance.live-decision-review.v1";
+backbone.data.approval.gate = "LIVE_GATE";
+backbone.data.approval.approval_id = "apr_live_gate_fixture";
+liveFixture.approval_id = "apr_live_gate_fixture";
+backbone.data.decision_evidence_manifest ??= backbone.data.evidence_manifest;
+backbone.data.evidence_manifest = null;
+for (const field of ["r1_reference", "r1_id", "grant_id", "grant_name", "approver_role", "plan_author"]) backbone.data[field] = null;
+backbone.data.r1_state = "MISSING";
+delete backbone.data.capture_context;
+backbone.data.decision_context = { ...base, workspace_id: backbone.workspace_id ?? "ws_example",
+  approval_id: "apr_live_gate_fixture", gate: "LIVE_GATE", evidence_set_hash: backbone.data.approval.evidence_set_hash,
+  expected_approval_version: backbone.data.approval.approval_version,
+  evidence_hashes: [...new Set(backbone.data.decision_evidence_manifest?.entries.map(item => item.sha256) ?? [])].sort(),
+  command_type: "GOVERNANCE_LIVE_DECISION", request_schema_version: "governance.live-decision-plan-request.v1",
+  plan_path: "/api/v1/execution/commands/plans", availability: { state: "BLOCKED", reason_code: "LIVE_PARENT_NOT_PUBLISHED" } };
+backbone.data.eligibility = { can_approve: false, can_approve_with_condition: false, can_deny: false,
+  can_request_changes: false, locks: ["LIVE_PARENT_NOT_PUBLISHED"], separation_of_duties: "OK" };
+save(liveFixturePath, liveFixture);

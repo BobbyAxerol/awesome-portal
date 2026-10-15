@@ -10,30 +10,33 @@ export const REVIEW_CONTEXT_REASONS = [
   "GOVERNANCE_CAPABILITY_REQUIRED", "ADMIN_ROLE_REQUIRED", "APPROVAL_NOT_PENDING",
   "APPROVAL_EXPIRED", "EVIDENCE_HASH_LIMIT_EXCEEDED", "R2_EXECUTION_DECISION_NOT_COMMISSIONED",
   "R1_APPROVAL_REQUIRED", "R1_EVIDENCE_INCOMPLETE", "R2_ACCEPTED_LINEAGE_UNAVAILABLE",
-  "R2_REVIEW_CLOSED", "CAPTURE_RETAINED_REVIEW_READ_ONLY", "CAPTURE_PROJECTION_NOT_AUTHORIZED",
+  "R2_REVIEW_CLOSED", "R2_APPROVAL_REQUIRED", "CAPTURE_RETAINED_REVIEW_READ_ONLY", "CAPTURE_PROJECTION_NOT_AUTHORIZED",
   "CAPTURE_PROJECTION_UNAVAILABLE", "CAPTURE_PROJECTION_SCOPE_MISMATCH", "CAPTURE_PROJECTION_STALE",
   "CAPTURE_DEPLOYMENT_SOURCE_UNAVAILABLE", "R2_RISK_GRANT_SOURCE_UNAVAILABLE",
   "R2_PORTFOLIO_SCOPE_NOT_FOUND", "CAPTURE_DEPLOYMENT_SCOPE_NOT_FOUND",
   "PAPER_VENUE_UNAVAILABLE",
+  "LIVE_PARENT_NOT_PUBLISHED", "R1_LINEAGE_UNPUBLISHED", "R1_NOT_APPROVED", "R1_EXPIRED",
+  "R1_EVIDENCE_MANIFEST_INTEGRITY_FAILED",
 ] as const;
 const availability = z.object({
   state: z.enum(["AVAILABLE", "BLOCKED"]), reason_code: z.enum(REVIEW_CONTEXT_REASONS).nullable(),
 }).strict().refine(value => (value.state === "AVAILABLE") === (value.reason_code === null));
 
 export const DecisionContextSchema = z.object({
-  gate: z.enum(["R1", "R2"]), workspace_id: identifier, approval_id: identifier,
+  gate: z.enum(["R1", "R2", "LIVE_GATE"]), workspace_id: identifier, approval_id: identifier,
   expected_approval_version: z.number().int().positive(), evidence_set_hash: hash,
   evidence_hashes: z.array(hash).max(128).nullable(),
-  command_type: z.literal("GOVERNANCE_R1_DECISION").nullable(),
-  request_schema_version: z.literal("governance.r1-decision-plan-request.v1").nullable(),
+  command_type: z.enum(["GOVERNANCE_R1_DECISION", "GOVERNANCE_R2_DECISION", "GOVERNANCE_LIVE_DECISION"]),
+  request_schema_version: z.enum(["governance.r1-decision-plan-request.v1", "governance.r2-decision-plan-request.v1", "governance.live-decision-plan-request.v1"]),
   plan_path: z.literal("/api/v1/execution/commands/plans").nullable(),
   availability, source_side_effect_requested: z.literal(false),
 }).strict().superRefine((value, ctx) => {
-  const wired = value.gate === "R1";
-  if (wired !== (value.command_type !== null) || wired !== (value.plan_path !== null)
-    || wired !== (value.request_schema_version !== null)
-    || value.gate === "R2" && (value.evidence_hashes !== null
-      || value.availability.reason_code !== "R2_EXECUTION_DECISION_NOT_COMMISSIONED")
+  const route = value.gate === "R1" ? "r1" : value.gate === "R2" ? "r2" : "live";
+  const command = value.gate === "R1" ? "GOVERNANCE_R1_DECISION"
+    : value.gate === "R2" ? "GOVERNANCE_R2_DECISION" : "GOVERNANCE_LIVE_DECISION";
+  if (value.command_type !== command || value.plan_path === null
+    || value.request_schema_version !== `governance.${route}-decision-plan-request.v1`
+    || value.gate === "LIVE_GATE" && value.availability.reason_code !== "LIVE_PARENT_NOT_PUBLISHED"
     || value.evidence_hashes !== null && new Set(value.evidence_hashes).size !== value.evidence_hashes.length
     || value.availability.state === "AVAILABLE" && value.evidence_hashes === null) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Decision executor does not match this gate." });
@@ -96,20 +99,22 @@ export const CaptureContextSchema = z.object({
 export type CaptureContext = z.infer<typeof CaptureContextSchema>;
 export type ReviewContextReason = typeof REVIEW_CONTEXT_REASONS[number];
 
-export function decisionContext(approval: ApprovalRecord, evidence: readonly EvidenceRecord[], mayDecide: boolean) {
+export function decisionContext(approval: ApprovalRecord, evidence: readonly EvidenceRecord[], mayDecide: boolean,
+  policyReason: ReviewContextReason | null = null) {
   const hashes = [...new Set(evidence.map(item => item.sha256))].sort();
-  const gate = approval.gate === "R1" ? "R1" : "R2";
-  const reason: ReviewContextReason | null = gate === "R2" ? "R2_EXECUTION_DECISION_NOT_COMMISSIONED"
+  const gate = approval.gate;
+  const route = gate === "R1" ? "r1" : gate === "R2" ? "r2" : "live";
+  const reason: ReviewContextReason | null = gate === "LIVE_GATE" ? "LIVE_PARENT_NOT_PUBLISHED"
     : !mayDecide ? "GOVERNANCE_CAPABILITY_REQUIRED"
       : approval.expiresAt <= new Date() ? "APPROVAL_EXPIRED"
         : approval.status !== "PENDING" ? "APPROVAL_NOT_PENDING"
-          : hashes.length > 128 ? "EVIDENCE_HASH_LIMIT_EXCEEDED" : null;
+          : hashes.length > 128 ? "EVIDENCE_HASH_LIMIT_EXCEEDED" : policyReason;
   return DecisionContextSchema.parse({ gate, workspace_id: approval.workspaceId, approval_id: approval.approvalId,
     expected_approval_version: approval.approvalVersion, evidence_set_hash: approval.evidenceSetHash,
-    evidence_hashes: gate === "R2" || hashes.length > 128 ? null : hashes,
-    command_type: gate === "R1" ? "GOVERNANCE_R1_DECISION" : null,
-    request_schema_version: gate === "R1" ? "governance.r1-decision-plan-request.v1" : null,
-    plan_path: gate === "R1" ? "/api/v1/execution/commands/plans" : null,
+    evidence_hashes: hashes.length > 128 ? null : hashes,
+    command_type: gate === "R1" ? "GOVERNANCE_R1_DECISION" : gate === "R2" ? "GOVERNANCE_R2_DECISION" : "GOVERNANCE_LIVE_DECISION",
+    request_schema_version: `governance.${route}-decision-plan-request.v1`,
+    plan_path: "/api/v1/execution/commands/plans",
     availability: { state: reason === null ? "AVAILABLE" : "BLOCKED", reason_code: reason },
     source_side_effect_requested: false });
 }

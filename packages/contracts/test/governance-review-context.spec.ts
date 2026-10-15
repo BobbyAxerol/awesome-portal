@@ -19,15 +19,38 @@ describe("Governance action context canonical and generated contracts", () => {
     expect(fixture.lane).toBe("SYNTHETIC_CONTRACT_EXAMPLE_NOT_PRODUCT_RECEIPT");
     expect(decision(fixture.r1), JSON.stringify(decision.errors)).toBe(true);
     expect(decision(fixture.r2), JSON.stringify(decision.errors)).toBe(true);
+    expect(decision(fixture.live), JSON.stringify(decision.errors)).toBe(true);
     expect(capture(fixture.capture), JSON.stringify(capture.errors)).toBe(true);
     expect(fixture.capture.candidates[0].currency).toBeNull();
   });
   it("rejects R2 aliases, duplicate/unbound evidence and upstream side effects", () => {
     expect(decision({ ...fixture.r2, command_type: "GOVERNANCE_R1_DECISION" })).toBe(false);
-    expect(decision({ ...fixture.r2, evidence_hashes: fixture.r1.evidence_hashes })).toBe(false);
+    expect(decision({ ...fixture.r2, request_schema_version: fixture.r1.request_schema_version })).toBe(false);
+    expect(decision({ ...fixture.live, availability: { state: "AVAILABLE", reason_code: null } })).toBe(false);
     expect(decision({ ...fixture.r1, evidence_hashes: null })).toBe(false);
     expect(decision({ ...fixture.r1, evidence_hashes: [...fixture.r1.evidence_hashes, ...fixture.r1.evidence_hashes] })).toBe(false);
     expect(decision({ ...fixture.r1, source_side_effect_requested: true })).toBe(false);
+  });
+  it("publishes distinct request/apply/operation schemas for each Portal gate, not R1 aliases", () => {
+    const document = load("schemas/execution-governance-portal-decisions.v1.schema.json");
+    const source = load("schemas/execution-governance-approval-workflow.v1.schema.json");
+    expect(Object.keys(document.$defs)).toHaveLength(15);
+    for (const [prefix, route, command] of [["R1", "r1", "GOVERNANCE_R1_DECISION"],
+      ["R2", "r2", "GOVERNANCE_R2_DECISION"], ["Live", "live", "GOVERNANCE_LIVE_DECISION"]]) {
+      const validate = ajv.compile({ $ref: `${document.$id}#/$defs/${prefix}DecisionPlanRequest` });
+      // Reuse the canonical request example; only the named command changes.
+      const request = { schema_version: `governance.${route}-decision-plan-request.v1`, workspace_id: "ws_example",
+        request_key: "request_example", command_type: command, command_version: 1,
+        target: { approval_id: "apr_example" }, expected_approval_version: 2,
+        payload: { decision: "APPROVE", reason: "Independent evidence review", conditions: [], evidence_hashes: fixture.r1.evidence_hashes } };
+      expect(validate(request), JSON.stringify(validate.errors)).toBe(true);
+      expect(validate({ ...request, command_type: "GOVERNANCE_PAPER_EXIT_DECISION" })).toBe(false);
+      const plan = document.$defs[`${prefix}DecisionPlan`];
+      expect(plan.properties.command_type.const).toBe(command);
+      expect(plan.properties.schema_version.const).toBe(`governance.${route}-decision-plan.v1`);
+      if (route !== "r1") expect(plan.properties.source_side_effect_requested.const).toBe(false);
+    }
+    expect(source.$defs.R1DecisionPlanRequest.properties.command_type.const).toBe("GOVERNANCE_R1_DECISION");
   });
   it("rejects invented AVAILABLE captures and enforces input bounds", () => {
     expect(capture({ ...fixture.capture, candidates: [] })).toBe(false);

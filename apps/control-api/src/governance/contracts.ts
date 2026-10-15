@@ -115,6 +115,8 @@ export interface GovernanceRequestState {
 }
 
 export interface ApprovalInboxRow extends QueryResultRow {
+  r2_parent_ready: boolean;
+  r2_plan_author_user_id: string | null;
   approval_id: string;
   workspace_id: string;
   gate: ApprovalGate;
@@ -201,8 +203,10 @@ export function approvalInboxResource(
 ): PostgresListResource<ApprovalInboxRow, ApprovalInboxItem> {
   return {
     resourceId: "governance.approvals",
-    table: "governance_approval_inbox",
+    table: "governance_approval_decision_inbox",
     selectColumns: [
+      "r2_parent_ready",
+      "r2_plan_author_user_id",
       "approval_id",
       "workspace_id",
       "gate",
@@ -335,7 +339,8 @@ export function approvalInboxResource(
          * expired or inert row needs nobody regardless of authority.
          */
         needs_you:
-          mayDecide(row.gate) && row.status === "PENDING" && row.expires_at > now && inert === null,
+          mayDecide(row.gate) && row.status === "PENDING" && row.expires_at > now && inert === null
+          && (row.gate !== "R2" || row.r2_parent_ready === true && row.r2_plan_author_user_id !== actor.userId),
         record_authority: "PORTAL",
         updated_at: row.updated_at.toISOString(),
       };
@@ -346,12 +351,12 @@ export function approvalInboxResource(
 const RequestKey = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/);
 const EvidenceHash = z.string().regex(/^sha256:[0-9a-f]{64}$/);
 
-export const DecisionPlanRequestSchema = z
+function decisionPlanRequestSchema<G extends "r1" | "r2" | "live", C extends string>(gate: G, command: C) { return z
   .object({
-    schema_version: z.literal("governance.r1-decision-plan-request.v1"),
+    schema_version: z.literal(`governance.${gate}-decision-plan-request.v1`),
     workspace_id: z.string().min(3).max(96),
     request_key: RequestKey,
-    command_type: z.literal("GOVERNANCE_R1_DECISION"),
+    command_type: z.literal(command),
     command_version: z.literal(1),
     target: z.object({ approval_id: z.string().min(3).max(96) }).strict(),
     expected_approval_version: z.number().int().positive(),
@@ -407,7 +412,14 @@ export const DecisionPlanRequestSchema = z
         message: "conditions must be unique",
       });
     }
-  });
+  }); }
+
+export const DecisionPlanRequestSchema = decisionPlanRequestSchema("r1", "GOVERNANCE_R1_DECISION");
+export const R2DecisionPlanRequestSchema = decisionPlanRequestSchema("r2", "GOVERNANCE_R2_DECISION");
+export const LiveDecisionPlanRequestSchema = decisionPlanRequestSchema("live", "GOVERNANCE_LIVE_DECISION");
+export const PortalDecisionPlanRequestSchema = z.union([
+  DecisionPlanRequestSchema, R2DecisionPlanRequestSchema, LiveDecisionPlanRequestSchema,
+]);
 
 export const ApplyOperationRequestSchema = z
   .object({
@@ -416,6 +428,16 @@ export const ApplyOperationRequestSchema = z
     apply_token: z.string().regex(/^gat1\.[A-Za-z0-9_-]{1,32}\.[A-Za-z0-9_-]{3,96}\.[A-Za-z0-9_-]{43}$/),
   })
   .strict();
+
+export const R2ApplyOperationRequestSchema = ApplyOperationRequestSchema.extend({
+  schema_version: z.literal("governance.r2-decision-apply-request.v1"),
+});
+export const LiveApplyOperationRequestSchema = ApplyOperationRequestSchema.extend({
+  schema_version: z.literal("governance.live-decision-apply-request.v1"),
+});
+export const PortalApplyOperationRequestSchema = z.union([
+  ApplyOperationRequestSchema, R2ApplyOperationRequestSchema, LiveApplyOperationRequestSchema,
+]);
 
 export const ApprovalCreateRequestSchema = z
   .object({

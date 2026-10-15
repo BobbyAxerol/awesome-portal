@@ -191,7 +191,7 @@ export interface components {
         approval: {
             approval_id: components["schemas"]["identifier"];
             /** @constant */
-            gate: "R2";
+            gate: "LIVE_GATE";
             subject_type: string;
             subject_id: components["schemas"]["identifier"];
             subject_label: string;
@@ -200,8 +200,8 @@ export interface components {
             target_label: string;
             requester: components["schemas"]["portal_actor"];
             creator: components["schemas"]["portal_actor"];
-            /** @constant */
-            status: "PENDING";
+            /** @enum {unknown} */
+            status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
             policy_version: string;
             quorum_met: number;
             quorum_required: number;
@@ -214,33 +214,33 @@ export interface components {
             expires_at: components["schemas"]["date_time"];
             created_at: components["schemas"]["date_time"];
             updated_at: components["schemas"]["date_time"];
-            portfolio_id: components["schemas"]["identifier"];
-            currency: string;
+            portfolio_id: components["schemas"]["identifier"] | null;
+            currency: string | null;
         };
-        /** @description Immutable evidence pins for the existing R1 command. Executor availability is not permission to bypass per-verb eligibility. R2 has no commissioned executor: null command/path and typed refusal, never an R1 alias. */
+        /** @description Same-read immutable child manifest pins, with distinct named Portal-only R1/R2/Live commands. AVAILABLE permits planning, not a per-verb policy bypass. Live remains blocked until an explicit immutable predecessor policy is published. Never Trading System execution authority. */
         DecisionContext: {
             /** @enum {unknown} */
-            gate: "R1" | "R2";
+            gate: "R1" | "R2" | "LIVE_GATE";
             workspace_id: string;
             approval_id: string;
             expected_approval_version: number;
             evidence_set_hash: string;
             evidence_hashes: string[] | null;
             /** @enum {unknown} */
-            command_type: "GOVERNANCE_R1_DECISION" | null;
+            command_type: "GOVERNANCE_R1_DECISION" | "GOVERNANCE_R2_DECISION" | "GOVERNANCE_LIVE_DECISION";
             /** @enum {unknown} */
-            request_schema_version: "governance.r1-decision-plan-request.v1" | null;
-            /** @enum {unknown} */
-            plan_path: "/api/v1/execution/commands/plans" | null;
+            request_schema_version: "governance.r1-decision-plan-request.v1" | "governance.r2-decision-plan-request.v1" | "governance.live-decision-plan-request.v1";
+            /** @constant */
+            plan_path: "/api/v1/execution/commands/plans";
             availability: {
                 /** @enum {unknown} */
                 state: "AVAILABLE" | "BLOCKED";
                 /** @enum {unknown} */
-                reason_code: null | "GOVERNANCE_CAPABILITY_REQUIRED" | "ADMIN_ROLE_REQUIRED" | "APPROVAL_NOT_PENDING" | "APPROVAL_EXPIRED" | "EVIDENCE_HASH_LIMIT_EXCEEDED" | "R2_EXECUTION_DECISION_NOT_COMMISSIONED" | "R1_APPROVAL_REQUIRED" | "R1_EVIDENCE_INCOMPLETE" | "R2_ACCEPTED_LINEAGE_UNAVAILABLE" | "R2_REVIEW_CLOSED" | "CAPTURE_RETAINED_REVIEW_READ_ONLY" | "CAPTURE_PROJECTION_NOT_AUTHORIZED" | "CAPTURE_PROJECTION_UNAVAILABLE" | "CAPTURE_PROJECTION_SCOPE_MISMATCH" | "CAPTURE_PROJECTION_STALE" | "CAPTURE_DEPLOYMENT_SOURCE_UNAVAILABLE" | "R2_RISK_GRANT_SOURCE_UNAVAILABLE" | "R2_PORTFOLIO_SCOPE_NOT_FOUND" | "CAPTURE_DEPLOYMENT_SCOPE_NOT_FOUND" | "PAPER_VENUE_UNAVAILABLE";
+                reason_code: null | "GOVERNANCE_CAPABILITY_REQUIRED" | "ADMIN_ROLE_REQUIRED" | "APPROVAL_NOT_PENDING" | "APPROVAL_EXPIRED" | "EVIDENCE_HASH_LIMIT_EXCEEDED" | "R2_EXECUTION_DECISION_NOT_COMMISSIONED" | "R1_APPROVAL_REQUIRED" | "R1_EVIDENCE_INCOMPLETE" | "R2_ACCEPTED_LINEAGE_UNAVAILABLE" | "R2_REVIEW_CLOSED" | "CAPTURE_RETAINED_REVIEW_READ_ONLY" | "CAPTURE_PROJECTION_NOT_AUTHORIZED" | "CAPTURE_PROJECTION_UNAVAILABLE" | "CAPTURE_PROJECTION_SCOPE_MISMATCH" | "CAPTURE_PROJECTION_STALE" | "CAPTURE_DEPLOYMENT_SOURCE_UNAVAILABLE" | "R2_RISK_GRANT_SOURCE_UNAVAILABLE" | "R2_PORTFOLIO_SCOPE_NOT_FOUND" | "CAPTURE_DEPLOYMENT_SCOPE_NOT_FOUND" | "PAPER_VENUE_UNAVAILABLE" | "R2_APPROVAL_REQUIRED" | "LIVE_PARENT_NOT_PUBLISHED" | "R1_LINEAGE_UNPUBLISHED" | "R1_NOT_APPROVED" | "R1_EXPIRED" | "R1_EVIDENCE_MANIFEST_INTEGRITY_FAILED";
             } & unknown;
             /** @constant */
             source_side_effect_requested: false;
-        } & (unknown & unknown);
+        } & (unknown & unknown & unknown & unknown);
         /** @description At most 50 accepted, parent/workspace/profile-bound capture choices; no Manager relations/cursors. Null currency is unrecorded, never USDT by default. Capture creates a Portal review, not execution authorization. Retained/source-off/stale/outage profiles are blocked. */
         CaptureContext: {
             /** @enum {unknown} */
@@ -253,7 +253,7 @@ export interface components {
                 /** @enum {unknown} */
                 state: "AVAILABLE" | "BLOCKED";
                 /** @enum {unknown} */
-                reason_code: null | "GOVERNANCE_CAPABILITY_REQUIRED" | "ADMIN_ROLE_REQUIRED" | "APPROVAL_NOT_PENDING" | "APPROVAL_EXPIRED" | "EVIDENCE_HASH_LIMIT_EXCEEDED" | "R2_EXECUTION_DECISION_NOT_COMMISSIONED" | "R1_APPROVAL_REQUIRED" | "R1_EVIDENCE_INCOMPLETE" | "R2_ACCEPTED_LINEAGE_UNAVAILABLE" | "R2_REVIEW_CLOSED" | "CAPTURE_RETAINED_REVIEW_READ_ONLY" | "CAPTURE_PROJECTION_NOT_AUTHORIZED" | "CAPTURE_PROJECTION_UNAVAILABLE" | "CAPTURE_PROJECTION_SCOPE_MISMATCH" | "CAPTURE_PROJECTION_STALE" | "CAPTURE_DEPLOYMENT_SOURCE_UNAVAILABLE" | "R2_RISK_GRANT_SOURCE_UNAVAILABLE" | "R2_PORTFOLIO_SCOPE_NOT_FOUND" | "CAPTURE_DEPLOYMENT_SCOPE_NOT_FOUND" | "PAPER_VENUE_UNAVAILABLE";
+                reason_code: null | "GOVERNANCE_CAPABILITY_REQUIRED" | "ADMIN_ROLE_REQUIRED" | "APPROVAL_NOT_PENDING" | "APPROVAL_EXPIRED" | "EVIDENCE_HASH_LIMIT_EXCEEDED" | "R2_EXECUTION_DECISION_NOT_COMMISSIONED" | "R1_APPROVAL_REQUIRED" | "R1_EVIDENCE_INCOMPLETE" | "R2_ACCEPTED_LINEAGE_UNAVAILABLE" | "R2_REVIEW_CLOSED" | "CAPTURE_RETAINED_REVIEW_READ_ONLY" | "CAPTURE_PROJECTION_NOT_AUTHORIZED" | "CAPTURE_PROJECTION_UNAVAILABLE" | "CAPTURE_PROJECTION_SCOPE_MISMATCH" | "CAPTURE_PROJECTION_STALE" | "CAPTURE_DEPLOYMENT_SOURCE_UNAVAILABLE" | "R2_RISK_GRANT_SOURCE_UNAVAILABLE" | "R2_PORTFOLIO_SCOPE_NOT_FOUND" | "CAPTURE_DEPLOYMENT_SCOPE_NOT_FOUND" | "PAPER_VENUE_UNAVAILABLE" | "R2_APPROVAL_REQUIRED" | "LIVE_PARENT_NOT_PUBLISHED" | "R1_LINEAGE_UNPUBLISHED" | "R1_NOT_APPROVED" | "R1_EXPIRED" | "R1_EVIDENCE_MANIFEST_INTEGRITY_FAILED";
             } & unknown;
             candidates: {
                 deployment_id: string;
@@ -323,14 +323,15 @@ export interface components {
             plan_author: string | null;
             evidence_manifest: components["schemas"]["evidence_manifest"] | null;
             eligibility: components["schemas"]["eligibility"];
+            decision_evidence_manifest?: components["schemas"]["evidence_manifest"];
         };
         /**
          * Portal Execution Governance R2 Review v1
          * @description Read-only, workspace-bound active R2 review with the immutable capital-preview scope. This document is not an R2 decision or execution authorization.
          */
-        "execution-governance-r2-review.v1.schema": {
+        "governance-live-decision-review.v1.schema": {
             /** @constant */
-            schema_version: "governance.r2-review.v1";
+            schema_version: "governance.live-decision-review.v1";
             workspace_id?: string;
             /** @constant */
             record_authority: "PORTAL";
@@ -355,7 +356,7 @@ export interface components {
                 approval: {
                     approval_id: components["schemas"]["identifier"];
                     /** @constant */
-                    gate: "R2";
+                    gate: "LIVE_GATE";
                     subject_type: string;
                     subject_id: components["schemas"]["identifier"];
                     subject_label: string;
@@ -364,8 +365,8 @@ export interface components {
                     target_label: string;
                     requester: components["schemas"]["portal_actor"];
                     creator: components["schemas"]["portal_actor"];
-                    /** @constant */
-                    status: "PENDING";
+                    /** @enum {unknown} */
+                    status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
                     policy_version: string;
                     quorum_met: number;
                     quorum_required: number;
@@ -378,8 +379,8 @@ export interface components {
                     expires_at: components["schemas"]["date_time"];
                     created_at: components["schemas"]["date_time"];
                     updated_at: components["schemas"]["date_time"];
-                    portfolio_id: components["schemas"]["identifier"];
-                    currency: string;
+                    portfolio_id: components["schemas"]["identifier"] | null;
+                    currency: string | null;
                 };
                 r1_reference: {
                     approval_id: components["schemas"]["identifier"];
@@ -432,6 +433,7 @@ export interface components {
                     plan_author: string | null;
                     evidence_manifest: components["schemas"]["evidence_manifest"] | null;
                     eligibility: components["schemas"]["eligibility"];
+                    decision_evidence_manifest?: components["schemas"]["evidence_manifest"];
                 };
             };
         };
@@ -457,7 +459,7 @@ export interface components {
                 /** @constant */
                 composition: "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS";
             };
-            governance_backbone: components["schemas"]["execution-governance-r2-review.v1.schema"];
+            governance_backbone: components["schemas"]["governance-live-decision-review.v1.schema"];
             current_source: components["schemas"]["ProfileRead"];
             derived_branches: {
                 capability_id: string;
@@ -469,6 +471,7 @@ export interface components {
             source_side_effect_requested: false;
             /** @constant */
             production_command_active: false;
+            workspace_id?: string;
         };
     };
     responses: never;

@@ -427,10 +427,10 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(validate!({ ...account, selected_environment: "canary" })).toBe(false);
   });
 
-  it("keeps the N23 Live gate read-only over the existing R2 backbone", () => {
+  it("keeps Live read-only over its own gate backbone and unpublished parent refusal", () => {
     const backbone = loadJson(
-      join(fixtureDir, "execution-governance.r2-review.valid.json"),
-    );
+      join(fixtureDir, "governance-live-review.valid.json"),
+    ).governance_backbone;
     const currentSource = loadJson(
       join(fixtureDir, "execution-canary-live-facts.empty.valid.json"),
     );

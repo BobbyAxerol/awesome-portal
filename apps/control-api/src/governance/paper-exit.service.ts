@@ -363,6 +363,7 @@ export class PaperExitService {
       await this.rejected(user, input, requestId, "APPROVER_ROLE_REQUIRED", "DENIED");
       throw new GovernanceError("APPROVER_ROLE_REQUIRED", "Access denied.", 403);
     }
+    await this.assertActorAuthority(user, input.workspaceId);
     const snapshot = await this.verifiedSnapshot(input.workspaceId, input.reviewId);
     const { approval, review } = snapshot;
     const evaluation = evaluatePaperExit(snapshot);
@@ -405,7 +406,7 @@ export class PaperExitService {
     try {
       created = await this.repository.createPlan({
         operationId, workspaceId: input.workspaceId, reviewId: input.reviewId,
-        actorUserId: user.userId, requestKey: input.requestKey, payloadHash,
+        actorUserId: user.userId, actor: user, requestKey: input.requestKey, payloadHash,
         decision: input.decision, reason: input.reason, extensionDays: input.extensionDays,
         expectedReviewVersion: input.expectedReviewVersion,
         evidenceSetHash: approval.evidenceSetHash, sourceSnapshotHash: review.sourceSnapshotHash,
@@ -416,6 +417,8 @@ export class PaperExitService {
         expiresAt, requestId, auditEventId: newUlid("evt"), outboxMessageId: newUlid("msg"),
       });
     } catch (error) {
+      const typed = error as { governanceCode?: string; status?: number };
+      if (typed.governanceCode) throw new GovernanceError(typed.governanceCode, "Operation could not be planned.", typed.status ?? 409);
       if ((error as { code?: string }).code !== "23505") throw error;
       const raced = await this.repository.findPlanByKey(input.workspaceId, user.userId, input.requestKey);
       if (!raced) throw error;
@@ -444,7 +447,7 @@ export class PaperExitService {
     }
     try {
       const result = await this.repository.applyDecision({
-        workspaceId, actorUserId: user.userId, actorUsername: user.username,
+        workspaceId, actorUserId: user.userId, actorUsername: user.username, actor: user,
         operationId, requestId, decisionId: newUlid("dec"), grantId: newUlid("grant"),
         auditEventId: newUlid("evt"), outboxMessageId: newUlid("msg"),
         reasonHash: digest(plan.reason),
@@ -475,6 +478,7 @@ export class PaperExitService {
   async operationOrNull(user: PortalUser, workspaceId: string, operationId: string) {
     const plan = await this.repository.findPlan(workspaceId, user.userId, operationId);
     if (!plan) return null;
+    await this.assertActorAuthority(user, workspaceId);
     const status = plan.status === "APPLIED" ? "SUCCEEDED"
       : plan.expiresAt <= new Date() ? "EXPIRED" : "PENDING";
     return {
@@ -489,6 +493,16 @@ export class PaperExitService {
       expires_at: plan.expiresAt.toISOString(), applied_at: plan.appliedAt?.toISOString() ?? null,
       receipt: plan.responseJson, external_side_effect_requested: false,
     };
+  }
+
+  private async assertActorAuthority(user: PortalUser, workspaceId: string): Promise<void> {
+    try {
+      await this.repository.assertActorAuthority(user, workspaceId);
+    } catch (error) {
+      const typed = error as { governanceCode?: string; status?: number };
+      if (!typed.governanceCode) throw error;
+      throw new GovernanceError(typed.governanceCode, "Access denied.", typed.status ?? 403);
+    }
   }
 
   private async verifiedSnapshot(workspaceId: string, reviewId: string) {

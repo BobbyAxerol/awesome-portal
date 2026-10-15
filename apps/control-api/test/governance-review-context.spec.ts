@@ -107,15 +107,36 @@ describe("Governance review context — bounded inputs, not source execution aut
     expect(decisionContext(parent, large, true)).toMatchObject({ evidence_hashes: null,
       availability: { state: "BLOCKED", reason_code: "EVIDENCE_HASH_LIMIT_EXCEEDED" } });
   });
-  it("cannot alias R2 into an R1 command or publish unbound/duplicate command hashes", () => {
-    const context = decisionContext(approval("R2"), [evidence(HASH_A)], true);
-    expect(context).toMatchObject({ command_type: null, plan_path: null, evidence_hashes: null,
-      availability: { state: "BLOCKED", reason_code: "R2_EXECUTION_DECISION_NOT_COMMISSIONED" } });
+  it("binds the commissioned R2 context to its own command and rejects R1 aliases or missing/duplicate hashes", () => {
+    const context = decisionContext({ ...approval("R2"), status: "PENDING" }, [evidence(HASH_A)], true);
+    expect(context).toMatchObject({ gate: "R2", command_type: "GOVERNANCE_R2_DECISION",
+      request_schema_version: "governance.r2-decision-plan-request.v1",
+      plan_path: "/api/v1/execution/commands/plans", evidence_hashes: [HASH_A],
+      availability: { state: "AVAILABLE", reason_code: null }, source_side_effect_requested: false });
     expect(DecisionContextSchema.safeParse({ ...context, command_type: "GOVERNANCE_R1_DECISION" }).success).toBe(false);
-    expect(DecisionContextSchema.safeParse({ ...context, evidence_hashes: [HASH_A] }).success).toBe(false);
+    expect(DecisionContextSchema.safeParse({ ...context, request_schema_version: "governance.r1-decision-plan-request.v1" }).success).toBe(false);
+    expect(DecisionContextSchema.safeParse({ ...context, evidence_hashes: null }).success).toBe(false);
+    expect(DecisionContextSchema.safeParse({ ...context, evidence_hashes: [HASH_A, HASH_A] }).success).toBe(false);
     const r1 = decisionContext({ ...approval(), status: "PENDING" }, [], true);
     expect(DecisionContextSchema.safeParse({ ...r1, evidence_hashes: null }).success).toBe(false);
     expect(DecisionContextSchema.safeParse({ ...r1, evidence_hashes: [HASH_A, HASH_A] }).success).toBe(false);
+  });
+  it("does not turn a named R2 executor into approval when its stored policy prerequisites are absent", () => {
+    const parent = { ...approval("R2"), status: "PENDING" };
+    expect(decisionContext(parent, [evidence(HASH_A)], true, "R1_LINEAGE_UNPUBLISHED")).toMatchObject({
+      command_type: "GOVERNANCE_R2_DECISION", evidence_hashes: [HASH_A],
+      availability: { state: "BLOCKED", reason_code: "R1_LINEAGE_UNPUBLISHED" } });
+    expect(decisionContext(parent, [evidence(HASH_A)], true, "ADMIN_ROLE_REQUIRED").availability)
+      .toEqual({ state: "BLOCKED", reason_code: "ADMIN_ROLE_REQUIRED" });
+  });
+  it("names the Live command without inventing its unpublished parent or activating Execution", () => {
+    const context = decisionContext({ ...approval("LIVE_GATE"), status: "PENDING" }, [evidence(HASH_B)], true);
+    expect(context).toMatchObject({ gate: "LIVE_GATE", command_type: "GOVERNANCE_LIVE_DECISION",
+      request_schema_version: "governance.live-decision-plan-request.v1", evidence_hashes: [HASH_B],
+      availability: { state: "BLOCKED", reason_code: "LIVE_PARENT_NOT_PUBLISHED" },
+      source_side_effect_requested: false });
+    expect(DecisionContextSchema.safeParse({ ...context, command_type: "GOVERNANCE_R2_DECISION" }).success).toBe(false);
+    expect(DecisionContextSchema.safeParse({ ...context, availability: { state: "AVAILABLE", reason_code: null } }).success).toBe(false);
   });
   it("lists every accepted risk choice without guessing an unrecorded currency", () => {
     const snap = snapshot();
@@ -144,7 +165,7 @@ describe("Governance review context — bounded inputs, not source execution aut
     expect(CaptureContextSchema.safeParse({ ...result, expected_projection_digest: HASH_A }).success).toBe(false);
   });
   it("binds Paper Exit to accepted R2 portfolio/deployment and checks venue before offering the action", () => {
-    const parent = { ...approval("R2"), subjectId: "dep_test", status: "PENDING" };
+    const parent = { ...approval("R2"), subjectId: "dep_test", status: "APPROVED" };
     expect(paperCaptureContext(parent, "PAPER_EXIT_CREATE", snapshot(), lineage()).candidates).toHaveLength(1);
     expect(paperCaptureContext(parent, "PAPER_EXIT_CREATE", snapshot(), { ...lineage(), portfolioId: "another" }).availability.state).toBe("BLOCKED");
     const snap = snapshot();
@@ -187,6 +208,17 @@ describe("Governance review context — bounded inputs, not source execution aut
     expect((await h.service.context(user, "R2_CREATE", approval())).availability.reason_code).toBe("GOVERNANCE_CAPABILITY_REQUIRED");
     expect(h.read).toHaveBeenCalledTimes(1);
     expect(h.access).toHaveBeenCalledTimes(2);
+  });
+  it("requires an approved R2 before offering Paper Exit, without consulting source candidates for a pending review", async () => {
+    const h = harness();
+    const parent = { ...approval("R2"), subjectId: "dep_test", status: "PENDING" };
+    const pending = await h.service.context(user, "PAPER_EXIT_CREATE", parent, lineage());
+    expect(pending).toMatchObject({ expected_projection_digest: null, candidates: [],
+      availability: { state: "BLOCKED", reason_code: "R2_APPROVAL_REQUIRED" } });
+    expect(h.read).not.toHaveBeenCalled();
+    expect((await h.service.context(user, "PAPER_EXIT_CREATE", { ...parent, status: "APPROVED" }, lineage()))
+      .availability).toEqual({ state: "AVAILABLE", reason_code: null });
+    expect(h.read).toHaveBeenCalledTimes(1);
   });
   it.each([false, true])("uses the correct snapshot reader when stores are split=%s", async split => {
     const h = harness(split);

@@ -3451,3 +3451,40 @@ seek when it fits, demand-driven chunks otherwise. Preserve approved charts;
 measure lightweight-charts trail/markers/memory separately rather than keeping
 an unmeasured600 or loading every page. Backend measurement is not FE/browser
 or deployment acceptance. No preview restart, engine job or remote push here.
+
+## §60 — Bobby-approved Governance → P23/P24 continuation (2026-10-15)
+
+Continue existing R1/Paper Exit, then commission Portal-local R2/Live decision
+paths, reconcile P23 by exact dependencies and finish P24 preview acceptance.
+This supersedes the earlier suggestion to freeze/release immediately: no
+dev/main promotion, remote push, signing/deploy or source-command activation.
+Base `051eeb89`, `codex/be-gaps`; preserve all Claude commits/design.
+
+GOV-C1 IN_PROGRESS; GOV-C2 existing policy/authority inspection; GOV-C3/C4
+depend on the changed backend. The [canonical P22 packet](./evidence/P22/GOVERNANCE_P23_P24_CONTINUATION_2026-10-15.md)
+owns per-item implementation, generated contract/Claude handoff, real/technical
+receipt labels, dependency reuse and exact open source/consumer dispositions.
+Keep original receipts and historical failures; do not manufacture accepted
+source capture, duplicate reviewer grants or missing historical artifact bytes.
+
+### §60 — Backend delivery and bounded consumer work
+
+GOV-C1 implemented fresh transaction-local authority and actual apply-time
+manifest validation, fixed multi-reviewer conditional ordinal collision and
+capture/replay revocation races. GOV-C2 has separate named R2 plan/apply/read
+contracts and a Portal-local executor; Live reads its own gate with an own
+named command but remains `LIVE_PARENT_NOT_PUBLISHED` (no immutable predecessor
+policy). Neither path emits an Execution command or creates a risk grant.
+Pending old plans without policy pins require replan; no history is rewritten.
+
+GOV-C3: [15-gate dependency/custody matrix](./evidence/P23/GOVERNANCE_DEPENDENCY_DISPOSITION_2026-10-15.md),
+23 actual private receipt hashes and offline reconciliation tool with14/14
+technical tests. Historical strict83/86 stays false full-store integrity.
+No same-image certification or unverified receipt reuse is manufactured.
+
+Claude must consume [FE-GOV-C01…05](./evidence/P22/GOVERNANCE_PORTAL_DECISION_CLAUDE_HANDOFF_2026-10-15.md):
+own R2/Live command/schema pairs, same-read child manifest pins, per-verb
+eligibility, exact authority requirements, Live typed refusal and retained
+capture lock. Old decoder/client hard-code R1 and must be updated; no UI
+design file was modified by Codex. Final PG/preview results and P24 affected
+browser T02/T14 are recorded in the linked packet, never inferred from fixtures.

@@ -2,6 +2,9 @@ import { Inject, Injectable } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
 import { CONTROL_API_POOL } from "../tokens";
 import { EvidenceRecord } from "./governance.repository";
+import type { PortalUser } from "../domain";
+import { assertDecisionAuthority } from "./decision-authority";
+import { computeEvidenceManifestHash } from "./evidence-manifest";
 
 export type PaperExitEvaluationState = "MET" | "UNMET" | "PARTIAL" | "STALE" | "UNAVAILABLE";
 export type PaperExitDecision = "PROMOTE" | "EXTEND_OBSERVATION" | "REJECT";
@@ -341,6 +344,33 @@ function plan(row: PlanRow): PaperExitPlanRecord {
 export class PaperExitRepository {
   constructor(@Inject(CONTROL_API_POOL) readonly pool: Pool) {}
 
+  async assertActorAuthority(actor: PortalUser, workspaceId: string): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      await assertDecisionAuthority(client, { actor, workspaceId, gate: "PAPER_EXIT" });
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  private async verifiedManifest(client: PoolClient, reviewId: string, expectedHash: string, expectedHashes: string[]) {
+    const entries = (await client.query<EvidenceRow>(
+      `SELECT * FROM governance_approval_evidence WHERE approval_id = $1 ORDER BY ordinal`, [reviewId],
+    )).rows.map(evidence);
+    if (computeEvidenceManifestHash(entries) !== expectedHash) {
+      throw this.problem("EVIDENCE_MANIFEST_INTEGRITY_FAILED", 409);
+    }
+    const hashes = [...new Set(entries.map(item => item.sha256))].sort();
+    if (JSON.stringify(hashes) !== JSON.stringify([...expectedHashes].sort())) {
+      throw this.problem("EVIDENCE_SET_CHANGED", 409);
+    }
+  }
+
   async detail(workspaceId: string, reviewId: string, transaction?: PoolClient): Promise<PaperExitSnapshot | null> {
     const client = transaction ?? await this.pool.connect();
     try {
@@ -430,10 +460,16 @@ export class PaperExitRepository {
     sourceSnapshotHash: string; evidenceHashes: string[]; evaluationState: PaperExitEvaluationState;
     blockerCodes: string[]; warningCodes: string[]; applyKeyId: string; applyTokenHash: string;
     expiresAt: Date; requestId: string; auditEventId: string; outboxMessageId: string;
+    actor: PortalUser;
   }): Promise<PaperExitPlanRecord> {
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
+      if (input.actor.userId !== input.actorUserId) throw this.problem("ACTOR_IDENTITY_MISMATCH", 403);
+      await assertDecisionAuthority(client, { actor: input.actor, workspaceId: input.workspaceId, gate: "PAPER_EXIT" });
+      if (input.blockerCodes.length === 0) {
+        await this.verifiedManifest(client, input.reviewId, input.evidenceSetHash, input.evidenceHashes);
+      }
       const inserted = await client.query<PlanRow>(
         `INSERT INTO governance_paper_exit_decision_plans
            (operation_id, workspace_id, review_id, actor_user_id, request_key,
@@ -486,13 +522,15 @@ export class PaperExitRepository {
   async applyDecision(input: {
     workspaceId: string; actorUserId: string; actorUsername: string; operationId: string;
     requestId: string; decisionId: string; grantId: string; auditEventId: string;
-    outboxMessageId: string; reasonHash: string;
+    outboxMessageId: string; reasonHash: string; actor: PortalUser;
   }): Promise<{ plan: PaperExitPlanRecord; replayed: boolean }> {
     const client = await this.pool.connect();
     let transactionOpen = false;
     try {
       await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
       transactionOpen = true;
+      if (input.actor.userId !== input.actorUserId) throw this.problem("ACTOR_IDENTITY_MISMATCH", 403);
+      await assertDecisionAuthority(client, { actor: input.actor, workspaceId: input.workspaceId, gate: "PAPER_EXIT" });
       const planResult = await client.query<PlanRow>(
         `SELECT * FROM governance_paper_exit_decision_plans
           WHERE workspace_id = $1 AND actor_user_id = $2 AND operation_id = $3 FOR UPDATE`,
@@ -538,6 +576,15 @@ export class PaperExitRepository {
       }
       if (reviewRow.source_snapshot_hash !== planRow.source_snapshot_hash) throw this.problem("SOURCE_SNAPSHOT_CHANGED", 409);
       if (approvalRow.evidence_set_hash !== planRow.evidence_set_hash) throw this.problem("EVIDENCE_SET_CHANGED", 409);
+      await this.verifiedManifest(client, planRow.review_id, approvalRow.evidence_set_hash, planRow.evidence_hashes);
+      if (approvalRow.quorum_required !== 1) throw this.problem("PAPER_EXIT_QUORUM_UNSUPPORTED", 409);
+      if (approvalRow.decision_actor_ids.includes(input.actorUserId)) throw this.problem("ACTOR_ALREADY_DECIDED", 409);
+      if (planRow.decision === "PROMOTE") {
+        if (!approvalRow.evidence_complete) throw this.problem("EVIDENCE_INCOMPLETE", 409);
+        if ([approvalRow.requester_user_id, approvalRow.artifact_creator_user_id].includes(input.actorUserId)) {
+          throw this.problem("SELF_PROMOTION_PROHIBITED", 409);
+        }
+      }
 
       const versionAfter = reviewRow.review_version + 1;
       const decidedAt = new Date();

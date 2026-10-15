@@ -16,6 +16,7 @@ import { blockedCapture, paperCaptureContext, type CaptureContext, type ReviewCo
 import { retainedReview } from "../execution/retained-read-profile";
 import { OwnerAccessService } from "../auth/owner-access.service";
 import { mayGovern } from "../auth/governance-access";
+import { assertDecisionAuthority, DecisionAuthorityError } from "./decision-authority";
 
 const POLICY = "portal.review-capture.v1";
 const EXIT_PANELS = ["OBSERVATION_COVERAGE", "DRIFT", "LIMITS_HEALTH", "PORTFOLIO_FIT"] as const;
@@ -45,7 +46,7 @@ export class GovernanceReviewCaptureService {
         { id: "R2_CREATE", state: "AVAILABLE", inputs: "APPROVED_R1_AND_PINNED_PAPER_DEPLOYMENT_RISK_GRANT", path: "/api/v1/execution/governance/r2/capture" },
         { id: "PAPER_EXIT_CREATE", state: "AVAILABLE", inputs: "PINNED_R2_AND_PAPER_DEPLOYMENT", path: "/api/v1/execution/governance/paper-exit/create" },
         { id: "SANDBOX_NOTE", state: "AVAILABLE", inputs: "EXISTING_DRAFT_CERTIFICATION", path: "/api/v1/execution/governance/sandbox/capture-note" },
-        { id: "R2_EXECUTION_GRANT", state: "UNAVAILABLE", reason_code: "R2_EXECUTION_DECISION_NOT_COMMISSIONED" },
+        { id: "R2_EXECUTION_GRANT", state: "UNAVAILABLE", reason_code: "R2_UPSTREAM_EXECUTION_NOT_QUALIFIED" },
         { id: "PAPER_EXIT_PROMOTE", state: "UNAVAILABLE", reason_code: GAP },
         { id: "SANDBOX_CERTIFY_SOURCE", state: "UNAVAILABLE", reason_code: "ACCEPTED_SANDBOX_STEP_EVIDENCE_UNAVAILABLE" },
       ].map(action => action.state === "AVAILABLE" && user.role !== "ADMIN"
@@ -62,7 +63,7 @@ export class GovernanceReviewCaptureService {
     if (action === "R2_CREATE" && !["APPROVED", "APPROVED_WITH_CONDITION"].includes(approval.status)) return blocked("R1_APPROVAL_REQUIRED");
     if (action === "R2_CREATE" && !approval.evidenceComplete) return blocked("R1_EVIDENCE_INCOMPLETE");
     if (action === "PAPER_EXIT_CREATE") {
-      if (!["PENDING", "APPROVED", "APPROVED_WITH_CONDITION"].includes(approval.status)) return blocked("R2_REVIEW_CLOSED");
+      if (!["APPROVED", "APPROVED_WITH_CONDITION"].includes(approval.status)) return blocked("R2_APPROVAL_REQUIRED");
       if (!lineage) return blocked("R2_ACCEPTED_LINEAGE_UNAVAILABLE");
       if (!["APPROVED", "APPROVED_WITH_CONDITION"].includes(lineage.r1Status)) return blocked("R1_APPROVAL_REQUIRED");
       if (lineage.r1ExpiresAt <= new Date()) return blocked("APPROVAL_EXPIRED");
@@ -119,19 +120,19 @@ export class GovernanceReviewCaptureService {
       [id,input.workspace_id,r1.approval_id,input.risk_grant_id,user.userId,user.username]);
       await client.query(`INSERT INTO governance_approval_findings
         (finding_id,approval_id,ordinal,label,outcome,suggestion,blocking,policy_version,formula_version,basis_hashes,evaluated_at)
-        VALUES ($1,$2,0,$3,'INSUFFICIENT','R2_EXECUTION_DECISION_NOT_COMMISSIONED',true,$4,$4,$5,now())`,
+        VALUES ($1,$2,0,$3,'WATCH','PORTAL_REVIEW_ONLY_NOT_EXECUTION_AUTHORIZATION',false,$4,$4,$5,now())`,
       [newUlid("find"),id,`Portal-authored review note: ${input.summary}`,POLICY,[snapshot.payloadDigest, r1.evidence_set_hash]]);
       return { aggregate_id: id, approval_id: id, workflow_version: 1,
         read_path: `/api/v1/execution/governance/approvals/${id}/r2`,
         captured_projection_digest: snapshot.payloadDigest, source_verdict: "NOT_ASSERTED",
-        decision_reason_code: "R2_EXECUTION_DECISION_NOT_COMMISSIONED" };
+        decision_reason_code: "PORTAL_REVIEW_ONLY_NOT_EXECUTION_AUTHORIZATION" };
     });
   }
 
   async createPaperExit(user: PortalUser, input: PaperExitCreate, requestId: string) {
     return this.capture(user, input, "PAPER_EXIT_CREATE", requestId, async client => {
       const r2 = await this.parent(client, input.workspace_id, input.r2_approval_id, "R2", input.expected_r2_version);
-      if (!["PENDING", "APPROVED", "APPROVED_WITH_CONDITION"].includes(r2.status)) fail("R2_REVIEW_CLOSED", 422);
+      if (!["APPROVED", "APPROVED_WITH_CONDITION"].includes(r2.status)) fail("R2_APPROVAL_REQUIRED", 422);
       const lineage = (await client.query(`SELECT l.*,s.portfolio_id FROM governance_r2_lineage l
         JOIN governance_approval_analytics_scopes s ON s.approval_id=l.r2_approval_id AND s.workspace_id=l.workspace_id
         WHERE l.workspace_id=$1 AND l.r2_approval_id=$2`, [input.workspace_id,input.r2_approval_id])).rows[0];
@@ -228,9 +229,20 @@ export class GovernanceReviewCaptureService {
     return withTransaction(this.pool,async client => {
       await client.query("SET LOCAL lock_timeout = '5s'");
       await client.query("SET LOCAL statement_timeout = '10s'");
-      if ((action === "R2_CREATE" || action === "PAPER_EXIT_CREATE")
-        && !await this.captureReadAllowed(user, action, input.workspace_id)) {
-        throw new GovernanceError("GOVERNANCE_CAPABILITY_REQUIRED", "Access denied.", 403);
+      // Serialize credential, role, membership and scoped read revocations
+      // with capture AND its idempotent replay. Do not consult a second pool
+      // for an authority snapshot outside this transaction.
+      try {
+        const current = await assertDecisionAuthority(client, { actor: user, workspaceId: input.workspace_id,
+          gate: action === "SANDBOX_NOTE" ? "PAPER_EXIT" : "R2", mode: "read" });
+        if (current.role !== "ADMIN") fail("ADMIN_ROLE_REQUIRED", 403);
+        if (action === "R2_CREATE") await assertDecisionAuthority(client,
+          { actor: user, workspaceId: input.workspace_id, gate: "R1", mode: "read" });
+      } catch (error) {
+        if (error instanceof DecisionAuthorityError) {
+          throw new GovernanceError(error.governanceCode, error.message, error.status);
+        }
+        throw error;
       }
       // DB-wide serialization of this retry identity, including multi-replica callers.
       await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[`${input.workspace_id}:${user.userId}:${input.request_key}`]);
@@ -330,9 +342,9 @@ export class GovernanceReviewCaptureService {
       (approval_id,workspace_id,gate,subject_type,subject_id,subject_label,environment,target_label,requester_user_id,requester_username,
        artifact_creator_user_id,artifact_creator_username,status,policy_version,quorum_required,evidence_set_hash,evidence_complete,
        blocker_count,blocker_summary,sla_due_at,expires_at)
-      VALUES ($1,$2,$3,'DEPLOYMENT',$4,$4,'PAPER',$3,$5,$6,$7,$8,'PENDING',$9,1,$10,false,1,$11,now()+interval '24 hours',now()+interval '72 hours')`,
+      VALUES ($1,$2,$3,'DEPLOYMENT',$4,$4,'PAPER',$3,$5,$6,$7,$8,'PENDING',$9,1,$10,$12,$13,$11,now()+interval '24 hours',now()+interval '72 hours')`,
     [id,workspace,gate,subject,user.userId,user.username,parent.artifact_creator_user_id,parent.artifact_creator_username,
-      POLICY,manifest,gate==="R2"?"R2_EXECUTION_DECISION_NOT_COMMISSIONED":GAP]);
+      POLICY,manifest,gate==="R2"?null:GAP,gate === "R2",gate === "R2" ? 0 : 1]);
   }
 
   private async insertEvidence(client: PoolClient,items: EvidenceRecord[],id: string) {

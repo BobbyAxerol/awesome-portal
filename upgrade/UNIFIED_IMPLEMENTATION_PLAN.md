@@ -9289,3 +9289,38 @@ push, dev/main or production change. Claude owns max_bars consumption, measured
 chart trail/markers/memory and affected browser receipt;600 trail not qualified
 by backend timings. Normal commit hook/landing and final C4 are required as
 recorded in the packet, not implied by the focused measurements.
+
+### Governance → P23/P24 preview continuation — Bobby approved, 2026-10-15
+
+Owner-approved order: existing R1/Paper Exit → Portal-local R2/Live decisions
+→ dependency-scoped P23 qualification reconciliation → P24 preview acceptance.
+This is a continuation of P22–P24, not a new phase or release authorization.
+Base `051eeb89`, backend lane `codex/be-gaps`; preserve Claude's frontend,
+land only on `docs/research-loop-plan` after normal grouped hook/clean FF.
+No remote push, dev/main merge, signed release, production/source activation.
+
+| Slice | Scope / exit | Current state |
+| --- | --- | --- |
+| GOV-C1 | Research RC→Inbox→independent R1/Paper Exit plan/apply, evidence/hash/CAS/idempotency/revocation/workspace controls; exact real versus technical evidence labels | BACKEND_TARGETED_PASS: 106 unique API/PG cases across scoped runs + restore; real source capture remains conditional |
+| GOV-C2 | Explicit per-gate Portal decision contracts/executors for R2/Live; fresh exact capabilities, immutable evidence/lineage, quorum/audit/replay; never alias R1 or emit execution commands | R2_LOCAL_IMPLEMENTED; Live own command/read delivered but LIVE_PARENT_NOT_PUBLISHED, not commissioned |
+| GOV-C3 | P23 gate→receipt→dependency hashes→reuse/invalidation matrix; accepted exact-three historical manifest exception remains 83/86, never strict PASS | MATRIX_AND_VERIFIER_DELIVERED; 15 scoped rows/23 raw hashes, no blanket current-candidate qualification |
+| GOV-C4 | P24 affected preview journey/authority/protected-data T02/T14, unsigned candidate and Claude consumer handoff; max READY_FOR_BOBBY_REVIEW | PENDING_PREVIEW_AND_CLAUDE_CONSUMER; no release authority |
+
+Capture requires accepted fresh source evidence; retained observations cannot
+be promoted into live authority. Qualify source-independent Portal records in
+an isolated cell, preserving the shared retained preview's read-only source
+mode. Missing source-backed capture is a named disposition, never fake PASS.
+Backend changes must publish generated contracts/canonical fixtures and the
+exact Claude field/action/story handoff; Codex does not edit approved UI.
+Focused gates per affected slice, one normal grouped commit gate; do not
+repeat unchanged engine/load/DR evidence. Owned test identities/resources get
+bounded C4 cleanup and private evidence retention.
+
+Live ledger / authority matrix / receipt index:
+[P22 continuation packet](./research_loop/evidence/P22/GOVERNANCE_P23_P24_CONTINUATION_2026-10-15.md).
+
+Claude's bounded contract/story tasks:
+[FE-GOV-C01…05](./research_loop/evidence/P22/GOVERNANCE_PORTAL_DECISION_CLAUDE_HANDOFF_2026-10-15.md).
+P23 [dependency/custody dispositions](./research_loop/evidence/P23/GOVERNANCE_DEPENDENCY_DISPOSITION_2026-10-15.md)
+preserve unchanged numerical scopes, exact83/86 exception and unresolved
+image/COPY/config custody; they do not imply that all gates ran on one image.

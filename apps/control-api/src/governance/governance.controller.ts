@@ -32,11 +32,11 @@ import {
 import { ExecutionOperationsService } from "../operations/operations.service";
 import { OperationsWorkflowService } from "../operations/workflow.service";
 import {
-  ApplyOperationRequestSchema,
+  PortalApplyOperationRequestSchema,
   ApprovalCreateRequestSchema,
   approvalHistoryQuery,
   approvalListQuery,
-  DecisionPlanRequestSchema,
+  PortalDecisionPlanRequestSchema,
   PaperExitApplyOperationRequestSchema,
   PaperExitDecisionPlanRequestSchema,
   governanceConditionsQuery,
@@ -372,7 +372,7 @@ export class GovernanceController {
         400,
       );
     }
-    const parsed = DecisionPlanRequestSchema.safeParse(body);
+    const parsed = PortalDecisionPlanRequestSchema.safeParse(body);
     if (!parsed.success) {
       throw new GovernanceError("INVALID_DECISION_PLAN", "Invalid decision plan request.", 400);
     }
@@ -381,6 +381,7 @@ export class GovernanceController {
       request.portalUser,
       {
         workspaceId,
+        commandType: parsed.data.command_type,
         requestKey: parsed.data.request_key,
         approvalId: parsed.data.target.approval_id,
         expectedApprovalVersion: parsed.data.expected_approval_version,
@@ -433,7 +434,7 @@ export class GovernanceController {
         this.requestId(request),
       );
     }
-    const parsed = ApplyOperationRequestSchema.safeParse(body);
+    const parsed = PortalApplyOperationRequestSchema.safeParse(body);
     if (!parsed.success) {
       throw new GovernanceError("INVALID_APPLY_REQUEST", "Invalid apply request.", 400);
     }
@@ -444,6 +445,9 @@ export class GovernanceController {
       operationId,
       parsed.data.apply_token,
       this.requestId(request),
+      parsed.data.schema_version === "governance.r2-decision-apply-request.v1" ? "GOVERNANCE_R2_DECISION"
+        : parsed.data.schema_version === "governance.live-decision-apply-request.v1" ? "GOVERNANCE_LIVE_DECISION"
+          : "GOVERNANCE_R1_DECISION",
     );
   }
 
