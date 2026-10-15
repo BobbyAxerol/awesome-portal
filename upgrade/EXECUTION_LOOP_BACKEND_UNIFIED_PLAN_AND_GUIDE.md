@@ -1,5 +1,9 @@
 # Execution Loop Backend Unified Plan and Guide
 
+> **New Edge upgrade planning entry (2026-10-15):** [§23 EPG10 v1.2](#epg10-upgrade-v12).
+> All twelve upgrade phases await Bobby's individual approval; no implementation
+> or runtime activation is authorized by the documentation package.
+
 > **Backend owner:** Codex  
 > **Frontend owner:** Claude  
 > **Product/release owner:** Bobby  
@@ -9354,4 +9358,1029 @@ copied from the workflow, with only the three steps that cannot mean anything
 off a runner omitted. Python first, because no local gate runs the Python
 suites: `verify-workspace.sh` invokes no pytest, and that is precisely how two
 CI failures reached `main` in this release.
+
+---
+
+<a id="epg10-upgrade-v12"></a>
+## 23. Execution Portal Edge upgrade v1.2 — EPG10-00…11
+
+**Recorded:** 2026-10-15 UTC. **Status: PLAN_WRITTEN_AWAITING_PHASE_APPROVAL.**
+Bobby authorized this documentation package and a new feature branch from current
+`dev`; no EPG10 implementation/test/load/migration/activation phase is authorized
+by this entry. Every phase below is **PLANNED / NOT_STARTED**; every new product
+test is **NOT_RUN**, exit gate **NOT_EVALUATED**. Reading source and preparing this
+plan is not completion of EPG10-00.
+
+This section is the single active sequencing/journal for the Edge v1.2 campaign.
+Earlier EDS/N/EX-DP/R3/A4 records remain historical evidence with their original
+scope. Do not reopen completed phases or relabel their PASS as EPG10 acceptance.
+The mother Unified Plan and backend indexes point here; do not create another
+independent Edge roadmap.
+
+### 23.1 Authority, guide index and approved documentation boundary
+
+For this campaign, the latest approved Bobby request → current authority contract
+→ revision-recorded decisions → current guide governs design intent. Observed
+runtime is evidence of actual behavior, not permission to override that intent.
+This clarification supersedes any reading of §0.1 that would make runtime drift
+a new business policy. Conflicts stop only the affected feature and require exact
+locators and a proposed disposition.
+
+| Ref | Required detailed guide | Use in this plan |
+|---|---|---|
+| EDGE | [Edge upgrade v1.2](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md) | Primary guide; §§2–9 architecture/source/resource contracts; §10 all 12 phases; §§11–14 decisions, evidence, runbooks and release gates |
+| BE | [Portal backend/data contracts v1.2](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md) | §§3–9 authority, ACL and envelopes; §§11–14 financial/query/fixture semantics; §15 ELP2 partner phases; §17 XLC-01…11 |
+| SCORE | [Final scoring/regime v1.1](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md) | §§4–9 inputs, fixed formula, independent outputs and contracts; §§10–12 Archive, acceptance and analytics lanes; numerical appendix is reference, not runtime evidence |
+| REVIEW | [Review decisions and PM delta](upgrade_v1.2/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md) | §§2–3 historical pins and PM R2; §§4–5 locked formula/config distinction; §§8–9 targeted source/input audit |
+| PM-R2 | [Current PM guide, revision R2](</home/bobby/.worktrees/trading-system-pm-v1_1/upgrade/TS_PORTFOLIO_ACCOUNT_MANAGEMENT_UPGRADE_GUIDE_v1.1 (1).md>) and [PM journal](/home/bobby/.worktrees/trading-system-pm-v1_1/TRADING_SYSTEM_UNIFIED_IMPLEMENTATION_PLAN.md) | TS-owned reference, not vendored/edited by this campaign; pin guide digest and journal sections at each affected phase |
+| TS-N1 | [TS current journal](/home/bobby/.worktrees/trading-system-next-upgrade/TRADING_SYSTEM_UNIFIED_IMPLEMENTATION_PLAN.md) and [N1 R2 amendment](/home/bobby/.worktrees/trading-system-next-upgrade/upgrade/P184_N1_ACCEPTANCE_AMENDMENT_R2.md) | Current producer/runtime dependencies and coexistence; historical guide pins are not current attestation |
+| DL | [DL closure journal](/home/bobby/.worktrees/data-layer-p184-closure/DATA_LAYER_UNIFIED_IMPLEMENTATION_PLAN.md) | Source-health, stream isolation and load/recovery dependencies |
+| RULES | [Portal rules](../AGENTS.md), workspace `/home/bobby/AGENTS.md`, [dual-cell supplement](RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md), [backend tracking](BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md#141-current-backend-state-tracking-snapshot--2026-08-17) | Source/runtime separation, phase journal, compatibility, branch and cleanup discipline |
+
+All **four Markdown files actually present** in the supplied `upgrade_v1.2`
+directory have been read across the preparation review, including the full BE
+companion and SCORE numerical appendix. The four files are copied byte-for-byte
+into this feature branch so links survive a future pull. Their original location
+remains untouched:
+`/home/bobby/.worktrees/portal-execution-manager-v2/upgrade/upgrade_v1.2`.
+
+Referenced but **not supplied in that local bundle**:
+`EXECUTION_LOOP_MANAGER_UX_DESIGN_GUIDE_v1.1_VI.md`,
+`SCORE_IMPLEMENTATION_FEASIBILITY_REVIEW_v1.0_VI.md`,
+`PARALLEL_IMPLEMENTATION_AGENT_PROMPTS_v1.2_VI.md`, and the referenced score
+hardening receipt. They are not claimed read or executed. Bobby's supplied
+Prompt A is the Edge assignment. Missing UX/analytics companions block only an
+affected design/acceptance claim requiring them, not source inventory or Edge
+contract preparation. Remote agents must resolve PM/TS/DL paths to their exact
+repo+SHA; these absolute locators are local-owner references, not portable mounts.
+
+**Documentation package approved now**
+
+- Target: `awesome-portal`, new `feat/execution-edge-upgrade-v1_2`,
+  worktree `/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2`.
+- Files: this plan, the four supplied guides, and short pointers in the mother
+  Unified Plan / backend architecture §14.1 / backend README.
+- Resource footprint: Git checkout and documentation only. No Docker start/build,
+  cargo/pytest, load generator, DB query/migration or SSH service operation.
+- Validation: guide byte hashes, all 12 phase blocks and linked local targets,
+  declared test ranges, scoped diff/whitespace, configured commit identity.
+- Risk/rollback: documentation drift only; review/revert this documentation commit.
+  Do not delete the original user guide directory or reset a peer worktree.
+- No push, merge, deploy, credential operation or runtime flag change authorized.
+  Subsequent phase approval is required before that phase's implementation.
+
+### 23.2 Fresh source review, parallel tracks and limits
+
+Review observation: **2026-10-15 ~16:06 UTC**, not a frozen runtime certificate.
+Refresh all affected pins/digests at phase start; peers are actively advancing.
+
+| Source | Path / branch | Full SHA observed | Working state / interpretation |
+|---|---|---|---|
+| Portal upstream base | `origin/dev` and `origin/main`, `BobbyAxerol/awesome-portal` | `533162635f56584d630e3d971d77d50860595f15` | Verified with authenticated SSH ls-remote then fetch; same commit; no remote configuration changed |
+| New Edge upgrade | `/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2`, `feat/execution-edge-upgrade-v1_2` | Base `533162635f56584d630e3d971d77d50860595f15` | Created solely for this approved plan/upgrade campaign; no tracking of dev for accidental push |
+| Existing local repository root | `/home/bobby/.worktrees/portal-execution-manager-v2`, `feat/manager-v2-paper-read` | `54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4` | User-supplied guide directory untracked; preserved. This checkout holds the common Git repository; it is not current deployed identity |
+| TS execution/N1 | `/home/bobby/.worktrees/trading-system-next-upgrade`, `feat/v2-rust-first-okx-demo` | `4e9c5f29313019714bd82aa1b7b491d2689630ca` | No tracked diff; untracked PM guide copy; do not substitute that copy for current PM authority |
+| TS alternate lane | `/home/bobby/.worktrees/trading-system-next-upgrade-claude`, `feat/v2-rust-first-okx-demo-claude` | `1137413a11e562f2591563145ad3b858ff4ce091` | Clean; historical R1.4 consumer-amplification planning lane, not newest N1 source merely because named Claude |
+| TS PM R2 | `/home/bobby/.worktrees/trading-system-pm-v1_1`, `feat/portfolio-account-v1_1-parallel` | `d16aa2b5f251596e469807f57e81fe14cdc7e763` | Clean; read guide, membership contract, relevant receipts/status and journal through §58.63 |
+| DL active closure | `/home/bobby/.worktrees/data-layer-p184-closure`, `fix/p184-dl-closure` | `334a0aaa4f09eb47a451ca8ea141cb28b8cc44db` | Dirty `scripts/p184_dr08_isolated.py`, `tests/test_p184_dr08_isolated.py`; peer-owned |
+| TS canonical legacy checkout | `/home/bobby/trading_system`, `fix/dev-consumer-recovery-integration` | `668e10320c0bf5a9089e33b72f317d8d7c7215c3` | Dirty compose/symbols; not an upgrade target |
+| DL canonical | `/home/bobby/data_layer`, `main` | `5bf5cd540498b82959342c7cfb2ebeaac3007426` | Dirty main plan; preserve |
+| Research BE / FE | Guide locators `/home/bobby/portal-research-be`, `/home/bobby/portal-research-fe` | Guide historical BE `d5d31cbd7adf3db658508b3cc9aedb280c1be2f1`; FE `051eeb89a8105d9f76032422c75821d7af98d1e2` | Not present on this host; not freshly verified. Map Research host/repo and request exact handoff in 00; do not treat Execution dev as these branches |
+
+Observed unstaged diff SHA-256 (`git diff --binary`, not a complete future
+manifest): DL closure `548fe62f0d0257eb0c16a02c9bb417c6597fa5b442a2efdd60aac346a03c5a77`;
+legacy TS `bb7d1723d941253ab8dde387606ac9e33c3074a25df6eecb7f623e71ddbdda6b`;
+canonical DL `b8adf709d8bff7d0fb745146592f9c118b3574efbde37568d9e26c9702d0ecb1`.
+TS N1 untracked guide copy SHA-256:
+`1ac56bff4e5728650cdb91df0544a8f3e17c5103d56ad49d3549f4b7e864b6e3`.
+EPG10-00 must capture staged + unstaged + relevant untracked bytes and applied
+schema separately; these planning observations are not a substitute.
+
+**Changes relative to the guide's historical snapshot**
+
+1. TS journal now records native-writer production cutover (13:00 UTC), subsequent
+   B14 deployment (15:59 UTC), and DL core rc22 simultaneous rollout. Do **not**
+   repeat the guide's old B6 “not yet cut over” statement as current truth.
+2. The final stage-100 journal retains FAIL for G1/G2/G4/G5/G7/G8/G9, with
+   G11 PASS and other gates NOT_MEASURED for that run. Later scoped fixes and
+   rollouts do not automatically change that failed scorecard. B14 is recorded
+   deployed, not yet final gate-certified.
+3. DL live-budget isolation is locally tested, not deployed in the inspected
+   journal; multi-key proof remains open. This host is under active TS/DL work:
+   no Edge benchmark/build may contaminate peer measurement windows.
+4. PM §58.63 has isolated registration checks; §58.62 has canonical P09 payload/
+   claim tests. Full PM 15/16 remain IN_PROGRESS; current providers, native sender,
+   actual export/applied checkpoint and full campaign are not closed by those
+   component receipts. No PM P17 or human-command runtime acceptance inferred.
+5. TS source `ConsumerJournalReadSource` has bounded, permit-bound,
+   group-boundary/retention reads and a **Paper-specific** fixed resource/role.
+   Broader P13/P16 catalogue/commit-LSN primitives exist. This is reuse evidence,
+   not proof of an exposed all-profile endpoint or complete writer coverage.
+   Source diff from guide TS pin to current HEAD for `domain/consumer_publication.py`,
+   `services/source_change_journal/` and `init-db/` was empty in this review.
+   That does not establish applied schema or runtime publication.
+6. Current Portal dev still explicitly rejects `EDGE_COMMAND_RELAY_ENABLED=true`
+   in `edge-service/src/main.rs`. Manager routes exist; Fleet SWR/coalescing
+   exists, while `replaceAlphaFleet` still deletes/reinserts a scope. Reuse these
+   boundaries, measure before optimizing, and do not call a flag flip a relay.
+
+**Runtime/source boundary and retention**
+
+The read-only `docker ps` attempt in this planning session was denied by socket
+permissions. No bypass or service mutation was performed. Active image digests,
+config revisions, service set, current TLS health and retained rollback artifacts
+are **NOT_REATTESTED_IN_THIS_PACKAGE**. The earlier local release locator
+`/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy`
+and guide Research stable path `/home/bobby/portal-main-release` are discovery
+inputs, not freshly verified release facts. EPG10-00 must resolve them, including
+previously observed TLS-expiry symptoms, before dependent runtime work.
+Do not create `/home/bobby/portal` or move canonical checkouts as incidental cleanup.
+
+Existing Portal worktrees retained without modification:
+`portal-eds-current-bff` / `feat/eds-current-bff`,
+`portal-eds09-owner-return-handoff` / `docs/eds09-ts-owner-return-handoff`,
+`portal-execution-data-activation` / `feat/execution-data-activation`,
+`portal-r4r5-activation` / `deploy/r4r5-activation`, and the original manager
+checkout. Their current ownership/merge retention is an inventory item, not
+permission to delete. Stable remote tag `v1.1.1` remains a historical source
+reference distinct from the fetched main/dev revision. No cleanup performed;
+no test images/cache/containers created by this package.
+
+### 23.3 Campaign invariants, ownership and closure rules
+
+- **Placement:** TS owns economic/capital/business authority and bounded source
+  publication; HK Edge handles lightweight export/transport. Research hosts
+  projection/history/query/fanout and the canonical analytics worker. SQLx on Edge
+  uses only its approved projection store; do not add arbitrary TS DB/Redis/CLI
+  access, a second financial ledger, Kafka cluster or new service by default.
+- **Reuse/source truth:** migrations 48/59/60/67, current native/P13/P16 interfaces,
+  existing Manager transport/auth/projection/checkpoint crates first. Rust remains
+  typed data-plane authority; TypeScript owns Portal identity/policy/BFF composition.
+  This track does not implement ELP2 identity/UI or analytics P0…P4 as extra Edge
+  phases; partner artifacts are explicit dependencies.
+- **Data:** full authorized catalogue traversal with bounded pages, not a hidden
+  total row cap. Exact decimal strings, opaque ID/revision/cursor strings, validated
+  UTC epoch-ms; availability, completeness, freshness, history and implementation
+  status are separate. No empty/zero success for missing facts.
+- **Ordering:** source continuity epoch is not projection generation. Commit-aware
+  capture, snapshot barrier, atomic dedupe/apply/checkpoint, ACK after commit,
+  correction lineage and fenced writers; no MAX(id)/timestamp ordering fiction.
+  Financial facts are lossless; only replaceable telemetry may coalesce.
+- **Scopes:** design covers Paper/Sandbox/Canary/Live without treating Paper as the
+  product ceiling. Each dataset and operation requires its own publication and
+  identity proof. Canary stage is not automatically a new environment; `ALL`
+  is navigation, not permission to sum simulated and real capital.
+- **PM R2:** margin/risk budget, economic backing and exposure cap remain distinct;
+  no mandatory global 1x. Research owner, portfolio manager and deploy actor are
+  separate. Preserve `pma.capital-command.v1.1`, CAS and exact receipt partitions.
+- **Score:** `qbts_prb_v1_1` and bands are fixed. Raw q, contribution w*q,
+  composition A and direct consolidated-NAV PortfolioScore are distinct.
+  Grouping/Regime/missing alpha q must not globally block independent direct scores
+  or authorized reduce-risk. Runtime calibration/input proof is still required;
+  no fixture constants promoted to production; no score compute in TS hot path.
+- **Security:** Bobby/Stan full business-read positive controls; no secret or
+  implicit command grant. Researcher access uses current verified user-ID linkage
+  and approved fields, never display-name inference. Revoke cache/cursor/stream/
+  export and recheck command authority at commit. No insecure TLS fallback.
+- **No conflicting writes:** own only this Portal branch's approved files. TS N1,
+  PM, DL and Research BE/FE changes require their scoped owner handoff; do not merge,
+  cherry-pick or edit their trees to make Edge tests pass. Schema changes get
+  producer/consumer review before implementation.
+- **Approval:** Bobby approves each named phase/package; record target, files,
+  resources, tests, risks, rollback and blast radius before work. Once granted,
+  execute that scope without asking again for every normal step. Stage/code
+  approval is not an implicit production deploy, live order or native transfer.
+- **Evidence:** start all 100 named EPG10 cases at NOT_RUN. Record actual command,
+  full source/diff/config/schema/fixture pins, expected/actual, distinct counts,
+  receipt path, measurements and limitations. Historical/isolated/probe PASS does
+  not count as new integration/production evidence. Use EDGE §12.2 receipt shape.
+- **Shared host:** read `/home/bobby/.local/state/host-measurement-window.lock`
+  before any container/build/cargo/pytest/load job. Future foreign lock → wait or
+  read-only work. Own benchmark lock lasts ≤3h; concurrent foreign load taints
+  performance evidence. No invented throughput/CPU/RAM/SLO limits.
+- **Cleanup:** phase-owned disposables only, before/after disk and runtime restart
+  checks, protect active images and named rollback images. Follow
+  [cleanup C4](../docs/production-feature-profile-and-cleanup.md#c4--self-hosted-runner-docker-worktree-and-cache-hygiene)
+  and workspace rules; no broad prune, volume deletion or peer worktree removal.
+  Blocked inventory/cleanup is recorded explicitly, never silently PASS.
+- **Debt:** unfinished in-scope code, failed tests or missing promised evidence
+  must be fixed before closure. Only a real external/infra/business/approval
+  dependency may be recorded as a gate, with owner, exact affected path, required
+  artifact and independently runnable work. A scoped read release does not close
+  unfinished command/metric phases or the full guide.
+- **Per-phase closeout:** update this journal after each coherent tested slice;
+  capture source/runtime/rollback tuple, files, domain behavior, tests with exact
+  PASS/FAIL/SKIP/BLOCKED/NOT_RUN, cleanup, debt/decision, next permitted action.
+  Commit tested slices as BobbyAxerol; no self-merge/push/release.
+
+### 23.4 Phase overview and approval tracker
+
+All rows are **PLANNED / AWAITING_BOBBY_APPROVAL**. Test counts below are required
+case identities, **not executed tests**. Test bodies are preserved in each detailed
+phase block and the pinned Edge guide; partner ELP2/PM cases are not double-counted.
+
+| Phase | Goal | Tests, all NOT_RUN | Runtime closure depends on |
+|---|---|---|---|
+| [EPG10-00](#epg10-00-plan) | Current source/authority/scope manifest | T00-01…06 (6) | Exact pins and explicit unknown-owner disposition |
+| [EPG10-01](#epg10-01-plan) | Paired baselines, placement, budgets | T01-01…06 (6) | Approved hosts/workload/measurement window |
+| [EPG10-02](#epg10-02-plan) | Catalogue, schema, fixtures | T02-01…11 (11) | Producer/consumer contract review, source coverage |
+| [EPG10-03](#epg10-03-plan) | Capture and commit-order proof | T03-01…05 (5) | Real PG writer/barrier/retention/fence proof |
+| [EPG10-04](#epg10-04-plan) | Bootstrap/delta/atomic projection | T04-01…08 (8) | 03 certified input + 01 capacity |
+| [EPG10-05](#epg10-05-plan) | Research query/history/fanout | T05-01…08 (8) | 04 + 06 + 08-read, partner BFF |
+| [EPG10-06](#epg10-06-plan) | Resource enforcement/optimization | T06-01…10 (10) | Same-workload B0/B1/B2 measurements |
+| [EPG10-07](#epg10-07-plan) | Durable typed command relay | T07-01…06 (6) | Exact TS handlers/current trust/receipts + 08-command |
+| [EPG10-08](#epg10-08-plan) | Read/command revoke, scope and TLS | T08-01…09 (9) | Read trust independently; command commit proof separately |
+| [EPG10-09](#epg10-09-plan) | Scoped integrated acceptance | T09-01…21 (21) | Read 04/05/06/08; command and metric prerequisites only where enabled |
+| [EPG10-10](#epg10-10-plan) | Shadow/fenced rollout/rollback | T10-01…05 (5) | 09 exact scope + explicit release target approval |
+| [EPG10-11](#epg10-11-plan) | Operator handoff/acceptance | T11-01…05 (5) | 10 scoped rollout + restore/retention/ownership evidence |
+
+Order: 00 → 01 and 02; after contract approval, isolated 03/04 and read-security/
+query work can proceed in parallel. 06 measures the integrated candidate.
+Read E2E does not wait for 07 commands or unconfigured scoring. Shared trust,
+correctness or resource failures still block every dependent surface.
+These are scheduling options, not authorization to start multiple phases.
+
+### 23.5 Detailed phases — frozen guide requirements plus execution tracking
+
+Common receipt destination **proposed, not created**:
+`upgrade/evidence/execution-edge-v1_2/<phase>/<run>/receipt.json` for bounded
+sanitized metadata/digests/metrics only. Raw/private logs and data remain outside
+Git in the approved host evidence directory. No secrets or source business rows
+are copied into this plan. EPG10-00 chooses the exact owned paths before tests.
+
+<a id="epg10-00-plan"></a>
+#### EPG10-00 Khóa source authority và phạm vi
+
+**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
+**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+
+**Guide chi tiết bắt buộc:** [EDGE / EPG10-00](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-00-khóa-source-authority-và-phạm-vi);
+[BE §§2–3, 7, 17; ELP2-00](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§4, 8.3, 12/P0](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
+[REVIEW §§2–3, 8–9](upgrade_v1.2/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md). PM-R2/source links ở §23.1 áp dụng theo dependency.
+
+**Owner / inputs / source pins:** Codex Edge owns this scoped Portal package; partner
+owners retain TS/PM/DL/Research authority. Use §23.2 as initial review only; refresh
+full SHA + staged/unstaged/untracked digests and relevant schema/config before work.
+Record phase approval, exact affected datasets/operations/profiles and partner receipts.
+
+**Files / scope dự kiến:** Plan/journal + sanitized source manifest and coverage inventory only. Read TS publication/PM reports/native CDC, Portal routes/config and Research handoffs; no producer or service edits.
+
+**Invariant trọng tâm:** Mỗi dataset → writer/admission/source cursor/lineage/ACL/consumer; migration file ≠ applied schema; current checkout ≠ deployed image.
+
+**Mục tiêu:** có baseline trung thực để không nâng kiến trúc dựa vào endpoint, migration hoặc runtime giả định. **Dependencies:** không có; là đầu vào mọi phase.
+
+**Deliverables:** `source-runtime-manifest`, source map có writer/read/publication paths, authority matrix, permissions manifest, decision register DEC-E01…E15 và dependency map tới PM/Portal/DL; pin final specification và companion revisions.
+
+**Checklist:**
+
+- [ ] Pin full SHAs/dirty status cho TS, DL, PM, Edge/Portal main và stable, Research BE/FE riêng; ghi source review UTC, dirty/untracked digests và diff scope.
+- [ ] Đọc AGENTS/custom permissions; tách read-only inspection khỏi mutation package cần duyệt.
+- [ ] Map P16 catalogue/manifest/permit/cursor/retention và deferred membership; đọc source migrations tới current HEAD nhưng giữ applied schema riêng.
+- [ ] Verify target service/binary/DB/TLS chỉ bằng read route được phép; missing source/runtime giữ UNKNOWN.
+- [ ] List every authority/writer, human/workload trust, supported mode/venue/profile và unavailable operations.
+- [ ] Khóa base release read/Demo; phân biệt P184 performance G2 500 ms với P19 G2 mainnet optional theo explicit request; N1/F1 readiness phải revalidate theo journal hiện hành; không là global blocker của dataset đọc độc lập.
+
+**Tests và fixtures:** `EPG10-T00-01` manifest rejects truncated/mismatched SHA ở release gate; `T00-02` migration source không làm applied-schema claim PASS; `T00-03` F-AUTH owner TEXT/shared admin token không đủ chứng minh business membership; `T00-04` pending production publication artifact không biến thành live flag.
+
+**Tests v1.1 bổ sung:** `EPG10-T00-05` source manifest không dùng HEAD thay dirty/untracked digest; `T00-06` P184 G2/P19 G2/N1 F1 và P16 isolated/full DB/P/XLC status không bị nhập nhằng hoặc nâng scope.
+
+**Evidence:** source locators/digests, read-only inspection receipts, unresolved matrix và approvals references. **Exit gate:** mọi affected path có authority owner và exact baseline; UNKNOWN runtime có blocker rõ, không cho dependent production gate pass. **Stop/rollback:** baseline đổi thì repin và invalidate affected receipts; phase inventory không có service rollback. **Phase report:** branch/source/runtime table, permission gaps, decisions cần Bobby duyệt và scopes đủ điều kiện bắt đầu 01/02.
+
+**To do bổ sung từ source review:** Before closure capture actual producer/consumer publication status for orders/fills/positions, economics, registry, capital and reports; reconcile all guide families, not just the old 96-relation census. Re-read latest TS/DL journal instead of freezing historical B6/F1 wording.
+
+**Resource/test execution boundary:** Read-only metadata and bounded logs only; no benchmark or source-row scan. Manifest records what was not accessible. Shared-host lock, disposable
+namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
+
+**Technical debt / external gates:** Hiện chưa tạo technical debt. External inputs cần thu: Research BE/FE current pins, approved read-only runtime access/TLS/applied-schema proof, current producer handoff. Owner: TS/PM, Portal Research and runtime operators. Missing proof được ghi UNKNOWN với affected dataset; không tạo fake API.
+
+**Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
+actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
+source/runtime/retention tuple; remaining gate owner and next independently runnable
+scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+
+
+<a id="epg10-01-plan"></a>
+#### EPG10-01 Đo tải và chốt placement
+
+**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
+**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+
+**Guide chi tiết bắt buộc:** [EDGE / EPG10-01](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-01-đo-tải-và-chốt-placement);
+[BE §13, §15/ELP2-10, XLC-06/08](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§8.6, 10, 12](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
+[REVIEW §§5, 8.1](upgrade_v1.2/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md). PM-R2/source links ở §23.1 áp dụng theo dependency.
+
+**Owner / inputs / source pins:** Codex Edge owns this scoped Portal package; partner
+owners retain TS/PM/DL/Research authority. Use §23.2 as initial review only; refresh
+full SHA + staged/unstaged/untracked digests and relevant schema/config before work.
+Record phase approval, exact affected datasets/operations/profiles and partner receipts.
+
+**Files / scope dự kiến:** Owned measurement manifest/harness and budget worksheet; review existing Edge/Research pools and query plans. No production config/index change during baseline.
+
+**Invariant trọng tâm:** Same pinned workload across B0/B1/B2, full-window percentiles and clock semantics; no peer-job contamination or fake percentage at near-zero baseline.
+
+**Mục tiêu:** biết chi phí thực của read/export hiện tại và capacity Research trước khi chuyển tải. **Dependencies:** 00 cho manifest; thiết kế harness/sizing worksheet chạy song song với 02 trong approved workspace. Đo tải thật cần target và permission riêng.
+
+**Deliverables:** workload manifest, baseline metrics cho hai host, query inventory, bottleneck report và budget register đã chốt.
+
+**Checklist:**
+
+- [ ] Định nghĩa CPU/RSS/query/IO và freshness measurement cùng percentile/window; kiểm clock skew và local monotonic duration.
+- [ ] Đo W-IDLE/NORMAL/BURST/DASH, sau đó OUTAGE/RESYNC ở test target được phép; baseline source unchanged.
+- [ ] Attribute cost theo source fetch, serialization, network, projection, report và fanout; không gộp tất cả vào một average.
+- [ ] Đo Research cùng existing workload; xác định headroom, notional consumer count và history growth.
+- [ ] Chốt B-TS-CPU/RAM/DB/IO, B-TRADE, B-RS và data freshness; chọn targets dựa số đo.
+- [ ] Quyết định module/process placement và resource isolation không tạo extra service nếu không cần.
+- [ ] Lập B0/B1/B2 worksheet §9.5 và W-COEXIST-6K/9K; giữ nguyên P184 fixture semantics, 500 ms gate definition và N1/F1 status đúng current source/runtime receipt (không pin cứng B6 lịch sử).
+- [ ] Chốt TS producer ceilings cùng B-DL/B-EDGE/B-ANALYTICS; sizing all pools/queues/copies và outage disk runway theo §6.6.
+
+**Tests và fixtures:** `EPG10-T01-01` F-LOAD paired runs dùng same seed/cardinality/config; `T01-02` W-DASH tăng client chỉ ra source QPS amplification hiện có; `T01-03` W-RESYNC capture peak RSS/IO và trading impact; `T01-04` idle near-zero baseline dùng absolute delta, không chia phần trăm sai.
+
+**Tests v1.1 bổ sung:** `EPG10-T01-05` W-COEXIST-6K/9K B0/B1/B2 giữ exact fixture/source/config manifest và gate metric; `T01-06` sizing cộng all pools/queues/in-flight/decompressed/cache bytes, no unowned CPU/RAM/IO reserve. Các tests đo tải vẫn NOT_RUN tới approved execution.
+
+**Evidence:** raw metrics, query definitions, environment/config digest, variation và placement decision. **Exit gate:** từng axis có baseline và approved bound; thiếu capacity evidence thì chưa chuyển load. **Stop/rollback:** dừng load generator khi vượt safety budget, giữ observations; không tự tăng VPS resources/config. **Phase report:** bottlenecks xếp theo chi phí, placement được chọn, budgets và các phép đo còn thiếu.
+
+**To do bổ sung từ source review:** Include absolute and baseline-relative CPU, RSS, IO, DB wait/WAL, network, backlog, TS p95/p99 and DL freshness/recovery. Pin all process/queue/copy budgets; any foreign load marks the measurement tainted.
+
+**Resource/test execution boundary:** B0 existing TS/DL, B1 minimal producer + Research projection, B2 dashboards/history/analytics; W-IDLE/NORMAL/BURST/DASH/OUTAGE/RESYNC and applicable 6k×2/9k×2. Thresholds approved before candidate runs. Shared-host lock, disposable
+namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
+
+**Technical debt / external gates:** Chưa tạo debt. Approval/resource gate: approved target/windows and TS/DL/Research workload ownership; numeric limits must come from baseline. Owner: Bobby + runtime owners. Missing host capacity blocks workload movement, not 02 schema work.
+
+**Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
+actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
+source/runtime/retention tuple; remaining gate owner and next independently runnable
+scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+
+<a id="epg10-02-plan"></a>
+#### EPG10-02 Khóa catalogue schema và compatibility
+
+**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
+**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+
+**Guide chi tiết bắt buộc:** [EDGE / EPG10-02](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-02-khóa-catalogue-schema-và-compatibility);
+[BE §§4.8, 6–9, 14, 17; ELP2-01/05](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§4–9, 11; fixed P/R/B/bands](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
+[REVIEW §§3–4, 8.3, 9](upgrade_v1.2/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md). PM-R2/source links ở §23.1 áp dụng theo dependency.
+
+**Owner / inputs / source pins:** Codex Edge owns this scoped Portal package; partner
+owners retain TS/PM/DL/Research authority. Use §23.2 as initial review only; refresh
+full SHA + staged/unstaged/untracked digests and relevant schema/config before work.
+Record phase approval, exact affected datasets/operations/profiles and partner receipts.
+
+**Files / scope dự kiến:** Existing Rust execution-contracts, manager-v2-contract, maximum-data-contract and versioned contract fixtures; shared Portal schema mapping reviewed with ELP2 owner. No listener, generic SQL route or source activation.
+
+**Invariant trọng tâm:** edge.v1/browser portal.snapshot.v1 versioned explicitly; decimals/null/UTC/epoch/generation exact; complete authorized traversal and honest per-field availability.
+
+**Mục tiêu:** mọi business resource có contract producer rõ và full retrieval được; không ép consumer đoán. **Dependencies:** 00; có thể khóa logical contracts/fixtures song song 01. Numeric pages/cadence và release capacity đợi 01, không chặn schema design.
+
+**Deliverables:** versioned catalogue/schema registry, coverage matrix, DTO mapping existing→proposed, compatibility and error-code specification.
+
+**Checklist:**
+
+- [ ] Đối chiếu từng catalogue family với writer, source query, history table/journal và publication gate; bổ sung rows nguồn còn thiếu.
+- [ ] Khóa IDs/decimals/UTC/ms/null/availability/as-of/completeness và environment/venue/profile scope.
+- [ ] Tách availability AVAILABLE/PARTIAL/UNAVAILABLE/OUT_OF_SCOPE khỏi history capability và implementation/evidence status theo 4.2; explicit gaps, missing source không dùng empty success.
+- [ ] Keyset pages theo snapshot; rows+bytes bound, continuation và oversized-record handling; full traversal không tổng row cap.
+- [ ] Version additive fields, unknown-field handling và incompatible-major rejection; giữ canonical TS capital payload.
+- [ ] Contract test fixtures cho old Python façade/new Rust exporter/Portal DTO; không silent precision loss.
+- [ ] Khóa proposed metric/Archive DTO source-set/window/currency/correction/ACL metadata; formula_id=qbts_prb_v1_1 từ SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md; approved formula và pending runtime calibration/config là hai trạng thái riêng.
+- [ ] Khóa canonical metric registry/dependency graph và §8.6 NAV/flow/cost/turnover/watermark/stress proof; tách formula_approved khỏi runtime_config_approved.
+- [ ] Map PM R2 margin-risk/economic backing/separate exposure cap; không add global 1× notional cap hoặc đổi pma.capital-command.v1.1.
+
+**Tests và fixtures:** `EPG10-T02-01` F-CATALOG traversal trả đủ unique entities qua nhiều page/bytes limits; `T02-02` large integer/decimal/null/zero round-trip exact; `T02-03` current-only không chứng nhận full history; `T02-04` cursor đổi scope/filter/generation bị từ chối; `T02-05` old compatible reader và unsupported schema behavior rõ; `T02-06` availability/history/implementation adapter giữ đúng nghĩa, RESTRICTED→OUT_OF_SCOPE không lộ hidden existence.
+
+**Tests v1.1 bổ sung:** `EPG10-T02-07` metric DTO round-trip giữ source-set/window/currency/revision/evidence/availability và research run khi áp dụng; `T02-08` PM R2 risk/budget/backing/exposure fields không bị gom thành global 1× cap hoặc monetary equity; `T02-09` stage/lifecycle/TradeState/Archive dimensions, typed units/denominators và Paper-clone lineage round-trip không bị nhập nhằng.
+
+**Tests v1.2 bổ sung:** `EPG10-T02-10` registry/envelope round-trip giữ P/R/B/six atoms/bands, formula/config approval riêng, comparable basis khác subject binding, source watermarks và stress/consolidation manifests; decimal/null/count/time đúng schema. `T02-11` metric dependency graph không thêm raw-q/grouping/correlation/Research binding vào direct economic PortfolioScore; legacy lambda field không đi vào v1.1 schema/compute.
+
+**Evidence:** schemas và digests, source-coverage table, fixture expected outputs, compatibility receipts. **Exit gate:** 100% catalogue families có authority+availability+history scope+owner; mọi path bật có producer contract đã certify. **Stop/rollback:** chỉ bật supported subset và công bố unavailable; không delete unknown fields hoặc history để khớp DTO. **Phase report:** contract changes, unsupported datasets, coverage gaps và exact schemas được khóa.
+
+**To do bổ sung từ source review:** Freeze every metric atom's source-field mapping and watermark/flow/cost/FX/notional requirements; direct NAV score stays independent of raw q/grouping/Regime. All/Live/Canary/Sandbox/Paper and Archive lifecycle remain separate. Partner review identifies exact ELP2 fixture IDs.
+
+**Resource/test execution boundary:** Contract-only resource caps expressed as required configuration, not invented production defaults. Before numeric publication require own calibration/config artifact; not before schema fixtures. Shared-host lock, disposable
+namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
+
+**Technical debt / external gates:** Chưa tạo debt. Source-field gaps owned by TS/PM publisher; exact researcher field policy by Bobby/Portal; numeric calibration by analytics owner. Registry records each gap, not a global read block. Missing required fixture/schema is in-scope work, not external debt.
+
+**Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
+actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
+source/runtime/retention tuple; remaining gate owner and next independently runnable
+scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+
+<a id="epg10-03-plan"></a>
+#### EPG10-03 Chứng minh capture và commit ordering
+
+**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
+**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+
+**Guide chi tiết bắt buộc:** [EDGE / EPG10-03](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-03-chứng-minh-capture-và-commit-ordering);
+[BE §§6.4–6.6, 8.1–8.3; ELP2-05](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§4.3–4.5, 8.6](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
+[REVIEW §§2.1, 9](upgrade_v1.2/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md). PM-R2/source links ở §23.1 áp dụng theo dependency.
+
+**Owner / inputs / source pins:** Codex Edge owns this scoped Portal package; partner
+owners retain TS/PM/DL/Research authority. Use §23.2 as initial review only; refresh
+full SHA + staged/unstaged/untracked digests and relevant schema/config before work.
+Record phase approval, exact affected datasets/operations/profiles and partner receipts.
+
+**Files / scope dự kiến:** Reuse authoritative-event-core/source transport and TS existing P13/P16 ports; isolated PostgreSQL fixture/harness. A needed TS writer/schema patch is a separate producer-owned package, never a silent edit in N1/PM worktrees.
+
+**Invariant trọng tâm:** Every supported writer/update/delete/correction accounted for; commit-LSN/group completeness and fence proven; no timestamp/row-ID cursor or inferred global guarantee.
+
+**Mục tiêu:** mọi committed business change được xuất đúng, không hole do late commit. **Dependencies:** 00/02; mutation approval cho test-only capture changes nếu cần.
+
+**Deliverables:** transaction/capture design, ordering proof, writer-coverage map, durable export ledger/cursor semantics, retention ownership.
+
+**Checklist:**
+
+- [ ] Trace journal write cùng domain transaction; kiểm mọi writer/update/delete/correction path trong supported datasets.
+- [ ] Chứng minh source commit coverage riêng với published sequence; công bố partition guarantee thật.
+- [ ] Replay F-TXN với ID cấp trước nhưng commit muộn, aborted tx và multi-entity group.
+- [ ] Nếu current P16 thiếu proof, duyệt phương án commit-aware hoặc outbox pending/ledger; đo write amplification/contention trước mở.
+- [ ] Fence producer generation tại durable commit; no concurrent writers after lease loss.
+- [ ] Retention không xóa unexported/unacknowledged rows ngoài policy resync được chứng minh.
+
+**Tests và fixtures:** `EPG10-T03-01` T1 thấp-ID commit sau T2 vẫn xuất đủ đúng revision/group; `T03-02` abort không tạo business delta giả; `T03-03` crash domain commit/export append/mark published không mất hoặc tạo duplicate effect; `T03-04` stale generation writer bị reject; `T03-05` event same ID/different digest dừng stream thay vì overwrite.
+
+**Evidence:** real PostgreSQL multi-connection receipt, failure timeline, source transaction paths, invariant queries và ordering claim scope. **Exit gate:** zero lost committed changes và exact expected digest trong fixtures; global ordering claim chỉ khi có proof, còn partition/vector contract đủ rõ. **Stop/rollback:** disable new publisher, retain domain facts/outbox; không reset cursor tới MAX(id). **Phase report:** proven guarantees, unresolved writers, write-cost delta và replayability floor.
+
+**To do bổ sung từ source review:** Inspect native CDC coverage receipts separately from external N03 SOURCE_DARK status. A native/shared-DB proof is not an externally accepted Edge stream. Preserve all source facts and pending commit groups during crash/retention tests.
+
+**Resource/test execution boundary:** Real multi-connection PG in approved disposable target; capture source write/WAL/lock cost and bounded capture backlog. Never inject faults in shared source DB under this phase's isolated approval. Shared-host lock, disposable
+namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
+
+**Technical debt / external gates:** Chưa tạo debt. Actual source publication/complete writer coverage is producer dependency, not solved by browser polling. Owner: TS publication/PM export. If required source change is absent, name exact writer and artifact; don't claim real integration from local fixtures.
+
+**Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
+actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
+source/runtime/retention tuple; remaining gate owner and next independently runnable
+scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+
+<a id="epg10-04-plan"></a>
+#### EPG10-04 Bootstrap delta và atomic projection
+
+**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
+**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+
+**Guide chi tiết bắt buộc:** [EDGE / EPG10-04](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-04-bootstrap-delta-và-atomic-projection);
+[BE §§6.3–6.6, 8; ELP2-06/09](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§8.1, 8.6, 11.4](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
+[REVIEW §§4.3, 9](upgrade_v1.2/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md). PM-R2/source links ở §23.1 áp dụng theo dependency.
+
+**Owner / inputs / source pins:** Codex Edge owns this scoped Portal package; partner
+owners retain TS/PM/DL/Research authority. Use §23.2 as initial review only; refresh
+full SHA + staged/unstaged/untracked digests and relevant schema/config before work.
+Record phase approval, exact affected datasets/operations/profiles and partner receipts.
+
+**Files / scope dự kiến:** Rust authoritative-event-core, projection-core, projection-store-pg, shared-consumer-core and additive owned migrations/tests. Research storage placement per 01; no source ledger mutation.
+
+**Invariant trọng tâm:** Atomic dedupe/apply/checkpoint and ACK-after-commit; staging invisible before complete; source continuity and read generation distinct; no half-visible consistency group.
+
+**Mục tiêu:** consumer có full consistent read model và recover sau crash. **Dependencies:** 02 cho isolated implementation/fixtures; 03 và Research DB capacity/permissions từ 01 trước certification từ nguồn thật. Không ghi integration PASS khi chỉ dùng fixture.
+
+**Deliverables:** snapshot/manifest protocol, staging projection, checkpoint transaction, generation pointer, resync implementation and tests.
+
+**Checklist:**
+
+- [ ] Chốt barrier/overlap algorithm theo source guarantee; snapshot lifetime và vacuum cost bounded.
+- [ ] Stage pages, digest/uniqueness/referential checks; không giữ TS transaction mở theo browser.
+- [ ] Atomic apply+dedup+checkpoint; ACK sau commit; group completeness giữ provisional views.
+- [ ] Xử lý tombstone, late correction, duplicate replay và aborted/expired snapshot.
+- [ ] Resync generation mới, atomic pointer swap và rollback-compatible old projection.
+- [ ] History backfill tách quota, không starve fresh deltas; checkpoints per dataset/consistency group.
+
+**Tests và fixtures:** `EPG10-T04-01` F-CATALOG mutation/delete trong bootstrap không hole hoặc resurrection; `T04-02` crash trước/sau projection commit và trước ACK converges same digest; `T04-03` expired cursor tạo resync, không partial continuation disguised complete; `T04-04` cross-dataset group không visible half-state; `T04-05` generation switch đang query không mix epochs; `T04-06/07/08` scoped hidden skips, true visible loss và scope-change cursors theo 5.7.
+
+**Evidence:** golden projections, source/read-model digest comparison, checkpoint rows, fault/restart timeline, snapshot expiry results. **Exit gate:** full authorised catalogue và published history scope reconstruct đúng; checkpoint/data consistency đạt all injected boundaries. **Stop/rollback:** giữ active generation cũ stale/read-only theo policy; quarantine new generation, không merge two histories. **Phase report:** bootstrap/replay cost, completeness proof và exact recovery behavior.
+
+**To do bổ sung từ source review:** Include visible1/hidden2/visible3 scan coverage without hidden counters, true visible loss, scope grant/revoke cursor reset, tombstone non-resurrection and new-generation quarantine. No TS transaction held for a browser session.
+
+**Resource/test execution boundary:** Measure bootstrap peak RSS/IO/DB duration and tail/backfill competition; size retention/outage runway and checkpoint recovery. Bound snapshot lifetime and backfill concurrency. Shared-host lock, disposable
+namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
+
+**Technical debt / external gates:** Chưa tạo debt. Actual 03 certified input and approved Research capacity are external/runtime prerequisites. Isolated projector defects and missing crash tests must be fixed here. Snapshot-only fallback must be explicitly labelled, not counted as full replay acceptance.
+
+**Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
+actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
+source/runtime/retention tuple; remaining gate owner and next independently runnable
+scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+
+<a id="epg10-05-plan"></a>
+#### EPG10-05 Tích hợp query history và realtime fanout
+
+**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
+**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+
+**Guide chi tiết bắt buộc:** [EDGE / EPG10-05](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-05-tích-hợp-query-history-và-realtime-fanout);
+[BE §§5–6, 8–10, 13; ELP2-04/06/09](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§6–9, 11.3–11.5](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
+[REVIEW §§8.1–8.3](upgrade_v1.2/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md). PM-R2/source links ở §23.1 áp dụng theo dependency.
+
+**Owner / inputs / source pins:** Codex Edge owns this scoped Portal package; partner
+owners retain TS/PM/DL/Research authority. Use §23.2 as initial review only; refresh
+full SHA + staged/unstaged/untracked digests and relevant schema/config before work.
+Record phase approval, exact affected datasets/operations/profiles and partner receipts.
+
+**Files / scope dự kiến:** Rust query-api/realtime-sse/manager-projection and owned read adapters; BFF mapping/fixtures coordinated with Research ELP2 owner. No FE screens implemented by this Edge package.
+
+**Invariant trọng tâm:** One source ingest serves many clients; auth before paging/count/join/aggregation; scope+policy+generation cache isolation; no TS scan per tab.
+
+**Mục tiêu:** Portal đọc nhẹ từ Research, một nguồn phục vụ nhiều client mà vẫn đúng scope/freshness. **Dependencies:** 02 và Portal contracts cho isolated BFF/UI contract work; 04, read-scope security của 08 và 06 budgets trước activation nguồn thật.
+
+**Deliverables:** BFF read routes map, scoped query/cache layer, subscription/replay interface, history continuation and freshness metadata.
+
+**Checklist:**
+
+- [ ] Giữ compatibility với existing routes; route mới chỉ mở sau schema tests, không biến proposed name thành hiện hữu.
+- [ ] Research projection là source của dashboard/report/history query; TS read fallback chỉ trong policy đã đo.
+- [ ] Cache key gồm principal effective scope/auth revision/filter/schema/generation; single-flight expensive query.
+- [ ] Server-side pagination/full exports, browser virtualized list; count/completeness đúng nguồn.
+- [ ] Per-client queue/byte caps, slow-client disconnect/resume và reconnect authorization.
+- [ ] Tách replaceable display mark/notification coalescing khỏi exact financial event retention.
+- [ ] Bounded chart paging/decimation có method/coverage; metrics/report dùng canonical exact input, không browser-derived score.
+- [ ] Push/notify + shared poll fallback; test lost hint, cursor continuity, cache TTL/revision invalidation và single-flight khi reset.
+
+**Tests và fixtures:** `EPG10-T05-01` F-AUTH hai scope cùng filter không leak cache; `T05-02` W-DASH nhiều tabs không nhân full TS scan theo client; `T05-03` F-NET slow client không tăng RAM vô hạn hoặc block peers; `T05-04` reconnect với cursor hợp lệ replay đủ, expired cursor yêu cầu refetch; `T05-05` unavailable/stale/partial không hiển thị complete realtime.
+
+**Tests v1.1 bổ sung:** `EPG10-T05-06` history keyset/decimation returns exact continuation/coverage và retains spike extrema theo approved display method, không đổi canonical metric oracle; `T05-07` lost notify/restart dùng durable-cursor fallback, không missing facts; `T05-08` cache stampede/correction/revoke invalidation không phát old-scope/old-policy metric hoặc nhân source polling.
+
+**Evidence:** route/DTO mapping, scoped cache fixtures, source-vs-Research QPS, fanout queue curves và UI integration receipts từ guide Portal. **Exit gate:** XLC-02/03/06 read E2E pass trong supported scopes, budgets đáp ứng. **Stop/rollback:** disable new fanout/route and serve compatible old scoped read, không bypass auth để giữ availability. **Phase report:** client scale được đo, history coverage và compatibility differences.
+
+**To do bổ sung từ source review:** Provide route/DTO/error compatibility, full continuation/export semantics, server-side query allowlists, durable notify fallback and bounded slow-client handling. Chart decimation is display-only; metric inputs stay exact.
+
+**Resource/test execution boundary:** Compare source QPS against client count; record Research query p95/p99, pool waits, cache hit/stampede and fanout queue bytes under slow/reconnecting consumers. Shared-host lock, disposable
+namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
+
+**Technical debt / external gates:** Chưa tạo debt. BFF consumer/field-policy handoff and real 04 data are partner gates. UI fixture acceptance is partner evidence, not permission to expand this track into UI work. Source history absent remains typed unavailable, not fabricated timeline.
+
+**Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
+actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
+source/runtime/retention tuple; remaining gate owner and next independently runnable
+scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+
+<a id="epg10-06-plan"></a>
+#### EPG10-06 Áp resource budgets và tối ưu hot path
+
+**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
+**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+
+**Guide chi tiết bắt buộc:** [EDGE / EPG10-06](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-06-áp-resource-budgets-và-tối-ưu-hot-path);
+[BE §13; ELP2-06/10](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§8.6, 10, 12](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
+[REVIEW §§5, 8.1](upgrade_v1.2/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md). PM-R2/source links ở §23.1 áp dụng theo dependency.
+
+**Owner / inputs / source pins:** Codex Edge owns this scoped Portal package; partner
+owners retain TS/PM/DL/Research authority. Use §23.2 as initial review only; refresh
+full SHA + staged/unstaged/untracked digests and relevant schema/config before work.
+Record phase approval, exact affected datasets/operations/profiles and partner receipts.
+
+**Files / scope dự kiến:** Measured hot paths in existing Rust transport/projection/query plus approved Research refresh persistence; owned bounded config and benchmark harness. Index/view changes require exact query-plan review, no broad tuning.
+
+**Invariant trọng tâm:** No unbounded queue/cache/decompression/task; financial event digest unchanged; optimization cannot weaken precision, auth, replay or freshness.
+
+**Mục tiêu:** giảm chi phí TS có số đo, giữ queue/memory/DB bounded và không giảm correctness. **Dependencies:** instrumentation/ceiling design từ 00/01 và làm song song 02…05; final paired benchmark cần candidate 03/04/05 trong scope được đo.
+
+**Deliverables:** per-module resource config, priority/backpressure policy, before/after benchmark, approved optimization diff và observability dashboard specification.
+
+**Checklist:**
+
+- [ ] Bound mọi queue theo entries+bytes; bound DB/HTTP/concurrency, cache memory và decompression.
+- [ ] Cô lập live delta/command status khỏi bootstrap/history/report; admission không bị background worker chiếm pool.
+- [ ] Thay repeated TS scan bằng snapshot reuse/single-flight/projection; index/query changes cần plan+approval.
+- [ ] Profile serialization/compression/copy/task blocking; chỉ optimize nơi có evidence.
+- [ ] Review audited manager fleet expiry/8-relation drains/max-page cap và full-scope delete+insert (§2.6); reuse SWR, thay steady-state bằng incremental upsert/checkpoint sau proof, giữ full snapshot chỉ cho bootstrap/resync.
+- [ ] Test durable backlog/disk watermarks, throttling và retry jitter; không drop exact events.
+- [ ] Rerun all workload matrix và công bố delta CPU/RAM/query/IO cả TS/DL/Research; ghi rõ mọi tradeoff.
+- [ ] Chạy B0/B1/B2 ở pinned 6k×2/9k×2 workloads khi applicable; không reuse B6 PASS cho candidate.
+- [ ] Verify source exporter không compute history rollups/score/regime/correlation; Research job quota/cancel/checkpoint không starve projector.
+- [ ] Enforce soft/high/hard resource ceilings trong isolated load test; record backpressure trước OOM/disk-full và resume exact digest.
+
+**Tests và fixtures:** `EPG10-T06-01` W-BURST queue/RSS không vượt approved bounds và drain theo recovery target; `T06-02` W-RESYNC không starve fresh delta/command status; `T06-03` network outage/backpressure giữ đủ exact event digest; `T06-04` dashboard client scale có TS amplification nằm trong B-TS-DB; `T06-05` candidate giữ B-TRADE và mọi budget đã duyệt.
+
+**Tests v1.1 bổ sung:** `EPG10-T06-06` B0/B1/B2 6k×2/9k×2 giữ P184 performance gate khi impacted, B-DL và B-EDGE; `T06-07` enforced CPU/RAM/pool/queue/disk high-water giới hạn producer bằng backpressure, no lost facts; `T06-08` W-ANALYTICS/Archive full recompute bị quota/pause mà delta/TS không starvation; `T06-09` W-CACHE-RESET fanout source amplification bounded và slow clients không head-of-line block peers; `T06-10` incremental manager projection matches full-snapshot golden digest qua correction/tombstone/bootstrap, measured writes scale theo changed entities, max-page exhaustion không báo COMPLETE.
+
+**Evidence:** paired metrics, profile/query plans được phép, config digest, rejected-load counters và all-event count/digest. **Exit gate:** đạt approved reduction targets và non-regression bounds; no data loss/scope leak; không có unbounded buffer. **Stop/rollback:** giảm/disable background exporter hoặc read feature theo approved policy, giữ durable journal; không throttle exchange ingest ngoài policy TS. **Phase report:** số trước/sau trên từng axis, bottleneck còn lại, configuration envelope an toàn và tradeoff cần duyệt.
+
+**To do bổ sung từ source review:** Specifically test changed-key upsert/delete versus full-snapshot oracle, correction/tombstone/rebootstrap, full-page exhaustion not COMPLETE, and reserve/fairness for fresh delta/status versus analytics/backfill. Do not enlarge quotas to hide starvation.
+
+**Resource/test execution boundary:** Paired B0/B1/B2 on same source/config/workload with CPU/RSS/IO/WAL/DB waits/p95/p99 and all-event digest. Include cache reset, coexistence, analytics/Archive and lossless outage recovery. Shared-host lock, disposable
+namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
+
+**Technical debt / external gates:** Chưa tạo debt. Approved numeric thresholds/clean shared-host windows are resource gates; unexplained regression, failed benchmark or repeated whole-scope rewrite on the promised incremental path is unfinished in-scope work, not debt.
+
+**Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
+actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
+source/runtime/retention tuple; remaining gate owner and next independently runnable
+scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+
+<a id="epg10-07-plan"></a>
+#### EPG10-07 Thực hiện command relay có durable receipt
+
+**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
+**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+
+**Guide chi tiết bắt buộc:** [EDGE / EPG10-07](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-07-thực-hiện-command-relay-có-durable-receipt);
+[BE §§3, 9.2–9.4, 11–12; ELP2-07](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§8.5, 9.9, 10 (no score-driven authority)](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
+[REVIEW §§3.1–3.3](upgrade_v1.2/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md). PM-R2/source links ở §23.1 áp dụng theo dependency.
+
+**Owner / inputs / source pins:** Codex Edge owns this scoped Portal package; partner
+owners retain TS/PM/DL/Research authority. Use §23.2 as initial review only; refresh
+full SHA + staged/unstaged/untracked digests and relevant schema/config before work.
+Record phase approval, exact affected datasets/operations/profiles and partner receipts.
+
+**Files / scope dự kiến:** Rust command-relay/edge-auth/ts-transport/edge-service and versioned command contract tests. TS owns handlers, memberships and economic commits; no direct SQL/CLI shell/native exchange bypass.
+
+**Invariant trọng tâm:** Same key+digest one effect; wrong key reuse conflicts; ACCEPTED/UNKNOWN/APPLIED distinct; current human/workload/TS permission at commit; preserve amount partition and PM R2 payload.
+
+**Mục tiêu:** hoàn thiện relay mới tại source hiện đang từ chối activation, đưa approved command tới TS đúng authority. **Dependencies:** 00/02, TS command handlers/identity/capital scopes đã được PM certify, 04 cho receipt projection; explicit mutation approval.
+
+**Deliverables:** reviewed relay implementation, operation catalogue, actor/transport contract, status lookup, durable ambiguity handling và feature activation matrix.
+
+**Checklist:**
+
+- [ ] Sửa code từ chối relay hiện tại chỉ trong approved implementation package; không coi việc đổi flag là implementation.
+- [ ] Preserve `pma.capital-command.v1.1` payload và states; map existing paper command catalogue riêng, không giả mọi PM operation đã tồn tại.
+- [ ] Verify workload+human delegation, supported target/mode/profile, TS business authorization và expected versions.
+- [ ] Implement same-key/digest replay và conflict; persist correlation để lost-response recovery.
+- [ ] Distinguish accepted/terminal/unknown; status lookup authoritative và retention đủ ambiguity window.
+- [ ] Reject direct SQL/exchange bypass; operation chưa publish trả unavailable; base release chỉ local/Demo allowed scopes.
+
+**Tests và fixtures:** `EPG10-T07-01` F-NET TS commit trước response loss, retry same key có đúng một effect/receipt; `T07-02` same key different payload trả conflict; `T07-03` stale version/wrong mode/profile/unauthorized actor no effect; `T07-04` ACCEPTED không làm UI/relay nói APPLIED; `T07-05` pending recall receipt giữ exact amount invariant sau retry/cancel; `T07-06` missing authority implementation không fallback admin SQL.
+
+**Evidence:** source diff, TS+Edge correlated receipts, domain before/after, canonical payload vectors và fault timeline. **Exit gate:** tất cả enabled operations có handler/permission/version/idempotency/status proof; unknown outcome recover được; no live activation implied. **Stop/rollback:** disable new command entrypoint, retain accepted operation ledger and status/recovery; không cancel hoặc undo applied amounts hàng loạt. **Phase report:** enabled operation matrix theo environment, terminal/unknown examples và authority gaps còn blocked.
+
+**To do bổ sung từ source review:** Keep read-only lane command-denied with negative tests. Build durable receipt/status recovery before enabling any send. Define operation×environment/profile matrix including unsupported operations; conditional Demo/G1 proof applies only impacted trading flow.
+
+**Resource/test execution boundary:** Bound admission, retries, status lookup and ambiguity retention; record before/after domain versions and TS receipts through lost response/restart. No real order/transfer or production command without exact separate activation approval. Shared-host lock, disposable
+namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
+
+**Technical debt / external gates:** Chưa tạo debt. Exact TS operation handler/publication, actual PM trust/current provider and actor-chain acceptance remain upstream gates. Missing relay code is this phase's work, not an operational switch or external debt.
+
+**Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
+actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
+source/runtime/retention tuple; remaining gate owner and next independently runnable
+scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+
+<a id="epg10-08-plan"></a>
+#### EPG10-08 Hoàn thiện revocation scope và TLS
+
+**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
+**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+
+**Guide chi tiết bắt buộc:** [EDGE / EPG10-08](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-08-hoàn-thiện-revocation-scope-và-tls);
+[BE §§3–5, 9.2, 14.2; ELP2-02/03/04/09](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§8.5, 11.3–11.5](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
+[REVIEW §3.3](upgrade_v1.2/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md). PM-R2/source links ở §23.1 áp dụng theo dependency.
+
+**Owner / inputs / source pins:** Codex Edge owns this scoped Portal package; partner
+owners retain TS/PM/DL/Research authority. Use §23.2 as initial review only; refresh
+full SHA + staged/unstaged/untracked digests and relevant schema/config before work.
+Record phase approval, exact affected datasets/operations/profiles and partner receipts.
+
+**Files / scope dự kiến:** Existing edge-auth/transport/route policy, scope-bound cache/stream tests and rotation runbook. Portal identity issuer and TS effective membership remain partner-owned; credentials remain outside Git.
+
+**Invariant trọng tâm:** Current grants on all surfaces; revoke invalidates cursor/cache/socket/download and queued command; full-business read never implies mutation or secret visibility; TLS chain/hostname verified.
+
+**Mục tiêu:** quyền thu hồi có hiệu lực xuyên cache/queue/socket và TS commit; transport fail closed. **Dependencies:** read-scope tests từ 02/05 và trust decisions, không cần 07 command hoàn tất. Command-scope revoke/commit tests cần 07 + TS authority. Security changes cần riêng approval theo loại.
+
+**Deliverables:** revocation propagation contract, security test report, certificate/auth rotation plan, least-privilege access map và safe logging policy.
+
+**Checklist:**
+
+- [ ] Validate issuer/audience/signature/expiry và workload identity; trusted actor assertion không đọc từ arbitrary body.
+- [ ] Revoke trong TS revision transaction, invalidate caches/subscriptions và recheck queued command tại commit.
+- [ ] Inventory direct ADMIN remnants; no self-elevation/protected-owner mutation qua relay.
+- [ ] Test cross-scope own/shared/delegated grants theo TS-approved business model; chưa có model thì deny/unavailable.
+- [ ] Verify certificate chain/hostname/TLS config và reconnect on rotation; không bypass verification.
+- [ ] Scrub secrets khỏi logs/metrics/error/evidence; validate oversized payload và rate limits.
+- [ ] Tách read grants/cross-portfolio discovery khỏi command/capital capability; aggregate metric không leak hidden inputs qua weights/counts/reasons.
+- [ ] Với read-only release, test mọi command entrypoint vẫn denied và UI không quảng bá command-ready.
+
+**Tests và fixtures:** `EPG10-T08-01` F-AUTH revoke sau enqueue trước TS commit denies effect; `T08-02` revoke active SSE/cache không phát thêm restricted data ngoài certified boundary; `T08-03` Stan không self-elevate hoặc sửa protected owner; `T08-04` wrong issuer/audience/expired token and wrong certificate/hostname fail closed; `T08-05` key/cert rotation authorised flow giữ identity/scope correct; `T08-06` injected secret-shaped field không xuất publication/log.
+
+**Tests v1.1 bổ sung:** `EPG10-T08-07` read-only scope vẫn deny command/capital mutation; hidden metric inputs/counts/weights không leak qua aggregate; `T08-08` auth revision/correction/generation invalidation đúng mọi Research cache và active stream, positive controls cho independent unaffected scope; `T08-09` Bobby/Stan full-business-read positive controls không mở secrets hoặc command rights; Thanhvuong chỉ eligible portfolio + approved own-slice fields/metrics, no hidden aggregates/counts qua cache/stream/export.
+
+**Evidence:** authorization timeline theo monotonic+UTC clocks, safe negative-test logs, trust-store/config digest không secret, scan report. **Exit gate:** XLC-01/05 và TLS path đạt scoped proof; revoked command không commit; no secret leak. **Stop/rollback:** disable affected routes/streams, preserve receipt/status/recovery; không fallback shared admin identity hoặc insecure TLS. **Phase report:** measured revoke latency, exact deny behavior, trust gaps và security approvals còn thiếu.
+
+**To do bổ sung từ source review:** Separate 08-read and 08-command scopes without new phase IDs. Positive controls for Bobby/Stan and unaffected scopes; negative restricted totals/weights/counts/filter/sort/export/SSE. No hardcoded user names.
+
+**Resource/test execution boundary:** Measure revocation propagation with UTC and monotonic timeline against approved bound; record sanitized trust/config digests, old/new credential behavior and secret-scan results. Shared-host lock, disposable
+namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
+
+**Technical debt / external gates:** Chưa tạo debt. Actual trust material/rotation window and researcher approved-field policy are owner/security dependencies. Prior TLS symptoms require fresh verification, not insecure bypass. Read acceptance need not wait for 07-command.
+
+**Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
+actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
+source/runtime/retention tuple; remaining gate owner and next independently runnable
+scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+
+<a id="epg10-09-plan"></a>
+#### EPG10-09 Kiểm thử E2E dữ liệu command và recovery
+
+**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
+**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+
+**Guide chi tiết bắt buộc:** [EDGE / EPG10-09](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-09-kiểm-thử-e2e-dữ-liệu-command-và-recovery);
+[BE §§14–17; ELP2-10/11 and exact partner test IDs](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§11–12 and numerical hardening appendix](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
+[REVIEW §§4–5, 7–9](upgrade_v1.2/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md). PM-R2/source links ở §23.1 áp dụng theo dependency.
+
+**Owner / inputs / source pins:** Codex Edge owns this scoped Portal package; partner
+owners retain TS/PM/DL/Research authority. Use §23.2 as initial review only; refresh
+full SHA + staged/unstaged/untracked digests and relevant schema/config before work.
+Record phase approval, exact affected datasets/operations/profiles and partner receipts.
+
+**Files / scope dự kiến:** Existing product-acceptance/source-qualification test boundaries, scoped end-to-end harness and sanitized receipts. Research shared calculator/ELP2/UI artifacts are imported by version/handoff, not reimplemented in Edge.
+
+**Invariant trọng tâm:** No economic double count; no missing facts; actual correlation to source receipt; full metric dependency/status semantics and no-lookahead; historical probes cannot stand in for E2E.
+
+**Mục tiêu:** chứng minh ba hệ thống hoạt động cùng nhau, không chỉ isolated PASS. **Dependencies:** 04/05/06 + read portion của 08 cho read-only scope; thêm 07 + command portion của 08 và PM impacted authority receipts cho enabled commands. Portal impacted receipts bắt buộc theo released surface; offline suite có thể chuẩn bị từ 02.
+
+**Deliverables:** integrated fixture suite, cross-guide traceability, workload/fault evidence, failure triage và production-readiness gap register.
+
+**Checklist:**
+
+- [ ] E2E full catalogue/history → bootstrap/delta → BFF/UI cùng scopes, completeness và metrics.
+- [ ] E2E approved Demo/local command → TS decision/effect/receipt → Edge projection → UI terminal state. Affected TS trading-flow certification phải có G1 actual OKX Demo; generic sandbox/mock không thay, pure docs/read-only không bị kéo vào gate này.
+- [ ] Cover order/fill/fee/funding/correction/reconciliation và capital/budget distinction, temporal owner/binding attribution.
+- [ ] Crash source/export/consumer/BFF, lost ACK/response, stale generation, corrupt page/schema và history retention expiry.
+- [ ] Run F-TXN trên real PostgreSQL async/multi-connection; fixture/mock-only tests không thay thế.
+- [ ] Rerun F-LOAD candidate với failure/recovery và preserve trading latency; phân biệt current-page evidence khỏi full-history proof.
+- [ ] Shared Research calculation golden tests: same input-set/window/version, corrections, missing sample/coverage/currency, no-lookahead regime và Archive paper-only non-actuation.
+- [ ] Certify metric sau approved runtime calibration, input/source proof và oracle của formula đã chọn; core read scope được đóng riêng khi metrics chưa available. Không nâng P16 four isolated probes thành full T16 DB/P/XLC.
+
+**Tests và fixtures:** `EPG10-T09-01` F-CATALOG+F-MONEY complete history/reports match golden facts; `T09-02` deposit/withdrawal-only luôn không tạo trading PnL; return/drawdown hiệu suất được quảng bá phải pass approved cashflow-only oracle; advanced metrics chưa certify giữ DISABLED/UNAVAILABLE, không chặn core release; `T09-03` E2E command timeout/restart/revoke vẫn one effect và correct actor; `T09-04` failover/resync converges identical projection digest; `T09-05` all modes/profiles scoped và wrong-scope attempts denied; `T09-06` budgets hold under integrated W-BURST/OUTAGE/RESYNC.
+
+**Tests v1.1 bổ sung:** `EPG10-T09-07` approved QBTS/AlphaScore/PortfolioScore golden vectors cùng version/source-set/window cho report/BFF/UI, corrections invalidate đúng affected windows; `T09-08` regime run/stage/window binding và feature/reference cutoffs không lookahead hoặc trộn strategy versions; `T09-09` Archive paper watch respects cadence/retention/resource quota, không auto-unarchive/promote/live/TradeState/allocator mutation; `T09-10` formula đã chọn nhưng chưa approved runtime config trả policy_pending/UNAVAILABLE, nhưng certified independent read dataset không bị global-block vì metric/N1/command gate không liên quan; `T09-11` Archive/Paper-clone explicit authorized disposition giữ original history và scope/identity lineage, read/watch không tạo clone hoặc lifecycle side effect.
+
+**Tests v1.2 bổ sung — tất cả PLANNED / NOT RUN trong lần sửa tài liệu:**
+
+| ID | Fixture / assertion bắt buộc |
+|---|---|
+| EPG10-T09-12 | Final spec numerical vectors: P80/R66/B70 → F73.3/fair; atomic weights và band boundaries dùng unrounded canonical value; report/BFF/UI parity |
+| EPG10-T09-13 | Missing q làm composition partial; missing grouping/correlation chỉ degrade own diagnostics; missing research linkage không chặn ledger-only score; direct portfolio NAV score vẫn available/provisional khi own inputs đầy đủ; đủ q mà thiếu NAV không lấy AlphaScore thay PortfolioScore |
+| EPG10-T09-14 | Same-window/basis complete short evidence → numeric provisional, same value khi đổi maturity; q90 available/q50 provisional với a60/20 → AlphaScore80/provisional weight.25; khác 5d/30d chỉ Early facet |
+| EPG10-T09-15 | Missing Sharpe trong canonical fixture → full null/bounds62.5…76; missing turnover giữ known baseline atoms nhưng full null/stress partial; missing baseline fees invalidates dependent known atoms; không renormalize |
+| EPG10-T09-16 | Stress proof: net.01/opening100/G200/delta5bps → extra cost.10/stress.009; fill-side dedupe, derivative notional, no transfer turnover/no double fee; delta/anchor monotonicity; invalid nonpositive stressed path fails |
+| EPG10-T09-17 | Valuation/flow/grid/closed-block/late-cost/FX watermark gap → correct affected status; no zero-fill or forward-fill fiction; completed missing block khác incomplete tail; deposit fixture TWR7.1%, PnL9.1 |
+| EPG10-T09-18 | Same actual Canary→Live giữ path; predeclared nonoverlap Paper40+Sandbox20+actual10 → forward70/actual10 mixed observational facet, không actual NAV; outcome-selected source/config mismatch/gap invalidates stitching |
+| EPG10-T09-19 | Unique manager account NAV + internal-transfer elimination trước F; không mean child scores; split/clones cùng path không đổi direct score; missing grouping chỉ chặn HHI |
+| EPG10-T09-20 | Approved formula + pending calibration → policy_pending, preview không vào production aggregate; fixture anchors/delta không tự trở thành production; score outage không chặn authorized reduce-risk |
+| EPG10-T09-21 | Rolling window peak-exit fixture: MDD/ADD recompute theo new E0/peak, không subtract-old-DD shortcut; intermediate overflow/underflow/nonfinite stress rejected trước band/serialize |
+
+**Evidence:** full execution manifest, TS/Edge/Portal correlation, source/read-model reconciliation, exact failed/blocked receipts và resource deltas. **Exit gate:** hard invariants pass trên đường chạy được mở; critical gaps không được che bằng E7/source-isolated PASS. External N03 chỉ pass khi có own fresh receipt. **Stop/rollback:** keep feature dark/shadow, fix failed scoped path và rerun impacted tests; không chuyển sang live để thay test environment thiếu. **Phase report:** traceability result từng XLC, support matrix, residual issues và release recommendation có scope.
+
+**To do bổ sung từ source review:** Include P/R/B73.3, provisional same-window A80/weight.25, missing-component bounds, stress .009, deposit TWR7.1%/PnL9.1, manager transfer/account dedupe, Canary→Live continuity, mixed-forward70d/actual10d, rolling peak-exit and nonfinite guards. No whole roadmap block from an optional metric.
+
+**Resource/test execution boundary:** Run real PG crash/reconnect/replay and selected host coexistence; classify synthetic math, isolated source, integrated runtime and broker-authoritative evidence separately. N1 performance G2 never waived by optional mainnet G2. Shared-host lock, disposable
+namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
+
+**Technical debt / external gates:** Chưa tạo debt. Partner integration environment, exact source publication and metric calibration are external gates only for dependent cases. Any failed promised test/correctness gap remains open work. All 21 cases get explicit scope/status, not blanket PASS.
+
+**Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
+actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
+source/runtime/retention tuple; remaining gate owner and next independently runnable
+scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+
+<a id="epg10-10-plan"></a>
+#### EPG10-10 Shadow fenced cutover và rollback drill
+
+**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
+**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+
+**Guide chi tiết bắt buộc:** [EDGE / EPG10-10](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-10-shadow-fenced-cutover-và-rollback-drill);
+[BE §16; ELP2-11](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§5.10, 8.6, 12 (versioned original/restated)](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
+[REVIEW §§4.3, 6](upgrade_v1.2/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md). PM-R2/source links ở §23.1 áp dụng theo dependency.
+
+**Owner / inputs / source pins:** Codex Edge owns this scoped Portal package; partner
+owners retain TS/PM/DL/Research authority. Use §23.2 as initial review only; refresh
+full SHA + staged/unstaged/untracked digests and relevant schema/config before work.
+Record phase approval, exact affected datasets/operations/profiles and partner receipts.
+
+**Files / scope dự kiến:** Approved versioned release/compose/config manifest, migration/shadow/cutover tooling and rollback runbook only. Release outside source worktree, canonical service names and immutable image digests.
+
+**Invariant trọng tâm:** One writer per generation; read pointer only after complete checkpoint; rollback never rewinds financial facts, rights or accepted receipts; no double sends in shadow.
+
+**Mục tiêu:** chuyển read/relay path có kiểm soát và chứng minh một writer generation. **Dependencies:** 09 cho exact dataset/consistency-group/operation scope sẽ mở, explicit release/target approval và backups/recovery plan đã verify. N1 F1/P184/live gates chỉ tham gia theo real dependency; không gộp all-roadmap gate.
+
+**Deliverables:** change package, shadow comparison report, deployment/runbook sequence, fencing evidence, rollback drill và operator sign-off.
+
+**Checklist:**
+
+- [ ] Expand schema/config additively; record applied-state evidence sau khi authorized deployment thực sự chạy.
+- [ ] Shadow reads/export/projection trên matched scope; compare event counts/digests/versions/quality/resource costs.
+- [ ] Cut over per dataset/consumer group/mode đã duyệt, pause old writer và acquire new generation fence; chứng minh stale writer bị reject.
+- [ ] Chỉ route read pointer sau complete checkpoint; command activation là decision riêng từng operation/mode.
+- [ ] Rollback read pointer/code compatible, giữ accepted command receipts và status lookup; forward-repair economic facts khi cần.
+- [ ] Giữ compatibility window và evidence; destructive cleanup/contract migration phải approval mới.
+
+**Tests và fixtures:** `EPG10-T10-01` shadow/new projection match same barrier; `T10-02` stale old writer không ghi sau fence dù process sống lại; `T10-03` cutover giữa in-flight read/command không duplicate effect hoặc mất receipt; `T10-04` rollback consumer/route vẫn đọc accepted commands và exact history; `T10-05` interrupted cutover resume có operator state rõ, không hai active writers.
+
+**Evidence:** release artifact/config digests, approval refs, fence/lease rows, before/after health/checkpoint, rollback timeline và preserved facts check. **Exit gate:** approved scope ổn định trong observation window dựa workload, đạt budgets và rollback drill; không cần production funds/keys nếu base release không live. **Stop/rollback:** trigger theo mục 13; freeze new entrypoint, retain events và reconcile unknown operations trước resume. **Phase report:** what changed/where/when, current active generation, validated scope, rollback readiness và go/no-go còn lại.
+
+**To do bổ sung từ source review:** Separate read dataset cutover from command operation activation and numerical metric release. Reconcile actual TS/DL dependency status at execution time; do not retain outdated guide F1 status as an automatic global block.
+
+**Resource/test execution boundary:** Paired shadow count/digest/version/quality/cost; stale-writer rejection and interrupted rollout; approved observation window sized to workload, not arbitrary soak. Record active+named rollback image/config and retained checkpoints. Shared-host lock, disposable
+namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
+
+**Technical debt / external gates:** Chưa tạo debt. Explicit target/change-window/operator/recovery proof is release dependency. Failed shadow/fence/rollback is in-scope failure and blocks affected release; no widening blast radius or ad hoc production fix.
+
+**Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
+actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
+source/runtime/retention tuple; remaining gate owner and next independently runnable
+scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+
+<a id="epg10-11-plan"></a>
+#### EPG10-11 Bàn giao vận hành và đóng acceptance
+
+**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
+**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+
+**Guide chi tiết bắt buộc:** [EDGE / EPG10-11](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-11-bàn-giao-vận-hành-và-đóng-acceptance);
+[BE §§16–18; ELP2-11](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§8.2, 10–12](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
+[REVIEW §§6–7](upgrade_v1.2/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md). PM-R2/source links ở §23.1 áp dụng theo dependency.
+
+**Owner / inputs / source pins:** Codex Edge owns this scoped Portal package; partner
+owners retain TS/PM/DL/Research authority. Use §23.2 as initial review only; refresh
+full SHA + staged/unstaged/untracked digests and relevant schema/config before work.
+Record phase approval, exact affected datasets/operations/profiles and partner receipts.
+
+**Files / scope dự kiến:** This journal, runbooks, bounded sanitized acceptance/compatibility manifest and Portal handoff index. No additional product feature, UI, storage stack or source migration.
+
+**Invariant trọng tâm:** Every advertised surface has exact version/scope/evidence and owner; operator can recover without undocumented private steps; unresolved mandatory gate prevents full acceptance.
+
+**Mục tiêu:** operator có thể xử lý sự cố, cập nhật catalogue và kiểm performance mà không đoán. **Dependencies:** runbook/ownership/alerts chuẩn bị song song từ 00; final acceptance cần 10 trong exact released scope và retention decisions complete.
+
+**Deliverables:** operation runbooks, ownership/on-call map, final acceptance matrix, approved configuration envelope, release notes và known limitations.
+
+**Checklist:**
+
+- [ ] Bàn giao source/consumer checkpoint, backlog, freshness, TLS/auth, unknown-command và storage alerts có actionable owner.
+- [ ] Rehearse runbooks cursor expiry, slow clients, stale data, authority unavailable, revoke loss, projection corruption và cert expiry.
+- [ ] Verify restore/rebuild projection từ retained history; backup scope không chứa unneeded secrets.
+- [ ] Document per-family retention/archival/quality and full-catalogue continuation; policy changes cần decision revision.
+- [ ] Close XLC traceability và impacted PM/Portal references bằng receipts, không copy PASS từ baseline cũ.
+- [ ] Ghi rõ command modes/operations enabled; live vẫn disabled nếu chưa explicit approved; thêm source/schema/runtime freshness date.
+
+**Tests và fixtures:** `EPG10-T11-01` operator khác thực hiện runbook trên approved test target không cần private knowledge; `T11-02` restore+resync tái tạo canonical digest và full coverage; `T11-03` alert firing/recovery có đúng owner/reason/action; `T11-04` release evidence references resolve và mỗi PASS đúng source/schema/runtime scope.
+
+**Tests v1.1 bổ sung:** `EPG10-T11-05` operator nhận và xử lý watch/score-job backlog, policy revision và correction alert bằng bounded pause/resume, không cần TS heavy recompute; published metric revision và raw-history availability vẫn traceable.
+
+**Evidence:** drill receipts, acceptance sign-off, unresolved limitations và updated source/runtime manifest. **Exit gate:** không có critical unresolved gate trong released scope; budgets/retention/ownership đã chốt; base release có supportable recovery. **Stop/rollback:** không đóng acceptance nếu cần secret/private command ngầm hoặc không restore được; giữ previous approved scope. **Phase report:** final support matrix, limitations, operational owners và next review triggers.
+
+**To do bổ sung từ source review:** Handoff includes endpoint/schema/fixture versions, dataset/history/retention matrix, source/Edge/Research applied checkpoints, source-dark/disabled gates, all partner references and reopen triggers (schema/config/policy/source change).
+
+**Resource/test execution boundary:** Independent operator restore/resync/drill and alert firing/recovery; final source/runtime reconciliation, cleanup disk/retention evidence and measured supported capacity only. Shared-host lock, disposable
+namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
+
+**Technical debt / external gates:** Chưa tạo debt. Named operator and acceptance/retention decisions are operational dependencies. Unfinished restore, alert or required integration remains phase work. Scope-limited read handover cannot be labelled completion of all 12 phases.
+
+**Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
+actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
+source/runtime/retention tuple; remaining gate owner and next independently runnable
+scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+
+### 23.6 Decision and external-dependency register
+
+Every decision below starts **PENDING_SCOPED_REVIEW** for implementation/activation.
+Already selected design is not reopened: PM R2 and SCORE formula/weights/bands remain
+approved-design. Per decision record owner, UTC, accepted/rejected/deferred state,
+exact evidence/approval reference, affected dataset/operation and next independent
+work. Missing engineering evidence is engineering work, not a request for Bobby
+to approve an assumption.
+
+Primary ownership: E01/E12/E15 Bobby + release operators; E02/E10 Portal trust +
+TS identity owners; E03/E04/E07 TS publisher + Edge consumer; E05/E06/E08 Edge +
+Research/DL operations; E09 TS PM/command + Edge; E11 PM economics + analytics;
+E13 analytics owner + Bobby config approval; E14 TS lifecycle + Research watch owner.
+
+| ID | Quyết định | Baseline đề xuất | Cần chốt bằng gì | Khi chưa chốt |
+|---|---|---|---|---|
+| DEC-E01 | Scope release và mode/venue/profile | Read theo dataset + local/Demo command được chọn; P19 G2 mainnet optional riêng, P184 G2 performance giữ đúng gate | Supported-scope matrix và explicit release request | Live disabled; unavailable scopes không giả empty |
+| DEC-E02 | Human/workload trust và business authority | Portal session/app grants; TS verified effective business membership, capital and owner authority | Trust issuer/audience, role mapping, DEC11-01/07, revocation policy | New mutation fail closed |
+| DEC-E03 | Full catalogue và source publication | Expand approved producer families qua catalogue/permit; không generic DB access | Writer/query/source coverage và data classification | Family chưa certify có implementation PLANNED/RUNTIME_PENDING và served availability UNAVAILABLE |
+| DEC-E04 | Ordering và snapshot barrier | Reuse migrations48/59/60/67 và journal nếu proof đủ | Multi-connection commit-order/capture/barrier receipts | Không claim global ordered/full replay |
+| DEC-E05 | Placement lease failover và DR owner | Export/admission gần TS; projection/history/fanout trên Research có headroom | Capacity measurements, fence/lease semantics, backup/restore ownership | Không chuyển workload/writer |
+| DEC-E06 | CPU RAM query IO và trading budgets | Baseline-relative reduction/non-regression theo mục9 | Actual metrics, host headroom và approved bounds | Optimization gate UNDECIDED |
+| DEC-E07 | Per-family durable history và retention | Exact facts giữ theo business policy; replay window đủ outage; current snapshot sampled được gắn nhãn | Dataset-specific duration/storage/gap/backfill policy và cleanup permissions | Không xóa history hoặc quảng bá coverage ngoài proof |
+| DEC-E08 | Per-dataset cadence freshness và revocation SLO | Event-driven exact facts; coalesce report state; bounded revoke enforcement | Measured ingest/write rates, approved lag/burst/stale bounds | UI stale; safety/mutation fail closed khi cần |
+| DEC-E09 | Command publication activation và kill switch | Implement source rejection gap trước; operation/mode allowlist, current TS authority và receipt | Source review, N12 owner publication proof, E2E and release approval | Relay stays denied; no flag-only enable |
+| DEC-E10 | TLS service authentication và rotation | Verify chain/hostname; reuse approved mTLS/JWT trust | Current config/runtime proof và security approval | No insecure fallback; affected route unavailable |
+| DEC-E11 | Cashflow performance drawdown và finality | PM v1.1 semantics, exact flow-adjusted metrics với late correction lineage | Oracle và metric-version sign-off; P15.T05 gap được test | Affected score partial/invalid/policy_pending theo dependency; provisional chỉ khi math-complete nhưng evidence limited |
+| DEC-E12 | Cutover recovery observation và ownership | Additive/shadow/fenced switch, recoverable read rollback, forward economic repair | Approved deployment package, thresholds, operator and escalation map | Feature dark/shadow; không destructive rollback |
+| DEC-E13 | Runtime calibration/config và release của scoring đã chọn | Formula qbts_prb_v1_1, weights/bands đã duyệt theo SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md; shared Research module duy nhất | Approve immutable anchors/stress/block/maturity/grid/config artifact bằng calibration evidence; source proof, golden vectors, ACL/replay; Regime thresholds riêng | policy_pending/UNAVAILABLE cho numeric production chưa đủ config; không mở lại lựa chọn formula; independent core reads xét riêng |
+| DEC-E14 | Archive paper monitoring | Research-only bounded jobs, explicit watch policy; no automatic promotion/live | Cadence/retention/admission/stop policy, resource benchmark và source availability | Archive catalogue/history vẫn đọc theo quyền; watch jobs chưa bật |
+| DEC-E15 | Parallel read release và TS/DL coexistence | Scoped lane gates §10.2; 6k×2/9k×2 paired benchmarks §9.5 | Dependency proof; P184 G2 vs P19 G2 separation; N1 F1 impact; approved B-DL/B-EDGE ceilings | Affected activation blocked; offline/independent certified paths không global-block |
+
+**Initial concrete dependency intake (not a new phase or accepted debt):**
+
+| Item | Required owner return | Blocks | Independent work |
+|---|---|---|---|
+| Current Research source/runtime | Research host/repo/branch/full SHA, dirty digest, current ELP2 plan and consumer/identity pins | Real BFF/identity integration claims | Local Edge inventory/contracts |
+| Native P13/P16 → external Edge publication | TS accepted dataset/profile manifest, route/auth/permit/cursor/retention and actual read receipt; current N03 SOURCE_DARK disposition | Activation of that authoritative journal lane | Existing published Manager snapshot/typed-unavailable contracts |
+| PM actual trust/export | PM current human authority/provider, report publication and Edge delivered/Portal applied checkpoint | PM-dependent datasets/commands | Independent registry/order/fill reads with own publication proof |
+| TLS/runtime reattestation | Runtime operator approved read evidence; cert chain/expiry/hostname, image/config/service tuple | Affected real private transport | Offline fixtures and runbook planning |
+| TS/DL shared-host work | Current lock owner/window, latest journal/failed-scorecard dispositions, clean measured slot | Builds/load or changed producer certification during foreign measurement | Docs/source review |
+| Researcher field policy | Exact approved fields/aggregation/export/stream behavior and principal mapping | Restricted financial publication | Manager contract fixtures and already authorized business-read lane |
+| Numeric score calibration | Horizon anchors, stress delta, grid/block/maturity/freshness/precision, config hash and input coverage | Production numeric outputs needing that config | Fixed-formula schema/math fixtures and independent absolute economics |
+| Missing named companions | Exact UX/feasibility/prompt/receipt artifact revisions when needed by partner acceptance | Only claims dependent on absent material | EPG10-00 and the four supplied-guide requirements |
+
+No source outage is “fixed” by querying arbitrary TS tables/Redis or assigning
+extra privileges. Unavailable typed outcomes are valid only where the approved
+contract allows them; they do not waive a promised implementation or full-guide gate.
+
+### 23.7 Cross-guide acceptance and first implementation-package proposal
+
+[EDGE §12.1](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#121-cross-guide-acceptance)
+is the exact XLC-to-EPG10 acceptance table.
+[BE §17.1](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md#171-shared-contract-register)
+is the partner contract register. Phase receipts must bind actual partner IDs;
+a link to a planned ELP2/PM test is not joint acceptance.
+
+| XLC | Edge phases | Partner handoff required |
+|---|---|---|
+| 01 Authority/identity | 00, 07, 08 | PM identity/membership and ELP2-01…04 |
+| 02 Catalogue/read completeness | 02, 04, 05, 09 | TS publisher, ELP2-05/06 typed field/history coverage |
+| 03 Snapshot/replay/atomic recovery | 03, 04, 10 | TS commit/cursor and ELP2-05/09 projection/subscription |
+| 04 Command/receipt | 07, 09, 10 | PM operation/CAS/idempotency and ELP2-07/08 |
+| 05 Revoke/access | 05, 08 | Portal session/grants + TS current authority and ELP2-03/04/09 |
+| 06 Resource/retention/coexistence | 01, 05, 06 | DL/TS current workload and ELP2-10 |
+| 07 Cashflow/economics | 02, 07, 09 | PM ledger/capital + canonical metric oracle |
+| 08 Evidence/source/release separation | 00, 09, 10, 11 | All tracks' exact scoped receipts, G1/performance-G2/mainnet-G2 applicability |
+| 09 Manager/researcher visibility | 02, 05, 08 | Verified owner-user-ID mapping and reviewed ELP2 field policy |
+| 10 Fleet/stage/Archive/units | 02, 05, 09 | TS registry/lifecycle, ELP2-01/06/08 and UX artifact if consumed |
+| 11 Shared scores/bounded corrections | 02, 06, 09, 11 | SCORE shared module/config/input proof + ELP2 adapter; no Edge formula fork |
+
+**First package proposed, not approved by this plan:** after 00 inventory and the
+relevant 01/02 decisions, implement dataset catalogue + bounded snapshot/delta
+contract + **one read-only vertical slice**, chosen from actually published data.
+Choose the exact dataset in the inventory rather than guessing that a PM exporter
+exists. Reuse Rust crates, existing private transport and disposable test storage.
+Define current-only fallback honestly when applicable; do not claim replay from
+polling. Bound memory, pages/bytes, connections, retries and source QPS.
+Keep command relay denied with negative tests. Real activation waits only for
+this slice's publication/trust/cursor/resource evidence and explicit target
+approval, not every future command or score. This package does not start now.
+
+**Phase approval/report template (apply to each phase above):**
+
+```text
+phase / selected dataset+operation+mode / owner approval reference
+current source+dirty+schema+runtime pins / partner artifact versions
+goal / exact files+resources / invariants / exclusions
+planned case IDs -> actual command+expected+actual+receipt
+PASS / FAIL / SKIP / BLOCKED / NOT_RUN (distinct IDs, no reused-count inflation)
+source-to-projection tie-out / resource deltas / privacy+recovery proof
+rollback tested or NOT_RUN / cleanup inventory+disk+retention
+external gate: owner + required artifact + affected path + independent next work
+status: implemented | tested locally | shadow-certified | production-ready |
+        production-authoritative (only with corresponding scoped evidence)
+commit+branch / pushed? merged? deployed? / next permitted step
+```
+
+### 23.8 Documentation preparation journal — not EPG10-00 acceptance
+
+**Scope:** owner-requested plan, new feature branch from fetched current dev,
+unchanged four-file guide bundle and required index pointers. No product changes.
+
+**Source review performed:** all four supplied Markdown files; Portal current
+dev rules and relevant historical plan/architecture; TS execution/alternate/PM
+and DL branch/worktree states; TS recent commits and latest N1 rollout/failure
+journal; PM R2 source/journal and registration evidence; source journal read/
+publication/consumer contracts; current Rust routes/relay refusal and Research
+Fleet coalescing/persistence code in Portal dev. This is a targeted interface
+review, **not an exhaustive audit of every repository file or runtime**.
+Research BE/FE host paths/current revisions remain unverified here.
+
+**Guide SHA-256 (original and branch copy identical):**
+
+| File | SHA-256 |
+|---|---|
+| Edge guide | `af6d53725d58aca4dfefb0fb212272c2df281b7d605a1f7bca5e54ced9b2eeb0` |
+| Backend companion | `9047f765f7878f7284363bc6322ff14f3feb5fff4913cc7d4b9a328afd591985` |
+| Review | `0a266334f26d02bc4be858017d44e980e4ab5a4a5a4a007dad6827f565f06b86` |
+| Score specification | `d77a05fc0c6b481114c0d4055a2ff0c09f6b7a3cc0ca1447f691d92f139adbad` |
+
+**Validation status:** read-only Python standard-library documentation assertions
+PASS: 4/4 byte-identical guides, 12/12 phase blocks with mandatory tracking fields
+and all four companion links, 100 planned case IDs, 75/75 local links/anchors,
+15/15 decision rows and 11/11 XLC rows. Initial Node validation command could not
+start because Node is not installed (exit 127); no dependency was installed and
+the equivalent read-only check passed with Python. All 100 EPG10 product cases
+remain NOT_RUN. No cargo/pytest/build/load/DB or runtime activation.
+Actual documentation checks: `sha256sum` for original/copied guide files;
+`python3` inline standard-library assertions for phase fields, case-range maxima,
+local Markdown links/anchors and registers; `git diff --cached --check` PASS;
+staged scope review contains exactly eight Markdown files, no deletions/code/config.
+`git merge-base HEAD origin/dev` equals the recorded base before commit.
+Read-only `df -B1 /home/bobby` observed 194804625408 available bytes (63% used);
+this is a capacity snapshot, not a cleanup/reclaim or benchmark result.
+No historical test counts promoted to new PASS. Docker read inventory permission
+denied; full runtime reattestation belongs to approved 00, not silently omitted.
+
+**Git/release/cleanup:** base main/dev
+`533162635f56584d630e3d971d77d50860595f15`; configured committer
+`BobbyAxerol <vugioan11022002@gmail.com>`. Stable source tag `v1.1.1`
+resolves to `e4fd93658de1ff0614126a85d70e59a23c25a01f`, distinct from current
+dev and runtime. No push/merge/deploy, no original guide edits, no source-service
+restart, no disposable runtime/build resources or cleanup. Existing runtime,
+rollback artifacts and parallel worktrees intentionally retained; active images/
+config/restarts not freshly verified because Docker read access was denied.
+Next permitted step after this documentation commit: Bobby reviews and approves
+a named EPG10 phase, starting with 00; no automatic implementation continuation.
+
+
 

@@ -650,6 +650,14 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+- **Execution Edge v1.2 planning (2026-10-15):**
+  [EPG10-00…11 in the Execution Loop unified plan §23](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)
+  is `PLAN_WRITTEN_AWAITING_PHASE_APPROVAL`, on
+  `feat/execution-edge-upgrade-v1_2` from current `origin/dev` at
+  `533162635f56584d630e3d971d77d50860595f15`. Four supplied guides retained
+  byte-identically; refreshed TS/PM/DL source/journal observations are not runtime
+  certification. No product code, test/build, DB/service change or phase activation.
+
 **Delivered since the runway note above** (commits on
 `chore/v1.1-roadmap-taskboard`):
 

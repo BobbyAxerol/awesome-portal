@@ -1,5 +1,11 @@
 # Unified Implementation Plan — QuantBT Portal v0.4
 
+> **Execution Edge v1.2 upgrade (2026-10-15):** the active detailed phase plan is
+> [Execution Loop unified plan §23 — EPG10-00…11](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12).
+> Documentation/new feature branch only; all 12 phases await Bobby's individual
+> approval and every new product test is NOT_RUN. The four owner-supplied guides
+> are linked and pinned there; earlier acceptance is not new upgrade evidence.
+
 > **Trạng thái:** Draft để owner review và chốt thứ tự triển khai<br>
 > **Cập nhật:** 2026-08-15<br>
 > **Nguồn kiến trúc:** [QuantBT Portal Architecture & UI/UX Final v0.4](./quantbt_portal_architecture_uiux_final_v0.4_vi.md)<br>
