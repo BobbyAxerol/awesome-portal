@@ -303,8 +303,6 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
             ))}
             <span className="exec-af-filternote">an alpha appears in every stage it holds a deployment in · sort: live exposure first, then furthest stage</span>
             <span className="exec-af-spacer" />
-            <button type="button" className="exec-af-chip" disabled title="Venue and owner filters need fleet-list.v1 (BR-EX-49)">Venue All ▾</button>
-            <button type="button" className="exec-af-chip" disabled title="Venue and owner filters need fleet-list.v1 (BR-EX-49)">Owner All ▾</button>
           </div>
           <div className="exec-af-panel">
             <div className="exec-scroll-x">

@@ -308,7 +308,6 @@ export function PaperOverview({ envelope = null, status = "ok", reason, demo, de
 
           <div className="exec-po-scope" role="group" aria-label="Paper scope">
             <span className="exec-po-scopelabel">Scope</span>
-            <button type="button" className="exec-po-chip" disabled title="Portfolio scope needs BR-EX-62; one portfolio per venue is in paper today">Portfolio All ⌄</button>
             {PO.venues.map((v) => (
               <button key={v} type="button" className="exec-po-chip" data-active={venue === v ? "true" : undefined} aria-pressed={venue === v} onClick={() => setVenue(v)}>{v}</button>
             ))}

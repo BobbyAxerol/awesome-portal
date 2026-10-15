@@ -290,11 +290,6 @@ export function SandboxOverview({ envelope = null, status = "ok", reason, demo, 
                 {LABEL[f]} ({smoke.counts[f]})
               </button>
             ))}
-            <span className="exec-af-filternote">venue:</span>
-            {/* "All" twice in one toolbar is two different questions with one
-                label; the venue chip names its own axis. */}
-            <button type="button" className="exec-af-chip" data-active="true" aria-pressed="true" disabled title="Venue filter needs sandbox-overview.v1 (BR-EX-60); one testnet venue is in use today">All venues</button>
-            <button type="button" className="exec-af-chip" disabled title="Venue filter needs sandbox-overview.v1 (BR-EX-60)">OKX TESTNET</button>
             <span className="exec-af-chip exec-sb-dashed">BINANCE TESTNET — no deployment in certification, rows appear from the registry</span>
           </div>
 

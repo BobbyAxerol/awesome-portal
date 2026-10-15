@@ -4,7 +4,7 @@
  *  - `GateStepper`   where this gate sits on the loop: Report → RC → R1 → R2 → Paper → Sandbox → Canary → Live;
  *  - `GateVerdict`   the conclusion first, in a sentence, with the facts that carry it (counts the server's own marks; never a new verdict);
  *  - `GateAbsences`  every "not published" collapsed into one line that opens into typed reasons — one honest line, not four frames;
- *  - `GateDecisionActions` one primary action and a "Not yet" menu (request changes · deny · the alternative approval), reasons beside the buttons.
+ *  - `GateDecisionActions` one primary action and an "Other decisions" menu (request changes · deny · the alternative approval), reasons beside the buttons.
  *
  * Nothing here decides: every lock, reason and handler arrives as a prop from the screen that already derived it.
  */
@@ -93,10 +93,10 @@ export interface GateAction {
 }
 
 /**
- * One primary action and a "Not yet" menu for every other verb. All verbs stay real buttons with their own names, so a screen reader and a
+ * One primary action and an "Other decisions" menu for every other verb. All verbs stay real buttons with their own names, so a screen reader and a
  * test reach `Deny` or `Request changes` exactly as before; the menu only changes what is on the surface.
  */
-export function GatePrimaryWithMenu({ primary, others, menuLabel = "Not yet ▾" }: { primary: GateAction; others: readonly GateAction[]; menuLabel?: string }) {
+export function GatePrimaryWithMenu({ primary, others, menuLabel = "Other decisions ▾" }: { primary: GateAction; others: readonly GateAction[]; menuLabel?: string }) {
   const menu = useRef<HTMLDetailsElement>(null);
   // A menu that stays open until its own button is pressed again covers the decision dock: Escape, a click elsewhere or tabbing away closes it.
   useEffect(() => {

@@ -876,8 +876,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
             <span className="exec-bd-k">governance</span><span>ADMIN step-up · dual approval · plan → apply → verify · PARTIAL never renders green</span>
           </div>
           <footer className="exec-sbc-planfoot">
-            <button type="button" className="exec-pf2-primary" disabled title="The rebalance route lands with BR-EX-51; this preview never leaves the browser.">Apply</button>
-            <span>preview only — apply enables when BR-EX-51 ships the plan → apply → verify route · today's allocation actions live in the Admin Action Drawer</span>
+            <span>Preview only — nothing is applied from here. Today's allocation actions live in the Admin Action Drawer.</span>
           </footer>
         </section>
       ) : null}
@@ -894,8 +893,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
             approvals touching this portfolio — at the digests they were read at.
           </p>
           <footer className="exec-sbc-planfoot">
-            <button type="button" className="exec-pf2-primary" disabled title="Report generation lands with BR-EX-51; nothing is produced here.">Generate</button>
-            <span>preview only — the export route ships with BR-EX-51</span>
+            <span>Preview only — nothing is produced here.</span>
           </footer>
         </section>
       ) : null}
