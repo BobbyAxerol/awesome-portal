@@ -2,8 +2,9 @@
 
 > **Execution Edge v1.2 upgrade (2026-10-15):** the active detailed phase plan is
 > [Execution Loop unified plan §23 — EPG10-00…11](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12).
-> Documentation/new feature branch only; all 12 phases await Bobby's individual
-> approval and every new product test is NOT_RUN. The four owner-supplied guides
+> EPG10-00 completed as inventory only: six offline metadata cases PASS; source,
+> authority and owned runtime unknowns are recorded. EPG10-01…11 await individual
+> approval (94 cases NOT_RUN). No runtime activation. Four owner-supplied guides
 > are linked and pinned there; earlier acceptance is not new upgrade evidence.
 
 > **Trạng thái:** Draft để owner review và chốt thứ tự triển khai<br>

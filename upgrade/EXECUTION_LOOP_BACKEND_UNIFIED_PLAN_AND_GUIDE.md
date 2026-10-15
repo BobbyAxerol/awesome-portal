@@ -9364,12 +9364,12 @@ CI failures reached `main` in this release.
 <a id="epg10-upgrade-v12"></a>
 ## 23. Execution Portal Edge upgrade v1.2 — EPG10-00…11
 
-**Recorded:** 2026-10-15 UTC. **Status: PLAN_WRITTEN_AWAITING_PHASE_APPROVAL.**
-Bobby authorized this documentation package and a new feature branch from current
-`dev`; no EPG10 implementation/test/load/migration/activation phase is authorized
-by this entry. Every phase below is **PLANNED / NOT_STARTED**; every new product
-test is **NOT_RUN**, exit gate **NOT_EVALUATED**. Reading source and preparing this
-plan is not completion of EPG10-00.
+**Recorded:** 2026-10-15 UTC. **Status: EPG10-00_COMPLETED_INVENTORY_ONLY.**
+Bobby approved EPG10-00 after the documentation package; its six offline metadata
+cases PASS and its inventory exit gate passes with explicitly owned UNKNOWNs.
+This is not runtime qualification. EPG10-01…11 remain **PLANNED / NOT_STARTED**,
+awaiting individual approval, with 94 cases **NOT_RUN**. No load, migration,
+credential change, source/service mutation or new activation was authorized/run.
 
 This section is the single active sequencing/journal for the Edge v1.2 campaign.
 Earlier EDS/N/EX-DP/R3/A4 records remain historical evidence with their original
@@ -9414,7 +9414,7 @@ affected design/acceptance claim requiring them, not source inventory or Edge
 contract preparation. Remote agents must resolve PM/TS/DL paths to their exact
 repo+SHA; these absolute locators are local-owner references, not portable mounts.
 
-**Documentation package approved now**
+**Initial documentation package (completed before EPG10-00 approval)**
 
 - Target: `awesome-portal`, new `feat/execution-edge-upgrade-v1_2`,
   worktree `/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2`.
@@ -9433,6 +9433,9 @@ repo+SHA; these absolute locators are local-owner references, not portable mount
 
 Review observation: **2026-10-15 ~16:06 UTC**, not a frozen runtime certificate.
 Refresh all affected pins/digests at phase start; peers are actively advancing.
+The newer EPG10-00 source/runtime observations and owned UNKNOWNs are in
+[§23.9](#239-epg10-00-execution-journal--2026-10-15) and its machine manifest;
+the table below remains the historical preparation baseline.
 
 | Source | Path / branch | Full SHA observed | Working state / interpretation |
 |---|---|---|---|
@@ -9575,13 +9578,14 @@ no test images/cache/containers created by this package.
 
 ### 23.4 Phase overview and approval tracker
 
-All rows are **PLANNED / AWAITING_BOBBY_APPROVAL**. Test counts below are required
-case identities, **not executed tests**. Test bodies are preserved in each detailed
+EPG10-00 is **COMPLETED_INVENTORY_ONLY / BOBBY_APPROVED** (2026-10-15); 01–11 remain
+**PLANNED / AWAITING_BOBBY_APPROVAL**. Until the phase receipt below records execution,
+test counts are required case identities, **not executed tests**. Test bodies are preserved in each detailed
 phase block and the pinned Edge guide; partner ELP2/PM cases are not double-counted.
 
-| Phase | Goal | Tests, all NOT_RUN | Runtime closure depends on |
+| Phase | Goal | Tests (actual status shown) | Runtime closure depends on |
 |---|---|---|---|
-| [EPG10-00](#epg10-00-plan) | Current source/authority/scope manifest | T00-01…06 (6) | Exact pins and explicit unknown-owner disposition |
+| [EPG10-00](#epg10-00-plan) | COMPLETED_INVENTORY_ONLY: current source/authority/scope manifest | T00-01…06: 6 PASS | Inventory only; unknown-owner dispositions recorded, no runtime acceptance |
 | [EPG10-01](#epg10-01-plan) | Paired baselines, placement, budgets | T01-01…06 (6) | Approved hosts/workload/measurement window |
 | [EPG10-02](#epg10-02-plan) | Catalogue, schema, fixtures | T02-01…11 (11) | Producer/consumer contract review, source coverage |
 | [EPG10-03](#epg10-03-plan) | Capture and commit-order proof | T03-01…05 (5) | Real PG writer/barrier/retention/fence proof |
@@ -9602,17 +9606,19 @@ These are scheduling options, not authorization to start multiple phases.
 
 ### 23.5 Detailed phases — frozen guide requirements plus execution tracking
 
-Common receipt destination **proposed, not created**:
+Proposed receipt destination for later phases:
 `upgrade/evidence/execution-edge-v1_2/<phase>/<run>/receipt.json` for bounded
 sanitized metadata/digests/metrics only. Raw/private logs and data remain outside
 Git in the approved host evidence directory. No secrets or source business rows
-are copied into this plan. EPG10-00 chooses the exact owned paths before tests.
+are copied into this plan. EPG10-00 selected the compact single-run path
+`upgrade/evidence/execution-edge-v1_2/EPG10-00/verification-receipt.json` in §23.9.
 
 <a id="epg10-00-plan"></a>
 #### EPG10-00 Khóa source authority và phạm vi
 
-**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
-**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+**Status:** COMPLETED_INVENTORY_ONLY — **Approval:** BOBBY_APPROVED, named phase 2026-10-15.
+**Tests:** 6 PASS / 0 FAIL / 0 SKIP / 0 BLOCKED (offline metadata) —
+**Exit:** PASS_INVENTORY_WITH_OWNED_UNKNOWNS — **Runtime activation:** NOT_AUTHORIZED.
 
 **Guide chi tiết bắt buộc:** [EDGE / EPG10-00](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-00-khóa-source-authority-và-phạm-vi);
 [BE §§2–3, 7, 17; ELP2-00](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§4, 8.3, 12/P0](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
@@ -9633,12 +9639,12 @@ Record phase approval, exact affected datasets/operations/profiles and partner r
 
 **Checklist:**
 
-- [ ] Pin full SHAs/dirty status cho TS, DL, PM, Edge/Portal main và stable, Research BE/FE riêng; ghi source review UTC, dirty/untracked digests và diff scope.
-- [ ] Đọc AGENTS/custom permissions; tách read-only inspection khỏi mutation package cần duyệt.
-- [ ] Map P16 catalogue/manifest/permit/cursor/retention và deferred membership; đọc source migrations tới current HEAD nhưng giữ applied schema riêng.
-- [ ] Verify target service/binary/DB/TLS chỉ bằng read route được phép; missing source/runtime giữ UNKNOWN.
-- [ ] List every authority/writer, human/workload trust, supported mode/venue/profile và unavailable operations.
-- [ ] Khóa base release read/Demo; phân biệt P184 performance G2 500 ms với P19 G2 mainnet optional theo explicit request; N1/F1 readiness phải revalidate theo journal hiện hành; không là global blocker của dataset đọc độc lập.
+- [x] Pin full SHAs/dirty status cho TS, DL, PM, Edge/Portal main và stable, Research BE/FE riêng; ghi source review UTC, dirty/untracked digests và diff scope.
+- [x] Đọc AGENTS/custom permissions; tách read-only inspection khỏi mutation package cần duyệt.
+- [x] Map P16 catalogue/manifest/permit/cursor/retention và deferred membership; đọc source migrations tới current HEAD nhưng giữ applied schema riêng (UNKNOWN, owned).
+- [x] Verify target service/binary/DB/TLS bằng allowed metadata; DB/applied schema and end-to-end transport remain explicitly UNKNOWN, not PASS. Expired Manager leafs identified.
+- [x] List authority/writer, human/workload trust, supported mode/venue/profile và unavailable operations for all39 guide families plus discovered transport/egress/feed-health interfaces.
+- [x] Khóa base release read/Demo; phân biệt P184 performance G2 500 ms với P19 G2 mainnet optional; latest N1/F1 journal re-read, no old global blocker or new blanket PASS.
 
 **Tests và fixtures:** `EPG10-T00-01` manifest rejects truncated/mismatched SHA ở release gate; `T00-02` migration source không làm applied-schema claim PASS; `T00-03` F-AUTH owner TEXT/shared admin token không đủ chứng minh business membership; `T00-04` pending production publication artifact không biến thành live flag.
 
@@ -9646,17 +9652,32 @@ Record phase approval, exact affected datasets/operations/profiles and partner r
 
 **Evidence:** source locators/digests, read-only inspection receipts, unresolved matrix và approvals references. **Exit gate:** mọi affected path có authority owner và exact baseline; UNKNOWN runtime có blocker rõ, không cho dependent production gate pass. **Stop/rollback:** baseline đổi thì repin và invalidate affected receipts; phase inventory không có service rollback. **Phase report:** branch/source/runtime table, permission gaps, decisions cần Bobby duyệt và scopes đủ điều kiện bắt đầu 01/02.
 
-**To do bổ sung từ source review:** Before closure capture actual producer/consumer publication status for orders/fills/positions, economics, registry, capital and reports; reconcile all guide families, not just the old 96-relation census. Re-read latest TS/DL journal instead of freezing historical B6/F1 wording.
+**Source-review checklist completed:** current producer/consumer publication status
+for orders/fills/positions, economics, registry, capital and reports is captured
+for all39 guide families plus discovered interfaces. Historical96relation pack
+requires semantic re-derivation, not blind rehash. Latest TS/DL journal supersedes
+historical B6/F1 wording; stage100#2 is RUNNING, not PASS.
 
 **Resource/test execution boundary:** Read-only metadata and bounded logs only; no benchmark or source-row scan. Manifest records what was not accessible. Shared-host lock, disposable
 namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
 
-**Technical debt / external gates:** Hiện chưa tạo technical debt. External inputs cần thu: Research BE/FE current pins, approved read-only runtime access/TLS/applied-schema proof, current producer handoff. Owner: TS/PM, Portal Research and runtime operators. Missing proof được ghi UNKNOWN với affected dataset; không tạo fake API.
+**Technical debt / external gates:** No unfinished phase00 defect. Research BE/FE
+pins and read-only runtime access are now obtained. Owned external dependencies:
+expired HK issuer/facade TLS (runtime PKI owner), actual applied-schema receipt
+(TS/platform), accepted external N03/P16 publication (TS publisher), mounted PM
+current trust/export/applied checkpoint (PM/Research), immutable Manager build/
+release provenance (TS runtime), and current numeric calibration (analytics).
+Each has an affected-path/independent-work disposition in the source map; none
+is silently promoted or an extra owner-approval request for phase00.
 
 **Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
 actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
 source/runtime/retention tuple; remaining gate owner and next independently runnable
-scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+scope. **Current execution:** §23.9; read-only partner audit and metadata verification
+only. Root is the sole file writer; three read-only reviewers cover TS/DL, PM and
+Portal/Research. Six manifest cases passed with Python standard library
+(verification tooling, no new runtime); no cargo/pytest/build/load during the
+foreign host measurement lock. No product service/source/credential/DB mutation.
 
 
 <a id="epg10-01-plan"></a>
@@ -10236,6 +10257,9 @@ scope. **Hiện tại:** no implementation, no product receipt, no cleanup artif
 ### 23.6 Decision and external-dependency register
 
 Every decision below starts **PENDING_SCOPED_REVIEW** for implementation/activation.
+EPG10-00 inventory dispositions for all15 are now recorded in
+[source authority/scope map](evidence/execution-edge-v1_2/EPG10-00/SOURCE_AUTHORITY_AND_SCOPE.md#decisions-and-dependencies-dec-e01e15);
+they do not grant later-phase runtime approval.
 Already selected design is not reopened: PM R2 and SCORE formula/weights/bands remain
 approved-design. Per decision record owner, UTC, accepted/rejected/deferred state,
 exact evidence/approval reference, affected dataset/operation and next independent
@@ -10381,6 +10405,110 @@ rollback artifacts and parallel worktrees intentionally retained; active images/
 config/restarts not freshly verified because Docker read access was denied.
 Next permitted step after this documentation commit: Bobby reviews and approves
 a named EPG10 phase, starting with 00; no automatic implementation continuation.
+
+### 23.9 EPG10-00 execution journal — 2026-10-15
+
+**Approval / goal / scope:** Bobby explicitly approved EPG10-00 and optimized
+parallel review. Freeze truthful source/authority/runtime inventory only, governed
+by the four byte-pinned guides in §23.8 and phase links in §23.5. No subsequent
+phase, rollout, producer edits, business data scan, migration, trust provisioning,
+push or merge. Invariants and six test gates are unchanged from EPG10-00 above.
+
+**Owned deliverables:** `upgrade/evidence/execution-edge-v1_2/EPG10-00/`
+contains sanitized manifest, source/authority/dependency map and verification receipt;
+`scripts/verify_execution_edge_authority.py` is offline metadata validation tooling,
+not a Python runtime service. No secrets, raw rows, private evidence or unbounded logs.
+
+**Workflow / stop boundary:** one feature branch/worktree and sole writer; three
+read-only reviewers have disjoint TS/DL, PM and Portal/Research scopes. Repin at
+start/end of each round; source drift invalidates only affected mappings/receipts.
+Do not copy historic PASS into this campaign. UNKNOWN is owned and blocks the
+dependent activation, not unrelated offline work. Revert only this phase's source
+commit if needed; runtime is untouched, so no service rollback is performed.
+
+**Round 1, 16:23–16:31 UTC:** refreshed source/journals and read-only container
+metadata. DL moved to `864774d5df6b9cfe8c9163272847619c20ff3b9f` during review;
+current stage100#2 remains RUNNING, not PASS. PM report HTTP/transport component
+exists, but actual export/applied checkpoint is unqualified. SGP source/runtime
+access succeeded using existing pinned SSH trust. Default sandbox sudo was denied;
+approved read-only escalation succeeded without changing permissions or trust.
+Host lock `claude-n1-opt-20261013` until 17:42:27 UTC prohibits heavy work;
+all reviewers complied. Manifest tests NOT_RUN at this pre-implementation checkpoint.
+
+**Round 2 / tested slice, 16:31–16:42 UTC:**
+
+- Added [source/runtime manifest](evidence/execution-edge-v1_2/EPG10-00/source-runtime-manifest.json),
+  [authority/scope/permissions/dependency map](evidence/execution-edge-v1_2/EPG10-00/SOURCE_AUTHORITY_AND_SCOPE.md)
+  and [six-case receipt](evidence/execution-edge-v1_2/EPG10-00/verification-receipt.json).
+  Fourteen checkout pins include full SHA, separate staged/unstaged byte digests,
+  untracked path-set digest and relevant source-content hashes. Fifty-four
+  reviewed interface/guide pins; 39/39 guide families, 15/15 decisions; additional
+  report codec/transport, native registration and feed-health interfaces recorded.
+- Peer review found and closed metadata-validator defects before closure:
+  missing evidence sections could pass; decision count allowed duplicate IDs.
+  Required sections/source pins/publication identities and exact unique decisions
+  now fail closed; negative variants cover these omissions. Review confirmed PM
+  facts against unchanged `d16aa2b5…`; no producer fixes or new debt.
+- Actual command: `python3 scripts/verify_execution_edge_authority.py --self-test --check-local`:
+  **6 PASS / 0 FAIL / 0 SKIP / 0 BLOCKED**. All case IDs T00-01…06 are offline
+  metadata/negative-fixture tests, **not service/DB/auth runtime qualification**.
+  Standard-library assertions also checked 39 ordered family rows, 15 unique
+  decision rows and source-map relative links/anchors. `git diff --check` PASS.
+  Other94 EPG10 cases NOT_RUN; no cargo, pytest, build, load, new containers,
+  provider request, source-row read or business-data mutation.
+- Local producer HEAD/interface-byte/diff/untracked checks passed again16:41.
+  SGP recheck16:38:01 kept all six source HEADs/staged/untracked-path digests;
+  FE screenshot PNG changes continued under its owner (new unstaged digest
+  recorded separately), not reset. Four concurrent Research guide uploads match
+  the supplied four byte pins. A fifth UX companion is now discoverable remotely,
+  hashed but not read/adopted for phase00. Initial source snapshot remains dated,
+  never a promise that peers cannot subsequently move.
+- Fresh public cert inspection: HK Manager issuer/facade leafs expired
+  **2026-09-27T03:40:51Z**; valid Edge/Proxy/SGP certs do not repair upstream.
+  Source Proxy profile config uses `proxy_ssl_verify on`. No handshake/route
+  qualification, insecure fallback, credential read or cert rotation. Manager
+  images lack OCI revision labels and reference an absent historical owner
+  worktree: obtain immutable build/release provenance before future rollout,
+  not recreate an old deployment tree. Default sudo/RG PATH limitations were
+  resolved with approved read-only escalation/grep fallback, no package install.
+- Current HK Edge image `sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e`,
+  Proxy `sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b`,
+  OCI revision `8814cd2a5f66aeac0828812dbb8340c4f0a4adbb`, release location
+  `/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy`.
+  Full18service/config/Manager/PG tuples are in the manifest. Automated start/end
+  comparison16:40:23: **18/18 image/config/restart counters unchanged**. SGP
+  stable Control API `sha256:d2c23ad668fcf4e03e0c6edffe9b9cc1a8d5a7b3787dd9ae280677f76e965263`,
+  deployed release `/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose`,
+  differs from stable source main `533162635f56584d630e3d971d77d50860595f15`;
+  stable image/config/restart tuples unchanged at recheck.
+
+**Cleanup / source-release reconciliation:** No disposable images/cache/containers,
+rows, ports, secrets or temporary files created; phase-owned teardown is
+`NO_ACTION_NEEDED`. Read-only inventory: host125images; BuildKit27.91GB total,
+20.37GB reclaimable, shared21.55GB/private6.363GB. No prune during active foreign
+production measurement and no authority to remove peer/shared rollback artifacts.
+All operational images/containers/volumes and existing rollback artifacts retained;
+qualified historical rollback-release enumeration remains UNKNOWN, not invented.
+`df -B1 /home/bobby` available194088599552→191712604160 bytes; **no cleanup/reclaim**,
+shared disk movement during the TS/DL campaign is not attributed to this phase.
+Canonical HK source checkout remains `/home/bobby/.worktrees/portal-execution-manager-v2`
+on `feat/manager-v2-paper-read@54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4`;
+active upgrade branch/worktree `feat/execution-edge-upgrade-v1_2` /
+`/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2`, base
+`ca13617ff273af4b4ad68453b944e83c30a5a19e`. SGP canonical source is
+`/home/bobby/portal@87d9d98c3a80400a72de759e63dfc50af70e0436`, distinct from
+stable source checkout/runtime. Active Portal feature worktrees are inventoried,
+preserved and not treated as production identity. No push, merge or deploy.
+
+**Exit / decision boundary:** `COMPLETED_INVENTORY_ONLY` /
+`PASS_INVENTORY_WITH_OWNED_UNKNOWNS`. Every affected family has authority/writer/
+source/read/consumer/lineage status; UNKNOWNs have exact owner, missing artifact,
+affected activation and independently runnable next work. Expired TLS, applied
+DB state, external publication, PM mounted trust/export, source provenance and
+numeric calibration remain external dependencies, not hidden PASS or unfinished
+phase00 engineering. Next eligible scopes are **EPG10-01** (placement/baseline;
+heavy measurements wait for clean window) and **EPG10-02** (catalogue/contracts).
+Each still requires Bobby's named phase approval. No additional phase started.
 
 
 

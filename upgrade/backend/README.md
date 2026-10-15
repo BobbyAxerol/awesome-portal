@@ -8,11 +8,14 @@ Chúng không thay thế phase hoặc exit gate trong
 ## Active deep dives
 
 - [Execution Edge v1.2 — EPG10-00…11 detailed plan](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)
-  — **plan written, individual phase approval pending**. The new campaign starts
+  — **EPG10-00 completed, inventory only; 01…11 approval pending**. Six offline
+  metadata cases PASS, with source/runtime/TLS and owned unknowns recorded in
+  §23.9 and its manifest. No activation/runtime acceptance. The campaign starts
   from current `origin/dev`, keeps the complete four-file owner guide bundle under
   `upgrade/upgrade_v1.2`, and links Edge, Portal contracts, scoring and PM R2 inputs.
   Goals, scope, source pins, invariants, tests, exit gates, rollback, resource and
-  debt/owner tracking are recorded per phase. No new runtime or test PASS implied.
+  debt/owner tracking are recorded per phase. No product/runtime acceptance implied;
+  the remaining94 case IDs are NOT_RUN.
 
 - [Official Trading System owner request — Portal Execution capability campaign](./TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md)
   — **the governing owner request.** It consolidates N02/N03 incremental
