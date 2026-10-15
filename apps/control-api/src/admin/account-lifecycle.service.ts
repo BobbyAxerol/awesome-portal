@@ -164,6 +164,13 @@ export class AccountLifecycleService {
       );
     }
     const expiresAt = await this.withTransaction(null, async (tx) => {
+      const actor = await tx.users.lockById(input.actor.userId);
+      if (!actor || actor.status !== "ACTIVE" || actor.archivedAt || actor.mustChangePassword ||
+          actor.sessionVersion !== input.actor.sessionVersion ||
+          !await tx.sessions.lockActiveLease(input.sessionId, actor.userId, actor.sessionVersion) ||
+          (await tx.ownerAccess.ownerAnchor())?.userId !== actor.userId) {
+        throw new LifecycleDeniedError("CURRENT_ACTOR_AUTHORITY_REQUIRED", "Access denied.", 403);
+      }
       const granted = await tx.lifecycle.grantStepUp({
         stepUpId: randomId("stp"),
         sessionId: input.sessionId,
@@ -218,8 +225,33 @@ export class AccountLifecycleService {
   // ------------------------------------------------------------ operations
 
   async execute(request: LifecycleRequest): Promise<LifecycleResult> {
+    return this.executeAuthorized(request, "OWNER");
+  }
+
+  async updateOwnProfile(input: {
+    actor: PortalUser; sessionId: string; displayName: string; expectedRevision: number;
+    idempotencyKey: string; requestId?: string;
+  }): Promise<LifecycleResult> {
+    return this.executeAuthorized({ ...input, action: "UPDATE_PROFILE", targetUserId: input.actor.userId }, "SELF_PROFILE");
+  }
+
+  private async executeAuthorized(request: LifecycleRequest, scope: "OWNER" | "SELF_PROFILE"): Promise<LifecycleResult> {
     const fingerprint = fingerprintOf(request);
     const output = await this.withTransaction<LifecycleExecution>(request.idempotencyKey, async (tx) => {
+      const actor = await tx.users.lockById(request.actor.userId);
+      const authorized = actor && actor.status === "ACTIVE" && !actor.archivedAt && !actor.mustChangePassword &&
+        actor.sessionVersion === request.actor.sessionVersion &&
+        await tx.sessions.lockActiveLease(request.sessionId, actor.userId, actor.sessionVersion);
+      const anchor = scope === "OWNER" ? await tx.ownerAccess.ownerAnchor() : null;
+      const permittedScope = scope === "OWNER" ? anchor?.userId === actor?.userId :
+        request.action === "UPDATE_PROFILE" && request.targetUserId === actor?.userId &&
+        request.role === undefined && request.username === undefined;
+      if (!authorized || !permittedScope) {
+        await tx.audit.recordSecurityDecision({ eventType: "account_lifecycle_refused",
+          actorUserId: request.actor.userId, result: "DENIED", reasonCode: "CURRENT_ACTOR_AUTHORITY_REQUIRED",
+          requestId: request.requestId });
+        return { denial: new LifecycleDeniedError("CURRENT_ACTOR_AUTHORITY_REQUIRED", "Access denied.", 403) };
+      }
       /*
        * The advisory transaction lock serializes only a shared idempotency
        * key.  It closes the read-then-insert race without serializing unrelated
@@ -227,13 +259,19 @@ export class AccountLifecycleService {
        */
       const prior = await tx.lifecycle.findByIdempotencyKey(request.idempotencyKey);
       if (prior) {
-        if (prior.requestFingerprint !== fingerprint) {
+        // Retain historical fingerprints, but never let another authorized
+        // actor replay somebody else's operation through a globally unique key.
+        if (prior.actorUserId !== request.actor.userId || prior.requestFingerprint !== fingerprint) {
           return {
             denial: new LifecycleDeniedError(
               "IDEMPOTENCY_KEY_PAYLOAD_CONFLICT",
               "That idempotency key was used for a different request. Use a new key.",
             ),
           };
+        }
+        if (prior.outcome === "DENIED" || prior.outcome === "CONFLICT") {
+          return { denial: new LifecycleDeniedError(prior.reasonCode ?? "PREVIOUS_OPERATION_REFUSED",
+            "This request was refused. Refresh the account before trying a new request.", 409) };
         }
         const account = await tx.users.findById(prior.targetUserId);
         if (!account) {

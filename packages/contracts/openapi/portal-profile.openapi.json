@@ -1,0 +1,451 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal own-profile identity and lifecycle",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/auth/profile": {
+      "get": {
+        "operationId": "portalOwnProfileGetV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Own source-confirmed identity; private,no-store",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnProfile"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed refusal; no secrets. Current authority is rechecked before replay/write.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed refusal; no secrets. Current authority is rechecked before replay/write.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed refusal; no secrets. Current authority is rechecked before replay/write.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed refusal; no secrets. Current authority is rechecked before replay/write.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed refusal; no secrets. Current authority is rechecked before replay/write.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileProblem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "portalOwnProfilePatchV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-portal-idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{8,128}$"
+            }
+          },
+          {
+            "name": "x-portal-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnProfilePatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Atomic own-profile lifecycle receipt; private,no-store",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnProfileOperation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed refusal; no secrets. Current authority is rechecked before replay/write.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed refusal; no secrets. Current authority is rechecked before replay/write.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed refusal; no secrets. Current authority is rechecked before replay/write.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed refusal; no secrets. Current authority is rechecked before replay/write.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed refusal; no secrets. Current authority is rechecked before replay/write.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "PortalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-portal_session"
+      }
+    },
+    "schemas": {
+      "OwnProfile": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "user_id",
+          "display_name",
+          "account_state",
+          "account_revision",
+          "external_identity",
+          "ts_identity",
+          "researcher_identity",
+          "access",
+          "may_update_display_name",
+          "owner_recovery"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.profile.v1"
+          },
+          "user_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "display_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "account_state": {
+            "enum": [
+              "INVITED",
+              "ACTIVE",
+              "DISABLED",
+              "ARCHIVED"
+            ]
+          },
+          "account_revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "external_identity": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "authority"
+            ],
+            "properties": {
+              "state": {
+                "enum": [
+                  "BOUND",
+                  "UNBOUND"
+                ]
+              },
+              "authority": {
+                "const": "PORTAL_VERIFIED_ISSUER_SUBJECT"
+              }
+            }
+          },
+          "ts_identity": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "reason",
+              "source_locator"
+            ],
+            "properties": {
+              "state": {
+                "const": "UNMAPPED"
+              },
+              "reason": {
+                "const": "MAPPING_SOURCE_NOT_QUALIFIED"
+              },
+              "source_locator": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "researcher_identity": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "reason",
+              "source_locator"
+            ],
+            "properties": {
+              "state": {
+                "const": "UNMAPPED"
+              },
+              "reason": {
+                "const": "MAPPING_SOURCE_NOT_QUALIFIED"
+              },
+              "source_locator": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "access": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "is_owner",
+              "capabilities",
+              "scopes"
+            ],
+            "properties": {
+              "is_owner": {
+                "type": "boolean"
+              },
+              "capabilities": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              },
+              "scopes": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "may_update_display_name": {
+            "type": "boolean"
+          },
+          "owner_recovery": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "enabled",
+              "reason"
+            ],
+            "properties": {
+              "enabled": {
+                "const": false
+              },
+              "reason": {
+                "const": "OWNER_RECOVERY_NOT_APPROVED"
+              }
+            }
+          }
+        }
+      },
+      "OwnProfilePatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "display_name",
+          "expected_revision"
+        ],
+        "properties": {
+          "display_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "pattern": "^(?=.*\\S)[^\\u0000-\\u001f\\u007f]+$",
+            "description": "Nonblank raw input without control characters, at most120 characters; trimmed by the server. Display name only. Identity, roles and grants are immutable here."
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        }
+      },
+      "OwnProfileOperation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "outcome",
+          "operation_id",
+          "resulting_revision",
+          "profile"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.profile-operation.v1"
+          },
+          "outcome": {
+            "enum": [
+              "APPLIED",
+              "REPLAYED"
+            ]
+          },
+          "operation_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "resulting_revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "profile": {
+            "$ref": "#/components/schemas/OwnProfile"
+          }
+        }
+      },
+      "ProfileProblem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "request_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

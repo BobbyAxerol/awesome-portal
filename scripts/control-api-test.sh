@@ -78,6 +78,7 @@ trap cleanup EXIT
 # node_modules tree becomes read-only in the internal test cell below.
 cp "${APP_DIR}/package.json" "${APP_DIR}/package-lock.json" "${DEPS_DIR}/"
 "${DOCKER[@]}" run --rm --network bridge --read-only \
+  --cpus 3 --memory 3g --pids-limit 512 \
   -u "${CONTAINER_USER}" \
   -v "${DEPS_DIR}:/deps" \
   --tmpfs /tmp:rw,exec,mode=1777,size=256m \
@@ -123,6 +124,7 @@ ln -s ../node_modules "${WORK_DIR}/node_modules"
 "${DOCKER[@]}" network create --internal "${NETWORK}" >/dev/null
 
 "${DOCKER[@]}" run -d --name "${PG_CONTAINER}" --network "${NETWORK}" --read-only \
+  --cpus 1 --memory 1g --pids-limit 256 \
   --tmpfs /var/lib/postgresql/data:rw,exec,mode=0700,size=2048m \
   --tmpfs /run/postgresql:rw,exec,mode=1777,size=16m \
   --tmpfs /tmp:rw,exec,mode=1777,size=64m \
@@ -144,6 +146,7 @@ if [[ "${ready}" != true ]]; then
 fi
 
 "${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}" --network "${NETWORK}" --read-only \
+  --cpus 3 --memory 3g --pids-limit 512 \
   -u "${CONTAINER_USER}" \
   -v "${DEPS_DIR}:/cell" \
   -v "${ROOT_DIR}/packages/contracts:/contracts:ro" \

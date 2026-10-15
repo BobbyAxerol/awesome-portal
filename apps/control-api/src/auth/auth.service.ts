@@ -19,6 +19,7 @@ import { Argon2CredentialService, constantTimeEqual, randomToken, sha256 } from 
 import { CloudflareJwtError, CloudflareJwtVerifier } from "./cloudflare";
 import { isAcceptablePassword, validatePassword } from "./policy";
 import { PrincipalService } from "./principal";
+import { withTransaction } from "../db/pool";
 
 export class AuthError extends Error {
   constructor(
@@ -126,6 +127,15 @@ export class AuthService {
       session = null;
     }
     if (session) {
+      // In production, both authentication factors must name the same user.
+      // Local preview's explicit dev identity remains a separate, non-CF mode.
+      if (this.config.AUTH_MODE !== "dev") {
+        const binding = await this.bindings.findByProviderIdentity(identity.iss, identity.sub);
+        if (!binding || binding.userId !== session.userId || session.accessSubject !== identity.sub) {
+          return { state: "APP_LOGIN_REQUIRED", principal: null,
+            accessIdentity: { sub: identity.sub, email: identity.email } };
+        }
+      }
       const user = await this.users.findById(session.userId);
       if (user && user.status === "DISABLED") {
         return {
@@ -277,7 +287,10 @@ export class AuthService {
       identity.iss,
       identity.sub,
     );
-    if (binding && binding.userId !== user.userId) {
+    const targetBindings = await this.bindings.findByUser(user.userId);
+    if ((binding && binding.userId !== user.userId) ||
+        (targetBindings.length > 0 && !targetBindings.some((b) => b.issuer === identity.iss && b.subject === identity.sub))) {
+      await this.argon2.verifyAgainstDecoy();
       await this.audit.record({
         eventType: "login_denied_binding_conflict",
         targetUserId: user.userId,
@@ -294,6 +307,7 @@ export class AuthService {
       identity.email,
     );
     if (emailBinding && emailBinding.userId !== user.userId) {
+      await this.argon2.verifyAgainstDecoy();
       await this.audit.record({
         eventType: "login_denied_binding_conflict",
         targetUserId: user.userId,
@@ -418,45 +432,55 @@ export class AuthService {
       throw new AuthError("INVALID_CREDENTIALS", GENERIC_LOGIN_ERROR, 401);
     }
 
-    await this.users.resetLoginCounters(user.userId);
-    const wasInvited = user.status === "INVITED" && !binding;
-    if (wasInvited) {
-      await this.bindings.create({
-        bindingId: randomId("bnd"),
-        userId: user.userId,
-        issuer: identity.iss,
-        subject: identity.sub,
-        email: identity.email,
-      });
-      await this.users.update({ userId: user.userId, mustChangePassword: true });
-      await this.audit.record({
-        eventType: "identity_bound",
-        actorUserId: user.userId,
-        targetUserId: user.userId,
-        accessSubject: identity.sub,
-        result: "SUCCESS",
-        requestId: input.requestId,
-        sourceIp: input.sourceIp,
-      });
-    } else if (binding) {
-      await this.bindings.touch(binding.bindingId);
-    }
+    try {
+      return await withTransaction(this.pool, async (client) => {
+        const users = new UsersRepository(client), bindings = new BindingsRepository(client);
+        const audit = new AuditRepository(client);
+        const current = await users.lockById(user.userId);
+        if (!current || current.status === "DISABLED" || current.archivedAt ||
+            current.sessionVersion !== user.sessionVersion || current.mustChangePassword !== user.mustChangePassword) {
+          throw new AuthError("INVALID_CREDENTIALS", GENERIC_LOGIN_ERROR, 401);
+        }
+        const existing = await bindings.findByUser(current.userId);
+        const byIdentity = await bindings.findByProviderIdentity(identity.iss, identity.sub);
+        const byEmail = await bindings.findByProviderEmail(identity.iss, identity.email);
+        if ((byIdentity && byIdentity.userId !== current.userId) || (byEmail && byEmail.userId !== current.userId) ||
+            (existing.length > 0 && !existing.some((b) => b.issuer === identity.iss && b.subject === identity.sub))) {
+          throw new AuthError("INVALID_CREDENTIALS", GENERIC_LOGIN_ERROR, 401);
+        }
+        await users.resetLoginCounters(current.userId);
+        // First binding requires BOTH a verified external assertion and the
+        // existing Portal credential. ENABLE can restore an unbound invitation
+        // as ACTIVE/password-pending; legacy ACTIVE accounts can be unbound too.
+        // Limiting this to INVITED strands those users in a successful-login /
+        // APP_LOGIN_REQUIRED loop. The user lock serializes competing bindings.
+        if (existing.length === 0) {
+          await bindings.create({
+            bindingId: randomId("bnd"), userId: current.userId,
+            issuer: identity.iss, subject: identity.sub, email: identity.email,
+          });
+          if (current.status === "INVITED")
+            await users.update({ userId: current.userId, mustChangePassword: true });
+          await audit.record({
+            eventType: "identity_bound", actorUserId: current.userId, targetUserId: current.userId,
+            accessSubject: identity.sub, result: "SUCCESS", requestId: input.requestId, sourceIp: input.sourceIp,
+          });
+        } else if (byIdentity) await bindings.touch(byIdentity.bindingId);
 
-    await this.audit.record({
-      eventType: "login_succeeded",
-      actorUserId: user.userId,
-      targetUserId: user.userId,
-      accessSubject: identity.sub,
-      result: "SUCCESS",
-      requestId: input.requestId,
-      sourceIp: input.sourceIp,
-    });
-    return this.createSession(
-      user,
-      identity,
-      credentialProof.activationId,
-      input.requestId,
-    );
+        await audit.record({
+          eventType: "login_succeeded", actorUserId: current.userId, targetUserId: current.userId,
+          accessSubject: identity.sub, result: "SUCCESS", requestId: input.requestId, sourceIp: input.sourceIp,
+        });
+        return this.createSession(
+          current, identity, credentialProof.activationId, input.requestId, new SessionsRepository(client),
+        );
+      });
+    } catch (error) {
+      if ((error as { code?: string }).code === "23505") {
+        throw new AuthError("INVALID_CREDENTIALS", GENERIC_LOGIN_ERROR, 401);
+      }
+      throw error;
+    }
   }
 
   /**
@@ -507,6 +531,13 @@ export class AuthService {
     if (!token) return null;
     const row = await this.sessions.findByTokenHash(sha256(token));
     if (!row) return null;
+    if (row.state === "ACTIVE") {
+      const user = await this.users.findById(row.userId);
+      if (!user || user.status === "DISABLED" || user.archivedAt || user.sessionVersion !== row.sessionVersion) {
+        await this.sessions.revokeSession(row.sessionId, "identity_or_generation_revoked");
+        return { ...row, state: "REVOKED" as const };
+      }
+    }
     const now = new Date();
     if (
       row.state === "ACTIVE" &&
@@ -545,6 +576,7 @@ export class AuthService {
     identity: VerifiedAccessIdentity,
     activationId: string | null,
     requestId: string | undefined,
+    sessions: SessionsRepository = this.sessions,
   ): Promise<SessionResult> {
     const token = randomToken(32);
     const csrfToken = randomToken(24);
@@ -556,7 +588,7 @@ export class AuthService {
       idleExpiresAt: new Date(now.getTime() + this.config.SESSION_IDLE_SECONDS * 1000),
       absoluteExpiresAt: new Date(now.getTime() + this.config.SESSION_ABSOLUTE_SECONDS * 1000),
     };
-    await this.sessions.create({
+    await sessions.create({
       sessionId: session.sessionId,
       tokenHash: sha256(token),
       userId: user.userId,
@@ -681,27 +713,24 @@ export class AuthService {
       throw new AuthError("PASSWORD_REJECTED", "Password does not meet the policy.", 422);
     }
     const { hash, parametersJson } = await this.argon2.hash(input.newPassword);
-    await this.credentials.upsertPassword({
+    await withTransaction(this.pool, async (client) => {
+      const users = new UsersRepository(client), sessions = new SessionsRepository(client);
+      const credentials = new CredentialsRepository(client);
+      const current = await users.lockById(user.userId);
+      if (!current || current.status === "DISABLED" || current.archivedAt ||
+          current.sessionVersion !== session.sessionVersion ||
+          !await sessions.lockActiveLease(session.sessionId, user.userId, session.sessionVersion)) {
+        throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
+      }
+      await credentials.upsertPassword({
       credentialId: randomId("pwd"),
       userId: user.userId,
       passwordHash: hash,
       parametersJson,
     });
-    /*
-     * A4-1 · order these two so a crash cannot strand the account.
-     *
-     * These four writes are not one transaction. With the revoke first, a
-     * process death between it and the update left: a usable new password, no
-     * activation, and `must_change_password` still true — an account that
-     * login will only accept an activation for, and that has none. Permanent,
-     * and only an owner reset could undo it.
-     *
-     * Clearing the flag first inverts the failure: a crash in the new window
-     * leaves a spent activation row behind (already `used_at IS NOT NULL`, so
-     * useless for login) while the user simply signs in with the password they
-     * just set. Same happy path, recoverable failure instead of a dead end.
-     */
-    await this.users.update({
+      // Credential, activation completion, revocation and audit commit together.
+      // A disable/reset racing the password hash cannot resurrect this user.
+      await users.update({
       userId: user.userId,
       /*
        * A4-1 · setting a password completes an invitation; it never reverses a
@@ -719,15 +748,16 @@ export class AuthService {
       status: user.status === "INVITED" ? "ACTIVE" : undefined,
       mustChangePassword: false,
     });
-    await this.credentials.revokeActivationCredentials(user.userId);
-    await this.users.bumpSessionVersion(user.userId);
-    await this.sessions.revokeAllForUser(user.userId, "password_change");
-    await this.audit.record({
+      await credentials.revokeActivationCredentials(user.userId);
+      await users.bumpSessionVersion(user.userId);
+      await sessions.revokeAllForUser(user.userId, "password_change");
+      await new AuditRepository(client).record({
       eventType: "password_changed",
       actorUserId: user.userId,
       targetUserId: user.userId,
       result: "SUCCESS",
       requestId: input.requestId,
+    });
     });
   }
 

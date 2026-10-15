@@ -2,7 +2,7 @@
   "schema": "research-loop.live-route-ledger.v1",
   "statement": "Live static route ledger. Regenerate with --write-live-routes in the same change that adds or removes a route.",
   "protected_kernel_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
-  "route_count": 271,
+  "route_count": 273,
   "routes": [
     {
       "method": "DELETE",
@@ -48,6 +48,11 @@
       "method": "GET",
       "path": "/api/auth/csrf",
       "owner": "apps/control-api/src/auth/auth.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/profile",
+      "owner": "apps/control-api/src/auth/profile.controller.ts"
     },
     {
       "method": "GET",
@@ -943,6 +948,11 @@
       "method": "PATCH",
       "path": "/api/admin/accounts/:user_id",
       "owner": "apps/control-api/src/admin/account-lifecycle.controller.ts"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/auth/profile",
+      "owner": "apps/control-api/src/auth/profile.controller.ts"
     },
     {
       "method": "PATCH",

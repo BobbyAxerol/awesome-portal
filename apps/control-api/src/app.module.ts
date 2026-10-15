@@ -5,6 +5,7 @@ import { ExecutionRetainedReviewController } from "./execution/retained-review.c
 import { DynamicModule, Module } from "@nestjs/common";
 import { Pool } from "pg";
 import { AuthController } from "./auth/auth.controller";
+import { ProfileController } from "./auth/profile.controller";
 import { AuthService } from "./auth/auth.service";
 import { Argon2CredentialService } from "./auth/argon";
 import { AdminService } from "./admin/admin.service";
@@ -207,6 +208,7 @@ export class AppModule {
         ExecutionRetainedReviewController,
         HealthController,
         AuthController,
+        ProfileController,
         // A4-2 retired the six /api/admin/users* routes. They mutated
         // accounts with no expected revision, no idempotency, no step-up and
         // no operation record, so leaving them mounted beside the control

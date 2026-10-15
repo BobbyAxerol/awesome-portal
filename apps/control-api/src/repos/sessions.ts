@@ -134,6 +134,17 @@ export class SessionsRepository {
     return result.rows[0]?.active === true;
   }
 
+  /** Recheck and hold the session through a mutation commit, after user lock. */
+  async lockActiveLease(sessionId: string, userId: string, sessionVersion: number): Promise<boolean> {
+    const result = await this.pool.query(
+      `SELECT session_id FROM auth_sessions
+        WHERE session_id=$1 AND user_id=$2 AND session_version=$3 AND state='ACTIVE'
+          AND idle_expires_at > clock_timestamp() AND absolute_expires_at > clock_timestamp()
+        FOR UPDATE`, [sessionId, userId, sessionVersion],
+    );
+    return result.rowCount === 1;
+  }
+
   async expireStale(now: Date): Promise<void> {
     await this.pool.query(
       `UPDATE auth_sessions SET state = 'EXPIRED'

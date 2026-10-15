@@ -107,12 +107,24 @@ are in [contract-map.md](contract-map.md).
 - Independent read-only contract review found score band/component omissions,
   metric contradictions, wrong Edge names, PM text/context and alias gaps. The
   fixes above and corresponding negative tests are incorporated before freeze.
-- Latest normal-hook checkpoint: contracts **388 PASS**, Control API build PASS,
+- Previous normal-hook checkpoint51825: contracts **388 PASS**, Control API build PASS,
   Control API **2,603 PASS / 1 FAIL / 3 skipped**, 276 files PASS / 1 FAIL /
   2 skipped, 755.45s. The sole failure is the retained-review harness expecting
   a revoked session to work after disable→enable (expected403, actual401).
   Phase02's harness correction now obtains a fresh authenticated session;
-  its retake is NOT_RUN. No commit or restore PASS is claimed for this attempt.
+  that attempt has no commit or restore PASS. The later retake is recorded below;
+  this failed receipt is retained, not rewritten as success.
+- Normal hook89394 terminated exit0: contracts **51 files/388 tests PASS**;
+  clean Control API build; **277 files/2,606 tests PASS,2 files/3 tests skipped**,
+  duration787.80s; PostgreSQL dump/restore signature PASS. The identity snapshot
+  had17 cases; retained-review8/8 PASS. Later02 changes require02's own gate.
+  Normal workspace, N29/fail-closed and tracking checks also PASS. Landed local
+  commit `700aa6a47cdfc72c53ced8f1851144e1ab58f3e0`,40files +27,558/−3
+  including preserved onboarding guides/assets and00 evidence, not just code.
+  Accounting by path: implementation/tooling8files +501/−2; generated5files
+  +18,453/−1; tests2files +172/−0; docs/evidence23files +8,432/−0;
+  assets2binaryfiles (excluded from line totals). These add to the commit
+  total; generated and provided guide lines are not hand-coded implementation.
 
 ### Artifact pins
 
@@ -140,6 +152,12 @@ available, RAM12527550464 bytes available, no swap. CPU/RSS peak NOT_MEASURED;
 do not infer resource/load qualification. Cleanup `NO_ACTION_NEEDED`, no broad
 prune or user-data deletion. Rollback removes additive unused contracts/validator
 and restores tooling list, never revoked identities/grants/audit.
+
+Hook89394 cleanup verified after exit: exact Node/PG containers
+`control-api-test-{node,postgres}-1483524` and internal network
+`control-api-test-net-1483524` absent. Disk available169251532800 bytes,75%used.
+Observed point (not peak): Node1005MiB/3GiB, PG74.42MiB/1GiB; combined CPU/memory
+ceilings4CPU/4GiB. `NO_ACTION_NEEDED`; shared services/data untouched.
 
 ### Handoff / debt / next steps
 

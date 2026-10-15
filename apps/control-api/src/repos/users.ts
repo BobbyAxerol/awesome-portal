@@ -56,6 +56,14 @@ export class UsersRepository {
     return result.rows[0] ? toUser(result.rows[0]) : null;
   }
 
+  /** Transaction-only identity fence; never infer ownership from a name. */
+  async lockById(userId: string): Promise<PortalUser | null> {
+    const result = await this.pool.query<UserRow>(
+      `SELECT * FROM portal_users WHERE user_id = $1 FOR UPDATE`, [userId],
+    );
+    return result.rows[0] ? toUser(result.rows[0]) : null;
+  }
+
   async list(): Promise<PortalUser[]> {
     const result = await this.pool.query<UserRow>(
       `SELECT * FROM portal_users ORDER BY username`,

@@ -9505,6 +9505,8 @@ block only dependent activation. Existing Research/Governance evidence preserved
   generation and snapshot checks PASS. Schema-only API, no mounted route.
   External authority/consumer/runtime gates remain OPEN.02 dependency ready;
   frontend NOT_STARTED_BY_OWNER_DIRECTION, handoff AWAITING_CONSUMER_REVIEW.
+  Local commit `700aa6a4`; normal hook388 contracts/2,606 API tests PASS,
+ 3 API tests skipped, restore/tracking PASS. No shared runtime change.
 - **Goal/dependency:** sau 00; contract slice đủ cho FE không đoán data/quyền.
 - **To-do:** identity/resource keys, decimal/UTCms, environment/stage/lifecycle, availability, revision/cursor; PM envelope/payload preservation; manager/researcher schemas; score basis/status/config schema; OpenAPI generation và fixtures FX-01…25 theo guide.
 - **Claude:** UXM-01/02 map từng field/action vào generated DTO, IA/role states; draft UXM-03…05 được dùng synthetic fixtures ghi rõ.
@@ -9515,6 +9517,12 @@ block only dependent activation. Existing Research/Governance evidence preserved
 
 ### ELP2-02 — Nâng cấp Profile identity và lifecycle
 
+- **Current backend return2026-10-16:** [packet](./execution_loop/evidence/ELP2-02/README.md)
+  records identity/session/lifecycle fixes and generated own-profile contracts.
+  Earlier isolated PG/API cell90/90 PASS; current normal-hook snapshot identity
+  17/17 and retained-review8/8 PASS. Final18-case02 snapshot and coherent commit
+  remain pending; no shared runtime or external identity mapping activated.
+  Frontend NOT_STARTED_BY_OWNER_DIRECTION; handoff AWAITING_CONSUMER_REVIEW.
 - **Goal/dependency:** 01; bảo toàn users/accounts/session/owner đã có, identity đồng nhất Research/Execution.
 - **To-do:** stable issuer+subject và verified researcher owner mapping; lifecycle/revoke/own-profile; protected owner recovery chỉ theo quyết định được duyệt; migration expand nếu cần, không reset users/grants.
 - **Claude:** M10 identity/session states qua UXM-02/07; không suy owner từ tên/deployer.
@@ -10054,3 +10062,12 @@ phải mở thêm phase hoặc commissioning TS/Edge.
 không chạy lại full suite/build/DB do sửa kế hoạch. Các receipt trên là lịch
 sử hiện có, không phải test mới của lượt planning. Code đang dở được giữ nguyên;
 không push, merge, rebuild shared preview hoặc bắt đầu frontend.
+
+**Implementation continuation2026-10-16:**01 landed at
+`700aa6a47cdfc72c53ced8f1851144e1ab58f3e0`; normal hook89394 exit0,
+388 contracts/2,606 Control API tests PASS,3 API tests skipped; clean build,
+PostgreSQL restore signature and tracking PASS. Its owned cell/network cleanup
+verified. This supersedes the earlier failed-hook checkpoint without erasing
+it.02 final18-case snapshot is prepared for its coherent normal-hook landing;
+03/04 remain dependent, not complete. Frontend is not assigned; no push/runtime
+change or production policy/TS authority is authorized by these local results.
