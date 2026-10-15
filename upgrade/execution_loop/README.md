@@ -1,9 +1,13 @@
 # Execution Loop Portal V2 — entry point
 
-Ngày ghi: 2026-10-15 (Asia/Saigon). Phạm vi hiện tại: đọc guide, đối chiếu
-source chỉ đọc và chuẩn hóa rules/handoff theo Bobby. **Current update2026-10-16:
-ELP2-00 audit delivered, READY_FOR_BOBBY_REVIEW; owner acceptance pending.**
-Chưa triển khai ứng dụng ELP2/EPG10/UXM, không phê duyệt build/migration/activation.
+Ngày ghi: 2026-10-15 (Asia/Saigon). Phạm vi onboarding ban đầu là đọc guide,
+đối chiếu source chỉ đọc và chuẩn hóa rules/handoff. **Current update2026-10-16:**
+ELP2-00 audit delivered;01/02 local backend checkpoints landed ở `700aa6a4` và
+`b448c0be`;03 có186/186 focused PASS trên snapshot trước review cuối, latest
+delta và normal-hook commit còn pending;04 preparation only. Xem
+[điểm tiếp tục hiện hành](../UNIFIED_IMPLEMENTATION_PLAN.md#elp2-batch-current-resume).
+Frontend chưa được giao; không có shared-runtime/Edge activation. Các đoạn
+onboarding/PLAN_ONLY bên dưới giữ lịch sử, không ghi đè current return này.
 
 [ELP2-00 packet](evidence/ELP2-00/README.md) có baseline manifest mới nhất,
 112-route census,14family/11XLC/15decision map,8audit checks và backend/Claude

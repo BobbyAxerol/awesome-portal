@@ -1,0 +1,968 @@
+/**
+ * ELP2-03 real disposable-PG and mounted Nest/Fastify regression definitions.
+ * The explicit TEST_DATABASE_URL is the only database target. The synthetic
+ * reviewed policy, human mapping, relations and receipt verifier below are
+ * TEST_ONLY dependency injection, never TS producer/runtime qualification.
+ * No public socket is opened; HTTP assertions use Fastify.inject().
+ */
+import { Module } from "@nestjs/common";
+import { NestFactory } from "@nestjs/core";
+import { FastifyAdapter, NestFastifyApplication } from "@nestjs/platform-fastify";
+import fastifyCookie from "@fastify/cookie";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { AdminService } from "../src/admin/admin.service";
+import { AuthService } from "../src/auth/auth.service";
+import { CSRF_COOKIE, SESSION_COOKIE } from "../src/auth/cookies";
+import { PortalUser, VerifiedAccessIdentity } from "../src/domain";
+import { SessionGuard } from "../src/facade/session.guard";
+import { HttpErrorFilter } from "../src/http-error.filter";
+import { AccountLifecycleRepository } from "../src/repos/account-lifecycle";
+import { OwnerAccessRepository } from "../src/repos/owner-access";
+import { WorkspacesRepository } from "../src/repos/workspaces";
+import { CONTROL_API_CONFIG } from "../src/tokens";
+import { AccessAction, AccessActor, GrantChange, ReviewedAccessPolicy,
+  ScopedAccessGrant, TsMembershipAcceptance } from "../src/execution-v2/access.contract";
+import { AccessRelations, accessDigest, canonicalSelector } from "../src/execution-v2/access-policy";
+import { ExecutionAccessController } from "../src/execution-v2/access.controller";
+import { AccessReceipt, AccessRepository } from "../src/execution-v2/access.repository";
+import { ExecutionAccessService } from "../src/execution-v2/access.service";
+import { AccessTrustProvider, ReviewedPolicyArtifact } from "../src/execution-v2/access-trust";
+import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
+
+const DATABASE_URL = process.env.TEST_DATABASE_URL;
+const PASSWORD = "elp203-test-only-correct-horse-battery-2026";
+const BASE = "/api/admin/profile-access/v2";
+type Session = Awaited<ReturnType<AuthService["login"]>>;
+type Account = { user: PortalUser; session: Session; assertion: string };
+type Submitted = Awaited<ReturnType<ExecutionAccessService["propose"]>>;
+
+@Module({})
+class TestOnlyAccessModule {}
+
+describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL authority fences", () => {
+  let ctx: Awaited<ReturnType<typeof setupApp>>;
+  let auth: AuthService;
+  let admin: AdminService;
+  let owner: Account;
+  let manager: Account;
+  let researcher: Account;
+  let peer: Account;
+  let sequence = 0;
+  const next = (label: string) => `elp203-${label}-${++sequence}`;
+  const actor = (account: Account): AccessActor => ({ user_id: account.user.userId,
+    session_id: account.session.sessionId, session_generation: account.user.sessionVersion });
+  const cookie = (session: Session) => `${SESSION_COOKIE}=${session.token}; ${CSRF_COOKIE}=${session.csrfToken}`;
+  const headers = (session: Session, key = next("http")): Record<string, string> => ({
+    cookie: cookie(session), origin: ctx.config.PORTAL_PUBLIC_ORIGIN,
+    "x-portal-csrf": session.csrfToken, "x-portal-idempotency-key": key,
+  });
+
+  async function active(label: string, role: "ADMIN" | "USER" = "USER"): Promise<Account> {
+    const username = next(label);
+    const created = await admin.createUser({ username, displayName: username, role });
+    const activation = await admin.resetCredential(created.userId);
+    const initial = await auth.login({ assertion: username, username, credential: activation.activationToken });
+    await auth.changePassword({ sessionToken: initial.token, csrfToken: initial.csrfToken,
+      currentPassword: activation.activationToken, newPassword: PASSWORD });
+    const session = await auth.login({ assertion: username, username, credential: PASSWORD });
+    return { user: (await auth.users.findById(created.userId))!, session, assertion: username };
+  }
+
+  /** Only exact in-memory verifier handles qualify; raw receipt-shaped JSON does not. */
+  class TestOnlyTrust implements AccessTrustProvider {
+    readonly receipts = new Map<object, TsMembershipAcceptance>();
+    readonly memberships = new Map<string, AccessRelations["membership"]>();
+    beforeHumanMapping?: () => Promise<void>;
+    constructor(readonly artifact: ReviewedPolicyArtifact, readonly resources: AccessRelations["roots"]) {}
+    async verifyPolicy(input: unknown) { return input === this.artifact ? this.artifact : null; }
+    async verifyReceipt(input: unknown) {
+      return typeof input === "object" && input !== null ? this.receipts.get(input) ?? null : null;
+    }
+    async relations(userId: string, workspace: string): Promise<AccessRelations> {
+      if (workspace !== this.artifact.policy.workspace_id) return { qualified: false, revision: "UNQUALIFIED",
+        own_alpha_ids: [], member_portfolio_ids: [], roots: {}, membership: null };
+      const membership = this.memberships.get(userId) ?? null;
+      return { qualified: true, revision: `TEST_ONLY-relations:${membership?.revision ?? "none"}`,
+        own_alpha_ids: userId === researcher.user.userId ? ["TEST_ONLY-alpha-1"] : [],
+        member_portfolio_ids: ["TEST_ONLY-portfolio-1"], roots: this.resources, membership };
+    }
+    async verifiedHumanMapping(userId: string, workspace: string) {
+      if (this.beforeHumanMapping) await this.beforeHumanMapping();
+      return workspace === this.artifact.policy.workspace_id
+        ? { ts_user_id: `TEST_ONLY-ts:${userId}`, revision: "TEST_ONLY-human-mapping-v1" } : null;
+    }
+    seal(fact: TsMembershipAcceptance, publishCurrent = fact.outcome === "ACCEPTED"): object {
+      const handle = Object.freeze({ TEST_ONLY_verified_receipt: next("proof") });
+      this.receipts.set(handle, structuredClone(fact));
+      if (publishCurrent) this.memberships.set(fact.portal_user_id, { revision: fact.membership_revision,
+        receipt_id: fact.receipt_id, mapping_revision: fact.mapping_revision });
+      return handle;
+    }
+  }
+
+  async function fixture(issuingManager = manager) {
+    const workspace = next("workspace");
+    await ctx.pool.query("INSERT INTO workspaces(workspace_id,name,owner_user_id) VALUES($1,$2,$3)",
+      [workspace, "TEST_ONLY ELP2-03 workspace", owner.user.userId]);
+    const accounts = [...new Map([owner, issuingManager, researcher, peer].map(a => [a.user.userId, a])).values()];
+    for (const account of accounts) await ctx.pool.query(
+      "INSERT INTO workspace_members(workspace_id,user_id,role) VALUES($1,$2,$3)",
+      [workspace, account.user.userId, account === owner ? "OWNER" : "MEMBER"]);
+    const now = Date.now();
+    const policy: ReviewedAccessPolicy = { workspace_id: workspace, revision: `TEST_ONLY-policy:${workspace}`,
+      artifact_digest: accessDigest(["TEST_ONLY-reviewed-policy", workspace]), approval_ref: "TEST_ONLY-not-owner-approval",
+      state: "REVIEWED", qualification: "TEST_ONLY", protected_owner_user_id: owner.user.userId,
+      researcher_fields: { state: "PENDING", policy_ref: null, fields: [] } };
+    const rootId = `TEST_ONLY-root:${workspace}`;
+    const resources: AccessRelations["roots"] = { [rootId]: [
+      ...accounts.map(a => ({ kind: "USER" as const, id: a.user.userId })),
+      { kind: "PORTFOLIO", id: "TEST_ONLY-portfolio-1" },
+      { kind: "PORTFOLIO", id: "TEST_ONLY-portfolio-2" }, { kind: "ALPHA", id: "TEST_ONLY-alpha-1" },
+    ] };
+    const actions: AccessAction[] = ["users.read", "access.grant", "access.read", "audit.read", "portfolio.read"];
+    const root = (subject: Account, action: AccessAction): ScopedAccessGrant => ({
+      grant_id: `TEST_ONLY-root-grant:${workspace}:${subject.user.userId}:${action}`,
+      subject_user_id: subject.user.userId, workspace_id: workspace, action, effect: "ALLOW",
+      selector: { kind: "ROOT_SCOPE", root_id: rootId }, environments: ["paper", "sandbox"],
+      valid_from_ms: now - 60_000, valid_until_ms: now + 3_600_000,
+      delegable_actions: action === "access.grant" ? actions : [], issued_by: owner.user.userId,
+      parent_grant_id: null, revision: `TEST_ONLY-root-revision:${workspace}:${subject.user.userId}:${action}`,
+      policy_revision: policy.revision, revoked_at_ms: null, requires_ts_acceptance: false,
+      ts_receipt: null, field_policy_ref: null,
+    });
+    const rootGrants = [root(owner, "access.grant"), root(owner, "access.revoke"), root(owner, "audit.read"),
+      root(owner, "access.read"), root(issuingManager, "access.grant"), root(issuingManager, "access.revoke")];
+    const artifact: ReviewedPolicyArtifact = { policy, root_grants: rootGrants, provenance_ref: "TEST_ONLY-isolated-harness" };
+    const trust = new TestOnlyTrust(artifact, resources);
+    const service = new ExecutionAccessService(ctx.pool, auth, trust, true);
+    await service.installReviewedPolicy(artifact);
+    for (const account of [owner, issuingManager]) await new AccountLifecycleRepository(ctx.pool).grantStepUp({
+      stepUpId: next("stepup"), sessionId: account.session.sessionId, userId: account.user.userId, ttlSeconds: 600,
+    });
+    const managerRoot = rootGrants.find(g => g.subject_user_id === issuingManager.user.userId && g.action === "access.grant")!;
+    const ownerRoot = rootGrants.find(g => g.subject_user_id === owner.user.userId && g.action === "access.grant")!;
+    const change = (overrides: Partial<GrantChange> = {}): GrantChange => ({
+      subject_user_id: researcher.user.userId, action: "users.read", effect: "ALLOW",
+      selector: { kind: "EXPLICIT_RESOURCE_SET", resource_kind: "USER", ids: [peer.user.userId] },
+      environments: ["paper"], valid_from_ms: now - 1_000, valid_until_ms: now + 1_800_000,
+      delegable_actions: [], ceiling_grant_id: managerRoot.grant_id, expected_ceiling_revision: managerRoot.revision,
+      expected_policy_revision: policy.revision, expected_ts_membership_revision: null,
+      reason: "TEST_ONLY scoped regression", ...overrides,
+    });
+    const submit = async (request = change(), key = next("submit"), by = issuingManager) => {
+      const preview = await service.preview(actor(by), workspace, request);
+      return service.propose(actor(by), workspace, request, preview.preview_digest, key);
+    };
+    return { workspace, policy, trust, service, managerRoot, ownerRoot, change, submit, issuingManager };
+  }
+  type Fixture = Awaited<ReturnType<typeof fixture>>;
+
+  async function storedGrant(id: string): Promise<ScopedAccessGrant> {
+    return (await ctx.pool.query("SELECT grant_fact FROM portal_access_grants_v2 WHERE grant_id=$1", [id])).rows[0].grant_fact;
+  }
+  async function state(f: Fixture) {
+    return (await ctx.pool.query(`SELECT
+      (SELECT count(*)::int FROM portal_access_proposals WHERE workspace_id=$1) AS proposals,
+      (SELECT count(*)::int FROM portal_access_grants_v2 WHERE workspace_id=$1) AS grants,
+      (SELECT count(*)::int FROM portal_access_policy_events WHERE workspace_id=$1) AS events`, [f.workspace])).rows[0];
+  }
+  async function ownGrant(f: Fixture, receipt: AccessReceipt) {
+    return (await f.service.effective(actor(researcher), f.workspace)).grants.find(g => g.grant_id === receipt.grant_id)!;
+  }
+  async function business(f: Fixture) {
+    const request = f.change({ action: "portfolio.read", selector: { kind: "EXPLICIT_RESOURCE_SET",
+      resource_kind: "PORTFOLIO", ids: ["TEST_ONLY-portfolio-1"] } });
+    return { request, submitted: await f.submit(request) };
+  }
+  async function tsFact(f: Fixture, submitted: Submitted,
+    overrides: Partial<TsMembershipAcceptance> = {}): Promise<TsMembershipAcceptance> {
+    const row = (await ctx.pool.query("SELECT request_digest,change FROM portal_access_proposals WHERE proposal_id=$1",
+      [submitted.receipt.proposal_id])).rows[0] as { request_digest: string; change: GrantChange };
+    return { source: "TEST_ONLY-ts-producer", source_contract: "TEST_ONLY-membership.v1",
+      trust_profile: "TEST_ONLY-NOT-QUALIFIED-IN-PRODUCTION", receipt_id: next("ts-receipt"),
+      proposal_id: submitted.receipt.proposal_id!, proposal_digest: row.request_digest,
+      portal_user_id: row.change.subject_user_id, ts_user_id: `TEST_ONLY-ts:${row.change.subject_user_id}`,
+      mapping_revision: "TEST_ONLY-human-mapping-v1", human_requester_user_id: f.issuingManager.user.userId,
+      workspace_id: f.workspace, action: row.change.action, selector_digest: accessDigest(canonicalSelector(row.change.selector)),
+      environments: row.change.environments, previous_membership_revision: row.change.expected_ts_membership_revision,
+      membership_revision: next("membership-revision"), effective_at_ms: row.change.valid_from_ms,
+      expires_at_ms: row.change.valid_until_ms, outcome: "ACCEPTED", payload_digest: accessDigest(["TEST_ONLY", row.request_digest]),
+      provenance_ref: "TEST_ONLY-verifier-proof", ...overrides };
+  }
+  async function withHttp(service: ExecutionAccessService, run: (app: NestFastifyApplication) => Promise<void>) {
+    const app = await NestFactory.create<NestFastifyApplication>({ module: TestOnlyAccessModule,
+      controllers: [ExecutionAccessController], providers: [SessionGuard,
+        { provide: ExecutionAccessService, useValue: service }, { provide: AuthService, useValue: auth },
+        { provide: WorkspacesRepository, useValue: new WorkspacesRepository(ctx.pool, ctx.config) },
+        { provide: CONTROL_API_CONFIG, useValue: ctx.config },
+      ] }, new FastifyAdapter(), { logger: false, abortOnError: false });
+    try {
+      app.useGlobalFilters(new HttpErrorFilter());
+      await app.register(fastifyCookie as never);
+      await app.init();
+      await app.getHttpAdapter().getInstance().ready();
+      await run(app);
+    } finally { await app.close(); }
+  }
+
+  beforeAll(async () => {
+    await migrateTestDatabase(DATABASE_URL!);
+    ctx = await setupApp({ DATABASE_URL: DATABASE_URL! });
+    auth = ctx.app.get(AuthService);
+    admin = new AdminService(ctx.pool, ctx.config, auth);
+    vi.spyOn(auth, "verifyAccessIdentity").mockImplementation(async assertion => {
+      if (!assertion) throw new Error("TEST_ONLY_VERIFIED_IDENTITY_REQUIRED");
+      return { iss: "https://test-only.cloudflareaccess.com", sub: `TEST_ONLY:${assertion}`,
+        aud: "test-audience", email: `${assertion}@azdag.com`, normalizedEmail: `${assertion}@azdag.com`,
+        authenticationTime: new Date(), tokenExpiresAt: new Date(Date.now() + 60_000) } satisfies VerifiedAccessIdentity;
+    });
+    owner = await active("protected-owner", "ADMIN");
+    await new OwnerAccessRepository(ctx.pool).claimOwner({ userId: owner.user.userId, claimedBy: "ELP2-03_TEST_ONLY" });
+    manager = await active("bounded-manager");
+    researcher = await active("linked-researcher");
+    peer = await active("owner-like-name-admin", "ADMIN");
+  });
+  afterAll(async () => {
+    vi.restoreAllMocks();
+    if (ctx) await teardownApp(ctx);
+  });
+
+  it("T03-01/05 no migration or default service makes TEST_ONLY policy into production authority", async () => {
+    expect((await ctx.pool.query("SELECT count(*)::int AS n FROM portal_access_policy_state")).rows[0].n).toBe(0);
+    const f = await fixture();
+    const defaultService = new ExecutionAccessService(ctx.pool, auth);
+    expect(await defaultService.effective(actor(manager), f.workspace)).toMatchObject({ availability: "POLICY_PENDING",
+      grants: expect.arrayContaining([expect.objectContaining({ current: false })]) });
+    await expect(defaultService.installReviewedPolicy(f.trust.artifact)).rejects.toMatchObject({ code: "RECEIPT_NOT_QUALIFIED", status: 503 });
+    await expect(new ExecutionAccessService(ctx.pool, auth, f.trust).installReviewedPolicy(f.trust.artifact))
+      .rejects.toMatchObject({ code: "RECEIPT_NOT_QUALIFIED" });
+    await expect(defaultService.acceptTsReceipt({ outcome: "ACCEPTED" })).rejects.toMatchObject({ code: "RECEIPT_NOT_QUALIFIED" });
+  });
+
+  it("T03-06 reinstall is idempotent only for the exact original policy and root-grant artifact", async () => {
+    const f = await fixture(), before = await state(f);
+    const originalGrants = (await ctx.pool.query("SELECT grant_fact FROM portal_access_grants_v2 WHERE workspace_id=$1 ORDER BY grant_id", [f.workspace])).rows;
+    await f.service.installReviewedPolicy(f.trust.artifact);
+    expect(await state(f)).toEqual(before);
+    // Keep the policy revision unchanged but remove a root from the verified
+    // TEST_ONLY artifact. The prior install's digest must still bind the roots.
+    f.trust.artifact.root_grants = f.trust.artifact.root_grants.slice(0, -1);
+    await expect(f.service.installReviewedPolicy(f.trust.artifact))
+      .rejects.toMatchObject({ code: "POLICY_REVISION_CONFLICT", status: 409 });
+    expect(await state(f)).toEqual(before);
+    expect((await ctx.pool.query("SELECT grant_fact FROM portal_access_grants_v2 WHERE workspace_id=$1 ORDER BY grant_id", [f.workspace])).rows).toEqual(originalGrants);
+  });
+
+  it("T03-05 a verified TEST_ONLY artifact cannot install capital.fund as app-only authority", async () => {
+    const f = await fixture(), before = await state(f), originalPolicy = structuredClone(f.policy);
+    const policyRevision = next("forbidden-app-only-policy");
+    f.trust.artifact.policy = { ...f.policy, revision: policyRevision,
+      artifact_digest: accessDigest(["TEST_ONLY-forbidden-capital-root", policyRevision]) };
+    f.trust.artifact.root_grants = [{ ...f.managerRoot, grant_id: next("forbidden-capital-root"),
+      revision: next("forbidden-capital-root-revision"), policy_revision: policyRevision,
+      action: "capital.fund", delegable_actions: [], requires_ts_acceptance: false }];
+    await expect(f.service.installReviewedPolicy(f.trust.artifact)).rejects.toMatchObject({ code: "RECEIPT_BINDING_MISMATCH" });
+    expect(await state(f)).toEqual(before);
+    expect((await ctx.pool.query("SELECT policy FROM portal_access_policy_state WHERE workspace_id=$1", [f.workspace])).rows[0].policy).toEqual(originalPolicy);
+    expect((await ctx.pool.query("SELECT count(*)::int AS n FROM portal_access_grants_v2 WHERE workspace_id=$1 AND grant_fact->>'action'='capital.fund'", [f.workspace])).rows[0].n).toBe(0);
+  });
+
+  it("T03-05/08 installer cannot copy a portfolio acceptance receipt into a capital.fund root", async () => {
+    const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted);
+    await f.service.acceptTsReceipt(f.trust.seal(fact));
+    const acceptedGrant = await storedGrant(submitted.receipt.grant_id!), before = await state(f);
+    expect(acceptedGrant.ts_receipt).not.toBeNull();
+    const revision = next("TEST_ONLY-copied-receipt-policy");
+    f.trust.artifact.policy = { ...f.policy, revision, artifact_digest: accessDigest(["TEST_ONLY-copied-receipt", revision]) };
+    f.trust.artifact.root_grants = [{ ...acceptedGrant, grant_id: next("TEST_ONLY-copied-capital-root"),
+      revision: next("TEST_ONLY-copied-capital-revision"), policy_revision: revision,
+      issued_by: owner.user.userId, parent_grant_id: null, action: "capital.fund", requires_ts_acceptance: true }];
+    await expect(f.service.installReviewedPolicy(f.trust.artifact)).rejects.toMatchObject({ code: "RECEIPT_BINDING_MISMATCH" });
+    expect(await state(f)).toEqual(before);
+    expect(await storedGrant(acceptedGrant.grant_id)).toEqual(acceptedGrant);
+    expect(await ownGrant(f, submitted.receipt)).toMatchObject({ current: true, action: "portfolio.read", ts_authority: "ACCEPTED" });
+    expect((await ctx.pool.query("SELECT revision FROM portal_access_policy_state WHERE workspace_id=$1", [f.workspace])).rows[0].revision).toBe(f.policy.revision);
+  });
+
+  it("T03-02 preview is advisory; app proposal atomically stores a scoped grant and immutable receipt", async () => {
+    const f = await fixture(), request = f.change(), before = await state(f);
+    const preview = await f.service.preview(actor(manager), f.workspace, request);
+    expect(preview).toMatchObject({ allowed: true, app_outcome: "ELIGIBLE", effective_business_right: false, ts_authority: "NOT_REQUIRED" });
+    expect(await state(f)).toEqual(before);
+    const result = await f.service.propose(actor(manager), f.workspace, request, preview.preview_digest, next("apply"));
+    expect(result).toMatchObject({ replayed: false, receipt: { outcome: "APP_APPLIED", http_status: 201, ts_authority: "NOT_REQUIRED" } });
+    expect(await ownGrant(f, result.receipt)).toMatchObject({ current: true, action: "users.read" });
+    expect(await state(f)).toEqual({ proposals: 1, grants: before.grants + 1, events: before.events + 1 });
+    const event = (await ctx.pool.query("SELECT before_fact,after_fact,receipt FROM portal_access_policy_events WHERE event_id=$1",
+      [result.receipt.operation_id])).rows[0];
+    expect(event.before_fact).toBeNull();
+    expect(event.after_fact).toEqual(await storedGrant(result.receipt.grant_id!));
+    expect(event.receipt).toEqual(result.receipt);
+  });
+
+  it("T03-06 replay returns the original app receipt even after the grant was revoked", async () => {
+    const f = await fixture(), request = f.change(), key = next("immutable-replay"), applied = await f.submit(request, key);
+    const original = structuredClone(applied.receipt);
+    const revokeKey = next("revoke");
+    const revoked = await f.service.revoke(actor(owner), f.workspace, applied.receipt.grant_id!, f.policy.revision,
+      applied.receipt.grant_revision!, revokeKey);
+    expect(revoked.receipt).toMatchObject({ outcome: "REVOKED", ts_authority: "NOT_REQUIRED" });
+    expect(await f.service.revoke(actor(owner), f.workspace, original.grant_id!, f.policy.revision,
+      original.grant_revision!, revokeKey)).toEqual({ receipt: revoked.receipt, replayed: true });
+    await expect(f.service.revoke(actor(owner), f.workspace, original.grant_id!, f.policy.revision,
+      revoked.receipt.grant_revision!, revokeKey)).rejects.toMatchObject({ code: "IDEMPOTENCY_KEY_PAYLOAD_CONFLICT", status: 409 });
+    const replay = await f.submit(request, key);
+    expect(replay).toEqual({ receipt: original, replayed: true });
+    expect(await ownGrant(f, original)).toMatchObject({ current: false, revision: revoked.receipt.grant_revision });
+    expect((await f.service.proposal(actor(manager), f.workspace, original.proposal_id!)).submission_receipt).toEqual(original);
+    const event = (await ctx.pool.query("SELECT before_fact,after_fact FROM portal_access_policy_events WHERE event_id=$1", [revoked.receipt.operation_id])).rows[0];
+    expect(event.before_fact).toMatchObject({ revoked_at_ms: null, revision: original.grant_revision });
+    expect(event.after_fact).toMatchObject({ grant: { revision: revoked.receipt.grant_revision, revoked_at_ms: expect.any(Number) }, reason: "Access revoked." });
+    await expect(f.service.revoke(actor(owner), f.workspace, original.grant_id!, f.policy.revision,
+      original.grant_revision!, next("stale-revoke"))).rejects.toMatchObject({ code: "GRANT_REVISION_CONFLICT" });
+  });
+
+  it("T03-06 the same key cannot bind changed payload or another currently authorized actor", async () => {
+    const f = await fixture(), request = f.change(), key = next("bound-key"), original = await f.submit(request, key);
+    await expect(f.submit({ ...request, reason: "TEST_ONLY changed reason" }, key))
+      .rejects.toMatchObject({ code: "IDEMPOTENCY_KEY_PAYLOAD_CONFLICT", status: 409 });
+    const byOwner = { ...request, ceiling_grant_id: f.ownerRoot.grant_id, expected_ceiling_revision: f.ownerRoot.revision };
+    await expect(f.submit(byOwner, key, owner)).rejects.toMatchObject({ code: "IDEMPOTENCY_KEY_PAYLOAD_CONFLICT", status: 409 });
+    expect((await f.submit(request, key)).receipt).toEqual(original.receipt);
+    expect((await state(f)).proposals).toBe(1);
+  });
+
+  it.each([
+    ["policy", "POLICY_REVISION_CONFLICT"], ["ceiling", "GRANT_REVISION_CONFLICT"],
+    ["membership", "TS_MEMBERSHIP_REVISION_CONFLICT"], ["digest", "POLICY_REVISION_CONFLICT"],
+  ] as const)("T03-06 stale %s or preview digest never creates a proposal", async (kind, code) => {
+    const f = await fixture(), request = kind === "membership" ? f.change({ action: "portfolio.read",
+      selector: { kind: "EXPLICIT_RESOURCE_SET", resource_kind: "PORTFOLIO", ids: ["TEST_ONLY-portfolio-1"] } }) : f.change();
+    const preview = await f.service.preview(actor(manager), f.workspace, request);
+    const stale: GrantChange = { ...request,
+      ...(kind === "policy" ? { expected_policy_revision: "TEST_ONLY-stale-policy" } : {}),
+      ...(kind === "ceiling" ? { expected_ceiling_revision: "TEST_ONLY-stale-ceiling" } : {}),
+      ...(kind === "membership" ? { expected_ts_membership_revision: "TEST_ONLY-stale-membership" } : {}),
+    };
+    const before = await state(f);
+    const key = next("stale"), digest = kind === "digest" ? accessDigest("TEST_ONLY-wrong-preview")
+      : (await f.service.preview(actor(manager), f.workspace, stale)).preview_digest;
+    const attempt = () => f.service.propose(actor(manager), f.workspace, stale, digest, key);
+    await expect(attempt()).rejects.toMatchObject({ code, status: 409 });
+    const originalDenial = (await ctx.pool.query(`SELECT * FROM portal_access_policy_events
+      WHERE workspace_id=$1 AND operation='DENIED'`, [f.workspace])).rows;
+    expect(originalDenial).toHaveLength(1);
+    expect(originalDenial[0]).toMatchObject({ subject_user_id: null, before_fact: null, after_fact: null,
+      receipt: { outcome: "DENIED", http_status: 409, reason_code: code } });
+    await expect(attempt()).rejects.toMatchObject({ code, status: 409 });
+    expect((await ctx.pool.query(`SELECT * FROM portal_access_policy_events
+      WHERE workspace_id=$1 AND operation='DENIED'`, [f.workspace])).rows).toEqual(originalDenial);
+    expect(await state(f)).toEqual({ ...before, events: before.events + 1 });
+    expect(preview.allowed).toBe(true);
+  });
+
+  it("T03-06 concurrent same-key submissions have one durable effect and exact replay after retry", async () => {
+    const f = await fixture(), request = f.change(), key = next("race-key"), preview = await f.service.preview(actor(manager), f.workspace, request);
+    const attempt = () => f.service.propose(actor(manager), f.workspace, request, preview.preview_digest, key);
+    const results = await Promise.allSettled([attempt(), attempt()]);
+    expect(results.some(r => r.status === "fulfilled")).toBe(true);
+    for (const result of results) if (result.status === "rejected") expect(result.reason).toMatchObject({ code: "ACCESS_RETRY_REQUIRED", status: 409 });
+    const original = results.find(r => r.status === "fulfilled") as PromiseFulfilledResult<Submitted>;
+    expect(await attempt()).toEqual({ receipt: original.value.receipt, replayed: true });
+    expect((await state(f)).proposals).toBe(1);
+    expect((await ctx.pool.query("SELECT count(*)::int AS n FROM portal_access_policy_events WHERE workspace_id=$1 AND operation='PROPOSE'", [f.workspace])).rows[0].n).toBe(1);
+  });
+
+  it("T03-06 concurrent changed-payload/key race cannot overwrite the winning immutable receipt", async () => {
+    const f = await fixture(), first = f.change(), second = { ...first, reason: "TEST_ONLY other contender" }, key = next("payload-race");
+    const firstPreview = await f.service.preview(actor(manager), f.workspace, first);
+    const secondPreview = await f.service.preview(actor(manager), f.workspace, second);
+    const submit = async (change: GrantChange) => f.service.propose(actor(manager), f.workspace, change,
+      change === first ? firstPreview.preview_digest : secondPreview.preview_digest, key);
+    const results = await Promise.allSettled([submit(first), submit(second)]);
+    const winners = results.flatMap((r, i) => r.status === "fulfilled" ? [{ index: i, value: r.value }] : []);
+    expect(winners).toHaveLength(1);
+    const winner = winners[0];
+    const loserChange = winner.index === 0 ? second : first;
+    await expect(submit(loserChange)).rejects.toMatchObject({ code: "IDEMPOTENCY_KEY_PAYLOAD_CONFLICT", status: 409 });
+    expect((await submit(winner.index === 0 ? first : second)).receipt).toEqual(winner.value.receipt);
+    expect((await state(f)).proposals).toBe(1);
+  });
+
+  it.each(["self", "owner"] as const)("T03-03 %s privilege changes remain protected at preview and submit", async target => {
+    const f = await fixture(), request = f.change({ subject_user_id: target === "self" ? manager.user.userId : owner.user.userId });
+    const code = target === "self" ? "SELF_PRIVILEGE_CHANGE_DENIED" : "PROTECTED_OWNER_CHANGE_DENIED";
+    const preview = await f.service.preview(actor(manager), f.workspace, request);
+    expect(preview).toMatchObject({ allowed: false, reason_code: code });
+    await expect(f.service.propose(actor(manager), f.workspace, request, preview.preview_digest, next("protected")))
+      .rejects.toMatchObject({ code, status: 403 });
+    expect((await state(f)).proposals).toBe(0);
+  });
+
+  it("T03-01/02 ADMIN and a suggestive display name do not provide a delegation ceiling", async () => {
+    const f = await fixture(), request = f.change({ subject_user_id: researcher.user.userId });
+    await expect(f.service.propose(actor(peer), f.workspace, request, accessDigest("TEST_ONLY"), next("admin-deny")))
+      .rejects.toMatchObject({ code: "STEP_UP_REQUIRED" });
+    await new AccountLifecycleRepository(ctx.pool).grantStepUp({ stepUpId: next("admin-stepup"),
+      sessionId: peer.session.sessionId, userId: peer.user.userId, ttlSeconds: 600 });
+    expect(await f.service.preview(actor(peer), f.workspace, request)).toMatchObject({ allowed: false, reason_code: "DELEGATION_CEILING_EXCEEDED" });
+    await expect(f.service.propose(actor(peer), f.workspace, request, accessDigest("TEST_ONLY"), next("admin-deny")))
+      .rejects.toMatchObject({ code: "DELEGATION_CEILING_EXCEEDED" });
+  });
+
+  it.each(["missing", "revoked", "expired", "generation", "disabled", "archived"] as const)(
+    "T03-07 current actor/session %s invalidates both a queued submit and a prior receipt replay", async mode => {
+      const account = await active(`actor-${mode}`), f = await fixture(account), request = f.change(), key = next("auth-replay");
+      const applied = await f.submit(request, key), preview = await f.service.preview(actor(account), f.workspace, request);
+      if (mode === "revoked") await auth.sessions.revokeSession(account.session.sessionId, "TEST_ONLY_REVOKE");
+      if (mode === "expired") await ctx.pool.query("UPDATE auth_sessions SET idle_expires_at=clock_timestamp()-interval '1 second' WHERE session_id=$1", [account.session.sessionId]);
+      if (mode === "generation") await auth.users.bumpSessionVersion(account.user.userId);
+      if (mode === "disabled") await auth.users.update({ userId: account.user.userId, status: "DISABLED" });
+      if (mode === "archived") await ctx.pool.query("UPDATE portal_users SET archived_at=clock_timestamp() WHERE user_id=$1", [account.user.userId]);
+      const stale = mode === "missing" ? { ...actor(account), session_id: "TEST_ONLY-no-current-session" } : actor(account);
+      for (const attemptKey of [key, next("queued")]) await expect(f.service.propose(stale, f.workspace, request, preview.preview_digest, attemptKey))
+        .rejects.toMatchObject({ code: "CURRENT_ACTOR_AUTHORITY_REQUIRED", status: 403 });
+      expect((await state(f)).proposals).toBe(1);
+      expect((await storedGrant(applied.receipt.grant_id!)).revoked_at_ms).toBeNull();
+    });
+
+  it("T03-07 a session cannot borrow another session's step-up, including immutable replay", async () => {
+    const account = await active("stepup-bound"), f = await fixture(account), request = f.change(), key = next("stepup-replay");
+    await f.submit(request, key);
+    const second = await auth.login({ assertion: account.assertion, username: account.user.username, credential: PASSWORD });
+    const secondActor = { ...actor(account), session_id: second.sessionId };
+    const preview = await f.service.preview(secondActor, f.workspace, request);
+    expect(preview.allowed).toBe(true);
+    await expect(f.service.propose(secondActor, f.workspace, request, preview.preview_digest, key)).rejects.toMatchObject({ code: "STEP_UP_REQUIRED" });
+    await ctx.pool.query("UPDATE owner_step_up_grants SET revoked_at=clock_timestamp() WHERE session_id=$1", [account.session.sessionId]);
+    await expect(f.submit(request, key)).rejects.toMatchObject({ code: "STEP_UP_REQUIRED" });
+    expect((await state(f)).proposals).toBe(1);
+  });
+
+  it("T03-07 expired step-up cannot submit; delegated password proof creates no capability", async () => {
+    const account = await active("expired-stepup"), f = await fixture(account), request = f.change();
+    await ctx.pool.query("UPDATE owner_step_up_grants SET expires_at=clock_timestamp()-interval '1 second' WHERE session_id=$1", [account.session.sessionId]);
+    const before = await state(f);
+    await expect(f.submit(request)).rejects.toMatchObject({ code: "STEP_UP_REQUIRED" });
+    await expect(f.service.stepUp(actor(account), f.workspace, "TEST_ONLY-wrong-password"))
+      .rejects.toMatchObject({ code: "STEP_UP_REJECTED" });
+    expect(await state(f)).toEqual(before);
+    expect(await f.service.stepUp(actor(account), f.workspace, PASSWORD)).toMatchObject({ state: "ACTIVE", expires_at_ms: expect.any(Number) });
+    expect((await f.submit(request)).receipt.outcome).toBe("APP_APPLIED");
+    const unprivileged = await f.service.stepUp(actor(peer), f.workspace, PASSWORD).catch(error => error);
+    expect(unprivileged).toMatchObject({ code: "ACCESS_DENIED" });
+    expect((await f.service.effective(actor(peer), f.workspace)).grants).toEqual([]);
+  });
+
+  it("T03-07 mounted wrong-password step-up refusal is redacted and changes no proof or capability", async () => {
+    const account = await active("wrong-password-stepup"), f = await fixture(account);
+    const wrongPassword = next("TEST_ONLY-private-wrong-password"), rawKey = next("TEST_ONLY-private-stepup-key");
+    const proofRows = (await ctx.pool.query("SELECT * FROM owner_step_up_grants WHERE user_id=$1 ORDER BY step_up_id", [account.user.userId])).rows;
+    const legacyGrants = (await ctx.pool.query("SELECT * FROM portal_capability_grants WHERE grantee_user_id=$1 ORDER BY grant_id", [account.user.userId])).rows;
+    const effective = await f.service.effective(actor(account), f.workspace), before = await state(f);
+    await withHttp(f.service, async app => {
+      const response = await app.getHttpAdapter().getInstance().inject({ method: "POST", url: `${BASE}/step-up`,
+        headers: headers(account.session, rawKey), payload: { workspace_id: f.workspace, password: wrongPassword } });
+      expect(response.statusCode).toBe(403);
+      expect(response.json().error.code).toBe("STEP_UP_REJECTED");
+    });
+    expect((await ctx.pool.query("SELECT * FROM owner_step_up_grants WHERE user_id=$1 ORDER BY step_up_id", [account.user.userId])).rows).toEqual(proofRows);
+    expect((await ctx.pool.query("SELECT * FROM portal_capability_grants WHERE grantee_user_id=$1 ORDER BY grant_id", [account.user.userId])).rows).toEqual(legacyGrants);
+    expect(await f.service.effective(actor(account), f.workspace)).toEqual(effective);
+    expect(await state(f)).toEqual(before);
+    const rows = (await ctx.pool.query(`SELECT * FROM auth_audit_events
+      WHERE event_type='portal_scoped_access_refused' AND actor_user_id=$1`, [account.user.userId])).rows;
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ actor_user_id: account.user.userId, target_user_id: null, access_subject: null,
+      request_id: null, source_ip: null, user_agent_hash: null, result: "DENIED", reason_code: "STEP_UP_REJECTED" });
+    expect(rows[0].metadata_json).toEqual({ schema_version: "portal.access-refusal.v1", http_status: 403 });
+    const encoded = JSON.stringify(rows);
+    for (const sensitive of [wrongPassword, PASSWORD, rawKey, account.session.token, account.session.csrfToken,
+      account.session.sessionId, account.assertion]) expect(encoded).not.toContain(sensitive);
+  });
+
+  it("T03-04/07 a principal with only a current DENY access.grant cannot obtain step-up", async () => {
+    const account = await active("deny-only-stepup"), f = await fixture(account);
+    await ctx.pool.query("UPDATE owner_step_up_grants SET revoked_at=clock_timestamp() WHERE user_id=$1", [account.user.userId]);
+    const revision = next("TEST_ONLY-deny-only-policy");
+    f.trust.artifact.policy = { ...f.policy, revision,
+      artifact_digest: accessDigest(["TEST_ONLY-deny-only-policy", revision]) };
+    const denial: ScopedAccessGrant = { ...f.managerRoot, grant_id: next("TEST_ONLY-deny-root"),
+      revision: next("TEST_ONLY-deny-root-revision"), policy_revision: revision, effect: "DENY", delegable_actions: [] };
+    f.trust.artifact.root_grants = [denial];
+    await f.service.installReviewedPolicy(f.trust.artifact);
+    const effective = await f.service.effective(actor(account), f.workspace);
+    expect(effective.grants.filter(grant => grant.current)).toEqual([
+      expect.objectContaining({ grant_id: denial.grant_id, action: "access.grant", effect: "DENY", current: true }),
+    ]);
+    const proofs = (await ctx.pool.query("SELECT * FROM owner_step_up_grants WHERE user_id=$1 ORDER BY step_up_id", [account.user.userId])).rows;
+    const before = await state(f);
+    await expect(f.service.stepUp(actor(account), f.workspace, PASSWORD))
+      .rejects.toMatchObject({ code: "ACCESS_DENIED", status: 403 });
+    expect((await ctx.pool.query("SELECT * FROM owner_step_up_grants WHERE user_id=$1 ORDER BY step_up_id", [account.user.userId])).rows).toEqual(proofs);
+    expect((await ctx.pool.query(`SELECT count(*)::int AS n FROM owner_step_up_grants
+      WHERE user_id=$1 AND revoked_at IS NULL AND expires_at>clock_timestamp()`, [account.user.userId])).rows[0].n).toBe(0);
+    expect(await f.service.effective(actor(account), f.workspace)).toEqual(effective);
+    expect(await state(f)).toEqual(before);
+  });
+
+  it("T03-07 refused step-up/current authority appends only redacted auth-audit facts", async () => {
+    const account = await active("redacted-auth-refusal"), f = await fixture(account);
+    const rawKey = next("TEST_ONLY-raw-idempotency-key"), passwordMarker = `TEST_ONLY-private-password:${PASSWORD}`;
+    const request = f.change({ reason: passwordMarker });
+    const preview = await f.service.preview(actor(account), f.workspace, request);
+    await ctx.pool.query("UPDATE owner_step_up_grants SET revoked_at=clock_timestamp() WHERE session_id=$1", [account.session.sessionId]);
+    const before = await state(f);
+    await expect(f.service.propose(actor(account), f.workspace, request, preview.preview_digest, rawKey))
+      .rejects.toMatchObject({ code: "STEP_UP_REQUIRED", status: 403 });
+    await auth.sessions.revokeSession(account.session.sessionId, "TEST_ONLY_REDACTED_AUTHORITY_FAILURE");
+    await expect(f.service.propose(actor(account), f.workspace, request, preview.preview_digest, rawKey))
+      .rejects.toMatchObject({ code: "CURRENT_ACTOR_AUTHORITY_REQUIRED", status: 403 });
+    const rows = (await ctx.pool.query(`SELECT actor_user_id,target_user_id,access_subject,request_id,
+      source_ip,user_agent_hash,result,reason_code,metadata_json FROM auth_audit_events
+      WHERE event_type='portal_scoped_access_refused' AND actor_user_id=$1`, [account.user.userId])).rows;
+    expect(rows).toHaveLength(2);
+    expect(rows.map(row => row.reason_code).sort()).toEqual(["CURRENT_ACTOR_AUTHORITY_REQUIRED", "STEP_UP_REQUIRED"]);
+    for (const row of rows) expect(row).toMatchObject({ actor_user_id: account.user.userId,
+      target_user_id: null, access_subject: null, request_id: null, source_ip: null, user_agent_hash: null,
+      result: "DENIED", metadata_json: { schema_version: "portal.access-refusal.v1", http_status: 403 } });
+    const encoded = JSON.stringify(rows);
+    for (const sensitive of [rawKey, passwordMarker, PASSWORD, account.session.token, account.session.csrfToken,
+      account.session.sessionId, researcher.user.userId, request.reason]) expect(encoded).not.toContain(sensitive);
+    expect(await state(f)).toEqual(before);
+  });
+
+  it("T03-07 revoking the current ceiling after preview blocks both submit and historical replay", async () => {
+    const f = await fixture(), request = f.change(), key = next("ceiling-replay");
+    const original = await f.submit(request, key);
+    const preview = await f.service.preview(actor(manager), f.workspace, request);
+    await f.service.revoke(actor(owner), f.workspace, f.managerRoot.grant_id, f.policy.revision,
+      f.managerRoot.revision, next("ceiling-revoke"));
+    for (const attemptKey of [key, next("new-key-after-ceiling-revoke")])
+      await expect(f.service.propose(actor(manager), f.workspace, request, preview.preview_digest, attemptKey))
+        .rejects.toMatchObject({ code: "DELEGATION_CEILING_EXCEEDED", status: 403 });
+    expect(await ownGrant(f, original.receipt)).toMatchObject({ current: false });
+    expect((await state(f)).proposals).toBe(1);
+  });
+
+  it.each(["nonmember", "disabled", "archived"] as const)(
+    "T03-02 current target %s cannot receive a grant after preview", async mode => {
+      const target = await active(`target-${mode}`), f = await fixture();
+      if (mode !== "nonmember") await ctx.pool.query(
+        "INSERT INTO workspace_members(workspace_id,user_id,role) VALUES($1,$2,'MEMBER')", [f.workspace, target.user.userId]);
+      const request = f.change({ subject_user_id: target.user.userId });
+      const preview = await f.service.preview(actor(manager), f.workspace, request);
+      expect(preview.allowed).toBe(mode !== "nonmember");
+      if (mode === "nonmember") expect(preview.reason_code).toBe("ACCESS_RESOURCE_NOT_FOUND");
+      if (mode === "disabled") await auth.users.update({ userId: target.user.userId, status: "DISABLED" });
+      if (mode === "archived") await ctx.pool.query("UPDATE portal_users SET archived_at=clock_timestamp() WHERE user_id=$1", [target.user.userId]);
+      const before = await state(f);
+      await expect(f.service.propose(actor(manager), f.workspace, request, preview.preview_digest, next("target-deny")))
+        .rejects.toMatchObject({ code: "ACCESS_RESOURCE_NOT_FOUND", status: 404 });
+      expect(await state(f)).toEqual({ ...before, events: before.events + 1 });
+    });
+
+  it("T03-07 current lifecycle row lock prevents a stale submit crossing a disable transaction", async () => {
+    const account = await active("row-lock-disable"), f = await fixture(account), request = f.change();
+    const preview = await f.service.preview(actor(account), f.workspace, request);
+    const blocker = await ctx.pool.connect();
+    try {
+      await blocker.query("BEGIN");
+      await blocker.query("UPDATE portal_users SET status='DISABLED' WHERE user_id=$1", [account.user.userId]);
+      const pending = f.service.propose(actor(account), f.workspace, request, preview.preview_digest, next("locked-submit"));
+      // Attach the assertion before releasing the real row lock to avoid an unhandled rejection.
+      const assertion = expect(pending).rejects.toMatchObject({ code: "CURRENT_ACTOR_AUTHORITY_REQUIRED" });
+      await blocker.query("COMMIT");
+      await assertion;
+      expect((await state(f)).proposals).toBe(0);
+    } finally { await blocker.query("ROLLBACK"); blocker.release(); }
+  });
+
+  it("T03-07 revoked parent invalidates descendants immediately without rewriting history", async () => {
+    const f = await fixture();
+    const onward = f.change({ action: "access.grant", delegable_actions: ["users.read"],
+      selector: { kind: "EXPLICIT_RESOURCE_SET", resource_kind: "USER", ids: [peer.user.userId] } });
+    const parent = await f.submit(onward);
+    await new AccountLifecycleRepository(ctx.pool).grantStepUp({ stepUpId: next("researcher-stepup"),
+      sessionId: researcher.session.sessionId, userId: researcher.user.userId, ttlSeconds: 600 });
+    const childRequest = f.change({ subject_user_id: peer.user.userId, ceiling_grant_id: parent.receipt.grant_id!,
+      expected_ceiling_revision: parent.receipt.grant_revision! });
+    const child = await f.submit(childRequest, next("child"), researcher);
+    expect((await f.service.effective(actor(peer), f.workspace)).grants.find(g => g.grant_id === child.receipt.grant_id)?.current).toBe(true);
+    const immutableChild = await storedGrant(child.receipt.grant_id!);
+    const queued = await f.service.preview(actor(researcher), f.workspace, childRequest);
+    await f.service.revoke(actor(owner), f.workspace, parent.receipt.grant_id!, f.policy.revision, parent.receipt.grant_revision!, next("ancestor-revoke"));
+    expect((await f.service.effective(actor(peer), f.workspace)).grants.find(g => g.grant_id === child.receipt.grant_id)?.current).toBe(false);
+    expect(await storedGrant(child.receipt.grant_id!)).toEqual(immutableChild);
+    await expect(f.service.propose(actor(researcher), f.workspace, childRequest, queued.preview_digest, next("queued-descendant")))
+      .rejects.toMatchObject({ code: "DELEGATION_CEILING_EXCEEDED" });
+    await expect(f.service.revoke(actor(manager), f.workspace, f.managerRoot.grant_id, f.policy.revision,
+      f.managerRoot.revision, next("self-revoke"))).rejects.toMatchObject({ code: "SELF_PRIVILEGE_CHANGE_DENIED" });
+    await expect(f.service.revoke(actor(manager), f.workspace, f.ownerRoot.grant_id, f.policy.revision,
+      f.ownerRoot.revision, next("owner-revoke"))).rejects.toMatchObject({ code: "PROTECTED_OWNER_CHANGE_DENIED" });
+  });
+
+  it("T03-05 pending business proposal never activates a right; only a verified current membership does", async () => {
+    const f = await fixture(), { submitted } = await business(f);
+    expect(submitted.receipt).toMatchObject({ outcome: "TS_PENDING", ts_authority: "PENDING" });
+    expect(await ownGrant(f, submitted.receipt)).toMatchObject({ current: false, ts_authority: "PENDING" });
+    const fact = await tsFact(f, submitted);
+    await expect(f.service.acceptTsReceipt(fact)).rejects.toMatchObject({ code: "RECEIPT_NOT_QUALIFIED" });
+    const accepted = await f.service.acceptTsReceipt(f.trust.seal(fact));
+    expect(accepted.receipt).toMatchObject({ outcome: "TS_APPLIED", ts_authority: "ACCEPTED" });
+    expect(await ownGrant(f, accepted.receipt)).toMatchObject({ current: true, ts_authority: "ACCEPTED" });
+    const proposal = await f.service.proposal(actor(manager), f.workspace, submitted.receipt.proposal_id!);
+    expect(proposal).toMatchObject({ state: "TS_APPLIED", submission_receipt: submitted.receipt });
+    f.trust.memberships.set(researcher.user.userId, null);
+    expect(await ownGrant(f, accepted.receipt)).toMatchObject({ current: false });
+  });
+
+  it.each(["ceiling_revoked", "issuer_disabled"] as const)(
+    "T03-07/08 verified acceptance after %s cannot activate the pending grant", async mode => {
+      const account = await active(`pending-${mode}`), f = await fixture(account);
+      const { submitted } = await business(f), fact = await tsFact(f, submitted);
+      if (mode === "ceiling_revoked") await f.service.revoke(actor(owner), f.workspace, f.managerRoot.grant_id,
+        f.policy.revision, f.managerRoot.revision, next("pending-ceiling-revoke"));
+      else await auth.users.update({ userId: account.user.userId, status: "DISABLED" });
+      const before = await state(f), originalGrant = await storedGrant(submitted.receipt.grant_id!);
+      // Even a TEST_ONLY verifier reporting the exact accepted current TS
+      // revision cannot bypass revoked local delegation or issuer lifecycle.
+      await expect(f.service.acceptTsReceipt(f.trust.seal(fact))).rejects.toMatchObject({
+        code: mode === "ceiling_revoked" ? "DELEGATION_CEILING_EXCEEDED" : "CURRENT_ACTOR_AUTHORITY_REQUIRED",
+      });
+      expect(await state(f)).toEqual(before);
+      expect(await storedGrant(submitted.receipt.grant_id!)).toEqual(originalGrant);
+      expect(await ownGrant(f, submitted.receipt)).toMatchObject({ current: false, ts_authority: "PENDING" });
+      expect((await f.service.proposal(actor(researcher), f.workspace, submitted.receipt.proposal_id!)).state).toBe("TS_PENDING");
+      expect((await ctx.pool.query(`SELECT count(*)::int AS n FROM portal_access_policy_events
+        WHERE workspace_id=$1 AND operation='TS_RECEIPT' AND receipt->>'outcome'='TS_APPLIED'`, [f.workspace])).rows[0].n).toBe(0);
+    });
+
+  it("T03-07/08 real-clock grant expiry during verified mapping rolls back acceptance and its event", async () => {
+    const f = await fixture();
+    const now = Number((await ctx.pool.query("SELECT floor(extract(epoch FROM clock_timestamp())*1000)::bigint AS ms")).rows[0].ms);
+    const request = f.change({ action: "portfolio.read", selector: { kind: "EXPLICIT_RESOURCE_SET",
+      resource_kind: "PORTFOLIO", ids: ["TEST_ONLY-portfolio-1"] }, valid_until_ms: now + 2_000 });
+    const submitted = await f.submit(request), fact = await tsFact(f, submitted), before = await state(f);
+    let mappingAwaited = false;
+    f.trust.beforeHumanMapping = async () => {
+      mappingAwaited = true;
+      // Bounded to the remaining two-second TEST_ONLY grant interval plus
+      // 50 ms, using PostgreSQL's real clock rather than a mocked service time.
+      await ctx.pool.query(`SELECT pg_sleep(GREATEST(
+        ($1::double precision-extract(epoch FROM clock_timestamp())*1000)/1000,0)+0.05)`, [request.valid_until_ms]);
+    };
+    await expect(f.service.acceptTsReceipt(f.trust.seal(fact)))
+      .rejects.toMatchObject({ code: "RECEIPT_REVISION_CONFLICT", status: 409 });
+    expect(mappingAwaited).toBe(true);
+    expect(await state(f)).toEqual(before);
+    expect((await storedGrant(submitted.receipt.grant_id!)).ts_receipt).toBeNull();
+    expect(await ownGrant(f, submitted.receipt)).toMatchObject({ current: false, ts_authority: "PENDING" });
+    expect((await f.service.proposal(actor(researcher), f.workspace, submitted.receipt.proposal_id!)).state).toBe("TS_PENDING");
+    expect((await ctx.pool.query(`SELECT count(*)::int AS n FROM portal_access_policy_events
+      WHERE workspace_id=$1 AND operation='TS_RECEIPT'`, [f.workspace])).rows[0].n).toBe(0);
+  });
+
+  it.each(["REJECTED", "UNKNOWN"] as const)("T03-05 %s preserves the original accepted grant and submission receipt", async outcome => {
+    const f = await fixture(), first = await business(f), acceptedFact = await tsFact(f, first.submitted);
+    await f.service.acceptTsReceipt(f.trust.seal(acceptedFact));
+    const request = { ...first.request, expected_ts_membership_revision: acceptedFact.membership_revision,
+      selector: { kind: "EXPLICIT_RESOURCE_SET" as const, resource_kind: "PORTFOLIO" as const, ids: ["TEST_ONLY-portfolio-2"] } };
+    const replacement = await f.submit(request);
+    expect(await ownGrant(f, first.submitted.receipt)).toMatchObject({ current: true });
+    const fact = await tsFact(f, replacement, { outcome });
+    const decision = await f.service.acceptTsReceipt(f.trust.seal(fact));
+    expect(decision.receipt).toMatchObject({ outcome: outcome === "REJECTED" ? "TS_REJECTED" : "TS_UNKNOWN", ts_authority: outcome });
+    expect(await ownGrant(f, replacement.receipt)).toMatchObject({ current: false, ts_authority: outcome });
+    expect(await ownGrant(f, first.submitted.receipt)).toMatchObject({ current: true });
+    expect((await f.service.proposal(actor(manager), f.workspace, replacement.receipt.proposal_id!)).submission_receipt).toEqual(replacement.receipt);
+    if (outcome === "UNKNOWN") {
+      const reconciled = await tsFact(f, replacement);
+      expect((await f.service.acceptTsReceipt(f.trust.seal(reconciled))).receipt.outcome).toBe("TS_APPLIED");
+      expect(await ownGrant(f, replacement.receipt)).toMatchObject({ current: true });
+    }
+  });
+
+  it("T03-08 unchanged receipt replay is exact; changed duplicate and out-of-order receipts are refused", async () => {
+    const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted);
+    const proof = f.trust.seal(fact), accepted = await f.service.acceptTsReceipt(proof), before = await state(f);
+    expect(await f.service.acceptTsReceipt(proof)).toEqual({ receipt: accepted.receipt, replayed: true });
+    const changed = f.trust.seal({ ...fact, payload_digest: accessDigest("TEST_ONLY-changed-source-payload") }, false);
+    await expect(f.service.acceptTsReceipt(changed)).rejects.toMatchObject({ code: "RECEIPT_PAYLOAD_CONFLICT", status: 409 });
+    const outOfOrder = f.trust.seal({ ...fact, receipt_id: next("out-of-order"), outcome: "UNKNOWN" }, false);
+    await expect(f.service.acceptTsReceipt(outOfOrder)).rejects.toMatchObject({ code: "RECEIPT_REVISION_CONFLICT", status: 409 });
+    expect(await state(f)).toEqual(before);
+  });
+
+  it.each([
+    "proposal_digest", "portal_user_id", "ts_user_id", "mapping_revision", "human_requester_user_id",
+    "action", "selector_digest", "environments", "previous_membership_revision", "membership_revision",
+    "effective_at_ms", "expires_at_ms", "source_contract", "trust_profile", "provenance_ref", "payload_digest",
+  ] as const)("T03-08 verified receipt misbinding %s cannot establish accepted authority", async field => {
+    const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted);
+    const changed: TsMembershipAcceptance = { ...fact };
+    if (field === "environments") changed.environments = ["live"];
+    else if (field === "action") changed.action = "capital.fund";
+    else if (field === "effective_at_ms") changed.effective_at_ms = fact.effective_at_ms - 1;
+    else if (field === "expires_at_ms") changed.expires_at_ms = fact.expires_at_ms! + 1;
+    else if (field === "previous_membership_revision") changed.previous_membership_revision = "TEST_ONLY-wrong-prior";
+    else if (field === "membership_revision") changed.membership_revision = "";
+    else changed[field] = ["source_contract", "trust_profile", "provenance_ref", "payload_digest"].includes(field)
+      ? "" : "TEST_ONLY-misbound";
+    const before = await state(f);
+    await expect(f.service.acceptTsReceipt(f.trust.seal(changed))).rejects.toMatchObject({ code: "RECEIPT_BINDING_MISMATCH", status: 409 });
+    expect(await ownGrant(f, submitted.receipt)).toMatchObject({ current: false, ts_authority: "PENDING" });
+    expect(await state(f)).toEqual(before);
+  });
+
+  it("T03-08 proposal/workspace binding and exact current TS revision refuse stale accepted receipts", async () => {
+    const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted);
+    for (const changed of [{ ...fact, proposal_id: "TEST_ONLY-absent-proposal" }, { ...fact, workspace_id: next("absent-workspace") }])
+      await expect(f.service.acceptTsReceipt(f.trust.seal(changed, false))).rejects.toMatchObject({ code: "RECEIPT_REVISION_CONFLICT", status: 409 });
+    await expect(f.service.acceptTsReceipt(f.trust.seal(fact, false))).rejects.toMatchObject({ code: "TS_MEMBERSHIP_REVISION_CONFLICT", status: 409 });
+    f.trust.memberships.set(researcher.user.userId, { revision: "TEST_ONLY-newer-current", receipt_id: "TEST_ONLY-newer-receipt", mapping_revision: fact.mapping_revision });
+    await expect(f.service.acceptTsReceipt(f.trust.seal(fact, false))).rejects.toMatchObject({ code: "TS_MEMBERSHIP_REVISION_CONFLICT" });
+    expect(await ownGrant(f, submitted.receipt)).toMatchObject({ current: false });
+  });
+
+  it("T03-07/08 app revoke is immediate and late verified acceptance cannot re-enable a pending grant", async () => {
+    const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted);
+    const revoked = await f.service.revoke(actor(owner), f.workspace, submitted.receipt.grant_id!, f.policy.revision,
+      submitted.receipt.grant_revision!, next("pending-revoke"));
+    expect(revoked.receipt).toMatchObject({ outcome: "REVOKED", ts_authority: "UNKNOWN" });
+    await expect(f.service.acceptTsReceipt(f.trust.seal(fact))).rejects.toMatchObject({ code: "RECEIPT_REVISION_CONFLICT", status: 409 });
+    expect(await ownGrant(f, submitted.receipt)).toMatchObject({ current: false });
+    expect((await f.service.proposal(actor(manager), f.workspace, submitted.receipt.proposal_id!)).state).toBe("REVOKED");
+  });
+
+  it("T03-07/08 an accepted receipt replay after revoke is historical, not renewed authority", async () => {
+    const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted), proof = f.trust.seal(fact);
+    const accepted = await f.service.acceptTsReceipt(proof);
+    await f.service.revoke(actor(owner), f.workspace, accepted.receipt.grant_id!, f.policy.revision, accepted.receipt.grant_revision!, next("accepted-revoke"));
+    expect(await ownGrant(f, accepted.receipt)).toMatchObject({ current: false, ts_authority: "ACCEPTED" });
+    expect(await f.service.acceptTsReceipt(proof)).toEqual({ receipt: accepted.receipt, replayed: true });
+    expect(await ownGrant(f, accepted.receipt)).toMatchObject({ current: false });
+  });
+
+  it("T03-06 migration guards reject event mutation and submission-receipt rewrite", async () => {
+    const f = await fixture(), submitted = await f.submit();
+    await expect(ctx.pool.query("UPDATE portal_access_policy_events SET request_digest=$2 WHERE event_id=$1",
+      [submitted.receipt.operation_id, accessDigest("TEST_ONLY-tamper")])).rejects.toThrow("immutable");
+    await expect(ctx.pool.query("DELETE FROM portal_access_policy_events WHERE event_id=$1", [submitted.receipt.operation_id])).rejects.toThrow("immutable");
+    await expect(ctx.pool.query("UPDATE portal_access_proposals SET submission_receipt='{}'::jsonb WHERE proposal_id=$1",
+      [submitted.receipt.proposal_id])).rejects.toThrow("immutable");
+    expect((await f.service.proposal(actor(manager), f.workspace, submitted.receipt.proposal_id!)).submission_receipt).toEqual(submitted.receipt);
+  });
+
+  it("T03-02 revoke preview shows advisory before/after without mutating authority",async()=>{
+    const f=await fixture(),submitted=await f.submit(),before=await state(f);
+    const preview=await f.service.previewRevoke(actor(owner),f.workspace,submitted.receipt.grant_id!,f.policy.revision,
+      submitted.receipt.grant_revision!,"TEST_ONLY revoke diff");
+    expect(preview).toMatchObject({advisory_only:true,step_up_required:true,before:{grant_id:submitted.receipt.grant_id,effect:"ALLOW",revoked_at_ms:null},
+      after:{grant_state:"REVOKED_ON_COMMIT",effective_access:"CURRENT_POLICY_REEVALUATED",ts_revocation:"NOT_REQUIRED",committed_obligations:"CONTINUE"}});
+    await expect(f.service.previewRevoke(actor(peer),f.workspace,submitted.receipt.grant_id!,f.policy.revision,
+      submitted.receipt.grant_revision!,"TEST_ONLY")).rejects.toMatchObject({code:"ACCESS_RESOURCE_NOT_FOUND",status:404});
+    await expect(f.service.previewRevoke(actor(owner),f.workspace,submitted.receipt.grant_id!,f.policy.revision,
+      "TEST_ONLY stale","TEST_ONLY")).rejects.toMatchObject({code:"GRANT_REVISION_CONFLICT",status:409});
+    expect(await state(f)).toEqual(before);
+  });
+
+  it("T03-03/07 only the current protected owner may preview/remove DENY, including before receipt replay", async () => {
+    const f = await fixture(), denied = await f.submit(f.change({ effect: "DENY" })), before = await state(f);
+    const id = denied.receipt.grant_id!, revision = denied.receipt.grant_revision!, reason = "TEST_ONLY remove explicit constraint";
+    await expect(f.service.previewRevoke(actor(manager), f.workspace, id, f.policy.revision, revision, reason))
+      .rejects.toMatchObject({ code: "DELEGATION_CEILING_EXCEEDED", status: 403 });
+    await expect(f.service.revoke(actor(manager), f.workspace, id, f.policy.revision, revision, next("manager-deny-removal"), reason))
+      .rejects.toMatchObject({ code: "DELEGATION_CEILING_EXCEEDED", status: 403 });
+    expect(await state(f)).toEqual(before);
+    expect(await ownGrant(f, denied.receipt)).toMatchObject({ effect: "DENY", current: true });
+    expect(await f.service.previewRevoke(actor(owner), f.workspace, id, f.policy.revision, revision, reason))
+      .toMatchObject({ before: { effect: "DENY" }, after: { grant_state: "REVOKED_ON_COMMIT", effective_access: "CURRENT_POLICY_REEVALUATED" } });
+    const key = next("owner-deny-removal"), revoked = await f.service.revoke(actor(owner), f.workspace, id, f.policy.revision, revision, key, reason);
+    expect(revoked.receipt.outcome).toBe("REVOKED");
+    await expect(f.service.revoke(actor(manager), f.workspace, id, f.policy.revision, revision, key, reason))
+      .rejects.toMatchObject({ code: "DELEGATION_CEILING_EXCEEDED", status: 403 });
+    expect(await f.service.revoke(actor(owner), f.workspace, id, f.policy.revision, revision, key, reason))
+      .toEqual({ receipt: revoked.receipt, replayed: true });
+    expect(await ownGrant(f, denied.receipt)).toMatchObject({ effect: "DENY", current: false });
+  });
+
+  it("T03-07 audit rechecks permission after an awaited read crosses the real grant expiry", async () => {
+    const f = await fixture();
+    await f.submit();
+    const now = Number((await ctx.pool.query("SELECT floor(extract(epoch FROM clock_timestamp())*1000)::bigint AS ms")).rows[0].ms);
+    const deadline = now + 2_000, revision = next("TEST_ONLY-expiring-audit-policy");
+    f.trust.artifact.policy = { ...f.policy, revision, artifact_digest: accessDigest(["TEST_ONLY-expiring-audit", revision]) };
+    f.trust.artifact.root_grants = f.trust.artifact.root_grants.map(grant => ({ ...grant,
+      grant_id: next("TEST_ONLY-expiring-audit-root"), revision: next("TEST_ONLY-expiring-audit-root-revision"),
+      policy_revision: revision, valid_until_ms: grant.action === "audit.read" ? deadline : grant.valid_until_ms }));
+    await f.service.installReviewedPolicy(f.trust.artifact);
+    const before = await state(f), original = AccessRepository.prototype.events;
+    let readAwaited = false;
+    const spy = vi.spyOn(AccessRepository.prototype, "events").mockImplementation(async function(this: AccessRepository,
+      workspace: string, subject: string, limit: number, after: null | { time: string; id: string }) {
+      const rows = await original.call(this, workspace, subject, limit, after);
+      if (workspace === f.workspace && subject === researcher.user.userId) {
+        expect(rows.length).toBeGreaterThan(0);
+        readAwaited = true;
+        await ctx.pool.query(`SELECT pg_sleep(GREATEST(
+          ($1::double precision-extract(epoch FROM clock_timestamp())*1000)/1000,0)+0.05)`, [deadline]);
+      }
+      return rows;
+    });
+    try {
+      await expect(f.service.audit(actor(owner), f.workspace, researcher.user.userId, 25))
+        .rejects.toMatchObject({ code: "ACCESS_RESOURCE_NOT_FOUND", status: 404 });
+      expect(readAwaited).toBe(true);
+      expect(await state(f)).toEqual(before);
+    } finally { spy.mockRestore(); }
+  });
+
+  it("T03-02/11 target and workspace isolation hide proposal/audit data from unrelated principals", async () => {
+    const f = await fixture(), submitted = await f.submit();
+    for (const id of [submitted.receipt.proposal_id!, "TEST_ONLY-nonexistent-proposal"])
+      await expect(f.service.proposal(actor(peer), f.workspace, id)).rejects.toMatchObject({ code: "ACCESS_RESOURCE_NOT_FOUND", status: 404 });
+    await expect(f.service.audit(actor(peer), f.workspace, researcher.user.userId, 25))
+      .rejects.toMatchObject({ code: "ACCESS_RESOURCE_NOT_FOUND", status: 404 });
+    const other = await fixture();
+    await expect(f.service.proposal(actor(manager), other.workspace, submitted.receipt.proposal_id!))
+      .rejects.toMatchObject({ code: "ACCESS_RESOURCE_NOT_FOUND", status: 404 });
+    await ctx.pool.query("DELETE FROM workspace_members WHERE workspace_id=$1 AND user_id=$2", [f.workspace, peer.user.userId]);
+    await expect(f.service.effective(actor(peer), f.workspace)).rejects.toMatchObject({ code: "ACCESS_RESOURCE_NOT_FOUND", status: 404 });
+    const unknownTarget = f.change({ subject_user_id: "TEST_ONLY-missing-user" });
+    await expect(f.submit(unknownTarget)).rejects.toMatchObject({ code: "ACCESS_RESOURCE_NOT_FOUND", status: 404 });
+  });
+
+  it("T03-02 mounted delegated USER preview/proposal/replay returns the real committed contract", async () => {
+    const f = await fixture(), change = f.change(), key = next("http-replay");
+    expect(manager.user.role).toBe("USER");
+    await withHttp(f.service, async app => {
+      const http = app.getHttpAdapter().getInstance();
+      const preview = await http.inject({ method: "POST", url: `${BASE}/preview`, headers: headers(manager.session), payload: { workspace_id: f.workspace, change } });
+      expect(preview.statusCode).toBe(200);
+      expect(preview.headers["cache-control"]).toContain("no-store");
+      expect(preview.json()).toMatchObject({ allowed: true, effective_business_right: false });
+      const payload = { workspace_id: f.workspace, change, preview_digest: preview.json().preview_digest };
+      const applied = await http.inject({ method: "POST", url: `${BASE}/proposals`, headers: headers(manager.session, key), payload });
+      expect(applied.statusCode).toBe(201);
+      expect(applied.json()).toMatchObject({ schema_version: "portal.access-result.v1", replayed: false, receipt: { outcome: "APP_APPLIED" } });
+      const replay = await http.inject({ method: "POST", url: `${BASE}/proposals`, headers: headers(manager.session, key), payload });
+      expect(replay.statusCode).toBe(201);
+      expect(replay.json()).toEqual({ ...applied.json(), replayed: true });
+      const own = await http.inject({ method: "GET", url: `${BASE}/effective?workspace_id=${f.workspace}`, headers: { cookie: cookie(researcher.session) } });
+      expect(own.statusCode).toBe(200);
+      expect(own.json()).toMatchObject({ user_id: researcher.user.userId, grants: expect.arrayContaining([
+        expect.objectContaining({ grant_id: applied.json().receipt.grant_id, current: true }),
+      ]) });
+    });
+  });
+
+  it("T03-02 mounted revoke preview returns the advisory contract and enforces strict input/CSRF without authority writes", async () => {
+    const f = await fixture(), submitted = await f.submit(), grant = await storedGrant(submitted.receipt.grant_id!);
+    const before = await state(f), effective = await ownGrant(f, submitted.receipt);
+    const proofs = (await ctx.pool.query("SELECT * FROM owner_step_up_grants WHERE user_id=$1 ORDER BY step_up_id", [manager.user.userId])).rows;
+    const payload = { workspace_id: f.workspace, expected_policy_revision: f.policy.revision,
+      expected_grant_revision: submitted.receipt.grant_revision!, reason: "TEST_ONLY mounted advisory revoke" };
+    const url = `${BASE}/grants/${submitted.receipt.grant_id}/preview-revoke`;
+    await withHttp(f.service, async app => {
+      const http = app.getHttpAdapter().getInstance();
+      const response = await http.inject({ method: "POST", url, headers: headers(manager.session), payload });
+      expect(response.statusCode).toBe(200);
+      expect(response.headers["cache-control"]).toContain("no-store");
+      expect(response.json()).toMatchObject({ schema_version: "portal.access-revoke-preview.v1",
+        policy_revision: f.policy.revision, advisory_only: true, step_up_required: true,
+        before: { grant_id: grant.grant_id, grant_revision: grant.revision, action: grant.action, effect: "ALLOW",
+          selector: grant.selector, environments: grant.environments, revoked_at_ms: null },
+        after: { grant_state: "REVOKED_ON_COMMIT", effective_access: "CURRENT_POLICY_REEVALUATED", ts_revocation: "NOT_REQUIRED",
+          descendants: "CURRENT_CHAIN_RECHECKED", committed_obligations: "CONTINUE" } });
+      expect(response.json().preview_digest).toBe(accessDigest([manager.user.userId, f.workspace,
+        grant.grant_id, f.policy.revision, grant.revision, payload.reason]));
+      const invalid = await http.inject({ method: "POST", url, headers: headers(manager.session),
+        payload: { ...payload, actor_user_id: owner.user.userId } });
+      expect(invalid.statusCode).toBe(400);
+      expect(invalid.json().error.code).toBe("ACCESS_INPUT_INVALID");
+      for (const overrides of [{ "x-portal-csrf": "TEST_ONLY-invalid-csrf" }, { origin: "" }]) {
+        const denied = await http.inject({ method: "POST", url,
+          headers: { ...headers(manager.session), ...overrides }, payload });
+        expect(denied.statusCode).toBe(403);
+      }
+    });
+    expect(await state(f)).toEqual(before);
+    expect(await storedGrant(grant.grant_id)).toEqual(grant);
+    expect(await ownGrant(f, submitted.receipt)).toEqual(effective);
+    expect((await ctx.pool.query("SELECT * FROM owner_step_up_grants WHERE user_id=$1 ORDER BY step_up_id", [manager.user.userId])).rows).toEqual(proofs);
+  });
+
+  it("T03-02 mounted endpoints require a current session and reject CSRF/origin/idempotency failures", async () => {
+    const f = await fixture(), change = f.change(), before = await state(f);
+    await withHttp(f.service, async app => {
+      const http = app.getHttpAdapter().getInstance();
+      expect((await http.inject({ method: "GET", url: `${BASE}/effective?workspace_id=${f.workspace}` })).statusCode).toBe(401);
+      for (const overrides of [{ origin: "" }, { origin: "https://untrusted.invalid" }, { "x-portal-csrf": "wrong" },
+        { "x-portal-csrf": "" }, { cookie: `${SESSION_COOKIE}=${manager.session.token}` }]) {
+        const response = await http.inject({ method: "POST", url: `${BASE}/preview`,
+          headers: { ...headers(manager.session), ...overrides }, payload: { workspace_id: f.workspace, change } });
+        expect(response.statusCode).toBe(403);
+      }
+      for (const key of ["", "short", "x".repeat(129), "invalid key spaces"]) {
+        expect((await http.inject({ method: "POST", url: `${BASE}/preview`, headers: headers(manager.session, key),
+          payload: { workspace_id: f.workspace, change } })).statusCode).toBe(400);
+      }
+    });
+    expect(await state(f)).toEqual(before);
+  });
+
+  it("T03-03/11 mounted strict schemas refuse spoofed actors, identities, ownership and acceptance facts", async () => {
+    const f = await fixture(), change = f.change(), before = await state(f);
+    await withHttp(f.service, async app => {
+      const http = app.getHttpAdapter().getInstance();
+      const extras = [{ actor_user_id: owner.user.userId }, { issuer: "TEST_ONLY-forged" }, { owner_user_id: owner.user.userId },
+        { role: "ADMIN" }, { ts_state: "APPLIED" }, { accepted: true }, { verifier: "TEST_ONLY" },
+        { sql: "SELECT 1" }, { url: "https://untrusted.invalid" }];
+      for (const extra of extras) {
+        const top = await http.inject({ method: "POST", url: `${BASE}/preview`, headers: headers(owner.session),
+          payload: { workspace_id: f.workspace, change, ...extra } });
+        const nested = await http.inject({ method: "POST", url: `${BASE}/preview`, headers: headers(owner.session),
+          payload: { workspace_id: f.workspace, change: { ...change, ...extra } } });
+        expect([top.statusCode, nested.statusCode]).toEqual([400, 400]);
+        expect(top.json().error.code).toBe("ACCESS_INPUT_INVALID");
+      }
+      const badSelector = await http.inject({ method: "POST", url: `${BASE}/preview`, headers: headers(manager.session),
+        payload: { workspace_id: f.workspace, change: { ...change, selector: { kind: "OWN_ALPHA", owner_user_id: owner.user.userId } } } });
+      expect(badSelector.statusCode).toBe(400);
+    });
+    expect(await state(f)).toEqual(before);
+  });
+
+  it("T03-03 mounted deny reasons and step-up cannot be bypassed by ADMIN or a copied preview", async () => {
+    const f = await fixture(), change = f.change(), preview = await f.service.preview(actor(manager), f.workspace, change);
+    await withHttp(f.service, async app => {
+      const http = app.getHttpAdapter().getInstance();
+      const denied = await http.inject({ method: "POST", url: `${BASE}/preview`, headers: headers(peer.session), payload: { workspace_id: f.workspace, change } });
+      expect(denied.statusCode).toBe(200);
+      expect(denied.json()).toMatchObject({ allowed: false, reason_code: "DELEGATION_CEILING_EXCEEDED" });
+      const submit = await http.inject({ method: "POST", url: `${BASE}/proposals`, headers: headers(peer.session),
+        payload: { workspace_id: f.workspace, change, preview_digest: preview.preview_digest } });
+      expect(submit.statusCode).toBe(403);
+      expect(["STEP_UP_REQUIRED", "DELEGATION_CEILING_EXCEEDED"]).toContain(submit.json().error.code);
+    });
+    expect((await state(f)).proposals).toBe(0);
+  });
+
+  it("T03-05/08 neither mounted test nor default application publishes policy-install or TS-acceptance writers", async () => {
+    const f = await fixture();
+    await withHttp(f.service, async app => {
+      for (const http of [app.getHttpAdapter().getInstance(), ctx.app.getHttpAdapter().getInstance()]) {
+        for (const path of ["policy", "policy/install", "install-reviewed-policy", "ts-receipts", "accept-ts-receipt", "proposals/TEST_ONLY/accept"]) {
+          const response = await http.inject({ method: "POST", url: `${BASE}/${path}`, headers: headers(owner.session),
+            payload: { policy: f.policy, outcome: "ACCEPTED", qualification: "OWNER_VERIFIED" } });
+          expect(response.statusCode, path).toBe(404);
+        }
+      }
+      const defaultEffective = await ctx.app.getHttpAdapter().getInstance().inject({ method: "GET",
+        url: `${BASE}/effective?workspace_id=${f.workspace}`, headers: { cookie: cookie(manager.session) } });
+      expect(defaultEffective.statusCode).toBe(200);
+      expect(defaultEffective.json().availability).toBe("POLICY_PENDING");
+    });
+  });
+});

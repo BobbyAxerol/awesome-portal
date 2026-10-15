@@ -1,0 +1,2178 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal scoped access and delegation",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/admin/profile-access/v2/effective": {
+      "get": {
+        "operationId": "portalScopedAccessEffectiveGetV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private,no-store; Portal application authority, not TS business activation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessEffective"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/profile-access/v2/preview": {
+      "post": {
+        "operationId": "portalScopedAccessPreviewPostV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-portal-idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{8,128}$"
+            }
+          },
+          {
+            "name": "x-portal-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessPreviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Immutable original receipt, including original status on replay; private,no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessPreview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/profile-access/v2/proposals": {
+      "post": {
+        "operationId": "portalScopedAccessProposalPostV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-portal-idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{8,128}$"
+            }
+          },
+          {
+            "name": "x-portal-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessProposalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Immutable original receipt, including original status on replay; private,no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/profile-access/v2/proposals/{id}": {
+      "get": {
+        "operationId": "portalScopedAccessProposalGetV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private,no-store; Portal application authority, not TS business activation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProposal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/profile-access/v2/grants/{id}/revoke": {
+      "post": {
+        "operationId": "portalScopedAccessRevokePostV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-portal-idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{8,128}$"
+            }
+          },
+          {
+            "name": "x-portal-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessRevokeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Immutable original receipt, including original status on replay; private,no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/profile-access/v2/grants/{id}/preview-revoke": {
+      "post": {
+        "operationId": "portalScopedAccessRevokePreviewPostV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-portal-idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{8,128}$"
+            }
+          },
+          {
+            "name": "x-portal-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessRevokeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Immutable original receipt, including original status on replay; private,no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessRevokePreview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/profile-access/v2/step-up": {
+      "post": {
+        "operationId": "portalScopedAccessStepUpPostV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-portal-idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{8,128}$"
+            }
+          },
+          {
+            "name": "x-portal-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessStepUpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Immutable original receipt, including original status on replay; private,no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessStepUp"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/profile-access/v2/audit": {
+      "get": {
+        "operationId": "portalScopedAccessAuditGetV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            }
+          },
+          {
+            "name": "subject_user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private,no-store; Portal application authority, not TS business activation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessAudit"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "PortalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-portal_session"
+      }
+    },
+    "schemas": {
+      "AccessAction": {
+        "type": "string",
+        "enum": [
+          "administration.users.manage",
+          "administration.profile_access.manage",
+          "governance.r1.read",
+          "governance.r1.decide",
+          "governance.r2.read",
+          "governance.r2.decide",
+          "governance.canary.read",
+          "governance.canary.decide",
+          "governance.live.read",
+          "governance.live.decide",
+          "profile.read_self",
+          "profile.update_self",
+          "users.read",
+          "users.create",
+          "users.manage_status",
+          "sessions.revoke",
+          "access.read",
+          "access.preview",
+          "access.propose",
+          "access.grant",
+          "access.revoke",
+          "alpha.read",
+          "alpha.metadata.edit",
+          "alpha.owner.propose",
+          "business.read_all",
+          "portfolio.discover_linked",
+          "portfolio.read_restricted",
+          "portfolio.read",
+          "portfolio.manage",
+          "membership.propose",
+          "account.read",
+          "binding.read",
+          "binding.change.propose",
+          "capital.preview",
+          "capital.fund",
+          "capital.return_capital",
+          "capital.initial_grant",
+          "capital.top_up",
+          "capital.immediate_decrease",
+          "capital.recall_partial",
+          "capital.recall_full",
+          "capital.adjust_target_budget",
+          "capital.set_root_limit",
+          "deployment.register",
+          "deployment.activate",
+          "deployment.assignment.propose",
+          "safety.halt",
+          "safety.reducing",
+          "safety.resume",
+          "audit.read",
+          "report.export",
+          "stream.subscribe",
+          "maintenance.read",
+          "maintenance.execute",
+          "development.read",
+          "development.execute",
+          "owner.recovery"
+        ]
+      },
+      "AccessSelector": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "resource_kind",
+              "ids"
+            ],
+            "properties": {
+              "kind": {
+                "const": "EXPLICIT_RESOURCE_SET"
+              },
+              "resource_kind": {
+                "enum": [
+                  "ROOT",
+                  "PORTFOLIO",
+                  "ALPHA",
+                  "ALPHA_VERSION",
+                  "DEPLOYMENT",
+                  "ACCOUNT",
+                  "BINDING",
+                  "USER"
+                ]
+              },
+              "ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                },
+                "minItems": 1,
+                "maxItems": 200,
+                "uniqueItems": true
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "const": "OWN_ALPHA"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "portfolio_ids"
+            ],
+            "properties": {
+              "kind": {
+                "const": "PORTFOLIO_MEMBERSHIP"
+              },
+              "portfolio_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                },
+                "minItems": 1,
+                "maxItems": 200,
+                "uniqueItems": true
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "root_id"
+            ],
+            "properties": {
+              "kind": {
+                "const": "ROOT_SCOPE"
+              },
+              "root_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              }
+            }
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind"
+        }
+      },
+      "AccessChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "subject_user_id",
+          "action",
+          "effect",
+          "selector",
+          "environments",
+          "valid_from_ms",
+          "valid_until_ms",
+          "delegable_actions",
+          "ceiling_grant_id",
+          "expected_ceiling_revision",
+          "expected_policy_revision",
+          "expected_ts_membership_revision",
+          "reason"
+        ],
+        "properties": {
+          "subject_user_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "action": {
+            "$ref": "#/components/schemas/AccessAction"
+          },
+          "effect": {
+            "enum": [
+              "ALLOW",
+              "DENY"
+            ]
+          },
+          "selector": {
+            "$ref": "#/components/schemas/AccessSelector"
+          },
+          "environments": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 3,
+            "uniqueItems": true
+          },
+          "valid_from_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "valid_until_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "delegable_actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccessAction"
+            },
+            "minItems": 0,
+            "maxItems": 57,
+            "uniqueItems": true
+          },
+          "ceiling_grant_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "expected_ceiling_revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "expected_policy_revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "expected_ts_membership_revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          }
+        },
+        "description": "End-exclusive interval: valid_until_ms must be greater than valid_from_ms or null. Exact single current parent ceiling; no browser actor/issuer/TS-acceptance fields.",
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "not": {
+                    "const": "access.grant"
+                  }
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "delegable_actions": {
+                  "maxItems": 0
+                }
+              }
+            }
+          }
+        ]
+      },
+      "AccessPreviewRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "workspace_id",
+          "change"
+        ],
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "change": {
+            "$ref": "#/components/schemas/AccessChange"
+          }
+        }
+      },
+      "AccessProposalRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "workspace_id",
+          "change",
+          "preview_digest"
+        ],
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "change": {
+            "$ref": "#/components/schemas/AccessChange"
+          },
+          "preview_digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        }
+      },
+      "AccessRevokeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "workspace_id",
+          "expected_policy_revision",
+          "expected_grant_revision",
+          "reason"
+        ],
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "expected_policy_revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "expected_grant_revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          }
+        }
+      },
+      "AccessRevokePreview": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "preview_digest",
+          "policy_revision",
+          "before",
+          "after",
+          "step_up_required",
+          "advisory_only"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.access-revoke-preview.v1"
+          },
+          "preview_digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "policy_revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "before": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "grant_id",
+              "grant_revision",
+              "action",
+              "effect",
+              "selector",
+              "environments",
+              "revoked_at_ms"
+            ],
+            "properties": {
+              "grant_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              },
+              "grant_revision": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "action": {
+                "$ref": "#/components/schemas/AccessAction"
+              },
+              "effect": {
+                "enum": [
+                  "ALLOW",
+                  "DENY"
+                ]
+              },
+              "selector": {
+                "$ref": "#/components/schemas/AccessSelector"
+              },
+              "environments": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "paper",
+                    "sandbox",
+                    "live"
+                  ]
+                },
+                "minItems": 1,
+                "maxItems": 3,
+                "uniqueItems": true
+              },
+              "revoked_at_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "after": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "grant_state",
+              "effective_access",
+              "ts_revocation",
+              "descendants",
+              "committed_obligations"
+            ],
+            "properties": {
+              "grant_state": {
+                "const": "REVOKED_ON_COMMIT"
+              },
+              "effective_access": {
+                "const": "CURRENT_POLICY_REEVALUATED"
+              },
+              "ts_revocation": {
+                "enum": [
+                  "NOT_CONFIRMED",
+                  "NOT_REQUIRED"
+                ]
+              },
+              "descendants": {
+                "const": "CURRENT_CHAIN_RECHECKED"
+              },
+              "committed_obligations": {
+                "const": "CONTINUE"
+              }
+            }
+          },
+          "step_up_required": {
+            "const": true
+          },
+          "advisory_only": {
+            "const": true
+          }
+        }
+      },
+      "AccessStepUpRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "workspace_id",
+          "password"
+        ],
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "writeOnly": true
+          }
+        }
+      },
+      "AccessReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "operation_id",
+          "proposal_id",
+          "grant_id",
+          "outcome",
+          "http_status",
+          "reason_code",
+          "policy_revision",
+          "grant_revision",
+          "decided_at_ms",
+          "ts_authority"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.access-operation.v1"
+          },
+          "operation_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "proposal_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "grant_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "outcome": {
+            "enum": [
+              "APP_APPLIED",
+              "TS_PENDING",
+              "REVOKED",
+              "DENIED",
+              "TS_APPLIED",
+              "TS_REJECTED",
+              "TS_UNKNOWN"
+            ]
+          },
+          "http_status": {
+            "type": "integer",
+            "minimum": 200,
+            "maximum": 599
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "policy_revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "grant_revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "decided_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "ts_authority": {
+            "enum": [
+              "NOT_REQUIRED",
+              "PENDING",
+              "ACCEPTED",
+              "REJECTED",
+              "UNKNOWN"
+            ]
+          }
+        }
+      },
+      "AccessResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "receipt",
+          "replayed"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.access-result.v1"
+          },
+          "receipt": {
+            "$ref": "#/components/schemas/AccessReceipt"
+          },
+          "replayed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AccessEffective": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "user_id",
+          "policy_revision",
+          "availability",
+          "reason_code",
+          "grants",
+          "researcher_field_policy",
+          "owner_recovery"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.access-effective.v1"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "user_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "policy_revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "availability": {
+            "enum": [
+              "AVAILABLE",
+              "POLICY_PENDING"
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "grants": {
+            "type": "array",
+            "maxItems": 10000,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "grant_id",
+                "action",
+                "effect",
+                "selector",
+                "environments",
+                "valid_from_ms",
+                "valid_until_ms",
+                "revision",
+                "current",
+                "ts_authority"
+              ],
+              "properties": {
+                "grant_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                },
+                "action": {
+                  "$ref": "#/components/schemas/AccessAction"
+                },
+                "effect": {
+                  "enum": [
+                    "ALLOW",
+                    "DENY"
+                  ]
+                },
+                "selector": {
+                  "$ref": "#/components/schemas/AccessSelector"
+                },
+                "environments": {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "paper",
+                      "sandbox",
+                      "live"
+                    ]
+                  },
+                  "minItems": 1,
+                  "maxItems": 3,
+                  "uniqueItems": true
+                },
+                "valid_from_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "valid_until_ms": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "revision": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "current": {
+                  "type": "boolean"
+                },
+                "ts_authority": {
+                  "enum": [
+                    "NOT_REQUIRED",
+                    "PENDING",
+                    "ACCEPTED",
+                    "REJECTED",
+                    "UNKNOWN"
+                  ]
+                }
+              }
+            }
+          },
+          "researcher_field_policy": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "policy_ref"
+            ],
+            "properties": {
+              "state": {
+                "enum": [
+                  "PENDING",
+                  "QUALIFIED"
+                ]
+              },
+              "policy_ref": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "owner_recovery": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "enabled",
+              "reason_code"
+            ],
+            "properties": {
+              "enabled": {
+                "const": false
+              },
+              "reason_code": {
+                "const": "OWNER_RECOVERY_NOT_APPROVED"
+              }
+            }
+          }
+        }
+      },
+      "AccessPreview": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "allowed",
+          "reason_code",
+          "preview_digest",
+          "policy_revision",
+          "app_outcome",
+          "ts_authority",
+          "effective_business_right",
+          "change",
+          "effect_preview"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.access-preview.v1"
+          },
+          "allowed": {
+            "type": "boolean"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "preview_digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "policy_revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "app_outcome": {
+            "enum": [
+              "DENIED",
+              "ELIGIBLE"
+            ]
+          },
+          "ts_authority": {
+            "enum": [
+              "NOT_REQUIRED",
+              "PENDING"
+            ]
+          },
+          "effective_business_right": {
+            "const": false
+          },
+          "change": {
+            "$ref": "#/components/schemas/AccessChange"
+          },
+          "effect_preview": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "before",
+              "after"
+            ],
+            "properties": {
+              "before": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "coverage",
+                  "grants"
+                ],
+                "properties": {
+                  "coverage": {
+                    "const": "EXACT_SELECTOR_GRANTS_ONLY"
+                  },
+                  "grants": {
+                    "type": "array",
+                    "maxItems": 10000,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "grant_id",
+                        "revision",
+                        "effect"
+                      ],
+                      "properties": {
+                        "grant_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                        },
+                        "revision": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        },
+                        "effect": {
+                          "enum": [
+                            "ALLOW",
+                            "DENY"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "after": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "application",
+                  "business",
+                  "rights_effective_now"
+                ],
+                "properties": {
+                  "application": {
+                    "enum": [
+                      "DENIED",
+                      "ELIGIBLE_ON_COMMIT"
+                    ]
+                  },
+                  "business": {
+                    "enum": [
+                      "PENDING",
+                      "NOT_REQUIRED"
+                    ]
+                  },
+                  "rights_effective_now": {
+                    "const": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "AccessProposal": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "proposal_id",
+          "state",
+          "change",
+          "submission_receipt",
+          "updated_at_ms"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.access-proposal.v1"
+          },
+          "proposal_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "state": {
+            "enum": [
+              "APP_APPLIED",
+              "TS_PENDING",
+              "TS_APPLIED",
+              "TS_REJECTED",
+              "TS_UNKNOWN",
+              "REVOKED"
+            ]
+          },
+          "change": {
+            "$ref": "#/components/schemas/AccessChange"
+          },
+          "submission_receipt": {
+            "$ref": "#/components/schemas/AccessReceipt"
+          },
+          "updated_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        }
+      },
+      "AccessStepUp": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "state",
+          "expires_at_ms"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.access-step-up.v1"
+          },
+          "state": {
+            "const": "ACTIVE"
+          },
+          "expires_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        }
+      },
+      "AccessAudit": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "subject_user_id",
+          "items",
+          "next_cursor",
+          "max_items"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.access-audit.v1"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "subject_user_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "operation",
+                "receipt",
+                "occurred_at_ms"
+              ],
+              "properties": {
+                "operation": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                },
+                "receipt": {
+                  "$ref": "#/components/schemas/AccessReceipt"
+                },
+                "occurred_at_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              }
+            }
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "max_items": {
+            "const": 100
+          }
+        }
+      },
+      "AccessProblem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

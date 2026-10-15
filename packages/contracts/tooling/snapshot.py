@@ -20,6 +20,10 @@ from typing import Any
 CONTRACTS_ROOT = Path(__file__).resolve().parents[1]
 
 TRACKED = (
+    "tooling/generate-execution-access.mjs",
+    "openapi/execution-access.openapi.json",
+    "fixtures/execution-access.synthetic.valid.json",
+    "generated/execution-access.d.ts",
     "tooling/generate-portal-profile.mjs",
     "openapi/portal-profile.openapi.json",
     "fixtures/portal-profile.synthetic.valid.json",

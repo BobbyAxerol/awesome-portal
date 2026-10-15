@@ -1,0 +1,281 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "cases": [
+    {
+      "type": "AccessEffective",
+      "value": {
+        "schema_version": "portal.access-effective.v1",
+        "workspace_id": "ws_TEST_ONLY",
+        "user_id": "usr_TEST_ONLY",
+        "policy_revision": null,
+        "availability": "POLICY_PENDING",
+        "reason_code": "POLICY_PENDING",
+        "grants": [],
+        "researcher_field_policy": {
+          "state": "PENDING",
+          "policy_ref": null
+        },
+        "owner_recovery": {
+          "enabled": false,
+          "reason_code": "OWNER_RECOVERY_NOT_APPROVED"
+        }
+      }
+    },
+    {
+      "type": "AccessPreviewRequest",
+      "value": {
+        "workspace_id": "ws_TEST_ONLY",
+        "change": {
+          "subject_user_id": "usr_TEST_ONLY_researcher",
+          "action": "portfolio.read_restricted",
+          "effect": "ALLOW",
+          "selector": {
+            "kind": "EXPLICIT_RESOURCE_SET",
+            "resource_kind": "PORTFOLIO",
+            "ids": [
+              "portfolio_TEST_ONLY"
+            ]
+          },
+          "environments": [
+            "paper"
+          ],
+          "valid_from_ms": 1792094400000,
+          "valid_until_ms": null,
+          "delegable_actions": [],
+          "ceiling_grant_id": "ceiling_TEST_ONLY",
+          "expected_ceiling_revision": "r1_TEST_ONLY",
+          "expected_policy_revision": "p1_TEST_ONLY",
+          "expected_ts_membership_revision": null,
+          "reason": "Synthetic example, not a granted production policy"
+        }
+      }
+    },
+    {
+      "type": "AccessPreview",
+      "value": {
+        "schema_version": "portal.access-preview.v1",
+        "allowed": false,
+        "reason_code": "RESEARCHER_FIELD_POLICY_PENDING",
+        "preview_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "policy_revision": "p1_TEST_ONLY",
+        "app_outcome": "DENIED",
+        "ts_authority": "PENDING",
+        "effective_business_right": false,
+        "change": {
+          "subject_user_id": "usr_TEST_ONLY_researcher",
+          "action": "portfolio.read_restricted",
+          "effect": "ALLOW",
+          "selector": {
+            "kind": "EXPLICIT_RESOURCE_SET",
+            "resource_kind": "PORTFOLIO",
+            "ids": [
+              "portfolio_TEST_ONLY"
+            ]
+          },
+          "environments": [
+            "paper"
+          ],
+          "valid_from_ms": 1792094400000,
+          "valid_until_ms": null,
+          "delegable_actions": [],
+          "ceiling_grant_id": "ceiling_TEST_ONLY",
+          "expected_ceiling_revision": "r1_TEST_ONLY",
+          "expected_policy_revision": "p1_TEST_ONLY",
+          "expected_ts_membership_revision": null,
+          "reason": "Synthetic example, not a granted production policy"
+        },
+        "effect_preview": {
+          "before": {
+            "coverage": "EXACT_SELECTOR_GRANTS_ONLY",
+            "grants": []
+          },
+          "after": {
+            "application": "DENIED",
+            "business": "PENDING",
+            "rights_effective_now": false
+          }
+        }
+      }
+    },
+    {
+      "type": "AccessRevokePreview",
+      "value": {
+        "schema_version": "portal.access-revoke-preview.v1",
+        "preview_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "policy_revision": "p1_TEST_ONLY",
+        "before": {
+          "grant_id": "acg_TEST_ONLY_ALLOW",
+          "grant_revision": "r1_TEST_ONLY",
+          "action": "users.read",
+          "effect": "ALLOW",
+          "selector": {
+            "kind": "EXPLICIT_RESOURCE_SET",
+            "resource_kind": "USER",
+            "ids": [
+              "usr_TEST_ONLY_target"
+            ]
+          },
+          "environments": [
+            "paper"
+          ],
+          "revoked_at_ms": null
+        },
+        "after": {
+          "grant_state": "REVOKED_ON_COMMIT",
+          "effective_access": "CURRENT_POLICY_REEVALUATED",
+          "ts_revocation": "NOT_REQUIRED",
+          "descendants": "CURRENT_CHAIN_RECHECKED",
+          "committed_obligations": "CONTINUE"
+        },
+        "step_up_required": true,
+        "advisory_only": true
+      }
+    },
+    {
+      "type": "AccessRevokePreview",
+      "value": {
+        "schema_version": "portal.access-revoke-preview.v1",
+        "preview_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "policy_revision": "p1_TEST_ONLY",
+        "before": {
+          "grant_id": "acg_TEST_ONLY_DENY",
+          "grant_revision": "r1_TEST_ONLY",
+          "action": "users.read",
+          "effect": "DENY",
+          "selector": {
+            "kind": "EXPLICIT_RESOURCE_SET",
+            "resource_kind": "USER",
+            "ids": [
+              "usr_TEST_ONLY_target"
+            ]
+          },
+          "environments": [
+            "paper"
+          ],
+          "revoked_at_ms": null
+        },
+        "after": {
+          "grant_state": "REVOKED_ON_COMMIT",
+          "effective_access": "CURRENT_POLICY_REEVALUATED",
+          "ts_revocation": "NOT_REQUIRED",
+          "descendants": "CURRENT_CHAIN_RECHECKED",
+          "committed_obligations": "CONTINUE"
+        },
+        "step_up_required": true,
+        "advisory_only": true
+      }
+    },
+    {
+      "type": "AccessReceipt",
+      "value": {
+        "schema_version": "portal.access-operation.v1",
+        "operation_id": "ace_TEST_ONLY_APP_APPLIED",
+        "proposal_id": "acp_TEST_ONLY",
+        "grant_id": "acg_TEST_ONLY",
+        "outcome": "APP_APPLIED",
+        "http_status": 200,
+        "reason_code": null,
+        "policy_revision": "p1_TEST_ONLY",
+        "grant_revision": "r1_TEST_ONLY",
+        "decided_at_ms": 1792094400000,
+        "ts_authority": "NOT_REQUIRED"
+      }
+    },
+    {
+      "type": "AccessReceipt",
+      "value": {
+        "schema_version": "portal.access-operation.v1",
+        "operation_id": "ace_TEST_ONLY_TS_PENDING",
+        "proposal_id": "acp_TEST_ONLY",
+        "grant_id": "acg_TEST_ONLY",
+        "outcome": "TS_PENDING",
+        "http_status": 200,
+        "reason_code": null,
+        "policy_revision": "p1_TEST_ONLY",
+        "grant_revision": "r1_TEST_ONLY",
+        "decided_at_ms": 1792094400000,
+        "ts_authority": "PENDING"
+      }
+    },
+    {
+      "type": "AccessReceipt",
+      "value": {
+        "schema_version": "portal.access-operation.v1",
+        "operation_id": "ace_TEST_ONLY_TS_APPLIED",
+        "proposal_id": "acp_TEST_ONLY",
+        "grant_id": "acg_TEST_ONLY",
+        "outcome": "TS_APPLIED",
+        "http_status": 200,
+        "reason_code": null,
+        "policy_revision": "p1_TEST_ONLY",
+        "grant_revision": "r1_TEST_ONLY",
+        "decided_at_ms": 1792094400000,
+        "ts_authority": "ACCEPTED"
+      }
+    },
+    {
+      "type": "AccessReceipt",
+      "value": {
+        "schema_version": "portal.access-operation.v1",
+        "operation_id": "ace_TEST_ONLY_TS_REJECTED",
+        "proposal_id": "acp_TEST_ONLY",
+        "grant_id": "acg_TEST_ONLY",
+        "outcome": "TS_REJECTED",
+        "http_status": 200,
+        "reason_code": null,
+        "policy_revision": "p1_TEST_ONLY",
+        "grant_revision": "r1_TEST_ONLY",
+        "decided_at_ms": 1792094400000,
+        "ts_authority": "REJECTED"
+      }
+    },
+    {
+      "type": "AccessReceipt",
+      "value": {
+        "schema_version": "portal.access-operation.v1",
+        "operation_id": "ace_TEST_ONLY_TS_UNKNOWN",
+        "proposal_id": "acp_TEST_ONLY",
+        "grant_id": "acg_TEST_ONLY",
+        "outcome": "TS_UNKNOWN",
+        "http_status": 200,
+        "reason_code": null,
+        "policy_revision": "p1_TEST_ONLY",
+        "grant_revision": "r1_TEST_ONLY",
+        "decided_at_ms": 1792094400000,
+        "ts_authority": "UNKNOWN"
+      }
+    },
+    {
+      "type": "AccessReceipt",
+      "value": {
+        "schema_version": "portal.access-operation.v1",
+        "operation_id": "ace_TEST_ONLY_REVOKED",
+        "proposal_id": "acp_TEST_ONLY",
+        "grant_id": "acg_TEST_ONLY",
+        "outcome": "REVOKED",
+        "http_status": 200,
+        "reason_code": null,
+        "policy_revision": "p1_TEST_ONLY",
+        "grant_revision": "r1_TEST_ONLY",
+        "decided_at_ms": 1792094400000,
+        "ts_authority": "NOT_REQUIRED"
+      }
+    },
+    {
+      "type": "AccessReceipt",
+      "value": {
+        "schema_version": "portal.access-operation.v1",
+        "operation_id": "ace_TEST_ONLY_DENIED",
+        "proposal_id": "acp_TEST_ONLY",
+        "grant_id": "acg_TEST_ONLY",
+        "outcome": "DENIED",
+        "http_status": 409,
+        "reason_code": "GRANT_REVISION_CONFLICT",
+        "policy_revision": "p1_TEST_ONLY",
+        "grant_revision": "r1_TEST_ONLY",
+        "decided_at_ms": 1792094400000,
+        "ts_authority": "NOT_REQUIRED"
+      }
+    }
+  ]
+}

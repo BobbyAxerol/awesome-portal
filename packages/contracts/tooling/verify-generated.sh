@@ -24,6 +24,8 @@ node tooling/generate-execution-v2-foundation.mjs --check
 generate_and_compare openapi/execution-v2-foundation.openapi.json generated/execution-v2-foundation.d.ts
 node tooling/generate-portal-profile.mjs --check
 generate_and_compare openapi/portal-profile.openapi.json generated/portal-profile.d.ts
+node tooling/generate-execution-access.mjs --check
+generate_and_compare openapi/execution-access.openapi.json generated/execution-access.d.ts
 generate_and_compare openapi/execution-analytics.openapi.json generated/execution-analytics.d.ts
 generate_and_compare openapi/execution-query-analytics.openapi.json generated/execution-query-analytics.d.ts
 generate_and_compare openapi/execution-analytics-series.openapi.json generated/execution-analytics-series.d.ts

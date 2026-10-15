@@ -1,4 +1,4 @@
-import { Pool, PoolClient } from "pg";
+import type { Pool, PoolClient } from "pg";
 
 /**
  * A4-1 · the owner anchor and the finite capability namespace.

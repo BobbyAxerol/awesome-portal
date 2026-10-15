@@ -1,6 +1,8 @@
 # ELP2-02 — Identity, current sessions and safe profile lifecycle
 
-Status: WORKING_IMPLEMENTATION / FINAL_LANDING_GATE_PENDING. ELP2-01 landed at
+Status: BACKEND_TECHNICAL_CHECKPOINT_PASS / EXTERNAL_MAPPING_BLOCKED.
+Landed `b448c0be655817dc49dd02f86aa2544e64c00d48` at2026-10-15T20:37Z.
+ELP2-01 landed at
 `700aa6a47cdfc72c53ced8f1851144e1ab58f3e0` with a successful normal hook.
 Assigned under
 Bobby's active01→04 goal, Unified §14.9. This is not
@@ -65,6 +67,29 @@ Claude handoff AWAITING_CONSUMER_REVIEW; no consumer work assigned.03 waits for
 current identity/session preservation gates. Canonical external decisions remain
 in ELP2-00 (exact ceiling/disclosure, trusted TS mapping/acceptance, recovery).
 No new approval request: the local backend/test scope is already assigned.
+
+### Final landing addendum — later result supersedes pending notes below
+
+Normal hook21748 completed **exit0** and committed
+`b448c0be655817dc49dd02f86aa2544e64c00d48`:51 contract files/388 tests PASS;
+clean Control API build;277 API files/2,607 tests PASS,2 files/3 tests SKIP;
+duration769.01s, including final identity18/18 and retained-review8/8.
+Disposable PostgreSQL dump/restore signature and normal workspace/tracking
+checks PASS. Earlier failed/pending receipts below remain historical, not the
+current verdict. This is local PG/API proof, not shared-runtime qualification.
+
+Commit scope25 files,+1,656/−69: existing identity/lifecycle preserved, new own
+profile API/contracts/tests and tracking. No migration, account/grant reset,
+frontend edit, push or shared runtime change. Test cell suffix1579242 used
+Node3CPU/3GiB and PG1CPU/1GiB; point sample Node379.4MiB, PG716.8MiB
+(not measured peaks). Disk free169,046,573,056bytes/25%; no capacity cleanup
+required beyond owned cell teardown. Preserve evidence and shared caches.
+
+Backend checkpoint02→03 **PASS**. Original full exit remains limited by
+request003 verified TS/researcher mapping; recovery explicitly disabled under
+request001/DEC01, not falsely claimed implemented. Frontend remains unassigned,
+consumer acknowledgement AWAITING_CONSUMER_REVIEW. Next approved backend03
+may implement local policy/proposals without activating pending authority.
 
 ## Requirement → implementation → verification matrix
 

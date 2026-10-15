@@ -1,5 +1,7 @@
 import { Pool, PoolClient } from "pg";
 
+import { randomId } from "../domain";
+import { redactAuditMetadata } from "./audit";
 import { PortalCapability, isPortalCapability } from "./owner-access";
 
 /**
@@ -83,6 +85,14 @@ export interface GrantEvent {
   stateAfter: Record<string, unknown> | null;
   stepUpUsed: boolean;
   occurredAt: Date;
+}
+
+/** A refusal with no valid grantee FK still has an immutable, redacted receipt. */
+export interface GrantRefusalReceipt {
+  actorUserId: string | null;
+  requestFingerprint: string;
+  reasonCode: string;
+  httpStatus: number;
 }
 
 interface EventRow {
@@ -187,6 +197,14 @@ export class GovernanceGrantsRepository {
     return result.rows[0] ? toGrant(result.rows[0]) : null;
   }
 
+  /** Hold the protected owner binding through this authority-change commit. */
+  async lockOwnerAnchorUserId(): Promise<string | null> {
+    const result = await this.pool.query<{ user_id: string }>(
+      `SELECT user_id FROM portal_owner_anchor WHERE anchor_id = 'PORTAL_OWNER' FOR SHARE`,
+    );
+    return result.rowCount === 1 ? result.rows[0].user_id : null;
+  }
+
   // ------------------------------------------------------------- writing
 
   /**
@@ -285,6 +303,58 @@ export class GovernanceGrantsRepository {
     return result.rows[0] ? toEvent(result.rows[0]) : null;
   }
 
+  async findRefusalByKey(keyDigest: string): Promise<GrantRefusalReceipt | null> {
+    const result = await this.pool.query<{
+      actor_user_id: string | null;
+      reason_code: string;
+      metadata_json: { request_fingerprint: string; http_status: number };
+    }>(
+      `SELECT actor_user_id, reason_code, metadata_json FROM auth_audit_events
+        WHERE event_id = $1 AND event_type = 'governance_grant_refused'
+          AND metadata_json->>'receipt_version' = 'portal.grant-refusal.v1'
+          AND metadata_json->>'key_digest' = $2
+          AND metadata_json->>'replayable' = 'true'
+        LIMIT 1`,
+      [refusalEventId(keyDigest), keyDigest],
+    );
+    const row = result.rows[0];
+    return row ? {
+      actorUserId: row.actor_user_id,
+      requestFingerprint: row.metadata_json.request_fingerprint,
+      reasonCode: row.reason_code,
+      httpStatus: row.metadata_json.http_status,
+    } : null;
+  }
+
+  async recordRefusal(input: {
+    actorUserId: string | null;
+    keyDigest: string;
+    requestFingerprint: string;
+    reasonCode: string;
+    httpStatus: number;
+    stepUpUsed: boolean;
+    replayable: boolean;
+    requestId?: string | null;
+  }): Promise<void> {
+    // Unknown IDs/free-form capability inputs never become audit values or FKs.
+    // Prefixes distinguish integrity hashes from credential-shaped bare hashes.
+    const metadata = redactAuditMetadata({
+      receipt_version: "portal.grant-refusal.v1",
+      key_digest: input.keyDigest,
+      request_fingerprint: `sha256:${input.requestFingerprint}`,
+      http_status: input.httpStatus,
+      step_up_used: input.stepUpUsed,
+      replayable: input.replayable,
+    });
+    await this.pool.query(
+      `INSERT INTO auth_audit_events
+         (event_id, event_type, actor_user_id, request_id, result, reason_code, metadata_json)
+       VALUES ($1, 'governance_grant_refused', $2, $3, 'DENIED', $4, $5)`,
+      [input.replayable ? refusalEventId(input.keyDigest) : randomId("evt"),
+        input.actorUserId, input.requestId ?? null, input.reasonCode, JSON.stringify(metadata)],
+    );
+  }
+
   async recordEvent(input: {
     eventId: string;
     idempotencyKey: string;
@@ -342,4 +412,10 @@ export class GovernanceGrantsRepository {
     );
     return result.rows.map(toEvent);
   }
+}
+
+function refusalEventId(keyDigest: string): string {
+  // Versioned namespace + digest gives an indexed point lookup without storing
+  // the raw key or adding a second mutable idempotency table.
+  return `ggr_v1_${keyDigest.slice("sha256:".length)}`;
 }

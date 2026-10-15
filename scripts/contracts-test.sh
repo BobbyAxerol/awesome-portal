@@ -71,6 +71,7 @@ mkdir -p \
   "${WORKSPACE_DIR}/apps/portal/registry/openapi" \
   "${WORKSPACE_DIR}/apps/control-api/src/operations" \
   "${WORKSPACE_DIR}/apps/control-api/src/research" \
+  "${WORKSPACE_DIR}/apps/control-api/src/repos" \
   "${WORKSPACE_DIR}/apps/control-api/src/execution-v2" \
   "${WORKSPACE_DIR}/apps/portal/backend/src/portal_api/domain" \
   "${WORKSPACE_DIR}/upgrade/research_loop/evidence/P02" \
@@ -99,7 +100,13 @@ cp -a \
 # Copy only this pure validator and compatibility dictionary, not app config,
 # credentials, node_modules or any runtime mount. The test cell stays networkless.
 cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/access.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/execution-v2/"
+# Access validation reuses the finite capability vocabulary. Its PostgreSQL
+# imports are type-only: copying this explicit dependency opens no DB/runtime
+# access and keeps contract/parser parity in the networkless test cell.
+cp -a "${ROOT_DIR}/apps/control-api/src/repos/owner-access.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/repos/"
 cp -a "${ROOT_DIR}/upgrade/execution_loop/evidence/ELP2-01/contract-map.md" \
   "${WORKSPACE_DIR}/upgrade/execution_loop/evidence/ELP2-01/"
 # Verify image-owned TS/Python views and every exact checked-in receipt

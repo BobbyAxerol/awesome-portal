@@ -171,6 +171,19 @@ export class AccountLifecycleRepository {
     return result.rows[0]?.expires_at ?? null;
   }
 
+  /** Mutation fence: the proof belongs to this actor AND this active session. */
+  async lockActiveStepUpExpiry(sessionId: string, userId: string): Promise<Date | null> {
+    const result = await this.pool.query<{ expires_at: Date }>(
+      `SELECT expires_at FROM owner_step_up_grants
+        WHERE session_id = $1 AND user_id = $2 AND revoked_at IS NULL
+          AND expires_at > clock_timestamp()
+        ORDER BY expires_at DESC
+        LIMIT 1 FOR UPDATE`,
+      [sessionId, userId],
+    );
+    return result.rows[0]?.expires_at ?? null;
+  }
+
   async revokeStepUpsForUser(userId: string, client?: PoolClient): Promise<void> {
     const runner = client ?? this.pool;
     await runner.query(

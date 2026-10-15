@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-25",
- "route_count": 214,
+ "route_count": 222,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -12,6 +12,70 @@
  "taxonomy_gap": "The R2-0 enum has no class for a route that is published, healthy and has no consumer. Six such routes are recorded as INTERACTION_READ with unused_capability=true. Codex to decide whether to add PUBLISHED_UNCONSUMED.",
  "edge_command_count_zero_because": "No command plane exists: issueCommand/sendCommand/commandPlane/EDGE_COMMAND/postToEdge appear nowhere in apps/control-api/src or the Rust crates. Every mutation route writes locally.",
  "routes": [
+  {
+   "route": "POST /api/admin/profile-access/v2/grants/:id/preview-revoke",
+   "controller": "execution-v2/access.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND", "unused_capability": true,
+   "evidence": "ELP2-03: current-authorized advisory revoke before/after; obligations continue; no write or TS revocation claim.",
+   "owner": "codex", "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/admin/profile-access/v2/effective",
+   "controller": "execution-v2/access.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND", "unused_capability": true,
+   "evidence": "ELP2-03: current own scoped policy; no default production grants. Consumer not assigned.",
+   "owner": "codex", "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/admin/profile-access/v2/preview",
+   "controller": "execution-v2/access.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND", "unused_capability": true,
+   "evidence": "ELP2-03: advisory scoped ceiling/diff; CSRF/origin; never TS business activation.",
+   "owner": "codex", "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/admin/profile-access/v2/proposals",
+   "controller": "execution-v2/access.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND", "unused_capability": true,
+   "evidence": "ELP2-03: current delegation ceiling, proof, CAS and immutable receipt; TS authority pending until qualified acceptance.",
+   "owner": "codex", "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/admin/profile-access/v2/proposals/:id",
+   "controller": "execution-v2/access.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND", "unused_capability": true,
+   "evidence": "ELP2-03: current-authorized proposal state and original receipt; hidden id safe404.",
+   "owner": "codex", "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/admin/profile-access/v2/grants/:id/revoke",
+   "controller": "execution-v2/access.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND", "unused_capability": true,
+   "evidence": "ELP2-03: exact current resource/environment revoke, proof/CAS/idempotency; no TS revoke claim.",
+   "owner": "codex", "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/admin/profile-access/v2/step-up",
+   "controller": "execution-v2/access.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND", "unused_capability": true,
+   "evidence": "ELP2-03: own current password/session proof for delegated users; no capability granted.",
+   "owner": "codex", "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/admin/profile-access/v2/audit",
+   "controller": "execution-v2/access.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND", "unused_capability": true,
+   "evidence": "ELP2-03: scoped subject audit before page/count; signed actor/policy/limit-bound keyset cursor.",
+   "owner": "codex", "test_owner": "codex"
+  },
   {
    "route": "GET /api/auth/profile",
    "controller": "auth/profile.controller.ts",

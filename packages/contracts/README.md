@@ -6,6 +6,16 @@ IDs, timestamps, decimals, RFC 7807 problem documents, command envelopes
 guide). Schemas live in `schemas/`, canonical fixtures in `fixtures/`, and the
 committed TypeScript types generated from the Portal OpenAPI in `generated/`.
 
+ELP2-03 scoped access is published at `openapi/execution-access.openapi.json`
+and `generated/execution-access.d.ts`. Run `npm run generate:execution-access`
+for its eight named operations under `/api/admin/profile-access/v2`. Examples
+in `fixtures/execution-access.synthetic.valid.json` are explicitly TEST_ONLY,
+not owner approvals or TS producer receipts. Mounting the Portal controller
+does not qualify a policy/TS adapter: the default adapter remains unqualified,
+owner recovery disabled, and no migration seeds production rights. Preserve
+`APP_APPLIED` separately from `TS_PENDING/APPLIED/REJECTED/UNKNOWN`; a historical
+receipt is not current authority. Consumer assignment is still owner-gated.
+
 Execution analytics has its own narrow, source-backed screen contract at
 `openapi/execution-analytics.openapi.json`, generated as
 `generated/execution-analytics.d.ts`. It covers the six EX-BE-07b analytics

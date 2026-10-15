@@ -9363,7 +9363,7 @@ Không copy lại toàn guide hoặc mở implementation từ việc nhận tài
 
 | Track | Detailed authority | Disposition hiện tại |
 | --- | --- | --- |
-| Portal ELP2-00…11 | [BE guide v1.2](./execution_loop/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md) | ELP2-00 baseline audit delivered,8/8 audit checks; READY_FOR_BOBBY_REVIEW. ELP2-01…11 NOT_STARTED; no runtime activation |
+| Portal ELP2-00…11 | [BE guide v1.2](./execution_loop/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md) | 00 audit delivered;01/02 local backend checkpoints landed;03 focused186/186 PASS on prior working snapshot, latest review deltas and normal-hook commit pending;04 preparation only;05…11 NOT_STARTED. [Current resume point](#elp2-batch-current-resume); no shared-runtime activation |
 | Edge EPG10-00…11 | [Edge guide v1.2](./execution_loop/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md) | GUIDE_READ; HK inspection READ_ONLY; no Edge source/runtime changes |
 | Claude UXM-00…10 | [UX guide v1.1](./execution_loop/EXECUTION_LOOP_MANAGER_UX_DESIGN_GUIDE_v1.1_VI.md) | RULES_READY; browser audit/new design/implementation not performed in this package |
 | Shared score / Regime | [FINAL v1.1](./execution_loop/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md) | Formula/weights/bands selected; runtime calibration/config still pending; no new calculator/test run |
@@ -9457,8 +9457,9 @@ có phép tính tương tự. Source TS/PM candidates không phải publication 
 ## 14.3 Portal phase index — ELP2-00…11
 
 Chi tiết authoritative ở [Portal guide §15](./execution_loop/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md#15-kế-hoạch-12-phase-triển-khai).
-Các test ranges dưới đây dùng prefix `ELP2-`; ngoài T00 audit return, tests
-implementation/runtime hiện **NOT_RUN cho V2**.
+Các test ranges dưới đây dùng prefix `ELP2-`; actual results nằm trong current
+return/packet từng phase.01/02 đã có local contract/PG/API receipts;03/04 chưa
+có implementation-test receipt. Không suy shared-runtime PASS từ local tests.
 Mỗi phase tạo packet `execution_loop/evidence/ELP2-xx/` khi được giao, ghi goal,
 pins, owned files, impact, receipt/test results, resources, exit, rollback và
 handoff. Không tạo receipt PASS từ kế hoạch.
@@ -9519,9 +9520,10 @@ block only dependent activation. Existing Research/Governance evidence preserved
 
 - **Current backend return2026-10-16:** [packet](./execution_loop/evidence/ELP2-02/README.md)
   records identity/session/lifecycle fixes and generated own-profile contracts.
-  Earlier isolated PG/API cell90/90 PASS; current normal-hook snapshot identity
-  17/17 and retained-review8/8 PASS. Final18-case02 snapshot and coherent commit
-  remain pending; no shared runtime or external identity mapping activated.
+  Landed `b448c0be655817dc49dd02f86aa2544e64c00d48`; normal hook21748 exit0,
+  contracts388 PASS, API2,607 PASS/3 skipped, identity18/18 and retained-review8/8,
+  clean build/PostgreSQL restore PASS. Checkpoint02→03 PASS; external mapping
+  remains request003, not activated. No shared runtime changed.
   Frontend NOT_STARTED_BY_OWNER_DIRECTION; handoff AWAITING_CONSUMER_REVIEW.
 - **Goal/dependency:** 01; bảo toàn users/accounts/session/owner đã có, identity đồng nhất Research/Execution.
 - **To-do:** stable issuer+subject và verified researcher owner mapping; lifecycle/revoke/own-profile; protected owner recovery chỉ theo quyết định được duyệt; migration expand nếu cần, không reset users/grants.
@@ -9533,6 +9535,10 @@ block only dependent activation. Existing Research/Governance evidence preserved
 
 ### ELP2-03 — Capability delegation và TS membership proposal
 
+- **Current backend return2026-10-16:** IN_PROGRESS after02 checkpoint at
+  `b448c0be655817dc49dd02f86aa2544e64c00d48`; [entry/task map](./execution_loop/evidence/ELP2-03/README.md).
+  Local evaluator/proposals and legacy grant repairs only; no production policy,
+  pending ceiling/disclosure or TS acceptance is authorized by test fixtures.
 - **Goal/dependency:** 01 cho design, 02 current identity cho runtime; một policy evaluator, app authority khác TS authority.
 - **To-do:** resource×mode capability/ceiling/current revision; grants/revoke audit; Stan delegation không self-elevate; TS proposal pending/accepted/rejected; approved researcher field matrix, không dùng owner-only guard để cản mọi delegated action hoặc bỏ guard toàn bộ.
 - **Claude:** access preview, pending TS acceptance, deny reason và reviewable grant diff.
@@ -10071,3 +10077,55 @@ verified. This supersedes the earlier failed-hook checkpoint without erasing
 it.02 final18-case snapshot is prepared for its coherent normal-hook landing;
 03/04 remain dependent, not complete. Frontend is not assigned; no push/runtime
 change or production policy/TS authority is authorized by these local results.
+
+<a id="elp2-batch-current-resume"></a>
+
+### 14.9.8 Current resume point — rà lại batch, không chạy lại phần đã đạt
+
+Đối chiếu tại `b448c0be655817dc49dd02f86aa2544e64c00d48`,
+2026-10-15T20:43Z /2026-10-16 Asia/Saigon. Mục này cập nhật điểm bắt đầu thực
+tế, thắng các dòng planning/pending lịch sử ở trên; không xóa receipt cũ,
+không mở thêm phase, frontend hay runtime authority. Lượt rà kế hoạch này chỉ
+sửa Markdown; giữ nguyên code đang dở, không chạy build/DB/hook/push.
+
+| Phase trong goal | Trạng thái đã đối chiếu | Việc phải hoàn tất / gate để chuyển bước |
+| --- | --- | --- |
+| **01 — contracts** | Landed `700aa6a4`; contract/generation checkpoint PASS, external review còn OPEN | Reuse schema/FX receipts nếu dependency không đổi; không regenerate/build lại chỉ để khởi động goal. Nếu03 cần thêm schema thì additive versioned contract và impacted tests ở03 |
+| **02 — identity** | Landed `b448c0be`; identity18/18, retained8/8, normal hook/PG restore PASS | Reuse preservation/current-session proof; không làm lại login/lifecycle. Verified TS mapping chưa qualified vẫn typed pending, không coi checkpoint này là TS acceptance |
+| **03 — policy/delegation** | **UNCOMMITTED**. Focused isolated PG/API cell27826:186/186 PASS trên snapshot trước delta preview/review cuối; migration và mounted API đã kiểm trong cell, không phải runtime chung | Đồng bộ8 operation/preview-revoke và review fixes → normal hook gồm latest PG/API/restore → packet/handoff/commit. Không cộng receipt snapshot cũ thành PASS cho diff mới. Chưa đạt gate03 thì04 chỉ được chuẩn bị read-only |
+| **04 — read enforcement** | Chỉ có route/test design;112 baseline patterns và54 aliases chưa được implementation-certified | Sau03: inventory delta → server-minted scope/query predicates → fields/totals/metadata/cursor/cache/export/stream enforcement → T04-01…12 direct-API negative/revoke/in-flight → complete dispositions, packet/handoff/normal-hook commit |
+
+**03 chia bốn gói nội bộ, không tạo phase mới:** (a) một pure evaluator + finite
+capability/ceiling registry; (b) persistence/CAS/idempotent immutable receipts,
+current actor/session/ancestor locks và legacy replay/audit repairs; (c) TS
+proposal/verified acceptance boundary, pending/rejected/unknown không cấp quyền;
+(d) HTTP/generated contract + positive/negative/concurrency proof và closeout.
+Primary review lock order, canonical fingerprints và permission-on-replay trước
+khi ghép các gói. Không dùng TEST_ONLY verifier hoặc Stan/researcher fixtures
+để seed policy/quyền thật. Migration number phải recheck trước khi viết.
+
+**04 chia bốn gói nội bộ:** (a) complete112-route +54-alias + adjacent/new-route
+matrix; (b) authorization trước filter/sort/page/count/group/analytics input;
+(c) scoped redaction/metadata/cursor/cache/export/audit/existing-stream delivery,
+recheck sau await và trước trả bytes; (d) API leakage/in-flight/revoke matrix,
+compatibility và closeout. Metadata/time bounds, profile counts và total/rank
+cũng thuộc scope; không chỉ hide rows hoặc thêm SessionGuard. Existing closed
+export/stream phải có disabled proof, không bật chúng để lấy positive receipt.
+
+Mỗi phase vẫn kết thúc riêng theo §14.9.4 và rules §7.4: **journal + gate matrix
++ commit + handoff + debt/owner + backend-next + Claude-next + request/ack**.
+Hai phase01/02 đã landed không thành hai phase mới để chạy lại; goal tiếp tục
+từ03 sau review working tree.03/04 chưa được gọi COMPLETE; whole-runtime/owner
+acceptance vẫn riêng. Frontend `NOT_STARTED_BY_OWNER_DIRECTION`, handoff
+`AWAITING_CONSUMER_REVIEW`; không giao Claude triển khai lúc này.
+
+**Ngoại lệ không được âm thầm đóng:** exact Stan ceiling/researcher field matrix
+(request002), qualified TS identity/acceptance (request003), owner recovery và
+new export operating profile vẫn theo canonical00. Local technical checkpoint
+cho phép phần backend độc lập đi tiếp, nhưng không tạo quyền production hoặc
+chứng minh TS đã chấp nhận. Nếu mục bắt buộc bị chặn thì báo đúng feature/owner/
+done-when; không sửa exit gate hoặc chuyển cả batch thành blanket PASS.
+
+Khi dùng prompt §14.9.5, thêm: **“Tiếp tục từ checkpoint đã ghi ở §14.9.8;
+không chạy lại01/02 đã PASS nếu dependency không đổi. Review toàn bộ diff03
+chưa commit trước khi triển khai tiếp. Giữ nguyên frontend và shared runtime.”**

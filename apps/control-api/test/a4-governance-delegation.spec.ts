@@ -11,7 +11,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { AdminService } from "../src/admin/admin.service";
-import { GovernanceGrantsService, GrantDeniedError } from "../src/admin/governance-grants.service";
+import { GovernanceGrantsService, GrantDeniedError, type GrantRequest } from "../src/admin/governance-grants.service";
 import { Argon2CredentialService } from "../src/auth/argon";
 import { AuthService } from "../src/auth/auth.service";
 import { OwnerAccessService } from "../src/auth/owner-access.service";
@@ -20,7 +20,7 @@ import { AccountLifecycleRepository } from "../src/repos/account-lifecycle";
 import { GovernanceGrantsRepository } from "../src/repos/governance-grants";
 import { OwnerAccessRepository } from "../src/repos/owner-access";
 import { WorkspacesRepository } from "../src/repos/workspaces";
-import { randomId } from "../src/domain";
+import { randomId, type PortalUser } from "../src/domain";
 
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
 
@@ -42,18 +42,35 @@ describe("A4-3 delegated Governance gates", () => {
   let lifecycle: AccountLifecycleRepository;
 
   /** owner · delegated decider · delegated reader · ungranted USER · non-owner ADMIN */
-  let bobby: { userId: string; username: string };
-  let stan: { userId: string; username: string };
-  let reader: { userId: string; username: string };
-  let outsider: { userId: string; username: string };
-  let otherAdmin: { userId: string; username: string };
+  let bobby: PortalUser;
+  let stan: PortalUser;
+  let reader: PortalUser;
+  let outsider: PortalUser;
+  let otherAdmin: PortalUser;
   let workspaceId: string;
   /** A session that has stepped up, so grant mutations are reachable. */
   let ownerSessionId: string;
 
   const freshUser = async (prefix: string, role: "ADMIN" | "USER" = "USER") => {
     const username = `${prefix}-${process.hrtime.bigint()}`;
-    return admin.createUser({ username, displayName: prefix, role });
+    const created = await admin.createUser({ username, displayName: prefix, role });
+    await auth.users.update({ userId: created.userId, status: "ACTIVE", mustChangePassword: false });
+    return (await auth.users.findById(created.userId))!;
+  };
+
+  const freshSession = async (user: PortalUser, steppedUp = true): Promise<string> => {
+    const sessionId = randomId("ses");
+    await ctx.pool.query(
+      `INSERT INTO auth_sessions
+         (session_id, session_token_hash, user_id, state, csrf_secret_hash,
+          session_version, idle_expires_at, absolute_expires_at)
+       VALUES ($1, $2, $3, 'ACTIVE', 'x', $4, now() + interval '1 hour', now() + interval '8 hours')`,
+      [sessionId, randomId("tok"), user.userId, user.sessionVersion],
+    );
+    if (steppedUp) await lifecycle.grantStepUp({
+      stepUpId: randomId("stp"), sessionId, userId: user.userId, ttlSeconds: 3600,
+    });
+    return sessionId;
   };
 
   beforeAll(async () => {
@@ -95,32 +112,19 @@ describe("A4-3 delegated Governance gates", () => {
     }
 
     // A live session for the owner, stepped up, so grant mutations are allowed.
-    ownerSessionId = randomId("ses");
-    await ctx.pool.query(
-      `INSERT INTO auth_sessions
-         (session_id, session_token_hash, user_id, state, csrf_secret_hash,
-          session_version, idle_expires_at, absolute_expires_at)
-       VALUES ($1, $2, $3, 'ACTIVE', 'x', 0, now() + interval '1 hour', now() + interval '8 hours')`,
-      [ownerSessionId, randomId("tok"), bobby.userId],
-    );
-    await lifecycle.grantStepUp({
-      stepUpId: randomId("stp"),
-      sessionId: ownerSessionId,
-      userId: bobby.userId,
-      ttlSeconds: 3600,
-    });
+    ownerSessionId = await freshSession(bobby);
   });
 
   afterAll(async () => {
     await teardownApp(ctx);
   });
 
-  const ownerRequest = (over: Record<string, unknown>) => ({
-    actor: { userId: bobby.userId } as never,
+  const ownerRequest = (over: Record<string, unknown>): GrantRequest => ({
+    actor: bobby,
     sessionId: ownerSessionId,
     idempotencyKey: randomId("idem"),
     ...over,
-  }) as never;
+  }) as GrantRequest;
 
   const accessOf = (userId: string) => ownerAccess.effectiveAccess(userId);
 
@@ -441,28 +445,27 @@ describe("A4-3 delegated Governance gates", () => {
       ).rejects.toMatchObject({ reasonCode: "ACCOUNT_NOT_ACTIVE" });
     });
 
-    it("requires a step-up, and records nothing when it is missing", async () => {
-      const noStepUp = randomId("ses");
-      await ctx.pool.query(
-        `INSERT INTO auth_sessions
-           (session_id, session_token_hash, user_id, state, csrf_secret_hash,
-            session_version, idle_expires_at, absolute_expires_at)
-         VALUES ($1, $2, $3, 'ACTIVE', 'x', 0, now() + interval '1 hour', now() + interval '8 hours')`,
-        [noStepUp, randomId("tok"), bobby.userId],
-      );
+    it("requires a step-up, leaves grants unchanged and audits the redacted refusal", async () => {
+      const noStepUp = await freshSession(bobby, false);
+      const requestId = randomId("req");
       const before = (await grants.listGrants()).length;
       await expect(
         service.execute({
           action: "GRANT",
-          actor: { userId: bobby.userId } as never,
+          actor: bobby,
           sessionId: noStepUp,
           idempotencyKey: randomId("idem"),
+          requestId,
           granteeUserId: stan.userId,
           capability: "governance.canary.read",
           workspaceId: null,
         } as never),
       ).rejects.toMatchObject({ reasonCode: "STEP_UP_REQUIRED" });
       expect((await grants.listGrants()).length).toBe(before);
+      const audited = await ctx.pool.query(`SELECT metadata_json FROM auth_audit_events
+        WHERE request_id = $1 AND reason_code = 'STEP_UP_REQUIRED'`, [requestId]);
+      expect(audited.rows).toHaveLength(1);
+      expect(audited.rows[0].metadata_json).toMatchObject({ replayable: false, step_up_used: false });
     });
   });
 
@@ -474,7 +477,7 @@ describe("A4-3 delegated Governance gates", () => {
       const key = randomId("idem");
       const request = {
         action: "GRANT" as const,
-        actor: { userId: bobby.userId } as never,
+        actor: bobby,
         sessionId: ownerSessionId,
         idempotencyKey: key,
         granteeUserId: target.userId,
@@ -492,13 +495,13 @@ describe("A4-3 delegated Governance gates", () => {
       const target = await freshUser("deleg-idem-conflict");
       const key = randomId("idem");
       await service.execute({
-        action: "GRANT", actor: { userId: bobby.userId } as never, sessionId: ownerSessionId,
+        action: "GRANT", actor: bobby, sessionId: ownerSessionId,
         idempotencyKey: key, granteeUserId: target.userId,
         capability: "governance.r1.read", workspaceId: null,
       } as never);
       await expect(
         service.execute({
-          action: "GRANT", actor: { userId: bobby.userId } as never, sessionId: ownerSessionId,
+          action: "GRANT", actor: bobby, sessionId: ownerSessionId,
           idempotencyKey: key, granteeUserId: target.userId,
           capability: "governance.r2.read", workspaceId: null,
         } as never),
@@ -584,6 +587,293 @@ describe("A4-3 delegated Governance gates", () => {
         ),
       ).rejects.toMatchObject({ reasonCode: "STALE_GRANT_REVISION" });
       expect((await grants.findById(granted.grant!.grantId))?.state).toBe("ACTIVE");
+    });
+  });
+
+  // ----------------------------------------- current authority and replay
+
+  describe("ELP2-03 current authority and immutable original receipts", () => {
+    it("replays the original ACTIVE revision after that grant has been revoked", async () => {
+      const target = await freshUser("deleg-original");
+      const request = ownerRequest({ action: "GRANT", granteeUserId: target.userId,
+        capability: "governance.r1.read", workspaceId: null });
+      const first = await service.execute(request);
+      await service.execute(ownerRequest({ action: "REVOKE", grantId: first.grant!.grantId,
+        expectedRevision: first.grant!.grantRevision }));
+      const replay = await service.execute(request);
+      expect(replay.outcome).toBe("REPLAYED");
+      expect(replay.grant).toEqual(first.grant);
+      expect(replay.grant).toMatchObject({ state: "ACTIVE", grantRevision: 1 });
+      expect((await grants.findById(first.grant!.grantId))?.state).toBe("REVOKED");
+    });
+
+    it("replays the original revoke snapshot after a later independent grant", async () => {
+      const target = await freshUser("deleg-revoke-receipt");
+      const granted = await service.execute(ownerRequest({ action: "GRANT", granteeUserId: target.userId,
+        capability: "governance.r2.read", workspaceId: null }));
+      const revoke = ownerRequest({ action: "REVOKE", grantId: granted.grant!.grantId, expectedRevision: 1 });
+      const first = await service.execute(revoke);
+      const next = await service.execute(ownerRequest({ action: "GRANT", granteeUserId: target.userId,
+        capability: "governance.r2.read", workspaceId: null }));
+      expect(next.grant!.grantId).not.toBe(first.grant!.grantId);
+      expect((await service.execute(revoke)).grant).toEqual(first.grant);
+      expect(first.grant).toMatchObject({ state: "REVOKED", grantRevision: 2 });
+    });
+
+    it("does not turn a repeated self-grant denial into a successful replay", async () => {
+      const request = ownerRequest({ action: "GRANT", granteeUserId: bobby.userId,
+        capability: "governance.live.read", workspaceId: null });
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await expect(service.execute(request)).rejects.toMatchObject({ reasonCode: "SELF_GRANT_REFUSED", status: 409 });
+      }
+      const event = await grants.findEventByKey(request.idempotencyKey);
+      expect(event?.outcome).toBe("DENIED");
+    });
+
+    it("does not turn a repeated stale-revision conflict into a successful replay", async () => {
+      const target = await freshUser("deleg-conflict-receipt");
+      const first = await service.execute(ownerRequest({ action: "GRANT", granteeUserId: target.userId,
+        capability: "governance.canary.read", workspaceId: null }));
+      const request = ownerRequest({ action: "REVOKE", grantId: first.grant!.grantId, expectedRevision: 42 });
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await expect(service.execute(request)).rejects.toMatchObject({ reasonCode: "STALE_GRANT_REVISION", status: 409 });
+      }
+      expect((await grants.findById(first.grant!.grantId))?.state).toBe("ACTIVE");
+    });
+
+    it("keeps a duplicate-grant refusal after the conflicting grant was later revoked", async () => {
+      const target = await freshUser("deleg-original-refusal");
+      const setup = { action: "GRANT", granteeUserId: target.userId,
+        capability: "governance.r1.read", workspaceId: null };
+      const first = await service.execute(ownerRequest(setup));
+      const duplicate = ownerRequest(setup);
+      await expect(service.execute(duplicate)).rejects.toMatchObject({ reasonCode: "GRANT_ALREADY_ACTIVE", status: 409 });
+      await service.execute(ownerRequest({ action: "REVOKE", grantId: first.grant!.grantId, expectedRevision: 1 }));
+      await expect(service.execute(duplicate)).rejects.toMatchObject({ reasonCode: "GRANT_ALREADY_ACTIVE", status: 409 });
+      expect((await grants.findEventByKey(duplicate.idempotencyKey))?.outcome).toBe("DENIED");
+      expect(await grants.listGrants({ granteeUserId: target.userId })).toEqual([]);
+    });
+
+    it("records absent→ACTIVE and ACTIVE→REVOKED immutable before/after images", async () => {
+      const target = await freshUser("deleg-images");
+      await ctx.pool.query(`INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'MEMBER')`,
+        [workspaceId, target.userId]);
+      const granted = await service.execute(ownerRequest({ action: "GRANT", granteeUserId: target.userId,
+        capability: "governance.r1.read", workspaceId }));
+      expect(granted.event.stateBefore).toBeNull();
+      expect(granted.event.stateAfter).toMatchObject({ state: "ACTIVE", workspace_id: workspaceId, grant_revision: 1 });
+      const revoked = await service.execute(ownerRequest({ action: "REVOKE", grantId: granted.grant!.grantId, expectedRevision: 1 }));
+      expect(revoked.event.stateBefore).toEqual({ state: "ACTIVE", workspace_id: workspaceId, grant_revision: 1 });
+      expect(revoked.event.stateAfter).toMatchObject({ state: "REVOKED", workspace_id: workspaceId, grant_revision: 2 });
+      expect(revoked.event.stateAfter?._receipt).toMatchObject({ version: "portal.grant-receipt.v1", http_status: 200 });
+    });
+
+    it("reconstructs a historical receipt only from immutable event facts", async () => {
+      const target = await freshUser("deleg-historical");
+      const request = ownerRequest({ action: "GRANT", granteeUserId: target.userId,
+        capability: "governance.live.read", workspaceId: null });
+      const first = await service.execute(request);
+      // Exact old event shape, with its original fingerprint unchanged.
+      await ctx.pool.query(`UPDATE portal_capability_grant_events SET state_after = state_after - '_receipt'
+        WHERE event_id = $1`, [first.event.eventId]);
+      await service.execute(ownerRequest({ action: "REVOKE", grantId: first.grant!.grantId, expectedRevision: 1 }));
+      const replay = await service.execute(request);
+      expect(replay.grant).toEqual(first.grant);
+      expect(replay.event.requestFingerprint).toBe(first.event.requestFingerprint);
+    });
+
+    it("fails closed if historical receipt facts are missing instead of borrowing the mutable grant", async () => {
+      const target = await freshUser("deleg-missing-history");
+      const request = ownerRequest({ action: "GRANT", granteeUserId: target.userId,
+        capability: "governance.live.read", workspaceId: null });
+      const first = await service.execute(request);
+      await ctx.pool.query(`UPDATE portal_capability_grant_events SET state_after = NULL WHERE event_id = $1`, [first.event.eventId]);
+      await expect(service.execute(request)).rejects.toMatchObject({ reasonCode: "GRANT_RECEIPT_NOT_AVAILABLE", status: 503 });
+    });
+
+    it("binds an unchanged historical fingerprint to its original authorized actor", async () => {
+      const target = await freshUser("deleg-actor-receipt");
+      const request = ownerRequest({ action: "GRANT", granteeUserId: target.userId,
+        capability: "governance.r2.read", workspaceId: null });
+      const first = await service.execute(request);
+      const second = await freshUser("deleg-owner-replacement", "ADMIN");
+      const secondSession = await freshSession(second);
+      try {
+        await ctx.pool.query(`UPDATE portal_owner_anchor SET user_id = $1 WHERE anchor_id = 'PORTAL_OWNER'`, [second.userId]);
+        await expect(service.execute({ ...request, actor: second, sessionId: secondSession })).rejects.toMatchObject({
+          reasonCode: "IDEMPOTENCY_KEY_PAYLOAD_CONFLICT", status: 409,
+        });
+        expect((await grants.findEventByKey(request.idempotencyKey))?.requestFingerprint).toBe(first.event.requestFingerprint);
+        await expect(service.execute(request)).rejects.toMatchObject({ reasonCode: "CURRENT_ACTOR_AUTHORITY_REQUIRED", status: 403 });
+      } finally {
+        await ctx.pool.query(`UPDATE portal_owner_anchor SET user_id = $1 WHERE anchor_id = 'PORTAL_OWNER'`, [bobby.userId]);
+      }
+      expect((await service.execute(request)).outcome).toBe("REPLAYED");
+    });
+
+    it("requires a current unexpired session of the actor even when an original receipt exists", async () => {
+      const target = await freshUser("deleg-session-fence");
+      const request = ownerRequest({ action: "GRANT", granteeUserId: target.userId,
+        capability: "governance.r1.read", workspaceId: null });
+      await service.execute(request);
+      const foreign = await freshSession(stan);
+      for (const invalidSession of [randomId("missing"), foreign]) {
+        await expect(service.execute({ ...request, sessionId: invalidSession })).rejects.toMatchObject({
+          reasonCode: "CURRENT_ACTOR_AUTHORITY_REQUIRED", status: 403,
+        });
+      }
+      for (const change of [
+        `state = 'REVOKED'`,
+        `idle_expires_at = now() - interval '1 second'`,
+        `absolute_expires_at = now() - interval '1 second'`,
+        `session_version = session_version + 1`,
+      ]) {
+        const sessionId = await freshSession(bobby);
+        // Test-owned constant SQL only, never request-provided SQL.
+        await ctx.pool.query(`UPDATE auth_sessions SET ${change} WHERE session_id = $1`, [sessionId]);
+        await expect(service.execute({ ...request, sessionId })).rejects.toMatchObject({ reasonCode: "CURRENT_ACTOR_AUTHORITY_REQUIRED", status: 403 });
+      }
+      expect((await service.execute(request)).outcome).toBe("REPLAYED");
+    });
+
+    it("requires the current user state and generation before replay or a new write", async () => {
+      const target = await freshUser("deleg-user-fence");
+      const request = ownerRequest({ action: "GRANT", granteeUserId: target.userId,
+        capability: "governance.r1.read", workspaceId: null });
+      await service.execute(request);
+      for (const change of [
+        `status = 'DISABLED'`, `archived_at = now()`, `must_change_password = true`,
+        `session_version = session_version + 1`,
+      ]) {
+        try {
+          await ctx.pool.query(`UPDATE portal_users SET ${change} WHERE user_id = $1`, [bobby.userId]);
+          await expect(service.execute(request)).rejects.toMatchObject({ reasonCode: "CURRENT_ACTOR_AUTHORITY_REQUIRED", status: 403 });
+          await expect(service.execute({ ...request, idempotencyKey: randomId("new-key") })).rejects.toMatchObject({
+            reasonCode: "CURRENT_ACTOR_AUTHORITY_REQUIRED", status: 403,
+          });
+        } finally {
+          await ctx.pool.query(`UPDATE portal_users SET status = 'ACTIVE', archived_at = NULL,
+            must_change_password = false, session_version = $2 WHERE user_id = $1`, [bobby.userId, bobby.sessionVersion]);
+        }
+      }
+    });
+
+    it("requires an actor-and-session-bound current step-up before replay", async () => {
+      const target = await freshUser("deleg-stepup-fence");
+      const request = ownerRequest({ action: "GRANT", granteeUserId: target.userId,
+        capability: "governance.canary.read", workspaceId: null });
+      await service.execute(request);
+      for (const change of [
+        { sql: `revoked_at = now()`, values: [] },
+        { sql: `expires_at = now() - interval '1 second'`, values: [] },
+        { sql: `user_id = $2`, values: [stan.userId] },
+      ]) {
+        const sessionId = await freshSession(bobby);
+        await ctx.pool.query(`UPDATE owner_step_up_grants SET ${change.sql} WHERE session_id = $1`, [sessionId, ...change.values]);
+        await expect(service.execute({ ...request, sessionId })).rejects.toMatchObject({ reasonCode: "STEP_UP_REQUIRED", status: 403 });
+      }
+      expect((await service.execute(request)).outcome).toBe("REPLAYED");
+    });
+
+    it("does not consume an idempotency key for a step-up failure", async () => {
+      const target = await freshUser("deleg-stepup-recover");
+      const sessionId = await freshSession(bobby, false);
+      const request = ownerRequest({ action: "GRANT", sessionId, granteeUserId: target.userId,
+        capability: "governance.r1.read", workspaceId: null });
+      await expect(service.execute(request)).rejects.toMatchObject({ reasonCode: "STEP_UP_REQUIRED", status: 403 });
+      await lifecycle.grantStepUp({ stepUpId: randomId("stp"), sessionId, userId: bobby.userId, ttlSeconds: 60 });
+      expect((await service.execute(request)).outcome).toBe("APPLIED");
+    });
+
+    it("fences a queued grant behind a concurrent owner disable transaction", async () => {
+      const target = await freshUser("deleg-disable-race");
+      const blocker = await ctx.pool.connect();
+      let attempt: Promise<unknown> | undefined;
+      try {
+        await blocker.query("BEGIN");
+        const pid = (await blocker.query<{ pid: number }>("SELECT pg_backend_pid() AS pid")).rows[0].pid;
+        await blocker.query(`UPDATE portal_users SET status = 'DISABLED' WHERE user_id = $1`, [bobby.userId]);
+        attempt = service.execute(ownerRequest({ action: "GRANT", granteeUserId: target.userId,
+          capability: "governance.live.decide", workspaceId: null })).then(() => null, (error: unknown) => error);
+        let blocked = false;
+        for (let check = 0; check < 50 && !blocked; check++) {
+          blocked = (await ctx.pool.query<{ blocked: boolean }>(
+            `SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))) AS blocked`, [pid],
+          )).rows[0].blocked;
+          if (!blocked) await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        await blocker.query("COMMIT");
+        expect(blocked).toBe(true);
+        expect(await attempt).toMatchObject({ reasonCode: "CURRENT_ACTOR_AUTHORITY_REQUIRED", status: 403 });
+        expect(await grants.listGrants({ granteeUserId: target.userId })).toEqual([]);
+      } finally {
+        await blocker.query("ROLLBACK");
+        blocker.release();
+        if (attempt) await attempt;
+        await ctx.pool.query(`UPDATE portal_users SET status = 'ACTIVE' WHERE user_id = $1`, [bobby.userId]);
+      }
+    });
+
+    it("audits unknown target/capability/grant without raw input or invalid foreign keys", async () => {
+      const secret = "fixture-sensitive-input@example.invalid";
+      for (const [over, reasonCode, status] of [
+        [{ action: "GRANT", granteeUserId: secret, capability: "governance.r1.read" }, "ACCOUNT_NOT_FOUND", 404],
+        [{ action: "GRANT", granteeUserId: stan.userId, capability: secret }, "CAPABILITY_NOT_IN_NAMESPACE", 422],
+        [{ action: "REVOKE", grantId: secret, expectedRevision: 1 }, "GRANT_NOT_FOUND", 404],
+      ] as const) {
+        const requestId = randomId("req");
+        const request = ownerRequest({ ...over, requestId });
+        for (let attempt = 0; attempt < 2; attempt++) {
+          await expect(service.execute(request)).rejects.toMatchObject({ reasonCode, status });
+        }
+        const rows = await ctx.pool.query(`SELECT * FROM auth_audit_events WHERE request_id = $1`, [requestId]);
+        expect(rows.rows).toHaveLength(1);
+        expect(rows.rows[0]).toMatchObject({ event_type: "governance_grant_refused", target_user_id: null,
+          reason_code: reasonCode, actor_user_id: bobby.userId });
+        expect(rows.rows[0].metadata_json).toMatchObject({ http_status: status, replayable: true });
+        const text = JSON.stringify(rows.rows);
+        expect(text).not.toContain(secret);
+        expect(text).not.toContain(request.idempotencyKey);
+        expect(text).not.toContain(ownerSessionId);
+        expect(rows.rows[0].metadata_json.key_digest).toMatch(/^sha256:[0-9a-f]{64}$/);
+        expect(rows.rows[0].metadata_json.request_fingerprint).toMatch(/^sha256:[0-9a-f]{64}$/);
+      }
+    });
+
+    it.each(["step-up","session"] as const)("rolls back grant and success receipt if %s expires behind the target lock", async kind => {
+      const target=await freshUser(`deleg-final-${kind}`),sessionId=await freshSession(bobby);
+      if(kind==="step-up")await ctx.pool.query("UPDATE owner_step_up_grants SET expires_at=clock_timestamp()+interval '2 seconds' WHERE session_id=$1",[sessionId]);
+      else await ctx.pool.query("UPDATE auth_sessions SET idle_expires_at=clock_timestamp()+interval '2 seconds' WHERE session_id=$1",[sessionId]);
+      const blocker=await ctx.pool.connect();let attempt:Promise<unknown>|undefined;
+      const request=ownerRequest({action:"GRANT",sessionId,granteeUserId:target.userId,capability:"governance.r2.read",workspaceId:null});
+      try{
+        await blocker.query("BEGIN");
+        await blocker.query("SELECT user_id FROM portal_users WHERE user_id=$1 FOR UPDATE",[target.userId]);
+        const pid=(await blocker.query("SELECT pg_backend_pid() AS pid")).rows[0].pid;
+        attempt=service.execute(request).then(()=>null,(error:unknown)=>error);
+        let blocked=false;
+        for(let check=0;check<100&&!blocked;check++){
+          blocked=(await ctx.pool.query("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE $1=ANY(pg_blocking_pids(pid))) AS blocked",[pid])).rows[0].blocked;
+          if(!blocked)await new Promise(resolve=>setTimeout(resolve,10));
+        }
+        expect(blocked).toBe(true);
+        await blocker.query("SELECT pg_sleep(2.05)");
+        await blocker.query("COMMIT");
+        expect(await attempt).toMatchObject({reasonCode:kind==="step-up"?"STEP_UP_REQUIRED":"CURRENT_ACTOR_AUTHORITY_REQUIRED",status:403});
+        expect(await grants.listGrants({granteeUserId:target.userId})).toEqual([]);
+        expect(await grants.findEventByKey(request.idempotencyKey)).toBeNull();
+      }finally{
+        await blocker.query("ROLLBACK");blocker.release();if(attempt)await attempt;
+      }
+    });
+
+    it("binds a redacted unknown-target refusal to the original payload", async () => {
+      const request = ownerRequest({ action: "GRANT", granteeUserId: randomId("absent"),
+        capability: "governance.r1.read", workspaceId: null });
+      await expect(service.execute(request)).rejects.toMatchObject({ reasonCode: "ACCOUNT_NOT_FOUND", status: 404 });
+      await expect(service.execute({ ...request, granteeUserId: stan.userId })).rejects.toMatchObject({
+        reasonCode: "IDEMPOTENCY_KEY_PAYLOAD_CONFLICT", status: 409,
+      });
     });
   });
 

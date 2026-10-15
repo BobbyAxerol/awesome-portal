@@ -6,6 +6,8 @@ import { DynamicModule, Module } from "@nestjs/common";
 import { Pool } from "pg";
 import { AuthController } from "./auth/auth.controller";
 import { ProfileController } from "./auth/profile.controller";
+import { ExecutionAccessController } from "./execution-v2/access.controller";
+import { ExecutionAccessService } from "./execution-v2/access.service";
 import { AuthService } from "./auth/auth.service";
 import { Argon2CredentialService } from "./auth/argon";
 import { AdminService } from "./admin/admin.service";
@@ -209,6 +211,7 @@ export class AppModule {
         HealthController,
         AuthController,
         ProfileController,
+        ExecutionAccessController,
         // A4-2 retired the six /api/admin/users* routes. They mutated
         // accounts with no expected revision, no idempotency, no step-up and
         // no operation record, so leaving them mounted beside the control
@@ -314,6 +317,11 @@ export class AppModule {
             ownerAccess: OwnerAccessService,
           ) => new GovernanceGrantsService(db, auth, ownerAccess),
           inject: [CONTROL_API_POOL, AuthService, OwnerAccessService],
+        },
+        {
+          provide: ExecutionAccessService,
+          useFactory: (db:Pool,auth:AuthService)=>new ExecutionAccessService(db,auth),
+          inject: [CONTROL_API_POOL,AuthService],
         },
         {
           provide: AccountLifecycleService,

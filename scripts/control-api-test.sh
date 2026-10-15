@@ -170,17 +170,35 @@ fi
   ' sh "$@"
 
 CONTROL_SIGNATURE_SQL="SELECT string_agg(value, ':' ORDER BY ordinal) FROM (VALUES (1, (SELECT count(*)::text FROM pgmigrations)), (2, (SELECT count(*)::text FROM portal_users)), (3, (SELECT count(*)::text FROM governance_approval_requests)), (4, (SELECT count(*)::text FROM governance_approval_known_limitations)), (5, (SELECT count(*)::text FROM governance_r2_lineage)), (6, (SELECT count(*)::text FROM governance_approval_history)), (7, (SELECT count(*)::text FROM governance_paper_exit_reviews)), (8, (SELECT count(*)::text FROM execution_command_plans_f0)), (9, (SELECT count(*)::text FROM execution_command_plans_f0 WHERE payload_json <> '{}'::jsonb)), (10, (SELECT count(*)::text FROM execution_operation_queue_items)), (11, (SELECT count(*)::text FROM execution_operation_queue_items WHERE assigned_to_user_id IS NOT NULL)), (12, (SELECT count(*)::text FROM execution_operation_queue_read WHERE incident_id IS NOT NULL)), (13, (SELECT count(*)::text FROM execution_operation_workflow_events)), (14, (SELECT count(*)::text FROM execution_incidents)), (15, (SELECT count(*)::text FROM execution_incident_operation_links)), (16, (SELECT count(*)::text FROM execution_incident_annotations)), (17, (SELECT count(*)::text FROM execution_incident_evidence)), (18, (SELECT count(*)::text FROM execution_incident_events)), (19, (SELECT count(*)::text FROM governance_sandbox_certifications)), (20, (SELECT count(*)::text FROM governance_sandbox_smoke_plans)), (21, (SELECT count(*)::text FROM governance_sandbox_step_evidence)), (22, (SELECT count(*)::text FROM governance_sandbox_findings)), (23, (SELECT count(*)::text FROM governance_sandbox_certification_events)), (24, (SELECT count(*)::text FROM governance_sandbox_promotion_plans)), (25, (SELECT count(*)::text FROM governance_canary_envelopes)), (26, (SELECT count(*)::text FROM execution_activation_capabilities)), (27, (SELECT count(*)::text FROM execution_activation_capabilities WHERE effective_profile <> 'fixture' OR source_enabled OR runtime_enabled OR NOT kill_switch_engaged)), (28, (SELECT count(*)::text FROM execution_activation_plans)), (29, (SELECT count(*)::text FROM execution_activation_evidence_refs)), (30, (SELECT count(*)::text FROM execution_activation_compatibility_requirements)), (31, (SELECT count(*)::text FROM execution_activation_events)), (32, (SELECT count(*)::text FROM execution_shared_admission_state)), (33, (SELECT count(*)::text FROM execution_shared_admission_leases)), (34, (SELECT count(*)::text FROM execution_shared_read_flights)), (35, (SELECT count(*)::text FROM execution_shared_read_cache)), (36, (SELECT count(*)::text FROM execution_manager_operation_continuations)), (37, (SELECT count(*)::text FROM execution_manager_projection_snapshots)), (38, (SELECT count(*)::text FROM execution_alpha_fleet_projection)), (39, (SELECT count(*)::text FROM execution_binding_projection)), (40, (SELECT count(*)::text FROM execution_profile_projection_leases)), (41, (SELECT count(*)::text FROM execution_profile_projection_snapshots)), (42, (SELECT count(*)::text FROM execution_profile_projection_journal)), (43, (SELECT count(*)::text FROM execution_durable_mirror_batches)), (44, (SELECT count(*)::text FROM execution_durable_mirror_revisions)), (45, (SELECT count(*)::text FROM execution_durable_mirror_observations)), (46, (SELECT count(*)::text FROM execution_durable_mirror_current_entities)), (47, (SELECT count(*)::text FROM execution_durable_mirror_range_rows)), (48, (SELECT count(*)::text FROM execution_durable_mirror_continuations)), (49, (SELECT count(*)::text FROM execution_durable_mirror_gaps)), (50, (SELECT count(*)::text FROM execution_durable_mirror_conflicts)), (51, (SELECT count(*)::text FROM execution_financial_query_cursors)), (52, (SELECT count(*)::text FROM execution_authoritative_event_streams)), (53, (SELECT count(*)::text FROM execution_authoritative_event_entries)), (54, (SELECT count(*)::text FROM execution_authoritative_event_entities)), (55, (SELECT count(*)::text FROM execution_profile_projection_refresh_health)), (56, (SELECT count(*)::text FROM governance_review_captures))) AS signature(ordinal, value);"
+"${DOCKER[@]}" exec -i "${PG_CONTAINER}" psql -U portal -d portal_control_test -v ON_ERROR_STOP=1 \
+  < "${APP_DIR}/test/fixtures/elp2-access-restore.sql"
 source_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d portal_control_test -Atc "${CONTROL_SIGNATURE_SQL}")"
+# Restore scoped policy and immutable receipts byte-for-byte as well as the
+# historical table-count signature. jsonb rows have deterministic key order;
+# sorting by the primary key makes this independent of physical heap order.
+ACCESS_SIGNATURE_SQL="SELECT string_agg(name || ':' || rows || ':' || digest, ':' ORDER BY name) FROM (
+  SELECT 'policy' AS name, count(*)::text AS rows, md5(COALESCE(string_agg(row_to_json(t)::text, chr(10) ORDER BY workspace_id),'')) AS digest FROM portal_access_policy_state t
+  UNION ALL SELECT 'grants', count(*)::text, md5(COALESCE(string_agg(row_to_json(t)::text, chr(10) ORDER BY grant_id),'')) FROM portal_access_grants_v2 t
+  UNION ALL SELECT 'proposals', count(*)::text, md5(COALESCE(string_agg(row_to_json(t)::text, chr(10) ORDER BY proposal_id),'')) FROM portal_access_proposals t
+  UNION ALL SELECT 'events', count(*)::text, md5(COALESCE(string_agg(row_to_json(t)::text, chr(10) ORDER BY event_id),'')) FROM portal_access_policy_events t
+) AS access_restore;"
+source_access_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d portal_control_test -Atc "${ACCESS_SIGNATURE_SQL}")"
 "${DOCKER[@]}" exec "${PG_CONTAINER}" pg_dump -U portal -d portal_control_test \
   --format=custom --file=/tmp/portal_control_test.dump
 "${DOCKER[@]}" exec "${PG_CONTAINER}" createdb -U portal portal_control_restore
 "${DOCKER[@]}" exec "${PG_CONTAINER}" pg_restore -U portal -d portal_control_restore \
   --exit-on-error /tmp/portal_control_test.dump
 restore_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d portal_control_restore -Atc "${CONTROL_SIGNATURE_SQL}")"
+restore_access_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d portal_control_restore -Atc "${ACCESS_SIGNATURE_SQL}")"
 [[ "${source_signature}" == "${restore_signature}" ]] || {
   printf 'Control API restore signature mismatch: source=%s restore=%s\n' \
     "${source_signature}" "${restore_signature}" >&2
   exit 1
 }
+[[ "${source_access_signature}" == "${restore_access_signature}" ]] || {
+  printf 'Scoped access restore row-digest mismatch: source=%s restore=%s\n' \
+    "${source_access_signature}" "${restore_access_signature}" >&2
+  exit 1
+}
 
-printf 'Control API security/query/governance tests and PostgreSQL restore drill passed.\n'
+printf 'Control API security/query/governance tests and PostgreSQL restore drill (including four scoped-access row digests) passed.\n'

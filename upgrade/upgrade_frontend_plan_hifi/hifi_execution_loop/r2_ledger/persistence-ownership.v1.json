@@ -13,6 +13,42 @@
   ],
   "tables": [
     {
+      "table": "portal_access_policy_state",
+      "writer_owner": "PORTAL_WORKFLOW", "ingress": "INTERNAL_QUALIFIED_ADAPTER",
+      "verbs": {"insert": 1, "update": 1, "delete": 0, "read": 1}, "readers": 1,
+      "rows_dev": null, "rows_stable": null,
+      "retention": "RETAIN_WITH_AUTHORITY_HISTORY", "disposal_decision": "NO_AUTOMATIC_DELETE",
+      "note": "ELP2-03 additive current reviewed Portal policy, not TS authority. Default adapter unqualified; no migration seed or public installer.",
+      "reached_via": "ExecutionAccessService.installReviewedPolicy (internal qualified port only)"
+    },
+    {
+      "table": "portal_access_grants_v2",
+      "writer_owner": "PORTAL_WORKFLOW", "ingress": "ROUTE_AND_INTERNAL_QUALIFIED_ADAPTER",
+      "verbs": {"insert": 1, "update": 1, "delete": 0, "read": 1}, "readers": 1,
+      "rows_dev": null, "rows_stable": null,
+      "retention": "RETAIN_WITH_AUTHORITY_HISTORY", "disposal_decision": "NO_AUTOMATIC_DELETE",
+      "note": "ELP2-03 scoped Portal policy/CAS/revoke with independent TS acceptance; current grants never created by migration defaults.",
+      "reached_via": "execution-v2/access.controller.ts, ExecutionAccessService internal qualified ports"
+    },
+    {
+      "table": "portal_access_proposals",
+      "writer_owner": "PORTAL_WORKFLOW", "ingress": "ROUTE_AND_INTERNAL_QUALIFIED_ADAPTER",
+      "verbs": {"insert": 1, "update": 2, "delete": 0, "read": 2}, "readers": 2,
+      "rows_dev": null, "rows_stable": null,
+      "retention": "RETAIN_WITH_AUTHORITY_HISTORY", "disposal_decision": "NO_AUTOMATIC_DELETE",
+      "note": "ELP2-03 immutable submission/receipt with mutable reconciliation state. Unknown/pending/rejected do not grant TS rights.",
+      "reached_via": "execution-v2/access.controller.ts, ExecutionAccessService.acceptTsReceipt (internal qualified port only)"
+    },
+    {
+      "table": "portal_access_policy_events",
+      "writer_owner": "PORTAL_WORKFLOW", "ingress": "ROUTE_AND_INTERNAL_QUALIFIED_ADAPTER",
+      "verbs": {"insert": 1, "update": 0, "delete": 0, "read": 4}, "readers": 4,
+      "rows_dev": null, "rows_stable": null,
+      "retention": "IMMUTABLE_AUTHORITY_AUDIT", "disposal_decision": "NO_AUTOMATIC_DELETE",
+      "note": "ELP2-03 append-only before/after decisions and original outcomes; scoped audit reads, no credentials.",
+      "reached_via": "execution-v2/access.controller.ts, ExecutionAccessService internal qualified ports"
+    },
+    {
       "table": "activation_credentials",
       "writer_owner": "PORTAL_WORKFLOW",
       "ingress": "ROUTE",

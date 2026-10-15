@@ -7,6 +7,10 @@ import { createControlApiApp } from "../src/app";
 import { ControlApiConfig } from "../src/config";
 
 export const TEST_TABLES = [
+  "portal_access_policy_events",
+  "portal_access_proposals",
+  "portal_access_grants_v2",
+  "portal_access_policy_state",
   "execution_retained_review_access",
   "research.window_execution_seals_v1",
   "research.window_execution_rows_v1",
