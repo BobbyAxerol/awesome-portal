@@ -272,7 +272,7 @@ export function GateR1Review({
 
   const absences: AbsenceItem[] = evidence
     ? []
-    : [{ label: "evidence series", reason: "Evidence series are not published on governance.r1-review.v1 yet (BR-EX-67 evidence_series). The checklist verdicts above are the server's; the charts arrive with the field." }];
+    : [{ label: "evidence series", reason: "Evidence series are not published for this review yet. The checklist verdicts above are the server's." }];
 
   return (
     <section className="exec-gate exec-gov" aria-label={`Gate R1 review ${approvalId}`} data-hifi-exact="gate-r1-1a">
@@ -316,8 +316,7 @@ export function GateR1Review({
         <details className="exec-gf-details">
           <summary>Policy &amp; references</summary>
           <p className="exec-gov-meta">
-            policy {policyVersion} · {policyChip ?? "gate policy reference not published · BR-EX-67"}{" "}
-            <button type="button" className="exec-gov-reglink" disabled title="The policy registry route ships with BR-EX-67.">policy registry →</button>
+            policy {policyVersion} · {policyChip ?? "gate policy reference not published"}
           </p>
         </details>
       </GateVerdict>
@@ -450,7 +449,7 @@ export function GateR1Review({
         tone={verdictTone}
         reasons={isDecided ? [] : reasons}
         note={onNoteChange && !isDecided ? { value: note ?? "", onChange: onNoteChange, disabled: approveLocked && conditionLocked && denyLocked } : undefined}
-        footnote={<>your decision counts as 1 of {quorumRequired} required approvers · decision is recorded against policy {policyVersion} · conditions are typed objects with owner, deadline and expiry, never free text</>}
+        footnote={<>your decision counts as 1 of {quorumRequired} required approvers · decision is recorded against policy {policyVersion}</>}
         trail={trail}
         actions={
           isDecided ? null : (

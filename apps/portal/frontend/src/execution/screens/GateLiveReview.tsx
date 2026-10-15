@@ -237,7 +237,7 @@ export function GateLiveReview({
         <div className="exec-gov-panel">
           <div className="exec-gov-panelhead">
             <span className="exec-gov-paneltitle">Gate criteria — policy vs canary evidence</span>
-            <span className="exec-gate-policychip">gate policy reference not published · BR-EX-70</span>
+            <span className="exec-gate-policychip">gate policy reference not published</span>
           </div>
           <PanelState
             status="unavailable"
@@ -277,7 +277,7 @@ export function GateLiveReview({
           <div className="exec-gov-inverse exec-gov-panel">
             <div className="exec-gov-panelhead">
               <span className="exec-gov-paneltitle">Capital step — execution vocabulary</span>
-              <span className="exec-gate-policychip" data-inverse="true">not published · BR-EX-70</span>
+              <span className="exec-gate-policychip" data-inverse="true">not published</span>
             </div>
             <PanelState
               status="unavailable"

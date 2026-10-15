@@ -140,7 +140,7 @@ describe("live gate — its own review room (unchanged backbone)", () => {
   it("holds the capital step as a typed gap — no number is invented for real money", async () => {
     render(<GateLiveReviewContainer api={createFixtureApi()} approvalId="AP-311" />);
     await screen.findByText(/Canary Evidence Approval/);
-    expect(screen.getAllByText(/not published · BR-EX-70/).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText(/not published/).length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText(/Approving without it approves the stage grant only/)).toBeTruthy();
     expect(screen.queryByText(/this step 20,000/)).toBeNull();
   });

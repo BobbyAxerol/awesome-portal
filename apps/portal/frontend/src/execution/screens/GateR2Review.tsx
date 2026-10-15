@@ -31,7 +31,7 @@ export type R1State = "APPROVED" | "APPROVED_WITH_CONDITION" | "EXPIRED" | "DENI
 function r1Block(state: R1State, id: string | null, expiredAt: string | null, lineagePublished = true): string | null {
   const ref = id ?? "the linked R1";
   if (!lineagePublished) {
-    return "This response does not carry the R1 lineage, so the authority this R2 rests on cannot be shown. Approve is disabled until the source publishes it (BR-EX-30).";
+    return "This response does not carry the R1 lineage, so the authority this R2 rests on cannot be shown. Approve is disabled until the source publishes it.";
   }
   switch (state) {
     case "APPROVED":
@@ -262,9 +262,9 @@ export function GateR2Review({
       : null;
 
   const absences: AbsenceItem[] = [
-    ...(fitPanel ? [] : [{ label: "portfolio fit", reason: "portfolio_fit is not published on governance.r2-review.v1 yet (BR-EX-67). Nothing here estimates it client-side." }]),
-    ...(criteriaPanel ? [] : [{ label: "gate criteria", reason: "gate_criteria are POLICY DATA computed server-side and are not published yet (BR-EX-67). The browser never re-derives a verdict." }]),
-    ...(stageChips ? [] : [{ label: "stage eligibility", reason: "stage_eligibility is not published yet (BR-EX-67) — no chip is invented for it." }]),
+    ...(fitPanel ? [] : [{ label: "portfolio fit", reason: "Portfolio fit is not published yet; nothing here estimates it." }]),
+    ...(criteriaPanel ? [] : [{ label: "gate criteria", reason: "Gate criteria are not published yet; the browser never re-derives a verdict." }]),
+    ...(stageChips ? [] : [{ label: "stage eligibility", reason: "Stage eligibility is not published yet." }]),
   ];
 
   return (
@@ -478,7 +478,7 @@ export function GateR2Review({
             ) : null}
             your decision counts as 1 of {quorumRequired} required approvers ·{" "}
             {artifactDigest ? <>evidence digest {shortDigest(artifactDigest)} · </> : null}
-            decision is recorded against policy {policyVersion} · conditions are typed objects with owner, deadline and expiry, never free text
+            decision is recorded against policy {policyVersion}
           </>
         }
         trail={trail}

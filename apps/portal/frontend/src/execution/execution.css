@@ -7439,3 +7439,15 @@ details.exec-gf-details[open] > summary.exec-gov-panelhead::before { content: "�
 .exec-capnext-controls { display: flex; flex-direction: column; gap: var(--space-3); }
 section.exec-capnext { padding: var(--space-3) var(--space-4); border: 1px dashed var(--line-strong); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: var(--space-2); }
 .exec-gov .exec-rc { border-radius: var(--radius-lg); }
+
+/* Decision bar: the one reason that matters is on the line; the rest is one click away. */
+.exec-decision-bar-reasons { align-items: baseline; }
+.exec-decision-bar-reasons [data-reason="main"] { color: var(--ink); }
+.exec-decision-bar-reasons .exec-decision-bar-more { margin: 0; display: inline-block; }
+.exec-decision-bar-reasons .exec-decision-bar-more > summary { cursor: pointer; color: var(--ink-mute); font: var(--exec-font-meta); list-style: none; display: inline-flex; align-items: center; gap: 4px; }
+.exec-decision-bar-reasons .exec-decision-bar-more > summary::-webkit-details-marker { display: none; }
+.exec-decision-bar-reasons .exec-decision-bar-more > summary::before { content: "▸"; }
+.exec-decision-bar-reasons .exec-decision-bar-more[open] > summary::before { content: "▾"; }
+.exec-decision-bar-reasons .exec-decision-bar-more > summary:hover { color: var(--ink); text-decoration: underline; }
+.exec-decision-bar-reasons .exec-decision-bar-more > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.exec-decision-bar-reasons .exec-decision-bar-more ul { margin: 4px 0 0; padding-left: 18px; color: var(--ink-soft); }

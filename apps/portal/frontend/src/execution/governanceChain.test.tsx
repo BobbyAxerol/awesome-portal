@@ -120,12 +120,22 @@ describe.each(ROLES)("role matrix · %s", (role) => {
 });
 
 describe("sticky decision bar", () => {
-  it("prints every lock on one line beside the buttons — nothing folds behind a count", () => {
+  it("shows the ONE reason that matters beside the buttons, and the rest one click away (still in the page)", () => {
     r1({ actorId: "u_minh", actor: "Minh", locks: ["EXPIRED"], eligibility: NONE });
     const bar = screen.getByRole("region", { name: /Gate R1 decision/ });
+    const main = bar.querySelector("[data-reason='main']")!;
+    expect(main.textContent).toMatch(/\S/);
+    const more = bar.querySelector("details.exec-decision-bar-more") as HTMLDetailsElement;
+    expect(more, "the other reasons fold behind one count").not.toBeNull();
+    expect(more.open).toBe(false);
+    expect(more.querySelector("summary")!.textContent).toMatch(/\d+ more reasons?/);
+    // nothing is dropped: every other reason is in the page, and none repeats the main one
+    const texts = [...more.querySelectorAll("li")].map((li) => li.textContent);
+    expect(texts.length).toBeGreaterThan(0);
+    expect(new Set([main.textContent, ...texts]).size).toBe(texts.length + 1);
     expect(within(bar).getByText(/self-approval prohibited/)).toBeTruthy();
     expect(within(bar).getByText(/This request expired/)).toBeTruthy();
-    expect(within(bar).queryByText(/more reasons?/)).toBeNull();
+    fireEvent.click(more.querySelector("summary")!);
     expect(bar.className).toContain("exec-decision-bar");
   });
   it("carries the reviewer note into the decision reason", async () => {

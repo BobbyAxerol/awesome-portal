@@ -3640,9 +3640,9 @@ describe("Gate R2 — the blocked banner tells a reviewer what to do", () => {
     }
   });
 
-  it("explains its own conditions model so nobody asks for a free-text box", () => {
+  it("names the policy the decision is recorded against, without a paragraph about the conditions model", () => {
     render(r2({ artifactDigest: "sha256:9f3c…" }));
-    expect(screen.getByText(/typed objects with owner, deadline and expiry, never free text/)).toBeTruthy();
+    expect(screen.queryByText(/never free text/)).toBeNull();
     expect(screen.getByText(/recorded against policy approval\.v3/)).toBeTruthy();
   });
 

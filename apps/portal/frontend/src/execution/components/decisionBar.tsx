@@ -3,10 +3,11 @@
  * (handoff EL-V2-05 supplement: "đang quyết định" is shown by a sticky bar
  * with verdict + reason + buttons and elevation, never by a light surface).
  *
- * It renders what it is given: a verdict chip, every lock reason on one line
- * beside the buttons (nothing folded away), an optional reviewer note that
- * becomes the decision's reason, the action buttons and the decision trail.
- * It never decides anything itself.
+ * It renders what it is given: a verdict chip, the ONE reason that matters
+ * (the first the screen supplies) beside the buttons with the rest one click
+ * away — still in the page, still named by `aria-describedby` — an optional
+ * reviewer note that becomes the decision's reason, the action buttons and the
+ * decision trail. It never decides anything itself.
  */
 import type { ReactNode } from "react";
 import { StatusChip } from "./badges";
@@ -56,9 +57,25 @@ export function ExecutionDecisionBar({ verdict, tone, reasons = [], note, action
       </div>
       {reasons.length > 0 ? (
         <div className="exec-decision-bar-reasons exec-role-body" id={reasonsId}>
-          {reasons.map((r) => (
-            <span key={r}>{r}</span>
-          ))}
+          {(() => {
+            const unique = [...new Set(reasons)];
+            const [main, ...rest] = unique;
+            return (
+              <>
+                <span data-reason="main">{main}</span>
+                {rest.length > 0 ? (
+                  <details className="exec-decision-bar-more">
+                    <summary>{rest.length} more {rest.length === 1 ? "reason" : "reasons"}</summary>
+                    <ul>
+                      {rest.map((r) => (
+                        <li key={r}>{r}</li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
+              </>
+            );
+          })()}
         </div>
       ) : null}
       {footnote ? <div className="exec-decision-bar-foot exec-role-meta">{footnote}</div> : null}
