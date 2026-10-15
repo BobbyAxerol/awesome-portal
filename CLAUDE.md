@@ -1,5 +1,33 @@
 # CLAUDE.md — Frontend Lead / UIUX Agent Guide
 
+> **Execution Loop V2 directive — Bobby, 2026-10-15:** for this new campaign,
+> read [Unified §14](upgrade/UNIFIED_IMPLEMENTATION_PLAN.md#execution-loop-v2),
+> [guide index](upgrade/execution_loop/README.md) and
+> [shared rules / Claude handoff](upgrade/execution_loop/AGENT_WORKING_RULES.md).
+> You own manager-first UI/UX refinement and approved new-screen design, not
+> a literal copy of old HiFi. Reuse accepted components, simplify wording,
+> improve selectors/navigation/density/accessibility and preserve deep links;
+> never change economic grain, authority, missing-data semantics or source
+> truth for appearance. Design approval precedes implementation. Browser/HiFi
+> comparison is mandatory; disclose absent lowfi inputs and fixture-only proof.
+> This scoped directive supersedes the dated scope/copy/upgrade-doc edit ban
+> and duplicate tracker instructions below for assigned V2 work only. Claude
+> may write V2 design, request and phase packets and the matching Unified index;
+> do not silently rewrite source guides or accepted backend contracts. Keep
+> Research/Planning and shared visual tokens protected unless separately assigned.
+> Read the latest backend handoff before each phase; missing contracts become
+> explicit requests, not invented client facts. No self-deploy, push, live
+> action or HK mutation authority is granted by receiving this bundle.
+
+> **V2 workflow addendum — Bobby, 2026-10-16:** follow shared rules §§7–8 and
+> [phase packet template](upgrade/execution_loop/PHASE_PACKET_TEMPLATE.md).
+> Read new backend requests/handoffs before every phase; acknowledge delivered
+> contracts with ACCEPTED or CHANGES_REQUESTED and evidence. End every phase
+> with backend next/debt, frontend next, bidirectional requests and approval
+> state. Delegate independent approved tasks only, one writer per file; primary
+> coordinates shared contracts/docs, tests/resources and integration review.
+> Fixture success is not real-API acceptance; no auto-start of unapproved phases.
+
 > **Research Loop override — Bobby, 2026-09-19:** for a Research assignment,
 > start at [Unified Plan §13](upgrade/UNIFIED_IMPLEMENTATION_PLAN.md#research-loop-v11)
 > and [Research working rules](upgrade/research_loop/CLAUDE-FOR-thanhvuong.md#research-working-rules).

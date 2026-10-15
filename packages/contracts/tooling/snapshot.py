@@ -20,6 +20,13 @@ from typing import Any
 CONTRACTS_ROOT = Path(__file__).resolve().parents[1]
 
 TRACKED = (
+    "schemas/execution-v2-foundation.v1.schema.json",
+    "openapi/execution-v2-foundation.openapi.json",
+    "generated/execution-v2-foundation.d.ts",
+    "fixtures/execution-v2-foundation.synthetic.valid.json",
+    "tooling/execution-v2-foundation.mjs",
+    "tooling/execution-v2-fixtures.mjs",
+    "tooling/generate-execution-v2-foundation.mjs",
     "schemas/execution-governance-portal-decisions.v1.schema.json",
     "schemas/governance-live-decision-review.v1.schema.json",
     "tooling/generate-research-replay-continuity.mjs",

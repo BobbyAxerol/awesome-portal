@@ -1,0 +1,276 @@
+{
+  "schema_version": "portal.elp2-00.baseline.v1",
+  "observed_window_utc": {
+    "start": "2026-10-15T18:07:22Z",
+    "end": "2026-10-15T18:17:41.258Z",
+    "source_census": "2026-10-15T18:17:41.258Z"
+  },
+  "verdict": "BASELINE_AUDIT_COMPLETE_AWAITING_OWNER_REVIEW",
+  "authorization": {
+    "owner": "Bobby",
+    "reference": "ELP2-00 assignment, 2026-10-16 Asia/Saigon",
+    "allowed": [
+      "local source/document audit",
+      "read-only HK Git/journal/selected Docker metadata",
+      "local phase evidence and Unified index"
+    ],
+    "excluded": [
+      "application changes",
+      "authenticated business API probes",
+      "build/write tests/migration",
+      "remote writes",
+      "credentials/TLS changes",
+      "runtime/source/command/SSE activation",
+      "push/merge/release"
+    ]
+  },
+  "portal": {
+    "root": "/home/bobby/portal-research",
+    "branch": "docs/research-loop-plan",
+    "commit": "be56efdf8a44b0fd8cd44202b04ada582293a1dd",
+    "entry_dirty": {
+      "tracked": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "upgrade/UNIFIED_IMPLEMENTATION_PLAN.md"
+      ],
+      "untracked": [
+        "upgrade/execution_loop/"
+      ],
+      "origin": "prior onboarding/planning and supplied guides; preserved",
+      "tracked_diff_sha256_before_phase_index_edit": "cb6655b757a78cfc17185fa8afdbfff72461ab74789ee1b16db58f5b929304de"
+    },
+    "local_refs": {
+      "main": "533162635f56584d630e3d971d77d50860595f15",
+      "dev": "533162635f56584d630e3d971d77d50860595f15",
+      "origin_main": "533162635f56584d630e3d971d77d50860595f15",
+      "origin_dev": "533162635f56584d630e3d971d77d50860595f15",
+      "origin_research": "d3d99f26e531c0003415797b932cf2377215a478",
+      "stable_v1_1_1": "e4fd93658de1ff0614126a85d70e59a23c25a01f"
+    },
+    "graph": {
+      "main_only": 0,
+      "research_only_vs_main": 795,
+      "dev_only": 0,
+      "research_only_vs_dev": 795,
+      "research_ahead_local_origin_tracking": 430,
+      "fetch_performed": false,
+      "remote_freshness": "UNKNOWN"
+    },
+    "lanes": [
+      {
+        "path": "/home/bobby/portal-research-fe",
+        "branch": "claude/fe-parity",
+        "commit": "be56efdf8a44b0fd8cd44202b04ada582293a1dd"
+      },
+      {
+        "path": "/home/bobby/portal-research-be",
+        "branch": "codex/be-gaps",
+        "commit": "d5d31cbd7adf3db658508b3cc9aedb280c1be2f1"
+      }
+    ]
+  },
+  "hk": {
+    "target": "bobby@16.163.212.33",
+    "hostname": "ip-172-31-16-126",
+    "atomic_snapshot": false,
+    "ts": {
+      "path": "/home/bobby/.worktrees/trading-system-next-upgrade",
+      "branch": "feat/v2-rust-first-okx-demo",
+      "initial_commit": "6e0244d6ede961e60df50ffb638c4be452456c1c",
+      "last_observed_commit": "e8cd7b7c89fa633df91912a780106871be0ceb1f",
+      "last_commit_at_utc": "2026-10-15T18:16:40Z",
+      "tracked_modified_files_at_last_observation": 11,
+      "untracked_at_last_observation": [
+        "upgrade/TS_PORTFOLIO_ACCOUNT_MANAGEMENT_UPGRADE_GUIDE_v1.1 (1).md"
+      ],
+      "initial_tracked_diff_sha256": "347f34dfb749013f182929fd6037ebff3fb8ea9ce09c455a8a7d30687e54edd5",
+      "last_observed_tracked_diff_sha256": "3ef980a2ca4f8336439d025b7224b21f2f7c7972cd0511bb0d7726a8f6847e16",
+      "plan_sha256": "ec81e5ace8ceb800fabf0a4ad7f09296c5cf8ee940cb152ffd1d8",
+      "untracked_pm_copy_sha256": "1ac56bff4e5728650cdb91df0544a8f3e17c5103d56ad49d3549f4b7e864b6e3",
+      "g7_test_file_sha256_at_181653": "9456036f779c3636ac347545dc09fa1a425b392a96d8779039f047fb8beefd2e",
+      "journal_stage100_2": {
+        "window_utc": "2026-10-15T16:23:52Z/2026-10-15T17:00:00Z",
+        "protocol_met": true,
+        "pass": [
+          "G1",
+          "G3",
+          "G5",
+          "G6",
+          "G9",
+          "G10",
+          "G11",
+          "G14"
+        ],
+        "fail": [
+          "G2",
+          "G4",
+          "G7",
+          "G8"
+        ],
+        "separate_evidence": [
+          "G12",
+          "G13"
+        ],
+        "classification": "SOURCE_JOURNAL_REPORTED; not rerun or independently certified by Portal",
+        "new_g7_source_fix": "present at e8cd7b7c; no replacement gate receipt inspected"
+      }
+    },
+    "pm": {
+      "path": "/home/bobby/.worktrees/trading-system-pm-v1_1",
+      "branch": "feat/portfolio-account-v1_1-parallel",
+      "commit": "d16aa2b5f251596e469807f57e81fe14cdc7e763",
+      "working_tree": "clean",
+      "current_guide": "upgrade/TS_PORTFOLIO_ACCOUNT_MANAGEMENT_UPGRADE_GUIDE_v1.1 (1).md",
+      "guide_sha256": "7d79d8de84eab19d0d2de3dce2b4c9278a691277b0b8b4379a7db0000dfc8945",
+      "trust": "PMA03 human trust runtime integration pending; current execution.read-only assertion is not PM mutation authority",
+      "rehearsal": "fresh 101 source + 11 candidate SQL rehearsal, not old DB upgrade",
+      "probes": "PMA16 four isolated real-PG TEST_ONLY probes; not full P16 campaign"
+    },
+    "dl": {
+      "path": "/home/bobby/.worktrees/data-layer-p184-closure",
+      "branch": "fix/p184-dl-closure",
+      "commit": "0ffdae264bb626c303fc24c773633e2c9b170d02",
+      "working_tree": "clean",
+      "plan_sha256": "c93db136e6784133c2307a528d0b9f2488ab0e7ad7aca24bb20e914454e996d6",
+      "canonical": {
+        "path": "/home/bobby/data_layer",
+        "branch": "main",
+        "commit": "5bf5cd540498b82959342c7cfb2ebeaac3007426",
+        "owner_plan_modified": true,
+        "tracked_diff_sha256": "b8adf709d8bff7d0fb745146592f9c118b3574efbde37568d9e26c9702d0ecb1"
+      }
+    }
+  },
+  "runtime": {
+    "observation_scope": "selected immutable image IDs/OCI revision/Compose path/three allowlisted Edge flags; no full env, secrets, DB query or business source GET",
+    "preview": {
+      "project": "portal-research-preview",
+      "url_local": "http://127.0.0.1:8095/",
+      "static_asset": "/assets/index-SniIVI8p.js",
+      "saved_identity_commit": "045788b166b14a366ae22b490a4e3c147864463e",
+      "saved_identity_at_utc": "2026-10-15T09:42:01Z",
+      "images_match_saved_identity": true,
+      "images": {
+        "control_api": "sha256:d13cef069471be8b34c7d6f0cda4b6df55e892812c7ea8bf0f17846256e76e6d",
+        "web": "sha256:423e5b1efa920bbb2d3b3597f27d9e06f066229add9a25422d956a2a23a3e89a",
+        "portal_api_and_quant_worker": "sha256:20da76618efb92e1b8930339a6797aba3b5bc72849bdf5173c62617cf554b2b5",
+        "roadmap": "sha256:e32bd3220153caaead4828495f2fc8580973a4266182cd3aae261ca0687fca59"
+      },
+      "effective_read_profile": "retained_review_v1",
+      "declared_migration": "1723680000133_governance-portal-decisions.sql",
+      "actual_applied_schema": "UNKNOWN_NOT_QUERIED",
+      "source_attestation_limit": "saved identity metadata, no OCI revision; not a reproducible current-HEAD build attestation"
+    },
+    "stable": {
+      "legacy_container_prefix": "portal-stable-v1-0-1",
+      "actual_oci_revision": "e4fd93658de1ff0614126a85d70e59a23c25a01f",
+      "matches_stable_v1_1_1_tag": true,
+      "images": {
+        "control_api": "sha256:d2c23ad668fcf4e03e0c6edffe9b9cc1a8d5a7b3787dd9ae280677f76e965263",
+        "web": "sha256:e237aabba580445fd43ae839b057e2cdc001b0ab7f1be120e5056c199173cadc"
+      },
+      "compose_workdir": "/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose",
+      "actual_applied_schema": "UNKNOWN_NOT_QUERIED"
+    },
+    "dev": {
+      "control_api_image": "sha256:8400439bc2cea6baf9bb86d3b4e851d4a0601531de86a7c1a47347f5837b7641",
+      "oci_revision": null,
+      "compose_workdir": "/home/bobby/portal-integration",
+      "deployed_commit": "UNKNOWN"
+    },
+    "edge": {
+      "profiles": [
+        "paper",
+        "sandbox",
+        "live"
+      ],
+      "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+      "oci_revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+      "compose_workdir": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+      "reported_container_health": "healthy",
+      "flags": {
+        "EDGE_REALTIME_SSE_ENABLED": true,
+        "EDGE_PROJECTION_INGESTION_ENABLED": false,
+        "EDGE_COMMAND_RELAY_ENABLED": false
+      },
+      "trust_tls_publication_current_qualification": "UNKNOWN_NOT_PROBED; flag/health is not readiness"
+    },
+    "manager": {
+      "images": {
+        "paper": "sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3",
+        "sandbox_and_live": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7"
+      },
+      "oci_revision": null,
+      "compose_label_workdir": "/home/bobby/.worktrees/trading-system-portal-execution-owner-v2",
+      "label_path_present_on_hk": false,
+      "source_mapping": "UNKNOWN; absent path is not a clean Git checkout"
+    }
+  },
+  "resources": {
+    "host": "Portal SGP; one observation, not load/soak/capacity certification",
+    "root_filesystem": {
+      "total_bytes": 665811062784,
+      "available_bytes": 169411964928
+    },
+    "memory": {
+      "total_bytes": 33651220480,
+      "available_bytes": 12614066176,
+      "swap_bytes": 0
+    },
+    "docker_df": {
+      "images": {
+        "total": 328,
+        "active": 25,
+        "size": "88.82GB",
+        "reclaimable": "74.4GB"
+      },
+      "volumes": {
+        "total": 97,
+        "active": 22,
+        "size": "31.95GB",
+        "reclaimable": "13.78GB"
+      },
+      "build_cache": {
+        "total": 3776,
+        "active": 93,
+        "size": "195.9GB",
+        "reclaimable": "62.97GB"
+      }
+    },
+    "measurement": "df/free/docker system df; values not summed as a disjoint accounting",
+    "created_by_phase": {
+      "containers": 0,
+      "volumes": 0,
+      "images": 0,
+      "services": 0
+    },
+    "cleanup": "NO_ACTION_NEEDED_FOR_PHASE; no broad prune; separate C4-GOV-CAPACITY-01 inventory follow-up remains"
+  },
+  "audit_counts": {
+    "execution_controllers": 28,
+    "execution_route_patterns": 112,
+    "execution_get": 84,
+    "execution_post": 28,
+    "execution_direct_openapi_matches": 79,
+    "execution_without_direct_openapi": 33,
+    "admin_routes": 16,
+    "auth_routes": 5,
+    "execution_openapi_files": 21,
+    "scanned_openapi_files": 46,
+    "registered_execution_patterns": 112
+  },
+  "source_custody": "source-census.json input_sha256/code_sha256; script stdout is read-only. No app test/import.",
+  "unknown_owners": {
+    "dev_source_mapping": "Portal ops, before affected rebuild/deploy",
+    "manager_image_source_mapping": "Edge/TS ops, before ELP2-05 runtime integration",
+    "actual_db_schema": "Portal ops, separately approved DB qualification",
+    "tls_trust": "Edge/TS trust owner, before source/command activation"
+  },
+  "next": {
+    "backend": "ELP2-01 contract/fixtures when Bobby assigns",
+    "claude": "UXM-00 current UI/browser audit and reuse map when assigned; then UXM-01/02 with reviewed contracts",
+    "owner_acceptance": "PENDING",
+    "runtime_activation": "NOT_AUTHORIZED"
+  }
+}

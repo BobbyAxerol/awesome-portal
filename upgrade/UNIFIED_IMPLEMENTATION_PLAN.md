@@ -9349,3 +9349,708 @@ distinct Core/store workspace semantics, before affected browser acceptance.
 All probe sessions logged out201. C4-GOV-CAPACITY-01 is the named, separate
 cache inventory follow-up at25% root free; do not prune active/rollback assets.
 No remote push, dev/main merge, signed release or production/source activation.
+
+<a id="execution-loop-v2"></a>
+
+# 14. Execution Loop Portal V2 — guide onboarding và authority alignment
+
+Bobby giao ngày2026-10-15: đọc toàn bộ bundle mới, đối chiếu đúng source
+worktrees trên AWS HK và thêm rules cho Claude nâng cấp UI/UX manager-first.
+Prompt B/C/D và bổ sung authority của Bobby được áp dụng trong
+[campaign entry point](./execution_loop/README.md) và
+[shared agent / Claude rules](./execution_loop/AGENT_WORKING_RULES.md).
+Không copy lại toàn guide hoặc mở implementation từ việc nhận tài liệu.
+
+| Track | Detailed authority | Disposition hiện tại |
+| --- | --- | --- |
+| Portal ELP2-00…11 | [BE guide v1.2](./execution_loop/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md) | ELP2-00 baseline audit delivered,8/8 audit checks; READY_FOR_BOBBY_REVIEW. ELP2-01…11 NOT_STARTED; no runtime activation |
+| Edge EPG10-00…11 | [Edge guide v1.2](./execution_loop/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md) | GUIDE_READ; HK inspection READ_ONLY; no Edge source/runtime changes |
+| Claude UXM-00…10 | [UX guide v1.1](./execution_loop/EXECUTION_LOOP_MANAGER_UX_DESIGN_GUIDE_v1.1_VI.md) | RULES_READY; browser audit/new design/implementation not performed in this package |
+| Shared score / Regime | [FINAL v1.1](./execution_loop/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md) | Formula/weights/bands selected; runtime calibration/config still pending; no new calculator/test run |
+
+[Source alignment receipt](./execution_loop/evidence/SOURCE_ALIGNMENT_2026-10-15.md)
+pins Portal5f3f2332, TS4e9c5f29, PMd16aa2b5, DL864774d5 with full SHAs,
+dirty states, guide hashes and limitations. PM R2 is read in its own PM
+worktree; TS untracked copy differs. Latest TS/DL journal advances beyond guide
+pins and records stage-100 in progress; journal is not direct runtime proof.
+At that inspection feasibility/lowfi were missing; the subsequent receipt
+[planning addendum](./execution_loop/evidence/PLAN_ALIGNMENT_2026-10-15.md)
+records their arrival and inspection. Full prompt companion and numerical
+receipt/script companions remain unverified; historical missing-input evidence
+above is preserved, not a current blocker for reviewing the two supplied images.
+
+Current integration branch stays `docs/research-loop-plan`; source inspection
+does not certify this checkout as deployed Execution. No main/dev merge,
+remote push, build/migration, service/TLS/credential change or live activation.
+Normal build/DB commit hook is PENDING under this read/docs-only package,
+never bypassed. The prior Research/Governance/P23/P24 evidence is preserved,
+not upgraded to complete by this new campaign. Existing §12 is historical;
+this §14 is the new campaign's single live index when phases are assigned.
+
+**Current return,2026-10-16:** Bobby assigned ELP2-00; the
+[phase packet](./execution_loop/evidence/ELP2-00/README.md) now supersedes prior
+source pins for next-work planning, without deleting their history. Portalbe56,
+HK TS6e0244d6→e8cd7b7c dirty / PMd16aa2b5 / DL0ffdae26; source vs actual
+stable/preview/Edge images distinct. Next proposed assignment is ELP2-01
+schema/golden fixtures. Claude UXM-00 can be assigned independently; request001
+in the packet defines exact audit/handoff. Owner acceptance still PENDING;
+no phase01 implementation, remote change or activation implied.
+
+<a id="elp2-sequencing"></a>
+
+## 14.1 Thứ tự triển khai — contract-first, UI song song
+
+Planning addendum theo Bobby, 2026-10-15 (Asia/Saigon). **Các phase bên dưới là
+PLANNED / NOT RUN trừ explicit phase return; plan không cấp quyền runtime.** Codex
+backend-first, Claude design/frontend-first; mỗi gói phải được giao trước khi
+triển khai. Nhánh tích hợp giữ `docs/research-loop-plan`, không dev/main.
+
+| Đợt | Codex/backend | Claude/frontend | Dependency để đi tiếp |
+| --- | --- | --- | --- |
+| A — hiểu đúng nền | ELP2-00; Score P0 inventory | UXM-00 audit/reuse, xem hai lowfi | Source/runtime tách biệt; authority/scope decisions có owner |
+| B — khóa ngôn ngữ chung | ELP2-01 contracts, canonical fixtures; thiết kế identity/policy/publication | UXM-01/02 IA, metric dictionary, role journeys | Schema/field grain và restricted disclosure được review; không dựng quyền từ UI |
+| C — nền dữ liệu và thiết kế | ELP2-02/03/04; ELP2-05 từng family; ELP2-06 projection và Score P1 theo inputs đủ | UXM-03/04/05 lowfi → UXM-06 HiFi được Bobby duyệt → UXM-07 fixture implementation | Có thể làm song song theo owned files; chưa mở real data/commands khi thiếu gate |
+| D — nối đọc thật | ELP2-06 selected reads + ELP2-08 handoff; ELP2-09 theo stream đủ continuity | UXM-08: Overview/Portfolio → Fleet → Alpha/Account/Deployment; Score P2 | ACL + publication + metric + resource evidence từng endpoint; retained không gọi live |
+| E — thao tác có authority | ELP2-07 exact operations, status/recovery; ELP2-08 workflow | UXM-09 confirmations/receipts/unknown/revoke | TS/PM authority + Edge relay/trust + approval exact operation×environment; không tự Live |
+| F — nghiệm thu selected scope | ELP2-10, Score P3, rồi ELP2-11 | UXM-10 browser/accessibility/performance/handoff | Đối chiếu source/dependency hashes; release/deploy là approval riêng |
+
+Không buộc mọi family hoàn tất trước read-only slice đầu tiên. Cũng không gọi
+toàn campaign COMPLETE khi chỉ selected scope PASS. Contract/design command có
+thể làm sớm sau B; runtime command cần E. Regime không là dependency của F(NAV),
+và analytics thiếu không được khóa close/reduce-risk đã có quyền.
+
+Hai ảnh là **lowfi yêu cầu dữ liệu**, chưa là approved HiFi. Giữ đủ hàng/cột,
+nhưng Claude được thiết kế hierarchy và interaction theo UX guide:
+
+- [Overview lowfi](<./execution_loop/ChatGPT Image Oct 15, 2026, 11_56_37 PM.png>):
+  Initial/Added funds không tự tạo cohort PnL khi nguồn không có attribution;
+  “Portfolio Score (QBTS Weighted)” phải map theo score spec thành **direct
+  PortfolioScore từ NAV** và **allocation composition** riêng, không tráo tên.
+- [Fleet lowfi](<./execution_loop/ChatGPT Image Oct 15, 2026, 11_56_58 PM.png>):
+  giữ Alpha/Version, Owner/Portfolio, Stage, Alloc, PnL, Unrealized, Internal
+  Account Balance, Equity30D, Health/Source, QBTS; All là navigation, không
+  cộng actual và virtual. Sort/filter/group trên authorized full result.
+- Guide bổ sung Paper/Archive và các màn detail; ảnh không phải permission
+  mở mọi cột cho researcher. Chưa có HiFi cuối; UXM-06 phải publish revision
+  và link vào đây trước khi gọi nghiệm thu visual.
+
+## 14.2 Backend hiện có, khoảng thiếu và consumer
+
+Source inspected tại `be56efdf8a44b0fd8cd44202b04ada582293a1dd`; đây không phải
+deployed manifest. [Receipt](./execution_loop/evidence/PLAN_ALIGNMENT_2026-10-15.md)
+ghi phạm vi kiểm và hashes. Những mục “reuse” không tự là V2 certified.
+
+| Nền tái sử dụng | Phần V2 cần bổ sung/qualification | Consumer Claude |
+| --- | --- | --- |
+| `admin/owner-access.guard.ts`, `auth/owner-access.service.ts`: owner/session/CSRF, capability workspace | Stable identity mapping, ceiling/resource/mode policy, TS proposal receipts, protected lifecycle; không blanket ADMIN | M10 Profile/Access; scoped actions, pending/denied/revoked |
+| `manager-lists/*`: retained snapshots, SWR/coalescing, existing Fleet/Portfolio pagination | Fleet grain V2, full-query scalar sort/filter/group, policy-before-query, economic dedupe và field coverage | M01–M07; retained/source quality, context/deep links |
+| UDB isolated Execution store và read profile; Edge PG projection/checkpoint substrate | Exact publication barrier, correction/continuity proof, shared pools/retention budgets và revoke fanout theo current policy | Real reads/stream chỉ khi qualified; không polling upstream theo browser |
+| `governance/*`: review context, decision grants, plan/apply, evidence và status | Phân biệt Portal decision/TS action; exact operation bridge. Edge source hiện reject `EDGE_COMMAND_RELAY_ENABLED=true` | M09 và confirmations/status; giữ Research RC → Governance workspace |
+| Research retained analytics v2 / source-aware metric infrastructure | Shared canonical P/R/B calculator + economic adapters/config; analytics cũ không tự là score v1.1 | Raw/contribution/composition/direct score, per-metric absence và provenance |
+| Existing Execution components, Fleet/360, retained context và Governance UX | Manager-first IA, required fields, new capital/archive/score journeys; không viết lại mọi component | Claude reuse/refine; bảo vệ Research/Planning/global tokens |
+
+Targeted search trong `apps/control-api/src`, `services`, `packages` chưa tìm
+implementation mang id `qbts_prb_v1_1`; ELP2-00/Score P0 phải hoàn tất inventory
+legacy trước chọn module, không dùng tìm kiếm này làm chứng minh toàn repo không
+có phép tính tương tự. Source TS/PM candidates không phải publication đang chạy.
+
+## 14.3 Portal phase index — ELP2-00…11
+
+Chi tiết authoritative ở [Portal guide §15](./execution_loop/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md#15-kế-hoạch-12-phase-triển-khai).
+Các test ranges dưới đây dùng prefix `ELP2-`; ngoài T00 audit return, tests
+implementation/runtime hiện **NOT_RUN cho V2**.
+Mỗi phase tạo packet `execution_loop/evidence/ELP2-xx/` khi được giao, ghi goal,
+pins, owned files, impact, receipt/test results, resources, exit, rollback và
+handoff. Không tạo receipt PASS từ kế hoạch.
+
+**Workflow bắt buộc, addendum 2026-10-16:** mọi phase áp dụng
+[rules §7–8](./execution_loop/AGENT_WORKING_RULES.md#7-phase-approval-và-bàn-giao-hai-chiều-bắt-buộc)
+và [packet template](./execution_loop/PHASE_PACKET_TEMPLATE.md). Sau phase phải
+ghi backend next/debt, Claude next, request hai chiều và approval state theo
+[§14.8](#elp2-phase-handoff). Thiếu handoff/exit evidence thì chưa ready-for-review;
+Bobby duyệt từng phase, không tự chuyển phase vì bảng dependency cho phép.
+
+<a id="elp2-00"></a>
+
+### ELP2-00 — Chốt baseline coverage và quyết định
+
+- **Goal/dependency:** từ bundle và source hiện hành, xác định đúng nền Portal/Edge/PM/TS/DL; không coi Research HEAD là stable deploy.
+- **To-do:** repin SHA/dirty/deployed identities; route↔controller↔dataset↔authority census; legacy score inventory; quyết định XLC-01…11 và §17 guide; inventory gap có owner/locator; nguồn HK chỉ đọc, tránh measurement windows.
+- **Claude:** UXM-00 audit current preview/components/deep links và reuse map; không đổi UI.
+- **Tests/exit:** T00-01…08; scope/authority được owner review, ambiguity ảnh hưởng implementation được giải quyết; từng pending decision chỉ khóa feature liên quan. Preliminary source receipt không thay exit này.
+- **Guide:** Portal §2, §15 ELP2-00, §17; Review decisions; UX §18 UXM-00. Rollback docs/version only.
+
+**Return2026-10-16 — BASELINE_AUDIT_COMPLETE / READY_FOR_BOBBY_REVIEW.**
+[Packet +8test dispositions](./execution_loop/evidence/ELP2-00/README.md),
+[manifest](./execution_loop/evidence/ELP2-00/baseline-manifest.json),
+[route/family map](./execution_loop/evidence/ELP2-00/coverage-and-route-map.md),
+[XLC/DEC/request+Claude handoff](./execution_loop/evidence/ELP2-00/decisions-and-handoff.md).
+112 Execution patterns/96 historical relations/54 named aliases;79 direct
+OpenAPI matches,33 explicit dispositions including2 retired raw routes.
+14families/11XLC/15decisions mapped, not runtime-certified. T00-01…08 audit
+PASS; owner acceptance pending. N1 new source fixes do not replace journal
+G2/G4/G7/G8 FAIL; PM probes do not supply deployed trust/full P16.
+No application/UI/contract/DB/runtime edits, build or load; normal full commit
+hook PENDING under audit-only scope, no bypass. Packet UNCOMMITTED.
+ELP2-REQ-00-001…005 OPEN with owners/done-when. Backend next01 and Claude
+UXM-00 need separate assignment; pending ceiling/field/calibration decisions
+block only dependent activation. Existing Research/Governance evidence preserved.
+
+<a id="elp2-01"></a>
+
+### ELP2-01 — Chốt authority schema và contract fixtures
+
+- **Current technical return2026-10-16:** [packet](./execution_loop/evidence/ELP2-01/README.md)
+  CONTRACT_DELIVERED/READY_FOR_REVIEW;40/40 focused tests, source typecheck,
+  generation and snapshot checks PASS. Schema-only API, no mounted route.
+  External authority/consumer/runtime gates remain OPEN.02 dependency ready;
+  frontend NOT_STARTED_BY_OWNER_DIRECTION, handoff AWAITING_CONSUMER_REVIEW.
+- **Goal/dependency:** sau 00; contract slice đủ cho FE không đoán data/quyền.
+- **To-do:** identity/resource keys, decimal/UTCms, environment/stage/lifecycle, availability, revision/cursor; PM envelope/payload preservation; manager/researcher schemas; score basis/status/config schema; OpenAPI generation và fixtures FX-01…25 theo guide.
+- **Claude:** UXM-01/02 map từng field/action vào generated DTO, IA/role states; draft UXM-03…05 được dùng synthetic fixtures ghi rõ.
+- **Tests/exit:** T01-01…15 + schema/generation compatibility; golden fixtures/negative paths review, không relaxed type/hand parsing. Config chưa duyệt không biến fixture thành numeric production.
+- **Guide:** Portal §15 ELP2-01, [Score §8](./execution_loop/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md#8-contract-policy-artifacts-và-vị-trí-thực-thi), UX §16–18; Edge EPG10-02. Rollback versioned additive contract.
+
+<a id="elp2-02"></a>
+
+### ELP2-02 — Nâng cấp Profile identity và lifecycle
+
+- **Goal/dependency:** 01; bảo toàn users/accounts/session/owner đã có, identity đồng nhất Research/Execution.
+- **To-do:** stable issuer+subject và verified researcher owner mapping; lifecycle/revoke/own-profile; protected owner recovery chỉ theo quyết định được duyệt; migration expand nếu cần, không reset users/grants.
+- **Claude:** M10 identity/session states qua UXM-02/07; không suy owner từ tên/deployer.
+- **Tests/exit:** T02-01…10; identity collision, CSRF/revoke/concurrency và preservation proof; chưa duyệt recovery thì không bật recovery, không gọi scope đó complete.
+- **Guide:** Portal §15 ELP2-02; PM current identity contract. Rollback reader-compatible, không phục hồi revoked sessions.
+
+<a id="elp2-03"></a>
+
+### ELP2-03 — Capability delegation và TS membership proposal
+
+- **Goal/dependency:** 01 cho design, 02 current identity cho runtime; một policy evaluator, app authority khác TS authority.
+- **To-do:** resource×mode capability/ceiling/current revision; grants/revoke audit; Stan delegation không self-elevate; TS proposal pending/accepted/rejected; approved researcher field matrix, không dùng owner-only guard để cản mọi delegated action hoặc bỏ guard toàn bộ.
+- **Claude:** access preview, pending TS acceptance, deny reason và reviewable grant diff.
+- **Tests/exit:** T03-01…11; indirect escalation, stale revision, grant-of-grant, revoke-at-commit; pending proposal không thành effective TS permission.
+- **Guide:** Portal §15 ELP2-03; UX §3, UXM-02. Rollback deny new grants, giữ revocation/audit.
+
+<a id="elp2-04"></a>
+
+### ELP2-04 — Áp quyền trên mọi read surface
+
+- **Goal/dependency:** 02/03 proof và 01 schemas; scope trước query/aggregation, không frontend hide.
+- **To-do:** list/detail/search/join/count/group/rank/export/cache/SSE field policy; linked-portfolio minimal discovery; no peer/physical/denominator leakage; current membership kiểm cả historical reads.
+- **Claude:** manager/researcher variants; denied khác authorized-empty; preserved workspace/deep links.
+- **Tests/exit:** T04-01…12; full-surface negative matrix, revoked/in-flight/hidden-sort inference; pending allowlist khóa đúng disclosure, không mở rộng mặc định.
+- **Guide:** Portal §15 ELP2-04; UXM-02/08. Rollback fail-closed scope, không cache fallback vượt quyền.
+
+<a id="elp2-05"></a>
+
+### ELP2-05 — Nối catalogue và TS publication
+
+- **Goal/dependency:** 01; selected Edge family publication, không chờ mọi endpoint của track khác.
+- **To-do:** family/field/source manifest, grain/writer/schema/source clock/quality; named BFF adapters bounded rows/bytes/cursors; snapshot barrier/tail/correction evidence theo family; economic inputs NAV/flows/costs/notional; giữ nguồn chưa đủ typed absence.
+- **Claude:** mapping source availability, freshness và read-only fixture, không tự direct upstream.
+- **Tests/exit:** T05-01…13; selected family real publication/coverage/trust proof; snapshot-only không claim replay. Source row có trong DB không đồng nghĩa exported/certified returns.
+- **Guide:** Portal §2.3.1, §15 ELP2-05; Edge EPG10-02…05, PM current publication. Rollback adapter/feature, giữ facts/checkpoints.
+
+<a id="elp2-06"></a>
+
+### ELP2-06 — Manager read models và 360 datasets
+
+- **Goal/dependency:** 01 cho design; 02/03/04 + selected 05 cho real reads. Reuse UDB/Manager infrastructure, không thêm ledger kinh tế.
+- **To-do:** atomic projection+checkpoint, dedupe, full authorized sort/filter/group/stable paging; Fund/Fleet/360 and capital statements; Score P1/P2, direct NAV khác composition; correction dependency cache, bounded recompute ngoài request/tick path.
+- **Claude:** UXM-08 nối Overview/Portfolio → Fleet → Alpha/Account/Deployment với context; mỗi field có unit, absence, capability, provenance.
+- **Tests/exit:** T06-01…20; source→projection→API tie-out, no physical/internal/virtual double count, partial independent score, null/tie paging, crash/rebuild consistency; metric nào chưa đủ source/config không numeric production.
+- **Guide:** Portal §15 ELP2-06; Score §4–8/11–12; UX §6–12. Rollback compatible reader/flag, không overwrite immutable revisions.
+
+<a id="elp2-07"></a>
+
+### ELP2-07 — Trusted command và status bridge
+
+- **Goal/dependency:** 01/02/03 contract/policy; mutation cần exact TS/PM operation, qualified Edge trust/relay và approval riêng.
+- **To-do:** human/workload envelope, unchanged PM payload, CAS/idempotency/status lookup, commit-time policy; delivery/business/projection/venue states tách; giữ R1/R2/Live semantics; no universal1x, no auto-liquidation archive/recall.
+- **Claude:** UXM-09 confirmation/receipt/retry-unknown và gate-specific disabled states; không đổi retained preview thành write permission.
+- **Tests/exit:** T07-01…11; concurrent single-effect, revoke/expiry, unknown commit recovery và source receipt; exact unqualified operations bị direct API reject, không chỉ hide button.
+- **Guide:** Portal §15 ELP2-07; Edge EPG10-07/08/09 và PM current R2. Rollback disable sends, giữ status/late facts, không tự đảo financial effects.
+
+<a id="elp2-08"></a>
+
+### ELP2-08 — Workflows và HiFi states
+
+- **Goal/dependency:** fixture/design mở sau 01; read acceptance cần 04/05/06; command acceptance cần 07, không waterfall đợi hết backend.
+- **To-do BE:** publish workflow states/fixtures, capital amount partitions, lifecycle residual/obligations, score explanations và request ledger; giữ Research RC → Approval → gate context.
+- **Claude:** UXM-03…09 sở hữu UI; lowfi→approved HiFi→typed components; M01…M10, contextual controls, keyboard/responsive, short public copy/details; retain legacy deep links.
+- **Tests/exit:** T08-01…17 + applicable UX-F01…40; actual browser receipt khớp contract/design, no invented success/data/score band. Fixture và real integration verdict riêng.
+- **Guide:** Portal §15 ELP2-08; UX §5–18; hai lowfi tại §14.1. Rollback scoped UI/read flag, giữ shared tokens và permission guards.
+
+<a id="elp2-09"></a>
+
+### ELP2-09 — Realtime revocation và replay
+
+- **Goal/dependency:** selected reads 04/05/06 và relevant Edge continuity; không buộc snapshot-only endpoint mở SSE.
+- **To-do:** scoped cursors, source epoch/projection generation, atomic apply/ACK, tombstones, coverage proof, revoke caches/export/stream/queued intents; bounded reconnect/slow clients.
+- **Claude:** replay/resync/revoked/retained states theo typed facts; không auto poll Edge hoặc giả live từ cached snapshots.
+- **Tests/exit:** T09-01…14; visible-hidden-visible không false gap/leak, actual loss vẫn detected, revoke mid-replay, filter/model scope mismatch, reconnect bounds.
+- **Guide:** Portal §15 ELP2-09; Edge EPG10-03…05/08/09. Rollback stream/sends off, retain safe snapshot/ingestion/status phù hợp authority.
+
+<a id="elp2-10"></a>
+
+### ELP2-10 — Performance, quality và coexistence
+
+- **Goal/dependency:** selected changed reads/workflows/streams; approved target/quota/threshold trước load. Không dùng máy TS/DL đang đo làm test cell.
+- **To-do:** query plans/pools, source amplification, queues/bytes/retention/WAL/RSS/CPU, correction cadence, lease/DR, cashflow-only oracle; Score P3 calibration; classify old receipts reusable vs impacted.
+- **Claude:** UXM-10 browser latency/overflow/a11y, multi-tab/reconnect and no per-browser upstream workload.
+- **Tests/exit:** T10-01…14; measured selected workload đạt approved SLO và coexistence; không tự hạ load/nới SLO. Performance G2 giữ khi applicable, optional mainnet G2 không thay thế.
+- **Guide:** Portal §15 ELP2-10; Edge EPG10-01/06/09; Score §12 P3. Rollback bounded fanout/feature scope, không bỏ correctness/security/history cần thiết.
+
+<a id="elp2-11"></a>
+
+### ELP2-11 — Migration tích hợp và bàn giao release
+
+- **Goal/dependency:** selected mandatory gates 00…10 và UX integration complete; scope loại trừ phải owner-approved, không lặng lẽ bỏ gate.
+- **To-do:** expand/backfill/shadow/tie-out; identity/session/grants/financial-history preservation; real DB race/restore; exact source/image/schema/config manifest; operator runbooks; original vs restated score revisions không overwritten.
+- **Claude:** final design/source/API/browser receipt và old-route regression; known disabled scopes/disclosures.
+- **Tests/exit:** T11-01…15; selected source→Edge→Portal→UI, privacy, recovery/rollback và applicable trading certification; unresolved critical failures không PASS. Handoff có thể READY_FOR_BOBBY_REVIEW, không OWNER_ACCEPTED/released.
+- **Guide:** Portal §15 ELP2-11/§16; Edge EPG10-10/11; UXM-10. **Dừng trước merge dev/main, signing, deploy/activation nếu chưa có approval riêng.**
+
+## 14.4 Chỉ mục frontend giao Claude — không chờ full backend
+
+Chi tiết mỗi phase (inputs/tasks/deliverables/tests/rollback) ở
+[UX guide §18](./execution_loop/EXECUTION_LOOP_MANAGER_UX_DESIGN_GUIDE_v1.1_VI.md#18-kế-hoạch-11-phase-ux-và-frontend-handoff).
+Tất cả **PLANNED / NOT RUN**; dưới đây là index, không thay yêu cầu trong guide.
+
+| Phase | Dependency | Goal / to-do | Exit và backend consumer |
+| --- | --- | --- | --- |
+| UXM-00 Audit/reuse | ELP2-00 inputs, hai ảnh | Browser/source inventory; giữ/đổi/thêm, routes và persona | UX-F23; pin UI thực thấy, không source-only claim deployed |
+| UXM-01 IA/dictionary | 00, ELP2-01/EPG10-02 draft | Manager hierarchy, metric/grain, global context/URL; map đủ ảnh | UX-F04/05/06/20/24; economics rõ, no weighted/direct ambiguity |
+| UXM-02 Authorization states | 01 schemas/policy | Manager vs researcher, field/action ceilings, deny/revoke | UX-F01…03; disclosure approval trước real data |
+| UXM-03 Overview/Portfolios lowfi | 01/02, ảnh Overview | M01/M02/M04 KPI/capital/score/drilldown | UX-F05/06/07/11; Bobby review flow trước HiFi |
+| UXM-04 Fleet/detail lowfi | 01/02, ảnh Fleet | M03/M05/M06/M07 columns, server queries, nested navigation | UX-F04/19/20; complete fields, correct grain/context |
+| UXM-05 Score/Regime/Archive | P/R/B + lifecycle contract | Four score semantics, continuity, historical support, M08 | UX-F08…16/25…40; honest pending config, no auto-live |
+| UXM-06 HiFi/design system | approved lowfi | Responsive states/components/chart/table; annotate fields | UX-F22 + coverage; design approved; link exact HiFi revision here |
+| UXM-07 Fixture implementation | approved scope, 06 + schema | Typed components/adapters, flags/deep links/saved views | Applicable UX-F01…40; fixture-browser only, no real API claim |
+| UXM-08 Read-only vertical slice | ELP2-04 + selected05/06 | Source→API→UI, manager/researcher routes, freshness | UX-F02/03/04/05/07/19/21; actual selected source receipt |
+| UXM-09 Commands | ELP2-07 exact operation qualified | Preview/confirmation/receipt, unknown/retry/revoke | UX-F14…18; UI-to-authority proof, other actions locked |
+| UXM-10 Acceptance/handoff | selected reads/actions, budget | Accessibility, performance, regression and runbook | Selected gate matrix valid; release approval still separate |
+
+UXM-03/04/05 độc lập sau shared IA; không chạy ba người sửa cùng components nếu
+chưa chia owned paths. ELP2-08 là backend/workflow handoff chung, không phải một
+frontend rewrite thứ hai ngoài UXM. Claude ghi missing fields thành request có
+locator, expected DTO, blocked element và done-when, không tự bịa facts.
+
+## 14.5 Score P0…P3 và external Edge dependencies
+
+[Score §12](./execution_loop/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md#12-phạm-vi-triển-khai-và-exit-gates)
+và [feasibility §3–5](./execution_loop/SCORE_IMPLEMENTATION_FEASIBILITY_REVIEW_v1.0_VI.md#3-dependencies-và-độ-phức-tạp-mvp)
+là guide chi tiết. Prefix **Score** phân biệt Research phases; không thêm formula mới.
+
+| Score phase | Gắn Portal / Claude | To-do và exit riêng |
+| --- | --- | --- |
+| P0 Audit inputs/config/provenance | ELP2-00/01/05; UXM-01/05 | Source dependency matrix cho NAV, flow-adjusted return, required costs, dedup notional, FX, economic capital, continuity. Policy schema/math validation; approved config còn thiếu giữ policy_pending, không NAV-growth→TWR |
+| P1 Shared calculator | ELP2-06; fixture UXM-05/07 | Fixed F/P/R/B, bounds/contributions/direct NAV, reproducible snapshots; spec §11 invariants, precision/overflow/underflow, rolling peak leaves window, stress invalid path. Không paste reference Python thành production kernel |
+| P2 Read model/UI | ELP2-04/06/08/09; UXM-08 | Scope/window/basis cache, corrections/original-restated, stage continuity. Real economic snapshot-to-browser parity, no hidden denominator, same-window provisional; direct NAV score không bị research binding/Regime chặn vô lý |
+| P3 Calibration/shadow + Regime lane | ELP2-10/11; UXM-05/10 | Approved horizon anchors/stress/grid/block/maturity artifact; temporal replay/clipping/rank sensitivity. Regime riêng: bound historical references/support/no leakage, không forecast. Read-only production cần review config; không tự trading activation |
+
+Tính metrics trên inputs đã align là O(n+m), không gọi cả source IO/join O(n)
+vô điều kiện. MVP rolling ADD/MDD rebuild đúng window; chỉ optimize sau profiling.
+Compute theo sealed watermark/affected corrections, không mỗi browser request
+hay tick. Cache đủ policy/basis/window/source/permission revisions; no fixture
+constants as production config. Historical 44/47 tests trong review chưa là
+campaign execution receipt; đồng thời math PASS không là data/config/empirical PASS.
+
+External workstream chỉ là dependencies, không giao Codex tự sửa HK:
+
+| Portal need | Edge/PM dependency | Khi chưa có |
+| --- | --- | --- |
+| Inventory/sizing | EPG10-00/01 và current TS/DL/PM journals | Repin source/measurement windows, không giả host capacity |
+| Schemas/publication/local projections | EPG10-02…05; PM selected exporter authority | Contract/fixtures được làm; dependent runtime read typed unavailable |
+| Commands | EPG10-07/08/09 + PM exact operation/trust/commit semantics | Disabled direct API; Portal approval không gọi là upstream applied |
+| Revoke/replay | EPG10-03…05/08/09 | Safe snapshot scope nếu qualified; không claim global replay |
+| Coexistence/cutover | EPG10-06/09/10/11, applicable TS/DL gates | Chặn affected activation, không chặn independent UI design |
+
+## 14.6 Test impact, receipts và exit discipline
+
+- **Mỗi slice:** requirement → file/schema/policy/dependency hash → tests →
+  receipt path → verdict. Receipt reuse ghi original candidate, unchanged
+  dependencies và rationale; không gộp nhiều images thành một lần chạy giả.
+- **Contracts/policy:** focused schema/generation/compatibility, matrix
+  positive/negative grants và economic invariants. DB concurrency/revoke/crash
+  cần real isolated DB proof, unit/fixture không thay thế.
+- **Projection/query:** tie-out full dataset vs page, null/unit/sort/group,
+  correction/checkpoint/dedupe; bounds rows/bytes/pools/queues/recompute đo thật.
+- **Frontend:** typecheck/consumer tests cho changed contracts, browser so
+  approved HiFi ở desktop/narrow, keyboard/overflow/context/absence/revoke;
+  fixture và real lane ghi riêng. Re-record baseline chỉ reviewed visual deltas.
+- **Resource tests:** target/budget/threshold trước khi chạy; focused load/fault
+  duration theo risk, không mặc định 24h soak hoặc lặp full engine/build vì docs.
+  Normal hook không bypass; gom vào coherent code batch được duyệt.
+- **Mỗi endpoint:** manifest có design_ready, fixture_compatible, source_ready,
+  identity_policy_ready, privacy_ready, metric_ready, performance_ready,
+  runtime_enabled, blockers/approver; command thêm exact operation/environment.
+- **Closeout:** báo selected scope và remaining roadmap riêng; không hạ gate
+  để PASS, không biến historical/calibration fixture thành deployed evidence.
+  Cleanup chỉ resources tạo trong gói, không broad prune hoặc business data.
+
+## 14.7 Gói tiếp theo đề nghị Bobby giao
+
+**Historical sequencing khi lập plan2026-10-15:**
+
+1. **Codex ELP2-00**, cùng **Claude UXM-00**: read-only baseline/coverage và
+   browser audit/reuse. Sau đó duyệt authority/field-scope decisions còn mở.
+2. **Codex ELP2-01**, Claude **UXM-01/02** song song theo schema drafts; freeze
+   contract slice đầu tiên rồi Claude làm lowfi/HiFi trong gói được giao.
+3. Chọn read-only vertical slice **Overview → Portfolio → Fleet → Alpha detail**;
+   triển khai foundation 02…06 theo dependencies, không mở command trước trust.
+
+**Current sequencing theo Bobby2026-10-16:** ELP2-00 đã có audit return;
+đề nghị một goal backend **ELP2-01→02→03→04** theo [§14.9](#elp2-backend-batch-01-04).
+Frontend/UXM **chưa bắt đầu theo chỉ đạo owner**, không tự giao Claude phase.
+Vẫn viết contract/handoff sau mỗi phase để Claude nối khi Bobby giao sau;
+chưa có FE acceptance không cản backend độc lập hoặc thành product complete.
+
+Các approval còn cần theo guide: researcher exact field allowlist/delegation
+ceiling; owner recovery nếu đưa vào scope; deployment/resource/retention scope;
+runtime score calibration artifact; exact command activation. **Không hỏi lại
+formula/weights/bands đã chốt.** Docs package này không đổi runtime, source
+authority, UI, migrations hoặc grants; implementation và remote writes chờ giao gói.
+
+<a id="elp2-phase-handoff"></a>
+
+## 14.8 Phase delivery, next-step map và request hai chiều
+
+Addendum Bobby 2026-10-16 (Asia/Saigon). Bảng dưới là **requirements bàn giao**,
+không là kết quả đã đạt hay permission triển khai. “Next” nghĩa là có thể đề
+xuất khi đủ dependencies §14.1/14.3 và Bobby duyệt; không chỉ xét phase liền trước.
+Mọi UXM/Score phase cũng dùng template và cùng reporting rule, không ngoại lệ.
+
+| Phase kết thúc | Artifact tối thiểu để giao | Backend có thể đề xuất tiếp | Claude có thể đề xuất tiếp | Nợ/dependency phải báo rõ nếu còn |
+| --- | --- | --- | --- | --- |
+| ELP2-00 | Baseline manifest; route/source/reuse map; decisions + owners | 01 contract slice | UXM-00 completion → 01/02 với contract drafts | Runtime identity unknown, source mismatch, scope/field-policy decisions |
+| ELP2-01 | Versioned schema/generated types, canonical fixtures + negative paths, compatibility notes | Design 02/03/05/06/07 theo files độc lập | UXM-01/02 rồi lowfi03/04/05 | Config/field approval; chưa có real-source evidence không cấp runtime |
+| ELP2-02 | Identity/lifecycle DTO + migration/preservation proof, deny/revoke examples | 03 effective grants; 04 khi policy đủ | M10 identity states, UXM-02/07 được duyệt | Recovery/mapping chưa duyệt; users/grants compatibility |
+| ELP2-03 | Capability matrix/ceiling, proposal receipts, effective policy revision | 04 privacy; 07 contract/status | M10 grant preview, pending/rejected UX | TS accepted authority/trust hoặc exact researcher disclosure thiếu |
+| ELP2-04 | Route/field matrix, query predicates và privacy negative receipts | Selected06 khi05 đủ; 09 design | UXM-08 chỉ endpoint có05/06 qualified | Export/cache/SSE/in-flight bypass còn thiếu evidence |
+| ELP2-05 | Selected family manifest, publication/source/time/coverage receipts, field map | Selected06 economic/read adapters | Fixture→real consumer cho family có04/06 | Per-field source gaps, continuity/trust, economic coverage/calibration |
+| ELP2-06 | Named BFF/type/query semantics, score capsules, fixtures + data tie-out | 08 integration; 09 stream; selected10 measurement | UXM-08 manager→detail, Score P2 | Missing fields/config, FE chưa nối, corrections/metric proofs chưa có |
+| ELP2-07 | Exact operation/state contract, idempotency/status/recovery receipts, activation scope | 08 command workflow; 09 revoke; selected10 | UXM-09 đúng operation được phép | Upstream authority/certification; retained preview không đủ write proof |
+| ELP2-08 | Consumer map, approved design pins, workflow/API/browser receipts và unresolved IDs | Affected09/10; không làm lại unchanged backend | RemainingUXM-08/09, chuẩn bị10 | BE delivered nhưng FE chưa accepted, thiếu positive lanes hoặc design review |
+| ELP2-09 | Scoped stream/cursor/revoke contract, race/recovery/bounds receipts | Affected10 | UXM-08/09 reconnect/revoke states; UXM-10 | Source continuity/slow-client/revoke gaps, disabled stream scopes |
+| ELP2-10 | Gate→candidate/dependency→receipt index, budget/perf/calibration verdict | 11 selected scope khi mandatory gates đủ | UXM-10 browser/resource closeout | SLO/regression/DR/config chưa đạt; không hạ gate hoặc bỏ scope âm thầm |
+| ELP2-11 | Exact candidate/schema/config, migration/restore/rollback và final scope manifest | Chỉ scope follow-up được Bobby giao; release approval riêng | Final owner walkthrough và documented follow-up | Owner review/release authorization, external/optional/deferred scope còn lại |
+
+**Quy trình phối hợp trong mỗi phase:**
+
+1. Entry: đọc handoff/request mới nhất cả hai bên; ghi approved scope, inputs,
+   owned paths và impacted tests. Backend và frontend cùng làm trên source đã
+   thống nhất, không tự lấy ref cũ ghi đè shared branch.
+2. Làm: primary giao subagents việc độc lập nếu hữu ích, contract/shared-file
+   writer chỉ một người. Tasks có scope, acceptance và resource budget; primary
+   review diff + evidence trước integration. Docs-only không cần nhiều agents.
+3. Giao: producer ghi commit/type/example/fixture + exact consumer task. Consumer
+   xác nhận ACCEPTED hoặc CHANGES_REQUESTED với evidence; chưa nhận phản hồi
+   ghi AWAITING_CONSUMER_REVIEW. Không cần đợi agent kia online để giao packet,
+   nhưng không gọi integration accepted khi chưa có proof.
+4. Đóng/báo cáo: packet có requirements/test results, stats đúng baseline,
+   backend next, debt IDs/owners, Claude next, new/closed requests và approval
+   cần thiết. Unified cập nhật status/link ngắn cùng delivery; không tạo board
+   canonical thứ hai hoặc ghi suông “done, no gaps”.
+5. Chuyển phase: đề xuất một gói tiếp rõ ràng để Bobby duyệt. Nếu blocker chỉ
+   ảnh hưởng một endpoint, nêu independent next work, không tự hạ exit gate.
+
+Request ID mới dùng `ELP2-REQ-<phase>-<nnn>`; canonical details nằm trong packet
+phát sinh, guide hiện hành không bị sửa âm thầm. Request BE→FE và FE→BE đều có
+owner/done-when/receipt/acknowledgement. Optional/deferred cần destination và
+approval; không dùng typed absence hay delivered code để che source/integration
+gap chưa đóng. Khi không phát sinh request, báo đã đối chiếu và ghi rõ none.
+
+**Historical disposition of workflow addendum:** chưa ELP2/UXM phase nào được
+mở bởi riêng addendum đó. **Current update2026-10-16:** Bobby subsequently
+assigned ELP2-00; read-only audit return is linked above. No implementation
+task/build/write-test/merge/push/deploy. Backend next ELP2-01; Claude UXM-00
+audit independently assignable; both still require assignment. Exact pending
+decisions/owners and5 new requests are canonical in the ELP2-00 packet.
+
+<a id="elp2-backend-batch-01-04"></a>
+
+## 14.9 Proposed backend goal — ELP2-01 → 02 → 03 → 04
+
+Bobby yêu cầu sắp xếp ngày2026-10-16 (Asia/Saigon): chuẩn bị một goal gồm
+**bốn phase backend liên tục**, frontend chưa bắt đầu. **PLAN_ONLY /
+NOT_STARTED**: việc sửa chỉ mục này chưa là lệnh bật goal hoặc triển khai.
+Guide/exit gốc ở §14.3 và Portal guide §15 giữ nguyên; không rename phase,
+không gộp bốn phase thành một verdict để bỏ journal hoặc che blocker.
+
+**Plan review2026-10-16:** yêu cầu hiện tại là sắp xếp để Bobby giao goal sau,
+không phải lệnh triển khai. Dòng draft `ACTIVE/IN_PROGRESS` trước đó được sửa
+về **PLAN_ONLY / NOT_STARTED** vì không có approval triển khai trong yêu cầu
+này. [ELP2-01 preparation note](./execution_loop/evidence/ELP2-01/README.md)
+chỉ ghi việc đọc/chuẩn bị, không phải implementation receipt. Không suy quyền
+từ trạng thái automation/goal cũ; frontend/shared runtime/push/dev/main/release
+vẫn ngoài phạm vi. Khi Bobby giao goal, ghi exact approval và entry SHA mới.
+
+### 14.9.1 Thứ tự, deliverables và gate chuyển bước
+
+| Thứ tự | Phase / backend scope | Deliverable tối thiểu trước bước sau | Validation theo guide / dependency |
+| --- | --- | --- | --- |
+| 1 | [ELP2-01](#elp2-01): authority/resource/mode/lifecycle, decimal/UTCms/absence/revision, PM envelope và score/config contracts; mapping existing routes | Versioned schema/OpenAPI + generated types; field/authority dictionary; FX-01…25 gồm positive/negative/pending fixtures; compatibility map. Scope chỉ schema score, chưa tự triển khai whole calculator hoặc production calibration | T01-01…15, generation/schema drift, exact PM payload và legacy compatibility. Contract kỹ thuật được review/freeze đủ cho local implementation; external authority review chưa có vẫn ghi pending, không gọi toàn phase/full integration complete |
+| 2 | [ELP2-02](#elp2-02): reuse identity/session/owner/lifecycle; verified TS/researcher mapping state; current-session revoke và allowlisted own-profile | Backend DTO/adapters, additive migration nếu thực sự cần, preservation fingerprints và lifecycle/owner/session receipts. Không reset account/grant, fuzzy-match tên hay bật owner recovery chưa duyệt | T02-01…10; real disposable PostgreSQL old→new migration/read compatibility khi có schema change, authenticated HTTP/CSRF/revoke/concurrency. Recovery disabled rõ ràng nếu chưa được duyệt; identity invariants phải đạt trước grants |
+| 3 | [ELP2-03](#elp2-03): shared policy evaluator; explicit resource×mode×action ceiling; preview/grant/revoke và TS proposal/receipt state machine | Capability registry/policy revision, audit/idempotency/CAS; app vs TS-effective states; pending/rejected/unknown fail closed. Preset mapping dùng stable IDs; ceiling và researcher fields chưa duyệt không được cấp thật | T03-01…11; real DB/API negative/race/idempotency tests. Accepted TS receipt ở fixture/harness phải ghi TEST_ONLY; chưa có actual TS acceptance thì business-grant activation BLOCKED, không claim TS rejects/accepts thực |
+| 4 | [ELP2-04](#elp2-04): apply current policy trước query/count/join/group/rank; field redaction, scoped cache/cursor, export/status/audit và existing stream paths | Complete route authorization matrix từ112 Execution patterns + adjacent admin/auth/facade boundaries; mỗi surface có enforced/retired/disabled/internal disposition. Current linked-slice policy, no historical-owner bypass; giữ workspace/deep-link API compatibility | T04-01…12; real scoped DB/API leakage/IDOR/revoke/in-flight tests, list/detail/totals/sort/export/cache/stream negatives. Chưa mở export/SSE thì chứng minh disabled direct API, không tạo service mới chỉ để test. Upstream replay/continuity còn thuộc05/09 |
+
+**48 test IDs** là requirements phải map vào tests/receipts, không phải48
+engine runs hoặc48 lần build. Fixture/unit/PG/HTTP/actual upstream/browser là
+những proof khác nhau. N/A chỉ khi có applicability proof; không dùng
+NOT_APPLICABLE để miễn gate thiếu implementation/authority.
+
+**Bốn checkpoint để chạy liên tục, không đợi frontend:**
+
+1. **01 → 02:** có versioned contract/generation command dùng được, FX manifest
+   và compatibility/authority map; mọi ambiguity ảnh hưởng identity/money đã
+   resolve hoặc khóa đúng schema/action. External TS/Edge review còn pending
+   được ghi riêng; không dùng một contract đang mâu thuẫn để xây identity.
+2. **02 → 03:** identity preservation, protected-owner, session/CSRF/revoke và
+   verified mapping regressions đạt; không có đường owner lockout. Snapshot
+   synthetic của DB cũ→mới phải giữ stable IDs, session-generation semantics,
+   lịch sử/audit; test không được chỉ chạy trên DB trống khi có migration.
+3. **03 → 04:** một evaluator/policy revision dùng chung, app vs TS states tách
+   biệt, ceiling và revoke-at-commit đạt; chưa có approved matrix/TS receipt thì
+   runtime quyền mới vẫn deny/pending. Không đợi cấp quyền thật để test privacy.
+4. **04 → batch return:** mọi route trong census được disposition và có guard/
+   predicate/redaction hoặc bằng chứng disabled/retired; negative tests phải
+   đi qua direct API, không chỉ unit evaluator. Giao bốn packet/commits và
+   consolidated debt; **chưa mở05**, chưa coi whole product/runtime complete.
+
+Checkpoint đạt là dependency kỹ thuật để đi tiếp trong **batch được duyệt**,
+không thay original full exit hoặc bỏ unresolved security invariant. Nếu một
+checkpoint fail thì sửa dependency; không tự skip phase rồi báo đủ bốn phase.
+
+### 14.9.2 Scope card cho lần duyệt goal
+
+- **Source/target:** `/home/bobby/portal-research`, branch duy nhất
+  `docs/research-loop-plan`. Dùng ELP2-00 manifest làm entry reference, repin
+  HEAD/dirty/guide/dependency hashes lúc bắt đầu và trước mỗi landing. Giữ
+  onboarding edits/assets và code Claude; không auto lấy old BE lane ghi đè.
+- **Owned:** backend identity/policy/repository/controllers có liên quan,
+  contracts/OpenAPI/generation/fixtures/tests, additive migration khi cần và
+  packet `execution_loop/evidence/ELP2-01…04/` + Unified. Đọc local rules của
+  module trước sửa; API cũ không được silently reinterpret hoặc thêm required
+  fields làm gãy accepted consumer; schema breaking cần versioned adapter.
+- **Storage/migrations:** reuse Portal identity/app-policy stores hiện có;
+  không thêm auth DB hoặc business ledger TS thứ hai. Nếu cần additive schema,
+  kiểm migration inventory và reserve số tiếp theo ngay trước viết để tránh
+  đụng Research đang làm; không chốt số cũ từ một handoff lịch sử. Không drop,
+  rename destructive hoặc seed tài khoản/quyền production trong batch này.
+- **Forbidden:** `apps/portal/frontend/**`, global tokens/components/baselines,
+  Research/Planning nghiệp vụ không liên quan, protected strategy, current
+  users/grants/business rows trên preview/dev/stable, shared runtime volumes.
+  Không mở ELP2-05…11, Score implementation/UXM hoặc Edge/TS code changes.
+- **SSH HK:** chỉ repin/read source/current PM R2/journal/measurement locks và
+  relevant contracts; không build/test/write/restart/migration remote. Không
+  direct TS DB/Redis/broker/CLI. Source change chỉ invalidates receipts thực
+  sự phụ thuộc; không kéo audit ELP2-00 chạy lại toàn bộ vô cớ.
+- **Test target/budget đề xuất:** một test cell riêng cho batch, tối đa một
+  PostgreSQL container tại một thời điểm, không publish public listener; DB
+  credentials/schema/data synthetic riêng, không mount existing Portal data.
+  Target ceiling tổng4CPU/4GiB và transient disk8GiB; test workers tối đa2,
+  chỉ một heavyweight build/hook/DB suite cùng lúc. Đây là budget proposal,
+  không đoán host đủ tài nguyên: kiểm capacity trước chạy, công cụ cần vượt
+  budget phải báo trước, không âm thầm mượn preview hoặc TS/DL workload.
+- **Runtime boundary:** local code/test/migration rehearsal khác production
+  activation. Không rebuild shared preview, đổi runtime config, apply migration
+  trên persistent existing DB, cấp quyền thật, renew TLS, bật relay/source/SSE,
+  deploy/push/merge dev/main/sign release. Những việc đó cần gói duyệt riêng.
+- **Rollback:** additive/versioned contracts, deny-default; code rollback không
+  phục hồi revoked sessions/grants hoặc xoá audit. Test cell chỉ teardown đúng
+  resources đã tạo, giữ receipt và hashes; no broad prune.
+
+### 14.9.3 Pending decisions không chặn sai phần việc
+
+Canonical decisions/requests giữ ở
+[ELP2-00 register](./execution_loop/evidence/ELP2-00/decisions-and-handoff.md),
+không copy thành ledger mới. Batch implement validator/state machine và tests;
+**không tự duyệt values/quyền** để đạt gate:
+
+- DEC01: owner recovery không mở; chứng minh protected-owner denial và recovery
+  disabled. Không làm Bobby mất quyền đã có hoặc tạo reset/recovery backdoor.
+- DEC02/11, request002: chưa có exact Stan ceiling/researcher field matrix thì
+  pending/default-deny cho quyền mới; giữ quyền hợp lệ hiện tại. Positive policy
+  cases dùng synthetic TEST_ONLY policy ghi rõ, không apply fixture vào users.
+- DEC03, request003: hiện chưa actual TS human membership acceptance thì
+  proposal/trusted-receipt adapter vẫn hoàn thiện/test được; effective TS grant
+  không chuyển APPLIED chỉ vì local app applied hoặc transport ACK.
+- DEC12, request005: fixed score formula/weights/bands được schema-test; config
+  lifecycle vẫn policy_pending, không phát numeric production từ fixture.
+- DEC09: chưa duyệt profile export thì không bật export mới. Existing surfaces
+  vẫn phải được kiểm direct API/access/status/download/cache theo policy;
+  `DISABLED` có receipt không phải bỏ qua surface khỏi route matrix.
+- Một external review/activation gate chưa đủ: ghi **backend technical verdict
+  và original phase exit riêng**. Tiếp phần độc lập đã được goal duyệt nếu
+  dependency kỹ thuật đủ; không gọi phase COMPLETE khi original mandatory gate
+  còn mở. Nếu identity/contract/security invariant hỏng thì dừng dependent
+  implementation và sửa nguyên nhân, không tiếp bằng cast/mock/fallback broad.
+
+### 14.9.4 Journal, commits và handoff sau từng phase
+
+1. Trước phase: đọc packet/request mới nhất, ghi entry SHA/dirty/pins/approved
+   scope, owned paths, test applicability và resource budget; nếu dùng subagents
+   lập task map. Một writer shared OpenAPI/generated/migrations/Unified.
+2. Trong phase: ghi requirement→code/type→test/receipt→actual verdict. Không
+   dồn mọi journal đến cuối goal; báo progress/blocker ngắn trong lúc làm.
+3. Trước chuyển bước: ghi packet theo template, update Unified phase row/return,
+   debt/request IDs/owners/done-when và exact next phase. Commit coherent
+   code+tests+docs của phase qua normal hook; chỉ stage owned paths, không
+   `--no-verify`, không lẫn dirty files bên khác. Recheck HEAD trước landing.
+4. Tests: focused impacted suites mỗi phase; reuse unchanged valid receipts với
+   dependency hashes. Full cross-phase regression một lần cuối batch khi cần;
+   không build frontend/engine/whole stack vì docs. Hook bắt buộc vẫn chạy theo
+   repo; không hứa một hook cho cả batch nếu có nhiều normal commits, không tự
+   sửa hook để né. Gom coherent changes để tránh hook cho từng dòng/request.
+5. **Claude chưa bắt đầu:** vẫn publish handoff mỗi phase gồm operationId,
+   generated type/schema/fixture hashes, example provenance, semantics/errors/
+   absence/permissions, migration/runtime requirements và exact consumer tasks.
+   Ack ghi `AWAITING_CONSUMER_REVIEW` / frontend `NOT_STARTED_BY_OWNER_DIRECTION`;
+   không spawn/giao frontend work hoặc đợi Claude phản hồi để làm backend độc lập.
+6. Cuối phase/goal: code/generated/tests/docs stats, verdict backend vs original
+   full exit, còn nợ, backend next, Claude next khi được giao, request hai chiều,
+   cleanup/capacity và rollback. Không có request mới cũng phải ghi đã đối chiếu.
+   Cuối batch tổng hợp bốn returns, không đổi failed/blocked thành blanket PASS.
+
+**Handoff tối thiểu riêng cho bốn phase** (Claude đọc khi được Bobby giao,
+không phải lệnh frontend bắt đầu):
+
+| Producer | Nội dung consumer phải nhận | Consumer có thể làm sau này | Giới hạn phải hiện rõ |
+| --- | --- | --- | --- |
+| 01 | Generated types/command, versioned examples FX-01…25, field dictionary, legacy/Edge/Portal map, exact-value/absence/error semantics | IA/role-state map và fixture-backed composition UXM-01/02 | Synthetic không là source facts; score/config và runtime readiness độc lập |
+| 02 | Identity/self-profile/lifecycle operations, CSRF/revoke behavior, immutable mapping và protected-owner denial fixtures | M10 profile/lifecycle states trong UXM-02/07 | Không auth mới, không tự nhận owner/deployer từ display name; recovery chưa duyệt vẫn disabled |
+| 03 | Capability/ceiling preview, policy revision, app-applied/TS-pending/accepted/rejected/unknown examples, audit/idempotency errors | Access preview/diff, pending authority và disabled actions | Button không tự suy quyền; accepted fixture chỉ TEST_ONLY, không bật command |
+| 04 | Route/field allowlist, manager/restricted schemas, scoped query/paging/cache/revoke contracts và leakage receipts | Manager/researcher variants, denied vs empty, export/stream disabled states | Không dùng full payload rồi hide rows; real-source reads chờ05/06, stream qualification chờ09 |
+
+Mỗi handoff ghi thêm **working-diff hash hoặc commit**, schema/fixture hashes,
+operation nào đã mount hay chỉ contract-only, môi trường thực sự sẵn sàng,
+exact consumer file/task và acceptance. Không ghi một operation minh họa như
+API đã chạy; consumer chưa bắt đầu thì không mở request thiếu acknowledgement
+thành blocker giả cho backend. Request mới có owner/done-when; pending policies
+tham chiếu register00 thay vì copy một bảng quyền thứ hai.
+
+### 14.9.5 Cách giao một goal cho bốn phase
+
+Một approval nêu đích danh01→04 và scope card ở trên là assignment cho **từng
+phase trong danh sách**, không phải bỏ per-phase gates. Khi Bobby bật goal,
+không hỏi lại quyền chuyển bước đúng scope nếu technical dependency đã đạt.
+Request hiện tại mới sắp xếp plan: **chưa có approval triển khai batch**.
+
+Prompt Bobby có thể dùng:
+
+> Bật goal làm backend ELP2-01 → ELP2-02 → ELP2-03 → ELP2-04 theo Unified §14.9.
+> Duyệt scope local backend, generated contracts, isolated tests và budget/test
+> cell đã ghi; không bắt đầu frontend, không đổi shared preview/production/HK
+> runtime hay tự cấp quyền/config còn pending. Làm tuần tự, kiểm gate, journal,
+> handoff và commit từng phase theo rules; không cần hỏi lại từng bước trong
+> scope này. Blocker external giữ đúng gate và làm tiếp phần độc lập đã duyệt;
+> không giả full completion. Cuối goal báo đủ bốn phase, debt và Claude handoff.
+> Không push/merge dev/main/release/deploy.
+
+### 14.9.6 Các điểm phải kiểm ngay khi vào implementation
+
+- **PM wire, không sửa theo mẫu cũ:** re-read HTTP adapter và strict parser của
+  PM R2 đúng source pin trước freeze. `expected_versions` của HTTP candidate là
+  canonical decimal-counter strings tới `9223372036854775807`, khác opaque
+  Portal revisions và Python integer nội bộ; không round-trip qua JS Number.
+  Giữ actor/trusted context ngoài business payload; currency phải hỗ trợ USDT.
+  Cross-check operation-specific version keys và route availability, không suy
+  operation runnable chỉ vì lower-level parser nhận tên đó.
+- **Guide example/source discrepancy:** exact pinned source adapter/parser và
+  applicable authority contract phải được đối chiếu; ghi locator khi sample
+  PM thiếu `recipient_kind` hoặc thêm `command_scope`. Không sửa guide PM bên
+  HK, không thêm field vào strict payload để "khớp" ví dụ, không gọi unmounted
+  candidate router là runtime support. Sai khác chưa resolve chỉ khóa action
+  phụ thuộc, không chặn schema/identity độc lập.
+- **Security enforcement:** inventory cả controllers, facade/named aliases và
+  repository/query/cache/stream/export, không coi `SessionGuard` có mặt là đủ
+  resource authorization. Grant revision/current binding phải ràng buộc cả
+  in-flight results và cursors; không leak hidden totals bằng sort/rank/filter.
+- **Tests/resources:** focused contract/unit trước, isolated PostgreSQL/API khi
+  cần; đo capacity và cleanup đúng cell. One writer shared contracts/migrations/
+  Unified, audit/test agents chỉ trong gói được giao và không tự build song song.
+  Không chạy hook/build/engine chỉ để chứng minh thay đổi plan Markdown này.
+- **Planning validation:** kiểm diff và local Markdown links/anchors của gói;
+  đây là documentation check, không đánh dấu T01…T04 đã PASS. Commit gói plan
+  vẫn phải theo normal hook; nếu hook kéo test ngoài scope thì ghi PENDING,
+  không bypass hoặc đổi hook. Chưa push/merge/rebuild/runtime change.
+
+**Planning return2026-10-16:** `git diff --check` exit0; kiểm25 local links
+trong batch/entry/preparation note và4 phase anchors,0fail. Đây là docs-only
+validation; application tests/build/DB/runtime NOT_RUN/NONE. Normal commit hook
+và commit PENDING trong scope lập plan; không bypass. Bốn phase vẫn NOT_STARTED,
+frontend NOT_STARTED_BY_OWNER_DIRECTION. Next: Bobby giao exact batch bằng prompt
+§14.9.5; backend bắt đầu01, không tự mở implementation từ planning return này.
+
+**Goal assignment (subsequent continuation,2026-10-16):** Bobby's active objective
+explicitly assigns backend ELP2-01→04 with this scope/budget, sequential gates,
+journal/handoff/commit per phase. Batch **ACTIVE**,01 **IN_PROGRESS**;02→04
+queued. Entry source `be56efdf8a44b0fd8cd44202b04ada582293a1dd`, branch
+`docs/research-loop-plan`; planning dirty paths preserved. This later assignment
+does not authorize frontend, push/dev/main merges or shared runtime changes.
+
+**ELP2-01 technical return2026-10-16:** versioned foundation/schema-only OpenAPI,
+generated types, FX-01…25 and PM/legacy/Edge validators delivered locally.40/40
+contract tests and source-only Control API typecheck PASS; generation/snapshot
+drift checks PASS. [Packet](./execution_loop/evidence/ELP2-01/README.md) records
+artifact hashes, failure/fix history, external gates and resource closeout.
+Original external authority review still OPEN; no production policy/config,
+grants, mounted API, source activation or consumer acceptance claimed.02 is
+next under this active assignment;03/04 await its technical dependencies.
+
+### 14.9.7 Reviewed four-phase backend runbook — frontend not started
+
+Theo yêu cầu Bobby rà lại plan để giao một goal bốn phase: giữ nguyên thứ tự
+**ELP2-01 → ELP2-02 → ELP2-03 → ELP2-04**, không kéo ELP2-05 hoặc UXM vào goal.
+Mục này là rà soát/làm rõ kế hoạch, không cấp thêm quyền từ trạng thái goal hay
+thay đổi đang có. Các implementation/test receipts trước đó giữ nguyên lịch sử;
+chỉ dùng khi dependency hash tương thích, không gọi bốn phase đã hoàn tất.
+
+| Checkpoint | Kết quả phải bàn giao | Được làm tiếp khi |
+| --- | --- | --- |
+| 01 — contracts | Authority/compatibility dictionary, generated schema/types, FX-01…25, requirement→test map; ghi rõ contract-only hay API đã mount | Contract kỹ thuật không còn mâu thuẫn identity/money; các quyết định external còn thiếu đã khóa đúng feature |
+| 02 — identity | Bảo toàn users/bindings/owner/history; current-session/CSRF/revoke/concurrency; own-profile allowlist và mapping absence có kiểu | Disposable DB/API preservation và owner/session invariants đạt; recovery chưa duyệt vẫn disabled |
+| 03 — policy | Một evaluator, resource×mode×action, delegation ceiling, preview/revision/idempotency/revoke audit; app-applied khác TS-effective | Policy/revoke-at-commit tests đạt; pending matrix/TS receipt không cấp quyền thật; không dùng fixture làm production policy |
+| 04 — read enforcement | Route census đầy đủ, scope trước query/count/aggregate, redaction, cursor/cache/export/stream policy và in-flight revocation | Mọi surface có disposition và direct-API negative proof; thiếu nguồn/authority giữ BLOCKED đúng feature, không blanket PASS |
+
+**Chu kỳ bắt buộc của từng phase:** đọc dependency packet/request mới nhất →
+entry SHA/dirty/pins/owned paths → implementation theo scope → focused tests →
+normal hook và coherent commit → journal/Unified return + handoff + debt/next.
+Không bắt đầu phần phụ thuộc khi checkpoint trước hỏng. Không gom journal đến
+cuối bốn phase; không lặp engine/browser/full build chỉ vì đổi Markdown.
+
+**Return bắt buộc:** (1) đã làm và commit; (2) test mới/reuse/NOT_RUN với receipt;
+(3) backend technical exit khác full-product/runtime exit; (4) backend phase nào
+tiếp tục được; (5) gap/owner/done-when; (6) Claude có thể nối gì khi được giao;
+(7) request hai chiều và acknowledgement; (8) resource cleanup/rollback.
+Handoff ghi operation/type/schema/fixture/producer pin, field/absence/permission
+mapping và consumer acceptance. Frontend **NOT_STARTED_BY_OWNER_DIRECTION**;
+ack **AWAITING_CONSUMER_REVIEW**, không tự giao việc hoặc sửa UI/baseline.
+
+Đọc-only audits/negative-test design có thể delegate theo rules §8; primary giữ
+schema/generated outputs/migration numbering/Unified và integration. Không chạy
+hai heavy lanes cùng lúc hoặc tăng budget theo số agent. Scope/budget/remote,
+runtime và pending-decision boundaries tại §§14.9.2–14.9.3 không thay đổi.
+
+**Điểm bắt đầu thực tế, không làm lại từ đầu:** trước khi chuyển checkpoint,
+đối chiếu working tree với packet01/02. Contract01 đã có kết quả focused;
+commit landing chưa đạt. Lượt normal hook kết thúc với contracts388 PASS,
+Control API2603 PASS/1 FAIL/3 skipped. FAIL ở retained-review dùng lại session
+sau disable→enable; session đã revoke không được sống lại. Test harness đã
+được chỉnh để lấy session mới, **chưa có receipt retake** cho chỉnh sửa đó.
+Không coi hook thất bại là commit thành công hoặc kéo03/04 vượt checkpoint02.
+
+**Phân chia công việc khi goal được giao:** primary giữ contracts/generated,
+migrations, journal và integration; audit độc lập có thể rà policy03 và route
+matrix04 trong lúc primary chốt identity02. Không triển khai dependent policy
+trước identity gate.03 phải bao gồm kiểm replay sau revoke/step-up, fingerprint
+actor/session và audit before/after của grant legacy;04 kiểm cả aliases,
+profile/context metadata, totals, cursor và kết quả chờ cache/in-flight, không
+chỉ list/detail. Những phạm vi này nằm trong authority/privacy guide, không
+phải mở thêm phase hoặc commissioning TS/Edge.
+
+**Planning closeout:** chỉ kiểm Markdown links/anchors và diff cho runbook;
+không chạy lại full suite/build/DB do sửa kế hoạch. Các receipt trên là lịch
+sử hiện có, không phải test mới của lượt planning. Code đang dở được giữ nguyên;
+không push, merge, rebuild shared preview hoặc bắt đầu frontend.

@@ -8,6 +8,31 @@ their own private runtime services.
 
 ## Agent roles
 
+### Execution Loop V2 campaign directive — Bobby, 2026-10-15
+
+For assigned Execution V2 work, start at
+`upgrade/UNIFIED_IMPLEMENTATION_PLAN.md#execution-loop-v2` and read
+`upgrade/execution_loop/README.md` plus `AGENT_WORKING_RULES.md` there.
+These scoped rules incorporate Bobby's latest authority order and Prompt B/C/D:
+Codex backend-first, Claude UI/UX-first; creative manager-first refinement
+must preserve financial/permission semantics and accepted shared surfaces.
+Use Unified §14 as the live index and phase evidence packets for details;
+older §12 tracker/scope instructions remain historical for the old campaign.
+Do not infer implementation or runtime authority from receiving the guides.
+HK access is read-only until the exact change package is approved; current PM
+R2 in its own worktree wins over stale copies. Preserve contributor controls,
+normal hooks, protected data and dev/main/release gates. The onboarding package
+is Markdown-only; a commit hook that builds/tests is pending separate scope,
+not bypassed. Do not overwrite concurrent Research or frontend work.
+
+V2 workflow addendum (Bobby, 2026-10-16): obey campaign rules §§7–8 and
+`upgrade/execution_loop/PHASE_PACKET_TEMPLATE.md`. Every phase needs its own
+assignment; report backend next-ready phases, remaining debt, Claude next-ready
+consumers and bidirectional requests/acknowledgements. Delegate only independent
+approved subtasks with disjoint write ownership; primary owns integration,
+shared docs/contracts, resource scheduling and receipt review. Dependency-ready
+is not approval to begin the next phase; producer delivery is not consumer acceptance.
+
 ### Research Loop campaign override — Bobby, 2026-09-19
 
 For Research Loop only, read `upgrade/UNIFIED_IMPLEMENTATION_PLAN.md#research-loop-v11`

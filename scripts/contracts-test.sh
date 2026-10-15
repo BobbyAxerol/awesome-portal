@@ -65,14 +65,16 @@ cp "${CONTRACTS_DIR}/package.json" "${CONTRACTS_DIR}/package-lock.json" "${DEPS_
 
 # Keep the host checkout immutable while avoiding nested mounts below a
 # read-only /repo bind (unsupported by some containerd snapshotters). Only the
-# contract workspace and the one canonical Portal OpenAPI input are copied.
+# contract workspace and explicit non-secret source/receipt dependencies are copied.
 mkdir -p \
   "${WORKSPACE_DIR}/packages/contracts" \
   "${WORKSPACE_DIR}/apps/portal/registry/openapi" \
   "${WORKSPACE_DIR}/apps/control-api/src/operations" \
   "${WORKSPACE_DIR}/apps/control-api/src/research" \
+  "${WORKSPACE_DIR}/apps/control-api/src/execution-v2" \
   "${WORKSPACE_DIR}/apps/portal/backend/src/portal_api/domain" \
   "${WORKSPACE_DIR}/upgrade/research_loop/evidence/P02" \
+  "${WORKSPACE_DIR}/upgrade/execution_loop/evidence/ELP2-01" \
   "${WORKSPACE_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_portal_contract_pack/extract"
 cp -a \
   "${CONTRACTS_DIR}/README.md" \
@@ -93,6 +95,13 @@ cp -a \
 cp -a \
   "${ROOT_DIR}/apps/control-api/src/operations/catalog.generated.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/operations/"
+# ELP2-01 validates its runtime parser against the identical published fixtures.
+# Copy only this pure validator and compatibility dictionary, not app config,
+# credentials, node_modules or any runtime mount. The test cell stays networkless.
+cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/execution-v2/"
+cp -a "${ROOT_DIR}/upgrade/execution_loop/evidence/ELP2-01/contract-map.md" \
+  "${WORKSPACE_DIR}/upgrade/execution_loop/evidence/ELP2-01/"
 # Verify image-owned TS/Python views and every exact checked-in receipt
 # reference (legacy/FULL02–06/expanded/native). No private runtime inputs are staged.
 cp -a "${ROOT_DIR}/apps/portal/registry/research-execution-recipes.v1.json" \

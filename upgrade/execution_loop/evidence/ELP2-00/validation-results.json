@@ -1,0 +1,76 @@
+{
+  "schema_version": "portal.elp2-00.audit-validation.v1",
+  "observed_at_utc": "2026-10-15T18:25:02.617Z",
+  "source_commit": "be56efdf8a44b0fd8cd44202b04ada582293a1dd",
+  "classification": "FOCUSED_STATIC_AUDIT_PLUS_REVIEWED_METADATA; NOT_APPLICATION_OR_RUNTIME_TEST",
+  "tests": [
+    {
+      "id": "ELP2-T00-01",
+      "result": "PASS",
+      "scope": "Exact refs/dirty/hash custody; reviewed non-atomic HK observations"
+    },
+    {
+      "id": "ELP2-T00-02",
+      "result": "PASS",
+      "scope": "Static AST/controller/spec/classification census, not runtime ACL"
+    },
+    {
+      "id": "ELP2-T00-03",
+      "result": "PASS",
+      "scope": "14 families/11 XLC/15 decisions reviewed, not qualified publications"
+    },
+    {
+      "id": "ELP2-T00-04",
+      "result": "PASS",
+      "scope": "Allowlisted runtime metadata distinct from Git and saved identity"
+    },
+    {
+      "id": "ELP2-T00-05",
+      "result": "PASS",
+      "scope": "Manual historical/current audit classification, no automatic receipt reuse"
+    },
+    {
+      "id": "ELP2-T00-06",
+      "result": "PASS",
+      "scope": "Diff scope and observed flags; no phase runtime resources or changes"
+    },
+    {
+      "id": "ELP2-T00-07",
+      "result": "PASS",
+      "scope": "Current N1 journal/PM TEST_ONLY scope, not stale F1 or source-fix runtime PASS"
+    },
+    {
+      "id": "ELP2-T00-08",
+      "result": "PASS",
+      "scope": "Ancestry is not deployment; unknown image/source mapping preserved"
+    }
+  ],
+  "checks": {
+    "hashed_files": 94,
+    "hash_failures": [],
+    "packet_links_checked": 12,
+    "broken_links": [],
+    "tracked_dirty_paths": [
+      "AGENTS.md",
+      "CLAUDE.md",
+      "upgrade/UNIFIED_IMPLEMENTATION_PLAN.md"
+    ],
+    "application_tracked_diff": false,
+    "original_guides_and_images_unchanged": true
+  },
+  "delivery": {
+    "state": "UNCOMMITTED",
+    "owner_acceptance": "PENDING_BOBBY_REVIEW",
+    "packet_files_excluding_this_result": 6,
+    "packet_lines_excluding_this_result": 1055,
+    "shared_index_changes": "Unified ELP2-00 return and campaign README status. Previous planning edits preserved; final tracked Unified diff405 additions vs381 additions at entry = +24 net lines this turn; not application work.",
+    "application_lines_added": 0,
+    "application_lines_removed": 0,
+    "contract_changes": 0,
+    "db_migrations": 0,
+    "normal_build_db_hook": "PENDING_NOT_RUN_UNDER_AUDIT_SCOPE_NO_BYPASS",
+    "push_merge_deploy": false
+  },
+  "verifier_note": "An initial T00-07 documentation phrase check failed only on a wrapped Markdown line; whitespace-normalized check passed. No gate threshold or source result changed.",
+  "cleanup": "NO_ACTION_NEEDED_FOR_PHASE; 0 created runtime resources"
+}

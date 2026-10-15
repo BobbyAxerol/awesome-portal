@@ -20,6 +20,8 @@ generate_and_compare() {
 }
 
 generate_and_compare "$repo_root/apps/portal/registry/openapi/portal-api.openapi.json" generated/portal-api.d.ts
+node tooling/generate-execution-v2-foundation.mjs --check
+generate_and_compare openapi/execution-v2-foundation.openapi.json generated/execution-v2-foundation.d.ts
 generate_and_compare openapi/execution-analytics.openapi.json generated/execution-analytics.d.ts
 generate_and_compare openapi/execution-query-analytics.openapi.json generated/execution-query-analytics.d.ts
 generate_and_compare openapi/execution-analytics-series.openapi.json generated/execution-analytics-series.d.ts
