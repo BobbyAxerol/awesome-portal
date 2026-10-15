@@ -1,0 +1,143 @@
+{
+  "schema": "epg10.measurement-plan.v1",
+  "phase": "EPG10-01",
+  "status": "IN_PROGRESS_MEASUREMENTS_BLOCKED",
+  "evidence_class": "READ_ONLY_METADATA_AND_OFFLINE_PREPARATION_NOT_CAPACITY_ACCEPTANCE",
+  "approved_by": "Bobby",
+  "approved_on": "2026-10-15",
+  "feature_base": "02de661fd32eb767d22f3dc82f0ff347f68a27dd",
+  "authority_manifest": {
+    "path": "../EPG10-00/source-runtime-manifest.json",
+    "sha256": "c7379a67a75251162b4f0c60304bc14d0c400ead7e4188e7fa34a8064580c20b",
+    "usage": "Historical source/runtime tuple; current round deltas in PLACEMENT_AND_QUERY_INVENTORY.md. Re-attest before execution."
+  },
+  "execution": {
+    "starts_jobs": false,
+    "changes_runtime": false,
+    "changes_database": false,
+    "runtime_acceptance": false,
+    "actual_run_receipts": [],
+    "target_ref": null,
+    "target_owner": "Bobby + TS/DL/Research runtime owners",
+    "stop_policy": "Stop only the owned generator at approved safety-bound breach; preserve committed facts and receipts. Never kill a trading loop or foreign workload.",
+    "rollback": "No deployment in this slice; remove only future owned disposable test namespaces after receipts, never shared volumes/rows."
+  },
+  "external_inputs": [
+    {"id": "CLEAN_HK_WINDOW", "ready": false, "owner": "TS/DL measurement owner", "reason": "Foreign lock observed16:46, removed by its owner before17:02:46Z. No owned EPG window reserved; recheck peer workload before any job."},
+    {"id": "CLEAN_SGP_WINDOW", "ready": false, "owner": "Research runtime owner", "reason": "Foreign test jobs observed16:47, exited by16:57; no coordinated owned window reserved. Metadata snapshot is not a baseline."},
+    {"id": "ISOLATED_B0_B1_B2_TARGET", "ready": false, "owner": "Edge + TS/DL/Research runtime owners", "reason": "No exact disposable target/resource allocation/cleanup namespace bound. Named phase approval already granted; do not repeat generic approval."},
+    {"id": "PAIR_RUNTIME_AND_COVERAGE", "ready": false, "owner": "Edge + source runtime owners", "reason": "No paired immutable candidate images/config/coverage receipt. Final P184 stage100#2 has G2/G4/G7/G8 FAIL at16:59:45Z; not an Edge result, but applicable source coexistence cannot be certified PASS. Current Manager upstream TLS expired; P16/N03/full PM export remain source-dark for dependent cases only, not a blanket block on existing reads."},
+    {"id": "FIXTURE_AND_CARDINALITY", "ready": false, "owner": "Edge + TS/DL/Research workload owners", "reason": "Original P184 harness pinned below; actual selected fixture receipt/dataset cardinality/history/clients/cache-regime values not yet bound to an EPG target."},
+    {"id": "CLOCK_CALIBRATION", "ready": false, "owner": "Edge measurement operator", "reason": "No two-host offset/error bound and timestamp-population receipt; monotonic duration helpers alone cannot prove cross-host latency."}
+  ],
+  "paired_protocol": {
+    "B0": "Pinned TS+DL; candidate disabled, existing approved reads retained, no safety-critical function disabled.",
+    "B1": "Same TS+DL + minimal producer and Research projection; zero browser load.",
+    "B2": "B1 + representative dashboard/history/shared score/regime/Archive load on Research.",
+    "required_pins": ["fixture_sha256", "source_set_sha256", "common_config_sha256", "hardware_sha256", "coverage_sha256", "cache_regime", "seed", "event_rate", "duration_seconds", "duration_tolerance_seconds", "repeat"],
+    "stage_specific_config": "Pin stage-specific immutable artifacts/flags separately. Common config/coverage cannot change; only declared candidate/client treatment differs.",
+    "repeat_protocol": "Randomize or counterbalance stage order; record warm/cold cache regime separately. Use independent repeats and report spread/confidence method before accepting a gain.",
+    "duration_tolerance_seconds": null,
+    "correctness_first": "Exact final facts/digest, no unexplained loss/duplicate/unauthorized exposure; correction/reassignment/late-cost parity before comparing resources.",
+    "metric_population": "Full steady, fault, bootstrap and recovery windows separately. Record n/p50/p95/max; p99 only with n>=100. Never use a sampled tail as full-window evidence.",
+    "clock_protocol": "Record UTC boundaries, host clock synchronization/offset/error before and after each pair; local monotonic durations. Cross-host source-time freshness requires compatible clock provenance/error bounds; negative lag is not clamped to zero."
+  },
+  "workloads": [
+    {"id": "W-IDLE", "shape": "No business mutation, one health consumer", "cardinality": null},
+    {"id": "W-NORMAL", "shape": "Representative orders/fills/balances/registry mix", "cardinality": null},
+    {"id": "W-BURST", "shape": "Bounded burst plus command/status read traffic where published", "cardinality": null},
+    {"id": "W-DASH", "shape": "Client/tab/filter/reconnect growth; source QPS per new client", "clients": null},
+    {"id": "W-OUTAGE", "shape": "Owned isolated disconnect/restart/lost ACK, durable same-digest recovery", "outage_seconds": null},
+    {"id": "W-RESYNC", "shape": "Expired cursor/full catalogue/history backfill; no live starvation", "history_span": null},
+    {"id": "W-REVOKE", "shape": "Revocation boundary through active stream/queued operation where target implements it", "cardinality": null},
+    {"id": "W-CORRECT", "shape": "Late fees/funding/reassignment/same-ID replay with exact restatement", "cardinality": null},
+    {"id": "W-COEXIST-6K", "event_rate": 6000, "seconds": 600, "independent_runs_per_stage": 2, "provenance": "Original P184 R2 controlled TEST_ONLY canonical events/s, not orders/s or live-provider capacity"},
+    {"id": "W-COEXIST-9K", "event_rate": 9000, "seconds": 600, "independent_runs_per_stage": 2, "provenance": "Same original P184 interpretation; keep fault/recovery and operational evidence separate"},
+    {"id": "W-ANALYTICS", "shape": "Exact heavy-history multi-subject/horizon score/regime/correlation/Archive; not decimated chart input", "subjects": null, "horizons": null, "history_span": null, "correction_rate": null},
+    {"id": "W-CACHE-RESET", "shape": "Cold start plus simultaneous invalidation/revoke/reconnect; single-flight, no stale scope", "clients": null}
+  ],
+  "native_apparatus": [
+    {"path": "/home/bobby/.worktrees/trading-system-next-upgrade/upgrade/P184_N1_ACCEPTANCE_AMENDMENT_R2.md", "sha256": "19d4029d44c510abd7b014d44f2a2ceed8bc7e402f3cc5bbc050a804818f6668", "usage": "Fixture semantics; do not run or republish historical PASS as EPG PASS"},
+    {"path": "/home/bobby/.worktrees/trading-system-next-upgrade/upgrade/p184-phase-d-gates.md", "sha256": "c67bf69bb921c992964eb8ff8b2e1bb17085a943fdf756d55526b6269641d5c4", "usage": "G2 new-event transit populations: per-feed/venue p95<=500ms; trade max<1500ms; quote/mark max<1000ms. Not optional mainnet G2."},
+    {"path": "/home/bobby/.worktrees/trading-system-next-upgrade/scripts/p184_n1_capacity_run.py", "sha256": "fc5e711730254813527747200e1d2fab541737b186585ca96a7802e57f067e94", "usage": "Native isolated runner; can start containers, NOT invoked in this slice"},
+    {"path": "/home/bobby/.worktrees/trading-system-next-upgrade/scripts/p184_n1_capacity_resources.py", "sha256": "2b2d5b9e01b036e852ec089389a13db25031ba5705581badbcc5124f0f113257", "usage": "Existing namespace/PID-fenced cgroup sampler; reuse without copying; DB/WAL/network require separate counters"},
+    {"path": "/home/bobby/.worktrees/data-layer-p184-closure/scripts/p184_g14_resource_table.py", "sha256": "a0f3f6fd8405a81b69d1418e48816b6a6941f27ace1d16e2b9c278939ffb0b1f", "usage": "Existing bounded resource aggregation; verify current path/hash before reuse"},
+    {"host": "SGP", "path": "/home/bobby/portal-research-be/scripts/research-p23/resource-snapshot.mjs", "sha256": "c258483ffe23bf29ab19f969db4533e6ec362f557451c4ce7c2c01b53b5f58a2", "usage": "Research-owned sampler/allowlist; its historical5GB profile is not an EPG budget"},
+    {"host": "SGP", "path": "/home/bobby/portal-research-be/scripts/research-p23/read-load.mjs", "sha256": "1d18956abd8e5176d230c940d03ace327d835e86f711bd2887ce59589804bfb1", "usage": "Research-only localhost8096 routes, not an Execution load adapter; no generic URL bypass"}
+  ],
+  "sampling_definitions": {
+    "cpu": "Cgroup cpu.stat usage_usec delta /1e6 = core-seconds; per-window divide by monotonic seconds for average cores; record throttling and host/process scopes separately.",
+    "memory": "Cgroup memory.current/peak, process RSS/working set and allocator high-water; include sampling interval and missed transient peaks, all replicas and queue copies.",
+    "database": "Scoped query calls/time/rows/scans/plan hash, active/pool/lock waits and commits. No global statistics reset. WAL attribution requires isolated DB or explain confounders; global WAL under foreign writes is not candidate-only cost.",
+    "io_network": "Cgroup io.stat read/write bytes/ops plus device latency, DB WAL and transport bytes/compression. Container counters are not a host disk-latency measurement.",
+    "latency": "Separate trading/admission, SDK->writer->Redis, producer->Research durable commit and Portal API/fanout exposures. Source event time is not observation age.",
+    "recovery": "High-water events/bytes/oldest age; peak and sustained replay rate minus producer rate; durable cursor/retention floor, outage runway and same final digest.",
+    "normalized_cost": "Per committed unique record/byte and per new dashboard; preserve full numerator, denominator, population and unit. Near-zero baselines use approved absolute thresholds only."
+  },
+  "budgets": [
+    {"id": "B-TS-CPU", "owner": "Bobby + TS", "approval_ref": null, "metrics": [
+      {"id": "core_time", "unit": "core_seconds/window", "bound_kind": "MAX_ABSOLUTE_AND_DELTA", "baseline": null, "approved_bound": null},
+      {"id": "peak_cores", "unit": "cores", "bound_kind": "MAX_ABSOLUTE", "baseline": null, "approved_bound": null}]},
+    {"id": "B-TS-RAM", "owner": "Bobby + TS", "approval_ref": null, "metrics": [
+      {"id": "rss_steady", "unit": "bytes", "bound_kind": "MAX_ABSOLUTE_AND_DELTA", "baseline": null, "approved_bound": null},
+      {"id": "rss_peak_and_growth", "unit": "bytes", "bound_kind": "MAX_ABSOLUTE", "baseline": null, "approved_bound": null}]},
+    {"id": "B-TS-DB", "owner": "Bobby + TS DB", "approval_ref": null, "metrics": [
+      {"id": "query_calls", "unit": "calls/window", "bound_kind": "MAX_ABSOLUTE_AND_DELTA", "baseline": null, "approved_bound": null},
+      {"id": "rows_scanned", "unit": "rows/window", "bound_kind": "MAX_ABSOLUTE_AND_DELTA", "baseline": null, "approved_bound": null},
+      {"id": "query_pool_lock_wait_p95", "unit": "ms", "bound_kind": "MAX_ABSOLUTE", "baseline": null, "approved_bound": null},
+      {"id": "connections", "unit": "connections", "bound_kind": "MAX_ABSOLUTE", "baseline": null, "approved_bound": null}]},
+    {"id": "B-TS-IO", "owner": "Bobby + TS", "approval_ref": null, "metrics": [
+      {"id": "disk_and_wal", "unit": "bytes/window per named counter", "bound_kind": "MAX_ABSOLUTE_AND_DELTA", "baseline": null, "approved_bound": null},
+      {"id": "network", "unit": "bytes/window", "bound_kind": "MAX_ABSOLUTE_AND_DELTA", "baseline": null, "approved_bound": null},
+      {"id": "device_latency", "unit": "ms", "bound_kind": "MAX_ABSOLUTE", "baseline": null, "approved_bound": null}]},
+    {"id": "B-TRADE", "owner": "Bobby + TS critical-loop owner", "approval_ref": null, "metrics": [
+      {"id": "admission_and_trading_p95_p99_max", "unit": "ms per population", "bound_kind": "MAX_NONREGRESSION", "baseline": null, "approved_bound": null},
+      {"id": "critical_errors", "unit": "errors/window", "bound_kind": "MAX_ABSOLUTE", "baseline": null, "approved_bound": null}]},
+    {"id": "B-RS", "owner": "Bobby + Research", "approval_ref": null, "metrics": [
+      {"id": "cpu", "unit": "core_seconds/window", "bound_kind": "MAX_WITH_OTHER_WORKLOAD_RESERVE", "baseline": null, "approved_bound": null},
+      {"id": "all_replica_peak_memory", "unit": "bytes", "bound_kind": "MAX_WITH_OTHER_WORKLOAD_RESERVE", "baseline": null, "approved_bound": null},
+      {"id": "db_io_storage", "unit": "bytes per named counter", "bound_kind": "MAX_WITH_OTHER_WORKLOAD_RESERVE", "baseline": null, "approved_bound": null}]},
+    {"id": "B-FRESH", "owner": "Bobby + dataset owners", "approval_ref": null, "metrics": [
+      {"id": "source_projection_exposure_p95_p99_max", "unit": "ms per dataset/path", "bound_kind": "MAX_ABSOLUTE", "baseline": null, "approved_bound": null}]},
+    {"id": "B-REVOKE", "owner": "Bobby + identity/policy owners", "approval_ref": null, "metrics": [
+      {"id": "commit_denial_and_exposure_invalidation", "unit": "ms per boundary", "bound_kind": "MAX_ABSOLUTE_ZERO_UNAUTHORIZED", "baseline": null, "approved_bound": null}]},
+    {"id": "B-RECOVERY", "owner": "Bobby + source/Research", "approval_ref": null, "metrics": [
+      {"id": "catchup_time", "unit": "seconds", "bound_kind": "MAX_ABSOLUTE", "baseline": null, "approved_bound": null},
+      {"id": "backlog_and_disk_runway", "unit": "bytes", "bound_kind": "MAX_BACKLOG_WITH_OUTAGE_RESERVE", "baseline": null, "approved_bound": null}]},
+    {"id": "B-CMD", "owner": "Bobby + TS command owner", "approval_ref": null, "metrics": [
+      {"id": "accepted_status_terminal_unknown_age", "unit": "ms per operation/state", "bound_kind": "MAX_PER_STATE_NO_FALSE_SUCCESS", "baseline": null, "approved_bound": null}]},
+    {"id": "B-HISTORY", "owner": "Bobby + Research", "approval_ref": null, "metrics": [
+      {"id": "query_export_latency", "unit": "ms per query shape", "bound_kind": "MAX_WITH_FULL_CONTINUATION", "baseline": null, "approved_bound": null},
+      {"id": "query_export_peak_memory", "unit": "bytes", "bound_kind": "MAX_ABSOLUTE", "baseline": null, "approved_bound": null}]},
+    {"id": "B-DL", "owner": "Bobby + DL", "approval_ref": null, "metrics": [
+      {"id": "p184_latency_p95_max", "unit": "ms per pinned G2 population", "bound_kind": "ORIGINAL_GATE_AND_NONREGRESSION", "baseline": null, "approved_bound": null},
+      {"id": "lag_throughput_error", "unit": "named units per feed", "bound_kind": "NONREGRESSION", "baseline": null, "approved_bound": null},
+      {"id": "cpu_ram_io_reserve", "unit": "named resource units", "bound_kind": "MAX_WITH_DL_RESERVE", "baseline": null, "approved_bound": null}]},
+    {"id": "B-EDGE", "owner": "Bobby + Edge", "approval_ref": null, "metrics": [
+      {"id": "producer_cpu", "unit": "cores", "bound_kind": "SOFT_HIGH_HARD_AND_ACTIONS", "baseline": null, "approved_bound": null},
+      {"id": "producer_ram", "unit": "bytes", "bound_kind": "SOFT_HIGH_HARD_AND_ACTIONS", "baseline": null, "approved_bound": null},
+      {"id": "producer_queries_io", "unit": "named resource units/window", "bound_kind": "SOFT_HIGH_HARD_AND_ACTIONS", "baseline": null, "approved_bound": null}]},
+    {"id": "B-ANALYTICS", "owner": "Bobby + shared Research analytics", "approval_ref": null, "metrics": [
+      {"id": "queued_running_jobs", "unit": "jobs", "bound_kind": "MAX_FAIR_NO_DELTA_STARVATION", "baseline": null, "approved_bound": null},
+      {"id": "recompute_cost", "unit": "core_seconds/window per subject/horizon", "bound_kind": "MAX_AT_APPROVED_CADENCE", "baseline": null, "approved_bound": null},
+      {"id": "cache_spill", "unit": "bytes", "bound_kind": "MAX_ABSOLUTE", "baseline": null, "approved_bound": null}]}
+  ],
+  "budget_note": "Every group is UNDECIDED. Expand composite named counters into distinct scalar rows with approved units/window/soft-high-hard values before execution; no scalar placeholder authorizes a vector or creates unlimited headroom.",
+  "near_zero_by_metric": {},
+  "sizing": {
+    "status": "NOT_MEASURED",
+    "memory_formula": "sum(replicas * (queues + inflight_copies + decompressed + cache + pool_tasks + runtime + allocator_reserve)); include TS/transport/Research/DB and host reserves separately without double-counting shared cgroups",
+    "backlog_formula": "ceil(peak_bytes_per_second * approved_outage_seconds * measured_storage_amplification) + reserve_bytes",
+    "catchup_formula": "backlog_events / (sustainable_replay_events_per_second - producer_events_per_second); denominator must be positive",
+    "groups": [],
+    "missing": "Actual per-group bytes/owners/replicas, measured amplification, outage objective, sustained replay rate and independent host reserve; existing configured ceilings are inventory, not observed RSS or approved budgets."
+  },
+  "real_tests": [
+    {"id": "EPG10-T01-01", "status": "NOT_RUN", "reason": "No clean paired runtime/target receipt"},
+    {"id": "EPG10-T01-02", "status": "NOT_RUN", "reason": "No isolated W-DASH/source-QPS growth run"},
+    {"id": "EPG10-T01-03", "status": "NOT_RUN", "reason": "No owned isolated W-RESYNC/recovery target"},
+    {"id": "EPG10-T01-04", "status": "NOT_RUN", "reason": "Absolute-only arithmetic helper tested; actual idle baseline still unmeasured"},
+    {"id": "EPG10-T01-05", "status": "NOT_RUN", "reason": "P184 source fixture semantics pinned; no EPG6k/9k B0/B1/B2 run"},
+    {"id": "EPG10-T01-06", "status": "NOT_RUN", "reason": "Sizing helper tested; real all-process/copy/reserve measurements missing"}
+  ]
+}

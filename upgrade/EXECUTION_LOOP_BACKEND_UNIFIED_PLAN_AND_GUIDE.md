@@ -9367,8 +9367,9 @@ CI failures reached `main` in this release.
 **Recorded:** 2026-10-15 UTC. **Status: EPG10-00_COMPLETED_INVENTORY_ONLY.**
 Bobby approved EPG10-00 after the documentation package; its six offline metadata
 cases PASS and its inventory exit gate passes with explicitly owned UNKNOWNs.
-This is not runtime qualification. EPG10-01…11 remain **PLANNED / NOT_STARTED**,
-awaiting individual approval, with 94 cases **NOT_RUN**. No load, migration,
+This is not runtime qualification. EPG10-01 is now **IN_PROGRESS / BOBBY_APPROVED**;
+02…11 remain **PLANNED / NOT_STARTED**. The remaining94 runtime measurement/product
+cases have no new acceptance yet. No load, migration,
 credential change, source/service mutation or new activation was authorized/run.
 
 This section is the single active sequencing/journal for the Edge v1.2 campaign.
@@ -9578,15 +9579,16 @@ no test images/cache/containers created by this package.
 
 ### 23.4 Phase overview and approval tracker
 
-EPG10-00 is **COMPLETED_INVENTORY_ONLY / BOBBY_APPROVED** (2026-10-15); 01–11 remain
-**PLANNED / AWAITING_BOBBY_APPROVAL**. Until the phase receipt below records execution,
+EPG10-00 is **COMPLETED_INVENTORY_ONLY / BOBBY_APPROVED** (2026-10-15);
+01 is **IN_PROGRESS / BOBBY_APPROVED**, 02–11 remain
+**PLANNED / AWAITING_BOBBY_APPROVAL**. Until a phase receipt records execution,
 test counts are required case identities, **not executed tests**. Test bodies are preserved in each detailed
 phase block and the pinned Edge guide; partner ELP2/PM cases are not double-counted.
 
 | Phase | Goal | Tests (actual status shown) | Runtime closure depends on |
 |---|---|---|---|
 | [EPG10-00](#epg10-00-plan) | COMPLETED_INVENTORY_ONLY: current source/authority/scope manifest | T00-01…06: 6 PASS | Inventory only; unknown-owner dispositions recorded, no runtime acceptance |
-| [EPG10-01](#epg10-01-plan) | Paired baselines, placement, budgets | T01-01…06 (6) | Approved hosts/workload/measurement window |
+| [EPG10-01](#epg10-01-plan) | IN_PROGRESS: paired baselines, placement, budgets | T01-01…06: measurement NOT_RUN | Exact isolated target, clean window, source/runtime proof |
 | [EPG10-02](#epg10-02-plan) | Catalogue, schema, fixtures | T02-01…11 (11) | Producer/consumer contract review, source coverage |
 | [EPG10-03](#epg10-03-plan) | Capture and commit-order proof | T03-01…05 (5) | Real PG writer/barrier/retention/fence proof |
 | [EPG10-04](#epg10-04-plan) | Bootstrap/delta/atomic projection | T04-01…08 (8) | 03 certified input + 01 capacity |
@@ -9683,8 +9685,10 @@ foreign host measurement lock. No product service/source/credential/DB mutation.
 <a id="epg10-01-plan"></a>
 #### EPG10-01 Đo tải và chốt placement
 
-**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
-**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+**Status:** IN_PROGRESS — **Approval:** BOBBY_APPROVED, named phase 2026-10-15.
+**Tests:** 26 offline helper PASS + six00 metadata regression PASS;
+six actual T01 measurement cases NOT_RUN (execution inputs blocked).
+**Exit:** NOT_MET / MEASUREMENTS_BLOCKED — **Runtime activation:** NOT_AUTHORIZED.
 
 **Guide chi tiết bắt buộc:** [EDGE / EPG10-01](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-01-đo-tải-và-chốt-placement);
 [BE §13, §15/ELP2-10, XLC-06/08](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§8.6, 10, 12](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
@@ -9702,6 +9706,12 @@ Record phase approval, exact affected datasets/operations/profiles and partner r
 **Mục tiêu:** biết chi phí thực của read/export hiện tại và capacity Research trước khi chuyển tải. **Dependencies:** 00 cho manifest; thiết kế harness/sizing worksheet chạy song song với 02 trong approved workspace. Đo tải thật cần target và permission riêng.
 
 **Deliverables:** workload manifest, baseline metrics cho hai host, query inventory, bottleneck report và budget register đã chốt.
+Current scoped preparation: [measurement sheet](evidence/execution-edge-v1_2/EPG10-01/measurement-plan.json),
+[placement/query inventory](evidence/execution-edge-v1_2/EPG10-01/PLACEMENT_AND_QUERY_INVENTORY.md),
+[test receipt](evidence/execution-edge-v1_2/EPG10-01/verification-receipt.json).
+The sheet has all12workload shapes and14UNDECIDED budget groups, not approved
+numeric budgets. No actual paired baseline, measured bottleneck rank or final
+placement acceptance yet; see one consolidated completion packet in the inventory.
 
 **Checklist:**
 
@@ -9730,7 +9740,10 @@ namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not exe
 **Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
 actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
 source/runtime/retention tuple; remaining gate owner and next independently runnable
-scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+scope. **Current execution:** §23.10. Named phase approval is already granted;
+do not ask for it again. Exact target/window and missing runtime prerequisites
+are engineering/external inputs, not presumed production mutation authority.
+No load/build/container starts during the foreign measurement window.
 
 <a id="epg10-02-plan"></a>
 #### EPG10-02 Khóa catalogue schema và compatibility
@@ -10509,6 +10522,109 @@ numeric calibration remain external dependencies, not hidden PASS or unfinished
 phase00 engineering. Next eligible scopes are **EPG10-01** (placement/baseline;
 heavy measurements wait for clean window) and **EPG10-02** (catalogue/contracts).
 Each still requires Bobby's named phase approval. No additional phase started.
+
+### 23.10 EPG10-01 execution journal — 2026-10-15
+
+**Approval / goal / links:** Bobby approved the named EPG10-01 phase after00.
+Follow the phase's Edge §§6.6/9/10, BE §13/ELP2-10/XLC-06/08, SCORE §§8.6/10/12
+and Review §§5/8.1 links. Goal: paired truthful baseline, complete resource sizing
+and evidence-based placement; no production config/index/resource change.
+
+**Owned scope / invariants / rollback:** same feature branch/worktree, root sole
+writer. Two read-only specialists refresh TS/DL fixture/journal and Research
+runtime/capacity/query inventory. Reuse Rust runtime boundaries and existing
+producer apparatus; offline measurement verification tooling is not a new service.
+Prepare owned `upgrade/evidence/execution-edge-v1_2/EPG10-01/` artifacts and scoped
+comparison tooling only. Tests: all six T01 cases as defined above; offline helper
+tests recorded separately, never substituted for real paired runs. Preserve
+financial facts/coverage/authority; no kill/restart/config/index/credential change.
+Stop only the owned generator on safety breach; no generator authorized on an
+unresolved/foreign measurement target. No merge/push/deploy.
+
+**Round1, 16:46 UTC / 23:46 Asia/Saigon:** local source clean at
+`02de661fd32eb767d22f3dc82f0ff347f68a27dd`. HK foreign lock
+`claude-n1-opt-20261013` runs until17:42:27UTC (00:42:27 2026-10-16 Asia/Saigon).
+SGP has no lock but foreign Research test containers and CPU-heavy jobs are active;
+benchmarking alongside them is TAINTED. No new workload/build/test container or
+load has started. Source/config/capacity metadata and harness design can proceed.
+Expired Manager issuer/facade leafs and unactivated P16/PM candidate inputs remain
+the already-recorded source/transport prerequisites, not new invented gates.
+
+**Tested preparation slice, rounds2–3 (16:57–17:03UTC):**
+
+- Added offline-only `scripts/execution_edge_measurement.py` and stdlib tests;
+  never starts jobs, calls DB/service/network or writes runtime state. Paired
+  full-digest/source/config/coverage/seed/duration checks; full-window nearest-rank
+  percentiles (bounded helper input, native apparatus owns full P184 populations),
+  no fake near-zero percentage; all-copy×replica memory, outage amplification and
+  positive-net replay sizing. It emits no runtime acceptance or budget PASS.
+- Read-only review found and fixed two in-scope fail-closed defects: actual
+  monotonic duration must match declared tolerance; missing/duplicate budget or
+  prerequisite register and invalid numeric bounds rejected. No unfixed helper
+  finding left. `python3 -B scripts/test_execution_edge_measurement.py -v`:
+  Final workload review also retained valid zero-event W-IDLE pairing instead
+  of imposing a positive event rate. Final suite:
+  **26PASS/0FAIL/0SKIP** in0.004s, TEST_ONLY in-memory checks, not actualT01.
+- `python3 -B scripts/verify_execution_edge_authority.py --self-test --check-local`:
+  **6PASS/0FAIL** existing00metadata regressions; local source/interface bytes
+  re-attested, remote attestation remains timestamped/manual. Do not sum these
+  reused case IDs as new phase01 capacity coverage. `git diff --check` PASS.
+  Standard-library artifact checks verified4file digests, local links/anchor,
+  all12workloads/14UNDECIDED budget groups/6NOT_RUN cases and expected preflight
+  exit2/20blockers; no runtime acceptance emitted.
+- `python3 -B scripts/execution_edge_measurement.py --plan
+  upgrade/evidence/execution-edge-v1_2/EPG10-01/measurement-plan.json` returns
+  expected **BLOCKED / exit2**, six missing execution inputs +14UNDECIDED
+  budget groups. All six T01 measurements remain NOT_RUN; all94 not-yet-run
+  EPG10 runtime/measurement cases remain unclaimed. No cargo/pytest/build/load.
+- Source rounds preserved unchanged TS`4e9c5f29313019714bd82aa1b7b491d2689630ca`,
+  DL`864774d5df6b9cfe8c9163272847619c20ff3b9f`,
+  PM`d16aa2b5f251596e469807f57e81fe14cdc7e763`, including dirty/untracked and
+  plan hashes. SGP BE remains`d5d31cbd7adf3db658508b3cc9aedb280c1be2f1`;
+  FE/docs advanced to`be56efdf8a44b0fd8cd44202b04ada582293a1dd`, peer docs
+  changes preserved. Current Research source differs from this feature's dev
+  baseline: query inventory pins the SGP branch/bytes, no blind copy/rebase.
+- Fully read the newly discoverable Research campaign rules, README, source
+  receipt and score feasibility companion (hash/locator in inventory). Earlier
+  missing-feasibility observation is now resolved **for document discovery**;
+  production economic inputs/calibration and measurements are not thereby PASS.
+  Research integration remains`docs/research-loop-plan`; do not move this
+  owner-approved isolated Edge branch or edit the peer's progress index.
+- Initial foreign HK lock was removed by its owner before17:02:46UTC;
+  SGP test stack exited before16:57:36UTC. These supersede earlier busy-host
+  observations, not a reserved EPG window. Final external P184 scorecard at
+  16:59:45UTC: protocol met,8PASS/4FAIL(G2/4/7/8)/2NOT_MEASURED. No Edge
+  measurements ran; never promote the failed source performance envelope to
+  a passing coexistence result. Full scorecard hash in inventory.
+
+**Runtime / hygiene / reconciliation:** HK18/18 image/config/restart tuples
+unchanged; SGP stable/integration API tuples unchanged. Full service/config/image
+and stable-release locations remain in00manifest; no product endpoint/contract,
+TS/PM/DL source, DB, index, credential, listener, resource limit or activation
+changed. Canonical HK checkout is still
+`/home/bobby/.worktrees/portal-execution-manager-v2` /
+`feat/manager-v2-paper-read@54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4`;
+active six Portal worktrees/branches from00inventory are retained unchanged.
+SGP canonical/stable/integration source pins and releases are distinct and
+recorded in current inventory. Immutable Edge/Proxy images remain
+`sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e` /
+`sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b`;
+config hashes unchanged. Existing active/operational/rollback image/container
+set retained exactly, qualified rollback inventory UNKNOWN. No phase-created
+resources; teardown NO_ACTION_NEEDED. HK Docker read-only inventory132images/
+34.95GB;BuildKit392entries/27.91GB,47active/607.7MB reclaimable (time-specific,
+peer work ongoing). SGP cache summary not collected after bounded query yielded;
+no retry or cleanup. HK disk available192678240256→191654641664B;
+SGP169270902784→169451610112B. No bytes reclaimed/attributed to phase01.
+No prune, merged-worktree removal, push, merge or deployment.
+
+**Recorded verdict / next permitted step:** preparation implemented/tested,
+phase **IN_PROGRESS / MEASUREMENTS_BLOCKED / EXIT_NOT_MET**. Chosen topology is
+only guide-aligned PROPOSED, not measured placement. No open in-scope helper
+defect, no debt-labelled completion. Actual paired evidence and approved numeric
+limits remain unfinished phase deliverables with exact runtime/target owners
+in one packet; continue01 once inputs exist. Bobby's phase approval stands.
+Do not automatically start02+, enlarge scope or mutate production to fill gaps.
 
 
 

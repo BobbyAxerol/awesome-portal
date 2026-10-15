@@ -659,8 +659,15 @@ deep-dive → ADR → slice → evidence discipline documented above.
   families, 15 decisions and current image/config/TLS metadata recorded. Manager
   issuer/facade leafs expired; N03/P16 external publication and PM full export
   remain unqualified. These are owned affected-path dependencies, not runtime
-  certification. No product code/build, DB/service change or activation. Phases
-  01…11 still await approval; 94 cases NOT_RUN. See §23.9 and linked manifest.
+  certification. No product code/build, DB/service change or activation.
+  **EPG10-01 approved/in progress:** query/config/capacity metadata inventory,
+  offline comparison/sizing tool and14-budget worksheet prepared;26helper tests
+  PASS, six00metadata regressions PASS, **six real T01 cases NOT_RUN / exit not
+  met**. No measured paired baseline/final placement or approved numeric bounds.
+  HK lock released, but final external P184 hasG2/4/7/8FAIL; exact isolated paired
+  target/candidate/coverage and impacted transport prerequisites remain. See
+  §23.10 and its one completion packet.02…11 await named approval;94actual cases
+  still NOT_RUN. No runtime/source/DB/credential change, push, merge or cleanup.
 
 **Delivered since the runway note above** (commits on
 `chore/v1.1-roadmap-taskboard`):
