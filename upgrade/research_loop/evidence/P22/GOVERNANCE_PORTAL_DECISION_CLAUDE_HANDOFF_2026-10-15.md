@@ -136,3 +136,43 @@ Update this packet, backend queue §60 and Unified with tested/blocked lane
 dispositions and any CG request. P24 remains pending the affected consumer
 receipt; even a successful preview review authorizes **no** dev/main merge,
 remote push, signed release or production deployment.
+
+## 5. Claude consumer receipt — FE-GOV-C01…06 (2026-10-15)
+
+Frontend `claude/fe-parity` @ `045788b1`, landed on the shared branch. Backend
+§60 base `5ca9d167`/`d5d31cbd` read first (this packet + continuation receipt).
+
+**Consumed:** each gate's exact context/command/plan/apply schema (R1, R2,
+LIVE_GATE; Paper Exit apply under its own schema — a defect of mine fixed on the
+way: the apply request used R1's schema for every kind); R2 from its OWN
+child-evidence context, no manifest/parent-digest fallback; per-verb
+eligibility; `authority_requirements` carried, `required_approvers` not an
+authorization; Live closed with `LIVE_PARENT_NOT_PUBLISHED` in words; public
+copy for the ten refusal codes; old R2 capture findings never hidden; retained
+stack = decision controls read-only up front. Details and tests: backend queue
+§60 consumer note. No layout, palette, typography or baseline change.
+
+**Real preview, read-only (GET after sign-in):** web bundle `index-SniIVI8p.js`
+built from `045788b1` (identity file `git_commit` matches; running image id ==
+tag for `portal-web`); Control API image `sha256:d13cef069471…` as Codex
+left it (not rebuilt by me). Account `claude-preview`, Research workspace
+`ws_06GCVTHWC9WVPGEPR85AB15K82`. Spec `e2e/_preview-governance-c06.spec.ts`,
+4 tests at 1280 and 660:
+
+- Two real, expired R1 approvals (`apr_06GG2K4A9Q3AHFVK0WV5GXNCY2`,
+  `apr_06GGAC00VHRN2Y9C34S55HEDC2`) open: the read carries the Research
+  workspace; all four verbs closed, each with the retained reason first
+  ("This stack is a retained review: it is read-only…") plus the server's own
+  separation-of-duties / expiry reasons; 0 overflow; 0 idle calls in 4 s; 0 writes;
+  0 cross-origin requests; 0 page/console errors.
+- R2, Live and Paper Exit: **no such record exists on this preview**, so only
+  unknown ids were read: each answers in its own frame with no open verb, 0 overflow, 0 writes.
+  This is NOT a receipt of a real R2/Live/Exit review.
+
+**Not observed:** a real R2, Live or Paper Exit record; any positive
+plan/apply (the retained preview refuses every Execution POST by design — not
+bypassed); the independent-reviewer path (covered only by Codex's disposable
+PostgreSQL tests). P24 consumer receipt for those stays open. Screenshots stay
+outside Git (`/tmp/gov-shots`). Noted, not changed (design is frozen): the
+blocked decision bar lists up to seven reasons for one verb set, two of them
+for Deny.
