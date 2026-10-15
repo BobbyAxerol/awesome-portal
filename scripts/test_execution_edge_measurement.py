@@ -26,6 +26,27 @@ class MeasurementTests(unittest.TestCase):
         for b in ['0', '.00001', '.001']:
             self.assertIsNone(m.delta(b, '.1', '.001')['percent'])
 
+    def test_baseline_does_not_require_its_own_result(self):
+        plan=self.plan()
+        for row in plan['external_inputs']: row['ready']=False
+        for row in plan['budgets']:
+            row['approval_ref']=None
+            row['metrics'][0].update(baseline=None,approved_bound=None)
+        r=m.preflight(plan,None,datetime.now(timezone.utc),'baseline')
+        self.assertEqual(r['status'],'BASELINE_PREPARATION_ONLY_NOT_AUTHORIZATION')
+        self.assertEqual(len(r['candidate_missing_inputs']),20)
+        self.assertFalse(r['starts_any_job']); self.assertFalse(r['runtime_acceptance'])
+        self.assertEqual(m.preflight(plan,None,datetime.now(timezone.utc))['status'],'BLOCKED')
+
+    def test_baseline_still_respects_foreign_host_lock(self):
+        lock={'owner':'foreign','until_utc':'2099-01-01T00:00:00Z'}
+        r=m.preflight(self.plan(),lock,datetime.now(timezone.utc),'baseline')
+        self.assertEqual(r['blockers'],['ACTIVE_HOST_MEASUREMENT_LOCK:foreign'])
+
+    def test_unknown_measurement_purpose_rejected(self):
+        with self.assertRaises(ValueError):
+            m.preflight(self.plan(),None,datetime.now(timezone.utc),'ignore_safety')
+
     def test_relative_and_negative_delta(self):
         self.assertEqual(m.delta('10', '8', '.001'),
                          {'absolute': '-2', 'percent': '-20.0', 'relative_status': 'AVAILABLE'})

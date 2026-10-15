@@ -1,8 +1,8 @@
 {
   "schema": "epg10.measurement-plan.v1",
   "phase": "EPG10-01",
-  "status": "IN_PROGRESS_MEASUREMENTS_BLOCKED",
-  "evidence_class": "READ_ONLY_METADATA_AND_OFFLINE_PREPARATION_NOT_CAPACITY_ACCEPTANCE",
+  "status": "IN_PROGRESS_AVAILABLE_SOURCE_MEASURED_EXIT_NOT_MET",
+  "evidence_class": "PASSIVE_HOST_AND_BOUNDED_REAL_RETAINED_READS_NOT_FULL_CAPACITY_ACCEPTANCE",
   "approved_by": "Bobby",
   "approved_on": "2026-10-15",
   "feature_base": "02de661fd32eb767d22f3dc82f0ff347f68a27dd",
@@ -16,19 +16,19 @@
     "changes_runtime": false,
     "changes_database": false,
     "runtime_acceptance": false,
-    "actual_run_receipts": [],
-    "target_ref": null,
-    "target_owner": "Bobby + TS/DL/Research runtime owners",
+    "actual_run_receipts": ["hk-observation.json", "sgp-observation-1.json", "sgp-observation-2.json", "retained-repository-runs.json", "isolated-retained-cell.json", "continuation-verification.json"],
+    "target_ref": "../../../../scripts/execution_edge_retained_cell.py",
+    "target_owner": "Codex Edge; SGP disposable retained replay only, not B0/B1/B2 target",
     "stop_policy": "Stop only the owned generator at approved safety-bound breach; preserve committed facts and receipts. Never kill a trading loop or foreign workload.",
-    "rollback": "No deployment in this slice; remove only future owned disposable test namespaces after receipts, never shared volumes/rows."
+    "rollback": "No deployment. Exact labelled retained PG/driver removed, private capture/socket/tmpdir removed; existing images/volumes/data retained. Historical execution starts jobs and writes only its new isolated fixture DB; this JSON/helper starts nothing."
   },
   "external_inputs": [
-    {"id": "CLEAN_HK_WINDOW", "ready": false, "owner": "TS/DL measurement owner", "reason": "Foreign lock observed16:46, removed by its owner before17:02:46Z. No owned EPG window reserved; recheck peer workload before any job."},
-    {"id": "CLEAN_SGP_WINDOW", "ready": false, "owner": "Research runtime owner", "reason": "Foreign test jobs observed16:47, exited by16:57; no coordinated owned window reserved. Metadata snapshot is not a baseline."},
-    {"id": "ISOLATED_B0_B1_B2_TARGET", "ready": false, "owner": "Edge + TS/DL/Research runtime owners", "reason": "No exact disposable target/resource allocation/cleanup namespace bound. Named phase approval already granted; do not repeat generic approval."},
+    {"id": "CLEAN_HK_WINDOW", "ready": false, "owner": "TS/DL measurement owner", "reason": "120s passive EPG window completed before new foreign jobs. At18:44:45Z foreign claude-n1-opt-20261013 lock active until19:54:08Z. Historical observation does not reserve a future candidate window."},
+    {"id": "CLEAN_SGP_WINDOW", "ready": false, "owner": "Edge measurement operator", "reason": "Two120s observations and bounded retained/source+isolated runs completed under own locks. Locks released; no future candidate window reserved. Recheck atomically at next run."},
+    {"id": "ISOLATED_B0_B1_B2_TARGET", "ready": false, "owner": "Edge candidate owner + TS/DL runtime owners", "reason": "Exact SGP retained cell implemented and tested/cleaned, not an equivalent whole-stack B0/B1/B2 target. New producer/projector/schema/candidate artifacts belong to02/03/04, not invented in01."},
     {"id": "PAIR_RUNTIME_AND_COVERAGE", "ready": false, "owner": "Edge + source runtime owners", "reason": "No paired immutable candidate images/config/coverage receipt. Final P184 stage100#2 has G2/G4/G7/G8 FAIL at16:59:45Z; not an Edge result, but applicable source coexistence cannot be certified PASS. Current Manager upstream TLS expired; P16/N03/full PM export remain source-dark for dependent cases only, not a blanket block on existing reads."},
-    {"id": "FIXTURE_AND_CARDINALITY", "ready": false, "owner": "Edge + TS/DL/Research workload owners", "reason": "Original P184 harness pinned below; actual selected fixture receipt/dataset cardinality/history/clients/cache-regime values not yet bound to an EPG target."},
-    {"id": "CLOCK_CALIBRATION", "ready": false, "owner": "Edge measurement operator", "reason": "No two-host offset/error bound and timestamp-population receipt; monotonic duration helpers alone cannot prove cross-host latency."}
+    {"id": "FIXTURE_AND_CARDINALITY", "ready": false, "owner": "Edge + TS/DL/Research workload owners", "reason": "Retained cell3623rows/6tables exact byte parity,7account history rows/1h,100paced reads and16same-query callers bound. This is not the original600s6k/9k canonical-event fixture, live mix or heavy analytics catalogue."},
+    {"id": "CLOCK_CALIBRATION", "ready": false, "owner": "Edge measurement operator", "reason": "Both hosts NTPSynchronized=yes at18:44Z; local wall-vs-monotonic drift recorded. No calibrated cross-host offset/error bound; no cross-host freshness claim."}
   ],
   "paired_protocol": {
     "B0": "Pinned TS+DL; candidate disabled, existing approved reads retained, no safety-critical function disabled.",
@@ -122,10 +122,19 @@
       {"id": "recompute_cost", "unit": "core_seconds/window per subject/horizon", "bound_kind": "MAX_AT_APPROVED_CADENCE", "baseline": null, "approved_bound": null},
       {"id": "cache_spill", "unit": "bytes", "bound_kind": "MAX_ABSOLUTE", "baseline": null, "approved_bound": null}]}
   ],
-  "budget_note": "Every group is UNDECIDED. Expand composite named counters into distinct scalar rows with approved units/window/soft-high-hard values before execution; no scalar placeholder authorizes a vector or creates unlimited headroom.",
+  "budget_note": "All production groups remain UNDECIDED. Actual observations and proposed narrow target bounds below do not fill unrelated composite counters or imply production approval. Baseline collection is allowed without circularly requiring that baseline; candidate acceptance still requires exact scalar bounds.",
+  "observed_target_and_proposals": {
+    "status": "PROPOSED_FOR_NAMED_RETAINED_CELL_ONLY_NOT_PRODUCTION_DEFAULTS",
+    "guide_boundary": "14 production groups above remain explicit; numeric values below cover only measured paths, not new exporter or all replicas.",
+    "enforced_cell": {"pg_cpu_cores": 0.5, "pg_memory_bytes": 805306368, "pg_tmpfs_bytes": 536870912, "driver_cpu_cores": 0.5, "driver_memory_bytes": 402653184, "driver_old_space_mib": 256, "db_connections": 1, "statement_timeout_ms": 250, "lock_timeout_ms": 100, "transaction_idle_timeout_ms": 3000, "private_fixture_max_bytes": 33554432, "history_page_rows": 200, "history_result_max_bytes": 1048576, "snapshot_input_and_output_max_bytes_each": 16777216},
+    "B-HISTORY_narrow_read": {"population": "Same captured7-row/1h account query,100paced reads/process; full-window nearest-rank", "observed_existing_p95_ms": [2.098707, 2.211445], "observed_isolated_p95_ms": [1.762391, 1.803927], "proposed_p95_max_ms": 5, "proposed_p99_max_ms": 10, "rationale": "Conservative next-rehearsal tripwire above observed values, not sustained throughput or universal history SLO"},
+    "B-RS_retained_cell": {"observed_driver_max_rss_kib": [146236, 146212], "observed_pg_sampled_max_bytes": 170172416, "container_hard_memory_sum_bytes": 1207959552, "proposed_host_memory_available_floor_bytes": 8589934592, "rationale": "SGP observed MemAvailable minimum12352135168B in clean repeat; leave8GiB available for other Research work. Container caps exclude host private capture/pagecache/orchestrator and are not all-process peak memory proof"},
+    "snapshot_instrumented_rehearsal": {"output_bytes": 11184215, "observed_isolated_cold_ms": [1823.634842, 1825.489408], "proposed_max_ms": 2500, "rationale": "Includes first-shape EXPLAIN instrumentation and warm DB/OS cache, separate fresh application cache each process; not uninstrumented production latency or route acceptance"},
+    "deferred_numeric_axes_reason": "B-TRADE/DL/FRESH/REVOKE/CMD/RECOVERY and new producer/analytics caps require their real populations, contracts or authority; inventing numbers would not close01. No proposal authorizes source restart, rotation or load movement."
+  },
   "near_zero_by_metric": {},
   "sizing": {
-    "status": "NOT_MEASURED",
+    "status": "PARTIAL_OBSERVED_CGROUPS_AND_ISOLATED_CAPS_NOT_ALL_COPIES",
     "memory_formula": "sum(replicas * (queues + inflight_copies + decompressed + cache + pool_tasks + runtime + allocator_reserve)); include TS/transport/Research/DB and host reserves separately without double-counting shared cgroups",
     "backlog_formula": "ceil(peak_bytes_per_second * approved_outage_seconds * measured_storage_amplification) + reserve_bytes",
     "catchup_formula": "backlog_events / (sustainable_replay_events_per_second - producer_events_per_second); denominator must be positive",
@@ -133,11 +142,11 @@
     "missing": "Actual per-group bytes/owners/replicas, measured amplification, outage objective, sustained replay rate and independent host reserve; existing configured ceilings are inventory, not observed RSS or approved budgets."
   },
   "real_tests": [
-    {"id": "EPG10-T01-01", "status": "NOT_RUN", "reason": "No clean paired runtime/target receipt"},
-    {"id": "EPG10-T01-02", "status": "NOT_RUN", "reason": "No isolated W-DASH/source-QPS growth run"},
-    {"id": "EPG10-T01-03", "status": "NOT_RUN", "reason": "No owned isolated W-RESYNC/recovery target"},
-    {"id": "EPG10-T01-04", "status": "NOT_RUN", "reason": "Absolute-only arithmetic helper tested; actual idle baseline still unmeasured"},
-    {"id": "EPG10-T01-05", "status": "NOT_RUN", "reason": "P184 source fixture semantics pinned; no EPG6k/9k B0/B1/B2 run"},
-    {"id": "EPG10-T01-06", "status": "NOT_RUN", "reason": "Sizing helper tested; real all-process/copy/reserve measurements missing"}
+    {"id": "EPG10-T01-01", "status": "NOT_RUN", "reason": "Two existing + two isolated same-source repository repeats PASS, not a B0/B1/B2 pair or12-workload acceptance"},
+    {"id": "EPG10-T01-02", "status": "PARTIAL", "reason": "Real16same-query callers ->1DBcall;16snapshot cache hits ->0DBcalls. No HTTP/browser/source-poller amplification run"},
+    {"id": "EPG10-T01-03", "status": "NOT_RUN", "reason": "Native schema idempotency/fixture parity and own-session recovery PASS, not full catalogue resync/live starvation/durable DR"},
+    {"id": "EPG10-T01-04", "status": "PARTIAL", "reason": "10.105635s controlled retained PG idle,10health reads,0business mutations;0.05841average cores. Not whole-stack idle TS/Edge/BFF"},
+    {"id": "EPG10-T01-05", "status": "BLOCKED", "reason": "No frozen Edge candidate pair; active foreign HK lock and external P184 G2/G4/G7/G8 failure envelope. Source fixes need own accepted rerun; retain exact600s6k/9k semantics"},
+    {"id": "EPG10-T01-06", "status": "PARTIAL", "reason": "40HK/36SGP container rosters+counters and enforced cell caps measured; allocator/copy/queue/pool totals and owned reserves remain unmeasured"}
   ]
 }

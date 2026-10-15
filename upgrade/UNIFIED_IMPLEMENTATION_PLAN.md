@@ -4,9 +4,12 @@
 > [Execution Loop unified plan §23 — EPG10-00…11](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12).
 > EPG10-00 completed as inventory only: six offline metadata cases PASS; source,
 > authority and owned runtime unknowns are recorded. EPG10-01 is approved/in
-> progress: offline preparation tested (26helper PASS), but six actual paired
-> measurement cases NOT_RUN / exit NOT_MET;14budget groups UNDECIDED. See §23.10
-> and its completion packet.02…11 await approval (94actual cases NOT_RUN).
+> progress: available-source continuation delivered (53offline+six metadata PASS),
+> both-host passive observations, real retained reads and isolated replay target
+> tested/cleaned.20repository subcases plus native schema/parity PASS, not whole
+> T01 acceptance:0PASS/3PARTIAL/2NOT_RUN/1BLOCKED, exit NOT_MET.14production budget
+> groups UNDECIDED; scoped numeric proposals recorded. See §23.10.1 and current
+> inventory §7.02…11 await approval; logical02 need not wait for capacity.
 > No runtime activation. Four owner-supplied guides
 > are linked and pinned there; earlier acceptance is not new upgrade evidence.
 

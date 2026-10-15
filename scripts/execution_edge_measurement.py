@@ -150,13 +150,16 @@ def compare(runs, epsilon):
             for a, b in [('B1', 'B0'), ('B2', 'B1'), ('B2', 'B0')]}
 
 
-def preflight(plan, lock, now):
+def preflight(plan, lock, now, purpose='candidate'):
+    if purpose not in ('candidate','baseline'):
+        raise ValueError('UNKNOWN_MEASUREMENT_PURPOSE')
     if (len(plan['external_inputs']) != len(INPUT_IDS)
             or {x['id'] for x in plan['external_inputs']} != INPUT_IDS):
         raise ValueError('ALL_EXTERNAL_INPUT_IDS_REQUIRED')
     if len(plan['budgets']) != len(BUDGET_IDS) or {b['id'] for b in plan['budgets']} != BUDGET_IDS:
         raise ValueError('ALL_FOURTEEN_UNIQUE_BUDGET_IDS_REQUIRED')
-    blockers = [x['id'] for x in plan['external_inputs'] if x['ready'] is not True]
+    missing = [x['id'] for x in plan['external_inputs'] if x['ready'] is not True]
+    blockers = missing.copy() if purpose == 'candidate' else []
     if lock:
         deadline = datetime.fromisoformat(lock['until_utc'].replace('Z', '+00:00'))
         if deadline.tzinfo is None:
@@ -175,8 +178,11 @@ def preflight(plan, lock, now):
                     number(metric[key])
             undecided |= any(metric[k] is None for k in ('baseline', 'approved_bound'))
         if undecided or not b['approval_ref']:
-            blockers.append('UNDECIDED:' + b['id'])
-    return {'status': 'BLOCKED' if blockers else 'INPUTS_COMPLETE_NOT_AUTHORIZATION',
+            missing.append('UNDECIDED:' + b['id'])
+            if purpose == 'candidate': blockers.append('UNDECIDED:' + b['id'])
+    return {'status': 'BLOCKED' if blockers else ('BASELINE_PREPARATION_ONLY_NOT_AUTHORIZATION'
+                if purpose == 'baseline' else 'INPUTS_COMPLETE_NOT_AUTHORIZATION'),
+            'purpose':purpose,'candidate_missing_inputs':missing,
             'blockers': blockers, 'runtime_acceptance': False, 'starts_any_job': False}
 
 
@@ -193,12 +199,16 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--plan', type=Path, required=True)
     p.add_argument('--runs', type=Path)
+    p.add_argument('--purpose',choices=('candidate','baseline'),default='candidate',
+                   help='Baseline preparation does not require the baseline to exist already; actual collector enforces its host lock.')
     p.add_argument('--lock', type=Path, default=Path('/home/bobby/.local/state/host-measurement-window.lock'))
     args = p.parse_args()
     try:
         plan = read_json(args.plan)
         lock = read_json(args.lock) if args.lock.exists() else None
-        result = preflight(plan, lock, datetime.now(timezone.utc))
+        if args.runs and args.purpose != 'candidate':
+            raise ValueError('BASELINE_PREPARATION_CANNOT_ACCEPT_CANDIDATE_RUNS')
+        result = preflight(plan, lock, datetime.now(timezone.utc),args.purpose)
         if args.runs and result['blockers']:
             print(json.dumps(result)); return 2
         if args.runs:

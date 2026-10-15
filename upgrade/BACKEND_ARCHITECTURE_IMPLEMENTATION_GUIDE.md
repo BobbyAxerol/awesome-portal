@@ -660,14 +660,18 @@ deep-dive → ADR → slice → evidence discipline documented above.
   issuer/facade leafs expired; N03/P16 external publication and PM full export
   remain unqualified. These are owned affected-path dependencies, not runtime
   certification. No product code/build, DB/service change or activation.
-  **EPG10-01 approved/in progress:** query/config/capacity metadata inventory,
-  offline comparison/sizing tool and14-budget worksheet prepared;26helper tests
-  PASS, six00metadata regressions PASS, **six real T01 cases NOT_RUN / exit not
-  met**. No measured paired baseline/final placement or approved numeric bounds.
-  HK lock released, but final external P184 hasG2/4/7/8FAIL; exact isolated paired
-  target/candidate/coverage and impacted transport prerequisites remain. See
-  §23.10 and its one completion packet.02…11 await named approval;94actual cases
-  still NOT_RUN. No runtime/source/DB/credential change, push, merge or cleanup.
+  **EPG10-01 approved/in progress, available-source continuation delivered:**
+  both-host120s passive observations, bounded real retained reads and exact
+  isolated replay target measured/cleaned.53offline tests+six00metadata PASS;
+  two existing+two isolated repository runs,20subcases PASS; native migration
+  idempotency/six-table3,623row byte parity PASS. Narrow numeric proposals recorded,
+  not production defaults. Formal T01:0PASS/3PARTIAL/2NOT_RUN/1BLOCKED; **exit not
+  met**, no whole-stack B0/B1/B2/6k/9k or approved14-group production budgets.
+  See §23.10.1 and current inventory §7 for exact owners/next actions. New
+  candidate02/03/04 work and TS/PM publication/TLS dependencies are separate.
+  02…11 await named approval; logical02 may proceed independently of capacity.
+  No operational runtime/source/credential change, push or merge. Only owned
+  test containers/private fixture/tempfiles removed; no image build/pull/prune.
 
 **Delivered since the runway note above** (commits on
 `chore/v1.1-roadmap-taskboard`):

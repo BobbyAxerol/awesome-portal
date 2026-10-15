@@ -1,0 +1,86 @@
+{
+  "phase": "EPG10-01",
+  "status": "IN_PROGRESS_AVAILABLE_SOURCE_MEASURED_EXIT_NOT_MET",
+  "scope": "Owner-approved baseline, isolated target, proposed bounds and available retained-source cases",
+  "current_tool_sha256": {
+    "scripts/execution_edge_measurement.py": "ec5e70770e360e97406ca72ddc74fef9a5a9cebc2dc5b069e1759fc4f18ffad9",
+    "scripts/execution_edge_observe.py": "cde8804626aec22bdddfdaec86b39b18e473314eddef9932c58a9f75f4120569",
+    "scripts/execution_edge_retained_cell.py": "abdbf7ab8c221d8921cfd4b684710c86fa4e7a2c65adc97df85e7be948b63746",
+    "scripts/execution_edge_retained_probe.cjs": "a9f4f78d05b8501e78a2ad8830cccfbde93dbdb5938f038a007fdc9ad5a51840"
+  },
+  "final_cell_private_stdout_sha256": "1cb3d759a5992dfba236d1c03f30b67903bef60c56804a083192e18eca6c7c56",
+  "test_only": {
+    "measurement_helper": 29,
+    "passive_observer": 17,
+    "isolated_cell_safety": 7,
+    "authority_metadata_self_test": 6,
+    "failures": 0,
+    "total_cases": 59,
+    "node_self_test_assertions": 10
+  },
+  "real_execution": {
+    "passive_windows": 3,
+    "existing_repository_process_runs": 2,
+    "existing_subcases_pass": 10,
+    "isolated_repository_process_runs": 2,
+    "isolated_subcases_pass": 10,
+    "native_migration_idempotency": "PASS",
+    "exact_row_parity_tables": 6,
+    "exact_row_parity_rows": 3623,
+    "controlled_idle_seconds": 10.105635,
+    "formal_T01_pass": 0
+  },
+  "receipts": [
+    "hk-observation.json",
+    "sgp-observation-1.json",
+    "sgp-observation-2.json",
+    "retained-repository-runs.json",
+    "isolated-retained-cell.json"
+  ],
+  "superseded_attempts": [
+    {
+      "kind": "observer startup",
+      "reason": "Docker Go virtual AS initialization and format-template defects fixed before observation",
+      "source_writes": 0
+    },
+    {
+      "kind": "preliminary real probe",
+      "reason": "Exact UTC microsecond preservation and index-preserving helper alias fixed; preliminary snapshot guard skip superseded",
+      "source_writes": 0
+    },
+    {
+      "kind": "cell teardown receipt",
+      "reason": "Docker lower-case not-found not recognized; exact targets independently absent, fixed plus regression and successful final rerun",
+      "source_writes": 0
+    }
+  ],
+  "production_writes": 0,
+  "production_restarts": 0,
+  "credential_or_source_config_changes": 0,
+  "image_builds": 0,
+  "image_pulls": 0,
+  "limitations": [
+    "No complete B0/B1/B2 pair, browser/HTTP amplification, whole-stack idle/resync, durable DR or P184 coexistence acceptance",
+    "Cold snapshot elapsed includes first-seen EXPLAIN instrumentation; not uninstrumented production latency",
+    "Isolated actual-plan runs warm DB/OS caches; application repository cache is new per process",
+    "Source provenance retained partial observations, not current broker/TS authority",
+    "No calibrated cross-host offset/error bound; local monotonic latency only",
+    "No approved numeric production budget; proposals and isolated enforced caps are distinct",
+    "SGP passive window1 includes a short own metadata-only module-resolution process; window2 repeats without it"
+  ],
+  "cleanup": {
+    "owned_cell_teardown": "PASS",
+    "private_capture_removed": true,
+    "removed_volumes": 0,
+    "retained_images": [
+      "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+      "sha256:d13cef069471be8b34c7d6f0cda4b6df55e892812c7ea8bf0f17846256e76e6d"
+    ],
+    "prune": "NOT_RUN_SHARED_FOREIGN_WORK_AND_UNPROVEN_RESOURCE_OWNERSHIP",
+    "disk_sgp_bytes": [
+      169369038848,
+      169368662016
+    ]
+  },
+  "next": "Continue independent EPG10-02 logical contract/schema only when Bobby names it; preserve EPG10-01 pending measurements for dependent target/candidate/source. No repeated generic approval for01."
+}

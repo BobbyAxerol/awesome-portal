@@ -1,0 +1,707 @@
+{
+  "runs": [
+    {
+      "status": "PASS_TEST_ONLY",
+      "assertions": 10,
+      "database_calls": 0
+    },
+    {
+      "schema": "epg10.retained-probe.v1",
+      "status": "PASS_SCOPED_REPOSITORY_PROBE",
+      "started_utc": "2026-10-15T18:24:23.644Z",
+      "ended_utc": "2026-10-15T18:24:30.581Z",
+      "provenance": "PORTAL_SGP_HISTORY_MIRROR_PARTIAL_RETAINED_OBSERVATIONS_NOT_AUTHORITATIVE_TS_HISTORY",
+      "scope_sha256": "66931d6569b97c2e81f9cd3d650129f4bc7639285ef72d0fee2d54121b417d81",
+      "relation": "manager.performance:account_equity_snapshots",
+      "range_seconds": 3600,
+      "history_census": {
+        "rows": 7,
+        "bytes": "7623"
+      },
+      "snapshot_input_bytes": 10858138,
+      "identity": {
+        "role": "exec_runtime",
+        "database": "portal_execution",
+        "read_only": "on",
+        "statement_timeout": "250ms"
+      },
+      "module_sha256": "404655342042f85d431790a9ce4419ea0d66537a6e2be45a956e59d0f81f760c",
+      "results": [
+        {
+          "case": "real_repository_history_100_sequential",
+          "status": "PASS",
+          "bytes": 7712,
+          "sha256": "38d6a6a7297f2c5774c2618d7545d5bf6dfc850278613f5829b273ee46ea3ed8",
+          "rows": 7,
+          "has_more": false,
+          "db_calls": 100,
+          "n": 100,
+          "p50_ms": 1.7741129999994882,
+          "p95_ms": 2.098707000000104,
+          "p99_ms": 2.2615449999999555,
+          "max_ms": 3.9758939999999257,
+          "method": "FULL_WINDOW_NEAREST_RANK"
+        },
+        {
+          "case": "real_repository_16_same_query_inflight",
+          "status": "PASS",
+          "callers": 16,
+          "db_calls": 1,
+          "elapsed_ms": 4.087101000000075
+        },
+        {
+          "case": "real_repository_narrow_chart",
+          "status": "PASS",
+          "source_rows": 7,
+          "output_rows": 7,
+          "downsample": null,
+          "bytes": 7729,
+          "sha256": "b7b86b1a392971c792e52c8c0e5640a89cd0c1b12d9a07c26b16c22b44dbdf32"
+        },
+        {
+          "case": "real_repository_snapshot_cold_then16_cache_reads",
+          "status": "PASS",
+          "cold_db_calls": 4,
+          "cold_ms": 855.3561660000005,
+          "warm_db_calls": 0,
+          "warm_elapsed_ms": 0.46693599999980506,
+          "bytes": 11184215,
+          "sha256": "0da8ba3a1d987eac562da3edc2df8ff8018395a8cd030f91705785e9d72fcf6a"
+        },
+        {
+          "case": "own_read_session_statement_timeout_then_recovery",
+          "status": "PASS",
+          "sqlstate": "57014",
+          "timeout_ms": 250
+        }
+      ],
+      "plans": [
+        {
+          "sql_sha256": "1b2f652b13127cd4b44e892d4f948c3eec38be1f950f9fdbfe0f3a02de5972cf",
+          "full_plan_sha256": "3f7ba850165865e108cf15be26ef3a57a784b69d5c025fa01a3a2492fe55ab19",
+          "plan": {
+            "Node Type": "Limit",
+            "Plan Rows": 1,
+            "Total Cost": 1.32,
+            "Plans": [
+              {
+                "Node Type": "Index Scan",
+                "Relation Name": "execution_timeseries_history",
+                "Index Name": "execution_timeseries_history_range_idx",
+                "Plan Rows": 20177,
+                "Total Cost": 18205.1
+              }
+            ]
+          }
+        },
+        {
+          "sql_sha256": "653a9abc4b0836ee6e3d6adb5d7fdd43937e70c5f55ea860940c27269b2e4250",
+          "full_plan_sha256": "5220f43416b74f6fcc25030eee9121c7f515557d878e5d891cf8b6d5314f70b6",
+          "plan": {
+            "Node Type": "Aggregate",
+            "Plan Rows": 1,
+            "Total Cost": 119.29,
+            "Plans": [
+              {
+                "Node Type": "Limit",
+                "Plan Rows": 1,
+                "Total Cost": 119.26,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Relation Name": "execution_timeseries_history",
+                    "Index Name": "execution_timeseries_history_range_idx",
+                    "Plan Rows": 1,
+                    "Total Cost": 119.26
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "sql_sha256": "d4195a9367d8e3027e7643c48d2e8454f04920e9d7a9543f8b5c60a5cd8ff5e1",
+          "full_plan_sha256": "52063b97a0cf5bebe5de3a693c527fcf4ba834f593dab4026a59c70e458f6ea9",
+          "plan": {
+            "Node Type": "Limit",
+            "Plan Rows": 1,
+            "Total Cost": 119.28,
+            "Plans": [
+              {
+                "Node Type": "Sort",
+                "Plan Rows": 1,
+                "Total Cost": 119.28,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Relation Name": "execution_timeseries_history",
+                    "Index Name": "execution_timeseries_history_range_idx",
+                    "Plan Rows": 1,
+                    "Total Cost": 119.26
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "sql_sha256": "6ede2c2f2e337760edc8320082581e3db90c67d890ac2e26aa455f7b4517672f",
+          "full_plan_sha256": "38d0216772da1645b49812c6d4631476f2c45479b422b3895a404663af2e702b",
+          "plan": {
+            "Node Type": "Aggregate",
+            "Plan Rows": 1,
+            "Total Cost": 119.59,
+            "Plans": [
+              {
+                "Node Type": "Index Scan",
+                "Relation Name": "execution_timeseries_history",
+                "Index Name": "execution_timeseries_history_range_idx",
+                "Plan Rows": 1,
+                "Total Cost": 119.55
+              }
+            ]
+          }
+        },
+        {
+          "sql_sha256": "19038c1c7152feb4a6c7964b1e2a755d6622c4bc6bc99d91cc5b66c973611cdb",
+          "full_plan_sha256": "f4a9d55c530cf508ad51024d5314d03bdd9ddc5145f6bb13a82fbfe2787fcb1c",
+          "plan": {
+            "Node Type": "Limit",
+            "Plan Rows": 1,
+            "Total Cost": 119.28,
+            "Plans": [
+              {
+                "Node Type": "Sort",
+                "Plan Rows": 1,
+                "Total Cost": 119.28,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Relation Name": "execution_timeseries_history",
+                    "Index Name": "execution_timeseries_history_range_idx",
+                    "Plan Rows": 1,
+                    "Total Cost": 119.26
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "sql_sha256": "d1b1945e1f87d53cc6ae603073213b757ec422ade4ea4493c83902b8d37ad50c",
+          "full_plan_sha256": "c906d3cb42a688f01d784be83cf332fe063fe911d358ae8212ed113b84c168e9",
+          "plan": {
+            "Node Type": "Aggregate",
+            "Plan Rows": 1,
+            "Total Cost": 636.9,
+            "Plans": [
+              {
+                "Node Type": "Limit",
+                "Plan Rows": 3080,
+                "Total Cost": 598.38,
+                "Plans": [
+                  {
+                    "Node Type": "Seq Scan",
+                    "Relation Name": "execution_durable_mirror_current_entities",
+                    "Plan Rows": 3080,
+                    "Total Cost": 598.38
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "sql_sha256": "2d9ee4dd64c93af36103979d76c1daacd161af3426a6d642fdd22850b02242ed",
+          "full_plan_sha256": "860947134471bed78c70abb6c3f55e6e00d55dbcb2b6b29774969fa5f0720d4a",
+          "plan": {
+            "Node Type": "Index Scan",
+            "Relation Name": "execution_profile_projection_snapshots",
+            "Index Name": "execution_profile_projection_freshness_idx",
+            "Plan Rows": 1,
+            "Total Cost": 660.92,
+            "Plans": [
+              {
+                "Node Type": "Aggregate",
+                "Plan Rows": 1,
+                "Total Cost": 652.74,
+                "Plans": [
+                  {
+                    "Node Type": "Subquery Scan",
+                    "Plan Rows": 554,
+                    "Total Cost": 649.95,
+                    "Plans": [
+                      {
+                        "Node Type": "Limit",
+                        "Plan Rows": 554,
+                        "Total Cost": 644.41,
+                        "Plans": [
+                          {
+                            "Node Type": "Sort",
+                            "Plan Rows": 554,
+                            "Total Cost": 644.41,
+                            "Plans": [
+                              {
+                                "Node Type": "Hash Join",
+                                "Plan Rows": 554,
+                                "Total Cost": 617.78,
+                                "Plans": [
+                                  {
+                                    "Node Type": "Seq Scan",
+                                    "Relation Name": "execution_durable_mirror_current_entities",
+                                    "Plan Rows": 3080,
+                                    "Total Cost": 598.38
+                                  },
+                                  {
+                                    "Node Type": "Hash",
+                                    "Plan Rows": 18,
+                                    "Total Cost": 10.75,
+                                    "Plans": [
+                                      {
+                                        "Node Type": "Seq Scan",
+                                        "Relation Name": "execution_durable_mirror_batches",
+                                        "Plan Rows": 18,
+                                        "Total Cost": 10.75
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "sql_sha256": "01c58f7872dc4f2f6ae299cc26bac93f37df240e62630dc690318d87e2533727",
+          "full_plan_sha256": "a16e101999196e6f0e64eefc4b28dc8496ce0763544ba8c902dd3cd1959d4410",
+          "plan": {
+            "Node Type": "Index Scan",
+            "Relation Name": "execution_profile_projection_snapshots",
+            "Index Name": "execution_profile_projection_freshness_idx",
+            "Plan Rows": 1,
+            "Total Cost": 8.18
+          }
+        },
+        {
+          "sql_sha256": "db4900f09ca59e6f117c4f49acca43c542f7ac1101d4b194eeca25d823f8205c",
+          "full_plan_sha256": "5bdc457f4e15a9fecf6bf3f3dbdf270341b2f4d0d24bd245edbf232dcf5f04b3",
+          "plan": {
+            "Node Type": "Limit",
+            "Plan Rows": 554,
+            "Total Cost": 644.41,
+            "Plans": [
+              {
+                "Node Type": "Sort",
+                "Plan Rows": 554,
+                "Total Cost": 644.41,
+                "Plans": [
+                  {
+                    "Node Type": "Hash Join",
+                    "Plan Rows": 554,
+                    "Total Cost": 617.78,
+                    "Plans": [
+                      {
+                        "Node Type": "Seq Scan",
+                        "Relation Name": "execution_durable_mirror_current_entities",
+                        "Plan Rows": 3080,
+                        "Total Cost": 598.38
+                      },
+                      {
+                        "Node Type": "Hash",
+                        "Plan Rows": 18,
+                        "Total Cost": 10.75,
+                        "Plans": [
+                          {
+                            "Node Type": "Seq Scan",
+                            "Relation Name": "execution_durable_mirror_batches",
+                            "Plan Rows": 18,
+                            "Total Cost": 10.75
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "instrumented_fixed_read_calls": 111,
+      "explain_calls": 9,
+      "elapsed_ms": 6937.268083,
+      "observer_cpu_ms": 1322.672,
+      "max_rss_kib": 157644,
+      "runtime_changes": 0,
+      "auth_session_writes": 0,
+      "business_writes": 0,
+      "source_http_calls": 0,
+      "limitations": [
+        "Internal repository only, not HTTP/mTLS/RBAC or browser acceptance",
+        "One private retained Paper scope, not current TS truth or all profiles",
+        "No source polling/transport cost or TS/DL trading latency measured",
+        "100 reads are not a sustained/concurrent capacity claim",
+        "EXPLAIN without ANALYZE: estimated rows/costs, not observed scans/buffers",
+        "Freshly instantiated cache is separate from existing service cache; no production cache reset"
+      ]
+    },
+    {
+      "schema": "epg10.retained-probe.v1",
+      "status": "PASS_SCOPED_REPOSITORY_PROBE",
+      "started_utc": "2026-10-15T18:24:30.791Z",
+      "ended_utc": "2026-10-15T18:24:37.491Z",
+      "provenance": "PORTAL_SGP_HISTORY_MIRROR_PARTIAL_RETAINED_OBSERVATIONS_NOT_AUTHORITATIVE_TS_HISTORY",
+      "scope_sha256": "66931d6569b97c2e81f9cd3d650129f4bc7639285ef72d0fee2d54121b417d81",
+      "relation": "manager.performance:account_equity_snapshots",
+      "range_seconds": 3600,
+      "history_census": {
+        "rows": 7,
+        "bytes": "7623"
+      },
+      "snapshot_input_bytes": 10858138,
+      "identity": {
+        "role": "exec_runtime",
+        "database": "portal_execution",
+        "read_only": "on",
+        "statement_timeout": "250ms"
+      },
+      "module_sha256": "404655342042f85d431790a9ce4419ea0d66537a6e2be45a956e59d0f81f760c",
+      "results": [
+        {
+          "case": "real_repository_history_100_sequential",
+          "status": "PASS",
+          "bytes": 7712,
+          "sha256": "38d6a6a7297f2c5774c2618d7545d5bf6dfc850278613f5829b273ee46ea3ed8",
+          "rows": 7,
+          "has_more": false,
+          "db_calls": 100,
+          "n": 100,
+          "p50_ms": 1.760972000000038,
+          "p95_ms": 2.2114449999999124,
+          "p99_ms": 2.299916999999823,
+          "max_ms": 2.334903999999824,
+          "method": "FULL_WINDOW_NEAREST_RANK"
+        },
+        {
+          "case": "real_repository_16_same_query_inflight",
+          "status": "PASS",
+          "callers": 16,
+          "db_calls": 1,
+          "elapsed_ms": 3.638918999999987
+        },
+        {
+          "case": "real_repository_narrow_chart",
+          "status": "PASS",
+          "source_rows": 7,
+          "output_rows": 7,
+          "downsample": null,
+          "bytes": 7729,
+          "sha256": "b7b86b1a392971c792e52c8c0e5640a89cd0c1b12d9a07c26b16c22b44dbdf32"
+        },
+        {
+          "case": "real_repository_snapshot_cold_then16_cache_reads",
+          "status": "PASS",
+          "cold_db_calls": 4,
+          "cold_ms": 713.647105,
+          "warm_db_calls": 0,
+          "warm_elapsed_ms": 0.4241460000002917,
+          "bytes": 11184215,
+          "sha256": "0da8ba3a1d987eac562da3edc2df8ff8018395a8cd030f91705785e9d72fcf6a"
+        },
+        {
+          "case": "own_read_session_statement_timeout_then_recovery",
+          "status": "PASS",
+          "sqlstate": "57014",
+          "timeout_ms": 250
+        }
+      ],
+      "plans": [
+        {
+          "sql_sha256": "1b2f652b13127cd4b44e892d4f948c3eec38be1f950f9fdbfe0f3a02de5972cf",
+          "full_plan_sha256": "3f7ba850165865e108cf15be26ef3a57a784b69d5c025fa01a3a2492fe55ab19",
+          "plan": {
+            "Node Type": "Limit",
+            "Plan Rows": 1,
+            "Total Cost": 1.32,
+            "Plans": [
+              {
+                "Node Type": "Index Scan",
+                "Relation Name": "execution_timeseries_history",
+                "Index Name": "execution_timeseries_history_range_idx",
+                "Plan Rows": 20177,
+                "Total Cost": 18205.1
+              }
+            ]
+          }
+        },
+        {
+          "sql_sha256": "653a9abc4b0836ee6e3d6adb5d7fdd43937e70c5f55ea860940c27269b2e4250",
+          "full_plan_sha256": "5220f43416b74f6fcc25030eee9121c7f515557d878e5d891cf8b6d5314f70b6",
+          "plan": {
+            "Node Type": "Aggregate",
+            "Plan Rows": 1,
+            "Total Cost": 119.29,
+            "Plans": [
+              {
+                "Node Type": "Limit",
+                "Plan Rows": 1,
+                "Total Cost": 119.26,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Relation Name": "execution_timeseries_history",
+                    "Index Name": "execution_timeseries_history_range_idx",
+                    "Plan Rows": 1,
+                    "Total Cost": 119.26
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "sql_sha256": "d4195a9367d8e3027e7643c48d2e8454f04920e9d7a9543f8b5c60a5cd8ff5e1",
+          "full_plan_sha256": "52063b97a0cf5bebe5de3a693c527fcf4ba834f593dab4026a59c70e458f6ea9",
+          "plan": {
+            "Node Type": "Limit",
+            "Plan Rows": 1,
+            "Total Cost": 119.28,
+            "Plans": [
+              {
+                "Node Type": "Sort",
+                "Plan Rows": 1,
+                "Total Cost": 119.28,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Relation Name": "execution_timeseries_history",
+                    "Index Name": "execution_timeseries_history_range_idx",
+                    "Plan Rows": 1,
+                    "Total Cost": 119.26
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "sql_sha256": "6ede2c2f2e337760edc8320082581e3db90c67d890ac2e26aa455f7b4517672f",
+          "full_plan_sha256": "38d0216772da1645b49812c6d4631476f2c45479b422b3895a404663af2e702b",
+          "plan": {
+            "Node Type": "Aggregate",
+            "Plan Rows": 1,
+            "Total Cost": 119.59,
+            "Plans": [
+              {
+                "Node Type": "Index Scan",
+                "Relation Name": "execution_timeseries_history",
+                "Index Name": "execution_timeseries_history_range_idx",
+                "Plan Rows": 1,
+                "Total Cost": 119.55
+              }
+            ]
+          }
+        },
+        {
+          "sql_sha256": "19038c1c7152feb4a6c7964b1e2a755d6622c4bc6bc99d91cc5b66c973611cdb",
+          "full_plan_sha256": "f4a9d55c530cf508ad51024d5314d03bdd9ddc5145f6bb13a82fbfe2787fcb1c",
+          "plan": {
+            "Node Type": "Limit",
+            "Plan Rows": 1,
+            "Total Cost": 119.28,
+            "Plans": [
+              {
+                "Node Type": "Sort",
+                "Plan Rows": 1,
+                "Total Cost": 119.28,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Relation Name": "execution_timeseries_history",
+                    "Index Name": "execution_timeseries_history_range_idx",
+                    "Plan Rows": 1,
+                    "Total Cost": 119.26
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "sql_sha256": "d1b1945e1f87d53cc6ae603073213b757ec422ade4ea4493c83902b8d37ad50c",
+          "full_plan_sha256": "c906d3cb42a688f01d784be83cf332fe063fe911d358ae8212ed113b84c168e9",
+          "plan": {
+            "Node Type": "Aggregate",
+            "Plan Rows": 1,
+            "Total Cost": 636.9,
+            "Plans": [
+              {
+                "Node Type": "Limit",
+                "Plan Rows": 3080,
+                "Total Cost": 598.38,
+                "Plans": [
+                  {
+                    "Node Type": "Seq Scan",
+                    "Relation Name": "execution_durable_mirror_current_entities",
+                    "Plan Rows": 3080,
+                    "Total Cost": 598.38
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "sql_sha256": "2d9ee4dd64c93af36103979d76c1daacd161af3426a6d642fdd22850b02242ed",
+          "full_plan_sha256": "860947134471bed78c70abb6c3f55e6e00d55dbcb2b6b29774969fa5f0720d4a",
+          "plan": {
+            "Node Type": "Index Scan",
+            "Relation Name": "execution_profile_projection_snapshots",
+            "Index Name": "execution_profile_projection_freshness_idx",
+            "Plan Rows": 1,
+            "Total Cost": 660.92,
+            "Plans": [
+              {
+                "Node Type": "Aggregate",
+                "Plan Rows": 1,
+                "Total Cost": 652.74,
+                "Plans": [
+                  {
+                    "Node Type": "Subquery Scan",
+                    "Plan Rows": 554,
+                    "Total Cost": 649.95,
+                    "Plans": [
+                      {
+                        "Node Type": "Limit",
+                        "Plan Rows": 554,
+                        "Total Cost": 644.41,
+                        "Plans": [
+                          {
+                            "Node Type": "Sort",
+                            "Plan Rows": 554,
+                            "Total Cost": 644.41,
+                            "Plans": [
+                              {
+                                "Node Type": "Hash Join",
+                                "Plan Rows": 554,
+                                "Total Cost": 617.78,
+                                "Plans": [
+                                  {
+                                    "Node Type": "Seq Scan",
+                                    "Relation Name": "execution_durable_mirror_current_entities",
+                                    "Plan Rows": 3080,
+                                    "Total Cost": 598.38
+                                  },
+                                  {
+                                    "Node Type": "Hash",
+                                    "Plan Rows": 18,
+                                    "Total Cost": 10.75,
+                                    "Plans": [
+                                      {
+                                        "Node Type": "Seq Scan",
+                                        "Relation Name": "execution_durable_mirror_batches",
+                                        "Plan Rows": 18,
+                                        "Total Cost": 10.75
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "sql_sha256": "01c58f7872dc4f2f6ae299cc26bac93f37df240e62630dc690318d87e2533727",
+          "full_plan_sha256": "a16e101999196e6f0e64eefc4b28dc8496ce0763544ba8c902dd3cd1959d4410",
+          "plan": {
+            "Node Type": "Index Scan",
+            "Relation Name": "execution_profile_projection_snapshots",
+            "Index Name": "execution_profile_projection_freshness_idx",
+            "Plan Rows": 1,
+            "Total Cost": 8.18
+          }
+        },
+        {
+          "sql_sha256": "db4900f09ca59e6f117c4f49acca43c542f7ac1101d4b194eeca25d823f8205c",
+          "full_plan_sha256": "5bdc457f4e15a9fecf6bf3f3dbdf270341b2f4d0d24bd245edbf232dcf5f04b3",
+          "plan": {
+            "Node Type": "Limit",
+            "Plan Rows": 554,
+            "Total Cost": 644.41,
+            "Plans": [
+              {
+                "Node Type": "Sort",
+                "Plan Rows": 554,
+                "Total Cost": 644.41,
+                "Plans": [
+                  {
+                    "Node Type": "Hash Join",
+                    "Plan Rows": 554,
+                    "Total Cost": 617.78,
+                    "Plans": [
+                      {
+                        "Node Type": "Seq Scan",
+                        "Relation Name": "execution_durable_mirror_current_entities",
+                        "Plan Rows": 3080,
+                        "Total Cost": 598.38
+                      },
+                      {
+                        "Node Type": "Hash",
+                        "Plan Rows": 18,
+                        "Total Cost": 10.75,
+                        "Plans": [
+                          {
+                            "Node Type": "Seq Scan",
+                            "Relation Name": "execution_durable_mirror_batches",
+                            "Plan Rows": 18,
+                            "Total Cost": 10.75
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "instrumented_fixed_read_calls": 111,
+      "explain_calls": 9,
+      "elapsed_ms": 6701.03433,
+      "observer_cpu_ms": 1213.649,
+      "max_rss_kib": 158464,
+      "runtime_changes": 0,
+      "auth_session_writes": 0,
+      "business_writes": 0,
+      "source_http_calls": 0,
+      "limitations": [
+        "Internal repository only, not HTTP/mTLS/RBAC or browser acceptance",
+        "One private retained Paper scope, not current TS truth or all profiles",
+        "No source polling/transport cost or TS/DL trading latency measured",
+        "100 reads are not a sustained/concurrent capacity claim",
+        "EXPLAIN without ANALYZE: estimated rows/costs, not observed scans/buffers",
+        "Freshly instantiated cache is separate from existing service cache; no production cache reset"
+      ]
+    }
+  ],
+  "stderr_present": false,
+  "exit_code": 0,
+  "evidence_class": "REAL_RETAINED_REPOSITORY_ONLY_NOT_FULL_T01",
+  "application_cache_regime": "New repository per process; shared database/OS cache not reset"
+}

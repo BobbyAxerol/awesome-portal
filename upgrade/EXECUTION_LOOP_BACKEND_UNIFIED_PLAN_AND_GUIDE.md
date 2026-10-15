@@ -9686,9 +9686,11 @@ foreign host measurement lock. No product service/source/credential/DB mutation.
 #### EPG10-01 Đo tải và chốt placement
 
 **Status:** IN_PROGRESS — **Approval:** BOBBY_APPROVED, named phase 2026-10-15.
-**Tests:** 26 offline helper PASS + six00 metadata regression PASS;
-six actual T01 measurement cases NOT_RUN (execution inputs blocked).
-**Exit:** NOT_MET / MEASUREMENTS_BLOCKED — **Runtime activation:** NOT_AUTHORIZED.
+**Tests (current continuation):** 53 offline helper/observer/cell tests + six00
+metadata regressions PASS; two existing and two isolated repository runs each
+pass five subcases, native migration idempotency/six-table byte parity PASS.
+Formal six T01: zero full PASS, three PARTIAL, two NOT_RUN, one BLOCKED.
+**Exit:** NOT_MET / AVAILABLE_SOURCE_MEASURED — **Runtime activation:** NOT_AUTHORIZED.
 
 **Guide chi tiết bắt buộc:** [EDGE / EPG10-01](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-01-đo-tải-và-chốt-placement);
 [BE §13, §15/ELP2-10, XLC-06/08](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§8.6, 10, 12](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
@@ -9703,19 +9705,21 @@ Record phase approval, exact affected datasets/operations/profiles and partner r
 
 **Invariant trọng tâm:** Same pinned workload across B0/B1/B2, full-window percentiles and clock semantics; no peer-job contamination or fake percentage at near-zero baseline.
 
-**Mục tiêu:** biết chi phí thực của read/export hiện tại và capacity Research trước khi chuyển tải. **Dependencies:** 00 cho manifest; thiết kế harness/sizing worksheet chạy song song với 02 trong approved workspace. Đo tải thật cần target và permission riêng.
+**Mục tiêu:** biết chi phí thực của read/export hiện tại và capacity Research trước khi chuyển tải. **Dependencies:** 00 cho manifest; harness/sizing chạy song song với logical02. Named01 approval covers its isolated target; exact blast radius/locks/source availability still apply, no repeated generic approval.
 
 **Deliverables:** workload manifest, baseline metrics cho hai host, query inventory, bottleneck report và budget register đã chốt.
 Current scoped preparation: [measurement sheet](evidence/execution-edge-v1_2/EPG10-01/measurement-plan.json),
 [placement/query inventory](evidence/execution-edge-v1_2/EPG10-01/PLACEMENT_AND_QUERY_INVENTORY.md),
 [test receipt](evidence/execution-edge-v1_2/EPG10-01/verification-receipt.json).
-The sheet has all12workload shapes and14UNDECIDED budget groups, not approved
-numeric budgets. No actual paired baseline, measured bottleneck rank or final
-placement acceptance yet; see one consolidated completion packet in the inventory.
+The sheet has all12workload shapes and14UNDECIDED production budget groups;
+measured retained-path proposals and actual receipts are now linked. Both-host
+passive baselines and an exact isolated retained target are implemented/tested;
+no whole-stack B0/B1/B2 or final placement acceptance. See current inventory §7
+and continuation §23.10.1; previous preparation receipts remain historical.
 
 **Checklist:**
 
-- [ ] Định nghĩa CPU/RSS/query/IO và freshness measurement cùng percentile/window; kiểm clock skew và local monotonic duration.
+- [x] Định nghĩa CPU/RSS/query/IO/freshness measurement và percentile/window; local monotonic duration implemented. Cross-host offset/error not certified.
 - [ ] Đo W-IDLE/NORMAL/BURST/DASH, sau đó OUTAGE/RESYNC ở test target được phép; baseline source unchanged.
 - [ ] Attribute cost theo source fetch, serialization, network, projection, report và fanout; không gộp tất cả vào một average.
 - [ ] Đo Research cùng existing workload; xác định headroom, notional consumer count và history growth.
@@ -9726,7 +9730,7 @@ placement acceptance yet; see one consolidated completion packet in the inventor
 
 **Tests và fixtures:** `EPG10-T01-01` F-LOAD paired runs dùng same seed/cardinality/config; `T01-02` W-DASH tăng client chỉ ra source QPS amplification hiện có; `T01-03` W-RESYNC capture peak RSS/IO và trading impact; `T01-04` idle near-zero baseline dùng absolute delta, không chia phần trăm sai.
 
-**Tests v1.1 bổ sung:** `EPG10-T01-05` W-COEXIST-6K/9K B0/B1/B2 giữ exact fixture/source/config manifest và gate metric; `T01-06` sizing cộng all pools/queues/in-flight/decompressed/cache bytes, no unowned CPU/RAM/IO reserve. Các tests đo tải vẫn NOT_RUN tới approved execution.
+**Tests v1.1 bổ sung:** `EPG10-T01-05` W-COEXIST-6K/9K B0/B1/B2 giữ exact fixture/source/config manifest và gate metric; `T01-06` sizing cộng all pools/queues/in-flight/decompressed/cache bytes, no unowned CPU/RAM/IO reserve. Actual partial/not-run/blocked dispositions are in the current receipt; phase approval is already granted.
 
 **Evidence:** raw metrics, query definitions, environment/config digest, variation và placement decision. **Exit gate:** từng axis có baseline và approved bound; thiếu capacity evidence thì chưa chuyển load. **Stop/rollback:** dừng load generator khi vượt safety budget, giữ observations; không tự tăng VPS resources/config. **Phase report:** bottlenecks xếp theo chi phí, placement được chọn, budgets và các phép đo còn thiếu.
 
@@ -9735,7 +9739,7 @@ placement acceptance yet; see one consolidated completion packet in the inventor
 **Resource/test execution boundary:** B0 existing TS/DL, B1 minimal producer + Research projection, B2 dashboards/history/analytics; W-IDLE/NORMAL/BURST/DASH/OUTAGE/RESYNC and applicable 6k×2/9k×2. Thresholds approved before candidate runs. Shared-host lock, disposable
 namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
 
-**Technical debt / external gates:** Chưa tạo debt. Approval/resource gate: approved target/windows and TS/DL/Research workload ownership; numeric limits must come from baseline. Owner: Bobby + runtime owners. Missing host capacity blocks workload movement, not 02 schema work.
+**Technical debt / remaining work:** No open in-scope tooling defect. Actual whole-stack pairs/critical-loop freshness, all-process copies and numeric production acceptance are unfinished measurements, not relabelled debt. Source-owned N03/PM publication/TLS and current P184 acceptance constrain only affected paths. Exact retained target complete; no new generic approval required. Missing capacity blocks load movement, not logical02 schema work.
 
 **Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
 actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
@@ -10525,6 +10529,10 @@ Each still requires Bobby's named phase approval. No additional phase started.
 
 ### 23.10 EPG10-01 execution journal — 2026-10-15
 
+Historical preparation slice below; **current continuation/status/evidence is
+§23.10.1**. Do not treat the historical no-measurement/no-test-resource statements
+as the current inventory.
+
 **Approval / goal / links:** Bobby approved the named EPG10-01 phase after00.
 Follow the phase's Edge §§6.6/9/10, BE §13/ELP2-10/XLC-06/08, SCORE §§8.6/10/12
 and Review §§5/8.1 links. Goal: paired truthful baseline, complete resource sizing
@@ -10625,6 +10633,205 @@ defect, no debt-labelled completion. Actual paired evidence and approved numeric
 limits remain unfinished phase deliverables with exact runtime/target owners
 in one packet; continue01 once inputs exist. Bobby's phase approval stands.
 Do not automatically start02+, enlarge scope or mutate production to fill gaps.
+
+#### 23.10.1 Owner-approved continuation — 2026-10-16 Asia/Saigon
+
+Bobby explicitly approved completing the remaining Edge-owned01 work: passive
+baseline → exact isolated target → proposed numeric bounds → available real-source
+cases. Do not stop all work for a source-dependent case, and do not ask again for
+generic phase approval. Existing guide/exit gates remain unchanged.
+
+**Pre-code scope / safety:** add a bounded passive observer and tests, baseline
+receipts and exact executable measurement-target configuration. Reuse existing
+Rust runtime/native apparatus; Python here is offline/operations tooling, never
+a producer/service/domain implementation. First sample existing HK/SGP cgroup-v2,
+process and host counters, no business requests or source writes. Observer ceiling:
+one process/host,120s windows at1s sampling, max48 explicitly selected containers,
+128MiB address-space and10CPU-second process limit, bounded output, no busy loop.
+Inspect identities/config once at each boundary, fence PID/cgroup/restart changes;
+own an atomic measurement lock before starting a clean window and remove only
+that exact owned lock. Foreign jobs/lock or changed identity taint evidence.
+Raw bounded observations outside Git; sanitized metrics/digests/provenance only
+in linked phase evidence. No secret/env value dump, credential rotation, service
+restart/config/index mutation, production fault injection or phase02 start.
+
+Pre-run review fixed metadata whitelist (never inspect Env/mounts), adjacent
+counter-reset/monotonic checks, per-sample lock validation and namespace IDs.
+15 TEST_ONLY observer cases PASS. First SGP attempt failed before sampling: Go
+Docker CLI cannot initialize under inherited128MiB virtual-address ceiling.
+No data query/runtime mutation; owned lock released. Corrected target keeps
+Python128MiB soft AS/10CPU-sec; the two metadata-only CLI children get2GiB
+virtual AS/2CPU-sec each and10sec timeout (virtual reservation, not RSS budget).
+Evidence is invalid if any sample/fence/counter/owned-lock check fails.
+
+**Available real-source subcase target:** existing SGP preview API digest
+`sha256:d13cef069471be8b34c7d6f0cda4b6df55e892812c7ea8bf0f17846256e76e6d`
+and its separate Execution PostgreSQL (not Core DB), retained_review_v1.
+Reuse its compiled repository; no second service/product runtime or UI work.
+One own temporary Node process,128MiB old-space,10CPU-sec/30sec wall watchdog;
+one connection, READ ONLY repeatable-read,250ms statement/100ms lock timeout,
+3sec idle-transaction timeout,100 sequential reads paced50ms apart,16 identical
+in-flight callers,200-row history/200-target-point single-account1h chart,
+1MiB history result bound. Cold snapshot only if pre-existing payload<=1MiB;
+existing repository cache<=16MiB serialized DATA (not heap) is measured, never
+production-reset. At most160 instrumented fixed reads plus one EXPLAIN per
+shape (no ANALYZE); no auth/session/lease writes, TS calls or policy changes.
+Test only own read-session timeout then SELECT recovery. Acquire/release own
+SGP measurement lock; no overlap with passive baseline. Publication stores
+counts/hashes/plan-node whitelist only, never raw rows/IDs/DSN/errors.
+This proves only the actual retained repository subpath, not BFF/auth/browser,
+TS freshness/history authority, full workload/capacity or all-profile acceptance.
+
+First real probe verified100 exact repeated reads,16→1 in-flight query sharing,
+the7-row narrow chart, timeout57014 and own-session recovery, but snapshot input
+was8,594,668bytes (above initial1MiB probe guard). Review also found JS Date
+microsecond truncation in probe upper-bound selection; that preliminary receipt
+is SUPERSEDED, not final sizing/correctness evidence. Fix preserves exact UTC
+microseconds; preflight actual history cardinality/bytes in same repeatable-read
+transaction before materializing results, and keep watchdog through cleanup.
+Final snapshot probe permits<=16MiB combined snapshot+entity input/10,000entities,
+matching existing bounded retained-view design; Node old-space256MiB,10CPU-sec,
+30sec wall. Sixteen cached callers compare identical immutable object, avoiding
+16 redundant serializations. This adjusts only owned probe safety caps, not
+production limits/config or a new owner gate. Repeat final probe with full pins.
+
+**Exact isolated existing-read target (same approved01):** SGP-only disposable
+`epg10-01-retained-pg-20261015` plus sequential `epg10-01-retained-driver-20261015`.
+Reuse pinned existing PG16/API images, no builds/pulls, no product service.
+PG network=none, no published ports, private Unix socket only;768MiB RAM/.5CPU,
+512MiB tmpfs PGDATA. Driver network=none, read-only root/cap-drop/no-new-privileges,
+384MiB/.5CPU/256MiB old-space. Own90–900sec lock,15min overall watchdog.
+One source READ ONLY repeatable-read capture with250ms statements: snapshot,
+all<=10,000 scoped current entities + exact FK batches/revisions, existing
+workspace reference verbatim (or explicit absence), <=200 real history rows
+from the selected1h account scope. Raw source records captured as JSONB TEXT
+to preserve bigint/decimals/UTC microseconds, <=32MiB private file, never Git.
+Use source column inventory, target native schema hash/idempotent migration,
+exact source↔target row digest checks before timing; reject missing FK/drift.
+`migrateExecutionStore` runs ONLY on the new empty isolated DB, never source;
+create SELECT-only exec_runtime AFTER migration. No Core/schema/auth import.
+Repeat same compiled repository probe twice on captured facts. No source polling
+during load, no synthetic trade or invented history; target is a retained
+replay cell, not actual B0/B1/B2, full-resync, HTTP or P184 certification.
+Teardown only these labelled owned test containers/tmpfs/private temp files,
+retain bounded hash/metrics receipt; existing images/volumes/rollback untouched.
+
+**Current inputs,18:04–18:06UTC /01:04–01:06 Asia/Saigon:** TS/DL advanced since
+the previous slice; refresh affected source hashes rather than replay old pins.
+HK has a new foreign G7 unit/timeit lock until18:10:50UTC; do read-only preparation
+there, not load/build/test jobs. SGP has no lock/test/build workload at18:05 and can
+be measured independently. All initial passive samples remain observations of
+current runtime, not W-IDLE proof, paired B0/B1/B2, restored correctness, HA,
+performance G2 PASS or production admission. Budget preflight must distinguish
+baseline collection from candidate acceptance: missing baseline/bounds cannot
+forbid collecting that baseline. Proposed limits are not approved production
+defaults. Full tests and external dependencies will be tracked case-by-case.
+
+**Rollback / exit:** stop only owned observer/generator, release own lock, clean
+only owned isolated resources, preserve raw evidence/operational images and data.
+Acceptance still requires measured axes, source correctness and approved bounds;
+missing source blocks only dependent cases. Record real PASS/FAIL/NOT_RUN, exact
+remaining owner/action, runtime tuples, disk/retention and next permitted scope.
+
+**Retained cell slice,18:42UTC:** native schema applied twice idempotently;3,623
+captured rows across six tables pass exact source/target JSONB-text parity; two
+repository repeats each pass all five subcases. First teardown receipt rejected
+lowercase Docker `no such object`; exact target checks confirmed both containers
+absent. Fixed case-insensitive not-found recognition with regression coverage;
+daemon/foreign-label errors still fail closed. No production write/restart.
+Before final target rerun, add isolated-only actual EXPLAIN ANALYZE/BUFFERS/WAL
+and DB-size/WAL counters (never on source), continuous1Hz PG sampling, and10s
+controlled retained-cell idle with one health query/s. These close obtainable
+query/resource evidence, not full HTTP/TS idle, resync, DR or paired P184 cases.
+
+**Completed continuation,18:44UTC /01:44 Oct16 Asia/Saigon:**
+
+- Passive baseline: HK120s/121samples/40containers; SGP two120s/121sample/
+  36container windows. Stable image/config/PID/restart fences, zero source
+  requests. SGP first window includes one short own metadata process; second
+  window repeats without it. Baselines are uncontrolled production observations,
+  not controlled W-IDLE or accepted P184 coexistence.
+- Real retained Execution DB (never Core): two fresh repository-process repeats
+  each pass100 exact history reads,16→1 in-flight DB coalescing, seven-point
+  chart, cold snapshot+16cached reads with zero extra DB calls, own-session250ms
+  timeout57014 and recovery. History p95=2.099/2.211ms, p99=2.262/2.300ms;
+  snapshot11,184,215B, instrumented cold855/714ms. Cold includes first-shape
+  EXPLAIN instrumentation, not uninstrumented service latency. No production
+  session/business writes, cache reset, source HTTP call or migration.
+- Exact isolated target PASS: same pinned existing API/PG images, network none,
+  no public port/persistent volume/Core credential. Native schema twice
+  idempotent,3,623records/six tables exact row-text/column parity; two independent
+  repository processes each pass five subcases. Actual ANALYZE/BUFFERS/WAL only
+  here: nine shapes/run, max3,569actual rows, no temp spill/query WAL; global
+  isolated WAL counter19,392,190→19,392,240B (+50B, one record, not financial
+  writes). No production ANALYZE. DB size17,472,535B. Fresh app caches, warm DB/OS
+  caches; tiny history7rows is not heavy-history/decimation proof.
+- Cell history p95=1.762/1.804ms; cold instrumented snapshot1,824/1,825ms under
+  .5CPU driver cap, **not claimed faster** than existing preview. Driver maxRSS
+  146,236/146,212KiB; PG1Hz sampled maximum170,172,416B, OOM0. Controlled retained
+  PG idle10.105635s/10health reads/0business mutations=.058410cores; not whole
+  TS/Edge/BFF idle. Absolute costs recorded, no misleading near-zero percentages.
+- Enforced test caps/proposed narrow bounds in measurement sheet; no invented
+  production budgets. History next-rehearsal p95<=5ms/p99<=10ms, instrumented
+  snapshot<=2,500ms and SGP8GiB MemAvailable floor are proposals only. Tested
+  .5+.5CPU and768+384MiB container caps are not all-process/host reserves.
+- Placement: retain minimal source/auth/export near TS; projection/history/
+  cache/fanout/analytics on Research, reuse current modules. Evidence supports
+  direction, not final candidate admission. HK Kafka memory-limit pressure and
+  8.73% host iowait are source-runtime facts, not an Edge regression or permission
+  to modify TS/DL. Whole retained snapshot11.18MB exceeds existing Edge2MiB cap:
+  02 must define bounded pages/stream and full traversal; never raise cap or
+  truncate history silently. No product Rust/domain implementation changed.
+
+**Current evidence:** [continuation verification](evidence/execution-edge-v1_2/EPG10-01/continuation-verification.json),
+[isolated result](evidence/execution-edge-v1_2/EPG10-01/isolated-retained-cell.json),
+[real repository repeats](evidence/execution-edge-v1_2/EPG10-01/retained-repository-runs.json),
+[both-host observations and complete dependency/action packet](evidence/execution-edge-v1_2/EPG10-01/PLACEMENT_AND_QUERY_INVENTORY.md#7-current-approved-continuation--observed-not-capacity-certified).
+Commands actually run: three `python3 -B -m unittest discover -s scripts -p
+'test_execution_edge_{measurement,observe,retained_cell}.py' -q` invocations
+(29+17+7PASS), authority `--self-test` (sixPASS); SGP pinned-image Node selftest
+10assertions, two real+two final isolated repository runs (20subcase PASS), seed
+idempotency/parity PASS. No cargo/pytest/build/load on HK during foreign lock.
+Earlier failing/preliminary attempts retained privately and described in receipt;
+latest rerun supersedes them, not edited history. Reviewer's final static pass
+found no actionable issue; reviewers did not run load or write peer sources.
+
+**Remaining decision boundary / next action:** detailed per-case owner packet in
+inventory §7. Formal T01 has0PASS/3PARTIAL/2NOT_RUN/1BLOCKED; phase stays
+`IN_PROGRESS / EXIT_NOT_MET`, not falsely closed. Available retained-source
+continuation delivered; missing candidate02/03/04 contracts/runtime and full
+HTTP/TS populations cannot be replaced by toy tests. External N03 source-dark,
+PM export/current checkpoint and expired Manager TLS affect only dependent
+paths; current P184 failure envelope and HK foreign lock prevent coexistence
+acceptance. No TS edits or operational rotation in this phase. Next independently
+useful step is named02 logical schema/compatibility approval, not a fresh generic
+01 approval.01 retains its pending paired/resource measurements for the actual
+candidate; no production load movement before those pass.
+
+**Runtime / cleanup:** source/read endpoints/flags/credentials and operational
+image/config/restart tuples unchanged. Cell containers auto-removed/label-checked;
+private fixture/socket/copied source/tmpdir removed, no persistent volume/image
+created, no cache/volume/source/operational-container deletion. Retain pinned
+operational PG/API images, all existing operational and rollback sets untouched;
+no new rollback needed. SGP disk169,369,038,848→169,368,662,016B (shared-host net
+change, not reclaimed-byte proof). Final read-only inventories: HK124images/
+34.66GB,BuildKit391/27.86GB; SGP328images/88.82GB,BuildKit3776/195.9GB.
+No broad prune: foreign jobs/unknown shared ownership. HK available195,353,194,496B
+at18:44; clock sync both hosts yes, error bound still unknown. Canonical HK
+checkout54c6f5f3 and six active feature worktrees retained; runtime stable release
+`/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy`
+and SGP release/source tuple remain as inventory. No push/merge/deployment.
+
+**Final slice verification:** all phase JSON parsed; four current tool SHA pins,
+six-table3,623row parity, four repository result digests, read-only identity,
+formal0/3/2/1 disposition, baseline sample counts and target path cross-checked
+PASS. Focused tests rerun29+17+7PASS; six metadata self-tests PASS. Four supplied
+guide SHA hashes unchanged. Scoped credential-pattern scan empty; `git diff
+--check` clean. Final runtime comparison HK40/40 and SGP36/36 image/config/
+restart tuples unchanged; four absent SGP Compose hashes normalized null/empty,
+not a config change. Commit uses verified BobbyAxerol identity on approved
+feature branch; no unrelated file staged. Pending source/runtime capacity cases
+remain as above, not waived by these verification checks.
 
 
 

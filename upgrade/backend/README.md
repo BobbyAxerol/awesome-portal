@@ -15,10 +15,14 @@ Chúng không thay thế phase hoặc exit gate trong
   `upgrade/upgrade_v1.2`, and links Edge, Portal contracts, scoring and PM R2 inputs.
   Goals, scope, source pins, invariants, tests, exit gates, rollback, resource and
   debt/owner tracking are recorded per phase. No product/runtime acceptance implied;
-  the remaining94 case IDs are NOT_RUN.01 now has a tested offline preparation
-  slice (26helper tests PASS), query/placement inventory and14UNDECIDED budgets;
-  **no actual T01 runs or final placement acceptance**. See §23.10 and its single
-  owned completion packet; no invented performance PASS or runtime mutation.
+  02…11 are not started.01 available-source continuation now has53offline tests
+  plus six00metadata PASS, both-host120s observations, two real+two isolated
+  retained repository runs (20subcases PASS), native schema idempotency and
+  six-table3,623row exact parity. Isolated target cleaned; narrow numeric
+  proposals are not production defaults. **Formal T01:0PASS/3PARTIAL/2NOT_RUN/
+  1BLOCKED; exit not met**, no B0/B1/B2/6k/9k acceptance. See §23.10.1 and
+  inventory §7 for the single current dependency/action packet;14production
+  groups remain UNDECIDED. No source/runtime mutation or invented capacity PASS.
 
 - [Official Trading System owner request — Portal Execution capability campaign](./TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md)
   — **the governing owner request.** It consolidates N02/N03 incremental
