@@ -24,7 +24,7 @@
  * one.
  */
 import { readDecimal, readEnum, readId, readTimestamp, type MaybeKnown } from "../adapter";
-import { bindExitDecision, bindR1Decision, readCaptureContext, readDecisionContext, readPaperExitDecisionContext, safeR1Href, type CaptureContext, type ContextRead, type DecisionContext, type ExitBinding, type R1Binding } from "./governanceContext";
+import { bindExitDecision, bindGateDecision, bindR1Decision, readCaptureContext, readDecisionContext, readPaperExitDecisionContext, safeR1Href, type CaptureContext, type ContextRead, type DecisionContext, type ExitBinding, type R1Binding } from "./governanceContext";
 import type { ApprovalId, EvidenceMark, PromotionStage, Sla } from "../contracts";
 import type { ApprovalGate, ApprovalRow, DecidedRow, InertReason } from "../screens/ApprovalInbox";
 import type { ChecklistItem, DecisionLock, PassportEntry } from "../screens/GateR1Review";
@@ -606,6 +606,8 @@ export interface GateR2Detail {
   grantName: string | null;
   locks: readonly R2Lock[];
   eligibility: Eligibility;
+  /** The pins of an R2 decision from this read's `decision_context`, or why it cannot be planned (FE-GOV-C03). */
+  binding: R1Binding;
   /**
    * Optimistic-concurrency version, as the published row carries it.
    *
@@ -657,6 +659,8 @@ export function readGateR2Detail(raw: unknown): GateR2Detail | null {
         "R1_NOT_APPROVED",
         "R1_EXPIRED",
         "R1_EVIDENCE_INCOMPLETE",
+        "R1_PARENT_CHANGED",
+        "R1_EVIDENCE_MANIFEST_INTEGRITY_FAILED",
       ].includes(entry)
     ) {
       locks.push("R1_NOT_VALID");
@@ -672,6 +676,8 @@ export function readGateR2Detail(raw: unknown): GateR2Detail | null {
 
   return {
     decision: readDecisionContext(data.decision_context),
+    /** The exact pins an R2 decision may send, from this same read (its OWN child evidence — never the R1 parent's manifest or digest), or the reason it cannot be planned. */
+    binding: bindGateDecision({ gate: "R2", context: readDecisionContext(data.decision_context), envelopeWorkspaceId: workspaceId, approvalId }),
     capture: readCaptureContext(data.capture_context),
     workspaceId,
     portfolioId: readId(approval.portfolio_id ?? data.portfolio_id),

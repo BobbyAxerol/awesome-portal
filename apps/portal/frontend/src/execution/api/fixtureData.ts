@@ -181,18 +181,18 @@ export const R2_DETAIL: Record<string, unknown> = {
     sla: { age_minutes: 960, budget_minutes: 1440 },
   },
   actor: "Lan",
-  // R2 has no commissioned decision executor: no command, path or hashes (typed BLOCKED).
+  // The R2 decision is its OWN command (GOVERNANCE_R2_DECISION) with the child evidence of this read as its pins (labelled synthetic: not product hashes).
   decision_context: {
     gate: "R2",
     workspace_id: "ws_fixture_governance",
     approval_id: "AP-352",
     expected_approval_version: 3,
     evidence_set_hash: "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    evidence_hashes: null,
-    command_type: null,
-    request_schema_version: null,
-    plan_path: null,
-    availability: { state: "BLOCKED", reason_code: "R2_EXECUTION_DECISION_NOT_COMMISSIONED" },
+    evidence_hashes: ["sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"],
+    command_type: "GOVERNANCE_R2_DECISION",
+    request_schema_version: "governance.r2-decision-plan-request.v1",
+    plan_path: "/api/v1/execution/commands/plans",
+    availability: { state: "AVAILABLE", reason_code: null },
     source_side_effect_requested: false,
   },
   capture_context: {

@@ -65,7 +65,8 @@ import type {
   OperationSnapshot,
   Result,
 } from "./ports";
-import { isPaperExitDecision, PAPER_EXIT_EXTENSION_DAYS, unavailable } from "./ports";
+import { isPaperExitDecision, PAPER_EXIT_EXTENSION_DAYS, unavailable, type DecisionKind, type PlanAuthority } from "./ports";
+import { DECISION_COMMANDS } from "./governanceContext";
 import type { ApprovalCreateInput, ApprovalCreateOutcome, ConditionsPage, WaiverQuery } from "./ports";
 import type { StageDrift } from "../hifiInsight";
 import { readOperationalComposition, type CompositionName, type OperationalComposition } from "../operationalComposition";
@@ -206,6 +207,21 @@ export interface HttpApiOptions {
   policy: DeliveryPolicy | null;
   signal?: AbortSignal;
   readScope?: object;
+}
+
+/** The plan's `authority_requirements`, exactly as served; anything unreadable is `null`, never a guess. */
+function readPlanAuthority(raw: unknown): PlanAuthority | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  if (typeof o.capability !== "string" || o.capability === "") return null;
+  if (o.role_constraint !== null && typeof o.role_constraint !== "string") return null;
+  return {
+    capability: o.capability,
+    roleConstraint: o.role_constraint === null ? null : (o.role_constraint as string),
+    // Displayed only: these describe what the server enforces and open nothing here, so an absent field reads as not stated.
+    workspaceMembershipRequired: o.workspace_membership_required === true,
+    separationOfDutiesRequired: o.separation_of_duties_required === true,
+  };
 }
 
 export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions): ExecutionApi {
@@ -1178,6 +1194,8 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       // and every R1 and R2 decision would have 404ed. Corrected against
       // `apps/control-api/src/governance/governance.controller.ts`.
       const decision = input.decision;
+      const gate = input.gate ?? "R1";
+      const kind: DecisionKind = isPaperExitDecision(decision) ? "PAPER_EXIT" : gate;
       // Typed against the generated declaration, so a field rename upstream
       // fails to compile here rather than 422ing in a browser. The R1 branch
       // has no generated counterpart to bind to — its schema lives in the
@@ -1202,10 +1220,11 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
             },
           } satisfies PaperExitPlanRequest)
         : {
-            schema_version: "governance.r1-decision-plan-request.v1",
+            // The gate's own command and request schema — never R1's for an R2 or Live decision.
+            schema_version: DECISION_COMMANDS[gate].planSchema,
             workspace_id: input.workspaceId,
             request_key: input.requestKey,
-            command_type: "GOVERNANCE_R1_DECISION",
+            command_type: DECISION_COMMANDS[gate].commandType,
             command_version: 1,
             target: { approval_id: input.approvalId },
             expected_approval_version: expectedVersion,
@@ -1265,6 +1284,8 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
           applyToken: typeof body.apply_token === "string" ? body.apply_token : null,
           blockers: list(body.blockers),
           warnings: list(body.warnings),
+          kind,
+          authority: readPlanAuthority(body.authority_requirements),
           expectedApprovalVersion:
             typeof body.expected_approval_version === "number"
               ? body.expected_approval_version
@@ -1278,6 +1299,7 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       operationId: string,
       applyToken: string,
       workspaceId: string,
+      kind: DecisionKind = "R1",
     ): Promise<Result<ApplyReceipt>> {
       const blocked = governanceWriteBlocked(policy);
       if (blocked) return unavailable(blocked);
@@ -1289,7 +1311,8 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       const response = await post(
         `/operations/${encodeURIComponent(operationId)}/apply`,
         {
-          schema_version: "governance.r1-decision-apply-request.v1",
+          // The apply schema of the kind the plan was made for: the server routes an apply by it (Paper Exit has its own, and so do R2 and Live).
+          schema_version: kind === "PAPER_EXIT" ? "governance.paper-exit-decision-apply-request.v1" : DECISION_COMMANDS[kind].applySchema,
           workspace_id: workspaceId,
           apply_token: applyToken,
         },

@@ -24,7 +24,7 @@ import { GateAbsences, GateDecisionActions, GateStepper, GateVerdict, type Absen
 import { EmptyRecordFrame } from "../components/EmptyRecordFrame";
 import { PanelState } from "../components/states";
 import { shortDigest } from "../components/workspace";
-import { REQUEST_CHANGES_DENIED_REASON, REQUEST_CHANGES_NOTE_REASON } from "./GateR1Review";
+import { REQUEST_CHANGES_DENIED_REASON, REQUEST_CHANGES_NOTE_REASON, REQUEST_CHANGES_NO_CONDITION_REASON } from "./GateR1Review";
 
 export type R1State = "APPROVED" | "APPROVED_WITH_CONDITION" | "EXPIRED" | "DENIED" | "PENDING" | "MISSING";
 
@@ -212,7 +212,7 @@ export function GateR2Review({
   const serverAllowsRequestChanges = eligibility?.canRequestChanges === true;
   const noteReady = (note ?? "").trim().length >= 8;
   const closedByContext = Boolean(decisionsBlockedReason);
-  const requestChangesLocked = !serverAllowsRequestChanges || !noteReady || !onRequestChanges || closedByContext;
+  const requestChangesLocked = !serverAllowsRequestChanges || !noteReady || !onRequestChanges || (conditions?.length ?? 0) === 0 || closedByContext;
   const locked = effectiveLocks.length > 0 || !serverAllowsApprove || closedByContext;
   const conditionLocked = effectiveLocks.length > 0 || !serverAllowsCondition || closedByContext;
   const denyLocks = effectiveLocks.filter((lock): lock is "EXPIRED" | "NOT_ELIGIBLE" =>
@@ -496,7 +496,7 @@ export function GateR2Review({
             requestChanges={{
               label: "Request changes",
               locked: requestChangesLocked,
-              title: closedByContext ? decisionsBlockedReason ?? undefined : !serverAllowsRequestChanges || !onRequestChanges ? REQUEST_CHANGES_DENIED_REASON : !noteReady ? REQUEST_CHANGES_NOTE_REASON : undefined,
+              title: closedByContext ? decisionsBlockedReason ?? undefined : !serverAllowsRequestChanges || !onRequestChanges ? REQUEST_CHANGES_DENIED_REASON : !noteReady ? REQUEST_CHANGES_NOTE_REASON : (conditions?.length ?? 0) === 0 ? REQUEST_CHANGES_NO_CONDITION_REASON : undefined,
               onClick: onRequestChanges,
             }}
           />

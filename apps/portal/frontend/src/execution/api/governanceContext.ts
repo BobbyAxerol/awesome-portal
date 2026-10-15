@@ -45,6 +45,17 @@ const REASON_WORDS: Readonly<Record<string, string>> = {
   R2_PORTFOLIO_SCOPE_NOT_FOUND: "no accepted portfolio scope was found",
   CAPTURE_DEPLOYMENT_SCOPE_NOT_FOUND: "no accepted deployment was found",
   PAPER_VENUE_UNAVAILABLE: "the paper venue is not available",
+  R2_APPROVAL_REQUIRED: "R2 must be approved before this can go on",
+  R1_LINEAGE_UNPUBLISHED: "the R1 this review follows is not published, so its approval cannot be checked",
+  R1_NOT_APPROVED: "the R1 behind this review is not approved",
+  R1_EXPIRED: "the R1 approval behind this review has expired",
+  R1_PARENT_CHANGED: "the R1 behind this review changed after it was approved",
+  R1_EVIDENCE_MANIFEST_INTEGRITY_FAILED: "the R1 evidence manifest failed its integrity check",
+  LIVE_PARENT_NOT_PUBLISHED: "the Live review has no published predecessor policy yet, so no Live decision can be made",
+  APPROVAL_POLICY_CHANGED: "the approval policy changed since this was read",
+  APPROVER_ROLE_REQUIRED: "this decision needs a different approver role",
+  GRANT_REVOKED: "your governance grant was revoked",
+  SESSION_STALE: "your session is no longer current",
 };
 export function reasonWords(code: string | null): string | null {
   if (code === null) return null;
@@ -65,15 +76,31 @@ function readAvailability(raw: unknown): Availability | null {
   return null;
 }
 
+/** The gates whose Portal-local decision the server commissions, each with its own exact command and request/apply schemas (§60). */
+export type DecisionGate = "R1" | "R2" | "LIVE_GATE";
+export interface DecisionCommand {
+  commandType: "GOVERNANCE_R1_DECISION" | "GOVERNANCE_R2_DECISION" | "GOVERNANCE_LIVE_DECISION";
+  planSchema: "governance.r1-decision-plan-request.v1" | "governance.r2-decision-plan-request.v1" | "governance.live-decision-plan-request.v1";
+  applySchema: "governance.r1-decision-apply-request.v1" | "governance.r2-decision-apply-request.v1" | "governance.live-decision-apply-request.v1";
+}
+/** One row per gate. A gate never borrows another's command or schema; nothing is parsed from a label or a command name. */
+export const DECISION_COMMANDS: Readonly<Record<DecisionGate, DecisionCommand>> = {
+  R1: { commandType: "GOVERNANCE_R1_DECISION", planSchema: "governance.r1-decision-plan-request.v1", applySchema: "governance.r1-decision-apply-request.v1" },
+  R2: { commandType: "GOVERNANCE_R2_DECISION", planSchema: "governance.r2-decision-plan-request.v1", applySchema: "governance.r2-decision-apply-request.v1" },
+  LIVE_GATE: { commandType: "GOVERNANCE_LIVE_DECISION", planSchema: "governance.live-decision-plan-request.v1", applySchema: "governance.live-decision-apply-request.v1" },
+};
+
 export interface DecisionContext {
-  gate: "R1" | "R2";
+  gate: DecisionGate;
   workspaceId: string;
   approvalId: string;
   expectedVersion: number;
   evidenceSetHash: string;
   /** Sorted-unique pins exactly as published; `null` = the server could not publish them (over the bound) — unavailable, never `[]`. */
   evidenceHashes: readonly string[] | null;
-  /** True only for the commissioned R1 command with every pin present. It is a context, not an eligibility: the per-verb flags still apply. */
+  /** The exact command this gate's decision is sent as, or `null` on a legacy read that named none. */
+  command: DecisionCommand | null;
+  /** True only when the gate's own command is named, the context is AVAILABLE and every pin is present. It is a context, not an eligibility: the per-verb flags still apply. */
   commandReady: boolean;
   availability: Availability;
 }
@@ -85,19 +112,21 @@ export function readDecisionContext(raw: unknown): ContextRead<DecisionContext> 
   const c = obj(raw);
   if (!c) return { kind: "invalid" };
   const availability = readAvailability(c.availability);
-  if (!availability || (c.gate !== "R1" && c.gate !== "R2") || !id(c.workspace_id) || !id(c.approval_id) || !version(c.expected_approval_version) ||
+  if (!availability || (c.gate !== "R1" && c.gate !== "R2" && c.gate !== "LIVE_GATE") || !id(c.workspace_id) || !id(c.approval_id) || !version(c.expected_approval_version) ||
       !hash(c.evidence_set_hash) || c.source_side_effect_requested !== false) return { kind: "invalid" };
   let hashes: string[] | null = null;
   if (c.evidence_hashes !== null) {
     if (!Array.isArray(c.evidence_hashes) || c.evidence_hashes.length > 128 || !c.evidence_hashes.every(hash) || new Set(c.evidence_hashes).size !== c.evidence_hashes.length) return { kind: "invalid" };
     hashes = [...(c.evidence_hashes as string[])];
   }
-  const commandWire = c.command_type === "GOVERNANCE_R1_DECISION" && c.request_schema_version === "governance.r1-decision-plan-request.v1" && c.plan_path === "/api/v1/execution/commands/plans";
+  const expected = DECISION_COMMANDS[c.gate];
+  const commandWire = c.command_type === expected.commandType && c.request_schema_version === expected.planSchema && c.plan_path === "/api/v1/execution/commands/plans";
   const noCommand = c.command_type === null && c.request_schema_version === null && c.plan_path === null;
   if (!commandWire && !noCommand) return { kind: "invalid" };
-  // R2 never carries a command; an R1 context that says AVAILABLE must carry one.
-  if (c.gate === "R2" && (commandWire || availability.available)) return { kind: "invalid" };
-  if (c.gate === "R1" && availability.available && !commandWire) return { kind: "invalid" };
+  // Each gate carries ITS command and no other (an R2 read naming R1's command is a different decision under the wrong gate). The earlier no-command
+  // shape is a legacy, blocked-only read: it can never be AVAILABLE, and the Live gate has no legacy shape at all.
+  if (noCommand && (availability.available || c.gate === "LIVE_GATE")) return { kind: "invalid" };
+  if (availability.available && !commandWire) return { kind: "invalid" };
   return {
     kind: "ok",
     value: {
@@ -107,7 +136,8 @@ export function readDecisionContext(raw: unknown): ContextRead<DecisionContext> 
       expectedVersion: c.expected_approval_version,
       evidenceSetHash: c.evidence_set_hash,
       evidenceHashes: hashes,
-      commandReady: c.gate === "R1" && availability.available && commandWire && hashes !== null,
+      command: commandWire ? expected : null,
+      commandReady: availability.available && commandWire && hashes !== null,
       availability,
     },
   };
@@ -279,6 +309,33 @@ export function bindR1Decision(input: {
   }
   const unique = [...new Set(m.sha256)].sort();
   return { state: "ready", workspaceId: input.envelopeWorkspaceId, approvalId: input.approvalId, expectedVersion: input.legacyVersion, evidenceHashes: unique, source: "manifest" };
+}
+
+/**
+ * Bind a Portal-local decision of ANY commissioned gate to its pins from the same read.
+ *
+ * R1 keeps its own binder (it alone may fall back to a complete older manifest). R2 and Live never do: their child decision pins come from the read's
+ * own `decision_context`, and neither the R1 parent manifest nor its digest stands in for them. A changed version, policy or hash is a fresh read and a
+ * new request key, never a silently reused intent.
+ */
+export function bindGateDecision(input: {
+  gate: DecisionGate;
+  context: ContextRead<DecisionContext>;
+  envelopeWorkspaceId: string | null;
+  approvalId: string;
+}): R1Binding {
+  const { gate, context } = input;
+  if (context.kind === "absent") return { state: "unavailable", reason: `This read published no ${gate === "R2" ? "R2" : "Live"} decision context, so no decision can be addressed from it.` };
+  if (context.kind === "invalid") return { state: "unavailable", reason: "The decision context in this read could not be validated. Reload to read it again." };
+  const c = context.value;
+  if (c.gate !== gate) return { state: "unavailable", reason: "This read's decision context belongs to another gate, so no decision is addressed from it." };
+  if (c.approvalId !== input.approvalId || (input.envelopeWorkspaceId !== null && c.workspaceId !== input.envelopeWorkspaceId)) {
+    return { state: "unavailable", reason: "The decision context does not match the approval and workspace of this read. Reload before deciding." };
+  }
+  if (!c.availability.available) return { state: "blocked", reasonCode: c.availability.reasonCode, reason: `No decision can be planned: ${reasonWords(c.availability.reasonCode)}.` };
+  if (c.command === null) return { state: "unavailable", reason: "This read named no command for the decision, so none can be planned." };
+  if (c.evidenceHashes === null) return { state: "unavailable", reason: "The evidence pins for this decision were not published, so a plan cannot be made safely. Reload to read them again." };
+  return { state: "ready", workspaceId: c.workspaceId, approvalId: c.approvalId, expectedVersion: c.expectedVersion, evidenceHashes: c.evidenceHashes, source: "context" };
 }
 
 /**

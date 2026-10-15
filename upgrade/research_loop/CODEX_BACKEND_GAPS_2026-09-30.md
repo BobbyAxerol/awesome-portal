@@ -3511,3 +3511,28 @@ measurements, unresolved COPY/config custody and strict83/86 exception.
 [affected preview report](./evidence/P24/GOVERNANCE_AFFECTED_PREVIEW_ACCEPTANCE_2026-10-15.md).
 C4-GOV-CAPACITY-01 is a named separate quiet-window cache inventory, not prune
 or permission to touch active/rollback images, DB volumes, data or evidence.
+
+**§60 consumer result — FE-GOV-C01…06 (Claude, 2026-10-15).** Read: handoff
+`GOVERNANCE_PORTAL_DECISION_CLAUDE_HANDOFF_2026-10-15.md` + continuation receipt.
+Frontend only; no layout, palette, typography or baseline change.
+
+| Item | Result |
+| --- | --- |
+| C01 | `governanceContext.ts` decodes each exact gate/schema/command triple (`R1`, `R2`, `LIVE_GATE`); the earlier no-command shape is accepted only as a legacy **blocked** R2 read; a context naming another gate's command or schema is invalid. `bindGateDecision` binds R2/Live from their OWN context only — no manifest or parent-digest fallback. |
+| C02 | `planDecision` takes the gate and sends that gate's command + plan schema; `applyPlan` takes the plan's kind and sends the matching apply schema; `authority_requirements` is carried (capability, role constraint, membership, SoD) and `required_approvers` is not treated as authorization. Workspace stays on request, navigation and reload. |
+| C03 | R2 verbs use per-verb eligibility, the read's child evidence pins and R2's own command (request-changes needs a typed condition). Live stays closed for every verb with its typed `LIVE_PARENT_NOT_PUBLISHED` reason; nothing plans R1/R2 for Live. Inbox already routes Live rows to `/live`. |
+| C04 | Public copy added for `R2_APPROVAL_REQUIRED`, `R1_LINEAGE_UNPUBLISHED`, `R1_NOT_APPROVED`, `R1_EXPIRED`, `R1_PARENT_CHANGED`, `R1_EVIDENCE_MANIFEST_INTEGRITY_FAILED`, `LIVE_PARENT_NOT_PUBLISHED`, `APPROVAL_POLICY_CHANGED`, `ADMIN_ROLE_REQUIRED`, `APPROVER_ROLE_REQUIRED` (+ grant/session). |
+| C05 | Old R2 captures keep their original blocking finding; capture stays on its own context. No retrofit. |
+| C06 | R1, R2 and Paper Exit decision controls stay read-only up front with the retained reason when the stack reports a retained review; the retained context is read without a Research workspace override. No flag, SQL or guard change. |
+
+**Defect found and fixed on the way (mine):** the apply request always carried
+R1's apply schema, including for Paper Exit, whose route is
+`governance.paper-exit-decision-apply-request.v1`. Apply now follows the plan's
+kind. A Paper Exit apply had not been exercised on a real stack, so this was
+never seen in a receipt.
+
+Tests: R1/R2/Live/Paper Exit exact command binding (plan and apply), child vs
+parent pins, legacy/absent/invalid context, cross-gate refusal, retained
+read-only. Not run: the browser R1/R2 journey at 1280/660 against a rebuilt
+preview, and any positive write (the retained preview refuses every Execution
+POST by design). P24 consumer receipt for the preview journey remains open.

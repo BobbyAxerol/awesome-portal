@@ -45,7 +45,8 @@ import { IncidentDetailScreen } from "./IncidentDetail";
 import { SandboxCertificationScreen } from "./SandboxCertification";
 import { ReviewCapturePanel, captureCapability } from "../components/ReviewCapture";
 import { CaptureNextStep } from "../components/CaptureNextStep";
-import { reasonWords } from "../api/governanceContext";
+import { bindGateDecision, type DecisionGate } from "../api/governanceContext";
+import { useRetainedReview } from "../retainedReview";
 import { useExecutionRuntime } from "../useExecutionRuntime";
 import { CanaryControlRoomScreen } from "./CanaryControlRoom";
 import { LiveFullOperationsScreen } from "./LiveFullOperations";
@@ -351,6 +352,16 @@ export function ApprovalInboxContainer({
   );
 }
 
+/**
+ * FE-GOV-C06: a retained-review stack refuses EVERY Execution POST at its session guard — including Portal-local governance decisions — whatever the gate's
+ * policy or the reviewer's eligibility says. So the decision controls stay read-only up front, with that reason, instead of answering a click with a refusal.
+ * The retained context is read without a Research workspace override; a missing retained context never counts as permission to write.
+ */
+const RETAINED_WRITE_CLOSED = "This stack is a retained review: it is read-only, so no decision is sent from here.";
+function useRetainedWriteClosed(): string | null {
+  return useRetainedReview().status === "retained" ? RETAINED_WRITE_CLOSED : null;
+}
+
 /** Polling cadence. Bounded here so the reducer stays pure. */
 const POLL_MS = 1_500;
 const MAX_POLLS = 40;
@@ -362,6 +373,7 @@ export function GateR1ReviewContainer({ api, approvalId, workspaceId }: { api: E
   // the one thing it exists to mean.
   const [conditions, setConditions] = useState<readonly TypedCondition[]>([]);
   const [note, setNote] = useState("");
+  const retainedClosed = useRetainedWriteClosed();
   const [decision, dispatch] = useReducer(decisionReducer, undefined, () =>
     initialDecision(newRequestKey()),
   );
@@ -486,6 +498,7 @@ export function GateR1ReviewContainer({ api, approvalId, workspaceId }: { api: E
         planned.value.operationId,
         planned.value.applyToken,
         binding.workspaceId,
+        planned.value.kind,
       );
       if (!applied.ok) {
         dispatch({ type: "APPLY_FAILED", error: applied.reason });
@@ -503,7 +516,7 @@ export function GateR1ReviewContainer({ api, approvalId, workspaceId }: { api: E
     <>
       <GateR1Review
         // Every verb stays closed, with the reason, unless this read published the pins a decision needs (or the older manifest can supply them completely).
-        decisionsBlockedReason={detail && detail.binding.state !== "ready" ? detail.binding.reason : null}
+        decisionsBlockedReason={retainedClosed ?? (detail && detail.binding.state !== "ready" ? detail.binding.reason : null)}
         trail={decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : undefined}
         note={note}
         onNoteChange={setNote}
@@ -651,7 +664,7 @@ function useDecision(api: ExecutionApi, workspaceId: string | null) {
       verdict: Parameters<ExecutionApi["planDecision"]>[0]["decision"],
       reason: string,
       expectedApprovalVersion: number | null,
-      extra?: { conditions?: readonly TypedCondition[]; workspaceId?: string; evidenceHashes?: readonly string[] | null },
+      extra?: { conditions?: readonly TypedCondition[]; workspaceId?: string; evidenceHashes?: readonly string[] | null; gate?: DecisionGate },
     ) => {
       // No workspace, no decision. The caller keeps the controls disabled with
       // a reason; this is the second gate on the same fact, so a decision can
@@ -659,12 +672,15 @@ function useDecision(api: ExecutionApi, workspaceId: string | null) {
       const target = extra?.workspaceId ?? workspaceId;
       if (!target) return;
       dispatch({ type: "PLAN_REQUESTED" });
+      // Typed conditions travel with approve-with-condition and request-changes only.
+      const carriesConditions = verdict === "APPROVE_WITH_CONDITION" || verdict === "REQUEST_CHANGES";
       const planned = await api.planDecision({
+        ...(extra?.gate ? { gate: extra.gate } : {}),
         approvalId: subjectId,
         workspaceId: target,
         decision: verdict,
         reason,
-        conditions: verdict === "APPROVE_WITH_CONDITION" ? (extra?.conditions ?? []) : [],
+        conditions: carriesConditions ? (extra?.conditions ?? []) : [],
         ...(extra?.evidenceHashes ? { evidenceHashes: extra.evidenceHashes } : {}),
         expectedApprovalVersion,
         // Per intent, not per container. One key reused across APPROVE and
@@ -672,7 +688,7 @@ function useDecision(api: ExecutionApi, workspaceId: string | null) {
         // server answers with the original operation and the reviewer is told
         // their refusal succeeded when what was recorded was an approval.
         requestKey: intentKey(ref.current.requestKey, subjectId, verdict,
-          JSON.stringify([target, expectedApprovalVersion, extra?.evidenceHashes ?? [], reason, verdict === "APPROVE_WITH_CONDITION" ? (extra?.conditions ?? []) : []])),
+          JSON.stringify([extra?.gate ?? null, target, expectedApprovalVersion, extra?.evidenceHashes ?? [], reason, carriesConditions ? (extra?.conditions ?? []) : []])),
       });
       if (!planned.ok) {
         dispatch(
@@ -703,6 +719,7 @@ function useDecision(api: ExecutionApi, workspaceId: string | null) {
         planned.value.operationId,
         planned.value.applyToken,
         target,
+        planned.value.kind,
       );
       if (!applied.ok) {
         dispatch({ type: "APPLY_FAILED", error: applied.reason });
@@ -756,7 +773,10 @@ export function GateR2ReviewContainer({
 }) {
   const [state, setState] = useState<LoadState<GateR2Detail>>(loading);
   const [note, setNote] = useState("");
+  const [conditions, setConditions] = useState<readonly TypedCondition[]>([]);
   const [preview, setPreview] = useState<CapitalPreviewState>(null);
+  const { decision, decide } = useDecision(api, state.value?.workspaceId ?? null);
+  const retainedClosed = useRetainedWriteClosed();
   useEffect(() => {
     let cancelled = false;
     setState(loading);
@@ -812,17 +832,25 @@ export function GateR2ReviewContainer({
   }, [api, approvalId, previewScope?.portfolioId, previewScope?.requestedAmount, previewScope?.currency]);
 
   const d = state.value;
-  // R2 has no commissioned decision executor (FE-GOV-02). There is deliberately no `decide` here: the one commissioned command is R1's, and sending it
-  // for an R2 review — even for an owner, even from a historical response that claimed eligibility — would be a different decision under the wrong gate.
-  const r2Closed = d
-    ? `${reasonWords(d.decision.kind === "ok" ? d.decision.value.availability.reasonCode : "R2_EXECUTION_DECISION_NOT_COMMISSIONED") ?? "R2 decisions are not commissioned yet"}.`
-    : null;
+  // R2's decision is its OWN command (`GOVERNANCE_R2_DECISION`), never R1's, and its pins are the child evidence of this same read. With no ready binding every
+  // verb stays closed with the reason; per-verb eligibility still applies on top, and the retained runtime can still refuse the write.
+  const r2Closed = retainedClosed ?? (d && d.binding.state !== "ready" ? d.binding.reason : null);
+  const r2Decide = (verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION" | "REQUEST_CHANGES", reason: string) => {
+    if (!d || d.binding.state !== "ready") return;
+    void decide(d.binding.approvalId, verdict, reason, d.binding.expectedVersion, {
+      workspaceId: d.binding.workspaceId,
+      evidenceHashes: d.binding.evidenceHashes,
+      gate: "R2",
+      conditions,
+    });
+  };
   const served = preview && !("failed" in preview) ? preview : null;
 
   return (
     <>
       <GateR2Review
         decisionsBlockedReason={r2Closed}
+        trail={decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : undefined}
         note={note}
         onNoteChange={setNote}
         onCopyProvenance={(full) => void navigator.clipboard?.writeText(full)}
@@ -874,8 +902,15 @@ export function GateR2ReviewContainer({
         status={state.status}
         reason={state.reason}
         partialReason={state.warnings.length ? state.warnings.join("; ") : undefined}
-        conditions={[]}
-        onRequestCondition={() => undefined}
+        conditions={conditions}
+        onAttachCondition={(condition) => setConditions((prior) => [...prior, condition])}
+        onApprove={() => r2Decide("APPROVE", note.trim() || "Evidence reviewed and accepted.")}
+        onDeny={() => r2Decide("DENY", note.trim() || "Evidence rejected.")}
+        onRequestChanges={() => r2Decide("REQUEST_CHANGES", note.trim())}
+        onRequestCondition={() => {
+          if (conditions.length === 0) return;
+          r2Decide("APPROVE_WITH_CONDITION", note.trim() || "Approved with a condition.");
+        }}
       >
         {d ? (
           <CaptureNextStep
@@ -892,6 +927,7 @@ export function GateR2ReviewContainer({
 export function PaperExitReviewContainer({ api, reviewId, workspaceId }: { api: ExecutionApi; reviewId: string | null; workspaceId?: string }) {
   const [state, setState] = useState<LoadState<PaperExitDetail>>(loading);
   const { decision, decide } = useDecision(api, state.value?.workspaceId ?? null);
+  const retainedClosed = useRetainedWriteClosed();
 
   useEffect(() => {
     let cancelled = false;
@@ -924,7 +960,7 @@ export function PaperExitReviewContainer({ api, reviewId, workspaceId }: { api: 
         trail={decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : undefined}
         eligibility={d?.eligibility}
         // Every verb stays closed, with the reason, unless this read published the pins a decision needs; per-verb eligibility still applies on top.
-        decisionsClosedReason={d && d.binding.state !== "ready" ? d.binding.reason : null}
+        decisionsClosedReason={retainedClosed ?? (d && d.binding.state !== "ready" ? d.binding.reason : null)}
         reviewId={d?.reviewId ?? reviewId ?? "no review named"}
         deploymentId={d?.deploymentId ?? "unknown"}
         subject={d?.subject ?? reviewId ?? "the exit review register"}
@@ -1001,10 +1037,11 @@ export function GateLiveReviewContainer({ api, approvalId, workspaceId }: { api:
   // The governance backbone rides inside the live payload as a full
   // r2-review document — same reader, same eligibility semantics.
   const d = state.value ? readGateR2Detail(state.value.governanceBackbone) : null;
-  // Like R2, the live gate has no commissioned decision executor: every verb is closed with that reason, whatever a historical response's eligibility says,
-  // and nothing here ever plans the R1 command (FE-GOV-02).
+  // Live has its own gate (`LIVE_GATE`), command and context, and it is closed for every verb: no Live predecessor policy is published, whatever a response's
+  // eligibility says (FE-GOV-C03). Nothing here ever plans R1's or R2's command in its place, and nothing enables a Live or source action.
   const locked = true;
   const denyLocked = true;
+  const liveBinding = d ? bindGateDecision({ gate: "LIVE_GATE", context: d.decision, envelopeWorkspaceId: d.workspaceId ?? state.value?.workspaceId ?? null, approvalId }) : null;
   /*
    * PHASE 6 (round 2) · §3.5. `separationOfDuties` exists precisely to explain
    * why the verbs are false, and this screen was dropping it.
@@ -1013,7 +1050,9 @@ export function GateLiveReviewContainer({ api, approvalId, workspaceId }: { api:
     ? "This review published no governance document, so no decision can be addressed to it."
     : d.eligibility.separationOfDuties === "VIOLATION"
       ? "You requested or created this artifact, so you may not decide it — separation of duties."
-      : "Live decisions are not commissioned yet. Viewing this review grants no execution, and an R1 decision is never sent in its place.";
+      : liveBinding && liveBinding.state !== "ready"
+        ? liveBinding.reason
+        : "Live decisions stay closed on this build. Viewing this review grants no execution, and no other gate's decision is sent in its place.";
   return (
     <GateLiveReview
       approvalId={approvalId}

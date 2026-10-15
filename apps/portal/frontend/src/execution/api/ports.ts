@@ -21,6 +21,7 @@ import type { StageDrift } from "../hifiInsight";
 import type { CompositionName, OperationalComposition } from "../operationalComposition";
 import type { ApprovalRow, DecidedRow } from "../screens/ApprovalInbox";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "./rows";
+import type { DecisionGate } from "./governanceContext";
 import type {
   AnalyticsEnvelope,
   BindingExposure,
@@ -136,7 +137,22 @@ export function isPaperExitDecision(decision: string): decision is PaperExitDeci
 /** The schema pins the extension to one term; it is not a free number. */
 export const PAPER_EXIT_EXTENSION_DAYS = 14;
 
+/** Which Portal-local decision a plan/apply belongs to. Each has its own command, request schema and apply schema; none borrows another's. */
+export type DecisionKind = DecisionGate | "PAPER_EXIT";
+
+/** `authority_requirements` of a plan, exactly as served. The legacy `required_approvers` is a display/quorum summary and is not carried here as authorization. */
+export interface PlanAuthority {
+  capability: string;
+  /** `null` = no role constraint; an ADMIN label alone never grants access. */
+  roleConstraint: string | null;
+  workspaceMembershipRequired: boolean;
+  separationOfDutiesRequired: boolean;
+}
+
 export interface DecisionPlan {
+  /** The decision kind this plan was made for; the apply must name the same one. */
+  kind: DecisionKind;
+  authority: PlanAuthority | null;
   operationId: string;
   applyToken: string | null;
   blockers: readonly { code: string }[];
@@ -558,7 +574,9 @@ export interface ExecutionApi {
    * other decision.
    */
   planDecision(input: {
-    /** Approval or exit-review identifier. One command type, two subjects. */
+    /** Which decision this is. Defaults to R1 for a verb that is not a Paper Exit outcome; Paper Exit outcomes are always Paper Exit. */
+    gate?: DecisionGate;
+    /** Approval or exit-review identifier. One command type per gate. */
     approvalId: string;
     workspaceId: string;
     decision:
@@ -606,6 +624,8 @@ export interface ExecutionApi {
     operationId: string,
     applyToken: string,
     workspaceId: string,
+    /** The kind the plan was made for (`DecisionPlan.kind`): it picks the apply schema. */
+    kind?: DecisionKind,
   ): Promise<Result<ApplyReceipt>>;
   /** `GET /api/v1/execution/operations/{id}` */
   pollOperation(operationId: string): Promise<Result<OperationSnapshot>>;

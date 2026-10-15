@@ -109,6 +109,8 @@ const FLAGS: Record<string, { dangerous: boolean; why: string }> = {
  * being descriptive and belongs in FLAGS above with a danger direction.
  */
 const DESCRIPTIVE: Record<string, string> = {
+  workspace_membership_required: "a plan's authority_requirements: displays what the server enforces; an absent field reads as not stated; gates nothing",
+  separation_of_duties_required: "a plan's authority_requirements: displays what the server enforces; an absent field reads as not stated; gates nothing",
   plan_required: "describes the command protocol; renders a chip, gates nothing",
   apply_required: "describes the command protocol; renders a chip, gates nothing",
   verify_required: "describes the command protocol; renders a chip, gates nothing",

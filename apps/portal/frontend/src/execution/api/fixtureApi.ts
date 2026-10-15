@@ -98,7 +98,7 @@ import type {
   ConditionsPage,
   WaiverQuery,
 } from "./ports";
-import { unavailable } from "./ports";
+import { isPaperExitDecision, unavailable } from "./ports";
 import type { CapitalPreviewInput, InsightBatchInput, DecisionPlan } from "./ports";
 
 /** Wire-shaped, snake_case, exactly as the endpoint will send it. */
@@ -701,6 +701,8 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       const detail = readGateR2Detail({
         ...R2_DETAIL,
         approval: { ...(R2_DETAIL.approval as object), approval_id: approvalId },
+        // The synthetic context follows the requested approval, as the approval row does.
+        decision_context: { ...(R2_DETAIL.decision_context as object), approval_id: approvalId },
       });
       return detail
         ? { ok: true as const, value: detail, warnings: detail.gaps }
@@ -1021,8 +1023,10 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
           applyToken: blockers.length > 0 ? null : `gat1.fixture.${id}.${"a".repeat(43)}`,
           blockers: blockers.map((code) => ({ code })),
           warnings: [],
+          kind: isPaperExitDecision(input.decision) ? "PAPER_EXIT" : (input.gate ?? "R1"),
+          authority: null,
           expectedApprovalVersion: input.expectedApprovalVersion,
-          riskTier: "R1",
+          riskTier: input.gate === "R2" ? "R2" : "R1",
         },
       };
     },

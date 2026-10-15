@@ -6,7 +6,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import fixture from "../../../../../packages/contracts/fixtures/governance-review-context.synthetic.valid.json";
-import { bindR1Decision, readCaptureContext, readDecisionContext, readPaperExitDecisionContext, safeR1Href } from "./api/governanceContext";
+import { bindGateDecision, bindR1Decision, reasonWords, readCaptureContext, readDecisionContext, readPaperExitDecisionContext, safeR1Href } from "./api/governanceContext";
 import { readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "./api/rows";
 import { createFixtureApi } from "./api/fixtureApi";
 import { createHttpApi } from "./api/httpApi";
@@ -14,6 +14,8 @@ import { EXIT_DETAIL, R1_DETAIL, R2_DETAIL } from "./api/fixtureData";
 import type { PaperExitCreateInput, R2CaptureInput } from "./api/reviewCapture";
 import { CaptureNextStep } from "./components/CaptureNextStep";
 import { choose } from "./choiceTestUtil";
+import retainedFixture from "../../../../../packages/contracts/fixtures/execution-retained-review.valid.json";
+import { ensureRetainedReview, resetRetainedReviewForTests } from "./retainedReview";
 import { GateLiveReviewContainer, GateR1ReviewContainer, GateR2ReviewContainer, PaperExitReviewContainer } from "./screens/containers";
 
 afterEach(cleanup);
@@ -26,7 +28,8 @@ describe("published contexts (FE-GOV boundary)", () => {
     const r1 = readDecisionContext(fixture.r1);
     expect(r1).toMatchObject({ kind: "ok", value: { gate: "R1", commandReady: true, expectedVersion: 2, evidenceHashes: [H("a")] } });
     const r2 = readDecisionContext(fixture.r2);
-    expect(r2).toMatchObject({ kind: "ok", value: { gate: "R2", commandReady: false, evidenceHashes: null, availability: { available: false, reasonCode: "R2_EXECUTION_DECISION_NOT_COMMISSIONED" } } });
+    expect(r2).toMatchObject({ kind: "ok", value: { gate: "R2", commandReady: true, evidenceHashes: [H("a")], command: { commandType: "GOVERNANCE_R2_DECISION", planSchema: "governance.r2-decision-plan-request.v1", applySchema: "governance.r2-decision-apply-request.v1" } } });
+    expect(readDecisionContext(fixture.live)).toMatchObject({ kind: "ok", value: { gate: "LIVE_GATE", commandReady: false, command: { commandType: "GOVERNANCE_LIVE_DECISION", applySchema: "governance.live-decision-apply-request.v1" }, availability: { available: false, reasonCode: "LIVE_PARENT_NOT_PUBLISHED" } } });
     expect(readCaptureContext(fixture.capture)).toMatchObject({ kind: "ok", value: { action: "R2_CREATE", candidates: [{ deploymentId: "dep_example", riskGrantId: "risk_example", currency: null }] } });
     expect(readDecisionContext(undefined)).toEqual({ kind: "absent" });
   });
@@ -42,11 +45,39 @@ describe("published contexts (FE-GOV boundary)", () => {
     tamper(c);
     expect(readDecisionContext(c)).toEqual({ kind: "invalid" });
   });
-  it("refuses an R2 context that carries a command or claims to be available", () => {
-    const withCommand = { ...clone(fixture.r1), gate: "R2" };
-    expect(readDecisionContext(withCommand)).toEqual({ kind: "invalid" });
-    const available = { ...clone(fixture.r2), availability: { state: "AVAILABLE", reason_code: null } };
-    expect(readDecisionContext(available)).toEqual({ kind: "invalid" });
+  it("each gate carries ITS command and no other: a context naming another gate's command or schema is invalid", () => {
+    expect(readDecisionContext({ ...clone(fixture.r1), gate: "R2" })).toEqual({ kind: "invalid" });
+    expect(readDecisionContext({ ...clone(fixture.r2), gate: "LIVE_GATE" })).toEqual({ kind: "invalid" });
+    expect(readDecisionContext({ ...clone(fixture.r2), request_schema_version: "governance.r1-decision-plan-request.v1" })).toEqual({ kind: "invalid" });
+    expect(readDecisionContext({ ...clone(fixture.live), command_type: "GOVERNANCE_R2_DECISION" })).toEqual({ kind: "invalid" });
+  });
+  it("the earlier no-command shape is a legacy, blocked-only read: never AVAILABLE, and Live has no legacy shape", () => {
+    const legacyBlocked = { ...clone(fixture.r2), command_type: null, request_schema_version: null, plan_path: null, evidence_hashes: null, availability: { state: "BLOCKED", reason_code: "R2_EXECUTION_DECISION_NOT_COMMISSIONED" } };
+    expect(readDecisionContext(legacyBlocked)).toMatchObject({ kind: "ok", value: { gate: "R2", command: null, commandReady: false } });
+    expect(readDecisionContext({ ...legacyBlocked, availability: { state: "AVAILABLE", reason_code: null } })).toEqual({ kind: "invalid" });
+    expect(readDecisionContext({ ...clone(fixture.live), command_type: null, request_schema_version: null, plan_path: null })).toEqual({ kind: "invalid" });
+  });
+  it("binds R2 from its OWN context only, Live stays blocked with its typed reason, and nothing crosses gates", () => {
+    const r2 = readDecisionContext(fixture.r2);
+    expect(bindGateDecision({ gate: "R2", context: r2, envelopeWorkspaceId: "ws_example", approvalId: "apr_example" })).toEqual({ state: "ready", workspaceId: "ws_example", approvalId: "apr_example", expectedVersion: 2, evidenceHashes: [H("a")], source: "context" });
+    // an R1 binder on an R2 read, and an R2 binder on an R1 or Live read, are refused
+    expect(bindGateDecision({ gate: "R1", context: r2, envelopeWorkspaceId: "ws_example", approvalId: "apr_example" })).toMatchObject({ state: "unavailable" });
+    expect(bindGateDecision({ gate: "R2", context: readDecisionContext(fixture.r1), envelopeWorkspaceId: "ws_example", approvalId: "apr_example" })).toMatchObject({ state: "unavailable" });
+    expect(bindGateDecision({ gate: "R2", context: readDecisionContext(fixture.live), envelopeWorkspaceId: "ws_example", approvalId: "apr_example" })).toMatchObject({ state: "unavailable" });
+    // Live: blocked with its own code, in words
+    const live = bindGateDecision({ gate: "LIVE_GATE", context: readDecisionContext(fixture.live), envelopeWorkspaceId: "ws_example", approvalId: "apr_example" });
+    expect(live).toMatchObject({ state: "blocked", reasonCode: "LIVE_PARENT_NOT_PUBLISHED" });
+    expect((live as { reason: string }).reason).toMatch(/no published predecessor policy/);
+    // a context for another approval or workspace, an absent or invalid one: never a fallback to a manifest or digest
+    expect(bindGateDecision({ gate: "R2", context: r2, envelopeWorkspaceId: "ws_other", approvalId: "apr_example" })).toMatchObject({ state: "unavailable" });
+    expect(bindGateDecision({ gate: "R2", context: r2, envelopeWorkspaceId: "ws_example", approvalId: "apr_other" })).toMatchObject({ state: "unavailable" });
+    expect(bindGateDecision({ gate: "R2", context: { kind: "absent" }, envelopeWorkspaceId: "ws_example", approvalId: "apr_example" })).toMatchObject({ state: "unavailable" });
+    expect(bindGateDecision({ gate: "R2", context: { kind: "invalid" }, envelopeWorkspaceId: "ws_example", approvalId: "apr_example" })).toMatchObject({ state: "unavailable" });
+  });
+  it("names each refusal code the server can send in words", () => {
+    for (const code of ["R2_APPROVAL_REQUIRED", "R1_LINEAGE_UNPUBLISHED", "R1_NOT_APPROVED", "R1_EXPIRED", "R1_PARENT_CHANGED", "R1_EVIDENCE_MANIFEST_INTEGRITY_FAILED", "LIVE_PARENT_NOT_PUBLISHED", "APPROVAL_POLICY_CHANGED", "ADMIN_ROLE_REQUIRED", "APPROVER_ROLE_REQUIRED"]) {
+      expect(reasonWords(code), code).not.toBe(code);
+    }
   });
   it.each([
     ["more than 50 choices", (c: any) => { c.candidates = Array.from({ length: 51 }, (_, i) => ({ deployment_id: `d${i}`, portfolio_id: "p", risk_grant_id: "g", currency: null })); }],
@@ -241,9 +272,29 @@ describe("FE-GOV-01 · the R1 command carries the exact pins and typed condition
   });
 });
 
-describe("FE-GOV-02 · R2 and Live never plan a decision", () => {
-  it("R2: every verb closed with the not-commissioned reason; nothing is planned even after clicking", async () => {
+describe("FE-GOV-C03 · R2 plans its OWN command; Live stays closed", () => {
+  it("R2: a decision is planned as GOVERNANCE_R2_DECISION with this read's child pins, then applied under the R2 apply schema", async () => {
     const api = createFixtureApi();
+    const plan = vi.spyOn(api, "planDecision");
+    const apply = vi.spyOn(api, "applyPlan");
+    render(<GateR2ReviewContainer api={api} approvalId="AP-352" />);
+    fireEvent.change(await screen.findByRole("textbox", { name: /reason|note/i }), { target: { value: "Capital scope reviewed and refused." } });
+    const deny = await screen.findByRole("button", { name: "Deny" });
+    await waitFor(() => expect(deny).toHaveProperty("disabled", false));
+    await act(async () => { fireEvent.click(deny); });
+    await waitFor(() => expect(plan).toHaveBeenCalledTimes(1));
+    expect(plan.mock.calls[0]![0]).toMatchObject({
+      gate: "R2", approvalId: "AP-352", workspaceId: "ws_fixture_governance", decision: "DENY", expectedApprovalVersion: 3,
+      evidenceHashes: ["sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"],
+    });
+    await waitFor(() => expect(apply).toHaveBeenCalledTimes(1));
+    expect(apply.mock.calls[0]![3]).toBe("R2");
+  });
+  it("R2: a blocked context closes every verb with its reason in words and plans nothing", async () => {
+    const blocked = clone(R2_DETAIL) as any;
+    blocked.decision_context = { ...blocked.decision_context, availability: { state: "BLOCKED", reason_code: "R1_NOT_APPROVED" } };
+    const api = createFixtureApi();
+    vi.spyOn(api, "getGateR2").mockResolvedValue({ ok: true, value: readGateR2Detail(blocked)!, warnings: [] });
     const plan = vi.spyOn(api, "planDecision");
     render(<GateR2ReviewContainer api={api} approvalId="AP-352" />);
     const approve = await screen.findByRole("button", { name: "Approve" });
@@ -252,11 +303,10 @@ describe("FE-GOV-02 · R2 and Live never plan a decision", () => {
       expect(button, name).toHaveProperty("disabled", true);
       fireEvent.click(button);
     }
-    expect(approve.getAttribute("title")).toMatch(/not commissioned/);
-    expect(screen.getAllByText(/grants no execution/).length).toBeGreaterThanOrEqual(1);
+    expect(approve.getAttribute("title")).toMatch(/not approved/);
     expect(plan).not.toHaveBeenCalled();
   });
-  it("R2: a historical response that claims eligibility and has no context is closed just the same", async () => {
+  it("R2: a historical response with eligibility but no context is closed — its decision is never addressed from R1's manifest or digest", async () => {
     const legacy = clone(R2_DETAIL) as any;
     delete legacy.decision_context;
     const api = createFixtureApi();
@@ -275,6 +325,77 @@ describe("FE-GOV-02 · R2 and Live never plan a decision", () => {
     expect(screen.getByRole("button", { name: /Deny/ })).toHaveProperty("disabled", true);
     fireEvent.click(approve);
     expect(plan).not.toHaveBeenCalled();
+  });
+});
+
+describe("the wire: plan and apply carry the gate's own schema", () => {
+  const plans: Record<string, unknown>[] = [];
+  const stub = (kind: "R2" | "LIVE_GATE" | "PAPER_EXIT" | "R1") => {
+    plans.length = 0;
+    vi.stubGlobal("fetch", vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+      plans.push({ url: String(_url), body: init?.body ? JSON.parse(String(init.body)) : null });
+      const body = String(_url).endsWith("/commands/plans")
+        ? { operation_id: "op_1", apply_token: "tok", blockers: [], warnings: [], expected_approval_version: 2, risk_tier: kind, authority_requirements: { capability: "governance.r2.decide", role_constraint: null, workspace_membership_required: true, separation_of_duties_required: true } }
+        : { operation_id: "op_1", receipt_id: null, status: "PENDING" };
+      return new Response(JSON.stringify(body), { status: String(_url).endsWith("/apply") ? 202 : 200, headers: { "content-type": "application/json" } });
+    }));
+  };
+  afterEach(() => vi.unstubAllGlobals());
+  const policy = { policyRevision: 4, queryEnabled: true, projectionIngestionEnabled: true, sseEnabled: true, governanceWriteEnabled: true, paperCommandsEnabled: true, sandboxCommandsEnabled: true, liveProtectiveCommandsEnabled: true, liveRiskIncreasingCommandsEnabled: true } as never;
+  it.each([
+    ["R2", "governance.r2-decision-plan-request.v1", "GOVERNANCE_R2_DECISION", "governance.r2-decision-apply-request.v1"],
+    ["LIVE_GATE", "governance.live-decision-plan-request.v1", "GOVERNANCE_LIVE_DECISION", "governance.live-decision-apply-request.v1"],
+    ["R1", "governance.r1-decision-plan-request.v1", "GOVERNANCE_R1_DECISION", "governance.r1-decision-apply-request.v1"],
+  ] as const)("%s: plan %s / %s, apply %s", async (gate, planSchema, command, applySchema) => {
+    stub(gate);
+    const api = createHttpApi({ policy });
+    const planned = await api.planDecision({ gate, approvalId: "apr_1", workspaceId: "ws_1", decision: "DENY", reason: "Evidence is not enough.", expectedApprovalVersion: 2, evidenceHashes: [H("a")], requestKey: "k1" });
+    expect(planned.ok).toBe(true);
+    if (!planned.ok) throw new Error(planned.reason);
+    expect(plans[0]!.body).toMatchObject({ schema_version: planSchema, command_type: command, target: { approval_id: "apr_1" } });
+    expect(planned.value).toMatchObject({ kind: gate, authority: { capability: "governance.r2.decide", roleConstraint: null, workspaceMembershipRequired: true, separationOfDutiesRequired: true } });
+    await api.applyPlan("op_1", "tok", "ws_1", planned.value.kind);
+    expect(plans[1]!.body).toMatchObject({ schema_version: applySchema, workspace_id: "ws_1", apply_token: "tok" });
+  });
+});
+
+describe("Paper Exit apply carries ITS schema (a defect found while reading the apply route)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("plans GOVERNANCE_PAPER_EXIT_DECISION and applies under governance.paper-exit-decision-apply-request.v1 — never R1's apply schema", async () => {
+    const sent: { url: string; body: any }[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      sent.push({ url: String(url), body: init?.body ? JSON.parse(String(init.body)) : null });
+      const plan = String(url).endsWith("/commands/plans");
+      return new Response(JSON.stringify(plan ? { operation_id: "op_9", apply_token: "tok", blockers: [], warnings: [] } : { operation_id: "op_9", status: "PENDING" }), { status: plan ? 200 : 202 });
+    }));
+    const api = createHttpApi({ policy: { policyRevision: 4, queryEnabled: true, projectionIngestionEnabled: true, sseEnabled: true, governanceWriteEnabled: true, paperCommandsEnabled: true, sandboxCommandsEnabled: true, liveProtectiveCommandsEnabled: true, liveRiskIncreasingCommandsEnabled: true } as never });
+    const planned = await api.planDecision({ approvalId: "EX-1", workspaceId: "ws_1", decision: "PROMOTE", reason: "Exit review decision: PROMOTE.", expectedApprovalVersion: 3, evidenceHashes: [H("a")], requestKey: "k" });
+    expect(planned.ok).toBe(true);
+    if (!planned.ok) throw new Error(planned.reason);
+    expect(planned.value.kind).toBe("PAPER_EXIT");
+    expect(sent[0]!.body).toMatchObject({ schema_version: "governance.paper-exit-decision-plan-request.v1", command_type: "GOVERNANCE_PAPER_EXIT_DECISION" });
+    await api.applyPlan("op_9", "tok", "ws_1", planned.value.kind);
+    expect(sent[1]!.body.schema_version).toBe("governance.paper-exit-decision-apply-request.v1");
+  });
+});
+
+describe("FE-GOV-C06 · a retained stack keeps every decision read-only", () => {
+  afterEach(() => { cleanup(); vi.unstubAllGlobals(); resetRetainedReviewForTests(); });
+  it("R2 verbs stay closed with the retained reason although the gate and the reviewer are eligible, and nothing is planned", async () => {
+    resetRetainedReviewForTests();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(retainedFixture), { status: 200, headers: { "content-type": "application/json" } })));
+    await act(async () => { ensureRetainedReview(); await new Promise((resolve) => setTimeout(resolve, 40)); });
+    const api = createFixtureApi();
+    const plan = vi.spyOn(api, "planDecision");
+    render(<GateR2ReviewContainer api={api} approvalId="AP-352" />);
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 80)); });
+    const deny = screen.getByRole("button", { name: "Deny" });
+    expect(deny.getAttribute("title")).toMatch(/retained review/);
+    expect(deny).toHaveProperty("disabled", true);
+    fireEvent.click(deny);
+    expect(plan).not.toHaveBeenCalled();
+    /* let the review's own preview read settle inside act before the test ends */
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 40)); });
   });
 });
 
