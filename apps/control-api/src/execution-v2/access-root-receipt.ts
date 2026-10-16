@@ -6,6 +6,8 @@ import { AccessPolicyError, accessText, reviewedAccessPolicy, scopedAccessGrant,
   tsBusinessAction, tsMembershipAcceptance } from "./access.contract";
 import { accessDigest, canonicalSelector, type AccessRelations } from "./access-policy";
 import { AccessRepository, type AccessEvent, type AccessReceipt } from "./access.repository";
+import { CurrentHumanLeaseError } from "./current-human-candidate";
+import type { CurrentHumanMutations } from "./current-human-mutations";
 
 const digest = z.string().regex(/^sha256:[0-9a-f]{64}$/);
 
@@ -58,12 +60,15 @@ function isRootReplay(prior: AccessEvent, fact: TsRootMembershipAcceptance, proo
  * ordinary proposal bypass, external calls inside transactions, or source enable. */
 export async function acceptRootMembershipReceipt(pool: Pool,
   verify: ((input: unknown) => Promise<QualifiedRootMembershipReceipt | null>) | undefined,
-  input: unknown, allowTestOnly = false): Promise<{ receipt: AccessReceipt; replayed: boolean }> {
+  input: unknown, allowTestOnly = false,
+  authorityMutations?: CurrentHumanMutations): Promise<{ receipt: AccessReceipt; replayed: boolean }> {
+  if (authorityMutations && !authorityMutations.usesPool(pool)) throw notQualified();
   if (!verify) throw notQualified();
   let lease: QualifiedRootMembershipReceipt | null;
   try { lease = await verify(input); } catch { throw notQualified(); }
   if (!lease || typeof lease.release !== "function") throw notQualified();
   const release = lease.release.bind(lease);
+  let initialLeaseHeld = true;
   try {
     if (typeof lease.assertCurrent !== "function") throw notQualified();
     const guard = lease.assertCurrent.bind(lease);
@@ -80,7 +85,8 @@ export async function acceptRootMembershipReceipt(pool: Pool,
       membership.receipt_id !== fact.receipt_id || membership.mapping_revision !== fact.mapping_revision))
       throw new AccessPolicyError("TS_MEMBERSHIP_REVISION_CONFLICT", 409);
     guardNow(guard);
-    const result = await withTransaction(pool, async db => {
+    type Result = { receipt: AccessReceipt; replayed: boolean };
+    const processRoot = async (db: PoolClient, write: boolean, currentGuard?: () => void): Promise<Result | null> => {
       await db.query("SET LOCAL lock_timeout='1500ms'");
       await db.query("SET LOCAL statement_timeout='5000ms'");
       const lock = await db.query("SELECT pg_try_advisory_xact_lock(hashtextextended($1,0)) AS acquired", [`portal-access-v2:${fact.workspace_id}`]);
@@ -88,7 +94,7 @@ export async function acceptRootMembershipReceipt(pool: Pool,
       const repo = new AccessRepository(db), prior = await repo.sourceEvent(fact.source, fact.receipt_id);
       if (prior) {
         if (!isRootReplay(prior, fact, proofDigest)) throw new AccessPolicyError("RECEIPT_PAYLOAD_CONFLICT", 409);
-        guardNow(guard);
+        if (currentGuard) guardNow(currentGuard);
         // Historical outcome only. Never restore a revoked grant or old policy.
         return { receipt: prior.receipt, replayed: true };
       }
@@ -134,9 +140,10 @@ export async function acceptRootMembershipReceipt(pool: Pool,
           fact.expires_at_ms !== null && (fact.expires_at_ms <= now || fact.expires_at_ms <= fact.effective_at_ms) ||
           grant.valid_until_ms !== null && (fact.expires_at_ms === null || fact.expires_at_ms > grant.valid_until_ms))
           throw new AccessPolicyError("RECEIPT_REVISION_CONFLICT", 409);
-        guardNow(guard);
+        if (currentGuard) guardNow(currentGuard);
       };
       const now = await dbNow(db); assertCurrent(now);
+      if (!write) return null;
       const updated = fact.outcome === "ACCEPTED" ? { ...grant, revision: randomId("acr"), ts_receipt: {
         receipt_id: fact.receipt_id, membership_revision: fact.membership_revision, mapping_revision: fact.mapping_revision,
         effective_at_ms: fact.effective_at_ms, expires_at_ms: fact.expires_at_ms,
@@ -154,10 +161,77 @@ export async function acceptRootMembershipReceipt(pool: Pool,
       // Last DB await precedes the sync provider fence; no external I/O here.
       assertCurrent(await dbNow(db));
       return { receipt, replayed: false };
-    });
+    };
+    const apply = async (db: PoolClient, currentGuard: () => void): Promise<Result> => {
+      const result = await processRoot(db, true, currentGuard);
+      if (!result) throw notQualified();
+      return result;
+    };
+    if (authorityMutations) {
+      // An immutable source receipt may predate commissioning of the durable
+      // coordinator. Its authenticated historical ACK is not a new authority
+      // mutation: do not drain/retire unrelated leases or create an intent.
+      const historical = await withTransaction(pool, async db => {
+        await db.query("SET LOCAL statement_timeout='5000ms'");
+        const prior = await new AccessRepository(db).sourceEvent(fact.source, fact.receipt_id);
+        if (prior && !isRootReplay(prior, fact, proofDigest)) throw new AccessPolicyError("RECEIPT_PAYLOAD_CONFLICT", 409);
+        guardNow(guard);
+        return prior;
+      });
+      if (historical) {
+        try { guardNow(guard); } catch { throw new AccessPolicyError("ACCESS_RETRY_REQUIRED", 503); }
+        return { receipt: historical.receipt, replayed: true };
+      }
+      // A source fence held across drain recovery could block its own TS
+      // resolution. Release the initial qualification before any Core work;
+      // the coordinator reacquires an exact fresh fence after recovery.
+      initialLeaseHeld = false;
+      try { await release(); } catch { throw new AccessPolicyError("ACCESS_RETRY_REQUIRED", 503); }
+      const qualifiedDigest = accessDigest({ fact, mapping, membership });
+      let currentGuard: (() => void) | null = null;
+      return await authorityMutations.executeVerified({ family: "QUALIFIED_ROOT_RECEIPT", operation: "ROOT_RECEIPT",
+        key_digest: accessDigest(["ROOT_RECEIPT", fact.source, fact.receipt_id]), request_digest: proofDigest,
+        target_id: fact.workspace_id }, {
+        retain_after_application_rollback: true,
+        authorize: async db => { await processRoot(db, false); },
+        acquire_fence: async () => {
+          let fresh: QualifiedRootMembershipReceipt | null;
+          try { fresh = await verify(input); } catch { throw notQualified(); }
+          if (!fresh || typeof fresh.release !== "function") throw notQualified();
+          const freshLease = fresh;
+          try {
+            if (typeof freshLease.assertCurrent !== "function") throw notQualified();
+            const parsed = tsRootMembershipAcceptance.safeParse(freshLease.fact);
+            if (!parsed.success || accessDigest({ fact: parsed.data,
+              mapping: structuredClone(freshLease.mapping), membership: structuredClone(freshLease.membership) }) !== qualifiedDigest)
+              throw refusal();
+            const assertCurrent = freshLease.assertCurrent.bind(freshLease);
+            guardNow(assertCurrent);
+            currentGuard = assertCurrent;
+            return { assertCurrent: () => guardNow(assertCurrent), release: async () => {
+              try { await freshLease.release(); } catch { throw new AccessPolicyError("ACCESS_RETRY_REQUIRED", 503); }
+            } };
+          } catch (error) {
+            try { await freshLease.release(); } catch { throw new AccessPolicyError("ACCESS_RETRY_REQUIRED", 503); }
+            throw error;
+          }
+        },
+        apply: db => {
+          if (!currentGuard) throw notQualified();
+          return apply(db, currentGuard);
+        },
+        terminal: result => ({ outcome: "APPLIED", receipt_ref: result.receipt.operation_id, reason_code: null }),
+      });
+    }
+    const result = await withTransaction(pool, db => apply(db, guard));
     try { guardNow(guard); } catch { throw new AccessPolicyError("ACCESS_RETRY_REQUIRED", 503); }
     return result;
   } catch (error) {
+    if (error instanceof CurrentHumanLeaseError) {
+      if (error.code === "CURRENT_HUMAN_MUTATION_KEY_CONFLICT")
+        throw new AccessPolicyError("RECEIPT_PAYLOAD_CONFLICT", 409);
+      throw new AccessPolicyError("ACCESS_RETRY_REQUIRED", 503);
+    }
     if (error && typeof error === "object" && "code" in error && String(error.code) === "23505")
       throw new AccessPolicyError("RECEIPT_PAYLOAD_CONFLICT", 409);
     if (error && typeof error === "object" && "code" in error && ["55P03", "40P01", "57014"].includes(String(error.code)))
@@ -166,6 +240,8 @@ export async function acceptRootMembershipReceipt(pool: Pool,
   } finally {
     // Core's COMMIT/ROLLBACK and connection release have both completed.
     // A failure is an uncertain acknowledgement; source-id replay is safe.
-    try { await release(); } catch { throw new AccessPolicyError("ACCESS_RETRY_REQUIRED", 503); }
+    if (initialLeaseHeld) {
+      try { await release(); } catch { throw new AccessPolicyError("ACCESS_RETRY_REQUIRED", 503); }
+    }
   }
 }

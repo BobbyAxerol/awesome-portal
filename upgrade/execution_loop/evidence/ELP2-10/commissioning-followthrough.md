@@ -674,3 +674,163 @@ one-view decision; operator/artifact and source-receipt purpose adapters;
 actual selected trust/provider installation; approved numeric budget/calibration;
 allocated paired coexistence/original G2. None is replaced by this correctness
 receipt; full10NOT_MET,11not started.
+
+## Continuation: artifact/source purpose, historical policy replay (entry b3620cf5)
+
+Entry2026-10-16: `docs/research-loop-plan`, clean full SHA
+`b3620cf5a6d97619da5b7fc3056732750133cead`. The workspace batch terminal
+`workspace-land-213104/controller.json` is PASS: contracts691, API4233 PASS /
+3 existing skips, build and scoped PostgreSQL restore; eight runtime tuples
+unchanged, zero owned leftovers. This supersedes only its preparation-time
+PENDING gate prose above, not actual commissioning or production capacity.
+
+Confirmed new bug: `installReviewedPolicy` only consults its immutable install
+event when the incoming revision is current. Replaying an older installed
+revision can roll policy back. Exact historical replay must acknowledge that
+event read-only; changed content under the same revision conflicts. Neither
+replay nor missing original install evidence may restore grants or policy.
+
+Approved existing ELP2-10 scope: compose reviewed-artifact and qualified root
+receipt purposes with the same drain/recovery barrier, without fabricating a
+human session. Source guards must not survive across recovery that could need
+the same source fence; reacquire after recovery and hold through Core outcome.
+Ordinary receipt adapters without that held proof remain explicitly unqualified.
+No runtime activation, source/credential changes, public schema/UI, numbered
+migration or ELP2-11. Current SQL remains an isolated unmounted installer.
+
+Task map before delegation (one writer/path):
+
+| Task | Owner / output | Allowed writes | Dependencies / acceptance |
+| --- | --- | --- | --- |
+| Historical replay regression | delegated test writer | `test/elp2-access-transaction.spec.ts` only | Existing fixture; original event first, exact historical ACK/no writes, changed digest409, no missing-receipt repair. No independent tests/Git/runtime. |
+| Purpose composition | primary | coordinator/installer, access service, dedicated purpose tests | Strict non-session binding; existing session digests compatible; held source fence outside recovery/Core I/O; exact receipt replay. |
+| Root receipt composition | delegated root writer | `access-root-receipt.ts`, `test/elp210-root-receipt.spec.ts` only | Frozen `executeVerified` binding/fence interface from primary; no source await inside Core, reacquire after recovery; no tests/Git/runtime independently. |
+| Independent security review | delegated readonly reviewer | none; return notes | Check purpose trust/identity, replay/UNKNOWN/fence lifetime and Core COMMIT boundaries against actual source. No gates or credentials. |
+
+One local correctness cell remains the approved4CPU/4GiB/8GiB ceiling; one
+heavy lane only, honor measurement locks. Group affected tests in one normal
+hook for this coherent delivery, preserving failures. No calibration/load/DR
+rerun unrelated to these changes. Candidate trust/calibration/budget artifacts
+and paired source-connected performanceG2 remain separate OPEN dependencies.
+Claude receives no new public field; existing consumer handoffs still await
+assignment/review. Owner one-view login answer remains pending; independent
+artifact/root work can proceed. Current preparation verdict: IN_PROGRESS,
+not a test receipt or full phase PASS.
+
+### Implemented working delta / evidence freeze
+
+New internal finding **ELP2-REQ-10-004**: historical reviewed-policy replay
+could reinstall a superseded revision. Owner Codex; status IN_PROGRESS until
+the normal-hook terminal receipt. Original install event now owns replay:
+full exact artifact digest returns read-only, changed policy/roots/provenance
+under its revision409, missing original event never synthesizes authority.
+Verified events predating coordinator adoption also ACK without opening a new
+drain, retiring leases, or waiting on unrelated UNKNOWN. Detached artifact
+snapshot prevents provider-owned JS mutation across Core awaits.
+
+Source/operator entries in the earlier writer census are refined, not erased:
+`installReviewedPolicy` and `acceptRootTsReceipt` now optionally use the same
+coordinator through separate strict REVIEWED_POLICY / QUALIFIED_ROOT_RECEIPT
+purposes. Their actor/session/generation columns are NULL and forbidden by SQL
+for these families; human families still require all three. Domain-separated
+identity keys bind workspace+revision or source+receipt id; full normalized
+artifact/fact is the request digest. Access identifiers keep their256-codepoint
+contract; existing human binding/replay digest semantics are unchanged.
+
+Root qualification releases its initial provider fence before recovery;
+UNKNOWN blocks before reacquisition, signed COMMITTED/ROLLED_BACK permits
+reacquiring exact detached fact+mapping+membership outside Core. The provider
+must actually hold a revocation fence through physical COMMIT/ROLLBACK and
+bounded release; a timer or last synchronous check is not equivalent. Final
+guards run before/after Core outcome. Failure rolls back or returns uncertain
+503, preserving same durable intent/immutable receipt for retry, never regrant.
+Historical Core policy/revoke does not invalidate old receipt ACK, but provider
+must still authenticate that fact: a revoked/unavailable mapping proof remains
+typed unavailable, not browser-only replay. Ordinary delegated receipt intake
+still lacks an equivalent held-source provider and is separately OPEN.
+
+Tests authored (not yet PASS):14 artifact/historical metadata cases,11 root
+cases(1 synthetic composition +10 real disposable-PG); existing candidate and
+workspace coordinator tests are impacted regressions. Cases include real
+expiry/UNKNOWN, actual single-connection recovery, receipt conflicts, raw SQL
+purpose constraints, post-write fence rollback, release-ACK uncertainty and
+replay with no writes to current state. No TS/PM/source case is represented by
+these fixtures. Frozen normal-hook batch `purpose` owns the4 source paths,
+2 test paths, this packet and Unified; controller records exact source hashes,
+runtime tuples, result and cleanup under the existing private evidence root.
+
+Readonly source refresh22:04UTC: PM clean `4e99c5e6b8e4dcb3de73a2732d3410cee27187c0`;
+TLS handoff remains`c8bd50bf…`; readiness now
+`f236025ab1d8fa8ac64c75065b34591da4dfa6dc0a72559b977530d7a0c3d52c`,
+still DRAFT_NOT_APPROVED_FOR_EXECUTION with target/resource/workload/SLO null.
+Edge stays`ec5c6c2f…`, measurement-plan`aaa1c7d0…`; foreign untracked feasibility
+file was observed and untouched. No remote write/test/load/credential operation.
+
+New owner interoperability return at PM84af0a5c:
+`pma11-03-core-human-interoperability.json` SHA256
+`cf711e9589b4146974ebcd18fb0096ee68a71797452ee3fb7f1c272b3dfcd7a2`;
+evidence SHA256`7a6924a82fa1e42bc2255ec4cc60605e7bf2a3f3cf8c5bab67c238d7b1990201`.
+Reports73PASS(8new+65regression;52unit/21PG-HTTP-TLS),21:30:38→21:32:07UTC,
+exact Core`26e688e4`, real HTTP byte binding/JWT, Core ENTER/RESOLVE mTLS and
+independent terminal source readback, field denial, revoke-before-effect,
+lost ACK/UNKNOWN, wrong bytes/TLS pin.25offline checks are separate, not98
+distinct runtime cases. This is source-reported isolated interoperability,
+not installed authority or full16/capacity/production acceptance.
+
+Impact review: Core candidate/transport/wire/HTTP-binding source is byte-for-byte
+unchanged from26e688e4; reuse this exact narrow interoperability receipt, do not
+rerun its unchanged source tests. New mutation families/DB constraints/writer
+composition are **not** certified by it and require the current normal hook.
+Actual client/trust/provider/current source installation, numeric approved
+calibration/budget and allocated source-connected coexistence/G2 remain OPEN.
+
+Rollback: optional coordinator injection absent returns legacy composition;
+do not remove authority history/regrant or reinstall an old policy. Candidate
+installer remains unmounted/disposable-only, no numbered production migration.
+Backend next is still ELP2-10: qualified ordinary receipt provider and separate
+verified-issuance one-view decision, then actual installed trust/provider and
+approved numeric/performance envelope. Claude: no public field/type/UI delta,
+existing six consumers AWAITING_CONSUMER_REVIEW. No new FE request after this
+comparison;10-004 is internal,10-003 provider integration advanced only locally.
+
+### Focus receipt and final normal-hook freeze (purpose batch)
+
+The isolated focus gate completed22:12:30UTC: build PASS;4files,
+**215/215 PASS,0skip**,77.98s; scoped PostgreSQL restore/4row digests PASS.
+Private receipt `purpose-focus-220752/controller.json` SHA256
+`820020125e832389d728016c14650ba1eb0e3ee1e229d99e703cb01a0bf16e93`;
+`gate.log` SHA256
+`bbd8124f6c913b78ec1281c0aaf93f8db4792888f3a3a3bc5c5a4f3b4f5c28c0`.
+Both are under `/home/bobby/.local/state/portal-execution-elp210/20261016/`.
+Controller records exact source hashes; eight shared runtime tuples unchanged,
+no owned container/network left, own measurement lock released. This is
+TEST_ONLY Core correctness, not source-connected capacity or commissioning.
+
+Independent review found one additional refusal mismatch after that freeze:
+changed full payload under a still-PENDING source+receipt id was translated to
+503 instead of permanent409. Intake now maps the coordinator's exact key
+conflict to `RECEIPT_PAYLOAD_CONFLICT`409. One additional real-PG regression
+asserts the original intent/authority/ENTERED source lease/grant/event stay
+unchanged and no recovery is invoked. This correction and its test were not
+in the215-case focus; the mandatory normal hook is their validation gate.
+The final batch contains14 artifact cases and12 root cases, not duplicated
+coverage from repeated runs. No extra full focused rerun for this small delta.
+
+An optional host noEmit check was bounded to1536MiB heap and stopped at about
+4.5min/exit143 after GC pressure; it is NOT_COMPLETED, not a typecheck PASS.
+The isolated build above passed; the normal hook performs the landing build.
+No second heavy lane or runtime restart was used to force this optional check.
+
+Frozen land gate: `commissioning-gate.py land purpose`, exact eight paths
+listed above, one normal unbypassed hook. Its forthcoming terminal
+`purpose-land-HHMMSS/controller.json` is authoritative only if exit0,
+`runtime_unchanged:true`, zero owned resources and its recorded HEAD includes
+the commit. Until then the landing gate remains PENDING, with the focus result
+reused only at its exact source scope. Preserve failed logs; no repeated full
+hook merely to replace this pre-commit text with a final PASS statement.
+
+Rollback remains unmounting optional composition, not reverting authority
+history. Actual trust/provider/current source installation, the verified
+issuance decision, approved numeric budget/calibration and allocated original
+G2/coexistence stay OPEN. No new Claude type/UI task; backend next is the
+ordinary delegated receipt held-source purpose within ELP2-10, not ELP2-11.

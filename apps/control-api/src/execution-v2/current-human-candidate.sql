@@ -50,10 +50,14 @@ CREATE TABLE elp210_candidate.mutations (
   key_digest text UNIQUE NOT NULL CHECK (key_digest ~ '^sha256:[a-f0-9]{64}$'),
   binding_digest text NOT NULL CHECK (binding_digest ~ '^sha256:[a-f0-9]{64}$'),
   replay_digest text NOT NULL CHECK (replay_digest ~ '^sha256:[a-f0-9]{64}$'),
-  family text NOT NULL CHECK (family IN ('ACCOUNT_LIFECYCLE','GOVERNANCE_GRANT','EXECUTION_ACCESS','AUTH_SESSION','WORKSPACE_PROVISIONING')),
-  actor_id text NOT NULL,
-  session_id text NOT NULL,
-  session_revision bigint NOT NULL,
+  family text NOT NULL CHECK (family IN ('ACCOUNT_LIFECYCLE','GOVERNANCE_GRANT','EXECUTION_ACCESS','AUTH_SESSION','WORKSPACE_PROVISIONING',
+    'REVIEWED_POLICY','QUALIFIED_ROOT_RECEIPT')),
+  actor_id text,
+  session_id text,
+  session_revision bigint,
+  CHECK ((family IN ('REVIEWED_POLICY','QUALIFIED_ROOT_RECEIPT') AND actor_id IS NULL AND session_id IS NULL AND session_revision IS NULL)
+    OR (family NOT IN ('REVIEWED_POLICY','QUALIFIED_ROOT_RECEIPT') AND actor_id IS NOT NULL AND session_id IS NOT NULL
+      AND session_revision IS NOT NULL AND session_revision BETWEEN 0 AND 9007199254740991)),
   state text NOT NULL DEFAULT 'PENDING' CHECK (state IN ('PENDING','FINISHED','REFUSED')),
   terminal_digest text,
   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),

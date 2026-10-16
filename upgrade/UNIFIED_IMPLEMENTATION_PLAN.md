@@ -9890,6 +9890,40 @@ source-connected coexistence/original performanceG2 remain OPEN; Claude's six
 Manager/360 consumers remain AWAITING_CONSUMER_REVIEW. Full10NOT_MET;
 11/dev/main/push/release/deploy/Live are not started.
 
+**ELP2-10 continued, entry b3620cf5:** workspace composition landed via normal
+hook691contracts/4233API PASS+3existingSKIP, build/scoped restore; eight runtime
+tuples unchanged, no owned resources. The [same canonical commissioning packet](./execution_loop/evidence/ELP2-10/commissioning-followthrough.md#continuation-artifactsource-purpose-historical-policy-replay-entry-b3620cf5)
+records the next bounded artifact/root-purpose batch, historical-policy rollback
+bug, independent source review and exact test ownership. Verified artifacts and
+source receipts must not be fabricated as human sessions; immutable old receipts
+are read-only ACKs even when no coordinator intent existed originally. Source
+fences are released before drain recovery and reacquired after it, held through
+Core outcome. New code's gate is PENDING until its terminal controller receipt,
+not inherited from b362's PASS. No public field/FE change or runtime installation.
+
+Readonly HK refresh22:04UTC: PM advanced independently to4e99c5e6, clean;
+TLS handoff hash unchangedc8bd50bf and Edgeec5c6c2f measurement-planaaa1c7d0
+unchanged, with one foreign untracked feasibility document preserved. New PM
+84af0a5c interoperability receipt reports73PASS(8newcases) at exact Core26e688e4
+with real mTLS/HTTP/Core PG; its qualification explicitly excludes installed
+authority/native source fences/full campaign. Unchanged byte-binding/transport/
+candidate source permits scoped historical reuse, not new writer commissioning.
+Readinessf236025a still has no approved target/workload/resource/SLO envelope.
+Actual selected trust/provider installation, numeric budget/calibration and
+allocated source-connected coexistence/originalG2 remain OPEN. Claude next is
+existing six Manager/360 handoffs when assigned; full10NOT_MET,11not started.
+
+**Purpose focus22:12UTC:** build,215/215 affected API cases and scoped PG restore
+PASS on the exact freeze; eight runtime tuples unchanged, no owned leftovers.
+The [canonical packet](./execution_loop/evidence/ELP2-10/commissioning-followthrough.md#focus-receipt-and-final-normal-hook-freeze-purpose-batch)
+pins controller/log hashes, review correction and final eight-path landing scope.
+After focus, independent review corrected pending source-receipt changed-payload
+refusal503→409 and added one real-PG no-mutation/no-recovery regression; its gate
+is the forthcoming `purpose-land-HHMMSS` normal hook, not the earlier215PASS.
+No duplicate focused/full suites or frontend/runtime changes. Actual ELP2-10
+authority/config/coexistence gates remain OPEN; next independent backend slice
+is ordinary delegated receipt held-source composition, not11.
+
 <a id="elp2-11"></a>
 
 ### ELP2-11 — Migration tích hợp và bàn giao release

@@ -1,17 +1,22 @@
 /** Private root-bootstrap component proofs. TEST_ONLY synthetic provider data,
  * disposable TEST_DATABASE_URL only; never TS wire/runtime qualification. */
 import { randomUUID } from "node:crypto";
-import type { Pool, PoolClient } from "pg";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { generateKeyPair, SignJWT } from "jose";
+import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { AuthService } from "../src/auth/auth.service";
 import { OwnerAccessRepository } from "../src/repos/owner-access";
-import { AccessRepository } from "../src/execution-v2/access.repository";
+import { AccessRepository, type AccessReceipt } from "../src/execution-v2/access.repository";
 import { ExecutionAccessService } from "../src/execution-v2/access.service";
 import { AccessPolicyError, type ScopedAccessGrant, type ReviewedAccessPolicy } from "../src/execution-v2/access.contract";
 import { accessDigest, canonicalSelector, grantCurrent } from "../src/execution-v2/access-policy";
 import { unqualifiedAccessTrust, type AccessTrustProvider, type ReviewedPolicyArtifact } from "../src/execution-v2/access-trust";
 import { acceptRootMembershipReceipt, tsRootMembershipAcceptance, type QualifiedRootMembershipReceipt,
   type TsRootMembershipAcceptance } from "../src/execution-v2/access-root-receipt";
+import { CurrentHumanCandidate, type CurrentHumanBinding, type CurrentHumanCandidateConfig } from "../src/execution-v2/current-human-candidate";
+import { CurrentHumanMutations, type CurrentHumanRecoveryAttempt } from "../src/execution-v2/current-human-mutations";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
 
 const DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -74,6 +79,13 @@ describe("ELP2-10 private root receipt qualification", () => {
       .rejects.toMatchObject({ code: key === "mapping" ? "RECEIPT_BINDING_MISMATCH" : "TS_MEMBERSHIP_REVISION_CONFLICT" });
     expect(connect).not.toHaveBeenCalled(); expect(lease.release).toHaveBeenCalledOnce();
   });
+  it("refuses a coordinator on another Core pool before consulting the source", async () => {
+    const verify = vi.fn(async () => proof()), connect = vi.fn();
+    const coordinator = { usesPool: () => false } as unknown as CurrentHumanMutations;
+    await expect(acceptRootMembershipReceipt({ connect } as unknown as Pool, verify, {}, true, coordinator))
+      .rejects.toMatchObject({ code: "RECEIPT_NOT_QUALIFIED", status: 503 });
+    expect(verify).not.toHaveBeenCalled(); expect(connect).not.toHaveBeenCalled();
+  });
 });
 
 describe.skipIf(!DATABASE_URL)("ELP2-10 exact root receipt through reviewed policy installation, disposable PG", () => {
@@ -126,6 +138,82 @@ describe.skipIf(!DATABASE_URL)("ELP2-10 exact root receipt through reviewed poli
   type Fixture = Awaited<ReturnType<typeof fixture>>;
   async function changeGrant(f: Fixture, update: Partial<ScopedAccessGrant>) {
     await new AccessRepository(ctx.pool).saveGrant({ ...f.grant, ...update });
+  }
+
+  /** This candidate and its ephemeral signing keys exist only for one test.
+   * A max=1 real Core pool proves both verifier acquisition and source recovery
+   * run after every Core transaction/connection has been released. */
+  async function withAuthority(f: Fixture, test: (h: {
+    pool: Pool; candidate: CurrentHumanCandidate; coordinator: CurrentHumanMutations;
+    accept(): Promise<{ receipt: AccessReceipt; replayed: boolean }>;
+    enter(): Promise<{ token: string; lease_id: string; expires_at_ms: number }>;
+    sign(lease: string, phase: "ENTER" | "COMMITTED" | "ROLLED_BACK" | "UNKNOWN"): Promise<string>;
+    recovery(fn: (attempt: CurrentHumanRecoveryAttempt) => Promise<unknown>): void;
+    transform(fn: (lease: QualifiedRootMembershipReceipt, call: number) => void): void;
+    held(): number; verify: ReturnType<typeof vi.fn>; releases(): number;
+    intent(): Promise<Record<string, unknown>[]>;
+  }) => Promise<void>, ttl = 30000) {
+    const pool = new Pool({ connectionString: DATABASE_URL, max: 1, connectionTimeoutMillis: 2000, query_timeout: 6000 });
+    const sid = next("source-session");
+    try {
+      await pool.query(`INSERT INTO auth_sessions(session_id,session_token_hash,user_id,state,csrf_secret_hash,
+        session_version,idle_expires_at,absolute_expires_at) VALUES($1,$1,$2,'ACTIVE','TEST_ONLY',0,
+        clock_timestamp()+interval '10 minutes',clock_timestamp()+interval '20 minutes')`, [sid, owner]);
+      await pool.query(await readFile(join(__dirname, "../src/execution-v2/current-human-candidate.sql"), "utf8"));
+      const [source, human] = await Promise.all([generateKeyPair("EdDSA", { crv: "Ed25519", extractable: true }),
+        generateKeyPair("EdDSA", { crv: "Ed25519", extractable: true })]);
+      const binding: CurrentHumanBinding = { workspace_id: f.workspace, environment: "paper",
+        workload_id: "TEST_ONLY-root-provider", request_digest: accessDigest(["TEST_ONLY-root-source", sid]) };
+      const config: CurrentHumanCandidateConfig = { issuer: "TEST_ONLY-portal", audience: "TEST_ONLY-pm", key_id: "TEST_ONLY-human",
+        private_key: human.privateKey, source: { issuer: "TEST_ONLY-pm", audience: "TEST_ONLY-portal-authority",
+          key_id: "TEST_ONLY-source", public_key: source.publicKey, workload_id: binding.workload_id },
+        limits: { ttl_ms: ttl, maximum_unresolved: 3, maximum_retained: 10 } };
+      const candidate = await CurrentHumanCandidate.create(pool, config);
+      const sign = async (lease: string, phase: "ENTER" | "COMMITTED" | "ROLLED_BACK" | "UNKNOWN") => {
+        const now = Math.floor(Date.now() / 1000), terminal = phase === "COMMITTED" || phase === "ROLLED_BACK";
+        return new SignJWT({ iss: config.source.issuer, aud: config.source.audience, sub: binding.workload_id,
+          jti: randomUUID(), iat: now, nbf: now, exp: now + 60, purpose: "pma.current-human-lease.v1",
+          lease_id: lease, attempt_id: `TEST_ONLY-${lease}`, ...binding, phase,
+          source_receipt_id: terminal ? `TEST_ONLY-terminal-${lease}` : null,
+          source_receipt_digest: terminal ? accessDigest(["TEST_ONLY-terminal", lease, phase]) : null,
+        }).setProtectedHeader({ alg: "EdDSA", kid: config.source.key_id, typ: "JWT" }).sign(source.privateKey);
+      };
+      let held = 0, releases = 0, calls = 0;
+      let transform: (lease: QualifiedRootMembershipReceipt, call: number) => void = () => {};
+      let recover: (attempt: CurrentHumanRecoveryAttempt) => Promise<unknown> = async () => {};
+      const verify = vi.fn(async (input: unknown) => {
+        if (input !== f.token) return null;
+        expect(held).toBe(0); expect(pool.idleCount).toBe(pool.totalCount);
+        expect((await pool.query("SELECT 1 AS source_outside_core")).rows[0].source_outside_core).toBe(1);
+        const lease = proof(structuredClone(f.fact)); held++;
+        lease.assertCurrent = () => { expect(held).toBe(1); };
+        lease.release = vi.fn(async () => {
+          expect(pool.idleCount).toBe(pool.totalCount);
+          expect((await pool.query("SELECT 1 AS release_after_core")).rows[0].release_after_core).toBe(1);
+          held--; releases++;
+        });
+        transform(lease, ++calls);
+        return lease;
+      });
+      const coordinator = new CurrentHumanMutations(pool, candidate, { recover: async attempt => {
+        expect(held).toBe(0); expect(pool.idleCount).toBe(pool.totalCount);
+        expect((await pool.query("SELECT 1 AS recovery_outside_core")).rows[0].recovery_outside_core).toBe(1);
+        return recover(attempt);
+      } }, { maximum_intents: 8, maximum_recoveries_per_request: 3 });
+      await test({ pool, candidate, coordinator, verify, sign,
+        accept: () => acceptRootMembershipReceipt(pool, verify, f.token, true, coordinator),
+        enter: async () => {
+          const lease = await candidate.issue({ user_id: owner, session_id: sid, session_generation: 0 }, binding);
+          await candidate.enter(lease.token, await sign(lease.lease_id, "ENTER")); return lease;
+        }, recovery(fn) { recover = fn; }, transform(fn) { transform = fn; }, held: () => held, releases: () => releases,
+        intent: async () => (await pool.query("SELECT * FROM elp210_candidate.mutations ORDER BY mutation_id")).rows });
+      expect(held).toBe(0);
+    } finally {
+      // Exact disposable candidate only; never the shared preview schema.
+      await pool.query("DROP SCHEMA IF EXISTS elp210_candidate CASCADE");
+      await pool.query("DELETE FROM auth_sessions WHERE session_id=$1", [sid]);
+      await pool.end();
+    }
   }
 
   it.each(["owner", "other"] as const)("activates the explicitly approved pending %s root, not an ADMIN preset", async target => {
@@ -316,5 +404,141 @@ describe.skipIf(!DATABASE_URL)("ELP2-10 exact root receipt through reviewed poli
   it("a provider refusal is redacted and never creates an event", async () => {
     const f = await fixture(); f.onGuard(() => { throw new AccessPolicyError("ACCESS_DENIED"); });
     await expect(f.accept()).rejects.toMatchObject({ code: "RECEIPT_NOT_QUALIFIED" }); expect(await f.events()).toBe(0);
+  });
+
+  it("coordinated root intake keeps an expired source UNKNOWN pending, without borrowing a human session", async () => {
+    const f = await fixture();
+    await withAuthority(f, async h => {
+      const lease = await h.enter();
+      await h.candidate.resolve(await h.sign(lease.lease_id, "UNKNOWN"));
+      await expect(h.accept()).rejects.toMatchObject({ code: "ACCESS_RETRY_REQUIRED", status: 503 });
+      const first = (await h.intent())[0];
+      await h.pool.query("SELECT pg_sleep(GREATEST(0,($1::bigint-floor(extract(epoch FROM clock_timestamp())*1000))/1000.0)+0.05)", [lease.expires_at_ms]);
+      await expect(h.accept()).rejects.toMatchObject({ code: "ACCESS_RETRY_REQUIRED", status: 503 });
+      expect(await h.intent()).toMatchObject([{ mutation_id: first.mutation_id, family: "QUALIFIED_ROOT_RECEIPT", state: "PENDING",
+        actor_id: null, session_id: null, session_revision: null }]);
+      expect((await h.pool.query("SELECT phase FROM elp210_candidate.leases WHERE lease_id=$1", [lease.lease_id])).rows[0].phase).toBe("UNKNOWN");
+      expect((await f.stored())!.ts_receipt).toBeNull(); expect(await f.events()).toBe(0); expect(h.held()).toBe(0);
+    }, 2000);
+  });
+  it.each(["COMMITTED", "ROLLED_BACK"] as const)("releases initial qualification before signed %s recovery and reacquires outside a one-connection Core pool", async phase => {
+    const f = await fixture();
+    await withAuthority(f, async h => {
+      const lease = await h.enter();
+      await expect(h.accept()).rejects.toMatchObject({ code: "ACCESS_RETRY_REQUIRED", status: 503 });
+      const pending = (await h.intent())[0];
+      const recover = vi.fn(async (attempt: CurrentHumanRecoveryAttempt) => {
+        expect(attempt.lease_id).toBe(lease.lease_id); expect(h.held()).toBe(0);
+        return h.candidate.resolve(await h.sign(attempt.lease_id, phase));
+      });
+      h.recovery(recover);
+      const result = await h.accept(), stored = await f.stored();
+      expect(result).toMatchObject({ replayed: false, receipt: { outcome: "TS_APPLIED" } });
+      expect(stored!.ts_receipt?.receipt_id).toBe(f.fact.receipt_id);
+      expect(await h.intent()).toMatchObject([{ mutation_id: pending.mutation_id, family: "QUALIFIED_ROOT_RECEIPT", state: "FINISHED",
+        actor_id: null, session_id: null, session_revision: null,
+        terminal_digest: accessDigest({ outcome: "APPLIED", receipt_ref: result.receipt.operation_id, reason_code: null }) }]);
+      expect(recover).toHaveBeenCalledOnce(); expect(h.pool.totalCount).toBe(1);
+      expect(h.verify).toHaveBeenCalledTimes(3); expect(h.releases()).toBe(3); expect(await f.events()).toBe(1);
+      expect(await h.accept()).toEqual({ receipt: result.receipt, replayed: true });
+      expect(await f.stored()).toEqual(stored); expect(await f.events()).toBe(1); expect(recover).toHaveBeenCalledOnce();
+    });
+  });
+  it("a changed payload under a pending source receipt is a permanent conflict, not a recovery retry", async () => {
+    const f = await fixture();
+    await withAuthority(f, async h => {
+      const lease = await h.enter();
+      await expect(h.accept()).rejects.toMatchObject({ code: "ACCESS_RETRY_REQUIRED", status: 503 });
+      const pending = await h.intent(), grant = await f.stored();
+      const authority = (await h.pool.query("SELECT * FROM elp210_candidate.authority WHERE singleton")).rows;
+      const recover = vi.fn(async () => {}); h.recovery(recover);
+      f.fact.payload_digest = accessDigest("TEST_ONLY-pending-payload-change");
+      await expect(h.accept()).rejects.toMatchObject({ code: "RECEIPT_PAYLOAD_CONFLICT", status: 409 });
+      expect(await h.intent()).toEqual(pending); expect(recover).not.toHaveBeenCalled();
+      expect((await h.pool.query("SELECT * FROM elp210_candidate.authority WHERE singleton")).rows).toEqual(authority);
+      expect((await h.pool.query("SELECT phase FROM elp210_candidate.leases WHERE lease_id=$1", [lease.lease_id])).rows[0].phase).toBe("ENTERED");
+      expect(await f.stored()).toEqual(grant); expect(await f.events()).toBe(0); expect(h.held()).toBe(0);
+    });
+  });
+  it.each(["fact", "mapping", "membership"] as const)("rejects changed %s on post-recovery qualification without changing a grant or replacing the intent", async part => {
+    const f = await fixture();
+    await withAuthority(f, async h => {
+      h.transform((lease, call) => {
+        if (call !== 2) return;
+        if (part === "fact") lease.fact.payload_digest = accessDigest("TEST_ONLY-changed-after-recovery");
+        else if (part === "mapping") lease.mapping.revision = "TEST_ONLY-other-current-mapping";
+        else lease.membership = { ...lease.membership!, revision: "TEST_ONLY-other-current-membership" };
+      });
+      await expect(h.accept()).rejects.toMatchObject({ code: "RECEIPT_BINDING_MISMATCH", status: 409 });
+      const pending = (await h.intent())[0];
+      expect(pending.state).toBe("PENDING"); expect(h.releases()).toBe(2); expect(h.held()).toBe(0);
+      expect((await f.stored())!.ts_receipt).toBeNull(); expect(await f.events()).toBe(0);
+      h.transform(() => {});
+      expect((await h.accept()).receipt.outcome).toBe("TS_APPLIED");
+      expect(await h.intent()).toMatchObject([{ mutation_id: pending.mutation_id, state: "FINISHED" }]);
+      expect(await f.events()).toBe(1);
+    });
+  });
+  it("authenticates an old source receipt read-only despite a later Core revoke and policy, without draining unrelated UNKNOWN work", async () => {
+    const f = await fixture({ target: "other" }), original = await f.accept(), accepted = (await f.stored())!;
+    const revoked = { ...accepted, revision: next("revoked"), revoked_at_ms: Date.now() };
+    await new AccessRepository(ctx.pool).saveGrant(revoked);
+    await new AccessRepository(ctx.pool).putPolicy({ ...f.policy, revision: next("newer-policy") });
+    await withAuthority(f, async h => {
+      const lease = await h.enter(); await h.candidate.resolve(await h.sign(lease.lease_id, "UNKNOWN"));
+      const authority = (await h.pool.query("SELECT * FROM elp210_candidate.authority WHERE singleton")).rows;
+      const recovery = vi.fn(async () => {}); h.recovery(recovery);
+      expect(await h.accept()).toEqual({ receipt: original.receipt, replayed: true });
+      expect(await h.intent()).toEqual([]); expect(recovery).not.toHaveBeenCalled();
+      expect((await h.pool.query("SELECT * FROM elp210_candidate.authority WHERE singleton")).rows).toEqual(authority);
+      expect((await h.pool.query("SELECT phase FROM elp210_candidate.leases WHERE lease_id=$1", [lease.lease_id])).rows[0].phase).toBe("UNKNOWN");
+      expect(await f.stored()).toEqual(revoked); expect(await f.events()).toBe(1);
+      // Historical Core authority is not rechecked, but this adapter still
+      // requires its provider to authenticate the old immutable fact. A
+      // revoked/unavailable provider never becomes a browser-only replay.
+      h.transform(lease => { lease.assertCurrent = () => { throw new Error("TEST_ONLY-source-unavailable"); }; });
+      await expect(h.accept()).rejects.toMatchObject({ code: "RECEIPT_NOT_QUALIFIED", status: 503 });
+      expect(await h.intent()).toEqual([]); expect(await f.stored()).toEqual(revoked); expect(await f.events()).toBe(1);
+    });
+  });
+  it("a changed immutable source id conflicts without a new intent or recovery", async () => {
+    const f = await fixture(); await f.accept(); f.fact.payload_digest = accessDigest("TEST_ONLY-historical-payload-change");
+    await withAuthority(f, async h => {
+      const recover = vi.fn(async () => {}); h.recovery(recover);
+      await expect(h.accept()).rejects.toMatchObject({ code: "RECEIPT_PAYLOAD_CONFLICT", status: 409 });
+      expect(await h.intent()).toEqual([]); expect(recover).not.toHaveBeenCalled();
+      expect(h.releases()).toBe(1); expect(await f.events()).toBe(1);
+    });
+  });
+  it("holds the reacquired fence through writes and rolls back both grant and source receipt if it changes", async () => {
+    const f = await fixture();
+    await withAuthority(f, async h => {
+      let valid = true;
+      h.transform(lease => { lease.assertCurrent = () => { if (!valid) throw new Error("TEST_ONLY-revoked-during-Core"); }; });
+      const original = AccessRepository.prototype.event;
+      const spy = vi.spyOn(AccessRepository.prototype, "event").mockImplementation(async function (this: AccessRepository, event) {
+        await original.call(this, event); if (event.operation === "TS_RECEIPT") valid = false;
+      });
+      try {
+        await expect(h.accept()).rejects.toMatchObject({ code: "RECEIPT_NOT_QUALIFIED", status: 503 });
+        expect((await f.stored())!.ts_receipt).toBeNull(); expect(await f.events()).toBe(0);
+        expect(await h.intent()).toMatchObject([{ state: "PENDING" }]); expect(h.releases()).toBe(2);
+      } finally { spy.mockRestore(); }
+      valid = true; expect((await h.accept()).receipt.outcome).toBe("TS_APPLIED"); expect(await f.events()).toBe(1);
+    });
+  });
+  it("a reacquired release failure preserves the committed immutable result and retry cannot apply twice", async () => {
+    const f = await fixture();
+    await withAuthority(f, async h => {
+      h.transform((lease, call) => {
+        if (call !== 2) return;
+        const release = lease.release.bind(lease);
+        lease.release = async () => { await release(); throw new Error("TEST_ONLY-release-ack-lost"); };
+      });
+      await expect(h.accept()).rejects.toMatchObject({ code: "ACCESS_RETRY_REQUIRED", status: 503 });
+      const accepted = await f.stored();
+      expect(accepted!.ts_receipt).not.toBeNull(); expect(await h.intent()).toMatchObject([{ state: "FINISHED" }]);
+      expect((await h.accept()).replayed).toBe(true); expect(await f.stored()).toEqual(accepted); expect(await f.events()).toBe(1);
+    });
   });
 });

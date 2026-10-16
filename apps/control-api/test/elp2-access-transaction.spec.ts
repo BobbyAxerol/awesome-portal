@@ -167,9 +167,9 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
    * No mocked coordinator result is treated as source terminal authority. */
   async function withCurrentHuman(f:Fixture,by:Account,run:(cell:{
     pool:Pool;candidate:CurrentHumanCandidate;binding:CurrentHumanBinding;
-    enter():Promise<{lease_id:string}>;resolve(leaseId:string):Promise<unknown>;
+    enter():Promise<{lease_id:string}>;resolve(leaseId:string,phase?:"COMMITTED"|"UNKNOWN"):Promise<unknown>;
     service(recover:CurrentHumanRecoveryPort["recover"],trust?:AccessTrustProvider):ExecutionAccessService;
-  })=>Promise<void>) {
+  })=>Promise<void>,ttlMs=30000) {
     const pool=new Pool({connectionString:DATABASE_URL!,max:1,connectionTimeoutMillis:500,query_timeout:6000});
     let installed=false;
     const originalRelations=f.trust.relations.bind(f.trust);
@@ -190,11 +190,11 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
       const config:CurrentHumanCandidateConfig={issuer:"TEST_ONLY-access-portal",audience:"TEST_ONLY-access-pm",key_id:"TEST_ONLY-access-human-key",
         private_key:humanKey.privateKey,source:{issuer:"TEST_ONLY-access-source",audience:"TEST_ONLY-access-core",
           key_id:"TEST_ONLY-access-source-key",public_key:sourceKey.publicKey,workload_id:binding.workload_id},
-        limits:{ttl_ms:30000,maximum_unresolved:4,maximum_retained:12}};
+        limits:{ttl_ms:ttlMs,maximum_unresolved:4,maximum_retained:12}};
       await pool.query(await readFile(join(__dirname,"../src/execution-v2/current-human-candidate.sql"),"utf8"));
       installed=true;
       const candidate=await CurrentHumanCandidate.create(pool,config);
-      const proof=async(leaseId:string,phase:"ENTER"|"COMMITTED")=>{
+      const proof=async(leaseId:string,phase:"ENTER"|"COMMITTED"|"UNKNOWN")=>{
         const now=Math.floor(Date.now()/1000),terminal=phase==="COMMITTED";
         return new SignJWT({iss:config.source.issuer,aud:config.source.audience,sub:config.source.workload_id,
           jti:next("proof"),iat:now,nbf:now,exp:now+60,purpose:"pma.current-human-lease.v1",
@@ -208,7 +208,7 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
           const lease=await candidate.issue({user_id:by.user.userId,session_id:by.session.sessionId,
             session_generation:by.user.sessionVersion},binding);
           await candidate.enter(lease.token,await proof(lease.lease_id,"ENTER"));return lease;
-        },resolve:async leaseId=>candidate.resolve(await proof(leaseId,"COMMITTED")),
+        },resolve:async(leaseId,phase="COMMITTED")=>candidate.resolve(await proof(leaseId,phase)),
         service:(recover,trust=f.trust)=>new ExecutionAccessService(pool,auth,trust,true,new CurrentHumanMutations(pool,candidate,{
           recover:async attempt=>{
             expect(pool.totalCount-pool.idleCount).toBe(0);
@@ -232,6 +232,32 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
       (SELECT count(*)::int FROM portal_access_proposals WHERE workspace_id=$1) AS proposals,
       (SELECT count(*)::int FROM portal_access_grants_v2 WHERE workspace_id=$1) AS grants,
       (SELECT count(*)::int FROM portal_access_policy_events WHERE workspace_id=$1) AS events`, [f.workspace])).rows[0];
+  }
+  /** Preserve PostgreSQL's full timestamp precision rather than comparing JS
+   * Date objects, which would miss a same-millisecond update during replay. */
+  async function authorityRows(f: Fixture) {
+    return (await ctx.pool.query(`SELECT 'policy' AS kind,workspace_id AS id,row_to_json(p)::text AS bytes
+      FROM portal_access_policy_state p WHERE workspace_id=$1
+      UNION ALL SELECT 'grant',grant_id,row_to_json(g)::text
+      FROM portal_access_grants_v2 g WHERE workspace_id=$1
+      UNION ALL SELECT 'proposal',proposal_id,row_to_json(p)::text
+      FROM portal_access_proposals p WHERE workspace_id=$1
+      UNION ALL SELECT 'event',event_id,row_to_json(e)::text
+      FROM portal_access_policy_events e WHERE workspace_id=$1
+      ORDER BY kind,id`, [f.workspace])).rows;
+  }
+  function emptyRootArtifact(f: Fixture, label: string): ReviewedPolicyArtifact {
+    const revision = next(label);
+    return {
+      policy: { ...f.policy, revision, artifact_digest: accessDigest(["TEST_ONLY-reviewed-revision", revision]) },
+      root_grants: [], provenance_ref: `TEST_ONLY-reviewed-provenance:${revision}`,
+    };
+  }
+  async function installEmptyRootRevision(f: Fixture, label: string) {
+    const artifact = emptyRootArtifact(f, label);
+    Object.assign(f.trust.artifact, structuredClone(artifact));
+    await f.service.installReviewedPolicy(f.trust.artifact);
+    return artifact;
   }
   async function ownGrant(f: Fixture, receipt: AccessReceipt) {
     return (await f.service.effective(actor(researcher), f.workspace)).grants.find(g => g.grant_id === receipt.grant_id)!;
@@ -318,6 +344,258 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
       .rejects.toMatchObject({ code: "POLICY_REVISION_CONFLICT", status: 409 });
     expect(await state(f)).toEqual(before);
     expect((await ctx.pool.query("SELECT grant_fact FROM portal_access_grants_v2 WHERE workspace_id=$1 ORDER BY grant_id", [f.workspace])).rows).toEqual(originalGrants);
+  });
+
+  it("ELP2-10 historical empty-root policy replay cannot roll the current revision back or rewrite timestamps", async () => {
+    const f = await fixture();
+    const historical = await installEmptyRootRevision(f, "TEST_ONLY-historical-B");
+    const current = await installEmptyRootRevision(f, "TEST_ONLY-current-C");
+    const before = await authorityRows(f);
+    Object.assign(f.trust.artifact, structuredClone(historical));
+    await f.service.installReviewedPolicy(f.trust.artifact);
+    expect(await authorityRows(f)).toEqual(before);
+    expect((await new AccessRepository(ctx.pool).policy(f.workspace))?.revision).toBe(current.policy.revision);
+  });
+
+  it.each(["policy", "roots", "provenance"] as const)(
+    "ELP2-10 historical policy replay rejects changed %s under an installed revision without writes", async changed => {
+      const f = await fixture();
+      const historical = await installEmptyRootRevision(f, "TEST_ONLY-historical-mismatch-B");
+      await installEmptyRootRevision(f, "TEST_ONLY-current-mismatch-C");
+      const altered = structuredClone(historical);
+      if (changed === "policy") altered.policy.artifact_digest = accessDigest(["TEST_ONLY-changed-artifact", historical.policy.revision]);
+      if (changed === "roots") altered.root_grants = [{ ...f.managerRoot, grant_id: next("TEST_ONLY-new-historical-root"),
+        revision: next("TEST_ONLY-new-historical-root-revision"), policy_revision: historical.policy.revision }];
+      if (changed === "provenance") altered.provenance_ref = "TEST_ONLY-different-historical-provenance";
+      const before = await authorityRows(f);
+      Object.assign(f.trust.artifact, altered);
+      await expect(f.service.installReviewedPolicy(f.trust.artifact))
+        .rejects.toMatchObject({ code: "POLICY_REVISION_CONFLICT", status: 409 });
+      expect(await authorityRows(f)).toEqual(before);
+    });
+
+  it("ELP2-10 historical policy replay acknowledges its original receipt without restoring a revoked root", async () => {
+    const f = await fixture(), original = structuredClone(f.trust.artifact);
+    const revoked = await f.service.revoke(actor(owner), f.workspace, f.managerRoot.grant_id,
+      f.policy.revision, f.managerRoot.revision, next("TEST_ONLY-revoke-before-policy-replay"));
+    expect(revoked.receipt.outcome).toBe("REVOKED");
+    const current = await installEmptyRootRevision(f, "TEST_ONLY-after-root-revoke");
+    const before = await authorityRows(f);
+    Object.assign(f.trust.artifact, original);
+    await f.service.installReviewedPolicy(f.trust.artifact);
+    expect(await authorityRows(f)).toEqual(before);
+    expect(await storedGrant(f.managerRoot.grant_id)).toMatchObject({
+      revision: revoked.receipt.grant_revision, revoked_at_ms: expect.any(Number),
+    });
+    expect((await new AccessRepository(ctx.pool).policy(f.workspace))?.revision).toBe(current.policy.revision);
+  });
+
+  it("ELP2-10 historical policy replay preserves a later TS acceptance and its immutable source receipt", async () => {
+    const f = await fixture(), original = structuredClone(f.trust.artifact);
+    const { submitted } = await business(f), fact = await tsFact(f, submitted);
+    const accepted = await f.service.acceptTsReceipt(f.trust.seal(fact));
+    expect(accepted.receipt.outcome).toBe("TS_APPLIED");
+    const grant = await storedGrant(submitted.receipt.grant_id!);
+    expect(grant.ts_receipt?.receipt_id).toBe(fact.receipt_id);
+    const current = await installEmptyRootRevision(f, "TEST_ONLY-after-ts-acceptance");
+    const before = await authorityRows(f);
+    Object.assign(f.trust.artifact, original);
+    await f.service.installReviewedPolicy(f.trust.artifact);
+    expect(await authorityRows(f)).toEqual(before);
+    expect(await storedGrant(grant.grant_id)).toEqual(grant);
+    expect((await new AccessRepository(ctx.pool).policy(f.workspace))?.revision).toBe(current.policy.revision);
+  });
+
+  it("ELP2-10 a current policy without an immutable install receipt conflicts instead of repairing authority", async () => {
+    const f = await fixture(), revision = next("TEST_ONLY-missing-install");
+    const artifact: ReviewedPolicyArtifact = {
+      policy: { ...f.policy, revision, artifact_digest: accessDigest(["TEST_ONLY-missing-install", revision]) },
+      root_grants: [], provenance_ref: "TEST_ONLY-incomplete-historical-import",
+    };
+    // Isolated fixture corruption only: do not delete or alter immutable events.
+    await new AccessRepository(ctx.pool).putPolicy(artifact.policy);
+    expect(await new AccessRepository(ctx.pool).policyInstall(f.workspace, revision)).toBeNull();
+    const before = await authorityRows(f);
+    Object.assign(f.trust.artifact, artifact);
+    await expect(f.service.installReviewedPolicy(f.trust.artifact))
+      .rejects.toMatchObject({ code: "POLICY_REVISION_CONFLICT", status: 409 });
+    expect(await authorityRows(f)).toEqual(before);
+  });
+
+  it("ELP2-10 reviewed artifact drains an entered source attempt, installs once after signed recovery and replays without a session", async () => {
+    const f = await fixture(), artifact = emptyRootArtifact(f, "TEST_ONLY-coordinated-policy");
+    await withCurrentHuman(f, manager, async cell => {
+      const lease = await cell.enter(), before = await authorityRows(f);
+      let terminal = false, calls = 0;
+      const recover: CurrentHumanRecoveryPort["recover"] = async attempt => {
+        calls++;
+        expect(attempt.lease_id).toBe(lease.lease_id);
+        return terminal ? cell.resolve(attempt.lease_id) : { phase: "COMMITTED", TEST_ONLY_untrusted_ack: true };
+      };
+      Object.assign(f.trust.artifact, structuredClone(artifact));
+      await expect(cell.service(recover).installReviewedPolicy(f.trust.artifact))
+        .rejects.toMatchObject({ code: "ACCESS_RETRY_REQUIRED", status: 503 });
+      expect(calls).toBe(1);
+      expect(await authorityRows(f)).toEqual(before);
+      const pending = (await cell.pool.query(`SELECT mutation_id,family,actor_id,session_id,session_revision,state
+        FROM elp210_candidate.mutations`)).rows;
+      expect(pending).toEqual([{ mutation_id: expect.any(String), family: "REVIEWED_POLICY",
+        actor_id: null, session_id: null, session_revision: null, state: "PENDING" }]);
+      expect((await cell.pool.query("SELECT drain_id FROM elp210_candidate.authority WHERE singleton")).rows[0].drain_id)
+        .toBe(pending[0].mutation_id);
+      expect((await cell.pool.query("SELECT phase FROM elp210_candidate.leases WHERE lease_id=$1", [lease.lease_id])).rows[0].phase)
+        .toBe("ENTERED");
+
+      // Recreated private services reuse durable intent; the helper's max1
+      // pool proves actual signed source recovery runs outside every Core TX.
+      terminal = true;
+      await cell.service(recover).installReviewedPolicy(f.trust.artifact);
+      expect(calls).toBe(2);
+      expect((await new AccessRepository(cell.pool).policy(f.workspace))?.revision).toBe(artifact.policy.revision);
+      expect((await cell.pool.query("SELECT state FROM elp210_candidate.mutations")).rows).toEqual([{ state: "FINISHED" }]);
+      expect((await cell.pool.query("SELECT drain_id FROM elp210_candidate.authority WHERE singleton")).rows[0].drain_id).toBeNull();
+      expect((await cell.pool.query(`SELECT count(*)::int AS n FROM portal_access_policy_events
+        WHERE workspace_id=$1 AND policy_revision=$2 AND operation='POLICY_INSTALL'`, [f.workspace, artifact.policy.revision])).rows[0].n).toBe(1);
+      const after = await authorityRows(f);
+      await cell.service(recover).installReviewedPolicy(f.trust.artifact);
+      expect(calls).toBe(2);
+      expect(await authorityRows(f)).toEqual(after);
+      expect((await cell.pool.query("SELECT state FROM elp210_candidate.mutation_events ORDER BY event_id")).rows)
+        .toEqual([{ state: "PENDING" }, { state: "FINISHED" }]);
+    });
+  });
+
+  it("ELP2-10 a reviewed artifact stays pending after signed UNKNOWN outlives the actual lease expiry", async () => {
+    const f = await fixture(), artifact = emptyRootArtifact(f, "TEST_ONLY-unknown-policy");
+    await withCurrentHuman(f, manager, async cell => {
+      const lease = await cell.enter();
+      await cell.resolve(lease.lease_id, "UNKNOWN");
+      await cell.pool.query(`SELECT pg_sleep(GREATEST(
+        (expires_at_ms::double precision-extract(epoch FROM clock_timestamp())*1000)/1000,0)+0.05)
+        FROM elp210_candidate.leases WHERE lease_id=$1`, [lease.lease_id]);
+      expect((await cell.pool.query(`SELECT expires_at_ms<=floor(extract(epoch FROM clock_timestamp())*1000) AS expired
+        FROM elp210_candidate.leases WHERE lease_id=$1`, [lease.lease_id])).rows[0].expired).toBe(true);
+      const before = await authorityRows(f);
+      Object.assign(f.trust.artifact, artifact);
+      const recover = async () => ({ phase: "COMMITTED", TEST_ONLY_untrusted_ack: true });
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await expect(cell.service(recover).installReviewedPolicy(f.trust.artifact))
+          .rejects.toMatchObject({ code: "ACCESS_RETRY_REQUIRED", status: 503 });
+        expect(await authorityRows(f)).toEqual(before);
+        expect((await cell.pool.query("SELECT state FROM elp210_candidate.mutations")).rows).toEqual([{ state: "PENDING" }]);
+        expect((await cell.pool.query("SELECT phase FROM elp210_candidate.leases WHERE lease_id=$1", [lease.lease_id])).rows[0].phase)
+          .toBe("UNKNOWN");
+        expect((await cell.pool.query("SELECT drain_id FROM elp210_candidate.authority WHERE singleton")).rows[0].drain_id).not.toBeNull();
+      }
+    }, 2000);
+  });
+
+  it("ELP2-10 changing a pending reviewed artifact conflicts without replacing its original intent", async () => {
+    const f = await fixture(), artifact = emptyRootArtifact(f, "TEST_ONLY-pending-artifact-conflict");
+    await withCurrentHuman(f, manager, async cell => {
+      await cell.enter();
+      let calls = 0;
+      const recover = async () => { calls++; return undefined; };
+      Object.assign(f.trust.artifact, artifact);
+      await expect(cell.service(recover).installReviewedPolicy(f.trust.artifact))
+        .rejects.toMatchObject({ code: "ACCESS_RETRY_REQUIRED", status: 503 });
+      const before = await authorityRows(f);
+      const intents = (await cell.pool.query("SELECT row_to_json(m)::text AS bytes FROM elp210_candidate.mutations m")).rows;
+      f.trust.artifact.provenance_ref = "TEST_ONLY-changed-pending-provenance";
+      await expect(cell.service(recover).installReviewedPolicy(f.trust.artifact))
+        .rejects.toMatchObject({ code: "POLICY_REVISION_CONFLICT", status: 409 });
+      expect(calls).toBe(1);
+      expect(await authorityRows(f)).toEqual(before);
+      expect((await cell.pool.query("SELECT row_to_json(m)::text AS bytes FROM elp210_candidate.mutations m")).rows).toEqual(intents);
+      expect((await cell.pool.query("SELECT state FROM elp210_candidate.mutation_events ORDER BY event_id")).rows)
+        .toEqual([{ state: "PENDING" }]);
+    });
+  });
+
+  it("ELP2-10 FINISHED historical artifact replay leaves a new entered source lease and the newer policy untouched", async () => {
+    const f = await fixture(), historical = emptyRootArtifact(f, "TEST_ONLY-finished-history-B"),
+      current = emptyRootArtifact(f, "TEST_ONLY-finished-current-C");
+    await withCurrentHuman(f, manager, async cell => {
+      const recover = vi.fn(async () => undefined);
+      for (const artifact of [historical, current]) {
+        Object.assign(f.trust.artifact, structuredClone(artifact));
+        await cell.service(recover).installReviewedPolicy(f.trust.artifact);
+      }
+      const lease = await cell.enter(), before = await authorityRows(f);
+      const authority = (await cell.pool.query("SELECT row_to_json(a)::text AS bytes FROM elp210_candidate.authority a")).rows;
+      const intents = (await cell.pool.query("SELECT row_to_json(m)::text AS bytes FROM elp210_candidate.mutations m ORDER BY mutation_id")).rows;
+      Object.assign(f.trust.artifact, structuredClone(historical));
+      await cell.service(recover).installReviewedPolicy(f.trust.artifact);
+      expect(recover).not.toHaveBeenCalled();
+      expect(await authorityRows(f)).toEqual(before);
+      expect((await new AccessRepository(cell.pool).policy(f.workspace))?.revision).toBe(current.policy.revision);
+      expect((await cell.pool.query("SELECT phase FROM elp210_candidate.leases WHERE lease_id=$1", [lease.lease_id])).rows[0].phase)
+        .toBe("ENTERED");
+      expect((await cell.pool.query("SELECT row_to_json(a)::text AS bytes FROM elp210_candidate.authority a")).rows).toEqual(authority);
+      expect((await cell.pool.query("SELECT row_to_json(m)::text AS bytes FROM elp210_candidate.mutations m ORDER BY mutation_id")).rows).toEqual(intents);
+    });
+  });
+
+  it("ELP2-10 a pre-coordinator install receipt is a readonly ACK even behind an unrelated UNKNOWN", async () => {
+    const f = await fixture();
+    await withCurrentHuman(f, manager, async cell => {
+      const lease = await cell.enter(); await cell.resolve(lease.lease_id, "UNKNOWN");
+      const before = await authorityRows(f), recover = vi.fn(async () => undefined);
+      const authority = (await cell.pool.query("SELECT * FROM elp210_candidate.authority WHERE singleton")).rows;
+      await cell.service(recover).installReviewedPolicy(f.trust.artifact);
+      expect(await authorityRows(f)).toEqual(before); expect(recover).not.toHaveBeenCalled();
+      expect((await cell.pool.query("SELECT * FROM elp210_candidate.authority WHERE singleton")).rows).toEqual(authority);
+      expect((await cell.pool.query("SELECT * FROM elp210_candidate.mutations")).rows).toEqual([]);
+      expect((await cell.pool.query("SELECT phase FROM elp210_candidate.leases WHERE lease_id=$1", [lease.lease_id])).rows[0].phase).toBe("UNKNOWN");
+    });
+  });
+
+  it("ELP2-10 an unqualified or wrong-owner artifact cannot open an authority drain", async () => {
+    const f = await fixture(), artifact = emptyRootArtifact(f, "TEST_ONLY-refused-policy");
+    await withCurrentHuman(f, manager, async cell => {
+      const lease = await cell.enter(), before = await authorityRows(f), recover = vi.fn(async () => undefined);
+      Object.assign(f.trust.artifact, artifact);
+      const verify = vi.spyOn(f.trust, "verifyPolicy").mockResolvedValue(null);
+      try {
+        await expect(cell.service(recover).installReviewedPolicy(f.trust.artifact))
+          .rejects.toMatchObject({ code: "RECEIPT_NOT_QUALIFIED", status: 503 });
+      } finally { verify.mockRestore(); }
+      f.trust.artifact.policy.protected_owner_user_id = peer.user.userId;
+      await expect(cell.service(recover).installReviewedPolicy(f.trust.artifact))
+        .rejects.toMatchObject({ code: "RECEIPT_BINDING_MISMATCH" });
+      expect(recover).not.toHaveBeenCalled();
+      expect(await authorityRows(f)).toEqual(before);
+      expect((await cell.pool.query("SELECT count(*)::int AS n FROM elp210_candidate.mutations")).rows[0].n).toBe(0);
+      expect((await cell.pool.query("SELECT drain_id FROM elp210_candidate.authority WHERE singleton")).rows[0].drain_id).toBeNull();
+      expect((await cell.pool.query("SELECT phase FROM elp210_candidate.leases WHERE lease_id=$1", [lease.lease_id])).rows[0].phase)
+        .toBe("ENTERED");
+    });
+  });
+
+  it("ELP2-10 verified-purpose metadata cannot fabricate a human session or omit one for a human family", async () => {
+    const f = await fixture();
+    await withCurrentHuman(f, manager, async cell => {
+      for (const [family, sessionRevision] of [["REVIEWED_POLICY", 0], ["ACCOUNT_LIFECYCLE", null]] as const) {
+        const key = accessDigest(["TEST_ONLY-invalid-purpose-binding", family, next("invalid-metadata")]);
+        await expect(cell.pool.query(`INSERT INTO elp210_candidate.mutations
+          (mutation_id,key_digest,binding_digest,replay_digest,family,actor_id,session_id,session_revision)
+          VALUES($1,$2,$3,$3,$4,$5,$6,$7)`, [next("invalid-mutation"), key, accessDigest(["TEST_ONLY-invalid", family]),
+          family, manager.user.userId, manager.session.sessionId, sessionRevision])).rejects.toMatchObject({ code: "23514" });
+      }
+      const coordinator = new CurrentHumanMutations(cell.pool, cell.candidate, { recover: async () => undefined },
+        { maximum_intents: 12, maximum_recoveries_per_request: 4 });
+      const fabricated = { family: "REVIEWED_POLICY" as const, operation: "INSTALL_POLICY" as const,
+        key_digest: accessDigest(["TEST_ONLY-fabricated-key"]), request_digest: accessDigest(["TEST_ONLY-fabricated-request"]),
+        target_id: f.workspace, actor_id: manager.user.userId, session_id: manager.session.sessionId, session_revision: 0 };
+      const authorize = vi.fn(async () => undefined), apply = vi.fn(async () => undefined);
+      await expect(coordinator.executeVerified(fabricated, { authorize, apply,
+        terminal: () => ({ outcome: "APPLIED", receipt_ref: null, reason_code: null }) })).rejects.toMatchObject({ name: "ZodError" });
+      expect(authorize).not.toHaveBeenCalled();
+      expect(apply).not.toHaveBeenCalled();
+      expect((await cell.pool.query("SELECT count(*)::int AS n FROM elp210_candidate.mutations")).rows[0].n).toBe(0);
+      expect((await cell.pool.query("SELECT count(*)::int AS n FROM elp210_candidate.mutation_events")).rows[0].n).toBe(0);
+      expect((await cell.pool.query("SELECT drain_id FROM elp210_candidate.authority WHERE singleton")).rows[0].drain_id).toBeNull();
+    });
   });
 
   it("T03-05 a verified TEST_ONLY artifact cannot install capital.fund as app-only authority", async () => {

@@ -12,7 +12,7 @@ import { AccessAction, AccessResource, AccessActor, AccessPolicyError, AccessRef
 import { AccessEvaluationContext, AccessRelations, accessDigest, canonicalChange, canonicalSelector,
   evaluateAccess, grantCurrent, policyReady, resolvedResources, validateDelegation } from "./access-policy";
 import { AccessEvent, AccessReceipt, AccessRepository } from "./access.repository";
-import { AccessTrustProvider, unqualifiedAccessTrust } from "./access-trust";
+import { AccessTrustProvider, type ReviewedPolicyArtifact, unqualifiedAccessTrust } from "./access-trust";
 import { KeysetCursorCodec } from "../query/cursor";
 import { querySigningKeys } from "../config";
 import type { ExecutionReadPublicationRequest } from "./read-publication";
@@ -492,32 +492,68 @@ export class ExecutionAccessService {
 
   /** No public writer. Install only a verified owner-reviewed artifact, never a migration default. */
   async installReviewedPolicy(input:unknown):Promise<void> {
-    const artifact=await this.trust.verifyPolicy(input);
-    if(!artifact||artifact.policy.state!=="REVIEWED"||!(artifact.policy.qualification==="OWNER_VERIFIED"||
-      this.allowTestOnly&&artifact.policy.qualification==="TEST_ONLY")||!artifact.policy.approval_ref||!artifact.provenance_ref)
+    const verified=await this.trust.verifyPolicy(input);
+    if(!verified||verified.policy.state!=="REVIEWED"||!(verified.policy.qualification==="OWNER_VERIFIED"||
+      this.allowTestOnly&&verified.policy.qualification==="TEST_ONLY")||!verified.policy.approval_ref||!verified.provenance_ref)
       throw new AccessPolicyError("RECEIPT_NOT_QUALIFIED",503);
+    // Detach the verified artifact before any Core await; verifier-owned JS
+    // objects are not mutable authority inside an installation transaction.
+    const artifact=structuredClone(verified);
     if(!reviewedAccessPolicy.safeParse(artifact.policy).success||artifact.root_grants.length>10000||
       artifact.root_grants.some(g=>!scopedAccessGrant.safeParse(g).success))throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH",409);
-    await withTransaction(this.pool,async db=>{
-      await db.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[`portal-access-v2:${artifact.policy.workspace_id}`]);
-      const anchor=(await db.query("SELECT user_id FROM portal_owner_anchor WHERE anchor_id='PORTAL_OWNER' FOR SHARE")).rows[0]?.user_id;
-      if(anchor!==artifact.policy.protected_owner_user_id) throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH");
-      const repo=new AccessRepository(db),old=await repo.policy(artifact.policy.workspace_id,true);
-      if(old?.revision===artifact.policy.revision){
-        const original=await repo.policyInstall(artifact.policy.workspace_id,artifact.policy.revision);
-        if(accessDigest(old)!==accessDigest(artifact.policy)||original?.request_digest!==accessDigest(artifact))
-          throw new AccessPolicyError("POLICY_REVISION_CONFLICT",409);
+    if(this.authorityMutations){
+      // Install events predate coordinator adoption too. A verified immutable
+      // historical ACK must not create a drain/retire leases just to read it.
+      const original=await withTransaction(this.pool,async db=>{
+        await db.query("SET TRANSACTION READ ONLY");
+        return new AccessRepository(db).policyInstall(artifact.policy.workspace_id,artifact.policy.revision);
+      });
+      if(original){
+        if(original.request_digest!==accessDigest(artifact))throw new AccessPolicyError("POLICY_REVISION_CONFLICT",409);
         return;
       }
-      // A reviewed revision carries explicit new roots; old-revision grants remain inert history.
-      await repo.putPolicy(artifact.policy);
+      try {
+        await this.authorityMutations.executeVerified({family:"REVIEWED_POLICY",operation:"INSTALL_POLICY",
+          key_digest:accessDigest(["REVIEWED_POLICY",artifact.policy.workspace_id,artifact.policy.revision]),
+          request_digest:accessDigest(artifact),target_id:artifact.policy.workspace_id},{
+          retain_after_application_rollback:true,
+          authorize:async db=>{await this.installReviewedPolicyInTransaction(db,artifact,false);},
+          apply:db=>this.installReviewedPolicyInTransaction(db,artifact,true),
+          terminal:receipt=>({outcome:"APPLIED",receipt_ref:receipt!.operation_id,reason_code:null}),
+        });
+      }catch(error){
+        if(error instanceof CurrentHumanLeaseError)throw new AccessPolicyError(
+          error.code==="CURRENT_HUMAN_MUTATION_KEY_CONFLICT"?"POLICY_REVISION_CONFLICT":"ACCESS_RETRY_REQUIRED",
+          error.code==="CURRENT_HUMAN_MUTATION_KEY_CONFLICT"?409:503);
+        throw error;
+      }
+    }else await withTransaction(this.pool,db=>this.installReviewedPolicyInTransaction(db,artifact,true));
+  }
+
+  private async installReviewedPolicyInTransaction(db:PoolClient,artifact:ReviewedPolicyArtifact,
+    write:boolean):Promise<AccessReceipt|null> {
+      await db.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[`portal-access-v2:${artifact.policy.workspace_id}`]);
+      const repo=new AccessRepository(db),original=await repo.policyInstall(artifact.policy.workspace_id,artifact.policy.revision);
+      // The immutable original event, not the current revision, owns replay.
+      // Historical acknowledgement must not restore a superseded policy/root.
+      if(original){
+        if(original.request_digest!==accessDigest(artifact))throw new AccessPolicyError("POLICY_REVISION_CONFLICT",409);
+        return original.receipt;
+      }
+      const anchor=(await db.query("SELECT user_id FROM portal_owner_anchor WHERE anchor_id='PORTAL_OWNER' FOR SHARE")).rows[0]?.user_id;
+      if(anchor!==artifact.policy.protected_owner_user_id) throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH");
+      const old=await repo.policy(artifact.policy.workspace_id,true);
+      if(old?.revision===artifact.policy.revision)throw new AccessPolicyError("POLICY_REVISION_CONFLICT",409);
       for(const grant of artifact.root_grants){
         if(grant.parent_grant_id!==null||grant.issued_by!==anchor||grant.workspace_id!==artifact.policy.workspace_id||
           grant.policy_revision!==artifact.policy.revision||grant.revoked_at_ms!==null||grant.action==="owner.recovery"||
           tsBusinessAction(grant.action)&&grant.effect==="ALLOW"&&(!grant.requires_ts_acceptance||grant.ts_receipt!==null))
           throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH");
-        await repo.saveGrant(grant,true);
       }
+      if(!write)return null;
+      // A reviewed revision carries explicit new roots; old-revision grants remain inert history.
+      await repo.putPolicy(artifact.policy);
+      for(const grant of artifact.root_grants)await repo.saveGrant(grant,true);
       const receipt:AccessReceipt={schema_version:"portal.access-operation.v1",operation_id:randomId("ace"),proposal_id:null,grant_id:null,
         outcome:"APP_APPLIED",http_status:200,reason_code:null,policy_revision:artifact.policy.revision,grant_revision:null,
         decided_at_ms:await this.now(db),ts_authority:"NOT_REQUIRED"};
@@ -526,13 +562,13 @@ export class ExecutionAccessService {
         grant_id:null,proposal_id:null,source:null,source_receipt_id:null,before_fact:old,
         after_fact:{policy:artifact.policy,provenance_ref:artifact.provenance_ref,
           root_grant_digests:artifact.root_grants.map(grant=>({grant_id:grant.grant_id,grant_digest:accessDigest(grant)}))},receipt});
-    });
+      return receipt;
   }
 
   /** Independently verified reviewed roots have no delegation proposal. This
    * private path does not waive TS acceptance, owner policy or current grants. */
   async acceptRootTsReceipt(input:unknown):Promise<OperationResult> {
-    return acceptRootMembershipReceipt(this.pool,this.trust.verifyRootReceipt?.bind(this.trust),input,this.allowTestOnly);
+    return acceptRootMembershipReceipt(this.pool,this.trust.verifyRootReceipt?.bind(this.trust),input,this.allowTestOnly,this.authorityMutations);
   }
 
   /** Capture the delegated receipt's exact Core binding separately from source

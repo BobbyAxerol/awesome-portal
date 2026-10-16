@@ -3,6 +3,7 @@ import type { Pool, PoolClient } from "pg";
 import { z } from "zod";
 import { withTransaction } from "../db/pool";
 import { accessDigest } from "./access-policy";
+import { accessText } from "./access.contract";
 import { CurrentHumanCandidate, CurrentHumanLeaseError } from "./current-human-candidate";
 
 const text = z.string().min(1).max(128).regex(/^[^\u0000-\u001f\u007f]+$/);
@@ -19,6 +20,16 @@ const mutationBinding = z.object({
   WORKSPACE_PROVISIONING: ["ENSURE_PERSONAL"],
 })[value.family].includes(value.operation), "CURRENT_HUMAN_MUTATION_OPERATION_INVALID");
 export type CurrentHumanMutationBinding = z.infer<typeof mutationBinding>;
+// A reviewed artifact or authenticated source receipt is not a login. These
+// private purposes have no fabricated user/session/generation. Their key and
+// full normalized request digest bind the immutable authority evidence.
+const verifiedBinding = z.discriminatedUnion("family", [
+  z.object({ family: z.literal("REVIEWED_POLICY"), operation: z.literal("INSTALL_POLICY"),
+    key_digest: hash, request_digest: hash, target_id: accessText }).strict(),
+  z.object({ family: z.literal("QUALIFIED_ROOT_RECEIPT"), operation: z.literal("ROOT_RECEIPT"),
+    key_digest: hash, request_digest: hash, target_id: accessText }).strict(),
+]);
+export type CurrentHumanVerifiedMutationBinding = z.infer<typeof verifiedBinding>;
 export type CurrentHumanRecoveryAttempt = Awaited<ReturnType<CurrentHumanCandidate["recoverableAttempts"]>>[number];
 export interface CurrentHumanRecoveryPort {
   /** Must use the exact authenticated durable Core attempt, never browser JSON.
@@ -50,6 +61,26 @@ export interface CurrentHumanMutationHooks<T> {
    * contain a one-view activation secret). APPLIED/REPLAYED normalize equally. */
   terminal(result: T): { outcome: "APPLIED" | "REFUSED"; receipt_ref: string | null; reason_code: string | null };
 }
+export interface CurrentHumanMutationFence {
+  /** Must be synchronous; the provider holds this proof through Core outcome. */
+  assertCurrent(): void;
+  release(): Promise<void>;
+}
+export interface CurrentHumanVerifiedMutationHooks<T> extends CurrentHumanMutationHooks<T> {
+  /** Resolve source I/O AFTER drain recovery, outside every Core transaction.
+   * Never hold a provider fence while recovery needs that same provider. */
+  acquire_fence?(): Promise<CurrentHumanMutationFence>;
+}
+
+function assertFence(fence: CurrentHumanMutationFence | undefined): void {
+  if (!fence) return;
+  const result: unknown = fence.assertCurrent();
+  if (result && (typeof result === "object" || typeof result === "function") &&
+    typeof (result as { then?: unknown }).then === "function") {
+    void Promise.resolve(result).catch(() => undefined);
+    throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_FENCE_INVALID");
+  }
+}
 
 /** Small durable intent/drain coordinator, NOT a background identity writer.
  * It stores only a request binding and executes a caller's existing authorized
@@ -76,10 +107,23 @@ export class CurrentHumanMutations {
   }
 
   async execute<T>(untrusted: CurrentHumanMutationBinding, hooks: CurrentHumanMutationHooks<T>): Promise<T> {
-    const binding = mutationBinding.parse(untrusted), bindingDigest = accessDigest(binding);
+    return this.executeBinding(mutationBinding.parse(untrusted), hooks);
+  }
+
+  /** Private adapter API. Verification belongs to the existing artifact/source
+   * boundary; never mount this method as JSON/browser authority. */
+  async executeVerified<T>(untrusted: CurrentHumanVerifiedMutationBinding,
+    hooks: CurrentHumanVerifiedMutationHooks<T>): Promise<T> {
+    return this.executeBinding(verifiedBinding.parse(untrusted), hooks);
+  }
+
+  private async executeBinding<T>(binding: CurrentHumanMutationBinding | CurrentHumanVerifiedMutationBinding,
+    hooks: CurrentHumanVerifiedMutationHooks<T>): Promise<T> {
+    const bindingDigest = accessDigest(binding);
     // A FINISHED receipt belongs to actor/request, not an obsolete login. A
     // PENDING mutation remains bound to its exact original session/generation.
-    const { session_id: _session, session_revision: _generation, ...stable } = binding;
+    const stable = { ...binding } as Record<string, unknown>;
+    delete stable.session_id; delete stable.session_revision;
     const replayDigest = accessDigest(stable);
     let intent: Intent;
     try { intent = await this.transaction(async db => {
@@ -98,7 +142,9 @@ export class CurrentHumanMutations {
       const created = (await db.query<Intent>(`INSERT INTO elp210_candidate.mutations
         (mutation_id,key_digest,binding_digest,replay_digest,family,actor_id,session_id,session_revision)
         VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`, [randomUUID(), binding.key_digest, bindingDigest,
-        replayDigest, binding.family, binding.actor_id, binding.session_id, binding.session_revision])).rows[0];
+        replayDigest, binding.family, "actor_id" in binding ? binding.actor_id : null,
+        "session_id" in binding ? binding.session_id : null,
+        "session_revision" in binding ? binding.session_revision : null])).rows[0];
       await db.query("UPDATE elp210_candidate.authority SET drain_id=$1 WHERE singleton", [created.mutation_id]);
       await db.query("UPDATE elp210_candidate.leases SET phase='RETIRED' WHERE phase='ISSUED'");
       return created;
@@ -113,18 +159,30 @@ export class CurrentHumanMutations {
       throw error;
     }
 
-    if (intent.state === "FINISHED") {
-      return this.transaction(db => this.replay(db, intent, hooks));
-    }
-
     // No Core client/transaction survives the call into the real source.
-    await this.recoverSource();
+    if (intent.state !== "FINISHED") await this.recoverSource();
+    let fence: CurrentHumanMutationFence | undefined;
     try {
-      return await this.transaction(async db => {
+      if (hooks.acquire_fence && intent.state !== "FINISHED") await this.transaction(async db => {
+        const row = (await db.query<Intent>("SELECT * FROM elp210_candidate.mutations WHERE mutation_id=$1", [intent.mutation_id])).rows[0];
+        if (row.state === "FINISHED") return;
+        if (row.state !== "PENDING") throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_PREVIOUSLY_REFUSED");
+        const pending = await this.pendingState(db);
+        if (pending) throw new CurrentHumanMutationPending(intent.mutation_id, pending);
+      });
+      fence = await hooks.acquire_fence?.();
+      if (hooks.acquire_fence && (!fence || typeof fence.assertCurrent !== "function" || typeof fence.release !== "function"))
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_FENCE_INVALID");
+      assertFence(fence);
+      const result = await this.transaction(async db => {
         const row = (await db.query<Intent>("SELECT * FROM elp210_candidate.mutations WHERE mutation_id=$1 FOR UPDATE", [intent.mutation_id])).rows[0];
         // Another exact retry may already have committed while source recovery
         // was in flight. Re-read its immutable receipt, never apply twice.
-        if (row.state === "FINISHED") return this.replay(db, row, hooks);
+        if (row.state === "FINISHED") {
+          const replayed = await this.replay(db, row, hooks);
+          assertFence(fence);
+          return replayed;
+        }
         if (row.state !== "PENDING") throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_PREVIOUSLY_REFUSED");
         const authority = (await db.query("SELECT drain_id FROM elp210_candidate.authority WHERE singleton")).rows[0];
         if (authority.drain_id !== intent.mutation_id) throw new CurrentHumanLeaseError("CURRENT_HUMAN_DRAIN_CONFLICT");
@@ -137,8 +195,11 @@ export class CurrentHumanMutations {
         await db.query(`UPDATE elp210_candidate.mutations SET state='FINISHED',terminal_digest=$2,finished_at=clock_timestamp()
           WHERE mutation_id=$1`, [intent.mutation_id, terminal]);
         await db.query("UPDATE elp210_candidate.authority SET drain_id=NULL WHERE singleton");
+        assertFence(fence);
         return result;
       });
+      assertFence(fence);
+      return result;
     } catch (error) {
       // Fresh serialized read follows a possible lost COMMIT ACK. A FINISHED
       // intent must never be recast as REFUSED or cause callback re-execution.
@@ -154,6 +215,10 @@ export class CurrentHumanMutations {
         });
       } catch { /* An unavailable authoritative read leaves the intent pending. */ }
       throw error;
+    } finally {
+      // Core COMMIT/ROLLBACK and pool release have settled first. A failed
+      // source release/guard is an uncertain ACK, not permission to reapply.
+      if (fence && typeof fence.release === "function") await fence.release();
     }
   }
 
