@@ -2,7 +2,8 @@
 
 Status: COMPLETE_INDEPENDENT — implemented, isolated-tested and cleaned.
 Full connected acceptance NOT_MET; no production activation/sign-off.
-Original connected objective resumed by Bobby; full exit remains NOT_MET.
+Original connected objective BLOCKED after three resumed same-input audits;
+full exit remains NOT_MET and original approval stays valid.
 See current `resumed_intake` before the historical `blocked_audit` in the intake.
 Bobby approved independent11 and original10 round2 on actual owner returns.
 Current original10/11 round2 continuation is also approved; no repeated generic
@@ -70,6 +71,13 @@ until exact released scope has connected evidence, not a blanket stop on all wor
 ## Parallel source consumption and next action
 
 ### Resumed intake —17/10/2026,02:21 Asia/Saigon
+
+Latest02:28 audit: PM retake1007PASS/2FAIL of1009, exit1/cleanup complete/
+runtime unchanged; controller41aff892…. Both failed attempts retained, no new
+source qualification. Research's updated packet b721e6fa… still marks current
+human/budget/coexistence OPEN. No actual compatible provider/port is returned.
+Connected goal BLOCKED after three resumed audits; same original six10 actions
+and approval remain valid. Do not restart terminal jobs or fabricate a provider.
 
 New owner return locator:
 `/home/bobby/.worktrees/trading-system-pm-v1_1/contracts/baseline/portfolio-account-v1_1/pma11-03-http-request-binding.json`.

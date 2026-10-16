@@ -2,9 +2,10 @@
   "schema": "epg10.connected-round2-intake.v1",
   "current_state_ref": "resumed_intake (blocked_audit and earlier intake remain historical)",
   "resumed_intake": {
-    "observed_utc": "2026-10-16T19:22:41Z",
-    "feature_baseline": "4939403708652b18cd6bd86117f7d0d7836b36a1",
-    "goal": "RESUMED_ACTIVE_FULL_OBJECTIVE_NOT_COMPLETE",
+    "observed_utc": "2026-10-16T19:28:14Z",
+    "feature_baseline": "d2d0f65230ed0cb09c915bafd528e720765fd557",
+    "goal": "BLOCKED_NOT_COMPLETE_ACTUAL_INPUTS_MISSING",
+    "same_blocker_resumed_turns": 3,
     "original_approval": "UNCHANGED_NO_NEW_PHASE",
     "pm_commit": "84456381f11b056a2d003fe3941f52e8a69dbb92",
     "pm_packet": "/home/bobby/.worktrees/trading-system-pm-v1_1/contracts/baseline/portfolio-account-v1_1/pma11-03-http-request-binding.json",
@@ -26,22 +27,34 @@
       "owner_runtime_unchanged": true,
       "terminal_not_a_live_wait": true
     },
-    "abi": "PM raw HTTP delivery digest is not Edge immutable intent digest/current grant/full authority receipt; no actual compatible provider/port returned",
-    "ts_commit": "5a17ecaf14107bfc3c9c605f3d64d4a3e607fc6a",
+    "retake": {
+      "controller_ref": "/home/bobby/.local/state/pma11-http-human-sgp-4l5y2_g0/attempt-192318/controller.json",
+      "controller_sha256": "41aff892d7a7aab26169c2b2536cbbe8865f761e50804ade7f1df86f62017025",
+      "tests": 1009,
+      "passed": 1007,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 1,
+      "cleanup_complete": true,
+      "owner_runtime_unchanged": true
+    },
+    "abi": "HTTP delivery digest != immutable intent/grant/receipt; no compatible provider/port",
+    "ts_commit": "ca435a18feb46ef497fef5b6c3bc359ee57e3376",
     "native_fence": "DECISIVE_BYTES_UNCHANGED",
-    "research": "d92efc0e; commissioning packet e08aa877 unchanged; new WIP not adopted",
+    "research": "d92efc0e; packet b721e6fa3a464f8b0caa8d6856ff31351ba49528463d58428fe1ebfbc4594b97; current-human/budget/coexistence OPEN",
     "runtime": {
       "protected_tuples_unchanged": 23,
-      "hk_free_bytes": 211064508416,
-      "sgp_free_bytes": 167564783616,
-      "last_observed_utc": "2026-10-16T19:22Z"
+      "hk_free_bytes": 210380058624,
+      "sgp_free_bytes": 167730122752,
+      "last_observed_utc": "2026-10-16T19:27Z"
     },
-    "c4": "NO_ACTION_NEEDED; own artifacts0/deleted0B; active/rollback/7worktrees retained",
+    "c4": "NO_ACTION_NEEDED own0 deleted0B; retain active/rollback/7worktrees",
     "independent11": "COMPLETE",
     "full_connected10_11": "NOT_MET",
     "fresh_edge_product_tests": 0,
     "new_bound_ports": 0,
-    "next": "Consume qualified PM retake and actual SOURCE/TRUST/COMMAND/RESEARCH/LOAD/RELEASE input; bind/test only dependent original03/08/09/10/11 cells"
+    "next": "Same six10 returns -> affected original03/08/09/10/11 cells; no new phase/approval"
   },
   "blocked_audit": {
     "observed_utc": "2026-10-16T19:13:36Z",
