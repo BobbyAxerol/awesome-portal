@@ -67,6 +67,21 @@ until exact released scope has connected evidence, not a blanket stop on all wor
 
 ## Parallel source consumption and next action
 
+### Committed PM publication —17/10/2026,02:08 Asia/Saigon
+
+PM84456381f11b056a2d003fe3941f52e8a69dbb92 now commits the previously consumed
+965PASS/25offline package and provider-publication receipt SHA256
+`2b03704c65d22269c6f8b5d56fadadb0c1f713c7c4d6a953109a64533170de8f`.
+The earlier WIP/pending-owner-publication descriptions below are historical.
+This closes source publication only; actual provider/field enablement remain
+false and command transport unmounted. PM per-request human preparation/HTTP
+request-binding implementation and Research commissioning are active peer work,
+not installed authority or Edge-owned unfinished work. No genuine new binding
+is returned. Full connected10/11 stays NOT_MET; original six10 returns apply.
+See `publication_followup` in [the same intake](round2-intake.json) and main-plan
+§23.20.1 for immutable pins, current23runtime/C4 and next exact action. No new
+phase/general approval or duplicate candidate-only test job is needed.
+
 ### Latest connected-goal follow-up —17/10/2026,01:51 Asia/Saigon
 
 Research retry is now **PASS_NORMAL_HOOK**, clean commit

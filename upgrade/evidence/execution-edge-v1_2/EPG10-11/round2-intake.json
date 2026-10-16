@@ -1,6 +1,175 @@
 {
   "schema": "epg10.connected-round2-intake.v1",
-  "current_state_ref": "latest_followup (initial intake and failed first Research attempt below remain historical)",
+  "current_state_ref": "publication_followup (prior latest_followup and initial intake remain historical)",
+  "publication_followup": {
+    "observed_utc": "2026-10-16T19:09:36Z",
+    "feature_baseline": "d625b12d79e6b5468deaedc3dfbffe57dc5ad6f4",
+    "provenance": "READ_ONLY_COMMITTED_SOURCE_PUBLICATION_AND_RUNTIME_RECONCILIATION_NOT_CONNECTED_ACCEPTANCE",
+    "pm": {
+      "worktree": "/home/bobby/.worktrees/trading-system-pm-v1_1",
+      "branch": "feat/portfolio-account-v1_1-parallel",
+      "commit": "84456381f11b056a2d003fe3941f52e8a69dbb92",
+      "evidence_ref": "contracts/baseline/portfolio-account-v1_1/pma11-13-provider-publication-evidence.json",
+      "evidence_sha256": "2b03704c65d22269c6f8b5d56fadadb0c1f713c7c4d6a953109a64533170de8f",
+      "status": "COMMITTED_ISOLATED_SOURCE_PACKAGE_QUALIFIED_FULL_PHASES_OPEN",
+      "source_passed": 965,
+      "offline_passed_separately": 25,
+      "replaces_obsolete_publication_state": "Previously consumed tests now have immutable owner commit; historical f8+WIP/owner-publication-pending descriptions are not current",
+      "actual_provider_installed": false,
+      "actual_field_enablement": false,
+      "unfinished_pm_owned_implementation": "Per-request current-human preparation factory and server-computed HTTP request binding; do not duplicate or mislabel as external debt",
+      "source_publication_is_authenticated_export_or_runtime_mount": false
+    },
+    "research": {
+      "observed_utc": "2026-10-16T19:03:40.707749+00:00",
+      "worktree": "/home/bobby/portal-research",
+      "commit": "d92efc0e33d71d2d2f21f7f67cafa1cae946cb0b",
+      "state": "COMMISSIONING_WIP_PEER_OWNED_NO_ACTUAL_CURRENT_PROVIDER_RETURN",
+      "unstaged_sha256": "73121925078990e9a075668c24e554ceb9205e54588b51728bb9e9a958dd1b9b",
+      "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "live_relevant_jobs_at_observation": [],
+      "untested_wip_inherits_prior_source_hook_pass": false
+    },
+    "source": {
+      "ts_commit": "1dde708ed8f787d4f81e156f0a160b4a45226325",
+      "dl_commit": "860b79bacbb70d20b4c895da6f4664245e637dd2",
+      "native_publication_rust_sha256": "13f21d5369b641dafaaff9f5664ee5d97c5d870376b57ace3ce8feba17e59c05",
+      "native_sql59_sha256": "0115a6bc9142e330ec48b9ada7ecc6506548815190790ed776178f332ced6a96",
+      "native_fence": "NO_NEW_OWNER_RETURN_DECISIVE_BYTES_UNCHANGED",
+      "command_runtime": "UNCONFIGURED_FAIL_CLOSED_NO_QUALIFIED_CELLS_NO_NEW_SEND_TRANSPORT",
+      "former_g12_namespace": "p184-g12-dl-90f8a08ef462e6ae",
+      "former_g12_running_containers_now": 0,
+      "lock_absence_or_g12_completion_is_n03_or_connected_capacity_pass": false
+    },
+    "verification": {
+      "provenance": "READ_ONLY_IMMUTABLE_SOURCE_HASH_RECONCILIATION_NOT_PRODUCT_TESTS",
+      "pm_commit": "84456381f11b056a2d003fe3941f52e8a69dbb92",
+      "pm_committed_pins": 17,
+      "pm_committed_mismatches": [],
+      "pm_current_worktree_mismatches": [],
+      "pm_evidence_sha256": "2b03704c65d22269c6f8b5d56fadadb0c1f713c7c4d6a953109a64533170de8f",
+      "pm_actual_provider_installed": false,
+      "pm_actual_fields_enabled": false,
+      "edge_public_inputs": 439,
+      "edge_input_mismatches": [],
+      "edge_helpers": 4,
+      "edge_helper_mismatches": [],
+      "retained_historical_edge_passed": 535,
+      "fresh_edge_product_tests": 0
+    },
+    "tracking_verification": {
+      "provenance": "READ_ONLY_METADATA_JSON_LINK_SCOPE_CHECK_NOT_PRODUCT_TEST",
+      "status": "PASS",
+      "local_file_links_checked": 594,
+      "missing_links": [],
+      "changed_owned_files": 5,
+      "git_diff_check": "PASS",
+      "fresh_edge_product_tests": 0,
+      "new_connected_cases": 0
+    },
+    "runtime": {
+      "hk": {
+        "observed_utc": "2026-10-16T19:06:06.211481+00:00",
+        "tuples": 18,
+        "unchanged_against_protected_baseline": true,
+        "disk_available_bytes": 210311163904,
+        "disk_total_bytes": 518933680128,
+        "measurement_lock": null,
+        "docker_inventory": [
+          {
+            "Active": "39",
+            "Reclaimable": "7.725GB (25%)",
+            "Size": "30.57GB",
+            "TotalCount": "102",
+            "Type": "Images"
+          },
+          {
+            "Active": "40",
+            "Reclaimable": "17.29MB (4%)",
+            "Size": "404.1MB",
+            "TotalCount": "69",
+            "Type": "Containers"
+          },
+          {
+            "Active": "14",
+            "Reclaimable": "218.3MB (0%)",
+            "Size": "129.3GB",
+            "TotalCount": "39",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "442.3MB",
+            "Size": "28.3GB",
+            "TotalCount": "371",
+            "Type": "Build Cache"
+          }
+        ]
+      },
+      "sgp": {
+        "observed_utc": "2026-10-16T19:07:43.035326+00:00",
+        "tuples": 5,
+        "unchanged_against_protected_baseline": true,
+        "disk_available_bytes": 167833169920,
+        "disk_total_bytes": 665811062784,
+        "measurement_lock": null,
+        "docker_inventory": [
+          {
+            "Active": "25",
+            "Reclaimable": "74.4GB (83%)",
+            "Size": "88.82GB",
+            "TotalCount": "328",
+            "Type": "Images"
+          },
+          {
+            "Active": "51",
+            "Reclaimable": "471kB (19%)",
+            "Size": "2.449MB",
+            "TotalCount": "59",
+            "Type": "Containers"
+          },
+          {
+            "Active": "22",
+            "Reclaimable": "13.78GB (42%)",
+            "Size": "32.46GB",
+            "TotalCount": "97",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "93",
+            "Reclaimable": "62.89GB",
+            "Size": "195.9GB",
+            "TotalCount": "3774",
+            "Type": "Build Cache"
+          }
+        ]
+      }
+    },
+    "c4": {
+      "decision": "NO_ACTION_NEEDED",
+      "own_images": 0,
+      "own_buildkit": 0,
+      "own_containers": 0,
+      "own_volumes": 0,
+      "own_networks": 0,
+      "removed_bytes": 0,
+      "shared_prune": false,
+      "retention": "All7 active Portal worktrees, unchanged active23 runtime/release/config tuples, named rollback and08 private PKI retained"
+    },
+    "result": {
+      "full_connected10_11": "NOT_MET",
+      "independent11": "COMPLETE",
+      "actual_new_bound_ports": 0,
+      "new_connected_cases_run": 0,
+      "goal": "ACTIVE_NOT_COMPLETE_SOURCE_PIN_PROGRESS_ONLY",
+      "runnable_owned_intake_status": "COMPLETE_NO_NEW_OWNED_BINDING_FROM_SOURCE_PUBLICATION_ALONE",
+      "genuinely_blocked": "Original SOURCE/TRUST/COMMAND/RESEARCH/LOAD/RELEASE require compatible actual input/target/provider; exact owners and actions remain in same10 packet",
+      "next": "Consume each actual compatible return and run original affected03/08/09/10/11 cells immediately; no new phase, repeated generic approval or synthetic substitute",
+      "production_mutations": 0,
+      "peer_edits": 0,
+      "push_or_merge": false
+    }
+  },
   "latest_followup": {
     "observed_at": "2026-10-17T01:59:53+07:00",
     "feature_baseline": "03180552340c3b132381fcd334e08bb276f148fc",

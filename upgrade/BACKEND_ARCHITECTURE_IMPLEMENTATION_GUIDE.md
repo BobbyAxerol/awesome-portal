@@ -744,9 +744,10 @@ deep-dive → ADR → slice → evidence discipline documented above.
   owner-accepted r1 field matrix; neither is installed runtime authority.
   Research retry landed clean`d92efc0e`/normal-hook PASS; the earlier exit124 is
   historical, not a current blocker or connected acceptance. PM financial/
-  composition source now965pytest PASS/25offline separate,11relevant hash pins
-  verified against tested WIP; no runtime certification. Actual authenticated
-  current provider/export/mapping remain unbound.
+  composition source now965pytest PASS/25offline separate, committed84456381;
+  provider-publication evidence is consumed, not pending WIP publication. No
+  runtime certification. Actual authenticated current provider/export/mapping
+  remain unbound.
   Historical08 completion round after the earlier PM deferral recorded
   PM`c401a023` still explicitly NOT_PUBLISHED for runtime authority/COMMIT proof;
   Research`169195ca` has no production provider and UNMAPPED identity. The single

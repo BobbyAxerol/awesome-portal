@@ -14277,5 +14277,56 @@ Fresh hashes and terminal scope are in intake `latest_followup.pm_terminal_retur
 Final read-only reconciliation after that return:17checks/0failures,605file links
 resolve, bounded receipt49,675B; no fresh Edge product-test count or runtime change.
 
+**Same-round source-publication follow-up17/10/2026,02:08Asia/Saigon:** original
+10/11 approval, guides, scope, invariants, test/rollback gates above remain in
+force. Consume newly committed PM return84456381f11b056a2d003fe3941f52e8a69dbb92
+and its `pma11-13-provider-publication-evidence.json` now; reconcile immutable
+tested hashes and current runtime before changing only owned tracking/intake.
+This is not a request for approval or permission to edit PM/Research/TS code.
+No new product byte, target, grant, identity or production mutation is intended.
+
+PM's previously consumed965PASS/25offline source is now COMMITTED, not pending
+owner publication or merely uncommitted WIP. Evidence SHA256
+`2b03704c65d22269c6f8b5d56fadadb0c1f713c7c4d6a953109a64533170de8f`;
+actual provider/field enablement remain false. PM explicitly owns unfinished
+per-request human preparation and server-computed HTTP request binding; do not
+mislabel that implementation as external debt or duplicate it in Edge. Research
+commissioning remains peer WIP without an actual authenticated current provider
+return. TS1dde708e native fence hashes remain unchanged; market-data G12 is not
+that publisher. A committed source package is not an enabled read/export port.
+
+**Runnable/blocked partition:** consume the committed source/evidence and repair
+the obsolete WIP/publication status now. No compatible actual current-provider,
+B/delta/history, command, connected-load or release target has been returned;
+the original six10 returns still name the exact owner/input/dependent drill.
+No new owned Edge binding/test becomes runnable from the commit alone. Keep
+full connected10/11 NOT_MET and affected tests NOT_RUN; do not produce fixture
+PASS as replacement. New phase/general approval is unnecessary. Consume each
+real compatible return in its original03/08/09/10/11 cell when available.
+
+**Fresh runtime/C4:**02:06HK/02:07SGP metadata matches all23protected Portal
+image/config/start/restart tuples. Both host locks now absent; G12's former
+container namespace has no running container. These are terminal observations,
+not an active job to await or connected capacity PASS. HK free210,311,163,904B;
+SGP167,833,169,920B. Image/BuildKit inventories retained in the same intake;
+own build/cache/container/volume/network0, deleted0B, NO_ACTION_NEEDED. All7
+active Portal worktrees, current runtime and named rollback/08PKI retained.
+Canonical manager54c6f5f3, stableSGP main53316263, released Edge8814cd2a/image
+d6aa7a51 remain separate from this featured625b12d plus enclosing commit. No
+deploy/restart/DB/TLS/financial change, peer edit, push or merge. Verification
+below must remain metadata/hash/JSON/link checks, not fresh product acceptance.
+
+**Verified source-publication slice:** all17 PM immutable committed behavior/
+test/manifest hashes match the qualifying receipt; current worktree also matches
+those17 at inspection. Edge439public inputs/4helpers remain unchanged against
+historical535qualification. Bounded JSON/owner-scope/false-PASS checks and594local
+Markdown file links pass,0missing; intake56,299B before final verification note.
+New Edge product/connected tests0, no new provider bound. `git diff --check`
+PASS. Only five owned tracking/intake files changed; preserve unrelated untracked
+feasibility review. Commit with configured Bobby identity and normal hooks;
+no push/merge. Full goal remains NOT_ACHIEVED/connected NOT_MET, not complete
+from this immutable publication update. Next concrete action remains actual
+compatible owner return → original dependent binding/drill, no new phase.
+
 
 
