@@ -10059,13 +10059,16 @@ Full connected checklist remains open: existing01 numeric budgets,03 actual
 publication, fresh paired coexistence and Research returns; these are not waived
 by317 correctness tests. No known defect left in the tested isolated package;
 Edge runtime composition/connected measurement remains unfinished phase work,
-not reclassified as somebody else's technical debt.07 not started.
+not reclassified as somebody else's technical debt.07 was not started at that
+06 checkpoint; the newly approved07 execution is tracked below and in §23.16.
 
 <a id="epg10-07-plan"></a>
 #### EPG10-07 Thực hiện command relay có durable receipt
 
-**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
-**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+**Status:** IN_PROGRESS — **Approval:** BOBBY_APPROVED (2026-10-16), named phase.
+**Tests:** final416PASS /0FAIL/skip; fmt + strict zero-warning Clippy PASS.
+**Owned package:** QUALIFIED_SOURCE_DARK — **Full phase exit:** NOT_MET —
+**Runtime activation:** NOT_AUTHORIZED / NOT_PERFORMED.
 
 **Guide chi tiết bắt buộc:** [EDGE / EPG10-07](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-07-thực-hiện-command-relay-có-durable-receipt);
 [BE §§3, 9.2–9.4, 11–12; ELP2-07](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§8.5, 9.9, 10 (no score-driven authority)](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
@@ -10087,11 +10090,11 @@ Record phase approval, exact affected datasets/operations/profiles and partner r
 **Checklist:**
 
 - [ ] Sửa code từ chối relay hiện tại chỉ trong approved implementation package; không coi việc đổi flag là implementation.
-- [ ] Preserve `pma.capital-command.v1.1` payload và states; map existing paper command catalogue riêng, không giả mọi PM operation đã tồn tại.
+- [x] Preserve `pma.capital-command.v1.1` payload và states; map existing paper command catalogue riêng, không giả mọi PM operation đã tồn tại. Verified structurally/isolated only; no native runtime publication inferred.
 - [ ] Verify workload+human delegation, supported target/mode/profile, TS business authorization và expected versions.
-- [ ] Implement same-key/digest replay và conflict; persist correlation để lost-response recovery.
+- [x] Implement same-key/digest replay và conflict; persist correlation để lost-response recovery. Real disposable PG, concurrent CAS and fresh OS process verified.
 - [ ] Distinguish accepted/terminal/unknown; status lookup authoritative và retention đủ ambiguity window.
-- [ ] Reject direct SQL/exchange bypass; operation chưa publish trả unavailable; base release chỉ local/Demo allowed scopes.
+- [x] Reject direct SQL/exchange bypass; operation chưa publish trả unavailable; base release chỉ local/Demo allowed scopes. Runtime remains command-denied; no actual mutation activation.
 
 **Tests và fixtures:** `EPG10-T07-01` F-NET TS commit trước response loss, retry same key có đúng một effect/receipt; `T07-02` same key different payload trả conflict; `T07-03` stale version/wrong mode/profile/unauthorized actor no effect; `T07-04` ACCEPTED không làm UI/relay nói APPLIED; `T07-05` pending recall receipt giữ exact amount invariant sau retry/cancel; `T07-06` missing authority implementation không fallback admin SQL.
 
@@ -10102,12 +10105,23 @@ Record phase approval, exact affected datasets/operations/profiles and partner r
 **Resource/test execution boundary:** Bound admission, retries, status lookup and ambiguity retention; record before/after domain versions and TS receipts through lost response/restart. No real order/transfer or production command without exact separate activation approval. Shared-host lock, disposable
 namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
 
-**Technical debt / external gates:** Chưa tạo debt. Exact TS operation handler/publication, actual PM trust/current provider and actor-chain acceptance remain upstream gates. Missing relay code is this phase's work, not an operational switch or external debt.
+**Technical debt / external gates:** No known defect remains in the qualified
+isolated package. Exact TS operation handler/publication, actual PM trust/current
+provider and actor-chain acceptance remain upstream gates. Actual Edge adapter/
+HTTP/runtime binding and connected qualification are unfinished dependent07 work,
+not an operational switch, a new phase or somebody else's completed code. The
+single owner return identifies the exact prerequisite; no repeated blanket approval.
 
 **Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
 actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
 source/runtime/retention tuple; remaining gate owner and next independently runnable
-scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+scope. **Hiện tại:** bounded relay/store/provider seams qualified source-dark;
+416automated PASS and6formal families PASS isolated,0actual TS qualifications.
+No actual TS product receipt or runtime activation. See §23.16,
+[verification](evidence/execution-edge-v1_2/EPG10-07/verification.json),
+[immutable qualification](evidence/execution-edge-v1_2/EPG10-07/qualification.json)
+and [single owner return](evidence/execution-edge-v1_2/EPG10-07/COMMAND_RELAY_AND_OWNER_RETURN.md).
+Owned7.365GB test copies/cache/logs removed;12HK+5SGP tuples unchanged/restarts0.
 
 <a id="epg10-08-plan"></a>
 #### EPG10-08 Hoàn thiện revocation scope và TLS
@@ -12287,6 +12301,271 @@ that approved edit and all unrelated untracked workspace files.
 Commit this coherent tested continuation locally as Bobby; full06NOT_MET and
 07NOT_STARTED remain explicit. No failed or missing connected test is counted
 as PASS, and no independent preparation is deferred to a new phase.
+
+### 23.16 EPG10-07 — trusted command relay and durable receipt execution
+
+**2026-10-16 UTC pre-code freeze / BOBBY_APPROVED / IN_PROGRESS.** Worktree
+`/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2`, branch
+`feat/execution-edge-upgrade-v1_2`, clean base
+`e15e7064dba5f9cc912ce52198dfc450ccf6d3e8`. Rules reread; follow phase07 linked
+EDGE07, BE§3/9.2–9.4/11–12/ELP2-07, SCORE§8.5/9.9/10 and REVIEW§3.1–3.3.
+06 remains NOT_MET; its connected capacity acceptance is not claimed or waived.
+Execute independent07 code/contracts/isolated tests now; do not reopen approval.
+
+**Goal / scope:** implement a bounded Rust command plane and additive durable
+PostgreSQL delivery/receipt correlation using existing crates/runtime, not the
+GET-with-retry read transport, in-memory snapshots or Control API blocked F0
+plans as authority. Preserve legacy read behavior/claims and default command
+denial. Source catalogue defines exact operation×environment/profile and actual
+TS authority; PM business JSON/receipt and R2 capital semantics remain unchanged.
+No TS/PM/DL/Research writes, browser/UI work, generic URL/SQL/CLI/exchange bypass,
+real orders/transfers, production command activation, shared DB/schema mutation,
+secret rotation or service restart/deploy. Mutation tests use named TEST_ONLY
+authority and disposable real PG; never report that as TS/provider acceptance.
+
+**Invariants:** distinct verified human/session/workload context, payload digest,
+scope/profile, expected versions, current policy checks and TS commit authority;
+read permission is not mutation permission. Persist intent/correlation before
+send, acquire a durable one-dispatch CAS token, same key+digest returns original,
+different digest conflicts. Never automatically replay ambiguous mutation;
+recover by scoped authority status with the same correlation. Delivery ACK/202
+is not APPLIED. Retain exact PM disposition and amount partition across pending,
+cancel/replay/restart; never synthesize capital success from HTTP status or
+cached grants. Disabled sends must retain authorized status/recovery; no bulk
+cancel/undo or silent amount recomputation on rollback. Bound admission, body,
+response, pool, attempts, operation lookup and ambiguity retention explicitly.
+
+**Verification:** required T07-01…06 (commit-before-response loss/restart and
+same-key one effect; conflict; stale version/wrong mode/profile/spoofed actor;
+accepted nonterminal; exact pending/cancel amount partition; unavailable authority
+no fallback). Add concurrent callers/multi-instance durable CAS/fencing, receipt
+binding/out-of-order status, expiry/revoke/disabled reads, malformed/oversized
+input, persisted restart and rollback/status-only checks; existing Rust/read/auth
+and runner regressions, migration reapply, fmt/strict Clippy. Test correctness
+before performance; capacity/source-connected/Live acceptance remains separate.
+
+**Parallel review / resource boundary:** delegated read-only TS/PM/DL authority,
+Research ELP2-07 staged contracts and existing Rust substrate audits each round;
+root owns plan/integration and reads governing instructions. No peer edits or
+heavy HK jobs: foreign `claude-drain-rate` lock09:30:38–11:30:38UTC. Prepare and
+test on independent SGP only after lock/capacity preflight under own atomic lock,
+one Cargo job/CPU affinity, nice15, disposable0700 `/tmp/epg10-07-*` and exact
+loopback PG name/port/schema/credentials; copy public source/contracts only.
+Do not send real commands or store JWT/secret values in source/evidence/receipt.
+
+**Rollback / cleanup / closure:** disable new sends, preserve durable status and
+already accepted/unknown rows. Additive schema rollback never drops operational
+receipts. Remove exact owned test PG/source/cache/lock; inventory images/BuildKit,
+record disk pre/post and12HK+5SGP protected tuples. Commit coherent verified
+slices as Bobby on this feature only; no push/merge. Close only exact enabled
+operation scopes with correlated authority receipts. Publish once the concrete
+upstream operation/trust gaps; do not count unmounted PM handlers or old Paper
+workload-only JWT drills as current-human capital authorization. Missing owned
+relay/store/config tests stay implementation work, not external debt.
+
+**09:53 UTC implementation checkpoint (NOT_YET_TESTED):** pure internal PM
+intent/receipt constructors preserve the original JSON and exact decimal amount
+partition; a separate current-authority provider seam has no Deserialize/wire
+or implicit read-role upgrade. Additive Portal migration0021 and governed PG
+store implement shared quota, indexed immutable-key lookup, one-send CAS,
+bounded SQL/lock waits, full receipt revision/progress checks and status-only
+restart recovery. The async composition bounds admission and source deadlines,
+checks current authority before dispatch, keeps ACK separate from outcome and
+does not use GET retry transport. Existing Edge read runtime stays unchanged;
+command request now reports the concrete unavailable authority/transport instead
+of implying that a boolean flag installs it. New runners reuse04/05/06 and07
+TEST_ONLY source port; no actual TS effect has been claimed.
+
+Parallel refresh: TS4598e392 / PMd16aa2b5 / DL68556d40 unchanged; Research landed
+`3d537127313fb3c282eda054fd180499fe4732ca` during audit. Its
+`command-trust.ts` is explicitly a server-owned internal seam; no signed command
+wire/crypto adapter exists. Its reduced public status is not the sole durable
+receipt: Edge stores the full source presentation. Local Portal payload digest
+is NOT PM's resolved-recipient/authority source-intent digest; an eventual native
+port must bind the actual TS key/digest/target before presenting a receipt.
+Current TS N12's nine capabilities remain unpublished and its Paper workload
+assertion is not PM human authority. The PM candidate is unmounted. These are
+specific source/transport dependencies, not permission to invent a new wire.
+
+SGP preflight09:45–09:46UTC: no measurement lock,168123715584B free; retain all
+five protected SGP tuples. Exact private test directory `/tmp/epg10-07-gVjNCDAA`
+contains public source/contracts/helpers only. HK foreign lock is respected;
+no cargo/pytest/container/load job started on HK. Run isolated correctness under
+its own lock; format/strict-Clippy failures and any owned defect must be fixed
+before this implementation slice closes. Actual connected07 exit remains open.
+
+**10:02 UTC attempt1:** runner73/73 and rustfmt PASS; locked all-target compile
+FAIL before DB creation because the newly included legacy command-relay tests
+require `execution-command-relay-denied.valid.json`, missing from the copied
+input allowlist. This is an owned harness defect, not external debt. Added that
+exact public fixture with64KiB/nonempty/hash checks and one runner safety case
+(74 total). Preserve attempt1 failure; no PG/container/source requests occurred,
+lock released cleanly. Final review additionally removes a post-commit DB read,
+rechecks current status authority before source I/O/disclosure, boxes the source
+receipt variant and adds fresh-OS-process persistence plus fail-fast async
+admission tests. Final candidate must be reformatted and rerun in full; old
+candidate successes are not substituted for the final source manifest.
+
+**10:14 UTC attempt2 / current-requester refinement:** runner74/74, fmt,
+all-target compile and Edge all-target check PASS. Combined eight-library
+regression hit the inherited240s stage deadline (no assertion failure observed);
+the owned runner now gives only profile07's expanded unit suite600s, preserves
+04/05/06 limits and the1500s total lease, with one additional safety case.
+This timeout remains a recorded failed attempt, not PASS or external debt.
+Current-authority facts now distinguish the original immutable intent actor
+from the authenticated requester: another currently authorized manager may
+read a historical receipt, but cannot submit as the original actor/workload.
+Current requester revocation/session/membership/policy remain mandatory; three
+pure tests add positive and negative report controls. Service-only recovery
+still returns no public data. Reformat/strict-lint preflight and the full final
+candidate rerun follow; no production/source effect or runtime activation.
+
+**10:22 UTC final-candidate checkpoint:** after fixing one strict-Clippy
+semicolon diagnostic (no suppression), runner75/75, locked nine-package
+all-target compile, Edge all-target check, eight-library211/211 and actual
+Edge-binary38/38 PASS. DB integration and final strict Clippy are still running;
+this checkpoint is not full acceptance. Final parallel source refresh confirms
+TS4598e392 / PMd16aa2b5 / DL68556d40 and all34 frozen non-journal interfaces
+unchanged (ordered inventory SHA256
+`04be31ddb93f8b1beefb58d25f68cb74a5fe2aa8ba65059044eb844f85b21117`).
+All four detailed guides retain their original hashes. HK12 runtime tuples
+unchanged at10:18, foreign measurement lock respected. Failed attempts and their
+owned fixes are retained in
+[attempt history](evidence/execution-edge-v1_2/EPG10-07/attempt-history.json);
+no failed attempt is added to the eventual final-candidate PASS count.
+
+**10:25 UTC attempt3:** all416 automated cases PASS/0FAIL/skip, including22real
+PG command cases; fmt, nine-package all-target compile and Edge check PASS.
+Overall qualification is still FAIL because strict Clippy found one doc-markdown
+diagnostic in owned `command.rs` (`FAILED_BEFORE_SEND` needed code ticks).
+Fixed documentation only; no economic/state behavior or lint policy changed.
+Preserve this attempt as failed qualification, rerun strict lint and complete
+profile07 against the exact final source hashes. Owned PG/sampler/lock cleanup
+succeeded, no production/source requests or mutations.
+
+**10:27 UTC:** strict nine-package/all-target Clippy preflight now PASS with
+`-D warnings` after adding code ticks to the command and test doc comments.
+No executable change or lint allowlist/suppression. Full profile07 rerun started
+on that exact source (attempt4), all test selection and bounds retained.
+
+**10:31 UTC parallel round:** Research advanced from3d537127 to
+`daf434875e28aa131105d7f27d910b2f0ca05792` (ELP2-08 workflow/HiFi contracts,
+21changed files). Inspected the delta and pure workflow helper: no command
+module/controller/service wiring changes; all five pinned command trust,
+contract, foundation, OpenAPI and fixture hashes unchanged. Updated observed
+Research pin without rewriting its command-origin revision or claiming runtime
+activation. TS/PM/DL source pins unchanged. Final relay library/regression211
+PASS again; Edge/PG/strict-lint rerun still in progress on unchanged input bytes.
+
+**10:33–10:36 UTC final tested slice / owned package QUALIFIED_SOURCE_DARK;
+full07 NOT_MET.** Final profile07 attempt4 completes successfully in366.194s;
+all exact input bytes remain unchanged. The local candidate matches all424
+public source files and4helpers,0mismatches. Manifest SHA256
+`e464f9e96633306be07577f0ea501499c46c8535197ffb1c9b7ac6cd43053bdf`.
+[Verification](evidence/execution-edge-v1_2/EPG10-07/verification.json),
+[full bounded qualification/hashes](evidence/execution-edge-v1_2/EPG10-07/qualification.json),
+[attempt history](evidence/execution-edge-v1_2/EPG10-07/attempt-history.json)
+and [single owner return/code entrypoints](evidence/execution-edge-v1_2/EPG10-07/COMMAND_RELAY_AND_OWNER_RETURN.md)
+are the authoritative handoff. Existing guides and backend indexes agree:
+implemented/tested isolated, not shadow-certified/production-ready or authoritative.
+
+**Implemented exact scope:** `command-relay::{authority,durable}` adds opaque
+current requester/service-recovery proofs, not an external signed envelope;
+checks every scope/intent/revision/TTL and exact version set before new dispatch.
+Immutable original actor/workload differs from current manager reporting rights.
+All eight PM capital shapes preserve original JSON and arbitrary128-character
+decimal proof, six dispositions and full15-field source receipt. Local raw
+payload digest is deliberately not native PM's resolved authority/recipient
+digest; an actual adapter must bind both correctly. No monetary/business authority
+was moved into Portal. No `RETURN_CAPITAL`, control/profile or exchange alias.
+Paper/Sandbox/Live are structural environments; Canary requires an explicit
+native profile. Eight structural shapes are not eight runtime-ready operations.
+
+Portal-owned PG migration0021 and `projection-store-pg::command` implement a
+shared finite ledger quota, immutable indexed business key/request-digest lookup,
+persist-before-send and cross-replica one-dispatch CAS. Network calls hold no DB
+transaction; SQL2s/lock250ms, fail-fast1–32active/source50ms–30s bounds are explicit
+construction constraints, not new production budget defaults. Timeout/crash/
+post-send503/decode failure remains UNKNOWN, never automatic resend. ACK is not
+APPLIED; source receipt revision/amount/version progress cannot regress. Full
+receipts persist through a new OS process. New sends can be disabled while current
+authorized status and independently authorized private service recovery continue.
+No automatic TTL/deletion can turn an unresolved old key into a new executable
+intent; full ledger fails admission closed. Retention/compaction waits for actual
+native idempotency semantics, not an invented purge policy. Existing read auth,
+transport, legacy protective primitive and operational deployments unchanged.
+
+**Commands/tests actually run on isolated SGP (no HK heavy job):** reusable
+`scripts/epg10-04/run.py`, `EPG10_TEST_PROFILE=07`, exact base revision above,
+expected bootstrap22/read29/resource8/manager11/command22, offline dependency
+mode on final run. It invokes `cargo fmt --all -- --check`, locked nine-package
+all-target test build, `cargo check -p edge-service --all-targets`, eight-package
+`cargo test --lib -- --test-threads=1`, actual Edge binary, all five named real-PG
+integration suites and strict all-target `cargo clippy -- -D warnings`.
+
+- Runner safety75PASS; eight Rust libraries211PASS; actual Edge38PASS.
+- Real disposable PG bootstrap22/read29/resource8/manager11/command22PASS.
+- **Total416PASS /0FAIL/ignored/skip/filtered; fmt PASS, Clippy0warnings PASS.**
+- T07-01…06:6PASS_ISOLATED;0connected actual TS qualifications. Includes lost
+  response after TEST_ONLY source commit, same-key one effect/conflict, concurrent
+  replicas, stale/revoked/unpublished/scoped denial, ACK distinction, exact pending/
+  cancel/full receipt, fresh OS process, bounded admission/timeout, rollback and
+  private recovery without leaking data to revoked requester. Child process not
+  double-counted. Native source commit authorization/effects/transport NOT_RUN.
+- Earlier three qualifications remain FAIL in history; their owned harness/
+  doc-lint defects fixed and final source rerun completely, no lint allowlist.
+  Whole unrelated monorepo suite not run; no Git hooks disabled/reconfigured.
+
+**Observations, not production capacity:** one Cargo job/one CPU affinity/nice15;
+test PG0.5CPU/768MiB with512MiBtmpfs/max24connections. Final sampled PG memory
+max497405952B; memory high/max/oom/oom_kill deltas0. Shared-host/cumulative child
+RSS/WAL/CPU observations remain tainted for capacity; no p95/p99, TS effect,
+broker/native-provider, HA or Live acceptance inferred.01/03/06 gates unchanged.
+
+**Cleanup / source-release-runtime reconciliation:** runner removes its exact
+PG and sampler in finally; cleanup10:35UTC removes only validated owned0700
+`/tmp/epg10-07-gVjNCDAA` (public copies, Cargo/target caches and private test logs),
+7364943872allocated bytes. Free160728117248→168093061120B, +7364943872B;
+path/own lock/own container absent. Synthetic PG state intentionally discarded;
+original source and bounded sanitized receipts retained.0own images/build cache
+created, pulled or removed;0volumes/networks/operational/source-data deletions.
+[Exact cleanup receipt](evidence/execution-edge-v1_2/EPG10-07/cleanup-receipt.json).
+
+[Final reconciliation](evidence/execution-edge-v1_2/EPG10-07/final-reconciliation.json)
+at10:35UTC proves all12HK+5SGP image/config/revision/release-path/restart tuples
+unchanged, restarts0. Canonical HK source remains
+`/home/bobby/.worktrees/portal-execution-manager-v2`, `feat/manager-v2-paper-read`
+@`54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4`; this feature checkout is not a
+deployment directory. Stable SGP `/home/bobby/portal-main-release`, `main`
+@`533162635f56584d630e3d971d77d50860595f15`. HK active Edge/Manager-worker image
+`sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e`,
+revision8814cd2a; exact Source Proxy/PG/SGP service digests/configs/release paths
+are in reconciliation. All6Portal active feature worktrees retained; none merged
+or abandoned here. Existing active/release/rollback images preserved unchanged,
+no phase rollback image added. HK images127/cache402 at27.94GB; SGP images328/
+cache3776 at195.9GB. These shared artifacts are not owned disposable outputs;
+no shared prune under foreign HK measurement or unverified SGP retention window.
+SGP root free168092553216B/665811062784B=25.246%; attach C4 capacity observation,
+not capacity acceptance. Quiet-window shared maintenance belongs to Bobby/ops
+with exact active+rollback retention proof; no new disk-heavy job below20%.
+Matching `actions.runner.*` systemd query returned no units, not runner-health proof.
+
+**Remaining work partition / exact next permitted action:** no independently
+runnable owned implementation/test/cleanup item remains in this qualified slice.
+Full07 is not closed: actual Edge HTTP/provider/transport binding and connected
+T07 proof still belong to07, blocked by missing publication, not reclassified
+as a future product task. TS/PM return mounted exact operation/profile/status,
+current human/workload/session/delegation/membership/policy/approval/commit fences,
+independent service recovery and native digest/full-receipt/idempotency retention.
+Research binds its existing unqualified `CommandTrust` seam to that wire; Edge
+then binds the exact adapters and reruns this same07. No generic new approval or
+new phase ID; no real financial command outside approved exact target scope.
+N12 remains0/9published; PM candidate unmounted; no new command HTTP route.
+Research currentdaf434875 with unchanged command-origin3d537127 reviewed above;
+TS/PM/DL and34non-journal source interfaces unchanged.08…11 not started.
+Commit this coherent verified slice locally as Bobby on the existing feature
+branch; no push/merge/deploy. Workspace root's prior rule10a edit is preserved,
+not bundled into this Portal commit; no peer source or runtime changed.
 
 
 

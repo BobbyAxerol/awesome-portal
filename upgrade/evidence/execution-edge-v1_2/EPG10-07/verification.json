@@ -1,0 +1,225 @@
+{
+  "schema": "epg10.command-verification.v1",
+  "phase": "EPG10-07",
+  "at_utc": "2026-10-16T10:35:17.510429+00:00",
+  "status": "IN_PROGRESS_OWNED_ISOLATED_PACKAGE_QUALIFIED_SOURCE_DARK",
+  "phase_exit": "NOT_MET",
+  "approval": "BOBBY_APPROVED_NAMED_PHASE_NO_REAPPROVAL_REQUEST",
+  "worktree": "/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2",
+  "branch": "feat/execution-edge-upgrade-v1_2",
+  "candidate_base_commit": "e15e7064dba5f9cc912ce52198dfc450ccf6d3e8",
+  "tested_candidate_identity": "qualification.json424input_hashes+4runner_hashes exactly match local final candidate; committed patch is not deployed runtime",
+  "implemented": [
+    "Provider-neutral Rust bounded immutable PM payload/full receipt/exact decimal state validation; preserves native source semantics rather than upgrading an HTTP ACK",
+    "Current trusted requester versus original immutable actor binding; current session/membership/policy/versions/publication checks; no Deserialize/wire/role upgrade",
+    "Separate current service-only accepted-command recovery; survives expired/revoked historical human login, returns no public data and never sends",
+    "Additive Portal migration0021, shared finite quota, indexed one-row key/digest reads, transaction SQL2s/lock250ms, persist-before-send one-dispatch CAS",
+    "Async fail-fast admission1..32 and source deadline50ms..30s; no network-held transaction, no mutation retry after ambiguity; authorized status retained when sends disabled",
+    "Default unavailable command transport/provider and Edge runtime gate; existing read and legacy protective code remain compatible",
+    "Reusable bounded isolated profile07 with all-target builds, actual Edge regression, strict lint, immutable inputs and scoped cleanup"
+  ],
+  "exclusions": [
+    "No TS/PM/DL/Research source, schema, data, grant, credential or operational service changed",
+    "No new mounted command HTTP route, actual cryptographic command transport, native TS effect, financial transfer, order or broker interaction",
+    "No generic SQL/table/URL/CLI/native-exchange access; no Manager read permission upgraded into command authority",
+    "No production capacity/latency, shadow certification, native venue, HA, Sandbox/Canary/Live acceptance or runtime activation"
+  ],
+  "compatibility": {
+    "structural_capital_operations": 8,
+    "canonical_environments": [
+      "paper",
+      "sandbox",
+      "live"
+    ],
+    "canary": "Explicit published native profile only, not fourth enum/wildcard",
+    "qualified_runtime_operations": [],
+    "profile_bindings": [],
+    "legacy_n12_published": 0,
+    "legacy_n12_catalogue_count": 9,
+    "pm_candidate_mounted": false,
+    "existing_read_runtime_changed": false
+  },
+  "tests": {
+    "automated": {
+      "passed": 416,
+      "failed": 0,
+      "ignored": 0,
+      "skipped": 0,
+      "filtered_out": 0,
+      "breakdown": {
+        "runner_safety": 75,
+        "eight_rust_library_binaries": 211,
+        "actual_edge_binary": 38,
+        "real_pg_bootstrap": 22,
+        "real_pg_scoped_read": 29,
+        "real_pg_resource": 8,
+        "real_pg_manager": 11,
+        "real_pg_command": 22
+      },
+      "regressions_included": true,
+      "separate_process_child": "Included in parent command case, not counted twice"
+    },
+    "rustfmt": "PASS",
+    "clippy": {
+      "owned_warnings": [],
+      "status": "PASS_STRICT_ZERO_WARNINGS",
+      "upstream_advisory_warnings": 0
+    },
+    "all_target_compile": {
+      "all_targets": true,
+      "basis": "COVERED_BY_07_ALL_TARGETS_NO_RUN",
+      "locked": true,
+      "no_run": true,
+      "package_count": 9
+    },
+    "edge_all_targets_check": "PASS",
+    "immutable_input_verification": {
+      "source_files": 424,
+      "runner_files": 4,
+      "source_mismatches": [],
+      "runner_mismatches": [],
+      "remote_source_unchanged": true,
+      "local_candidate_matches_remote_tested_input": true,
+      "manifest_sha256": "e464f9e96633306be07577f0ea501499c46c8535197ffb1c9b7ac6cd43053bdf"
+    },
+    "formal_families": [
+      {
+        "id": "EPG10-T07-01",
+        "isolated_status": "PASS_ISOLATED",
+        "connected_status": "NOT_RUN_SOURCE_UNAVAILABLE",
+        "proven": "TEST_ONLY authority commit before lost response, original key one effect, new relay and new OS process read durable receipt, no blind resend",
+        "remaining": "Actual TS/PM commit/status/native idempotency proof not run."
+      },
+      {
+        "id": "EPG10-T07-02",
+        "isolated_status": "PASS_ISOLATED",
+        "connected_status": "NOT_RUN_SOURCE_UNAVAILABLE",
+        "proven": "Durable same-key/different payload conflict; concurrent preparation and one-dispatch CAS",
+        "remaining": "Native handler/key/digest/retention publication not available."
+      },
+      {
+        "id": "EPG10-T07-03",
+        "isolated_status": "PASS_ISOLATED",
+        "connected_status": "NOT_RUN_SOURCE_UNAVAILABLE",
+        "proven": "Every scope axis/current requester binding, current session/membership/policy, revoke, stale versions and unpublished denial",
+        "remaining": "Actual delegated human/workload chain and TS commit-time fences unavailable."
+      },
+      {
+        "id": "EPG10-T07-04",
+        "isolated_status": "PASS_ISOLATED",
+        "connected_status": "NOT_RUN_SOURCE_UNAVAILABLE",
+        "proven": "ACK remains delivery-only; no fabricated APPLIED; timeout remains UNKNOWN",
+        "remaining": "Actual native ACK/status contract and transport not bound."
+      },
+      {
+        "id": "EPG10-T07-05",
+        "isolated_status": "PASS_ISOLATED",
+        "connected_status": "NOT_RUN_SOURCE_UNAVAILABLE",
+        "proven": "All six PM dispositions/full15-field receipt, exact decimal partition, pending/cancel/monotonic versions preserved across PG restart",
+        "remaining": "Native PM operation/economic before-after/receipt qualification not run."
+      },
+      {
+        "id": "EPG10-T07-06",
+        "isolated_status": "PASS_ISOLATED",
+        "connected_status": "NOT_RUN_SOURCE_UNAVAILABLE",
+        "proven": "Unavailable current provider and runtime gate deny; no SQL/CLI/exchange fallback; private service recovery does not grant human disclosure",
+        "remaining": "New command HTTP route unmounted; no actual authenticated wire tested."
+      }
+    ],
+    "formal_summary": {
+      "pass_isolated": 6,
+      "connected_qualified": 0,
+      "not_additive_to_automated_count": true
+    },
+    "earlier_attempts": "attempt-history.json retains three failed qualifications and fixed harness/style defects; not counted as final PASS",
+    "repository_wide_verify": "NOT_RUN_THIS_SLICE; scoped correctness/build/lint coverage above; no hooks bypassed/reconfigured"
+  },
+  "observations": {
+    "classification": "CORRECTNESS_ONLY_SHARED_HOST_TAINTED_FOR_CAPACITY",
+    "elapsed_seconds": 366.194,
+    "postgresql_sampled_memory_max_bytes": 497405952,
+    "postgresql_memory_events_delta": {
+      "high": 0,
+      "low": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0
+    },
+    "resource_bounds": {
+      "cargo_cpu_affinity": [
+        0
+      ],
+      "cargo_jobs": 1,
+      "cargo_nice": 15,
+      "pg_cpu_limit": 0.5,
+      "pg_max_connections": 24,
+      "pg_memory_limit_bytes": 805306368,
+      "pg_pids_limit": 128,
+      "pg_tmpfs_limit_bytes": 536870912,
+      "private_log_limit_bytes_per_stage": 8388608
+    },
+    "performance_acceptance": false,
+    "source_requests": 0,
+    "production_mutations": 0
+  },
+  "runtime": {
+    "activation_authorized": false,
+    "activation_performed": false,
+    "deployed_candidate": false,
+    "protected_tuples": {
+      "hk_protected_runtime_tuples": 12,
+      "sgp_protected_runtime_tuples": 5,
+      "hk_runtime_unchanged": true,
+      "sgp_runtime_unchanged": true,
+      "all_protected_restart_counts_zero": true
+    },
+    "canonical_and_active_worktrees_release_digests_config_revisions": "final-reconciliation.json",
+    "new_rollback_artifacts": [],
+    "preexisting_release_and_rollback_preserved": true
+  },
+  "cleanup": {
+    "status": "COMPLETE_NO_OWNED_ARTIFACT_FOLLOWUP",
+    "receipt": "cleanup-receipt.json",
+    "removed_allocated_bytes": 7364943872,
+    "private_target_absent": true,
+    "own_lock_absent": true,
+    "own_containers_remaining": 0,
+    "images_built_or_pulled_or_removed": 0,
+    "buildkit_cache_created_or_removed": 0,
+    "volumes_networks_or_source_data_removed": 0,
+    "shared_cache_cleanup": "Intentionally not performed: unowned shared artifacts/foreign measurement and release-retention boundary; inventory preserved"
+  },
+  "capacity_closeout": {
+    "host": "SGP",
+    "root_free_bytes": 168092553216,
+    "root_total_bytes": 665811062784,
+    "root_free_percent_observational": 25.246,
+    "observation_below30_percent": true,
+    "below20_percent_build_stop_threshold": false,
+    "shared_maintenance_action": "Bobby/operations quiet maintenance only after exact active+rollback retention proof under docs/production-feature-profile-and-cleanup.md C4; not authorized/performed here",
+    "runner_systemd_query": "systemctl list-units --all --type=service actions.runner.* --no-pager --no-legend returned no matching units; not runner health qualification"
+  },
+  "remaining_work": {
+    "independently_runnable_owned_items": [],
+    "known_owned_defects_in_qualified_package": [],
+    "blocked": [
+      {
+        "owner": "TS/PM",
+        "action": "Return revision-bound mounted handlers/status, exact operation/profile bindings, actual current human/workload/session/membership/policy/approval authority through commit plus independent service recovery, native digest/full receipt/status/idempotency retention."
+      },
+      {
+        "owner": "Research",
+        "action": "Bind actual CommandTrust provider to that source wire; preserve full source receipt internally and current requester report rights. Read adapter/HiFi contracts are not mutation authority."
+      },
+      {
+        "owner": "Execution Edge (same EPG10-07)",
+        "action": "Bind exact authenticated source/provider/HTTP adapters after publication; run connected T07-01..06 within approved exact target scope; no new phase or repeated generic approval."
+      }
+    ],
+    "packet": "COMMAND_RELAY_AND_OWNER_RETURN.md",
+    "next_phase": "EPG10-08 not started; requires named approval; full07 exit not waived"
+  },
+  "pushed": false,
+  "merged": false,
+  "deployed": false
+}

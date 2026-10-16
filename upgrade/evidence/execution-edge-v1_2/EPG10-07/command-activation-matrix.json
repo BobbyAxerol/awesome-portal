@@ -1,0 +1,42 @@
+{
+  "schema_version": "execution-edge.command-activation-evidence.v1",
+  "provenance": "SOURCE_REVIEW_NOT_RUNTIME_ACCEPTANCE",
+  "runtime_activation": false,
+  "qualified_runtime_operations": [],
+  "structural_environment_support": ["paper", "sandbox", "live"],
+  "pm_capital": {
+    "business_schema": "pma.capital-command.v1.1",
+    "structural_operations": [
+      "FUND", "INITIAL_GRANT", "TOP_UP", "SET_ROOT_LIMIT",
+      "IMMEDIATE_DECREASE", "RECALL_PARTIAL", "RECALL_FULL", "ADJUST_TARGET_BUDGET"
+    ],
+    "profile_bindings": [],
+    "native_candidate_mounted": false,
+    "authenticated_command_wire": "UNPUBLISHED",
+    "current_authority_provider": "UNAVAILABLE",
+    "service_recovery_provider": "UNAVAILABLE",
+    "runtime_disposition": "TYPED_UNAVAILABLE",
+    "source_revision": "d16aa2b5f251596e469807f57e81fe14cdc7e763"
+  },
+  "existing_n12": {
+    "published": false,
+    "portal_reachable": false,
+    "paper": ["halt", "cancel-open-orders"],
+    "sandbox": ["halt", "cancel-open-orders"],
+    "live": ["halt", "reduce", "emergency-close", "resume", "scale"],
+    "workload_identity_is_pm_human_authority": false,
+    "source_revision": "4598e39245e13a1dec74e6f34105d9b6fd3a0f57"
+  },
+  "not_aliased_to_capital": [
+    "RETURN_CAPITAL", "ADMIN_LOCK", "UNLOCK", "REALLOCATE_BUDGET",
+    "APPLY_PENDING", "CANCEL_REMAINING", "management", "profile", "exchange_order"
+  ],
+  "research_revision": "daf434875e28aa131105d7f27d910b2f0ca05792",
+  "research_command_contract_origin_revision": "3d537127313fb3c282eda054fd180499fe4732ca",
+  "notes": [
+    "Internal provider/port types are not a signed wire or authentication adapter.",
+    "Read activation and mTLS workload identity alone never grant PM mutation authority.",
+    "No generic SQL, table, source URL, CLI shell or native exchange bypass.",
+    "Actual source adapters must bind exact operation, native profile, current human and workload authority through TS commit."
+  ]
+}

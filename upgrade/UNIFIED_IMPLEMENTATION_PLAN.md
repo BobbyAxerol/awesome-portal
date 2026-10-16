@@ -39,7 +39,14 @@
 > +2CLI checks; numeric logical sizing, replica/pool/all-copy worksheets,
 > 14collector mappings and original12-cell B0/B1/B2 descriptor implemented.
 > Not a deployed stack/production budget/capacity receipt; full06 remains NOT_MET.
->07…11 await named approval. Evidence/action packet linked in §23.15.
+> **07 approved/in progress (§23.16):** bounded Rust command relay with additive
+> Portal PG durable correlation/full receipts, one-send CAS and status-only
+> ambiguity recovery; final416automated PASS/0FAIL/skip, fmt/strict zero-warning
+> Clippy PASS. Owned package qualified source-dark; full07 exit NOT_MET for source
+> wire/providers/publication and dependent Edge binding/connected qualification.
+> Own7.365GB test copies/cache/logs cleaned;12HK+5SGP tuples unchanged/restarts0.
+> No actual TS effects or command runtime activation; single owner return in §23.16.
+>08…11 await named approval. Evidence/action packet linked in §23.15/§23.16.
 > 01capacity is still pending;
 > logical02 closure does not waive it.
 > No runtime activation. Four owner-supplied guides

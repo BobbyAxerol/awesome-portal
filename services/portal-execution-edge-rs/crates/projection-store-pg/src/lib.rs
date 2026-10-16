@@ -22,6 +22,7 @@ use uuid::Uuid;
 mod analytics_repository;
 mod authoritative_event_store;
 pub mod bootstrap;
+pub mod command;
 mod d4_writer;
 mod manager_projection;
 mod manager_query_analytics;

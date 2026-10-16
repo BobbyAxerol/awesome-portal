@@ -8,14 +8,14 @@ Chúng không thay thế phase hoặc exit gate trong
 ## Active deep dives
 
 - [Execution Edge v1.2 — EPG10-00…11 detailed plan](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)
-  — **EPG10-00 completed inventory;01 in progress;02 completed contract-only;03…06 approved/in progress;07…11 approval pending**. Six offline
+  — **EPG10-00 completed inventory;01 in progress;02 completed contract-only;03…07 approved/in progress;08…11 approval pending**. Six offline
   metadata cases PASS, with source/runtime/TLS and owned unknowns recorded in
   §23.9 and its manifest. No activation/runtime acceptance. The campaign starts
   from current `origin/dev`, keeps the complete four-file owner guide bundle under
   `upgrade/upgrade_v1.2`, and links Edge, Portal contracts, scoring and PM R2 inputs.
   Goals, scope, source pins, invariants, tests, exit gates, rollback, resource and
   debt/owner tracking are recorded per phase. No product/runtime acceptance implied;
-  07…11 are not started.01 available-source continuation now has53offline tests
+  08…11 are not started.01 available-source continuation now has53offline tests
   plus six00metadata PASS, both-host120s observations, two real+two isolated
   retained repository runs (20subcases PASS), native schema idempotency and
   six-table3,623row exact parity. Isolated target cleaned; narrow numeric
@@ -63,6 +63,15 @@ Chúng không thay thế phase hoặc exit gate trong
   pool/copy worksheets,14budget collector mappings and original12-cell matrix
   implemented. Not a deployed stack, approved production budget or connected
   capacity PASS; full06 remains NOT_MET. See §23.15 continuation/cleanup evidence.
+  **07 (§23.16) approved/in progress:** bounded Rust async relay and additive
+  Portal PG durable correlation/full-receipt store; same-key replay/conflict,
+  one-send CAS, no blind resend after timeout/restart, separate current public
+  status versus service-only recovery. Final416automated PASS/0FAIL/skip,
+  fmt/strict zero-warning Clippy PASS, exact424+4input hashes match. Full07 exit
+  NOT_MET: actual command wire/current PM providers/operation publication and
+  dependent connected Edge binding remain unfinished. Own7.365GB private copies/
+  cache/logs cleaned;12HK+5SGP protected tuples unchanged/restarts0. No actual TS
+  effect or runtime activation. §23.16 links evidence and the single owner return.
 
 - [Official Trading System owner request — Portal Execution capability campaign](./TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md)
   — **the governing owner request.** It consolidates N02/N03 incremental

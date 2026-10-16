@@ -573,9 +573,7 @@ fn runtime_features_from_environment() -> Result<RuntimeFeatureConfig, ConfigErr
     if paper_workbench_shadow_enabled.is_enabled() && !shadow_query_enabled.is_enabled() {
         return Err(ConfigError::Invalid("EDGE_PAPER_WORKBENCH_SHADOW_ENABLED"));
     }
-    if strict_boolean("EDGE_COMMAND_RELAY_ENABLED", false)? {
-        return Err(ConfigError::Invalid("EDGE_COMMAND_RELAY_ENABLED"));
-    }
+    command_relay_runtime_gate(strict_boolean("EDGE_COMMAND_RELAY_ENABLED", false)?)?;
     let projection_database_url_file = optional_path("EDGE_PROJECTION_DATABASE_URL_FILE");
     if (projection_ingestion_enabled.is_enabled()
         || realtime_sse_enabled.is_enabled()
@@ -834,7 +832,8 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
     let current_gateway_acceptance = Arc::new(CurrentGatewayAcceptance::canonical()?);
     // N16B is compatibility-only. Loading the immutable contract at startup
     // catches source-pack drift, while EDGE_COMMAND_RELAY_ENABLED remains
-    // unconditionally rejected by runtime configuration until N17B.
+    // source-dark:07's durable relay is not an authenticated HTTP adapter.
+    // A read assertion or feature flag cannot install the missing PM provider.
     let _current_protective_acceptance = CurrentProtectiveAcceptance::canonical()?;
     let initial_snapshot = if config.source_probes_enabled.is_enabled() {
         Some(negotiator.probe(config.probe_alpha_id.as_deref()).await)
@@ -4606,6 +4605,34 @@ enum ConfigError {
     Missing(&'static str),
     #[error("configuration {0} is invalid")]
     Invalid(&'static str),
+    #[error("runtime capability unavailable: {0}")]
+    Unavailable(&'static str),
+}
+
+fn command_relay_runtime_gate(requested: bool) -> Result<(), ConfigError> {
+    // Current TS N12 is unpublished and does not authenticate the PM human
+    // chain. Research CommandTrust is an internal seam, not a signed wire.
+    // Keep read deployments unchanged; do not invent a mutation transport.
+    if requested {
+        return Err(ConfigError::Unavailable(
+            "COMMAND_AUTHORITY_AND_TRANSPORT_UNPUBLISHED",
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod command_runtime_tests {
+    #[test]
+    fn read_release_does_not_activate_an_unpublished_command_provider() {
+        assert!(super::command_relay_runtime_gate(false).is_ok());
+        assert!(matches!(
+            super::command_relay_runtime_gate(true),
+            Err(super::ConfigError::Unavailable(
+                "COMMAND_AUTHORITY_AND_TRANSPORT_UNPUBLISHED"
+            ))
+        ));
+    }
 }
 
 #[derive(Debug, Error)]

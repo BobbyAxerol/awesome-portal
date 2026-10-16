@@ -710,7 +710,14 @@ deep-dive → ADR → slice → evidence discipline documented above.
   Descriptor is not a deployed stack or capacity receipt; unknown memory/source
   pins remain explicit. Full06 NOT_MET; connected runtime/measurement work stays
   in06. Evidence/reproduction and cleanup are in §23.15, not deferred to07.
-  07…11 await approval.
+  **07 approved/in progress (§23.16):** bounded durable command relay, Portal PG
+  correlation/receipt CAS and independent human/status versus service recovery
+  seams qualified source-dark; final416automated PASS/0FAIL/skip, fmt/strict
+  zero-warning Clippy PASS. Full07 exit NOT_MET: actual command wire/current
+  providers/publication and connected Edge binding are absent. Own7.365GB test
+  copies/cache/logs cleaned;12HK+5SGP tuples unchanged/restarts0. Evidence and
+  one same-phase owner return are linked in §23.16; no runtime activation.
+  08…11 await approval.
   01capacity exit remains unmet, not waived.
   No operational runtime/source/credential change, push or merge. Only owned
   test containers/private fixture/tempfiles removed; no image build/pull/prune.

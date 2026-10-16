@@ -1,0 +1,294 @@
+{
+  "schema": "epg10.phase07-source-runtime-before.v1",
+  "provenance": "BOUNDED_READ_ONLY_METADATA_NOT_RUNTIME_ACCEPTANCE",
+  "HK": {
+    "at_utc": "2026-10-16T09:51:19.898127+00:00",
+    "disk_available_bytes": 202960363520,
+    "docker_inventory": [
+      {
+        "Active": "43",
+        "Reclaimable": "13.15GB (37%)",
+        "Size": "34.7GB",
+        "TotalCount": "127",
+        "Type": "Images"
+      },
+      {
+        "Active": "58",
+        "Reclaimable": "17.29MB (0%)",
+        "Size": "3.553GB",
+        "TotalCount": "87",
+        "Type": "Containers"
+      },
+      {
+        "Active": "16",
+        "Reclaimable": "218.3MB (0%)",
+        "Size": "117.4GB",
+        "TotalCount": "80",
+        "Type": "Local Volumes"
+      },
+      {
+        "Active": "47",
+        "Reclaimable": "716.2MB",
+        "Size": "27.94GB",
+        "TotalCount": "402",
+        "Type": "Build Cache"
+      }
+    ],
+    "host": "HK",
+    "host_lock": {
+      "owner": "claude-drain-rate",
+      "purpose": "P18.4 drain-rate investigation: isolated TEST_ONLY core-pause cells at 9k (APPLY_MAX_ROWS / tsredis CPU variants), --rm containers, no production mutation",
+      "started_utc": "2026-10-16T09:30:38+00:00",
+      "until_utc": "2026-10-16T11:30:38+00:00"
+    },
+    "owned_epg03_containers": [],
+    "running_container_count": 58,
+    "runtime": [
+      {
+        "config": "6180b9bf3d7d16cc8b9ada67ccb6c860e3c83430412de14758961f9857db90f6",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "name": "/portal-execution-edge-execution-edge-1",
+        "release_path": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+        "restarts": 0,
+        "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb"
+      },
+      {
+        "config": "98a191c75adf491d5b61de58f2e7d3b7e022a1f15533150d406ae9dc7f55ab0f",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "name": "/portal-execution-edge-live-execution-edge-1",
+        "release_path": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+        "restarts": 0,
+        "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb"
+      },
+      {
+        "config": "1582b40cffaa5fb00350fa79da5f32519d03271fdb6f6dc59e719bc73ca68d53",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "name": "/portal-execution-edge-live-manager-projection-worker-1",
+        "release_path": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+        "restarts": 0,
+        "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb"
+      },
+      {
+        "config": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+        "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+        "name": "/portal-execution-edge-live-projection-postgres-1",
+        "release_path": "/srv/primus/portal/releases/e18d21f223ea1a25e485801fad30265306b144d6/deploy",
+        "restarts": 0,
+        "revision": ""
+      },
+      {
+        "config": "9bb20c8894a71aa620bce6a62828f66336618526a0f8e6fcb4a1f46449d6384c",
+        "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+        "name": "/portal-execution-edge-live-source-proxy-1",
+        "release_path": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+        "restarts": 0,
+        "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb"
+      },
+      {
+        "config": "95e96a9b2c547f91b6175a0055de71aaee7197db3b37ed48012509cacee73801",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "name": "/portal-execution-edge-manager-projection-worker-1",
+        "release_path": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+        "restarts": 0,
+        "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb"
+      },
+      {
+        "config": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+        "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+        "name": "/portal-execution-edge-projection-postgres-1",
+        "release_path": "/srv/primus/portal/releases/501d27a3702f82cc8d7792ffa6e870485a5dbc09/deploy",
+        "restarts": 0,
+        "revision": ""
+      },
+      {
+        "config": "cd79e9c68f67595e5ddbb88bddb95e4694a5b286ac25a72fb29bbe38d15190a1",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "name": "/portal-execution-edge-sandbox-execution-edge-1",
+        "release_path": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+        "restarts": 0,
+        "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb"
+      },
+      {
+        "config": "12294191799e7d112a3c8c8eff86f32dce1531fc40ec87062d87b13b53b23caa",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "name": "/portal-execution-edge-sandbox-manager-projection-worker-1",
+        "release_path": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+        "restarts": 0,
+        "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb"
+      },
+      {
+        "config": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+        "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+        "name": "/portal-execution-edge-sandbox-projection-postgres-1",
+        "release_path": "/srv/primus/portal/releases/e18d21f223ea1a25e485801fad30265306b144d6/deploy",
+        "restarts": 0,
+        "revision": ""
+      },
+      {
+        "config": "da4b44c00580f3e4dfa42b77fd160f72c79300d6ab3f226e595ec42ee7f26b77",
+        "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+        "name": "/portal-execution-edge-sandbox-source-proxy-1",
+        "release_path": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+        "restarts": 0,
+        "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb"
+      },
+      {
+        "config": "21786bb09a2c5e94481b457a19a262c0cb2bf3fc6edb86629b053247ca329de8",
+        "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+        "name": "/portal-execution-edge-source-proxy-1",
+        "release_path": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+        "restarts": 0,
+        "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb"
+      }
+    ],
+    "schema": "epg10.source-runtime-metadata.v1",
+    "sources": [
+      {
+        "branch": "feat/v2-rust-first-okx-demo",
+        "head": "4598e39245e13a1dec74e6f34105d9b6fd3a0f57",
+        "journal_sha256": "5627b42edede5fcd2d4b91d0ae2517972ac20c52ba5789cde9fda095d1cff4a5",
+        "path": "/home/bobby/.worktrees/trading-system-next-upgrade",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "untracked_count": 1,
+        "untracked_paths_sha256": "0f5ccc3e62adf3367f549fa8fc2ab99b763ff0c1580f8bbc0fef1ba4b1d800e2"
+      },
+      {
+        "branch": "feat/portfolio-account-v1_1-parallel",
+        "head": "d16aa2b5f251596e469807f57e81fe14cdc7e763",
+        "journal_sha256": "96ee825d90a33f3cab614b8c7053408fc34b6ae965db867e6efc33ef769735fd",
+        "path": "/home/bobby/.worktrees/trading-system-pm-v1_1",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "untracked_count": 0,
+        "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "branch": "fix/p184-dl-closure",
+        "head": "68556d40a8ef71420f3d65ba850796ea5fe68887",
+        "journal_sha256": "e10b8268813c0cd7ced8403157610ac76f737048a4d4e78f1fc709521ab1cb1c",
+        "path": "/home/bobby/.worktrees/data-layer-p184-closure",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "untracked_count": 0,
+        "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "branch": "feat/manager-v2-paper-read",
+        "head": "54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4",
+        "path": "/home/bobby/.worktrees/portal-execution-manager-v2",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "untracked_count": 4,
+        "untracked_paths_sha256": "51ffb84753145825dbfd449cfa77440dd156af83e34fc40fd6400b82663e75a4"
+      }
+    ],
+    "worktrees": "worktree /home/bobby/.worktrees/portal-execution-manager-v2\nHEAD 54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4\nbranch refs/heads/feat/manager-v2-paper-read\n\nworktree /home/bobby/.worktrees/portal-eds-current-bff\nHEAD bab79402be7ca65adb529080865a4fe1a7d5a0bb\nbranch refs/heads/feat/eds-current-bff\n\nworktree /home/bobby/.worktrees/portal-eds09-owner-return-handoff\nHEAD ec97c4835acd1d68e9b58dd8b68015ceecd96864\nbranch refs/heads/docs/eds09-ts-owner-return-handoff\n\nworktree /home/bobby/.worktrees/portal-execution-data-activation\nHEAD 6f6503ea21327bc39946f48c697b4287c673f12c\nbranch refs/heads/feat/execution-data-activation\n\nworktree /home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2\nHEAD e15e7064dba5f9cc912ce52198dfc450ccf6d3e8\nbranch refs/heads/feat/execution-edge-upgrade-v1_2\n\nworktree /home/bobby/.worktrees/portal-r4r5-activation\nHEAD d63a650112eca3b2b17f4df1faedd1a0ab06ceaa\nbranch refs/heads/deploy/r4r5-activation\n\n"
+  },
+  "SGP": {
+    "at_utc": "2026-10-16T09:46:08.335388+00:00",
+    "disk_available_bytes": 168123715584,
+    "docker_inventory": [
+      {
+        "Active": "25",
+        "Reclaimable": "74.4GB (83%)",
+        "Size": "88.82GB",
+        "TotalCount": "328",
+        "Type": "Images"
+      },
+      {
+        "Active": "51",
+        "Reclaimable": "471kB (19%)",
+        "Size": "2.449MB",
+        "TotalCount": "59",
+        "Type": "Containers"
+      },
+      {
+        "Active": "22",
+        "Reclaimable": "13.78GB (43%)",
+        "Size": "32.02GB",
+        "TotalCount": "97",
+        "Type": "Local Volumes"
+      },
+      {
+        "Active": "93",
+        "Reclaimable": "62.97GB",
+        "Size": "195.9GB",
+        "TotalCount": "3776",
+        "Type": "Build Cache"
+      }
+    ],
+    "host": "SGP",
+    "host_lock": null,
+    "owned_epg03_containers": [],
+    "research_contracts": {
+      "apps/control-api/src/execution-v2/read-publication.ts": "61fd25aadecfb358949e3b6096f9fc9cd620bedb0e7a846a031204f4a6cb34ba",
+      "packages/contracts/fixtures/execution-v2-foundation.synthetic.valid.json": "7b3044c2f4c990633a4550ab2c521f0fdf0108f9e70027bcbc1c2df02643cb75",
+      "packages/contracts/schemas/execution-v2-foundation.v1.schema.json": "7a28e0545005789da1a54d304dbf242a2413d464aa905b83d5641e40821c4828"
+    },
+    "running_container_count": 51,
+    "runtime": [
+      {
+        "config": "963a3d8436bd48220cc41cafb73a18e8c6d0d4fd6abe72eddb843539b8918f60",
+        "image": "sha256:8400439bc2cea6baf9bb86d3b4e851d4a0601531de86a7c1a47347f5837b7641",
+        "name": "/portal-control-api-1",
+        "release_path": "/home/bobby/portal-integration",
+        "restarts": 0,
+        "revision": ""
+      },
+      {
+        "config": "e0e3c404d22c6ae26fa993e3d56433591bcaf7c77fc89a675b21f4856ff87840",
+        "image": "sha256:c2fb7a8c1122f8b737c3cefee1b78cafda7b025a0f8c36b56b5b9424a1b9ea31",
+        "name": "/portal-portal-web-1",
+        "release_path": "/home/bobby/portal-integration",
+        "restarts": 0,
+        "revision": ""
+      },
+      {
+        "config": "42a9f3ad29ba77eeab6683f99070469673bb2f78824f3c4191093f8ee664306d",
+        "image": "sha256:d13cef069471be8b34c7d6f0cda4b6df55e892812c7ea8bf0f17846256e76e6d",
+        "name": "/portal-research-preview-control-api-1",
+        "release_path": "/home/bobby/portal-research",
+        "restarts": 0,
+        "revision": ""
+      },
+      {
+        "config": "59551a2cdeb2bb8696602336920f30db42cd61b9ecaed3cbd55ebd96e50d4fd4",
+        "image": "sha256:20da76618efb92e1b8930339a6797aba3b5bc72849bdf5173c62617cf554b2b5",
+        "name": "/portal-research-preview-portal-api-1",
+        "release_path": "/home/bobby/portal-research",
+        "restarts": 0,
+        "revision": ""
+      },
+      {
+        "config": "26c0d954d1f3af2133b2a528f39430f814e3c35d350095aecf7178f3bc90cedb",
+        "image": "sha256:d2c23ad668fcf4e03e0c6edffe9b9cc1a8d5a7b3787dd9ae280677f76e965263",
+        "name": "/portal-stable-v1-0-1-control-api-1",
+        "release_path": "/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose",
+        "restarts": 0,
+        "revision": "e4fd93658de1ff0614126a85d70e59a23c25a01f"
+      }
+    ],
+    "schema": "epg10.source-runtime-metadata.v1",
+    "sources": [
+      {
+        "branch": "docs/research-loop-plan",
+        "head": "3d537127313fb3c282eda054fd180499fe4732ca",
+        "path": "/home/bobby/portal-research",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "untracked_count": 5,
+        "untracked_paths_sha256": "e7630f61751b41a5b5fbf22fe8ff278855269d6cea952a230f2c8ca5a4d8d84e"
+      },
+      {
+        "branch": "main",
+        "head": "533162635f56584d630e3d971d77d50860595f15",
+        "path": "/home/bobby/portal-main-release",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "untracked_count": 0,
+        "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  }
+}

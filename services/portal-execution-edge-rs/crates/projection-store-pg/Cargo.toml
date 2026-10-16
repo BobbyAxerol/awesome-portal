@@ -10,6 +10,7 @@ repository.workspace = true
 analytics = { path = "../analytics" }
 authoritative-event-core = { path = "../authoritative-event-core" }
 chrono.workspace = true
+command-relay = { path = "../command-relay" }
 execution-contracts = { path = "../execution-contracts" }
 hex.workspace = true
 home.workspace = true

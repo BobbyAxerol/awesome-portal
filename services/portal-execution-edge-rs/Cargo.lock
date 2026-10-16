@@ -375,6 +375,7 @@ dependencies = [
 name = "command-relay"
 version = "0.1.0"
 dependencies = [
+ "projection-core",
  "serde",
  "serde_json",
  "sha2",
@@ -1706,6 +1707,7 @@ dependencies = [
  "analytics",
  "authoritative-event-core",
  "chrono",
+ "command-relay",
  "execution-contracts",
  "hex",
  "home",

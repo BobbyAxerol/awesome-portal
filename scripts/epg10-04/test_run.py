@@ -25,27 +25,31 @@ class RunnerSafety(unittest.TestCase):
         source = Path(private.name) / 'source'
         names = ['Cargo.toml', 'Cargo.lock', *qualification.owned_rust(profile),
                  'crates/projection-store-pg/migrations/0019_scoped_bootstrap.sql']
+        if profile == '07':
+            names.append(qualification.COMMAND_MIGRATION)
         if profile != '04':
             names.append('crates/projection-store-pg/migrations/0020_scoped_read.sql')
             names = [qualification.RUST_WORKSPACE + '/' + name for name in names]
             names.append(qualification.SHARED_FIXTURE)
-        if profile == '06':
+        if profile in ('06', '07'):
             names.extend(qualification.RESOURCE_SHARED_FIXTURES)
             names.extend(qualification.RESOURCE_COMPILE_INPUTS)
             names.extend(qualification.RUST_WORKSPACE + '/' + name
                          for name in qualification.RESOURCE_BUILD_SCRIPTS)
+        if profile == '07':
+            names.extend(qualification.COMMAND_SHARED_FIXTURES)
         for name in names:
             path = source / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text('TEST_ONLY\n')
         return source
 
-    def test_profile_defaults_to04_and_requires_exact_04_or05_or06(self):
+    def test_profile_defaults_to04_and_requires_exact_04_or05_or06_or07(self):
         with patch.dict(qualification.os.environ, {}, clear=True):
             self.assertEqual(qualification.test_profile(), '04')
-        for value in ('04', '05', '06'):
+        for value in ('04', '05', '06', '07'):
             self.assertEqual(qualification.test_profile(value), value)
-        for value in ('', '4', '5', '6', '07', '04,05', '05 ', 5, True):
+        for value in ('', '4', '5', '6', '7', '08', '04,05', '05 ', '07 ', 5, True):
             with self.subTest(profile=value):
                 with self.assertRaisesRegex(ValueError, 'EXPLICIT_TEST_PROFILE'):
                     qualification.test_profile(value)
@@ -596,6 +600,164 @@ class RunnerSafety(unittest.TestCase):
             'spans': [{'is_primary': True, 'file_name': qualification.RESOURCE_OWNED_RUST[1]}]}}
         self.assertEqual(qualification.clippy_findings(json.dumps(warning), '06')['owned_warnings'],
                          ['clippy::resource'])
+
+    def test_profile07_cleanup_and_private_paths_cannot_select_other_profiles(self):
+        helper = qualification.load_cleanup_helpers(Path(__file__).resolve().parent, '07')
+        self.assertTrue(helper.PG.startswith('epg10-07-pg-'))
+        self.assertTrue(helper.OWNER.startswith('codex-epg10-07-'))
+        self.assertNotEqual(helper.PG, self.helper.PG)
+        for path in ('/home/bobby', '/tmp/epg10-04-test', '/tmp/epg10-05-test',
+                     '/tmp/epg10-06-test', '/tmp/epg10-07-',
+                     '/tmp/epg10-07-test/child', '/tmp/epg10-07-test/../foreign'):
+            with self.subTest(path=path), self.assertRaisesRegex(ValueError, 'PRIVATE_DISPOSABLE'):
+                qualification.validate_base(Path(path), '07')
+
+    def test_profile07_adds_command_and_auth_units_to_all_six06_packages(self):
+        packages = qualification.package_arguments('07')
+        self.assertEqual(packages, ['-p', 'command-relay', '-p', 'edge-auth',
+                                    *qualification.package_arguments('06')])
+        self.assertEqual(len(packages), 16)
+        self.assertEqual(len(set(packages[1::2])), 8)
+        row = 'test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out'
+        self.assertEqual(qualification.parse_rust_results('\n'.join([row]*8), 8)['passed'], 16)
+        with self.assertRaisesRegex(ValueError, 'ALL_REQUIRED'):
+            qualification.parse_rust_results('\n'.join([row]*6), 8)
+
+    def test_profile07_unit_timeout_is_bounded_without_changing_prior_profiles_or_own_lock(self):
+        self.assertEqual(qualification.UNIT_TEST_TIMEOUT_SECONDS,
+                         {'04': 240, '05': 240, '06': 240, '07': 600})
+        self.assertEqual(qualification.LOCK_SECONDS, 1500)
+        self.assertLess(qualification.UNIT_TEST_TIMEOUT_SECONDS['07'], qualification.LOCK_SECONDS - 30)
+
+    def test_profile07_command_count_is_explicit_bounded_exact_and_unskippable(self):
+        for value in ('1', '12', '128'):
+            self.assertEqual(qualification.expected_test_count(value, 'COMMAND'), int(value))
+        for invalid in (None, '', '0', '129', '-1', '1.0', '01', 1, True):
+            with self.subTest(value=invalid), self.assertRaisesRegex(ValueError, 'EXACT_BOUNDED_COMMAND'):
+                qualification.expected_test_count(invalid, 'COMMAND')
+        row = 'test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out'
+        self.assertEqual(qualification.parse_rust_results(row, 1, 12, count_kind='COMMAND')['passed'], 12)
+        with self.assertRaisesRegex(ValueError, 'EXACT_COMMAND_TEST_COUNT'):
+            qualification.parse_rust_results(row, 1, 11, count_kind='COMMAND')
+        for invalid in ('', row.replace('0 ignored', '1 ignored'),
+                        row.replace('0 filtered out', '1 filtered out')):
+            with self.subTest(result=invalid), self.assertRaisesRegex(ValueError, 'ALL_REQUIRED'):
+                qualification.parse_rust_results(invalid, 1, 12, count_kind='COMMAND')
+
+    def test_profile07_requires_and_hash_binds_every_command_source_and_migration(self):
+        source = self.source_fixture('07')
+        before = qualification.source_hashes(source, '07')
+        for name in (*qualification.COMMAND_OWNED_RUST, qualification.COMMAND_MIGRATION):
+            relative = qualification.RUST_WORKSPACE + '/' + name
+            self.assertIn(relative, before)
+            path = source / relative
+            path.unlink()
+            with self.subTest(missing=name), self.assertRaisesRegex(ValueError, 'EXACT_OWNED_INPUT_MISSING'):
+                qualification.source_hashes(source, '07')
+            path.write_text('TEST_ONLY_CHANGED\n')
+            self.assertNotEqual(before[relative], qualification.source_hashes(source, '07')[relative])
+            path.write_text('TEST_ONLY\n')
+
+    def test_profile07_does_not_accept06_inventory_but06_keeps_its_original_requirements(self):
+        source = self.source_fixture('06')
+        before = qualification.source_hashes(source, '06')
+        with self.assertRaisesRegex(ValueError, 'EXACT_OWNED_INPUT_MISSING'):
+            qualification.source_hashes(source, '07')
+        self.assertEqual(qualification.source_hashes(source, '06'), before)
+        self.assertFalse(set(qualification.COMMAND_OWNED_RUST) & set(qualification.owned_rust('06')))
+        self.assertTrue(set(qualification.owned_rust('06')) < set(qualification.owned_rust('07')))
+
+    def test_profile07_legacy_denied_fixture_is_required_bounded_and_hash_bound(self):
+        source = self.source_fixture('07')
+        name = 'packages/contracts/fixtures/execution-command-relay-denied.valid.json'
+        self.assertEqual(qualification.COMMAND_SHARED_FIXTURES, (name,))
+        before = qualification.source_hashes(source, '07')
+        path = source / name
+        path.unlink()
+        with self.assertRaisesRegex(ValueError, 'EXACT_OWNED_INPUT_MISSING'):
+            qualification.source_hashes(source, '07')
+        for size in (0, 64 * 1024 + 1):
+            path.write_bytes(b'x' * size)
+            with self.subTest(size=size), self.assertRaisesRegex(ValueError, 'BOUNDED_SHARED_FIXTURE'):
+                qualification.source_hashes(source, '07')
+        path.write_text('TEST_ONLY_CHANGED\n')
+        self.assertNotEqual(before[name], qualification.source_hashes(source, '07')[name])
+        # The newly required07 fixture is not a06 prerequisite.
+        path.unlink()
+        qualification.source_hashes(source, '06')
+
+    def test_profile07_retains_exact_public_compile_inputs_and_original_fixture_bounds(self):
+        source = self.source_fixture('07')
+        before = qualification.source_hashes(source, '07')
+        for name in (*qualification.RESOURCE_SHARED_FIXTURES, *qualification.RESOURCE_COMPILE_INPUTS,
+                     *(qualification.RUST_WORKSPACE + '/' + path
+                       for path in qualification.RESOURCE_BUILD_SCRIPTS)):
+            self.assertIn(name, before)
+        for name, cap in ((qualification.SHARED_FIXTURE, qualification.MAX_SHARED_FIXTURE_BYTES),
+                          *qualification.RESOURCE_COMPILE_INPUTS.items()):
+            path = source / name
+            path.write_bytes(b'x' * (cap + 1))
+            with self.subTest(path=name), self.assertRaisesRegex(ValueError, 'BOUNDED_'):
+                qualification.source_hashes(source, '07')
+            path.write_text('TEST_ONLY\n')
+
+    def test_profile07_mtime_refresh_uses_explicit_profile_and_never_changes_bytes(self):
+        source = self.source_fixture('07', private_prefix='epg10-07-')
+        before = qualification.source_hashes(source, '07')
+        stamp = 2_000_000_000_000_000_001
+        with patch.object(qualification.time, 'time_ns', return_value=stamp):
+            receipt = qualification.refresh_copied_input_mtimes(source.parent, source, before, '07')
+        self.assertEqual(receipt['touched_files'], len(before))
+        self.assertTrue(receipt['bytes_unchanged'])
+        self.assertFalse(receipt['target_or_cache_touched'])
+        self.assertEqual(qualification.source_hashes(source, '07'), before)
+        self.assertTrue(all((source / name).stat().st_mtime_ns == stamp for name in before))
+        with patch.object(qualification.os, 'utime') as mutate:
+            with self.assertRaisesRegex(ValueError, 'PRIVATE_DISPOSABLE'):
+                qualification.refresh_copied_input_mtimes(source.parent, source, before)
+            mutate.assert_not_called()
+
+    def test_profile07_mtime_refresh_rejects_escape_drift_and_linked_source(self):
+        source = self.source_fixture('07', private_prefix='epg10-07-')
+        before = qualification.source_hashes(source, '07')
+        with patch.object(qualification.os, 'utime') as mutate:
+            with self.assertRaisesRegex(ValueError, 'EXACT_PRIVATE_SOURCE_PATH'):
+                qualification.refresh_copied_input_mtimes(source.parent, source / '..', before, '07')
+            for manifest in ({}, {'../outside': '0' * 64}, dict(before, injected='0' * 64)):
+                with self.assertRaisesRegex(ValueError, 'EXACT_VALIDATED_INPUT_MANIFEST'):
+                    qualification.refresh_copied_input_mtimes(source.parent, source, manifest, '07')
+            mutate.assert_not_called()
+        path = source / qualification.RUST_WORKSPACE / qualification.COMMAND_OWNED_RUST[0]
+        outside = source.parent / 'outside'
+        path.rename(outside)
+        qualification.os.link(outside, path)
+        with patch.object(qualification.os, 'utime') as mutate:
+            with self.assertRaisesRegex(ValueError, 'PRIVATE_UNLINKED_SOURCE_FILE'):
+                qualification.refresh_copied_input_mtimes(source.parent, source, before, '07')
+            mutate.assert_not_called()
+
+    def test_profile07_command_and_prior_resource_warnings_are_owned(self):
+        for path in (*qualification.COMMAND_OWNED_RUST, *qualification.RESOURCE_OWNED_RUST):
+            warning = {'message': {'level': 'warning', 'code': {'code': 'clippy::command'},
+                'spans': [{'is_primary': True, 'file_name': path}]}}
+            with self.subTest(path=path):
+                self.assertEqual(qualification.clippy_findings(json.dumps(warning), '07')['owned_warnings'],
+                                 ['clippy::command'])
+
+    def test_profile07_unconfirmed_optional_orchestration_paths_are_not_required_but_are_hashed(self):
+        source = self.source_fixture('07')
+        before = qualification.source_hashes(source, '07')
+        for name in ('crates/command-relay/src/relay.rs', 'crates/edge-service/src/command_relay.rs'):
+            self.assertNotIn(name, qualification.COMMAND_OWNED_RUST)
+            path = source / qualification.RUST_WORKSPACE / name
+            self.assertFalse(path.exists())
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text('TEST_ONLY_OPTIONAL_SOURCE\n')
+            relative = qualification.RUST_WORKSPACE + '/' + name
+            after = qualification.source_hashes(source, '07')
+            self.assertIn(relative, after)
+            self.assertEqual(after[relative], qualification.hashlib.sha256(path.read_bytes()).hexdigest())
+            self.assertTrue(set(before) < set(after))
 
     @staticmethod
     def child_usage(user=1.0, system=0.5, rss=100, reads=2, writes=4):
