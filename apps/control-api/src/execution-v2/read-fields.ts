@@ -14,6 +14,10 @@ export const BUSINESS_READ_FIELDS = [
   "risk_grant_id", "decision_id", "submitted_count", "risk_rejected_count", "broker_rejected_count", "filled_count",
   "timestamp_ms", "occurred_at_ms", "sequence", "order_id", "fill_id", "position_id", "side",
   "group_id", "leg_id", "max_capital",
+  // Closed ELP2-06 vocabulary, not a researcher grant or source qualification.
+  "opening_economic_capital", "initial_funds", "added_funds", "returned_capital", "net_economic_assignments", "current_nav",
+  "actual_fees", "pending_fees", "funding", "interest", "initial_budget", "current_budget", "topups_applied",
+  "decreases_applied", "recall_applied", "pending_amount", "cancelled_amount", "locked_amount", "exposure_cap",
 ] as const;
 const business = new Set<string>(BUSINESS_READ_FIELDS);
 export const isBusinessReadField = (field:string):boolean => business.has(field);

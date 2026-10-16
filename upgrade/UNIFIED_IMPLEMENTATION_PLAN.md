@@ -9363,10 +9363,10 @@ Không copy lại toàn guide hoặc mở implementation từ việc nhận tài
 
 | Track | Detailed authority | Disposition hiện tại |
 | --- | --- | --- |
-| Portal ELP2-00…11 | [BE guide v1.2](./execution_loop/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md) | 00 audit delivered;01–04 landed,04=`2ec5924d`, final hook contracts574/API3,306 PASS+3 existing skips/restore PASS.05 explicitly assigned: [catalogue/publication delivery and selected-source gates](./execution_loop/evidence/ELP2-05/README.md).06…11 NOT_STARTED; no shared-runtime activation |
+| Portal ELP2-00…11 | [BE guide v1.2](./execution_loop/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md) | 00 audit delivered;01–04 landed,04=`2ec5924d`, final hook contracts574/API3,306 PASS+3 existing skips/restore PASS.05=`c4109ef3` [catalogue/source gates](./execution_loop/evidence/ELP2-05/README.md).06 explicitly assigned: [Manager models/score technical return, source/config/consumer exit NOT_MET](./execution_loop/evidence/ELP2-06/README.md).07…11 NOT_STARTED; no shared-runtime activation |
 | Edge EPG10-00…11 | [Edge guide v1.2](./execution_loop/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md) | GUIDE_READ; HK inspection READ_ONLY; no Edge source/runtime changes |
 | Claude UXM-00…10 | [UX guide v1.1](./execution_loop/EXECUTION_LOOP_MANAGER_UX_DESIGN_GUIDE_v1.1_VI.md) | RULES_READY; browser audit/new design/implementation not performed in this package |
-| Shared score / Regime | [FINAL v1.1](./execution_loop/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md) | Formula/weights/bands selected; runtime calibration/config still pending; no new calculator/test run |
+| Shared score / Regime | [FINAL v1.1](./execution_loop/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md) | Formula/weights/bands selected;06 pure reference/calculation tests delivered, no request-path computation. Runtime source/calibration/config and Regime inputs still pending; API scores null/policy_pending |
 
 [Source alignment receipt](./execution_loop/evidence/SOURCE_ALIGNMENT_2026-10-15.md)
 pins Portal5f3f2332, TS4e9c5f29, PMd16aa2b5, DL864774d5 with full SHAs,
@@ -9589,6 +9589,7 @@ block only dependent activation. Existing Research/Governance evidence preserved
 
 ### ELP2-06 — Manager read models và 360 datasets
 
+- **Current return2026-10-16:** separately assigned on `c4109ef3`; [gate / actual tests / remaining dependencies](./execution_loop/evidence/ELP2-06/README.md), [source pins](./execution_loop/evidence/ELP2-06/source-alignment.md), [generated contracts + Claude handoff](./execution_loop/evidence/ELP2-06/coverage-and-handoff.md). Technical bounded slice delivered via normal-hook commit; **full source/config/consumer exit NOT_MET**. No runtime or frontend activation;07 requires separate assignment.
 - **Goal/dependency:** 01 cho design; 02/03/04 + selected 05 cho real reads. Reuse UDB/Manager infrastructure, không thêm ledger kinh tế.
 - **To-do:** atomic projection+checkpoint, dedupe, full authorized sort/filter/group/stable paging; Fund/Fleet/360 and capital statements; Score P1/P2, direct NAV khác composition; correction dependency cache, bounded recompute ngoài request/tick path.
 - **Claude:** UXM-08 nối Overview/Portfolio → Fleet → Alpha/Account/Deployment với context; mỗi field có unit, absence, capability, provenance.
@@ -10422,3 +10423,54 @@ This supersedes older05 NOT_STARTED text, not historical evidence/failed attempt
   NOT_STARTED_BY_OWNER_DIRECTION; AWAITING_CONSUMER_REVIEW. No acknowledgement
   or product acceptance invented. No goal/runtime/remote/frontend change,
   push, dev/main merge, release or06 work accompanies this delivery.
+
+<a id="elp2-06-current-return"></a>
+
+### 14.11 ELP2-06 — Manager models, economic partitions and score reference, 2026-10-16
+
+Bobby assigned06 separately; source parent `c4109ef350a58c1ae3840d9c3f4c2110b312a079`,
+same integration branch. [Requirement→implementation→test matrix](./execution_loop/evidence/ELP2-06/README.md)
+and [consumer handoff](./execution_loop/evidence/ELP2-06/coverage-and-handoff.md)
+are authoritative current return. Earlier NOT_STARTED/planning entries are historical.
+
+- Six named scoped Fund/Fleet/Portfolio/Alpha/Account/Deployment reads publish
+  generated ManagerDataset/Query/Metric/Row. Correlated tuple/field authorization
+  precedes joins/counts/global exact-decimal sort/filter/groups/keyset. Full
+  Fund authority, explicit full/restricted Portfolio distinction, final grant
+  and head fences. No generic proxy or browser source selector.
+- Partitioned typed statement fields keep capital/budget/cost/exposure separate.
+  Source-ID and ownership dedupe differ; custody excluded, internal pairs require
+  matching economic cut/proof. Missing member/metric census yields null, not a
+  falsely complete total. All cross-profile money is still rejected; current
+  ALL navigation is reused separately, not a new global financial projection.
+- Additive migration135 / separately pinned isolated-store forward ledger;
+  two bounded rebuildable projection tables, no identity/financial ledger.
+  Existing projection/journal transaction couples optional qualified Manager
+  revision/head; corrections append, A→B→A rejected, generation rebuild CAS and
+  cap stop rather than delete history. No shared DB migration/runtime writer.
+- Pure off-request Score P1 F(P/R/B), own path vs composition, full denominator,
+  continuity/cost/stress tested with explicit TEST_ONLY config. Approved runtime
+  anchors/source/calibration absent: numeric API remains policy_pending;
+  fixture values are not production policy. Automatic qualified-source precompute
+  adapter/recompute and real source tie-out remain open06-002, not silently done.
+- Focused isolated attempt142 PASS/2 assertion failures retained;13 transaction
+  and27 existing-reader tests PASS. Corrected current-grant assertion, census
+  fixtures; final local reducer48/48, score54/54, service12/12; contract9/9 and
+  FEledger22/22 PASS. Shared registry caught a missing schema `$id`; generator
+  fixed, affected3-suite retake152/152 PASS (includes10 Manager contract cases).
+  Additional transfer/parent-transaction tests run in the
+  final normal hook. Full terminal counts/log are in the packet, no duplicate
+  case summation or source/runtime acceptance from unit/PG fixtures.
+- Read-only HK pins refreshed: committed Edge05/active dirty06 do not qualify
+  new42families or current trust/source publisher fence. Canonical00-002…005,
+  04-008…010 and05-001/002 remain in their original packets. No source, SSE,
+  TLS/credential, upstream command, goal, push, merge dev/main or deploy.
+- Frontend NOT_STARTED_BY_OWNER_DIRECTION; request06-001/handoff remains
+  AWAITING_CONSUMER_REVIEW. Claude can begin UXM-08 fixture/design only when
+  Bobby assigns it; exact types/routes/null/permission/paging/browser gates
+  supplied. Backend07 can be proposed next, **not auto-started**; dependent06
+  source/config/recompute/ALL work resumes only on compatible qualified inputs.
+
+Normal-hook commit is the landing gate for this coherent slice. Full ELP2-06
+exit remains **NOT_MET_SOURCE_CONFIG_CONSUMER**, not product available or
+owner accepted. Cleanup/rollback and resource measurements stay in the packet.

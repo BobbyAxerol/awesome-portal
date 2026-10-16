@@ -25,6 +25,8 @@ const inputs = [
 ] as const;
 
 export const EXECUTION_STORE_VERSION = "131.execution-store.v1";
+const managerForward = ["135.execution-manager-models.v1", "1723680000135_execution-manager-models.sql",
+  "1e4c6822e675955b7608c5bc0cd11fde145c1a8a6303a17bb6770b35ab0b1939"] as const;
 export function executionStoreSql(dir = join(__dirname,"../../migrations")): string {
   let sql = `CREATE TABLE execution_workspace_references (
     workspace_id text PRIMARY KEY, core_reference_receipt text NOT NULL,
@@ -62,6 +64,16 @@ export async function migrateExecutionStore(pool: Pool): Promise<string> {
       await client.query(sql);
       await client.query("CREATE TABLE execution_store_migrations (version text PRIMARY KEY,digest text NOT NULL, applied_at timestamptz NOT NULL DEFAULT now())");
       await client.query("INSERT INTO execution_store_migrations(version,digest) VALUES($1,$2)",[EXECUTION_STORE_VERSION,sha]);
+    }
+    // Append a separately pinned version: never rewrite the frozen v131 digest
+    // that an already-hydrated isolated store has recorded.
+    const forwardSql = readFileSync(join(__dirname,"../../migrations",managerForward[1]),"utf8");
+    if (createHash("sha256").update(forwardSql).digest("hex") !== managerForward[2]) throw new Error("EXECUTION_SCHEMA_INPUT_CHANGED");
+    const forward = await client.query("SELECT digest FROM execution_store_migrations WHERE version=$1",[managerForward[0]]);
+    if (forward.rowCount && forward.rows[0].digest !== managerForward[2]) throw new Error("EXECUTION_SCHEMA_LEDGER_DRIFT");
+    if (!forward.rowCount) {
+      await client.query(forwardSql.split("-- Down Migration")[0]);
+      await client.query("INSERT INTO execution_store_migrations(version,digest) VALUES($1,$2)",[managerForward[0],managerForward[2]]);
     }
     // Runtime can page retained facts and write only ephemeral coordination.
     // No schema/role privileges or modification of retained projection/history.

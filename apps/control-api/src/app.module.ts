@@ -106,6 +106,8 @@ import { ProfileReadService } from "./profile-read/profile-read.service";
 import { ManagerListsController } from "./manager-lists/manager-lists.controller";
 import { ManagerListsRepository } from "./manager-lists/manager-lists.repository";
 import { ManagerListsService } from "./manager-lists/manager-lists.service";
+import { ManagerModelController } from "./execution-v2/manager-model.controller";
+import { ManagerModelService } from "./execution-v2/manager-model.service";
 import { ResourceReadController } from "./resource-read/resource-read.controller";
 import { ResourceReadService } from "./resource-read/resource-read.service";
 import { PortalDerivationsController } from "./execution/portal-derivations.controller";
@@ -255,6 +257,7 @@ export class AppModule {
         PaperReadController,
         ProfileReadController,
         ManagerListsController,
+        ManagerModelController,
         ExecutionDurableMirrorIntegrityController,
         ResourceReadController,
         PortalDerivationsController,
@@ -449,6 +452,7 @@ export class AppModule {
         ProfileReadService,
         ManagerListsRepository,
         ManagerListsService,
+        ManagerModelService,
         ResourceReadService,
         PortalDerivationsService,
         OperationalCompositionService,

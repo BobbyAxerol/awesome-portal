@@ -160,6 +160,8 @@ export interface ProjectionCommitInput {
   relationCursors?: readonly DurableMirrorRelationCursor[];
   /** Raw accepted range rows stay out of the bounded compatibility JSONB snapshot. */
   retainedRangeRows?: DurableMirrorRetainedRangeRows;
+  /** Optional qualified new-family projection, applied with the same checkpoint transaction. No runtime producer installs it yet. */
+  managerModel?: import("../execution-v2/manager-model.store").PreparedManagerProjection;
 }
 
 @Injectable()
@@ -790,6 +792,7 @@ export class ExecutionProfileProjectionRepository {
         };
       }
       if (!changed) {
+        if (input.managerModel) await this.persistManagerModel(client, document, input.sourceEpoch, input.managerModel);
         await client.query(
           `UPDATE execution_profile_projection_snapshots SET
              source_catalogue_sha256=$4, source_epoch=$5, source_cursor=$6, source_as_of=$7, received_at=$8,
@@ -877,6 +880,7 @@ export class ExecutionProfileProjectionRepository {
         [document.workspace_id, document.environment, document.profile_id,
           projectionEpoch, projectionSequence, input.maximumJournalEntries],
       );
+      if (input.managerModel) await this.persistManagerModel(client, document, input.sourceEpoch, input.managerModel);
       await client.query("SELECT pg_notify('execution_profile_projection', $1)", [JSON.stringify({
         workspace_id: document.workspace_id,
         environment: document.environment,
@@ -893,6 +897,20 @@ export class ExecutionProfileProjectionRepository {
         payloadDigest,
       };
     });
+  }
+
+  private async persistManagerModel(client: PoolClient, document: ProfileProjectionDocument, sourceEpoch: string,
+    model: import("../execution-v2/manager-model.store").PreparedManagerProjection) {
+    const value = model.document;
+    if (value.workspace_id !== document.workspace_id || value.environment !== document.environment || value.profile_id !== document.profile_id)
+      throw new Error("MANAGER_PARENT_PROFILE_MISMATCH");
+    // A private adapter may only couple snapshots from the same accepted
+    // source epoch/catalogue. The legacy projection UUID and Manager's source
+    // generation are different namespaces, never silently compared as cursors.
+    if (value.source_epoch !== sourceEpoch || value.catalogue_digest !== document.source_catalogue_sha256)
+      throw new Error("MANAGER_PARENT_SOURCE_MISMATCH");
+    const { persistManagerProjection } = await import("../execution-v2/manager-model.store");
+    await persistManagerProjection(client, model);
   }
 
   async snapshot(

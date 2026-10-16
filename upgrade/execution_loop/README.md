@@ -13,6 +13,15 @@ Không bật goal, không tự mở06+, không push/deploy hoặc sửa frontend
 Frontend vẫn NOT_STARTED_BY_OWNER_DIRECTION; handoff AWAITING_CONSUMER_REVIEW.
 Các đoạn onboarding/PLAN_ONLY bên dưới giữ lịch sử, không ghi đè current return.
 
+**Subsequent assignment2026-10-16:** Bobby assigned [ELP2-06](evidence/ELP2-06/README.md)
+separately on `c4109ef3`. Named Fund/Fleet/360 contracts, scoped exact query,
+atomic bounded Manager revision/checkpoint store and pure score reference are
+delivered with [handoff](evidence/ELP2-06/coverage-and-handoff.md). Full06 source/
+config/consumer exit remains NOT_MET; no numeric production score, ALL financial
+aggregate or qualified-source recompute worker is claimed. Normal hook is the
+landing gate. Frontend remains on hold; no goal,07+, push or runtime activation.
+This supersedes only the earlier “06 not assigned” status, not source evidence.
+
 [ELP2-00 packet](evidence/ELP2-00/README.md) có baseline manifest mới nhất,
 112-route census,14family/11XLC/15decision map,8audit checks và backend/Claude
 handoff. Pins cũ dưới đây giữ lịch sử, không ghi đè runtime/source snapshot mới.

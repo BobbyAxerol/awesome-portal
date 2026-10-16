@@ -190,7 +190,7 @@
     {
       "id": "projection_repository",
       "file": "apps/control-api/src/execution/profile-projection.repository.ts",
-      "sha256": "sha256:2436eb0a68574c2cb714174b76cb153204265e8784e3e72f0f9549f36d173f4d"
+      "sha256": "sha256:3bb56c8ecfaa0625e263f8ca9a02f3f296f4ad4e5f5e253539fade3445ab81e9"
     },
     {
       "id": "market_context_intake",

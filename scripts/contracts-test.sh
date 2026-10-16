@@ -111,6 +111,7 @@ cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/retained-context.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/read-publication.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/publication.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-model.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/publication-catalogue.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/publication-source.generated.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/execution-v2/"

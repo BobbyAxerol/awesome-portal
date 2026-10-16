@@ -258,10 +258,15 @@ export function composeManagerItems(scope: AuthorizedExecutionReadScope, snapsho
     const matches = (row: Facts) => visibleRow(row) && tuples.some(tuple => rowMatches(row, tuple)) &&
       population.populationTuples.filter(tuple => rowMatches(row, tuple)).every(tuple => groupKeys.has(tupleKey(tuple)));
     const financial: ScopedManagerItem["financial_facts"] = [];
+    // Manager publishes positions_v2. Retain the explicit historical Portal
+    // alias only when that canonical relation is absent, never alongside it or
+    // as a fallback for an unavailable/empty canonical publication.
+    const positionsRelation = Object.values(snapshot.document.relations).some(value => value.relation === "positions_v2")
+      ? "positions_v2" : "positions";
     for (const [relation, factKind, mapping] of [
       ["portfolio_allocations", "ALLOCATION", { allocation: "allocated_capital" }],
       ["account_balances", "INTERNAL_ACCOUNT_BALANCE", { balance_total: "total", balance_free: "free", balance_locked: "locked" }],
-      ["positions", "POSITION_PNL", { realized_pnl: "realized_pnl", unrealized_pnl: "unrealized_pnl", exposure: "notional" }],
+      [positionsRelation, "POSITION_PNL", { realized_pnl: "realized_pnl", unrealized_pnl: "unrealized_pnl", exposure: "notional" }],
     ] as const) {
       const seen = new Set<string>();
       for (const row of rows(relation).filter(matches)) {

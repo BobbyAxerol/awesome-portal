@@ -20,6 +20,9 @@ from typing import Any
 CONTRACTS_ROOT = Path(__file__).resolve().parents[1]
 
 TRACKED = (
+    "tooling/verify-generated.sh",
+    "fixtures/execution-manager-dataset.rows.synthetic.valid.json",
+    "tooling/generate-execution-manager-models.mjs",
     "tooling/generate-execution-history.mjs",
     "tooling/generate-execution-manager-scoped.mjs",
     "tooling/generate-execution-scoped-records.mjs",
@@ -420,6 +423,10 @@ TRACKED = (
     "fixtures/execution-analytics.capital-ledger.valid.json",
     "fixtures/execution-analytics.binding-exposure.valid.json",
     "schemas/execution-publication-catalogue.v1.schema.json",
+    "schemas/execution-manager-dataset.v1.schema.json",
+    "openapi/execution-manager-models.openapi.json",
+    "generated/execution-manager-models.d.ts",
+    "fixtures/execution-manager-dataset.synthetic.valid.json",
     "openapi/execution-publication-catalogue.openapi.json",
     "generated/execution-publication-catalogue.d.ts",
     "fixtures/execution-publication-catalogue.source.valid.json",

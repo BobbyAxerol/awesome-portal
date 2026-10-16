@@ -16,7 +16,7 @@ import type { AccessTrustProvider, ReviewedPolicyArtifact } from "../src/executi
 import type { ExecutionReadPublicationRequest, ExecutionReadPublication } from "../src/execution-v2/read-publication";
 import { ExecutionReadScopes, type ReadScopePrincipal } from "../src/execution-v2/read-scope";
 import { ExecutionProfileProjectionRepository, type ProfileProjectionDocument } from "../src/execution/profile-projection.repository";
-import { ScopedManagerReader } from "../src/manager-lists/scoped-manager.reader";
+import { ScopedManagerReader, composeManagerItems } from "../src/manager-lists/scoped-manager.reader";
 import { ExecutionProfileReadAdapterService } from "../src/execution/profile-read-adapter.service";
 import { ExecutionFinancialChartService } from "../src/execution/financial-chart.service";
 import { ExecutionDurableFinancialRepository } from "../src/execution/durable-financial.repository";
@@ -28,6 +28,7 @@ import { AlphaFleetQuerySchema, BindingsQuerySchema } from "../src/manager-lists
 import { scopedManagerResponseSchema } from "../src/manager-lists/scoped-manager.contract";
 import type { AuthSession, PortalUser, VerifiedAccessIdentity } from "../src/domain";
 import { migrateTestDatabase, setupApp, teardownApp, testConfig } from "./harness";
+import { productReadFixture, OWN as PRODUCT_OWN } from "./elp2-product-read.fixture";
 
 const OWN = { alpha_id: "TEST-own", alpha_version_id: "TEST-av", portfolio_id: "TEST-shared-pf", deployment_id: "TEST-own-dep", account_id: "TEST-shared-account" };
 const PEER = { alpha_id: "TEST-peer", alpha_version_id: "TEST-peer-av", portfolio_id: OWN.portfolio_id, deployment_id: "TEST-peer-dep", account_id: OWN.account_id };
@@ -40,6 +41,59 @@ const resources: AccessResource[] = [...new Map(tuples.flatMap(tuple => [
 ]).map(resource => [JSON.stringify(resource), resource])).values(), { kind: "BINDING", id: "TEST-own-binding" }, { kind: "BINDING", id: "TEST-peer-binding" }];
 const PROFILE = "PAPER_BINANCE_USDM", SANDBOX = "SANDBOX_BINANCE_USDM";
 const fields = ["alpha_id", "alpha_version_id", "portfolio_id", "deployment_id", "account_id", "binding_id", "name", "state", "stage", "venue", "currency", "base_currency", "allocation", "balance_total", "balance_free", "balance_locked", "realized_pnl", "unrealized_pnl", "exposure", "updated_at", "timestamp_ms", "equity", "strategy_id", "risk_grant_id", "created_at", "environment"];
+
+describe("ELP2-06 current Manager position relation compatibility / TEST_ONLY", () => {
+  async function positionFacts(options: { canonical?: boolean; legacy?: boolean; unavailable?: boolean }) {
+    const f = productReadFixture({ fields });
+    const relation = (name: string, unrealized: string, unavailable = false) => ({
+      source_id: "manager.positions", relation: name, availability: unavailable ? "UNAVAILABLE" as const : "AVAILABLE" as const,
+      reason_code: unavailable ? "SOURCE_NOT_PUBLISHED" : null, as_of: null,
+      freshness: "UNKNOWN" as const, completeness: "PARTIAL" as const,
+      // Actual positions_v2 carries strategy/account identity, not the full
+      // deployment tuple. Currency is not published by this relation either.
+      items: [
+        { position_id: "position-own", strategy_id: "strategy-own", account_id: PRODUCT_OWN.account_id,
+          realized_pnl: "0", unrealized_pnl: unrealized, notional: "123.0000000000000001" },
+        { position_id: "position-peer", strategy_id: "strategy-peer", account_id: PRODUCT_OWN.account_id,
+          realized_pnl: "0", unrealized_pnl: "990001", notional: "990002" },
+      ].map(value => ({ lineage: { workspace_id: f.principal.workspaceId, profile_id: "PAPER_BINANCE_USDM",
+        source_contract_revision: "TEST_ONLY" }, fields: value })),
+    });
+    f.snapshot.document.relations = {
+      ...(options.canonical ? { "manager.positions:positions_v2": relation("positions_v2", "2.1000000000000001", options.unavailable) } : {}),
+      ...(options.legacy ? { "historical:positions": relation("positions", "9.2") } : {}),
+    };
+    const scope = await f.scopes.authorize(f.principal, { environment: "paper", profileId: "PAPER_BINANCE_USDM" }, {
+      action: "alpha.read", dataset: { dataset_id: "manager:ALPHA_FLEET", source_revision: f.snapshot.payloadDigest,
+        projection_generation: f.snapshot.projectionEpoch, catalogue_revision: f.snapshot.sourceCatalogueSha256, window: null },
+    });
+    return composeManagerItems(scope, f.snapshot, "ALPHA_FLEET").find(item => item.identity.alpha_id === PRODUCT_OWN.alpha_id &&
+      item.identity.portfolio_id === PRODUCT_OWN.portfolio_id)!;
+  }
+
+  it("reads authoritative positions_v2 with exact permitted strategy/account attribution", async () => {
+    const item = await positionFacts({ canonical: true });
+    expect(item.financial_facts).toEqual([{ kind: "POSITION_PNL", facts: { account_id: PRODUCT_OWN.account_id,
+      realized_pnl: "0", unrealized_pnl: "2.1000000000000001", exposure: "123.0000000000000001" } }]);
+    expect(item.financial_totals).toEqual([]); // Missing source currency never becomes an invented total.
+    expect(JSON.stringify(item)).not.toMatch(/990001|990002|position-peer/);
+  });
+  it("retains explicitly historical positions-only documents", async () => {
+    const item = await positionFacts({ legacy: true });
+    expect(item.financial_facts).toHaveLength(1);
+    expect(item.financial_facts[0].facts.unrealized_pnl).toBe("9.2");
+  });
+  it("never adds a historical alias alongside the canonical relation", async () => {
+    const item = await positionFacts({ canonical: true, legacy: true });
+    expect(item.financial_facts).toHaveLength(1);
+    expect(item.financial_facts[0].facts.unrealized_pnl).toBe("2.1000000000000001");
+  });
+  it("never falls back to historical amounts when the canonical source is unavailable", async () => {
+    const item = await positionFacts({ canonical: true, legacy: true, unavailable: true });
+    expect(item.financial_facts).toEqual([]);
+    expect(item.financial_availability.state).toBe("NOT_PUBLISHED");
+  });
+});
 
 describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 scoped Manager raw reads / TEST_ONLY authority", () => {
   let ctx: Awaited<ReturnType<typeof setupApp>>, auth: AuthService, owner: PortalUser, researcher: PortalUser;
