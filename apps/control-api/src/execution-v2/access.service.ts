@@ -18,15 +18,21 @@ import { querySigningKeys } from "../config";
 import type { ExecutionReadPublicationRequest } from "./read-publication";
 import { acceptRootMembershipReceipt } from "./access-root-receipt";
 import { captureCurrentHumanSnapshot } from "./current-human-snapshot";
+import { CurrentHumanLeaseError } from "./current-human-candidate";
+import { CurrentHumanMutations, type CurrentHumanMutationBinding, type CurrentHumanMutationHooks } from "./current-human-mutations";
 
 type Tx={db:PoolClient;repo:AccessRepository;context:AccessEvaluationContext;recheck:(check:()=>void)=>void};
 type OperationResult={receipt:AccessReceipt;replayed:boolean};
+type AuthorityMutation<T>={binding:CurrentHumanMutationBinding;authorize:(tx:Tx)=>Promise<void>;
+  terminal:CurrentHumanMutationHooks<T>["terminal"]};
 
 /** One application-policy boundary. Default trust is unqualified and seeds no production rights. */
 export class ExecutionAccessService {
   constructor(private readonly pool:Pool,private readonly auth:AuthService,
     private readonly trust:AccessTrustProvider=unqualifiedAccessTrust,
-    private readonly allowTestOnly=false) {}
+    private readonly allowTestOnly=false,private readonly authorityMutations?:CurrentHumanMutations) {
+    if(authorityMutations&&!authorityMutations.usesPool(pool))throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_CONFIG_INVALID");
+  }
 
   /** Short consistent capture; no adapter I/O or mutation locks. */
   private async captureReadContext(actor:AccessActor,workspace:string) {
@@ -40,11 +46,18 @@ export class ExecutionAccessService {
   /** Current context, freshly fenced AFTER adapter I/O. Never cache it as an
    * entitlement; delivery re-evaluates it after its own last source/cache await. */
   async readContext(actor:AccessActor,workspace:string):Promise<AccessEvaluationContext> {
+    return this.readContextWithPrincipals(actor,workspace,[]);
+  }
+
+  /** A new grant's subject is not necessarily in the existing grant graph.
+   * Resolve that subject through the same private adapter, before Core locks. */
+  private async readContextWithPrincipals(actor:AccessActor,workspace:string,extraPrincipals:string[]):Promise<AccessEvaluationContext> {
     const captured=await this.captureReadContext(actor,workspace);
     // Qualified relations may come from an adapter. All DB locks/connections
     // above have been released before awaiting it.
     const relationMap=new Map<string,AccessRelations>();
-    for(const id of captured.ids)relationMap.set(id,structuredClone(await this.trust.relations(id,workspace)));
+    for(const id of new Set([...captured.ids,...extraPrincipals]))
+      relationMap.set(id,structuredClone(await this.trust.relations(id,workspace)));
     const current=await this.captureReadContext(actor,workspace);
     if(current.authority_fingerprint!==captured.authority_fingerprint)
       throw new AccessPolicyError("ACCESS_RETRY_REQUIRED",409);
@@ -121,9 +134,17 @@ export class ExecutionAccessService {
     },[],expected);
   }
 
-  private async transaction<T>(workspace:string,actor:AccessActor,stepUp:boolean,fn:(tx:Tx)=>Promise<T>,extraPrincipals:string[]=[],captured?:AccessEvaluationContext):Promise<T> {
+  private async transaction<T>(workspace:string,actor:AccessActor,stepUp:boolean,fn:(tx:Tx)=>Promise<T>,extraPrincipals:string[]=[],
+    captured?:AccessEvaluationContext,mutation?:AuthorityMutation<T>):Promise<T> {
     try {
-      return await withTransaction(this.pool,async db=>{
+      const prepared=captured??await this.readContextWithPrincipals(actor,workspace,extraPrincipals);
+      if(prepared.principal_id!==actor.user_id||prepared.workspace_id!==workspace||!prepared.authority_fingerprint)
+        throw new AccessPolicyError("CURRENT_ACTOR_AUTHORITY_REQUIRED");
+      // Source relations are fully detached before either the coordinator's
+      // short authorization TX or its final application TX. Both execute this
+      // DB-only boundary on the caller's supplied client: no nested pool lease
+      // and no adapter/network await while Core mutation locks are held.
+      const run=async <Result>(db:PoolClient,operation:(tx:Tx)=>Promise<Result>):Promise<Result>=>{
         await db.query("SET LOCAL lock_timeout='1500ms'");
         await db.query("SET LOCAL statement_timeout='5000ms'");
         const lock=await db.query("SELECT pg_try_advisory_xact_lock(hashtextextended($1,0)) AS acquired",[`portal-access-v2:${workspace}`]);
@@ -136,7 +157,7 @@ export class ExecutionAccessService {
         const anchor=(await db.query("SELECT user_id FROM portal_owner_anchor WHERE anchor_id='PORTAL_OWNER' FOR SHARE")).rows[0]?.user_id;
         const member=await db.query("SELECT user_id FROM workspace_members WHERE workspace_id=$1 AND user_id=$2 FOR SHARE NOWAIT",[workspace,user.userId]);
         if(!member.rowCount && anchor!==user.userId) throw new AccessPolicyError("ACCESS_RESOURCE_NOT_FOUND",404);
-        if(!await db.query("SELECT 1 FROM workspaces WHERE workspace_id=$1",[workspace]).then(r=>r.rowCount))
+        if(!await db.query("SELECT 1 FROM workspaces WHERE workspace_id=$1 FOR SHARE NOWAIT",[workspace]).then(r=>r.rowCount))
           throw new AccessPolicyError("ACCESS_RESOURCE_NOT_FOUND",404);
         if(stepUp && !await lifecycle.lockActiveStepUpExpiry(actor.session_id,user.userId)) throw new AccessPolicyError("STEP_UP_REQUIRED");
         const repo=new AccessRepository(db),policy=await repo.policy(workspace,true),grants=await repo.grants(workspace);
@@ -150,14 +171,25 @@ export class ExecutionAccessService {
         const memberIds=new Set<string>(members.rows.map(r=>r.user_id));
         if(anchor) memberIds.add(anchor);
         const active=new Set<string>(current.rows.filter(r=>r.status==="ACTIVE"&&!r.must_change_password&&!r.archived_at&&memberIds.has(r.user_id)).map(r=>r.user_id));
+        // Adapter awaits happened before acquiring a Core connection. Re-read
+        // the same current facts under the existing mutation locks, not merely
+        // the caller's cached policy/grant revisions. New targets are checked
+        // from the locked lifecycle/membership rows above and again by fn.
+        const boundary=await captureCurrentHumanSnapshot(db,actor,workspace);
+        const existingPrincipals=new Set([actor.user_id,anchor,...grants.flatMap(g=>[g.subject_user_id,g.issued_by])]);
+        const existingActive=[...active].filter(id=>existingPrincipals.has(id)).sort();
+        if(boundary.authority_fingerprint!==prepared.authority_fingerprint||
+          accessDigest([policy,grants,existingActive,user.role])!==
+          accessDigest([prepared.policy,prepared.grants,[...prepared.active_principals].sort(),prepared.actor_role]))
+          throw new AccessPolicyError("ACCESS_RETRY_REQUIRED",409);
         const relationMap=new Map<string,AccessRelations>();
-        for(const id of principals) relationMap.set(id,captured?captured.relationsFor(id!):await this.trust.relations(id!,workspace));
+        for(const id of principals) relationMap.set(id!,structuredClone(prepared.relationsFor(id!)));
         const now=await this.now(db);
         const context:AccessEvaluationContext={principal_id:actor.user_id,workspace_id:workspace,now_ms:now,
           actor_current:true,actor_role:user.role,policy,grants,active_principals:active,allow_test_only:this.allowTestOnly,
           relationsFor:id=>relationMap.get(id)??{qualified:false,revision:"UNQUALIFIED",own_alpha_ids:[],member_portfolio_ids:[],roots:{},membership:null}};
         const checks:Array<()=>void>=[];
-        const result=await fn({db,repo,context,recheck:check=>{check();checks.push(check);}});
+        const result=await operation({db,repo,context,recheck:check=>{check();checks.push(check);}});
         // Row locks prevent revoke/generation races, not wall-clock expiry while awaiting work.
         if(!await sessions.lockActiveLease(actor.session_id,user.userId,user.sessionVersion))
           throw new AccessPolicyError("CURRENT_ACTOR_AUTHORITY_REQUIRED");
@@ -165,8 +197,13 @@ export class ExecutionAccessService {
         context.now_ms=await this.now(db);
         for(const check of checks)check();
         return result;
+      };
+      if(mutation&&this.authorityMutations)return await this.authorityMutations.execute(mutation.binding,{
+        authorize:db=>run(db,mutation.authorize),apply:db=>run(db,fn),terminal:mutation.terminal,
       });
-    } catch(error) {
+      return await withTransaction(this.pool,db=>run(db,fn));
+    } catch(caught) {
+      const error=caught instanceof CurrentHumanLeaseError?this.mutationRefusal(caught):caught;
       if(stepUp && error instanceof AccessPolicyError) {
         // The transaction is already rolled back. Log only a current stable
         // actor and a typed refusal; no target/key/password or authority seed.
@@ -176,6 +213,19 @@ export class ExecutionAccessService {
         throw new AccessPolicyError("ACCESS_RETRY_REQUIRED",409);
       throw error;
     }
+  }
+  private mutationRefusal(error:CurrentHumanLeaseError):AccessPolicyError {
+    const mapped=error.code==="CURRENT_HUMAN_MUTATION_KEY_CONFLICT"
+      ?new AccessPolicyError("IDEMPOTENCY_KEY_PAYLOAD_CONFLICT",409)
+      :error.code==="CURRENT_HUMAN_MUTATION_PREVIOUSLY_REFUSED"
+        ?new AccessPolicyError("ACCESS_DENIED",409)
+        :error.code==="CURRENT_HUMAN_MUTATION_CAPACITY_EXHAUSTED"
+          ?new AccessPolicyError("ACCESS_SCOPE_LIMIT_EXCEEDED",503)
+          :new AccessPolicyError("ACCESS_RETRY_REQUIRED",503);
+    // Preserve the typed internal diagnostic without putting request bodies,
+    // raw keys or provider details into the public contract or refusal audit.
+    Object.defineProperty(mapped,"cause",{value:error});
+    return mapped;
   }
   private async recordRefusal(actor:AccessActor,error:AccessPolicyError):Promise<void> {
     const current=await new UsersRepository(this.pool).findById(actor.user_id);
@@ -242,27 +292,36 @@ export class ExecutionAccessService {
   async preview(actor:AccessActor,workspace:string,change:GrantChange) {
     return this.transaction(workspace,actor,false,async tx=>this.previewResult(tx.context,actor,change),[change.subject_user_id]);
   }
+  private assertProposeCeiling(tx:Tx,change:GrantChange):void {
+    // Even an immutable receipt remains private to an actor whose delegation
+    // ceiling is current. Historical replay never reactivates its output.
+    const currentCeiling=tx.context.grants.find(g=>g.grant_id===change.ceiling_grant_id);
+    tx.recheck(()=>validateDelegation(tx.context,{...change,expected_policy_revision:tx.context.policy?.revision??change.expected_policy_revision,
+      expected_ceiling_revision:currentCeiling?.revision??change.expected_ceiling_revision}));
+  }
+  private async assertProposeReady(tx:Tx,actor:AccessActor,workspace:string,change:GrantChange,previewDigest:string,digest:string):Promise<void> {
+    validateDelegation(tx.context,change);
+    const preview=this.previewResult(tx.context,actor,change);
+    if(previewDigest!==digest)throw new AccessPolicyError("POLICY_REVISION_CONFLICT",409);
+    if(!preview.allowed)throw new AccessPolicyError(preview.reason_code!,preview.reason_code==="ACCESS_RESOURCE_NOT_FOUND"?404:
+      preview.reason_code==="TS_MEMBERSHIP_REVISION_CONFLICT"?409:403);
+    const target=(await tx.db.query(`SELECT user_id FROM portal_users WHERE user_id=$1 AND status='ACTIVE'
+      AND NOT must_change_password AND archived_at IS NULL FOR SHARE NOWAIT`,[change.subject_user_id])).rows[0];
+    const targetMembership=await tx.db.query("SELECT user_id FROM workspace_members WHERE workspace_id=$1 AND user_id=$2 FOR SHARE NOWAIT",[workspace,change.subject_user_id]);
+    if(!target||!targetMembership.rowCount)throw new AccessPolicyError("ACCESS_RESOURCE_NOT_FOUND",404);
+  }
   async propose(actor:AccessActor,workspace:string,change:GrantChange,previewDigest:string,key:string):Promise<OperationResult> {
+    actor={...actor};change=structuredClone(change);
+    const digest=this.changeDigest(actor,workspace,change),keyDigest=accessDigest(["PROPOSE",key]);
     const result=await this.transaction(workspace,actor,true,async tx=>{
-      const digest=this.changeDigest(actor,workspace,change),keyDigest=accessDigest(["PROPOSE",key]);
       // Validate current authority before even exposing an immutable earlier receipt.
-      const currentCeiling=tx.context.grants.find(g=>g.grant_id===change.ceiling_grant_id);
-      tx.recheck(()=>validateDelegation(tx.context,{...change,expected_policy_revision:tx.context.policy?.revision??change.expected_policy_revision,
-        expected_ceiling_revision:currentCeiling?.revision??change.expected_ceiling_revision}));
+      this.assertProposeCeiling(tx,change);
       const prior=await tx.repo.keyedEvent(workspace,keyDigest);
       if(prior) return this.replay(prior,actor,digest);
       // All business refusals precede writes. Store the original outcome instead
       // of allowing the same key to become a later, different successful intent.
       try{
-        validateDelegation(tx.context,change);
-        const preview=this.previewResult(tx.context,actor,change);
-        if(previewDigest!==digest) throw new AccessPolicyError("POLICY_REVISION_CONFLICT",409);
-        if(!preview.allowed) throw new AccessPolicyError(preview.reason_code!,preview.reason_code==="ACCESS_RESOURCE_NOT_FOUND"?404:
-          preview.reason_code==="TS_MEMBERSHIP_REVISION_CONFLICT"?409:403);
-        const target=(await tx.db.query(`SELECT user_id FROM portal_users WHERE user_id=$1 AND status='ACTIVE'
-          AND NOT must_change_password AND archived_at IS NULL FOR SHARE NOWAIT`,[change.subject_user_id])).rows[0];
-        const targetMembership=await tx.db.query("SELECT user_id FROM workspace_members WHERE workspace_id=$1 AND user_id=$2 FOR SHARE NOWAIT",[workspace,change.subject_user_id]);
-        if(!target || !targetMembership.rowCount) throw new AccessPolicyError("ACCESS_RESOURCE_NOT_FOUND",404);
+        await this.assertProposeReady(tx,actor,workspace,change,previewDigest,digest);
       }catch(error){
         if(!(error instanceof AccessPolicyError))throw error;
         const receipt=this.receipt(tx.context,{outcome:"DENIED",http_status:error.status,reason_code:error.code});
@@ -285,7 +344,19 @@ export class ExecutionAccessService {
         state:tsRequired?"TS_PENDING":"APP_APPLIED",submission_receipt:receipt},keyDigest);
       await this.event(tx,actor,"PROPOSE",digest,receipt,{key_digest:keyDigest,subject_user_id:change.subject_user_id,after_fact:grant});
       return {receipt,replayed:false};
-    },[change.subject_user_id]);
+    },[change.subject_user_id],undefined,{
+      binding:{family:"EXECUTION_ACCESS",operation:"PROPOSE_GRANT",actor_id:actor.user_id,session_id:actor.session_id,
+        session_revision:actor.session_generation,key_digest:accessDigest(["execution-access","PROPOSE_GRANT",workspace,key]),
+        request_digest:accessDigest({request_digest:digest,preview_digest:previewDigest}),target_id:change.subject_user_id},
+      authorize:async tx=>{
+        this.assertProposeCeiling(tx,change);
+        const prior=await tx.repo.keyedEvent(workspace,keyDigest);
+        if(prior){this.replay(prior,actor,digest);return;}
+        // The global drain is admission, not a way for an otherwise current
+        // user to stall every workspace with an ineligible grant request.
+        await this.assertProposeReady(tx,actor,workspace,change,previewDigest,digest);
+      },terminal:result=>this.mutationTerminal(result),
+    });
     if(result.receipt.outcome==="DENIED")throw new AccessPolicyError(result.receipt.reason_code as "ACCESS_DENIED",result.receipt.http_status);
     return result;
   }
@@ -293,6 +364,10 @@ export class ExecutionAccessService {
     if(prior.actor_user_id!==actor.user_id||prior.request_digest!==digest) throw new AccessPolicyError("IDEMPOTENCY_KEY_PAYLOAD_CONFLICT",409);
     if(prior.receipt.outcome==="DENIED") throw new AccessPolicyError(prior.receipt.reason_code as "ACCESS_DENIED",prior.receipt.http_status);
     return {receipt:prior.receipt,replayed:true};
+  }
+  private mutationTerminal(result:OperationResult) {
+    return {outcome:result.receipt.outcome==="DENIED"?"REFUSED" as const:"APPLIED" as const,
+      receipt_ref:result.receipt.operation_id,reason_code:result.receipt.reason_code};
   }
   async proposal(actor:AccessActor,workspace:string,id:string) {
     return this.transaction(workspace,actor,false,async tx=>{
@@ -314,8 +389,7 @@ export class ExecutionAccessService {
         submission_receipt:row.submission_receipt,updated_at_ms:row.updated_at.getTime()};
     });
   }
-  async revoke(actor:AccessActor,workspace:string,id:string,policyRevision:string,grantRevision:string,key:string,reason="Access revoked."):Promise<OperationResult> {
-    return this.transaction(workspace,actor,true,async tx=>{
+  private assertRevokeAuthority(tx:Tx,actor:AccessActor,id:string):ScopedAccessGrant {
       const grant=tx.context.grants.find(g=>g.grant_id===id);
       if(!grant) throw new AccessPolicyError("ACCESS_RESOURCE_NOT_FOUND",404);
       if(grant.subject_user_id===actor.user_id) throw new AccessPolicyError("SELF_PRIVILEGE_CHANGE_DENIED");
@@ -328,17 +402,36 @@ export class ExecutionAccessService {
         for(const resource of resources) for(const environment of grant.environments)
           if(!evaluateAccess(tx.context,"access.revoke",resource,environment).allowed)throw new AccessPolicyError("ACCESS_DENIED");
       });
-      const digest=accessDigest([actor.user_id,workspace,id,policyRevision,grantRevision,reason]),keyDigest=accessDigest(["REVOKE",key]);
+      return grant;
+  }
+  private assertRevokeRevisions(tx:Tx,grant:ScopedAccessGrant,policyRevision:string,grantRevision:string):void {
+    if(tx.context.policy!.revision!==policyRevision)throw new AccessPolicyError("POLICY_REVISION_CONFLICT",409);
+    if(grant.revision!==grantRevision||grant.revoked_at_ms!==null)throw new AccessPolicyError("GRANT_REVISION_CONFLICT",409);
+  }
+  async revoke(actor:AccessActor,workspace:string,id:string,policyRevision:string,grantRevision:string,key:string,reason="Access revoked."):Promise<OperationResult> {
+    actor={...actor};
+    const digest=accessDigest([actor.user_id,workspace,id,policyRevision,grantRevision,reason]),keyDigest=accessDigest(["REVOKE",key]);
+    return this.transaction(workspace,actor,true,async tx=>{
+      const grant=this.assertRevokeAuthority(tx,actor,id);
       const prior=await tx.repo.keyedEvent(workspace,keyDigest);
       if(prior) return this.replay(prior,actor,digest);
-      if(tx.context.policy!.revision!==policyRevision) throw new AccessPolicyError("POLICY_REVISION_CONFLICT",409);
-      if(grant.revision!==grantRevision||grant.revoked_at_ms!==null) throw new AccessPolicyError("GRANT_REVISION_CONFLICT",409);
+      this.assertRevokeRevisions(tx,grant,policyRevision,grantRevision);
       const updated={...grant,revision:randomId("acr"),revoked_at_ms:tx.context.now_ms};
       const receipt=this.receipt(tx.context,{grant_id:id,outcome:"REVOKED",http_status:200,grant_revision:updated.revision,
         ts_authority:grant.requires_ts_acceptance?"UNKNOWN":"NOT_REQUIRED"});
       await tx.repo.saveGrant(updated);await tx.repo.revokeProposals(id);
       await this.event(tx,actor,"REVOKE",digest,receipt,{key_digest:keyDigest,subject_user_id:grant.subject_user_id,before_fact:grant,after_fact:{grant:updated,reason}});
       return {receipt,replayed:false};
+    },[],undefined,{
+      binding:{family:"EXECUTION_ACCESS",operation:"REVOKE_GRANT",actor_id:actor.user_id,session_id:actor.session_id,
+        session_revision:actor.session_generation,key_digest:accessDigest(["execution-access","REVOKE_GRANT",workspace,key]),
+        request_digest:digest,target_id:id},
+      authorize:async tx=>{
+        const grant=this.assertRevokeAuthority(tx,actor,id);
+        const prior=await tx.repo.keyedEvent(workspace,keyDigest);
+        if(prior){this.replay(prior,actor,digest);return;}
+        this.assertRevokeRevisions(tx,grant,policyRevision,grantRevision);
+      },terminal:result=>this.mutationTerminal(result),
     });
   }
 
@@ -442,29 +535,71 @@ export class ExecutionAccessService {
     return acceptRootMembershipReceipt(this.pool,this.trust.verifyRootReceipt?.bind(this.trust),input,this.allowTestOnly);
   }
 
+  /** Capture the delegated receipt's exact Core binding separately from source
+   * I/O. The locked form is the final DB-only fence, never an adapter callback. */
+  private async receiptCoreSnapshot(db:PoolClient,fact:TsMembershipAcceptance,lock=false) {
+    const repo=new AccessRepository(db),row=await repo.proposal(fact.workspace_id,fact.proposal_id);
+    const policy=await repo.policy(fact.workspace_id,lock),grants=await repo.grants(fact.workspace_id);
+    const grant=grants.find(g=>g.grant_id===row?.grant_id);
+    if(!row||!grant||!policy||policy.revision!==grant.policy_revision||grant.revoked_at_ms!==null||
+      row.state!=="TS_PENDING"&&row.state!=="TS_UNKNOWN"||grants.length>10000||!grant.requires_ts_acceptance)
+      throw new AccessPolicyError("RECEIPT_REVISION_CONFLICT",409);
+    const principalIds=[...new Set([row.actor_user_id,grant.subject_user_id,
+      ...grants.flatMap(g=>[g.issued_by,g.subject_user_id])])].sort();
+    const users=await db.query(`SELECT user_id,status,must_change_password,archived_at FROM portal_users
+      WHERE user_id=ANY($1::text[]) ORDER BY user_id${lock?" FOR SHARE NOWAIT":""}`,[principalIds]);
+    const members=await db.query(`SELECT user_id FROM workspace_members WHERE workspace_id=$1
+      AND user_id=ANY($2::text[]) ORDER BY user_id${lock?" FOR SHARE NOWAIT":""}`,[fact.workspace_id,principalIds]);
+    const anchor=(await db.query("SELECT user_id FROM portal_owner_anchor WHERE anchor_id='PORTAL_OWNER'"+
+      (lock?" FOR SHARE NOWAIT":""))).rows[0]?.user_id;
+    const memberIds=new Set<string>(members.rows.map(r=>r.user_id));
+    if(anchor===policy.protected_owner_user_id)memberIds.add(anchor);
+    const active=new Set<string>(users.rows.filter(u=>u.status==="ACTIVE"&&!u.must_change_password&&
+      !u.archived_at&&memberIds.has(u.user_id)).map(u=>u.user_id));
+    const authority_fingerprint=accessDigest({policy,grants,principalIds,active:[...active].sort(),anchor,
+      proposal:{proposal_id:row.proposal_id,actor_user_id:row.actor_user_id,subject_user_id:row.subject_user_id,
+        grant_id:row.grant_id,request_digest:row.request_digest,change:row.change,state:row.state}});
+    return {repo,row,policy,grants,grant,principalIds,active,authority_fingerprint};
+  }
+
   /** Qualified internal TS adapter only; pending/rejected/unknown cannot create accepted authority. */
   async acceptTsReceipt(input:unknown):Promise<OperationResult> {
-    const fact=await this.trust.verifyReceipt(input);
-    if(!fact) throw new AccessPolicyError("RECEIPT_NOT_QUALIFIED",503);
-    if(!tsMembershipAcceptance.safeParse(fact).success)throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH",409);
+    const verified=await this.trust.verifyReceipt(input);
+    if(!verified) throw new AccessPolicyError("RECEIPT_NOT_QUALIFIED",503);
+    const parsed=tsMembershipAcceptance.safeParse(verified);
+    if(!parsed.success)throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH",409);
+    const fact=parsed.data,digest=accessDigest(fact);
+    const prepared=await withTransaction(this.pool,async db=>{
+      await db.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY");
+      await db.query("SET LOCAL statement_timeout='5000ms'");
+      const prior=await new AccessRepository(db).sourceEvent(fact.source,fact.receipt_id);
+      if(prior){
+        if(prior.request_digest!==digest)throw new AccessPolicyError("RECEIPT_PAYLOAD_CONFLICT",409);
+        return null; // Historical replay needs no new current-source authority.
+      }
+      return this.receiptCoreSnapshot(db,fact);
+    });
+    const relations=new Map<string,AccessRelations>();
+    let mapping:Awaited<ReturnType<AccessTrustProvider["verifiedHumanMapping"]>>=null;
+    if(prepared){
+      for(const id of prepared.principalIds)
+        relations.set(id,structuredClone(await this.trust.relations(id,fact.workspace_id)));
+      mapping=structuredClone(await this.trust.verifiedHumanMapping(prepared.grant.subject_user_id,fact.workspace_id));
+      // Preserve the latest source-membership check after the mapping await,
+      // but perform it before taking ANY Core mutation lock/connection.
+      relations.set(prepared.grant.subject_user_id,
+        structuredClone(await this.trust.relations(prepared.grant.subject_user_id,fact.workspace_id)));
+    }
     return withTransaction(this.pool,async db=>{
+      await db.query("SET LOCAL lock_timeout='1500ms'");
+      await db.query("SET LOCAL statement_timeout='5000ms'");
       await db.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[`portal-access-v2:${fact.workspace_id}`]);
       const repo=new AccessRepository(db),prior=await repo.sourceEvent(fact.source,fact.receipt_id);
-      const digest=accessDigest(fact);
       if(prior){if(prior.request_digest!==digest)throw new AccessPolicyError("RECEIPT_PAYLOAD_CONFLICT",409);return {receipt:prior.receipt,replayed:true};}
-      const row=await repo.proposal(fact.workspace_id,fact.proposal_id),policy=await repo.policy(fact.workspace_id,true);
-      const grants=await repo.grants(fact.workspace_id),grant=grants.find(g=>g.grant_id===row?.grant_id);
-      if(!row||!grant||!policy||policy.revision!==grant.policy_revision||grant.revoked_at_ms!==null||row.state!=="TS_PENDING"&&row.state!=="TS_UNKNOWN")
+      const current=await this.receiptCoreSnapshot(db,fact,true);
+      if(!prepared||current.authority_fingerprint!==prepared.authority_fingerprint)
         throw new AccessPolicyError("RECEIPT_REVISION_CONFLICT",409);
-      if(grants.length>10000||!grant.requires_ts_acceptance)throw new AccessPolicyError("RECEIPT_REVISION_CONFLICT",409);
-      const principalIds=[...new Set([row.actor_user_id,grant.subject_user_id,...grants.flatMap(g=>[g.issued_by,g.subject_user_id])])];
-      const users=await db.query("SELECT user_id,status,must_change_password,archived_at FROM portal_users WHERE user_id=ANY($1::text[]) FOR SHARE NOWAIT",[principalIds]);
-      const members=await db.query("SELECT user_id FROM workspace_members WHERE workspace_id=$1 AND user_id=ANY($2::text[]) FOR SHARE NOWAIT",[fact.workspace_id,principalIds]);
-      const anchor=(await db.query("SELECT user_id FROM portal_owner_anchor WHERE anchor_id='PORTAL_OWNER' FOR SHARE")).rows[0]?.user_id;
-      const memberIds=new Set(members.rows.map(r=>r.user_id));if(anchor===policy.protected_owner_user_id)memberIds.add(anchor);
-      const active=new Set<string>(users.rows.filter(u=>u.status==="ACTIVE"&&!u.must_change_password&&!u.archived_at&&memberIds.has(u.user_id)).map(u=>u.user_id));
-      const relations=new Map<string,AccessRelations>();
-      for(const id of principalIds)relations.set(id,await this.trust.relations(id,fact.workspace_id));
+      const {row,policy,grants,grant,active}=current;
       const context:AccessEvaluationContext={principal_id:row.actor_user_id,workspace_id:fact.workspace_id,now_ms:await this.now(db),
         actor_current:active.has(row.actor_user_id),policy,grants,active_principals:active,allow_test_only:this.allowTestOnly,
         relationsFor:id=>relations.get(id)??{qualified:false,revision:"UNQUALIFIED",own_alpha_ids:[],member_portfolio_ids:[],roots:{},membership:null}};
@@ -476,7 +611,7 @@ export class ExecutionAccessService {
           expected_ceiling_revision:ceiling?.revision??row.change.expected_ceiling_revision});
       };
       assertCurrent();
-      await this.validateTsBinding(fact,row,grant,policy);
+      this.validateTsBinding(fact,row,grant,policy,mapping,relations.get(grant.subject_user_id)?.membership??null);
       const outcome=fact.outcome==="ACCEPTED"?"TS_APPLIED":fact.outcome==="REJECTED"?"TS_REJECTED":"TS_UNKNOWN";
       const updated=fact.outcome==="ACCEPTED"?{...grant,revision:randomId("acr"),ts_receipt:{receipt_id:fact.receipt_id,
         membership_revision:fact.membership_revision,mapping_revision:fact.mapping_revision,effective_at_ms:fact.effective_at_ms,
@@ -495,9 +630,9 @@ export class ExecutionAccessService {
       return {receipt,replayed:false};
     });
   }
-  private async validateTsBinding(fact:TsMembershipAcceptance,row:{actor_user_id:string;request_digest:string;change:GrantChange},
-    grant:ScopedAccessGrant,policy:ReviewedAccessPolicy) {
-    const mapping=await this.trust.verifiedHumanMapping(grant.subject_user_id,grant.workspace_id);
+  private validateTsBinding(fact:TsMembershipAcceptance,row:{actor_user_id:string;request_digest:string;change:GrantChange},
+    grant:ScopedAccessGrant,policy:ReviewedAccessPolicy,
+    mapping:Awaited<ReturnType<AccessTrustProvider["verifiedHumanMapping"]>>,current:AccessRelations["membership"]) {
     if(!mapping||!fact.source||!fact.source_contract||!fact.trust_profile||!fact.provenance_ref||!fact.payload_digest||
       fact.proposal_digest!==row.request_digest||fact.portal_user_id!==grant.subject_user_id||fact.ts_user_id!==mapping.ts_user_id||
       fact.mapping_revision!==mapping.revision||fact.human_requester_user_id!==row.actor_user_id||fact.action!==grant.action||
@@ -509,7 +644,6 @@ export class ExecutionAccessService {
       grant.valid_until_ms!==null&&(fact.expires_at_ms===null||fact.expires_at_ms>grant.valid_until_ms)||policy.state!=="REVIEWED")
       throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH",409);
     // Never compare opaque revisions lexically; exact current source revision is authoritative.
-    const current=(await this.trust.relations(grant.subject_user_id,grant.workspace_id)).membership;
     if(fact.outcome==="ACCEPTED"&&(!current||current.revision!==fact.membership_revision||current.receipt_id!==fact.receipt_id||
       current.mapping_revision!==fact.mapping_revision)) throw new AccessPolicyError("TS_MEMBERSHIP_REVISION_CONFLICT",409);
   }

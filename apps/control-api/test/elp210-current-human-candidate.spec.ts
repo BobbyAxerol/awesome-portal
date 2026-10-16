@@ -5,8 +5,10 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { decodeJwt, generateKeyPair, SignJWT } from "jose";
 import { Pool } from "pg";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { CurrentHumanCandidate, type CurrentHumanCandidateConfig, type CurrentHumanBinding } from "../src/execution-v2/current-human-candidate";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { CurrentHumanCandidate, CurrentHumanLeaseError, type CurrentHumanCandidateConfig, type CurrentHumanBinding } from "../src/execution-v2/current-human-candidate";
+import { CurrentHumanMutations, type CurrentHumanMutationBinding } from "../src/execution-v2/current-human-mutations";
+import { accessDigest } from "../src/execution-v2/access-policy";
 import { captureCurrentHumanSnapshot } from "../src/execution-v2/current-human-snapshot";
 import { withTransaction } from "../src/db/pool";
 import type { AccessActor } from "../src/execution-v2/access.contract";
@@ -34,6 +36,36 @@ describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Co
     await candidate.enter(lease.token, await proof(lease.lease_id));
     return lease;
   };
+  const mutation = (): CurrentHumanMutationBinding => ({ family: "AUTH_SESSION", operation: "REVOKE_SESSION",
+    actor_id: actor.user_id, session_id: actor.session_id, session_revision: 7,
+    key_digest: accessDigest(["TEST_ONLY", suffix]), request_digest: accessDigest({ target: `test-only-target-${suffix}` }),
+    target_id: `test-only-target-${suffix}` });
+  const mutationFixture = async (session = actor.session_id) => {
+    await pool.query("CREATE TABLE IF NOT EXISTS elp210_candidate.test_receipts(receipt_id text PRIMARY KEY)");
+    await pool.query(`INSERT INTO auth_sessions(session_id,session_token_hash,user_id,state,csrf_secret_hash,
+      session_version,idle_expires_at,absolute_expires_at) VALUES($1,$1,$2,'ACTIVE','TEST_ONLY',7,
+      clock_timestamp()+interval '10 minutes',clock_timestamp()+interval '20 minutes') ON CONFLICT DO NOTHING`,
+    [`test-only-target-${suffix}`, actor.user_id]);
+    return {
+      authorize: async (db: import("pg").PoolClient) => {
+        const result = await db.query(`SELECT s.session_id FROM auth_sessions s JOIN portal_users u ON u.user_id=s.user_id
+          WHERE s.session_id=$1 AND u.user_id=$2 AND s.state='ACTIVE' AND u.status='ACTIVE'
+          AND s.session_version=7 AND u.session_version=7
+          AND s.idle_expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()`, [session, actor.user_id]);
+        if (!result.rowCount) throw new CurrentHumanLeaseError("CURRENT_ACTOR_AUTHORITY_REQUIRED");
+      },
+      apply: vi.fn(async (db: import("pg").PoolClient) => {
+        if (!(await db.query("SELECT receipt_id FROM elp210_candidate.test_receipts WHERE receipt_id=$1", [suffix])).rowCount) {
+          await db.query("UPDATE auth_sessions SET state='REVOKED' WHERE session_id=$1", [`test-only-target-${suffix}`]);
+          await db.query("INSERT INTO elp210_candidate.test_receipts VALUES($1)", [suffix]);
+        }
+        return { receipt: suffix };
+      }),
+      terminal: (result: { receipt: string }) => ({ outcome: "APPLIED" as const, receipt_ref: result.receipt, reason_code: null }),
+    };
+  };
+  const coordinator = (recover: (attempt: Awaited<ReturnType<CurrentHumanCandidate["recoverableAttempts"]>>[number]) => Promise<unknown>) =>
+    new CurrentHumanMutations(pool, candidate, { recover }, { maximum_intents: 8, maximum_recoveries_per_request: 3 });
 
   beforeAll(async () => {
     await migrateTestDatabase(database!);
@@ -259,5 +291,196 @@ describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Co
     if (snapshot.anchor) expect(snapshot.ids).toContain(snapshot.anchor);
     expect(snapshot.authority_fingerprint).toMatch(/^sha256:[0-9a-f]{64}$/);
     expect(snapshot.lease_until_ms).toBeGreaterThan(snapshot.now);
+  });
+
+  it("durably waits without holding Core connections and ignores fake recovery ACKs", async () => {
+    const hooks = await mutationFixture(), lease = await enter();
+    const service = coordinator(async attempt => {
+      expect(pool.idleCount).toBe(pool.totalCount);
+      expect(attempt.lease_id).toBe(lease.lease_id);
+      return { phase: "COMMITTED", portal_acknowledged: true }; // Not a signed Core proof.
+    });
+    await expect(service.execute(mutation(), hooks)).rejects.toMatchObject({ code: "CURRENT_HUMAN_MUTATION_PENDING" });
+    expect(hooks.apply).not.toHaveBeenCalled();
+    expect((await state()).drain_id).toBeTruthy();
+    expect(await phase(lease.lease_id)).toBe("ENTERED");
+    expect((await pool.query("SELECT state FROM elp210_candidate.mutations")).rows[0].state).toBe("PENDING");
+  });
+  it("runs existing authority writer only after signed terminal proof, preserving one immutable receipt", async () => {
+    const hooks = await mutationFixture(), lease = await enter();
+    const service = coordinator(async () => candidate.resolve(await proof(lease.lease_id, "COMMITTED")));
+    expect(await service.execute(mutation(), hooks)).toEqual({ receipt: suffix });
+    expect((await state()).drain_id).toBeNull();
+    expect((await pool.query("SELECT state FROM auth_sessions WHERE session_id=$1", [`test-only-target-${suffix}`])).rows[0].state).toBe("REVOKED");
+    expect(await service.execute(mutation(), hooks)).toEqual({ receipt: suffix });
+    expect((await pool.query("SELECT count(*)::int n FROM elp210_candidate.mutation_events")).rows[0].n).toBe(2);
+    expect((await pool.query("SELECT count(*)::int n FROM elp210_candidate.test_receipts")).rows[0].n).toBe(1);
+  });
+  it("permits same-actor FINISHED receipt replay after legitimate relogin, never a changed payload", async () => {
+    const hooks = await mutationFixture(), service = coordinator(async () => {});
+    await service.execute(mutation(), hooks);
+    const newSession = `test-only-relogin-${suffix}`;
+    await pool.query(`INSERT INTO auth_sessions(session_id,session_token_hash,user_id,state,csrf_secret_hash,
+      session_version,idle_expires_at,absolute_expires_at) SELECT $1,$1,user_id,'ACTIVE','TEST_ONLY',7,
+      clock_timestamp()+interval '10 minutes',clock_timestamp()+interval '20 minutes' FROM portal_users WHERE user_id=$2`, [newSession, actor.user_id]);
+    const replayHooks = await mutationFixture(newSession), rebound = { ...mutation(), session_id: newSession };
+    expect(await service.execute(rebound, replayHooks)).toEqual({ receipt: suffix });
+    await expect(service.execute({ ...rebound, request_digest: accessDigest("changed") }, replayHooks))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_MUTATION_KEY_CONFLICT" });
+    expect((await pool.query("SELECT count(*)::int n FROM elp210_candidate.test_receipts")).rows[0].n).toBe(1);
+  });
+  it("never changes a PENDING session binding or cancels it from a substituted request", async () => {
+    const hooks = await mutationFixture(); await enter();
+    const service = coordinator(async () => {});
+    await expect(service.execute(mutation(), hooks)).rejects.toMatchObject({ code: "CURRENT_HUMAN_MUTATION_PENDING" });
+    await expect(service.execute({ ...mutation(), session_id: "different" }, hooks))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_MUTATION_KEY_CONFLICT" });
+    expect((await pool.query("SELECT state FROM elp210_candidate.mutations")).rows[0].state).toBe("PENDING");
+  });
+  it("abort-only recovery survives restart/expired actor and never applies a forgotten payload", async () => {
+    const hooks = await mutationFixture();
+    await pool.query("UPDATE auth_sessions SET idle_expires_at=clock_timestamp()+interval '3 seconds' WHERE session_id=$1", [actor.session_id]);
+    await enter();
+    const service = coordinator(async () => {});
+    await expect(service.execute(mutation(), hooks)).rejects.toMatchObject({ code: "CURRENT_HUMAN_MUTATION_PENDING" });
+    const id = (await state()).drain_id;
+    expect(await coordinator(async () => {}).recoverAbandoned(id)).toEqual({ state: "DRAIN_PENDING" });
+    const attempts = await candidate.recoverableAttempts();
+    // A real signed readback, not a fabricated rollback on timeout.
+    await candidate.resolve(await proof(attempts[0].lease_id, "ROLLED_BACK"));
+    await pool.query("SELECT pg_sleep(3.05)"); // Natural expiry, never bypass the writer fence.
+    const restarted = coordinator(async () => {});
+    await expect(restarted.execute(mutation(), hooks)).rejects.toMatchObject({ code: "CURRENT_ACTOR_AUTHORITY_REQUIRED" });
+    expect((await state()).drain_id).toBeNull();
+    expect((await pool.query("SELECT state FROM elp210_candidate.mutations")).rows[0].state).toBe("REFUSED");
+    expect(await restarted.recoverAbandoned(id)).toEqual({ state: "ALREADY_TERMINAL" });
+    expect(hooks.apply).not.toHaveBeenCalled();
+  });
+  it("keeps UNKNOWN quarantined through private abandoned recovery", async () => {
+    const hooks = await mutationFixture(), lease = await enter();
+    await candidate.resolve(await proof(lease.lease_id, "UNKNOWN"));
+    const service = coordinator(async () => {});
+    await expect(service.execute(mutation(), hooks)).rejects.toMatchObject({ code: "CURRENT_HUMAN_MUTATION_OUTCOME_UNCERTAIN" });
+    const id = (await state()).drain_id;
+    expect(await service.recoverAbandoned(id)).toEqual({ state: "DRAIN_UNKNOWN" });
+    expect((await state()).drain_id).toBe(id); expect(hooks.apply).not.toHaveBeenCalled();
+  });
+  it("rolls back authority/receipt atomically on application failure and records a non-replayable refusal", async () => {
+    const hooks = await mutationFixture(), service = coordinator(async () => {});
+    const apply = hooks.apply;
+    hooks.apply = vi.fn(async db => { await apply(db); throw new Error("TEST_ONLY application failed"); });
+    await expect(service.execute(mutation(), hooks)).rejects.toThrow("TEST_ONLY application failed");
+    expect((await state()).drain_id).toBeNull();
+    expect((await pool.query("SELECT state FROM auth_sessions WHERE session_id=$1", [`test-only-target-${suffix}`])).rows[0].state).toBe("ACTIVE");
+    expect((await pool.query("SELECT count(*)::int n FROM elp210_candidate.test_receipts")).rows[0].n).toBe(0);
+    await expect(service.execute(mutation(), hooks)).rejects.toMatchObject({ code: "CURRENT_HUMAN_MUTATION_PREVIOUSLY_REFUSED" });
+  });
+  it("preserves FINISHED after an actual final Core COMMIT whose acknowledgement is lost", async () => {
+    const hooks = await mutationFixture(), originalApply = hooks.apply, service = coordinator(async () => {});
+    const lostAck = new Error("TEST_ONLY_FINAL_CORE_COMMIT_ACK_LOST");
+    let commits = 0, applications = 0, restored = false, inject = true;
+    hooks.apply = vi.fn(async (db: import("pg").PoolClient) => {
+      const prior = await db.query("SELECT receipt_id FROM elp210_candidate.test_receipts WHERE receipt_id=$1", [suffix]);
+      if (!prior.rowCount) applications++;
+      const result = await originalApply(db);
+      if (inject) {
+        inject = false;
+        // Wrap only this checked-out client, after the original DB writes.
+        // Restore before throwing/returning so neither release nor a subsequent
+        // borrower sees the fault. No pool/global query spy or source proof.
+        const originalQuery = db.query, hadOwnQuery = Object.hasOwn(db, "query");
+        const invoke = (...args: unknown[]) => (originalQuery as (...args: unknown[]) => Promise<unknown>).apply(db, args);
+        const restore = () => {
+          if (hadOwnQuery) db.query = originalQuery;
+          else Reflect.deleteProperty(db, "query");
+          restored = db.query === originalQuery;
+        };
+        db.query = (async (...args: unknown[]) => {
+          const command = typeof args[0] === "string" ? args[0] : (args[0] as { text?: unknown })?.text;
+          if (command === "COMMIT") {
+            try {
+              await invoke(...args); // PostgreSQL really commits first.
+              commits++;
+              throw lostAck;
+            } finally { restore(); }
+          }
+          if (command === "ROLLBACK") {
+            try { return await invoke(...args); }
+            finally { restore(); }
+          }
+          return invoke(...args);
+        }) as typeof db.query;
+      }
+      return result;
+    });
+    await expect(service.execute(mutation(), hooks)).rejects.toBe(lostAck);
+    expect(commits).toBe(1); expect(restored).toBe(true);
+    expect((await pool.query("SELECT state FROM elp210_candidate.mutations")).rows[0].state).toBe("FINISHED");
+    expect((await pool.query("SELECT state FROM auth_sessions WHERE session_id=$1", [`test-only-target-${suffix}`])).rows[0].state).toBe("REVOKED");
+    const revisionAfterCommit = (await state()).revision;
+    expect((await state()).drain_id).toBeNull();
+    expect(await service.execute(mutation(), hooks)).toEqual({ receipt: suffix });
+    expect(applications).toBe(1); expect(originalApply).toHaveBeenCalledTimes(2);
+    expect((await state()).revision).toBe(revisionAfterCommit);
+    expect((await pool.query("SELECT count(*)::int n FROM elp210_candidate.test_receipts")).rows[0].n).toBe(1);
+    expect((await pool.query("SELECT state FROM elp210_candidate.mutations")).rows[0].state).toBe("FINISHED");
+    expect((await pool.query("SELECT count(*)::int n FROM elp210_candidate.mutation_events")).rows[0].n).toBe(2);
+    expect((await state()).drain_id).toBeNull();
+  });
+  it("bounds durable mutation intents while permitting an existing FINISHED receipt replay", async () => {
+    const hooks = await mutationFixture();
+    const service = new CurrentHumanMutations(pool, candidate, { recover: async () => {} },
+      { maximum_intents: 1, maximum_recoveries_per_request: 1 });
+    expect(await service.execute(mutation(), hooks)).toEqual({ receipt: suffix });
+    await expect(service.execute({ ...mutation(), key_digest: accessDigest(["TEST_ONLY-over-capacity", suffix]) }, hooks))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_MUTATION_CAPACITY_EXHAUSTED" });
+    expect((await pool.query("SELECT count(*)::int n FROM elp210_candidate.mutations")).rows[0].n).toBe(1);
+    expect((await state()).drain_id).toBeNull();
+    expect(await service.execute(mutation(), hooks)).toEqual({ receipt: suffix });
+    expect((await pool.query("SELECT count(*)::int n FROM elp210_candidate.test_receipts")).rows[0].n).toBe(1);
+    expect((await pool.query("SELECT count(*)::int n FROM elp210_candidate.mutation_events")).rows[0].n).toBe(2);
+  });
+  it("preserves subsequent immutable refusal audit during a pending drain, without opening authority writes", async () => {
+    const db = await pool.connect();
+    try {
+      await db.query("BEGIN");
+      const event = `INSERT INTO portal_access_policy_events(event_id,workspace_id,actor_user_id,operation,request_digest,receipt)
+        VALUES($1,$2,$3,'DENIED',$4,'{}'::jsonb)`;
+      await db.query(event, [`test-only-first-${suffix}`, binding.workspace_id, actor.user_id, accessDigest("TEST_ONLY-first")]);
+      await db.query(`INSERT INTO elp210_candidate.mutations(mutation_id,key_digest,binding_digest,replay_digest,family,actor_id,session_id,session_revision)
+        VALUES($1,$2,$2,$2,'AUTH_SESSION',$3,$4,7)`, [suffix, accessDigest(suffix), actor.user_id, actor.session_id]);
+      await db.query("UPDATE elp210_candidate.authority SET drain_id=$1 WHERE singleton", [suffix]);
+      await db.query("SAVEPOINT refused_authority");
+      await expect(db.query("UPDATE auth_sessions SET state='REVOKED' WHERE session_id=$1", [actor.session_id]))
+        .rejects.toThrow("CURRENT_HUMAN_DRAIN_COORDINATOR_REQUIRED");
+      await db.query("ROLLBACK TO SAVEPOINT refused_authority");
+      await db.query(event, [`test-only-next-${suffix}`, binding.workspace_id, actor.user_id, accessDigest("TEST_ONLY-next")]);
+      expect((await db.query("SELECT count(*)::int n FROM portal_access_policy_events WHERE workspace_id=$1", [binding.workspace_id])).rows[0].n).toBe(2);
+    } finally { await db.query("ROLLBACK"); db.release(); }
+  });
+  it("refuses uncoordinated authority writes into a READY durable intent", async () => {
+    const hooks = await mutationFixture(), lease = await enter(), service = coordinator(async () => {});
+    await expect(service.execute(mutation(), hooks)).rejects.toMatchObject({ code: "CURRENT_HUMAN_MUTATION_PENDING" });
+    await candidate.resolve(await proof(lease.lease_id, "COMMITTED"));
+    await expect(pool.query("UPDATE auth_sessions SET state='REVOKED' WHERE session_id=$1", [actor.session_id]))
+      .rejects.toThrow("CURRENT_HUMAN_DRAIN_COORDINATOR_REQUIRED");
+    expect(await service.execute(mutation(), hooks)).toEqual({ receipt: suffix });
+  });
+  it("refuses a FINISHED replay callback that tries a second authority mutation", async () => {
+    const hooks = await mutationFixture(), service = coordinator(async () => {});
+    await service.execute(mutation(), hooks);
+    await expect(service.execute(mutation(), { ...hooks, apply: async db => {
+      await db.query("UPDATE auth_sessions SET state='REVOKED' WHERE session_id=$1", [actor.session_id]);
+      return { receipt: suffix };
+    } })).rejects.toThrow("CURRENT_HUMAN_MUTATION_REPLAY_WRITE_FORBIDDEN");
+    expect((await pool.query("SELECT state FROM elp210_candidate.mutations")).rows[0].state).toBe("FINISHED");
+  });
+  it("serializes concurrent exact retries across recovery, without a drain-conflict false failure", async () => {
+    const hooks = await mutationFixture(), lease = await enter();
+    const service = coordinator(async () => candidate.resolve(await proof(lease.lease_id, "COMMITTED")));
+    const outcomes = await Promise.all([service.execute(mutation(), hooks), service.execute(mutation(), hooks)]);
+    expect(outcomes).toEqual([{ receipt: suffix }, { receipt: suffix }]);
+    expect((await pool.query("SELECT count(*)::int n FROM elp210_candidate.test_receipts")).rows[0].n).toBe(1);
+    expect((await state()).drain_id).toBeNull();
   });
 });

@@ -1,4 +1,5 @@
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
+import { createHmac } from "node:crypto";
 import {
   AuthSession,
   ContextState,
@@ -20,6 +21,9 @@ import { CloudflareJwtError, CloudflareJwtVerifier } from "./cloudflare";
 import { isAcceptablePassword, validatePassword } from "./policy";
 import { PrincipalService } from "./principal";
 import { withTransaction } from "../db/pool";
+import { accessDigest } from "../execution-v2/access-policy";
+import { CurrentHumanMutations, type CurrentHumanMutationBinding } from "../execution-v2/current-human-mutations";
+import { CurrentHumanLeaseError } from "../execution-v2/current-human-candidate";
 
 export class AuthError extends Error {
   constructor(
@@ -61,7 +65,10 @@ export class AuthService {
     readonly pool: Pool,
     readonly config: ControlApiConfig,
     readonly argon2: Argon2CredentialService,
+    private readonly currentHumanMutations?: CurrentHumanMutations,
   ) {
+    if (currentHumanMutations && !currentHumanMutations.usesPool(pool))
+      throw new Error("CURRENT_HUMAN_MUTATION_POOL_MISMATCH");
     this.users = new UsersRepository(pool);
     this.bindings = new BindingsRepository(pool);
     this.credentials = new CredentialsRepository(pool);
@@ -357,17 +364,6 @@ export class AuthService {
       });
       throw new AuthError("INVALID_CREDENTIALS", GENERIC_LOGIN_ERROR, 401);
     }
-    if (credentialProof && locked) {
-      await this.audit.recordSecurityDecision({
-        eventType: "account_lock_cleared",
-        actorUserId: user.userId,
-        targetUserId: user.userId,
-        result: "SUCCESS",
-        reasonCode: "CORRECT_CREDENTIAL_DURING_LOCK",
-        requestId: input.requestId,
-        metadata: { failedLoginCount: user.failedLoginCount },
-      });
-    }
     if (!credentialProof) {
       const attempts = await this.users.recordFailedLogin(
         user.userId,
@@ -434,6 +430,7 @@ export class AuthService {
 
     try {
       return await withTransaction(this.pool, async (client) => {
+        await client.query("SET LOCAL lock_timeout='1500ms'; SET LOCAL statement_timeout='5000ms'");
         const users = new UsersRepository(client), bindings = new BindingsRepository(client);
         const audit = new AuditRepository(client);
         const current = await users.lockById(user.userId);
@@ -448,7 +445,26 @@ export class AuthService {
             (existing.length > 0 && !existing.some((b) => b.issuer === identity.iss && b.subject === identity.sub))) {
           throw new AuthError("INVALID_CREDENTIALS", GENERIC_LOGIN_ERROR, 401);
         }
+        // Credential verification does not spend an activation. Binding,
+        // consumption and session creation must commit together: a candidate
+        // drain/guard failure must not burn the only credential and strand the
+        // invitee without a delivered session. Recheck the exact proof under
+        // the existing user lock so concurrent logins cannot spend it twice.
+        if (credentialProof.kind === "ACTIVATION") {
+          const consumed = await new CredentialsRepository(client).consumeUsableActivation(
+            current.userId, sha256(input.credential),
+          );
+          if (!consumed || consumed.activationId !== credentialProof.activationId)
+            throw new AuthError("INVALID_CREDENTIALS", GENERIC_LOGIN_ERROR, 401);
+        }
         await users.resetLoginCounters(current.userId);
+        if (current.lockedUntil !== null && current.lockedUntil > new Date()) {
+          await audit.recordSecurityDecision({
+            eventType: "account_lock_cleared", actorUserId: current.userId, targetUserId: current.userId,
+            result: "SUCCESS", reasonCode: "CORRECT_CREDENTIAL_DURING_LOCK", requestId: input.requestId,
+            metadata: { failedLoginCount: current.failedLoginCount },
+          });
+        }
         // First binding requires BOTH a verified external assertion and the
         // existing Portal credential. ENABLE can restore an unbound invitation
         // as ACTIVE/password-pending; legacy ACTIVE accounts can be unbound too.
@@ -498,11 +514,11 @@ export class AuthService {
     credential: string,
   ): Promise<CredentialProof | null> {
     if (user.mustChangePassword) {
-      const activation = await this.credentials.consumeUsableActivation(
+      const activation = await this.credentials.findUsableActivation(
         user.userId,
         sha256(credential),
       );
-      // Burned on BOTH branches: spending it only on failure would make a
+      // The same argon2 work runs on BOTH branches: doing it only on failure would make a
       // successful activation login the fast one instead.
       await this.argon2.verifyAgainstDecoy();
       return activation
@@ -525,6 +541,22 @@ export class AuthService {
 
   // ------------------------------------------------------------ sessions
 
+  /** Invalidity is established by current identity/time, not by successful
+   * cleanup. A coordinated authority drain may defer this bookkeeping write;
+   * it must never turn an already-invalid session back into authentication.
+   * Only that exact guard refusal is optional: driver/outage errors propagate. */
+  private async retireInvalidSession(sessionId: string, reason: string): Promise<void> {
+    try {
+      await this.sessions.revokeSession(sessionId, reason);
+    } catch (error) {
+      if (!error || typeof error !== "object" || !("code" in error) ||
+        error.code !== "P0001" || !("message" in error) ||
+        error.message !== "CURRENT_HUMAN_DRAIN_REQUIRED" && error.message !== "CURRENT_HUMAN_DRAIN_COORDINATOR_REQUIRED") {
+        throw error;
+      }
+    }
+  }
+
   async sessionFromToken(
     token: string | undefined,
   ): Promise<Awaited<ReturnType<SessionsRepository["findByTokenHash"]>> | null> {
@@ -534,7 +566,7 @@ export class AuthService {
     if (row.state === "ACTIVE") {
       const user = await this.users.findById(row.userId);
       if (!user || user.status === "DISABLED" || user.archivedAt || user.sessionVersion !== row.sessionVersion) {
-        await this.sessions.revokeSession(row.sessionId, "identity_or_generation_revoked");
+        await this.retireInvalidSession(row.sessionId, "identity_or_generation_revoked");
         return { ...row, state: "REVOKED" as const };
       }
     }
@@ -543,7 +575,7 @@ export class AuthService {
       row.state === "ACTIVE" &&
       (row.absoluteExpiresAt <= now || row.idleExpiresAt <= now)
     ) {
-      await this.sessions.revokeSession(row.sessionId, "expired");
+      await this.retireInvalidSession(row.sessionId, "expired");
       return { ...row, state: "EXPIRED" as const };
     }
     return row;
@@ -644,6 +676,98 @@ export class AuthService {
 
   // ------------------------------------------------------ password change
 
+  private passwordChangeBinding(session: NonNullable<Awaited<ReturnType<SessionsRepository["findByTokenHash"]>>>,
+    input: { sessionToken: string; currentPassword: string; newPassword: string }): CurrentHumanMutationBinding {
+    // The 256-bit bearer is never persisted here. A database-only reader has
+    // neither this HMAC key nor an offline password oracle. Each UTF-8 field
+    // is length-prefixed, with no trimming/normalization or ambiguous joins.
+    const fingerprint = createHmac("sha256", Buffer.from(input.sessionToken, "utf8"));
+    for (const field of ["portal.auth.change-password.request.v1", session.userId,
+      session.sessionId, String(session.sessionVersion), input.currentPassword, input.newPassword]) {
+      const bytes = Buffer.from(field, "utf8");
+      if (bytes.toString("utf8") !== field)
+        throw new AuthError("INVALID_REQUEST", "Invalid data.", 400);
+      const length = Buffer.alloc(4); length.writeUInt32BE(bytes.length);
+      fingerprint.update(length).update(bytes);
+    }
+    return { family: "AUTH_SESSION", operation: "CHANGE_PASSWORD", actor_id: session.userId,
+      session_id: session.sessionId, session_revision: session.sessionVersion,
+      key_digest: accessDigest(["AUTH_SESSION", "CHANGE_PASSWORD", session.sessionId]),
+      request_digest: `sha256:${fingerprint.digest("hex")}`, target_id: session.sessionId };
+  }
+
+  private async hasPasswordChangeReceipt(db: Pool | PoolClient, binding: CurrentHumanMutationBinding): Promise<boolean> {
+    if (!this.currentHumanMutations) return false;
+    const { session_id: _session, session_revision: _generation, ...stable } = binding;
+    const receipt = (await db.query<{ binding_digest: string; replay_digest: string; terminal_digest: string }>(
+      `SELECT binding_digest,replay_digest,terminal_digest FROM elp210_candidate.mutations
+       WHERE key_digest=$1 AND family='AUTH_SESSION' AND actor_id=$2 AND session_id=$3
+         AND session_revision=$4 AND state='FINISHED'`,
+      [binding.key_digest, binding.actor_id, binding.session_id, binding.session_revision])).rows[0];
+    return !!receipt && constantTimeEqual(receipt.binding_digest, accessDigest(binding)) &&
+      constantTimeEqual(receipt.replay_digest, accessDigest(stable)) &&
+      constantTimeEqual(receipt.terminal_digest,
+        accessDigest({ outcome: "APPLIED", receipt_ref: binding.session_id, reason_code: null }));
+  }
+
+  /** Purpose-only receipt read for the existing controller. An inactive bearer
+   * is accepted ONLY for its exact completed password-change request, never
+   * as a general authenticated session. Origin and double-submit CSRF remain
+   * mandatory in the controller, including this historical read-only retry. */
+  async passwordChangeSession(input: { sessionToken: string; currentPassword: string; newPassword: string }) {
+    if (this.currentHumanMutations) {
+      const original = await this.sessions.findByTokenHash(sha256(input.sessionToken));
+      if (original && await this.hasPasswordChangeReceipt(this.pool, this.passwordChangeBinding(original, input)))
+        return original;
+    }
+    const active = await this.sessionFromToken(input.sessionToken);
+    if (active?.state === "ACTIVE") return active;
+    // The first request can commit between our initial receipt read and this
+    // session read. Self-revocation is not a denial of its exact receipt.
+    if (this.currentHumanMutations && active &&
+        await this.hasPasswordChangeReceipt(this.pool, this.passwordChangeBinding(active, input))) return active;
+    return null;
+  }
+
+  private async tryReplayPasswordChange(
+    session: NonNullable<Awaited<ReturnType<SessionsRepository["findByTokenHash"]>>>,
+    input: { sessionToken: string; csrfToken: string; currentPassword: string; newPassword: string },
+    binding: CurrentHumanMutationBinding | null,
+  ): Promise<boolean> {
+    if (!this.currentHumanMutations || !binding || !await this.hasPasswordChangeReceipt(this.pool, binding)) return false;
+    // Rechecking after an expensive read/verify closes an exact-retry race:
+    // another request may have atomically replaced the credential and sealed
+    // this same receipt. No active-user bypass or password write is allowed.
+    try {
+      await this.currentHumanMutations.execute(binding, {
+        authorize: async db => {
+          const exact = await new SessionsRepository(db).findByTokenHash(sha256(input.sessionToken));
+          if (!exact || exact.sessionId !== session.sessionId || exact.userId !== session.userId ||
+              exact.sessionVersion !== session.sessionVersion ||
+              !constantTimeEqual(sha256(input.csrfToken), exact.csrfSecretHash) ||
+              !await this.hasPasswordChangeReceipt(db, binding))
+            throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
+        },
+        apply: async db => {
+          if ((await db.query("SELECT current_setting('elp210_candidate.replay_only',true) AS replay")).rows[0].replay !== "on")
+            throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
+          return { receipt_ref: session.sessionId };
+        },
+        terminal: result => ({ outcome: "APPLIED", receipt_ref: result.receipt_ref, reason_code: null }),
+      });
+    } catch (error) { this.rethrowCurrentHumanAuthError(error); }
+    return true;
+  }
+
+  private rethrowCurrentHumanAuthError(error: unknown): never {
+    if (error instanceof CurrentHumanLeaseError) {
+      const conflict = ["CURRENT_HUMAN_MUTATION_KEY_CONFLICT", "CURRENT_HUMAN_MUTATION_PREVIOUSLY_REFUSED",
+        "CURRENT_HUMAN_MUTATION_RECEIPT_MISMATCH", "CURRENT_HUMAN_DRAIN_CONFLICT"].includes(error.code);
+      throw new AuthError(error.code, "The current identity operation is not available.", conflict ? 409 : 503);
+    }
+    throw error;
+  }
+
   async changePassword(input: {
     sessionToken: string;
     csrfToken: string;
@@ -651,15 +775,18 @@ export class AuthService {
     newPassword: string;
     requestId?: string;
   }): Promise<void> {
-    const session = await this.sessionFromToken(input.sessionToken);
-    if (!session || session.state !== "ACTIVE") {
+    const session = await this.passwordChangeSession(input);
+    if (!session) {
       throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
     }
     if (!constantTimeEqual(sha256(input.csrfToken), session.csrfSecretHash)) {
       throw new AuthError("CSRF_INVALID", "CSRF token is invalid.", 403);
     }
+    const binding = this.currentHumanMutations ? this.passwordChangeBinding(session, input) : null;
+    if (await this.tryReplayPasswordChange(session, input, binding)) return;
     const user = await this.users.findById(session.userId);
     if (!user) {
+      if (await this.tryReplayPasswordChange(session, input, binding)) return;
       throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
     }
     /*
@@ -674,6 +801,7 @@ export class AuthService {
      * future caller from undoing a revocation by accident.
      */
     if (user.status === "DISABLED") {
+      if (await this.tryReplayPasswordChange(session, input, binding)) return;
       await this.audit.record({
         eventType: "password_change_denied",
         actorUserId: user.userId,
@@ -683,19 +811,23 @@ export class AuthService {
       });
       throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
     }
+    // Expensive password verification/hash stays outside Core row locks and
+    // source I/O. The same exact credential is checked again in final apply.
+    const passwordProof = session.activationId ? null : await this.credentials.findPassword(user.userId);
+    const activationHash = session.activationId ? sha256(input.currentPassword) : null;
     const currentCredentialMatches = session.activationId
       ? await this.credentials.matchesConsumedActivation({
           activationId: session.activationId,
           userId: user.userId,
-          tokenHash: sha256(input.currentPassword),
+          tokenHash: activationHash!,
         })
       : await (async () => {
-          const credential = await this.credentials.findPassword(user.userId);
-          return credential
-            ? this.argon2.verify(credential.passwordHash, input.currentPassword)
+          return passwordProof
+            ? this.argon2.verify(passwordProof.passwordHash, input.currentPassword)
             : false;
         })();
     if (!currentCredentialMatches) {
+      if (await this.tryReplayPasswordChange(session, input, binding)) return;
       await this.audit.record({
         eventType: "password_change_denied",
         actorUserId: user.userId,
@@ -713,21 +845,51 @@ export class AuthService {
       throw new AuthError("PASSWORD_REJECTED", "Password does not meet the policy.", 422);
     }
     const { hash, parametersJson } = await this.argon2.hash(input.newPassword);
-    await withTransaction(this.pool, async (client) => {
+    const authorizePasswordChange = async (client: PoolClient) => {
       const users = new UsersRepository(client), sessions = new SessionsRepository(client);
-      const credentials = new CredentialsRepository(client);
+      const exact = await sessions.findByTokenHash(sha256(input.sessionToken));
+      if (!exact || exact.sessionId !== session.sessionId || exact.userId !== session.userId ||
+          exact.sessionVersion !== session.sessionVersion ||
+          !constantTimeEqual(sha256(input.csrfToken), exact.csrfSecretHash))
+        throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
+      // A concurrent exact retry can complete while password hashing runs.
+      // Only the proven same FINISHED request can bypass ACTIVE checks.
+      if (binding && await this.hasPasswordChangeReceipt(client, binding)) return;
       const current = await users.lockById(user.userId);
       if (!current || current.status === "DISABLED" || current.archivedAt ||
           current.sessionVersion !== session.sessionVersion ||
           !await sessions.lockActiveLease(session.sessionId, user.userId, session.sessionVersion)) {
         throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
       }
+      if (session.activationId) {
+        const activation = await client.query(`SELECT activation_id FROM activation_credentials
+          WHERE activation_id=$1 AND user_id=$2 AND token_hash=$3
+            AND used_at IS NOT NULL AND revoked_at IS NULL FOR UPDATE`,
+        [session.activationId, user.userId, activationHash]);
+        if (activation.rowCount !== 1) throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
+      } else {
+        const credential = (await client.query<{ credential_id: string; password_hash: string }>(
+          "SELECT credential_id,password_hash FROM password_credentials WHERE user_id=$1 FOR UPDATE", [user.userId])).rows[0];
+        if (!credential || !passwordProof || credential.credential_id !== passwordProof.credentialId ||
+            !constantTimeEqual(credential.password_hash, passwordProof.passwordHash))
+          throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
+      }
+    };
+    const applyPasswordChange = async (client: PoolClient) => {
+      if (binding && (await client.query("SELECT current_setting('elp210_candidate.replay_only',true) AS replay")).rows[0].replay === "on") {
+        if (!await this.hasPasswordChangeReceipt(client, binding))
+          throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
+        return { receipt_ref: session.sessionId };
+      }
+      await authorizePasswordChange(client);
+      const users = new UsersRepository(client), sessions = new SessionsRepository(client);
+      const credentials = new CredentialsRepository(client);
       await credentials.upsertPassword({
-      credentialId: randomId("pwd"),
-      userId: user.userId,
-      passwordHash: hash,
-      parametersJson,
-    });
+        credentialId: randomId("pwd"),
+        userId: user.userId,
+        passwordHash: hash,
+        parametersJson,
+      });
       // Credential, activation completion, revocation and audit commit together.
       // A disable/reset racing the password hash cannot resurrect this user.
       await users.update({
@@ -758,21 +920,81 @@ export class AuthService {
       result: "SUCCESS",
       requestId: input.requestId,
     });
-    });
+      return { receipt_ref: session.sessionId };
+    };
+    try {
+      if (this.currentHumanMutations && binding) {
+        await this.currentHumanMutations.execute(binding, {
+          authorize: authorizePasswordChange, apply: applyPasswordChange,
+          retain_after_application_rollback: true,
+          terminal: result => ({ outcome: "APPLIED", receipt_ref: result.receipt_ref, reason_code: null }),
+        });
+      } else {
+        await withTransaction(this.pool, async client => {
+          await client.query("SET LOCAL lock_timeout='1000ms'; SET LOCAL statement_timeout='3000ms'");
+          await applyPasswordChange(client);
+        });
+      }
+    } catch (error) { this.rethrowCurrentHumanAuthError(error); }
   }
 
   // ------------------------------------------------------------- logout
 
   async logout(sessionToken: string | undefined, requestId?: string): Promise<void> {
     if (!sessionToken) return;
-    const row = await this.sessions.findByTokenHash(sha256(sessionToken));
+    const tokenHash = sha256(sessionToken);
+    const row = await this.sessions.findByTokenHash(tokenHash);
     if (!row) return;
-    await this.sessions.revokeSession(row.sessionId, "logout");
-    await this.audit.record({
-      eventType: "logout",
-      actorUserId: row.userId,
-      result: "SUCCESS",
-      requestId,
-    });
+    // This capability is only self-LOGOUT: possession of the exact matching
+    // session token can revoke that session even after expiry/user disable.
+    // It cannot authorize a different operation, session or authority grant.
+    // Token/hash stay in this request closure, never the durable intent/audit.
+    const authorizeLogout = async (db: PoolClient) => {
+      const match = await db.query(`SELECT session_id FROM auth_sessions
+        WHERE session_id=$1 AND user_id=$2 AND session_version=$3 AND session_token_hash=$4`,
+      [row.sessionId, row.userId, row.sessionVersion, tokenHash]);
+      if (match.rowCount !== 1) throw new AuthError("LOGOUT_SESSION_CHANGED", "Session no longer matches.", 401);
+    };
+    const applyLogout = async (db: PoolClient) => {
+      const locked = await db.query<{ state: string }>(`SELECT state FROM auth_sessions
+        WHERE session_id=$1 AND user_id=$2 AND session_version=$3 AND session_token_hash=$4 FOR UPDATE`,
+      [row.sessionId, row.userId, row.sessionVersion, tokenHash]);
+      if (locked.rowCount !== 1) throw new AuthError("LOGOUT_SESSION_CHANGED", "Session no longer matches.", 401);
+      if (locked.rows[0].state !== "REVOKED") {
+        await new SessionsRepository(db).revokeSession(row.sessionId, "logout");
+        await new AuditRepository(db).record({
+          eventType: "logout", actorUserId: row.userId, result: "SUCCESS", requestId,
+        });
+      }
+      // Session identity is the stable terminal target, not a newly minted
+      // success receipt or cookie. A FINISHED retry is entirely read-only.
+      return { receipt_ref: row.sessionId };
+    };
+    try {
+      if (this.currentHumanMutations) {
+        await this.currentHumanMutations.execute({
+          family: "AUTH_SESSION", operation: "LOGOUT", actor_id: row.userId,
+          session_id: row.sessionId, session_revision: row.sessionVersion,
+          key_digest: accessDigest(["AUTH_SESSION", "LOGOUT", row.sessionId]),
+          request_digest: accessDigest({ operation: "LOGOUT", user_id: row.userId,
+            session_id: row.sessionId, session_revision: row.sessionVersion }),
+          target_id: row.sessionId,
+        }, { authorize: authorizeLogout, apply: applyLogout, retain_after_application_rollback: true,
+          terminal: result => ({ outcome: "APPLIED", receipt_ref: result.receipt_ref, reason_code: null }) });
+      } else {
+        // Legacy/default composition keeps the same public no-op contract,
+        // but revoke and its audit now share one transaction and row lock.
+        await withTransaction(this.pool, async db => {
+          await db.query("SET LOCAL lock_timeout='1000ms'; SET LOCAL statement_timeout='3000ms'");
+          await authorizeLogout(db);
+          await applyLogout(db);
+        });
+      }
+    } catch (error) {
+      // A deleted/rebound token is no longer a logout capability. Preserve
+      // cookie clearing without disclosing another session. Drain/UNKNOWN,
+      // storage and audit failures are NOT success and must still propagate.
+      if (!(error instanceof AuthError) || error.code !== "LOGOUT_SESSION_CHANGED") this.rethrowCurrentHumanAuthError(error);
+    }
   }
 }

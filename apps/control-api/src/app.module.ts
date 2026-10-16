@@ -13,6 +13,7 @@ import { ExecutionCommandController } from "./execution-v2/command.controller";
 import type { CommandTrust } from "./execution-v2/command-trust";
 import type { AccessTrustProvider } from "./execution-v2/access-trust";
 import { ExecutionManagerRuntime, type ManagerRuntimeInstallation } from "./execution-v2/manager-runtime";
+import type { CurrentHumanMutations } from "./execution-v2/current-human-mutations";
 import { ExecutionReadScopes } from "./execution-v2/read-scope";
 import { AuthService } from "./auth/auth.service";
 import { Argon2CredentialService } from "./auth/argon";
@@ -214,6 +215,9 @@ export interface ControlApiDependencies {
   executionAccessTrust?: AccessTrustProvider;
   allowTestOnlyExecutionAccess?: boolean;
   executionManagerRuntime?: ManagerRuntimeInstallation;
+  /** Explicit private candidate composition, never an environment switch or
+   * browser input. It must share the candidate's bounded Core pool. */
+  currentHumanMutations?: CurrentHumanMutations;
 }
 
 @Module({})
@@ -222,6 +226,8 @@ export class AppModule {
     dependencies: ControlApiDependencies = {}): DynamicModule {
     if (dependencies.allowTestOnlyExecutionAccess && config.NODE_ENV !== "test")
       throw new Error("TEST_ONLY Execution authority requires an isolated test application.");
+    if (dependencies.currentHumanMutations && !dependencies.currentHumanMutations.usesPool(pool))
+      throw new Error("CURRENT_HUMAN_MUTATION_CORE_POOL_REQUIRED");
     const ownsExecutionPool = !executionPool && !!config.EXECUTION_DATABASE_URL;
     if (dependencies.executionManagerRuntime && (executionPool === pool || !executionPool && !config.EXECUTION_DATABASE_URL))
       throw new Error("MANAGER_RUNTIME_EXECUTION_POOL_REQUIRED");
@@ -324,6 +330,7 @@ export class AppModule {
                 iterations: cfg.ARGON2_ITERATIONS,
                 parallelism: cfg.ARGON2_PARALLELISM,
               }),
+              dependencies.currentHumanMutations,
             ),
           inject: [CONTROL_API_CONFIG, CONTROL_API_POOL],
         },
@@ -342,13 +349,13 @@ export class AppModule {
             db: Pool,
             auth: AuthService,
             ownerAccess: OwnerAccessService,
-          ) => new GovernanceGrantsService(db, auth, ownerAccess),
+          ) => new GovernanceGrantsService(db, auth, ownerAccess, dependencies.currentHumanMutations),
           inject: [CONTROL_API_POOL, AuthService, OwnerAccessService],
         },
         {
           provide: ExecutionAccessService,
           useFactory: (db:Pool,auth:AuthService)=>new ExecutionAccessService(db,auth,
-            accessTrust, dependencies.allowTestOnlyExecutionAccess === true),
+            accessTrust, dependencies.allowTestOnlyExecutionAccess === true, dependencies.currentHumanMutations),
           inject: [CONTROL_API_POOL,AuthService],
         },
         {
@@ -366,7 +373,7 @@ export class AppModule {
         {
           provide: AccountLifecycleService,
           useFactory: (cfg: ControlApiConfig, db: Pool, auth: AuthService) =>
-            new AccountLifecycleService(db, cfg, auth),
+            new AccountLifecycleService(db, cfg, auth, dependencies.currentHumanMutations),
           inject: [CONTROL_API_CONFIG, CONTROL_API_POOL, AuthService],
         },
         WorkspacesRepository,

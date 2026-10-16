@@ -47,6 +47,9 @@ export class CurrentHumanCandidate {
   private constructor(private readonly pool: Pool, private readonly config: CurrentHumanCandidateConfig,
     private readonly humanPublicKey: KeyLike) {}
 
+  /** The writer coordinator must share this exact bounded Core pool. */
+  usesPool(pool: Pool): boolean { return pool === this.pool; }
+
   static async create(pool: Pool, input: CurrentHumanCandidateConfig) {
     if ([pool.options.connectionTimeoutMillis, pool.options.query_timeout]
       .some(n => !Number.isSafeInteger(n) || Number(n) < 1 || Number(n) > 60_000))
@@ -122,7 +125,7 @@ export class CurrentHumanCandidate {
   /** Source MUST enter once BEFORE borrowing its TS connection. Replayed entry
    * is refused, not permission for a second TS transaction. Lost enter ACK needs
    * the same source attempt's qualified resolution; never blindly retry a write. */
-  async enter(humanToken: string, sourceProof: string): Promise<void> {
+  async enter(humanToken: string, sourceProof: string): Promise<{ lease_id: string; attempt_id: string }> {
     const source = await this.attest(sourceProof);
     if (typeof humanToken !== "string" || Buffer.byteLength(humanToken) > 8192)
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_TOKEN_INVALID");
@@ -135,7 +138,7 @@ export class CurrentHumanCandidate {
       if (human.exp <= human.iat || human.exp - human.iat > 60 || human.nbf !== human.iat) throw new Error();
     } catch { throw new CurrentHumanLeaseError("CURRENT_HUMAN_TOKEN_INVALID"); }
     if (source.phase !== "ENTER" || source.lease_id !== human.jti) throw new CurrentHumanLeaseError("CURRENT_HUMAN_BINDING_MISMATCH");
-    await this.transaction(async (db, authority) => {
+    return this.transaction(async (db, authority) => {
       if (authority.drain_id) throw new CurrentHumanLeaseError("CURRENT_HUMAN_DRAINING");
       const row = (await db.query<Row>("SELECT * FROM elp210_candidate.leases WHERE lease_id=$1 FOR UPDATE", [human.jti])).rows[0];
       if (!row || row.phase !== "ISSUED") throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
@@ -149,6 +152,7 @@ export class CurrentHumanCandidate {
       const now = Number((await db.query("SELECT floor(extract(epoch FROM clock_timestamp())*1000)::bigint AS ms")).rows[0].ms);
       if (now >= Number(row.expires_at_ms)) throw new CurrentHumanLeaseError("CURRENT_HUMAN_EXPIRED");
       await db.query("UPDATE elp210_candidate.leases SET phase='ENTERED',attempt_id=$2 WHERE lease_id=$1", [row.lease_id, source.attempt_id]);
+      return { lease_id: row.lease_id, attempt_id: source.attempt_id };
     });
   }
 

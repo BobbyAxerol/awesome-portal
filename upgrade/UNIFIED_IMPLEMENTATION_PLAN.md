@@ -9818,6 +9818,31 @@ is real client/trust/authority-writer/provider commissioning plus approved
 budget/calibration and allocated coexistence/G2; browser remains Claude's
 assigned acceptance. No public field or ELP2-11 entry introduced here.
 
+**ELP2-10 active three-gate follow-through,2026-10-16UTC:** Bobby assigned
+current-human/client/provider/authority-writer commissioning, approved numeric
+budget/calibration and source-connected coexistence/G2 as one persistent goal.
+[Scope card, independent task map and live gate ledger](./execution_loop/evidence/ELP2-10/commissioning-followthrough.md)
+start at cleand92efc0e; prior candidate/hook receipts remain historical by their
+exact dependency pins. No ELP2-11, frontend, push, dev/main, financial-command
+or Live scope added. Actual trust/approval/window inputs cannot be invented;
+progress and every unresolved gate remain distinct from full completion.
+Optional Lifecycle/Governance/Access propose-revoke and self-logout/password
+writer adapters now share exact durable drain/recovery; login activation,
+lock-cleared audit and session delivery are atomic. PM owner0f008f27 adopted
+candidatea03500ac and reports403 isolatedPASS including3real mTLS cases.
+Latest read-only pin is ebb63cef with foreign readiness/probe WIP; actual
+trust/provider remains uninstalled, not commissioningPASS.
+The linked packet records independent review, corrective failures, calibration
+census and the terminal normal-hook controller receipt rule; no future PASS is
+predeclared. Initial hook failed14 new fixture cases (contracts678PASS,
+API4179PASS/3existingSKIP); fixes and real exact-retry correction are retained.
+Focused retake55/55PASS/build/scoped restore, runtime unchanged/zero leftovers;
+the one coherent retry commit still requires its own terminal normal-hook PASS.
+Claude has no new field/type, but pending auth-state retry behavior
+needs review before activation. Backend next remains actual selected
+writer/provider/trust commissioning and approved numeric capacity/calibration,
+then allocated paired coexistence/G2. Full10NOT_MET;11not started.
+
 <a id="elp2-11"></a>
 
 ### ELP2-11 — Migration tích hợp và bàn giao release

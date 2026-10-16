@@ -9,6 +9,10 @@ import { Module } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, NestFastifyApplication } from "@nestjs/platform-fastify";
 import fastifyCookie from "@fastify/cookie";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { generateKeyPair, SignJWT } from "jose";
+import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { AdminService } from "../src/admin/admin.service";
 import { AuthService } from "../src/auth/auth.service";
@@ -22,11 +26,13 @@ import { WorkspacesRepository } from "../src/repos/workspaces";
 import { CONTROL_API_CONFIG } from "../src/tokens";
 import { AccessAction, AccessActor, GrantChange, ReviewedAccessPolicy,
   ScopedAccessGrant, TsMembershipAcceptance } from "../src/execution-v2/access.contract";
-import { AccessRelations, accessDigest, canonicalSelector } from "../src/execution-v2/access-policy";
+import { AccessRelations, accessDigest, canonicalChange, canonicalSelector } from "../src/execution-v2/access-policy";
 import { ExecutionAccessController } from "../src/execution-v2/access.controller";
 import { AccessReceipt, AccessRepository } from "../src/execution-v2/access.repository";
 import { ExecutionAccessService } from "../src/execution-v2/access.service";
 import { AccessTrustProvider, ReviewedPolicyArtifact } from "../src/execution-v2/access-trust";
+import { CurrentHumanCandidate, type CurrentHumanBinding, type CurrentHumanCandidateConfig } from "../src/execution-v2/current-human-candidate";
+import { CurrentHumanMutations, type CurrentHumanRecoveryPort } from "../src/execution-v2/current-human-mutations";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
 
 const DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -156,6 +162,67 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
     return { workspace, policy, trust, service, managerRoot, ownerRoot, change, submit, issuingManager };
   }
   type Fixture = Awaited<ReturnType<typeof fixture>>;
+
+  /** Real isolated Core candidate and services, ephemeral TEST_ONLY signatures.
+   * No mocked coordinator result is treated as source terminal authority. */
+  async function withCurrentHuman(f:Fixture,by:Account,run:(cell:{
+    pool:Pool;candidate:CurrentHumanCandidate;binding:CurrentHumanBinding;
+    enter():Promise<{lease_id:string}>;resolve(leaseId:string):Promise<unknown>;
+    service(recover:CurrentHumanRecoveryPort["recover"],trust?:AccessTrustProvider):ExecutionAccessService;
+  })=>Promise<void>) {
+    const pool=new Pool({connectionString:DATABASE_URL!,max:1,connectionTimeoutMillis:500,query_timeout:6000});
+    let installed=false;
+    const originalRelations=f.trust.relations.bind(f.trust);
+    const relations=vi.spyOn(f.trust,"relations").mockImplementation(async(id,workspace)=>{
+      expect(pool.totalCount-pool.idleCount).toBe(0);
+      // This single-connection query would time out if a source adapter were
+      // called from either of the coordinator's Core transactions.
+      await pool.query("SELECT user_id FROM portal_users WHERE user_id=$1 FOR UPDATE NOWAIT",[by.user.userId]);
+      return originalRelations(id,workspace);
+    });
+    try {
+      const [humanKey,sourceKey]=await Promise.all([
+        generateKeyPair("EdDSA",{crv:"Ed25519",extractable:true}),
+        generateKeyPair("EdDSA",{crv:"Ed25519",extractable:true}),
+      ]);
+      const binding:CurrentHumanBinding={workspace_id:f.workspace,environment:"paper",workload_id:"TEST_ONLY-access-pm",
+        request_digest:accessDigest(["TEST_ONLY-source-request",next("request")])};
+      const config:CurrentHumanCandidateConfig={issuer:"TEST_ONLY-access-portal",audience:"TEST_ONLY-access-pm",key_id:"TEST_ONLY-access-human-key",
+        private_key:humanKey.privateKey,source:{issuer:"TEST_ONLY-access-source",audience:"TEST_ONLY-access-core",
+          key_id:"TEST_ONLY-access-source-key",public_key:sourceKey.publicKey,workload_id:binding.workload_id},
+        limits:{ttl_ms:30000,maximum_unresolved:4,maximum_retained:12}};
+      await pool.query(await readFile(join(__dirname,"../src/execution-v2/current-human-candidate.sql"),"utf8"));
+      installed=true;
+      const candidate=await CurrentHumanCandidate.create(pool,config);
+      const proof=async(leaseId:string,phase:"ENTER"|"COMMITTED")=>{
+        const now=Math.floor(Date.now()/1000),terminal=phase==="COMMITTED";
+        return new SignJWT({iss:config.source.issuer,aud:config.source.audience,sub:config.source.workload_id,
+          jti:next("proof"),iat:now,nbf:now,exp:now+60,purpose:"pma.current-human-lease.v1",
+          lease_id:leaseId,attempt_id:`TEST_ONLY-attempt-${leaseId}`,...binding,phase,
+          source_receipt_id:terminal?`TEST_ONLY-terminal-${leaseId}`:null,
+          source_receipt_digest:terminal?accessDigest(["TEST_ONLY-terminal",leaseId]):null,
+        }).setProtectedHeader({alg:"EdDSA",kid:config.source.key_id,typ:"JWT"}).sign(sourceKey.privateKey);
+      };
+      await run({pool,candidate,binding,
+        enter:async()=>{
+          const lease=await candidate.issue({user_id:by.user.userId,session_id:by.session.sessionId,
+            session_generation:by.user.sessionVersion},binding);
+          await candidate.enter(lease.token,await proof(lease.lease_id,"ENTER"));return lease;
+        },resolve:async leaseId=>candidate.resolve(await proof(leaseId,"COMMITTED")),
+        service:(recover,trust=f.trust)=>new ExecutionAccessService(pool,auth,trust,true,new CurrentHumanMutations(pool,candidate,{
+          recover:async attempt=>{
+            expect(pool.totalCount-pool.idleCount).toBe(0);
+            await pool.query("SELECT user_id FROM portal_users WHERE user_id=$1 FOR UPDATE NOWAIT",[by.user.userId]);
+            return recover(attempt);
+          },
+        },{maximum_intents:12,maximum_recoveries_per_request:4})),
+      });
+    } finally {
+      relations.mockRestore();
+      try{if(installed)await pool.query("DROP SCHEMA elp210_candidate CASCADE");}
+      finally{await pool.end();}
+    }
+  }
 
   async function storedGrant(id: string): Promise<ScopedAccessGrant> {
     return (await ctx.pool.query("SELECT grant_fact FROM portal_access_grants_v2 WHERE grant_id=$1", [id])).rows[0].grant_fact;
@@ -298,6 +365,46 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
     expect(event.before_fact).toBeNull();
     expect(event.after_fact).toEqual(await storedGrant(result.receipt.grant_id!));
     expect(event.receipt).toEqual(result.receipt);
+  });
+
+  it("ELP2-10 new-target relations resolve before ANY Core connection or mutation lock is held",async()=>{
+    const f=await fixture(),seen=new Set<string>();
+    const pool=new Pool({connectionString:DATABASE_URL!,max:1,connectionTimeoutMillis:500});
+    const original=f.trust.relations.bind(f.trust);
+    const spy=vi.spyOn(f.trust,"relations").mockImplementation(async(id,workspace)=>{
+      expect(pool.totalCount-pool.idleCount).toBe(0);
+      // A single-connection pool cannot service this source callback if the
+      // access transaction is still holding its Core connection. NOWAIT also
+      // proves the actor row is not locked through another Core connection.
+      await pool.query("SELECT user_id FROM portal_users WHERE user_id=$1 FOR UPDATE NOWAIT",[manager.user.userId]);
+      seen.add(id);return original(id,workspace);
+    });
+    try {
+      const service=new ExecutionAccessService(pool,auth,f.trust,true),request=f.change();
+      const preview=await service.preview(actor(manager),f.workspace,request);
+      expect(preview.allowed).toBe(true);
+      expect(seen.has(request.subject_user_id)).toBe(true); // Not yet in the grant graph.
+      expect((await service.propose(actor(manager),f.workspace,request,preview.preview_digest,next("no-lock-io")))
+        .receipt.outcome).toBe("APP_APPLIED");
+    } finally {spy.mockRestore();await pool.end();}
+  });
+
+  it("ELP2-10 a Core ceiling changed during a relation await fails the final DB-only fence",async()=>{
+    const f=await fixture(),request=f.change(),preview=await f.service.preview(actor(manager),f.workspace,request);
+    const before=await state(f),original=f.trust.relations.bind(f.trust);let changed=false;
+    const spy=vi.spyOn(f.trust,"relations").mockImplementation(async(id,workspace)=>{
+      if(!changed){
+        changed=true;
+        await new AccessRepository(ctx.pool).saveGrant({...f.managerRoot,
+          revision:next("TEST_ONLY-concurrent-ceiling"),revoked_at_ms:Date.now()});
+      }
+      return original(id,workspace);
+    });
+    try {
+      await expect(f.service.propose(actor(manager),f.workspace,request,preview.preview_digest,next("source-await-race")))
+        .rejects.toMatchObject({code:"ACCESS_RETRY_REQUIRED",status:409});
+      expect(changed).toBe(true);expect(await state(f)).toEqual(before);
+    } finally {spy.mockRestore();}
   });
 
   it("T03-06 replay returns the original app receipt even after the grant was revoked", async () => {
@@ -615,6 +722,46 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
     expect(proposal).toMatchObject({ state: "TS_APPLIED", submission_receipt: submitted.receipt });
     f.trust.memberships.set(researcher.user.userId, null);
     expect(await ownGrant(f, accepted.receipt)).toMatchObject({ current: false });
+  });
+
+  it("ELP2-10 delegated receipt relations and mapping await with the Core connection released",async()=>{
+    const f=await fixture(),{submitted}=await business(f),fact=await tsFact(f,submitted);
+    const pool=new Pool({connectionString:DATABASE_URL!,max:1,connectionTimeoutMillis:500});
+    const original=f.trust.relations.bind(f.trust);let mappingRead=false,relationReads=0;
+    const proveReleased=async()=>{
+      expect(pool.totalCount-pool.idleCount).toBe(0);
+      await pool.query("SELECT user_id FROM portal_users WHERE user_id=$1 FOR UPDATE NOWAIT",[manager.user.userId]);
+      await pool.query("SELECT workspace_id FROM portal_access_policy_state WHERE workspace_id=$1 FOR UPDATE NOWAIT",[f.workspace]);
+    };
+    const spy=vi.spyOn(f.trust,"relations").mockImplementation(async(id,workspace)=>{
+      await proveReleased();relationReads++;return original(id,workspace);
+    });
+    f.trust.beforeHumanMapping=async()=>{await proveReleased();mappingRead=true;};
+    try {
+      const service=new ExecutionAccessService(pool,auth,f.trust,true);
+      const result=await service.acceptTsReceipt(f.trust.seal(fact));
+      expect(result.receipt).toMatchObject({outcome:"TS_APPLIED",ts_authority:"ACCEPTED"});
+      expect(mappingRead).toBe(true);expect(relationReads).toBeGreaterThan(1);
+      expect((await storedGrant(submitted.receipt.grant_id!)).ts_receipt?.receipt_id).toBe(fact.receipt_id);
+    } finally {spy.mockRestore();await pool.end();}
+  });
+
+  it("ELP2-10 revoking a ceiling during delegated mapping refuses acceptance without a stale write",async()=>{
+    const f=await fixture(),{submitted}=await business(f),fact=await tsFact(f,submitted);
+    let revoked=false;
+    f.trust.beforeHumanMapping=async()=>{
+      revoked=true;
+      await f.service.revoke(actor(owner),f.workspace,f.managerRoot.grant_id,f.policy.revision,
+        f.managerRoot.revision,next("mapping-ceiling-revoke"));
+    };
+    await expect(f.service.acceptTsReceipt(f.trust.seal(fact)))
+      .rejects.toMatchObject({code:"RECEIPT_REVISION_CONFLICT",status:409});
+    expect(revoked).toBe(true);
+    expect((await storedGrant(submitted.receipt.grant_id!)).ts_receipt).toBeNull();
+    expect((await ctx.pool.query(`SELECT count(*)::int AS n FROM portal_access_policy_events
+      WHERE workspace_id=$1 AND operation='TS_RECEIPT'`,[f.workspace])).rows[0].n).toBe(0);
+    expect((await ctx.pool.query("SELECT state FROM portal_access_proposals WHERE proposal_id=$1",
+      [submitted.receipt.proposal_id])).rows[0].state).toBe("TS_PENDING");
   });
 
   it.each(["ceiling_revoked", "issuer_disabled"] as const)(
@@ -963,6 +1110,123 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
         url: `${BASE}/effective?workspace_id=${f.workspace}`, headers: { cookie: cookie(manager.session) } });
       expect(defaultEffective.statusCode).toBe(200);
       expect(defaultEffective.json().availability).toBe("POLICY_PENDING");
+    });
+  });
+
+  for(const operation of ["propose","revoke"] as const)it(`ELP2-10 ${operation}: signed source terminal proof gates the actual writer, restart and immutable replay`,async()=>{
+    const f=await fixture(),request=f.change(),key=next("coordinated-access"),by=operation==="propose"?manager:owner;
+    const preview=await f.service.preview(actor(manager),f.workspace,request);
+    const existing=operation==="revoke"?await f.submit(request):null,before=await state(f);
+    await withCurrentHuman(f,by,async cell=>{
+      const lease=await cell.enter();let allowTerminal=false,calls=0;
+      const recover:CurrentHumanRecoveryPort["recover"]=async attempt=>{
+        calls++;expect(attempt).toMatchObject({lease_id:lease.lease_id,workspace_id:f.workspace,
+          workload_id:cell.binding.workload_id,subject:by.user.userId,session_id:by.session.sessionId});
+        if(!allowTerminal)return {phase:"COMMITTED",TEST_ONLY_untrusted_ack:true};
+        return cell.resolve(attempt.lease_id);
+      };
+      const execute=(service:ExecutionAccessService)=>operation==="propose"
+        ?service.propose(actor(by),f.workspace,request,preview.preview_digest,key)
+        :service.revoke(actor(by),f.workspace,existing!.receipt.grant_id!,f.policy.revision,existing!.receipt.grant_revision!,key);
+      await expect(execute(cell.service(recover))).rejects.toMatchObject({code:"ACCESS_RETRY_REQUIRED",status:503,
+        cause:{code:"CURRENT_HUMAN_MUTATION_PENDING"}});
+      expect(calls).toBe(1);expect(await state(f)).toEqual(before);
+      expect((await cell.pool.query("SELECT phase FROM elp210_candidate.leases WHERE lease_id=$1",[lease.lease_id])).rows[0].phase).toBe("ENTERED");
+      expect((await cell.pool.query("SELECT state FROM elp210_candidate.mutations")).rows).toEqual([{state:"PENDING"}]);
+
+      // A changed body on the same key is a permanent conflict, not a false
+      // pending503 and never a new grant/revoke. The exact preview is bound too.
+      const changed={...request,reason:"TEST_ONLY changed request on existing intent"};
+      const changedPreview=accessDigest({actor_user_id:by.user.userId,workspace_id:f.workspace,change:canonicalChange(changed)});
+      await expect(operation==="propose"
+        ?cell.service(recover).propose(actor(by),f.workspace,changed,changedPreview,key)
+        :cell.service(recover).revoke(actor(by),f.workspace,existing!.receipt.grant_id!,f.policy.revision,
+          existing!.receipt.grant_revision!,key,"TEST_ONLY changed revoke request"))
+        .rejects.toMatchObject({code:"IDEMPOTENCY_KEY_PAYLOAD_CONFLICT",status:409});
+      if(operation==="propose")await expect(cell.service(recover).propose(actor(by),f.workspace,request,accessDigest("TEST_ONLY wrong preview"),key))
+        .rejects.toMatchObject({code:"POLICY_REVISION_CONFLICT",status:409});
+      expect(calls).toBe(1);expect(await state(f)).toEqual(before);
+
+      // A new service/coordinator retries the original durable request. Only
+      // Core's genuine signed terminal resolution permits its writer.
+      allowTerminal=true;
+      const applied=await execute(cell.service(recover));
+      expect(applied).toMatchObject({replayed:false,receipt:{outcome:operation==="propose"?"APP_APPLIED":"REVOKED"}});
+      expect(calls).toBe(2);
+      expect((await cell.pool.query("SELECT phase FROM elp210_candidate.leases WHERE lease_id=$1",[lease.lease_id])).rows[0].phase).toBe("COMMITTED");
+      expect((await cell.pool.query("SELECT drain_id FROM elp210_candidate.authority WHERE singleton")).rows[0].drain_id).toBeNull();
+      expect((await cell.pool.query("SELECT state FROM elp210_candidate.mutations")).rows).toEqual([{state:"FINISHED"}]);
+      const after=await state(f);
+      expect(after).toEqual({proposals:before.proposals+(operation==="propose"?1:0),
+        grants:before.grants+(operation==="propose"?1:0),events:before.events+1});
+      expect(await execute(cell.service(recover))).toEqual({receipt:applied.receipt,replayed:true});
+      expect(await state(f)).toEqual(after);expect(calls).toBe(2);
+      if(operation==="propose"){
+        await cell.service(recover).revoke(actor(owner),f.workspace,applied.receipt.grant_id!,f.policy.revision,
+          applied.receipt.grant_revision!,next("revoke-coordinated-output"));
+        expect(await execute(cell.service(recover))).toEqual({receipt:applied.receipt,replayed:true});
+        expect((await storedGrant(applied.receipt.grant_id!)).revoked_at_ms).not.toBeNull();
+      }
+      const event=(await cell.pool.query("SELECT receipt FROM portal_access_policy_events WHERE event_id=$1",[applied.receipt.operation_id])).rows[0];
+      expect(event.receipt).toEqual(applied.receipt);
+    });
+  });
+
+  it.each(["ceiling","target","step-up","preview","cas"] as const)("ELP2-10 ineligible %s cannot open a global access drain",async axis=>{
+    const account=await active(`coordinator-${axis}`),f=await fixture(account),request=f.change(),key=next("pre-drain-refusal");
+    const preview=await f.service.preview(actor(account),f.workspace,request);
+    if(axis==="ceiling")await new AccessRepository(ctx.pool).saveGrant({...f.managerRoot,revision:next("revoked-pre-drain"),revoked_at_ms:Date.now()});
+    if(axis==="target")await ctx.pool.query("DELETE FROM workspace_members WHERE workspace_id=$1 AND user_id=$2",[f.workspace,request.subject_user_id]);
+    if(axis==="step-up")await ctx.pool.query("UPDATE owner_step_up_grants SET revoked_at=clock_timestamp() WHERE session_id=$1",[account.session.sessionId]);
+    if(axis==="cas")request.expected_ceiling_revision=next("stale-ceiling");
+    const expected=axis==="ceiling"?{code:"DELEGATION_CEILING_EXCEEDED",status:403}:axis==="target"?{code:"ACCESS_RESOURCE_NOT_FOUND",status:404}:
+      axis==="step-up"?{code:"STEP_UP_REQUIRED",status:403}:axis==="cas"?{code:"GRANT_REVISION_CONFLICT",status:409}:{code:"POLICY_REVISION_CONFLICT",status:409};
+    const before=await state(f);
+    await withCurrentHuman(f,account,async cell=>{
+      const recover=vi.fn(async()=>null);
+      await expect(cell.service(recover).propose(actor(account),f.workspace,request,
+        axis==="preview"?accessDigest("TEST_ONLY stale preview"):preview.preview_digest,key)).rejects.toMatchObject(expected);
+      expect(recover).not.toHaveBeenCalled();expect(await state(f)).toEqual(before);
+      expect((await cell.pool.query("SELECT 1 FROM elp210_candidate.mutations")).rowCount).toBe(0);
+      expect((await cell.pool.query("SELECT drain_id FROM elp210_candidate.authority WHERE singleton")).rows[0].drain_id).toBeNull();
+    });
+  });
+
+  it("ELP2-10 access actor expiry during signed recovery refuses final apply and clears only the terminal drain",async()=>{
+    const account=await active("coordinator-expiring-actor"),f=await fixture(account),request=f.change();
+    const preview=await f.service.preview(actor(account),f.workspace,request),before=await state(f);
+    await withCurrentHuman(f,account,async cell=>{
+      // Before a lease exists, shortening this fixture session is an ordinary
+      // authority update. Time expiry itself does not forge source rollback.
+      const deadline=(await cell.pool.query<{expires_at:Date}>(`UPDATE auth_sessions
+        SET idle_expires_at=clock_timestamp()+interval '1.5 seconds' WHERE session_id=$1 RETURNING idle_expires_at AS expires_at`,[account.session.sessionId])).rows[0].expires_at;
+      const lease=await cell.enter();let calls=0;
+      const recover:CurrentHumanRecoveryPort["recover"]=async()=>{
+        calls++;await cell.pool.query("SELECT pg_sleep(GREATEST(0,extract(epoch FROM ($1::timestamptz-clock_timestamp())))+0.025)",[deadline]);
+        return cell.resolve(lease.lease_id);
+      };
+      await expect(cell.service(recover).propose(actor(account),f.workspace,request,preview.preview_digest,next("expiry-coordinated")))
+        .rejects.toMatchObject({code:"CURRENT_ACTOR_AUTHORITY_REQUIRED",status:403});
+      expect(calls).toBe(1);expect(await state(f)).toEqual(before);
+      expect((await cell.pool.query("SELECT phase FROM elp210_candidate.leases WHERE lease_id=$1",[lease.lease_id])).rows[0].phase).toBe("COMMITTED");
+      expect((await cell.pool.query("SELECT state FROM elp210_candidate.mutations")).rows).toEqual([{state:"REFUSED"}]);
+      expect((await cell.pool.query("SELECT drain_id FROM elp210_candidate.authority WHERE singleton")).rows[0].drain_id).toBeNull();
+    });
+  });
+
+  it("ELP2-10 coordinated keys remain distinct across operation and workspace",async()=>{
+    const f=await fixture(),other=await fixture(),key=next("shared-coordinator-key"),request=f.change(),otherRequest=other.change();
+    const preview=await f.service.preview(actor(manager),f.workspace,request),otherPreview=await other.service.preview(actor(manager),other.workspace,otherRequest);
+    await withCurrentHuman(f,manager,async cell=>{
+      const recover=vi.fn(async()=>null),service=cell.service(recover);
+      const applied=await service.propose(actor(manager),f.workspace,request,preview.preview_digest,key);
+      const otherApplied=await cell.service(recover,other.trust).propose(actor(manager),other.workspace,otherRequest,otherPreview.preview_digest,key);
+      const revoked=await service.revoke(actor(owner),f.workspace,applied.receipt.grant_id!,f.policy.revision,applied.receipt.grant_revision!,key);
+      expect(otherApplied.receipt.operation_id).not.toBe(applied.receipt.operation_id);
+      expect(revoked.receipt.outcome).toBe("REVOKED");expect(recover).not.toHaveBeenCalled();
+      expect((await cell.pool.query("SELECT family,state FROM elp210_candidate.mutations")).rows).toEqual([
+        {family:"EXECUTION_ACCESS",state:"FINISHED"},{family:"EXECUTION_ACCESS",state:"FINISHED"},{family:"EXECUTION_ACCESS",state:"FINISHED"},
+      ]);
     });
   });
 });

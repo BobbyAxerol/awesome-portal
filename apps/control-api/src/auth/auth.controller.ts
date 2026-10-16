@@ -127,8 +127,9 @@ export class AuthController {
     if (!sessionToken) {
       throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
     }
-    const session = await this.auth.sessionFromToken(sessionToken);
-    if (!session || session.state !== "ACTIVE") {
+    const session = await this.auth.passwordChangeSession({ sessionToken,
+      currentPassword: parsed.data.current_password, newPassword: parsed.data.new_password });
+    if (!session) {
       throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
     }
     /*

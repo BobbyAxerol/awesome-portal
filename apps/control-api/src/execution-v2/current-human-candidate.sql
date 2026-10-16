@@ -42,6 +42,32 @@ CREATE TABLE elp210_candidate.events (
   terminal_receipt_digest text,
   occurred_at timestamptz NOT NULL DEFAULT clock_timestamp()
 );
+-- Request metadata only: no passwords, activation credentials, signed tokens,
+-- source payloads or replayable authority mutations. Existing services remain
+-- the only writers and retain their original operation/idempotency receipts.
+CREATE TABLE elp210_candidate.mutations (
+  mutation_id text PRIMARY KEY,
+  key_digest text UNIQUE NOT NULL CHECK (key_digest ~ '^sha256:[a-f0-9]{64}$'),
+  binding_digest text NOT NULL CHECK (binding_digest ~ '^sha256:[a-f0-9]{64}$'),
+  replay_digest text NOT NULL CHECK (replay_digest ~ '^sha256:[a-f0-9]{64}$'),
+  family text NOT NULL CHECK (family IN ('ACCOUNT_LIFECYCLE','GOVERNANCE_GRANT','EXECUTION_ACCESS','AUTH_SESSION')),
+  actor_id text NOT NULL,
+  session_id text NOT NULL,
+  session_revision bigint NOT NULL,
+  state text NOT NULL DEFAULT 'PENDING' CHECK (state IN ('PENDING','FINISHED','REFUSED')),
+  terminal_digest text,
+  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  finished_at timestamptz,
+  CHECK ((state='PENDING' AND terminal_digest IS NULL AND finished_at IS NULL)
+    OR (state IN ('FINISHED','REFUSED') AND terminal_digest IS NOT NULL AND finished_at IS NOT NULL))
+);
+CREATE TABLE elp210_candidate.mutation_events (
+  event_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  mutation_id text NOT NULL REFERENCES elp210_candidate.mutations(mutation_id),
+  state text NOT NULL,
+  terminal_digest text,
+  occurred_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
 CREATE FUNCTION elp210_candidate.immutable() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN RAISE EXCEPTION 'CURRENT_HUMAN_HISTORY_IMMUTABLE'; END $$;
 CREATE TRIGGER preserve_events BEFORE UPDATE OR DELETE OR TRUNCATE ON elp210_candidate.events
@@ -50,6 +76,24 @@ CREATE TRIGGER preserve_leases BEFORE DELETE OR TRUNCATE ON elp210_candidate.lea
   FOR EACH STATEMENT EXECUTE FUNCTION elp210_candidate.immutable();
 CREATE TRIGGER preserve_revision BEFORE DELETE OR TRUNCATE ON elp210_candidate.authority
   FOR EACH STATEMENT EXECUTE FUNCTION elp210_candidate.immutable();
+CREATE TRIGGER preserve_mutations BEFORE DELETE OR TRUNCATE ON elp210_candidate.mutations
+  FOR EACH STATEMENT EXECUTE FUNCTION elp210_candidate.immutable();
+CREATE TRIGGER preserve_mutation_events BEFORE UPDATE OR DELETE OR TRUNCATE ON elp210_candidate.mutation_events
+  FOR EACH STATEMENT EXECUTE FUNCTION elp210_candidate.immutable();
+CREATE FUNCTION elp210_candidate.mutation_event() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP='UPDATE' THEN
+    IF OLD.state<>'PENDING' OR NEW.state NOT IN ('FINISHED','REFUSED') OR
+      (to_jsonb(NEW)-ARRAY['state','terminal_digest','finished_at']) IS DISTINCT FROM
+      (to_jsonb(OLD)-ARRAY['state','terminal_digest','finished_at'])
+    THEN RAISE EXCEPTION 'CURRENT_HUMAN_MUTATION_TRANSITION_INVALID'; END IF;
+  END IF;
+  INSERT INTO elp210_candidate.mutation_events(mutation_id,state,terminal_digest)
+    VALUES(NEW.mutation_id,NEW.state,NEW.terminal_digest);
+  RETURN NEW;
+END $$;
+CREATE TRIGGER mutation_events AFTER INSERT OR UPDATE ON elp210_candidate.mutations
+  FOR EACH ROW EXECUTE FUNCTION elp210_candidate.mutation_event();
 CREATE FUNCTION elp210_candidate.lease_event() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   -- A physical singleton version change is required, not just FOR UPDATE:
@@ -103,6 +147,14 @@ BEGIN
     IF EXISTS(SELECT 1 FROM public.portal_access_policy_events WHERE workspace_id=NEW.workspace_id)
     THEN RETURN NEW; END IF;
   END IF;
+  -- Audit after policy_seen is immutable evidence, not an entitlement change;
+  -- a pending drain must not erase the refusal trail of subsequent requests.
+  IF current_setting('elp210_candidate.replay_only',true)='on'
+    THEN RAISE EXCEPTION 'CURRENT_HUMAN_MUTATION_REPLAY_WRITE_FORBIDDEN'; END IF;
+  IF EXISTS(SELECT 1 FROM elp210_candidate.authority a JOIN elp210_candidate.mutations m
+      ON m.mutation_id=a.drain_id AND m.state='PENDING' WHERE a.singleton
+      AND m.mutation_id IS DISTINCT FROM current_setting('elp210_candidate.mutation_id',true))
+    THEN RAISE EXCEPTION 'CURRENT_HUMAN_DRAIN_COORDINATOR_REQUIRED'; END IF;
   IF EXISTS(SELECT 1 FROM elp210_candidate.leases WHERE phase IN ('ISSUED','ENTERED','UNKNOWN'))
     THEN RAISE EXCEPTION 'CURRENT_HUMAN_DRAIN_REQUIRED'; END IF;
   UPDATE elp210_candidate.authority SET revision=revision+1 WHERE singleton;

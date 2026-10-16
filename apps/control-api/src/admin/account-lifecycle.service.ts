@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
 
 import { ControlApiConfig } from "../config";
 import { AuthService } from "../auth/auth.service";
@@ -10,6 +10,9 @@ import { UsersRepository } from "../repos/users";
 import { CredentialsRepository } from "../repos/credentials";
 import { SessionsRepository } from "../repos/sessions";
 import { AuditRepository } from "../repos/audit";
+import { CurrentHumanLeaseError } from "../execution-v2/current-human-candidate";
+import { CurrentHumanMutations, type CurrentHumanMutationBinding } from "../execution-v2/current-human-mutations";
+import { accessDigest } from "../execution-v2/access-policy";
 import {
   AccountLifecycleRepository,
   LifecycleAction,
@@ -90,6 +93,7 @@ export interface LifecycleResult {
  * that explains and safely retries it.
  */
 interface LifecycleMutationRepositories {
+  db: PoolClient;
   users: UsersRepository;
   credentials: CredentialsRepository;
   sessions: SessionsRepository;
@@ -123,6 +127,7 @@ export class AccountLifecycleService {
     private readonly pool: Pool,
     private readonly config: ControlApiConfig,
     private readonly auth: AuthService,
+    private readonly authorityMutations?: CurrentHumanMutations,
   ) {
     this.lifecycle = new AccountLifecycleRepository(pool);
     this.ownerAccess = new OwnerAccessRepository(pool);
@@ -252,6 +257,17 @@ export class AccountLifecycleService {
           requestId: request.requestId });
         return { denial: new LifecycleDeniedError("CURRENT_ACTOR_AUTHORITY_REQUIRED", "Access denied.", 403) };
       }
+      // Hold the session row and preserve its pre-operation deadline. An owner
+      // may intentionally revoke their own session or issue their own fresh
+      // activation below; re-authorizing that changed row would incorrectly
+      // undo the very operation they authorized. A row lock does not, however,
+      // freeze wall-clock expiry while a target write waits.
+      const sessionDeadline = (await tx.db.query<{ expires_at: Date }>(
+        `SELECT LEAST(idle_expires_at, absolute_expires_at) AS expires_at
+           FROM auth_sessions WHERE session_id=$1 AND user_id=$2 AND session_version=$3`,
+        [request.sessionId, actor.userId, actor.sessionVersion],
+      )).rows[0]?.expires_at;
+      if (!sessionDeadline) throw new LifecycleDeniedError("CURRENT_ACTOR_AUTHORITY_REQUIRED", "Access denied.", 403);
       /*
        * The advisory transaction lock serializes only a shared idempotency
        * key.  It closes the read-then-insert race without serializing unrelated
@@ -277,10 +293,12 @@ export class AccountLifecycleService {
         if (!account) {
           return { denial: new LifecycleDeniedError("ACCOUNT_NOT_FOUND", "No such account.", 404) };
         }
+        await this.assertAuthorityDeadlines(tx, sessionDeadline, null);
         return { outcome: "REPLAYED", operation: prior, account };
       }
 
-      const steppedUp = (await tx.lifecycle.activeStepUpExpiry(request.sessionId)) !== null;
+      const stepUpDeadline = await tx.lifecycle.lockActiveStepUpExpiry(request.sessionId, actor.userId);
+      const steppedUp = stepUpDeadline !== null;
       if (requiresStepUp(request) && !steppedUp) {
         return {
           denial: new LifecycleDeniedError(
@@ -291,13 +309,45 @@ export class AccountLifecycleService {
         };
       }
 
-      if (request.action === "CREATE_INVITED") {
-        return this.createInvited(request, fingerprint, steppedUp, tx);
-      }
-      return this.applyToExisting(request, fingerprint, steppedUp, tx);
-    });
+      const result = request.action === "CREATE_INVITED"
+        ? await this.createInvited(request, fingerprint, steppedUp, tx)
+        : await this.applyToExisting(request, fingerprint, steppedUp, tx);
+      // Throw after the writes, rather than returning a denial, so account,
+      // credential/session effects and the APPLIED receipt all roll back.
+      await this.assertAuthorityDeadlines(tx, sessionDeadline, requiresStepUp(request) ? stepUpDeadline : null);
+      return result;
+    }, { binding: { family: "ACCOUNT_LIFECYCLE", operation: request.action, actor_id: request.actor.userId,
+      session_id: request.sessionId, session_revision: request.actor.sessionVersion,
+      key_digest: accessDigest(["account-lifecycle", request.idempotencyKey]),
+      request_digest: `sha256:${fingerprint}`, target_id: request.targetUserId ?? null },
+      authorize: async client => {
+        const users = new UsersRepository(client), sessions = new SessionsRepository(client);
+        const actor = await users.lockById(request.actor.userId);
+        if (!actor || actor.status !== "ACTIVE" || actor.archivedAt || actor.mustChangePassword
+          || actor.sessionVersion !== request.actor.sessionVersion
+          || !await sessions.lockActiveLease(request.sessionId, actor.userId, actor.sessionVersion)
+          || (scope === "OWNER" ? (await new OwnerAccessRepository(client).ownerAnchor())?.userId !== actor.userId
+            : request.action !== "UPDATE_PROFILE" || request.targetUserId !== actor.userId || request.role !== undefined || request.username !== undefined))
+          throw new LifecycleDeniedError("CURRENT_ACTOR_AUTHORITY_REQUIRED", "Access denied.", 403);
+        const lifecycle = new AccountLifecycleRepository(client);
+        if (requiresStepUp(request) && !await lifecycle.findByIdempotencyKey(request.idempotencyKey)
+          && !await lifecycle.lockActiveStepUpExpiry(request.sessionId, actor.userId))
+          throw new LifecycleDeniedError("STEP_UP_REQUIRED", "Re-enter your password to confirm this action.", 403);
+      } });
     if ("denial" in output) throw output.denial;
     return output;
+  }
+
+  private async assertAuthorityDeadlines(
+    tx: LifecycleMutationRepositories, sessionDeadline: Date, stepUpDeadline: Date | null,
+  ): Promise<void> {
+    const current = (await tx.db.query<{ session_current: boolean; step_up_current: boolean }>(
+      `SELECT $1::timestamptz > clock_timestamp() AS session_current,
+              ($2::timestamptz IS NULL OR $2::timestamptz > clock_timestamp()) AS step_up_current`,
+      [sessionDeadline, stepUpDeadline],
+    )).rows[0];
+    if (!current?.session_current) throw new LifecycleDeniedError("CURRENT_ACTOR_AUTHORITY_REQUIRED", "Access denied.", 403);
+    if (!current.step_up_current) throw new LifecycleDeniedError("STEP_UP_REQUIRED", "Re-enter your password to confirm this action.", 403);
   }
 
   // ------------------------------------------------------------- create
@@ -474,26 +524,32 @@ export class AccountLifecycleService {
     }
 
     const activationToken = await this.applySideEffects(tx, request, after);
+    // Side effects also update this account: revoking access advances its
+    // session generation, and minting an activation clears login counters.
+    // Return and record the final transactional row, not the earlier UPDATE
+    // snapshot, so the first response agrees with its durable replay.
+    const finalAccount = await tx.users.findById(after.userId);
+    if (!finalAccount) throw new LifecycleDeniedError("ACCOUNT_NOT_FOUND", "No such account.", 404);
     const operation = await tx.lifecycle.record({
       operationId: randomId("alo"),
       idempotencyKey: request.idempotencyKey,
       action: request.action,
-      targetUserId: after.userId,
+      targetUserId: finalAccount.userId,
       actorUserId: request.actor.userId,
       expectedRevision: request.expectedRevision,
-      resultingRevision: after.accountRevision,
+      resultingRevision: finalAccount.accountRevision,
       requestFingerprint: fingerprint,
       outcome: "APPLIED",
       stateBefore: projectAccount(before),
-      stateAfter: projectAccount(after),
+      stateAfter: projectAccount(finalAccount),
       rollbackDescription: ROLLBACK[request.action],
       requestId: request.requestId,
       stepUpUsed: steppedUp,
     });
-    await this.auditOperation(tx, request.action, request, after.userId, "SUCCESS", "APPLIED");
+    await this.auditOperation(tx, request.action, request, finalAccount.userId, "SUCCESS", "APPLIED");
     return activationToken
-      ? { outcome: "APPLIED", operation, account: after, activationToken }
-      : { outcome: "APPLIED", operation, account: after };
+      ? { outcome: "APPLIED", operation, account: finalAccount, activationToken }
+      : { outcome: "APPLIED", operation, account: finalAccount };
   }
 
   /**
@@ -635,25 +691,34 @@ export class AccountLifecycleService {
   private async withTransaction<T>(
     idempotencyKey: string | null,
     operation: (tx: LifecycleMutationRepositories) => Promise<T>,
+    authority?: { binding: CurrentHumanMutationBinding; authorize(client: import("pg").PoolClient): Promise<void> },
   ): Promise<T> {
+    const apply = async (client: import("pg").PoolClient) => {
+      if (idempotencyKey !== null) await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`account-lifecycle:${idempotencyKey}`]);
+      return operation({ db: client, users: new UsersRepository(client), credentials: new CredentialsRepository(client),
+        sessions: new SessionsRepository(client), lifecycle: new AccountLifecycleRepository(client),
+        ownerAccess: new OwnerAccessRepository(client), audit: new AuditRepository(client) });
+    };
+    if (authority && this.authorityMutations) {
+      try {
+        return await this.authorityMutations.execute(authority.binding, { authorize: authority.authorize, apply,
+          terminal: result => {
+            const execution = result as LifecycleExecution;
+            return "denial" in execution
+              ? { outcome: "REFUSED", receipt_ref: null, reason_code: execution.denial.reasonCode }
+              : { outcome: "APPLIED", receipt_ref: execution.operation.operationId, reason_code: null };
+          } });
+      } catch (error) {
+        if (error instanceof CurrentHumanLeaseError) throw mutationRefusal(error);
+        throw error;
+      }
+    }
     const client = await this.pool.connect();
     let begun = false;
     try {
       await client.query("BEGIN");
       begun = true;
-      if (idempotencyKey !== null) {
-        await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
-          `account-lifecycle:${idempotencyKey}`,
-        ]);
-      }
-      const result = await operation({
-        users: new UsersRepository(client),
-        credentials: new CredentialsRepository(client),
-        sessions: new SessionsRepository(client),
-        lifecycle: new AccountLifecycleRepository(client),
-        ownerAccess: new OwnerAccessRepository(client),
-        audit: new AuditRepository(client),
-      });
+      const result = await apply(client);
       await client.query("COMMIT");
       begun = false;
       return result;
@@ -669,6 +734,27 @@ export class AccountLifecycleService {
     } finally {
       client.release();
     }
+  }
+}
+
+/** Only a durable pending/uncertain outcome may tell the caller to retry the
+ * original intent. A permanent key conflict is not a pending operation. */
+function mutationRefusal(error: CurrentHumanLeaseError): LifecycleDeniedError {
+  switch (error.code) {
+    case "CURRENT_HUMAN_MUTATION_KEY_CONFLICT":
+      return new LifecycleDeniedError(error.code, "That idempotency key was used for a different request. Use a new key.", 409);
+    case "CURRENT_HUMAN_MUTATION_PREVIOUSLY_REFUSED":
+      return new LifecycleDeniedError(error.code, "This request was refused. Refresh before starting a new request.", 409);
+    case "CURRENT_HUMAN_MUTATION_PENDING":
+    case "CURRENT_HUMAN_MUTATION_OUTCOME_UNCERTAIN":
+    case "CURRENT_HUMAN_MUTATION_RETRY_REQUIRED":
+    case "CURRENT_HUMAN_DRAIN_UNRESOLVED":
+    case "CURRENT_HUMAN_DRAIN_CONFLICT":
+      return new LifecycleDeniedError(error.code, "The access change is not confirmed. Retry the same request and idempotency key.", 503);
+    case "CURRENT_HUMAN_MUTATION_RECEIPT_MISMATCH":
+      return new LifecycleDeniedError(error.code, "The original access receipt is unavailable. Do not submit a replacement action.", 503);
+    default:
+      return new LifecycleDeniedError(error.code, "Access changes are temporarily unavailable. No result is confirmed.", 503);
   }
 }
 

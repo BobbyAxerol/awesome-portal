@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
+import { CurrentHumanLeaseError } from "../execution-v2/current-human-candidate";
+import { CurrentHumanMutations } from "../execution-v2/current-human-mutations";
+import { accessDigest } from "../execution-v2/access-policy";
 
 import { AuthService } from "../auth/auth.service";
 import { OwnerAccessService } from "../auth/owner-access.service";
@@ -94,6 +97,7 @@ export class GovernanceGrantsService {
     private readonly pool: Pool,
     private readonly auth: AuthService,
     private readonly ownerAccess: OwnerAccessService,
+    private readonly authorityMutations?: CurrentHumanMutations,
   ) {
     this.grants = new GovernanceGrantsRepository(pool);
   }
@@ -463,11 +467,7 @@ export class GovernanceGrantsService {
     request: GrantRequest,
     operation: (tx: GrantMutationRepositories) => Promise<GrantExecution>,
   ): Promise<GrantExecution> {
-    const client = await this.pool.connect();
-    let begun = false;
-    try {
-      await client.query("BEGIN");
-      begun = true;
+    const apply = async (client: PoolClient): Promise<GrantExecution> => {
       await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
         `governance-grant:${request.idempotencyKey}`,
       ]);
@@ -493,17 +493,42 @@ export class GovernanceGrantsService {
           throw new GrantDeniedError("STEP_UP_REQUIRED", "Re-enter your password before changing access.", 403);
         }
       }
-      await client.query("COMMIT");
-      begun = false;
       return result;
-    } catch (error) {
-      if (begun) {
-        try {
-          await client.query("ROLLBACK");
-        } catch {
-          // Preserve the original application/database error.
-        }
+    };
+    try {
+      if (this.authorityMutations) {
+        return await this.authorityMutations.execute({ family: "GOVERNANCE_GRANT", operation: request.action,
+          actor_id: request.actor.userId, session_id: request.sessionId, session_revision: request.actor.sessionVersion,
+          key_digest: accessDigest(["governance-grant", request.idempotencyKey]),
+          request_digest: `sha256:${fingerprintOf(request)}`, target_id: request.grantId ?? request.granteeUserId ?? null }, {
+          authorize: async client => {
+            const actor = await new UsersRepository(client).lockById(request.actor.userId);
+            if (!actor || actor.status !== "ACTIVE" || actor.archivedAt || actor.mustChangePassword
+              || actor.sessionVersion !== request.actor.sessionVersion
+              || !await new SessionsRepository(client).lockActiveLease(request.sessionId, actor.userId, actor.sessionVersion)
+              || await new GovernanceGrantsRepository(client).lockOwnerAnchorUserId() !== actor.userId)
+              throw new GrantDeniedError("CURRENT_ACTOR_AUTHORITY_REQUIRED", "Access denied.", 403);
+            if (!await new AccountLifecycleRepository(client).lockActiveStepUpExpiry(request.sessionId, actor.userId))
+              throw new GrantDeniedError("STEP_UP_REQUIRED", "Re-enter your password before changing access.", 403);
+          }, apply,
+          terminal: result => "denial" in result
+            ? { outcome: "REFUSED", receipt_ref: null, reason_code: result.denial.reasonCode }
+            : { outcome: "APPLIED", receipt_ref: result.event.eventId, reason_code: null },
+        });
       }
+      const client = await this.pool.connect();
+      let begun = false;
+      try {
+        await client.query("BEGIN"); begun = true;
+        const result = await apply(client);
+        await client.query("COMMIT"); begun = false;
+        return result;
+      } catch (error) {
+        if (begun) { try { await client.query("ROLLBACK"); } catch { /* Preserve the original error. */ } }
+        throw error;
+      } finally { client.release(); }
+    } catch (error) {
+      if (error instanceof CurrentHumanLeaseError) throw mutationRefusal(error);
       if (error instanceof GrantDeniedError &&
           ["CURRENT_ACTOR_AUTHORITY_REQUIRED","STEP_UP_REQUIRED"].includes(error.reasonCode)) {
         // The failed final fence rolled the grant and success receipt back.
@@ -515,9 +540,28 @@ export class GovernanceGrantsService {
           stepUpUsed:false,replayable:false,requestId:request.requestId});
       }
       throw error;
-    } finally {
-      client.release();
     }
+  }
+}
+
+/** Keep terminal refusal separate from an unresolved durable intent. Never
+ * instruct a caller to poll a key that permanently belongs to another body. */
+function mutationRefusal(error: CurrentHumanLeaseError): GrantDeniedError {
+  switch (error.code) {
+    case "CURRENT_HUMAN_MUTATION_KEY_CONFLICT":
+      return new GrantDeniedError(error.code, "That idempotency key was used for a different request. Use a new key.", 409);
+    case "CURRENT_HUMAN_MUTATION_PREVIOUSLY_REFUSED":
+      return new GrantDeniedError(error.code, "This access change was refused. Refresh before starting a new request.", 409);
+    case "CURRENT_HUMAN_MUTATION_PENDING":
+    case "CURRENT_HUMAN_MUTATION_OUTCOME_UNCERTAIN":
+    case "CURRENT_HUMAN_MUTATION_RETRY_REQUIRED":
+    case "CURRENT_HUMAN_DRAIN_UNRESOLVED":
+    case "CURRENT_HUMAN_DRAIN_CONFLICT":
+      return new GrantDeniedError(error.code, "The access change is not confirmed. Retry the same request and idempotency key.", 503);
+    case "CURRENT_HUMAN_MUTATION_RECEIPT_MISMATCH":
+      return new GrantDeniedError(error.code, "The original access receipt is unavailable. Do not submit a replacement action.", 503);
+    default:
+      return new GrantDeniedError(error.code, "Access changes are temporarily unavailable. No result is confirmed.", 503);
   }
 }
 
