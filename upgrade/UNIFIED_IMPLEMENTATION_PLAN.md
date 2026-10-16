@@ -9924,6 +9924,23 @@ No duplicate focused/full suites or frontend/runtime changes. Actual ELP2-10
 authority/config/coexistence gates remain OPEN; next independent backend slice
 is ordinary delegated receipt held-source composition, not11.
 
+**ELP2-10 delegated receipt continuation (entry a241a587):** purpose normal
+hook terminal PASS,691contracts/4259API +3existing skips, build/scoped restore,
+eight runtimes unchanged/zero owned leftovers. Exact receipt/hash and local
+10-004 closure in [canonical packet](./execution_loop/evidence/ELP2-10/commissioning-followthrough.md#ordinary-delegated-receipt-purpose--entry-a241a587).
+New10-005 closes only the local ordinary-receipt held-source seam after its
+own normal hook: separate private purpose/no fabricated session, exact complete
+source proof reacquired after signed recovery outside Core and held through
+physical outcome, historical ACK/no regrant,409 payload binding and uncertain
+lost ACK.22 real-PG+1synthetic wrapper cases authored, NOT_RUN at preparation;
+existing raw-purpose constraints expanded. No public schema/FE/runtime change.
+Private `delegated-land-HHMMSS/controller.json` is the authoritative terminal
+result only with committed SHA, exit0, unchanged runtime and zero leftovers.
+Backend next is still10: verified-issuance one-view decision, actual selected
+provider/trust, approved numeric budget/calibration, allocated coexistence/G2.
+Claude six existing Manager/360 handoffs AWAITING_CONSUMER_REVIEW; no new fields
+or consumer request. Full10NOT_MET;11/dev/main/release/deploy remain unopened.
+
 <a id="elp2-11"></a>
 
 ### ELP2-11 — Migration tích hợp và bàn giao release

@@ -575,7 +575,7 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
   it("ELP2-10 verified-purpose metadata cannot fabricate a human session or omit one for a human family", async () => {
     const f = await fixture();
     await withCurrentHuman(f, manager, async cell => {
-      for (const [family, sessionRevision] of [["REVIEWED_POLICY", 0], ["ACCOUNT_LIFECYCLE", null]] as const) {
+      for (const [family, sessionRevision] of [["REVIEWED_POLICY", 0], ["QUALIFIED_DELEGATED_RECEIPT", 0], ["ACCOUNT_LIFECYCLE", null]] as const) {
         const key = accessDigest(["TEST_ONLY-invalid-purpose-binding", family, next("invalid-metadata")]);
         await expect(cell.pool.query(`INSERT INTO elp210_candidate.mutations
           (mutation_id,key_digest,binding_digest,replay_digest,family,actor_id,session_id,session_revision)
@@ -590,6 +590,9 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
       const authorize = vi.fn(async () => undefined), apply = vi.fn(async () => undefined);
       await expect(coordinator.executeVerified(fabricated, { authorize, apply,
         terminal: () => ({ outcome: "APPLIED", receipt_ref: null, reason_code: null }) })).rejects.toMatchObject({ name: "ZodError" });
+      await expect(coordinator.executeVerified({ ...fabricated, family: "QUALIFIED_DELEGATED_RECEIPT", operation: "ACCEPT_RECEIPT" },
+        { authorize, apply, terminal: () => ({ outcome: "APPLIED", receipt_ref: null, reason_code: null }) }))
+        .rejects.toMatchObject({ name: "ZodError" });
       expect(authorize).not.toHaveBeenCalled();
       expect(apply).not.toHaveBeenCalled();
       expect((await cell.pool.query("SELECT count(*)::int AS n FROM elp210_candidate.mutations")).rows[0].n).toBe(0);
@@ -1388,6 +1391,315 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
         url: `${BASE}/effective?workspace_id=${f.workspace}`, headers: { cookie: cookie(manager.session) } });
       expect(defaultEffective.statusCode).toBe(200);
       expect(defaultEffective.json().availability).toBe("POLICY_PENDING");
+    });
+  });
+
+  type DelegatedLease = NonNullable<Awaited<ReturnType<NonNullable<AccessTrustProvider["qualifyDelegatedReceipt"]>>>>;
+  function delegatedTrust(f: Fixture, pool: Pool, fact: TsMembershipAcceptance, options: {
+    omitPort?: boolean; refuse?: boolean; transform?(lease: DelegatedLease): void;
+    guard?(): void; release?(): Promise<void>;
+  } = {}) {
+    let calls = 0, releases = 0, held = 0;
+    const trust: AccessTrustProvider = {
+      verifyPolicy: f.trust.verifyPolicy.bind(f.trust), verifyReceipt: f.trust.verifyReceipt.bind(f.trust),
+      relations: f.trust.relations.bind(f.trust), verifiedHumanMapping: f.trust.verifiedHumanMapping.bind(f.trust),
+    };
+    if (!options.omitPort) trust.qualifyDelegatedReceipt = async (input, scope) => {
+      calls++;
+      expect(await f.trust.verifyReceipt(input)).toEqual(fact);
+      expect(pool.totalCount - pool.idleCount).toBe(0);
+      // A real max1 query would time out if qualification held a Core client;
+      // NOWAIT also rules out another Core TX holding the actual actor row.
+      await pool.query("SELECT user_id FROM portal_users WHERE user_id=$1 FOR UPDATE NOWAIT", [f.issuingManager.user.userId]);
+      const grants = await new AccessRepository(pool).grants(f.workspace);
+      const ids = [...new Set([f.issuingManager.user.userId, fact.portal_user_id,
+        ...grants.flatMap(grant => [grant.issued_by, grant.subject_user_id])])].sort();
+      expect(scope).toEqual({ workspace_id: f.workspace, subject_user_id: fact.portal_user_id, principal_ids: ids });
+      if (options.refuse) return null;
+      const mapping = structuredClone(await f.trust.verifiedHumanMapping(fact.portal_user_id, f.workspace));
+      const relations: { principal_id: string; relations: AccessRelations }[] = [];
+      for (const principal_id of ids) relations.push({ principal_id,
+        relations: structuredClone(await f.trust.relations(principal_id, f.workspace)) });
+      const lease: DelegatedLease = {
+        fact: structuredClone(fact), mapping, relations,
+        assertCurrent: () => options.guard?.(),
+        release: async () => {
+          expect(pool.totalCount - pool.idleCount).toBe(0);
+          try {
+            expect((await pool.query("SELECT 1 AS released_after_core")).rows[0].released_after_core).toBe(1);
+            await options.release?.();
+          } finally { held--; releases++; }
+        },
+      };
+      held++;
+      options.transform?.(lease);
+      return lease;
+    };
+    return { trust, calls: () => calls, releases: () => releases, held: () => held };
+  }
+
+  it("ELP2-10 NEW coordinated delegation requires a held provider before opening a drain", async () => {
+    const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted), proof = f.trust.seal(fact);
+    await withCurrentHuman(f, manager, async cell => {
+      const before = await authorityRows(f), h = delegatedTrust(f, cell.pool, fact, { omitPort: true });
+      await expect(cell.service(async () => undefined, h.trust).acceptTsReceipt(proof))
+        .rejects.toMatchObject({ code: "RECEIPT_NOT_QUALIFIED", status: 503 });
+      expect(await authorityRows(f)).toEqual(before);
+      expect((await cell.pool.query("SELECT count(*)::int AS n FROM elp210_candidate.mutations")).rows[0].n).toBe(0);
+      expect((await cell.pool.query("SELECT drain_id FROM elp210_candidate.authority WHERE singleton")).rows[0].drain_id).toBeNull();
+    });
+  });
+
+  it("ELP2-10 detached receipt binding refusal cannot acquire a provider or open an authority drain", async () => {
+    const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted);
+    const proof = f.trust.seal({ ...fact, proposal_digest: accessDigest("TEST_ONLY-wrong-proposal") }, false);
+    await withCurrentHuman(f, manager, async cell => {
+      const before = await authorityRows(f), h = delegatedTrust(f, cell.pool, fact);
+      await expect(cell.service(async () => undefined, h.trust).acceptTsReceipt(proof))
+        .rejects.toMatchObject({ code: "RECEIPT_BINDING_MISMATCH", status: 409 });
+      expect(h.calls()).toBe(0); expect(await authorityRows(f)).toEqual(before);
+      expect((await cell.pool.query("SELECT count(*)::int AS n FROM elp210_candidate.mutations")).rows[0].n).toBe(0);
+    });
+  });
+
+  it("ELP2-10 delegated receipt recovers the signed source first, then holds exact qualification through Core outcome", async () => {
+    const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted), proof = f.trust.seal(fact);
+    await withCurrentHuman(f, manager, async cell => {
+      const lease = await cell.enter(), h = delegatedTrust(f, cell.pool, fact), before = await authorityRows(f);
+      let terminal = false, recoveries = 0;
+      const recover: CurrentHumanRecoveryPort["recover"] = async attempt => {
+        recoveries++; expect(h.held()).toBe(0); expect(attempt.lease_id).toBe(lease.lease_id);
+        return terminal ? cell.resolve(attempt.lease_id) : { phase: "COMMITTED", TEST_ONLY_unsigned_ack: true };
+      };
+      await expect(cell.service(recover, h.trust).acceptTsReceipt(proof))
+        .rejects.toMatchObject({ code: "ACCESS_RETRY_REQUIRED", status: 503 });
+      expect(h.calls()).toBe(0); expect(await authorityRows(f)).toEqual(before);
+      const intent = (await cell.pool.query("SELECT * FROM elp210_candidate.mutations")).rows[0];
+      expect(intent).toMatchObject({ family: "QUALIFIED_DELEGATED_RECEIPT", state: "PENDING",
+        actor_id: null, session_id: null, session_revision: null });
+      const changed = f.trust.seal({ ...fact, payload_digest: accessDigest("TEST_ONLY-pending-source-change") }, false);
+      await expect(cell.service(recover, h.trust).acceptTsReceipt(changed))
+        .rejects.toMatchObject({ code: "RECEIPT_PAYLOAD_CONFLICT", status: 409 });
+      expect(recoveries).toBe(1); expect(h.calls()).toBe(0);
+      terminal = true;
+      const result = await cell.service(recover, h.trust).acceptTsReceipt(proof);
+      expect(result).toMatchObject({ replayed: false, receipt: { outcome: "TS_APPLIED", ts_authority: "ACCEPTED" } });
+      expect(recoveries).toBe(2); expect(h.calls()).toBe(1); expect(h.releases()).toBe(1); expect(h.held()).toBe(0);
+      expect((await cell.pool.query("SELECT mutation_id,state FROM elp210_candidate.mutations")).rows)
+        .toEqual([{ mutation_id: intent.mutation_id, state: "FINISHED" }]);
+      const after = await authorityRows(f);
+      expect(await cell.service(recover, h.trust).acceptTsReceipt(proof)).toEqual({ receipt: result.receipt, replayed: true });
+      expect(await authorityRows(f)).toEqual(after); expect(h.calls()).toBe(1); expect(recoveries).toBe(2);
+      expect((await cell.pool.query("SELECT state,submission_receipt FROM portal_access_proposals WHERE proposal_id=$1",
+        [submitted.receipt.proposal_id])).rows[0]).toEqual({ state: "TS_APPLIED", submission_receipt: submitted.receipt });
+    });
+  });
+
+  it("ELP2-10 delegated receipt cannot turn an expired UNKNOWN source lease into authority", async () => {
+    const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted), proof = f.trust.seal(fact);
+    await withCurrentHuman(f, manager, async cell => {
+      const lease = await cell.enter(), h = delegatedTrust(f, cell.pool, fact), before = await authorityRows(f);
+      await cell.resolve(lease.lease_id, "UNKNOWN");
+      const service = cell.service(async () => undefined, h.trust);
+      await expect(service.acceptTsReceipt(proof)).rejects.toMatchObject({ code: "ACCESS_RETRY_REQUIRED", status: 503 });
+      const intent = (await cell.pool.query("SELECT * FROM elp210_candidate.mutations")).rows[0];
+      await cell.pool.query(`SELECT pg_sleep(GREATEST(
+        (expires_at_ms::double precision-extract(epoch FROM clock_timestamp())*1000)/1000,0)+0.05)
+        FROM elp210_candidate.leases WHERE lease_id=$1`, [lease.lease_id]);
+      await expect(cell.service(async () => undefined, h.trust).acceptTsReceipt(proof))
+        .rejects.toMatchObject({ code: "ACCESS_RETRY_REQUIRED", status: 503 });
+      expect((await cell.pool.query("SELECT * FROM elp210_candidate.mutations")).rows).toEqual([intent]);
+      expect((await cell.pool.query("SELECT phase FROM elp210_candidate.leases WHERE lease_id=$1", [lease.lease_id])).rows[0].phase).toBe("UNKNOWN");
+      expect(h.calls()).toBe(0); expect(await authorityRows(f)).toEqual(before);
+    }, 2000);
+  });
+
+  it.each(["fact", "mapping", "missing-principal", "extra-principal", "duplicate-principal", "relations", "unqualified", "membership"] as const)(
+    "ELP2-10 post-recovery %s mismatch cannot widen or substitute delegated authority", async part => {
+      const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted), proof = f.trust.seal(fact);
+      await withCurrentHuman(f, manager, async cell => {
+        let altered = true;
+        const h = delegatedTrust(f, cell.pool, fact, { transform: lease => {
+          if (!altered) return;
+          if (part === "fact") lease.fact.payload_digest = accessDigest("TEST_ONLY-other-qualified-fact");
+          else if (part === "mapping") lease.mapping = { ...lease.mapping!, revision: "TEST_ONLY-other-mapping" };
+          else if (part === "missing-principal") lease.relations = lease.relations.slice(1);
+          else if (part === "extra-principal") lease.relations = [...lease.relations,
+            { principal_id: "TEST_ONLY-not-in-core-graph", relations: structuredClone(lease.relations[0].relations) }];
+          else if (part === "duplicate-principal") lease.relations = [...lease.relations, structuredClone(lease.relations[0])];
+          else {
+            const subject = lease.relations.find(item => item.principal_id === fact.portal_user_id)!;
+            if (part === "relations") subject.relations.member_portfolio_ids = ["TEST_ONLY-other-portfolio"];
+            if (part === "unqualified") subject.relations.qualified = false;
+            if (part === "membership") subject.relations.membership = { ...subject.relations.membership!, revision: "TEST_ONLY-other-membership" };
+          }
+        } });
+        const before = await authorityRows(f);
+        await expect(cell.service(async () => undefined, h.trust).acceptTsReceipt(proof))
+          .rejects.toMatchObject({ code: "RECEIPT_BINDING_MISMATCH", status: 409 });
+        expect(await authorityRows(f)).toEqual(before); expect(h.releases()).toBe(1); expect(h.held()).toBe(0);
+        const intent = (await cell.pool.query("SELECT mutation_id,state FROM elp210_candidate.mutations")).rows[0];
+        expect(intent.state).toBe("PENDING");
+        altered = false;
+        expect((await cell.service(async () => undefined, h.trust).acceptTsReceipt(proof)).receipt.outcome).toBe("TS_APPLIED");
+        expect((await cell.pool.query("SELECT mutation_id,state FROM elp210_candidate.mutations")).rows)
+          .toEqual([{ mutation_id: intent.mutation_id, state: "FINISHED" }]);
+      });
+    });
+
+  it("ELP2-10 equivalent declared relation sets may be reordered without losing delegated qualification", async () => {
+    const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted), proof = f.trust.seal(fact);
+    await withCurrentHuman(f, manager, async cell => {
+      const h = delegatedTrust(f, cell.pool, fact, { transform: lease => {
+        lease.relations = [...lease.relations].reverse();
+        for (const entry of lease.relations) {
+          entry.relations.own_alpha_ids = [...entry.relations.own_alpha_ids].reverse();
+          entry.relations.member_portfolio_ids = [...entry.relations.member_portfolio_ids].reverse();
+          entry.relations.roots = Object.fromEntries(Object.entries(entry.relations.roots)
+            .map(([root_id, resources]) => [root_id, [...resources].reverse()]));
+        }
+      } });
+      expect((await cell.service(async () => undefined, h.trust).acceptTsReceipt(proof)).receipt.outcome).toBe("TS_APPLIED");
+      expect(h.calls()).toBe(1); expect(h.releases()).toBe(1); expect(h.held()).toBe(0);
+    });
+  });
+
+  it.each(["REJECTED", "UNKNOWN"] as const)("ELP2-10 coordinated %s records source outcome without inventing accepted authority", async outcome => {
+    const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted, { outcome }), proof = f.trust.seal(fact);
+    const grantBefore = await storedGrant(submitted.receipt.grant_id!);
+    await withCurrentHuman(f, manager, async cell => {
+      const h = delegatedTrust(f, cell.pool, fact), service = cell.service(async () => undefined, h.trust);
+      const result = await service.acceptTsReceipt(proof);
+      expect(result.receipt).toMatchObject({ outcome: outcome === "REJECTED" ? "TS_REJECTED" : "TS_UNKNOWN", ts_authority: outcome });
+      expect(await storedGrant(submitted.receipt.grant_id!)).toEqual(grantBefore);
+      expect((await new AccessRepository(cell.pool).proposal(f.workspace, submitted.receipt.proposal_id!))?.submission_receipt)
+        .toEqual(submitted.receipt);
+      expect((await cell.pool.query("SELECT state FROM elp210_candidate.mutations")).rows).toEqual([{ state: "FINISHED" }]);
+      const after = await authorityRows(f);
+      expect(await service.acceptTsReceipt(proof)).toEqual({ receipt: result.receipt, replayed: true });
+      expect(await authorityRows(f)).toEqual(after); expect(h.calls()).toBe(1); expect(h.releases()).toBe(1);
+    });
+  });
+
+  it("ELP2-10 provider refusal cannot apply a delegation and preserves the same retryable intent", async () => {
+    const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted), proof = f.trust.seal(fact);
+    await withCurrentHuman(f, manager, async cell => {
+      const options = { refuse: true }, h = delegatedTrust(f, cell.pool, fact, options), before = await authorityRows(f);
+      await expect(cell.service(async () => undefined, h.trust).acceptTsReceipt(proof))
+        .rejects.toMatchObject({ code: "RECEIPT_NOT_QUALIFIED", status: 503 });
+      expect(h.calls()).toBe(1); expect(h.releases()).toBe(0); expect(await authorityRows(f)).toEqual(before);
+      const intent = (await cell.pool.query("SELECT mutation_id,state FROM elp210_candidate.mutations")).rows[0];
+      expect(intent.state).toBe("PENDING");
+      options.refuse = false;
+      expect((await cell.service(async () => undefined, h.trust).acceptTsReceipt(proof)).receipt.outcome).toBe("TS_APPLIED");
+      expect((await cell.pool.query("SELECT mutation_id,state FROM elp210_candidate.mutations")).rows)
+        .toEqual([{ mutation_id: intent.mutation_id, state: "FINISHED" }]);
+    });
+  });
+
+  it("ELP2-10 a Core ceiling changed during detached mapping cannot enter a delegated receipt drain", async () => {
+    const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted), proof = f.trust.seal(fact);
+    await withCurrentHuman(f, manager, async cell => {
+      const h = delegatedTrust(f, cell.pool, fact); let changed = false;
+      f.trust.beforeHumanMapping = async () => {
+        if (changed) return; changed = true;
+        await new AccessRepository(ctx.pool).saveGrant({ ...f.managerRoot, revision: next("TEST_ONLY-raced-root"), revoked_at_ms: Date.now() });
+      };
+      await expect(cell.service(async () => undefined, h.trust).acceptTsReceipt(proof))
+        .rejects.toMatchObject({ code: "RECEIPT_REVISION_CONFLICT", status: 409 });
+      expect(changed).toBe(true); expect(h.calls()).toBe(0);
+      expect((await storedGrant(submitted.receipt.grant_id!)).ts_receipt).toBeNull();
+      expect((await cell.pool.query("SELECT count(*)::int AS n FROM elp210_candidate.mutations")).rows[0].n).toBe(0);
+      expect((await cell.pool.query("SELECT state FROM portal_access_proposals WHERE proposal_id=$1", [submitted.receipt.proposal_id])).rows[0].state).toBe("TS_PENDING");
+    });
+  });
+
+  it.each(["sync", "async"] as const)("ELP2-10 a %s held-fence failure after the source event rolls back all delegated writes", async kind => {
+    const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted), proof = f.trust.seal(fact);
+    await withCurrentHuman(f, manager, async cell => {
+      let valid = true;
+      const h = delegatedTrust(f, cell.pool, fact, { guard: (() => {
+        if (valid) return;
+        if (kind === "async") return Promise.resolve();
+        throw new Error("TEST_ONLY-held-source-revoked");
+      }) as () => void });
+      const before = await authorityRows(f), original = AccessRepository.prototype.event;
+      const event = vi.spyOn(AccessRepository.prototype, "event").mockImplementation(async function (this: AccessRepository, input) {
+        await original.call(this, input); if (input.operation === "TS_RECEIPT") valid = false;
+      });
+      try {
+        await expect(cell.service(async () => undefined, h.trust).acceptTsReceipt(proof))
+          .rejects.toMatchObject({ code: "RECEIPT_NOT_QUALIFIED", status: 503 });
+        expect(await authorityRows(f)).toEqual(before); expect(h.releases()).toBe(1); expect(h.held()).toBe(0);
+        expect((await cell.pool.query("SELECT state FROM elp210_candidate.mutations")).rows).toEqual([{ state: "PENDING" }]);
+      } finally { event.mockRestore(); }
+      valid = true;
+      expect((await cell.service(async () => undefined, h.trust).acceptTsReceipt(proof)).receipt.outcome).toBe("TS_APPLIED");
+    });
+  });
+
+  it("ELP2-10 historical delegated replay skips qualification and drain despite revoke and unrelated UNKNOWN work", async () => {
+    const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted), proof = f.trust.seal(fact);
+    const accepted = await f.service.acceptTsReceipt(proof), grant = await storedGrant(submitted.receipt.grant_id!);
+    await f.service.revoke(actor(owner), f.workspace, grant.grant_id, f.policy.revision, grant.revision, next("TEST_ONLY-revoke-before-history"));
+    await withCurrentHuman(f, manager, async cell => {
+      const lease = await cell.enter(); await cell.resolve(lease.lease_id, "UNKNOWN");
+      const h = delegatedTrust(f, cell.pool, fact, { omitPort: true }), recover = vi.fn(async () => undefined), before = await authorityRows(f);
+      const authority = (await cell.pool.query("SELECT * FROM elp210_candidate.authority")).rows;
+      expect(await cell.service(recover, h.trust).acceptTsReceipt(proof)).toEqual({ receipt: accepted.receipt, replayed: true });
+      expect(recover).not.toHaveBeenCalled(); expect(h.calls()).toBe(0); expect(await authorityRows(f)).toEqual(before);
+      expect((await cell.pool.query("SELECT * FROM elp210_candidate.authority")).rows).toEqual(authority);
+      expect((await cell.pool.query("SELECT count(*)::int AS n FROM elp210_candidate.mutations")).rows[0].n).toBe(0);
+      expect((await cell.pool.query("SELECT phase FROM elp210_candidate.leases WHERE lease_id=$1", [lease.lease_id])).rows[0].phase).toBe("UNKNOWN");
+      const changed = f.trust.seal({ ...fact, payload_digest: accessDigest("TEST_ONLY-changed-history") }, false);
+      await expect(cell.service(recover, h.trust).acceptTsReceipt(changed))
+        .rejects.toMatchObject({ code: "RECEIPT_PAYLOAD_CONFLICT", status: 409 });
+      expect(await authorityRows(f)).toEqual(before); expect(recover).not.toHaveBeenCalled();
+    });
+  });
+
+  it("ELP2-10 lost qualified-provider release ACK preserves FINISHED and retry cannot double apply", async () => {
+    const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted), proof = f.trust.seal(fact);
+    await withCurrentHuman(f, manager, async cell => {
+      const h = delegatedTrust(f, cell.pool, fact, { release: async () => {
+        expect((await storedGrant(submitted.receipt.grant_id!)).ts_receipt?.receipt_id).toBe(fact.receipt_id);
+        expect((await cell.pool.query("SELECT state FROM elp210_candidate.mutations")).rows).toEqual([{ state: "FINISHED" }]);
+        throw new Error("TEST_ONLY-provider-release-ACK-lost");
+      } });
+      await expect(cell.service(async () => undefined, h.trust).acceptTsReceipt(proof))
+        .rejects.toMatchObject({ code: "ACCESS_RETRY_REQUIRED", status: 503 });
+      const committed = await authorityRows(f), replay = await cell.service(async () => undefined, h.trust).acceptTsReceipt(proof);
+      expect(replay).toMatchObject({ replayed: true, receipt: { outcome: "TS_APPLIED" } });
+      expect(await authorityRows(f)).toEqual(committed); expect(h.calls()).toBe(1); expect(h.releases()).toBe(1); expect(h.held()).toBe(0);
+    });
+  });
+
+  it("ELP2-10 lost physical COMMIT ACK cannot turn a finished delegated receipt into REFUSED or reapply", async () => {
+    const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted), proof = f.trust.seal(fact);
+    await withCurrentHuman(f, manager, async cell => {
+      const lost = new Error("TEST_ONLY-delegated-COMMIT-ACK-lost"), h = delegatedTrust(f, cell.pool, fact);
+      const original = AccessRepository.prototype.event; let restored = false;
+      const event = vi.spyOn(AccessRepository.prototype, "event").mockImplementationOnce(async function (this: AccessRepository, input) {
+        await original.call(this, input);
+        expect(input.operation).toBe("TS_RECEIPT");
+        const db = this.db as import("pg").PoolClient, originalQuery = db.query, hadOwn = Object.hasOwn(db, "query");
+        const invoke = (...args: unknown[]) => (originalQuery as (...args: unknown[]) => Promise<unknown>).apply(db, args);
+        const restore = () => { if (hadOwn) db.query = originalQuery; else Reflect.deleteProperty(db, "query"); restored = db.query === originalQuery; };
+        db.query = (async (...args: unknown[]) => {
+          const command = typeof args[0] === "string" ? args[0] : (args[0] as { text?: unknown })?.text;
+          if (command === "COMMIT") { try { await invoke(...args); throw lost; } finally { restore(); } }
+          if (command === "ROLLBACK") { try { return await invoke(...args); } finally { restore(); } }
+          return invoke(...args);
+        }) as typeof db.query;
+      });
+      try {
+        await expect(cell.service(async () => undefined, h.trust).acceptTsReceipt(proof)).rejects.toBe(lost);
+        expect(restored).toBe(true);
+        expect((await cell.pool.query("SELECT state FROM elp210_candidate.mutations")).rows).toEqual([{ state: "FINISHED" }]);
+        const committed = await authorityRows(f);
+        expect((await cell.service(async () => undefined, h.trust).acceptTsReceipt(proof)).replayed).toBe(true);
+        expect(await authorityRows(f)).toEqual(committed); expect(h.calls()).toBe(1); expect(h.releases()).toBe(1);
+      } finally { event.mockRestore(); }
     });
   });
 

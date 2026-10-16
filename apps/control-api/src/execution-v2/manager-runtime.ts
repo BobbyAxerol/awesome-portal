@@ -83,6 +83,7 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
     const trust = this.installedTrust!;
     return { verifyPolicy:i=>trust.verifyPolicy(i),verifyReceipt:i=>trust.verifyReceipt(i),
       verifyRootReceipt:i=>trust.verifyRootReceipt?.(i) ?? Promise.resolve(null),
+      qualifyDelegatedReceipt:(i,s)=>trust.qualifyDelegatedReceipt?.(i,s) ?? Promise.resolve(null),
       relations:(u,w)=>trust.relations(u,w),verifiedHumanMapping:(u,w)=>trust.verifiedHumanMapping(u,w),
       readPublication:async request=>{
         if(request.binding.dataset_id!=="alpha_fleet_overview")return trust.readPublication?.(request) ?? null;

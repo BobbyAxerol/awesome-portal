@@ -28,6 +28,8 @@ const verifiedBinding = z.discriminatedUnion("family", [
     key_digest: hash, request_digest: hash, target_id: accessText }).strict(),
   z.object({ family: z.literal("QUALIFIED_ROOT_RECEIPT"), operation: z.literal("ROOT_RECEIPT"),
     key_digest: hash, request_digest: hash, target_id: accessText }).strict(),
+  z.object({ family: z.literal("QUALIFIED_DELEGATED_RECEIPT"), operation: z.literal("ACCEPT_RECEIPT"),
+    key_digest: hash, request_digest: hash, target_id: accessText }).strict(),
 ]);
 export type CurrentHumanVerifiedMutationBinding = z.infer<typeof verifiedBinding>;
 export type CurrentHumanRecoveryAttempt = Awaited<ReturnType<CurrentHumanCandidate["recoverableAttempts"]>>[number];

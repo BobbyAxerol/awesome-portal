@@ -17,6 +17,7 @@ import { KeysetCursorCodec } from "../query/cursor";
 import { querySigningKeys } from "../config";
 import type { ExecutionReadPublicationRequest } from "./read-publication";
 import { acceptRootMembershipReceipt } from "./access-root-receipt";
+import { coordinateDelegatedMembershipReceipt, type DelegatedReceiptSource } from "./access-delegated-receipt";
 import { captureCurrentHumanSnapshot } from "./current-human-snapshot";
 import { CurrentHumanLeaseError } from "./current-human-candidate";
 import { CurrentHumanMutations, type CurrentHumanMutationBinding, type CurrentHumanMutationHooks } from "./current-human-mutations";
@@ -605,49 +606,57 @@ export class ExecutionAccessService {
     const parsed=tsMembershipAcceptance.safeParse(verified);
     if(!parsed.success)throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH",409);
     const fact=parsed.data,digest=accessDigest(fact);
-    const prepared=await withTransaction(this.pool,async db=>{
+    const historical=(prior:AccessEvent|null):OperationResult|null=>{
+      if(!prior)return null;
+      if(prior.operation!=="TS_RECEIPT"||prior.request_digest!==digest||prior.workspace_id!==fact.workspace_id||
+        prior.proposal_id!==fact.proposal_id||prior.subject_user_id!==fact.portal_user_id)
+        throw new AccessPolicyError("RECEIPT_PAYLOAD_CONFLICT",409);
+      return {receipt:prior.receipt,replayed:true};
+    };
+    const captured=await withTransaction(this.pool,async db=>{
       await db.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY");
       await db.query("SET LOCAL statement_timeout='5000ms'");
-      const prior=await new AccessRepository(db).sourceEvent(fact.source,fact.receipt_id);
-      if(prior){
-        if(prior.request_digest!==digest)throw new AccessPolicyError("RECEIPT_PAYLOAD_CONFLICT",409);
-        return null; // Historical replay needs no new current-source authority.
-      }
-      return this.receiptCoreSnapshot(db,fact);
+      const prior=historical(await new AccessRepository(db).sourceEvent(fact.source,fact.receipt_id));
+      return prior?{prior,snapshot:null}:{prior:null,snapshot:await this.receiptCoreSnapshot(db,fact)};
     });
+    // Immutable source facts can predate the coordinator. Authentication above
+    // still applies, but old ACK must not drain unrelated work or regrant.
+    if(captured.prior)return captured.prior;
+    const prepared=captured.snapshot!;
     const relations=new Map<string,AccessRelations>();
-    let mapping:Awaited<ReturnType<AccessTrustProvider["verifiedHumanMapping"]>>=null;
-    if(prepared){
-      for(const id of prepared.principalIds)
-        relations.set(id,structuredClone(await this.trust.relations(id,fact.workspace_id)));
-      mapping=structuredClone(await this.trust.verifiedHumanMapping(prepared.grant.subject_user_id,fact.workspace_id));
-      // Preserve the latest source-membership check after the mapping await,
-      // but perform it before taking ANY Core mutation lock/connection.
-      relations.set(prepared.grant.subject_user_id,
-        structuredClone(await this.trust.relations(prepared.grant.subject_user_id,fact.workspace_id)));
-    }
-    return withTransaction(this.pool,async db=>{
+    for(const id of prepared.principalIds)
+      relations.set(id,structuredClone(await this.trust.relations(id,fact.workspace_id)));
+    const mapping=structuredClone(await this.trust.verifiedHumanMapping(prepared.grant.subject_user_id,fact.workspace_id));
+    // These detached reads preserve pre-drain delegation authorization only.
+    // They are never claimed as held current-source proof through COMMIT.
+    relations.set(prepared.grant.subject_user_id,
+      structuredClone(await this.trust.relations(prepared.grant.subject_user_id,fact.workspace_id)));
+    const initial:DelegatedReceiptSource={fact,mapping,relations:[...relations].map(([principal_id,relations])=>({principal_id,relations}))};
+    const process=async(db:PoolClient,write:boolean,source:DelegatedReceiptSource,guard?:()=>void):Promise<OperationResult|null>=>{
       await db.query("SET LOCAL lock_timeout='1500ms'");
       await db.query("SET LOCAL statement_timeout='5000ms'");
       await db.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[`portal-access-v2:${fact.workspace_id}`]);
-      const repo=new AccessRepository(db),prior=await repo.sourceEvent(fact.source,fact.receipt_id);
-      if(prior){if(prior.request_digest!==digest)throw new AccessPolicyError("RECEIPT_PAYLOAD_CONFLICT",409);return {receipt:prior.receipt,replayed:true};}
+      const repo=new AccessRepository(db),prior=historical(await repo.sourceEvent(fact.source,fact.receipt_id));
+      if(prior){guard?.();return prior;}
       const current=await this.receiptCoreSnapshot(db,fact,true);
-      if(!prepared||current.authority_fingerprint!==prepared.authority_fingerprint)
+      if(current.authority_fingerprint!==prepared.authority_fingerprint)
         throw new AccessPolicyError("RECEIPT_REVISION_CONFLICT",409);
       const {row,policy,grants,grant,active}=current;
+      const relationMap=new Map(source.relations.map(entry=>[entry.principal_id,entry.relations]));
       const context:AccessEvaluationContext={principal_id:row.actor_user_id,workspace_id:fact.workspace_id,now_ms:await this.now(db),
         actor_current:active.has(row.actor_user_id),policy,grants,active_principals:active,allow_test_only:this.allowTestOnly,
-        relationsFor:id=>relations.get(id)??{qualified:false,revision:"UNQUALIFIED",own_alpha_ids:[],member_portfolio_ids:[],roots:{},membership:null}};
+        relationsFor:id=>relationMap.get(id)??{qualified:false,revision:"UNQUALIFIED",own_alpha_ids:[],member_portfolio_ids:[],roots:{},membership:null}};
       const assertCurrent=()=>{
         if(!active.has(grant.subject_user_id)||grant.valid_until_ms!==null&&grant.valid_until_ms<=context.now_ms)
           throw new AccessPolicyError("RECEIPT_REVISION_CONFLICT",409);
         const ceiling=grants.find(g=>g.grant_id===row.change.ceiling_grant_id);
         validateDelegation(context,{...row.change,expected_policy_revision:policy.revision,
           expected_ceiling_revision:ceiling?.revision??row.change.expected_ceiling_revision});
+        guard?.();
       };
       assertCurrent();
-      this.validateTsBinding(fact,row,grant,policy,mapping,relations.get(grant.subject_user_id)?.membership??null);
+      this.validateTsBinding(fact,row,grant,policy,source.mapping,relationMap.get(grant.subject_user_id)?.membership??null);
+      if(!write)return null;
       const outcome=fact.outcome==="ACCEPTED"?"TS_APPLIED":fact.outcome==="REJECTED"?"TS_REJECTED":"TS_UNKNOWN";
       const updated=fact.outcome==="ACCEPTED"?{...grant,revision:randomId("acr"),ts_receipt:{receipt_id:fact.receipt_id,
         membership_revision:fact.membership_revision,mapping_revision:fact.mapping_revision,effective_at_ms:fact.effective_at_ms,
@@ -664,7 +673,13 @@ export class ExecutionAccessService {
           payload_digest:fact.payload_digest,provenance_ref:fact.provenance_ref},receipt});
       context.now_ms=await this.now(db);assertCurrent();
       return {receipt,replayed:false};
-    });
+    };
+    if(this.authorityMutations)return coordinateDelegatedMembershipReceipt(this.pool,this.authorityMutations,
+      this.trust.qualifyDelegatedReceipt?.bind(this.trust),input,
+      {workspace_id:fact.workspace_id,subject_user_id:prepared.grant.subject_user_id,principal_ids:prepared.principalIds},initial,process);
+    const result=await withTransaction(this.pool,db=>process(db,true,initial));
+    if(!result)throw new AccessPolicyError("RECEIPT_NOT_QUALIFIED",503);
+    return result;
   }
   private validateTsBinding(fact:TsMembershipAcceptance,row:{actor_user_id:string;request_digest:string;change:GrantChange},
     grant:ScopedAccessGrant,policy:ReviewedAccessPolicy,

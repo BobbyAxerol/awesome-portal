@@ -834,3 +834,100 @@ history. Actual trust/provider/current source installation, the verified
 issuance decision, approved numeric budget/calibration and allocated original
 G2/coexistence stay OPEN. No new Claude type/UI task; backend next is the
 ordinary delegated receipt held-source purpose within ELP2-10, not ELP2-11.
+
+## Ordinary delegated receipt purpose — entry a241a587
+
+Previous purpose batch landed as `a241a58709b711a7e92135471bc69d193fecaf44`.
+Terminal `purpose-land-221524/controller.json` is PASS:691contracts,
+4259API PASS/3existing skips, build and scoped PostgreSQL restore/4row digests;
+eight runtime tuples unchanged, zero owned resources, own lock released.
+Receipt SHA256 `0ce404a10b94293c5020e241d7f9730b3c49df230f69bdad3c93358d58fecf84`;
+log SHA256 `b562460a712ea640de2e336ed09e1cca14c51d9dab36dd8a6e49b71796d8aea1`.
+This closes the local10-004 historical-policy regression, not real provider
+commissioning. Contract/API counts overlap focused tests and are not added.
+
+New entry is clean `docs/research-loop-plan` at that exact SHA. Same approved
+ELP2-10 local4CPU/4GiB/8GiB envelope; one heavy lane, normal hook, foreign
+locks honored. No frontend, public schema/generated type, numbered migration,
+source activation, credentials, preview/runtime update, push or ELP2-11.
+
+Confirmed local gap **ELP2-REQ-10-005** (sender/reviewer primary security review;
+receiver/owner Codex; current-human05-001/07-001): ordinary `acceptTsReceipt`
+has a final locked Core fingerprint, but only detached source mapping/relations.
+They do not prove source revocation fencing through physical Core COMMIT.
+Done-when: private qualified scope/provider contract, exact source snapshots,
+signed recovery before reacquisition outside Core, existing delegation checks,
+held fence through physical outcome, immutable historical replay and real-PG
+rollback/retry/lost-ACK tests; actual provider qualification stays separate.
+Status IN_PROGRESS, not test/runtime PASS.
+
+Task map: primary owns the new delegated module, access service/trust,
+coordinator/isolated installer, manager/publication wrapper forwarding,
+commissioning wrapper tests, Unified and this packet. Delegated test author
+prepared only a private patch for `elp2-access-transaction.spec.ts` (20cases,
+NOT_RUN); primary reviews/applies it and adds REJECTED/UNKNOWN regressions.
+Independent draft review ACCEPT, no static must-fix; not test evidence.
+One writer per path, one grouped normal hook, no separate repeated full focus.
+Source/budget/calibration/browser receipts are not replaced by these fixtures.
+
+### Delegated implementation / acceptance matrix
+
+- New private `access-delegated-receipt.ts` defines the exact workspace,
+  subject and complete Core principal scope. Strict detached source fact,
+  mapping and each principal's relation/membership are compared after recovery;
+  only declared sets are order-normalized, no missing rows/default authority.
+  A genuine held provider fence is required for NEW coordinated receipts.
+- `QUALIFIED_DELEGATED_RECEIPT/ACCEPT_RECEIPT` binds source+receipt identity
+  and the entire normalized fact digest, with actor/session/generation NULL.
+  Raw SQL and strict verified-binding checks prohibit fabricated human fields.
+  Existing human metadata constraints and all delegation/TS-binding checks stay.
+- Original immutable authenticated source events ACK before new authority
+  drain/qualification. Replayed history cannot restore revoked grants. Pending
+  changed payload409; missing qualification503; UNKNOWN never expires into ACK.
+  REJECTED/UNKNOWN are recorded outcomes, not accepted business authority.
+- Source I/O and recovery use no held Core connection. Fresh proof is acquired
+  after signed terminal readback, held through physical COMMIT/ROLLBACK and
+  released afterwards. Guard failure rolls back; post-COMMIT/lost-release ACK
+  stays uncertain503 or original error, retry reads the original event, never
+  FINISHED→REFUSED or double-applies. Existing submission receipts stay intact.
+- Both private catalogue/Manager wrappers preserve provider receiver and scope;
+  no provider is installed by defining/forwarding this port. The uncoordinated
+  legacy path remains compatible, not claimed current-human-qualified.
+
+Authored acceptance:22 real-PG cases (20 delegated contribution +2 primary
+REJECTED/UNKNOWN),1 synthetic wrapper case, existing raw metadata assertions
+expanded to the new family. Scenarios cover ENTERED/unsigned ACK/real signed
+resolution, restart/TTL UNKNOWN,8 changed-proof classes, equivalent set order,
+Core race, no/refused provider, sync/async guard rollback, immutable history,
+source-release ACK loss and actual physical COMMIT ACK loss. The max1 helper
+proves source/recovery/release do not hold a Core client; it is not two-client
+contention. Existing generic coordinator contention coverage is distinct reuse.
+Tests remain NOT_RUN until the normal-hook terminal result; no invented PASS.
+Independent final diff review is requested with no write/Git/test authority.
+
+Final independent static return: ACCEPT, no concrete must-fix in implementation,
+two test files or metadata/wrapper changes. No build/DB/test/resource operation
+was delegated. This is review only, not a passing gate or provider qualification.
+
+Owned landing paths: new delegated module; access service/trust; candidate
+installer and mutation binding; Manager runtime/publication adapter;
+`elp2-access-transaction.spec.ts`, `elp210-commissioning.spec.ts`; this packet
+and Unified. No other source, schema/generated output, frontend or numbered
+migration belongs to this batch. Private controller batch `delegated` records
+the frozen hashes and real result at `delegated-land-HHMMSS/controller.json`.
+Require exit0, exact committed HEAD, unchanged eight runtime tuples and zero
+owned resources. No second full hook merely to copy its final status here.
+
+C4 after purpose batch: MemAvailable11171792KiB/32862520; root free
+167597023232bytes,75%used. NO_ACTION_NEEDED; a shared host observation, not
+measured peak or a production budget. No shared cache/image/volume pruning.
+
+Rollback is to leave optional candidate composition unmounted; retain all
+identity/grants/immutable events and resolve used source leases before any
+future unmount. No permission restoration or policy rollback. Backend next
+remains ELP2-10: separate verified-issuance one-view decision, actual selected
+trust/provider installation, approved14-group budgets/calibration and allocated
+paired coexistence/original performanceG2. Consumer10-001 remains owner-held.
+Claude: no public type/field/design change; existing six Manager/360 handoffs
+AWAITING_CONSUMER_REVIEW. No new frontend request after comparison. Full10
+NOT_MET;11, push/dev/main/release/deploy/Live not started.

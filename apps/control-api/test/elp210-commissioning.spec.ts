@@ -9,6 +9,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { AppModule } from "../src/app.module";
 import { accessDigest } from "../src/execution-v2/access-policy";
 import { unqualifiedAccessTrust } from "../src/execution-v2/access-trust";
+import type { DelegatedReceiptScope } from "../src/execution-v2/access-delegated-receipt";
 import { ExecutionManagerRuntime, type ManagerRuntimeInstallation } from "../src/execution-v2/manager-runtime";
 import { loadPublicationCommissioning, qualifyDatasetPublication, withCataloguePublications } from "../src/execution-v2/publication-adapter";
 import { EXECUTION_PUBLICATION_CATALOGUE } from "../src/execution-v2/publication-source.generated";
@@ -110,6 +111,7 @@ describe("ELP2-10 private commissioning and real registered constructors (synthe
     expect(await trust.verifiedHumanMapping("bobby",scope.workspace_id)).toBeNull();
     expect(await trust.verifyPolicy({role:"ADMIN"})).toBeNull();
     expect(await trust.verifyRootReceipt!({role:"ADMIN"})).toBeNull();
+    expect(await trust.qualifyDelegatedReceipt!({role:"ADMIN"},{workspace_id:scope.workspace_id,subject_user_id:"SYNTHETIC-user",principal_ids:[]})).toBeNull();
     expect(await trust.readPublication!({...scope,binding:d.publication.authority.binding})).toEqual(d.publication.authority);
   });
   it("preserves the independently qualified root verifier across both private compositions",async()=>{
@@ -125,6 +127,22 @@ describe("ELP2-10 private commissioning and real registered constructors (synthe
     expect(verifyRootReceipt).toHaveBeenCalledTimes(2);
     expect(verifyRootReceipt).toHaveBeenNthCalledWith(1,token);
     expect(verifyRootReceipt).toHaveBeenNthCalledWith(2,token);
+  });
+  it("preserves the delegated provider receiver and exact scope across both private compositions",async()=>{
+    const c=commissioning(),token=Object.freeze({SYNTHETIC_NOT_A_RECEIPT:true});
+    const requested:DelegatedReceiptScope={workspace_id:scope.workspace_id,subject_user_id:"SYNTHETIC-user",principal_ids:["SYNTHETIC-user"]};
+    const qualifyDelegatedReceipt=vi.fn(async function(this:unknown,input:unknown,received:DelegatedReceiptScope){
+      expect(this).toBe(base);expect(input).toBe(token);expect(received).toEqual(requested);return null;
+    });
+    const base={...unqualifiedAccessTrust,qualifyDelegatedReceipt};
+    const composed=withCataloguePublications(base,async()=>null,{purpose:"BUSINESS",commissioning:c.handle,now:()=>now});
+    await expect(composed.qualifyDelegatedReceipt!(token,requested)).resolves.toBeNull();
+    const runtime=new ExecutionManagerRuntime({options:{connectionTimeoutMillis:2000,query_timeout:4000}} as Pool,
+      {trust:composed,cadence_ms:1000,maximum_publication_reads:1,partitions:[{scope,commissioning:c.handle,bounds,
+        publication:async()=>null,source:{read:async()=>null,recheck:async()=>({}),acknowledge:async()=>{}}}]});
+    try{await expect(runtime.accessTrust()!.qualifyDelegatedReceipt!(token,requested)).resolves.toBeNull();}
+    finally{await runtime.beforeApplicationShutdown();}
+    expect(qualifyDelegatedReceipt).toHaveBeenCalledTimes(2);
   });
   it("refuses expired commissioning before lease or source I/O",async()=>{
     const c=commissioning(),d=input(),query=vi.fn(),read=vi.fn(),publication=vi.fn();
