@@ -40,6 +40,12 @@ Chúng không thay thế phase hoặc exit gate trong
   exit NOT_MET for actual03publication +01capacity/permissions, never fixture
   authority. Owned1.909GB private build/cache/source removed and own PG/lock0;
   12HK+5SGP runtime tuples unchanged/restarts0. No source grant/route/deploy.
+  **05 (§23.14), approved/in progress, owned implementation tested/source-dark:**
+  scoped read/history/export/cache and notification-only fanout;191automated PASS,
+  0FAIL/skip, fmt/strict clippy PASS;8formal families PASS isolated. Full connected
+  exit NOT_MET for04source +06budgets +08read-security/TLS +partner BFF receipts,
+  0owned debt. Own2.266GB source/target/cache/test logs removed;12HK+5SGP protected
+  tuples unchanged/restarts0. No BFF route, TS fallback/source grant or activation.
 
 - [Official Trading System owner request — Portal Execution capability campaign](./TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md)
   — **the governing owner request.** It consolidates N02/N03 incremental

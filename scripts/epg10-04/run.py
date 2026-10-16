@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """One isolated SGP Rust/PG correctness run; never performance acceptance.
 
-Private input: /tmp/epg10-04-*/{source/,run.py,test_run.py,
-execution_edge_observe.py,epg03_run.py}. source/ is the exact Rust workspace.
-Root supplies EPG10_PORTAL_REVISION and EPG10_EXPECT_BOOTSTRAP_TESTS. Only an
+Private input: /tmp/epg10-{04,05}-*/{source/,run.py,test_run.py,
+execution_edge_observe.py,epg03_run.py}. For04 source/ is the exact Rust
+workspace; for05 it preserves services/portal-execution-edge-rs plus the exact
+shared packages/contracts/fixtures/keyset-page.valid.json monorepo layout.
+EPG10_TEST_PROFILE is explicitly 04 or 05 (default04). Root supplies
+EPG10_PORTAL_REVISION, EPG10_EXPECT_BOOTSTRAP_TESTS and, for05,
+EPG10_EXPECT_READ_TESTS. Only an
 explicit EPG10_ALLOW_DEPENDENCY_FETCH=1 permits the first locked compile to fetch;
 every subsequent Cargo command is offline. No production/source credentials are
 inherited. Logs/rows/ephemeral DB credentials remain private, never stdout.
@@ -28,6 +32,9 @@ LABEL = 'portal.measurement.owner'
 TOOLCHAIN = '/home/bobby/.rustup/toolchains/1.85.1-x86_64-unknown-linux-gnu/bin'
 MAX_LOG_BYTES = 8 * 1024 * 1024
 LOCK_SECONDS = 1500
+RUST_WORKSPACE = 'services/portal-execution-edge-rs'
+SHARED_FIXTURE = 'packages/contracts/fixtures/keyset-page.valid.json'
+MAX_SHARED_FIXTURE_BYTES = 64 * 1024
 OWNED_RUST = (
     'crates/authoritative-event-core/src/bootstrap.rs',
     'crates/authoritative-event-core/src/bootstrap/tests.rs',
@@ -35,27 +42,61 @@ OWNED_RUST = (
     'crates/projection-store-pg/tests/epg10_04_bootstrap.rs',
     'crates/projection-store-pg/tests/epg10_04_bootstrap/edge_cases.rs',
 )
+SCOPED_OWNED_RUST = (
+    'crates/query-api/src/scoped.rs',
+    'crates/realtime-sse/src/scoped.rs',
+    'crates/projection-store-pg/src/scoped_read.rs',
+    'crates/projection-store-pg/tests/epg10_05_scoped_read.rs',
+)
 
 
-def load_cleanup_helpers(base):
+def test_profile(profile=None):
+    value = os.environ.get('EPG10_TEST_PROFILE', '04') if profile is None else profile
+    if value not in ('04', '05'):
+        raise ValueError('EXPLICIT_TEST_PROFILE_04_OR_05_REQUIRED')
+    return value
+
+
+def owned_rust(profile=None):
+    return OWNED_RUST + (SCOPED_OWNED_RUST if test_profile(profile) == '05' else ())
+
+
+def package_arguments(profile=None):
+    packages = ['authoritative-event-core', 'projection-store-pg']
+    if test_profile(profile) == '05':
+        packages = ['query-api', 'realtime-sse', *packages]
+    return [argument for package in packages for argument in ('-p', package)]
+
+
+def expected_test_count(value, kind):
+    if kind not in ('BOOTSTRAP', 'READ'):
+        raise ValueError('EXPLICIT_TEST_COUNT_KIND_REQUIRED')
+    if not isinstance(value, str) or not re.fullmatch('[1-9][0-9]{0,2}', value) or int(value) > 128:
+        raise ValueError('EXACT_BOUNDED_' + kind + '_TEST_COUNT_REQUIRED')
+    return int(value)
+
+
+def load_cleanup_helpers(base, profile=None):
     """Reuse the accepted 03 cleanup without editing it or sharing its target."""
+    profile = test_profile(profile)
     helper = base / 'epg03_run.py'
     observer_dir = base
     if not helper.exists():
         helper = Path(__file__).resolve().parent.parent / 'epg10-03/run.py'
         observer_dir = helper.parent.parent
     sys.path.insert(0, str(observer_dir))
-    spec = importlib.util.spec_from_file_location('epg10_04_cleanup_helpers', helper)
+    spec = importlib.util.spec_from_file_location('epg10_' + profile + '_cleanup_helpers', helper)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     suffix = hashlib.sha256(str(base).encode()).hexdigest()[:12]
-    module.OWNER = 'codex-epg10-04-' + suffix
-    module.PG = 'epg10-04-pg-' + suffix
+    module.OWNER = 'codex-epg10-' + profile + '-' + suffix
+    module.PG = 'epg10-' + profile + '-pg-' + suffix
     return module
 
 
-def validate_base(base):
-    if (not re.fullmatch(r'/tmp/epg10-04-[A-Za-z0-9_.-]+', str(base))
+def validate_base(base, profile=None):
+    profile = test_profile(profile)
+    if (not re.fullmatch(r'/tmp/epg10-' + profile + r'-[A-Za-z0-9_.-]+', str(base))
             or base.is_symlink() or base.resolve() != base):
         raise ValueError('PRIVATE_DISPOSABLE_PATH_REQUIRED')
     stat = base.stat()
@@ -63,9 +104,26 @@ def validate_base(base):
         raise ValueError('PRIVATE_OWNED_DIRECTORY_REQUIRED')
 
 
-def source_hashes(source):
+def workspace_directory(source, profile=None):
+    """Preserve shared compile-time paths inside the exact private source root."""
+    profile = test_profile(profile)
     if source.is_symlink() or not source.is_dir():
         raise ValueError('EXACT_SOURCE_DIRECTORY_REQUIRED')
+    if profile == '04':
+        return source
+    current = source
+    for part in Path(RUST_WORKSPACE).parts:
+        current /= part
+        if current.is_symlink():
+            raise ValueError('SOURCE_SYMLINK_NOT_ALLOWED')
+        if not current.is_dir():
+            raise ValueError('EXACT_OWNED_INPUT_MISSING')
+    return current
+
+
+def source_hashes(source, profile=None):
+    profile = test_profile(profile)
+    workspace_directory(source, profile)
     hashes = {}
     total = 0
     for path in sorted(source.rglob('*')):
@@ -79,12 +137,18 @@ def source_hashes(source):
                     and path.name not in ('.env.example', '.env.sample', '.env.template')):
                 raise ValueError('PRIVATE_CONFIG_NOT_SOURCE_INPUT')
             size = path.stat().st_size
+            if profile == '05' and relative.as_posix() == SHARED_FIXTURE:
+                if not 0 < size <= MAX_SHARED_FIXTURE_BYTES:
+                    raise ValueError('BOUNDED_SHARED_FIXTURE_REQUIRED')
             total += size
             if len(hashes) >= 10000 or total > 128 * 1024 * 1024:
                 raise ValueError('SOURCE_INPUT_BOUNDS')
             hashes[relative.as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
-    required = ('Cargo.toml', 'Cargo.lock', *OWNED_RUST,
+    required = ('Cargo.toml', 'Cargo.lock', *owned_rust(profile),
                 'crates/projection-store-pg/migrations/0019_scoped_bootstrap.sql')
+    if profile == '05':
+        required += ('crates/projection-store-pg/migrations/0020_scoped_read.sql',)
+        required = tuple(RUST_WORKSPACE + '/' + path for path in required) + (SHARED_FIXTURE,)
     if any(path not in hashes for path in required):
         raise ValueError('EXACT_OWNED_INPUT_MISSING')
     return hashes
@@ -151,7 +215,7 @@ def run_logged(args, log_path, *, cwd, env, timeout, check=True):
         process.stdout.close()
 
 
-def parse_rust_results(text, expected_summaries, expected_passed=None):
+def parse_rust_results(text, expected_summaries, expected_passed=None, count_kind='BOOTSTRAP'):
     rows = re.findall(r'test result: ok\. (\d+) passed; (\d+) failed; '
                       r'(\d+) ignored; (\d+) measured; (\d+) filtered out', text)
     if (len(rows) != expected_summaries or any(int(value) for row in rows for value in row[1:])
@@ -159,7 +223,7 @@ def parse_rust_results(text, expected_summaries, expected_passed=None):
         raise ValueError('ALL_REQUIRED_RUST_TESTS_MUST_RUN_AND_PASS')
     passed = sum(int(row[0]) for row in rows)
     if expected_passed is not None and passed != expected_passed:
-        raise ValueError('EXACT_BOOTSTRAP_TEST_COUNT_REQUIRED')
+        raise ValueError('EXACT_' + count_kind + '_TEST_COUNT_REQUIRED')
     return dict(passed=passed, failed=0, ignored=0, measured=0, filtered_out=0,
                 test_binaries=len(rows), passed_per_binary=[int(row[0]) for row in rows])
 
@@ -171,7 +235,8 @@ def parse_safety_results(text):
     return dict(passed=int(count[0]), failed=0, skipped=0)
 
 
-def clippy_findings(text):
+def clippy_findings(text, profile=None):
+    paths = owned_rust(profile)
     owned, upstream = [], 0
     for line in text.splitlines():
         if not line.startswith('{'):
@@ -181,7 +246,7 @@ def clippy_findings(text):
         if not isinstance(message, dict) or message.get('level') != 'warning':
             continue
         if any(span.get('is_primary') and any(span.get('file_name', '').endswith(path)
-               for path in OWNED_RUST) for span in message.get('spans', [])):
+               for path in paths) for span in message.get('spans', [])):
             owned.append((message.get('code') or {}).get('code', 'warning'))
         else:
             upstream += 1
@@ -233,7 +298,7 @@ class OwnPgSampler:
                            pid=value['pid'], start_ticks=start, cgroup=group,
                            restarts=value['restarts'])]
         self.capture()
-        self.thread = threading.Thread(target=self.poll, daemon=True, name='epg10-04-pg-observer')
+        self.thread = threading.Thread(target=self.poll, daemon=True, name=self.helper.PG + '-observer')
         self.thread.start()
 
     def process_rss_sum(self):
@@ -359,10 +424,12 @@ def finish_observation_and_cleanup(receipt, sampler, helper, attempted, lock_con
 def main():
     os.umask(0o077)
     base = Path(__file__).absolute().parent
-    validate_base(base)
-    helper = load_cleanup_helpers(base)
-    source = base / 'source'
-    receipt = dict(schema='epg10.bootstrap-correctness.v1', status='FAIL',
+    profile = test_profile()
+    validate_base(base, profile)
+    helper = load_cleanup_helpers(base, profile)
+    source_root = base / 'source'
+    receipt = dict(schema=('epg10.bootstrap-correctness.v1' if profile == '04'
+                          else 'epg10.scoped-read-correctness.v1'), test_profile=profile, status='FAIL',
                    at_utc=datetime.now(timezone.utc).isoformat(),
                    provenance='TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL', runtime_activation=False,
                    production_mutations=0, source_requests=0, pg_image=IMAGE,
@@ -380,17 +447,19 @@ def main():
     signal.alarm(LOCK_SECONDS - 30)
     try:
         revision = os.environ['EPG10_PORTAL_REVISION']
-        expected = os.environ['EPG10_EXPECT_BOOTSTRAP_TESTS']
+        expected = expected_test_count(os.environ['EPG10_EXPECT_BOOTSTRAP_TESTS'], 'BOOTSTRAP')
+        expected_read = (expected_test_count(os.environ.get('EPG10_EXPECT_READ_TESTS'), 'READ')
+                         if profile == '05' else None)
         if not re.fullmatch('[0-9a-f]{40}', revision):
             raise ValueError('EXACT_SOURCE_REVISION_REQUIRED')
-        if not re.fullmatch('[1-9][0-9]{0,2}', expected) or int(expected) > 128:
-            raise ValueError('EXACT_BOUNDED_BOOTSTRAP_TEST_COUNT_REQUIRED')
         receipt['source_revision'] = revision
-        receipt['expected_bootstrap_tests'] = int(expected)
+        receipt['expected_bootstrap_tests'] = expected
+        if expected_read is not None:
+            receipt['expected_read_tests'] = expected_read
         # Existing observer helper reserves 90s itself; pass1410 for an exact
         # 1500s lease, with a separate30s local cleanup reserve.
         lock_context = helper.obs.measurement_lock(helper.obs.LOCK, helper.OWNER,
-            LOCK_SECONDS - 90, 'EPG10-04 isolated SGP correctness only; no HK/source requests; not capacity')
+            LOCK_SECONDS - 90, 'EPG10-' + profile + ' isolated SGP correctness only; no HK/source requests; not capacity')
         lock = lock_context.__enter__()
         lock_acquired = True
         receipt['lock_window_seconds'] = LOCK_SECONDS
@@ -402,7 +471,9 @@ def main():
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout.decode().strip()
         if actual != IMAGE:
             raise ValueError('EXACT_CACHED_PG_IMAGE_REQUIRED')
-        receipt['input_hashes'] = source_hashes(source)
+        receipt['input_hashes'] = source_hashes(source_root, profile)
+        source = workspace_directory(source_root, profile)
+        receipt['source_workspace_relative'] = source.relative_to(source_root).as_posix()
         receipt['input_manifest_sha256'] = hashlib.sha256(json.dumps(
             receipt['input_hashes'], sort_keys=True, separators=(',', ':')).encode()).hexdigest()
         receipt['runner_hashes'] = {name: hashlib.sha256((base / name).read_bytes()).hexdigest()
@@ -430,8 +501,13 @@ def main():
         allow_fetch = os.environ.get('EPG10_ALLOW_DEPENDENCY_FETCH') == '1'
         compile_env['CARGO_NET_OFFLINE'] = 'false' if allow_fetch else 'true'
         receipt['dependency_fetch_allowed_during_compile_only'] = allow_fetch
-        logged(stage, ['cargo', 'test', '--locked', '-p', 'authoritative-event-core',
-            '-p', 'projection-store-pg', '--lib', '--no-run'], timeout=900, run_env=compile_env)
+        packages = package_arguments(profile)
+        logged(stage, ['cargo', 'test', '--locked', *packages, '--lib', '--no-run'],
+            timeout=900, run_env=compile_env)
+        if profile == '05':
+            stage = 'compile_integration_tests'
+            logged(stage, ['cargo', 'test', '--offline', '--locked', '-p', 'projection-store-pg',
+                '--tests', '--no-run'], timeout=240)
         helper.obs.verify_lock(helper.obs.LOCK, lock)
         stage = 'create_owned_pg'
         password = secrets.token_urlsafe(24)
@@ -462,33 +538,44 @@ def main():
             raise ValueError('LOOPBACK_DYNAMIC_PG_PORT_REQUIRED')
         env['TEST_PROJECTION_DATABASE_URL'] = 'postgres://postgres:' + password + '@' + port + '/portal_projection_test_epg10_04'
         env['EPG10_TEST_ONLY'] = '1'
+        # The legacy04 integration harness intentionally uses this exact DB
+        # name for both profiles; container name/owner remain profile-isolated.
         stage = 'postgresql_observer_start'
         sampler = OwnPgSampler(helper)
         sampler.start()
         stage = 'unit_tests'
         receipt['unit_tests'] = parse_rust_results(logged(stage,
-            ['cargo', 'test', '--offline', '--locked', '-p', 'authoritative-event-core',
-             '-p', 'projection-store-pg', '--lib', '--', '--test-threads=1'], timeout=240), 2)
+            ['cargo', 'test', '--offline', '--locked', *packages,
+             '--lib', '--', '--test-threads=1'], timeout=240), 4 if profile == '05' else 2)
         stage = 'bootstrap_tests'
         receipt['bootstrap_tests'] = parse_rust_results(logged(stage,
             ['cargo', 'test', '--offline', '--locked', '-p', 'projection-store-pg',
              '--test', 'epg10_04_bootstrap', '--', '--nocapture', '--test-threads=1'], timeout=240),
-             1, int(expected))
+             1, expected)
+        database_stages = ['unit_tests', 'bootstrap_tests']
+        if profile == '05':
+            stage = 'read_tests'
+            receipt['read_tests'] = parse_rust_results(logged(stage,
+                ['cargo', 'test', '--offline', '--locked', '-p', 'projection-store-pg',
+                 '--test', 'epg10_05_scoped_read', '--', '--nocapture', '--test-threads=1'], timeout=240),
+                 1, expected_read, count_kind='READ')
+            database_stages.append(stage)
         stage = 'post_suite_test_db_counts'
         receipt['test_database_counts'] = owned_db_counts(helper, sampler.roster[0]['container_id'])
         receipt['database_test_stage_seconds_observational'] = {
-            name: receipt['stages'][name]['elapsed_seconds'] for name in ('unit_tests', 'bootstrap_tests')}
+            name: receipt['stages'][name]['elapsed_seconds'] for name in database_stages}
         stage = 'clippy'
         findings = clippy_findings(logged(stage,
-            ['cargo', 'clippy', '--offline', '--locked', '-p', 'authoritative-event-core',
-             '-p', 'projection-store-pg', '--all-targets',
-             '--message-format=json'], timeout=240, check=False))
+            ['cargo', 'clippy', '--offline', '--locked', *packages, '--all-targets',
+             '--message-format=json', *(['--', '-D', 'warnings'] if profile == '05' else [])],
+            timeout=240, check=False), profile)
         receipt['clippy'] = findings
         if receipt['stages'][stage]['returncode'] or findings['owned_warnings']:
             raise ValueError('CLIPPY_GATE_FAILED_PRIVATE_LOG')
-        receipt['clippy']['status'] = 'PASS_NO_OWNED_WARNINGS'
+        receipt['clippy']['status'] = ('PASS_STRICT_ZERO_WARNINGS' if profile == '05'
+                                       else 'PASS_NO_OWNED_WARNINGS')
         stage = 'input_immutability'
-        if source_hashes(source) != receipt['input_hashes']:
+        if source_hashes(source_root, profile) != receipt['input_hashes']:
             raise ValueError('SOURCE_INPUT_CHANGED_DURING_QUALIFICATION')
         receipt['source_input_unchanged'] = True
         receipt['foreign_test_metadata_after'] = peer_test_metadata(helper)

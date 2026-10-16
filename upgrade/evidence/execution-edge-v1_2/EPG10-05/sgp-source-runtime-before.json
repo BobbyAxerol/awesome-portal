@@ -1,0 +1,106 @@
+{
+  "at_utc": "2026-10-16T05:19:56.458806+00:00",
+  "disk_available_bytes": 168666017792,
+  "docker_inventory": [
+    {
+      "Active": "26",
+      "Reclaimable": "74.4GB (83%)",
+      "Size": "88.82GB",
+      "TotalCount": "328",
+      "Type": "Images"
+    },
+    {
+      "Active": "52",
+      "Reclaimable": "471kB (19%)",
+      "Size": "2.466MB",
+      "TotalCount": "60",
+      "Type": "Containers"
+    },
+    {
+      "Active": "22",
+      "Reclaimable": "13.78GB (43%)",
+      "Size": "32GB",
+      "TotalCount": "97",
+      "Type": "Local Volumes"
+    },
+    {
+      "Active": "93",
+      "Reclaimable": "62.97GB",
+      "Size": "195.9GB",
+      "TotalCount": "3776",
+      "Type": "Build Cache"
+    }
+  ],
+  "host": "SGP",
+  "host_lock": null,
+  "owned_epg03_containers": [],
+  "research_contracts": {
+    "apps/control-api/src/execution-v2/read-publication.ts": "61fd25aadecfb358949e3b6096f9fc9cd620bedb0e7a846a031204f4a6cb34ba",
+    "packages/contracts/fixtures/execution-v2-foundation.synthetic.valid.json": "7b3044c2f4c990633a4550ab2c521f0fdf0108f9e70027bcbc1c2df02643cb75",
+    "packages/contracts/schemas/execution-v2-foundation.v1.schema.json": "7a28e0545005789da1a54d304dbf242a2413d464aa905b83d5641e40821c4828"
+  },
+  "running_container_count": 52,
+  "runtime": [
+    {
+      "config": "963a3d8436bd48220cc41cafb73a18e8c6d0d4fd6abe72eddb843539b8918f60",
+      "image": "sha256:8400439bc2cea6baf9bb86d3b4e851d4a0601531de86a7c1a47347f5837b7641",
+      "name": "/portal-control-api-1",
+      "release_path": "/home/bobby/portal-integration",
+      "restarts": 0,
+      "revision": ""
+    },
+    {
+      "config": "e0e3c404d22c6ae26fa993e3d56433591bcaf7c77fc89a675b21f4856ff87840",
+      "image": "sha256:c2fb7a8c1122f8b737c3cefee1b78cafda7b025a0f8c36b56b5b9424a1b9ea31",
+      "name": "/portal-portal-web-1",
+      "release_path": "/home/bobby/portal-integration",
+      "restarts": 0,
+      "revision": ""
+    },
+    {
+      "config": "42a9f3ad29ba77eeab6683f99070469673bb2f78824f3c4191093f8ee664306d",
+      "image": "sha256:d13cef069471be8b34c7d6f0cda4b6df55e892812c7ea8bf0f17846256e76e6d",
+      "name": "/portal-research-preview-control-api-1",
+      "release_path": "/home/bobby/portal-research",
+      "restarts": 0,
+      "revision": ""
+    },
+    {
+      "config": "59551a2cdeb2bb8696602336920f30db42cd61b9ecaed3cbd55ebd96e50d4fd4",
+      "image": "sha256:20da76618efb92e1b8930339a6797aba3b5bc72849bdf5173c62617cf554b2b5",
+      "name": "/portal-research-preview-portal-api-1",
+      "release_path": "/home/bobby/portal-research",
+      "restarts": 0,
+      "revision": ""
+    },
+    {
+      "config": "26c0d954d1f3af2133b2a528f39430f814e3c35d350095aecf7178f3bc90cedb",
+      "image": "sha256:d2c23ad668fcf4e03e0c6edffe9b9cc1a8d5a7b3787dd9ae280677f76e965263",
+      "name": "/portal-stable-v1-0-1-control-api-1",
+      "release_path": "/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose",
+      "restarts": 0,
+      "revision": "e4fd93658de1ff0614126a85d70e59a23c25a01f"
+    }
+  ],
+  "schema": "epg10.source-runtime-metadata.v1",
+  "sources": [
+    {
+      "branch": "docs/research-loop-plan",
+      "head": "c1d6b2dc53f1f80ac44cdfd9d96d159c4e9aae64",
+      "path": "/home/bobby/portal-research",
+      "staged_sha256": "e309beddc6f0abe6738ae014bbbff57c6937a35e2bd7a6cc46a402a994a728c1",
+      "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "branch": "main",
+      "head": "533162635f56584d630e3d971d77d50860595f15",
+      "path": "/home/bobby/portal-main-release",
+      "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

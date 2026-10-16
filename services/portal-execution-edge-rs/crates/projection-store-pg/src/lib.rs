@@ -26,6 +26,7 @@ mod manager_query_analytics;
 mod query;
 mod realtime;
 mod retention;
+pub mod scoped_read;
 mod shared_consumer;
 mod source_admission;
 

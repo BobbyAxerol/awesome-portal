@@ -10,6 +10,7 @@ repository.workspace = true
 chrono.workspace = true
 execution-contracts = { path = "../execution-contracts" }
 projection-core = { path = "../projection-core" }
+query-api = { path = "../query-api" }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

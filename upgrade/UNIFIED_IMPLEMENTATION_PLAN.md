@@ -22,7 +22,13 @@
 > fmt/strict clippy PASS;8formal cases PASS isolated. Full connected exit NOT_MET
 > for existing03publication +01capacity/permissions. Own1.909GB private test
 > build/cache/source removed;12HK+5SGP runtime tuples unchanged/restarts0.
-> No source-connected acceptance or runtime activation.05…11 await named approval.
+> No source-connected acceptance or runtime activation.**05 approved/in progress,
+> owned implementation tested/source-dark (§23.14):** scoped query/history/cache,
+> exact bounded export and notification-only fanout;191automated PASS,0FAIL/skip,
+> fmt/strict clippy PASS,8formal families PASS isolated. Full connected exit NOT_MET
+> for04source +06budgets +08read-security/TLS +partner BFF receipts;0owned debt.
+> Own2.266GB private test/build/cache cleaned;12HK+5SGP protected tuples unchanged,
+> restarts0. No BFF route/source activation.06…11 await named approval.
 > 01capacity is still pending;
 > logical02 closure does not waive it.
 > No runtime activation. Four owner-supplied guides

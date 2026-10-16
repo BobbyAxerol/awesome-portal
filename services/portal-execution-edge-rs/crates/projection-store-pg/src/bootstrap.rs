@@ -584,6 +584,18 @@ impl PgProjectionStore {
         if events_digest(&events)? != group.events_digest { return Err(BootstrapError::Integrity); }
         authoritative_event_core::bootstrap::validate_events(&events, &h.manifest, &h.limits)?;
         for event in &events { append_fact(&mut tx, h, event, true).await?; }
+        // Replay membership is immutable and shares the fact/checkpoint COMMIT.
+        // It preserves transport order/duplicates without duplicating payloads;
+        // history-only backfill deliberately creates no live change receipt.
+        let mut event_refs = Vec::new();
+        for (ordinal, event) in events.iter().enumerate() {
+            event_refs.push((number(ordinal as u64)?, event.event.event_id.as_str(), digest(event)?));
+            sqlx::query("INSERT INTO portal_projection.bootstrap_group_facts
+                (generation,group_id,ordinal,event_id) VALUES ($1,$2,$3,$4)")
+                .bind(h.manifest.generation).bind(&group.group_id)
+                .bind(number(ordinal as u64)?).bind(event.event.event_id.as_str())
+                .execute(&mut *tx).await?;
+        }
         validate_references(&mut tx, h).await?;
         let rev = before.revision.checked_add(1).ok_or(BootstrapError::Bounds)?;
         sqlx::query(
@@ -595,11 +607,12 @@ impl PgProjectionStore {
         ).bind(h.manifest.generation).bind(&group.to_cursor).execute(&mut *tx).await?;
         sqlx::query(
             "INSERT INTO portal_projection.bootstrap_inputs
-             (generation,kind,input_key,group_id,input_digest,content,receipt_revision)
-             VALUES ($1,'GROUP',$2,$2,$3,$4,$5)",
+             (generation,kind,input_key,group_id,input_digest,content,receipt_revision,event_refs_complete,event_refs)
+             VALUES ($1,'GROUP',$2,$2,$3,$4,$5,TRUE,$6)",
         ).bind(h.manifest.generation).bind(&group.group_id).bind(gd)
             .bind(serde_json::to_value(group).map_err(|_| BootstrapError::Serialization)?)
-            .bind(rev).execute(&mut *tx).await?;
+            .bind(rev).bind(serde_json::to_value(event_refs).map_err(|_| BootstrapError::Serialization)?)
+            .execute(&mut *tx).await?;
         sqlx::query(
             "DELETE FROM portal_projection.bootstrap_inputs
              WHERE generation=$1 AND kind='CHUNK' AND group_id=$2",

@@ -1711,6 +1711,7 @@ dependencies = [
  "home",
  "projection-core",
  "query-api",
+ "realtime-sse",
  "serde",
  "serde_json",
  "sha2",
@@ -1755,6 +1756,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "thiserror",
+ "tokio",
  "uuid",
 ]
 
@@ -1911,6 +1913,7 @@ dependencies = [
  "chrono",
  "execution-contracts",
  "projection-core",
+ "query-api",
  "serde",
  "serde_json",
  "thiserror",

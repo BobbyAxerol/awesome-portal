@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import subprocess
+import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -11,10 +12,180 @@ import run as qualification
 class RunnerSafety(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.helper = qualification.load_cleanup_helpers(Path(__file__).resolve().parent)
+        cls.helper = qualification.load_cleanup_helpers(Path(__file__).resolve().parent, '04')
 
     def result(self, code=0, stdout=b'', stderr=b''):
         return subprocess.CompletedProcess([], code, stdout, stderr)
+
+    def source_fixture(self, profile):
+        private = tempfile.TemporaryDirectory()
+        self.addCleanup(private.cleanup)
+        source = Path(private.name) / 'source'
+        names = ['Cargo.toml', 'Cargo.lock', *qualification.owned_rust(profile),
+                 'crates/projection-store-pg/migrations/0019_scoped_bootstrap.sql']
+        if profile == '05':
+            names.append('crates/projection-store-pg/migrations/0020_scoped_read.sql')
+            names = [qualification.RUST_WORKSPACE + '/' + name for name in names]
+            names.append(qualification.SHARED_FIXTURE)
+        for name in names:
+            path = source / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text('TEST_ONLY\n')
+        return source
+
+    def test_profile_defaults_to04_and_requires_exact_04_or05(self):
+        with patch.dict(qualification.os.environ, {}, clear=True):
+            self.assertEqual(qualification.test_profile(), '04')
+        for value in ('04', '05'):
+            self.assertEqual(qualification.test_profile(value), value)
+        for value in ('', '4', '5', '06', '04,05', '05 ', 5, True):
+            with self.subTest(profile=value):
+                with self.assertRaisesRegex(ValueError, 'EXPLICIT_TEST_PROFILE'):
+                    qualification.test_profile(value)
+        with patch.dict(qualification.os.environ, {'EPG10_TEST_PROFILE': 'production'}):
+            with self.assertRaisesRegex(ValueError, 'EXPLICIT_TEST_PROFILE'):
+                qualification.test_profile()
+
+    def test_profile05_cleanup_names_are_separate_and_stable(self):
+        helper = qualification.load_cleanup_helpers(Path(__file__).resolve().parent, '05')
+        self.assertTrue(helper.PG.startswith('epg10-05-pg-'))
+        self.assertTrue(helper.OWNER.startswith('codex-epg10-05-'))
+        self.assertEqual(helper.PG.rsplit('-', 1)[1], self.helper.PG.rsplit('-', 1)[1])
+        self.assertNotEqual(helper.PG, self.helper.PG)
+        with patch.object(helper.subprocess, 'run', return_value=self.result(stdout=b'a'*64+b'|foreign\n')):
+            with patch.object(helper, 'docker') as docker:
+                with self.assertRaisesRegex(ValueError, 'OWNERSHIP_CHANGED'):
+                    helper.remove_owned_pg()
+                docker.assert_not_called()
+
+    def test_profile05_path_cannot_select_04_or_operational_directory(self):
+        for path in ('/tmp/epg10-04-test', '/tmp/epg10-05-', '/home/bobby',
+                     '/tmp/epg10-05-test/child', '/tmp/epg10-05-test/../foreign'):
+            with self.subTest(path=path):
+                with self.assertRaisesRegex(ValueError, 'PRIVATE_DISPOSABLE'):
+                    qualification.validate_base(Path(path), '05')
+        with self.assertRaisesRegex(ValueError, 'PRIVATE_DISPOSABLE'):
+            qualification.validate_base(Path('/tmp/epg10-05-test'), '04')
+
+    def test_profile05_valid_private_owned_path_and_symlink_rejection(self):
+        path = MagicMock()
+        path.__str__.return_value = '/tmp/epg10-05-test'
+        path.is_symlink.return_value = False
+        path.resolve.return_value = path
+        path.stat.return_value.st_uid = qualification.os.getuid()
+        path.stat.return_value.st_mode = 0o700
+        qualification.validate_base(path, '05')
+        path.is_symlink.return_value = True
+        with self.assertRaisesRegex(ValueError, 'PRIVATE_DISPOSABLE'):
+            qualification.validate_base(path, '05')
+        path.is_symlink.return_value = False
+        path.stat.return_value.st_mode = 0o755
+        with self.assertRaisesRegex(ValueError, 'PRIVATE_OWNED'):
+            qualification.validate_base(path, '05')
+
+    def test_profile05_has_exactly_four_unit_packages_and_04_is_unchanged(self):
+        self.assertEqual(qualification.package_arguments('04'),
+                         ['-p', 'authoritative-event-core', '-p', 'projection-store-pg'])
+        self.assertEqual(qualification.package_arguments('05'),
+                         ['-p', 'query-api', '-p', 'realtime-sse',
+                          '-p', 'authoritative-event-core', '-p', 'projection-store-pg'])
+
+    def test_profile05_requires_all_four_rust_unit_summaries(self):
+        row = 'test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out'
+        self.assertEqual(qualification.parse_rust_results('\n'.join([row]*4), 4)['passed'], 8)
+        with self.assertRaisesRegex(ValueError, 'ALL_REQUIRED'):
+            qualification.parse_rust_results('\n'.join([row]*2), 4)
+
+    def test_profile05_read_count_is_explicit_bounded_and_exact(self):
+        for value in (None, '', '0', '129', '-1', '1.0', '01', 2):
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, 'EXACT_BOUNDED_READ'):
+                    qualification.expected_test_count(value, 'READ')
+        self.assertEqual(qualification.expected_test_count('1', 'READ'), 1)
+        self.assertEqual(qualification.expected_test_count('128', 'READ'), 128)
+        row = 'test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out'
+        self.assertEqual(qualification.parse_rust_results(row, 1, 2, count_kind='READ')['passed'], 2)
+        with self.assertRaisesRegex(ValueError, 'EXACT_READ_TEST_COUNT'):
+            qualification.parse_rust_results(row, 1, 3, count_kind='READ')
+
+    def test_profile04_source_inputs_remain_sufficient_only_for04(self):
+        source = self.source_fixture('04')
+        hashes = qualification.source_hashes(source, '04')
+        self.assertIn('crates/authoritative-event-core/src/bootstrap.rs', hashes)
+        with self.assertRaisesRegex(ValueError, 'EXACT_OWNED_INPUT_MISSING'):
+            qualification.source_hashes(source, '05')
+
+    def test_profile05_source_hashes_include_scoped_inputs_and_bootstrap(self):
+        source = self.source_fixture('05')
+        hashes = qualification.source_hashes(source, '05')
+        for name in (*qualification.OWNED_RUST, *qualification.SCOPED_OWNED_RUST,
+                     'crates/projection-store-pg/migrations/0020_scoped_read.sql'):
+            self.assertIn(qualification.RUST_WORKSPACE + '/' + name, hashes)
+        self.assertIn(qualification.SHARED_FIXTURE, hashes)
+        for name in (*qualification.SCOPED_OWNED_RUST,
+                     'crates/projection-store-pg/migrations/0020_scoped_read.sql'):
+            with self.subTest(missing=name):
+                path = source / qualification.RUST_WORKSPACE / name
+                path.unlink()
+                with self.assertRaisesRegex(ValueError, 'EXACT_OWNED_INPUT_MISSING'):
+                    qualification.source_hashes(source, '05')
+                path.write_text('TEST_ONLY\n')
+
+    def test_profile05_workspace_retains_monorepo_layout_without_changing04(self):
+        source = self.source_fixture('05')
+        self.assertEqual(qualification.workspace_directory(source, '05'),
+                         source / 'services' / 'portal-execution-edge-rs')
+        self.assertEqual(qualification.workspace_directory(source, '04'), source)
+        with self.assertRaisesRegex(ValueError, 'EXACT_OWNED_INPUT_MISSING'):
+            qualification.source_hashes(source / qualification.RUST_WORKSPACE, '05')
+
+    def test_profile05_missing_shared_fixture_fails_closed(self):
+        source = self.source_fixture('05')
+        (source / qualification.SHARED_FIXTURE).unlink()
+        with self.assertRaisesRegex(ValueError, 'EXACT_OWNED_INPUT_MISSING'):
+            qualification.source_hashes(source, '05')
+
+    def test_profile05_shared_fixture_symlink_is_not_accepted(self):
+        source = self.source_fixture('05')
+        fixture = source / qualification.SHARED_FIXTURE
+        fixture.unlink()
+        fixture.symlink_to(source / qualification.RUST_WORKSPACE / 'Cargo.toml')
+        with self.assertRaisesRegex(ValueError, 'SOURCE_SYMLINK'):
+            qualification.source_hashes(source, '05')
+
+    def test_profile05_parent_directory_symlink_cannot_escape_private_source(self):
+        source = self.source_fixture('05')
+        services = source / 'services'
+        moved = source.parent / 'external-services'
+        services.rename(moved)
+        services.symlink_to(moved, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, 'SOURCE_SYMLINK'):
+            qualification.source_hashes(source, '05')
+
+    def test_profile05_empty_or_oversize_shared_fixture_is_rejected_before_read(self):
+        source = self.source_fixture('05')
+        fixture = source / qualification.SHARED_FIXTURE
+        for size in (0, qualification.MAX_SHARED_FIXTURE_BYTES + 1):
+            with self.subTest(size=size):
+                fixture.write_bytes(b'x' * size)
+                with self.assertRaisesRegex(ValueError, 'BOUNDED_SHARED_FIXTURE'):
+                    qualification.source_hashes(source, '05')
+
+    def test_profile05_manifest_binds_exact_shared_fixture_and_workspace_bytes(self):
+        source = self.source_fixture('05')
+        before = qualification.source_hashes(source, '05')
+        (source / qualification.SHARED_FIXTURE).write_text('TEST_ONLY_CHANGED\n')
+        after = qualification.source_hashes(source, '05')
+        changed = [key for key in before if before[key] != after[key]]
+        self.assertEqual(changed, [qualification.SHARED_FIXTURE])
+        self.assertNotIn('Cargo.toml', after)
+        self.assertIn(qualification.RUST_WORKSPACE + '/Cargo.toml', after)
+
+    def test_profile05_scoped_clippy_warning_is_owned(self):
+        warning = {'message': {'level': 'warning', 'code': {'code': 'clippy::example'},
+                   'spans': [{'is_primary': True, 'file_name': qualification.SCOPED_OWNED_RUST[0]}]}}
+        self.assertEqual(qualification.clippy_findings(json.dumps(warning), '05')['owned_warnings'],
+                         ['clippy::example'])
 
     def test_cleanup_target_is_parameterized_not_epg03(self):
         self.assertTrue(self.helper.PG.startswith('epg10-04-pg-'))

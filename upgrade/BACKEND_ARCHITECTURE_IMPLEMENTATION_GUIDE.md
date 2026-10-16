@@ -685,7 +685,13 @@ deep-dive → ADR → slice → evidence discipline documented above.
   99automated PASS,0FAIL/skip, fmt/strict clippy PASS;8formal cases PASS isolated.
   Full connected exit NOT_MET for existing03publication +01capacity/permissions,
   no owned defect waived. Own1.909GB source/target/cache and test PG/lock cleaned;
-  12HK+5SGP runtime tuples unchanged/restarts0.05…11 await named approval.
+  12HK+5SGP runtime tuples unchanged/restarts0.
+  **05 approved/in progress, owned implementation tested/source-dark (§23.14):**
+  scoped read/history/export/cache and notification-only fanout;191automated PASS,
+  0FAIL/skip, fmt/strict clippy PASS,8formal families PASS isolated. Connected exit
+  NOT_MET for04source +06budgets +08read-security/TLS +partner BFF receipts;0owned
+  debt. Own2.266GB private build/cache/test source removed;12HK+5SGP protected
+  tuples unchanged/restarts0. No BFF route/source activation.06…11 await approval.
   01capacity exit remains unmet, not waived.
   No operational runtime/source/credential change, push or merge. Only owned
   test containers/private fixture/tempfiles removed; no image build/pull/prune.

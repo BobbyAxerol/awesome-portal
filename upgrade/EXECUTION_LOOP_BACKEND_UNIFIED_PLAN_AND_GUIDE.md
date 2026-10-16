@@ -9369,11 +9369,15 @@ Bobby approved EPG10-00 after the documentation package; its six offline metadat
 cases PASS and its inventory exit gate passes with explicitly owned UNKNOWNs.
 This is not runtime qualification. EPG10-01 is now **IN_PROGRESS / BOBBY_APPROVED**;
 02 is **COMPLETED_CONTRACT_ONLY**;03 and04 are **IN_PROGRESS / BOBBY_APPROVED**
-(2026-10-16);05…11 await named approval.02's11 logical cases pass;03's isolated
+(2026-10-16);06…11 await named approval.02's11 logical cases pass;03's isolated
 capture proof and actual publisher-fence dependency are recorded in§23.12.
 04's scoped bootstrap implementation/verification is recorded in§23.13.
+05 is **IN_PROGRESS / OWNED_IMPLEMENTATION_TESTED_SOURCE_DARK / BOBBY_APPROVED**
+(2026-10-16):191automated PASS,8formal families PASS isolated,0FAIL/skip;
+connected exit remains NOT_MET for04/06/08-read/partner BFF. Query/history/fanout,
+cleanup and exact owner returns are tracked in§23.14; no owned defect deferred.
 No production migration, credential change, source/service mutation or new
-activation is authorized by03/04.
+activation is authorized by03/04/05.
 
 This section is the single active sequencing/journal for the Edge v1.2 campaign.
 Earlier EDS/N/EX-DP/R3/A4 records remain historical evidence with their original
@@ -9926,8 +9930,10 @@ DB proof only, no new source-connected certification or runtime activation.
 <a id="epg10-05-plan"></a>
 #### EPG10-05 Tích hợp query history và realtime fanout
 
-**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
-**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+**Status:** IN_PROGRESS / OWNED_IMPLEMENTATION_TESTED_SOURCE_DARK — **Approval:** BOBBY_APPROVED (2026-10-16), named phase.
+**Tests:** 191PASS / 0FAIL / 0SKIP; 8formal families PASS isolated; fmt/strict clippy PASS.
+**Exit:** NOT_MET_SOURCE_CONNECTED_DEPENDENCIES (04 + 06 + 08-read, partner BFF).
+**Runtime activation:** NOT_AUTHORIZED / NOT_PERFORMED.
 
 **Guide chi tiết bắt buộc:** [EDGE / EPG10-05](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-05-tích-hợp-query-history-và-realtime-fanout);
 [BE §§5–6, 8–10, 13; ELP2-04/06/09](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§6–9, 11.3–11.5](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
@@ -9946,16 +9952,17 @@ Record phase approval, exact affected datasets/operations/profiles and partner r
 
 **Deliverables:** BFF read routes map, scoped query/cache layer, subscription/replay interface, history continuation and freshness metadata.
 
-**Checklist:**
+**Checklist (owned isolated backend proof; not a connected BFF/UI release):**
 
-- [ ] Giữ compatibility với existing routes; route mới chỉ mở sau schema tests, không biến proposed name thành hiện hữu.
-- [ ] Research projection là source của dashboard/report/history query; TS read fallback chỉ trong policy đã đo.
-- [ ] Cache key gồm principal effective scope/auth revision/filter/schema/generation; single-flight expensive query.
-- [ ] Server-side pagination/full exports, browser virtualized list; count/completeness đúng nguồn.
-- [ ] Per-client queue/byte caps, slow-client disconnect/resume và reconnect authorization.
-- [ ] Tách replaceable display mark/notification coalescing khỏi exact financial event retention.
-- [ ] Bounded chart paging/decimation có method/coverage; metrics/report dùng canonical exact input, không browser-derived score.
-- [ ] Push/notify + shared poll fallback; test lost hint, cursor continuity, cache TTL/revision invalidation và single-flight khi reset.
+- [x] Existing routes/DTOs unchanged; new typed library ports do not install routes.
+- [x] Query only committed04 Portal projection; no TS fallback/client installed.
+- [x] Full semantic scope/policy/generation cache identity and bounded single-flight.
+- [x] Backend keyset/export chunks <=200rows/1MiB, exact continuation, no hidden count; browser adapter remains partner-owned.
+- [x] Queue entry/byte/global caps, slow-client termination/resume and current authorization.
+- [x] Coalesced refetch notices never replace exact retained financial facts.
+- [x] Exact decimal display-only min/max preserves extrema/coverage/continuation, no canonical metric rewrite.
+- [x] Shared hint/poll fallback, lost-notify/restart/cursor and cache reset/revoke regressions.
+- [ ] Connected XLC-02/03/06 BFF/consumer + actual04source +06budgets +08read-security/TLS receipts.
 
 **Tests và fixtures:** `EPG10-T05-01` F-AUTH hai scope cùng filter không leak cache; `T05-02` W-DASH nhiều tabs không nhân full TS scan theo client; `T05-03` F-NET slow client không tăng RAM vô hạn hoặc block peers; `T05-04` reconnect với cursor hợp lệ replay đủ, expired cursor yêu cầu refetch; `T05-05` unavailable/stale/partial không hiển thị complete realtime.
 
@@ -9968,12 +9975,19 @@ Record phase approval, exact affected datasets/operations/profiles and partner r
 **Resource/test execution boundary:** Compare source QPS against client count; record Research query p95/p99, pool waits, cache hit/stampede and fanout queue bytes under slow/reconnecting consumers. Shared-host lock, disposable
 namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
 
-**Technical debt / external gates:** Chưa tạo debt. BFF consumer/field-policy handoff and real 04 data are partner gates. UI fixture acceptance is partner evidence, not permission to expand this track into UI work. Source history absent remains typed unavailable, not fabricated timeline.
+**Technical debt / external gates:** Owned defects fixed and fully rerun;0owned debt.
+Existing dependencies: actual04publication (03producer return),06numeric budgets,
+08current identity/read-security/TLS and Research BFF/consumer evidence. One exact
+handoff/action table is in the linked contract below; no repeated blanket approval.
+Source history absent remains typed unavailable, not fabricated timeline.
 
 **Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
 actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
 source/runtime/retention tuple; remaining gate owner and next independently runnable
-scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+scope. **Current execution:** §23.14 and
+[verification/acceptance](evidence/execution-edge-v1_2/EPG10-05/verification.json),
+[typed contract + partner action table](evidence/execution-edge-v1_2/EPG10-05/QUERY_HISTORY_FANOUT_CONTRACT_AND_ACCEPTANCE.md).
+Owned implementation qualified/source-dark; no real-source activation/route change.
 
 <a id="epg10-06-plan"></a>
 #### EPG10-06 Áp resource budgets và tối ưu hot path
@@ -11523,6 +11537,272 @@ EPG10-05 may begin isolated contract/query work when Bobby names it; no automati
 05 start, no source-connected/realtime/full-history or production claim.
 Commit this coherent tested package with configured Bobby identity on the
 feature branch only; no push, merge, deployment or source admission.
+
+### 23.14 EPG10-05 — scoped query/history and durable-notice fanout execution
+
+**2026-10-16 UTC, pre-implementation freeze / IN_PROGRESS.** Bobby approved the
+named05 phase. Base `e77a8ed0b6983880b646d17088f8f3c1581d4f86`, clean feature
+`feat/execution-edge-upgrade-v1_2` in
+`/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2`. Required guides and
+formal T05-01…08 are linked in the phase block above; EDGE§§4–6/10.2,
+BE§§5–6/8–10/13 and SCORE§8.6/11.3–11.5 govern the implementation.
+
+**Goal and approved owned scope:** additive Rust scoped read/query/cache/history
+and notification fanout over the existing04 Portal-owned store. Reuse canonical
+facts/current rows and committed groups, existing Tokio/SQLx/canonical hashes and
+pool; preserve legacy query-api/realtime/Manager routes byte-compatible. Typed
+trusted read scope precedes row/field selection, pagination and any count. No
+raw source offsets/counts/hidden rows in client cursors or notices. New private
+read-session state and bounded group→fact references may be added only to the
+Portal projection schema to support durable opaque continuation/replay; no TS
+schema/writer/index/notification/DB/Redis/CLI mutation. History capability and
+coverage are authenticated input, never inferred from snapshot facts. Financial
+history remains exact; display-only min/max decimation and replaceable change
+notices do not replace canonical history or compute metrics.
+
+**Implementation slices/ownership:** root owns journal, PG read adapter/migration,
+disposable integration harness and final reconciliation. Query reviewer owns only
+new `query-api::scoped` contracts/cache/chart helpers and their unit tests. Runtime
+reviewer initially reads Research route/DTO/source/runtime only; any fanout edit
+will have an exact delegated file boundary. TS/PM/DL reviewer is read-only. Each
+round refreshes partner full SHA + staged/unstaged/untracked digests and relevant
+contract hashes; no merge/cherry-pick/peer writes. Research BFF/FE consumer changes
+remain with their owner, not implemented in this Edge source-dark package.
+
+**Invariants/test gate:** full cache key includes principal/effective scope,
+app/field policy, filter/schema/model/source-set, projection generation/revision
+and cutoff; bounded single-flight must fence invalidated in-flight fills. Recheck
+current read authority before and after awaits and each replay delivery. Opaque
+persisted keysets revalidate scope/generation/retention; partial/stale/unavailable
+remain distinct. Notifications are wake hints only; shared durable-cursor poll
+fallback, bounded entries+bytes and slow-client termination cannot drop facts or
+block peers. Unit/contract tests first, real disposable PG migration-idempotency,
+negative privacy/cursor/recovery, then bounded multi-client observations; all
+T05-01…08 mapped to actual cases. No fixture becomes real-source/capacity proof.
+
+**Resource/rollback decision boundary:** HK foreign `claude-burst-b16` measurement
+lock until06:30:29Z prohibits HK Cargo/pytest/build/container/load jobs. Read and
+edit source only here; inspect the existing pinned private SGP test target/lock
+before any isolated job. Use one bounded test job, exact owner-labelled disposable
+PG and private source/target/cache directory, no image build/pull or broad prune.
+Observed costs are tainted for capacity unless a clean paired window is proved.
+Teardown exact owned resources and capture disk/image/cache and protected runtime
+tuples before/after. Rollback is source-only: leave new modules unbound; additive
+test migration never applied to operational storage. Do not deploy/restart/open
+new routes, rotate credentials, change source authority or command gates.
+
+**Exit/debt:** full connected05 exit requires real04 publication,06 numeric budgets,
+08 current read-security/TLS and partner BFF acceptance. These existing scoped
+dependencies do not excuse incomplete owned code/tests. Record owned correctness
+separately from integrated XLC acceptance; no new phase, repeated generic approval
+request or invented performance PASS. All tests currently NOT_RUN.
+
+**Slice1 source review (05:24UTC; tests NOT_RUN):** additive `query-api::scoped`
+implements trusted typed scope, full semantic cache identity, bounded/cancellation-
+safe single-flight and exact-decimal display-only min/max. `realtime-sse::scoped`
+implements one hint/fallback coordinator per identical authorized view, queue-only
+subscriptions, entry/byte/global limits and per-delivery reauthorization. PG adapter
+adds bounded current/history/JSON export chunks, DB-side row/field predicates,
+signed server-side keysets, monotonic fenced local ingest cut and a concrete
+`PgScopedReplaySource` bridge; no source polling per tab or new BFF/HTTP route.
+Migration0020 is additive/Portal-only; ordered group→fact membership and expected
+identity/digest list share04's existing atomic COMMIT. Historical backfill never
+creates live notices. Existing04 test fixture DB name is reused only inside the
+new owner-labelled05 disposable container for regression, not an operational DB.
+
+Independent reviewers found four owned defects before execution: missing member
+links could look hidden, current-page quality could overclaim complete, query-
+specific quota could evade scope cap, and rotating HMAC key could break paged
+causal aliases. All four have explicit source fixes and new integration cases:
+validate ordered expected references, preserve PARTIAL, separate scope budget,
+and pin identity-key binding/resync on rotation. Async PG context checks wrap real
+cache reads; backfill ingest-cut invalidates the history cache too. These were
+unfinished owned defects, not deferred debt.16new cache/query tests,22new fanout
+tests and22new real-PG cases are written, NOT_RUN until runner receipt exists.
+
+**Partner/runtime preflight:** [HK](evidence/execution-edge-v1_2/EPG10-05/hk-source-runtime-before.json)
+and [SGP](evidence/execution-edge-v1_2/EPG10-05/sgp-source-runtime-before.json).
+TS/PM/DL authority inputs remain unchanged from04; Research peer stages ELP2-04
+on its own tree, not adopted. Existing Research typed history is retained-range
+only; legacy realtime uses a different numeric/RFC3339 full-payload contract and
+must not accept this new cursor silently. Keep both backward-compatible. No new
+TS/PM source publication/fence appeared.12HK/5SGP protected tuples observed,
+restart counters0. HK sandbox Docker read required normal read-only escalation;
+no lock bypass or job. SGP has no foreign measurement lock; foreign Node work
+means all future observations are correctness-only/tainted for capacity.
+Exact private test directory `/tmp/epg10-05-Dk3YyhwP`,0700, code-only copy; cached
+PG digest `sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685`.
+Reusable04 runner now has explicit04/05 profiles,36written safety cases and no
+test execution on HK. Remote formatting runs under its own bounded owner lock;
+no operational source, database, credential or service changed.
+
+**Slice2 review and test admission (05:34UTC):** independent second review caught
+cache stale-state/key/read-limit/Replay-grant identity and real cursor deadline
+edges. Context now includes writer/rebuild/stale metadata; cache hits validate
+persisted Pin deadlines, not `produced_at + TTL`; final post-await guards reject
+expired tokens. Direct reads also fence replacement state and strip revoked
+Replay capability. Five new PG regressions bring the written read suite to27;
+no test PASS is claimed before runner output. [Contract, route/DTO/error mapping,
+formal T05 families and BFF handoff](evidence/execution-edge-v1_2/EPG10-05/QUERY_HISTORY_FANOUT_CONTRACT_AND_ACCEPTANCE.md).
+
+One source-sync attempt was blocked by environment export review; no bypass.
+Bobby explicitly confirmed `bobby@178.128.51.255` and this exact private test path
+in the same turn. Code/contracts-only transfer then succeeded; secrets/DB data
+excluded. Qualification runs with its own SGP lock, not under the foreign HK
+lock. First attempt uses26-case immutable source snapshot; the final deadline
+guard/regression is local pending that attempt's completion, then a fresh pinned
+rerun. TS/PM/DL refresh05:28:34 shows zero authority/hash/status delta from preflight.
+
+**Qualification attempt1:**36runner safety PASS, fmt PASS; compile FAIL because
+legacy query-api's shared keyset golden fixture requires the original monorepo
+layout. Rust/PG suites NOT_RUN; no PG container created, own lock released.
+[Bounded attempt record](evidence/execution-edge-v1_2/EPG10-05/qualification-attempts.json).
+Fixed05-only harness layout and added six fixture/path/symlink safety cases
+(42total, pending rerun); profile04 behavior unchanged. Shared fixture hash
+`2b78c3322f9b8b69045540cb9eb25346816ca814a6bd1b1530606615c7435c32`
+matches local and SGP. Prior failed source/receipt retained only in the same
+private temporary directory for final teardown; no `/tmp/packages` workaround.
+HK foreign lock renewed until08:30:30Z; no job launched here. Environment review
+separately blocks transferring the two tracked non-secret runner source files
+despite the source/contracts confirmation; read-only provenance proof did not
+lift it. Requested exact payload confirmation, no alternate transfer or bypass.
+
+**Continuation approved:** Bobby explicitly confirmed transfer of both exact
+runner files to the same private SGP path and execution/teardown. Transfer
+succeeded; runner hashes `167f9e77338fc7dc287b3c511f1e04d7a28417043d9f3c52a92b4cca862b9cc1`
+and `eea8d91c8d215b8c420b651f6efc325a07e53f7159c204cccaf82d37194b51f1`
+match local. SGP lock absent at admission; rerun uses42safety, four Rust unit
+packages,22bootstrap and27scoped-read PG cases, fmt and strict clippy. No new
+scope/source/DB/route/service permission inferred from this test authorization.
+
+**Qualification attempt2:**42safety PASS, fmt PASS, all selected lib/integration
+targets compile PASS. Unit results: authoritative-event-core31PASS,
+projection-store-pg20PASS, query-api22PASS; realtime-sse5PASS/21FAIL. The fanout
+test helper emitted bare hex digests while the frozen scope contract requires
+`sha256:`-prefixed digests; the production validator correctly rejected them.
+Fixed only the test helper, preserving authorizer and negative cases. No tests
+waived.22bootstrap/27scoped PG suites and final strict lint remain pending.
+Private PG removed and lock released after failure, sampler stopped safely;
+no production mutation/source request/image build/pull/volume. Running strict
+lint on the immutable attempt2 snapshot under a separate short SGP lock to catch
+owned diagnostics before the next complete qualification. Bounds unchanged;
+all observed cost remains tainted for capacity.
+
+**Owned lint cleanup before complete rerun:** strict four-package/all-targets
+preflight surfaced doc-markdown, nested-item order and assigning-clones in new
+modules, plus test helper docs/unused-self. Fixed source directly, no blanket
+lint suppression or legacy exemption. Four narrowly documented function-length
+exceptions retain the cache slot/load lifecycle, query/pin fence, receipt/cursor
+fence and explicit synthetic bootstrap fixture; workspace deny/pedantic and `-D warnings`
+remain enabled. The fixture event now uses its authenticated manifest epoch.
+Final precheck and full exact-count qualification rerun pending actual receipt.
+
+**Qualification attempt3 (05:52UTC):** strict four-package/all-targets Clippy
+preflight PASS with `-D warnings`;42runner safety, fmt and all selected compile
+targets PASS. Rust unit results31+20+22+25PASS, one realtime cancellation test
+FAIL: a1ms outer timeout raced a2ms internal timeout under scheduler delay.
+Deterministic fixture repair is in scope; timeout/cancellation admission remains
+required, no test waived.22bootstrap/27scoped PG suites NOT_RUN in this failed
+attempt. Exact owned PG removed, sampler stopped and measurement lock released;
+operational services/source DB untouched. Failed receipt/log retained privately
+for bounded diagnosis and included in final teardown, not committed as raw logs.
+
+**Final independent expiry review:** metadata reads could cross the old
+generation's bounded rollback deadline after the pre-await check. Added
+post-commit and final return guards for direct page, notices and cached reads;
+cache carries the finite stale deadline through its last async context probe.
+Added deterministic clock regression isolating stale10ms from cursor60s expiry
+for all three surfaces (28written PG cases). This is a fixed owned defect,
+not deferred debt. TS/PM/DL05:57:24UTC refresh shows no authority/source delta.
+
+**Qualification attempt4 / owned correctness PASS (06:00:30UTC start):**
+[Full bounded receipt](evidence/execution-edge-v1_2/EPG10-05/pg-receipt.json):
+42runner safety +99Rust units (31authcore/20PG/22query/26realtime) +22bootstrap
+regressions +28scoped-read real-PG cases = **191PASS,0FAIL/skip/ignored/filtered**.
+fmt and strict four-package/all-targets Clippy `-D warnings` PASS,0warnings.
+Test source/fixture374input hashes unchanged during qualification and exactly
+match the local formatted candidate afterwards; all four runner/helper hashes
+match. Manifest `02019ce2f8095aaa0ba3071603e4c091b32e78e53346bf32ec3a5079d39fc5d4`;
+base SHA is provenance, not a deployed release or substitute for input hashes.
+Three prior failures are retained as bounded summaries, fixed and rerun; none
+waived. Deterministic Pending-source cancellation test verifies Busy while a
+guard is held, explicit future-drop release and unchanged cursor separately
+from timeout.28PG includes final stale-window and cursor-deadline regressions.
+
+Elapsed115.598s; owned PG sampled87times/85.960s, sampled cgroup max489,598,976B,
+anonymous max17,068,032B, process-RSS-sum max164,429,824B,32.403CPU core-seconds,
+0OOM/oom-kill. **Observational only/tainted for capacity**, not a production
+envelope, p95/p99, HA or real-provider claim. Post-suite test-state counts are
+not total lifecycle event counts. No source requests/production mutations,
+image builds/pulls or volumes. Own PG removed, sampler stopped before teardown,
+lock released; exact private source/target/cache/log cleanup pending receipt.
+
+**Partner reconciliation and final disposition (06:05UTC):**
+[Partner review](evidence/execution-edge-v1_2/EPG10-05/partner-source-review.json),
+[HK](evidence/execution-edge-v1_2/EPG10-05/hk-source-runtime-final.json),
+[SGP after teardown](evidence/execution-edge-v1_2/EPG10-05/sgp-source-runtime-final.json).
+TS remains `c2035b41700c27ce810406a59dffeb259c621ea0`, same protected dirty
+market-health work; PM `d16aa2b5f251596e469807f57e81fe14cdc7e763` and DL
+`18c888fa6a568c66fb62606d882e34352973e8f7` clean. Relevant15native/16PM
+authority inputs unchanged. No publisher fence/source activation returned.
+Research advanced to `2ec5924da42a42525f96cb733e30bb062a034074`; its committed
+diff hash equals the ELP2-04 staged bytes seen at preflight. Foundation/read-
+publication/read-scope/history/legacy realtime pins unchanged. New ELP2-05
+42-family/31-field catalogue and bounded page/timestamp helpers remain peer WIP,
+not adopted. Its catalogue lane is `SOURCE_CONTRACT_NOT_RUNTIME_ACCEPTANCE`,
+families UNAVAILABLE/historyUNKNOWN/runtimefalse; no tracked production caller,
+trust/TLS or03fence receipt. Preserve peer changes, do not pretend HEAD is source
+publication or silently adapt the frozen Edge wire to a draft.
+
+**Resource-clean closeout:** [cleanup receipt](evidence/execution-edge-v1_2/EPG10-05/cleanup-receipt.json).
+Exact private SGP `/tmp/epg10-05-Dk3YyhwP` owner/mode/path, completed receipt,
+no remaining owned job/PG/lock verified before deletion. Removed only its source,
+target/dependency cache and private synthetic logs/failed-attempt snapshots:
+**2,265,501,696allocated bytes** (2,227,157,573logical). SGP free bytes
+166,443,048,960→168,708,575,232 across cleanup; post-audit168,708,026,368.
+Host-wide deltas observational, not attributed solely to this action. HK no
+cleanup/job under foreign lock; free190,771,298,304→202,859,839,488 reflects
+other host activity, not our reclamation. Docker inventory before/after:
+HK126images/34.69GB and398BuildKit/27.92GB; SGP328images/88.82GB and
+3776BuildKit/195.9GB, unchanged. **0owned images/build-cache entries created**,
+so shared Docker action `NO_ACTION_NEEDED`; no prune/image/volume/network removal.
+All operational/stable/rollback/peer resources retained; pre-existing rollback
+artifacts are not requalified by this no-rollout package.
+Final [resource closeout](evidence/execution-edge-v1_2/EPG10-05/resource-closeout.json)
+also verifies own test container/path absent on both hosts, SGP lock absent and
+`portal-gh-deploy-runner.service` active/running without any runner action.
+HK foreign lock subsequently changed to`claude-p184-quote-probe` until07:36:14Z;
+no HK heavy job, lock-owner intervention or shared cleanup was performed.
+
+**Source/release/runtime:** canonical HK Portal remains
+`/home/bobby/.worktrees/portal-execution-manager-v2`,
+`feat/manager-v2-paper-read@54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4`;
+six active documented HK worktrees listed in final audit retained. This active
+feature checkout/branch is not a deployment directory. Stable SGP
+`/home/bobby/portal-main-release`, clean`main@533162635f56584d630e3d971d77d50860595f15`.
+**12HK/5SGP protected runtime tuples unchanged, all restart counters0** before
+and after test/cleanup. Edge/worker image
+`sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e`,
+OCI revision`8814cd2a5f66aeac0828812dbb8340c4f0a4adbb`, per-service config
+digests/source-proxy/PG image set in final audits. HK release
+`/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy`;
+SGP`/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose`.
+No operational migration/route/listener/deploy/restart, authority/grant/key,
+TS/PM/DL/Research source edit, push or merge.
+
+**Acceptance:** [verification](evidence/execution-edge-v1_2/EPG10-05/verification.json)
+and [contract + single partner action table](evidence/execution-edge-v1_2/EPG10-05/QUERY_HISTORY_FANOUT_CONTRACT_AND_ACCEPTANCE.md).
+Owned05 implementation fully tested/source-dark,0owned debt. Full05 connected
+exit remains **NOT_MET**, not called complete: existing actual04publication
+(03TS/PM return),06numeric budgets,08current identity/read-security/TLS and
+Research BFF/consumer XLC-02/03/06 receipts. No fake route/history/capacity claim.
+Whole-monorepo/connected/provider/capacity tests NOT_RUN, outside this isolated
+proof. **Next permitted work:** Bobby may approve06 instrument/budget/isolated
+hot-path work now; no need to wait for the03return to start that independent
+scope. Connected benchmarks and05 acceptance rerun remain source-dependent.
+Do not self-start06 or reopen a new phase for these already named dependencies.
+Commit this coherent tested package locally with configured Bobby identity on
+`feat/execution-edge-upgrade-v1_2`; no push/merge/release.
 
 
 

@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+pub mod scoped;
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::Duration;
 
@@ -66,6 +68,60 @@ pub struct CursorCodec {
 }
 
 impl CursorCodec {
+    /// Produces an opaque, scope-bound public identity without exposing a raw
+    /// source event ID/position. Reuse one namespace for an event and its
+    /// correction/tombstone references. This identifier is not authorization.
+    ///
+    /// # Errors
+    /// Rejects unbounded identity/context strings or an invalid active key.
+    pub fn opaque_identifier(
+        &self,
+        context: &CursorContext<'_>,
+        namespace: &str,
+        raw: &str,
+    ) -> Result<String, QueryError> {
+        let values = [
+            context.workspace_id,
+            context.environment,
+            context.resource,
+            context.query_fingerprint,
+            namespace,
+            raw,
+            self.active_key_id.as_str(),
+        ];
+        if values.iter().any(|value| {
+            value.is_empty()
+                || value.len() > 160
+                || value.trim() != *value
+                || value.chars().any(char::is_control)
+        }) {
+            return Err(QueryError::InvalidCursor);
+        }
+        let input = serde_json::to_vec(&(
+            context.workspace_id,
+            context.environment,
+            context.epoch_id,
+            context.resource,
+            context.query_fingerprint,
+            namespace,
+            raw,
+        ))
+        .map_err(|_| QueryError::InvalidCursor)?;
+        let key = self
+            .keys
+            .get(&self.active_key_id)
+            .ok_or(QueryError::InvalidCursorKeyring)?;
+        let mut mac =
+            HmacSha256::new_from_slice(key).map_err(|_| QueryError::InvalidCursorKeyring)?;
+        mac.update(b"query-api/opaque-id/v1\0");
+        mac.update(&input);
+        Ok(format!(
+            "oid1.{}.{}",
+            self.active_key_id,
+            URL_SAFE_NO_PAD.encode(mac.finalize().into_bytes())
+        ))
+    }
+
     /// Builds a rotating HMAC keyring. Keys shorter than 32 bytes are rejected.
     ///
     /// # Errors
