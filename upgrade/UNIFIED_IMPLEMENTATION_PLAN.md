@@ -9617,6 +9617,30 @@ block only dependent activation. Existing Research/Governance evidence preserved
 - **Tests/exit:** T08-01…17 + applicable UX-F01…40; actual browser receipt khớp contract/design, no invented success/data/score band. Fixture và real integration verdict riêng.
 - **Guide:** Portal §15 ELP2-08; UX §5–18; hai lowfi tại §14.1. Rollback scoped UI/read flag, giữ shared tokens và permission guards.
 
+<a id="elp2-08-current-return"></a>
+
+**Current backend return2026-10-16 — riêng assignment ELP2-08:**
+[packet /17-gate disposition](./execution_loop/evidence/ELP2-08/README.md),
+[contract pins, text states, action/screen coverage, operator walkthrough và
+Claude request](./execution_loop/evidence/ELP2-08/coverage-and-handoff.md).
+Entry `3d537127313fb3c282eda054fd180499fe4732ca`, clean; branch
+`docs/research-loop-plan`. Additive generated workflow contracts/fixtures and
+pure read projections: separate create/FUND/grant, exact amount partitions,
+four command dimensions, obligations/move receipts/terminal archive and separate
+Paper-monitor lineage,12 read states,10 screen maps,24 disabled action
+descriptors, canonical score Early/mixed semantics and Research→Governance
+context. No new workflow endpoint, executor, migration or frontend/runtime edit.
+Focused **API76/76 + contracts56/56 PASS**; failures/retests retained in packet.
+Normal-hook terminal exit0 is the coherent-commit landing gate, not a
+prewritten full test result. [HK current-source audit](./execution_loop/evidence/ELP2-08/source-alignment.md)
+pins PM R2 unchanged and Edge `e15e7064`/EPG10-07 IN_PROGRESS/WIP; deny-default
+relay remains, no real operation/runtime proof. **Full08 exit remains
+NOT_MET_SOURCE_DESIGN_BROWSER.** Inherit canonical07-001/002 and06-002 debt;
+no duplicate activation/formula campaign. Claude `ELP2-REQ-08-001`
+AWAITING_CONSUMER_REVIEW, frontend NOT_STARTED_BY_OWNER_DIRECTION. Backend09
+is next-ready after separate assignment; no09 work/goal/push/dev/main/deploy.
+Old entry/planning statements elsewhere are retained history, not current08.
+
 <a id="elp2-09"></a>
 
 ### ELP2-09 — Realtime revocation và replay

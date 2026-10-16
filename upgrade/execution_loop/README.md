@@ -29,6 +29,15 @@ correlation and lookup-only recovery have a source-dark technical implementation
 No source command, runtime, frontend, push or08 assignment follows. Full07 exit
 still requires qualified PM/Edge command/status receipts and consumer acceptance.
 
+**Subsequent assignment2026-10-16:** Bobby assigned [ELP2-08](evidence/ELP2-08/README.md)
+on `3d537127`. Generated workflow states, canonical fixtures and pure projections
+cover create/capital/lifecycle/read/navigation/score stories;
+[text-state spec, advertised-action inventory, walkthrough and Claude handoff](evidence/ELP2-08/coverage-and-handoff.md).
+Focused API76/contracts56 PASS; normal hook is landing gate. No workflow API,
+source adapter, UI or runtime was activated. Full08 still needs source/design/
+browser acceptance; frontend remains on owner hold.09 next only after assignment.
+This supersedes only the earlier “08 not assigned” statements, not source gates.
+
 [ELP2-00 packet](evidence/ELP2-00/README.md) có baseline manifest mới nhất,
 112-route census,14family/11XLC/15decision map,8audit checks và backend/Claude
 handoff. Pins cũ dưới đây giữ lịch sử, không ghi đè runtime/source snapshot mới.

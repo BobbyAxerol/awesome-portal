@@ -20,6 +20,12 @@ from typing import Any
 CONTRACTS_ROOT = Path(__file__).resolve().parents[1]
 
 TRACKED = (
+    "tooling/generate-execution-workflows.mjs",
+    "tooling/execution-workflow-fixtures.mjs",
+    "openapi/execution-workflows.openapi.json",
+    "schemas/execution-workflows.v1.schema.json",
+    "generated/execution-workflows.d.ts",
+    "fixtures/execution-workflows.synthetic.valid.json",
     "tooling/generate-execution-trusted-commands.mjs",
     "openapi/execution-trusted-commands.openapi.json",
     "generated/execution-trusted-commands.d.ts",

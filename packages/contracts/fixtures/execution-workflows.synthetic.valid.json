@@ -1,0 +1,3118 @@
+{
+  "schema_version": "portal.execution.workflow-fixtures.v1",
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "production_config": false,
+  "cases": [
+    {
+      "id": "W08-CREATED-UNFUNDED",
+      "gate": "T08-02",
+      "schema": "WorkflowCreate",
+      "response": {
+        "schema_version": "portal.execution.create-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "requested_economic_capital": "1000",
+        "requested_initial_budget": "300",
+        "currency": "USDT",
+        "create": {
+          "state": "APPLIED",
+          "receipt_ref": "TEST_ONLY:create"
+        },
+        "fund": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "initial_grant": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "state": "CREATED_UNFUNDED",
+        "automatic_activation": false,
+        "physical_transfer_performed": false,
+        "trading_readiness": "SEPARATE_AUTHORITY_REQUIRED"
+      }
+    },
+    {
+      "id": "W08-CREATED-ZERO",
+      "gate": "T08-02",
+      "schema": "WorkflowCreate",
+      "response": {
+        "schema_version": "portal.execution.create-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "requested_economic_capital": "0",
+        "requested_initial_budget": "0",
+        "currency": "USDT",
+        "create": {
+          "state": "APPLIED",
+          "receipt_ref": "TEST_ONLY:create"
+        },
+        "fund": {
+          "state": "NOT_REQUIRED",
+          "receipt_ref": null
+        },
+        "initial_grant": {
+          "state": "NOT_REQUIRED",
+          "receipt_ref": null
+        },
+        "state": "CREATED_ZERO_CAPITAL",
+        "automatic_activation": false,
+        "physical_transfer_performed": false,
+        "trading_readiness": "SEPARATE_AUTHORITY_REQUIRED"
+      }
+    },
+    {
+      "id": "W08-CREATED-FUNDED",
+      "gate": "T08-02",
+      "schema": "WorkflowCreate",
+      "response": {
+        "schema_version": "portal.execution.create-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "requested_economic_capital": "1000",
+        "requested_initial_budget": "300",
+        "currency": "USDT",
+        "create": {
+          "state": "APPLIED",
+          "receipt_ref": "TEST_ONLY:create"
+        },
+        "fund": {
+          "state": "APPLIED",
+          "receipt_ref": "TEST_ONLY:fund"
+        },
+        "initial_grant": {
+          "state": "APPLIED",
+          "receipt_ref": "TEST_ONLY:grant"
+        },
+        "state": "CREATED_WITH_CAPITAL",
+        "automatic_activation": false,
+        "physical_transfer_performed": false,
+        "trading_readiness": "SEPARATE_AUTHORITY_REQUIRED"
+      }
+    },
+    {
+      "id": "W08-ACK-UNKNOWN",
+      "gate": "T08-10",
+      "schema": "WorkflowCapital",
+      "response": {
+        "schema_version": "portal.execution.capital-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "currency": "USDT",
+        "status": {
+          "schema_version": "portal.execution.command-status.v1",
+          "command_id": "ecm_00000000000000000000000000000001",
+          "operation": "TOP_UP",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "environment": "paper",
+          "profile_ref": "TEST_ONLY:paper",
+          "delivery": "ACKNOWLEDGED",
+          "business": {
+            "state": "UNKNOWN",
+            "receipt_ref": null,
+            "source_event_ref": null,
+            "revision": null,
+            "amounts": null
+          },
+          "projection": "CATCHING_UP",
+          "venue": "UNKNOWN",
+          "next_action": "QUERY_SAME_INTENT",
+          "created_at_ms": 1792100000000,
+          "updated_at_ms": 1792100000000,
+          "authority": "TEST_ONLY"
+        },
+        "effect_kind": "MANAGEMENT_BUDGET",
+        "physical_transfer_performed": false,
+        "form_cancel": "DISCARD_LOCAL_DRAFT_ONLY",
+        "after_submit_cancel": "SEPARATE_CANCEL_REMAINING_AUTHORITY_REQUIRED",
+        "refresh": "GET_ORIGINAL_COMMAND_NO_RESUBMIT",
+        "public_copy_key": "QUERY_SAME_INTENT",
+        "automatic_resend": false
+      }
+    },
+    {
+      "id": "W08-FUND",
+      "gate": "T08-03",
+      "schema": "WorkflowCapital",
+      "response": {
+        "schema_version": "portal.execution.capital-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "currency": "USDT",
+        "status": {
+          "schema_version": "portal.execution.command-status.v1",
+          "command_id": "ecm_00000000000000000000000000000001",
+          "operation": "FUND",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "environment": "paper",
+          "profile_ref": "TEST_ONLY:paper",
+          "delivery": "ACKNOWLEDGED",
+          "business": {
+            "state": "APPLIED",
+            "receipt_ref": "TEST_ONLY:owning-receipt",
+            "source_event_ref": "TEST_ONLY:event",
+            "revision": "9007199254740993",
+            "amounts": {
+              "requested": "1000",
+              "applied": "1000",
+              "pending": "0",
+              "cancelled": "0",
+              "rejected": "0"
+            }
+          },
+          "projection": "CATCHING_UP",
+          "venue": "NOT_APPLICABLE",
+          "next_action": "QUERY_SAME_INTENT",
+          "created_at_ms": 1792100000000,
+          "updated_at_ms": 1792100000000,
+          "authority": "TEST_ONLY"
+        },
+        "effect_kind": "ECONOMIC_ASSIGNMENT",
+        "physical_transfer_performed": false,
+        "form_cancel": "DISCARD_LOCAL_DRAFT_ONLY",
+        "after_submit_cancel": "SEPARATE_CANCEL_REMAINING_AUTHORITY_REQUIRED",
+        "refresh": "GET_ORIGINAL_COMMAND_NO_RESUBMIT",
+        "public_copy_key": "REVIEW_RECEIPT",
+        "automatic_resend": false
+      }
+    },
+    {
+      "id": "W08-TOPUP",
+      "gate": "T08-03",
+      "schema": "WorkflowCapital",
+      "response": {
+        "schema_version": "portal.execution.capital-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "currency": "USDT",
+        "status": {
+          "schema_version": "portal.execution.command-status.v1",
+          "command_id": "ecm_00000000000000000000000000000001",
+          "operation": "TOP_UP",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "environment": "paper",
+          "profile_ref": "TEST_ONLY:paper",
+          "delivery": "ACKNOWLEDGED",
+          "business": {
+            "state": "APPLIED",
+            "receipt_ref": "TEST_ONLY:owning-receipt",
+            "source_event_ref": "TEST_ONLY:event",
+            "revision": "9007199254740993",
+            "amounts": {
+              "requested": "1000",
+              "applied": "1000",
+              "pending": "0",
+              "cancelled": "0",
+              "rejected": "0"
+            }
+          },
+          "projection": "CATCHING_UP",
+          "venue": "NOT_APPLICABLE",
+          "next_action": "QUERY_SAME_INTENT",
+          "created_at_ms": 1792100000000,
+          "updated_at_ms": 1792100000000,
+          "authority": "TEST_ONLY"
+        },
+        "effect_kind": "MANAGEMENT_BUDGET",
+        "physical_transfer_performed": false,
+        "form_cancel": "DISCARD_LOCAL_DRAFT_ONLY",
+        "after_submit_cancel": "SEPARATE_CANCEL_REMAINING_AUTHORITY_REQUIRED",
+        "refresh": "GET_ORIGINAL_COMMAND_NO_RESUBMIT",
+        "public_copy_key": "REVIEW_RECEIPT",
+        "automatic_resend": false
+      }
+    },
+    {
+      "id": "W08-DECREASE-REJECTED",
+      "gate": "T08-04",
+      "schema": "WorkflowCapital",
+      "response": {
+        "schema_version": "portal.execution.capital-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "currency": "USDT",
+        "status": {
+          "schema_version": "portal.execution.command-status.v1",
+          "command_id": "ecm_00000000000000000000000000000001",
+          "operation": "IMMEDIATE_DECREASE",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "environment": "paper",
+          "profile_ref": "TEST_ONLY:paper",
+          "delivery": "ACKNOWLEDGED",
+          "business": {
+            "state": "REJECTED",
+            "receipt_ref": "TEST_ONLY:owning-receipt",
+            "source_event_ref": "TEST_ONLY:event",
+            "revision": "9007199254740993",
+            "amounts": {
+              "requested": "1000",
+              "applied": "0",
+              "pending": "0",
+              "cancelled": "0",
+              "rejected": "1000"
+            }
+          },
+          "projection": "CATCHING_UP",
+          "venue": "NOT_APPLICABLE",
+          "next_action": "QUERY_SAME_INTENT",
+          "created_at_ms": 1792100000000,
+          "updated_at_ms": 1792100000000,
+          "authority": "TEST_ONLY"
+        },
+        "effect_kind": "MANAGEMENT_BUDGET",
+        "physical_transfer_performed": false,
+        "form_cancel": "DISCARD_LOCAL_DRAFT_ONLY",
+        "after_submit_cancel": "SEPARATE_CANCEL_REMAINING_AUTHORITY_REQUIRED",
+        "refresh": "GET_ORIGINAL_COMMAND_NO_RESUBMIT",
+        "public_copy_key": "SOURCE_REJECTED",
+        "automatic_resend": false
+      }
+    },
+    {
+      "id": "W08-RECALL-PENDING",
+      "gate": "T08-04",
+      "schema": "WorkflowCapital",
+      "response": {
+        "schema_version": "portal.execution.capital-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "currency": "USDT",
+        "status": {
+          "schema_version": "portal.execution.command-status.v1",
+          "command_id": "ecm_00000000000000000000000000000001",
+          "operation": "RECALL_PARTIAL",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "environment": "paper",
+          "profile_ref": "TEST_ONLY:paper",
+          "delivery": "ACKNOWLEDGED",
+          "business": {
+            "state": "WAITING_ENCUMBRANCE",
+            "receipt_ref": "TEST_ONLY:owning-receipt",
+            "source_event_ref": "TEST_ONLY:event",
+            "revision": "9007199254740993",
+            "amounts": {
+              "requested": "1000",
+              "applied": "0",
+              "pending": "1000",
+              "cancelled": "0",
+              "rejected": "0"
+            }
+          },
+          "projection": "CATCHING_UP",
+          "venue": "NOT_APPLICABLE",
+          "next_action": "QUERY_SAME_INTENT",
+          "created_at_ms": 1792100000000,
+          "updated_at_ms": 1792100000000,
+          "authority": "TEST_ONLY"
+        },
+        "effect_kind": "MANAGEMENT_BUDGET",
+        "physical_transfer_performed": false,
+        "form_cancel": "DISCARD_LOCAL_DRAFT_ONLY",
+        "after_submit_cancel": "SEPARATE_CANCEL_REMAINING_AUTHORITY_REQUIRED",
+        "refresh": "GET_ORIGINAL_COMMAND_NO_RESUBMIT",
+        "public_copy_key": "PARTIAL_REMAINDER_PENDING",
+        "automatic_resend": false
+      }
+    },
+    {
+      "id": "W08-PARTIAL",
+      "gate": "T08-05",
+      "schema": "WorkflowCapital",
+      "response": {
+        "schema_version": "portal.execution.capital-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "currency": "USDT",
+        "status": {
+          "schema_version": "portal.execution.command-status.v1",
+          "command_id": "ecm_00000000000000000000000000000001",
+          "operation": "RECALL_PARTIAL",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "environment": "paper",
+          "profile_ref": "TEST_ONLY:paper",
+          "delivery": "ACKNOWLEDGED",
+          "business": {
+            "state": "PARTIALLY_APPLIED",
+            "receipt_ref": "TEST_ONLY:owning-receipt",
+            "source_event_ref": "TEST_ONLY:event",
+            "revision": "9007199254740993",
+            "amounts": {
+              "requested": "1000.000000000000000001",
+              "applied": "300",
+              "pending": "700.000000000000000001",
+              "cancelled": "0",
+              "rejected": "0"
+            }
+          },
+          "projection": "CATCHING_UP",
+          "venue": "NOT_APPLICABLE",
+          "next_action": "QUERY_SAME_INTENT",
+          "created_at_ms": 1792100000000,
+          "updated_at_ms": 1792100000000,
+          "authority": "TEST_ONLY"
+        },
+        "effect_kind": "MANAGEMENT_BUDGET",
+        "physical_transfer_performed": false,
+        "form_cancel": "DISCARD_LOCAL_DRAFT_ONLY",
+        "after_submit_cancel": "SEPARATE_CANCEL_REMAINING_AUTHORITY_REQUIRED",
+        "refresh": "GET_ORIGINAL_COMMAND_NO_RESUBMIT",
+        "public_copy_key": "PARTIAL_REMAINDER_PENDING",
+        "automatic_resend": false
+      }
+    },
+    {
+      "id": "W08-PARTIAL-CANCELLED",
+      "gate": "T08-05",
+      "schema": "WorkflowCapital",
+      "response": {
+        "schema_version": "portal.execution.capital-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "currency": "USDT",
+        "status": {
+          "schema_version": "portal.execution.command-status.v1",
+          "command_id": "ecm_00000000000000000000000000000001",
+          "operation": "RECALL_PARTIAL",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "environment": "paper",
+          "profile_ref": "TEST_ONLY:paper",
+          "delivery": "ACKNOWLEDGED",
+          "business": {
+            "state": "PARTIALLY_APPLIED_CANCELLED",
+            "receipt_ref": "TEST_ONLY:owning-receipt",
+            "source_event_ref": "TEST_ONLY:event",
+            "revision": "9007199254740993",
+            "amounts": {
+              "requested": "1000.000000000000000001",
+              "applied": "300",
+              "pending": "0",
+              "cancelled": "700.000000000000000001",
+              "rejected": "0"
+            }
+          },
+          "projection": "CATCHING_UP",
+          "venue": "NOT_APPLICABLE",
+          "next_action": "QUERY_SAME_INTENT",
+          "created_at_ms": 1792100000000,
+          "updated_at_ms": 1792100000000,
+          "authority": "TEST_ONLY"
+        },
+        "effect_kind": "MANAGEMENT_BUDGET",
+        "physical_transfer_performed": false,
+        "form_cancel": "DISCARD_LOCAL_DRAFT_ONLY",
+        "after_submit_cancel": "SEPARATE_CANCEL_REMAINING_AUTHORITY_REQUIRED",
+        "refresh": "GET_ORIGINAL_COMMAND_NO_RESUBMIT",
+        "public_copy_key": "APPLIED_PART_RETAINED",
+        "automatic_resend": false
+      }
+    },
+    {
+      "id": "W08-CONFIRM-SOURCE-DARK",
+      "gate": "T08-03",
+      "schema": "WorkflowConfirmation",
+      "response": {
+        "schema_version": "portal.execution.workflow-confirmation.v1",
+        "intent": {
+          "schema_version": "execution.capital-intent.v2",
+          "workspace_id": "TEST_ONLY:workspace",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "environment": "paper",
+          "expected_policy_revision": "TEST_ONLY:policy1",
+          "business_payload": {
+            "schema_version": "pma.capital-command.v1.1",
+            "operation": "TOP_UP",
+            "idempotency_key": "TEST_ONLY:key-0001",
+            "recipient_kind": "PORTFOLIO",
+            "currency": "USDT",
+            "reason": "TEST_ONLY component fixture",
+            "expected_versions": {
+              "budget": "9007199254740993",
+              "source": "2",
+              "parent": "3"
+            },
+            "amount": "100.000000000000000001"
+          }
+        },
+        "preview": {
+          "schema_version": "portal.execution.command-preview.v1",
+          "allowed": false,
+          "reason_code": "COMMAND_RELAY_NOT_QUALIFIED",
+          "preview_digest": null,
+          "expires_at_ms": null,
+          "profile_ref": null,
+          "approval_required": null,
+          "approval_gate": null,
+          "business_applied": false,
+          "reserved": false
+        },
+        "before": {
+          "economic_backing": null,
+          "margin_risk_budget": null,
+          "exposure_cap": null,
+          "source_receipt_ref": null,
+          "source_as_of_ms": null
+        },
+        "projected_after": {
+          "economic_backing": null,
+          "margin_risk_budget": null,
+          "exposure_cap": null,
+          "source_receipt_ref": null,
+          "source_as_of_ms": null
+        },
+        "effect_is_projection_not_receipt": true,
+        "source_parent_ref": null,
+        "confirm_is_approval": false,
+        "physical_transfer_performed": false
+      }
+    },
+    {
+      "id": "W08-INHERITED-LOCK",
+      "gate": "T08-06",
+      "schema": "WorkflowLifecycle",
+      "response": {
+        "schema_version": "portal.execution.lifecycle-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "operation": "RESUME",
+        "financial_stage": "PAPER",
+        "lifecycle": "ACTIVE",
+        "state": "BLOCKED",
+        "reason_code": "INHERITED_RESTRICTION",
+        "obligations": {
+          "counts": {
+            "positions": 0,
+            "working_orders": 0,
+            "reservations": 0,
+            "unknown_outcomes": 0,
+            "locks": 0,
+            "recalls": 0,
+            "settlements": 0,
+            "active_children": 0
+          },
+          "coverage": "COMPLETE",
+          "freshness": "FRESH",
+          "source_receipt_ref": "TEST_ONLY:census"
+        },
+        "source_portfolio_id": "TEST_ONLY:P1",
+        "destination_portfolio_id": "TEST_ONLY:P2",
+        "remaining_budget": "0",
+        "original_attribution": "ORIGINAL_CAUSAL_BINDING",
+        "automatic_liquidation": false,
+        "automatic_order_cancel": false,
+        "automatic_capital_return": false,
+        "automatic_live_activation": false,
+        "dispatch_enabled": false,
+        "source_budget_return": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "destination_budget_grant": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "economic_settlement": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "monitor": {
+          "state": "NOT_PROVISIONED",
+          "deployment_id": null,
+          "origin_deployment_id": null,
+          "alpha_version_id": null,
+          "params_digest": null,
+          "lineage_receipt_ref": null,
+          "reason": null,
+          "effective_at_ms": null,
+          "approved_config_digest": null,
+          "last_observation_ms": null,
+          "virtual_capital": null,
+          "currency": null
+        }
+      }
+    },
+    {
+      "id": "W08-EXACT-INSTANCE",
+      "gate": "T08-07",
+      "schema": "WorkflowLifecycle",
+      "response": {
+        "schema_version": "portal.execution.lifecycle-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "operation": "MOVE_ASSIGNMENT",
+        "financial_stage": "PAPER",
+        "lifecycle": "ACTIVE",
+        "state": "BLOCKED",
+        "reason_code": "EXACT_INSTANCE_REQUIRED",
+        "obligations": {
+          "counts": {
+            "positions": 0,
+            "working_orders": 0,
+            "reservations": 0,
+            "unknown_outcomes": 0,
+            "locks": 0,
+            "recalls": 0,
+            "settlements": 0,
+            "active_children": 0
+          },
+          "coverage": "COMPLETE",
+          "freshness": "FRESH",
+          "source_receipt_ref": "TEST_ONLY:census"
+        },
+        "source_portfolio_id": "TEST_ONLY:P1",
+        "destination_portfolio_id": "TEST_ONLY:P2",
+        "remaining_budget": "0",
+        "original_attribution": "ORIGINAL_CAUSAL_BINDING",
+        "automatic_liquidation": false,
+        "automatic_order_cancel": false,
+        "automatic_capital_return": false,
+        "automatic_live_activation": false,
+        "dispatch_enabled": false,
+        "source_budget_return": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "destination_budget_grant": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "economic_settlement": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "monitor": {
+          "state": "NOT_PROVISIONED",
+          "deployment_id": null,
+          "origin_deployment_id": null,
+          "alpha_version_id": null,
+          "params_digest": null,
+          "lineage_receipt_ref": null,
+          "reason": null,
+          "effective_at_ms": null,
+          "approved_config_digest": null,
+          "last_observation_ms": null,
+          "virtual_capital": null,
+          "currency": null
+        }
+      }
+    },
+    {
+      "id": "W08-PENDING-DRAIN",
+      "gate": "T08-08",
+      "schema": "WorkflowLifecycle",
+      "response": {
+        "schema_version": "portal.execution.lifecycle-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "operation": "MOVE_ASSIGNMENT",
+        "financial_stage": "PAPER",
+        "lifecycle": "ACTIVE",
+        "state": "PENDING_DRAIN",
+        "reason_code": "PENDING_DRAIN",
+        "obligations": {
+          "counts": {
+            "positions": 0,
+            "working_orders": 3,
+            "reservations": 0,
+            "unknown_outcomes": 0,
+            "locks": 0,
+            "recalls": 0,
+            "settlements": 0,
+            "active_children": 0
+          },
+          "coverage": "COMPLETE",
+          "freshness": "FRESH",
+          "source_receipt_ref": "TEST_ONLY:census"
+        },
+        "source_portfolio_id": "TEST_ONLY:P1",
+        "destination_portfolio_id": "TEST_ONLY:P2",
+        "remaining_budget": "0",
+        "original_attribution": "ORIGINAL_CAUSAL_BINDING",
+        "automatic_liquidation": false,
+        "automatic_order_cancel": false,
+        "automatic_capital_return": false,
+        "automatic_live_activation": false,
+        "dispatch_enabled": false,
+        "source_budget_return": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "destination_budget_grant": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "economic_settlement": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "monitor": {
+          "state": "NOT_PROVISIONED",
+          "deployment_id": null,
+          "origin_deployment_id": null,
+          "alpha_version_id": null,
+          "params_digest": null,
+          "lineage_receipt_ref": null,
+          "reason": null,
+          "effective_at_ms": null,
+          "approved_config_digest": null,
+          "last_observation_ms": null,
+          "virtual_capital": null,
+          "currency": null
+        }
+      }
+    },
+    {
+      "id": "W08-MOVE-RECEIPTS-MISSING",
+      "gate": "T08-08",
+      "schema": "WorkflowLifecycle",
+      "response": {
+        "schema_version": "portal.execution.lifecycle-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "operation": "MOVE_ASSIGNMENT",
+        "financial_stage": "PAPER",
+        "lifecycle": "ACTIVE",
+        "state": "BLOCKED",
+        "reason_code": "ASSIGNMENT_RECEIPTS_REQUIRED",
+        "obligations": {
+          "counts": {
+            "positions": 0,
+            "working_orders": 0,
+            "reservations": 0,
+            "unknown_outcomes": 0,
+            "locks": 0,
+            "recalls": 0,
+            "settlements": 0,
+            "active_children": 0
+          },
+          "coverage": "COMPLETE",
+          "freshness": "FRESH",
+          "source_receipt_ref": "TEST_ONLY:census"
+        },
+        "source_portfolio_id": "TEST_ONLY:P1",
+        "destination_portfolio_id": "TEST_ONLY:P2",
+        "remaining_budget": "0",
+        "original_attribution": "ORIGINAL_CAUSAL_BINDING",
+        "automatic_liquidation": false,
+        "automatic_order_cancel": false,
+        "automatic_capital_return": false,
+        "automatic_live_activation": false,
+        "dispatch_enabled": false,
+        "source_budget_return": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "destination_budget_grant": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "economic_settlement": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "monitor": {
+          "state": "NOT_PROVISIONED",
+          "deployment_id": null,
+          "origin_deployment_id": null,
+          "alpha_version_id": null,
+          "params_digest": null,
+          "lineage_receipt_ref": null,
+          "reason": null,
+          "effective_at_ms": null,
+          "approved_config_digest": null,
+          "last_observation_ms": null,
+          "virtual_capital": null,
+          "currency": null
+        }
+      }
+    },
+    {
+      "id": "W08-MOVE-REVIEW-ONLY",
+      "gate": "T08-08",
+      "schema": "WorkflowLifecycle",
+      "response": {
+        "schema_version": "portal.execution.lifecycle-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "operation": "MOVE_ASSIGNMENT",
+        "financial_stage": "PAPER",
+        "lifecycle": "ACTIVE",
+        "state": "READY_FOR_AUTHORITY_REVIEW",
+        "reason_code": null,
+        "obligations": {
+          "counts": {
+            "positions": 0,
+            "working_orders": 0,
+            "reservations": 0,
+            "unknown_outcomes": 0,
+            "locks": 0,
+            "recalls": 0,
+            "settlements": 0,
+            "active_children": 0
+          },
+          "coverage": "COMPLETE",
+          "freshness": "FRESH",
+          "source_receipt_ref": "TEST_ONLY:census"
+        },
+        "source_portfolio_id": "TEST_ONLY:P1",
+        "destination_portfolio_id": "TEST_ONLY:P2",
+        "remaining_budget": "0",
+        "original_attribution": "ORIGINAL_CAUSAL_BINDING",
+        "automatic_liquidation": false,
+        "automatic_order_cancel": false,
+        "automatic_capital_return": false,
+        "automatic_live_activation": false,
+        "dispatch_enabled": false,
+        "source_budget_return": {
+          "state": "APPLIED",
+          "receipt_ref": "TEST_ONLY:return"
+        },
+        "destination_budget_grant": {
+          "state": "APPLIED",
+          "receipt_ref": "TEST_ONLY:target-grant"
+        },
+        "economic_settlement": {
+          "state": "APPLIED",
+          "receipt_ref": "TEST_ONLY:residual"
+        },
+        "monitor": {
+          "state": "NOT_PROVISIONED",
+          "deployment_id": null,
+          "origin_deployment_id": null,
+          "alpha_version_id": null,
+          "params_digest": null,
+          "lineage_receipt_ref": null,
+          "reason": null,
+          "effective_at_ms": null,
+          "approved_config_digest": null,
+          "last_observation_ms": null,
+          "virtual_capital": null,
+          "currency": null
+        }
+      }
+    },
+    {
+      "id": "W08-REBIND-DISABLED",
+      "gate": "T08-09",
+      "schema": "WorkflowLifecycle",
+      "response": {
+        "schema_version": "portal.execution.lifecycle-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "operation": "REBIND",
+        "financial_stage": "PAPER",
+        "lifecycle": "ACTIVE",
+        "state": "BLOCKED",
+        "reason_code": "BINDING_CHANGE_NOT_QUALIFIED",
+        "obligations": {
+          "counts": {
+            "positions": 0,
+            "working_orders": 0,
+            "reservations": 0,
+            "unknown_outcomes": 0,
+            "locks": 0,
+            "recalls": 0,
+            "settlements": 0,
+            "active_children": 0
+          },
+          "coverage": "COMPLETE",
+          "freshness": "FRESH",
+          "source_receipt_ref": "TEST_ONLY:census"
+        },
+        "source_portfolio_id": "TEST_ONLY:P1",
+        "destination_portfolio_id": "TEST_ONLY:P2",
+        "remaining_budget": "0",
+        "original_attribution": "ORIGINAL_CAUSAL_BINDING",
+        "automatic_liquidation": false,
+        "automatic_order_cancel": false,
+        "automatic_capital_return": false,
+        "automatic_live_activation": false,
+        "dispatch_enabled": false,
+        "source_budget_return": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "destination_budget_grant": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "economic_settlement": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "monitor": {
+          "state": "NOT_PROVISIONED",
+          "deployment_id": null,
+          "origin_deployment_id": null,
+          "alpha_version_id": null,
+          "params_digest": null,
+          "lineage_receipt_ref": null,
+          "reason": null,
+          "effective_at_ms": null,
+          "approved_config_digest": null,
+          "last_observation_ms": null,
+          "virtual_capital": null,
+          "currency": null
+        }
+      }
+    },
+    {
+      "id": "W08-ARCHIVE-RESIDUAL",
+      "gate": "T08-13",
+      "schema": "WorkflowLifecycle",
+      "response": {
+        "schema_version": "portal.execution.lifecycle-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "operation": "ARCHIVE",
+        "financial_stage": "PAPER",
+        "lifecycle": "ARCHIVE_REQUESTED",
+        "state": "PENDING_DRAIN",
+        "reason_code": "PENDING_DRAIN",
+        "obligations": {
+          "counts": {
+            "positions": 1,
+            "working_orders": 0,
+            "reservations": 0,
+            "unknown_outcomes": 0,
+            "locks": 0,
+            "recalls": 0,
+            "settlements": 0,
+            "active_children": 0
+          },
+          "coverage": "COMPLETE",
+          "freshness": "FRESH",
+          "source_receipt_ref": "TEST_ONLY:census"
+        },
+        "source_portfolio_id": "TEST_ONLY:P1",
+        "destination_portfolio_id": "TEST_ONLY:P2",
+        "remaining_budget": "0",
+        "original_attribution": "ORIGINAL_CAUSAL_BINDING",
+        "automatic_liquidation": false,
+        "automatic_order_cancel": false,
+        "automatic_capital_return": false,
+        "automatic_live_activation": false,
+        "dispatch_enabled": false,
+        "source_budget_return": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "destination_budget_grant": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "economic_settlement": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "monitor": {
+          "state": "NOT_PROVISIONED",
+          "deployment_id": null,
+          "origin_deployment_id": null,
+          "alpha_version_id": null,
+          "params_digest": null,
+          "lineage_receipt_ref": null,
+          "reason": null,
+          "effective_at_ms": null,
+          "approved_config_digest": null,
+          "last_observation_ms": null,
+          "virtual_capital": null,
+          "currency": null
+        }
+      }
+    },
+    {
+      "id": "W08-ARCHIVE-MONITOR-MISSING",
+      "gate": "T08-13",
+      "schema": "WorkflowLifecycle",
+      "response": {
+        "schema_version": "portal.execution.lifecycle-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "operation": "CREATE_PAPER_MONITOR",
+        "financial_stage": "PAPER",
+        "lifecycle": "ARCHIVED",
+        "state": "BLOCKED",
+        "reason_code": "MONITOR_NOT_PROVISIONED",
+        "obligations": {
+          "counts": {
+            "positions": 0,
+            "working_orders": 0,
+            "reservations": 0,
+            "unknown_outcomes": 0,
+            "locks": 0,
+            "recalls": 0,
+            "settlements": 0,
+            "active_children": 0
+          },
+          "coverage": "COMPLETE",
+          "freshness": "FRESH",
+          "source_receipt_ref": "TEST_ONLY:census"
+        },
+        "source_portfolio_id": "TEST_ONLY:P1",
+        "destination_portfolio_id": "TEST_ONLY:P2",
+        "remaining_budget": "0",
+        "original_attribution": "ORIGINAL_CAUSAL_BINDING",
+        "automatic_liquidation": false,
+        "automatic_order_cancel": false,
+        "automatic_capital_return": false,
+        "automatic_live_activation": false,
+        "dispatch_enabled": false,
+        "source_budget_return": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "destination_budget_grant": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "economic_settlement": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "monitor": {
+          "state": "NOT_PROVISIONED",
+          "deployment_id": null,
+          "origin_deployment_id": null,
+          "alpha_version_id": null,
+          "params_digest": null,
+          "lineage_receipt_ref": null,
+          "reason": null,
+          "effective_at_ms": null,
+          "approved_config_digest": null,
+          "last_observation_ms": null,
+          "virtual_capital": null,
+          "currency": null
+        }
+      }
+    },
+    {
+      "id": "W08-PAPER-MONITOR-LINEAGE",
+      "gate": "T08-13",
+      "schema": "WorkflowLifecycle",
+      "response": {
+        "schema_version": "portal.execution.lifecycle-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "operation": "CREATE_PAPER_MONITOR",
+        "financial_stage": "PAPER",
+        "lifecycle": "ARCHIVED",
+        "state": "READY_FOR_AUTHORITY_REVIEW",
+        "reason_code": null,
+        "obligations": {
+          "counts": {
+            "positions": 0,
+            "working_orders": 0,
+            "reservations": 0,
+            "unknown_outcomes": 0,
+            "locks": 0,
+            "recalls": 0,
+            "settlements": 0,
+            "active_children": 0
+          },
+          "coverage": "COMPLETE",
+          "freshness": "FRESH",
+          "source_receipt_ref": "TEST_ONLY:census"
+        },
+        "source_portfolio_id": "TEST_ONLY:P1",
+        "destination_portfolio_id": "TEST_ONLY:P2",
+        "remaining_budget": "0",
+        "original_attribution": "ORIGINAL_CAUSAL_BINDING",
+        "automatic_liquidation": false,
+        "automatic_order_cancel": false,
+        "automatic_capital_return": false,
+        "automatic_live_activation": false,
+        "dispatch_enabled": false,
+        "source_budget_return": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "destination_budget_grant": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "economic_settlement": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "monitor": {
+          "state": "RUNNING",
+          "deployment_id": "TEST_ONLY:monitor",
+          "origin_deployment_id": "TEST_ONLY:original",
+          "alpha_version_id": "TEST_ONLY:av",
+          "params_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "lineage_receipt_ref": "TEST_ONLY:clone",
+          "reason": "ARCHIVE_MONITOR",
+          "effective_at_ms": 1792099900000,
+          "approved_config_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "last_observation_ms": 1792099990000,
+          "virtual_capital": "1000",
+          "currency": "USDT"
+        }
+      }
+    },
+    {
+      "id": "W08-REACTIVATION",
+      "gate": "T08-13",
+      "schema": "WorkflowLifecycle",
+      "response": {
+        "schema_version": "portal.execution.lifecycle-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "operation": "REACTIVATE",
+        "financial_stage": "PAPER",
+        "lifecycle": "ARCHIVED",
+        "state": "BLOCKED",
+        "reason_code": "REACTIVATION_REVIEW_REQUIRED",
+        "obligations": {
+          "counts": {
+            "positions": 0,
+            "working_orders": 0,
+            "reservations": 0,
+            "unknown_outcomes": 0,
+            "locks": 0,
+            "recalls": 0,
+            "settlements": 0,
+            "active_children": 0
+          },
+          "coverage": "COMPLETE",
+          "freshness": "FRESH",
+          "source_receipt_ref": "TEST_ONLY:census"
+        },
+        "source_portfolio_id": "TEST_ONLY:P1",
+        "destination_portfolio_id": "TEST_ONLY:P2",
+        "remaining_budget": "0",
+        "original_attribution": "ORIGINAL_CAUSAL_BINDING",
+        "automatic_liquidation": false,
+        "automatic_order_cancel": false,
+        "automatic_capital_return": false,
+        "automatic_live_activation": false,
+        "dispatch_enabled": false,
+        "source_budget_return": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "destination_budget_grant": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "economic_settlement": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "monitor": {
+          "state": "NOT_PROVISIONED",
+          "deployment_id": null,
+          "origin_deployment_id": null,
+          "alpha_version_id": null,
+          "params_digest": null,
+          "lineage_receipt_ref": null,
+          "reason": null,
+          "effective_at_ms": null,
+          "approved_config_digest": null,
+          "last_observation_ms": null,
+          "virtual_capital": null,
+          "currency": null
+        }
+      }
+    },
+    {
+      "id": "W08-READ-LOADING",
+      "gate": "T08-10",
+      "schema": "WorkflowReadState",
+      "response": {
+        "state": "LOADING",
+        "may_display_data": false,
+        "public_copy_key": "LOADING",
+        "next_action": "NONE",
+        "source_as_of_ms": null,
+        "observed_at_ms": 1792100000000
+      }
+    },
+    {
+      "id": "W08-READ-AUTHORIZED_EMPTY",
+      "gate": "T08-10",
+      "schema": "WorkflowReadState",
+      "response": {
+        "state": "AUTHORIZED_EMPTY",
+        "may_display_data": true,
+        "public_copy_key": "NO_AUTHORIZED_RESULTS",
+        "next_action": "NONE",
+        "source_as_of_ms": null,
+        "observed_at_ms": 1792100000000
+      }
+    },
+    {
+      "id": "W08-READ-READY",
+      "gate": "T08-10",
+      "schema": "WorkflowReadState",
+      "response": {
+        "state": "READY",
+        "may_display_data": true,
+        "public_copy_key": "READY",
+        "next_action": "NONE",
+        "source_as_of_ms": null,
+        "observed_at_ms": 1792100000000
+      }
+    },
+    {
+      "id": "W08-READ-PARTIAL",
+      "gate": "T08-10",
+      "schema": "WorkflowReadState",
+      "response": {
+        "state": "PARTIAL",
+        "may_display_data": true,
+        "public_copy_key": "PARTIAL_DATA",
+        "next_action": "REFRESH_ONCE",
+        "source_as_of_ms": null,
+        "observed_at_ms": 1792100000000
+      }
+    },
+    {
+      "id": "W08-READ-STALE",
+      "gate": "T08-10",
+      "schema": "WorkflowReadState",
+      "response": {
+        "state": "STALE",
+        "may_display_data": false,
+        "public_copy_key": "STALE_DATA",
+        "next_action": "REFRESH_ONCE",
+        "source_as_of_ms": null,
+        "observed_at_ms": 1792100000000
+      }
+    },
+    {
+      "id": "W08-READ-UNAVAILABLE",
+      "gate": "T08-10",
+      "schema": "WorkflowReadState",
+      "response": {
+        "state": "UNAVAILABLE",
+        "may_display_data": false,
+        "public_copy_key": "DATA_UNAVAILABLE",
+        "next_action": "REFRESH_ONCE",
+        "source_as_of_ms": null,
+        "observed_at_ms": 1792100000000
+      }
+    },
+    {
+      "id": "W08-READ-DENIED",
+      "gate": "T08-10",
+      "schema": "WorkflowReadState",
+      "response": {
+        "state": "DENIED",
+        "may_display_data": false,
+        "public_copy_key": "ACCESS_REQUIRED",
+        "next_action": "REQUEST_ACCESS",
+        "source_as_of_ms": null,
+        "observed_at_ms": 1792100000000
+      }
+    },
+    {
+      "id": "W08-READ-REVOKED",
+      "gate": "T08-10",
+      "schema": "WorkflowReadState",
+      "response": {
+        "state": "REVOKED",
+        "may_display_data": false,
+        "public_copy_key": "ACCESS_REVOKED",
+        "next_action": "DISCARD_AND_REFRESH",
+        "source_as_of_ms": null,
+        "observed_at_ms": 1792100000000
+      }
+    },
+    {
+      "id": "W08-READ-DISCONNECTED",
+      "gate": "T08-10",
+      "schema": "WorkflowReadState",
+      "response": {
+        "state": "DISCONNECTED",
+        "may_display_data": false,
+        "public_copy_key": "DISCONNECTED",
+        "next_action": "REFRESH_ONCE",
+        "source_as_of_ms": null,
+        "observed_at_ms": 1792100000000
+      }
+    },
+    {
+      "id": "W08-READ-RESYNC_REQUIRED",
+      "gate": "T08-10",
+      "schema": "WorkflowReadState",
+      "response": {
+        "state": "RESYNC_REQUIRED",
+        "may_display_data": false,
+        "public_copy_key": "REFRESH_REQUIRED",
+        "next_action": "DISCARD_AND_REFRESH",
+        "source_as_of_ms": null,
+        "observed_at_ms": 1792100000000
+      }
+    },
+    {
+      "id": "W08-READ-INSUFFICIENT_EVIDENCE",
+      "gate": "T08-10",
+      "schema": "WorkflowReadState",
+      "response": {
+        "state": "INSUFFICIENT_EVIDENCE",
+        "may_display_data": true,
+        "public_copy_key": "MORE_EVIDENCE_REQUIRED",
+        "next_action": "NONE",
+        "source_as_of_ms": null,
+        "observed_at_ms": 1792100000000
+      }
+    },
+    {
+      "id": "W08-READ-OUTCOME_UNKNOWN",
+      "gate": "T08-10",
+      "schema": "WorkflowReadState",
+      "response": {
+        "state": "OUTCOME_UNKNOWN",
+        "may_display_data": true,
+        "public_copy_key": "QUERY_SAME_INTENT",
+        "next_action": "QUERY_SAME_INTENT",
+        "source_as_of_ms": null,
+        "observed_at_ms": 1792100000000
+      }
+    },
+    {
+      "id": "W08-MANAGER-NAVIGATION",
+      "gate": "T08-11",
+      "schema": "WorkflowNavigation",
+      "response": {
+        "schema_version": "portal.execution.workflow-navigation.v1",
+        "workspace_id": "TEST_ONLY:workspace",
+        "view": "MANAGER",
+        "financial_stage_filter": "ALL",
+        "lifecycle_filter": "ACTIVE",
+        "environment": null,
+        "currency": "USDT",
+        "window": {
+          "from_ms": 1792000000000,
+          "to_ms": 1792100000000
+        },
+        "portfolio_id": "TEST_ONLY:P1",
+        "alpha_id": "TEST_ONLY:A1",
+        "deployment_id": "TEST_ONLY:D1",
+        "query_revision": "TEST_ONLY:q1",
+        "origin": {
+          "run_id": "TEST_ONLY:run",
+          "release_candidate_id": "TEST_ONLY:rc",
+          "approval_id": "TEST_ONLY:approval",
+          "gate": "R1",
+          "review_id": null,
+          "evidence_set_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "economic_aggregation": "EXPLICIT_AUTHORIZED_PARTITION_ONLY",
+        "saved_view_grants_access": false
+      }
+    },
+    {
+      "id": "W08-OWN-SLICE-NAVIGATION",
+      "gate": "T08-17",
+      "schema": "WorkflowNavigation",
+      "response": {
+        "schema_version": "portal.execution.workflow-navigation.v1",
+        "workspace_id": "TEST_ONLY:workspace",
+        "view": "OWN_SLICE",
+        "financial_stage_filter": "ALL",
+        "lifecycle_filter": "ACTIVE",
+        "environment": null,
+        "currency": "USDT",
+        "window": {
+          "from_ms": 1792000000000,
+          "to_ms": 1792100000000
+        },
+        "portfolio_id": "TEST_ONLY:P1",
+        "alpha_id": "TEST_ONLY:A1",
+        "deployment_id": "TEST_ONLY:D1",
+        "query_revision": "TEST_ONLY:q1",
+        "origin": {
+          "run_id": "TEST_ONLY:run",
+          "release_candidate_id": "TEST_ONLY:rc",
+          "approval_id": "TEST_ONLY:approval",
+          "gate": "R1",
+          "review_id": null,
+          "evidence_set_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "economic_aggregation": "EXPLICIT_AUTHORIZED_PARTITION_ONLY",
+        "saved_view_grants_access": false
+      }
+    },
+    {
+      "id": "W08-STAGE-PAPER",
+      "gate": "T08-12",
+      "schema": "WorkflowNavigation",
+      "response": {
+        "schema_version": "portal.execution.workflow-navigation.v1",
+        "workspace_id": "TEST_ONLY:workspace",
+        "view": "MANAGER",
+        "financial_stage_filter": "PAPER",
+        "lifecycle_filter": "ACTIVE",
+        "environment": "paper",
+        "currency": "USDT",
+        "window": {
+          "from_ms": 1792000000000,
+          "to_ms": 1792100000000
+        },
+        "portfolio_id": "TEST_ONLY:P1",
+        "alpha_id": "TEST_ONLY:A1",
+        "deployment_id": "TEST_ONLY:D1",
+        "query_revision": "TEST_ONLY:q1",
+        "origin": {
+          "run_id": "TEST_ONLY:run",
+          "release_candidate_id": "TEST_ONLY:rc",
+          "approval_id": "TEST_ONLY:approval",
+          "gate": "R1",
+          "review_id": null,
+          "evidence_set_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "economic_aggregation": "EXPLICIT_AUTHORIZED_PARTITION_ONLY",
+        "saved_view_grants_access": false
+      }
+    },
+    {
+      "id": "W08-STAGE-SANDBOX",
+      "gate": "T08-12",
+      "schema": "WorkflowNavigation",
+      "response": {
+        "schema_version": "portal.execution.workflow-navigation.v1",
+        "workspace_id": "TEST_ONLY:workspace",
+        "view": "MANAGER",
+        "financial_stage_filter": "SANDBOX",
+        "lifecycle_filter": "ACTIVE",
+        "environment": "sandbox",
+        "currency": "USDT",
+        "window": {
+          "from_ms": 1792000000000,
+          "to_ms": 1792100000000
+        },
+        "portfolio_id": "TEST_ONLY:P1",
+        "alpha_id": "TEST_ONLY:A1",
+        "deployment_id": "TEST_ONLY:D1",
+        "query_revision": "TEST_ONLY:q1",
+        "origin": {
+          "run_id": "TEST_ONLY:run",
+          "release_candidate_id": "TEST_ONLY:rc",
+          "approval_id": "TEST_ONLY:approval",
+          "gate": "R1",
+          "review_id": null,
+          "evidence_set_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "economic_aggregation": "EXPLICIT_AUTHORIZED_PARTITION_ONLY",
+        "saved_view_grants_access": false
+      }
+    },
+    {
+      "id": "W08-STAGE-CANARY",
+      "gate": "T08-12",
+      "schema": "WorkflowNavigation",
+      "response": {
+        "schema_version": "portal.execution.workflow-navigation.v1",
+        "workspace_id": "TEST_ONLY:workspace",
+        "view": "MANAGER",
+        "financial_stage_filter": "CANARY",
+        "lifecycle_filter": "ACTIVE",
+        "environment": "live",
+        "currency": "USDT",
+        "window": {
+          "from_ms": 1792000000000,
+          "to_ms": 1792100000000
+        },
+        "portfolio_id": "TEST_ONLY:P1",
+        "alpha_id": "TEST_ONLY:A1",
+        "deployment_id": "TEST_ONLY:D1",
+        "query_revision": "TEST_ONLY:q1",
+        "origin": {
+          "run_id": "TEST_ONLY:run",
+          "release_candidate_id": "TEST_ONLY:rc",
+          "approval_id": "TEST_ONLY:approval",
+          "gate": "R1",
+          "review_id": null,
+          "evidence_set_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "economic_aggregation": "EXPLICIT_AUTHORIZED_PARTITION_ONLY",
+        "saved_view_grants_access": false
+      }
+    },
+    {
+      "id": "W08-STAGE-LIVE",
+      "gate": "T08-12",
+      "schema": "WorkflowNavigation",
+      "response": {
+        "schema_version": "portal.execution.workflow-navigation.v1",
+        "workspace_id": "TEST_ONLY:workspace",
+        "view": "MANAGER",
+        "financial_stage_filter": "LIVE",
+        "lifecycle_filter": "ACTIVE",
+        "environment": "live",
+        "currency": "USDT",
+        "window": {
+          "from_ms": 1792000000000,
+          "to_ms": 1792100000000
+        },
+        "portfolio_id": "TEST_ONLY:P1",
+        "alpha_id": "TEST_ONLY:A1",
+        "deployment_id": "TEST_ONLY:D1",
+        "query_revision": "TEST_ONLY:q1",
+        "origin": {
+          "run_id": "TEST_ONLY:run",
+          "release_candidate_id": "TEST_ONLY:rc",
+          "approval_id": "TEST_ONLY:approval",
+          "gate": "R1",
+          "review_id": null,
+          "evidence_set_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "economic_aggregation": "EXPLICIT_AUTHORIZED_PARTITION_ONLY",
+        "saved_view_grants_access": false
+      }
+    },
+    {
+      "id": "W08-ARCHIVE-FILTER",
+      "gate": "T08-12",
+      "schema": "WorkflowNavigation",
+      "response": {
+        "schema_version": "portal.execution.workflow-navigation.v1",
+        "workspace_id": "TEST_ONLY:workspace",
+        "view": "MANAGER",
+        "financial_stage_filter": "ALL",
+        "lifecycle_filter": "ARCHIVED",
+        "environment": null,
+        "currency": "USDT",
+        "window": {
+          "from_ms": 1792000000000,
+          "to_ms": 1792100000000
+        },
+        "portfolio_id": "TEST_ONLY:P1",
+        "alpha_id": "TEST_ONLY:A1",
+        "deployment_id": "TEST_ONLY:D1",
+        "query_revision": "TEST_ONLY:q1",
+        "origin": {
+          "run_id": "TEST_ONLY:run",
+          "release_candidate_id": "TEST_ONLY:rc",
+          "approval_id": "TEST_ONLY:approval",
+          "gate": "R1",
+          "review_id": null,
+          "evidence_set_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "economic_aggregation": "EXPLICIT_AUTHORIZED_PARTITION_ONLY",
+        "saved_view_grants_access": false
+      }
+    },
+    {
+      "id": "W08-Q73-3",
+      "gate": "T08-15",
+      "schema": "WorkflowScorePresentation",
+      "response": {
+        "canonical_score": {
+          "model_revision": "qbts_prb_v1_1",
+          "band_revision": "quality_bands_v1_1",
+          "kind": "RAW_ALPHA",
+          "status": "provisional",
+          "value": "73.3",
+          "quality_band": "fair",
+          "comparable_basis_id": "test:7d-basis",
+          "evidence_ref": "test:raw-observations",
+          "requested_window": {
+            "start_ms": 1704067200000,
+            "end_exclusive_ms": 1704672000000
+          },
+          "effective_window": {
+            "start_ms": 1704067200000,
+            "end_exclusive_ms": 1704672000000
+          },
+          "economic_subject_ref": "A1:V1:P1",
+          "research_binding_ref": "test:binding",
+          "config_ref": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "reason_code": null,
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          },
+          "subject_type": "alpha",
+          "reason_codes": [],
+          "policy_version": "test:policy1",
+          "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "approved_policy_id": "TEST_ONLY_NOT_OWNER_APPROVAL",
+          "components": {
+            "P": "80",
+            "R": "66",
+            "B": "70",
+            "atomic": {
+              "net_excess_twr": {
+                "raw": "0.06",
+                "normalized": "80",
+                "contribution": "25.2",
+                "reason_code": null
+              },
+              "sharpe_period": {
+                "raw": "0.12",
+                "normalized": "80",
+                "contribution": "10.8",
+                "reason_code": null
+              },
+              "mdd": {
+                "raw": "0.03",
+                "normalized": "66",
+                "contribution": "11.88",
+                "reason_code": null
+              },
+              "add": {
+                "raw": "0.012",
+                "normalized": "66",
+                "contribution": "7.92",
+                "reason_code": null
+              },
+              "positive_block_ratio": {
+                "raw": "0.652",
+                "normalized": "70",
+                "contribution": "8.75",
+                "reason_code": null
+              },
+              "stress_excess_twr": {
+                "raw": "0.0452",
+                "normalized": "70",
+                "contribution": "8.75",
+                "reason_code": null
+              }
+            }
+          },
+          "bounds": null,
+          "evidence_status": "limited",
+          "sample_count": 168,
+          "complete_block_count": 250,
+          "trade_count": null,
+          "observed_duration_ms": 604800000,
+          "actual_duration_ms": 604800000,
+          "as_of_ms": 1704672000000,
+          "knowledge_cutoff_ms": 1704672000000,
+          "computed_at_ms": 1704672000000,
+          "subject_binding_id": "test:subject-binding",
+          "data_snapshot_id": "test:snapshot1",
+          "revision": "score:r1",
+          "supersedes_revision": null,
+          "stage_breakdown": [
+            {
+              "financial_stage": "CANARY",
+              "duration_ms": 604800000
+            }
+          ],
+          "series_kind": "ECONOMIC_NAV",
+          "economic_domain": "ACTUAL",
+          "cost_coverage": {
+            "state": "COMPLETE",
+            "source_ref": "test:costs",
+            "reason_code": null
+          },
+          "stress_policy_id": "test:stress",
+          "allocation_weight": null,
+          "raw_score_ref": null,
+          "allocation_snapshot_id": null,
+          "score_coverage_allocated": null,
+          "provisional_allocated_weight": null,
+          "allocation_coverage_nav": null,
+          "return_source_snapshot_id": "test:returns",
+          "consolidation_manifest_id": "test:consolidation",
+          "preview": null
+        },
+        "facet": "ACTUAL",
+        "headline": "RAW_QUALITY",
+        "public_copy_key": "PROVISIONAL",
+        "regime_changes_score": false,
+        "analytics_gates_safety_action": false
+      }
+    },
+    {
+      "id": "W08-CONTRIBUTION",
+      "gate": "T08-15",
+      "schema": "WorkflowScorePresentation",
+      "response": {
+        "canonical_score": {
+          "model_revision": "qbts_prb_v1_1",
+          "band_revision": "quality_bands_v1_1",
+          "kind": "CONTRIBUTION",
+          "status": "provisional",
+          "value": "18.325",
+          "quality_band": null,
+          "comparable_basis_id": "test:7d-basis",
+          "evidence_ref": "test:raw-observations",
+          "requested_window": {
+            "start_ms": 1704067200000,
+            "end_exclusive_ms": 1704672000000
+          },
+          "effective_window": {
+            "start_ms": 1704067200000,
+            "end_exclusive_ms": 1704672000000
+          },
+          "economic_subject_ref": "A1:V1:P1",
+          "research_binding_ref": "test:binding",
+          "config_ref": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "reason_code": null,
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          },
+          "subject_type": "alpha",
+          "reason_codes": [],
+          "policy_version": "test:policy1",
+          "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "approved_policy_id": "TEST_ONLY_NOT_OWNER_APPROVAL",
+          "components": {
+            "P": "80",
+            "R": "66",
+            "B": "70",
+            "atomic": {
+              "net_excess_twr": {
+                "raw": "0.06",
+                "normalized": "80",
+                "contribution": "25.2",
+                "reason_code": null
+              },
+              "sharpe_period": {
+                "raw": "0.12",
+                "normalized": "80",
+                "contribution": "10.8",
+                "reason_code": null
+              },
+              "mdd": {
+                "raw": "0.03",
+                "normalized": "66",
+                "contribution": "11.88",
+                "reason_code": null
+              },
+              "add": {
+                "raw": "0.012",
+                "normalized": "66",
+                "contribution": "7.92",
+                "reason_code": null
+              },
+              "positive_block_ratio": {
+                "raw": "0.652",
+                "normalized": "70",
+                "contribution": "8.75",
+                "reason_code": null
+              },
+              "stress_excess_twr": {
+                "raw": "0.0452",
+                "normalized": "70",
+                "contribution": "8.75",
+                "reason_code": null
+              }
+            }
+          },
+          "bounds": null,
+          "evidence_status": "limited",
+          "sample_count": 168,
+          "complete_block_count": 250,
+          "trade_count": null,
+          "observed_duration_ms": 604800000,
+          "actual_duration_ms": 604800000,
+          "as_of_ms": 1704672000000,
+          "knowledge_cutoff_ms": 1704672000000,
+          "computed_at_ms": 1704672000000,
+          "subject_binding_id": "test:subject-binding",
+          "data_snapshot_id": "test:snapshot1",
+          "revision": "score:r1",
+          "supersedes_revision": null,
+          "stage_breakdown": [
+            {
+              "financial_stage": "CANARY",
+              "duration_ms": 604800000
+            }
+          ],
+          "series_kind": "ECONOMIC_NAV",
+          "economic_domain": "ACTUAL",
+          "cost_coverage": {
+            "state": "COMPLETE",
+            "source_ref": "test:costs",
+            "reason_code": null
+          },
+          "stress_policy_id": "test:stress",
+          "allocation_weight": "0.25",
+          "raw_score_ref": "TEST_ONLY:q73.3",
+          "allocation_snapshot_id": null,
+          "score_coverage_allocated": null,
+          "provisional_allocated_weight": null,
+          "allocation_coverage_nav": null,
+          "return_source_snapshot_id": "test:returns",
+          "consolidation_manifest_id": "test:consolidation",
+          "preview": null
+        },
+        "facet": "ACTUAL",
+        "headline": "ALLOCATION_CONTRIBUTION_NO_BAND",
+        "public_copy_key": "PROVISIONAL",
+        "regime_changes_score": false,
+        "analytics_gates_safety_action": false
+      }
+    },
+    {
+      "id": "W08-DIRECT",
+      "gate": "T08-15",
+      "schema": "WorkflowScorePresentation",
+      "response": {
+        "canonical_score": {
+          "model_revision": "qbts_prb_v1_1",
+          "band_revision": "quality_bands_v1_1",
+          "kind": "DIRECT_NAV",
+          "status": "provisional",
+          "value": "73.3",
+          "quality_band": "fair",
+          "comparable_basis_id": "test:7d-basis",
+          "evidence_ref": "test:raw-observations",
+          "requested_window": {
+            "start_ms": 1704067200000,
+            "end_exclusive_ms": 1704672000000
+          },
+          "effective_window": {
+            "start_ms": 1704067200000,
+            "end_exclusive_ms": 1704672000000
+          },
+          "economic_subject_ref": "A1:V1:P1",
+          "research_binding_ref": null,
+          "config_ref": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "reason_code": null,
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          },
+          "subject_type": "portfolio",
+          "reason_codes": [],
+          "policy_version": "test:policy1",
+          "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "approved_policy_id": "TEST_ONLY_NOT_OWNER_APPROVAL",
+          "components": {
+            "P": "80",
+            "R": "66",
+            "B": "70",
+            "atomic": {
+              "net_excess_twr": {
+                "raw": "0.06",
+                "normalized": "80",
+                "contribution": "25.2",
+                "reason_code": null
+              },
+              "sharpe_period": {
+                "raw": "0.12",
+                "normalized": "80",
+                "contribution": "10.8",
+                "reason_code": null
+              },
+              "mdd": {
+                "raw": "0.03",
+                "normalized": "66",
+                "contribution": "11.88",
+                "reason_code": null
+              },
+              "add": {
+                "raw": "0.012",
+                "normalized": "66",
+                "contribution": "7.92",
+                "reason_code": null
+              },
+              "positive_block_ratio": {
+                "raw": "0.652",
+                "normalized": "70",
+                "contribution": "8.75",
+                "reason_code": null
+              },
+              "stress_excess_twr": {
+                "raw": "0.0452",
+                "normalized": "70",
+                "contribution": "8.75",
+                "reason_code": null
+              }
+            }
+          },
+          "bounds": null,
+          "evidence_status": "limited",
+          "sample_count": 168,
+          "complete_block_count": 250,
+          "trade_count": null,
+          "observed_duration_ms": 604800000,
+          "actual_duration_ms": 604800000,
+          "as_of_ms": 1704672000000,
+          "knowledge_cutoff_ms": 1704672000000,
+          "computed_at_ms": 1704672000000,
+          "subject_binding_id": "test:subject-binding",
+          "data_snapshot_id": "test:snapshot1",
+          "revision": "score:r1",
+          "supersedes_revision": null,
+          "stage_breakdown": [
+            {
+              "financial_stage": "CANARY",
+              "duration_ms": 604800000
+            }
+          ],
+          "series_kind": "ECONOMIC_NAV",
+          "economic_domain": "ACTUAL",
+          "cost_coverage": {
+            "state": "COMPLETE",
+            "source_ref": "test:costs",
+            "reason_code": null
+          },
+          "stress_policy_id": "test:stress",
+          "allocation_weight": null,
+          "raw_score_ref": null,
+          "allocation_snapshot_id": null,
+          "score_coverage_allocated": null,
+          "provisional_allocated_weight": null,
+          "allocation_coverage_nav": null,
+          "return_source_snapshot_id": "test:returns",
+          "consolidation_manifest_id": "test:consolidation",
+          "preview": null
+        },
+        "facet": "ACTUAL",
+        "headline": "CONSOLIDATED_NAV_QUALITY",
+        "public_copy_key": "PROVISIONAL",
+        "regime_changes_score": false,
+        "analytics_gates_safety_action": false
+      }
+    },
+    {
+      "id": "W08-COMPOSITION",
+      "gate": "T08-15",
+      "schema": "WorkflowScorePresentation",
+      "response": {
+        "canonical_score": {
+          "model_revision": "qbts_prb_v1_1",
+          "band_revision": "quality_bands_v1_1",
+          "kind": "COMPOSITION",
+          "status": "provisional",
+          "value": "73.3",
+          "quality_band": "fair",
+          "comparable_basis_id": "test:7d-basis",
+          "evidence_ref": "test:raw-observations",
+          "requested_window": {
+            "start_ms": 1704067200000,
+            "end_exclusive_ms": 1704672000000
+          },
+          "effective_window": {
+            "start_ms": 1704067200000,
+            "end_exclusive_ms": 1704672000000
+          },
+          "economic_subject_ref": "A1:V1:P1",
+          "research_binding_ref": "test:binding",
+          "config_ref": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "reason_code": null,
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          },
+          "subject_type": "portfolio",
+          "reason_codes": [],
+          "policy_version": "test:policy1",
+          "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "approved_policy_id": "TEST_ONLY_NOT_OWNER_APPROVAL",
+          "components": {
+            "P": "80",
+            "R": "66",
+            "B": "70",
+            "atomic": {
+              "net_excess_twr": {
+                "raw": "0.06",
+                "normalized": "80",
+                "contribution": "25.2",
+                "reason_code": null
+              },
+              "sharpe_period": {
+                "raw": "0.12",
+                "normalized": "80",
+                "contribution": "10.8",
+                "reason_code": null
+              },
+              "mdd": {
+                "raw": "0.03",
+                "normalized": "66",
+                "contribution": "11.88",
+                "reason_code": null
+              },
+              "add": {
+                "raw": "0.012",
+                "normalized": "66",
+                "contribution": "7.92",
+                "reason_code": null
+              },
+              "positive_block_ratio": {
+                "raw": "0.652",
+                "normalized": "70",
+                "contribution": "8.75",
+                "reason_code": null
+              },
+              "stress_excess_twr": {
+                "raw": "0.0452",
+                "normalized": "70",
+                "contribution": "8.75",
+                "reason_code": null
+              }
+            }
+          },
+          "bounds": null,
+          "evidence_status": "limited",
+          "sample_count": 168,
+          "complete_block_count": 250,
+          "trade_count": null,
+          "observed_duration_ms": 604800000,
+          "actual_duration_ms": 604800000,
+          "as_of_ms": 1704672000000,
+          "knowledge_cutoff_ms": 1704672000000,
+          "computed_at_ms": 1704672000000,
+          "subject_binding_id": "test:subject-binding",
+          "data_snapshot_id": "test:snapshot1",
+          "revision": "score:r1",
+          "supersedes_revision": null,
+          "stage_breakdown": [
+            {
+              "financial_stage": "CANARY",
+              "duration_ms": 604800000
+            }
+          ],
+          "series_kind": "ECONOMIC_NAV",
+          "economic_domain": "ACTUAL",
+          "cost_coverage": {
+            "state": "COMPLETE",
+            "source_ref": "test:costs",
+            "reason_code": null
+          },
+          "stress_policy_id": "test:stress",
+          "allocation_weight": null,
+          "raw_score_ref": null,
+          "allocation_snapshot_id": null,
+          "score_coverage_allocated": "1",
+          "provisional_allocated_weight": "0.25",
+          "allocation_coverage_nav": null,
+          "return_source_snapshot_id": "test:returns",
+          "consolidation_manifest_id": "test:consolidation",
+          "preview": null
+        },
+        "facet": "ACTUAL",
+        "headline": "ALLOCATED_CAPITAL_COMPOSITION",
+        "public_copy_key": "PROVISIONAL",
+        "regime_changes_score": false,
+        "analytics_gates_safety_action": false
+      }
+    },
+    {
+      "id": "W08-EARLY-5D",
+      "gate": "T08-16",
+      "schema": "WorkflowScorePresentation",
+      "response": {
+        "canonical_score": {
+          "model_revision": "qbts_prb_v1_1",
+          "band_revision": "quality_bands_v1_1",
+          "kind": "RAW_ALPHA",
+          "status": "provisional",
+          "value": "73.3",
+          "quality_band": "fair",
+          "comparable_basis_id": "test:7d-basis",
+          "evidence_ref": "test:raw-observations",
+          "requested_window": {
+            "start_ms": 1702080000000,
+            "end_exclusive_ms": 1704672000000
+          },
+          "effective_window": {
+            "start_ms": 1704240000000,
+            "end_exclusive_ms": 1704672000000
+          },
+          "economic_subject_ref": "A1:V1:P1",
+          "research_binding_ref": "test:binding",
+          "config_ref": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "reason_code": null,
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          },
+          "subject_type": "alpha",
+          "reason_codes": [],
+          "policy_version": "test:policy1",
+          "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "approved_policy_id": "TEST_ONLY_NOT_OWNER_APPROVAL",
+          "components": {
+            "P": "80",
+            "R": "66",
+            "B": "70",
+            "atomic": {
+              "net_excess_twr": {
+                "raw": "0.06",
+                "normalized": "80",
+                "contribution": "25.2",
+                "reason_code": null
+              },
+              "sharpe_period": {
+                "raw": "0.12",
+                "normalized": "80",
+                "contribution": "10.8",
+                "reason_code": null
+              },
+              "mdd": {
+                "raw": "0.03",
+                "normalized": "66",
+                "contribution": "11.88",
+                "reason_code": null
+              },
+              "add": {
+                "raw": "0.012",
+                "normalized": "66",
+                "contribution": "7.92",
+                "reason_code": null
+              },
+              "positive_block_ratio": {
+                "raw": "0.652",
+                "normalized": "70",
+                "contribution": "8.75",
+                "reason_code": null
+              },
+              "stress_excess_twr": {
+                "raw": "0.0452",
+                "normalized": "70",
+                "contribution": "8.75",
+                "reason_code": null
+              }
+            }
+          },
+          "bounds": null,
+          "evidence_status": "limited",
+          "sample_count": 120,
+          "complete_block_count": 250,
+          "trade_count": null,
+          "observed_duration_ms": 432000000,
+          "actual_duration_ms": 432000000,
+          "as_of_ms": 1704672000000,
+          "knowledge_cutoff_ms": 1704672000000,
+          "computed_at_ms": 1704672000000,
+          "subject_binding_id": "test:subject-binding",
+          "data_snapshot_id": "test:snapshot1",
+          "revision": "score:r1",
+          "supersedes_revision": null,
+          "stage_breakdown": [
+            {
+              "financial_stage": "CANARY",
+              "duration_ms": 604800000
+            }
+          ],
+          "series_kind": "ECONOMIC_NAV",
+          "economic_domain": "ACTUAL",
+          "cost_coverage": {
+            "state": "COMPLETE",
+            "source_ref": "test:costs",
+            "reason_code": null
+          },
+          "stress_policy_id": "test:stress",
+          "allocation_weight": null,
+          "raw_score_ref": null,
+          "allocation_snapshot_id": null,
+          "score_coverage_allocated": null,
+          "provisional_allocated_weight": null,
+          "allocation_coverage_nav": null,
+          "return_source_snapshot_id": "test:returns",
+          "consolidation_manifest_id": "test:consolidation",
+          "preview": null
+        },
+        "facet": "EARLY",
+        "headline": "DIAGNOSTIC_ONLY",
+        "public_copy_key": "EARLY_WINDOW",
+        "regime_changes_score": false,
+        "analytics_gates_safety_action": false
+      }
+    },
+    {
+      "id": "W08-MIXED-70D-ACTUAL-10D",
+      "gate": "T08-16",
+      "schema": "WorkflowScorePresentation",
+      "response": {
+        "canonical_score": {
+          "model_revision": "qbts_prb_v1_1",
+          "band_revision": "quality_bands_v1_1",
+          "kind": "RAW_ALPHA",
+          "status": "provisional",
+          "value": "73.3",
+          "quality_band": "fair",
+          "comparable_basis_id": "test:7d-basis",
+          "evidence_ref": "test:raw-observations",
+          "requested_window": {
+            "start_ms": 1698624000000,
+            "end_exclusive_ms": 1704672000000
+          },
+          "effective_window": {
+            "start_ms": 1698624000000,
+            "end_exclusive_ms": 1704672000000
+          },
+          "economic_subject_ref": "A1:V1:P1",
+          "research_binding_ref": "test:binding",
+          "config_ref": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "reason_code": null,
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          },
+          "subject_type": "alpha",
+          "reason_codes": [],
+          "policy_version": "test:policy1",
+          "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "approved_policy_id": "TEST_ONLY_NOT_OWNER_APPROVAL",
+          "components": {
+            "P": "80",
+            "R": "66",
+            "B": "70",
+            "atomic": {
+              "net_excess_twr": {
+                "raw": "0.06",
+                "normalized": "80",
+                "contribution": "25.2",
+                "reason_code": null
+              },
+              "sharpe_period": {
+                "raw": "0.12",
+                "normalized": "80",
+                "contribution": "10.8",
+                "reason_code": null
+              },
+              "mdd": {
+                "raw": "0.03",
+                "normalized": "66",
+                "contribution": "11.88",
+                "reason_code": null
+              },
+              "add": {
+                "raw": "0.012",
+                "normalized": "66",
+                "contribution": "7.92",
+                "reason_code": null
+              },
+              "positive_block_ratio": {
+                "raw": "0.652",
+                "normalized": "70",
+                "contribution": "8.75",
+                "reason_code": null
+              },
+              "stress_excess_twr": {
+                "raw": "0.0452",
+                "normalized": "70",
+                "contribution": "8.75",
+                "reason_code": null
+              }
+            }
+          },
+          "bounds": null,
+          "evidence_status": "limited",
+          "sample_count": 168,
+          "complete_block_count": 250,
+          "trade_count": null,
+          "observed_duration_ms": 6048000000,
+          "actual_duration_ms": 864000000,
+          "as_of_ms": 1704672000000,
+          "knowledge_cutoff_ms": 1704672000000,
+          "computed_at_ms": 1704672000000,
+          "subject_binding_id": "test:subject-binding",
+          "data_snapshot_id": "test:snapshot1",
+          "revision": "score:r1",
+          "supersedes_revision": null,
+          "stage_breakdown": [
+            {
+              "financial_stage": "PAPER",
+              "duration_ms": 3456000000
+            },
+            {
+              "financial_stage": "SANDBOX",
+              "duration_ms": 1728000000
+            },
+            {
+              "financial_stage": "LIVE",
+              "duration_ms": 864000000
+            }
+          ],
+          "series_kind": "MIXED_FORWARD_DIAGNOSTIC",
+          "economic_domain": "MIXED_DIAGNOSTIC",
+          "cost_coverage": {
+            "state": "COMPLETE",
+            "source_ref": "test:costs",
+            "reason_code": null
+          },
+          "stress_policy_id": "test:stress",
+          "allocation_weight": null,
+          "raw_score_ref": null,
+          "allocation_snapshot_id": null,
+          "score_coverage_allocated": null,
+          "provisional_allocated_weight": null,
+          "allocation_coverage_nav": null,
+          "return_source_snapshot_id": "test:returns",
+          "consolidation_manifest_id": "test:consolidation",
+          "preview": null
+        },
+        "facet": "MIXED_OBSERVATION",
+        "headline": "DIAGNOSTIC_ONLY",
+        "public_copy_key": "MIXED_NOT_ACTUAL",
+        "regime_changes_score": false,
+        "analytics_gates_safety_action": false
+      }
+    },
+    {
+      "id": "W08-POLICY-PENDING",
+      "gate": "T08-14",
+      "schema": "WorkflowScorePresentation",
+      "response": {
+        "canonical_score": {
+          "model_revision": "qbts_prb_v1_1",
+          "band_revision": "quality_bands_v1_1",
+          "kind": "RAW_ALPHA",
+          "status": "policy_pending",
+          "value": null,
+          "quality_band": null,
+          "comparable_basis_id": "test:7d-basis",
+          "evidence_ref": "test:raw-observations",
+          "requested_window": {
+            "start_ms": 1704067200000,
+            "end_exclusive_ms": 1704672000000
+          },
+          "effective_window": {
+            "start_ms": 1704067200000,
+            "end_exclusive_ms": 1704672000000
+          },
+          "economic_subject_ref": "A1:V1:P1",
+          "research_binding_ref": "test:binding",
+          "config_ref": null,
+          "reason_code": "SCORE_CONFIG_NOT_APPROVED",
+          "availability": {
+            "state": "UNAVAILABLE",
+            "reason_code": "SCORE_CONFIG_NOT_APPROVED"
+          },
+          "subject_type": "alpha",
+          "reason_codes": [
+            "SCORE_CONFIG_NOT_APPROVED"
+          ],
+          "policy_version": "test:policy1",
+          "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "approved_policy_id": null,
+          "components": {
+            "P": "80",
+            "R": "70",
+            "B": "65.2",
+            "atomic": {
+              "net_excess_twr": {
+                "raw": "0.06",
+                "normalized": "80",
+                "contribution": "25.2",
+                "reason_code": null
+              },
+              "sharpe_period": {
+                "raw": "0.12",
+                "normalized": "80",
+                "contribution": "10.8",
+                "reason_code": null
+              },
+              "mdd": {
+                "raw": "0.03",
+                "normalized": "70",
+                "contribution": "12.6",
+                "reason_code": null
+              },
+              "add": {
+                "raw": "0.012",
+                "normalized": "70",
+                "contribution": "8.4",
+                "reason_code": null
+              },
+              "positive_block_ratio": {
+                "raw": "0.652",
+                "normalized": "65.2",
+                "contribution": "8.15",
+                "reason_code": null
+              },
+              "stress_excess_twr": {
+                "raw": "0.0452",
+                "normalized": "65.2",
+                "contribution": "8.15",
+                "reason_code": null
+              }
+            }
+          },
+          "bounds": null,
+          "evidence_status": "limited",
+          "sample_count": 168,
+          "complete_block_count": 250,
+          "trade_count": null,
+          "observed_duration_ms": 604800000,
+          "actual_duration_ms": 604800000,
+          "as_of_ms": 1704672000000,
+          "knowledge_cutoff_ms": 1704672000000,
+          "computed_at_ms": 1704672000000,
+          "subject_binding_id": "test:subject-binding",
+          "data_snapshot_id": "test:snapshot1",
+          "revision": "score:r1",
+          "supersedes_revision": null,
+          "stage_breakdown": [
+            {
+              "financial_stage": "CANARY",
+              "duration_ms": 604800000
+            }
+          ],
+          "series_kind": "ECONOMIC_NAV",
+          "economic_domain": "ACTUAL",
+          "cost_coverage": {
+            "state": "COMPLETE",
+            "source_ref": "test:costs",
+            "reason_code": null
+          },
+          "stress_policy_id": "test:stress",
+          "allocation_weight": null,
+          "raw_score_ref": null,
+          "allocation_snapshot_id": null,
+          "score_coverage_allocated": null,
+          "provisional_allocated_weight": null,
+          "allocation_coverage_nav": null,
+          "return_source_snapshot_id": "test:returns",
+          "consolidation_manifest_id": "test:consolidation",
+          "preview": null
+        },
+        "facet": "ACTUAL",
+        "headline": "RAW_QUALITY",
+        "public_copy_key": "SCORE_POLICY_PENDING",
+        "regime_changes_score": false,
+        "analytics_gates_safety_action": false
+      }
+    }
+  ],
+  "actions": [
+    {
+      "operation": "CREATE_PORTFOLIO",
+      "capability_ref": "portfolio.manage",
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": null,
+      "submit_operation_id": null,
+      "status_operation_id": null,
+      "state_schema": "WorkflowCreate",
+      "commissioning": "SOURCE_ADAPTER_PENDING",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "REGISTER_INSTANCE",
+      "capability_ref": "deployment.register",
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": null,
+      "submit_operation_id": null,
+      "status_operation_id": null,
+      "state_schema": "WorkflowCreate",
+      "commissioning": "SOURCE_ADAPTER_PENDING",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "FUND",
+      "capability_ref": "capital.fund",
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": "executionCapitalCommandPreviewV1",
+      "submit_operation_id": "executionCapitalCommandSubmitV1",
+      "status_operation_id": "executionCapitalCommandStatusV1",
+      "state_schema": "WorkflowCapital",
+      "commissioning": "TECHNICAL_SOURCE_DARK",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "INITIAL_GRANT",
+      "capability_ref": "capital.initial_grant",
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": "executionCapitalCommandPreviewV1",
+      "submit_operation_id": "executionCapitalCommandSubmitV1",
+      "status_operation_id": "executionCapitalCommandStatusV1",
+      "state_schema": "WorkflowCapital",
+      "commissioning": "TECHNICAL_SOURCE_DARK",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "TOP_UP",
+      "capability_ref": "capital.top_up",
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": "executionCapitalCommandPreviewV1",
+      "submit_operation_id": "executionCapitalCommandSubmitV1",
+      "status_operation_id": "executionCapitalCommandStatusV1",
+      "state_schema": "WorkflowCapital",
+      "commissioning": "TECHNICAL_SOURCE_DARK",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "IMMEDIATE_DECREASE",
+      "capability_ref": "capital.immediate_decrease",
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": "executionCapitalCommandPreviewV1",
+      "submit_operation_id": "executionCapitalCommandSubmitV1",
+      "status_operation_id": "executionCapitalCommandStatusV1",
+      "state_schema": "WorkflowCapital",
+      "commissioning": "TECHNICAL_SOURCE_DARK",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "RECALL_PARTIAL",
+      "capability_ref": "capital.recall_partial",
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": "executionCapitalCommandPreviewV1",
+      "submit_operation_id": "executionCapitalCommandSubmitV1",
+      "status_operation_id": "executionCapitalCommandStatusV1",
+      "state_schema": "WorkflowCapital",
+      "commissioning": "TECHNICAL_SOURCE_DARK",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "RECALL_FULL",
+      "capability_ref": "capital.recall_full",
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": "executionCapitalCommandPreviewV1",
+      "submit_operation_id": "executionCapitalCommandSubmitV1",
+      "status_operation_id": "executionCapitalCommandStatusV1",
+      "state_schema": "WorkflowCapital",
+      "commissioning": "TECHNICAL_SOURCE_DARK",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "ADJUST_TARGET_BUDGET",
+      "capability_ref": "capital.adjust_target_budget",
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": "executionCapitalCommandPreviewV1",
+      "submit_operation_id": "executionCapitalCommandSubmitV1",
+      "status_operation_id": "executionCapitalCommandStatusV1",
+      "state_schema": "WorkflowCapital",
+      "commissioning": "TECHNICAL_SOURCE_DARK",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "SET_ROOT_LIMIT",
+      "capability_ref": "capital.set_root_limit",
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": "executionCapitalCommandPreviewV1",
+      "submit_operation_id": "executionCapitalCommandSubmitV1",
+      "status_operation_id": "executionCapitalCommandStatusV1",
+      "state_schema": "WorkflowCapital",
+      "commissioning": "TECHNICAL_SOURCE_DARK",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "RETURN_CAPITAL",
+      "capability_ref": "capital.return_capital",
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": null,
+      "submit_operation_id": null,
+      "status_operation_id": null,
+      "state_schema": null,
+      "commissioning": "SOURCE_ADAPTER_PENDING",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "APPLY_PENDING",
+      "capability_ref": null,
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": null,
+      "submit_operation_id": null,
+      "status_operation_id": null,
+      "state_schema": null,
+      "commissioning": "EXACT_ACTION_CATALOGUE_PENDING",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "CANCEL_REMAINING",
+      "capability_ref": null,
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": null,
+      "submit_operation_id": null,
+      "status_operation_id": null,
+      "state_schema": null,
+      "commissioning": "EXACT_ACTION_CATALOGUE_PENDING",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "REALLOCATE_BUDGET",
+      "capability_ref": null,
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": null,
+      "submit_operation_id": null,
+      "status_operation_id": null,
+      "state_schema": null,
+      "commissioning": "EXACT_ACTION_CATALOGUE_PENDING",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "ADMIN_LOCK",
+      "capability_ref": null,
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": null,
+      "submit_operation_id": null,
+      "status_operation_id": null,
+      "state_schema": null,
+      "commissioning": "EXACT_ACTION_CATALOGUE_PENDING",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "ADMIN_UNLOCK",
+      "capability_ref": null,
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": null,
+      "submit_operation_id": null,
+      "status_operation_id": null,
+      "state_schema": null,
+      "commissioning": "EXACT_ACTION_CATALOGUE_PENDING",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "HALT",
+      "capability_ref": "safety.halt",
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": null,
+      "submit_operation_id": null,
+      "status_operation_id": null,
+      "state_schema": null,
+      "commissioning": "SOURCE_ADAPTER_PENDING",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "REDUCING",
+      "capability_ref": "safety.reducing",
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": null,
+      "submit_operation_id": null,
+      "status_operation_id": null,
+      "state_schema": null,
+      "commissioning": "SOURCE_ADAPTER_PENDING",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "RESUME",
+      "capability_ref": "safety.resume",
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": null,
+      "submit_operation_id": null,
+      "status_operation_id": null,
+      "state_schema": "WorkflowLifecycle",
+      "commissioning": "SOURCE_ADAPTER_PENDING",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "MOVE_ASSIGNMENT",
+      "capability_ref": "deployment.assignment.propose",
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": null,
+      "submit_operation_id": null,
+      "status_operation_id": null,
+      "state_schema": "WorkflowLifecycle",
+      "commissioning": "SOURCE_ADAPTER_PENDING",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "REBIND",
+      "capability_ref": "binding.change.propose",
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": null,
+      "submit_operation_id": null,
+      "status_operation_id": null,
+      "state_schema": "WorkflowLifecycle",
+      "commissioning": "SOURCE_ADAPTER_PENDING",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "ARCHIVE",
+      "capability_ref": null,
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": null,
+      "submit_operation_id": null,
+      "status_operation_id": null,
+      "state_schema": "WorkflowLifecycle",
+      "commissioning": "EXACT_ACTION_CATALOGUE_PENDING",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "CREATE_PAPER_MONITOR",
+      "capability_ref": null,
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": null,
+      "submit_operation_id": null,
+      "status_operation_id": null,
+      "state_schema": "WorkflowLifecycle",
+      "commissioning": "EXACT_ACTION_CATALOGUE_PENDING",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    },
+    {
+      "operation": "REACTIVATE",
+      "capability_ref": null,
+      "dataset_refs": [
+        "EXACT_RESOURCE_REGISTRY",
+        "CURRENT_SCOPED_AUTHORITY",
+        "OWNING_RECEIPTS"
+      ],
+      "preview_operation_id": null,
+      "submit_operation_id": null,
+      "status_operation_id": null,
+      "state_schema": "WorkflowLifecycle",
+      "commissioning": "EXACT_ACTION_CATALOGUE_PENDING",
+      "runtime_enabled": false,
+      "public_copy_key": "SOURCE_NOT_QUALIFIED"
+    }
+  ],
+  "screens": [
+    {
+      "screen_id": "M01",
+      "scope": "BOTH_WITH_DISTINCT_PROJECTION",
+      "ui_route": null,
+      "route_state": "PROPOSED",
+      "read_operation_ids": [
+        "executionManagerFundOverviewGetV1"
+      ],
+      "source_qualified": false,
+      "consumer_status": "AWAITING_CONSUMER_REVIEW"
+    },
+    {
+      "screen_id": "M02",
+      "scope": "BOTH_WITH_DISTINCT_PROJECTION",
+      "ui_route": "/deployments/portfolios",
+      "route_state": "EXISTING_DETAIL_REQUIRES_DIRECTORY_REFINEMENT",
+      "read_operation_ids": [
+        "executionManagerPortfolio360GetV1"
+      ],
+      "source_qualified": false,
+      "consumer_status": "AWAITING_CONSUMER_REVIEW"
+    },
+    {
+      "screen_id": "M03",
+      "scope": "BOTH_WITH_DISTINCT_PROJECTION",
+      "ui_route": "/deployments/alphas",
+      "route_state": "EXISTING_SOURCE_ROUTE",
+      "read_operation_ids": [
+        "executionManagerFleetGetV1"
+      ],
+      "source_qualified": false,
+      "consumer_status": "AWAITING_CONSUMER_REVIEW"
+    },
+    {
+      "screen_id": "M04",
+      "scope": "BOTH_WITH_DISTINCT_PROJECTION",
+      "ui_route": "/deployments/portfolios/:id",
+      "route_state": "EXISTING_SOURCE_ROUTE",
+      "read_operation_ids": [
+        "executionManagerPortfolio360GetV1"
+      ],
+      "source_qualified": false,
+      "consumer_status": "AWAITING_CONSUMER_REVIEW"
+    },
+    {
+      "screen_id": "M05",
+      "scope": "BOTH_WITH_DISTINCT_PROJECTION",
+      "ui_route": "/deployments/alphas/:id",
+      "route_state": "EXISTING_SOURCE_ROUTE",
+      "read_operation_ids": [
+        "executionManagerAlpha360GetV1"
+      ],
+      "source_qualified": false,
+      "consumer_status": "AWAITING_CONSUMER_REVIEW"
+    },
+    {
+      "screen_id": "M06",
+      "scope": "BOTH_WITH_DISTINCT_PROJECTION",
+      "ui_route": "/deployments/accounts/:id",
+      "route_state": "EXISTING_SOURCE_ROUTE",
+      "read_operation_ids": [
+        "executionManagerAccount360GetV1"
+      ],
+      "source_qualified": false,
+      "consumer_status": "AWAITING_CONSUMER_REVIEW"
+    },
+    {
+      "screen_id": "M07",
+      "scope": "BOTH_WITH_DISTINCT_PROJECTION",
+      "ui_route": "/deployments/:environment/:id",
+      "route_state": "EXISTING_SOURCE_ROUTE",
+      "read_operation_ids": [
+        "executionManagerDeployment360GetV1"
+      ],
+      "source_qualified": false,
+      "consumer_status": "AWAITING_CONSUMER_REVIEW"
+    },
+    {
+      "screen_id": "M08",
+      "scope": "BOTH_WITH_DISTINCT_PROJECTION",
+      "ui_route": null,
+      "route_state": "PROPOSED",
+      "read_operation_ids": [],
+      "source_qualified": false,
+      "consumer_status": "AWAITING_CONSUMER_REVIEW"
+    },
+    {
+      "screen_id": "M09",
+      "scope": "BOTH_WITH_DISTINCT_PROJECTION",
+      "ui_route": "/execution/operations",
+      "route_state": "EXISTING_SOURCE_ROUTE",
+      "read_operation_ids": [
+        "executionCapitalCommandStatusV1"
+      ],
+      "source_qualified": false,
+      "consumer_status": "AWAITING_CONSUMER_REVIEW"
+    },
+    {
+      "screen_id": "M10",
+      "scope": "BOTH_WITH_DISTINCT_PROJECTION",
+      "ui_route": "/administration/profile-access",
+      "route_state": "EXISTING_SOURCE_ROUTE",
+      "read_operation_ids": [],
+      "source_qualified": false,
+      "consumer_status": "AWAITING_CONSUMER_REVIEW"
+    }
+  ],
+  "presets": [
+    {
+      "principal_ref": "TEST_ONLY:protected-owner",
+      "preset": "PROTECTED_OWNER",
+      "business_visibility": "ALL_BUSINESS",
+      "mutation_scope": "EXPLICIT_CAPABILITIES_ONLY",
+      "delegation_ceiling": "PROTECTED_OWNER_POLICY_REQUIRED"
+    },
+    {
+      "principal_ref": "TEST_ONLY:manager",
+      "preset": "MANAGER",
+      "business_visibility": "ALL_BUSINESS",
+      "mutation_scope": "EXPLICIT_CAPABILITIES_ONLY",
+      "delegation_ceiling": "EXPLICIT_DELEGATION_REQUIRED"
+    },
+    {
+      "principal_ref": "TEST_ONLY:researcher",
+      "preset": "RESEARCHER",
+      "business_visibility": "OWN_AUTHORIZED_SLICE",
+      "mutation_scope": "EXPLICIT_CAPABILITIES_ONLY",
+      "delegation_ceiling": "NONE_BY_DISCOVERY"
+    }
+  ]
+}

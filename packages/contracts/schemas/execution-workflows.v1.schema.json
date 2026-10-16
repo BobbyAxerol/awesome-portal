@@ -1,0 +1,5029 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-workflows.v1.schema.json",
+  "$defs": {
+    "Availability": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "AVAILABLE",
+            "PARTIAL",
+            "UNAVAILABLE",
+            "DENIED",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "reason_code"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "AVAILABLE"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reason_code": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "reason_code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            }
+          }
+        }
+      ]
+    },
+    "PmaCandidateCapitalCommand": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schema_version": {
+              "const": "pma.capital-command.v1.1"
+            },
+            "operation": {
+              "const": "FUND"
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_kind": {
+              "const": "PORTFOLIO"
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "expected_versions": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "budget": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "source": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "claim": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                }
+              },
+              "required": [
+                "budget",
+                "source",
+                "claim"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "amount": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+              "maxLength": 128,
+              "not": {
+                "pattern": "^0(?:\\.0+)?$"
+              }
+            },
+            "source_ref": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            }
+          },
+          "required": [
+            "schema_version",
+            "operation",
+            "idempotency_key",
+            "recipient_kind",
+            "currency",
+            "expected_versions",
+            "reason",
+            "amount",
+            "source_ref"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schema_version": {
+              "const": "pma.capital-command.v1.1"
+            },
+            "operation": {
+              "const": "FUND"
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_kind": {
+              "const": "DEPLOYMENT_ACCOUNT"
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "expected_versions": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "budget": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "source": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "claim": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                }
+              },
+              "required": [
+                "budget",
+                "source",
+                "claim"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_account_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_deployment_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "amount": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+              "maxLength": 128,
+              "not": {
+                "pattern": "^0(?:\\.0+)?$"
+              }
+            },
+            "source_ref": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            }
+          },
+          "required": [
+            "schema_version",
+            "operation",
+            "idempotency_key",
+            "recipient_kind",
+            "currency",
+            "expected_versions",
+            "reason",
+            "recipient_account_id",
+            "recipient_deployment_id",
+            "amount",
+            "source_ref"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schema_version": {
+              "const": "pma.capital-command.v1.1"
+            },
+            "operation": {
+              "const": "INITIAL_GRANT"
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_kind": {
+              "const": "PORTFOLIO"
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "expected_versions": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "budget": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "source": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "parent": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                }
+              },
+              "required": [
+                "budget",
+                "source",
+                "parent"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "amount": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+              "maxLength": 128,
+              "not": {
+                "pattern": "^0(?:\\.0+)?$"
+              }
+            }
+          },
+          "required": [
+            "schema_version",
+            "operation",
+            "idempotency_key",
+            "recipient_kind",
+            "currency",
+            "expected_versions",
+            "reason",
+            "amount"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schema_version": {
+              "const": "pma.capital-command.v1.1"
+            },
+            "operation": {
+              "const": "INITIAL_GRANT"
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_kind": {
+              "const": "DEPLOYMENT_ACCOUNT"
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "expected_versions": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "budget": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "source": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "parent": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                }
+              },
+              "required": [
+                "budget",
+                "source",
+                "parent"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_account_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_deployment_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "amount": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+              "maxLength": 128,
+              "not": {
+                "pattern": "^0(?:\\.0+)?$"
+              }
+            }
+          },
+          "required": [
+            "schema_version",
+            "operation",
+            "idempotency_key",
+            "recipient_kind",
+            "currency",
+            "expected_versions",
+            "reason",
+            "recipient_account_id",
+            "recipient_deployment_id",
+            "amount"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schema_version": {
+              "const": "pma.capital-command.v1.1"
+            },
+            "operation": {
+              "const": "TOP_UP"
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_kind": {
+              "const": "PORTFOLIO"
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "expected_versions": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "budget": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "source": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "parent": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                }
+              },
+              "required": [
+                "budget",
+                "source",
+                "parent"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "amount": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+              "maxLength": 128,
+              "not": {
+                "pattern": "^0(?:\\.0+)?$"
+              }
+            }
+          },
+          "required": [
+            "schema_version",
+            "operation",
+            "idempotency_key",
+            "recipient_kind",
+            "currency",
+            "expected_versions",
+            "reason",
+            "amount"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schema_version": {
+              "const": "pma.capital-command.v1.1"
+            },
+            "operation": {
+              "const": "TOP_UP"
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_kind": {
+              "const": "DEPLOYMENT_ACCOUNT"
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "expected_versions": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "budget": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "source": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "parent": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                }
+              },
+              "required": [
+                "budget",
+                "source",
+                "parent"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_account_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_deployment_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "amount": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+              "maxLength": 128,
+              "not": {
+                "pattern": "^0(?:\\.0+)?$"
+              }
+            }
+          },
+          "required": [
+            "schema_version",
+            "operation",
+            "idempotency_key",
+            "recipient_kind",
+            "currency",
+            "expected_versions",
+            "reason",
+            "recipient_account_id",
+            "recipient_deployment_id",
+            "amount"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schema_version": {
+              "const": "pma.capital-command.v1.1"
+            },
+            "operation": {
+              "const": "IMMEDIATE_DECREASE"
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_kind": {
+              "const": "PORTFOLIO"
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "expected_versions": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "budget": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "source": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "parent": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "book": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                }
+              },
+              "required": [
+                "budget",
+                "source",
+                "parent",
+                "book"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "amount": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+              "maxLength": 128,
+              "not": {
+                "pattern": "^0(?:\\.0+)?$"
+              }
+            }
+          },
+          "required": [
+            "schema_version",
+            "operation",
+            "idempotency_key",
+            "recipient_kind",
+            "currency",
+            "expected_versions",
+            "reason",
+            "amount"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schema_version": {
+              "const": "pma.capital-command.v1.1"
+            },
+            "operation": {
+              "const": "IMMEDIATE_DECREASE"
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_kind": {
+              "const": "DEPLOYMENT_ACCOUNT"
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "expected_versions": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "budget": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "source": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "parent": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "book": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                }
+              },
+              "required": [
+                "budget",
+                "source",
+                "parent",
+                "book"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_account_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_deployment_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "amount": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+              "maxLength": 128,
+              "not": {
+                "pattern": "^0(?:\\.0+)?$"
+              }
+            }
+          },
+          "required": [
+            "schema_version",
+            "operation",
+            "idempotency_key",
+            "recipient_kind",
+            "currency",
+            "expected_versions",
+            "reason",
+            "recipient_account_id",
+            "recipient_deployment_id",
+            "amount"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schema_version": {
+              "const": "pma.capital-command.v1.1"
+            },
+            "operation": {
+              "const": "RECALL_PARTIAL"
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_kind": {
+              "const": "PORTFOLIO"
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "expected_versions": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "budget": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "source": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "parent": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "book": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                }
+              },
+              "required": [
+                "budget",
+                "source",
+                "parent",
+                "book"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "amount": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+              "maxLength": 128,
+              "not": {
+                "pattern": "^0(?:\\.0+)?$"
+              }
+            }
+          },
+          "required": [
+            "schema_version",
+            "operation",
+            "idempotency_key",
+            "recipient_kind",
+            "currency",
+            "expected_versions",
+            "reason",
+            "amount"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schema_version": {
+              "const": "pma.capital-command.v1.1"
+            },
+            "operation": {
+              "const": "RECALL_PARTIAL"
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_kind": {
+              "const": "DEPLOYMENT_ACCOUNT"
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "expected_versions": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "budget": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "source": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "parent": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "book": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                }
+              },
+              "required": [
+                "budget",
+                "source",
+                "parent",
+                "book"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_account_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_deployment_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "amount": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+              "maxLength": 128,
+              "not": {
+                "pattern": "^0(?:\\.0+)?$"
+              }
+            }
+          },
+          "required": [
+            "schema_version",
+            "operation",
+            "idempotency_key",
+            "recipient_kind",
+            "currency",
+            "expected_versions",
+            "reason",
+            "recipient_account_id",
+            "recipient_deployment_id",
+            "amount"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schema_version": {
+              "const": "pma.capital-command.v1.1"
+            },
+            "operation": {
+              "const": "RECALL_FULL"
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_kind": {
+              "const": "PORTFOLIO"
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "expected_versions": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "budget": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "source": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "parent": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "book": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                }
+              },
+              "required": [
+                "budget",
+                "source",
+                "parent",
+                "book"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            }
+          },
+          "required": [
+            "schema_version",
+            "operation",
+            "idempotency_key",
+            "recipient_kind",
+            "currency",
+            "expected_versions",
+            "reason"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schema_version": {
+              "const": "pma.capital-command.v1.1"
+            },
+            "operation": {
+              "const": "RECALL_FULL"
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_kind": {
+              "const": "DEPLOYMENT_ACCOUNT"
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "expected_versions": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "budget": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "source": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "parent": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "book": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                }
+              },
+              "required": [
+                "budget",
+                "source",
+                "parent",
+                "book"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_account_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_deployment_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            }
+          },
+          "required": [
+            "schema_version",
+            "operation",
+            "idempotency_key",
+            "recipient_kind",
+            "currency",
+            "expected_versions",
+            "reason",
+            "recipient_account_id",
+            "recipient_deployment_id"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schema_version": {
+              "const": "pma.capital-command.v1.1"
+            },
+            "operation": {
+              "const": "ADJUST_TARGET_BUDGET"
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_kind": {
+              "const": "PORTFOLIO"
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "expected_versions": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "budget": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "source": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "parent": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "book": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                }
+              },
+              "required": [
+                "budget",
+                "source",
+                "parent",
+                "book"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "target_budget": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "schema_version",
+            "operation",
+            "idempotency_key",
+            "recipient_kind",
+            "currency",
+            "expected_versions",
+            "reason",
+            "target_budget"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schema_version": {
+              "const": "pma.capital-command.v1.1"
+            },
+            "operation": {
+              "const": "ADJUST_TARGET_BUDGET"
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_kind": {
+              "const": "DEPLOYMENT_ACCOUNT"
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "expected_versions": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "budget": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "source": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "parent": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "book": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                }
+              },
+              "required": [
+                "budget",
+                "source",
+                "parent",
+                "book"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_account_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_deployment_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "target_budget": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "schema_version",
+            "operation",
+            "idempotency_key",
+            "recipient_kind",
+            "currency",
+            "expected_versions",
+            "reason",
+            "recipient_account_id",
+            "recipient_deployment_id",
+            "target_budget"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schema_version": {
+              "const": "pma.capital-command.v1.1"
+            },
+            "operation": {
+              "const": "SET_ROOT_LIMIT"
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "recipient_kind": {
+              "const": "ROOT"
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "expected_versions": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "budget": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                },
+                "source": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                  "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                }
+              },
+              "required": [
+                "budget",
+                "source"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+              "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+            },
+            "target_root_limit": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "schema_version",
+            "operation",
+            "idempotency_key",
+            "recipient_kind",
+            "currency",
+            "expected_versions",
+            "reason",
+            "target_root_limit"
+          ]
+        }
+      ]
+    },
+    "ScoreCapsule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "model_revision": {
+          "const": "qbts_prb_v1_1"
+        },
+        "band_revision": {
+          "const": "quality_bands_v1_1"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "RAW_ALPHA",
+            "CONTRIBUTION",
+            "COMPOSITION",
+            "DIRECT_NAV"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "available",
+            "provisional",
+            "policy_pending",
+            "unbound",
+            "invalid_data",
+            "stale",
+            "partial_costs",
+            "partial_components",
+            "insufficient_data",
+            "partial_coverage",
+            "incomparable_basis",
+            "no_allocation"
+          ]
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(?:(?:0|[1-9][0-9]?)(?:\\.[0-9]+)?|100(?:\\.0+)?)$",
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "quality_band": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "weak",
+                "neutral",
+                "fair",
+                "good",
+                "very_good"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "comparable_basis_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidence_ref": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "requested_window": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "start_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "end_exclusive_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "start_ms",
+            "end_exclusive_ms"
+          ]
+        },
+        "effective_window": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "start_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "end_exclusive_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "start_ms",
+                "end_exclusive_ms"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "economic_subject_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "research_binding_ref": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "config_ref": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "availability": {
+          "$ref": "#/$defs/Availability"
+        },
+        "subject_type": {
+          "type": "string",
+          "enum": [
+            "alpha",
+            "deployment",
+            "sleeve",
+            "portfolio",
+            "manager_book"
+          ]
+        },
+        "reason_codes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "maxItems": 32
+        },
+        "policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "formula_hash": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "policy_hash": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "approved_policy_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "components": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "P": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(?:(?:0|[1-9][0-9]?)(?:\\.[0-9]+)?|100(?:\\.0+)?)$",
+                  "maxLength": 128
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "R": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(?:(?:0|[1-9][0-9]?)(?:\\.[0-9]+)?|100(?:\\.0+)?)$",
+                  "maxLength": 128
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "B": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(?:(?:0|[1-9][0-9]?)(?:\\.[0-9]+)?|100(?:\\.0+)?)$",
+                  "maxLength": 128
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "atomic": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "net_excess_twr": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "raw": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                          "maxLength": 128
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "normalized": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^(?:(?:0|[1-9][0-9]?)(?:\\.[0-9]+)?|100(?:\\.0+)?)$",
+                          "maxLength": 128
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "contribution": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^(?:(?:0|[1-9][0-9]?)(?:\\.[0-9]+)?|100(?:\\.0+)?)$",
+                          "maxLength": 128
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reason_code": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "raw",
+                    "normalized",
+                    "contribution",
+                    "reason_code"
+                  ]
+                },
+                "sharpe_period": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "raw": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                          "maxLength": 128
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "normalized": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^(?:(?:0|[1-9][0-9]?)(?:\\.[0-9]+)?|100(?:\\.0+)?)$",
+                          "maxLength": 128
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "contribution": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^(?:(?:0|[1-9][0-9]?)(?:\\.[0-9]+)?|100(?:\\.0+)?)$",
+                          "maxLength": 128
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reason_code": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "raw",
+                    "normalized",
+                    "contribution",
+                    "reason_code"
+                  ]
+                },
+                "mdd": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "raw": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                          "maxLength": 128
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "normalized": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^(?:(?:0|[1-9][0-9]?)(?:\\.[0-9]+)?|100(?:\\.0+)?)$",
+                          "maxLength": 128
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "contribution": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^(?:(?:0|[1-9][0-9]?)(?:\\.[0-9]+)?|100(?:\\.0+)?)$",
+                          "maxLength": 128
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reason_code": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "raw",
+                    "normalized",
+                    "contribution",
+                    "reason_code"
+                  ]
+                },
+                "add": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "raw": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                          "maxLength": 128
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "normalized": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^(?:(?:0|[1-9][0-9]?)(?:\\.[0-9]+)?|100(?:\\.0+)?)$",
+                          "maxLength": 128
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "contribution": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^(?:(?:0|[1-9][0-9]?)(?:\\.[0-9]+)?|100(?:\\.0+)?)$",
+                          "maxLength": 128
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reason_code": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "raw",
+                    "normalized",
+                    "contribution",
+                    "reason_code"
+                  ]
+                },
+                "positive_block_ratio": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "raw": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                          "maxLength": 128
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "normalized": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^(?:(?:0|[1-9][0-9]?)(?:\\.[0-9]+)?|100(?:\\.0+)?)$",
+                          "maxLength": 128
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "contribution": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^(?:(?:0|[1-9][0-9]?)(?:\\.[0-9]+)?|100(?:\\.0+)?)$",
+                          "maxLength": 128
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reason_code": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "raw",
+                    "normalized",
+                    "contribution",
+                    "reason_code"
+                  ]
+                },
+                "stress_excess_twr": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "raw": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                          "maxLength": 128
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "normalized": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^(?:(?:0|[1-9][0-9]?)(?:\\.[0-9]+)?|100(?:\\.0+)?)$",
+                          "maxLength": 128
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "contribution": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^(?:(?:0|[1-9][0-9]?)(?:\\.[0-9]+)?|100(?:\\.0+)?)$",
+                          "maxLength": 128
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reason_code": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "raw",
+                    "normalized",
+                    "contribution",
+                    "reason_code"
+                  ]
+                }
+              },
+              "required": [
+                "net_excess_twr",
+                "sharpe_period",
+                "mdd",
+                "add",
+                "positive_block_ratio",
+                "stress_excess_twr"
+              ]
+            }
+          },
+          "required": [
+            "P",
+            "R",
+            "B",
+            "atomic"
+          ]
+        },
+        "bounds": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "lower": {
+                  "type": "string",
+                  "pattern": "^(?:(?:0|[1-9][0-9]?)(?:\\.[0-9]+)?|100(?:\\.0+)?)$",
+                  "maxLength": 128
+                },
+                "upper": {
+                  "type": "string",
+                  "pattern": "^(?:(?:0|[1-9][0-9]?)(?:\\.[0-9]+)?|100(?:\\.0+)?)$",
+                  "maxLength": 128
+                },
+                "reason_code": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                }
+              },
+              "required": [
+                "lower",
+                "upper",
+                "reason_code"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidence_status": {
+          "type": "string",
+          "enum": [
+            "limited",
+            "sufficient_for_display",
+            "insufficient",
+            "unknown"
+          ]
+        },
+        "sample_count": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "complete_block_count": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "trade_count": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_duration_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "actual_duration_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "as_of_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "knowledge_cutoff_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "computed_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "subject_binding_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "data_snapshot_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "supersedes_revision": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stage_breakdown": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "financial_stage": {
+                "type": "string",
+                "enum": [
+                  "PAPER",
+                  "SANDBOX",
+                  "CANARY",
+                  "LIVE"
+                ]
+              },
+              "duration_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "financial_stage",
+              "duration_ms"
+            ]
+          },
+          "maxItems": 4
+        },
+        "series_kind": {
+          "type": "string",
+          "enum": [
+            "ECONOMIC_NAV",
+            "RESEARCH",
+            "MIXED_FORWARD_DIAGNOSTIC"
+          ]
+        },
+        "economic_domain": {
+          "type": "string",
+          "enum": [
+            "ACTUAL",
+            "SANDBOX_DEMO",
+            "PAPER_SIMULATION",
+            "MIXED_DIAGNOSTIC"
+          ]
+        },
+        "cost_coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "type": "string",
+              "enum": [
+                "COMPLETE",
+                "PARTIAL",
+                "UNKNOWN"
+              ]
+            },
+            "source_ref": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "reason_code": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "state",
+            "source_ref",
+            "reason_code"
+          ]
+        },
+        "stress_policy_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "allocation_weight": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(?:0(?:\\.[0-9]+)?|1(?:\\.0+)?)$",
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "raw_score_ref": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "allocation_snapshot_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "score_coverage_allocated": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(?:0(?:\\.[0-9]+)?|1(?:\\.0+)?)$",
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provisional_allocated_weight": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(?:0(?:\\.[0-9]+)?|1(?:\\.0+)?)$",
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "allocation_coverage_nav": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(?:0(?:\\.[0-9]+)?|1(?:\\.0+)?)$",
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "return_source_snapshot_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "consolidation_manifest_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "preview": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "const": "TEST_ONLY_OR_UNAPPROVED_NOT_PRODUCTION"
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^(?:(?:0|[1-9][0-9]?)(?:\\.[0-9]+)?|100(?:\\.0+)?)$",
+                      "maxLength": 128
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "config_ref": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^sha256:[0-9a-f]{64}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "reason_code": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                }
+              },
+              "required": [
+                "label",
+                "value",
+                "config_ref",
+                "reason_code"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "model_revision",
+        "band_revision",
+        "kind",
+        "status",
+        "value",
+        "quality_band",
+        "comparable_basis_id",
+        "evidence_ref",
+        "requested_window",
+        "effective_window",
+        "economic_subject_ref",
+        "research_binding_ref",
+        "config_ref",
+        "reason_code",
+        "availability",
+        "subject_type",
+        "reason_codes",
+        "policy_version",
+        "formula_hash",
+        "policy_hash",
+        "approved_policy_id",
+        "components",
+        "bounds",
+        "evidence_status",
+        "sample_count",
+        "complete_block_count",
+        "trade_count",
+        "observed_duration_ms",
+        "actual_duration_ms",
+        "as_of_ms",
+        "knowledge_cutoff_ms",
+        "computed_at_ms",
+        "subject_binding_id",
+        "data_snapshot_id",
+        "revision",
+        "supersedes_revision",
+        "stage_breakdown",
+        "series_kind",
+        "economic_domain",
+        "cost_coverage",
+        "stress_policy_id",
+        "allocation_weight",
+        "raw_score_ref",
+        "allocation_snapshot_id",
+        "score_coverage_allocated",
+        "provisional_allocated_weight",
+        "allocation_coverage_nav",
+        "return_source_snapshot_id",
+        "consolidation_manifest_id",
+        "preview"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "available",
+                  "provisional"
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "string",
+                "pattern": "^(?:(?:0|[1-9][0-9]?)(?:\\.[0-9]+)?|100(?:\\.0+)?)$",
+                "maxLength": 128
+              },
+              "comparable_basis_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "evidence_ref": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "effective_window": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "start_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "end_exclusive_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "start_ms",
+                  "end_exclusive_ms"
+                ]
+              },
+              "config_ref": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "approved_policy_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "availability": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "const": "AVAILABLE"
+                  }
+                }
+              },
+              "reason_code": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "value": {
+                "type": "null"
+              },
+              "quality_band": {
+                "type": "null"
+              },
+              "reason_code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "availability": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": [
+                      "PARTIAL",
+                      "UNAVAILABLE",
+                      "DENIED",
+                      "NOT_APPLICABLE"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "CONTRIBUTION"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "quality_band": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "available",
+                  "provisional"
+                ]
+              },
+              "kind": {
+                "enum": [
+                  "RAW_ALPHA",
+                  "DIRECT_NAV"
+                ]
+              }
+            },
+            "required": [
+              "status",
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "quality_band": {
+                "type": "string",
+                "enum": [
+                  "weak",
+                  "neutral",
+                  "fair",
+                  "good",
+                  "very_good"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "RAW_ALPHA",
+                  "DIRECT_NAV",
+                  "CONTRIBUTION"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "available",
+                  "provisional",
+                  "policy_pending",
+                  "unbound",
+                  "invalid_data",
+                  "stale",
+                  "partial_costs",
+                  "partial_components",
+                  "insufficient_data"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "quality_band": {
+                "const": "weak"
+              }
+            },
+            "required": [
+              "quality_band"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "string",
+                "pattern": "^(?:0|[1-9]|[12][0-9]|3[0-9])(?:\\.[0-9]+)?$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "quality_band": {
+                "const": "neutral"
+              }
+            },
+            "required": [
+              "quality_band"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "string",
+                "pattern": "^[45][0-9](?:\\.[0-9]+)?$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "quality_band": {
+                "const": "fair"
+              }
+            },
+            "required": [
+              "quality_band"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "string",
+                "pattern": "^(?:6[0-9]|7[0-4])(?:\\.[0-9]+)?$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "quality_band": {
+                "const": "good"
+              }
+            },
+            "required": [
+              "quality_band"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "string",
+                "pattern": "^(?:7[5-9]|8[0-9])(?:\\.[0-9]+)?$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "quality_band": {
+                "const": "very_good"
+              }
+            },
+            "required": [
+              "quality_band"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "string",
+                "pattern": "^(?:9[0-9](?:\\.[0-9]+)?|100(?:\\.0+)?)$"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "CommandIntent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "execution.capital-intent.v2"
+        },
+        "workspace_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "resource": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "ROOT",
+                "PORTFOLIO",
+                "DEPLOYMENT"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          "required": [
+            "kind",
+            "id"
+          ]
+        },
+        "environment": {
+          "type": "string",
+          "enum": [
+            "paper",
+            "sandbox",
+            "live"
+          ]
+        },
+        "expected_policy_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "business_payload": {
+          "$ref": "#/$defs/PmaCandidateCapitalCommand",
+          "description": "Unchanged PM wire. Eight candidate capital operations only; unsupported operator-control/profile/safety operations remain disabled. Portal fingerprint is NOT PM resolved-source canonical digest."
+        }
+      },
+      "required": [
+        "schema_version",
+        "workspace_id",
+        "resource",
+        "environment",
+        "expected_policy_revision",
+        "business_payload"
+      ]
+    },
+    "CommandPreview": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "portal.execution.command-preview.v1"
+        },
+        "allowed": {
+          "type": "boolean"
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "COMMAND_RELAY_NOT_QUALIFIED",
+                "COMMAND_OPERATION_NOT_QUALIFIED",
+                "COMMAND_CONTEXT_INVALID",
+                "COMMAND_CONTEXT_EXPIRED",
+                "COMMAND_PREVIEW_CHANGED",
+                "COMMAND_IDEMPOTENCY_CONFLICT",
+                "COMMAND_RETRY_REQUIRED",
+                "COMMAND_RESOURCE_NOT_FOUND",
+                "COMMAND_CAPACITY_EXCEEDED",
+                "COMMAND_STATUS_UNVERIFIED",
+                "COMMAND_APPROVAL_REQUIRED"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "preview_digest": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expires_at_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "profile_ref": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "approval_required": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "approval_gate": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "R1",
+                "R2",
+                "CANARY",
+                "LIVE",
+                "CAPITAL"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "business_applied": {
+          "const": false
+        },
+        "reserved": {
+          "const": false
+        }
+      },
+      "required": [
+        "schema_version",
+        "allowed",
+        "reason_code",
+        "preview_digest",
+        "expires_at_ms",
+        "profile_ref",
+        "approval_required",
+        "approval_gate",
+        "business_applied",
+        "reserved"
+      ]
+    },
+    "CommandStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "portal.execution.command-status.v1"
+        },
+        "command_id": {
+          "type": "string",
+          "pattern": "^ecm_[a-f0-9]{32}$"
+        },
+        "operation": {
+          "type": "string",
+          "enum": [
+            "FUND",
+            "INITIAL_GRANT",
+            "TOP_UP",
+            "IMMEDIATE_DECREASE",
+            "RECALL_PARTIAL",
+            "RECALL_FULL",
+            "ADJUST_TARGET_BUDGET",
+            "SET_ROOT_LIMIT"
+          ]
+        },
+        "resource": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "ROOT",
+                "PORTFOLIO",
+                "DEPLOYMENT"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          "required": [
+            "kind",
+            "id"
+          ]
+        },
+        "environment": {
+          "type": "string",
+          "enum": [
+            "paper",
+            "sandbox",
+            "live"
+          ]
+        },
+        "profile_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "delivery": {
+          "type": "string",
+          "enum": [
+            "PREPARED",
+            "SENDING",
+            "ACKNOWLEDGED",
+            "DELIVERY_UNKNOWN",
+            "FAILED_BEFORE_SEND"
+          ]
+        },
+        "business": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "type": "string",
+              "enum": [
+                "UNKNOWN",
+                "APPLIED",
+                "PARTIALLY_APPLIED",
+                "WAITING_ENCUMBRANCE",
+                "CANCELLED",
+                "PARTIALLY_APPLIED_CANCELLED",
+                "REJECTED"
+              ]
+            },
+            "receipt_ref": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "source_event_ref": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "revision": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,18})$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "amounts": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "requested": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                    },
+                    "applied": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                    },
+                    "pending": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                    },
+                    "cancelled": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                    },
+                    "rejected": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                    }
+                  },
+                  "required": [
+                    "requested",
+                    "applied",
+                    "pending",
+                    "cancelled",
+                    "rejected"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "state",
+            "receipt_ref",
+            "source_event_ref",
+            "revision",
+            "amounts"
+          ]
+        },
+        "projection": {
+          "type": "string",
+          "enum": [
+            "UNKNOWN",
+            "CURRENT",
+            "CATCHING_UP",
+            "STALE",
+            "UNAVAILABLE"
+          ]
+        },
+        "venue": {
+          "type": "string",
+          "enum": [
+            "NOT_APPLICABLE",
+            "UNKNOWN",
+            "PENDING",
+            "ACKNOWLEDGED",
+            "FILLED",
+            "REJECTED"
+          ]
+        },
+        "next_action": {
+          "type": "string",
+          "enum": [
+            "REVIEW_PREVIEW",
+            "QUERY_SAME_INTENT",
+            "REVIEW_RECEIPT",
+            "REVIEW_BLOCKER"
+          ]
+        },
+        "created_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "updated_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "authority": {
+          "type": "string",
+          "enum": [
+            "OWNER_VERIFIED",
+            "TEST_ONLY"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "command_id",
+        "operation",
+        "resource",
+        "environment",
+        "profile_ref",
+        "delivery",
+        "business",
+        "projection",
+        "venue",
+        "next_action",
+        "created_at_ms",
+        "updated_at_ms",
+        "authority"
+      ]
+    },
+    "WorkflowContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "workspace_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "environment": {
+          "type": "string",
+          "enum": [
+            "paper",
+            "sandbox",
+            "live"
+          ]
+        },
+        "resource": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "ROOT",
+                "PORTFOLIO",
+                "ALPHA",
+                "DEPLOYMENT",
+                "ACCOUNT",
+                "BINDING"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          "required": [
+            "kind",
+            "id"
+          ]
+        },
+        "policy_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "snapshot_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "source_as_of_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "workspace_id",
+        "environment",
+        "resource",
+        "policy_revision",
+        "snapshot_ref",
+        "source_as_of_ms",
+        "observed_at_ms"
+      ]
+    },
+    "WorkflowReadState": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "LOADING",
+            "AUTHORIZED_EMPTY",
+            "READY",
+            "PARTIAL",
+            "STALE",
+            "UNAVAILABLE",
+            "DENIED",
+            "REVOKED",
+            "DISCONNECTED",
+            "RESYNC_REQUIRED",
+            "INSUFFICIENT_EVIDENCE",
+            "OUTCOME_UNKNOWN"
+          ]
+        },
+        "may_display_data": {
+          "type": "boolean"
+        },
+        "public_copy_key": {
+          "type": "string",
+          "enum": [
+            "LOADING",
+            "NO_AUTHORIZED_RESULTS",
+            "READY",
+            "PARTIAL_DATA",
+            "STALE_DATA",
+            "DATA_UNAVAILABLE",
+            "ACCESS_REQUIRED",
+            "ACCESS_REVOKED",
+            "DISCONNECTED",
+            "REFRESH_REQUIRED",
+            "MORE_EVIDENCE_REQUIRED",
+            "QUERY_SAME_INTENT"
+          ]
+        },
+        "next_action": {
+          "type": "string",
+          "enum": [
+            "NONE",
+            "REFRESH_ONCE",
+            "REQUEST_ACCESS",
+            "DISCARD_AND_REFRESH",
+            "QUERY_SAME_INTENT"
+          ]
+        },
+        "source_as_of_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "state",
+        "may_display_data",
+        "public_copy_key",
+        "next_action",
+        "source_as_of_ms",
+        "observed_at_ms"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "LOADING",
+                  "UNAVAILABLE",
+                  "DENIED",
+                  "REVOKED",
+                  "RESYNC_REQUIRED"
+                ]
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "may_display_data": {
+                "const": false
+              }
+            }
+          }
+        }
+      ]
+    },
+    "WorkflowReceiptStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "NOT_REQUESTED",
+            "PENDING",
+            "APPLIED",
+            "REJECTED",
+            "UNKNOWN",
+            "NOT_REQUIRED"
+          ]
+        },
+        "receipt_ref": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "receipt_ref"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "APPLIED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "receipt_ref": {
+                "type": "string"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "receipt_ref": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "WorkflowCreate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "portal.execution.create-workflow.v1"
+        },
+        "context": {
+          "$ref": "#/$defs/WorkflowContext"
+        },
+        "requested_economic_capital": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "requested_initial_budget": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "create": {
+          "$ref": "#/$defs/WorkflowReceiptStep"
+        },
+        "fund": {
+          "$ref": "#/$defs/WorkflowReceiptStep"
+        },
+        "initial_grant": {
+          "$ref": "#/$defs/WorkflowReceiptStep"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "DRAFT",
+            "CREATE_PENDING",
+            "CREATED_UNFUNDED",
+            "FUNDING_PENDING",
+            "BUDGET_PENDING",
+            "CREATED_ZERO_CAPITAL",
+            "CREATED_WITH_CAPITAL",
+            "OUTCOME_UNKNOWN",
+            "REJECTED"
+          ]
+        },
+        "automatic_activation": {
+          "const": false
+        },
+        "physical_transfer_performed": {
+          "const": false
+        },
+        "trading_readiness": {
+          "const": "SEPARATE_AUTHORITY_REQUIRED"
+        }
+      },
+      "required": [
+        "schema_version",
+        "context",
+        "requested_economic_capital",
+        "requested_initial_budget",
+        "currency",
+        "create",
+        "fund",
+        "initial_grant",
+        "state",
+        "automatic_activation",
+        "physical_transfer_performed",
+        "trading_readiness"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "CREATED_WITH_CAPITAL"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "create": {
+                "properties": {
+                  "state": {
+                    "const": "APPLIED"
+                  }
+                }
+              },
+              "fund": {
+                "properties": {
+                  "state": {
+                    "const": "APPLIED"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "WorkflowCapital": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "portal.execution.capital-workflow.v1"
+        },
+        "context": {
+          "$ref": "#/$defs/WorkflowContext"
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "status": {
+          "$ref": "#/$defs/CommandStatus"
+        },
+        "effect_kind": {
+          "type": "string",
+          "enum": [
+            "ECONOMIC_ASSIGNMENT",
+            "MANAGEMENT_BUDGET",
+            "NOMINAL_ROOT_CAP"
+          ]
+        },
+        "physical_transfer_performed": {
+          "const": false
+        },
+        "form_cancel": {
+          "const": "DISCARD_LOCAL_DRAFT_ONLY"
+        },
+        "after_submit_cancel": {
+          "const": "SEPARATE_CANCEL_REMAINING_AUTHORITY_REQUIRED"
+        },
+        "refresh": {
+          "const": "GET_ORIGINAL_COMMAND_NO_RESUBMIT"
+        },
+        "public_copy_key": {
+          "type": "string",
+          "enum": [
+            "QUERY_SAME_INTENT",
+            "REVIEW_RECEIPT",
+            "PARTIAL_REMAINDER_PENDING",
+            "APPLIED_PART_RETAINED",
+            "SOURCE_REJECTED"
+          ]
+        },
+        "automatic_resend": {
+          "const": false
+        }
+      },
+      "required": [
+        "schema_version",
+        "context",
+        "currency",
+        "status",
+        "effect_kind",
+        "physical_transfer_performed",
+        "form_cancel",
+        "after_submit_cancel",
+        "refresh",
+        "public_copy_key",
+        "automatic_resend"
+      ]
+    },
+    "WorkflowConfirmation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "portal.execution.workflow-confirmation.v1"
+        },
+        "intent": {
+          "$ref": "#/$defs/CommandIntent"
+        },
+        "preview": {
+          "$ref": "#/$defs/CommandPreview"
+        },
+        "before": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "economic_backing": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 128,
+                  "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "margin_risk_budget": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 128,
+                  "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "exposure_cap": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 128,
+                  "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "source_receipt_ref": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "source_as_of_ms": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "economic_backing",
+            "margin_risk_budget",
+            "exposure_cap",
+            "source_receipt_ref",
+            "source_as_of_ms"
+          ]
+        },
+        "projected_after": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "economic_backing": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 128,
+                  "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "margin_risk_budget": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 128,
+                  "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "exposure_cap": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 128,
+                  "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "source_receipt_ref": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "source_as_of_ms": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "economic_backing",
+            "margin_risk_budget",
+            "exposure_cap",
+            "source_receipt_ref",
+            "source_as_of_ms"
+          ]
+        },
+        "effect_is_projection_not_receipt": {
+          "const": true
+        },
+        "source_parent_ref": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "confirm_is_approval": {
+          "const": false
+        },
+        "physical_transfer_performed": {
+          "const": false
+        }
+      },
+      "required": [
+        "schema_version",
+        "intent",
+        "preview",
+        "before",
+        "projected_after",
+        "effect_is_projection_not_receipt",
+        "source_parent_ref",
+        "confirm_is_approval",
+        "physical_transfer_performed"
+      ]
+    },
+    "WorkflowLifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "portal.execution.lifecycle-workflow.v1"
+        },
+        "context": {
+          "$ref": "#/$defs/WorkflowContext"
+        },
+        "operation": {
+          "type": "string",
+          "enum": [
+            "MOVE_ASSIGNMENT",
+            "REBIND",
+            "ARCHIVE",
+            "RESUME",
+            "CREATE_PAPER_MONITOR",
+            "REACTIVATE"
+          ]
+        },
+        "financial_stage": {
+          "type": "string",
+          "enum": [
+            "PAPER",
+            "SANDBOX",
+            "CANARY",
+            "LIVE"
+          ]
+        },
+        "lifecycle": {
+          "type": "string",
+          "enum": [
+            "ACTIVE",
+            "ARCHIVE_REQUESTED",
+            "ARCHIVED"
+          ]
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "BLOCKED",
+            "PENDING_DRAIN",
+            "READY_FOR_AUTHORITY_REVIEW"
+          ]
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "CURRENT_ACCESS_REQUIRED",
+                "EXACT_INSTANCE_REQUIRED",
+                "SOURCE_NOT_QUALIFIED",
+                "OBLIGATIONS_NOT_PUBLISHED",
+                "OBLIGATIONS_STALE",
+                "PENDING_DRAIN",
+                "INHERITED_RESTRICTION",
+                "BINDING_CHANGE_NOT_QUALIFIED",
+                "ARCHIVE_DISPOSITION_REQUIRED",
+                "ASSIGNMENT_RECEIPTS_REQUIRED",
+                "BUDGET_NOT_DRAINED",
+                "MONITOR_NOT_PROVISIONED",
+                "REACTIVATION_REVIEW_REQUIRED",
+                "CREATED_UNFUNDED",
+                "INITIAL_BUDGET_NOT_APPLIED",
+                "OUTCOME_UNKNOWN",
+                "SOURCE_REJECTED",
+                "SCOPE_CHANGED",
+                "DATA_UNAVAILABLE",
+                "CURRENT_GRANT_REVOKED",
+                "RESYNC_REQUIRED"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "obligations": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "counts": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "positions": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "working_orders": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "reservations": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "unknown_outcomes": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "locks": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "recalls": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "settlements": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "active_children": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "positions",
+                "working_orders",
+                "reservations",
+                "unknown_outcomes",
+                "locks",
+                "recalls",
+                "settlements",
+                "active_children"
+              ]
+            },
+            "coverage": {
+              "type": "string",
+              "enum": [
+                "COMPLETE",
+                "PARTIAL",
+                "UNPUBLISHED"
+              ]
+            },
+            "freshness": {
+              "type": "string",
+              "enum": [
+                "FRESH",
+                "STALE",
+                "UNKNOWN"
+              ]
+            },
+            "source_receipt_ref": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "counts",
+            "coverage",
+            "freshness",
+            "source_receipt_ref"
+          ]
+        },
+        "source_portfolio_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "destination_portfolio_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "remaining_budget": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "original_attribution": {
+          "const": "ORIGINAL_CAUSAL_BINDING"
+        },
+        "automatic_liquidation": {
+          "const": false
+        },
+        "automatic_order_cancel": {
+          "const": false
+        },
+        "automatic_capital_return": {
+          "const": false
+        },
+        "automatic_live_activation": {
+          "const": false
+        },
+        "dispatch_enabled": {
+          "const": false
+        },
+        "source_budget_return": {
+          "$ref": "#/$defs/WorkflowReceiptStep"
+        },
+        "destination_budget_grant": {
+          "$ref": "#/$defs/WorkflowReceiptStep"
+        },
+        "economic_settlement": {
+          "$ref": "#/$defs/WorkflowReceiptStep"
+        },
+        "monitor": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "type": "string",
+              "enum": [
+                "NOT_PROVISIONED",
+                "RUNNING",
+                "PAUSED",
+                "STALE",
+                "QUOTA_STOPPED"
+              ]
+            },
+            "deployment_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "origin_deployment_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "alpha_version_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "params_digest": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^sha256:[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "lineage_receipt_ref": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "reason": {
+              "anyOf": [
+                {
+                  "const": "ARCHIVE_MONITOR"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "effective_at_ms": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "approved_config_digest": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^sha256:[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "last_observation_ms": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "virtual_capital": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 128,
+                  "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "currency": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "state",
+            "deployment_id",
+            "origin_deployment_id",
+            "alpha_version_id",
+            "params_digest",
+            "lineage_receipt_ref",
+            "reason",
+            "effective_at_ms",
+            "approved_config_digest",
+            "last_observation_ms",
+            "virtual_capital",
+            "currency"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "context",
+        "operation",
+        "financial_stage",
+        "lifecycle",
+        "state",
+        "reason_code",
+        "obligations",
+        "source_portfolio_id",
+        "destination_portfolio_id",
+        "remaining_budget",
+        "original_attribution",
+        "automatic_liquidation",
+        "automatic_order_cancel",
+        "automatic_capital_return",
+        "automatic_live_activation",
+        "dispatch_enabled",
+        "source_budget_return",
+        "destination_budget_grant",
+        "economic_settlement",
+        "monitor"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "READY_FOR_AUTHORITY_REVIEW"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reason_code": {
+                "type": "null"
+              },
+              "obligations": {
+                "properties": {
+                  "coverage": {
+                    "const": "COMPLETE"
+                  },
+                  "freshness": {
+                    "const": "FRESH"
+                  },
+                  "source_receipt_ref": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "reason_code": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "WorkflowNavigation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "portal.execution.workflow-navigation.v1"
+        },
+        "workspace_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "view": {
+          "type": "string",
+          "enum": [
+            "MANAGER",
+            "OWN_SLICE"
+          ]
+        },
+        "financial_stage_filter": {
+          "type": "string",
+          "enum": [
+            "ALL",
+            "PAPER",
+            "SANDBOX",
+            "CANARY",
+            "LIVE"
+          ]
+        },
+        "lifecycle_filter": {
+          "type": "string",
+          "enum": [
+            "ACTIVE",
+            "ARCHIVE_REQUESTED",
+            "ARCHIVED"
+          ]
+        },
+        "environment": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "currency": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "window": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "from_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "to_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "from_ms",
+                "to_ms"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "portfolio_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "alpha_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "deployment_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "query_revision": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "origin": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "run_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "release_candidate_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "approval_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "gate": {
+                  "type": "string",
+                  "enum": [
+                    "R1",
+                    "R2",
+                    "LIVE_GATE",
+                    "PAPER_EXIT"
+                  ]
+                },
+                "review_id": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "evidence_set_hash": {
+                  "type": "string",
+                  "pattern": "^sha256:[a-f0-9]{64}$"
+                }
+              },
+              "required": [
+                "run_id",
+                "release_candidate_id",
+                "approval_id",
+                "gate",
+                "review_id",
+                "evidence_set_hash"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "economic_aggregation": {
+          "const": "EXPLICIT_AUTHORIZED_PARTITION_ONLY"
+        },
+        "saved_view_grants_access": {
+          "const": false
+        }
+      },
+      "required": [
+        "schema_version",
+        "workspace_id",
+        "view",
+        "financial_stage_filter",
+        "lifecycle_filter",
+        "environment",
+        "currency",
+        "window",
+        "portfolio_id",
+        "alpha_id",
+        "deployment_id",
+        "query_revision",
+        "origin",
+        "economic_aggregation",
+        "saved_view_grants_access"
+      ]
+    },
+    "WorkflowAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "type": "string",
+          "enum": [
+            "CREATE_PORTFOLIO",
+            "REGISTER_INSTANCE",
+            "FUND",
+            "RETURN_CAPITAL",
+            "INITIAL_GRANT",
+            "TOP_UP",
+            "IMMEDIATE_DECREASE",
+            "RECALL_PARTIAL",
+            "RECALL_FULL",
+            "ADJUST_TARGET_BUDGET",
+            "SET_ROOT_LIMIT",
+            "APPLY_PENDING",
+            "CANCEL_REMAINING",
+            "REALLOCATE_BUDGET",
+            "ADMIN_LOCK",
+            "ADMIN_UNLOCK",
+            "HALT",
+            "REDUCING",
+            "RESUME",
+            "MOVE_ASSIGNMENT",
+            "REBIND",
+            "ARCHIVE",
+            "CREATE_PAPER_MONITOR",
+            "REACTIVATE"
+          ]
+        },
+        "capability_ref": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dataset_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "minItems": 1,
+          "maxItems": 8
+        },
+        "preview_operation_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "submit_operation_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status_operation_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state_schema": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "WorkflowCreate",
+                "WorkflowCapital",
+                "WorkflowLifecycle"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "commissioning": {
+          "type": "string",
+          "enum": [
+            "TECHNICAL_SOURCE_DARK",
+            "EXACT_ACTION_CATALOGUE_PENDING",
+            "SOURCE_ADAPTER_PENDING"
+          ]
+        },
+        "runtime_enabled": {
+          "const": false
+        },
+        "public_copy_key": {
+          "const": "SOURCE_NOT_QUALIFIED"
+        }
+      },
+      "required": [
+        "operation",
+        "capability_ref",
+        "dataset_refs",
+        "preview_operation_id",
+        "submit_operation_id",
+        "status_operation_id",
+        "state_schema",
+        "commissioning",
+        "runtime_enabled",
+        "public_copy_key"
+      ]
+    },
+    "WorkflowScreen": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "screen_id": {
+          "type": "string",
+          "enum": [
+            "M01",
+            "M02",
+            "M03",
+            "M04",
+            "M05",
+            "M06",
+            "M07",
+            "M08",
+            "M09",
+            "M10"
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "MANAGER",
+            "OWN_SLICE",
+            "BOTH_WITH_DISTINCT_PROJECTION"
+          ]
+        },
+        "ui_route": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "route_state": {
+          "type": "string",
+          "enum": [
+            "EXISTING_SOURCE_ROUTE",
+            "PROPOSED",
+            "EXISTING_DETAIL_REQUIRES_DIRECTORY_REFINEMENT"
+          ]
+        },
+        "read_operation_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "maxItems": 8
+        },
+        "source_qualified": {
+          "const": false
+        },
+        "consumer_status": {
+          "const": "AWAITING_CONSUMER_REVIEW"
+        }
+      },
+      "required": [
+        "screen_id",
+        "scope",
+        "ui_route",
+        "route_state",
+        "read_operation_ids",
+        "source_qualified",
+        "consumer_status"
+      ]
+    },
+    "WorkflowScorePresentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonical_score",
+        "facet",
+        "headline",
+        "public_copy_key",
+        "regime_changes_score",
+        "analytics_gates_safety_action"
+      ],
+      "properties": {
+        "canonical_score": {
+          "$ref": "#/$defs/ScoreCapsule"
+        },
+        "facet": {
+          "enum": [
+            "ACTUAL",
+            "SIMULATED",
+            "EARLY",
+            "MIXED_OBSERVATION"
+          ]
+        },
+        "headline": {
+          "enum": [
+            "RAW_QUALITY",
+            "ALLOCATION_CONTRIBUTION_NO_BAND",
+            "ALLOCATED_CAPITAL_COMPOSITION",
+            "CONSOLIDATED_NAV_QUALITY",
+            "DIAGNOSTIC_ONLY"
+          ]
+        },
+        "public_copy_key": {
+          "enum": [
+            "CANONICAL_SCORE",
+            "PROVISIONAL",
+            "EARLY_WINDOW",
+            "MIXED_NOT_ACTUAL",
+            "SCORE_POLICY_PENDING"
+          ]
+        },
+        "regime_changes_score": {
+          "const": false
+        },
+        "analytics_gates_safety_action": {
+          "const": false
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "canonical_score": {
+                "properties": {
+                  "kind": {
+                    "const": "RAW_ALPHA"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              }
+            },
+            "required": [
+              "canonical_score"
+            ]
+          },
+          "then": {
+            "properties": {
+              "headline": {
+                "enum": [
+                  "RAW_QUALITY",
+                  "DIAGNOSTIC_ONLY"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "canonical_score": {
+                "properties": {
+                  "kind": {
+                    "const": "CONTRIBUTION"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              }
+            },
+            "required": [
+              "canonical_score"
+            ]
+          },
+          "then": {
+            "properties": {
+              "headline": {
+                "enum": [
+                  "ALLOCATION_CONTRIBUTION_NO_BAND",
+                  "DIAGNOSTIC_ONLY"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "canonical_score": {
+                "properties": {
+                  "kind": {
+                    "const": "COMPOSITION"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              }
+            },
+            "required": [
+              "canonical_score"
+            ]
+          },
+          "then": {
+            "properties": {
+              "headline": {
+                "enum": [
+                  "ALLOCATED_CAPITAL_COMPOSITION",
+                  "DIAGNOSTIC_ONLY"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "canonical_score": {
+                "properties": {
+                  "kind": {
+                    "const": "DIRECT_NAV"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              }
+            },
+            "required": [
+              "canonical_score"
+            ]
+          },
+          "then": {
+            "properties": {
+              "headline": {
+                "enum": [
+                  "CONSOLIDATED_NAV_QUALITY",
+                  "DIAGNOSTIC_ONLY"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "facet": {
+                "enum": [
+                  "EARLY",
+                  "MIXED_OBSERVATION"
+                ]
+              }
+            },
+            "required": [
+              "facet"
+            ]
+          },
+          "then": {
+            "properties": {
+              "headline": {
+                "const": "DIAGNOSTIC_ONLY"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "facet": {
+                "const": "MIXED_OBSERVATION"
+              }
+            },
+            "required": [
+              "facet"
+            ]
+          },
+          "then": {
+            "properties": {
+              "public_copy_key": {
+                "const": "MIXED_NOT_ACTUAL"
+              },
+              "canonical_score": {
+                "properties": {
+                  "series_kind": {
+                    "const": "MIXED_FORWARD_DIAGNOSTIC"
+                  },
+                  "economic_domain": {
+                    "const": "MIXED_DIAGNOSTIC"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "description": "Reuses the canonical ScoreCapsule. No calculator, policy defaults, hidden denominator or quality band for contribution is introduced. Diagnostic facets never replace actual headlines. Source/action authorization remains independent."
+    }
+  }
+}
