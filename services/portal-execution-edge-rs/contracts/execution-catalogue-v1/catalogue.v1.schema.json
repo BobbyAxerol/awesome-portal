@@ -1,0 +1,1670 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/edge/execution-catalogue.v1.schema.json",
+  "title": "EPG10-02 logical catalogue extension; not a runtime exporter or grant",
+  "$defs": {
+    "Scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "workspace_id": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "environment": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/Environment"
+        },
+        "venue": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "native_profile_id": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "execution_backend": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "authorization_revision": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "scope_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "workspace_id",
+        "environment",
+        "venue",
+        "native_profile_id",
+        "execution_backend",
+        "authorization_revision",
+        "scope_digest"
+      ]
+    },
+    "Watermark": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dataset_id": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "partition": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "source_continuity_epoch": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "checkpoint_ref": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "facts_through_ms": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/UtcMilliseconds"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recorded_through_ms": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/UtcMilliseconds"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "coverage": {
+          "type": "string",
+          "enum": [
+            "COMPLETE",
+            "PARTIAL",
+            "UNKNOWN"
+          ]
+        },
+        "proof_ref": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "dataset_id",
+        "partition",
+        "source_continuity_epoch",
+        "checkpoint_ref",
+        "facts_through_ms",
+        "recorded_through_ms",
+        "coverage",
+        "proof_ref"
+      ]
+    },
+    "MetricLineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source_set_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "dataset_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+          },
+          "maxItems": 200
+        },
+        "watermarks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "dataset_id": {
+                "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+              },
+              "partition": {
+                "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+              },
+              "source_continuity_epoch": {
+                "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+              },
+              "checkpoint_ref": {
+                "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+              },
+              "facts_through_ms": {
+                "anyOf": [
+                  {
+                    "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/UtcMilliseconds"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "recorded_through_ms": {
+                "anyOf": [
+                  {
+                    "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/UtcMilliseconds"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "coverage": {
+                "type": "string",
+                "enum": [
+                  "COMPLETE",
+                  "PARTIAL",
+                  "UNKNOWN"
+                ]
+              },
+              "proof_ref": {
+                "anyOf": [
+                  {
+                    "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "dataset_id",
+              "partition",
+              "source_continuity_epoch",
+              "checkpoint_ref",
+              "facts_through_ms",
+              "recorded_through_ms",
+              "coverage",
+              "proof_ref"
+            ]
+          },
+          "maxItems": 200
+        },
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "workspace_id": {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            "environment": {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/Environment"
+            },
+            "venue": {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            "native_profile_id": {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            "execution_backend": {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            "authorization_revision": {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            "scope_digest": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            }
+          },
+          "required": [
+            "workspace_id",
+            "environment",
+            "venue",
+            "native_profile_id",
+            "execution_backend",
+            "authorization_revision",
+            "scope_digest"
+          ]
+        },
+        "correction_view": {
+          "type": "string",
+          "enum": [
+            "ORIGINAL",
+            "RESTATED"
+          ]
+        },
+        "revision": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "supersedes_revision": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provenance_ref": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        }
+      },
+      "required": [
+        "source_set_digest",
+        "dataset_refs",
+        "watermarks",
+        "scope",
+        "correction_view",
+        "revision",
+        "supersedes_revision",
+        "provenance_ref"
+      ]
+    },
+    "MetricEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "execution.metric-evidence.v1"
+        },
+        "metric_ref": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "source_set": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "source_set_digest": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "dataset_refs": {
+              "type": "array",
+              "items": {
+                "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+              },
+              "maxItems": 200
+            },
+            "watermarks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "dataset_id": {
+                    "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                  },
+                  "partition": {
+                    "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                  },
+                  "source_continuity_epoch": {
+                    "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                  },
+                  "checkpoint_ref": {
+                    "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                  },
+                  "facts_through_ms": {
+                    "anyOf": [
+                      {
+                        "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/UtcMilliseconds"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "recorded_through_ms": {
+                    "anyOf": [
+                      {
+                        "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/UtcMilliseconds"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "coverage": {
+                    "type": "string",
+                    "enum": [
+                      "COMPLETE",
+                      "PARTIAL",
+                      "UNKNOWN"
+                    ]
+                  },
+                  "proof_ref": {
+                    "anyOf": [
+                      {
+                        "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "dataset_id",
+                  "partition",
+                  "source_continuity_epoch",
+                  "checkpoint_ref",
+                  "facts_through_ms",
+                  "recorded_through_ms",
+                  "coverage",
+                  "proof_ref"
+                ]
+              },
+              "maxItems": 200
+            },
+            "scope": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "workspace_id": {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                },
+                "environment": {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/Environment"
+                },
+                "venue": {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                },
+                "native_profile_id": {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                },
+                "execution_backend": {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                },
+                "authorization_revision": {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                },
+                "scope_digest": {
+                  "type": "string",
+                  "pattern": "^sha256:[a-f0-9]{64}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "environment",
+                "venue",
+                "native_profile_id",
+                "execution_backend",
+                "authorization_revision",
+                "scope_digest"
+              ]
+            },
+            "correction_view": {
+              "type": "string",
+              "enum": [
+                "ORIGINAL",
+                "RESTATED"
+              ]
+            },
+            "revision": {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            "supersedes_revision": {
+              "anyOf": [
+                {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "provenance_ref": {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            }
+          },
+          "required": [
+            "source_set_digest",
+            "dataset_refs",
+            "watermarks",
+            "scope",
+            "correction_view",
+            "revision",
+            "supersedes_revision",
+            "provenance_ref"
+          ]
+        },
+        "formula_approved": {
+          "type": "boolean"
+        },
+        "runtime_config_approved": {
+          "type": "boolean"
+        },
+        "runtime_config_ref": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "approved_policy_id": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "calibration_ref": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "comparable_basis_id": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "individual_evidence_binding_id": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "research_run_ref": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "research_evidence_used": {
+          "type": "boolean"
+        },
+        "stress_manifest_ref": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "consolidation_manifest_ref": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "return_source_snapshot_id": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cost_applicability_ref": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "fx_policy_ref": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "flow_grid_ref": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "fill_notional_dedupe_ref": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "opening_capital_ref": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        }
+      },
+      "required": [
+        "schema_version",
+        "metric_ref",
+        "source_set",
+        "formula_approved",
+        "runtime_config_approved",
+        "runtime_config_ref",
+        "approved_policy_id",
+        "calibration_ref",
+        "comparable_basis_id",
+        "individual_evidence_binding_id",
+        "research_run_ref",
+        "research_evidence_used",
+        "stress_manifest_ref",
+        "consolidation_manifest_ref",
+        "return_source_snapshot_id",
+        "cost_applicability_ref",
+        "fx_policy_ref",
+        "flow_grid_ref",
+        "fill_notional_dedupe_ref",
+        "opening_capital_ref"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "research_evidence_used": {
+                "const": true
+              }
+            },
+            "required": [
+              "research_evidence_used"
+            ]
+          },
+          "then": {
+            "properties": {
+              "research_run_ref": {
+                "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "runtime_config_approved": {
+                "const": true
+              }
+            },
+            "required": [
+              "runtime_config_approved"
+            ]
+          },
+          "then": {
+            "properties": {
+              "runtime_config_ref": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$"
+              },
+              "approved_policy_id": {
+                "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+              },
+              "calibration_ref": {
+                "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "PmR2Read": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "execution.pm-r2-read.v1"
+        },
+        "availability": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/Availability"
+        },
+        "currency": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "basis": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "nominal_budget": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/NonnegativeDecimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "margin_risk_requirement": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/NonnegativeDecimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "economic_backing": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/NonnegativeDecimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "exposure_cap": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/NonnegativeDecimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "exposure_unit": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "netting_policy_ref": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "new_risk_capacity": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/NonnegativeDecimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "amount_locked": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/NonnegativeDecimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recall_pending": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/NonnegativeDecimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "authority_ref": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "model_revision": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "profile_ref": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "lineage": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "source_set_digest": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "dataset_refs": {
+              "type": "array",
+              "items": {
+                "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+              },
+              "maxItems": 200
+            },
+            "watermarks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "dataset_id": {
+                    "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                  },
+                  "partition": {
+                    "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                  },
+                  "source_continuity_epoch": {
+                    "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                  },
+                  "checkpoint_ref": {
+                    "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                  },
+                  "facts_through_ms": {
+                    "anyOf": [
+                      {
+                        "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/UtcMilliseconds"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "recorded_through_ms": {
+                    "anyOf": [
+                      {
+                        "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/UtcMilliseconds"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "coverage": {
+                    "type": "string",
+                    "enum": [
+                      "COMPLETE",
+                      "PARTIAL",
+                      "UNKNOWN"
+                    ]
+                  },
+                  "proof_ref": {
+                    "anyOf": [
+                      {
+                        "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "dataset_id",
+                  "partition",
+                  "source_continuity_epoch",
+                  "checkpoint_ref",
+                  "facts_through_ms",
+                  "recorded_through_ms",
+                  "coverage",
+                  "proof_ref"
+                ]
+              },
+              "maxItems": 200
+            },
+            "scope": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "workspace_id": {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                },
+                "environment": {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/Environment"
+                },
+                "venue": {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                },
+                "native_profile_id": {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                },
+                "execution_backend": {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                },
+                "authorization_revision": {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                },
+                "scope_digest": {
+                  "type": "string",
+                  "pattern": "^sha256:[a-f0-9]{64}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "environment",
+                "venue",
+                "native_profile_id",
+                "execution_backend",
+                "authorization_revision",
+                "scope_digest"
+              ]
+            },
+            "correction_view": {
+              "type": "string",
+              "enum": [
+                "ORIGINAL",
+                "RESTATED"
+              ]
+            },
+            "revision": {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            "supersedes_revision": {
+              "anyOf": [
+                {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "provenance_ref": {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            }
+          },
+          "required": [
+            "source_set_digest",
+            "dataset_refs",
+            "watermarks",
+            "scope",
+            "correction_view",
+            "revision",
+            "supersedes_revision",
+            "provenance_ref"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "availability",
+        "currency",
+        "basis",
+        "nominal_budget",
+        "margin_risk_requirement",
+        "economic_backing",
+        "exposure_cap",
+        "exposure_unit",
+        "netting_policy_ref",
+        "new_risk_capacity",
+        "amount_locked",
+        "recall_pending",
+        "authority_ref",
+        "model_revision",
+        "profile_ref",
+        "lineage"
+      ]
+    },
+    "RegimeFit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "execution.regime-fit.v1"
+        },
+        "availability": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/Availability"
+        },
+        "run_id": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "alpha_version_id": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "parameter_binding_ref": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "feature_version": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "feature_cutoff_ms": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/UtcMilliseconds"
+        },
+        "reference_snapshot_ref": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "reference_cutoff_ms": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/UtcMilliseconds"
+        },
+        "no_lookahead_policy_ref": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "methodology_revision": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "distance": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "neighbor_count": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/UtcMilliseconds"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "effective_sample_size": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "episode_count": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/UtcMilliseconds"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "financial_stages": {
+          "type": "array",
+          "items": {
+            "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/FinancialStage"
+          },
+          "maxItems": 4
+        },
+        "evidence_snapshot_ref": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "lineage": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "source_set_digest": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "dataset_refs": {
+              "type": "array",
+              "items": {
+                "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+              },
+              "maxItems": 200
+            },
+            "watermarks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "dataset_id": {
+                    "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                  },
+                  "partition": {
+                    "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                  },
+                  "source_continuity_epoch": {
+                    "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                  },
+                  "checkpoint_ref": {
+                    "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                  },
+                  "facts_through_ms": {
+                    "anyOf": [
+                      {
+                        "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/UtcMilliseconds"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "recorded_through_ms": {
+                    "anyOf": [
+                      {
+                        "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/UtcMilliseconds"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "coverage": {
+                    "type": "string",
+                    "enum": [
+                      "COMPLETE",
+                      "PARTIAL",
+                      "UNKNOWN"
+                    ]
+                  },
+                  "proof_ref": {
+                    "anyOf": [
+                      {
+                        "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "dataset_id",
+                  "partition",
+                  "source_continuity_epoch",
+                  "checkpoint_ref",
+                  "facts_through_ms",
+                  "recorded_through_ms",
+                  "coverage",
+                  "proof_ref"
+                ]
+              },
+              "maxItems": 200
+            },
+            "scope": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "workspace_id": {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                },
+                "environment": {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/Environment"
+                },
+                "venue": {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                },
+                "native_profile_id": {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                },
+                "execution_backend": {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                },
+                "authorization_revision": {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                },
+                "scope_digest": {
+                  "type": "string",
+                  "pattern": "^sha256:[a-f0-9]{64}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "environment",
+                "venue",
+                "native_profile_id",
+                "execution_backend",
+                "authorization_revision",
+                "scope_digest"
+              ]
+            },
+            "correction_view": {
+              "type": "string",
+              "enum": [
+                "ORIGINAL",
+                "RESTATED"
+              ]
+            },
+            "revision": {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            "supersedes_revision": {
+              "anyOf": [
+                {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "provenance_ref": {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            }
+          },
+          "required": [
+            "source_set_digest",
+            "dataset_refs",
+            "watermarks",
+            "scope",
+            "correction_view",
+            "revision",
+            "supersedes_revision",
+            "provenance_ref"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "availability",
+        "run_id",
+        "alpha_version_id",
+        "parameter_binding_ref",
+        "feature_version",
+        "feature_cutoff_ms",
+        "reference_snapshot_ref",
+        "reference_cutoff_ms",
+        "no_lookahead_policy_ref",
+        "methodology_revision",
+        "distance",
+        "neighbor_count",
+        "effective_sample_size",
+        "episode_count",
+        "financial_stages",
+        "evidence_snapshot_ref",
+        "lineage"
+      ]
+    },
+    "Dimensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "environment": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/Environment"
+        },
+        "financial_stage": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/FinancialStage"
+        },
+        "lifecycle": {
+          "type": "string",
+          "enum": [
+            "ACTIVE",
+            "ARCHIVE_REQUESTED",
+            "ARCHIVED"
+          ]
+        },
+        "trade_state": {
+          "type": "string",
+          "enum": [
+            "ACTIVE",
+            "REDUCING",
+            "HALTED"
+          ]
+        }
+      },
+      "required": [
+        "environment",
+        "financial_stage",
+        "lifecycle",
+        "trade_state"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "environment": {
+                "const": "paper"
+              }
+            },
+            "required": [
+              "environment"
+            ]
+          },
+          "then": {
+            "properties": {
+              "financial_stage": {
+                "const": "PAPER"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "environment": {
+                "const": "sandbox"
+              }
+            },
+            "required": [
+              "environment"
+            ]
+          },
+          "then": {
+            "properties": {
+              "financial_stage": {
+                "const": "SANDBOX"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "environment": {
+                "const": "live"
+              }
+            },
+            "required": [
+              "environment"
+            ]
+          },
+          "then": {
+            "properties": {
+              "financial_stage": {
+                "enum": [
+                  "CANARY",
+                  "LIVE"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Page": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "execution.catalogue-page.v1"
+        },
+        "snapshot_id": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "rows": {
+          "type": "array",
+          "items": {},
+          "maxItems": 9007199254740991
+        },
+        "continuation": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "snapshot_id",
+        "rows",
+        "continuation"
+      ]
+    },
+    "CursorContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "execution.catalogue-cursor-context.v1"
+        },
+        "dataset": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "principal_ref": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "workspace_id": {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            "environment": {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/Environment"
+            },
+            "venue": {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            "native_profile_id": {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            "execution_backend": {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            "authorization_revision": {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            "scope_digest": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            }
+          },
+          "required": [
+            "workspace_id",
+            "environment",
+            "venue",
+            "native_profile_id",
+            "execution_backend",
+            "authorization_revision",
+            "scope_digest"
+          ]
+        },
+        "filter_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "source_continuity_epoch": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "projection_generation": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "snapshot_id": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "schema_id": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "expires_at_ms": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/UtcMilliseconds"
+        },
+        "last_key": {
+          "type": "array",
+          "items": {
+            "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+          },
+          "maxItems": 200
+        }
+      },
+      "required": [
+        "schema_version",
+        "dataset",
+        "principal_ref",
+        "scope",
+        "filter_digest",
+        "source_continuity_epoch",
+        "projection_generation",
+        "snapshot_id",
+        "schema_id",
+        "expires_at_ms",
+        "last_key"
+      ]
+    },
+    "Family": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "guide": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "authority_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+          },
+          "maxItems": 200
+        },
+        "owner": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "grain": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "source_query_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+          },
+          "maxItems": 200
+        },
+        "writer_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+          },
+          "maxItems": 200
+        },
+        "history_capability": {
+          "type": "string",
+          "enum": [
+            "CURRENT_ONLY",
+            "HISTORY_AVAILABLE",
+            "UNKNOWN"
+          ]
+        },
+        "history_scope": {
+          "type": "array",
+          "items": {
+            "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+          },
+          "maxItems": 200
+        },
+        "retention": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "from_ms": {
+              "anyOf": [
+                {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/UtcMilliseconds"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "to_ms": {
+              "anyOf": [
+                {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/UtcMilliseconds"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration_ms": {
+              "anyOf": [
+                {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/UtcMilliseconds"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "proof_ref": {
+              "anyOf": [
+                {
+                  "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "from_ms",
+            "to_ms",
+            "duration_ms",
+            "proof_ref"
+          ]
+        },
+        "availability": {
+          "type": "string",
+          "enum": [
+            "AVAILABLE",
+            "PARTIAL",
+            "UNAVAILABLE",
+            "OUT_OF_SCOPE"
+          ]
+        },
+        "availability_reason": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "implementation_status": {
+          "type": "string",
+          "enum": [
+            "PLANNED",
+            "SOURCE_VERIFIED",
+            "RUNTIME_PENDING",
+            "RUNTIME_VERIFIED"
+          ]
+        },
+        "evidence_status": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "source_contract_state": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "publication_gates": {
+          "type": "array",
+          "items": {
+            "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+          },
+          "maxItems": 200
+        },
+        "consumer": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+        },
+        "history_full": {
+          "type": "boolean"
+        },
+        "enabled_environments": {
+          "type": "array",
+          "items": {
+            "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/Environment"
+          },
+          "maxItems": 3
+        },
+        "coverage_proof_ref": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "guide",
+        "authority_refs",
+        "owner",
+        "grain",
+        "source_query_refs",
+        "writer_refs",
+        "history_capability",
+        "history_scope",
+        "retention",
+        "availability",
+        "availability_reason",
+        "implementation_status",
+        "evidence_status",
+        "source_contract_state",
+        "publication_gates",
+        "consumer",
+        "history_full",
+        "enabled_environments",
+        "coverage_proof_ref"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "history_full": {
+                "const": true
+              }
+            },
+            "required": [
+              "history_full"
+            ]
+          },
+          "then": {
+            "properties": {
+              "history_capability": {
+                "const": "HISTORY_AVAILABLE"
+              },
+              "coverage_proof_ref": {
+                "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/OpaqueRevision"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "ScopedBrowser": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mapping_revision": {
+          "const": "execution.scoped-continuation.v1"
+        },
+        "snapshot": {
+          "$ref": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json#/$defs/BrowserSnapshotMetadata"
+        }
+      },
+      "required": [
+        "mapping_revision",
+        "snapshot"
+      ]
+    },
+    "Registry": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "compatibility",
+        "source_pins",
+        "source_groups",
+        "families",
+        "new_runtime_exports_enabled"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "execution.catalogue-registry.v1"
+        },
+        "compatibility": {
+          "type": "object",
+          "required": [
+            "major",
+            "required_features",
+            "optional_extensions"
+          ],
+          "properties": {
+            "major": {
+              "const": 1
+            },
+            "required_features": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "optional_extensions": {
+              "type": "object"
+            }
+          }
+        },
+        "source_pins": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{40}$"
+          }
+        },
+        "source_groups": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "repo",
+              "owner",
+              "history",
+              "gate",
+              "writer_refs",
+              "query_refs",
+              "export_query_status",
+              "source_role_gap"
+            ]
+          }
+        },
+        "families": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/Family"
+          }
+        },
+        "new_runtime_exports_enabled": {
+          "const": false
+        }
+      },
+      "$comment": "Logical registry only. Extra descriptive metadata remains additive; required semantic extensions require explicit version/feature negotiation. Activation requires a separately qualified publication contract."
+    }
+  }
+}

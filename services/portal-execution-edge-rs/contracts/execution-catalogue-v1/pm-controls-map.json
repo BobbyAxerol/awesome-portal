@@ -1,0 +1,67 @@
+{
+  "schema_version": "execution.pm-controls-map.v1",
+  "provenance": "TEST_ONLY_SYNTHETIC_MAPPING_FROM_PM_CONTROLS_NOT_ADMISSION",
+  "source_ref": "services/portfolio_management/operator_reports_contract.py:Controls",
+  "fixture_ref": "tests/unit/test_pma11_operator_reports_contract.py:control",
+  "field_map": {
+    "nominal_budget": "management_budget",
+    "margin_risk_requirement": "margin_risk_requirement",
+    "backing": "economic_backing",
+    "exposure_cap": "exposure_cap",
+    "new_risk_capacity": "new_risk_capacity",
+    "amount_locked": "amount_locked",
+    "recall_pending": "recall_pending",
+    "authority_ref": "authority_ref",
+    "model_revision": "model_revision",
+    "profile": "profile"
+  },
+  "source": {
+    "nominal_budget": "80",
+    "margin_risk_requirement": "20",
+    "backing": "100",
+    "exposure_cap": "200",
+    "new_risk_capacity": "60",
+    "amount_locked": "5",
+    "recall_pending": "7",
+    "authority_ref": "TEST_ONLY-authority",
+    "model_revision": "model1",
+    "profile": {
+      "desired": "desired-2",
+      "broker_applied": "broker-2",
+      "verified": "verified-1",
+      "effective": "effective-1",
+      "outcome": "UNKNOWN",
+      "qualification": "TEST_ONLY_SIMULATION"
+    }
+  },
+  "expected": {
+    "management_budget": "80",
+    "margin_risk_requirement": "20",
+    "economic_backing": "100",
+    "exposure_cap": "200",
+    "new_risk_capacity": "60",
+    "amount_locked": "5",
+    "recall_pending": "7",
+    "authority_ref": "TEST_ONLY-authority",
+    "model_revision": "model1",
+    "profile": {
+      "desired": "desired-2",
+      "broker_applied": "broker-2",
+      "verified": "verified-1",
+      "effective": "effective-1",
+      "outcome": "UNKNOWN",
+      "qualification": "TEST_ONLY_SIMULATION"
+    }
+  },
+  "header": {
+    "currency": "USDT",
+    "basis": "equity-gross-pnl-v1"
+  },
+  "exposure_policy": {
+    "unit": "SOURCE_MODEL_REQUIRED",
+    "netting_policy_ref": null,
+    "availability": "UNAVAILABLE",
+    "reason_code": "PM_CONTROLS_DOES_NOT_CERTIFY_PRODUCT_EXPOSURE_POLICY"
+  },
+  "canonical_pm_business_payload_mutated": false
+}

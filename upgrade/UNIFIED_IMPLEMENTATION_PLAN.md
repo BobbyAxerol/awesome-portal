@@ -9,7 +9,11 @@
 > tested/cleaned.20repository subcases plus native schema/parity PASS, not whole
 > T01 acceptance:0PASS/3PARTIAL/2NOT_RUN/1BLOCKED, exit NOT_MET.14production budget
 > groups UNDECIDED; scoped numeric proposals recorded. See §23.10.1 and current
-> inventory §7.02…11 await approval; logical02 need not wait for capacity.
+> inventory §7.**02 completed contract-only:**42logical families, exact shared
+> Research schema/mapping and Rust compatibility primitives;11formal cases,
+> 36Rust+12Python PASS,57shared vectors agree; fmt/clippy PASS. See §23.11 and
+> 02receipt. No new exporter active; owned test artifacts cleaned.03…11 await
+> named approval.01capacity is still pending; logical02 closure does not waive it.
 > No runtime activation. Four owner-supplied guides
 > are linked and pinned there; earlier acceptance is not new upgrade evidence.
 

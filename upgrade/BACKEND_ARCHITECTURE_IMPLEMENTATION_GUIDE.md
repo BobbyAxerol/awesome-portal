@@ -669,7 +669,13 @@ deep-dive → ADR → slice → evidence discipline documented above.
   met**, no whole-stack B0/B1/B2/6k/9k or approved14-group production budgets.
   See §23.10.1 and current inventory §7 for exact owners/next actions. New
   candidate02/03/04 work and TS/PM publication/TLS dependencies are separate.
-  02…11 await named approval; logical02 may proceed independently of capacity.
+  **EPG10-02 completed, contract-only (2026-10-16):**42logical families with
+  source/owner/history/gap metadata; unchanged mirrored Research ELP2 foundation;
+  additive Rust exact metadata/cursor/pagination primitives, metric dependencies
+  and PM-R2/Archive/Regime fixtures.11formal cases,36Rust+12Python PASS;
+  57shared FX vectors match, fmt/clippy PASS. See §23.11 and02receipt. No runtime
+  activation/DB mutation; owned602MB compile fixture/cache/target removed.
+  03…11 await named approval.01capacity exit remains unmet, not waived.
   No operational runtime/source/credential change, push or merge. Only owned
   test containers/private fixture/tempfiles removed; no image build/pull/prune.
 

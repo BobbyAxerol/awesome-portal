@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+pub mod catalogue_v1;
 mod events;
 
 pub use events::{

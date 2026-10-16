@@ -1,0 +1,830 @@
+{
+  "schema_version": "execution.field-dictionary.v1",
+  "approval": "MANAGER_LOGICAL_READ_POLICY_NOT_DEPLOYED_GRANT",
+  "researcher_fields": "FIELD_POLICY_PENDING_NO_NEW_RUNTIME_DISCLOSURE",
+  "fields": [
+    {
+      "field_id": "new_risk_capacity",
+      "scalar_type": "DECIMAL",
+      "unit": "MONEY",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "amount_locked",
+      "scalar_type": "DECIMAL",
+      "unit": "MONEY",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "recall_pending",
+      "scalar_type": "DECIMAL",
+      "unit": "MONEY",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "alpha_id",
+      "scalar_type": "ID",
+      "unit": null,
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": null
+    },
+    {
+      "field_id": "alpha_version_id",
+      "scalar_type": "ID",
+      "unit": null,
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": null
+    },
+    {
+      "field_id": "owner_user_id",
+      "scalar_type": "ID",
+      "unit": null,
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": null
+    },
+    {
+      "field_id": "portfolio_id",
+      "scalar_type": "ID",
+      "unit": null,
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": null
+    },
+    {
+      "field_id": "financial_stage",
+      "scalar_type": "ENUM",
+      "unit": null,
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": null
+    },
+    {
+      "field_id": "lifecycle",
+      "scalar_type": "ENUM",
+      "unit": null,
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": null
+    },
+    {
+      "field_id": "allocation_weight",
+      "scalar_type": "DECIMAL",
+      "unit": "RATIO",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "management_budget",
+      "scalar_type": "DECIMAL",
+      "unit": "MONEY",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "margin_risk_requirement",
+      "scalar_type": "DECIMAL",
+      "unit": "MONEY",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "economic_backing",
+      "scalar_type": "DECIMAL",
+      "unit": "MONEY",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "exposure_cap",
+      "scalar_type": "DECIMAL",
+      "unit": "MODEL_DEFINED",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "pnl",
+      "scalar_type": "DECIMAL",
+      "unit": "MONEY",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "unrealized_pnl",
+      "scalar_type": "DECIMAL",
+      "unit": "MONEY",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "account_balance",
+      "scalar_type": "DECIMAL",
+      "unit": "MONEY",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "equity30d_end",
+      "scalar_type": "DECIMAL",
+      "unit": "MONEY",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "return30d_pct",
+      "scalar_type": "DECIMAL",
+      "unit": "PERCENT",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "health",
+      "scalar_type": "ENUM",
+      "unit": null,
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": null
+    },
+    {
+      "field_id": "source_status",
+      "scalar_type": "ENUM",
+      "unit": null,
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": null
+    },
+    {
+      "field_id": "raw_q",
+      "scalar_type": "DECIMAL",
+      "unit": "POINTS",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "contribution",
+      "scalar_type": "DECIMAL",
+      "unit": "POINTS",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "alpha_score",
+      "scalar_type": "DECIMAL",
+      "unit": "POINTS",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "portfolio_score",
+      "scalar_type": "DECIMAL",
+      "unit": "POINTS",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "regime_distance",
+      "scalar_type": "DECIMAL",
+      "unit": "DISTANCE",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "initial_funds",
+      "scalar_type": "DECIMAL",
+      "unit": "MONEY",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "added_funds",
+      "scalar_type": "DECIMAL",
+      "unit": "MONEY",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "returned_funds",
+      "scalar_type": "DECIMAL",
+      "unit": "MONEY",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "nav",
+      "scalar_type": "DECIMAL",
+      "unit": "MONEY",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": "execution.metric-field-policy.v1"
+    },
+    {
+      "field_id": "as_of_ms",
+      "scalar_type": "UTC_MS",
+      "unit": "UTC_MS",
+      "visible_in": [
+        "MANAGER"
+      ],
+      "sortable": true,
+      "filter_operators": [
+        "EQ",
+        "IN",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "required_capability": "execution.business.read",
+      "methodology_revision": null
+    }
+  ],
+  "pm_dimensions": {
+    "nominal_budget": "entitlement not cash",
+    "margin_risk_requirement": "model-authority budget requirement",
+    "economic_backing": "independent economic source proof",
+    "exposure_cap": "product/model/unit/netting limit, no global1x",
+    "new_risk_capacity": "current authority-derived admission",
+    "amount_locked": "administrative lock",
+    "recall_pending": "unresolved recall amount"
+  },
+  "source_mapping_policy": {
+    "currency": "every MONEY/PRICE metric carries exact reporting currency; no USD/USDT equality",
+    "window": "requested/effective windows and as-of source cut required",
+    "denominator": "RATIO/PERCENT positive typed denominator per shared MetricCapsule; unknown/null never zero",
+    "correction": "append revision+supersedes with ORIGINAL/RESTATED source evidence",
+    "producer_status": "all new metric fields UNAVAILABLE until qualified source-bound publication"
+  },
+  "field_sources": [
+    {
+      "field_id": "new_risk_capacity",
+      "source_ref": "TS PM operator_reports_contract.Controls/Economics + services/performance/repository.py account_equity_snapshots candidates",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "pm-controls-map.json",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "amount_locked",
+      "source_ref": "TS PM operator_reports_contract.Controls/Economics + services/performance/repository.py account_equity_snapshots candidates",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "pm-controls-map.json",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "recall_pending",
+      "source_ref": "TS PM operator_reports_contract.Controls/Economics + services/performance/repository.py account_equity_snapshots candidates",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "pm-controls-map.json",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "alpha_id",
+      "source_ref": "TS registry/membership/binding or projection source set",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "alpha_version_id",
+      "source_ref": "TS registry/membership/binding or projection source set",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "owner_user_id",
+      "source_ref": "TS registry/membership/binding or projection source set",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "portfolio_id",
+      "source_ref": "TS registry/membership/binding or projection source set",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "financial_stage",
+      "source_ref": "TS registry/membership/binding or projection source set",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "lifecycle",
+      "source_ref": "TS registry/membership/binding or projection source set",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "allocation_weight",
+      "source_ref": "TS PM operator_reports_contract.Controls/Economics + services/performance/repository.py account_equity_snapshots candidates",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "management_budget",
+      "source_ref": "TS PM operator_reports_contract.Controls/Economics + services/performance/repository.py account_equity_snapshots candidates",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "pm-controls-map.json",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "margin_risk_requirement",
+      "source_ref": "TS PM operator_reports_contract.Controls/Economics + services/performance/repository.py account_equity_snapshots candidates",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "pm-controls-map.json",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "economic_backing",
+      "source_ref": "TS PM operator_reports_contract.Controls/Economics + services/performance/repository.py account_equity_snapshots candidates",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "pm-controls-map.json",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "exposure_cap",
+      "source_ref": "TS PM operator_reports_contract.Controls/Economics + services/performance/repository.py account_equity_snapshots candidates",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "pm-controls-map.json",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "pnl",
+      "source_ref": "TS PM operator_reports_contract.Controls/Economics + services/performance/repository.py account_equity_snapshots candidates",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "unrealized_pnl",
+      "source_ref": "TS PM operator_reports_contract.Controls/Economics + services/performance/repository.py account_equity_snapshots candidates",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "account_balance",
+      "source_ref": "TS PM operator_reports_contract.Controls/Economics + services/performance/repository.py account_equity_snapshots candidates",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "equity30d_end",
+      "source_ref": "TS PM operator_reports_contract.Controls/Economics + services/performance/repository.py account_equity_snapshots candidates",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "return30d_pct",
+      "source_ref": "TS PM operator_reports_contract.Controls/Economics + services/performance/repository.py account_equity_snapshots candidates",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "health",
+      "source_ref": "TS registry/membership/binding or projection source set",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "source_status",
+      "source_ref": "TS registry/membership/binding or projection source set",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "raw_q",
+      "source_ref": "shared ScoreCapsule / catalogue MetricEvidence / RegimeFit",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "contribution",
+      "source_ref": "shared ScoreCapsule / catalogue MetricEvidence / RegimeFit",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "alpha_score",
+      "source_ref": "shared ScoreCapsule / catalogue MetricEvidence / RegimeFit",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "portfolio_score",
+      "source_ref": "shared ScoreCapsule / catalogue MetricEvidence / RegimeFit",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "regime_distance",
+      "source_ref": "shared ScoreCapsule / catalogue MetricEvidence / RegimeFit",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "initial_funds",
+      "source_ref": "TS PM operator_reports_contract.Controls/Economics + services/performance/repository.py account_equity_snapshots candidates",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "added_funds",
+      "source_ref": "TS PM operator_reports_contract.Controls/Economics + services/performance/repository.py account_equity_snapshots candidates",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "returned_funds",
+      "source_ref": "TS PM operator_reports_contract.Controls/Economics + services/performance/repository.py account_equity_snapshots candidates",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "nav",
+      "source_ref": "TS PM operator_reports_contract.Controls/Economics + services/performance/repository.py account_equity_snapshots candidates",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    },
+    {
+      "field_id": "as_of_ms",
+      "source_ref": "TS registry/membership/binding or projection source set",
+      "availability": "UNAVAILABLE",
+      "required_context": "MetricCapsule and MetricEvidence for numeric fields; exact current-authority IDs/field policy for identity fields",
+      "source_field_mapping_ref": "SOURCE_FIELD_OR_DERIVED_PRODUCER_PROOF_REQUIRED",
+      "gap": "Component fields not certified full requested window/export semantics"
+    }
+  ]
+}

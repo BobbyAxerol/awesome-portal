@@ -1,0 +1,102 @@
+{
+  "provenance": "TEST_ONLY_SYNTHETIC_FROM_RESEARCH_ELP2_FX08",
+  "source": {
+    "contract_version": "edge.v1",
+    "source_continuity_epoch": "source:epoch1",
+    "projection_generation": "edge:gen7",
+    "event_id": "opaque:event1",
+    "event_kind": "UPSERT",
+    "continuation": "opaque:bound-to-relation-policy",
+    "emitted_at_ms": 1704672000000,
+    "as_of_ms": 1704672000000,
+    "source_observed_at_ms": null,
+    "coverage_watermark": "opaque:authenticated-scope-watermark",
+    "policy_revision": "policy:r1",
+    "quality": {
+      "completeness": "PARTIAL",
+      "freshness": "STALE",
+      "coverage": "AUTHORIZED_ONLY",
+      "source_as_of_ms": null,
+      "portal_observed_at_ms": 1704672000000,
+      "source_set_ref": "test:source-set",
+      "confidence": "PROVISIONAL",
+      "reasons": [
+        "TEST_ONLY_PARTIAL_COVERAGE"
+      ]
+    },
+    "entity_key": "opaque:entity1",
+    "entity_revision": "source:r1",
+    "replacement_ref": "test:replacement1"
+  },
+  "expected": {
+    "schema_version": "portal.snapshot.v1",
+    "snapshot_id": "test:golden-snapshot",
+    "dataset": "test:orders",
+    "as_of_ms": 1704672000000,
+    "recorded_through_ms": null,
+    "facts_through_ms": null,
+    "produced_at_ms": 1800000000999,
+    "received_at_ms": 1800000000998,
+    "source_observed_at_ms": null,
+    "emitted_at_ms": 1704672000000,
+    "quality": {
+      "completeness": "UNRESOLVED",
+      "freshness": "STALE",
+      "coverage": "AUTHORIZED_ONLY",
+      "source_as_of_ms": null,
+      "portal_observed_at_ms": 1704672000000,
+      "source_set_ref": "test:source-set",
+      "confidence": "PROVISIONAL",
+      "reasons": [
+        "TEST_ONLY_PARTIAL_COVERAGE",
+        "COVERAGE_PROOF_NOT_PUBLISHED"
+      ]
+    },
+    "resume_cursor": "opaque:bound-to-relation-policy",
+    "coverage_watermark": "opaque:authenticated-scope-watermark",
+    "versions": {
+      "source_continuity_epoch": "source:epoch1",
+      "projection_generation": "edge:gen7",
+      "app_policy": "policy:r1"
+    },
+    "projection_lineage_ref": null,
+    "adapter_revision": "edge-to-portal-metadata.v1"
+  },
+  "scope_stage": {
+    "mapping_revision": "execution.scoped-continuation.v1",
+    "snapshot": {
+      "schema_version": "portal.snapshot.v1",
+      "snapshot_id": "test:golden-snapshot",
+      "dataset": "test:orders",
+      "as_of_ms": 1704672000000,
+      "recorded_through_ms": null,
+      "facts_through_ms": null,
+      "produced_at_ms": 1800000000999,
+      "received_at_ms": 1800000000998,
+      "source_observed_at_ms": null,
+      "emitted_at_ms": 1704672000000,
+      "quality": {
+        "completeness": "UNRESOLVED",
+        "freshness": "STALE",
+        "coverage": "AUTHORIZED_ONLY",
+        "source_as_of_ms": null,
+        "portal_observed_at_ms": 1704672000000,
+        "source_set_ref": "test:source-set",
+        "confidence": "PROVISIONAL",
+        "reasons": [
+          "TEST_ONLY_PARTIAL_COVERAGE",
+          "COVERAGE_PROOF_NOT_PUBLISHED"
+        ]
+      },
+      "resume_cursor": "test:bff-issued-bound-cursor",
+      "coverage_watermark": "opaque:authenticated-scope-watermark",
+      "versions": {
+        "source_continuity_epoch": "source:epoch1",
+        "projection_generation": "edge:gen7",
+        "app_policy": "policy:r1"
+      },
+      "projection_lineage_ref": null,
+      "adapter_revision": "edge-to-portal-metadata.v1"
+    }
+  }
+}

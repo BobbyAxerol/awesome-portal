@@ -9752,8 +9752,9 @@ No load/build/container starts during the foreign measurement window.
 <a id="epg10-02-plan"></a>
 #### EPG10-02 Khóa catalogue schema và compatibility
 
-**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
-**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+**Status:** COMPLETED_CONTRACT_ONLY — **Approval:** BOBBY_APPROVED, named phase2026-10-16.
+**Tests:** 11/11 formal contract cases PASS;36Rust+12Python PASS,57shared fixture
+vectors match — **Exit:** PASS_LOGICAL_SCHEMA — **Runtime activation:** NOT_AUTHORIZED / NONE.
 
 **Guide chi tiết bắt buộc:** [EDGE / EPG10-02](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-02-khóa-catalogue-schema-và-compatibility);
 [BE §§4.8, 6–9, 14, 17; ELP2-01/05](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§4–9, 11; fixed P/R/B/bands](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
@@ -9774,15 +9775,15 @@ Record phase approval, exact affected datasets/operations/profiles and partner r
 
 **Checklist:**
 
-- [ ] Đối chiếu từng catalogue family với writer, source query, history table/journal và publication gate; bổ sung rows nguồn còn thiếu.
-- [ ] Khóa IDs/decimals/UTC/ms/null/availability/as-of/completeness và environment/venue/profile scope.
-- [ ] Tách availability AVAILABLE/PARTIAL/UNAVAILABLE/OUT_OF_SCOPE khỏi history capability và implementation/evidence status theo 4.2; explicit gaps, missing source không dùng empty success.
-- [ ] Keyset pages theo snapshot; rows+bytes bound, continuation và oversized-record handling; full traversal không tổng row cap.
-- [ ] Version additive fields, unknown-field handling và incompatible-major rejection; giữ canonical TS capital payload.
-- [ ] Contract test fixtures cho old Python façade/new Rust exporter/Portal DTO; không silent precision loss.
-- [ ] Khóa proposed metric/Archive DTO source-set/window/currency/correction/ACL metadata; formula_id=qbts_prb_v1_1 từ SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md; approved formula và pending runtime calibration/config là hai trạng thái riêng.
-- [ ] Khóa canonical metric registry/dependency graph và §8.6 NAV/flow/cost/turnover/watermark/stress proof; tách formula_approved khỏi runtime_config_approved.
-- [ ] Map PM R2 margin-risk/economic backing/separate exposure cap; không add global 1× notional cap hoặc đổi pma.capital-command.v1.1.
+- [x] Đối chiếu từng catalogue family với writer, source query, history table/journal và publication gate; bổ sung rows nguồn còn thiếu.
+- [x] Khóa IDs/decimals/UTC/ms/null/availability/as-of/completeness và environment/venue/profile scope.
+- [x] Tách availability AVAILABLE/PARTIAL/UNAVAILABLE/OUT_OF_SCOPE khỏi history capability và implementation/evidence status theo 4.2; explicit gaps, missing source không dùng empty success.
+- [x] Keyset pages theo snapshot; rows+bytes bound, continuation và oversized-record handling; full traversal không tổng row cap.
+- [x] Version additive fields, unknown-field handling và incompatible-major rejection; giữ canonical TS capital payload.
+- [x] Contract test fixtures cho old Python façade/new Rust exporter/Portal DTO; không silent precision loss.
+- [x] Khóa proposed metric/Archive DTO source-set/window/currency/correction/ACL metadata; formula_id=qbts_prb_v1_1 từ SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md; approved formula và pending runtime calibration/config là hai trạng thái riêng.
+- [x] Khóa canonical metric registry/dependency graph và §8.6 NAV/flow/cost/turnover/watermark/stress proof; tách formula_approved khỏi runtime_config_approved.
+- [x] Map PM R2 margin-risk/economic backing/separate exposure cap; không add global 1× notional cap hoặc đổi pma.capital-command.v1.1.
 
 **Tests và fixtures:** `EPG10-T02-01` F-CATALOG traversal trả đủ unique entities qua nhiều page/bytes limits; `T02-02` large integer/decimal/null/zero round-trip exact; `T02-03` current-only không chứng nhận full history; `T02-04` cursor đổi scope/filter/generation bị từ chối; `T02-05` old compatible reader và unsupported schema behavior rõ; `T02-06` availability/history/implementation adapter giữ đúng nghĩa, RESTRICTED→OUT_OF_SCOPE không lộ hidden existence.
 
@@ -9797,12 +9798,20 @@ Record phase approval, exact affected datasets/operations/profiles and partner r
 **Resource/test execution boundary:** Contract-only resource caps expressed as required configuration, not invented production defaults. Before numeric publication require own calibration/config artifact; not before schema fixtures. Shared-host lock, disposable
 namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
 
-**Technical debt / external gates:** Chưa tạo debt. Source-field gaps owned by TS/PM publisher; exact researcher field policy by Bobby/Portal; numeric calibration by analytics owner. Registry records each gap, not a global read block. Missing required fixture/schema is in-scope work, not external debt.
+**Technical debt / external gates:** No open in-scope defect or missing fixture/schema.
+Source-field publication/current-authority/history proof remains with TS/PM;
+exact researcher field policy with Bobby/Portal; numeric calibration with analytics
+owner.42/42logical families record these gaps, not42available endpoints. No new
+producer path enabled; closure does not waive01capacity or03capture acceptance.
 
 **Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
 actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
 source/runtime/retention tuple; remaining gate owner and next independently runnable
-scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+scope. **Current execution:** §23.11; contract-only implementation, no listener,
+source activation, TS/PM/DL write, production DB query/migration or deployment.
+Final [contract receipt](evidence/execution-edge-v1_2/EPG10-02/contract-verification.json),
+[source/runtime+cleanup](evidence/execution-edge-v1_2/EPG10-02/source-runtime-manifest.json),
+and [package/compatibility/errors/crosswalk](../services/portal-execution-edge-rs/contracts/execution-catalogue-v1/README.md).
 
 <a id="epg10-03-plan"></a>
 #### EPG10-03 Chứng minh capture và commit ordering
@@ -10832,6 +10841,174 @@ restart tuples unchanged; four absent SGP Compose hashes normalized null/empty,
 not a config change. Commit uses verified BobbyAxerol identity on approved
 feature branch; no unrelated file staged. Pending source/runtime capacity cases
 remain as above, not waived by these verification checks.
+
+### 23.11 EPG10-02 contract freeze — 2026-10-16 Asia/Saigon
+
+**Approval / goal:** Bobby approved the complete named02 phase. Freeze the new
+Edge/browser logical catalogue/schema, explicit legacy mapping and compatibility
+fixtures, not runtime availability. Follow the exact EDGE02, BE4.8/6–9/14/17,
+SCORE4–9/11 and REVIEW3–4/8.3/9 links in the phase block.01 numeric capacity
+remains pending; it does not block logical schema. Four supplied guides stay
+byte-identical. Root sole writer; three read-only peers inspect TS/DL, PM R2 and
+Research contracts/pins each coherent round. No cross-worktree edits/merges.
+
+**Pre-code scope / files:** extend existing Rust `execution-contracts` with an
+isolated versioned module, reuse CanonicalId and existing contracts where exact;
+add a frozen JSON catalogue/metric-dependency/field dictionary and TEST_ONLY
+golden fixtures under the existing service contracts tree. Keep old Manager-v2,
+maximum-data and V1 schemas/fixtures unchanged; no second runtime/crate/service.
+New module validates edge.v1→portal.snapshot.v1 mapping, exact decimals and safe
+UTCms/counts, separate source epoch/projection generation, availability/history/
+implementation/evidence, snapshot-bound cursor context and row+byte page bounds.
+Cursor state here is authenticated upstream/server-held contract context, never
+an unsigned token accepted as auth. Preserve canonical PM payload verbatim;
+freeze metrics/score/Archive metadata and independent dependencies, no calculator.
+Cover all39Edge families plus genuinely distinct BE logical families; current
+source/export gaps stay explicit with owner/source/query/history refs. Old96-
+relation semantic drift must be re-derived, not blind rehash or false full proof.
+
+**Invariants / decision boundary:** all modes and venue/profile/backend retained;
+Canary stage≠environment, All navigation≠economic aggregation, Archive lifecycle
+≠stage. Full authorized traversal without total-row cap; oversize is explicit
+alternative/error, no truncation. No source/global sequence invented from old
+snapshot tokens. Manager read visibility≠command authority. Restricted field
+policy pending means no new production researcher fields. Fixed P/R/B/bands
+separate from policy_pending runtime calibration; portfolio NAV score has no
+raw-q/grouping/Regime/research-run dependency unless actual research evidence is
+used. No global1x budget/exposure/backing conflation or capital payload rewrite.
+
+**Test gates:** all eleven T02 IDs with positive/negative contract vectors,
+typed unavailable, additive fields/unsupported-major behavior, old-compatible
+reader and PM payload bytes; reject numeric rounding, unsafe timestamps, scope/
+filter/epoch/generation/policy cursor mismatch and legacy lambda fallback. Re-run
+existing execution-contracts/Manager-v2/maximum-data compatibility suites within
+shared-host lock rules, bounded compiler jobs/target outside source. Record exact
+commands/counts and ELP2 fixture crosswalk; no DB/network/runtime acceptance claim.
+
+**Rollback / resources / cleanup:** no service/config/credential/database change.
+Revert only this additive module/contract package if needed; existing consumers
+remain on old path. No Docker build/start planned; inventory images/cache and
+retain all shared operational/rollback sets. Any new compile artifacts use one
+owned external temp target and are removed exactly after tests. Check canonical
+host lock before every cargo/heavy job, no foreign cleanup. Exit requires42/42
+logical families (39Edge+3BE) with authority/history/availability/owner and all
+11contract cases PASS; only claims supported by actual fixtures may close.
+
+**Slice1 implementation / current verification:** current Research integration
+`docs/research-loop-plan@c1d6b2dc` contains ELP2-01 normative foundation, newer
+than old BE checkout. Mirrored schema+25synthetic fixtures byte-identically
+(SHA7a28e054…/7b3044c2…), not redefined. Strict `edge.v1` metadata keeps catalogue
+scope/availability outside that object. Explicit guide status mapping converts
+OUT_OF_SCOPE→safe DENIED and freshness UNRESOLVED→UNKNOWN. Shared mapper remains
+unchanged resume semantics; separate `execution.scoped-continuation.v1` stage
+replaces upstream cursor with BFF-issued cursor before public output. Metrics,
+PM and Archive use normative shared schema; Rust adds exact lexical decimals,
+JS-safe UTC/counts, required nulls, separate epochs and typed snapshot binding.
+42family registry/source gates,28field dictionary and dependency/source-proof
+registry added. All new exports OFF; old Manager/V1 fixtures unchanged.
+
+First offline run:12tests,9PASS/3ERROR due to test helper requesting fixture
+type names absent from the shared corpus (not product/schema defects). Fixed
+helper selection without changing authoritative fixtures; rerun pending. Peer
+review found and fixed reason-array deserialize bound and first-occurrence
+dedup parity. Shared TS mapper can create33reasons from32unique reasons without
+coverage; Rust rejects invalid output explicitly. No peer edits; boundary recorded
+for Research owner in handoff, not copied as valid behavior.
+
+**Test substrate refinement:** HK has no host Rust toolchain. Use verified SGP
+host Rust1.85.1 + existing cache in one owned `/tmp/epg10-02-*` source/target
+directory, one compile job/test thread; no Docker start/build/pull. Copy source
+mechanically for tests, no edits to SGP operational/peer checkouts. Check both
+host locks before each heavy job. Exact directory removed at exit; cache
+downloads, if needed, stay inside that owned directory, not shared cache.
+
+**Slice2 tested / review fixes:** offline Python now12/12PASS, all57 shared FX
+facts agree with expected positive/negative schema outcomes (exact count is
+recomputed in final receipt). Rust first attempt failed compile because isolated
+copy lacked the existing repo-level execution-events corpus; corrected test
+layout/copy, no product fallback. Corrected run35/35PASS (execution18 including
+11new, Manager8, maximum-data9), zero ignored/skipped; clippy PASS. Newer source
+changes after that run are pending final rerun, not covered by that receipt.
+
+Read-only TS/DL/PM review caught and fixed source-role ambiguity, history→runtime
+status inference, incomplete metric dependency leaves and incorrect draft ADD/
+stress descriptions. Fixed: ADD arithmetic regular-grid mean incl zeros excluding
+E0, Sharpe no annualization, ONE fixed-path incremental-cost stress from fill-
+side gross notional/opening subperiod capital/FX/net-return grid. Every dependency
+leaf now has owner/source-field or explicit absent-producer/config proof; point
+equity and DL Query DTO are not falsely labelled NAV series/FX policy. PM writer/
+binding roles corrected; explicit seven-dimension PM alias fixture and all31
+logical field entries added. Legacy96mapping remains unaccepted, not a blind
+rehash/recertification. Separate schema/golden now freeze metric lineage,
+watermarks/corrections/ACL, PM-R2, exact Regime binding and scoped-cursor mapping.
+Final shared-golden Rust/browser parity and nanosecond source-clock vectors added.
+No calculator, runtime source, route, credential or peer-worktree edit.
+
+**Final recorded status — COMPLETED_CONTRACT_ONLY / PASS_LOGICAL_SCHEMA:**
+all9checklist items and11/11formal T02cases pass. Package:
+[contract/schema/source registry and compatibility guide](../services/portal-execution-edge-rs/contracts/execution-catalogue-v1/README.md).
+[Verification receipt](evidence/execution-edge-v1_2/EPG10-02/contract-verification.json),
+[source/runtime/cleanup manifest](evidence/execution-edge-v1_2/EPG10-02/source-runtime-manifest.json)
+and [artifact hashes](evidence/execution-edge-v1_2/EPG10-02/artifact-digests.json)
+are bounded sanitized evidence, not source rows/log dumps.
+
+Final commands actually run: Python unittest12PASS/0FAIL/0SKIP; Rust1.85.1
+`cargo test --offline --locked -p execution-contracts -p manager-v2-contract -p
+maximum-data-contract`:19+8+9=36PASS,0FAIL/0ignored, including12new Rust cases;
+fmt and clippy `--all-targets -- -D warnings` PASS. Shared FX01…25 has57facts:
+53valid and4expected-invalid, all agree. Thus48top-level automated tests plus
+57nested partner vectors, not105independent acceptance tests. Full traversal
+1,379unique rows over>80pages, serialized bytes incl Unicode/escaping/envelope/
+cursor; changed bindings/expiry, oversized rows, precise clocks/decimals/nulls,
+shared golden parity and PM negative controls exercised. Final PM review also
+fixed all7control amounts to nullable NonnegativeDecimal; signed PnL unaffected.
+Source/DB/runtime integration, capacity/HA/replay/partner app suites NOT_RUN here.
+
+Three read-only reviewers re-pinned TS216bffbe,PMd16aa2b5,DL87db2159 and current
+Researchc1d6b2dc. TS/PM/DL unchanged with exact diff/journal hashes in manifest.
+Research ELP2-04 draft advanced during work (read-publication41e56…→3627bbc…,
+new history test); normative foundation unchanged. Registry records draft as
+in-flight requirement only, not negotiated producer authority. No peer changes
+overwritten. All source-role/formula/mapping findings fixed; no open Edge02
+defect. Producer publication/history/current-authority and researcher field/config
+approval remain owned affected-path dependencies, never fake availability.
+
+**Runtime/release reconciliation:** no operational/service/config/identity/DB
+mutation, no image build/pull/container start and no new listener. Canonical HK
+source `/home/bobby/.worktrees/portal-execution-manager-v2`, branch
+`feat/manager-v2-paper-read@54c6f5f3`; active feature is this upgrade branch at
+`/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2`, parentf9349351.
+Deployed Edge/projection immutable image`d6aa7a510ddf…`, proxy`aa14e21c5469…`,
+OCI revision label`8814cd2a…`; stable release path remains
+`/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy`.
+These identifiers are distinct, not proof this feature is deployed. Twelve HK
+Edge-stack service/config/restart tuples and five SGP API/web tuples recorded;
+SGP retained stable release`/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose`.
+No runtime acceptance claim or intervention in concurrent TS/DL activity.
+
+**Cleanup complete / NO_ACTION_NEEDED for phase-owned Docker resources:**
+exact SGP `/tmp/epg10-02-contract.h5PTPIl3` test copy/cache/target602,080,690logical
+bytes removed, absence checked. Free disk168,367,325,184→168,993,546,240B;
+shared-host net delta is not exclusively reclaimed-byte proof. No new local
+target/cache, images, BuildKit cache, containers or volumes. Read-only inventory
+HK126images34.69GB/398BuildKit27.92GB;SGP328images88.82GB/3776BuildKit195.9GB.
+Retain all existing operational/explicit rollback sets and six HK active feature
+worktrees; ownership/parallel activity forbids broad historical prune in this
+scope. No new rollback artifact required; source revert is the only rollback.
+Four supplied guides unchanged; final source bytes match tested copy; diff check
+and scoped secret-pattern scan clean. Commit uses BobbyAxerol configured identity,
+no push/merge/deployment.
+
+**Next permitted step:** named approval of **EPG10-03 capture/commit-ordering**;
+use current TS P13/P16 source and affected producer proof, no inferred all-table
+bootstrap.02 is closed, while01remains IN_PROGRESS with capacity exit unmet;
+numeric load placement/promotion waits for actual candidate measurement. No
+extra generic approval needed for already-delivered02; no new phases invented.
+
+**Closeout lock recheck:** HK foreign production measurement lock appeared at
+02:44:12Z, deadline04:04:12Z, after the completed contract/test/cleanup runs.
+No further cargo/unit/build/load/container jobs started. Final metadata/staged
+scope review and Git-only closeout do not restart or touch its owner's services.
 
 
 

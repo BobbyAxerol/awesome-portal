@@ -1,0 +1,2169 @@
+{
+  "schema_version": "execution.catalogue-registry.v1",
+  "provenance": "EPG10-02_LOGICAL_CONTRACT_NOT_RUNTIME_ACCEPTANCE",
+  "shared_schema_ref": "shared/execution-v2-foundation.v1.schema.json",
+  "shared_schema_sha256": "sha256:7a28e0545005789da1a54d304dbf242a2413d464aa905b83d5641e40821c4828",
+  "source_pins": {
+    "ts": "216bffbe20c585ec5a8b9b708bf4435e3edbd658",
+    "pm": "d16aa2b5f251596e469807f57e81fe14cdc7e763",
+    "dl": "87db2159f411e7c4d7d49033e7573b42a75fc91d",
+    "research": "c1d6b2dc53f1f80ac44cdfd9d96d159c4e9aae64"
+  },
+  "compatibility": {
+    "major": 1,
+    "required_features": [
+      "exact-decimal",
+      "scope-before-pagination"
+    ],
+    "optional_extensions": {},
+    "shared_dto_unknown_fields": "REJECT_NEGOTIATE_NEW_SCHEMA",
+    "p16_existing_resources": "EXACT_UNCHANGED_ADDITIONS_ONLY"
+  },
+  "new_runtime_exports_enabled": false,
+  "old_surface_unchanged": true,
+  "environments": [
+    "paper",
+    "sandbox",
+    "live"
+  ],
+  "financial_stages": [
+    "PAPER",
+    "SANDBOX",
+    "CANARY",
+    "LIVE"
+  ],
+  "lifecycle": [
+    "ACTIVE",
+    "ARCHIVE_REQUESTED",
+    "ARCHIVED"
+  ],
+  "trade_state": [
+    "ACTIVE",
+    "REDUCING",
+    "HALTED"
+  ],
+  "source_groups": {
+    "I": {
+      "repo": "pm",
+      "owner": "TS identity/membership",
+      "writer": "services/portal_execution_owner/identity/users.py",
+      "query": "services/portfolio_management/membership_repository.py",
+      "history": "temporal membership/revocation revisions; export history not certified",
+      "gate": "PM_FULL_SOURCE_EXPORT_AND_CURRENT_LEASE",
+      "writer_refs": [
+        "services/portal_execution_owner/identity/users.py",
+        "services/portfolio_management/membership_repository.py"
+      ],
+      "query_refs": [
+        "services/portal_execution_owner/identity/human.py",
+        "services/portfolio_management/membership_repository.py"
+      ],
+      "query_role": "current proof resolver and membership read; qualified external publication absent",
+      "export_query_status": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "source_role_gap": "COMPONENT_SOURCE_NOT_ALL_FAMILY_EXPORT_PROOF"
+    },
+    "L": {
+      "repo": "ts+pm",
+      "owner": "TS registry",
+      "writer": "services/portfolio_management/repository.py",
+      "query": "services/portfolio_management/instance_repository.py",
+      "history": "current registry plus candidate receipts/outbox; full history unproven",
+      "gate": "REGISTRY_TEMPORAL_EXPORT",
+      "writer_refs": [
+        "services/portfolio_management/repository.py",
+        "services/portfolio_management/instance_repository.py"
+      ],
+      "query_refs": [
+        "services/portfolio_management/instance_repository.py"
+      ],
+      "export_query_status": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "source_role_gap": "COMPONENT_SOURCE_NOT_ALL_FAMILY_EXPORT_PROOF"
+    },
+    "B": {
+      "repo": "pm",
+      "owner": "TS profile/binding",
+      "writer": "services/portfolio_management/binding_repository.py",
+      "query": "services/portfolio_management/binding_repository.py:current",
+      "history": "effective binding/profile revisions; installed temporal proof unverified",
+      "gate": "CURRENT_NATIVE_PROFILE_AND_BINDING_EXPORT",
+      "query_refs": [
+        "services/portfolio_management/binding_repository.py:current",
+        "services/portfolio_management/profile_attempts.py"
+      ],
+      "writer_refs": [
+        "services/portfolio_management/binding_repository.py"
+      ],
+      "export_query_status": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "source_role_gap": "COMPONENT_SOURCE_NOT_ALL_FAMILY_EXPORT_PROOF"
+    },
+    "C": {
+      "repo": "pm",
+      "owner": "TS capital/admission",
+      "writer": "services/risk_pool/capital_repository.py",
+      "query": "services/portfolio_management/operator_reports_repository.py",
+      "history": "candidate receipts; ISOLATED_CANDIDATE_NOT_CAPTURE_CERTIFIED",
+      "gate": "PM_CAPTURE_AND_REPORT_PUBLICATION",
+      "writer_refs": [
+        "services/risk_pool/capital_repository.py"
+      ],
+      "query_refs": [
+        "services/portfolio_management/operator_reports_repository.py"
+      ],
+      "export_query_status": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "source_role_gap": "COMPONENT_SOURCE_NOT_ALL_FAMILY_EXPORT_PROOF"
+    },
+    "K": {
+      "repo": "pm",
+      "owner": "TS risk/lock/recall",
+      "writer": "services/risk_pool/recall_repository.py",
+      "query": "services/risk_pool/lock_reallocation_repository.py",
+      "history": "exact command partitions and revisions; external history unproven",
+      "gate": "PM_CURRENT_AUTHORITY_AND_EXPORT",
+      "writer_refs": [
+        "services/risk_pool/recall_repository.py"
+      ],
+      "query_refs": [
+        "services/risk_pool/lock_reallocation_repository.py"
+      ],
+      "export_query_status": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "source_role_gap": "COMPONENT_SOURCE_NOT_ALL_FAMILY_EXPORT_PROOF"
+    },
+    "O": {
+      "repo": "ts",
+      "owner": "TS execution",
+      "writer": "services/paper_execution/repository.py",
+      "query": "services/paper_execution/repository.py:load_open_orders",
+      "history": "SourceScope opt-in transactional journal; compatibility writers not certified",
+      "gate": "QUALIFIED_WRITER_COVERAGE_AND_EXTERNAL_PUBLICATION",
+      "query_refs": [
+        "services/paper_execution/repository.py:load_open_orders"
+      ],
+      "query_role": "current open-order read only, not full-history family exporter",
+      "contract_refs": [
+        "domain/source_journal_coverage.py"
+      ],
+      "writer_refs": [
+        "services/paper_execution/repository.py"
+      ],
+      "export_query_status": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "source_role_gap": "COMPONENT_SOURCE_NOT_ALL_FAMILY_EXPORT_PROOF"
+    },
+    "E": {
+      "repo": "ts",
+      "owner": "TS economics/accounting",
+      "writer": "services/economics/repository.py",
+      "query": "services/economics/repository.py",
+      "history": "immutable postings/revision-specific positions; source/correction/export coverage required",
+      "gate": "ECONOMIC_SOURCE_COVERAGE_AND_EXPORT",
+      "query_refs": [
+        "services/economics/repository.py"
+      ],
+      "query_role": "domain repository; general read export unqualified",
+      "writer_refs": [
+        "services/economics/repository.py",
+        "services/private_events/repository.py"
+      ],
+      "export_query_status": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "source_role_gap": "COMPONENT_SOURCE_NOT_ALL_FAMILY_EXPORT_PROOF"
+    },
+    "J": {
+      "repo": "ts",
+      "owner": "TS journal/publication",
+      "writer": "services/source_change_journal/writer.py",
+      "query": "services/source_change_journal/read_source.py",
+      "history": "commit-order groups; materialized JOURNAL_CHECKPOINT_V1 not all-table bootstrap",
+      "gate": "P13_P16_SOURCE_ONLY_QUALIFIED_NOT_RUNTIME_ADVERTISED",
+      "writer_refs": [
+        "services/source_change_journal/writer.py",
+        "services/source_change_journal/consumer_repository.py:register_catalogue",
+        "services/source_change_journal/consumer_repository.py:register_manifest",
+        "services/source_change_journal/publication_repository.py"
+      ],
+      "query_refs": [
+        "services/source_change_journal/read_source.py",
+        "services/source_change_journal/consumer_repository.py",
+        "services/source_change_journal/publication_repository.py"
+      ],
+      "query_role": "fixed Paper permit reader; catalogue/manifest observation and checkpoint artifacts, not generic all-table export",
+      "export_query_status": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "source_role_gap": "COMPONENT_SOURCE_NOT_ALL_FAMILY_EXPORT_PROOF"
+    },
+    "M": {
+      "repo": "ts",
+      "owner": "TS Manager",
+      "writer": "services/portal_execution_owner/manager_facade.py",
+      "query": "services/portal_execution_owner/manager_facade.py",
+      "history": "repeatable-read per page only; no cross-page historical snapshot",
+      "gate": "CURRENT_PAGE_NOT_HISTORY_CERTIFICATION",
+      "writer_role": "NOT_A_BUSINESS_WRITER",
+      "query_role": "read facade only; writer is respective business domain",
+      "writer_refs": [],
+      "query_refs": [
+        "services/portal_execution_owner/manager_facade.py"
+      ],
+      "export_query_status": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "source_role_gap": "COMPONENT_SOURCE_NOT_ALL_FAMILY_EXPORT_PROOF"
+    },
+    "R": {
+      "repo": "pm",
+      "owner": "TS PM report publisher",
+      "writer": "services/portfolio_management/operator_reports_repository.py",
+      "query": "services/portfolio_management/report_delivery.py",
+      "history": "immutable report hashes; delta/applied checkpoints null; factory unmounted",
+      "gate": "PM_FULL_SOURCE_REPORT_EXPORT_ACCEPTANCE",
+      "writer_refs": [
+        "services/portfolio_management/operator_reports_repository.py"
+      ],
+      "query_refs": [
+        "services/portfolio_management/report_delivery.py"
+      ],
+      "export_query_status": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "source_role_gap": "COMPONENT_SOURCE_NOT_ALL_FAMILY_EXPORT_PROOF"
+    },
+    "D": {
+      "repo": "dl",
+      "owner": "DL admission/TS valuation",
+      "writer": "contracts/proto/qdl/marketdata/v2/market_data.proto",
+      "query": "contracts/proto/qdl/query/v2/query.proto",
+      "history": "per-dataset retention; md.latest6h marker no tombstones; not economic retention",
+      "gate": "ADMITTED_QUERY_STREAM_AND_PRICE_USED_LINEAGE",
+      "contract_refs": [
+        "contracts/proto/qdl/marketdata/v2/market_data.proto",
+        "contracts/proto/qdl/query/v2/query.proto"
+      ],
+      "writer_role": "PROTOBUF_CONTRACT_NOT_WRITER",
+      "query_role": "admission Query DTO not implemented FX/economic producer proof",
+      "writer_refs": [],
+      "query_refs": [],
+      "export_query_status": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "source_role_gap": "EXTERNAL_PRODUCER_OR_WORKER_NOT_CERTIFIED"
+    },
+    "P": {
+      "repo": "edge+research",
+      "owner": "Portal projection owner",
+      "writer": "services/portal-execution-edge-rs/crates/authoritative-event-core",
+      "query": "apps/control-api/src/execution",
+      "history": "retained observations not complete source history",
+      "gate": "VERSIONED_PROJECTION_AND_APPLIED_CHECKPOINT",
+      "writer_refs": [
+        "services/portal-execution-edge-rs/crates/authoritative-event-core"
+      ],
+      "query_refs": [
+        "apps/control-api/src/execution"
+      ],
+      "export_query_status": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "source_role_gap": "COMPONENT_SOURCE_NOT_ALL_FAMILY_EXPORT_PROOF"
+    },
+    "Q": {
+      "repo": "research",
+      "owner": "Research analytics",
+      "writer": "upgrade/upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md",
+      "query": "packages/contracts/schemas/execution-v2-foundation.v1.schema.json",
+      "history": "logical formula/metadata only; runtime config/inputs not certified",
+      "gate": "ANALYTICS_SOURCE_AND_APPROVED_RUNTIME_CONFIG",
+      "writer_role": "LOGICAL_SPECIFICATION_NOT_RUNTIME_WRITER",
+      "writer_refs": [],
+      "query_role": "logical schema not a running query source",
+      "query_refs": [],
+      "export_query_status": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "source_role_gap": "EXTERNAL_PRODUCER_OR_WORKER_NOT_CERTIFIED"
+    },
+    "U": {
+      "repo": "research",
+      "owner": "Portal identity/session owner",
+      "writer": "apps/control-api/src/execution-v2/access.service.ts",
+      "query": "apps/control-api/src/execution-v2/access-policy.ts",
+      "history": "in-flight ELP2-03/04 policy revisions; no Edge source authority",
+      "gate": "CURRENT_SESSION_POLICY_PUBLICATION",
+      "writer_refs": [
+        "apps/control-api/src/execution-v2/access.service.ts"
+      ],
+      "query_refs": [
+        "apps/control-api/src/execution-v2/access-policy.ts"
+      ],
+      "export_query_status": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "source_role_gap": "COMPONENT_SOURCE_NOT_ALL_FAMILY_EXPORT_PROOF"
+    }
+  },
+  "families": [
+    {
+      "id": "user_identity_mapping",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "I"
+      ],
+      "owner": "TS identity/membership",
+      "grain": "user_id/issuer/subject",
+      "source_query_refs": [
+        "services/portal_execution_owner/identity/human.py",
+        "services/portfolio_management/membership_repository.py"
+      ],
+      "writer_refs": [
+        "services/portal_execution_owner/identity/users.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "temporal membership/revocation revisions; export history not certified"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "PM_FULL_SOURCE_EXPORT_AND_CURRENT_LEASE"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "portfolio_registry",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "L",
+        "I"
+      ],
+      "owner": "TS registry; TS identity/membership",
+      "grain": "portfolio_id/root_id",
+      "source_query_refs": [
+        "services/portfolio_management/instance_repository.py",
+        "services/portal_execution_owner/identity/human.py",
+        "services/portfolio_management/membership_repository.py"
+      ],
+      "writer_refs": [
+        "services/portfolio_management/repository.py",
+        "services/portfolio_management/instance_repository.py",
+        "services/portal_execution_owner/identity/users.py",
+        "services/portfolio_management/membership_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "current registry plus candidate receipts/outbox; full history unproven",
+        "temporal membership/revocation revisions; export history not certified"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "REGISTRY_TEMPORAL_EXPORT",
+        "PM_FULL_SOURCE_EXPORT_AND_CURRENT_LEASE"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "portfolio_membership",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "I"
+      ],
+      "owner": "TS identity/membership",
+      "grain": "membership_id/portfolio_id/user_id",
+      "source_query_refs": [
+        "services/portal_execution_owner/identity/human.py",
+        "services/portfolio_management/membership_repository.py"
+      ],
+      "writer_refs": [
+        "services/portfolio_management/membership_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "temporal membership/revocation revisions; export history not certified"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "PM_FULL_SOURCE_EXPORT_AND_CURRENT_LEASE"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "alpha_registry",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "L"
+      ],
+      "owner": "TS registry",
+      "grain": "alpha_id/alpha_version_id",
+      "source_query_refs": [
+        "services/portfolio_management/instance_repository.py"
+      ],
+      "writer_refs": [
+        "services/portfolio_management/repository.py",
+        "services/portfolio_management/instance_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "current registry plus candidate receipts/outbox; full history unproven"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "REGISTRY_TEMPORAL_EXPORT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "alpha_ownership",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "I",
+        "L"
+      ],
+      "owner": "TS identity/membership; TS registry",
+      "grain": "alpha_id/owner_user_id/effective interval",
+      "source_query_refs": [
+        "services/portal_execution_owner/identity/human.py",
+        "services/portfolio_management/membership_repository.py",
+        "services/portfolio_management/instance_repository.py"
+      ],
+      "writer_refs": [
+        "services/portal_execution_owner/identity/users.py",
+        "services/portfolio_management/membership_repository.py",
+        "services/portfolio_management/repository.py",
+        "services/portfolio_management/instance_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "temporal membership/revocation revisions; export history not certified",
+        "current registry plus candidate receipts/outbox; full history unproven"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "PM_FULL_SOURCE_EXPORT_AND_CURRENT_LEASE",
+        "REGISTRY_TEMPORAL_EXPORT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "deployment_registry",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "L",
+        "B"
+      ],
+      "owner": "TS registry; TS profile/binding",
+      "grain": "deployment_id",
+      "source_query_refs": [
+        "services/portfolio_management/instance_repository.py",
+        "services/portfolio_management/binding_repository.py:current",
+        "services/portfolio_management/profile_attempts.py"
+      ],
+      "writer_refs": [
+        "services/portfolio_management/repository.py",
+        "services/portfolio_management/instance_repository.py",
+        "services/portfolio_management/binding_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "current registry plus candidate receipts/outbox; full history unproven",
+        "effective binding/profile revisions; installed temporal proof unverified"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "REGISTRY_TEMPORAL_EXPORT",
+        "CURRENT_NATIVE_PROFILE_AND_BINDING_EXPORT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "internal_accounts",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "L",
+        "B"
+      ],
+      "owner": "TS registry; TS profile/binding",
+      "grain": "account_id/deployment_id/currency",
+      "source_query_refs": [
+        "services/portfolio_management/instance_repository.py",
+        "services/portfolio_management/binding_repository.py:current",
+        "services/portfolio_management/profile_attempts.py"
+      ],
+      "writer_refs": [
+        "services/portfolio_management/repository.py",
+        "services/portfolio_management/instance_repository.py",
+        "services/portfolio_management/binding_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "current registry plus candidate receipts/outbox; full history unproven",
+        "effective binding/profile revisions; installed temporal proof unverified"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "REGISTRY_TEMPORAL_EXPORT",
+        "CURRENT_NATIVE_PROFILE_AND_BINDING_EXPORT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "venue_physical_account_registry",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "B",
+        "L"
+      ],
+      "owner": "TS profile/binding; TS registry",
+      "grain": "venue/physical_account_id/profile",
+      "source_query_refs": [
+        "services/portfolio_management/binding_repository.py:current",
+        "services/portfolio_management/profile_attempts.py",
+        "services/portfolio_management/instance_repository.py"
+      ],
+      "writer_refs": [
+        "services/portfolio_management/binding_repository.py",
+        "services/portfolio_management/repository.py",
+        "services/portfolio_management/instance_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "effective binding/profile revisions; installed temporal proof unverified",
+        "current registry plus candidate receipts/outbox; full history unproven"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "CURRENT_NATIVE_PROFILE_AND_BINDING_EXPORT",
+        "REGISTRY_TEMPORAL_EXPORT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "account_binding",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "B"
+      ],
+      "owner": "TS profile/binding",
+      "grain": "binding_id/revision/effective interval",
+      "source_query_refs": [
+        "services/portfolio_management/binding_repository.py:current",
+        "services/portfolio_management/profile_attempts.py"
+      ],
+      "writer_refs": [
+        "services/portfolio_management/binding_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "effective binding/profile revisions; installed temporal proof unverified"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "CURRENT_NATIVE_PROFILE_AND_BINDING_EXPORT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "root_capital_limit",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "C"
+      ],
+      "owner": "TS capital/admission",
+      "grain": "root_id/currency/revision",
+      "source_query_refs": [
+        "services/portfolio_management/operator_reports_repository.py"
+      ],
+      "writer_refs": [
+        "services/risk_pool/capital_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "candidate receipts; ISOLATED_CANDIDATE_NOT_CAPTURE_CERTIFIED"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "PM_CAPTURE_AND_REPORT_PUBLICATION"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "economic_capital_assignment",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "C",
+        "E"
+      ],
+      "owner": "TS capital/admission; TS economics/accounting",
+      "grain": "assignment_id/fact_id",
+      "source_query_refs": [
+        "services/portfolio_management/operator_reports_repository.py",
+        "services/economics/repository.py"
+      ],
+      "writer_refs": [
+        "services/risk_pool/capital_repository.py",
+        "services/economics/repository.py",
+        "services/private_events/repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "candidate receipts; ISOLATED_CANDIDATE_NOT_CAPTURE_CERTIFIED",
+        "immutable postings/revision-specific positions; source/correction/export coverage required"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "PM_CAPTURE_AND_REPORT_PUBLICATION",
+        "ECONOMIC_SOURCE_COVERAGE_AND_EXPORT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "budget_entitlement",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "C"
+      ],
+      "owner": "TS capital/admission",
+      "grain": "budget_id/parent/revision",
+      "source_query_refs": [
+        "services/portfolio_management/operator_reports_repository.py"
+      ],
+      "writer_refs": [
+        "services/risk_pool/capital_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "candidate receipts; ISOLATED_CANDIDATE_NOT_CAPTURE_CERTIFIED"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "PM_CAPTURE_AND_REPORT_PUBLICATION"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "execution_grant_reservation",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "O",
+        "K"
+      ],
+      "owner": "TS execution; TS risk/lock/recall",
+      "grain": "grant_id/reservation_id",
+      "source_query_refs": [
+        "services/paper_execution/repository.py:load_open_orders",
+        "services/risk_pool/lock_reallocation_repository.py"
+      ],
+      "writer_refs": [
+        "services/paper_execution/repository.py",
+        "services/risk_pool/recall_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "SourceScope opt-in transactional journal; compatibility writers not certified",
+        "exact command partitions and revisions; external history unproven"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "QUALIFIED_WRITER_COVERAGE_AND_EXTERNAL_PUBLICATION",
+        "PM_CURRENT_AUTHORITY_AND_EXPORT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "administrative_locks",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "K"
+      ],
+      "owner": "TS risk/lock/recall",
+      "grain": "lock_id/scope/revision",
+      "source_query_refs": [
+        "services/risk_pool/lock_reallocation_repository.py"
+      ],
+      "writer_refs": [
+        "services/risk_pool/recall_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "exact command partitions and revisions; external history unproven"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "PM_CURRENT_AUTHORITY_AND_EXPORT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "recall_requests",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "K"
+      ],
+      "owner": "TS risk/lock/recall",
+      "grain": "recall_id/revision",
+      "source_query_refs": [
+        "services/risk_pool/lock_reallocation_repository.py"
+      ],
+      "writer_refs": [
+        "services/risk_pool/recall_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "exact command partitions and revisions; external history unproven"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "PM_CURRENT_AUTHORITY_AND_EXPORT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "trading_state",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "K",
+        "O"
+      ],
+      "owner": "TS risk/lock/recall; TS execution",
+      "grain": "scope/state_revision",
+      "source_query_refs": [
+        "services/risk_pool/lock_reallocation_repository.py",
+        "services/paper_execution/repository.py:load_open_orders"
+      ],
+      "writer_refs": [
+        "services/risk_pool/recall_repository.py",
+        "services/paper_execution/repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "exact command partitions and revisions; external history unproven",
+        "SourceScope opt-in transactional journal; compatibility writers not certified"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "PM_CURRENT_AUTHORITY_AND_EXPORT",
+        "QUALIFIED_WRITER_COVERAGE_AND_EXTERNAL_PUBLICATION"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "order_intents",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "O",
+        "E"
+      ],
+      "owner": "TS execution; TS economics/accounting",
+      "grain": "intent_id/idempotency scope",
+      "source_query_refs": [
+        "services/paper_execution/repository.py:load_open_orders",
+        "services/economics/repository.py"
+      ],
+      "writer_refs": [
+        "services/paper_execution/repository.py",
+        "services/economics/repository.py",
+        "services/private_events/repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "SourceScope opt-in transactional journal; compatibility writers not certified",
+        "immutable postings/revision-specific positions; source/correction/export coverage required"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "QUALIFIED_WRITER_COVERAGE_AND_EXTERNAL_PUBLICATION",
+        "ECONOMIC_SOURCE_COVERAGE_AND_EXPORT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "obligations_unknown_execution_outcomes",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "O",
+        "E",
+        "K"
+      ],
+      "owner": "TS execution; TS economics/accounting; TS risk/lock/recall",
+      "grain": "obligation_id/recovery_id",
+      "source_query_refs": [
+        "services/paper_execution/repository.py:load_open_orders",
+        "services/economics/repository.py",
+        "services/risk_pool/lock_reallocation_repository.py"
+      ],
+      "writer_refs": [
+        "services/paper_execution/repository.py",
+        "services/economics/repository.py",
+        "services/private_events/repository.py",
+        "services/risk_pool/recall_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "SourceScope opt-in transactional journal; compatibility writers not certified",
+        "immutable postings/revision-specific positions; source/correction/export coverage required",
+        "exact command partitions and revisions; external history unproven"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "QUALIFIED_WRITER_COVERAGE_AND_EXTERNAL_PUBLICATION",
+        "ECONOMIC_SOURCE_COVERAGE_AND_EXPORT",
+        "PM_CURRENT_AUTHORITY_AND_EXPORT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "orders_execution_status",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "O",
+        "E"
+      ],
+      "owner": "TS execution; TS economics/accounting",
+      "grain": "order_id/entity_revision",
+      "source_query_refs": [
+        "services/paper_execution/repository.py:load_open_orders",
+        "services/economics/repository.py"
+      ],
+      "writer_refs": [
+        "services/paper_execution/repository.py",
+        "services/economics/repository.py",
+        "services/private_events/repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "SourceScope opt-in transactional journal; compatibility writers not certified",
+        "immutable postings/revision-specific positions; source/correction/export coverage required"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "QUALIFIED_WRITER_COVERAGE_AND_EXTERNAL_PUBLICATION",
+        "ECONOMIC_SOURCE_COVERAGE_AND_EXPORT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "fills",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "O",
+        "E"
+      ],
+      "owner": "TS execution; TS economics/accounting",
+      "grain": "fill_id/source_revision",
+      "source_query_refs": [
+        "services/paper_execution/repository.py:load_open_orders",
+        "services/economics/repository.py"
+      ],
+      "writer_refs": [
+        "services/paper_execution/repository.py",
+        "services/economics/repository.py",
+        "services/private_events/repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "SourceScope opt-in transactional journal; compatibility writers not certified",
+        "immutable postings/revision-specific positions; source/correction/export coverage required"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "QUALIFIED_WRITER_COVERAGE_AND_EXTERNAL_PUBLICATION",
+        "ECONOMIC_SOURCE_COVERAGE_AND_EXPORT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "positions_episodes",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "E"
+      ],
+      "owner": "TS economics/accounting",
+      "grain": "position_id/episode_id/entity_revision",
+      "source_query_refs": [
+        "services/economics/repository.py"
+      ],
+      "writer_refs": [
+        "services/economics/repository.py",
+        "services/private_events/repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "immutable postings/revision-specific positions; source/correction/export coverage required"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "ECONOMIC_SOURCE_COVERAGE_AND_EXPORT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "balances_collateral",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "E",
+        "B"
+      ],
+      "owner": "TS economics/accounting; TS profile/binding",
+      "grain": "account_id/currency/observation_id",
+      "source_query_refs": [
+        "services/economics/repository.py",
+        "services/portfolio_management/binding_repository.py:current",
+        "services/portfolio_management/profile_attempts.py"
+      ],
+      "writer_refs": [
+        "services/economics/repository.py",
+        "services/private_events/repository.py",
+        "services/portfolio_management/binding_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "immutable postings/revision-specific positions; source/correction/export coverage required",
+        "effective binding/profile revisions; installed temporal proof unverified"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "ECONOMIC_SOURCE_COVERAGE_AND_EXPORT",
+        "CURRENT_NATIVE_PROFILE_AND_BINDING_EXPORT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "fees_funding",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "E"
+      ],
+      "owner": "TS economics/accounting",
+      "grain": "fee_or_funding_id/correction_ref",
+      "source_query_refs": [
+        "services/economics/repository.py"
+      ],
+      "writer_refs": [
+        "services/economics/repository.py",
+        "services/private_events/repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "immutable postings/revision-specific positions; source/correction/export coverage required"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "ECONOMIC_SOURCE_COVERAGE_AND_EXPORT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "accounting_postings_corrections",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "E"
+      ],
+      "owner": "TS economics/accounting",
+      "grain": "posting_id/leg_id/revision",
+      "source_query_refs": [
+        "services/economics/repository.py"
+      ],
+      "writer_refs": [
+        "services/economics/repository.py",
+        "services/private_events/repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "immutable postings/revision-specific positions; source/correction/export coverage required"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "ECONOMIC_SOURCE_COVERAGE_AND_EXPORT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "economic_journal",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "E",
+        "J"
+      ],
+      "owner": "TS economics/accounting; TS journal/publication",
+      "grain": "transaction_group_id/index/commit_order",
+      "source_query_refs": [
+        "services/economics/repository.py",
+        "services/source_change_journal/read_source.py",
+        "services/source_change_journal/consumer_repository.py",
+        "services/source_change_journal/publication_repository.py"
+      ],
+      "writer_refs": [
+        "services/economics/repository.py",
+        "services/private_events/repository.py",
+        "services/source_change_journal/writer.py",
+        "services/source_change_journal/consumer_repository.py:register_catalogue",
+        "services/source_change_journal/consumer_repository.py:register_manifest",
+        "services/source_change_journal/publication_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "immutable postings/revision-specific positions; source/correction/export coverage required",
+        "commit-order groups; materialized JOURNAL_CHECKPOINT_V1 not all-table bootstrap"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "ECONOMIC_SOURCE_COVERAGE_AND_EXPORT",
+        "P13_P16_SOURCE_ONLY_QUALIFIED_NOT_RUNTIME_ADVERTISED"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "valuation_prices_used",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "E",
+        "D"
+      ],
+      "owner": "TS economics/accounting; DL admission/TS valuation",
+      "grain": "valuation_id/instrument/currency/source_cut",
+      "source_query_refs": [
+        "services/economics/repository.py"
+      ],
+      "writer_refs": [
+        "services/economics/repository.py",
+        "services/private_events/repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "immutable postings/revision-specific positions; source/correction/export coverage required",
+        "per-dataset retention; md.latest6h marker no tombstones; not economic retention"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "ECONOMIC_SOURCE_COVERAGE_AND_EXPORT",
+        "ADMITTED_QUERY_STREAM_AND_PRICE_USED_LINEAGE"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "risk_state_limits",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "K",
+        "O"
+      ],
+      "owner": "TS risk/lock/recall; TS execution",
+      "grain": "scope/model_revision/limit_id",
+      "source_query_refs": [
+        "services/risk_pool/lock_reallocation_repository.py",
+        "services/paper_execution/repository.py:load_open_orders"
+      ],
+      "writer_refs": [
+        "services/risk_pool/recall_repository.py",
+        "services/paper_execution/repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "exact command partitions and revisions; external history unproven",
+        "SourceScope opt-in transactional journal; compatibility writers not certified"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "PM_CURRENT_AUTHORITY_AND_EXPORT",
+        "QUALIFIED_WRITER_COVERAGE_AND_EXTERNAL_PUBLICATION"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "reconciliation",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "E",
+        "B"
+      ],
+      "owner": "TS economics/accounting; TS profile/binding",
+      "grain": "run_id/break_id/resolution_revision",
+      "source_query_refs": [
+        "services/economics/repository.py",
+        "services/portfolio_management/binding_repository.py:current",
+        "services/portfolio_management/profile_attempts.py"
+      ],
+      "writer_refs": [
+        "services/economics/repository.py",
+        "services/private_events/repository.py",
+        "services/portfolio_management/binding_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "immutable postings/revision-specific positions; source/correction/export coverage required",
+        "effective binding/profile revisions; installed temporal proof unverified"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "ECONOMIC_SOURCE_COVERAGE_AND_EXPORT",
+        "CURRENT_NATIVE_PROFILE_AND_BINDING_EXPORT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "command_receipts",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "C",
+        "K",
+        "P"
+      ],
+      "owner": "TS capital/admission; TS risk/lock/recall; Portal projection owner",
+      "grain": "command_id/idempotency_scope",
+      "source_query_refs": [
+        "services/portfolio_management/operator_reports_repository.py",
+        "services/risk_pool/lock_reallocation_repository.py",
+        "apps/control-api/src/execution"
+      ],
+      "writer_refs": [
+        "services/risk_pool/capital_repository.py",
+        "services/risk_pool/recall_repository.py",
+        "services/portal-execution-edge-rs/crates/authoritative-event-core"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "candidate receipts; ISOLATED_CANDIDATE_NOT_CAPTURE_CERTIFIED",
+        "exact command partitions and revisions; external history unproven",
+        "retained observations not complete source history"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "PM_CAPTURE_AND_REPORT_PUBLICATION",
+        "PM_CURRENT_AUTHORITY_AND_EXPORT",
+        "VERSIONED_PROJECTION_AND_APPLIED_CHECKPOINT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "operational_audit",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "I",
+        "C",
+        "K",
+        "E",
+        "P"
+      ],
+      "owner": "TS identity/membership; TS capital/admission; TS risk/lock/recall; TS economics/accounting; Portal projection owner",
+      "grain": "audit_event_id/actor/policy_revision",
+      "source_query_refs": [
+        "services/portal_execution_owner/identity/human.py",
+        "services/portfolio_management/membership_repository.py",
+        "services/portfolio_management/operator_reports_repository.py",
+        "services/risk_pool/lock_reallocation_repository.py",
+        "services/economics/repository.py",
+        "apps/control-api/src/execution"
+      ],
+      "writer_refs": [
+        "services/portal_execution_owner/identity/users.py",
+        "services/portfolio_management/membership_repository.py",
+        "services/risk_pool/capital_repository.py",
+        "services/risk_pool/recall_repository.py",
+        "services/economics/repository.py",
+        "services/private_events/repository.py",
+        "services/portal-execution-edge-rs/crates/authoritative-event-core"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "temporal membership/revocation revisions; export history not certified",
+        "candidate receipts; ISOLATED_CANDIDATE_NOT_CAPTURE_CERTIFIED",
+        "exact command partitions and revisions; external history unproven",
+        "immutable postings/revision-specific positions; source/correction/export coverage required",
+        "retained observations not complete source history"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "PM_FULL_SOURCE_EXPORT_AND_CURRENT_LEASE",
+        "PM_CAPTURE_AND_REPORT_PUBLICATION",
+        "PM_CURRENT_AUTHORITY_AND_EXPORT",
+        "ECONOMIC_SOURCE_COVERAGE_AND_EXPORT",
+        "VERSIONED_PROJECTION_AND_APPLIED_CHECKPOINT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "publication_catalogue_manifest",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "J"
+      ],
+      "owner": "TS journal/publication",
+      "grain": "catalogue_digest/manifest_id/permit_revision",
+      "source_query_refs": [
+        "services/source_change_journal/read_source.py",
+        "services/source_change_journal/consumer_repository.py",
+        "services/source_change_journal/publication_repository.py"
+      ],
+      "writer_refs": [
+        "services/source_change_journal/writer.py",
+        "services/source_change_journal/consumer_repository.py:register_catalogue",
+        "services/source_change_journal/consumer_repository.py:register_manifest",
+        "services/source_change_journal/publication_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "commit-order groups; materialized JOURNAL_CHECKPOINT_V1 not all-table bootstrap"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "P13_P16_SOURCE_ONLY_QUALIFIED_NOT_RUNTIME_ADVERTISED"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "sync_health_cursor_retention",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "J",
+        "P",
+        "D"
+      ],
+      "owner": "TS journal/publication; Portal projection owner; DL admission/TS valuation",
+      "grain": "hop/dataset/partition/epoch/checkpoint",
+      "source_query_refs": [
+        "services/source_change_journal/read_source.py",
+        "services/source_change_journal/consumer_repository.py",
+        "services/source_change_journal/publication_repository.py",
+        "apps/control-api/src/execution"
+      ],
+      "writer_refs": [
+        "services/source_change_journal/writer.py",
+        "services/source_change_journal/consumer_repository.py:register_catalogue",
+        "services/source_change_journal/consumer_repository.py:register_manifest",
+        "services/source_change_journal/publication_repository.py",
+        "services/portal-execution-edge-rs/crates/authoritative-event-core"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "commit-order groups; materialized JOURNAL_CHECKPOINT_V1 not all-table bootstrap",
+        "retained observations not complete source history",
+        "per-dataset retention; md.latest6h marker no tombstones; not economic retention"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "P13_P16_SOURCE_ONLY_QUALIFIED_NOT_RUNTIME_ADVERTISED",
+        "VERSIONED_PROJECTION_AND_APPLIED_CHECKPOINT",
+        "ADMITTED_QUERY_STREAM_AND_PRICE_USED_LINEAGE"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "recovery_quality_events",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "E",
+        "J",
+        "P",
+        "D"
+      ],
+      "owner": "TS economics/accounting; TS journal/publication; Portal projection owner; DL admission/TS valuation",
+      "grain": "recovery_id/quality_event_id",
+      "source_query_refs": [
+        "services/economics/repository.py",
+        "services/source_change_journal/read_source.py",
+        "services/source_change_journal/consumer_repository.py",
+        "services/source_change_journal/publication_repository.py",
+        "apps/control-api/src/execution"
+      ],
+      "writer_refs": [
+        "services/economics/repository.py",
+        "services/private_events/repository.py",
+        "services/source_change_journal/writer.py",
+        "services/source_change_journal/consumer_repository.py:register_catalogue",
+        "services/source_change_journal/consumer_repository.py:register_manifest",
+        "services/source_change_journal/publication_repository.py",
+        "services/portal-execution-edge-rs/crates/authoritative-event-core"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "immutable postings/revision-specific positions; source/correction/export coverage required",
+        "commit-order groups; materialized JOURNAL_CHECKPOINT_V1 not all-table bootstrap",
+        "retained observations not complete source history",
+        "per-dataset retention; md.latest6h marker no tombstones; not economic retention"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "ECONOMIC_SOURCE_COVERAGE_AND_EXPORT",
+        "P13_P16_SOURCE_ONLY_QUALIFIED_NOT_RUNTIME_ADVERTISED",
+        "VERSIONED_PROJECTION_AND_APPLIED_CHECKPOINT",
+        "ADMITTED_QUERY_STREAM_AND_PRICE_USED_LINEAGE"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "report_snapshots",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "R",
+        "Q",
+        "P"
+      ],
+      "owner": "TS PM report publisher; Research analytics; Portal projection owner",
+      "grain": "report_id/hash/source_cut",
+      "source_query_refs": [
+        "services/portfolio_management/report_delivery.py",
+        "apps/control-api/src/execution"
+      ],
+      "writer_refs": [
+        "services/portfolio_management/operator_reports_repository.py",
+        "services/portal-execution-edge-rs/crates/authoritative-event-core"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "immutable report hashes; delta/applied checkpoints null; factory unmounted",
+        "logical formula/metadata only; runtime config/inputs not certified",
+        "retained observations not complete source history"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "LOGICAL_DTO_FORMULA_ONLY",
+      "publication_gates": [
+        "PM_FULL_SOURCE_REPORT_EXPORT_ACCEPTANCE",
+        "ANALYTICS_SOURCE_AND_APPROVED_RUNTIME_CONFIG",
+        "VERSIONED_PROJECTION_AND_APPLIED_CHECKPOINT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "qbts_per_alpha",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "Q"
+      ],
+      "owner": "Research analytics",
+      "grain": "economic_subject_ref/comparable_basis_id/revision",
+      "source_query_refs": [
+        "UNAVAILABLE_NO_CERTIFIED_EXPORT_QUERY; see source group contract_refs"
+      ],
+      "writer_refs": [
+        "UNAVAILABLE_NO_CERTIFIED_RUNTIME_WRITER; see source group contract_refs"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "logical formula/metadata only; runtime config/inputs not certified"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "PLANNED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "LOGICAL_DTO_FORMULA_ONLY",
+      "publication_gates": [
+        "ANALYTICS_SOURCE_AND_APPROVED_RUNTIME_CONFIG"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "manager_alpha_score",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "Q",
+        "C",
+        "I"
+      ],
+      "owner": "Research analytics; TS capital/admission; TS identity/membership",
+      "grain": "manager_book/allocation_snapshot_id/revision",
+      "source_query_refs": [
+        "services/portfolio_management/operator_reports_repository.py",
+        "services/portal_execution_owner/identity/human.py",
+        "services/portfolio_management/membership_repository.py"
+      ],
+      "writer_refs": [
+        "services/risk_pool/capital_repository.py",
+        "services/portal_execution_owner/identity/users.py",
+        "services/portfolio_management/membership_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "logical formula/metadata only; runtime config/inputs not certified",
+        "candidate receipts; ISOLATED_CANDIDATE_NOT_CAPTURE_CERTIFIED",
+        "temporal membership/revocation revisions; export history not certified"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "LOGICAL_DTO_FORMULA_ONLY",
+      "publication_gates": [
+        "ANALYTICS_SOURCE_AND_APPROVED_RUNTIME_CONFIG",
+        "PM_CAPTURE_AND_REPORT_PUBLICATION",
+        "PM_FULL_SOURCE_EXPORT_AND_CURRENT_LEASE"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "portfolio_score",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "Q",
+        "E"
+      ],
+      "owner": "Research analytics; TS economics/accounting",
+      "grain": "portfolio_id/consolidation_manifest_id/revision",
+      "source_query_refs": [
+        "services/economics/repository.py"
+      ],
+      "writer_refs": [
+        "services/economics/repository.py",
+        "services/private_events/repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "logical formula/metadata only; runtime config/inputs not certified",
+        "immutable postings/revision-specific positions; source/correction/export coverage required"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "LOGICAL_DTO_FORMULA_ONLY",
+      "publication_gates": [
+        "ANALYTICS_SOURCE_AND_APPROVED_RUNTIME_CONFIG",
+        "ECONOMIC_SOURCE_COVERAGE_AND_EXPORT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "regime_fit",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "Q"
+      ],
+      "owner": "Research analytics",
+      "grain": "run_id/exact_binding/reference_snapshot_id",
+      "source_query_refs": [
+        "UNAVAILABLE_NO_CERTIFIED_EXPORT_QUERY; see source group contract_refs"
+      ],
+      "writer_refs": [
+        "UNAVAILABLE_NO_CERTIFIED_RUNTIME_WRITER; see source group contract_refs"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "logical formula/metadata only; runtime config/inputs not certified"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "PLANNED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "LOGICAL_DTO_FORMULA_ONLY",
+      "publication_gates": [
+        "ANALYTICS_SOURCE_AND_APPROVED_RUNTIME_CONFIG"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "archive_paper_watch",
+      "guide": "EDGE4.3",
+      "authority_refs": [
+        "Q",
+        "P"
+      ],
+      "owner": "Research analytics; Portal projection owner",
+      "grain": "watch_id/origin_deployment_id/clone_revision",
+      "source_query_refs": [
+        "apps/control-api/src/execution"
+      ],
+      "writer_refs": [
+        "services/portal-execution-edge-rs/crates/authoritative-event-core"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "logical formula/metadata only; runtime config/inputs not certified",
+        "retained observations not complete source history"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "LOGICAL_DTO_FORMULA_ONLY",
+      "publication_gates": [
+        "ANALYTICS_SOURCE_AND_APPROVED_RUNTIME_CONFIG",
+        "VERSIONED_PROJECTION_AND_APPLIED_CHECKPOINT"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "portal_identity_profile_session",
+      "guide": "BE6-8_ADDITIONAL_LOGICAL_VIEW",
+      "authority_refs": [
+        "U"
+      ],
+      "owner": "Portal identity/session owner",
+      "grain": "workspace/user/session/policy_revision",
+      "source_query_refs": [
+        "apps/control-api/src/execution-v2/access-policy.ts"
+      ],
+      "writer_refs": [
+        "apps/control-api/src/execution-v2/access.service.ts"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "in-flight ELP2-03/04 policy revisions; no Edge source authority"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "CURRENT_SESSION_POLICY_PUBLICATION"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "fund_portfolio_overview",
+      "guide": "BE6-8_ADDITIONAL_LOGICAL_VIEW",
+      "authority_refs": [
+        "P",
+        "C",
+        "E",
+        "R"
+      ],
+      "owner": "Portal projection owner; TS capital/admission; TS economics/accounting; TS PM report publisher",
+      "grain": "portfolio_id/source_set/currency/window",
+      "source_query_refs": [
+        "apps/control-api/src/execution",
+        "services/portfolio_management/operator_reports_repository.py",
+        "services/economics/repository.py",
+        "services/portfolio_management/report_delivery.py"
+      ],
+      "writer_refs": [
+        "services/portal-execution-edge-rs/crates/authoritative-event-core",
+        "services/risk_pool/capital_repository.py",
+        "services/economics/repository.py",
+        "services/private_events/repository.py",
+        "services/portfolio_management/operator_reports_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "retained observations not complete source history",
+        "candidate receipts; ISOLATED_CANDIDATE_NOT_CAPTURE_CERTIFIED",
+        "immutable postings/revision-specific positions; source/correction/export coverage required",
+        "immutable report hashes; delta/applied checkpoints null; factory unmounted"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "VERSIONED_PROJECTION_AND_APPLIED_CHECKPOINT",
+        "PM_CAPTURE_AND_REPORT_PUBLICATION",
+        "ECONOMIC_SOURCE_COVERAGE_AND_EXPORT",
+        "PM_FULL_SOURCE_REPORT_EXPORT_ACCEPTANCE"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    },
+    {
+      "id": "alpha_fleet_overview",
+      "guide": "BE6-8_ADDITIONAL_LOGICAL_VIEW",
+      "authority_refs": [
+        "P",
+        "L",
+        "I"
+      ],
+      "owner": "Portal projection owner; TS registry; TS identity/membership",
+      "grain": "five-ID tuple/dataset/window/publication_revision",
+      "source_query_refs": [
+        "apps/control-api/src/execution",
+        "services/portfolio_management/instance_repository.py",
+        "services/portal_execution_owner/identity/human.py",
+        "services/portfolio_management/membership_repository.py"
+      ],
+      "writer_refs": [
+        "services/portal-execution-edge-rs/crates/authoritative-event-core",
+        "services/portfolio_management/repository.py",
+        "services/portfolio_management/instance_repository.py",
+        "services/portal_execution_owner/identity/users.py",
+        "services/portfolio_management/membership_repository.py"
+      ],
+      "history_capability": "UNKNOWN",
+      "history_scope": [
+        "retained observations not complete source history",
+        "current registry plus candidate receipts/outbox; full history unproven",
+        "temporal membership/revocation revisions; export history not certified"
+      ],
+      "retention": {
+        "from_ms": null,
+        "to_ms": null,
+        "duration_ms": null,
+        "proof_ref": null
+      },
+      "availability": "UNAVAILABLE",
+      "availability_reason": "NEW_EDGE_V1_EXPORT_NOT_QUALIFIED",
+      "implementation_status": "SOURCE_VERIFIED",
+      "evidence_status": "SOURCE_INSPECTED_NOT_RUNTIME_CERTIFIED",
+      "source_contract_state": "SOURCE_COMPONENTS_PRESENT_EXPORT_UNQUALIFIED",
+      "publication_gates": [
+        "VERSIONED_PROJECTION_AND_APPLIED_CHECKPOINT",
+        "REGISTRY_TEMPORAL_EXPORT",
+        "PM_FULL_SOURCE_EXPORT_AND_CURRENT_LEASE"
+      ],
+      "consumer": "Research authorized projection/query; no browser raw source",
+      "history_full": false,
+      "enabled_environments": [],
+      "coverage_proof_ref": null
+    }
+  ],
+  "adapters": [
+    {
+      "id": "guide-to-foundation-status.v1",
+      "from": "OUT_OF_SCOPE",
+      "to": {
+        "state": "DENIED",
+        "reason_code": "RESOURCE_NOT_AVAILABLE"
+      },
+      "disclosure": "NO_ID_COUNT_LABEL_OR_PRIVATE_REASON"
+    },
+    {
+      "id": "guide-to-foundation-status.v1",
+      "from": "freshness.UNRESOLVED",
+      "to": "freshness.UNKNOWN"
+    },
+    {
+      "id": "legacy-current-to-catalogue.v1",
+      "from": "CURRENT_ONLY",
+      "to": {
+        "history_capability": "CURRENT_ONLY",
+        "history_request_availability": "UNAVAILABLE"
+      },
+      "constraint": "Never promotes current pages to full snapshot/history"
+    },
+    {
+      "id": "legacy-implementation-to-catalogue.v1",
+      "from": "PLANNED/SOURCE_VERIFIED/RUNTIME_PENDING",
+      "to": {
+        "availability": "UNAVAILABLE"
+      },
+      "constraint": "Source/evidence status not runtime serving proof"
+    },
+    {
+      "id": "legacy-generation.v1",
+      "from": "opaque legacy source_generation",
+      "to": {
+        "source_continuity_epoch": null,
+        "projection_generation": null
+      },
+      "constraint": "UNAVAILABLE until explicit source-bound mapping"
+    },
+    {
+      "id": "source-journal-to-edge.v1",
+      "from": "source-change-journal.v1",
+      "to": "edge.v1",
+      "constraint": "SEMANTIC_FACT requires dataset-specific adapter; DELETE->TOMBSTONE only with qualified source contract; no journal-ID clock ordering"
+    },
+    {
+      "id": "edge-to-portal-metadata.v1",
+      "from": "edge.v1",
+      "to": "portal.snapshot.v1",
+      "constraint": "Shared mapper preserves edge.continuation; intermediate internal only. execution.scoped-continuation.v1 separately replaces it with authenticated BFF cursor before public output. Source epoch unchanged; derived generation requires lineage"
+    }
+  ],
+  "pagination": {
+    "schema_version": "execution.catalogue-page.v1",
+    "order": "SNAPSHOT_STABLE_KEY_TUPLE_WITH_IMMUTABLE_ID_TIEBREAKER",
+    "scope_before_pagination": true,
+    "history_before_retention_floor": "RESYNC_REQUIRED",
+    "total_row_cap": null,
+    "limits": "REQUIRED_CONFIG_ROWS_AND_SERIALIZED_BYTES_NO_PRODUCTION_DEFAULTS",
+    "oversize": "RECORD_TOO_LARGE_AUTHORIZED_ALTERNATIVE_REQUIRED",
+    "cursor": "SERVER_HELD_OR_AUTHENTICATED_BINDS_DATASET_PRINCIPAL_FULL_SCOPE_FILTER_AUTH_REVISION_EPOCH_GENERATION_SNAPSHOT_SCHEMA_EXPIRY"
+  },
+  "source_semantic_delta": {
+    "manager_current_pages": "not stable multi-page snapshot; refreshed component-role references do not re-certify legacy96 relation/field mappings; old pack remains unaccepted",
+    "p16": "SOURCE_ONLY_QUALIFIED_NOT_RUNTIME_ADVERTISED; fixed Paper resource/reader only",
+    "pm": "all12report families UNAVAILABLE/NOT_RUN; runtime factory unmounted",
+    "dl": "md.latest marker6h no tombstones; md.bars distinct"
+  },
+  "in_flight_consumer": {
+    "path": "apps/control-api/src/execution-v2/read-publication.ts",
+    "sha256": "3627bbc2e8a1cc51d963a33a68eb28c913321abdac20ed562c0e6ec9ddec8edb",
+    "observed_at_utc": "2026-10-16T02:34:16Z",
+    "previous_observation_sha256": "41e56ae15f1aae95ecae85f262cbbc0ce64c4f9caf399df3c4ca8c2bbd0fb6db",
+    "authority": "DRAFT_NOT_SHARED_SCHEMA",
+    "requirement": "exact five-ID tuples and correlated alpha-portfolio/account-binding pairs; workspace/environment/profile + dataset/window/publication revision; scope before totals"
+  }
+}

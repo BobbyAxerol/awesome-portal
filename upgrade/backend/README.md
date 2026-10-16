@@ -8,14 +8,14 @@ Chúng không thay thế phase hoặc exit gate trong
 ## Active deep dives
 
 - [Execution Edge v1.2 — EPG10-00…11 detailed plan](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)
-  — **EPG10-00 completed, inventory only; 01 approved/in progress;02…11 approval pending**. Six offline
+  — **EPG10-00 completed inventory;01 in progress;02 completed contract-only;03…11 approval pending**. Six offline
   metadata cases PASS, with source/runtime/TLS and owned unknowns recorded in
   §23.9 and its manifest. No activation/runtime acceptance. The campaign starts
   from current `origin/dev`, keeps the complete four-file owner guide bundle under
   `upgrade/upgrade_v1.2`, and links Edge, Portal contracts, scoring and PM R2 inputs.
   Goals, scope, source pins, invariants, tests, exit gates, rollback, resource and
   debt/owner tracking are recorded per phase. No product/runtime acceptance implied;
-  02…11 are not started.01 available-source continuation now has53offline tests
+  03…11 are not started.01 available-source continuation now has53offline tests
   plus six00metadata PASS, both-host120s observations, two real+two isolated
   retained repository runs (20subcases PASS), native schema idempotency and
   six-table3,623row exact parity. Isolated target cleaned; narrow numeric
@@ -23,6 +23,11 @@ Chúng không thay thế phase hoặc exit gate trong
   1BLOCKED; exit not met**, no B0/B1/B2/6k/9k acceptance. See §23.10.1 and
   inventory §7 for the single current dependency/action packet;14production
   groups remain UNDECIDED. No source/runtime mutation or invented capacity PASS.
+  **02receipt (§23.11):**42logical family metadata rows, unchanged ELP2 shared
+  schemas, exact Rust wire/clock/cursor/reference-pagination mapping, source-aware
+  metric dependencies and PM/Archive fixtures.11formal cases;36Rust+12Python
+  PASS,57shared FX vectors agree; fmt/clippy PASS. No new source path enabled.
+  Owned602MB test copy/target/cache removed; shared runtime/images retained.
 
 - [Official Trading System owner request — Portal Execution capability campaign](./TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md)
   — **the governing owner request.** It consolidates N02/N03 incremental
