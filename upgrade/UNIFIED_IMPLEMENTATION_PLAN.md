@@ -9843,6 +9843,23 @@ needs review before activation. Backend next remains actual selected
 writer/provider/trust commissioning and approved numeric capacity/calibration,
 then allocated paired coexistence/G2. Full10NOT_MET;11not started.
 
+**20:53UTC terminal and final writer-census addendum:** coherent26e688e4
+landed through normal hook:678contracts/4194API PASS +3pre-existingSKIP,
+build/scoped-access restore PASS, eight runtimes unchanged and zero owned
+leftovers. Exact controller and28files+4387/−182 are in
+[the same canonical packet](./execution_loop/evidence/ELP2-10/commissioning-followthrough.md#terminal-delivery-and-final-writer-census--2053utc).
+The inventory explicitly retains purpose-specific login/first-binding,
+source/operator receipt/policy, provisioning and maintenance composition gaps;
+generic coordinator code is not exhaustive mounting. A bounded follow-up fixes
+atomic personal workspace+membership, atomic preview-session+audit/final user
+fence, and the actual503/top-levelrequest_id descriptor for9account/grant
+writers, with targeted regenerated lifecycle types and synthetic fixture.
+Follow-up gate remains PENDING until its own terminal controller receipt;
+the prior PASS is not reused for changed bytes. Claude consumes typed503 as
+unconfirmed same-key retry, no UI redesign/newscreen. Actual trust/providers,
+approved budgets/calibration and allocated coexistence/G2 remain OPEN;
+full10NOT_MET,11not started and no push/deploy/dev/main.
+
 <a id="elp2-11"></a>
 
 ### ELP2-11 — Migration tích hợp và bàn giao release

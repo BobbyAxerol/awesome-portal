@@ -126,6 +126,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Current identity coordination is unresolved or unavailable; no result is confirmed. Retry only the same request and idempotency key when the typed error permits. A 503 is never an applied receipt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -272,6 +282,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Current identity coordination is unresolved or unavailable; no result is confirmed. Retry only the same request and idempotency key when the typed error permits. A 503 is never an applied receipt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -355,6 +375,16 @@
           },
           "409": {
             "description": "Stale revision, replayed key with a different payload, an activation already live, or the owner anchor protected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Current identity coordination is unresolved or unavailable; no result is confirmed. Retry only the same request and idempotency key when the typed error permits. A 503 is never an applied receipt.",
             "content": {
               "application/json": {
                 "schema": {
@@ -448,6 +478,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Current identity coordination is unresolved or unavailable; no result is confirmed. Retry only the same request and idempotency key when the typed error permits. A 503 is never an applied receipt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -527,6 +567,16 @@
           },
           "409": {
             "description": "Stale revision, replayed key with a different payload, an activation already live, or the owner anchor protected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Current identity coordination is unresolved or unavailable; no result is confirmed. Retry only the same request and idempotency key when the typed error permits. A 503 is never an applied receipt.",
             "content": {
               "application/json": {
                 "schema": {
@@ -620,6 +670,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Current identity coordination is unresolved or unavailable; no result is confirmed. Retry only the same request and idempotency key when the typed error permits. A 503 is never an applied receipt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -699,6 +759,16 @@
           },
           "409": {
             "description": "Stale revision, replayed key with a different payload, an activation already live, or the owner anchor protected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Current identity coordination is unresolved or unavailable; no result is confirmed. Retry only the same request and idempotency key when the typed error permits. A 503 is never an applied receipt.",
             "content": {
               "application/json": {
                 "schema": {
@@ -891,6 +961,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Current identity coordination is unresolved or unavailable; no result is confirmed. Retry only the same request and idempotency key when the typed error permits. A 503 is never an applied receipt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -993,6 +1073,16 @@
           },
           "409": {
             "description": "STALE_GRANT_REVISION or GRANT_ALREADY_REVOKED.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Current identity coordination is unresolved or unavailable; no result is confirmed. Retry only the same request and idempotency key when the typed error permits. A 503 is never an applied receipt.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1265,11 +1355,20 @@
                 "type": "string"
               },
               "request_id": {
-                "type": "string"
+                "type": "string",
+                "deprecated": true,
+                "description": "Historical nested location retained for compatibility. New responses publish request_id at the top level."
               }
             }
+          },
+          "request_id": {
+            "type": "string",
+            "description": "Public request correlation identifier emitted by the existing error filter; not an operation or application receipt."
           }
-        }
+        },
+        "required": [
+          "error"
+        ]
       },
       "GrantedCapability": {
         "type": "object",

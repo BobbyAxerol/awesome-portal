@@ -66,17 +66,24 @@ export class WorkspacesRepository {
     const existing = await this.personalWorkspace(userId);
     if (existing) return existing.workspaceId;
     const workspaceId = newUlid("ws");
-    await this.pool.query(
-      `INSERT INTO workspaces (workspace_id, name, owner_user_id)
-       VALUES ($1, $2, $3)`,
+    // One statement is atomic for both a Pool and a caller-owned PoolClient:
+    // a membership refusal must not leave a committed owner-only workspace.
+    // This does not change personal-workspace selection, deduplicate concurrent
+    // provisioning, or establish an actor/session-generation authority fence.
+    const result = await this.pool.query<{ workspace_id: string }>(
+      `WITH created AS (
+         INSERT INTO workspaces (workspace_id, name, owner_user_id)
+         VALUES ($1, $2, $3)
+         RETURNING workspace_id
+       ), member AS (
+         INSERT INTO workspace_members (workspace_id, user_id, role)
+         SELECT workspace_id, $3, 'OWNER' FROM created
+         RETURNING workspace_id
+       )
+       SELECT workspace_id FROM member`,
       [workspaceId, `${username}'s workspace`, userId],
     );
-    await this.pool.query(
-      `INSERT INTO workspace_members (workspace_id, user_id, role)
-       VALUES ($1, $2, 'OWNER')`,
-      [workspaceId, userId],
-    );
-    return workspaceId;
+    return result.rows[0].workspace_id;
   }
 
   async isMember(workspaceId: string, userId: string): Promise<boolean> {

@@ -430,3 +430,95 @@ source/journal once; it does not require another identical full test cycle just
 to copy the terminal result into prose. The final user report names the exact
 directory, commit and actual results. Calibration's unchanged16 and source
 owner's403 remain independently scoped receipts, not repeated coverage.
+
+## Terminal delivery and final writer census — 20:53UTC
+
+**`26e688e4874269946e55e5e974905f731ce6e6e0`**, normal hook PASS:
+28files **+4,387/−182** from d92efc0e. Exact accepted controller:
+`/home/bobby/.local/state/portal-execution-elp210/20261016/commissioning-land-202824/controller.json`.
+Contracts **678/678**, Control API **4,194 PASS / 3 pre-existing SKIP** across
+326files (324passed/2skipped), build and PostgreSQL scoped-access restore PASS.
+API duration1,036.17s; this is a correctness suite, not a capacity measurement.
+Eight runtime tuples unchanged, zero owned resources remain; own lock released.
+Earlier failed attempts remain above and are not added to accepted coverage.
+
+The independent exhaustive writer census found these **remaining code seams**,
+separate from actual trust/provider/configuration and capacity inputs:
+
+| Existing path / purpose | Current safe disposition | Remaining commissioning contract |
+| --- | --- | --- |
+|AuthService.login/createSession, first identity binding and previewAutoSession|Normal login activation/binding/session is atomic; candidate guards reject changes while a used lease/drain remains. Preview atomicity is corrected in the follow-up below.|A verified-login/preview issuance purpose has no prior current human session. It cannot honestly reuse a revoke adapter with an invented session. Bind verified identity, credential proof, exact generation and one-view/lost-ACK disposition without persisting a password/token.|
+|AccessService.installReviewedPolicy|Private verified artifact intake, no public installer/default policy; candidate guards remain fail-closed.|Operator/artifact-bound intent with exact policy/root/revision/approval digests, not fabricated owner-session authority.|
+|AccessService.acceptTsReceipt, acceptRootTsReceipt/access-root-receipt|Existing source/mapping/membership checks and historical receipt replay remain. No automatic regrant.|Source/receipt-bound drain composition, reacquired current source fences after recovery and held through Core outcome; no expired original requester impersonation or source await inside Core transaction.|
+|WorkspacesRepository.ensurePersonal (SessionGuard and FacadeProxy)|Existing ownership+membership selection remains; paired insert atomicity is corrected below.|Provisioning purpose with current actor/session/generation and exact retry binding. Existing two-argument repository API does not prove this fence. Concurrent personal workspace dedup remains a distinct pre-existing model issue; no uniqueness constraint is invented.|
+|Internal AdminService provisioning, OwnerAccessRepository.claimOwner, retained workspace/access bootstrap|Maintenance-only paths, not mounted user mutation endpoints; guarded writes fail closed under unresolved leases.|Explicit maintenance/quiesce or separately qualified operator purpose; never synthesize a privileged login or silently bypass guards.|
+
+Lazy expired-session denial, last-seen touches and evidence-only audits do not
+require a new grant writer. An invalid session stays invalid even if its lazy
+retirement write is deferred. Signed terminal source resolution still governs
+used leases; no timer/cancellation turns UNKNOWN into rollback.
+
+This inventory is **not CLOSED** merely because generic coordinator families
+exist. Canonical05-001/06-002/07-001 retain these exact composition requirements.
+The final current `main.ts` has no optional candidate dependencies; default
+AccessTrust is unqualified and ManagerRuntime has no genuine source I/O.
+No candidate installer, trust material or actual human/workload grant is mounted.
+
+## Atomicity and public descriptor follow-up — coherent bounded patch
+
+Entry is the clean committed26e688e4 on the same branch. Resource envelope,
+no-runtime/no-source-load exclusions and rollback remain the entry scope above.
+Independent agents prepared disjoint patches outside the frozen checkout;
+primary reviewed and applied only after its normal-hook controller terminated.
+
+1. `WorkspacesRepository.ensurePersonal` uses one PostgreSQL data-modifying CTE
+   for workspace plus OWNER membership. An INSERT/guard failure cannot commit
+   an orphan workspace. PoolClient callers retain their own transaction; there
+   is no nested BEGIN/COMMIT/release or orphan adoption/regrant. Four new real
+   disposable-PG cases cover failure+retry, existing owned state, unrelated/orphan
+   preservation and caller-owned rollback. This is atomicity, **not concurrent
+   dedup or a new actor/source authority**.
+2. Preview auto-session verifies identity outside the Core transaction, then
+   locks/rechecks the actual user/status/archive/password/generation and commits
+   session plus success audit together. A late guard/audit failure cannot leave
+   a false login success or a usable orphan session. Nine new real-PG cases
+   cover both INSERT failures, four verification races, disabled configuration,
+   actual success and verification with a one-connection pool. Local preview
+   boundaries stay unchanged; no Cloudflare bypass or production login mode.
+3. `portal-account-lifecycle.openapi.json` now declares the existing coordinated
+   **503** on all **nine** account/grant writers (not owner step-up or reads).
+   Error/code/message are required; optional top-level `request_id` matches the
+   actual filter. Historical nested request_id remains deprecated-compatible.
+   The open string code domain and existing409 outcomes remain unchanged.
+   Regenerated only `packages/contracts/generated/portal-account-lifecycle.d.ts`
+   with the repository's pinned openapi-typescript executable. Canonical fixture
+   `portal-account-lifecycle.current-human-pending.synthetic.valid.json` is
+   explicitly synthetic;13 new contract cases do not become source evidence.
+
+No error-filter change: independent review confirmed current Auth/Lifecycle/
+Grant/Access wrappers already project public pending/UNKNOWN503 and permanent
+conflict/refusal409 without mutation IDs, private causes or source credentials.
+Raw internal errors still return the existing safe500. Do not add another
+inconsistent public error mapping merely because the candidate is unmounted.
+
+**Validation at patch preparation: PENDING_NORMAL_HOOK**, no future PASS.
+The one coherent follow-up uses the terminal receipt rule above and an exact
+`atomicity-land-HHMMSS` private controller directory; final report supplies the
+actual directory/result/commit. No unchanged source, calibration, browser,
+load, G2 or engine suite is independently rerun for these three repairs.
+The mandatory normal hook remains mandatory; it is not disabled for a small patch.
+
+Claude handoff: generated type `operations[<nine account/grant writer>].responses[503]`
+now exposes `components.schemas.Error` and its top-level request_id. Consume503
+as **not confirmed**, preserve the exact request/key, never show applied/revoked
+success or mint a new key automatically. No layout/token/baseline or new screen
+is assigned. Existing six Manager/360 consumers remain AWAITING_CONSUMER_REVIEW.
+No runtime consumer acceptance is inferred from this synthetic refusal fixture.
+
+Backend next remains ELP2-10: the purpose-specific writer seams in the table,
+selected actual issuer/audience/keys/CA/leaf/current providers/grants, approved
+numeric calibration/14-group budget artifacts and allocated paired coexistence/
+original performanceG2. Those missing facts/decisions cannot be derived from
+fixture constants. Full10 remains NOT_MET;11, push/dev/main/release/deploy/Live
+are not started. Rollback removes only unmounted candidate composition; retain
+all identities, immutable history, denied/revoked rights and original receipts.

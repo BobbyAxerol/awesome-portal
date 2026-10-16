@@ -590,17 +590,23 @@ export class AuthService {
     const username = this.config.PREVIEW_AUTO_LOGIN_USERNAME;
     if (!username || this.config.AUTH_MODE !== "dev" || this.config.PORTAL_ENV !== "local") return null;
     const user = await this.users.findByUsername(username);
-    if (!user || user.status !== "ACTIVE" || user.mustChangePassword) return null;
+    if (!user || user.status !== "ACTIVE" || user.archivedAt || user.mustChangePassword) return null;
+    // External verification precedes all Core locks/connections. A fresh
+    // eligible-user check and both durable success facts share one bounded
+    // transaction; a race cannot issue a stale preview session or false audit.
     const identity = await this.verifyAccessIdentity(undefined, devEmail);
-    await this.audit.record({
-      eventType: "login_succeeded",
-      actorUserId: user.userId,
-      targetUserId: user.userId,
-      accessSubject: identity.sub,
-      result: "SUCCESS",
-      reasonCode: "PREVIEW_AUTO_LOGIN",
+    return withTransaction(this.pool, async client => {
+      await client.query("SET LOCAL lock_timeout='1000ms'; SET LOCAL statement_timeout='3000ms'");
+      const current = await new UsersRepository(client).lockById(user.userId);
+      if (!current || current.username !== user.username || current.status !== "ACTIVE" ||
+          current.archivedAt || current.mustChangePassword || current.sessionVersion !== user.sessionVersion) return null;
+      const session = await this.createSession(current, identity, null, undefined, new SessionsRepository(client));
+      await new AuditRepository(client).record({
+        eventType: "login_succeeded", actorUserId: current.userId, targetUserId: current.userId,
+        accessSubject: identity.sub, result: "SUCCESS", reasonCode: "PREVIEW_AUTO_LOGIN",
+      });
+      return session;
     });
-    return this.createSession(user, identity, null, undefined);
   }
 
   private async createSession(
