@@ -9994,6 +9994,10 @@ Owned implementation qualified/source-dark; no real-source activation/route chan
 
 **Status:** IN_PROGRESS — **Approval:** BOBBY_APPROVED (2026-10-16), named phase.
 **Tests:** 317PASS /0FAIL/skip isolated; fmt + strict zero-warning Clippy PASS.
+**Independent preparation continuation:**70offline helper/observer PASS,
+0FAIL/error/skip +2actual CLI checks; numeric logical sizing and all14 collector
+mappings implemented. Prior317Rust/runner tests not rerun by this tooling-only
+slice. Full connected acceptance remains NOT_MET.
 **Owned package:** QUALIFIED_SOURCE_DARK — **Full phase exit:** NOT_MET —
 **Runtime activation:** NOT_AUTHORIZED / NOT_PERFORMED.
 
@@ -10017,6 +10021,9 @@ Record phase approval, exact affected datasets/operations/profiles and partner r
 **Checklist:**
 
 - [ ] Bound mọi queue theo entries+bytes; bound DB/HTTP/concurrency, cache memory và decompression.
+- [x] Finish independently runnable06 sizing, collector/population mapping and
+  offline B0/B1/B2 target preparation; preserve unknown observations and test
+  original12-cell protocol/negative cases (continuation evidence in §23.15).
 - [ ] Cô lập live delta/command status khỏi bootstrap/history/report; admission không bị background worker chiếm pool.
 - [ ] Thay repeated TS scan bằng snapshot reuse/single-flight/projection; index/query changes cần plan+approval.
 - [ ] Profile serialization/compression/copy/task blocking; chỉ optimize nơi có evidence.
@@ -12176,6 +12183,110 @@ with only this approved `AGENTS.md` edit uncommitted (no direct main commit).
 Portal branch`feat/execution-edge-upgrade-v1_2` records the portable rule and
 tracking as one local docs commit with Bobby's configured identity. No push,
 merge, phase advancement or deploy.
+
+**06 independent continuation —2026-10-16 / APPROVED / IN_PROGRESS:** finish
+runnable sizing, budget instrumentation and target preparation now, per rule10a;
+do not wait for source03 or start07. Reuse
+`scripts/execution_edge_measurement.py`/its existing tests, resource-profile and
+04/05 Rust envelope; no new scheduler/service or source writer. Deliver an exact
+offline target descriptor, replica/pool/all-copy sizing with unknowns explicit,
+derived numeric logical limits, metric/14-budget collection mapping, and paired
+B0/B1/B2 readiness validation. Preparation must run even when source, production
+budgets or a host window is missing; actual execution remains fail-closed.
+Original6000/9000TRADE/s×600s×2/common source+coverage pins cannot be weakened.
+Test pure preparation/negative/parity cases and existing helper regressions on
+independent SGP under its own short lock; no HK cargo/pytest/load during foreign
+`claude-writer-b17`09:02:46–09:42:46UTC. Only public source/contracts/metadata may
+be copied to exact private disposable test path; no secrets, DB data or runtime
+deploy. No source calls, shared DB mutations, candidate rollout or peer edits.
+Rollback is this owned helper/descriptor change only. Cleanup exact temporary
+source/test target; record disk and protected runtime tuples. Paired acceptance
+and production budget approval are not inferred from structural validation.
+
+**Continuation tested slice / PREPARATION_IMPLEMENTED_AND_VERIFIED:** existing
+`scripts/execution_edge_measurement.py` now validates exact06 offline target
+descriptors and prepares the12-cell B0/B1/B2 matrix (6000/9000TRADE/s,600s×2).
+`--target` works with baseline preparation even with missing source/budgets;
+candidate/`--runs` stays fail-closed. Same helper handles replica/pool/all-copy
+worksheets, shared cache/hub registration without double counting, foreground
+reserve fitting, stage/common pins, duration/correctness and cross-triplet units.
+No scheduler, new source/API/SDK, runtime flag, DB change or heavy analytics.
+
+[Isolated target](evidence/execution-edge-v1_2/EPG10-06/isolated-target.json) records
+numeric logical limits derived from the qualified envelope:3active/8192entries/
+128MiB with1active/2048entries/40MiB foreground reserve; cache4MiB +hub1MiB;
+worst-case group32MiB, allactive101MiB/background69MiB;3257/2257entries.
+Pool3+2test observer/admin connections =5≤isolated PG24; all replicas counted.
+Logical charge is NOT RSS. Edge/PG/observer each have all7memory parts/owner/
+replicas with explicit unknown reasons; missing measurements keep total=null.
+14budget groups now map collector/population/current availability/missing
+inputs; existing Rust stats and native samplers reused, not a deployed exporter.
+Actual production bounds, broader process totals and source pins are not invented.
+
+**Commands/results actually run on independentSGP:** source-only6-file copy to
+private0700 `/tmp/epg10-06-preparation-ST6Hs733`; `nice -n15 timeout90s python3 -B`
+with RLIMIT_AS256MiB/CPU30s and existing atomic own-lock context; unittest loader
+for `test_execution_edge_measurement` and `test_execution_edge_observe`.
+Final70PASS/0FAIL/error/skip =29existing helper +24target/CLI +17observer tests;
+actual CLI baseline exit0/prepared12cells, candidate exit2/55explicit missing
+reason entries;0source calls/DB mutations/container starts/image builds.
+Final same-input repeat ended09:17:41UTC. Prior317Rust/runner tests are historical
+unchanged-source proof, NOT rerun. [Final receipt](evidence/execution-edge-v1_2/EPG10-06/preparation-test-receipt.json).
+Independent read-only review found4sizing/schema defects (read/notice entries,
+PG/observer process inclusion, manifest cap/page bound, across-triplet units);
+all4fixed with regression tests before final qualification. Earlier67-test
+receipt is development provenance only. No known defect in tested offline scope.
+
+**Current gates, not new debt or phase:** full06 remains IN_PROGRESS/NOT_MET;
+07 NOT_STARTED. Owned runtime composition/storage observer/metrics exposure and
+actual full-process/all-replica sizing remain to bind/measure on the accepted
+source, with real paired source-connected workloads. TS owns03publisher fence,
+writer/export coverage and endpoint/identity acceptance; Research owns actual
+BFF/analytics quota/cancel/projection composition. Clean windows and populated
+01numeric production budgets remain required for capacity acceptance, not
+for preparation. Do not represent these connected Edge tasks as somebody
+else's debt or describe the offline descriptor as a deployed measurement stack.
+No blanket06approval is requested again; finish dependent cases in this phase
+when exact inputs return. [Reproduction, numeric rationale and owner actions](evidence/execution-edge-v1_2/EPG10-06/RESOURCE_ENVELOPE_AND_HOT_PATH.md#independent-sizing-and-target-preparation--2026-10-16-continuation).
+
+**Final source/runtime/cleanup reconciliation (09:21UTC):** source byte check:
+34TS/PM/DL authority inputs +4approved guides unchanged;399prior compiled input
+hashes unchanged;6new tested files match the final SGP receipt,0mismatch.
+TS advanced read-only to `68f2572fbc1c64520803cbfc1dfd22bfc5470cff` (QUOTE observe
+cadence bound/3, not journal/publication acceptance); preserve its3runner/test
+WIP files. PM `d16aa2b5f251596e469807f57e81fe14cdc7e763` and DL
+`68556d40a8ef71420f3d65ba850796ea5fe68887` clean/unchanged. Latest foreignB17
+lock09:12:59–10:32:59UTC was neither removed nor bypassed;0HK heavy jobs.
+
+12HK+5SGP protected runtime tuples identical before/after, all restart counts0.
+Canonical HK checkout `/home/bobby/.worktrees/portal-execution-manager-v2`,
+`feat/manager-v2-paper-read`@`54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4`, remains
+distinct from active feature `feat/execution-edge-upgrade-v1_2` here. All6active
+Portal worktrees retained; none merged/abandoned by this task. SGP stable
+`/home/bobby/portal-main-release` `main`@`533162635f56584d630e3d971d77d50860595f15`;
+active release paths/config hashes/digests/service names are captured verbatim
+in the [final reconciliation](evidence/execution-edge-v1_2/EPG10-06/preparation-final-reconciliation.json).
+HK Edge/worker image remains
+`sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e`;
+no runtime contains these new06 changes. No push/merge/deploy. Existing active
+and rollback images untouched; no new rollback artifact, no shared prune.
+HK exact Portal container filter12running/0stopped; foreign image/cache changes
+belong to concurrent owners, not this offline test. Shared Docker/BuildKit
+inventory before/after is attached;0own images/build cache created or removed.
+
+Scoped cleanup09:20:45UTC removed exactly6copied public files under validated
+owned0700 `/tmp/epg10-06-preparation-ST6Hs733` (139264allocated bytes). Before
+free167970856960B /after167970996224B, delta+139264B; exact target and owned lock
+absent. No operational restart/container/volume/network/source/data deletion.
+The files were disposable copies; canonical Git sources/evidence remain intact.
+[Cleanup receipt](evidence/execution-edge-v1_2/EPG10-06/preparation-cleanup-receipt.json).
+Rollback for this continuation is reverting only its helper/tests/descriptor
+changes on the feature branch; no runtime rollback required. Canonical workspace
+rule10a edit stays at `/home/bobby/AGENTS.md` uncommitted on shared`main`; preserve
+that approved edit and all unrelated untracked workspace files.
+Commit this coherent tested continuation locally as Bobby; full06NOT_MET and
+07NOT_STARTED remain explicit. No failed or missing connected test is counted
+as PASS, and no independent preparation is deferred to a new phase.
 
 
 

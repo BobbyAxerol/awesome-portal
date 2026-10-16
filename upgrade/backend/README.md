@@ -58,6 +58,11 @@ Chúng không thay thế phase hoặc exit gate trong
   scope blockers narrowly, finish runnable work before a blocked handoff or
   phase transition. Budget/target preparation is not external TS debt; no
   measurement-lock or source/activation gate is waived.
+  **06 independent preparation now verified:**70offline helper/observer PASS,
+  0FAIL/error/skip +2CLI checks. Numeric isolated logical sizing, all-replica
+  pool/copy worksheets,14budget collector mappings and original12-cell matrix
+  implemented. Not a deployed stack, approved production budget or connected
+  capacity PASS; full06 remains NOT_MET. See §23.15 continuation/cleanup evidence.
 
 - [Official Trading System owner request — Portal Execution capability campaign](./TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md)
   — **the governing owner request.** It consolidates N02/N03 incremental

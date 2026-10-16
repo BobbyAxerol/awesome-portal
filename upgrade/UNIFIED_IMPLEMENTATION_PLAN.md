@@ -35,6 +35,10 @@
 >06 exit NOT_MET (01numeric budgets/03publication, fresh paired measurements and
 > Research returns). Own5.863GB test source/cache/logs cleaned;12HK+5SGP tuples
 > unchanged/restarts0. No runtime/source mutation or capacity claim.
+> **06 preparation continuation:**70offline helper/observer PASS,0FAIL/error/skip
+> +2CLI checks; numeric logical sizing, replica/pool/all-copy worksheets,
+> 14collector mappings and original12-cell B0/B1/B2 descriptor implemented.
+> Not a deployed stack/production budget/capacity receipt; full06 remains NOT_MET.
 >07…11 await named approval. Evidence/action packet linked in §23.15.
 > 01capacity is still pending;
 > logical02 closure does not waive it.

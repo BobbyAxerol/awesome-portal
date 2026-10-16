@@ -169,3 +169,87 @@ Finish the same phase's connected cases when those inputs arrive. Independent07
 implementation may be approved separately; no automatic start or command/runtime
 activation follows this handoff. Detailed per-family coverage is in
 `verification.json`; a correctness PASS never fills a missing capacity receipt.
+
+## Independent sizing and target preparation — 2026-10-16 continuation
+
+Status: **PREPARATION_IMPLEMENTED_AND_VERIFIED; full06 exit NOT_MET**. This is
+remaining independently executable06 preparation, not a new phase/approval.
+Publication, a host window or an existing baseline is not required to prepare
+it. No source, production runtime or partner code changed.
+
+The existing offline helper now consumes [isolated-target.json](isolated-target.json).
+It generates the original12 coexistence cells: B0/B1/B2,6000/9000 canonical
+TRADE events/s,600s, two independent repeats with counterbalanced stage order.
+Common fixture/source/config/hardware/coverage/cache pins remain distinct from
+each stage's image/config/composition pins. Unknown pins stay null; the descriptor
+is **not an installed complete B0/B1/B2 stack**. It reuses existing04/05/06 test
+apparatus, not a new scheduler, exporter, deployment or load generator.
+
+| Numeric isolated bound | Prepared value / calculation |
+|---|---|
+| Envelope / foreground reserve | 3active,8192entries,128MiB /1active,2048entries,40MiB |
+| Cache registration | 128entries+1flight,4MiB logical payload |
+| Fanout registration | 16clients×8entries,1MiB aggregate;64KiB/client,2KiB/notice |
+| Worst work | 1000entries,32MiB =4×8MiB group; covers manifest/page/read/notice |
+| All active / background | 3257entries,101MiB /2257entries,69MiB; fit128MiB/88MiB |
+| DB pools | 1replica×3connections +2test observer/admin =5, below isolated PG24 |
+| PG test cap (existing runner) | 0.5CPU,768MiB inclusive of512MiB tmpfs, not768+512MiB |
+
+These are **logical admission/test tripwires, not measured malloc/RSS limits or
+production SLO approvals**. Cache/hub registrations are already inside the
+envelope: never add another128MiB. Independent Rust200-entry notice/read caps
+and manifest≤1MiB/page are checked even with smaller other work limits. All
+replicas, separate pools and other connections must fit; clones share the same
+registration/pool and must not be counted twice.
+
+All-copy worksheets name Edge, isolated PG and test observer, each with all
+seven parts, owner, replicas and unknown reasons. Removing a group/copy/replica
+fails validation. Logical101MiB cannot populate unknown RSS: target total stays
+null, not0. The broader TS/DL/Research composition is excluded from this isolated
+descriptor and needs its own groups before a connected claim. Existing backlog/
+catchup helpers require measured bytes/amplification, an outage objective and
+sustainable replay rate; no fabricated disk runway.
+
+All14 budget IDs now map collector, population, current availability and missing
+inputs in the descriptor. Reuse `execution_edge_observe.py`, TS/DL native samplers,
+Research-owned instrumentation and Rust `ResourceStats`. Implemented library
+counters are distinguished from runtime metrics wiring. This does not deploy
+a dashboard/exporter or replace composite/absent populations with invented
+production bounds. The14-group01 register remains authoritative; its dated
+blocker prose is historical. Current source/runtime metadata lives in the
+preparation before/after receipts. No production threshold is approved here.
+
+Reproduce preparation from the Portal feature root:
+
+```sh
+python3 -B scripts/execution_edge_measurement.py \
+  --plan upgrade/evidence/execution-edge-v1_2/EPG10-01/measurement-plan.json \
+  --target upgrade/evidence/execution-edge-v1_2/EPG10-06/isolated-target.json \
+  --purpose baseline
+```
+
+This is read-only offline preparation; it starts no job. Without a host lock,
+baseline preparation exits0 despite missing source/production budgets; with a
+foreign lock it still produces the descriptor but reports execution BLOCKED.
+Candidate mode stays exit2 for missing inputs (55current reason entries, not55
+new gates). `--target --runs` additionally requires all12 original cells, exact
+stage artifacts/common pins, identical metric units across repeats/rates, full
+durations and existing correctness/untainted-window checks. Synthetic positive
+vectors are TEST_ONLY validator tests, not proof that actual load runs occurred.
+
+Final validation: **70unittest PASS,0FAIL/error/skip** =29existing measurement
+helpers +24target/CLI regressions +17observer cases; plus two actual CLI checks
+(baseline exit0; candidate exit2). A second identical-input70-case run confirms
+the final [preparation-test-receipt.json](preparation-test-receipt.json). The earlier
+67-case receipt is development provenance only: four independent review findings
+were corrected with regression coverage before final qualification. Prior317
+Rust/runner tests were not rerun: only offline verification tooling/docs changed;
+compiled Rust inputs remain the prior qualified bytes. No performance gain claim.
+
+Still required in **this same06**, not moved to07: source/runtime binding,
+trusted storage observer/metrics wiring, full-process/all-replica memory/disk
+sizing on the actual composition, clean paired TS/DL/Research measurement and
+numeric bounds/reduction acceptance from those populations. Existing03 publisher
+fence/coverage/identity return blocks only dependent source cases. Preparation
+above is no longer deferred behind it. B16 amendment1 is4/5clean (core-pause
+overflow FAIL), not a source/capacity acceptance; respect TS B17 work and lock.

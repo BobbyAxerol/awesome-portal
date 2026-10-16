@@ -704,6 +704,12 @@ deep-dive → ADR → slice → evidence discipline documented above.
   immediately, not wait behind unrelated blockers or move into07; budgets/
   instrumentation/target preparation stay owned work. Canonical rule10a and
   Portal `AGENTS.md` closeout rule apply; locks and activation gates unchanged.
+  **06 preparation continuation verified:**70offline helper/observer PASS,
+  0FAIL/error/skip +2actual CLI checks; explicit logical sizing/pool/all-copy
+  sheet, all14collector mappings and12-cell B0/B1/B2 descriptor implemented.
+  Descriptor is not a deployed stack or capacity receipt; unknown memory/source
+  pins remain explicit. Full06 NOT_MET; connected runtime/measurement work stays
+  in06. Evidence/reproduction and cleanup are in §23.15, not deferred to07.
   07…11 await approval.
   01capacity exit remains unmet, not waived.
   No operational runtime/source/credential change, push or merge. Only owned
