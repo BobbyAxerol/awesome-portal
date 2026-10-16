@@ -7,7 +7,7 @@ import { SessionsRepository } from "../repos/sessions";
 import { AccountLifecycleRepository } from "../repos/account-lifecycle";
 import { CredentialsRepository } from "../repos/credentials";
 import { AuditRepository } from "../repos/audit";
-import { AccessActor, AccessPolicyError, AccessRefusal, GrantChange, ReviewedAccessPolicy, ScopedAccessGrant,
+import { AccessAction, AccessResource, AccessActor, AccessPolicyError, AccessRefusal, GrantChange, ReviewedAccessPolicy, ScopedAccessGrant,
   TsMembershipAcceptance, tsBusinessAction, reviewedAccessPolicy, scopedAccessGrant, tsMembershipAcceptance } from "./access.contract";
 import { AccessEvaluationContext, AccessRelations, accessDigest, canonicalChange, canonicalSelector,
   evaluateAccess, grantCurrent, policyReady, resolvedResources, validateDelegation } from "./access-policy";
@@ -100,7 +100,32 @@ export class ExecutionAccessService {
     return await this.trust.readPublication?.(request)??null;
   }
 
-  private async transaction<T>(workspace:string,actor:AccessActor,stepUp:boolean,fn:(tx:Tx)=>Promise<T>,extraPrincipals:string[]=[]):Promise<T> {
+  /** Internal only. Human mapping is source-verified, never supplied by UI. */
+  async commandHumanMapping(actor:AccessActor,workspace:string) {
+    return this.trust.verifiedHumanMapping(actor.user_id,workspace);
+  }
+
+  /** Command writes reuse current identity, step-up, policy and grant locks. The
+   * caller resolves source trust BEFORE entering this DB-only boundary. Never
+   * perform relay I/O inside fn; TS still checks its own authority at commit. */
+  async commandBoundary<T>(actor:AccessActor,workspace:string,expected:AccessEvaluationContext,
+    action:AccessAction,resource:AccessResource,environment:"paper"|"sandbox"|"live",
+    check:(now:number)=>void,fn:(db:PoolClient)=>Promise<T>):Promise<T> {
+    if(expected.principal_id!==actor.user_id||expected.workspace_id!==workspace||!expected.authority_fingerprint)
+      throw new AccessPolicyError("CURRENT_ACTOR_AUTHORITY_REQUIRED");
+    return this.transaction(workspace,actor,true,async tx=>{
+      tx.recheck(()=>{
+        if(accessDigest([tx.context.policy,tx.context.grants])!==accessDigest([expected.policy,expected.grants]))
+          throw new AccessPolicyError("ACCESS_RETRY_REQUIRED",409);
+        const decision=evaluateAccess(tx.context,action,resource,environment);
+        if(!decision.allowed)throw new AccessPolicyError(decision.reason_code??"ACCESS_DENIED");
+        check(tx.context.now_ms);
+      });
+      return fn(tx.db);
+    },[],expected);
+  }
+
+  private async transaction<T>(workspace:string,actor:AccessActor,stepUp:boolean,fn:(tx:Tx)=>Promise<T>,extraPrincipals:string[]=[],captured?:AccessEvaluationContext):Promise<T> {
     try {
       return await withTransaction(this.pool,async db=>{
         await db.query("SET LOCAL lock_timeout='1500ms'");
@@ -130,7 +155,7 @@ export class ExecutionAccessService {
         if(anchor) memberIds.add(anchor);
         const active=new Set<string>(current.rows.filter(r=>r.status==="ACTIVE"&&!r.must_change_password&&!r.archived_at&&memberIds.has(r.user_id)).map(r=>r.user_id));
         const relationMap=new Map<string,AccessRelations>();
-        for(const id of principals) relationMap.set(id,await this.trust.relations(id!,workspace));
+        for(const id of principals) relationMap.set(id,captured?captured.relationsFor(id!):await this.trust.relations(id!,workspace));
         const now=await this.now(db);
         const context:AccessEvaluationContext={principal_id:actor.user_id,workspace_id:workspace,now_ms:now,
           actor_current:true,policy,grants,active_principals:active,allow_test_only:this.allowTestOnly,

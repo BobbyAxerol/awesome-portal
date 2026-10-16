@@ -1,0 +1,150 @@
+# ELP2-07 — coverage, command recovery và Claude handoff
+
+## 1. Authority / exact delivered scope
+
+Baseline `42c390796f4bd2a7de151313944b41f1245bdbc2`, same integration branch.
+Source pins and direct excerpts: [source alignment](source-alignment.md).
+TS/PM remain financial/business authority; Portal keeps identity, current app
+policy, scoped intent and transport/status correlation. No economic postings,
+native order, broker, generic CLI/URL, TS DB fallback or autonomous human
+impersonation. Source-dark is enforced server-side, not a hidden button.
+
+The eight existing source-pinned capital candidate bodies are supported by
+the technical bridge: FUND, INITIAL_GRANT, TOP_UP, IMMEDIATE_DECREASE,
+RECALL_PARTIAL, RECALL_FULL, ADJUST_TARGET_BUDGET, SET_ROOT_LIMIT. Their exact
+`pma.capital-command.v1.1` body/counter strings are preserved; source still
+owns recipient resolution, Decimal normalization and canonical digest.
+
+No operation/environment is runtime qualified by this delivery. In particular:
+
+| Operation family | Disposition / locator |
+| --- | --- |
+| Eight capital candidates above | Component implementation; injected TEST_ONLY proof only; deployed trust/relay unavailable |
+| RETURN_CAPITAL | PM parser/status knows it, operator dispatch excludes it (`PM-G07-SEED-RETURN`); no synthetic economic adjustment |
+| ADMIN_LOCK/UNLOCK, REALLOCATE_BUDGET, APPLY_PENDING/CANCEL_REMAINING | Source candidate control schema exists; not the frozen capital body or current exact Portal action catalogue. Direct new capital route rejects them; no mapping to a weaker existing action |
+| Profile SET_LEVERAGE/MARGIN_MODE/POSITION_MODE/ACCOUNT_MODE | Separate PM profile PREPARE/RECONCILE semantics; not capital APPLIED or native execution. Existing readers/guarded operations unchanged |
+| Entity create/register/assignment/archive, HALT/REDUCING/RESUME | Existing gate-specific Governance/protective paths preserved; not silently routed through the capital bridge or R1 executor |
+| Autonomous new intents | No commissioned workload catalogue/provider supplied; denied. Internal recovery of accepted intent is lookup-only using explicit service authority, not renewed human intent |
+
+## 2. Public contract freeze
+
+Generator: `packages/contracts/tooling/generate-execution-trusted-commands.mjs`.
+OpenAPI: `packages/contracts/openapi/execution-trusted-commands.openapi.json`.
+Generated client: `packages/contracts/generated/execution-trusted-commands.d.ts`.
+Canonical consumer fixture:
+`packages/contracts/fixtures/execution-trusted-commands.synthetic.valid.json`.
+Generate with `npm run generate:execution-trusted-commands` in contracts;
+normal aggregate generation/check and snapshot include this additive API.
+
+| Operation / generated path | Input → output | Rules |
+| --- | --- | --- |
+| `executionCapitalCommandPreviewV1` POST `/api/v1/execution/capital-commands/preview` | CommandIntent → CommandPreview | Current exact capital action; CSRF/Origin and header = PM key. No reservation/effect. Source-dark preview has allowed=false + typed reason, not fake profile/default |
+| `executionCapitalCommandSubmitV1` POST `/api/v1/execution/capital-commands` | CommandSubmit → CommandStatus | Fresh step-up, current policy/grants + source mapping/membership/expiry/CAS/approval/qualified operation. Confirm is not approval. Reissued TTL alone does not change preview; authority/profile/payload/approval/CAS changes do |
+| `executionCapitalCommandStatusV1` GET `/api/v1/execution/capital-commands/{id}` | workspace query → CommandStatus | Local-only; no send or source I/O. Current exact audit/report grant with accepted TS membership; hidden/missing/wrong workspace normalized404 |
+| `executionCapitalCommandReconcileV1` POST `.../{id}/reconcile` | workspace body → CommandStatus | CSRF/Origin/key; current report authorization before/after; original authority/profile/key only. Never send or create a new intent |
+
+Public types are `operations[...]` / `components.schemas.CommandIntent`,
+`CommandSubmit`, `CommandPreview`, `CommandStatus`, `CommandProblem`.
+All API values are exact decimal/counter strings and UTC milliseconds. No
+human/workload IDs, JWT, mTLS, internal authorization references or PM reason
+in the public status. Request inputs have no actor/workload/source URL/profile
+authority installation. Outer recipient kind/deployment binding is structural;
+the source resolves canonical complete recipient/account scope independently.
+
+Public errors use fixed dictionary code/copy and safe next action, never source
+exception text. Existing guard/auth errors retain the shared envelope.400 input,
+401 session,403 current action/CSRF/step-up/context,404 unknown or hidden,
+409 policy/preview/key change,502 unverified receipt,503 source/capacity.
+All are private/no-store. Retained preview still blocks every mutation; this
+phase does NOT enable commands on research-portal.
+
+## 3. Four independent status dimensions
+
+Delivery PREPARED → SENDING is committed with attempt fencing and audit before
+network I/O. ACKNOWLEDGED only means transport acceptance, not APPLIED.
+Business UNKNOWN has no receipt/revision/amounts; known result requires an
+owning source receipt/event/revision. Exact fixed amounts bind source partition
+to original intent and preserve applied/cancelled/rejected monotonicity.
+APPLIED can coexist with CATCHING_UP projection and NOT_APPLICABLE venue;
+never resubmit because a view is stale. No APPLIED → flat/filled inference.
+
+Projection CURRENT/CATCHING_UP/STALE/UNAVAILABLE/UNKNOWN and venue remain source
+facts. Missing lookup after timeout, expired idempotency coverage, unverified
+receipt and SENDING after crash are not proof of no effect.
+
+Portal intent fingerprint includes actor/workspace/environment/target/body;
+keys are unique per workspace and conflicting intent is409. PM source digest
+is the exact **bare64 hex** authoritative resolved-recipient/authority digest,
+not Portal's prefixed hash or JSON.stringify digest. Source's own idempotency
+scope remains authority + operation + key + requester/target binding.
+
+## 4. Recovery / rollback runbook
+
+1. Disable **new sends** by withdrawing qualified prepare/operation activation.
+   Keep verified lookup/service-recovery available for already accepted intents.
+2. Record original command ID, immutable PM key/body/scope and last status.
+   Do not create a new key or assume timeout rolled back the source transaction.
+3. GET reads local status only. Authorized reconcile, or internal recovery,
+   calls verified source lookup of the original intent. Source report/recovery
+   credentials are renewed by the qualified adapter, NEVER by replaying the
+   expired human context as a new send.
+4. Matching late receipt updates state + immutable event + existing product
+   audit atomically. Missing/expired/unverified results remain unknown. A late
+   sender cannot overwrite a reconciled receipt. Same-revision conflicting
+   business facts and regression are refused; no financial compensation.
+5. Browser requester loses current rights → no disclosure; accepted-obligation
+   recovery may still ingest facts using explicit service authority. No
+   recovery path restores revoked grants/session or places a new trade.
+6. Migration136 is forward/additive Core metadata only. Down is intentionally
+   non-destructive. Keep rows/events on application rollback; no TTL/cascade
+   delete of unknown/accepted intent, no resetting keys or source history.
+
+Bounds: intent/authorization/status each≤32KiB,≤100 unresolved and≤1024 total
+intents per workspace stop **new** intake,≤4 underlying adapter calls per
+service instance,10s request deadline + AbortSignal. A provider ignoring abort
+keeps its slot until settle; timeout does not create unlimited background I/O.
+New-send authorization lifetime is at most60seconds. Immutable state events are
+not a TTL cache; their production retention/storage capacity and multi-instance
+request pacing still need the source-connected activation qualification. No
+claim of a fixed lifetime disk ceiling is made for accepted event history.
+Existing same-key reads/recovery are not evicted at capacity. No source transport
+is commissioned here; aggregate multi-instance/source rate qualification remains
+an activation requirement, not a measured SLO claim. Private Core payload retains
+the bounded original PM business reason, no credential/token; public audit is
+hash/state-only. Accepted history retention is explicit, not a cache sweeper.
+
+## 5. Handoff to Claude — NOT yet an assignment
+
+Read the API above, canonical fixture, source limitations and UX guide UXM-09.
+Reuse current approved components/layout; do not build a second command plane.
+
+- Preview/confirmation: show exact action, target, amount/currency, versions,
+  policy and required gate. Separate confirm from signed approval evidence.
+- Receipt: present delivery, business, projection and venue independently.
+  ACK+UNKNOWN and APPLIED+CATCHING_UP are expected, not contradictory.
+- Timeout/restart: show original command ID and “Query same intent”; no blind
+  retry/new-key button. Failed-before-send is not an invitation to replace key
+  unless a separately approved source policy certifies no previous effect.
+- Deny/revoke: current403/404 stops controls and cached receipt disclosure;
+  fixed public error dictionary, never raw server/source strings.
+- Keep uncommissioned operation/profile/environment controls visibly disabled
+  with exact reason. Never infer read-all/ADMIN as capital write permission.
+- Fixtures prove composition only. Real API/browser positive commands require
+  a separately assigned non-retained isolated cell and qualified source path;
+  no inserting grants/candidate rows or enabling shared preview writes.
+
+Consumer status `NOT_STARTED_BY_OWNER_DIRECTION` /
+`AWAITING_CONSUMER_REVIEW`. This file is ready for Bobby to forward; no claim
+that Claude has received/implemented/accepted it.
+
+## 6. Request / debt ledger
+
+| ID / owner | Observed / expected / impact | Done-when / destination | Status |
+| --- | --- | --- | --- |
+| ELP2-07-001 TS/PM + Edge/ops | Source EPG10-07 not started, relay denies, current PM candidate providers unconfigured/router unmounted. Technical fixture proof is not source authority | Exact source command/trust/status wire + authenticated human/workload commit checks, durable source/Edge correlation, retention proof and separately approved operation×environment activation; repin before connected acceptance | OPEN_SOURCE_RUNTIME; blocks real commands and full T07 source exit |
+| ELP2-07-002 Portal + source owners | Eight capital bodies wired technically; control/profile/management/autonomous families have distinct policy/schema/side effects and no commissioned end-to-end matrix | Freeze named per-operation action/target/gate adapters against current source contracts; test each selected family before admitting; no weaker-capability alias. Keep unselected actions denied | OPEN_EXACT_OPERATION_COVERAGE, not hidden as delivered |
+| ELP2-07-003 Claude/Bobby | No new UI assignment, browser proof or qualified non-retained consumer | UXM-09 explicit assignment; fixture story first, actual source/API/browser receipt only after001; exact delivery dimensions and negatives above | AWAITING_CONSUMER_REVIEW |
+
+No formula/weight/band decision reopened. No new Bobby choice required for the
+approved source-dark technical work. Activation/other operations require their
+actual source qualification, not another generic permission question.

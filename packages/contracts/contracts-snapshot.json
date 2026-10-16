@@ -98,6 +98,7 @@
     "fixtures/execution-staged-activation.capabilities.valid.json": "sha256:87ff22bd7be9862217b10224fe7f29cefb2abcb399b3d09adb407715b8d50203",
     "fixtures/execution-staged-activation.plan-blocked.valid.json": "sha256:686d29d14d837cd324eb087f3e08e6758022e3b0f1f1a018a220c15d2ec44958",
     "fixtures/execution-staged-activation.states.valid.json": "sha256:9a94bda34f0ad739cad68fa869f5f26f6c1499a8e2dc1e6de4063f80f1b64c24",
+    "fixtures/execution-trusted-commands.synthetic.valid.json": "sha256:7b68525cdb924ded0191847e65919d8390bc2bf478b6d5864de79dc7aa3ca609",
     "fixtures/execution-v2-foundation.synthetic.valid.json": "sha256:7b3044c2f4c990633a4550ab2c521f0fdf0108f9e70027bcbc1c2df02643cb75",
     "fixtures/governance-live-review.valid.json": "sha256:5f3d744843847c10e3389c2b60728aad8453fc88a3d532035a991697473ae9c8",
     "fixtures/governance-review-context.synthetic.valid.json": "sha256:99de23e1ea1a53b9d3982795b6f07cb64962713aa981a00938be2da834f960e8",
@@ -223,6 +224,7 @@
     "generated/execution-retained-review.d.ts": "sha256:d4b5c63f12134153e8d75171d8de4b8ffc200e0f397746dcb87466cf1bec8ffe",
     "generated/execution-scoped-records.d.ts": "sha256:a709706a6f949b54dd05a2dbf25a2bf51c8921de7726acd742a8ce181fe96375",
     "generated/execution-staged-activation.d.ts": "sha256:0c1dca37692c56aa495510afa05202d41d9ec9d7fb77b8b6ab7d4943da2220ce",
+    "generated/execution-trusted-commands.d.ts": "sha256:b6734d898d61bbcd4f6355b52f7f25760b3f93ad4d285fe90c7bb2ffde21a2c4",
     "generated/execution-v2-foundation.d.ts": "sha256:dc8e89c4589c5111ef1da6bbb590aabda11f41b2a6ec22e689e50e4362c9117a",
     "generated/portal-api.d.ts": "sha256:47ac6e85d727094921aa878bec4b53bd2c528eeada18d394b0a42e1c68310f20",
     "generated/portal-profile.d.ts": "sha256:2d7c10d947beee45c834a448949a8242c7578f24f561ba14bd9021300847881f",
@@ -274,6 +276,7 @@
     "openapi/execution-retained-review.openapi.json": "sha256:4a74197f909fa0f427c0ff9f2920c9daabc3bebf573675147c446b85ea6a5431",
     "openapi/execution-scoped-records.openapi.json": "sha256:72687fb424a3e7df4f52201f2296577d459e341eb7ff9ed12c9a5e916cd1f7fa",
     "openapi/execution-staged-activation.openapi.json": "sha256:c741d5b93362e2af59342df7c6c78e7586f81ab72c89039e6010b2632c81e6b2",
+    "openapi/execution-trusted-commands.openapi.json": "sha256:e27c8db8b56bffa1b9eb7a91a938ca6f28091ed6a2f0efef8247c01d2e636803",
     "openapi/execution-v2-foundation.openapi.json": "sha256:7af1d2024b6653bd05b0626d621e7de9b418bb8d45119c84291e00fee67610ab",
     "openapi/portal-profile.openapi.json": "sha256:9a8e8ba48f175ff312658913071b79df5050fc229231c0fe25592cdb45c7ef6b",
     "openapi/research-alpha-import.openapi.json": "sha256:791d2eac0ec5c162f3ac0fe596ed3bd0e2c613831652883fa492e3b686f49664",
@@ -299,7 +302,7 @@
     "openapi/research-search.openapi.json": "sha256:507da27c00fd9154f84f3c29e0f15034021cd80871c4db9647fa88edb8bdbe53",
     "openapi/research-split.openapi.json": "sha256:4897e1bf7086cc302fc3d07237c3ac157c8a8b6df9bcfef2f4de9f3fb13add7e",
     "openapi/research-window-execution.openapi.json": "sha256:5c007a46f847a695e9d9b7d73d55a92cd09a07db5f1e80afa619db436f6e9d3b",
-    "package.json": "sha256:0ddfe84d00239839abb6b034ba0a83b715ef68391c798aaa8fdbc6afd4ddae37",
+    "package.json": "sha256:2fa90b291be701ce9e5d375a81b5cf2a231eea26ce3cb0bd74bfe4ed4497091c",
     "schemas/command-envelope.v1.schema.json": "sha256:53c6f3ccf66d1b74de59945fe33f480ae58bb00ae500b7696d0411d8094d4cb1",
     "schemas/common.v1.schema.json": "sha256:a74a2c08ff7e87f8cb9110932099c66520bb942788000f5499c594d1c6ef5f88",
     "schemas/event-envelope.v1.schema.json": "sha256:527a2d5128758d088bfcd9e86291ac1a0be1b993821c90be2bd2a36890d10a95",
@@ -368,6 +371,7 @@
     "tooling/generate-execution-resource-scoped.mjs": "sha256:49a412cd4362748368bf52a3842e51f74e393a5f5d420b3e1abbd08d5883a52b",
     "tooling/generate-execution-retained-scoped.mjs": "sha256:ad8ec3dc323448d797956ca3cb2a62878e9d64e2c659ccab1636ccc71ff937b9",
     "tooling/generate-execution-scoped-records.mjs": "sha256:6c8954ef1bbd0e96d50590486e31b49dba6098b901536858b1ee6448095936c6",
+    "tooling/generate-execution-trusted-commands.mjs": "sha256:cedb4b508cac96cee6a1fd01f0dbbf39eaf68b5bcd7908023f3e1f3f3cd27334",
     "tooling/generate-execution-v2-foundation.mjs": "sha256:14a06540f8fabcd79611519348df441b4a68d258304c91498ab2551f496448d2",
     "tooling/generate-governance-review-context.mjs": "sha256:5cd1a78229cf7742645ba614e673ac0c0b89ba04076894e8d6191c95139d1651",
     "tooling/generate-portal-profile.mjs": "sha256:0965a3f642e6e2a9684d721bee8b80acb4991d0e4cbd8c424459f6a64ef401ef",
@@ -414,7 +418,7 @@
     "tooling/generate-research-window-execution.mjs": "sha256:8cfe6e1cf9623ba6b0290aed00815eea6c965bc91b85ca2bf14042a0388855b0",
     "tooling/native-read-fixtures.mjs": "sha256:12b97e776051d6f754a04ae544be428ab5946699967e2d1827e1f60156d81032",
     "tooling/research-window-views.mjs": "sha256:c53c0fb02aa0948c9fc5cc18b20489871b48423dd4eaa9156c1b4e854e058602",
-    "tooling/verify-generated.sh": "sha256:f127fedd4141127a499a3dccd8793784ce0eba9b73f46e2196610eea0a5ec6fe"
+    "tooling/verify-generated.sh": "sha256:6ef6e13ebdbd8a4174d4cb143c09d10394c2e3501deac86a30f4afe18e45489a"
   },
   "schema_version": "contracts.snapshot.v1"
 }

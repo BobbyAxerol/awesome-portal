@@ -7,6 +7,8 @@ import { createControlApiApp } from "../src/app";
 import { ControlApiConfig } from "../src/config";
 
 export const TEST_TABLES = [
+  "execution_trusted_command_events",
+  "execution_trusted_commands",
   "execution_manager_model_heads",
   "execution_manager_model_revisions",
   "portal_access_policy_events",

@@ -2,7 +2,7 @@
   "schema": "research-loop.live-route-ledger.v1",
   "statement": "Live static route ledger. Regenerate with --write-live-routes in the same change that adds or removes a route.",
   "protected_kernel_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
-  "route_count": 287,
+  "route_count": 291,
   "routes": [
     {
       "method": "DELETE",
@@ -308,6 +308,11 @@
       "method": "GET",
       "path": "/api/v1/execution/broker-bindings/:bindingId/exposure",
       "owner": "apps/control-api/src/execution/analytics.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/capital-commands/:id",
+      "owner": "apps/control-api/src/execution-v2/command.controller.ts"
     },
     {
       "method": "GET",
@@ -1133,6 +1138,21 @@
       "method": "POST",
       "path": "/api/v1/execution/approvals/:approvalId/capital-preview",
       "owner": "apps/control-api/src/execution/analytics.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/capital-commands",
+      "owner": "apps/control-api/src/execution-v2/command.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/capital-commands/:id/reconcile",
+      "owner": "apps/control-api/src/execution-v2/command.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/capital-commands/preview",
+      "owner": "apps/control-api/src/execution-v2/command.controller.ts"
     },
     {
       "method": "POST",

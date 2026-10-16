@@ -51,6 +51,7 @@ import { ResearchCompareError } from "./research/compare.error";
 import { ResearchReleaseCandidateError } from "./research/release-candidate.error";
 import {isReadStoreUnavailable} from "./db/read-unavailable";
 import { ExecutionReadScopeError } from "./execution-v2/read-scope";
+import { CommandHttpError } from "./execution-v2/command.error";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -124,6 +125,7 @@ export class HttpErrorFilter implements ExceptionFilter {
       void reply.status(exception.status).send({
         error: { code: exception.code, message: exception.message },
         request_id: requestId,
+        ...(exception instanceof CommandHttpError?{public_copy_key:exception.publicCopyKey,safe_next_action:exception.safeNextAction}:{}),
         ...(exception instanceof GovernanceError && exception.details
           ? { details: exception.details }
           : {}),

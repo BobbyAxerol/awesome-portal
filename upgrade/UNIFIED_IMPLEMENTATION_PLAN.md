@@ -9363,7 +9363,7 @@ Không copy lại toàn guide hoặc mở implementation từ việc nhận tài
 
 | Track | Detailed authority | Disposition hiện tại |
 | --- | --- | --- |
-| Portal ELP2-00…11 | [BE guide v1.2](./execution_loop/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md) | 00 audit delivered;01–04 landed,04=`2ec5924d`, final hook contracts574/API3,306 PASS+3 existing skips/restore PASS.05=`c4109ef3` [catalogue/source gates](./execution_loop/evidence/ELP2-05/README.md).06 explicitly assigned: [Manager models/score technical return, source/config/consumer exit NOT_MET](./execution_loop/evidence/ELP2-06/README.md).07…11 NOT_STARTED; no shared-runtime activation |
+| Portal ELP2-00…11 | [BE guide v1.2](./execution_loop/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md) | 00 audit delivered;01–04 landed,04=`2ec5924d`, final hook contracts574/API3,306 PASS+3 existing skips/restore PASS.05=`c4109ef3` [catalogue/source gates](./execution_loop/evidence/ELP2-05/README.md).06=`42c39079` [Manager technical return](./execution_loop/evidence/ELP2-06/README.md).07 assigned: [trusted command/status component and exact source gaps](./execution_loop/evidence/ELP2-07/README.md); full source/operation/consumer exit NOT_MET.08…11 NOT_STARTED; no shared-runtime activation |
 | Edge EPG10-00…11 | [Edge guide v1.2](./execution_loop/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md) | GUIDE_READ; HK inspection READ_ONLY; no Edge source/runtime changes |
 | Claude UXM-00…10 | [UX guide v1.1](./execution_loop/EXECUTION_LOOP_MANAGER_UX_DESIGN_GUIDE_v1.1_VI.md) | RULES_READY; browser audit/new design/implementation not performed in this package |
 | Shared score / Regime | [FINAL v1.1](./execution_loop/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md) | Formula/weights/bands selected;06 pure reference/calculation tests delivered, no request-path computation. Runtime source/calibration/config and Regime inputs still pending; API scores null/policy_pending |
@@ -9600,6 +9600,7 @@ block only dependent activation. Existing Research/Governance evidence preserved
 
 ### ELP2-07 — Trusted command và status bridge
 
+- **Current return2026-10-16:** assigned separately on `42c390796f4bd2a7de151313944b41f1245bdbc2`; [packet / actual validation](./execution_loop/evidence/ELP2-07/README.md), [HK source pins](./execution_loop/evidence/ELP2-07/source-alignment.md), [operation matrix / recovery / Claude handoff / debt](./execution_loop/evidence/ELP2-07/coverage-and-handoff.md). Four named APIs and eight candidate capital operations have a durable Portal component, **not a source-qualified dispatch**. Default adapter and retained mutation guard remain closed. Exact source receipts, other control/profile families and UXM-09 consumer remain open; no runtime/FE work or next-phase activation assigned.
 - **Goal/dependency:** 01/02/03 contract/policy; mutation cần exact TS/PM operation, qualified Edge trust/relay và approval riêng.
 - **To-do:** human/workload envelope, unchanged PM payload, CAS/idempotency/status lookup, commit-time policy; delivery/business/projection/venue states tách; giữ R1/R2/Live semantics; no universal1x, no auto-liquidation archive/recall.
 - **Claude:** UXM-09 confirmation/receipt/retry-unknown và gate-specific disabled states; không đổi retained preview thành write permission.

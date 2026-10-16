@@ -22,6 +22,13 @@ aggregate or qualified-source recompute worker is claimed. Normal hook is the
 landing gate. Frontend remains on hold; no goal,07+, push or runtime activation.
 This supersedes only the earlier “06 not assigned” status, not source evidence.
 
+**Subsequent assignment2026-10-16:** Bobby assigned [ELP2-07](evidence/ELP2-07/README.md)
+on `42c39079`. Four named capital command/status APIs, immutable transport
+correlation and lookup-only recovery have a source-dark technical implementation;
+[exact operation coverage / Claude handoff / open gates](evidence/ELP2-07/coverage-and-handoff.md).
+No source command, runtime, frontend, push or08 assignment follows. Full07 exit
+still requires qualified PM/Edge command/status receipts and consumer acceptance.
+
 [ELP2-00 packet](evidence/ELP2-00/README.md) có baseline manifest mới nhất,
 112-route census,14family/11XLC/15decision map,8audit checks và backend/Claude
 handoff. Pins cũ dưới đây giữ lịch sử, không ghi đè runtime/source snapshot mới.

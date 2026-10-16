@@ -12,6 +12,8 @@
     "VIEW_DERIVED"
   ],
   "tables": [
+    {"table":"execution_trusted_commands","writer_owner":"PORTAL_WORKFLOW","ingress":"NAMED_COMMAND_WITH_CURRENT_AUTHORITY","verbs":{"insert":1,"update":2,"delete":0,"read":5},"readers":3,"rows_dev":null,"rows_stable":null,"retention":"RETAIN_ACCEPTED_UNKNOWN_AND_IDEMPOTENCY_HISTORY","disposal_decision":"NO_AUTOMATIC_DELETE","note":"ELP2-07 Core transport ledger, NOT TS financial authority. Row bytes bounded32KiB per object,100 in-flight and1024 total intents per workspace; stop on cap. Never erase ambiguous outcome or recycle key on TTL.","reached_via":"ExecutionCommandController -> ExecutionCommandService -> CommandStore; internal recover only reads same source key"},
+    {"table":"execution_trusted_command_events","writer_owner":"PORTAL_WORKFLOW","ingress":"ATOMIC_COMMAND_STATE_TRANSITION","verbs":{"insert":1,"update":0,"delete":0,"read":0},"readers":0,"rows_dev":null,"rows_stable":null,"retention":"IMMUTABLE_COMMAND_HISTORY","disposal_decision":"NO_AUTOMATIC_DELETE","note":"ELP2-07 append-only transport-state and product-audit transaction. No credentials/raw PM reason in audit; no financial compensations.","reached_via":"CommandStore state transaction -> event + existing product_audit_events"},
     {
       "table":"execution_manager_model_revisions","writer_owner":"PORTAL_PROJECTION","ingress":"INTERNAL_QUALIFIED_ADAPTER",
       "verbs":{"insert":1,"update":0,"delete":0,"read":3},"readers":3,"rows_dev":null,"rows_stable":null,

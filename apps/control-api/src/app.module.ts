@@ -8,6 +8,9 @@ import { AuthController } from "./auth/auth.controller";
 import { ProfileController } from "./auth/profile.controller";
 import { ExecutionAccessController } from "./execution-v2/access.controller";
 import { ExecutionAccessService } from "./execution-v2/access.service";
+import { ExecutionCommandService } from "./execution-v2/command.service";
+import { ExecutionCommandController } from "./execution-v2/command.controller";
+import type { CommandTrust } from "./execution-v2/command-trust";
 import type { AccessTrustProvider } from "./execution-v2/access-trust";
 import { ExecutionReadScopes } from "./execution-v2/read-scope";
 import { AuthService } from "./auth/auth.service";
@@ -206,6 +209,7 @@ import { P22PublicationBridgeService } from "./research/p22-publication-bridge.s
 /** Internal composition seam, never populated from request headers/body or
  * runtime environment flags. TEST_ONLY authority cannot enter a non-test app. */
 export interface ControlApiDependencies {
+  executionCommandTrust?: CommandTrust;
   executionAccessTrust?: AccessTrustProvider;
   allowTestOnlyExecutionAccess?: boolean;
 }
@@ -226,6 +230,7 @@ export class AppModule {
         AuthController,
         ProfileController,
         ExecutionAccessController,
+        ExecutionCommandController,
         // A4-2 retired the six /api/admin/users* routes. They mutated
         // accounts with no expected revision, no idempotency, no step-up and
         // no operation record, so leaving them mounted beside the control
@@ -344,6 +349,12 @@ export class AppModule {
           provide: ExecutionReadScopes,
           useFactory: (db:Pool,access:ExecutionAccessService,cfg:ControlApiConfig)=>new ExecutionReadScopes(db,access,cfg),
           inject: [CONTROL_API_POOL,ExecutionAccessService,CONTROL_API_CONFIG],
+        },
+        {
+          provide: ExecutionCommandService,
+          useFactory: (db:Pool,access:ExecutionAccessService)=>new ExecutionCommandService(db,access,
+            dependencies.executionCommandTrust,dependencies.allowTestOnlyExecutionAccess===true),
+          inject:[CONTROL_API_POOL,ExecutionAccessService],
         },
         {
           provide: AccountLifecycleService,

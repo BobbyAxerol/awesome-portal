@@ -119,6 +119,8 @@ cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
 # dependencies are copied into the networkless contract verification cell.
 cp -a "${ROOT_DIR}/apps/control-api/src/manager-lists/scoped-manager.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/manager-lists/"
+cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/command.contract.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/execution-v2/"
 cp -a "${ROOT_DIR}/apps/control-api/src/resource-read/scoped-resource.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/resource-read/"
 # Access validation reuses the finite capability vocabulary. Its PostgreSQL
