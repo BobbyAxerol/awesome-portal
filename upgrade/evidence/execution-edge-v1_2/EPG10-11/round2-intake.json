@@ -1,6 +1,144 @@
 {
   "schema": "epg10.connected-round2-intake.v1",
-  "current_state_ref": "publication_followup (prior latest_followup and initial intake remain historical)",
+  "current_state_ref": "blocked_audit (publication_followup and earlier intake remain historical)",
+  "blocked_audit": {
+    "observed_utc": "2026-10-16T19:13:36Z",
+    "feature_baseline": "fdd24ec34080fff01584ae473691be9c8368b810",
+    "purpose": "Full original10/11 connected objective; not narrowed to independent completion",
+    "previous_goal_turn": "NO_CONNECTED_PROGRESS_SOURCE_PIN_REFRESH_ONLY_NO_BINDING_OR_NEXT_ACTION_CHANGE",
+    "consecutive_same_blocker_goal_turns": 3,
+    "goal_disposition": "BLOCKED_NOT_COMPLETE",
+    "verification": {
+      "provenance": "READ_ONLY_METADATA_HASH_LINK_AUDIT_NOT_PRODUCT_TESTS",
+      "status": "PASS",
+      "edge_input_hashes": 439,
+      "edge_helper_hashes": 4,
+      "local_file_links": 594,
+      "missing_links": [],
+      "git_diff_check": "PASS",
+      "new_product_or_connected_tests": 0
+    },
+    "approval": "Original round2 remains approved; no new phase/general approval",
+    "independent11": "COMPLETE",
+    "full_connected10_11": "NOT_MET",
+    "actual_compatible_new_inputs": 0,
+    "connected_cases": {
+      "T10_01": "NOT_RUN",
+      "T10_02": "NOT_RUN",
+      "T10_03": "NOT_RUN",
+      "T10_04": "NOT_RUN",
+      "T10_05": "NOT_RUN",
+      "T11_01": "NOT_RUN",
+      "T11_02": "NOT_RUN",
+      "T11_03": "NOT_RUN",
+      "T11_04": "NOT_RUN",
+      "T11_05": "NOT_RUN"
+    },
+    "fresh_source_evidence": {
+      "ts_commit": "1dde708ed8f787d4f81e156f0a160b4a45226325",
+      "native_publication_rust_sha256": "13f21d5369b641dafaaff9f5664ee5d97c5d870376b57ace3ce8feba17e59c05",
+      "native_sql59_sha256": "0115a6bc9142e330ec48b9ada7ecc6506548815190790ed776178f332ced6a96",
+      "native_fence_return": "NO_NEW_QUALIFIED_RETURN_DECISIVE_BYTES_UNCHANGED",
+      "pm_commit": "84456381f11b056a2d003fe3941f52e8a69dbb92",
+      "pm_current_read_handoff_sha256": "f8cce9fa63e14069664b55e85cd04031a9de62beba36e3a29255a61ddaf67484",
+      "pm_command_handoff_sha256": "7b62d7e17198347c85adc5267a319a175733adc2cb3b540d167a35135ed04a0b",
+      "pm_actual_read_provider_or_trust_installed": false,
+      "pm_real_mapping": "UNBOUND_NOT_RUNTIME_CERTIFIED",
+      "pm_export_or_apply_enabled": false,
+      "pm_command_providers": "UNCONFIGURED_FAIL_CLOSED",
+      "pm_command_qualified_cells": 0,
+      "pm_edge_wire_mounted": false,
+      "pm_new_send_transport": false,
+      "pm_authoritative_retention": "NOT_PUBLISHED_RUNTIME_GATE",
+      "pm_current_request_binding": "PEER_OWNED_UNQUALIFIED_WIP_NOT_ADOPTED_OR_EDITED",
+      "research_commit": "d92efc0e33d71d2d2f21f7f67cafa1cae946cb0b",
+      "research_commissioning_packet_sha256": "e08aa877e3fc3a3a00df312d1476fb9a0c22e6d503e0be4a5a5300be1223fe43",
+      "research_actual_provider_return": "NO_NEW_QUALIFIED_RETURN_COMMISSIONING_WIP_UNCHANGED_OPEN_PACKET",
+      "scoped_cutover_manifest": "EMPTY_SCOPE_NO_ACTIVATION",
+      "operations_production_budget": null
+    },
+    "inspection_safety": {
+      "rejected_request": "Remote commissioning document tail/process-derived scan rejected by safety review; not retried or bypassed",
+      "allowed_alternative": "Only Git revision/diff counts and named public commissioning packet SHA256; no document body or process arguments",
+      "required_inspection_still_blocked_by_review": false
+    },
+    "partition": {
+      "runnable_owned_binding_or_product_work": [],
+      "independently_runnable_preparation": "Already complete; no additional candidate-only fixture/job substitutes connected input",
+      "genuine_blocker": "No qualified actual authenticated current-provider/publication/command binding or exact connected target/recovery input returned",
+      "owners_and_exact_unblock_actions": "Original six10 packet SOURCE/TRUST/COMMAND/RESEARCH/LOAD/RELEASE; no blanket PM/TS/DL roadmap wait",
+      "packet": "upgrade/evidence/execution-edge-v1_2/EPG10-10/SHADOW_CUTOVER_AND_OWNER_RETURN.md",
+      "next": "Resume original approved round as each actual compatible input arrives, bind it and execute its affected03/08/09/10/11 cases"
+    },
+    "runtime": {
+      "hk": {
+        "observed_utc": "2026-10-16T19:13:16.269042+00:00",
+        "protected_tuples": 18,
+        "unchanged_against_protected_baseline": true,
+        "disk_available_bytes": 211955408896,
+        "disk_total_bytes": 518933680128,
+        "measurement_lock": {
+          "owner": "claude P18.4 G13 isolated v224 release 20261016T190612Z",
+          "purpose": "G13 isolated dr05-upstream + dr08 on v2.2.4 release set + canonical writer",
+          "started_utc": "2026-10-16T19:06:12Z",
+          "until_utc": "2026-10-16T20:16:12Z"
+        },
+        "docker_image_and_buildkit_inventory": [
+          {
+            "Active": "39",
+            "Reclaimable": "7.725GB (25%)",
+            "Size": "30.57GB",
+            "TotalCount": "102",
+            "Type": "Images"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "442.3MB",
+            "Size": "28.3GB",
+            "TotalCount": "371",
+            "Type": "Build Cache"
+          }
+        ]
+      },
+      "sgp": {
+        "observed_utc": "2026-10-16T19:13:18.447261+00:00",
+        "protected_tuples": 5,
+        "unchanged_against_protected_baseline": true,
+        "disk_available_bytes": 167823126528,
+        "disk_total_bytes": 665811062784,
+        "measurement_lock": null,
+        "docker_image_and_buildkit_inventory": [
+          {
+            "Active": "25",
+            "Reclaimable": "74.4GB (83%)",
+            "Size": "88.82GB",
+            "TotalCount": "328",
+            "Type": "Images"
+          },
+          {
+            "Active": "93",
+            "Reclaimable": "62.89GB",
+            "Size": "195.9GB",
+            "TotalCount": "3774",
+            "Type": "Build Cache"
+          }
+        ]
+      }
+    },
+    "c4": {
+      "decision": "NO_ACTION_NEEDED",
+      "own_artifacts_created": 0,
+      "removed_bytes": 0,
+      "shared_prune": false,
+      "retention": "All7 active Portal worktrees, unchanged23 protected runtime tuples and active/named rollback/08PKI retained"
+    },
+    "fresh_edge_product_tests": 0,
+    "new_connected_cases": 0,
+    "actual_new_bound_ports": 0,
+    "production_mutations": 0,
+    "peer_edits": 0,
+    "push_or_merge": false
+  },
   "publication_followup": {
     "observed_utc": "2026-10-16T19:09:36Z",
     "feature_baseline": "d625b12d79e6b5468deaedc3dfbffe57dc5ad6f4",

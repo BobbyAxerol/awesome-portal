@@ -2,6 +2,8 @@
 
 Status: COMPLETE_INDEPENDENT — implemented, isolated-tested and cleaned.
 Full connected acceptance NOT_MET; no production activation/sign-off.
+Connected objective BLOCKED after three fresh same-input audits; original
+round2 approval remains valid. See current `blocked_audit` in the intake.
 Bobby approved independent11 and original10 round2 on actual owner returns.
 Current original10/11 round2 continuation is also approved; no repeated generic
 approval is required. See the dated intake below before historical source pins.

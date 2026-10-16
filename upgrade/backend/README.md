@@ -47,6 +47,9 @@ Chúng không thay thế phase hoặc exit gate trong
   provider-publication receipt; it is no longer pending owner source publication.
   This is isolated source, not runtime or another policy approval request.
   Actual authenticated workload/field provider and source export remain unbound.
+  Connected goal BLOCKED after three fresh same-input audits; independent11
+  COMPLETE/full10/11 NOT_MET. Resume original approved round on an actual
+  compatible owner return, no new phase/general approval.
   Historical08 completion round after earlier deferral recorded PM
   `c401a023` still publishes no actual human/workload/COMMIT provider and Research
   `169195ca` remains unqualified/UNMAPPED. Single owner packet now specifies
