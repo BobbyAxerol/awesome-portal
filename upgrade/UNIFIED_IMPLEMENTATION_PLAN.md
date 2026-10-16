@@ -51,8 +51,12 @@
 > guards qualified source-dark: final490automated PASS,0FAIL/ignored/skip,
 > fmt/strict zero-warning Clippy PASS. Full08 NOT_MET for actual current providers,
 > TS commit/business proof and researcher field matrix.
-> Bobby explicitly defers actual mapping/authority/field-matrix acceptance to
-> parallel PM integration. Exact6Manager+3Proxy TLS repair is connected-qualified:
+> Latest request resumes08 after earlier PM deferral; fresh PM`c401a023` explicitly
+> NOT_PUBLISHED for actual runtime authority/COMMIT proof, Research`169195ca` still
+> no production provider/UNMAPPED. Single owner packet names exact RG03/RG08 read
+> provider/mapping and separate restricted/command returns; no whole-PM13/P184
+> dependency.12:55UTC audit matches18HK+5SGP post-repair tuples with no mutation
+> or new tests. Exact6Manager+3Proxy TLS repair is connected-qualified:
 > 6TLS/12positive/12denial PASS;46helper tests PASS; valid fallback loaded. Initial
 > wrong method expectation and containment/recovery retained, no policy weakening.
 > Own8.388GB +212,992B test artifacts removed; all23runtime images/configs unchanged,

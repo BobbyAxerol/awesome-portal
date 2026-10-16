@@ -1,5 +1,93 @@
 {
   "schema": "epg10.security-verification.v1",
+  "latest_authority_audit": {
+    "recorded_at_utc": "2026-10-16T12:55:22Z",
+    "provenance": "READ_ONLY_CURRENT_SOURCE_AND_RUNTIME_METADATA_NOT_NEW_SECURITY_QUALIFICATION",
+    "status": "RESUMED_ACTUAL_AUTHORITY_PUBLICATION_MISSING",
+    "owner_packet": "SECURITY_CONTRACT_AND_OWNER_RETURN.md",
+    "audit_change_verification": {
+      "git_diff_check": "PASS",
+      "json_contract_tracking_assertions": "PASS;8Research hash formats,2current PM artifact hashes/provider facts,evidence links,4tracking indexes,historical test/connected counts and9unaccepted formal families preserved",
+      "hk_tuple_comparator": "PASS after Docker leading-slash name normalization; initial name-format mismatch only, not runtime drift",
+      "product_security_tests_run": 0
+    },
+    "full_phase08_accepted": false,
+    "tls_repair_still_qualified": true,
+    "old_owner_deferral": "Historical; newest completion request resumes the same08, not generic approval pending",
+    "pm": {
+      "worktree": "/home/bobby/.worktrees/trading-system-pm-v1_1",
+      "branch": "feat/portfolio-account-v1_1-parallel",
+      "commit": "c401a02365bbe2ae341a7a135391ce3789aeb29d",
+      "tracked_and_untracked_clean": true,
+      "handoff": "contracts/baseline/portfolio-account-v1_1/pma11-14-edge-command-handoff.json",
+      "handoff_sha256": "7b62d7e17198347c85adc5267a319a175733adc2cb3b540d167a35135ed04a0b",
+      "evidence_sha256": "0e7aea46460473220f3f2eb6e0c5b3d35deb248fa7624d5b61794814d9e5ddc5",
+      "runtime_human_workload_provider": "NOT_PUBLISHED",
+      "runtime_commit_lease_proof": "NOT_PUBLISHED",
+      "production_mounted": false,
+      "edge_wire_mounted": false,
+      "qualified_runtime_targets": [],
+      "producer_gap_register": "TRADING_SYSTEM_UNIFIED_IMPLEMENTATION_PLAN.md §58.66.4",
+      "isolated_482_not_actual_authority_proof": true,
+      "pki_note": "Historical expired-TLS note superseded by Edge connected repair, not edited in peer history"
+    },
+    "research": {
+      "worktree": "/home/bobby/portal-research",
+      "host": "SGP",
+      "branch": "docs/research-loop-plan",
+      "commit": "169195ca534462dd07376bcc5872b474ba366567",
+      "tracked_clean": true,
+      "peer_untracked_files_preserved": 6,
+      "production_current_policy_provider": "ABSENT",
+      "portal_ts_identity_mapping": "UNMAPPED",
+      "current_observed_manifest": "upgrade/execution_loop/evidence/ELP2-10/qualification-input.observed.json",
+      "manifest_observed_at_utc": "2026-10-16T12:51:58Z",
+      "manifest_scope": "SELECTED_PAPER_REVIEW_TARGET_NOT_ACTIVATED",
+      "manifest_records": {},
+      "sha256": {
+        "apps/control-api/src/main.ts": "d9383c44b73cbd6eaccfe986a1737487611c8d032f7f64df1227274a39738b34",
+        "apps/control-api/src/app.module.ts": "49bc66f405fe53b9edc7a32a87d4ba1309cd19d94936db9551376f435421209c",
+        "apps/control-api/src/execution-v2/access-trust.ts": "14a1d3210f0d633ae5e11bdb1e57c6e6a7611429a58bec94428b6fe7cc9ed59a",
+        "apps/control-api/src/auth/profile.contract.ts": "fc6cdfe7a41819e89aa0298a85a583ac90f3230c283e9c1a7dcc9aba354a2965",
+        "apps/control-api/src/execution-v2/access.service.ts": "ade195afd7f42436d75bfad0e46f68dfeb5c343ec945ef49cf4fbb716ec23176",
+        "apps/control-api/src/execution-v2/publication-adapter.ts": "cc092b1602e06ae897ca4c857dc0d39b6bce28d130b0a2f7a54cb38da682975f",
+        "upgrade/execution_loop/evidence/ELP2-10/qualification-input.observed.json": "41d1362588ed761d47f4edfb7eed1da2c46a4fac932625e45135ba6e9a846e0a",
+        "upgrade/execution_loop/evidence/ELP2-10/qualification-continuation.md": "e4f8524c9deaa4212c78f5a4fdbae2b7063b808b820729e703e7f8b85a5aa34a"
+      }
+    },
+    "parallel_sources": {
+      "ts_commit": "bfc19d5ef72fe61f9e84ec45cd930b53813d85a6",
+      "dl_canonical_commit": "5bf5cd540498b82959342c7cfb2ebeaac3007426",
+      "dl_closure_commit": "cd3fd3a68cb5cb3ffe030425a7e6d3d21fdb908f",
+      "peer_source_mutations": 0
+    },
+    "dependency_partition": {
+      "manager_read": "RG03/RG08 actual current authenticated provider, verified identity mapping/current revisions and Research concrete composition; then current-scope/revoke/stream/cache positive and negative qualification",
+      "restricted_researcher_only": "Explicit approved field/precision/history/export/SSE policy plus current verified links; absent policy denies this lane only",
+      "commands_only": "RG03/RG17 actual native current human/workload lease through outer COMMIT and protected-owner/Stan ceiling; correlated revoke-first/commit-first proof; RG04 owning outcome is the separate07 command-port dependency",
+      "whole_pm13_p184_required_for_read_trust": false,
+      "no_automatic_financial_activation": true,
+      "independent_edge_implementation_test_cleanup_left": 0
+    },
+    "runtime_reconciliation": {
+      "baseline": "tls-continuation.json runtime_reconciliation",
+      "hk_container_count": 18,
+      "hk_all_running": true,
+      "hk_id_image_config_started_at_restarts_unchanged": true,
+      "hk_bounded_inspect_output_sha256": "39bdd8f88ee8ac3beb19d697ae15c4123f498b6841254b476890943a69f31ced",
+      "sgp_container_count": 5,
+      "sgp_all_running": true,
+      "sgp_images_configs_restarts_match_baseline": true,
+      "sgp_unprivileged_socket_inspect": "DENIED; existing sudo -n docker inspect succeeded read-only",
+      "runtime_mutations_this_audit": 0,
+      "new_tests_executed": 0,
+      "new_resources_created": 0,
+      "cleanup": "NO_ACTION_NEEDED; no owned resources created, no shared prune, active/release/rollback retention unchanged",
+      "release_and_worktrees": "Same canonical source, stable release, runtime image/config and six active worktrees as tls-continuation.json release; feature baseline efa89e3437cb810dbddd8743380eb6f7ff163688",
+      "pushed": false,
+      "merged": false
+    }
+  },
   "latest_continuation": {
     "recorded_at_utc": "2026-10-16T12:44:26Z",
     "evidence": "tls-continuation.json",

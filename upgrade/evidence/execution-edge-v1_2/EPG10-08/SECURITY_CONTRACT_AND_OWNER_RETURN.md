@@ -6,7 +6,7 @@ EDGE08 and BE§§3–5/9.2/14.2/ELP2-02/03/04/09. This is the single08
 security/owner return, not another roadmap or permission to change a peer.
 
 Final recorded status: **IN_PROGRESS / TLS_RUNTIME_QUALIFIED /
-AUTHORITY_OWNER_DEFERRED_TO_PM_INTEGRATION**.
+ACTUAL_AUTHORITY_PUBLICATION_MISSING** (completion request resumed12:55UTC).
 Final490automated PASS/0FAIL/ignored/skip; fmt/strict zero-warning Clippy PASS.
 **Full08 exit NOT_MET**; actual current security is not production-certified.
 Continuation:46repair tests PASS, actual6TLS +12positive/12denial PASS across
@@ -20,6 +20,79 @@ restored, corrected effective POST405 policy qualified, failure retained honestl
 Use [verification](verification.json) and the final main journal for executed results.
 No isolated fixture is an issuer, membership receipt, mounted provider or native
 TS commit. Paper/sandbox/live are structural scopes; Canary is a live stage.
+
+## Current completion return —16/10/2026,19:55 ICT
+
+Bobby requested finishing this same08 after the earlier deferral. The missing
+dependency is now freshly verified **producer implementation/publication**, not
+phase approval, secret values, an expired certificate or another Edge deny adapter.
+Historical deferral/TLS statements below do not override this current return.
+
+PM `feat/portfolio-account-v1_1-parallel@c401a02365bbe2ae341a7a135391ce3789aeb29d`
+explicitly records in
+`contracts/baseline/portfolio-account-v1_1/pma11-14-edge-command-handoff.json`:
+`runtime_human_workload_provider=NOT_PUBLISHED`,
+`runtime_commit_lease_proof=NOT_PUBLISHED`, production/Edge mounts false, no
+qualified runtime targets. PM main plan§58.66.4 names the actual trust/full
+owning outcome gaps. Its482PASS source/PG/ASGI tests are isolated, not actual
+identity or native revoke/COMMIT proof. Its PKI note is superseded by our
+6TLS/12positive/12denial repair receipt; no second TLS repair is required now.
+
+Research `docs/research-loop-plan@169195ca534462dd07376bcc5872b474ba366567` still
+supplies no executionAccessTrust override from main.ts, has an unqualified/null
+provider in access-trust.ts and UNMAPPED profile identities. The newly observed
+ELP2-10 qualification-input.observed.json at12:51:58Z explicitly reports
+SELECTED_PAPER_REVIEW_TARGET_NOT_ACTIVATED, empty records and no production
+provider. Offline consumer leases do not supply human/business authority.
+
+### One request to the actual TS/PM and Research owners
+
+1. **TS/PM — RG03/RG08 current read authority:** publish a concrete authenticated
+   current-policy provider/contract, exact verified Portal issuer+subject/user-ID
+   →TS human issuer+subject/UUID mapping and revision, current app/session/
+   membership/delegation/policy revisions, protected-owner anchor and current
+   manager all-business read grants. Supply safe provider/config references,
+   source commit and target/profile scope, unknown/revoked/unavailable behavior
+   and the real revoke/invalidation mechanism. A role/display name/static grant,
+   successfully signed transport token or current witness constructor is not
+   this provider. No secret value belongs in chat or Git.
+2. **Research — current-policy composition:** bind those actual facts through
+   ControlApiDependencies.executionAccessTrust and the existing server current
+   session/identity machinery; return exact verified mappings and receipts.
+   Edge then binds CurrentReadGrantProvider without caching permission grants.
+   Do not claim SOURCE_VERIFIED from local fixture/consumer lease alone. Do not
+   wait for all PM13/P184 publication merely to supply this trust contract.
+3. **Restricted researcher lane only:** owner-reviewed exact allowed fields,
+   precision/bands/history/export/SSE and current linked ownership/membership.
+   BE§4.8 remains PROPOSED; absent decisions deny this lane. This does not block
+   manager all-business read acceptance once items1–2 are real. Existing service
+   Manager reads remain available but are not human-policy qualification.
+4. **Command lane only — RG03/RG17:** implement actual human/workload/delegation
+   authority serialization/lease retained through outer native COMMIT, plus
+   protected-owner/Stan ceiling/grant lineage. Return correlated revoke-first
+   (no effect) and COMMIT-first (one valid committed effect retained) receipts,
+   UTC+monotonic timestamps and current revision/operation/target bindings.
+   No network I/O inside monetary transactions or always-true lease provider.
+   RG04 durable original intent/full owning outcome/retention remains the07
+   command-provider dependency; do not make it a prerequisite for08-read.
+
+**Accept within the same08:** current manager read positive controls, revoked
+old scopes/cursors/cache/export/SSE denied, unaffected scope continues, wrong
+issuer/audience/expiry/certificate rejected, no sensitive field/aggregate leak;
+measure actual authority-commit→last restricted disclosure including buffers.
+Command acceptance additionally proves both native transaction race orders.
+No invented revocation SLA, synthetic-runtime substitution or automatic command
+activation. Return exact sanitized hashes/receipts and target manifest; actual
+deployment must stay inside its approved blast radius/rollback.
+
+**Owned now:** source/hash audit and this consolidated request finished; all
+independent code/test/TLS/cleanup work already completed. Rechecking runtime
+matched18HK post-repair tuples and5SGP image/config/restarts, all running. No
+additional restart, source change, new test/resource or cleanup this audit.
+The original490 tests, final46repair tests and actualTLS/read proof are retained
+separately in verification.json/tls-continuation.json, not counted again.
+No peer source was edited, no push/merge, no09…11 started. Full08 remains NOT_MET
+until actual provider-dependent qualification is possible.
 
 ## Implemented boundaries
 

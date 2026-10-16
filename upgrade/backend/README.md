@@ -19,8 +19,12 @@ Chúng không thay thế phase hoặc exit gate trong
   package qualified source-dark, final490automated PASS/0FAIL/ignored/skip,
   fmt/strict zero-warning Clippy PASS. Full08 NOT_MET: actual authority/TS native
   commit/researcher field policy remain exact scoped
-  dependencies. Owner explicitly defers actual authority/mapping/field matrix to
-  parallel PM integration. Named6Manager+3Proxy TLS repair is now connected-
+  dependencies. Completion request resumed08 after earlier deferral; fresh PM
+  `c401a023` still publishes no actual human/workload/COMMIT provider and Research
+  `169195ca` remains unqualified/UNMAPPED. Single owner packet now specifies
+  RG03/RG08 read trust and separate restricted-field/command returns, not a
+  whole-PM13/P184 gate. Read-only audit matches18HK+5SGP post-repair tuples;
+  no new runtime mutation/tests. Named6Manager+3Proxy TLS repair is connected-
   qualified:6TLS +12positive/12denial PASS; final46helper tests PASS, valid
   same-identity fallback loaded. Incorrect first method assertion + bounded
   containment/recovery retained in §23.17/TLS continuation; no policy weakening.

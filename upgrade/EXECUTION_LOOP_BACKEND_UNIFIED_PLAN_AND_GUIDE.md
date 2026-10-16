@@ -10136,10 +10136,14 @@ runtime prohibition is superseded only for that named repair, with strict
 verification, valid rollback/disable-path and shared-host locks preserved.
 No financial command activation, arbitrary grants, peer-history rewrite,
 unapproved business field matrix or09…11 activation follows from this approval.
-**Latest owner disposition:** actual identity/membership/field-matrix/Stan
-authority qualification is **OWNER_DEFERRED_TO_PM_INTEGRATION**; retain the
-same08 acceptance items for the parallel Portfolio & Account Management return.
-This does not waive proof, enable a grant, or block independent TLS preparation.
+**Latest owner disposition (2026-10-16,12:55 UTC):** Bobby requested completion
+of this same08 after the earlier PM-integration deferral. Status is now
+**RESUMED / ACTUAL_AUTHORITY_PUBLICATION_MISSING**, not pending generic phase
+approval. Fresh PM `c401a023` explicitly publishes neither the runtime human/
+workload provider nor COMMIT-lease proof; Research `169195ca` still has no
+production current-policy provider and reports UNMAPPED identity. Complete
+all owned independent work; do not manufacture those producer facts. Exact
+producer actions and split read/command acceptance are in the single owner packet.
 **Owned package:** QUALIFIED_ISOLATED_SOURCE_DARK; full runtime security acceptance
 is not closed. Eight formal families have limited isolated proof; T08-03 remains
 partial without actual business authority. No production family is certified.
@@ -10184,7 +10188,13 @@ Record phase approval, exact affected datasets/operations/profiles and partner r
 **Resource/test execution boundary:** Measure revocation propagation with UTC and monotonic timeline against approved bound; record sanitized trust/config digests, old/new credential behavior and secret-scan results. Shared-host lock, disposable
 namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
 
-**Technical debt / external gates:** Chưa tạo debt. Actual trust material/rotation window and researcher approved-field policy are owner/security dependencies. Prior TLS symptoms require fresh verification, not insecure bypass. Read acceptance need not wait for 07-command.
+**Technical debt / external gates:** No unfinished independent Edge code/test/
+cleanup remains. TLS repair is qualified, not still awaiting keys or a window.
+Actual TS/PM provider implementation/publication and Research current-policy
+composition/mapping are concrete cross-owner dependencies, not environment
+placeholders. Approved researcher fields block that restricted lane only;
+Stan mutation ceiling/native COMMIT proof block the command lane, not all-business
+read. Read acceptance need not wait for07-command or the whole PM13/P184 campaign.
 
 **Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
 actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
@@ -10193,8 +10203,9 @@ scope. **Hiện tại:** owned current-scope/JWT/SSE-expiry/TLS/secret-defense p
 qualified source-dark; final490automated PASS,0FAIL/ignored/skip, fmt/strict
 zero-warning Clippy PASS. Subsequent continuation prepares guarded same-identity
 TLS repair tooling; its separate test/cleanup receipt must precede operations.
-Actual providers/TS commit authority/researcher field matrix are explicitly
-owner-deferred to PM integration. Named Manager TLS repair is now connected-
+Actual providers/TS commit authority/researcher field matrix remain unpublished
+on the fresh completion audit; their earlier owner deferral is historical.
+Named Manager TLS repair is now connected-
 qualified with valid same-identity fallback loaded; all6Manager running, all3
 Proxy contexts reloaded, no Edge/DB/image/JWT/grant change. First wrong-status
 assertion and bounded containment/recovery are retained in
@@ -12989,6 +13000,83 @@ Runnable independent repair/tool/test/cleanup work left0. Exact resume owner:
 parallel TS/PM and Research return real mapping/current providers/accepted
 field policy/Stan ceiling +native commit lease; resume their dependent same08
 qualification then, no new phase or invented grant. No09…11 implementation.
+
+**12:55 UTC completion request / fresh producer audit (19:55 ICT):** user asks
+to finish08; this resumes its dependent acceptance, without changing business
+policy or granting peer-source/runtime authority. Goal: establish whether the
+new parallel TS/PM/Research commits now supply actual providers, then bind and
+qualify only a genuinely supplied scope. Same EDGE08/BE§§3–5 guides, current
+scope invariants, formal T08 cases and fail-closed rollback remain governing.
+
+- **PM:** clean `feat/portfolio-account-v1_1-parallel@c401a02365bbe2ae341a7a135391ce3789aeb29d`.
+  New PMA11-14 handoff has useful source-only native integer/full-outcome codec
+  and recovery seams, but explicitly `runtime_human_workload_provider=NOT_PUBLISHED`,
+  `runtime_commit_lease_proof=NOT_PUBLISHED`, production/Edge mounts false and
+  zero qualified runtime targets. Its482TEST_ONLY cases do not authenticate a
+  real user or prove native revoke-versus-COMMIT ordering. PM§58.66.4 confirms
+  RG03/RG17 actual trust and RG04 owning-outcome/provider gaps. Its expired-PKI
+  note predates our connected repair; do not reopen TLS or rewrite peer evidence.
+- **Research:** clean tracked `docs/research-loop-plan@169195ca534462dd07376bcc5872b474ba366567`;
+  six peer untracked continuation files preserved. `main.ts` supplies no
+  executionAccessTrust override, access-trust stays null/unqualified and profile
+  mapping UNMAPPED. Newly observed ELP2-10 manifest at12:51:58Z explicitly
+  `SELECTED_PAPER_REVIEW_TARGET_NOT_ACTIVATED`, `records:{}` and no production
+  provider. Latest21-file ELP2-10 tooling does not supply identity/current policy.
+- **TS:** `feat/v2-rust-first-okx-demo@bfc19d5ef72fe61f9e84ec45cd930b53813d85a6`
+  advances native replay/market work, not actual human authority. DL canonical
+  `main@5bf5cd540498b82959342c7cfb2ebeaac3007426`; active closure
+  `fix/p184-dl-closure@cd3fd3a68cb5cb3ffe030425a7e6d3d21fdb908f` does not
+  create human trust. Old quant-data-layer-v2-authority path no longer exists;
+  discovered current worktrees read-only instead, no recreation or peer edits.
+
+**Runnable-now completed:** fresh contract/source/hash review, precise producer
+return request in the existing owner packet, scope-specific acceptance mapping,
+tracking/evidence indexes reconciled and read-only runtime comparison.
+No new authority adapter is needed until actual authority exists: another
+default-deny adapter would not implement the missing producer. No stale new
+key/phase-approval request, synthetic grant, financial command or unapproved
+Research/TS source edit. The restricted researcher matrix and Stan command
+ceiling are not prerequisites for the independently acceptable manager read lane.
+
+**Remaining dependency / exact next action:** TS/PM authority owners publish
+RG03/RG08 current verified identity+business-policy provider (RG17 workload/lease
+when applicable); Research binds it through ControlApiDependencies and returns
+verified principal mapping/current revisions. Then run same08 actual revoke/
+cache/cursor/export/SSE and unaffected-scope positive controls. Command acceptance
+additionally needs a real current lease through outer COMMIT and both race
+orders; RG04 full owning outcome is a separate07 command binding dependency.
+No whole-PM13/P184 wait is imposed. Business field/ceiling decisions are needed
+only for lanes actually enabled; unknown researcher/mutation rights stay denied.
+
+**Verification/runtime/cleanup:** documentation-only continuation, no new Rust,
+Python, capacity or connected security test claimed. Prior immutable490 and
+final46helper PASS plus6TLS/12positive/12denial proof remain separate receipts.
+Read-only Docker inspection matches all18HK tuples including ID/image/config/
+StartedAt/restarts against post-repair baseline; all5SGP image/config/restarts
+match and all23run. Initial unprivileged SGP socket inspection was denied;
+existing `sudo -n docker inspect` succeeded, not a service failure or restart.
+No resource created, no cleanup required; no new image/build/cache, no shared
+prune. Canonical manager checkout `feat/manager-v2-paper-read@54c6f5f3`, SGP
+stable main@53316263, Edge release/revision/images, six active feature worktrees
+and explicit rollback/30day private repair retention remain as pinned in
+[TLS continuation](evidence/execution-edge-v1_2/EPG10-08/tls-continuation.json).
+
+**Latest disposition:** IN_PROGRESS / TLS_RUNTIME_QUALIFIED /
+ACTUAL_AUTHORITY_PUBLICATION_MISSING; **full08 exit NOT_MET**. No09…11 started.
+Machine-readable current source hashes, missing-provider facts and scope split:
+[verification latest authority audit](evidence/execution-edge-v1_2/EPG10-08/verification.json).
+The original deferral and TLS attempts above remain historical, not current
+permission gates or erased failures.
+
+**Audit-change verification:** `git diff --check` PASS; bounded JSON/contract/
+documentation assertions PASS:8Research SHA formats,2actual PM artifact hashes
+and explicit provider facts, linked evidence,4tracking indexes, original490/
+46/connected counts preserved and all9formal runtime families still unaccepted.
+Exact18HK tuple comparator PASS after normalizing Docker's leading slash on
+names (initial string-only mismatch was not runtime drift);5SGP inspected
+read-only through existing sudo. These are metadata checks, not new application
+security tests or a new runtime/capacity qualification. Only6documentation/
+sanitized-evidence files changed; unrelated untracked feasibility review kept.
 
 
 

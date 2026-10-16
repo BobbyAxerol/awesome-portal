@@ -722,8 +722,13 @@ deep-dive → ADR → slice → evidence discipline documented above.
   selected-payload secret defense qualified source-dark: final490automated PASS,
   0FAIL/ignored/skip, fmt/strict zero-warning Clippy PASS. Full08 NOT_MET for
   actual providers, TS commit/business proof and researcher field approval.
-  Bobby now explicitly defers the actual authority/mapping/
-  field matrix to parallel PM integration; do not fake grants or edit peer WIP.
+  Latest completion request resumes08 after the earlier PM deferral: fresh
+  PM`c401a023` still explicitly NOT_PUBLISHED for runtime authority/COMMIT proof;
+  Research`169195ca` has no production provider and UNMAPPED identity. The single
+  owner packet names RG03/RG08 read-provider/mapping returns and separate
+  researcher/command decisions; manager read does not wait for all PM13/P184.
+  Do not fake grants or edit peer WIP.12:55UTC read-only audit matches18HK+5SGP
+  post-repair image/config/restart tuples; no new runtime mutation or tests.
   Exact6Manager+3Proxy TLS repair is connected-qualified:6TLS/12positive/
   12denial PASS, final46helper tests PASS; valid same-identity fallback loaded.
   Eight formal families have limited isolated proof;
