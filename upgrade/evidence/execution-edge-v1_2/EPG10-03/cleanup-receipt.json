@@ -1,0 +1,23 @@
+{
+  "at_utc": "2026-10-16T03:31:04.690829+00:00",
+  "buildkit_pruned": false,
+  "deleted_contents": "Disposable git-archived TS Rust/migrations, owned test drivers, Cargo dependency cache, build target, private synthetic test logs/artifacts only",
+  "disk_available_after": 168924286976,
+  "disk_available_before": 167608987648,
+  "images_built": 0,
+  "images_pulled": 0,
+  "images_removed": 0,
+  "operational_containers_removed": 0,
+  "owned_containers_after": 0,
+  "owned_containers_before": 0,
+  "owned_lock_released": true,
+  "owner": "codex-epg10-03-native-20261016",
+  "receipt_sha256": "cba151c67442ba0f67aad00ae48d044c0627bed70a6da34bb0e60a1fc5adbb31",
+  "retention": "All pre-existing active/operational/rollback images, containers, BuildKit cache, networks, volumes, source checkouts and peer worktrees retained; none created by this phase",
+  "schema": "epg10.exact-cleanup.v1",
+  "shared_disk_delta_not_exclusive_reclaim": true,
+  "target": "/tmp/epg10-03-native.azQ8THAs",
+  "target_absent_after": true,
+  "target_allocated_bytes_before": 1315299328,
+  "volumes_removed": 0
+}

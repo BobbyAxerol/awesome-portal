@@ -675,7 +675,12 @@ deep-dive → ADR → slice → evidence discipline documented above.
   and PM-R2/Archive/Regime fixtures.11formal cases,36Rust+12Python PASS;
   57shared FX vectors match, fmt/clippy PASS. See §23.11 and02receipt. No runtime
   activation/DB mutation; owned602MB compile fixture/cache/target removed.
-  03…11 await named approval.01capacity exit remains unmet, not waived.
+  **EPG10-03 approved/in progress (§23.12):**6native Rust real-PG tests,
+  12runner safety and12catalogue regressions PASS; formal T03:4PASS/1BLOCKED,
+  **exit NOT_MET**. Reproduced TS generic publisher-generation fence gap;
+  single TS/PM return packet linked in03. No all-writer or external N03/runtime
+  acceptance; exact owned1.315GB temporary test/build/cache cleaned.
+  04…11 await named approval.01capacity exit remains unmet, not waived.
   No operational runtime/source/credential change, push or merge. Only owned
   test containers/private fixture/tempfiles removed; no image build/pull/prune.
 

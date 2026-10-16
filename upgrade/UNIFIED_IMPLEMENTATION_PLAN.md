@@ -12,8 +12,13 @@
 > inventory §7.**02 completed contract-only:**42logical families, exact shared
 > Research schema/mapping and Rust compatibility primitives;11formal cases,
 > 36Rust+12Python PASS,57shared vectors agree; fmt/clippy PASS. See §23.11 and
-> 02receipt. No new exporter active; owned test artifacts cleaned.03…11 await
-> named approval.01capacity is still pending; logical02 closure does not waive it.
+> 02receipt. No new exporter active; owned test artifacts cleaned.**03 approved/in
+> progress (§23.12):**6native Rust +12runner safety +12catalogue PASS; formal
+> T03:4PASS/1producer-fence BLOCKED, **exit NOT_MET**. Actual same-scope stale
+> publisher counterexample and TS/PM return packet recorded. Isolated proof is
+> not external N03/all-writer/runtime acceptance; owned1.315GB target/cache/test
+> source removed.04…11 await named approval.01capacity is still pending;
+> logical02 closure does not waive it.
 > No runtime activation. Four owner-supplied guides
 > are linked and pinned there; earlier acceptance is not new upgrade evidence.
 

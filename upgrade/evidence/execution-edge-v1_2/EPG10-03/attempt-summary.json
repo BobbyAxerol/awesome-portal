@@ -1,0 +1,88 @@
+{
+  "schema": "epg10.attempt-summary.v1",
+  "attempts": [
+    {
+      "attempt": 1,
+      "status": "FAIL",
+      "failed_stage": "migrate",
+      "error_type": "CalledProcessError",
+      "elapsed_seconds": 152.259,
+      "cleanup": {
+        "images_built": 0,
+        "images_pulled": 0,
+        "owned_container_removed": true,
+        "private_build_dir_pending_removal": "/tmp/epg10-03-native.azQ8THAs",
+        "volumes_created": 0,
+        "volumes_removed": 0
+      },
+      "extension_sha256": "633be7acc6b9f84fb66338ec15a6c96919a2a529f12f0b99d3af528daf67e57b"
+    },
+    {
+      "attempt": 2,
+      "status": "FAIL",
+      "failed_stage": "migrate:48-v2-source-change-journal.sql",
+      "error_type": "CalledProcessError",
+      "elapsed_seconds": 13.875,
+      "cleanup": {
+        "images_built": 0,
+        "images_pulled": 0,
+        "owned_container_removed": true,
+        "private_build_dir_pending_removal": "/tmp/epg10-03-native.azQ8THAs",
+        "volumes_created": 0,
+        "volumes_removed": 0
+      },
+      "extension_sha256": "9bc4ab2c21f485a85003e60cf24fc5a757d329cd44a89bdba080c28c3fdf6c28"
+    },
+    {
+      "attempt": 3,
+      "status": "PASS_SCOPED_PROOF_WITH_PRODUCER_FENCE_GAP",
+      "elapsed_seconds": 14.749,
+      "cleanup": {
+        "images_built": 0,
+        "images_pulled": 0,
+        "owned_container_removed": true,
+        "private_build_dir_pending_removal": "/tmp/epg10-03-native.azQ8THAs",
+        "volumes_created": 0,
+        "volumes_removed": 0
+      },
+      "extension_sha256": "3ab2e5c50cea6daaafe967262e53a9ec7d591530b74068614686ef88884e3155"
+    },
+    {
+      "attempt": 4,
+      "status": "FAIL",
+      "failed_stage": "clippy",
+      "error_type": "CalledProcessError",
+      "elapsed_seconds": 61.663,
+      "cleanup": {
+        "images_built": 0,
+        "images_pulled": 0,
+        "owned_container_removed": false,
+        "private_build_dir_pending_removal": "/tmp/epg10-03-native.azQ8THAs",
+        "volumes_created": 0,
+        "volumes_removed": 0
+      },
+      "extension_sha256": "1be5780cf89607402c400b06e1e104e925ba5f98de35883ad74450ace71dae8d"
+    },
+    {
+      "attempt": 5,
+      "status": "PASS_SCOPED_PROOF_WITH_PRODUCER_FENCE_GAP",
+      "elapsed_seconds": 44.459,
+      "rust_tests_passed": 6,
+      "runner_safety_tests_passed": 7,
+      "owned_container_removed": true,
+      "extension_sha256": "c0307a5ac6377d6bea38d7c82eacf8d5aee074add16adf216183f151d33cf863",
+      "disposition": "Superseded by attempt6 after exception-safe runner finalization; native Rust fixture unchanged",
+      "diagnostic_us": {
+        "domain_only": 44625,
+        "domain_plus_journal": 180742,
+        "native_publication": 339235
+      }
+    }
+  ],
+  "notes": [
+    "Attempts1/2 failed before tests: transient PostgreSQL initialization readiness, fixed final TCP readiness",
+    "Attempt3 six native tests passed; final source revised/retested",
+    "Attempt4 strict full-TS clippy failed on12 pre-existing trading-core diagnostics under1.85; no producer edits. Final scoped JSON lint checks0 owned warnings,14 upstream advisories",
+    "Accepted final attempt6 is native-receipt.json:6 Rust/12 runner safety PASS; cleanup exception paths fixed, no native fixture change"
+  ]
+}

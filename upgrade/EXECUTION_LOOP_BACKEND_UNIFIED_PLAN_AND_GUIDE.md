@@ -9368,9 +9368,10 @@ CI failures reached `main` in this release.
 Bobby approved EPG10-00 after the documentation package; its six offline metadata
 cases PASS and its inventory exit gate passes with explicitly owned UNKNOWNs.
 This is not runtime qualification. EPG10-01 is now **IN_PROGRESS / BOBBY_APPROVED**;
-02…11 remain **PLANNED / NOT_STARTED**. The remaining94 runtime measurement/product
-cases have no new acceptance yet. No load, migration,
-credential change, source/service mutation or new activation was authorized/run.
+02 is **COMPLETED_CONTRACT_ONLY**;03 is **IN_PROGRESS / BOBBY_APPROVED**
+(2026-10-16);04…11 await named approval.02's11 logical cases pass;03's real
+capture cases are pending its own receipt. No production migration, credential
+change, source/service mutation or new activation is authorized by03.
 
 This section is the single active sequencing/journal for the Edge v1.2 campaign.
 Earlier EDS/N/EX-DP/R3/A4 records remain historical evidence with their original
@@ -9580,7 +9581,8 @@ no test images/cache/containers created by this package.
 ### 23.4 Phase overview and approval tracker
 
 EPG10-00 is **COMPLETED_INVENTORY_ONLY / BOBBY_APPROVED** (2026-10-15);
-01 is **IN_PROGRESS / BOBBY_APPROVED**, 02–11 remain
+01 is **IN_PROGRESS / BOBBY_APPROVED**,02 is **COMPLETED_CONTRACT_ONLY**,
+03 is **IN_PROGRESS / BOBBY_APPROVED**,04–11 remain
 **PLANNED / AWAITING_BOBBY_APPROVAL**. Until a phase receipt records execution,
 test counts are required case identities, **not executed tests**. Test bodies are preserved in each detailed
 phase block and the pinned Edge guide; partner ELP2/PM cases are not double-counted.
@@ -9589,8 +9591,8 @@ phase block and the pinned Edge guide; partner ELP2/PM cases are not double-coun
 |---|---|---|---|
 | [EPG10-00](#epg10-00-plan) | COMPLETED_INVENTORY_ONLY: current source/authority/scope manifest | T00-01…06: 6 PASS | Inventory only; unknown-owner dispositions recorded, no runtime acceptance |
 | [EPG10-01](#epg10-01-plan) | IN_PROGRESS: paired baselines, placement, budgets | T01-01…06: measurement NOT_RUN | Exact isolated target, clean window, source/runtime proof |
-| [EPG10-02](#epg10-02-plan) | Catalogue, schema, fixtures | T02-01…11 (11) | Producer/consumer contract review, source coverage |
-| [EPG10-03](#epg10-03-plan) | Capture and commit-order proof | T03-01…05 (5) | Real PG writer/barrier/retention/fence proof |
+| [EPG10-02](#epg10-02-plan) | COMPLETED_CONTRACT_ONLY | T02-01…11:11 PASS | No runtime activation; producer coverage remains distinct |
+| [EPG10-03](#epg10-03-plan) | IN_PROGRESS: owned native proof delivered; exit NOT_MET | T03:4PASS/1BLOCKED;6native tests PASS | Reproduced TS publisher-generation fence + selected writer/publication scope |
 | [EPG10-04](#epg10-04-plan) | Bootstrap/delta/atomic projection | T04-01…08 (8) | 03 certified input + 01 capacity |
 | [EPG10-05](#epg10-05-plan) | Research query/history/fanout | T05-01…08 (8) | 04 + 06 + 08-read, partner BFF |
 | [EPG10-06](#epg10-06-plan) | Resource enforcement/optimization | T06-01…10 (10) | Same-workload B0/B1/B2 measurements |
@@ -9816,8 +9818,10 @@ and [package/compatibility/errors/crosswalk](../services/portal-execution-edge-r
 <a id="epg10-03-plan"></a>
 #### EPG10-03 Chứng minh capture và commit ordering
 
-**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
-**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+**Status:** IN_PROGRESS — **Approval:** BOBBY_APPROVED (2026-10-16).
+**Tests:**4formal PASS/1BLOCKED in isolated native scope — **Exit:** NOT_MET.
+**Runtime activation:** NOT_AUTHORIZED; owned proof package delivered, producer
+generation-fence/selected-writer publication required for connected acceptance.
 
 **Guide chi tiết bắt buộc:** [EDGE / EPG10-03](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-03-chứng-minh-capture-và-commit-ordering);
 [BE §§6.4–6.6, 8.1–8.3; ELP2-05](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§4.3–4.5, 8.6](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
@@ -9838,12 +9842,12 @@ Record phase approval, exact affected datasets/operations/profiles and partner r
 
 **Checklist:**
 
-- [ ] Trace journal write cùng domain transaction; kiểm mọi writer/update/delete/correction path trong supported datasets.
-- [ ] Chứng minh source commit coverage riêng với published sequence; công bố partition guarantee thật.
-- [ ] Replay F-TXN với ID cấp trước nhưng commit muộn, aborted tx và multi-entity group.
-- [ ] Nếu current P16 thiếu proof, duyệt phương án commit-aware hoặc outbox pending/ledger; đo write amplification/contention trước mở.
+- [x] Trace journal/domain transaction and writer/update/delete/correction inventory; unsupported paths explicit, not all writers runtime-certified.
+- [x] Prove isolated native source commit coverage separate from published sequence; publish cell/database/epoch ordering scope and limits.
+- [x] F-TXN late lower-ID commit, aborted transaction and multi-group commit through one continuous real pgoutput stream.
+- [x] Reuse native commit-aware P13/SQL59, no duplicate outbox; bounded serial WAL/write diagnostics recorded. Concurrent contention/capacity NOT_CERTIFIED; no path opened.
 - [ ] Fence producer generation tại durable commit; no concurrent writers after lease loss.
-- [ ] Retention không xóa unexported/unacknowledged rows ngoài policy resync được chứng minh.
+- [x] Immutable/unexported facts, group-bound floor/resnapshot and snapshot-guarded mapping purge tested; not unlimited or unconditional ACK-pinned history.
 
 **Tests và fixtures:** `EPG10-T03-01` T1 thấp-ID commit sau T2 vẫn xuất đủ đúng revision/group; `T03-02` abort không tạo business delta giả; `T03-03` crash domain commit/export append/mark published không mất hoặc tạo duplicate effect; `T03-04` stale generation writer bị reject; `T03-05` event same ID/different digest dừng stream thay vì overwrite.
 
@@ -9854,12 +9858,17 @@ Record phase approval, exact affected datasets/operations/profiles and partner r
 **Resource/test execution boundary:** Real multi-connection PG in approved disposable target; capture source write/WAL/lock cost and bounded capture backlog. Never inject faults in shared source DB under this phase's isolated approval. Shared-host lock, disposable
 namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
 
-**Technical debt / external gates:** Chưa tạo debt. Actual source publication/complete writer coverage is producer dependency, not solved by browser polling. Owner: TS publication/PM export. If required source change is absent, name exact writer and artifact; don't claim real integration from local fixtures.
+**Technical debt / external gates:** No unfinished owned harness defect. Actual
+TS publisher generation fence is demonstrably absent; selected PM writer/export
+coverage remains producer-owned. Exact source paths, counterexample and return
+criteria are in the [single producer packet](evidence/execution-edge-v1_2/EPG10-03/CAPTURE_CONTRACT_AND_OWNER_RETURN.md#single-producer-action-packet--existing03-scope-no-new-phase).
+No generic new owner gate, SQL/polling fallback or false phase closure.
 
 **Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
 actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
 source/runtime/retention tuple; remaining gate owner and next independently runnable
-scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+scope. **Current execution:** §23.12; isolated native-source proof only, not a
+production source publication or a rewrite of TS/PM writers.
 
 <a id="epg10-04-plan"></a>
 #### EPG10-04 Bootstrap delta và atomic projection
@@ -11009,6 +11018,206 @@ extra generic approval needed for already-delivered02; no new phases invented.
 02:44:12Z, deadline04:04:12Z, after the completed contract/test/cleanup runs.
 No further cargo/unit/build/load/container jobs started. Final metadata/staged
 scope review and Git-only closeout do not restart or touch its owner's services.
+
+### 23.12 EPG10-03 capture and commit-order proof — 2026-10-16 Asia/Saigon
+
+**Pre-code approval / IN_PROGRESS:** Bobby approved the entire named03 scope.
+Read workspace/repository rules,03 plan and EDGE§5/10,BE§6.4–6.6/8.1–8.3/ELP2-05,
+SCORE§4.3–4.5/8.6 and REVIEW§2.1/9. Three existing read-only specialists refresh
+TS/DL,PM and Research/runtime in parallel; root is sole writer in this feature.
+
+**Goal and affected files:** prove current TS native P13 commit capture using
+an Edge-owned, reproducible Rust/PostgreSQL qualification harness; trace writer
+coverage and durable publication/cursor/retention guarantees. Reuse exact pinned
+TS `trading-core`, `trading-runtime` and migrations48/58/59/60/67 from a temporary
+source snapshot; do not vendor them or modify producer worktrees. Own changes
+are qualification source/scripts, bounded sanitized evidence and required plan
+indexes. No listener/exporter activation, business calculator, BFF/UI or new
+financial ledger. Synthetic fixture facts explicitly TEST_ONLY; no provider or
+runtime certification inferred.
+
+**Execution placement:** HK foreign production measurement lock
+`claude-n1-opt-20261013`,02:44:12Z–04:04:12Z protects TS/DL. No HK cargo/pytest,
+container/build/load jobs. Independent SGP read-only preflight03:05:56Z found
+no lock,168,971,165,696B free and Rust1.85.1. Tests may run only on SGP under
+its own atomic measurement lock, no calls to HK sources. One disposable PG,
+loopback/test-only trust, exact pre-existing image/no pull/build; bounded CPU,
+memory,pids,wall-time and WAL; source/cache/target outside operational checkout.
+Recheck competing jobs and both source pins before each coherent round.
+
+**Invariants/tests:** actual multi-connection low-ID late commit, aborted tx,
+multi-group tx; failures before/at publication COMMIT and lost ACK; stale writer
+generation and same-ID/different-digest; exact expected IDs/digests, immutable
+facts and complete groups. Capture WAL/write/lock/backlog costs as bounded
+diagnostics, not production capacity. Numeric journal IDs/timestamps are never
+resume proof; publication sequence is scoped to cell/database/epoch and native
+LSN ordering. Consumer fencing is not producer fencing; `SEMANTIC_FACT` is not
+silently mapped to an Edge UPSERT. Real source gaps remain explicit.
+
+**Rollback/cleanup:** stop only labelled owned test container; remove exact
+temporary test snapshot/cache/target; never touch shared source DB, slots,
+publications,volumes,services or foreign lock. Inventory Docker/BuildKit plus
+pre/post disk and runtime restarts. Source-only changes revert via reviewed
+commit, no financial rollback. No push/merge/deploy.
+
+**Decision boundary:** production TLS/auth/slot operation and complete TS/PM
+writer adoption stay producer-owned. If actual native publisher lacks a
+commit-time generation fence, reproduce and return one exact producer request;
+do not add a fake Edge-local precheck or call consumer fencing equivalent.
+No inherited capacity/production-publication claim from01/02. No tests yet run.
+
+**Tested slice1 — native real-PG proof,03:16Z:** current TS advanced to
+`bdf7685e166d1bdb94edf45d356c298c427a4db4` (docs-only parent change); actual
+P13/P16 source bytes unchanged. Exported committed Rust source+migrations to
+SGP `/tmp/epg10-03-native.azQ8THAs`, not peer dirty capacity files. Host
+Rust1.85.1 `cargo test --locked -p trading-runtime --test epg10_03_capture`
+compiled unchanged TS runtime with an Edge-owned test extension. All6native
+tests then PASS,0FAIL/ignored/filtered, real PostgreSQL16.15, zero slots left.
+Four owned tests plus two inherited P13 tests; formal cases are a separate map.
+
+Continuous same-slot T2 publish+ACK→late lower-ID T1 yields all3expected events,
+two complete semantic groups in late source commit, exact payload/IDs/digests;
+abort yields no journal/domain row. Real sink-backend kill before append and
+deferred SQL COMMIT failure leave no premature ACK; lost-response durable sink
+replay produces one mapping. Saved decoded-commit replay is not process/WAL
+reconnect proof; inherited test separately proves slot-loss→resnapshot.
+Same-ID/different-payload rejects, poisons native session/no ACK, original facts
+and publication head retained. Purge without qualified snapshot rejected;
+floor may advance at published group boundaries, forcing resnapshot—not an
+unconditional ACK-pinned or infinite history guarantee.
+
+**Reproduced producer dependency:** two independent temporary slots/publishers
+in the same source scope both work; old publisher accepts another committed
+event after replacement ACK. Native SQL59/`PostgresPublicationSink` lacks a
+durable publisher-generation argument/check. Thus formal T03-01/02/03/05 pass
+for this isolated contract, **T03-04 BLOCKED_SOURCE_FENCE_ABSENT**, exit NOT_MET.
+Private-ingress generation fencing is implemented in TS; not generic publisher
+fencing. No false Edge precheck wrapper or silent TS patch added. Exact single
+producer action packet and full coverage map follow in this same03scope.
+
+Intermediate attempt3 diagnostic32tx each, matching explicit BEGIN/COMMIT: domain-only25.940ms/
+6,008WALbytes; domain+journal132.138ms/74,712B; native publication317.941ms/
+125,016B; backlog32→0, final sampled lock waiters0. Synthetic serial run,
+not concurrent contention, production throughput, placement budget or live proof.
+
+**Setup failures fixed, not debt:** attempts1/2 failed before native test start
+because `pg_isready` saw entrypoint's transient Unix-socket init server. Wait
+for final TCP server instead; attempt3passes. First compile152s, warm attempt3
+run14.749s total (superseded by final accepted receipt below). Three exact labelled PGs removed on their respective exits;
+no build/pull/volume, production write/restart or HK test jobs. Review caught
+incorrect draft floor-vs-purge expectation and missing explicit fixture-digest
+assertions; both fixed before accepted run. Private compile copy/cache retained
+only for final reviewed rerun, then exact cleanup/disk/runtime reconciliation.
+
+**Review/final-rerun slice — 03:30Z:** independent runtime review found a runner
+cleanup exception could skip lock release and bounded receipt persistence. The
+owned runner now attempts container cleanup and lock release independently,
+preserves original failure fields, records sanitized cleanup errors and fails
+closed; five extra offline safety cases cover that finalization path, including
+foreign replacement/permission and disk-observation failures. Never remove a
+foreign container/lock. Final rerun must execute12safety +6native tests before
+cleanup. Whole-TS strict clippy failed on12pre-existing core diagnostics;
+scoped JSON lint instead requires zero owned-extension warnings and discloses
+all upstream advisory warnings, never a whole-TS lint PASS. First compile may
+fetch Cargo dependencies into the private cache; no Docker build/pull. Configured
+64MB PostgreSQL WAL controls are checkpoint-dependent, not a hard instantaneous
+disk limit; 512MiB data tmpfs is the hard disposable storage cap.
+
+**Accepted final slice — attempt6,03:30Z:** [native receipt](evidence/execution-edge-v1_2/EPG10-03/native-receipt.json)
+records **6Rust PASS/0FAIL/0ignored/0filtered +12runner safety PASS/0FAIL/0SKIP**,
+PostgreSQL16.15, zero residual slots; total17.617s. Rustfmt PASS. JSON clippy:
+zero owned warnings,14upstream advisory warnings; no whole-TS strict lint PASS.
+Fixture SHA256`c0307a5ac6377d6bea38d7c82eacf8d5aee074add16adf216183f151d33cf863`,
+generated native test`91d27f7efac7b291b6e471854fcdc3211cc8ffe0a38bf32ff4094156795d6d3a`.
+Command: `EPG10_TS_REVISION=bdf7685e166d1bdb94edf45d356c298c427a4db4 python3 -B /tmp/epg10-03-native.azQ8THAs/run.py`;
+actual native command `cargo test --offline --locked -p trading-runtime --test epg10_03_capture -- --nocapture --test-threads=1`.
+Final32tx diagnostics supersede earlier attempt3/5 timings: domain-only89.438ms/
+6,008WALbytes; domain+journal132.005ms/74,712B; publication395.102ms/125,016B;
+backlog32→0, final sampled waiters0. No concurrency/capacity/SLO inference.
+Earlier failed/pre-final runs are preserved in [attempt summary](evidence/execution-edge-v1_2/EPG10-03/attempt-summary.json).
+
+After the earlier HK lock disappeared by03:22:46Z, the small offline local suite
+ran under its own atomic60s lock: unittest discovery for
+`scripts/epg10-03/test_run.py` and `scripts/test_execution_edge_catalogue.py`
+with `PYTHONPATH=scripts python3 -B`: **24PASS/0FAIL/0SKIP in0.662s**.
+Those are12runner +12catalogue cases; do not double-count the12runner cases
+also executed on SGP. Distinct cases across final suites:30 (6native/24Python),
+not30formal T03 cases. No HK cargo/pytest/build/container/load started.
+New foreign HK lock `claude-burst-b16`,03:30:29Z–06:30:29Z, is respected;
+only read-only metadata/docs/commit preparation followed on HK.
+
+**Parallel final source reconciliation,03:31–03:32Z:** actual15native input
+hashes still exactly match the receipt at current TS
+`3d9582de9a9daea8b293d966165114d1b1fb5bf5`; new commits change capacity/release
+apparatus, not P13/P16/core/runtime/migrations/coverage contracts. Generic producer
+fence remains absent; private-ingress fencing remains distinct; N03 stays
+SOURCE_DARK. PM remains clean at`d16aa2b5f251596e469807f57e81fe14cdc7e763`.
+DL advanced to clean`2169c267a393934b19a2fbab6ba6f62f80d04d60`; its stage-100#3
+scorecard has protocol_met=false,G9FAIL/G11PASS/12NOT_MEASURED, not Edge acceptance.
+Research remains`c1d6b2dc53f1f80ac44cdfd9d96d159c4e9aae64`, actively dirty
+(29untracked at03:31:24Z); no peer change overwritten. Draft read-publication
+now includes5-ID scope correlation, optional generation/catalogue revision and
+source-qualified strategy→alpha lineage, not string/name equality. It remains
+draft producer material, not a newly frozen source contract; mirrored foundation
+schema/fixture hashes unchanged. Final [HK](evidence/execution-edge-v1_2/EPG10-03/hk-source-runtime-final.json)
+and [SGP](evidence/execution-edge-v1_2/EPG10-03/sgp-source-runtime-final.json)
+manifests include staged/unstaged/untracked/journal hashes and exact runtime pins.
+
+**Cleanup / source-release-runtime reconciliation:** at03:31Z removed only
+`/tmp/epg10-03-native.azQ8THAs`, verified own real directory; its1,315,299,328B
+allocated contents were disposable source archive/test drivers/Cargo cache/build
+target and private synthetic logs/artifacts. All receipts retained sanitized in
+this Portal repo; no raw logs/rows/secrets. SGP available disk
+167,608,987,648→168,924,286,976B; shared-host delta is not an exclusive production
+disk claim. [Cleanup receipt](evidence/execution-edge-v1_2/EPG10-03/cleanup-receipt.json)
+hash-matches accepted native receipt; owned container count0 before/after and own
+lock released. Each exact owned PG removed by immutable ID; no images built,
+pulled or removed, no volumes/networks/operational rows/slots/source touched.
+Final inventories: HK126images/34.69GB,398BuildKit entries/27.92GB; SGP328images/
+88.82GB,3,776BuildKit entries/195.9GB. No phase-created Docker/cache artifacts
+remain. Existing active/operational/rollback images, BuildKit and all6active
+feature worktrees retained; no broad prune or peer-worktree cleanup authorized.
+No new rollout rollback artifact required; historical qualified rollback
+enumeration remains UNKNOWN, never treated as this test's acceptance.
+
+Canonical HK checkout remains `/home/bobby/.worktrees/portal-execution-manager-v2`
+on`feat/manager-v2-paper-read@54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4`;
+active feature is `/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2` /
+`feat/execution-edge-upgrade-v1_2`, tested parent`7a0f6ed736f8d5e64fb9be904c12ef0d91a8ad2c`.
+**12HK and5SGP selected image/config/restart tuples unchanged**, all restarts0;
+SGP fifth(web) additionally reconciled against same-phase before-cleanup audit.
+HK peer TEST_ONLY burst changes host container count40→44, not the Edge service
+set. Edge/projection image remains
+`sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e`,
+Source Proxy`sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b`,
+PG`sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685`.
+OCI revision label`8814cd2a5f66aeac0828812dbb8340c4f0a4adbb` is not feature HEAD;
+HK stable release`/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy`,
+SGP stable`/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose`.
+Exact config hashes/service set/other projection release paths are in manifests.
+No source DB/service/identity/config/route changes, restarts, push, merge or deploy.
+
+**Recorded verdict / next permitted step:** owned capture design, native harness,
+writer-coverage/retention inventory and single source-owner packet delivered;
+**EPG10-03 IN_PROGRESS / T03 4PASS+1BLOCKED / EXIT_NOT_MET**. No open owned
+harness defect or fake all-writer certification. TS must close the reproduced
+durable publisher-generation fence and return the selected writer/publication
+coverage; Edge then reruns **this same03 phase**, no new subphase/blanket approval.
+Source-connected acceptance cannot advance through this gap.04 isolated projection
+work can be approved independently, but is NOT_STARTED here;01capacity and
+external publication remain their scoped dependencies. See the
+[single producer packet](evidence/execution-edge-v1_2/EPG10-03/CAPTURE_CONTRACT_AND_OWNER_RETURN.md),
+[verification](evidence/execution-edge-v1_2/EPG10-03/verification.json) and
+[artifact digests](evidence/execution-edge-v1_2/EPG10-03/artifact-digests.sha256).
+
+**Final consistency checks:** all17artifact SHA256 checks PASS; all JSON parsed,
+owned Python syntax parsed, native test/cleanup receipt and fixture digests
+reconciled, all owner-packet links resolved, four owner-guide bytes unchanged.
+`git diff --check` PASS. Three read-only specialist reviews closed owned capture,
+PM/retention and cleanup findings; no producer-source edits. Whole-monorepo
+verification/build is NOT_RUN in this scoped slice, and no heavy HK check is
+started under the new foreign measurement lock. Commit this tested package with
+configured Bobby identity on the feature branch only; no push/merge/deploy.
 
 
 
