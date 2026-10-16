@@ -1,6 +1,82 @@
 //! `TEST_ONLY` synthetic scopes/facts in the exact disposable real-PG target.
 //! No test authorizer or fixture is installed in a service/runtime route.
 
+#[tokio::test]
+async fn governed_pg_cache_has_one_permit_and_reserves_control_before_pool_wait() {
+    use chrono::Utc;
+    use projection_core::resources::{EnvelopeLimits, ResourceEnvelope, ResourceError, WorkClass};
+    let mut f = Fixture::new(2).await;
+    let resources = Arc::new(
+        ResourceEnvelope::new(EnvelopeLimits {
+            max_active: 2,
+            foreground_reserved: 1,
+            max_entries: 4096,
+            foreground_reserved_entries: 1024,
+            max_bytes: 64 * 1024 * 1024,
+            foreground_reserved_bytes: 8 * 1024 * 1024,
+            storage_max_age: Duration::from_secs(60),
+        })
+        .unwrap(),
+    );
+    f.store = Arc::new(
+        PgProjectionStore::connect_with_resources(
+            &std::env::var("TEST_PROJECTION_DATABASE_URL").unwrap(),
+            resources.clone(),
+            2,
+        )
+        .await
+        .unwrap(),
+    );
+    let scope = f.scope(None);
+    let read = f.read(&scope, Operation::Current);
+    let query = Fixture::query(Operation::Current, 1);
+    let cache = ScopedCache::new_with_resources(
+        CacheLimits {
+            max_entries: 8,
+            max_bytes: 4 * 1024 * 1024,
+            max_flights: 2,
+            ttl_ms: 1000,
+            load_timeout_ms: 5000,
+        },
+        &resources,
+    )
+    .unwrap();
+    let a = f
+        .service()
+        .cached_first_page(&cache, &read, &query)
+        .await
+        .unwrap();
+    let b = f
+        .service()
+        .cached_first_page(&cache, &read, &query)
+        .await
+        .unwrap();
+    assert!(Arc::ptr_eq(&a, &b));
+    assert_eq!(resources.stats().unwrap().active, 0);
+    let held = resources
+        .try_acquire(WorkClass::BackgroundRead, 1, 1, Utc::now())
+        .unwrap();
+    assert!(matches!(
+        f.service().page(&read, &query, None).await,
+        Err(ReadError::Resource(ResourceError::Busy))
+    ));
+    assert!(matches!(
+        f.service().notices(&read, None, 10).await,
+        Err(ReadError::Scope(ScopedError::AccessDenied))
+    ));
+    let replay = f.read(&scope, Operation::Replay);
+    f.service().notices(&replay, None, 10).await.unwrap();
+    f.policy.enabled.store(false, Ordering::SeqCst);
+    assert!(matches!(
+        f.service().page(&read, &query, None).await,
+        Err(ReadError::Scope(ScopedError::AccessDenied))
+    ));
+    drop(held);
+    drop(cache);
+    assert_eq!(resources.stats().unwrap().active, 0);
+    assert_eq!(resources.stats().unwrap().bytes, 0);
+}
+
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::{

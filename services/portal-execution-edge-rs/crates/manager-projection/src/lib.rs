@@ -26,7 +26,7 @@ use thiserror::Error;
 
 pub const MANAGER_PROJECTION_SCHEMA_VERSION: &str = "portal.execution.manager-projection.v2";
 pub const MANAGER_PROJECTION_ADAPTER_VERSION: &str =
-    "portal.execution.manager-projection.manager-v2.runtime.v5";
+    "portal.execution.manager-projection.manager-v2.runtime.v6";
 pub const PORTAL_PROJECTION_DELTA: &str = "PORTAL_PROJECTION_DELTA";
 pub const DEFAULT_POLL_INTERVAL_MS: i64 = 2_000;
 pub const MAXIMUM_FEED_RECORDS: usize = 20_000;
@@ -355,10 +355,57 @@ pub struct BuiltProjectionCycle {
     /// Entity-level freshness must not borrow a newer timestamp from another
     /// cadence class in the same aggregate cycle.
     pub snapshot_source_read_ats: BTreeMap<ProjectionEntityKind, DateTime<Utc>>,
+    /// Actual successful read time for every admitted feed, including empty
+    /// feeds. A deletion must use its own feed clock, not a sibling's cache age.
+    pub feed_source_read_ats: BTreeMap<String, DateTime<Utc>>,
     /// The fastest cadence represented by the complete cycle. It is used only
     /// for the aggregate heartbeat; per-snapshot cadence remains exact above.
     pub poll_interval_ms: i64,
     pub state_input_digest: String,
+}
+
+impl BuiltProjectionCycle {
+    /// Binds a validated view to its durable predecessor-aware occurrence.
+    /// Semantic digests stay unchanged; recurrence after an intervening state
+    /// gets fresh receipt/ingestion identities, not a false historical replay.
+    ///
+    /// # Errors
+    /// Returns a contract/serialization error for an invalid identity.
+    pub fn bind_durable_cycle_id(
+        mut self,
+        cycle_id: CanonicalId,
+    ) -> Result<Self, ProjectionMapError> {
+        if self.cycle_id == cycle_id {
+            return Ok(self);
+        }
+        for snapshot in &mut self.snapshots {
+            let digest = canonical_digest(&(
+                cycle_id.as_str(),
+                snapshot.entity_kind,
+                snapshot.snapshot_id.as_str(),
+            ))?;
+            snapshot.snapshot_id = CanonicalId::parse(format!(
+                "n24-snapshot-{}",
+                digest.trim_start_matches("sha256:")
+            ))?;
+            for observation in &mut snapshot.observations {
+                let digest = canonical_digest(&(
+                    cycle_id.as_str(),
+                    &observation.entity,
+                    observation.ingestion_id.as_str(),
+                ))?;
+                observation.ingestion_id = CanonicalId::parse(format!(
+                    "n24-ingest-{}",
+                    digest.trim_start_matches("sha256:")
+                ))?;
+                if let Some(cursor) = &mut observation.source_cursor {
+                    cursor.event_id = cycle_id.clone();
+                }
+            }
+        }
+        self.cycle_id = cycle_id;
+        Ok(self)
+    }
 }
 
 impl ManagerProjectionCycle {
@@ -383,6 +430,7 @@ impl ManagerProjectionCycle {
         let mut source_read_at: Option<DateTime<Utc>> = None;
         let mut snapshot_poll_intervals = BTreeMap::new();
         let mut snapshot_source_read_ats = BTreeMap::new();
+        let mut feed_source_read_ats = BTreeMap::new();
         // A complete source cycle must always emit all entity-kind snapshots,
         // including empty ones. Empty is a truthful source state (notably for
         // Live before its first row) and is also how removed rows become
@@ -397,6 +445,7 @@ impl ManagerProjectionCycle {
             if !seen_feeds.insert(feed.feed.feed_id) {
                 return Err(ProjectionMapError::DuplicateFeed);
             }
+            feed_source_read_ats.insert(feed.feed.feed_id.to_owned(), feed.source_read_at);
             if !(250..=60_000).contains(&feed.poll_interval_ms) {
                 return Err(ProjectionMapError::InvalidFeed);
             }
@@ -482,11 +531,6 @@ impl ManagerProjectionCycle {
             "n24-cycle-{}",
             state_input_digest.trim_start_matches("sha256:")
         ))?;
-        let cursor = SourceCursor {
-            event_ts: source_read_at,
-            created_at: source_read_at,
-            event_id: cycle_id.clone(),
-        };
         let mut snapshots = Vec::new();
         for (kind, mut kind_observations) in observations {
             kind_observations.sort_by(|left, right| left.entity.cmp(&right.entity));
@@ -522,7 +566,14 @@ impl ManagerProjectionCycle {
                     "n24-ingest-{}",
                     observation_digest.trim_start_matches("sha256:")
                 ))?;
-                observation.source_cursor = Some(cursor.clone());
+                // Global freshness is the oldest cached feed, not an ordering
+                // clock for newer transactional observations. Keep the actual
+                // feed read time; the content hash is only a receipt tie-breaker.
+                observation.source_cursor = Some(SourceCursor {
+                    event_ts: observation.source_read_at,
+                    created_at: observation.source_read_at,
+                    event_id: cycle_id.clone(),
+                });
             }
             let snapshot_id = CanonicalId::parse(format!(
                 "n24-snapshot-{}-{}",
@@ -547,6 +598,7 @@ impl ManagerProjectionCycle {
             source_read_at,
             snapshot_poll_intervals,
             snapshot_source_read_ats,
+            feed_source_read_ats,
             poll_interval_ms: self.poll_interval_ms,
             state_input_digest,
         })
@@ -911,6 +963,23 @@ mod tests {
             Err(ProjectionMapError::InvalidFeed)
         ));
 
+        let mut exhausted = cycle(ManagerProjectionProfile::Paper);
+        exhausted.feeds[0].page_count = MAXIMUM_FEED_PAGES;
+        exhausted.feeds[0].completeness = Completeness::Partial;
+        assert!(matches!(
+            exhausted.build(),
+            Err(ProjectionMapError::InvalidFeed)
+        ));
+        let mut over_bound = cycle(ManagerProjectionProfile::Paper);
+        over_bound.feeds[0].page_count = MAXIMUM_FEED_PAGES + 1;
+        assert!(matches!(
+            over_bound.build(),
+            Err(ProjectionMapError::InvalidFeed)
+        ));
+        let mut complete_at_bound = cycle(ManagerProjectionProfile::Paper);
+        complete_at_bound.feeds[0].page_count = MAXIMUM_FEED_PAGES;
+        assert!(complete_at_bound.build().is_ok());
+
         let mut missing = cycle(ManagerProjectionProfile::Paper);
         missing.feeds.pop();
         assert!(matches!(
@@ -1063,5 +1132,137 @@ mod tests {
 
         let built = input.build().expect("complete cycle");
         assert_eq!(built.source_read_at, at(11));
+    }
+
+    #[test]
+    fn durable_occurrence_binding_changes_receipts_not_semantic_state() {
+        let original = cycle(ManagerProjectionProfile::Paper).build().unwrap();
+        let first = original
+            .clone()
+            .bind_durable_cycle_id(CanonicalId::parse("occurrence-a").unwrap())
+            .unwrap();
+        let again = first
+            .clone()
+            .bind_durable_cycle_id(first.cycle_id.clone())
+            .unwrap();
+        let recurrence = original
+            .clone()
+            .bind_durable_cycle_id(CanonicalId::parse("occurrence-a-after-b").unwrap())
+            .unwrap();
+        assert_eq!(first.state_input_digest, original.state_input_digest);
+        assert_eq!(recurrence.state_input_digest, original.state_input_digest);
+        for ((first, again), recurrence) in first
+            .snapshots
+            .iter()
+            .zip(&again.snapshots)
+            .zip(&recurrence.snapshots)
+        {
+            assert_eq!(first.snapshot_id, again.snapshot_id);
+            assert_eq!(first.observations, again.observations);
+            assert_ne!(first.snapshot_id, recurrence.snapshot_id);
+            for (left, right) in first.observations.iter().zip(&recurrence.observations) {
+                assert_eq!(left.entity, right.entity);
+                assert_eq!(left.payload, right.payload);
+                assert_ne!(left.ingestion_id, right.ingestion_id);
+                assert_ne!(left.source_cursor, right.source_cursor);
+            }
+        }
+    }
+
+    #[test]
+    fn occurrence_binding_preserves_complete_sibling_feed_membership() {
+        let built = cycle(ManagerProjectionProfile::Paper)
+            .build()
+            .unwrap()
+            .bind_durable_cycle_id(CanonicalId::parse("occurrence-test").unwrap())
+            .unwrap();
+        let account = built
+            .snapshots
+            .iter()
+            .find(|snapshot| snapshot.entity_kind == ProjectionEntityKind::Account)
+            .unwrap();
+        let feeds: BTreeSet<_> = account
+            .observations
+            .iter()
+            .map(|observation| observation.payload["source_feed"].as_str().unwrap())
+            .collect();
+        let expected: BTreeSet<_> = FEEDS
+            .iter()
+            .filter(|feed| feed.entity_kind == ProjectionEntityKind::Account)
+            .map(|feed| feed.feed_id)
+            .collect();
+        assert_eq!(feeds, expected);
+        assert_eq!(account.completeness, SnapshotCompleteness::Complete);
+        assert_eq!(account.expected_count, account.observations.len());
+    }
+
+    #[test]
+    fn fast_feed_ordering_advances_while_cached_global_freshness_stays_old() {
+        let mut first = cycle(ManagerProjectionProfile::Paper);
+        let order = first
+            .feeds
+            .iter_mut()
+            .find(|feed| feed.feed.entity_kind == ProjectionEntityKind::Order)
+            .unwrap();
+        order.source_read_at = at(12);
+        let mut next = first.clone();
+        let order = next
+            .feeds
+            .iter_mut()
+            .find(|feed| feed.feed.entity_kind == ProjectionEntityKind::Order)
+            .unwrap();
+        order.source_read_at = at(13);
+        order.facts[0].fields["corrected"] = json!(true);
+        let first = first
+            .build()
+            .unwrap()
+            .bind_durable_cycle_id(CanonicalId::parse("zzz-earlier-receipt").unwrap())
+            .unwrap();
+        let next = next
+            .build()
+            .unwrap()
+            .bind_durable_cycle_id(CanonicalId::parse("aaa-newer-receipt").unwrap())
+            .unwrap();
+        assert_eq!(first.source_read_at, at(11));
+        assert_eq!(next.source_read_at, at(11));
+        let order_cursor = |built: &BuiltProjectionCycle| {
+            built
+                .snapshots
+                .iter()
+                .find(|snapshot| snapshot.entity_kind == ProjectionEntityKind::Order)
+                .unwrap()
+                .observations[0]
+                .source_cursor
+                .clone()
+                .unwrap()
+        };
+        let previous = order_cursor(&first);
+        let incoming = order_cursor(&next);
+        assert_eq!(previous.event_ts, at(12));
+        assert_eq!(incoming.event_ts, at(13));
+        assert!(incoming.event_id < previous.event_id);
+        assert!(incoming > previous);
+    }
+
+    #[test]
+    fn empty_feed_retains_actual_read_clock_for_tombstone_proof() {
+        let mut input = cycle(ManagerProjectionProfile::Paper);
+        let balances = input
+            .feeds
+            .iter_mut()
+            .find(|feed| feed.feed.feed_id == "relation.account_balances")
+            .unwrap();
+        balances.facts.clear();
+        balances.source_read_at = at(23);
+        let built = input.build().unwrap();
+        assert_eq!(built.feed_source_read_ats.len(), FEEDS.len());
+        assert_eq!(
+            built.feed_source_read_ats["relation.account_balances"],
+            at(23)
+        );
+        assert_eq!(
+            built.snapshot_source_read_ats[&ProjectionEntityKind::Account],
+            at(11)
+        );
     }
 }

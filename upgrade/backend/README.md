@@ -8,14 +8,14 @@ Chúng không thay thế phase hoặc exit gate trong
 ## Active deep dives
 
 - [Execution Edge v1.2 — EPG10-00…11 detailed plan](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)
-  — **EPG10-00 completed inventory;01 in progress;02 completed contract-only;03/04 approved/in progress;05…11 approval pending**. Six offline
+  — **EPG10-00 completed inventory;01 in progress;02 completed contract-only;03…06 approved/in progress;07…11 approval pending**. Six offline
   metadata cases PASS, with source/runtime/TLS and owned unknowns recorded in
   §23.9 and its manifest. No activation/runtime acceptance. The campaign starts
   from current `origin/dev`, keeps the complete four-file owner guide bundle under
   `upgrade/upgrade_v1.2`, and links Edge, Portal contracts, scoring and PM R2 inputs.
   Goals, scope, source pins, invariants, tests, exit gates, rollback, resource and
   debt/owner tracking are recorded per phase. No product/runtime acceptance implied;
-  05…11 are not started.01 available-source continuation now has53offline tests
+  07…11 are not started.01 available-source continuation now has53offline tests
   plus six00metadata PASS, both-host120s observations, two real+two isolated
   retained repository runs (20subcases PASS), native schema idempotency and
   six-table3,623row exact parity. Isolated target cleaned; narrow numeric
@@ -46,6 +46,14 @@ Chúng không thay thế phase hoặc exit gate trong
   exit NOT_MET for04source +06budgets +08read-security/TLS +partner BFF receipts,
   0owned debt. Own2.266GB source/target/cache/test logs removed;12HK+5SGP protected
   tuples unchanged/restarts0. No BFF route, TS fallback/source grant or activation.
+  **06 (§23.15), approved/in progress:** shared resource envelopes and04/05
+  pre-pool reservations, aggregate cache/fanout bounds and Manager recurrence/
+  mixed-cadence/tombstone correction;317automated PASS/0FAIL/skip, fmt/strict
+  zero-warning Clippy PASS. Owned isolated package qualified/source-dark; full06
+  exit NOT_MET for01numeric budgets/03publication, fresh paired measurements and
+  Research returns, not waived by correctness. Own5.863GB source/cache/logs
+  cleaned;12HK+5SGP tuples unchanged/restarts0. No runtime/source mutation or
+  capacity claim. §23.15 links evidence, binding limits and one action packet.
 
 - [Official Trading System owner request — Portal Execution capability campaign](./TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md)
   — **the governing owner request.** It consolidates N02/N03 incremental

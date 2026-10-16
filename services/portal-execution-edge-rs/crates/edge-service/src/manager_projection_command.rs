@@ -288,6 +288,24 @@ async fn run_once_mode(
         ManagerProjectionLeaseAcquireOutcome::Acquired(grant)
         | ManagerProjectionLeaseAcquireOutcome::AlreadyHeld(grant) => grant,
     };
+    let occurrence = store
+        .manager_projection_cycle_id(
+            &scope,
+            epoch.epoch_id,
+            lease.proof(),
+            &ManagerCycleCommitInput {
+                cycle_id: cycle.cycle_id.clone(),
+                profile_id: profile.profile_id().to_owned(),
+                catalogue_digest: cycle.catalogue_digest.clone(),
+                source_input_digest: cycle.state_input_digest.clone(),
+                feed_count: cycle.feed_count,
+                record_count: cycle.record_count,
+                source_read_at: cycle.source_read_at,
+                poll_interval_ms: cycle.poll_interval_ms,
+            },
+        )
+        .await?;
+    let cycle = cycle.bind_durable_cycle_id(occurrence)?;
     commit_cycle(&store, &scope, epoch.epoch_id, lease.proof(), &cycle).await?;
     let cycle_receipt = store
         .commit_manager_projection_cycle(
@@ -876,6 +894,10 @@ async fn commit_cycle(
     proof: projection_store_pg::ManagerProjectionLeaseProof,
     cycle: &BuiltProjectionCycle,
 ) -> Result<(), ManagerProjectionCommandError> {
+    // A run owns one freshly acquired UUID lease and commits exactly one cycle
+    // sequentially. This internal proof is never shared with Portal callers.
+    // After interruption a new run acquires a new fenced lease and can replace
+    // partial state with its complete current view; no pending-cycle lockout.
     for snapshot in &cycle.snapshots {
         let poll_interval_ms = *cycle
             .snapshot_poll_intervals
@@ -886,7 +908,7 @@ async fn commit_cycle(
             .get(&snapshot.entity_kind)
             .ok_or(ManagerProjectionCommandError::ProjectionCacheIncomplete)?;
         store
-            .commit_manager_projection_snapshot(
+            .commit_manager_projection_snapshot_with_feed_reads(
                 scope,
                 epoch_id,
                 proof,
@@ -899,6 +921,7 @@ async fn commit_cycle(
                     poll_interval_ms,
                     snapshot: snapshot.clone(),
                 },
+                &cycle.feed_source_read_ats,
                 Utc::now(),
             )
             .await?;

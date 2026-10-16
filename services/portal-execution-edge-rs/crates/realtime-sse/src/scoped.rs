@@ -17,6 +17,7 @@ use std::sync::{
 };
 
 use execution_contracts::catalogue_v1::Quality;
+use projection_core::resources::{ResourceEnvelope, ResourceError, ResourceLease};
 use query_api::scoped::{AuthorizedRead, Operation, ReadAuthorizer, ReadScope};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -179,6 +180,10 @@ struct Shared {
     config: ScopedRealtimeConfig,
     state: Mutex<State>,
     polling: AtomicBool,
+    /// Retains the configured charge through every hub clone/subscription.
+    registration: Option<Arc<ResourceLease>>,
+    /// Governed cohorts cannot use hints to bypass their minimum poll cadence.
+    poll_extra_ms: Option<u32>,
 }
 
 /// One exact authorized query/generation cohort. Never share a hub merely
@@ -219,8 +224,53 @@ impl ScopedRealtimeHub {
                     stopped: None,
                 }),
                 polling: AtomicBool::new(false),
+                registration: None,
+                poll_extra_ms: None,
             }),
         })
+    }
+
+    /// Registers the aggregate configured client queue entries/bytes once per
+    /// shared hub. Logical capacity is not process RSS. Governs poll cadence to
+    /// interval plus per-instance jitter in [0,min(interval,1000)] milliseconds;
+    /// hints never bypass that minimum. It starts no poll/retry background task.
+    /// # Errors
+    /// Invalid scope/config, denied Replay grant or exhausted shared resources.
+    pub fn new_with_resources(
+        scope: ReadScope,
+        generation: String,
+        initial_cursor: Option<String>,
+        config: ScopedRealtimeConfig,
+        authorizer: &dyn ReadAuthorizer,
+        now_ms: i64,
+        resources: &Arc<ResourceEnvelope>,
+    ) -> Result<Self, ScopedRealtimeError> {
+        let mut hub = Self::new(
+            scope,
+            generation,
+            initial_cursor,
+            config,
+            authorizer,
+            now_ms,
+        )?;
+        let entries = config
+            .maximum_clients
+            .checked_mul(config.client_queue_entries)
+            .ok_or(ScopedRealtimeError::Invalid)?;
+        let registration = resources
+            .try_register(entries, config.total_queue_bytes)
+            .map_err(|error| match error {
+                ResourceError::Config => ScopedRealtimeError::Invalid,
+                _ => ScopedRealtimeError::Busy,
+            })?;
+        let maximum_extra_ms = config.poll_interval_ms.min(1000);
+        let extra_ms =
+            u32::try_from(uuid::Uuid::now_v7().as_u128() % u128::from(maximum_extra_ms + 1))
+                .map_err(|_| ScopedRealtimeError::Invalid)?;
+        let shared = Arc::get_mut(&mut hub.shared).ok_or(ScopedRealtimeError::Unavailable)?;
+        shared.registration = Some(Arc::new(registration));
+        shared.poll_extra_ms = Some(extra_ms);
+        Ok(hub)
     }
 
     /// Queue-only subscription. It does not query TS, PG or any replay source.
@@ -281,12 +331,16 @@ impl ScopedRealtimeHub {
             if state.stopped.is_some() {
                 return Err(ScopedRealtimeError::ResyncRequired);
             }
-            if !state.hinted && now_ms < state.next_poll_ms {
+            if now_ms < state.next_poll_ms && (self.shared.poll_extra_ms.is_some() || !state.hinted)
+            {
                 return Ok(PollOutcome::NotDue);
             }
             state.hinted = false;
             state.next_poll_ms = now_ms
-                .checked_add(i64::from(self.shared.config.poll_interval_ms))
+                .checked_add(
+                    i64::from(self.shared.config.poll_interval_ms)
+                        + i64::from(self.shared.poll_extra_ms.unwrap_or(0)),
+                )
                 .ok_or(ScopedRealtimeError::Invalid)?;
             state.cursor.clone()
         };
@@ -580,3 +634,209 @@ fn notice_bytes(notice: &ChangeNotice) -> Result<usize, ScopedRealtimeError> {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod resource_tests {
+    use std::sync::atomic::AtomicUsize;
+
+    use projection_core::resources::EnvelopeLimits;
+    use query_api::scoped::{Coverage, HistoryCapability};
+
+    use super::*;
+
+    // Source-dark, test-only authorization and notification fixtures.
+    struct Authorizer(bool);
+
+    impl ReadAuthorizer for Authorizer {
+        fn current(&self, scope: &ReadScope, operation: Operation, _now_ms: i64) -> bool {
+            self.0 && operation == Operation::Replay && scope.principal_digest == digest(1)
+        }
+    }
+
+    fn digest(value: u8) -> String {
+        format!("sha256:{value:064x}")
+    }
+
+    fn scope() -> ReadScope {
+        ReadScope {
+            ingest_binding_digest: digest(2),
+            slot_key: digest(3),
+            principal_digest: digest(1),
+            effective_scope_digest: digest(4),
+            app_policy_revision: "app-v1".into(),
+            field_policy_revision: "field-v1".into(),
+            schema_version: "scoped.v1".into(),
+            model_revision: "model-v1".into(),
+            source_set_digest: digest(5),
+            dataset: "orders".into(),
+            entity_ids: None,
+            allowed_fields: BTreeSet::from(["quantity".into()]),
+            history_capability: HistoryCapability::RetainedObservations,
+            coverage: Coverage::RetainedObservations,
+            history_from_ms: Some(0),
+            history_to_ms: Some(1000),
+        }
+    }
+
+    fn config() -> ScopedRealtimeConfig {
+        ScopedRealtimeConfig {
+            maximum_clients: 2,
+            client_queue_entries: 2,
+            client_queue_bytes: 1024,
+            total_queue_bytes: 2048,
+            notices_per_poll: 2,
+            maximum_notice_bytes: 128,
+            poll_interval_ms: 10,
+            poll_timeout_ms: 100,
+        }
+    }
+
+    fn resources(max_entries: usize, max_bytes: usize) -> Arc<ResourceEnvelope> {
+        Arc::new(
+            ResourceEnvelope::new(EnvelopeLimits {
+                max_active: 3,
+                foreground_reserved: 1,
+                foreground_reserved_entries: 2,
+                foreground_reserved_bytes: 1000,
+                max_entries,
+                max_bytes,
+                storage_max_age: std::time::Duration::from_secs(5),
+            })
+            .unwrap(),
+        )
+    }
+
+    fn hub(resources: &Arc<ResourceEnvelope>) -> Result<ScopedRealtimeHub, ScopedRealtimeError> {
+        ScopedRealtimeHub::new_with_resources(
+            scope(),
+            "generation-one".into(),
+            None,
+            config(),
+            &Authorizer(true),
+            0,
+            resources,
+        )
+    }
+
+    struct Source {
+        calls: AtomicUsize,
+        failure: Option<ReplayError>,
+    }
+
+    impl ScopedReplaySource for Source {
+        fn replay<'a>(
+            &'a self,
+            _scope: &'a ReadScope,
+            _after: Option<&'a str>,
+            _limit: usize,
+            _now_ms: i64,
+        ) -> ReplayFuture<'a> {
+            self.calls.fetch_add(1, Ordering::AcqRel);
+            Box::pin(async move {
+                if let Some(error) = self.failure {
+                    Err(error)
+                } else {
+                    Ok(NoticeBatch {
+                        notices: vec![],
+                        next_cursor: None,
+                        caught_up: true,
+                    })
+                }
+            })
+        }
+    }
+
+    #[test]
+    fn hub_aggregate_registration_survives_clone_and_subscription() {
+        let resources = resources(10, 10000);
+        let first = hub(&resources).unwrap();
+        let subscription = first.subscribe(&Authorizer(true), 0).unwrap();
+        let cloned = first.clone();
+        let second = hub(&resources).unwrap();
+        assert!(matches!(hub(&resources), Err(ScopedRealtimeError::Busy)));
+        assert_eq!(resources.stats().unwrap().active, 0);
+        assert_eq!(resources.stats().unwrap().entries, 8);
+        drop((first, cloned));
+        assert_eq!(resources.stats().unwrap().entries, 8);
+        drop(subscription);
+        assert_eq!(resources.stats().unwrap().entries, 4);
+        drop(second);
+        assert_eq!(resources.stats().unwrap().bytes, 0);
+    }
+
+    #[test]
+    fn hub_aggregate_bytes_and_authorization_fail_without_leaks() {
+        let resources = resources(20, 5000);
+        let first = hub(&resources).unwrap();
+        assert!(matches!(hub(&resources), Err(ScopedRealtimeError::Busy)));
+        assert!(matches!(
+            ScopedRealtimeHub::new_with_resources(
+                scope(),
+                "generation-one".into(),
+                None,
+                config(),
+                &Authorizer(false),
+                0,
+                &resources,
+            ),
+            Err(ScopedRealtimeError::AccessDenied)
+        ));
+        assert_eq!(resources.stats().unwrap().registrations, 1);
+        drop(first);
+        assert_eq!(resources.stats().unwrap().entries, 0);
+    }
+
+    #[tokio::test]
+    async fn governed_jitter_is_bounded_and_hints_cannot_bypass_minimum() {
+        let resources = resources(10, 10000);
+        let hub = hub(&resources).unwrap();
+        let source = Source {
+            calls: AtomicUsize::new(0),
+            failure: None,
+        };
+        assert_eq!(
+            hub.poll(&source, &Authorizer(true), 0).await.unwrap(),
+            PollOutcome::CaughtUp
+        );
+        let next = hub.lock().unwrap().next_poll_ms;
+        assert!((10..=20).contains(&next));
+        hub.hint().unwrap();
+        assert_eq!(
+            hub.poll(&source, &Authorizer(true), 9).await.unwrap(),
+            PollOutcome::NotDue
+        );
+        assert_eq!(
+            hub.poll(&source, &Authorizer(true), next - 1)
+                .await
+                .unwrap(),
+            PollOutcome::NotDue
+        );
+        assert_eq!(source.calls.load(Ordering::Acquire), 1);
+        assert_eq!(
+            hub.poll(&source, &Authorizer(true), next).await.unwrap(),
+            PollOutcome::CaughtUp
+        );
+        assert_eq!(source.calls.load(Ordering::Acquire), 2);
+        drop(hub);
+        assert_eq!(resources.stats().unwrap().bytes, 0);
+    }
+
+    #[tokio::test]
+    async fn governed_resync_is_terminal_not_an_automatic_retry() {
+        let hub = hub(&resources(10, 10000)).unwrap();
+        let source = Source {
+            calls: AtomicUsize::new(0),
+            failure: Some(ReplayError::ResyncRequired),
+        };
+        assert_eq!(
+            hub.poll(&source, &Authorizer(true), 0).await,
+            Err(ScopedRealtimeError::ResyncRequired)
+        );
+        hub.hint().unwrap();
+        assert_eq!(
+            hub.poll(&source, &Authorizer(true), 100).await,
+            Err(ScopedRealtimeError::ResyncRequired)
+        );
+        assert_eq!(source.calls.load(Ordering::Acquire), 1);
+    }
+}

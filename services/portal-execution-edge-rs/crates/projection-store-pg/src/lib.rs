@@ -1,14 +1,16 @@
 #![forbid(unsafe_code)]
 
-use std::{str::FromStr as _, time::Duration};
+use std::{str::FromStr as _, sync::Arc, time::Duration};
 
 use chrono::{DateTime, TimeDelta, Utc};
 use execution_contracts::{CanonicalId, SourceAuthority, SourceCompleteness, SourceCursor};
 use projection_core::{
-    canonical_digest, semantic_state_digest, ApplyDisposition, FreshnessPolicy, ProjectedEntity,
-    ProjectionEntityKey, ProjectionEntityKind, ProjectionEpochStatus, ProjectionError,
-    ProjectionObservation, ProjectionOperation, ProjectionReducer, ProjectionScope, ReplayRecord,
-    SnapshotCompleteness, SourceSequenceSemantics,
+    canonical_digest,
+    resources::{ResourceEnvelope, ResourceError, ResourceLease, WorkClass},
+    semantic_state_digest, ApplyDisposition, FreshnessPolicy, ProjectedEntity, ProjectionEntityKey,
+    ProjectionEntityKind, ProjectionEpochStatus, ProjectionError, ProjectionObservation,
+    ProjectionOperation, ProjectionReducer, ProjectionScope, ReplayRecord, SnapshotCompleteness,
+    SourceSequenceSemantics,
 };
 use source_qualification::shadow_screen::{
     accept_shadow_activation, AcceptedShadowActivation, ShadowActivationEvidence,
@@ -119,6 +121,7 @@ pub struct ShadowScreenAuthority {
 #[derive(Clone)]
 pub struct PgProjectionStore {
     pool: PgPool,
+    resources: Option<Arc<ResourceEnvelope>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -141,7 +144,53 @@ impl PgProjectionStore {
             .idle_timeout(Duration::from_secs(60))
             .connect(database_url)
             .await?;
-        Ok(Self { pool })
+        Ok(Self {
+            pool,
+            resources: None,
+        })
+    }
+
+    /// Opt-in resource envelope for the versioned04/05 paths. All clones share
+    /// admission and one pool. Legacy/domain-specific APIs are not governed by
+    /// this constructor; do not share this pool with ungoverned worker traffic.
+    /// # Errors
+    /// Rejects a pool smaller than the total admitted work or an oversized pool.
+    /// The foreground reserve is meaningful only with this bounded pool binding.
+    pub async fn connect_with_resources(
+        database_url: &str,
+        resources: Arc<ResourceEnvelope>,
+        max_connections: u32,
+    ) -> Result<Self, StoreError> {
+        if max_connections == 0
+            || max_connections > 64
+            || usize::try_from(max_connections).map_err(|_| ResourceError::Config)?
+                < resources.limits().max_active
+        {
+            return Err(ResourceError::Config.into());
+        }
+        let pool = PgPoolOptions::new()
+            .max_connections(max_connections)
+            .min_connections(0)
+            .acquire_timeout(Duration::from_secs(3))
+            .idle_timeout(Duration::from_secs(60))
+            .connect(database_url)
+            .await?;
+        Ok(Self {
+            pool,
+            resources: Some(resources),
+        })
+    }
+
+    fn admit(
+        &self,
+        class: WorkClass,
+        entries: usize,
+        bytes: usize,
+    ) -> Result<Option<ResourceLease>, ResourceError> {
+        self.resources
+            .as_ref()
+            .map(|resources| resources.try_acquire(class, entries, bytes, Utc::now()))
+            .transpose()
     }
 
     /// Applies embedded expand-compatible projection migrations.
@@ -1407,6 +1456,8 @@ fn i64_from_u64(value: u64) -> Result<i64, StoreError> {
 
 #[derive(Debug, Error)]
 pub enum StoreError {
+    #[error(transparent)]
+    Resource(#[from] ResourceError),
     #[error(transparent)]
     Database(#[from] sqlx::Error),
     #[error(transparent)]

@@ -28,7 +28,14 @@
 > fmt/strict clippy PASS,8formal families PASS isolated. Full connected exit NOT_MET
 > for04source +06budgets +08read-security/TLS +partner BFF receipts;0owned debt.
 > Own2.266GB private test/build/cache cleaned;12HK+5SGP protected tuples unchanged,
-> restarts0. No BFF route/source activation.06…11 await named approval.
+> restarts0. No BFF route/source activation.**06 approved/in progress (§23.15):**
+> shared resource envelopes,04/05 pre-pool admission and Manager recurrence/
+> mixed-cadence hot-path correction;317automated PASS,0FAIL/skip; fmt/strict
+> zero-warning Clippy PASS. Owned isolated package qualified/source-dark; full
+>06 exit NOT_MET (01numeric budgets/03publication, fresh paired measurements and
+> Research returns). Own5.863GB test source/cache/logs cleaned;12HK+5SGP tuples
+> unchanged/restarts0. No runtime/source mutation or capacity claim.
+>07…11 await named approval. Evidence/action packet linked in §23.15.
 > 01capacity is still pending;
 > logical02 closure does not waive it.
 > No runtime activation. Four owner-supplied guides

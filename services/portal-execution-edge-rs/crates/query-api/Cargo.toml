@@ -12,6 +12,7 @@ chrono.workspace = true
 execution-contracts = { path = "../execution-contracts" }
 hex.workspace = true
 hmac.workspace = true
+projection-core = { path = "../projection-core" }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

@@ -1752,6 +1752,7 @@ dependencies = [
  "execution-contracts",
  "hex",
  "hmac",
+ "projection-core",
  "serde",
  "serde_json",
  "sha2",

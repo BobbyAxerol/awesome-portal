@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """One isolated SGP Rust/PG correctness run; never performance acceptance.
 
-Private input: /tmp/epg10-{04,05}-*/{source/,run.py,test_run.py,
+Private input: /tmp/epg10-{04,05,06}-*/{source/,run.py,test_run.py,
 execution_edge_observe.py,epg03_run.py}. For04 source/ is the exact Rust
-workspace; for05 it preserves services/portal-execution-edge-rs plus the exact
-shared packages/contracts/fixtures/keyset-page.valid.json monorepo layout.
-EPG10_TEST_PROFILE is explicitly 04 or 05 (default04). Root supplies
-EPG10_PORTAL_REVISION, EPG10_EXPECT_BOOTSTRAP_TESTS and, for05,
-EPG10_EXPECT_READ_TESTS. Only an
+workspace; for05/06 it preserves services/portal-execution-edge-rs plus the exact
+shared packages/contracts/fixtures/keyset-page.valid.json monorepo layout;
+06 additionally requires exact public Edge compile-time inputs below.
+EPG10_TEST_PROFILE is explicitly 04, 05 or 06 (default04). Root supplies
+EPG10_PORTAL_REVISION, EPG10_EXPECT_BOOTSTRAP_TESTS and, for05/06,
+EPG10_EXPECT_READ_TESTS;06 also requires EPG10_EXPECT_RESOURCE_TESTS and
+EPG10_EXPECT_MANAGER_TESTS. Resource/WAL/cost observations remain tainted for
+capacity, and cumulative child maxrss is not an individual stage peak. Only an
 explicit EPG10_ALLOW_DEPENDENCY_FETCH=1 permits the first locked compile to fetch;
 every subsequent Cargo command is offline. No production/source credentials are
 inherited. Logs/rows/ephemeral DB credentials remain private, never stdout.
@@ -16,12 +19,15 @@ from datetime import datetime, timezone
 import hashlib
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import re
+import resource
 import secrets
 import selectors
 import signal
+import stat
 import subprocess
 import sys
 import threading
@@ -34,7 +40,47 @@ MAX_LOG_BYTES = 8 * 1024 * 1024
 LOCK_SECONDS = 1500
 RUST_WORKSPACE = 'services/portal-execution-edge-rs'
 SHARED_FIXTURE = 'packages/contracts/fixtures/keyset-page.valid.json'
+RESOURCE_SHARED_FIXTURES = tuple('packages/contracts/fixtures/' + name for name in (
+    'execution-analytics.capital-preview.valid.json',
+    'execution-analytics.order-funnel.valid.json',
+    'execution-analytics.insight-batch.valid.json',
+    'execution-analytics.correlation.valid.json',
+    'execution-analytics.capital-ledger.valid.json',
+    'execution-analytics.binding-exposure.valid.json',
+    'execution-query-analytics.empty.valid.json',
+    'execution-paper-workbench.orders-shadow.valid.json',
+))
 MAX_SHARED_FIXTURE_BYTES = 64 * 1024
+# These tracked public compile inputs are not runtime configuration. Larger
+# contract extracts have individual caps; the nine existing shared fixtures
+# retain their original 64KiB limit.
+CONTRACT_PACK = ('upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/'
+                 'trading_system_portal_contract_pack/')
+RESOURCE_COMPILE_INPUTS = {
+    RUST_WORKSPACE + '/contract-pack.lock.json': 64 * 1024,
+    CONTRACT_PACK + 'extract/vocabularies.json': 256 * 1024,
+    CONTRACT_PACK + 'openapi.sanitized.json': 64 * 1024,
+    CONTRACT_PACK + 'extract/request-contracts.json': 64 * 1024,
+    CONTRACT_PACK + 'extract/response-shapes.json': 512 * 1024,
+    'deploy/manifests/full-paper-read-release-profile.v1.json': 64 * 1024,
+    'deploy/manifests/sandbox-live-read-release-profile.v1.json': 64 * 1024,
+    'deploy/manifests/execution-manager-product-release-profile.v1.json': 64 * 1024,
+    'deploy/manifests/current-source-paper-release-profile.v1.json': 64 * 1024,
+    'upgrade/backend/EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md': 64 * 1024,
+    'packages/contracts/fixtures/execution-protective-path.current-emergency-close.accepted.json': 64 * 1024,
+    'packages/contracts/fixtures/execution-command-catalog.valid.json': 64 * 1024,
+    'packages/contracts/fixtures/execution-intercell-gateway.current-paper.accepted.json': 64 * 1024,
+    'packages/contracts/fixtures/execution-emergency-routing.source-dark.valid.json': 64 * 1024,
+}
+RESOURCE_BUILD_SCRIPTS = (
+    'crates/ts-contract-v1/build.rs',
+    'crates/paper-source-contract/build.rs',
+    'crates/manager-v2-contract/build.rs',
+)
+EDGE_TEST_ARGUMENTS = ('cargo', 'test', '--offline', '--locked', '-p', 'edge-service',
+                       '--bins', '--', '--test-threads=1')
+MAX_COST_LINE_BYTES = 4096
+MAX_SAFE_METRIC = (1 << 53) - 1
 OWNED_RUST = (
     'crates/authoritative-event-core/src/bootstrap.rs',
     'crates/authoritative-event-core/src/bootstrap/tests.rs',
@@ -48,28 +94,45 @@ SCOPED_OWNED_RUST = (
     'crates/projection-store-pg/src/scoped_read.rs',
     'crates/projection-store-pg/tests/epg10_05_scoped_read.rs',
 )
+RESOURCE_OWNED_RUST = (
+    'crates/projection-core/src/lib.rs',
+    'crates/projection-core/src/resources.rs',
+    'crates/manager-projection/src/lib.rs',
+    'crates/projection-store-pg/src/lib.rs',
+    'crates/projection-store-pg/src/manager_projection.rs',
+    'crates/projection-store-pg/tests/epg10_06_resources.rs',
+    'crates/projection-store-pg/tests/epg10_06_manager.rs',
+    'crates/query-api/Cargo.toml',
+    'crates/edge-service/src/main.rs',
+    'crates/edge-service/src/manager_projection_command.rs',
+)
 
 
 def test_profile(profile=None):
     value = os.environ.get('EPG10_TEST_PROFILE', '04') if profile is None else profile
-    if value not in ('04', '05'):
-        raise ValueError('EXPLICIT_TEST_PROFILE_04_OR_05_REQUIRED')
+    if value not in ('04', '05', '06'):
+        raise ValueError('EXPLICIT_TEST_PROFILE_04_OR_05_OR_06_REQUIRED')
     return value
 
 
 def owned_rust(profile=None):
-    return OWNED_RUST + (SCOPED_OWNED_RUST if test_profile(profile) == '05' else ())
+    profile = test_profile(profile)
+    return (OWNED_RUST + (SCOPED_OWNED_RUST if profile != '04' else ())
+            + (RESOURCE_OWNED_RUST if profile == '06' else ()))
 
 
 def package_arguments(profile=None):
     packages = ['authoritative-event-core', 'projection-store-pg']
-    if test_profile(profile) == '05':
+    profile = test_profile(profile)
+    if profile != '04':
         packages = ['query-api', 'realtime-sse', *packages]
+    if profile == '06':
+        packages = ['projection-core', 'manager-projection', *packages]
     return [argument for package in packages for argument in ('-p', package)]
 
 
 def expected_test_count(value, kind):
-    if kind not in ('BOOTSTRAP', 'READ'):
+    if kind not in ('BOOTSTRAP', 'READ', 'RESOURCE', 'MANAGER'):
         raise ValueError('EXPLICIT_TEST_COUNT_KIND_REQUIRED')
     if not isinstance(value, str) or not re.fullmatch('[1-9][0-9]{0,2}', value) or int(value) > 128:
         raise ValueError('EXACT_BOUNDED_' + kind + '_TEST_COUNT_REQUIRED')
@@ -137,21 +200,67 @@ def source_hashes(source, profile=None):
                     and path.name not in ('.env.example', '.env.sample', '.env.template')):
                 raise ValueError('PRIVATE_CONFIG_NOT_SOURCE_INPUT')
             size = path.stat().st_size
-            if profile == '05' and relative.as_posix() == SHARED_FIXTURE:
+            if profile != '04' and relative.as_posix() in (
+                    SHARED_FIXTURE, *(RESOURCE_SHARED_FIXTURES if profile == '06' else ())):
                 if not 0 < size <= MAX_SHARED_FIXTURE_BYTES:
                     raise ValueError('BOUNDED_SHARED_FIXTURE_REQUIRED')
+            if profile == '06' and relative.as_posix() in RESOURCE_COMPILE_INPUTS:
+                if not 0 < size <= RESOURCE_COMPILE_INPUTS[relative.as_posix()]:
+                    raise ValueError('BOUNDED_PUBLIC_COMPILE_INPUT_REQUIRED')
             total += size
             if len(hashes) >= 10000 or total > 128 * 1024 * 1024:
                 raise ValueError('SOURCE_INPUT_BOUNDS')
             hashes[relative.as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
     required = ('Cargo.toml', 'Cargo.lock', *owned_rust(profile),
                 'crates/projection-store-pg/migrations/0019_scoped_bootstrap.sql')
-    if profile == '05':
+    if profile != '04':
         required += ('crates/projection-store-pg/migrations/0020_scoped_read.sql',)
         required = tuple(RUST_WORKSPACE + '/' + path for path in required) + (SHARED_FIXTURE,)
+    if profile == '06':
+        required += (*RESOURCE_SHARED_FIXTURES, *RESOURCE_COMPILE_INPUTS,
+                     *(RUST_WORKSPACE + '/' + name for name in RESOURCE_BUILD_SCRIPTS))
     if any(path not in hashes for path in required):
         raise ValueError('EXACT_OWNED_INPUT_MISSING')
     return hashes
+
+
+def refresh_copied_input_mtimes(base, source, expected_hashes):
+    """06 only: invalidate copied-source Cargo fingerprints, never source bytes."""
+    validate_base(base, '06')
+    if source != base / 'source' or source.resolve() != source:
+        raise ValueError('EXACT_PRIVATE_SOURCE_PATH_REQUIRED')
+    if (not isinstance(expected_hashes, dict) or not 0 < len(expected_hashes) <= 10000
+            or source_hashes(source, '06') != expected_hashes):
+        raise ValueError('EXACT_VALIDATED_INPUT_MANIFEST_REQUIRED')
+    paths = []
+    for relative in sorted(expected_hashes):
+        path = source / relative
+        if path.resolve() != path or source not in path.parents:
+            raise ValueError('EXACT_PRIVATE_SOURCE_PATH_REQUIRED')
+        metadata = path.lstat()
+        if (not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.getuid()
+                or metadata.st_nlink != 1):
+            raise ValueError('PRIVATE_UNLINKED_SOURCE_FILE_REQUIRED')
+        paths.append((path, metadata.st_dev, metadata.st_ino))
+    refreshed_at_ns = time.time_ns()
+    if not 0 < refreshed_at_ns < (1 << 63):
+        raise ValueError('BOUNDED_SOURCE_MTIME_REQUIRED')
+    for path, device, inode in paths:
+        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+        try:
+            metadata = os.fstat(descriptor)
+            if ((metadata.st_dev, metadata.st_ino) != (device, inode)
+                    or not stat.S_ISREG(metadata.st_mode)
+                    or metadata.st_uid != os.getuid() or metadata.st_nlink != 1):
+                raise ValueError('PRIVATE_UNLINKED_SOURCE_FILE_REQUIRED')
+            os.utime(descriptor, ns=(metadata.st_atime_ns, refreshed_at_ns))
+        finally:
+            os.close(descriptor)
+    if source_hashes(source, '06') != expected_hashes:
+        raise ValueError('SOURCE_BYTES_CHANGED_DURING_MTIME_REFRESH')
+    return dict(basis='VALIDATED_PRIVATE_SOURCE_MTIME_REFRESH_NOT_BYTE_CHANGE',
+                touched_files=len(paths), refreshed_at_ns=refreshed_at_ns,
+                bytes_unchanged=True, target_or_cache_touched=False)
 
 
 def isolated_environment(base):
@@ -181,9 +290,40 @@ def stop_process_group(process):
         process.wait(timeout=2)
 
 
-def run_logged(args, log_path, *, cwd, env, timeout, check=True):
+def metric_number(value, *, integer=False):
+    if (type(value) not in ((int,) if integer else (int, float))
+            or not 0 <= value <= MAX_SAFE_METRIC or not math.isfinite(value)):
+        raise ValueError('FINITE_NONNEGATIVE_BOUNDED_METRIC_REQUIRED')
+    return value
+
+
+def child_resource_delta(before, after):
+    """Linux child-lineage interval totals; maxrss is a cumulative high-water."""
+    fields = ('ru_utime', 'ru_stime', 'ru_maxrss', 'ru_inblock', 'ru_oublock')
+    pairs = {}
+    for field in fields:
+        start = metric_number(getattr(before, field), integer=field not in ('ru_utime', 'ru_stime'))
+        end = metric_number(getattr(after, field), integer=field not in ('ru_utime', 'ru_stime'))
+        if end < start:
+            raise ValueError('CHILD_RESOURCE_COUNTER_REGRESSED')
+        pairs[field] = (start, end)
+    return dict(basis='RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL',
+        user_cpu_seconds=pairs['ru_utime'][1] - pairs['ru_utime'][0],
+        system_cpu_seconds=pairs['ru_stime'][1] - pairs['ru_stime'][0],
+        maxrss_before_kib=pairs['ru_maxrss'][0], maxrss_after_kib=pairs['ru_maxrss'][1],
+        maxrss_cumulative_highwater_delta_kib=pairs['ru_maxrss'][1] - pairs['ru_maxrss'][0],
+        block_input_operations=pairs['ru_inblock'][1] - pairs['ru_inblock'][0],
+        block_output_operations=pairs['ru_oublock'][1] - pairs['ru_oublock'][0],
+        tainted_for_capacity=True,
+        limitations=['MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK',
+            'INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS',
+            'BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO'])
+
+
+def run_logged(args, log_path, *, cwd, env, timeout, check=True, measure_resources=False):
     """Drain a child into one bounded private log; kill its group on failure."""
     started = time.monotonic()
+    before = resource.getrusage(resource.RUSAGE_CHILDREN) if measure_resources else None
     process = subprocess.Popen(args, cwd=cwd, env=env, stdout=subprocess.PIPE,
                                stderr=subprocess.STDOUT, start_new_session=True)
     total = 0
@@ -206,8 +346,12 @@ def run_logged(args, log_path, *, cwd, env, timeout, check=True):
         code = process.wait(timeout=max(0.1, timeout - (time.monotonic() - started)))
         if check and code:
             raise subprocess.CalledProcessError(code, args)
-        return dict(returncode=code, elapsed_seconds=round(time.monotonic() - started, 3),
-                    private_log_bytes=total)
+        result = dict(returncode=code, elapsed_seconds=round(time.monotonic() - started, 3),
+                      private_log_bytes=total)
+        if measure_resources:
+            result['child_resource_observation'] = child_resource_delta(
+                before, resource.getrusage(resource.RUSAGE_CHILDREN))
+        return result
     except BaseException:
         stop_process_group(process)
         raise
@@ -233,6 +377,53 @@ def parse_safety_results(text):
     if len(count) != 1 or int(count[0]) == 0 or not text.rstrip().endswith('OK'):
         raise ValueError('RUNNER_SAFETY_TESTS_REQUIRED')
     return dict(passed=int(count[0]), failed=0, skipped=0)
+
+
+def unique_json_object(pairs):
+    value = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError('DUPLICATE_METRIC_KEY')
+        value[key] = item
+    return value
+
+
+def parse_manager_cost(text):
+    """One allowlisted TEST_ONLY line, never raw test output or business rows."""
+    if not isinstance(text, str) or len(text.encode()) > MAX_LOG_BYTES:
+        raise ValueError('BOUNDED_MANAGER_COST_LOG_REQUIRED')
+    marker = 'EPG10_COST_JSON='
+    rows = [line for line in text.splitlines() if marker in line]
+    if (len(rows) != 1 or not rows[0].startswith(marker)
+            or len(rows[0].encode()) > MAX_COST_LINE_BYTES):
+        raise ValueError('EXACT_ONE_BOUNDED_MANAGER_COST_LINE_REQUIRED')
+    value = json.loads(rows[0][len(marker):], object_pairs_hook=unique_json_object)
+    counts = ('entities', 'changed_entities', 'baseline_record_lookup_commands',
+        'candidate_current_bulk_reads', 'candidate_unchanged_record_lookups',
+        'applied_entities', 'removed_entities', 'unchanged_entities', 'candidate_wal_bytes',
+        'baseline_full_snapshot_wal_bytes', 'baseline_full_snapshot_applied_entities')
+    timing = ('baseline_record_lookup_elapsed_us', 'candidate_cycle_elapsed_us',
+              'baseline_full_snapshot_elapsed_us')
+    if (not isinstance(value, dict) or set(value) != set(counts + timing) | {
+            'schema', 'provenance', 'tainted_for_capacity'}
+            or value['schema'] != 'epg10.manager-cost.v1'
+            or value['provenance'] != 'TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL'
+            or value['tainted_for_capacity'] is not True):
+        raise ValueError('EXACT_TEST_ONLY_MANAGER_COST_SCHEMA_REQUIRED')
+    for field in counts:
+        metric_number(value[field], integer=True)
+    for field in timing:
+        metric_number(value[field])
+    if (value['entities'] == 0 or value['changed_entities'] == 0
+            or value['changed_entities'] != value['applied_entities'] + value['removed_entities']
+            or value['entities'] != value['applied_entities'] + value['removed_entities'] + value['unchanged_entities']
+            or value['baseline_record_lookup_commands'] != value['entities']
+            or value['baseline_full_snapshot_applied_entities'] != value['entities']
+            or value['candidate_current_bulk_reads'] != 1
+            or value['candidate_unchanged_record_lookups'] != 0):
+        raise ValueError('MANAGER_COST_FIXTURE_COUNTS_INCONSISTENT')
+    return dict(values=value, basis='SCOPED_TEST_QUERY_STRUCTURE_AND_FULL_SNAPSHOT_REFERENCE_NOT_TOTAL_SQL_OR_LEGACY_SPEEDUP',
+        tainted_for_capacity=True, performance_acceptance=False)
 
 
 def clippy_findings(text, profile=None):
@@ -401,6 +592,47 @@ SELECT json_build_object(
         tainted_for_capacity=True)
 
 
+def owned_wal_stats(helper, container_id):
+    """Fixed cluster-WAL counters from the verified disposable PG identity only."""
+    if not re.fullmatch('[0-9a-f]{64}', container_id):
+        raise ValueError('IMMUTABLE_OWNED_PG_ID_REQUIRED')
+    sql = """BEGIN READ ONLY; SET LOCAL statement_timeout='2s';
+SELECT json_build_object('database',current_database(),'wal_records',wal_records,
+ 'wal_fpi',wal_fpi,'wal_bytes',wal_bytes::bigint,'stats_reset',stats_reset::text)
+ FROM pg_stat_wal; COMMIT;"""
+    raw = helper.docker('exec', container_id, 'psql', '-X', '-qAt', '-U', 'postgres',
+        '-d', 'portal_projection_test_epg10_04', '-v', 'ON_ERROR_STOP=1', '-c', sql,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout
+    if len(raw) > 4096:
+        raise ValueError('BOUNDED_OWNED_WAL_STATS_REQUIRED')
+    value = json.loads(raw, object_pairs_hook=unique_json_object)
+    if (not isinstance(value, dict) or set(value) != {
+            'database', 'wal_records', 'wal_fpi', 'wal_bytes', 'stats_reset'}
+            or value['database'] != 'portal_projection_test_epg10_04'
+            or not isinstance(value['stats_reset'], str)
+            or not 1 <= len(value['stats_reset']) <= 80
+            or any(ord(char) < 32 for char in value['stats_reset'])):
+        raise ValueError('EXACT_OWNED_WAL_STATS_REQUIRED')
+    for field in ('wal_records', 'wal_fpi', 'wal_bytes'):
+        metric_number(value[field], integer=True)
+    return value
+
+
+def wal_observation(before, after):
+    if before['database'] != after['database'] or before['stats_reset'] != after['stats_reset']:
+        raise ValueError('OWNED_WAL_COUNTER_EPOCH_CHANGED')
+    delta = {}
+    for field in ('wal_records', 'wal_fpi', 'wal_bytes'):
+        start, end = metric_number(before[field], integer=True), metric_number(after[field], integer=True)
+        if end < start:
+            raise ValueError('OWNED_WAL_COUNTER_REGRESSED')
+        delta[field] = end - start
+    return dict(basis='OWNED_CLUSTER_PG_STAT_WAL_INTERVAL_NOT_PER_TEST_TRANSACTION',
+        before=before, after=after, delta=delta, tainted_for_capacity=True,
+        limitations=['STATISTICS_FLUSH_LAG_POSSIBLE', 'INCLUDES_ALL_OWNED_TEST_DATABASE_AND_MIGRATION_WAL',
+            'NOT_SOURCE_DATABASE_WAL_OR_CAPACITY_ACCEPTANCE'])
+
+
 def finish_observation_and_cleanup(receipt, sampler, helper, attempted, lock_context, base):
     """Stop observation first; neither observation failure nor cleanup skips release."""
     stopped = sampler is None
@@ -428,8 +660,9 @@ def main():
     validate_base(base, profile)
     helper = load_cleanup_helpers(base, profile)
     source_root = base / 'source'
-    receipt = dict(schema=('epg10.bootstrap-correctness.v1' if profile == '04'
-                          else 'epg10.scoped-read-correctness.v1'), test_profile=profile, status='FAIL',
+    receipt = dict(schema={'04': 'epg10.bootstrap-correctness.v1',
+                          '05': 'epg10.scoped-read-correctness.v1',
+                          '06': 'epg10.resource-correctness.v1'}[profile], test_profile=profile, status='FAIL',
                    at_utc=datetime.now(timezone.utc).isoformat(),
                    provenance='TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL', runtime_activation=False,
                    production_mutations=0, source_requests=0, pg_image=IMAGE,
@@ -449,13 +682,20 @@ def main():
         revision = os.environ['EPG10_PORTAL_REVISION']
         expected = expected_test_count(os.environ['EPG10_EXPECT_BOOTSTRAP_TESTS'], 'BOOTSTRAP')
         expected_read = (expected_test_count(os.environ.get('EPG10_EXPECT_READ_TESTS'), 'READ')
-                         if profile == '05' else None)
+                         if profile != '04' else None)
+        expected_resource = (expected_test_count(os.environ.get('EPG10_EXPECT_RESOURCE_TESTS'), 'RESOURCE')
+                             if profile == '06' else None)
+        expected_manager = (expected_test_count(os.environ.get('EPG10_EXPECT_MANAGER_TESTS'), 'MANAGER')
+                            if profile == '06' else None)
         if not re.fullmatch('[0-9a-f]{40}', revision):
             raise ValueError('EXACT_SOURCE_REVISION_REQUIRED')
         receipt['source_revision'] = revision
         receipt['expected_bootstrap_tests'] = expected
         if expected_read is not None:
             receipt['expected_read_tests'] = expected_read
+        if profile == '06':
+            receipt['expected_resource_tests'] = expected_resource
+            receipt['expected_manager_tests'] = expected_manager
         # Existing observer helper reserves 90s itself; pass1410 for an exact
         # 1500s lease, with a separate30s local cleanup reserve.
         lock_context = helper.obs.measurement_lock(helper.obs.LOCK, helper.OWNER,
@@ -488,7 +728,11 @@ def main():
         def logged(name, args, timeout=120, check=True, run_env=None, directory=None):
             helper.obs.verify_lock(helper.obs.LOCK, lock)
             receipt['stages'][name] = run_logged(prefix + args, base / (name + '.log'),
-                cwd=directory or source, env=run_env or env, timeout=timeout, check=check)
+                cwd=directory or source, env=run_env or env, timeout=timeout,
+                check=check if profile != '06' else False,
+                measure_resources=profile == '06')
+            if profile == '06' and check and receipt['stages'][name]['returncode']:
+                raise subprocess.CalledProcessError(receipt['stages'][name]['returncode'], args)
             return (base / (name + '.log')).read_text(errors='replace')
         stage = 'runner_safety_tests'
         receipt['runner_safety_tests'] = parse_safety_results(logged(stage,
@@ -496,18 +740,33 @@ def main():
         stage = 'rustfmt'
         logged(stage, ['cargo', 'fmt', '--all', '--', '--check'])
         receipt['rustfmt'] = 'PASS'
+        if profile == '06':
+            stage = 'refresh_private_source_mtimes'
+            helper.obs.verify_lock(helper.obs.LOCK, lock)
+            receipt['source_mtime_refresh'] = refresh_copied_input_mtimes(
+                base, source_root, receipt['input_hashes'])
         stage = 'compile'
         compile_env = env.copy()
         allow_fetch = os.environ.get('EPG10_ALLOW_DEPENDENCY_FETCH') == '1'
         compile_env['CARGO_NET_OFFLINE'] = 'false' if allow_fetch else 'true'
         receipt['dependency_fetch_allowed_during_compile_only'] = allow_fetch
         packages = package_arguments(profile)
-        logged(stage, ['cargo', 'test', '--locked', *packages, '--lib', '--no-run'],
+        compile_packages = packages + (['-p', 'edge-service'] if profile == '06' else [])
+        compile_targets = ['--all-targets'] if profile == '06' else ['--lib']
+        logged(stage, ['cargo', 'test', '--locked', *compile_packages, *compile_targets, '--no-run'],
             timeout=900, run_env=compile_env)
         if profile == '05':
             stage = 'compile_integration_tests'
             logged(stage, ['cargo', 'test', '--offline', '--locked', '-p', 'projection-store-pg',
                 '--tests', '--no-run'], timeout=240)
+        elif profile == '06':
+            receipt['integration_compile_coverage'] = dict(
+                basis='COVERED_BY_06_ALL_TARGETS_NO_RUN', package_count=len(compile_packages) // 2,
+                locked=True, no_run=True, all_targets=True)
+        if profile == '06':
+            stage = 'compile_edge_service'
+            logged(stage, ['cargo', 'check', '--offline', '--locked', '-p', 'edge-service',
+                '--all-targets'], timeout=600)
         helper.obs.verify_lock(helper.obs.LOCK, lock)
         stage = 'create_owned_pg'
         password = secrets.token_urlsafe(24)
@@ -539,40 +798,62 @@ def main():
         env['TEST_PROJECTION_DATABASE_URL'] = 'postgres://postgres:' + password + '@' + port + '/portal_projection_test_epg10_04'
         env['EPG10_TEST_ONLY'] = '1'
         # The legacy04 integration harness intentionally uses this exact DB
-        # name for both profiles; container name/owner remain profile-isolated.
+        # name for all profiles; container name/owner remain profile-isolated.
         stage = 'postgresql_observer_start'
         sampler = OwnPgSampler(helper)
         sampler.start()
+        if profile == '06':
+            stage = 'pre_suite_owned_wal'
+            wal_before = owned_wal_stats(helper, sampler.roster[0]['container_id'])
         stage = 'unit_tests'
         receipt['unit_tests'] = parse_rust_results(logged(stage,
             ['cargo', 'test', '--offline', '--locked', *packages,
-             '--lib', '--', '--test-threads=1'], timeout=240), 4 if profile == '05' else 2)
+             '--lib', '--', '--test-threads=1'], timeout=240), {'04': 2, '05': 4, '06': 6}[profile])
+        if profile == '06':
+            stage = 'edge_tests'
+            receipt['edge_tests'] = parse_rust_results(logged(stage,
+                list(EDGE_TEST_ARGUMENTS), timeout=240), 1)
         stage = 'bootstrap_tests'
         receipt['bootstrap_tests'] = parse_rust_results(logged(stage,
             ['cargo', 'test', '--offline', '--locked', '-p', 'projection-store-pg',
              '--test', 'epg10_04_bootstrap', '--', '--nocapture', '--test-threads=1'], timeout=240),
              1, expected)
         database_stages = ['unit_tests', 'bootstrap_tests']
-        if profile == '05':
+        if profile != '04':
             stage = 'read_tests'
             receipt['read_tests'] = parse_rust_results(logged(stage,
                 ['cargo', 'test', '--offline', '--locked', '-p', 'projection-store-pg',
                  '--test', 'epg10_05_scoped_read', '--', '--nocapture', '--test-threads=1'], timeout=240),
                  1, expected_read, count_kind='READ')
             database_stages.append(stage)
+        if profile == '06':
+            for stage, target, count, kind in (
+                    ('resource_tests', 'epg10_06_resources', expected_resource, 'RESOURCE'),
+                    ('manager_tests', 'epg10_06_manager', expected_manager, 'MANAGER')):
+                output = logged(stage, ['cargo', 'test', '--offline', '--locked',
+                    '-p', 'projection-store-pg', '--test', target, '--', '--nocapture',
+                    '--test-threads=1'], timeout=240)
+                receipt[stage] = parse_rust_results(output, 1, count, count_kind=kind)
+                database_stages.append(stage)
+                if kind == 'MANAGER':
+                    receipt['manager_cost_observation'] = parse_manager_cost(output)
+            stage = 'post_suite_owned_wal'
+            receipt['owned_wal_observation'] = wal_observation(wal_before,
+                owned_wal_stats(helper, sampler.roster[0]['container_id']))
         stage = 'post_suite_test_db_counts'
         receipt['test_database_counts'] = owned_db_counts(helper, sampler.roster[0]['container_id'])
         receipt['database_test_stage_seconds_observational'] = {
             name: receipt['stages'][name]['elapsed_seconds'] for name in database_stages}
         stage = 'clippy'
+        clippy_packages = packages + (['-p', 'edge-service'] if profile == '06' else [])
         findings = clippy_findings(logged(stage,
-            ['cargo', 'clippy', '--offline', '--locked', *packages, '--all-targets',
-             '--message-format=json', *(['--', '-D', 'warnings'] if profile == '05' else [])],
-            timeout=240, check=False), profile)
+            ['cargo', 'clippy', '--offline', '--locked', *clippy_packages, '--all-targets',
+             '--message-format=json', *(['--', '-D', 'warnings'] if profile != '04' else [])],
+            timeout=600 if profile == '06' else 240, check=False), profile)
         receipt['clippy'] = findings
         if receipt['stages'][stage]['returncode'] or findings['owned_warnings']:
             raise ValueError('CLIPPY_GATE_FAILED_PRIVATE_LOG')
-        receipt['clippy']['status'] = ('PASS_STRICT_ZERO_WARNINGS' if profile == '05'
+        receipt['clippy']['status'] = ('PASS_STRICT_ZERO_WARNINGS' if profile != '04'
                                        else 'PASS_NO_OWNED_WARNINGS')
         stage = 'input_immutability'
         if source_hashes(source_root, profile) != receipt['input_hashes']:

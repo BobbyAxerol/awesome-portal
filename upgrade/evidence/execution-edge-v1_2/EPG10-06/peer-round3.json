@@ -1,0 +1,95 @@
+{
+  "schema": "epg10.partner-source-review.v1",
+  "phase": "EPG10-06",
+  "round": 3,
+  "at_utc": "2026-10-16T07:08:10Z",
+  "evidence_class": "READ_ONLY_SOURCE_METADATA_NOT_RUNTIME_OR_CAPACITY_ACCEPTANCE",
+  "comparison": "UNCHANGED_FROM_EPG10_06_ROUND2",
+  "peer_edits": 0,
+  "peer_tests_or_heavy_jobs": 0,
+  "sources": [
+    {
+      "path": "/home/bobby/.worktrees/trading-system-next-upgrade",
+      "branch": "feat/v2-rust-first-okx-demo",
+      "head": "ebc1252555d4fc7b986ced902ac67b1eba17077f",
+      "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_sha256": "6b527d7852bec9097da8c0a245c84c92e572c4856734c1db9dfd60875de90416",
+      "untracked_paths_sha256": "0f5ccc3e62adf3367f549fa8fc2ab99b763ff0c1580f8bbc0fef1ba4b1d800e2",
+      "untracked_count": 1,
+      "journal_sha256": "75d9c80350050dcaa9e2efc999029d25dea98c3c3762dc00eeff8a3a80708e79",
+      "dirty_files": [
+        "rust/crates/market-data-writer/src/health.rs",
+        "rust/crates/market-data-writer/src/native_io.rs",
+        "rust/crates/market-data-writer/src/session.rs",
+        "rust/crates/market-data-writer/src/telemetry.rs",
+        "rust/crates/market-data-writer/tests/session.rs"
+      ]
+    },
+    {
+      "path": "/home/bobby/.worktrees/trading-system-pm-v1_1",
+      "branch": "feat/portfolio-account-v1_1-parallel",
+      "head": "d16aa2b5f251596e469807f57e81fe14cdc7e763",
+      "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "journal_sha256": "96ee825d90a33f3cab614b8c7053408fc34b6ae965db867e6efc33ef769735fd"
+    },
+    {
+      "path": "/home/bobby/.worktrees/data-layer-p184-closure",
+      "branch": "fix/p184-dl-closure",
+      "head": "7e40264ece699d886294dc9b3cdb6d5a06b22e09",
+      "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_sha256": "e4ca70671d4261dfe7a8baa8becaade4d3a1a6eaff0fe6dab09c2200014faee8",
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "journal_sha256": "3d81507ac6e8511ef5bec554fed89c8b57e9b8f05c5a775dda4b63f22c4efa4c",
+      "dirty_files": ["scripts/p184_g12_coordinator_load.py"]
+    }
+  ],
+  "authority": {
+    "comparison_manifest": "upgrade/evidence/execution-edge-v1_2/EPG10-00/source-runtime-manifest.json",
+    "non_journal_files_compared": 34,
+    "mismatches": 0,
+    "authority_hashes_unchanged": true,
+    "ts_native_15_plus_n03_p16_controls": "18_FILES_UNCHANGED",
+    "pm_guide_and_source_contracts": "15_FILES_UNCHANGED_PLUS_UNCHANGED_JOURNAL",
+    "dl_access_guide": "UNCHANGED",
+    "new_source_publication": false,
+    "generic_publisher_generation_fence": "UNCHANGED_ABSENT_COUNTEREXAMPLE_REPRODUCED_IN_EPG10_03",
+    "n03": "SOURCE_DARK",
+    "snapshot": "JOURNAL_PREFIX_NOT_BUSINESS_CURRENT_SNAPSHOT",
+    "pm_runtime": "COMPONENT_RECEIPTS_NOT_MOUNTED_FULL_SOURCE_EXPORT_OR_CONSUMER_ACCEPTANCE"
+  },
+  "b16": {
+    "amendment_path": "contracts/baseline/rust-first-v2/p18/p184-burst-b16-prereg.v1.amendment-1.json",
+    "amendment_sha256": "ab597f7043fc2a69f68d6cc97763a572246d81aee8cdf07c0158f61612122b29",
+    "frozen_utc": "2026-10-16T06:39:47.050825+00:00",
+    "provenance": "TEST_ONLY",
+    "capacity_acceptance": false,
+    "amended_evidence_directory": "/home/bobby/.local/state/trading-system/p184-burst-b16-amend1-20261016",
+    "amended_evidence_directory_exists": false,
+    "new_completed_amendment_receipts": 0,
+    "master_log_bytes": 0,
+    "wrapper_wait_condition": "HOST_LOCK_ABSENT_TWO_CONSECUTIVE_CHECKS_AND_NO_G12_RESIDUE",
+    "planned_subscription_depth": 2000,
+    "production_subscription_depth_documented": 1000,
+    "new_cell": {
+      "trade_events_per_second": 9000,
+      "duration_seconds": 600,
+      "core_pause_ms": 700,
+      "fault_at_second": 60
+    },
+    "prior_ladder": "7_OF_8_CLEAN_WITH_9K_SECOND_RUN_RULE_S_FAILURE",
+    "prior_9k_second_receipt_sha256": "9010bcce3b22ee0e350eb4dedf48bbc8568d4fd0e17bfd01368e4f2e9c0ce2dc",
+    "limitation": "INTERNAL_TRADE_EVENT_THROUGHPUT_NOT_PORTAL_USERS_QPS_VENUE_LATENCY_OR_EDGE_CAPACITY_PASS"
+  },
+  "remaining_external_returns": [
+    "QUALIFIED_SOURCE_PUBLISHER_FENCING_AND_REAL_SOURCE_BINDING",
+    "PM_FULL_SOURCE_EXPORT_AND_CONSUMER_APPLIED_CHECKPOINT_INTEGRATION",
+    "APPROVED_PRODUCTION_NUMERIC_ENVELOPES_AND_CLEAN_PAIRED_B0_B1_B2_COEXISTENCE_EVIDENCE"
+  ],
+  "gate_change": false,
+  "hk_foreign_lock_owner": "claude-g12-c-coordinator-load",
+  "hk_foreign_lock_until": "2026-10-16T08:05:27+00:00"
+}

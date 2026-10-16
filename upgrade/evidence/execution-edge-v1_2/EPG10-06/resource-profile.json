@@ -1,0 +1,61 @@
+{
+  "schema": "epg10.resource-profile.v1",
+  "phase": "EPG10-06",
+  "basis": "TEST_ONLY_ISOLATED_SAFETY_TRIPWIRES_NOT_PRODUCTION_APPROVAL",
+  "runtime_activation": false,
+  "test_target": "/tmp/epg10-06-GU8M0mOe",
+  "test_provenance": "SYNTHETIC_EXACT_FIXTURES_REAL_DISPOSABLE_POSTGRESQL",
+  "production_source_requests": 0,
+  "production_mutations": 0,
+  "envelope": {
+    "active_work": 3,
+    "foreground_reserved_work": 1,
+    "logical_entries": 8192,
+    "foreground_reserved_entries": 2048,
+    "logical_bytes": 134217728,
+    "foreground_reserved_bytes": 41943040,
+    "storage_max_age_seconds": 60,
+    "pool_connections": 3,
+    "waiting_queue": "NONE_FAIL_FAST"
+  },
+  "cache_control_test_envelope": {
+    "active_work": 2,
+    "foreground_reserved_work": 1,
+    "logical_entries": 4096,
+    "foreground_reserved_entries": 1024,
+    "logical_bytes": 67108864,
+    "foreground_reserved_bytes": 8388608,
+    "pool_connections": 2
+  },
+  "storage_test_values": {
+    "basis": "SYNTHETIC_TRUSTED_ADAPTER_OBSERVATION_NOT_ACTUAL_DISK_FULL",
+    "soft_used_bytes": 100,
+    "high_used_bytes": 200,
+    "hard_used_bytes": 300,
+    "minimum_free_bytes": 100,
+    "maximum_backlog_bytes": 1000,
+    "high": "PAUSE_BACKGROUND_FACT_WRITES",
+    "hard_or_stale": "REFUSE_ALL_FACT_WRITES_WITHOUT_ACK",
+    "automatic_deletion": false
+  },
+  "host_test_limits": {
+    "cargo_jobs": 1,
+    "cargo_cpu_affinity_count": 1,
+    "cargo_nice": 15,
+    "postgresql_cpu": 0.5,
+    "postgresql_memory_bytes": 805306368,
+    "postgresql_tmpfs_bytes": 536870912,
+    "postgresql_max_connections": 24,
+    "private_log_bytes_per_stage": 8388608,
+    "measurement_lock_seconds": 1500
+  },
+  "capacity_acceptance": false,
+  "limitations": [
+    "Logical reservation is not allocator or process RSS",
+    "One shared envelope/pool covers opted-in04/05 paths only; other replicas and legacy paths need their own explicit governed binding",
+    "No synthetic observer installed as runtime storage monitor",
+    "Shared-host observations cannot establish paired TS/DL/Research capacity",
+    "Fourteen production budget groups in EPG10-01 remain unapproved/unpopulated",
+    "No new scheduler, decompressor, metrics rollup or source-side analytics"
+  ]
+}

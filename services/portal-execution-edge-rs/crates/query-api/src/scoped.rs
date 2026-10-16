@@ -14,6 +14,7 @@ use std::sync::{
 use std::time::Duration;
 
 use execution_contracts::catalogue_v1::ExactDecimal;
+use projection_core::resources::{ResourceEnvelope, ResourceError, ResourceLease};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest as _, Sha256};
@@ -422,6 +423,8 @@ struct State {
 pub struct ScopedCache {
     state: Arc<Mutex<State>>,
     limits: CacheLimits,
+    /// Retains the configured charge until the final cache clone is dropped.
+    registration: Option<Arc<ResourceLease>>,
 }
 
 struct FlightGuard {
@@ -459,7 +462,32 @@ impl ScopedCache {
                 tick: 0,
             })),
             limits,
+            registration: None,
         })
+    }
+
+    /// Registers configured cache entries, in-flight slots and retained bytes
+    /// once across all clones. This logical ceiling is not a process RSS claim;
+    /// active loaders must use the caller's governed work admission separately.
+    /// # Errors
+    /// Invalid limits, arithmetic overflow or exhausted shared resource budget.
+    pub fn new_with_resources(
+        limits: CacheLimits,
+        resources: &Arc<ResourceEnvelope>,
+    ) -> Result<Self, ScopedError> {
+        let mut cache = Self::new(limits)?;
+        let entries = limits
+            .max_entries
+            .checked_add(limits.max_flights)
+            .ok_or(ScopedError::Bounds)?;
+        let registration = resources
+            .try_register(entries, limits.max_bytes)
+            .map_err(|error| match error {
+                ResourceError::Config => ScopedError::Bounds,
+                _ => ScopedError::Busy,
+            })?;
+        cache.registration = Some(Arc::new(registration));
+        Ok(cache)
     }
 
     /// Invalidates cached values and fences already running loaders. Flights
@@ -809,3 +837,74 @@ fn bounded(value: &(impl Serialize + ?Sized), maximum: usize) -> Result<(), Scop
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod resource_tests {
+    use projection_core::resources::EnvelopeLimits;
+
+    use super::*;
+
+    fn resources(max_entries: usize, max_bytes: usize) -> Arc<ResourceEnvelope> {
+        Arc::new(
+            ResourceEnvelope::new(EnvelopeLimits {
+                max_active: 3,
+                foreground_reserved: 1,
+                foreground_reserved_entries: 2,
+                foreground_reserved_bytes: 100,
+                max_entries,
+                max_bytes,
+                storage_max_age: Duration::from_secs(5),
+            })
+            .unwrap(),
+        )
+    }
+
+    fn limits() -> CacheLimits {
+        CacheLimits {
+            max_entries: 2,
+            max_bytes: 400,
+            max_flights: 2,
+            ttl_ms: 100,
+            load_timeout_ms: 100,
+        }
+    }
+
+    #[test]
+    fn cache_configured_entries_are_shared_and_clone_drop_is_exact() {
+        let resources = resources(10, 2000);
+        let first = ScopedCache::new_with_resources(limits(), &resources).unwrap();
+        let cloned = first.clone();
+        let second = ScopedCache::new_with_resources(limits(), &resources).unwrap();
+        assert!(matches!(
+            ScopedCache::new_with_resources(limits(), &resources),
+            Err(ScopedError::Busy)
+        ));
+        assert_eq!(resources.stats().unwrap().active, 0);
+        assert_eq!(resources.stats().unwrap().entries, 8);
+        drop(first);
+        assert_eq!(resources.stats().unwrap().entries, 8);
+        drop(cloned);
+        assert_eq!(resources.stats().unwrap().entries, 4);
+        drop(second);
+        assert_eq!(resources.stats().unwrap().bytes, 0);
+    }
+
+    #[test]
+    fn cache_byte_ceiling_failure_and_invalid_config_do_not_leak() {
+        let resources = resources(20, 800);
+        let first = ScopedCache::new_with_resources(limits(), &resources).unwrap();
+        assert!(matches!(
+            ScopedCache::new_with_resources(limits(), &resources),
+            Err(ScopedError::Busy)
+        ));
+        let mut invalid = limits();
+        invalid.max_flights = 0;
+        assert!(ScopedCache::new_with_resources(invalid, &resources).is_err());
+        assert_eq!(resources.stats().unwrap().bytes, 400);
+        drop(first);
+        assert_eq!(resources.stats().unwrap().entries, 0);
+        // The compatible constructor is intentionally not a governed allocation.
+        drop(ScopedCache::new(limits()).unwrap());
+        assert_eq!(resources.stats().unwrap().registrations, 1);
+    }
+}

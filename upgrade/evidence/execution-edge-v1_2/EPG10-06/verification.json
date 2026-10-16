@@ -1,0 +1,342 @@
+{
+  "schema": "epg10.resource-verification.v1",
+  "phase": "EPG10-06",
+  "at_utc": "2026-10-16 07:42:01 UTC",
+  "status": "IN_PROGRESS_OWNED_ISOLATED_PACKAGE_QUALIFIED_SOURCE_DARK",
+  "phase_exit": "NOT_MET",
+  "approval": "BOBBY_APPROVED_NAMED_PHASE_NO_REAPPROVAL_REQUEST",
+  "worktree": "/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2",
+  "branch": "feat/execution-edge-upgrade-v1_2",
+  "candidate_base_commit": "0cfa510f1518c867a1fa261527dc5d4f0e7858de",
+  "tested_candidate_identity": "qualification.json input_hashes plus four runner_hashes; exact399+4 match local candidate before commit",
+  "implemented": [
+    "Opt-in process-local shared ResourceEnvelope, reserved foreground slots/entries/bytes, fail-fast admission and RAII release",
+    "04/05 governed PG paths validate authorization then reserve before pool; no nested cached-page admission",
+    "Shared cache/fanout configured-capacity registration and bounded poll jitter; legacy constructors compatible",
+    "Fresh trusted storage samples with soft/high/hard/stale policy; no ACK or automatic fact deletion on pressure",
+    "Manager adapter v6 predecessor-aware recurrence, per-feed clocks including empty feeds, bounded CURRENT lookup and K-change writes; existing worker/registry/admission reused",
+    "Reusable isolated06 runner, immutable public compile inputs, bounded observations and finally cleanup"
+  ],
+  "exclusions": [
+    "No deployed envelope, real storage sampler, public metrics exporter or new service",
+    "No TS/PM/DL/Research source code, data, schema/index/view, grants, credentials or services mutated",
+    "No command or source activation; profiles/grants not widened",
+    "Not globally enforced for legacy constructors, all Manager APIs, all replicas or unrelated processes",
+    "No p95/p99, TS load reduction, broker authority, HA or source-connected capacity acceptance"
+  ],
+  "tests": {
+    "automated": {
+      "passed": 317,
+      "failed": 0,
+      "ignored": 0,
+      "filtered_out": 0,
+      "skipped": 0,
+      "breakdown": {
+        "runner_safety": 63,
+        "six_rust_library_binaries": 147,
+        "actual_edge_binary": 37,
+        "real_pg_bootstrap": 22,
+        "real_pg_scoped_read": 29,
+        "real_pg_resource": 8,
+        "real_pg_manager": 11
+      },
+      "regressions_included": true
+    },
+    "rustfmt": "PASS",
+    "clippy": {
+      "owned_warnings": [],
+      "status": "PASS_STRICT_ZERO_WARNINGS",
+      "upstream_advisory_warnings": 0
+    },
+    "all_target_compile": {
+      "all_targets": true,
+      "basis": "COVERED_BY_06_ALL_TARGETS_NO_RUN",
+      "locked": true,
+      "no_run": true,
+      "package_count": 7
+    },
+    "edge_all_targets_check": "PASS",
+    "immutable_input_verification": {
+      "source_file_count": 399,
+      "runner_file_count": 4,
+      "source_mismatches": [],
+      "runner_mismatches": [],
+      "manifest_sha256": "1ecac620d46f5678a4d9370c35499705dce14f7040b4b30161ced1139925170e",
+      "source_bytes_unchanged_during_remote_run": true,
+      "remote_mtime_refresh_bytes_unchanged": true,
+      "local_candidate_matches_remote_tested_input": true
+    },
+    "formal_families": [
+      {
+        "id": "EPG10-T06-01",
+        "status": "PARTIAL",
+        "proven": "Logical burst reservations/pressure and fail-fast bounds pass.",
+        "remaining_or_limitations": "Approved W-BURST population, Rust RSS ceiling and drain target remain unmeasured."
+      },
+      {
+        "id": "EPG10-T06-02",
+        "status": "PARTIAL",
+        "proven": "Real-PG reserved foreground/control slots, authorization-before-admission, cancellation pass.",
+        "remaining_or_limitations": "Connected W-RESYNC plus authoritative command-status coexistence not run."
+      },
+      {
+        "id": "EPG10-T06-03",
+        "status": "PARTIAL",
+        "proven": "Durable group idempotency/ACK-loss, cancellation rollback and pressure recovery preserve exact checkpoint/digest.",
+        "remaining_or_limitations": "Actual source network-outage/reconnect population requires the existing03 producer return."
+      },
+      {
+        "id": "EPG10-T06-04",
+        "status": "PARTIAL",
+        "proven": "Scope-safe shared cache/single-flight and fanout regressions pass.",
+        "remaining_or_limitations": "Source-connected dashboard TS amplification versus B-TS-DB not measured."
+      },
+      {
+        "id": "EPG10-T06-05",
+        "status": "NOT_RUN",
+        "proven": "No production capacity acceptance inferred from isolated tests.",
+        "remaining_or_limitations": "Approved B-TRADE and14 numeric production budget groups from01 absent."
+      },
+      {
+        "id": "EPG10-T06-06",
+        "status": "NOT_RUN",
+        "proven": "No historical B6/B16 acceptance inherited; HK lock respected.",
+        "remaining_or_limitations": "Fresh paired B0/B1/B2 at6000/9000 TRADE/s,600s x2, common source/config absent;1000 and amended2000 subscription profiles distinct."
+      },
+      {
+        "id": "EPG10-T06-07",
+        "status": "PARTIAL",
+        "proven": "PG hard cgroup/pool bounds, shared logical cache/fanout limits, synthetic soft/high/hard/stale storage and lossless recovery pass.",
+        "remaining_or_limitations": "Actual governed Rust process RSS, real disk-pressure monitor and approved production runtime binding not qualified."
+      },
+      {
+        "id": "EPG10-T06-08",
+        "status": "PARTIAL",
+        "proven": "Background admission denied before pool; foreground reserve and cancellation tested.",
+        "remaining_or_limitations": "Research analytics/Archive quota/cancel/checkpoint and full-scope refresh remain partner work; source exporter not activated."
+      },
+      {
+        "id": "EPG10-T06-09",
+        "status": "PARTIAL",
+        "proven": "Cache-reset/single-flight/cancellation, bounded jitter, aggregate registration and slow-client isolation regressions pass.",
+        "remaining_or_limitations": "Actual Research BFF/cohort/source-connected amplification not run."
+      },
+      {
+        "id": "EPG10-T06-10",
+        "status": "PASS_ISOLATED",
+        "proven": "Changed-key upsert/delete, A-B-A, mixed-cadence correction/tombstone, retry/rebootstrap and canonical business-payload oracle pass; actual row-version count proves K=1/128.",
+        "remaining_or_limitations": "100-page PARTIAL and101-page COMPLETE are builder negatives,100-page COMPLETE positive; not an actual100-request transport drill. Full-refresh reference is not old N24 speedup; per-receipt metadata digest validated separately."
+      }
+    ],
+    "formal_summary": {
+      "pass_isolated": 1,
+      "partial": 7,
+      "not_run": 2,
+      "failed": 0,
+      "not_additive_to_automated_count": true
+    },
+    "repository_wide_verify": "NOT_RUN_THIS_SLICE: unrelated full monorepo Python suite not substituted for scoped tests; HK foreign measurement lock; no hooks disabled or reconfigured"
+  },
+  "measurements": {
+    "classification": "OBSERVATION_ONLY_TAINTED_FOR_CAPACITY",
+    "shared_host": true,
+    "elapsed_seconds": 369.984,
+    "manager": {
+      "basis": "SCOPED_TEST_QUERY_STRUCTURE_AND_FULL_SNAPSHOT_REFERENCE_NOT_TOTAL_SQL_OR_LEGACY_SPEEDUP",
+      "performance_acceptance": false,
+      "tainted_for_capacity": true,
+      "values": {
+        "applied_entities": 1,
+        "baseline_full_snapshot_applied_entities": 128,
+        "baseline_full_snapshot_elapsed_us": 827730,
+        "baseline_full_snapshot_wal_bytes": 491952,
+        "baseline_record_lookup_commands": 128,
+        "baseline_record_lookup_elapsed_us": 161793,
+        "candidate_current_bulk_reads": 1,
+        "candidate_cycle_elapsed_us": 322224,
+        "candidate_unchanged_record_lookups": 0,
+        "candidate_wal_bytes": 21888,
+        "changed_entities": 1,
+        "entities": 128,
+        "provenance": "TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL",
+        "removed_entities": 0,
+        "schema": "epg10.manager-cost.v1",
+        "tainted_for_capacity": true,
+        "unchanged_entities": 127
+      }
+    },
+    "postgresql": {
+      "duration_seconds_observational": 265.658311,
+      "interval_seconds": 1,
+      "limitations": [
+        "SHARED_HOST_NOT_CAPACITY_OR_PERFORMANCE_ACCEPTANCE",
+        "SAMPLED_MAXIMUM_NOT_INSTANTANEOUS_PEAK",
+        "PROCESS_RSS_SUM_CAN_DOUBLE_COUNT_SHARED_PAGES",
+        "ONLY_TEST_POSTGRESQL_CGROUP_NOT_CARGO_WORKER_RESOURCES"
+      ],
+      "maximum_samples": 1500,
+      "maximum_sampling_gap_seconds": 1.007241,
+      "postgresql": {
+        "anonymous_max_bytes": 22441984,
+        "average_cores": 0.150453,
+        "cpu_core_seconds": 39.969189,
+        "io_delta": {
+          "rbytes": 749568,
+          "rios": 64,
+          "wbytes": 0,
+          "wios": 0
+        },
+        "memory_end_bytes": 139919360,
+        "memory_events_delta": {
+          "high": 0,
+          "low": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0
+        },
+        "memory_start_bytes": 62169088,
+        "name": "epg10-06-pg-348948af1c6b",
+        "network_delta": {
+          "rx_bytes": 9095053,
+          "tx_bytes": 27315310
+        },
+        "pids_max": 14,
+        "sampled_memory_max_bytes": 486309888,
+        "throttled_usec": 33527806
+      },
+      "process_rss_sum_sampled_max_bytes": 224059392,
+      "sample_count": 267,
+      "status": "PASS_OBSERVATION_ONLY",
+      "tainted_for_capacity": true
+    },
+    "wal": {
+      "after": {
+        "database": "portal_projection_test_epg10_04",
+        "stats_reset": "2026-10-16 07:33:57.885464+00",
+        "wal_bytes": 367049106,
+        "wal_fpi": 3339,
+        "wal_records": 1926948
+      },
+      "basis": "OWNED_CLUSTER_PG_STAT_WAL_INTERVAL_NOT_PER_TEST_TRANSACTION",
+      "before": {
+        "database": "portal_projection_test_epg10_04",
+        "stats_reset": "2026-10-16 07:33:57.885464+00",
+        "wal_bytes": 9516728,
+        "wal_fpi": 1418,
+        "wal_records": 25229
+      },
+      "delta": {
+        "wal_bytes": 357532378,
+        "wal_fpi": 1921,
+        "wal_records": 1901719
+      },
+      "limitations": [
+        "STATISTICS_FLUSH_LAG_POSSIBLE",
+        "INCLUDES_ALL_OWNED_TEST_DATABASE_AND_MIGRATION_WAL",
+        "NOT_SOURCE_DATABASE_WAL_OR_CAPACITY_ACCEPTANCE"
+      ],
+      "tainted_for_capacity": true
+    },
+    "child_resource_limitations": "RUSAGE_CHILDREN maxrss is cumulative reaped-child highwater, not one stage's peak; see qualification.json",
+    "production_latency_populations": "NOT_RUN"
+  },
+  "runtime": {
+    "activated": false,
+    "production_mutations": 0,
+    "source_requests": 0,
+    "protected_hk_tuples": 12,
+    "protected_sgp_tuples": 5,
+    "changed_tuples": 0,
+    "restarts": 0,
+    "canonical_hk_checkout": "/home/bobby/.worktrees/portal-execution-manager-v2",
+    "canonical_hk_branch": "feat/manager-v2-paper-read",
+    "canonical_hk_commit": "54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4",
+    "hk_release": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+    "hk_edge_worker_image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+    "hk_oci_revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+    "sgp_stable_checkout": "/home/bobby/portal-main-release",
+    "sgp_stable_branch": "main",
+    "sgp_stable_commit": "533162635f56584d630e3d971d77d50860595f15",
+    "sgp_actual_release": "/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose",
+    "exact_service_images_and_config_digests": "final-HK.json and after-SGP.json",
+    "six_active_feature_worktrees": "Unchanged; exact paths/branches/SHAs in final-HK.json worktrees",
+    "retained_rollback_artifacts": "All preexisting release/image/operational containers preserved; none created by06"
+  },
+  "cleanup": {
+    "allocated_bytes_removed": 5863378944,
+    "at_utc": "2026-10-16T07:39:28.542119+00:00",
+    "buildkit_created_or_removed": 0,
+    "disk_available_after_bytes": 168453197824,
+    "disk_available_before_bytes": 162589831168,
+    "disk_available_delta_bytes": 5863366656,
+    "errors": [],
+    "exact_path_absent": true,
+    "host": "SGP",
+    "images_built": 0,
+    "images_pulled": 0,
+    "images_removed": 0,
+    "networks_removed": 0,
+    "operational_containers_removed_or_restarted": 0,
+    "owned_lock_absent": true,
+    "owned_pg_absent": true,
+    "owned_pg_name": "epg10-06-pg-348948af1c6b",
+    "removed_exact_path": "/tmp/epg10-06-GU8M0mOe",
+    "retention": "ALL_ACTIVE_AND_PREEXISTING_ROLLBACK_IMAGES_RELEASES_VOLUMES_AND_PEER_RESOURCES_PRESERVED",
+    "schema": "epg10.scoped-cleanup.v1",
+    "shared_docker_cleanup": "NO_ACTION_NEEDED_NO_PHASE_OWNED_IMAGE_OR_BUILDKIT_CACHE",
+    "source_process_check": "NO_CWD_OR_EXE_UNDER_TARGET",
+    "volumes_created_or_removed": 0
+  },
+  "peer_review": {
+    "rounds": 5,
+    "final_metadata": "source-runtime-reconciliation.json",
+    "partner_authority_inputs_unchanged": 34,
+    "owner_guides_unchanged": 4,
+    "research_contracts_unchanged": 3,
+    "no_partner_writes": true,
+    "hk_foreign_lock": {
+      "owner": "claude-burst-b16-amend1",
+      "purpose": "P18.4 B16 burst amendment-1 rerun: isolated internal-burst TEST_ONLY on production pins, writer Subscribe depth 2000, 5 cells incl. core-pause 700 ms; --rm containers, no production mutation",
+      "started_utc": "2026-10-16T07:22:06+00:00",
+      "until_utc": "2026-10-16T10:22:06+00:00"
+    }
+  },
+  "remaining": [
+    {
+      "owner": "TS/PM producer",
+      "existing_gate": "EPG10-03",
+      "action": "Return publisher-generation fence, writer/export coverage and actual endpoint/identity/retention/correction publication."
+    },
+    {
+      "owner": "Edge plus resource owners",
+      "existing_gate": "EPG10-01 and06",
+      "action": "Finalize14 production budget groups/reduction targets using clean measurement; explicitly bind governed runtime and trusted storage monitor after inputs exist. Edge integration/measurement remains unfinished work, not externalized code debt."
+    },
+    {
+      "owner": "TS/DL plus Edge",
+      "existing_gate": "EPG10-06",
+      "action": "Run fresh source/config-pinned B0/B1/B2 coexistence including lossless outage/resync, CPU/RSS/IO/WAL/DB waits and p95/p99."
+    },
+    {
+      "owner": "Research backend plus Edge",
+      "existing_gate": "Guide2.6/06",
+      "action": "Qualify partner full-scope refresh optimization, analytics quota/cancel/checkpoint and BFF/cache/fanout workload."
+    }
+  ],
+  "known_owned_defects_in_tested_package": [],
+  "technical_debt_waivers": [],
+  "next_permitted_step": "Continue same06 connected qualification when existing inputs/clean window arrive;07 requires separate named approval and is NOT_STARTED.",
+  "rollback": "No operational rollout occurred. Existing runtime unchanged; code rollback is revert of this coherent feature commit, no DB rollback needed. Future v6 uses existing compatible-epoch bootstrap/activation/rollback, never relabels v5.",
+  "evidence": [
+    "qualification.json",
+    "resource-profile.json",
+    "RESOURCE_ENVELOPE_AND_HOT_PATH.md",
+    "cleanup-receipt.json",
+    "source-runtime-reconciliation.json",
+    "peer-round3.json",
+    "peer-round4.json",
+    "attempt-1-summary.json through attempt-6-summary.json"
+  ],
+  "push": false,
+  "merge": false
+}

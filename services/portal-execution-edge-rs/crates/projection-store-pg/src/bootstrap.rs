@@ -14,7 +14,10 @@ use authoritative_event_core::{
     },
     EventOperation,
 };
-use projection_core::{canonical_digest, canonical_value_digest};
+use projection_core::{
+    canonical_digest, canonical_value_digest,
+    resources::{ResourceError, WorkClass},
+};
 use serde::Serialize;
 use sqlx::{Postgres, Row, Transaction};
 use thiserror::Error;
@@ -24,6 +27,8 @@ use crate::PgProjectionStore;
 
 #[derive(Debug, Error)]
 pub enum BootstrapError {
+    #[error(transparent)]
+    Resource(#[from] ResourceError),
     #[error(transparent)]
     Protocol(#[from] ProtocolError),
     #[error(transparent)]
@@ -223,6 +228,8 @@ impl PgProjectionStore {
         input.check(&manifest.binding, "MANIFEST", now)?;
         limits.validate()?;
         manifest.validate_structure()?;
+        let _permit = self.admit(WorkClass::BackgroundWrite, manifest.binding.datasets.len(),
+            encoded_len(manifest)?.checked_mul(3).ok_or(BootstrapError::Bounds)?)?;
         let slot = manifest.binding.slot_key()?;
         let binding = manifest.binding.digest()?;
         let md = digest(manifest)?;
@@ -298,6 +305,11 @@ impl PgProjectionStore {
         input.check(&h.manifest.binding, "PAGE", now)?;
         let page = input.value();
         page.validate(&h.manifest, &h.limits, now)?;
+        // Reserve the protocol ceiling before any SQL/JSON materialization.
+        // Logical accounting covers retained input + SQL value + serialization;
+        // it is deliberately not a promise about allocator/process RSS.
+        let _permit = self.admit(WorkClass::BackgroundWrite, page.rows.len(),
+            h.limits.page_bytes.checked_mul(3).ok_or(BootstrapError::Bounds)?)?;
         let key = digest(&(&page.dataset, page.index))?;
         let pd = digest(page)?;
         let mut tx = begin_tx(self).await?;
@@ -367,6 +379,7 @@ impl PgProjectionStore {
     ) -> Result<Option<BootstrapReceipt>, BootstrapError> {
         bounded(async {
             control_binding(control, &h.manifest.binding, now)?;
+            let _permit = self.admit(WorkClass::BackgroundWrite, 1, 8192)?;
             let mut tx = begin_tx(self).await?;
             let state = fence(&mut tx, h).await?;
             if state != "INITIALIZING" {
@@ -419,6 +432,7 @@ impl PgProjectionStore {
     /// # Errors
     /// Rejects untrusted/oversize/conflicting chunks, initialization or competing
     /// pending groups; propagates bounded database failures.
+    #[allow(clippy::too_many_lines)] // Keep bounded staging, durable dedupe and integrity in one transaction.
     pub async fn bootstrap_stage_delta(
         &self,
         h: &BootstrapHandle,
@@ -429,6 +443,14 @@ impl PgProjectionStore {
             input.check(&h.manifest.binding, "CHUNK", now)?;
             let chunk = input.value();
             chunk.validate(&h.manifest, &h.limits, now)?;
+            let _permit = self.admit(
+                WorkClass::LiveWrite,
+                chunk.events.len(),
+                h.limits
+                    .group_bytes
+                    .checked_mul(3)
+                    .ok_or(BootstrapError::Bounds)?,
+            )?;
             let mut tx = begin_tx(self).await?;
             let state = fence(&mut tx, h).await?;
             if state == "INITIALIZING" {
@@ -542,6 +564,8 @@ impl PgProjectionStore {
         input.check(&h.manifest.binding, "GROUP", now)?;
         let group = input.value();
         group.validate(&h.manifest, &h.limits, now)?;
+        let _permit = self.admit(WorkClass::LiveWrite, h.limits.group_events,
+            h.limits.group_bytes.checked_mul(4).ok_or(BootstrapError::Bounds)?)?;
         let gd = digest(group)?;
         let mut tx = begin_tx(self).await?;
         let state = fence(&mut tx, h).await?;
@@ -646,6 +670,8 @@ impl PgProjectionStore {
         if chunk.events.len() > 64 || encoded_len(chunk)? > h.limits.page_bytes / 4 {
             return Err(BootstrapError::Bounds);
         }
+        let _permit = self.admit(WorkClass::BackgroundWrite, chunk.events.len(),
+            h.limits.page_bytes.checked_mul(3).ok_or(BootstrapError::Bounds)? / 4)?;
         let mut tx = begin_tx(self).await?;
         fence(&mut tx, h).await?;
         if sqlx::query("SELECT 1 FROM portal_projection.bootstrap_inputs WHERE generation=$1 AND kind='CHUNK' LIMIT 1")
@@ -670,6 +696,9 @@ impl PgProjectionStore {
     ) -> Result<(), BootstrapError> {
         bounded(async {
         control_binding(control, &h.manifest.binding, now)?;
+        // A bounded state transition to stop ingestion remains available under
+        // storage pressure; this is not admission for more economic facts.
+        let _permit = self.admit(WorkClass::ControlRead, 1, 8192)?;
         let mut tx = begin_tx(self).await?;
         fence(&mut tx, h).await?;
         sqlx::query("UPDATE portal_projection.bootstrap_generations SET state='RESYNC_REQUIRED',updated_at_ms=$2 WHERE generation=$1")
@@ -691,6 +720,7 @@ impl PgProjectionStore {
     ) -> Result<BootstrapReceipt, BootstrapError> {
         bounded(async {
             control_binding(control, &h.manifest.binding, now)?;
+            let _permit = self.admit(WorkClass::ControlRead, 1, 8192)?;
             let mut tx = begin_tx(self).await?;
             if fence(&mut tx, h).await? == "INITIALIZING" {
                 return Err(BootstrapError::Resync);
@@ -720,6 +750,7 @@ impl PgProjectionStore {
         input.check(binding, "READ", now)?;
         let binding_digest = binding.digest()?;
         if limit == 0 || limit > 200 { return Err(BootstrapError::Bounds); }
+        let _permit = self.admit(WorkClass::Interactive, limit, 3 * 1024 * 1024)?;
         let mut tx = self.pool.begin().await?;
         sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY").execute(&mut *tx).await?;
         sqlx::query("SET LOCAL statement_timeout='2s'").execute(&mut *tx).await?;

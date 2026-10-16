@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import subprocess
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -17,28 +18,34 @@ class RunnerSafety(unittest.TestCase):
     def result(self, code=0, stdout=b'', stderr=b''):
         return subprocess.CompletedProcess([], code, stdout, stderr)
 
-    def source_fixture(self, profile):
-        private = tempfile.TemporaryDirectory()
+    def source_fixture(self, profile, private_prefix=None):
+        private = (tempfile.TemporaryDirectory(prefix=private_prefix, dir='/tmp')
+                   if private_prefix is not None else tempfile.TemporaryDirectory())
         self.addCleanup(private.cleanup)
         source = Path(private.name) / 'source'
         names = ['Cargo.toml', 'Cargo.lock', *qualification.owned_rust(profile),
                  'crates/projection-store-pg/migrations/0019_scoped_bootstrap.sql']
-        if profile == '05':
+        if profile != '04':
             names.append('crates/projection-store-pg/migrations/0020_scoped_read.sql')
             names = [qualification.RUST_WORKSPACE + '/' + name for name in names]
             names.append(qualification.SHARED_FIXTURE)
+        if profile == '06':
+            names.extend(qualification.RESOURCE_SHARED_FIXTURES)
+            names.extend(qualification.RESOURCE_COMPILE_INPUTS)
+            names.extend(qualification.RUST_WORKSPACE + '/' + name
+                         for name in qualification.RESOURCE_BUILD_SCRIPTS)
         for name in names:
             path = source / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text('TEST_ONLY\n')
         return source
 
-    def test_profile_defaults_to04_and_requires_exact_04_or05(self):
+    def test_profile_defaults_to04_and_requires_exact_04_or05_or06(self):
         with patch.dict(qualification.os.environ, {}, clear=True):
             self.assertEqual(qualification.test_profile(), '04')
-        for value in ('04', '05'):
+        for value in ('04', '05', '06'):
             self.assertEqual(qualification.test_profile(value), value)
-        for value in ('', '4', '5', '06', '04,05', '05 ', 5, True):
+        for value in ('', '4', '5', '6', '07', '04,05', '05 ', 5, True):
             with self.subTest(profile=value):
                 with self.assertRaisesRegex(ValueError, 'EXPLICIT_TEST_PROFILE'):
                     qualification.test_profile(value)
@@ -422,6 +429,299 @@ class RunnerSafety(unittest.TestCase):
         helper.obs.read.side_effect = ['11 12 13', 'VmRSS:  7 kB\n']
         self.assertEqual(sampler.process_rss_sum(), 7*1024)
         self.assertEqual(helper.obs.read.call_count, 2)
+
+    def test_profile06_cleanup_and_private_paths_do_not_select_previous_targets(self):
+        helper = qualification.load_cleanup_helpers(Path(__file__).resolve().parent, '06')
+        self.assertTrue(helper.PG.startswith('epg10-06-pg-'))
+        self.assertTrue(helper.OWNER.startswith('codex-epg10-06-'))
+        for path in ('/home/bobby', '/tmp/epg10-04-test', '/tmp/epg10-05-test',
+                     '/tmp/epg10-06-', '/tmp/epg10-06-test/../foreign'):
+            with self.subTest(path=path), self.assertRaisesRegex(ValueError, 'PRIVATE_DISPOSABLE'):
+                qualification.validate_base(Path(path), '06')
+
+    def test_profile06_has_six_unit_packages_without_changing_prior_profiles(self):
+        self.assertEqual(qualification.package_arguments('06'), [
+            '-p', 'projection-core', '-p', 'manager-projection', '-p', 'query-api',
+            '-p', 'realtime-sse', '-p', 'authoritative-event-core', '-p', 'projection-store-pg'])
+        row = 'test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out'
+        self.assertEqual(qualification.parse_rust_results('\n'.join([row]*6), 6)['passed'], 12)
+        with self.assertRaisesRegex(ValueError, 'ALL_REQUIRED'):
+            qualification.parse_rust_results('\n'.join([row]*4), 6)
+
+    def test_profile06_resource_and_manager_counts_are_explicit_bounded_and_exact(self):
+        row = 'test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out'
+        for kind in ('RESOURCE', 'MANAGER'):
+            self.assertEqual(qualification.expected_test_count('8', kind), 8)
+            self.assertEqual(qualification.parse_rust_results(row, 1, 8, count_kind=kind)['passed'], 8)
+            for invalid in (None, '', '0', '129', '-1', '1.0', '08', True):
+                with self.subTest(kind=kind, value=invalid), self.assertRaisesRegex(ValueError, 'EXACT_BOUNDED'):
+                    qualification.expected_test_count(invalid, kind)
+            with self.assertRaisesRegex(ValueError, 'EXACT_' + kind):
+                qualification.parse_rust_results(row, 1, 7, count_kind=kind)
+
+    def test_profile06_source_hashes_require_every_owned_input_and_shared_fixture(self):
+        source = self.source_fixture('06')
+        hashes = qualification.source_hashes(source, '06')
+        required = [qualification.RUST_WORKSPACE + '/' + name
+                    for name in qualification.RESOURCE_OWNED_RUST] + [qualification.SHARED_FIXTURE,
+                        *qualification.RESOURCE_SHARED_FIXTURES, *qualification.RESOURCE_COMPILE_INPUTS,
+                        *(qualification.RUST_WORKSPACE + '/' + name
+                          for name in qualification.RESOURCE_BUILD_SCRIPTS)]
+        for name in required:
+            self.assertIn(name, hashes)
+            path = source / name
+            path.unlink()
+            with self.subTest(missing=name), self.assertRaisesRegex(ValueError, 'EXACT_OWNED_INPUT_MISSING'):
+                qualification.source_hashes(source, '06')
+            path.write_text('TEST_ONLY\n')
+        (source / qualification.RUST_WORKSPACE / qualification.RESOURCE_OWNED_RUST[1]).write_text('TEST_ONLY_CHANGED\n')
+        changed = qualification.source_hashes(source, '06')
+        self.assertNotEqual(hashes, changed)
+
+    def test_profile06_public_compile_inputs_have_separate_exact_bounded_caps(self):
+        source = self.source_fixture('06')
+        self.assertEqual(len(qualification.RESOURCE_COMPILE_INPUTS), 14)
+        for name, size in ((qualification.CONTRACT_PACK + 'extract/vocabularies.json', 86131),
+                           (qualification.CONTRACT_PACK + 'extract/response-shapes.json', 332122)):
+            (source / name).write_bytes(b'x' * size)
+        qualification.source_hashes(source, '06')
+        for name, cap in qualification.RESOURCE_COMPILE_INPUTS.items():
+            for size in (0, cap + 1):
+                (source / name).write_bytes(b'x' * size)
+                with self.subTest(path=name, size=size), self.assertRaisesRegex(
+                        ValueError, 'BOUNDED_PUBLIC_COMPILE_INPUT_REQUIRED'):
+                    qualification.source_hashes(source, '06')
+            (source / name).write_text('TEST_ONLY\n')
+
+    def test_profile06_workspace_contract_lock_is_required_bounded_and_hash_bound(self):
+        source = self.source_fixture('06')
+        name = qualification.RUST_WORKSPACE + '/contract-pack.lock.json'
+        self.assertEqual(qualification.RESOURCE_COMPILE_INPUTS[name], 64 * 1024)
+        before = qualification.source_hashes(source, '06')
+        path = source / name
+        path.unlink()
+        with self.assertRaisesRegex(ValueError, 'EXACT_OWNED_INPUT_MISSING'):
+            qualification.source_hashes(source, '06')
+        for size in (0, 64 * 1024 + 1):
+            path.write_bytes(b'x' * size)
+            with self.subTest(size=size), self.assertRaisesRegex(
+                    ValueError, 'BOUNDED_PUBLIC_COMPILE_INPUT_REQUIRED'):
+                qualification.source_hashes(source, '06')
+        path.write_text('TEST_ONLY_CHANGED\n')
+        self.assertNotEqual(before[name], qualification.source_hashes(source, '06')[name])
+
+    def test_profile06_original_nine_shared_fixture_caps_are_not_relaxed(self):
+        source = self.source_fixture('06')
+        self.assertEqual(qualification.MAX_SHARED_FIXTURE_BYTES, 64 * 1024)
+        for name in (qualification.SHARED_FIXTURE, *qualification.RESOURCE_SHARED_FIXTURES):
+            (source / name).write_bytes(b'x' * (64 * 1024 + 1))
+            with self.subTest(path=name), self.assertRaisesRegex(
+                    ValueError, 'BOUNDED_SHARED_FIXTURE_REQUIRED'):
+                qualification.source_hashes(source, '06')
+            (source / name).write_text('TEST_ONLY\n')
+
+    def test_profile06_edge_bin_tests_execute_separately_from_six_lib_summaries(self):
+        self.assertEqual(qualification.EDGE_TEST_ARGUMENTS, (
+            'cargo', 'test', '--offline', '--locked', '-p', 'edge-service',
+            '--bins', '--', '--test-threads=1'))
+        row = 'test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out'
+        result = qualification.parse_rust_results(row, 1)
+        self.assertEqual(result['passed'], 17)
+        self.assertEqual(result['test_binaries'], 1)
+        with self.assertRaisesRegex(ValueError, 'ALL_REQUIRED'):
+            qualification.parse_rust_results(row + '\n' + row, 1)
+
+    def test_profile06_copied_input_mtimes_refresh_without_changing_bytes_or_cache(self):
+        source = self.source_fixture('06', private_prefix='epg10-06-')
+        before = qualification.source_hashes(source, '06')
+        cache = source.parent / 'target'
+        cache.mkdir()
+        sentinel = cache / 'untouched'
+        sentinel.write_text('TEST_ONLY_CACHE\n')
+        cache_mtime = sentinel.stat().st_mtime_ns
+        stamp = 2_000_000_000_000_000_000
+        with patch.object(qualification.time, 'time_ns', return_value=stamp):
+            receipt = qualification.refresh_copied_input_mtimes(source.parent, source, before)
+        self.assertEqual(receipt['touched_files'], len(before))
+        self.assertEqual(receipt['refreshed_at_ns'], stamp)
+        self.assertTrue(receipt['bytes_unchanged'])
+        self.assertFalse(receipt['target_or_cache_touched'])
+        self.assertEqual(qualification.source_hashes(source, '06'), before)
+        self.assertTrue(all((source / name).stat().st_mtime_ns == stamp for name in before))
+        self.assertEqual(sentinel.stat().st_mtime_ns, cache_mtime)
+
+    def test_profile06_mtime_refresh_rejects_escape_wrong_profile_and_manifest_bounds(self):
+        source = self.source_fixture('06', private_prefix='epg10-06-')
+        before = qualification.source_hashes(source, '06')
+        with patch.object(qualification.os, 'utime') as mutate:
+            for base in (Path('/home/bobby'), Path('/tmp/epg10-04-test'),
+                         Path('/tmp/epg10-05-test')):
+                with self.subTest(base=base), self.assertRaisesRegex(ValueError, 'PRIVATE_DISPOSABLE'):
+                    qualification.refresh_copied_input_mtimes(base, source, before)
+            with self.assertRaisesRegex(ValueError, 'EXACT_PRIVATE_SOURCE_PATH'):
+                qualification.refresh_copied_input_mtimes(source.parent, source / '..', before)
+            for manifest in ({}, {'../outside': '0' * 64},
+                             {str(index): '0' * 64 for index in range(10001)}):
+                with self.assertRaisesRegex(ValueError, 'EXACT_VALIDATED_INPUT_MANIFEST'):
+                    qualification.refresh_copied_input_mtimes(source.parent, source, manifest)
+            mutate.assert_not_called()
+
+    def test_profile06_mtime_refresh_rejects_symlink_and_hardlinked_source(self):
+        source = self.source_fixture('06', private_prefix='epg10-06-')
+        before = qualification.source_hashes(source, '06')
+        path = source / qualification.RUST_WORKSPACE / 'Cargo.toml'
+        original = path.read_bytes()
+        outside = source.parent / 'outside'
+        outside.write_bytes(original)
+        outside_mtime = outside.stat().st_mtime_ns
+        path.unlink()
+        path.symlink_to(outside)
+        with patch.object(qualification.os, 'utime') as mutate:
+            with self.assertRaisesRegex(ValueError, 'SOURCE_SYMLINK_NOT_ALLOWED'):
+                qualification.refresh_copied_input_mtimes(source.parent, source, before)
+            mutate.assert_not_called()
+        path.unlink()
+        qualification.os.link(outside, path)
+        with patch.object(qualification.os, 'utime') as mutate:
+            with self.assertRaisesRegex(ValueError, 'PRIVATE_UNLINKED_SOURCE_FILE'):
+                qualification.refresh_copied_input_mtimes(source.parent, source, before)
+            mutate.assert_not_called()
+        self.assertEqual(outside.stat().st_mtime_ns, outside_mtime)
+
+    def test_profile06_does_not_accept_profile05_source_inventory_as_complete(self):
+        source = self.source_fixture('05')
+        with self.assertRaisesRegex(ValueError, 'EXACT_OWNED_INPUT_MISSING'):
+            qualification.source_hashes(source, '06')
+        warning = {'message': {'level': 'warning', 'code': {'code': 'clippy::resource'},
+            'spans': [{'is_primary': True, 'file_name': qualification.RESOURCE_OWNED_RUST[1]}]}}
+        self.assertEqual(qualification.clippy_findings(json.dumps(warning), '06')['owned_warnings'],
+                         ['clippy::resource'])
+
+    @staticmethod
+    def child_usage(user=1.0, system=0.5, rss=100, reads=2, writes=4):
+        return SimpleNamespace(ru_utime=user, ru_stime=system, ru_maxrss=rss,
+                               ru_inblock=reads, ru_oublock=writes)
+
+    def test_child_resource_deltas_label_cumulative_rss_and_block_operations(self):
+        result = qualification.child_resource_delta(self.child_usage(),
+            self.child_usage(user=1.25, system=0.75, rss=120, reads=3, writes=7))
+        self.assertEqual(result['user_cpu_seconds'], 0.25)
+        self.assertEqual(result['system_cpu_seconds'], 0.25)
+        self.assertEqual(result['maxrss_before_kib'], 100)
+        self.assertEqual(result['maxrss_after_kib'], 120)
+        self.assertEqual(result['maxrss_cumulative_highwater_delta_kib'], 20)
+        self.assertEqual(result['block_input_operations'], 1)
+        self.assertEqual(result['block_output_operations'], 3)
+        self.assertTrue(result['tainted_for_capacity'])
+        self.assertIn('NOT_INDIVIDUAL_STAGE_PEAK', result['limitations'][0])
+        unchanged = qualification.child_resource_delta(self.child_usage(), self.child_usage())
+        self.assertEqual(unchanged['maxrss_cumulative_highwater_delta_kib'], 0)
+
+    def test_child_resource_deltas_reject_regressions_nonfinite_and_non_numeric_values(self):
+        for field, invalid in (('ru_utime', float('nan')), ('ru_stime', float('inf')),
+                               ('ru_maxrss', -1), ('ru_inblock', True), ('ru_oublock', '1')):
+            after = self.child_usage()
+            setattr(after, field, invalid)
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                qualification.child_resource_delta(self.child_usage(), after)
+        with self.assertRaisesRegex(ValueError, 'REGRESSED'):
+            qualification.child_resource_delta(self.child_usage(), self.child_usage(rss=99))
+        with self.assertRaises(ValueError):
+            qualification.metric_number(10**1000, integer=True)
+
+    @staticmethod
+    def manager_cost_fixture():
+        return dict(schema='epg10.manager-cost.v1', provenance='TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL',
+            tainted_for_capacity=True, entities=128, changed_entities=1,
+            baseline_record_lookup_commands=128, baseline_record_lookup_elapsed_us=12.5,
+            candidate_current_bulk_reads=1, candidate_unchanged_record_lookups=0,
+            applied_entities=1, removed_entities=0, unchanged_entities=127,
+            candidate_cycle_elapsed_us=8, candidate_wal_bytes=1024,
+            baseline_full_snapshot_elapsed_us=16, baseline_full_snapshot_wal_bytes=8192,
+            baseline_full_snapshot_applied_entities=128)
+
+    def test_manager_cost_parser_accepts_one_exact_bounded_test_only_line(self):
+        value = self.manager_cost_fixture()
+        result = qualification.parse_manager_cost('test prelude\nEPG10_COST_JSON=' + json.dumps(value) + '\nok\n')
+        self.assertEqual(result['values'], value)
+        self.assertTrue(result['tainted_for_capacity'])
+        self.assertFalse(result['performance_acceptance'])
+        self.assertIn('NOT_TOTAL_SQL', result['basis'])
+
+    def test_manager_cost_parser_rejects_missing_duplicate_prefixed_or_unbounded_lines(self):
+        line = 'EPG10_COST_JSON=' + json.dumps(self.manager_cost_fixture())
+        for text in ('', line + '\n' + line, 'test fixture ... ' + line,
+                     'EPG10_COST_JSON=' + 'x'*qualification.MAX_COST_LINE_BYTES):
+            with self.subTest(text=text[:40]), self.assertRaises(ValueError):
+                qualification.parse_manager_cost(text)
+        with self.assertRaisesRegex(ValueError, 'BOUNDED_MANAGER_COST_LOG'):
+            qualification.parse_manager_cost('x'*(qualification.MAX_LOG_BYTES + 1))
+
+    def test_manager_cost_parser_rejects_extra_keys_wrong_provenance_or_duplicate_json_fields(self):
+        for key, invalid in (('schema', 'unknown'), ('provenance', 'PRODUCTION'),
+                             ('tainted_for_capacity', False), ('secret', 'DO_NOT_PUBLISH')):
+            value = self.manager_cost_fixture()
+            value[key] = invalid
+            with self.subTest(field=key), self.assertRaisesRegex(ValueError, 'EXACT_TEST_ONLY'):
+                qualification.parse_manager_cost('EPG10_COST_JSON=' + json.dumps(value))
+        text = json.dumps(self.manager_cost_fixture())
+        with self.assertRaisesRegex(ValueError, 'DUPLICATE_METRIC_KEY'):
+            qualification.parse_manager_cost('EPG10_COST_JSON=' + text[:-1] + ',"entities":128}')
+
+    def test_manager_cost_parser_rejects_bad_numbers_and_inconsistent_fixture_counts(self):
+        for key, invalid in (('entities', True), ('candidate_wal_bytes', -1),
+                             ('candidate_cycle_elapsed_us', float('nan')),
+                             ('baseline_record_lookup_elapsed_us', float('inf')),
+                             ('candidate_current_bulk_reads', 2), ('unchanged_entities', 128),
+                             ('baseline_full_snapshot_applied_entities', 127),
+                             ('changed_entities', 0), ('baseline_record_lookup_commands', 127)):
+            value = self.manager_cost_fixture()
+            value[key] = invalid
+            with self.subTest(field=key), self.assertRaises(ValueError):
+                qualification.parse_manager_cost('EPG10_COST_JSON=' + json.dumps(value))
+
+    @staticmethod
+    def wal_fixture(**changes):
+        value = dict(database='portal_projection_test_epg10_04', wal_records=4,
+                     wal_fpi=2, wal_bytes=4096, stats_reset='2026-10-16 00:00:00+00')
+        return dict(value, **changes)
+
+    def test_owned_wal_query_is_readonly_and_requires_immutable_identity(self):
+        helper = MagicMock()
+        helper.docker.return_value.stdout = json.dumps(self.wal_fixture()).encode()
+        self.assertEqual(qualification.owned_wal_stats(helper, 'a'*64), self.wal_fixture())
+        args = helper.docker.call_args.args
+        self.assertEqual(args[:2], ('exec', 'a'*64))
+        self.assertIn('BEGIN READ ONLY', args[-1])
+        self.assertIn('pg_stat_wal', args[-1])
+        helper.docker.reset_mock()
+        with self.assertRaisesRegex(ValueError, 'IMMUTABLE_OWNED'):
+            qualification.owned_wal_stats(helper, 'operational-name')
+        helper.docker.assert_not_called()
+
+    def test_owned_wal_parser_rejects_wrong_target_extra_keys_boolean_or_unbounded_output(self):
+        helper = MagicMock()
+        for value in (self.wal_fixture(database='production'), self.wal_fixture(wal_bytes=True),
+                      self.wal_fixture(extra='DO_NOT_PUBLISH'), self.wal_fixture(stats_reset=None)):
+            helper.docker.return_value.stdout = json.dumps(value).encode()
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                qualification.owned_wal_stats(helper, 'a'*64)
+        helper.docker.return_value.stdout = b'x'*4097
+        with self.assertRaisesRegex(ValueError, 'BOUNDED_OWNED_WAL'):
+            qualification.owned_wal_stats(helper, 'a'*64)
+
+    def test_owned_wal_observation_reports_counter_delta_not_transaction_or_capacity_proof(self):
+        before = self.wal_fixture()
+        after = self.wal_fixture(wal_records=8, wal_fpi=3, wal_bytes=8192)
+        result = qualification.wal_observation(before, after)
+        self.assertEqual(result['delta'], dict(wal_records=4, wal_fpi=1, wal_bytes=4096))
+        self.assertTrue(result['tainted_for_capacity'])
+        self.assertIn('NOT_PER_TEST_TRANSACTION', result['basis'])
+        self.assertIn('STATISTICS_FLUSH_LAG_POSSIBLE', result['limitations'])
+        with self.assertRaisesRegex(ValueError, 'EPOCH_CHANGED'):
+            qualification.wal_observation(before, self.wal_fixture(stats_reset='different'))
+        with self.assertRaisesRegex(ValueError, 'REGRESSED'):
+            qualification.wal_observation(before, self.wal_fixture(wal_records=3))
 
 
 if __name__ == '__main__':

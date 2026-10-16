@@ -1,0 +1,129 @@
+{
+  "at_utc": "2026-10-16T07:00:57.495381+00:00",
+  "cleanup": {
+    "errors": [],
+    "images_built": 0,
+    "images_pulled": 0,
+    "owned_container_removed": false,
+    "private_build_dir_pending_removal": "/tmp/epg10-06-GU8M0mOe",
+    "resource_sampler_stopped_before_container_cleanup": true,
+    "volumes_created": 0,
+    "volumes_removed": 0
+  },
+  "dependency_fetch_allowed_during_compile_only": false,
+  "disk_after_container": 166748667904,
+  "disk_before": 167043624960,
+  "elapsed_seconds_observational": 55.342,
+  "error_type": "CalledProcessError",
+  "expected_bootstrap_tests": 22,
+  "expected_manager_tests": 11,
+  "expected_read_tests": 29,
+  "expected_resource_tests": 8,
+  "failed_stage": "compile",
+  "foreign_test_metadata_before": [],
+  "input_manifest_sha256": "5f2da1c16243588ab27eaa4d26791b870dd13425a7ce25a3cbdd54984c6d25c3",
+  "limitation": "CORRECTNESS_ONLY_SHARED_HOST_NOT_CAPACITY_OR_PRODUCTION_PROOF",
+  "lock_window_seconds": 1500,
+  "performance_acceptance": false,
+  "pg_image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+  "production_mutations": 0,
+  "provenance": "TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL",
+  "resources": {
+    "cargo_cpu_affinity": [
+      0
+    ],
+    "cargo_jobs": 1,
+    "cargo_nice": 15,
+    "pg_cpu_limit": 0.5,
+    "pg_max_connections": 24,
+    "pg_memory_limit_bytes": 805306368,
+    "pg_pids_limit": 128,
+    "pg_tmpfs_limit_bytes": 536870912,
+    "private_log_limit_bytes_per_stage": 8388608
+  },
+  "runner_hashes": {
+    "epg03_run.py": "99ad890f0243fa0c2c0d07f48d5d30f897aef04e76a0254e34d4f79acba1b298",
+    "execution_edge_observe.py": "cde8804626aec22bdddfdaec86b39b18e473314eddef9932c58a9f75f4120569",
+    "run.py": "7dc2352f53b0ad5d09fac804d7bfd2b82af5cc51f3b7852dc12e473b4d1bdeea",
+    "test_run.py": "16661d3a818e2e9efe9ead082fab964d5fd29c01754b6e98a4bda7220c789b25"
+  },
+  "runner_safety_tests": {
+    "failed": 0,
+    "passed": 59,
+    "skipped": 0
+  },
+  "runtime_activation": false,
+  "rustfmt": "PASS",
+  "schema": "epg10.resource-correctness.v1",
+  "source_requests": 0,
+  "source_revision": "0cfa510f1518c867a1fa261527dc5d4f0e7858de",
+  "source_workspace_relative": "services/portal-execution-edge-rs",
+  "stages": {
+    "compile": {
+      "child_resource_observation": {
+        "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+        "block_input_operations": 20624,
+        "block_output_operations": 757752,
+        "limitations": [
+          "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+          "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+          "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+        ],
+        "maxrss_after_kib": 391768,
+        "maxrss_before_kib": 54656,
+        "maxrss_cumulative_highwater_delta_kib": 337112,
+        "system_cpu_seconds": 5.088265000000001,
+        "tainted_for_capacity": true,
+        "user_cpu_seconds": 47.454499
+      },
+      "elapsed_seconds": 52.835,
+      "private_log_bytes": 3000,
+      "returncode": 101
+    },
+    "runner_safety_tests": {
+      "child_resource_observation": {
+        "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+        "block_input_operations": 640,
+        "block_output_operations": 7880,
+        "limitations": [
+          "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+          "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+          "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+        ],
+        "maxrss_after_kib": 39644,
+        "maxrss_before_kib": 30004,
+        "maxrss_cumulative_highwater_delta_kib": 9640,
+        "system_cpu_seconds": 0.154271,
+        "tainted_for_capacity": true,
+        "user_cpu_seconds": 0.454977
+      },
+      "elapsed_seconds": 0.641,
+      "private_log_bytes": 5434,
+      "returncode": 0
+    },
+    "rustfmt": {
+      "child_resource_observation": {
+        "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+        "block_input_operations": 6040,
+        "block_output_operations": 0,
+        "limitations": [
+          "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+          "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+          "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+        ],
+        "maxrss_after_kib": 54656,
+        "maxrss_before_kib": 39644,
+        "maxrss_cumulative_highwater_delta_kib": 15012,
+        "system_cpu_seconds": 0.059005,
+        "tainted_for_capacity": true,
+        "user_cpu_seconds": 1.097829
+      },
+      "elapsed_seconds": 1.173,
+      "private_log_bytes": 0,
+      "returncode": 0
+    }
+  },
+  "status": "FAIL",
+  "tainted_for_capacity": true,
+  "test_profile": "06"
+}

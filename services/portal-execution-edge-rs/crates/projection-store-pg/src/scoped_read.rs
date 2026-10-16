@@ -12,7 +12,10 @@ use chrono::{DateTime, Utc};
 use execution_contracts::catalogue_v1::{
     Completeness, Confidence, Coverage as WireCoverage, Freshness, Opaque, Quality, SafeInteger,
 };
-use projection_core::canonical_digest;
+use projection_core::{
+    canonical_digest,
+    resources::{ResourceError, WorkClass},
+};
 use query_api::{
     scoped::{
         AuthorizedRead, CacheContext, CacheRequest, Coverage, HistoryCapability, Operation,
@@ -34,8 +37,29 @@ use crate::PgProjectionStore;
 const META_RESERVE: usize = 8192;
 const MAX_TIME_MS: i64 = 9_007_199_254_740_991;
 
+fn read_class(operation: Operation) -> WorkClass {
+    match operation {
+        Operation::Current => WorkClass::Interactive,
+        Operation::Replay => WorkClass::ControlRead,
+        Operation::History | Operation::Export => WorkClass::BackgroundRead,
+    }
+}
+
+fn replay_query() -> ReadQuery {
+    ReadQuery {
+        operation: Operation::Replay,
+        limit: 200,
+        max_bytes: 1024 * 1024,
+        entity_id: None,
+        from_ms: None,
+        to_ms: None,
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum ReadError {
+    #[error(transparent)]
+    Resource(#[from] ResourceError),
     #[error(transparent)]
     Scope(#[from] ScopedError),
     #[error("projection read unavailable")]
@@ -458,6 +482,11 @@ impl ScopedReadService<'_> {
     ) -> Result<Arc<Vec<u8>>, ReadError> {
         deadline(async {
             self.authorize(read, query)?;
+            let _permit = self.store.admit(
+                read_class(query.operation),
+                query.limit,
+                query.max_bytes.checked_mul(4).ok_or(ReadError::Bounds)?,
+            )?;
             let (context, _) = self.cache_context(read).await?;
             let clock = || self.clock.now_ms();
             let same_context = |value: &CacheContext| value == &context;
@@ -473,15 +502,15 @@ impl ScopedReadService<'_> {
                     },
                     || async {
                         let page =
-                            self.page(read, query, None)
-                                .await
-                                .map_err(|error| match error {
+                            self.page_inner(read, query, None).await.map_err(
+                                |error| match error {
                                     ReadError::Scope(error) => error,
                                     ReadError::Resync => ScopedError::ResyncRequired,
                                     ReadError::Bounds => ScopedError::Bounds,
-                                    ReadError::Busy => ScopedError::Busy,
+                                    ReadError::Busy | ReadError::Resource(_) => ScopedError::Busy,
                                     _ => ScopedError::Unavailable,
-                                })?;
+                                },
+                            )?;
                         serde_json::to_vec(&page).map_err(|_| ScopedError::Integrity)
                     },
                 )
@@ -579,7 +608,16 @@ impl ScopedReadService<'_> {
         query: &ReadQuery,
         cursor: Option<&str>,
     ) -> Result<ReadPage, ReadError> {
-        deadline(self.page_inner(read, query, cursor)).await
+        deadline(async {
+            self.authorize(read, query)?;
+            let _permit = self.store.admit(
+                read_class(query.operation),
+                query.limit,
+                query.max_bytes.checked_mul(4).ok_or(ReadError::Bounds)?,
+            )?;
+            self.page_inner(read, query, cursor).await
+        })
+        .await
     }
 
     #[allow(clippy::too_many_lines)] // Keep the scoped snapshot/SQL/pin/return fence auditable together.
@@ -871,7 +909,17 @@ impl ScopedReadService<'_> {
         after: Option<&str>,
         limit: usize,
     ) -> Result<NoticeBatch, ReadError> {
-        deadline(self.notices_inner(read, after, limit)).await
+        deadline(async {
+            self.authorize(read, &replay_query())?;
+            if limit == 0 || limit > 200 {
+                return Err(ReadError::Bounds);
+            }
+            let _permit = self
+                .store
+                .admit(WorkClass::ControlRead, limit, 4 * 1024 * 1024)?;
+            self.notices_inner(read, after, limit).await
+        })
+        .await
     }
 
     #[allow(clippy::too_many_lines)] // One bounded receipt scan and its cursor/authority commit boundary.
@@ -881,14 +929,7 @@ impl ScopedReadService<'_> {
         after: Option<&str>,
         limit: usize,
     ) -> Result<NoticeBatch, ReadError> {
-        let query = ReadQuery {
-            operation: Operation::Replay,
-            limit: 200,
-            max_bytes: 1024 * 1024,
-            entity_id: None,
-            from_ms: None,
-            to_ms: None,
-        };
+        let query = replay_query();
         self.authorize(read, &query)?;
         if !(1..=200).contains(&limit) {
             return Err(ReadError::Bounds);
