@@ -24,6 +24,10 @@
       "children": [{ "alpha_id": "TEST_ONLY:alpha", "alpha_version_id": "TEST_ONLY:av", "portfolio_id": "TEST_ONLY:portfolio",
         "deployment_id": "TEST_ONLY:deployment", "account_id": "TEST_ONLY:account", "stage": "PAPER", "binding_ref": null }],
       "metrics": {
+        "unrealized_pnl": { "value": null, "unit": "MONEY", "currency": "USDT", "basis": "TEST_ONLY:net-ledger", "window": null,
+          "denominator": null, "methodology_ref": null, "availability": "UNAVAILABLE", "reason_code": "METHODOLOGY_NOT_PUBLISHED",
+          "quality": { "completeness": "UNRESOLVED", "freshness": "STALE", "reasons": ["METHODOLOGY_NOT_PUBLISHED"] },
+          "source_confidence": "UNKNOWN", "provenance_refs": ["TEST_ONLY:source-receipt"], "calculation_revision": "manager-model.v1", "policy_revision": "TEST_ONLY:policy" },
         "net_pnl": { "value": "0", "unit": "MONEY", "currency": "USDT", "basis": "TEST_ONLY:net-ledger", "window": null,
           "denominator": null, "methodology_ref": "TEST_ONLY:method", "availability": "AVAILABLE", "reason_code": null,
           "quality": { "completeness": "COMPLETE", "freshness": "STALE", "reasons": ["TEST_ONLY:old-source-cut"] },
@@ -37,6 +41,10 @@
         "partition": { "economic_domain": "PAPER", "currency": "USDT", "basis": "TEST_ONLY:net-ledger",
           "native_profile_ref": "TEST_ONLY:paper-ledger", "domain_proof_ref": "TEST_ONLY:not-economic-authority" },
         "metrics": {
+          "unrealized_pnl": { "value": null, "unit": "MONEY", "currency": "USDT", "basis": "TEST_ONLY:net-ledger", "window": null,
+            "denominator": null, "methodology_ref": null, "availability": "UNAVAILABLE", "reason_code": "METHODOLOGY_NOT_PUBLISHED",
+            "quality": { "completeness": "UNRESOLVED", "freshness": "STALE", "reasons": ["METHODOLOGY_NOT_PUBLISHED"] },
+            "source_confidence": "UNKNOWN", "provenance_refs": ["TEST_ONLY:source-receipt"], "calculation_revision": "manager-model.v1", "policy_revision": "TEST_ONLY:policy" },
           "net_pnl": { "value": "0", "unit": "MONEY", "currency": "USDT", "basis": "TEST_ONLY:net-ledger", "window": null,
             "denominator": null, "methodology_ref": "TEST_ONLY:method", "availability": "AVAILABLE", "reason_code": null,
             "quality": { "completeness": "COMPLETE", "freshness": "STALE", "reasons": ["TEST_ONLY:old-source-cut"] },

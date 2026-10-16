@@ -37,6 +37,8 @@ describe("ELP2-06 generated named Manager BFF contract",()=>{
     expect(managerDatasetResponse.safeParse(rows.value).success).toBe(true);
     expect(rows.value.items[0].metrics.net_pnl.value).toBe("0");
     expect(rows.value.items[0].metrics.allocation.value).toBeNull();
+    expect(rows.value.items[0].metrics.unrealized_pnl).toMatchObject({ value:null,availability:"UNAVAILABLE",reason_code:"METHODOLOGY_NOT_PUBLISHED" });
+    expect(rows.value.items[0].economic_partitions[0].metrics.unrealized_pnl).toEqual(rows.value.items[0].metrics.unrealized_pnl);
     expect(rows.value.scores.direct_nav).toEqual({value:null,status:"policy_pending"});
   });
   it("pins a single economic environment and bounds page/query size",()=>{

@@ -24,7 +24,7 @@ const tupleKey = (tuple: Tuple) => JSON.stringify([
   tuple.alpha_id, tuple.alpha_version_id, tuple.portfolio_id, tuple.deployment_id, tuple.account_id,
 ]);
 type Population = { all: boolean; tuples: readonly (Tuple & { allowed: boolean })[];
-  strategies: ReadonlyMap<string, string>; json: string };
+  exact: ReadonlyMap<string, boolean>; strategies: ReadonlyMap<string, string>; json: string };
 const populations = new WeakMap<object, Population>();
 
 function population(scope: AuthorizedExecutionReadScope): Population {
@@ -32,7 +32,7 @@ function population(scope: AuthorizedExecutionReadScope): Population {
   const cached = populations.get(scope);
   if (cached) return cached;
   if (scope.mode === "LEGACY_COMPATIBILITY") {
-    const result = { all: true, tuples: [], strategies: new Map<string, string>(), json: "{}" };
+    const result = { all: true, tuples: [], exact: new Map<string, boolean>(), strategies: new Map<string, string>(), json: "{}" };
     populations.set(scope, result);
     return result;
   }
@@ -55,7 +55,7 @@ function population(scope: AuthorizedExecutionReadScope): Population {
   // backing table can later acquire unknown/orphan rows or unanchored totals;
   // authority over every known tuple is not authority over those new rows.
   // Purpose narrowing likewise remains represented by the allowed flags.
-  const result = { all: false, tuples, strategies,
+  const result = { all: false, tuples, exact: new Map(tuples.map(t => [tupleKey(t), t.allowed])), strategies,
     json: JSON.stringify({ tuples, strategy_pairs: [...strategies].map(([strategy_id, alpha_id]) => ({ strategy_id, alpha_id })) }) };
   populations.set(scope, result);
   return result;
@@ -130,6 +130,14 @@ export function projectionRowVisible(scope: AuthorizedExecutionReadScope, row: u
     }
   }
   if (!present.length) return false;
+  // Manager members/facts carry the complete correlated tuple. Index only that
+  // exact grain; partial legacy rows must retain the all-matches privacy rule.
+  // Keep descriptor/strategy validation above, including contradictory anchors.
+  const complete = new Map(present);
+  if (complete.size === anchors.length) {
+    if (present.some(([key, value]) => complete.get(key) !== value)) return false;
+    return facts.exact.get(JSON.stringify(anchors.map(([, key]) => complete.get(key)))) === true;
+  }
   let matched = false;
   for (const tuple of facts.tuples) {
     if (!present.every(([key, value]) => tuple[key] === value)) continue;

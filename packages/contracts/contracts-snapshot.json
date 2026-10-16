@@ -56,7 +56,7 @@
     "fixtures/execution-intercell-gateway.source-dark.valid.json": "sha256:5519cb574a3964ff23b4de6ed033ebce8fb5e9606ebb56a61bb195cff12fe4cb",
     "fixtures/execution-live-full-operations.unavailable.valid.json": "sha256:9e4f41626f243c03baf9c84e18fd6a75b53e74f98a443735634380ea93631ee3",
     "fixtures/execution-live-overview.empty.valid.json": "sha256:34b292387a517830cfb57b8f48b2eede73dd26fdd61aa169b3dc41a089ab4148",
-    "fixtures/execution-manager-dataset.rows.synthetic.valid.json": "sha256:6b3b120bf08fc295d6200c82aee93cbc81f0ef48681d9da1dcad8ed1efab531c",
+    "fixtures/execution-manager-dataset.rows.synthetic.valid.json": "sha256:c4af2ad63d06ea7ed54242bd7cc892dbad5744218545821e3913cc5f591d0c77",
     "fixtures/execution-manager-dataset.synthetic.valid.json": "sha256:2c7b89a1263035c736b8a8b0b52bc14ce4da95374100f6cb36eaf5ca3d7cbe51",
     "fixtures/execution-manager-realtime.live-empty.valid.json": "sha256:393e0c5240e82d723ab49dfc684fbfa8dcd488b08db382d362e0a62a22220740",
     "fixtures/execution-manager-scoped.synthetic.valid.json": "sha256:986d91d5714d4a23a517bb64dd9859368605dd19e0b05ec06d7d076aaa3f83bd",

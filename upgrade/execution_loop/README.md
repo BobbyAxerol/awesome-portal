@@ -50,6 +50,17 @@ trust/TLS/propagation and browser acceptance; retained preview stays no-stream.
 Frontend remains NOT_STARTED_BY_OWNER_DIRECTION / AWAITING_CONSUMER_REVIEW.
 10 next-ready only after separate assignment; no goal/push/dev/main/activation.
 
+**Subsequent assignment2026-10-16:** Bobby assigned [ELP2-10](evidence/ELP2-10/README.md)
+on `e6620f41`. Bounded exact-scope indexing, immutable-document coalescing,
+methodology absence and additive137 DB lease/COMMIT fencing are delivered as
+local backend changes, not an activated consumer. [Actual isolated measurements](evidence/ELP2-10/measurements.md)
+and [placement/DR/budget handoff](evidence/ELP2-10/coverage-and-handoff.md)
+separate SQL improvement from full source/TS/DL/Research coexistence and P3
+calibration. Run1 PG355/356 (one typed-error assertion corrected); final normal
+hook supplies terminal acceptance/restore, not a prewritten PASS. Full10 remains
+NOT_MET_SOURCE_BUDGET_CALIBRATION_COEXISTENCE_BROWSER; FE on owner hold.
+11 needs separate assignment/prerequisites; no goal/push/deploy/UI/runtime change.
+
 [ELP2-00 packet](evidence/ELP2-00/README.md) có baseline manifest mới nhất,
 112-route census,14family/11XLC/15decision map,8audit checks và backend/Claude
 handoff. Pins cũ dưới đây giữ lịch sử, không ghi đè runtime/source snapshot mới.

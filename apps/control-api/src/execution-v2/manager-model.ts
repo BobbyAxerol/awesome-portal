@@ -68,6 +68,10 @@ export function dedupeManagerFacts(facts: readonly ManagerFact[]): ManagerFact[]
 function sumMetric(facts: ManagerFact[]): ManagerMetric {
   const first = facts[0]?.metric;
   if (!first) return absent("SOURCE_FACTS_NOT_PUBLISHED");
+  // Performance facts need their own methodology; capital/fees/budgets remain
+  // independently readable. Missing methodology is not source-zero or PnL.
+  if (["return_30d_pct", "net_pnl", "realized_pnl", "unrealized_pnl"].includes(facts[0].kind) &&
+    facts.some(f => !f.metric.methodology_ref)) return absent("METHODOLOGY_NOT_PUBLISHED", first);
   const identity = (m: ManagerMetric) => JSON.stringify([m.unit, m.currency, m.basis, m.window,
     m.methodology_ref, m.denominator, m.policy_revision]);
   if (facts.some(f => identity(f.metric) !== identity(first))) return absent("INCOMPARABLE_UNITS", first);

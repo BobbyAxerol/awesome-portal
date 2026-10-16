@@ -9682,6 +9682,29 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 - **Tests/exit:** T10-01…14; measured selected workload đạt approved SLO và coexistence; không tự hạ load/nới SLO. Performance G2 giữ khi applicable, optional mainnet G2 không thay thế.
 - **Guide:** Portal §15 ELP2-10; Edge EPG10-01/06/09; Score §12 P3. Rollback bounded fanout/feature scope, không bỏ correctness/security/history cần thiết.
 
+**Current return2026-10-16:** Bobby assigned10 separately on
+`e6620f416e43bc8c18a044339a598c436d8556ba`.
+[Local backend delivery /14gate matrix](./execution_loop/evidence/ELP2-10/README.md),
+[actual bounded measurements](./execution_loop/evidence/ELP2-10/measurements.md),
+[per-family/profile manifest](./execution_loop/evidence/ELP2-10/measurement-manifest.json),
+[placement/lease/DR runbook](./execution_loop/evidence/ELP2-10/capacity-recovery-runbook.md)
+and [Claude handoff/debt](./execution_loop/evidence/ELP2-10/coverage-and-handoff.md).
+Exact scope index, finite detached immutable-document single-flight, dependent
+methodology absence, additive137 DB-clock/token/epoch/COMMIT fence and
+autocommit guard; old worker unchanged/unmounted new consumer. Focused PG
+run1 **355/356**, one corrected typed-error assertion (public text intentionally
+sanitized); actual measurement20same-key readers20→1SQL, paired p95≈2251–2266→
+942–953ms on1.197MB synthetic document, **not HTTP/source SLO**. Final normal
+hook/restore is landing gate; external terminal receipt is linked in packet.
+Source PM R2 `d16aa2b5`, Edge `f10c15f6` plus owner WIP;14source budgets null,
+HK foreign lock observed through13:48:52UTC, no host load. Full10
+**NOT_MET_SOURCE_BUDGET_CALIBRATION_COEXISTENCE_BROWSER**;10-002 budget/load
+window and canonical05/06/07 source gates remain open, calibrated P3 pending.
+Frontend NOT_STARTED_BY_OWNER_DIRECTION,10-001 AWAITING_CONSUMER_REVIEW.
+Next: selected10 operational proof after prerequisites;11 only on separate
+assignment with mandatory dependencies, no silent PASS or activation.
+No goal/push/dev/main/release/deploy or UI changes.
+
 <a id="elp2-11"></a>
 
 ### ELP2-11 — Migration tích hợp và bàn giao release

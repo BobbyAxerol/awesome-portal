@@ -4,14 +4,17 @@ import { managerModelDocument, type ManagerModelDocument } from "./manager-model
 import { qualifyDatasetPublication, type PublicationContinuity } from "./publication-adapter";
 import { type DatasetPublication } from "./publication.contract";
 import { dedupeManagerFacts } from "./manager-model";
+import { fenceManagerProjection, type ManagerProjectionLease } from "./manager-lease";
 
 const prepared = new WeakSet<object>();
 export interface PreparedManagerProjection { readonly document: ManagerModelDocument; readonly digest: string;
-  readonly rebuild: { expected_revision: string; receipt_ref: string } | null; }
+  readonly rebuild: { expected_revision: string; receipt_ref: string } | null;
+  readonly lease: ManagerProjectionLease | null; }
 /** Source verification remains owned by the private trust adapter. This parser
  * cannot commission a source or turn fixture receipt strings into authority. */
 export function prepareManagerProjection(input: unknown, publication: DatasetPublication,
   options: { nowMs: number; allowTestOnly?: boolean; expectedContinuity?: PublicationContinuity;
+    lease?: ManagerProjectionLease;
     rebuild?: { expected_revision: string; receipt_ref: string } }): PreparedManagerProjection {
   const document = managerModelDocument.parse(input);
   const p = qualifyDatasetPublication(publication, { workspace_id: document.workspace_id, environment: document.environment,
@@ -52,7 +55,8 @@ export function prepareManagerProjection(input: unknown, publication: DatasetPub
   if (options.rebuild && (!options.rebuild.expected_revision || !options.rebuild.receipt_ref ||
     options.rebuild.expected_revision !== document.supersedes_revision)) throw new Error("MANAGER_REBUILD_BINDING_INVALID");
   const rebuild = options.rebuild ? Object.freeze({ ...options.rebuild }) : null;
-  const value = Object.freeze({ get document() { return structuredClone(document); }, digest: accessDigest(document), rebuild });
+  const lease = options.lease ? Object.freeze({ ...options.lease }) : null;
+  const value = Object.freeze({ get document() { return structuredClone(document); }, digest: accessDigest(document), rebuild, lease });
   prepared.add(value); return value;
 }
 
@@ -64,6 +68,9 @@ export async function persistManagerProjection(client: PoolClient, input: Prepar
   if (!prepared.has(input)) throw new Error("MANAGER_QUALIFIED_INPUT_REQUIRED");
   const d = input.document, key = [d.workspace_id, d.environment, d.profile_id];
   await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [JSON.stringify(["manager-model", ...key])]);
+  if (input.lease) await fenceManagerProjection(client, input.lease,
+    { workspace_id: d.workspace_id, environment: d.environment, profile_id: d.profile_id });
+  else if (d.qualification === "SOURCE_VERIFIED") throw new Error("MANAGER_CONSUMER_LEASE_REQUIRED");
   const head = (await client.query<ManagerModelHead>(`SELECT revision,source_epoch,source_sequence::text,projection_generation,payload_digest,catalogue_digest
     FROM execution_manager_model_heads WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 FOR UPDATE`, key)).rows[0];
   const old = (await client.query<{ payload_digest: string }>(`SELECT payload_digest FROM execution_manager_model_revisions
@@ -99,16 +106,42 @@ export async function persistManagerProjection(client: PoolClient, input: Prepar
 }
 
 export class ManagerModelRepository {
-  constructor(readonly pool: Pool) {}
+  private readonly flights = new Map<string, Promise<ManagerModelDocument | null>>();
+  private readonly maximumFlights: number;
+  private waitingReaders = 0;
+  constructor(readonly pool: Pool, options: { maximumFlights: number } = { maximumFlights: 4 }) {
+    if (!Number.isSafeInteger(options.maximumFlights) || options.maximumFlights < 1 || options.maximumFlights > 16)
+      throw new Error("MANAGER_READ_LIMIT_INVALID");
+    this.maximumFlights = options.maximumFlights;
+  }
   async head(workspace: string, environment: string, profile: string) {
     return (await this.pool.query<ManagerModelHead>(`SELECT revision,source_epoch,source_sequence::text,projection_generation,payload_digest,catalogue_digest
       FROM execution_manager_model_heads WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3`, [workspace, environment, profile])).rows[0] ?? null;
   }
   async document(workspace: string, environment: string, profile: string, revision: string) {
+    // Bound followers as well as unique flights. Each detached 8MiB maximum
+    // document still costs per-caller memory; coalescing is not free fanout.
+    if (this.waitingReaders >= 32) throw new Error("MANAGER_READ_CAPACITY_EXCEEDED");
+    const key = JSON.stringify([workspace, environment, profile, revision]);
+    let flight = this.flights.get(key);
+    if (!flight) {
+      if (this.flights.size >= this.maximumFlights) throw new Error("MANAGER_READ_CAPACITY_EXCEEDED");
+      // Reserve before I/O starts. No TTL/auth cache: a settled flight is removed,
+      // including errors. Service still authorizes each caller and current head.
+      flight = Promise.resolve().then(() => this.loadDocument(workspace, environment, profile, revision));
+      this.flights.set(key, flight);
+      void flight.finally(() => { if (this.flights.get(key) === flight) this.flights.delete(key); }).catch(() => undefined);
+    }
+    this.waitingReaders++;
+    try { const document = await flight; return document === null ? null : structuredClone(document); }
+    finally { this.waitingReaders--; }
+  }
+  private async loadDocument(workspace: string, environment: string, profile: string, revision: string) {
     const row = (await this.pool.query<{ payload: unknown; payload_digest: string }>(`SELECT payload,payload_digest
       FROM execution_manager_model_revisions WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND revision=$4`,
     [workspace, environment, profile, revision])).rows[0];
     if (!row) return null;
+    if (Buffer.byteLength(JSON.stringify(row.payload)) > 8 * 1024 * 1024) throw new Error("MANAGER_PROJECTION_LIMIT");
     const doc = managerModelDocument.parse(row.payload);
     if (accessDigest(doc) !== row.payload_digest) throw new Error("MANAGER_PROJECTION_DIGEST_MISMATCH");
     return doc;
