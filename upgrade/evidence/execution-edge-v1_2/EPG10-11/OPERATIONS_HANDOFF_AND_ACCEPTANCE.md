@@ -2,8 +2,8 @@
 
 Status: COMPLETE_INDEPENDENT — implemented, isolated-tested and cleaned.
 Full connected acceptance NOT_MET; no production activation/sign-off.
-Connected objective BLOCKED after three fresh same-input audits; original
-round2 approval remains valid. See current `blocked_audit` in the intake.
+Original connected objective resumed by Bobby; full exit remains NOT_MET.
+See current `resumed_intake` before the historical `blocked_audit` in the intake.
 Bobby approved independent11 and original10 round2 on actual owner returns.
 Current original10/11 round2 continuation is also approved; no repeated generic
 approval is required. See the dated intake below before historical source pins.
@@ -68,6 +68,19 @@ create ephemeral keys, never copy owner PKI. Full phase/campaign exit stays NOT_
 until exact released scope has connected evidence, not a blanket stop on all work.
 
 ## Parallel source consumption and next action
+
+### Resumed intake —17/10/2026,02:21 Asia/Saigon
+
+New owner return locator:
+`/home/bobby/.worktrees/trading-system-pm-v1_1/contracts/baseline/portfolio-account-v1_1/pma11-03-http-request-binding.json`.
+Source packet remains PENDING_VERIFICATION/runtime false. Its real first1009case
+attempt ended1000PASS/9fixture-setup FAIL; controller266c4776…/cleanup complete,
+not a passing source package or live job. PM owns its correction/full retake.
+Exact byte binding is separate from Edge intent digest/current authority/full
+outcome. No compatible actual provider/transport is newly returned to bind.
+Consume qualified retake/actual returns in the original dependent cells; no
+new phase/general approval. Main plan §23.20.1 journals the evidence/ABI/action;
+`resumed_intake` in [the same intake](round2-intake.json) is current.
 
 ### Committed PM publication —17/10/2026,02:08 Asia/Saigon
 

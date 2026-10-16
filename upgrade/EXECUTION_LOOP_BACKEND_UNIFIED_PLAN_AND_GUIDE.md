@@ -14385,5 +14385,62 @@ Configured Bobby identity verified; coherent local audit commit, no hook bypass,
 push or merge. Set persistent goal BLOCKED after this passed audit; resume the
 same approved scope only when a real owner return changes binding availability.
 
+**Owner-requested resume17/10/2026,02:21Asia/Saigon — original10/11 intake:**
+Bobby explicitly requested continuing this same round; persistent goal resumed,
+fresh blocked audit starts here, no new phase/general approval. Existing scope,
+guides/invariants/test/rollback gates above remain binding. Consume actual new
+owner packet/terminal result and inspect the existing Rust seam; no peer edits,
+replacement fixtures, production/provider/key/identity changes or generic waits.
+
+New PM return is
+`/home/bobby/.worktrees/trading-system-pm-v1_1/contracts/baseline/portfolio-account-v1_1/pma11-03-http-request-binding.json`
+(SHA16687796…), on84456381+owner WIP, status
+SOURCE_DARK_IMPLEMENTED_PENDING_VERIFICATION/runtime_enabled=false. It freezes
+raw HTTP delivery method/path/query/body hashing, not Edge intent/current grants
+or full source outcomes. Actual attempt02:15:21–02:19:15Asia/Saigon ended exit1:
+1009cases/1000PASS/9FAIL/0ERROR/skip; controller SHA266c4776…. All9new PG tests
+failed fixture setup because HTTP helper `request` shadowed inherited instance
+registration helper. PM owner is correcting to `bound_request` and retaining
+the full selection; no source qualification/PG PASS inferred. Controller reports
+exact cleanup complete and8protected source-owner runtime tuples unchanged.
+Exact tested containers502e5602/49b6a12c now missing, not restarted here. This
+terminal receipt supersedes “live handle63637” as a wait; no retake PASS/job is
+invented from an intent or expired lease. Private copy cleanup remains PM-owned.
+
+**Owned ABI/result/action:** reviewed Rust CurrentReadGrantProvider and command
+AuthorityProvider/CommandPort. PM human HTTP request_digest is NOT Edge immutable
+CommandIntent.request_digest or a CurrentReadGrant/AuthorityReceipt. The packet
+returns no actual authenticated provider, normalized B/delta/history or qualified
+full command transport to bind. TS now5a17ecaf journal-only delta; decisive native
+fence Rust/SQL hashes unchanged. Researchd92 commissioning checksum e08aa877
+unchanged despite active writer/transport WIP. No new owned binding/test becomes
+runnable from this failed owner source attempt; do not duplicate peer fixes or
+weaken a guard. Record the actual new packet/counts now; next consume PM's real
+qualified retake and each compatible actual authority/source/command/target
+return in its affected original03/08/09/10/11 cell. Independent11 COMPLETE,
+full connected10/11 NOT_MET; fresh Edge product/connected tests0, no new grant or
+port bound. This is source intake, never full connected acceptance.
+
+**Resumed runtime/C4:** fresh02:22Asia/Saigon all18HK+5SGP protected tuples match
+baseline exactly. HKfree211,064,508,416B/SGP167,564,783,616B; images102/30.57GB
+and328/88.82GB, BuildKit371/28.3GB and3774/195.9GB respectively. Shared inventory,
+not production capacity. Current foreign HK DR05 lease until02:58:18 and SGP
+Core-focus until02:36:23 respected; no heavy job run here, no job wait inferred
+from locks. Own images/cache/containers/volumes/networks0, removed0B,
+NO_ACTION_NEEDED. Preserve all7active worktrees/active release/named rollback/
+08PKI and unrelated untracked feasibility review. Canonical manager54c6f5f3,
+stableSGPmain53316263, released Edge8814cd2a/image d6aa7a51 unchanged; feature
+49394037 plus enclosing intake commit is source only. No peer/runtime/DB/TLS/
+financial mutation, push or merge. Validate the bounded intake/hash/link/scope
+and diff; no fresh Edge product acceptance or foreign test-count inheritance.
+
+**Resumed intake verification/commit:** bounded JSON/scope/actual failed receipt
+hash checks PASS;439Edge public inputs/4helpers unchanged;595local file links
+resolve/0missing. Intake65,007B below64KiB, no raw log/test data/key copied.
+`git diff --check` PASS, fresh Edge product/connected tests0. Five owned tracking/
+intake files only; configured Bobby identity, normal local commit/no hook bypass,
+push or merge. Goal stays active on this first resumed intake, not complete or
+immediately reblocked; next real input/qualification changes its dependent work.
+
 
 

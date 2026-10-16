@@ -748,9 +748,10 @@ deep-dive → ADR → slice → evidence discipline documented above.
   provider-publication evidence is consumed, not pending WIP publication. No
   runtime certification. Actual authenticated current provider/export/mapping
   remain unbound.
-  Connected goal is BLOCKED after three fresh intakes of the same missing actual
-  binding inputs;11 independent remains complete/full10/11 NOT_MET. Original
-  round2 approval remains valid; resume on a compatible actual owner return.
+  Bobby resumed original round2 intake;11 independent complete/full10/11 NOT_MET.
+  New PM HTTP-binding packet is unqualified: first1009case attempt1000PASS/9FAIL
+  in new fixture setup; PM fixes/retakes its own source. No actual grant/port
+  returned; prior blocked audit remains historical, not a repeated approval gate.
   Historical08 completion round after the earlier PM deferral recorded
   PM`c401a023` still explicitly NOT_PUBLISHED for runtime authority/COMMIT proof;
   Research`169195ca` has no production provider and UNMAPPED identity. The single
