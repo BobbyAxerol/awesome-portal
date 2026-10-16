@@ -12136,5 +12136,46 @@ feature commit. Unrelated full monorepo verification not run under HK foreign
 measurement lock; it is not represented by the scoped317 tests. No hooks disabled
 or reconfigured, no production-capacity claim, push or merge.
 
+**Owner rule clarification —2026-10-16 / APPROVED_DOCS_ONLY / COMPLETED_DOCS_ONLY:**
+Bobby requires runnable approved work to be executed immediately, not grouped
+with unrelated blockers or deferred to a new phase. Record this in canonical
+`/home/bobby/AGENTS.md` and the portable Portal `AGENTS.md`; governing EDGE
+§14 parallel-dependency table already separates early implementation from
+certification/activation gates. This clarification does not change guide bytes,
+phase approval, source authority, runtime permission or any acceptance threshold.
+Scope: rules plus these existing tracking documents only; no budget numbers,
+source binding, benchmark, sibling edits, deployment or07 implementation.
+Verification: exact diff/scope/wording checks; no heavy tests for prose-only work.
+Rollback: remove only this added clarification, preserving all prior rules.
+Workspace-rules checkout is on`main`; do not commit/switch that shared branch.
+The approved canonical rules edit stays explicit there; the portable rule and
+project journal belong to the current Portal feature commit.
+
+**Applied and checked:** canonical rule10a now requires immediate execution of
+safe authorized independent work, a runnable/blocked partition and completion
+of runnable items before blocked handoff/phase transition. Portal closeout rule
+mirrors it for remote readers; backend guide §14.1 and README synchronized.
+For current06, independent budget sizing/instrumentation/target preparation is
+unfinished Edge work to execute, not a reason to wait for03 or reopen approval.
+This docs change does not claim those implementation items are completed.
+Missing publication/clean-window evidence still blocks only dependent tests;
+07 remains NOT_STARTED and full06exit remains NOT_MET.
+
+Seven lightweight rule/scope checks PASS; `git diff --check` PASS for both
+canonical rules and Portal docs. No cargo/pytest/build/load/source request,
+runtime mutation or new capacity attestation; existing317 test receipt remains
+historical evidence, not rerun here. Cleanup NO_ACTION_NEEDED: no test target,
+container/image/cache/volume/worktree created or removed; active/rollback
+resources untouched by this documentation change. Source/runtime/release and
+retention locators remain in the preceding reconciliation (last attested there,
+not re-certified by a prose edit).
+Canonical rules file SHA256
+`da11cc9040ca1e91aa71286895b290377d11714f6ad98915696551b419d67a8c`;
+`/home/bobby` stays`main`@`817c0fea735b4ebfeead1c0af05f2800cae989fb`
+with only this approved `AGENTS.md` edit uncommitted (no direct main commit).
+Portal branch`feat/execution-edge-upgrade-v1_2` records the portable rule and
+tracking as one local docs commit with Bobby's configured identity. No push,
+merge, phase advancement or deploy.
+
 
 

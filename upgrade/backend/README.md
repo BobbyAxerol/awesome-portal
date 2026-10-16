@@ -54,6 +54,10 @@ Chúng không thay thế phase hoặc exit gate trong
   Research returns, not waived by correctness. Own5.863GB source/cache/logs
   cleaned;12HK+5SGP tuples unchanged/restarts0. No runtime/source mutation or
   capacity claim. §23.15 links evidence, binding limits and one action packet.
+  Owner clarification in `AGENTS.md`: execute independent approved work now;
+  scope blockers narrowly, finish runnable work before a blocked handoff or
+  phase transition. Budget/target preparation is not external TS debt; no
+  measurement-lock or source/activation gate is waived.
 
 - [Official Trading System owner request — Portal Execution capability campaign](./TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md)
   — **the governing owner request.** It consolidates N02/N03 incremental

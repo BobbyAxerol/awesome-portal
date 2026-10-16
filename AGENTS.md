@@ -157,6 +157,17 @@ Rules for these agents:
 
 ## Owner-authorized phase closeout
 
+- Scope blockers to their actual dependencies. During an approved implementation
+  turn, execute every safe, authorized, independently runnable item immediately;
+  do not merely report it as a next step, wait for an unrelated return, ask for
+  the same phase approval again, or move it into a new phase. Before a blocked
+  handoff or proposed phase transition, finish the runnable work and record the
+  genuinely blocked remainder with evidence, owner and exact unblock action.
+  In particular, independent budget sizing, instrumentation and isolated
+  target/harness preparation do not wait for source publication. Keep owned
+  unfinished work distinct from external technical debt. This does not widen
+  phase/runtime/peer authority, override measurement locks, invent numerical
+  budgets or upgrade isolated evidence into production acceptance.
 - An explicit Bobby approval to promote a named phase/scope is the owner
   decision for that exact phase; do not ask for the same approval again under
   a different label. Run the shortest declared evidence profile that still

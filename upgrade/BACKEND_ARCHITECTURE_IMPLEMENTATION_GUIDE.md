@@ -700,6 +700,10 @@ deep-dive → ADR → slice → evidence discipline documented above.
   03publication, fresh paired measurements and Research returns. Own5.863GB test
   source/cache/logs cleaned;12HK+5SGP tuples unchanged/restarts0. No runtime/source
   mutation or capacity claim; §23.15 links exact evidence and consolidated actions.
+  **Owner clarification:** independently runnable approved work must execute
+  immediately, not wait behind unrelated blockers or move into07; budgets/
+  instrumentation/target preparation stay owned work. Canonical rule10a and
+  Portal `AGENTS.md` closeout rule apply; locks and activation gates unchanged.
   07…11 await approval.
   01capacity exit remains unmet, not waived.
   No operational runtime/source/credential change, push or merge. Only owned
