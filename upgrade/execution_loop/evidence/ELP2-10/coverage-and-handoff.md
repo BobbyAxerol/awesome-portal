@@ -1,5 +1,49 @@
 # ELP2-10 — quality/performance consumer handoff and open ledger
 
+## Authentic-human continuation2026-10-17 Asia/Saigon, latest
+
+[Private wire, source adapter, tests/corrections and consolidated operational return](authority-continuation.md).
+Core issue→signed source ENTER→durable used lease→fenced source terminal proof
+is implemented as an unmounted candidate, with drain blocking new admission and
+all existing authority-changing DB writers. A separate physical lease epoch
+prevents stale REPEATABLE READ revocation snapshots from missing an admitted
+lease. Crash recovery rehydrates exact persisted attempts, not credentials or
+new permission. Actual PM HumanIdentityService remains the source resolver;
+workload/economic/field grants are still independently required.
+
+Qualification tooling refuses absent calibration bytes/canonical-loader proof,
+unapproved scalar budget catalogues and unmatched B0/B1/B2 repetitions. It
+accepts approved counterbalanced ordering, not an invented universal stage
+sequence. No new public route/DTO/OpenAPI/generated/FE mapping in this private
+wire slice. Claude next: existing six named Manager/360 and Score consumers
+when assigned; no browser acceptance or new UI request invented.
+
+Canonical05-001/06-002 now distinguish implemented candidate compatibility
+from uninstalled actual trust/provider;00-005 approved calibration and10-002
+budget/coexistence/G2 still need real selected inputs.10-001 remains
+AWAITING_CONSUMER_REVIEW. All exact test outcomes and source commit are in the
+linked packet/terminal receipt. Backend next stays10; no11, push or runtime.
+
+## Candidate-only return2026-10-16, latest
+
+[Implementation, source repins, actual45PASS, cleanup and concrete authority package](source-followthrough.md).
+Bobby's approved PM/Edge candidate worktrees exist; private PM association
+commit **9c39b4663bac971d37b489445b8cfff5d2b463ad**,5files+548/−0, is clean
+and unmounted. Exact issuer/workspace/alpha/version/source-evidence→registered
+TS tuple is immutable, current TS permission precedes replay, outer-COMMIT
+membership expiry and cross-instance digest conflicts fail closed.
+15new+30registry tests PASS on disposable PG, TEST_ONLY identity/research
+evidence, no HK load. No public contract or frontend binding changed.
+
+Source owner now has a separate832PASS WIP lease-composition receipt, explicitly
+no actual human/app/field provider installed. Existing05-001/06-002 therefore
+remain open for real versioned Portal↔PM human/trust/revocation-through-COMMIT
+compatibility and normalized source commissioning, not missing association code.
+10-003 local root defect remains delivered at **fa857b85**; do not reopen it or
+repeat its unchanged suite.10-002 approved budgets/coexistence,00-005 calibration
+and10-001 assigned six-Manager browser consumers remain open. Full10NOT_MET,
+11not started. No push, owner-worktree edit, runtime activation or UI change.
+
 ## Provider continuation2026-10-16, newest
 
 [Protected-root fix / independent review / actual source repins / next approval package](provider-continuation.md).

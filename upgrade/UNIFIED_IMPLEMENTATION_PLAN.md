@@ -9770,6 +9770,54 @@ Claude next remains six named Manager/360 consumers when assigned; no new
 binding task in this private fix. Full10**NOT_MET**,11 not started; no push,
 dev/main merge, release, deployment, UI change or financial command.
 
+**ELP2-10 candidate-only follow-through2026-10-16, latest:** Bobby approved
+the exact PM/Edge isolated candidate package; [scope, implementation, actual tests and next authority package](./execution_loop/evidence/ELP2-10/source-followthrough.md).
+Separate PM98dbfd8c/Edge9db77811 worktrees created, owner source/WIP untouched.
+No source runtime, credential, command or Live activation. HK foreign measurement
+window through17:40UTC prohibits load there; candidate correctness can use the
+approved isolated SGP2CPU/1536MiB/300s envelope. Candidate PMcommit
+**9c39b4663bac971d37b489445b8cfff5d2b463ad**,5files+548/−0: immutable
+research/version association, explicit source evidence, current permission before
+retry and deferred outer-COMMIT expiry checks. Actual final **45PASS**,15new+
+30registry regressions,12.23spytest/17.009soverall; cleanup complete,8Portal
+service tuples unchanged. PMowner's newer832isolatedPASS lease wrapper explicitly
+does not install a genuine provider; not merged or added to candidate coverage.
+Actual Portal↔PM current-human/trust/revocation-through-COMMIT compatibility is
+an additional authority package proposal, not another placeholder provider.
+Approved budgets/calibration/coexistence and assigned browser acceptance remain
+mandatory; full10NOT_MET and11not started. No push or source runtime activation.
+
+**ELP2-10 genuine-human authority continuation2026-10-17 Asia/Saigon, latest:**
+[implementation, private wire, source transaction adapter, real test corrections and operational return](./execution_loop/evidence/ELP2-10/authority-continuation.md).
+Entryfa857b85, same branch; no new goal/push/UI/runtime. Real Core user/session/
+workspace/policy capture is reused, not copied identity authority. Additive
+unmounted candidate issues exact Ed25519pma.identity.v1 and authenticates signed
+source ENTER/terminal proofs; durable one-use leases and committed drain fence
+legacy/raw DB authority writers. Unknown COMMIT remains quarantined after TTL;
+fenced source readback, not cancellation, proves terminal outcome. Persisted
+attempts support crash recovery; separate physical lease epoch closes a real
+stale-REPEATABLE-READ snapshot race without altering signed authority revision.
+PM adapter reuses actual HumanIdentityService, same-TX source marker and deferred
+logical-COMMIT expiry; no Portal network holds a TS connection. No public
+browser contract, numbered runtime migration, key/client/provider installation
+or business grant. Qualification intake requires independent approval/actual
+calibration/canonical-loader bytes, exact14-group metric catalogue and matched
+repeated counterbalanced B0/B1/B2 receipts. Actual tests, final pins/normal hook
+and cleanup are recorded in the linked packet, not inferred from fixture state.
+05-001/06-002 remain actual provider commissioning;00-005 approved calibration;
+10-002 budgets/coexistence/applicableG2;10-001 assigned consumers/browser.
+Backend next stays10 and Claude next existing six named Manager/360/Score
+handoff when assigned. Full10NOT_MET,11not started; no acceptance invented.
+Terminal source candidate **0e7059cc968654d50e76fcc76f3a2d3aceababe3**,
+5files+1369/−0;23PASS real disposable PM PostgreSQL/crypto/identity,
+13.67spytest, source-client transport explicitlyTEST_ONLY. Three earlier failed
+attempts and corrections preserved. Owner advanced independentlyf8ddea31,
+unchanged by us. Actual Portal normal-hook terminal status/hash/cleanup is in
+the linked receipt, not a fixture-derived phase PASS. Remaining backend work
+is real client/trust/authority-writer/provider commissioning plus approved
+budget/calibration and allocated coexistence/G2; browser remains Claude's
+assigned acceptance. No public field or ELP2-11 entry introduced here.
+
 <a id="elp2-11"></a>
 
 ### ELP2-11 — Migration tích hợp và bàn giao release

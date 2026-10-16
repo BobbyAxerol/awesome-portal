@@ -1,5 +1,17 @@
 # ELP2-10 — Performance, quality và coexistence
 
+**Authority continuation2026-10-17 Asia/Saigon, latest:**
+[private genuine-human wire, revoke-through-COMMIT, actual validation and remaining operational inputs](authority-continuation.md).
+Candidate Portal issue/ENTER/drain/terminal recovery and PM source transaction
+adapter are implemented without runtime mounting or credential provisioning.
+Real users/sessions remain authority; unknown COMMIT never auto-expires into a
+successful revoke. The intake checker now requires actual approved calibration,
+named budget metrics and matched repeated coexistence receipts. No new public
+frontend field. This supersedes “authority package only proposed” below for code
+delivery, not actual commissioned provider/calibration/capacity/browser gates.
+Full10 remainsNOT_MET;11not started. Final hook/source pins are linked in the
+continuation packet; no plan is a passing test.
+
 **Provider continuation2026-10-16, newest:**
 [exact source/current-human audit, protected-root fix and minimal approval package](provider-continuation.md)
 supersedes earlier source pins/locks, not their historical receipts. The local
