@@ -1,0 +1,194 @@
+{
+  "schema": "epg10.bootstrap-verification.v1",
+  "phase": "EPG10-04",
+  "status": "IN_PROGRESS_OWNED_IMPLEMENTATION_TESTED_SOURCE_DARK",
+  "exit": "NOT_MET_SOURCE_CONNECTED_DEPENDENCIES",
+  "evidence_class": "TEST_ONLY_SYNTHETIC_INPUTS_REAL_DISPOSABLE_POSTGRESQL",
+  "runtime_activation": false,
+  "owned_technical_debt": 0,
+  "formal_cases_isolated": {
+    "T04-01": "PASS_EXACT_PAGED_SNAPSHOT_OVERLAP_MUTATION_DELETE_HISTORY",
+    "T04-02": "PASS_DB_WRITER_DISCONNECT_PRE_COMMIT_LOST_ACK_AND_NEW_STORE_RECONNECT",
+    "T04-03": "PASS_SNAPSHOT_EXPIRY_RETENTION_RESET_NEW_GENERATION",
+    "T04-04": "PASS_COMPLETE_CROSS_DATASET_GROUP_ATOMIC_CHECKPOINT_POINTER",
+    "T04-05": "PASS_GENERATION_REVISION_PIN_NO_MIXED_PAGE_READ",
+    "T04-06": "PASS_SPARSE_VISIBLE_AND_HIDDEN_ONLY_SCOPED_SCAN_NO_HIDDEN_COUNTS",
+    "T04-07": "PASS_MISSING_VISIBLE_DIGEST_AND_UNTRUSTED_PROOF_NO_ACK",
+    "T04-08": "PASS_GRANT_REVOKE_EPOCH_AUTHORIZED_RESNAPSHOT"
+  },
+  "formal_counts_isolated": {
+    "passed": 8,
+    "failed": 0,
+    "blocked": 0
+  },
+  "source_connected_acceptance": {
+    "status": "BLOCKED_EXISTING_DEPENDENCIES",
+    "cases_not_run": 8,
+    "phase03": "Actual publisher-generation fence and selected writer/export/full-current-snapshot/overlap/retention/group/auth publication are absent",
+    "phase01": "Approved production Research DB capacity/permissions and coexistence evidence not met",
+    "action_packet": "../EPG10-03/CAPTURE_CONTRACT_AND_OWNER_RETURN.md",
+    "approval": "BOBBY_ALREADY_APPROVED_04_NO_REPEAT_BLANKET_APPROVAL"
+  },
+  "final_automated_tests": {
+    "core_unit": {
+      "passed": 31,
+      "failed": 0,
+      "ignored": 0
+    },
+    "pg_unit": {
+      "passed": 20,
+      "failed": 0,
+      "ignored": 0
+    },
+    "pg_bootstrap": {
+      "passed": 22,
+      "failed": 0,
+      "ignored": 0,
+      "filtered_out": 0
+    },
+    "runner_safety": {
+      "passed": 26,
+      "failed": 0,
+      "skipped": 0
+    },
+    "distinct_cases": 99,
+    "count_note": "Formal8 are mappings to these tests, not8additional tests; all legacy PG-gated tests receive the real disposable URL."
+  },
+  "lint": {
+    "rustfmt": "PASS",
+    "clippy": {
+      "owned_warnings": [],
+      "status": "PASS_NO_OWNED_WARNINGS",
+      "upstream_advisory_warnings": 0
+    },
+    "whole_monorepo_verify": "NOT_RUN_OUTSIDE_SCOPED_CRATES_NO_HK_JOB_UNDER_FOREIGN_LOCK"
+  },
+  "input_verification": {
+    "parent_revision": "fd41382716f39aeed8b680c4689afa177f009d79",
+    "working_tree_input_files": 386,
+    "all_files_matched_back_to_local_checkout": true,
+    "all4runner_hashes_matched": true,
+    "source_input_unchanged_during_run": true,
+    "input_manifest_sha256": "cce2cd94fc62cd6df617fba6b54f3ba8062ad463b7a90a7421291d2a618f1812",
+    "guide_bundle_unchanged": 4
+  },
+  "test_fixture_oracle": {
+    "visible_rows": 206,
+    "immutable_facts": 5,
+    "full_row_equality": "PASS_FINAL_T04_01",
+    "deterministic_digest_observed_attempt02": "sha256:596c25bc68b06b56aac0f1333d3b6ecb01c3edbbae1d44d69824025024bbaced",
+    "note": "T04-01 input/oracle function unchanged; digest was observed in earlier bounded test output, not re-extracted from the deleted final private log."
+  },
+  "resource_observation": {
+    "tainted_for_capacity": true,
+    "performance_acceptance": false,
+    "postgresql_sampled_memory_max_bytes": 483762176,
+    "process_rss_sum_sampled_max_bytes": 163950592,
+    "postgresql_cpu_core_seconds": 29.595273,
+    "oom_kill": 0,
+    "bootstrap_suite_seconds_observational": 22.53,
+    "scope": "Only disposable PG cgroup/process RSS; not whole-worker/process/node peak, throughput, SLO or capacity certification."
+  },
+  "source_reconciliation": {
+    "ts": {
+      "branch": "feat/v2-rust-first-okx-demo",
+      "head": "c2035b41700c27ce810406a59dffeb259c621ea0",
+      "journal_sha256": "77bf6666f2aa8a5c9d2598bb5be56218716e55e2d07cb8e002cf0aa5161dd935",
+      "path": "/home/bobby/.worktrees/trading-system-next-upgrade",
+      "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_sha256": "6cde02a0e1990df480287911b2e6343294a1de0d50697830356712b59e61c438",
+      "untracked_count": 1,
+      "untracked_paths_sha256": "0f5ccc3e62adf3367f549fa8fc2ab99b763ff0c1580f8bbc0fef1ba4b1d800e2"
+    },
+    "pm": {
+      "branch": "feat/portfolio-account-v1_1-parallel",
+      "head": "d16aa2b5f251596e469807f57e81fe14cdc7e763",
+      "journal_sha256": "96ee825d90a33f3cab614b8c7053408fc34b6ae965db867e6efc33ef769735fd",
+      "path": "/home/bobby/.worktrees/trading-system-pm-v1_1",
+      "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "dl": {
+      "branch": "fix/p184-dl-closure",
+      "head": "18c888fa6a568c66fb62606d882e34352973e8f7",
+      "journal_sha256": "db0f55f44a3b63045d821c90fa90fc30fc8b087005ad1094d8a310489e5f2433",
+      "path": "/home/bobby/.worktrees/data-layer-p184-closure",
+      "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "research": {
+      "branch": "docs/research-loop-plan",
+      "head": "c1d6b2dc53f1f80ac44cdfd9d96d159c4e9aae64",
+      "path": "/home/bobby/portal-research",
+      "staged_sha256": "af795e2d94b8d57ef2ebb7a574cf45ee07a16a5d974a894b1bd81ea11c529e0e",
+      "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "research_peer_draft_adopted": false,
+    "peer_edits": 0,
+    "new_source_publication": false,
+    "partner_rounds": "partner-source-review.json"
+  },
+  "runtime_reconciliation": {
+    "hk_unchanged_image_config_revision_release_restart_tuples": 12,
+    "sgp_unchanged_image_config_revision_release_restart_tuples": 5,
+    "all_selected_restarts": 0,
+    "operational_mutations": 0,
+    "production_migrations": 0,
+    "source_requests": 0,
+    "new_routes_credentials_or_source_grants": 0,
+    "source_and_runtime_not_equal": true,
+    "edge_image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+    "edge_oci_revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+    "canonical_checkout": {
+      "branch": "feat/manager-v2-paper-read",
+      "head": "54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4",
+      "path": "/home/bobby/.worktrees/portal-execution-manager-v2",
+      "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 4,
+      "untracked_paths_sha256": "51ffb84753145825dbfd449cfa77440dd156af83e34fc40fd6400b82663e75a4"
+    },
+    "stable_sgp_checkout": {
+      "branch": "main",
+      "head": "533162635f56584d630e3d971d77d50860595f15",
+      "path": "/home/bobby/portal-main-release",
+      "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "active_feature_worktrees": "hk-source-runtime-final.json#worktrees",
+    "rollback_artifacts": "Pre-existing operational/rollback releases and images retained untouched; not requalified by this no-rollout phase."
+  },
+  "cleanup": {
+    "receipt": "cleanup-receipt.json",
+    "target_allocated_bytes_removed": 1908666368,
+    "owned_containers_after": 0,
+    "owned_lock_released": true,
+    "images_built_pulled_or_removed": 0,
+    "shared_buildkit_pruned": false,
+    "volumes_removed": 0,
+    "decision": "OWNED_C4_NO_FURTHER_ACTION; SHARED_RESOURCE_CLEANUP_INTENTIONALLY_DEFERRED_FOREIGN_ACTIVITY_AND_NO_OWNERSHIP"
+  },
+  "not_certified": [
+    "Actual TS/PM full authorised current catalogue and published lifetime history reconstruct",
+    "Native producer-generation fencing or complete PG transaction grouping",
+    "Source snapshot lifetime/vacuum, retention/outage runway and production capacity",
+    "Production SourceProofVerifier/current TLS identity or source endpoint admission",
+    "OS/node restart, persistent database failover, HA/DR and independent failure domain",
+    "Broker-authoritative, Sandbox/Canary/Live real-provider evidence, commands or new runtime activation"
+  ],
+  "receipts": {
+    "pg": "pg-receipt.json",
+    "attempts": "attempt-summary.json",
+    "cleanup": "cleanup-receipt.json",
+    "protocol": "BOOTSTRAP_PROTOCOL_AND_ACCEPTANCE.md"
+  },
+  "next_permitted_step": "Return existing03 producer packet to TS/PM owners, then rerun same03 and connected04 after01 placement/capacity inputs. EPG10-05 isolated contract/query work may start on its named approval; no automatic05 work or source-connected/runtime claim."
+}

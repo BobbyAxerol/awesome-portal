@@ -17,7 +17,13 @@
 > T03:4PASS/1producer-fence BLOCKED, **exit NOT_MET**. Actual same-scope stale
 > publisher counterexample and TS/PM return packet recorded. Isolated proof is
 > not external N03/all-writer/runtime acceptance; owned1.315GB target/cache/test
-> source removed.04…11 await named approval.01capacity is still pending;
+> source removed.**04 approved/in progress (§23.13), owned implementation tested/source-dark:**
+> scoped Rust bootstrap/delta/atomic projection;99automated PASS,0FAIL/skip,
+> fmt/strict clippy PASS;8formal cases PASS isolated. Full connected exit NOT_MET
+> for existing03publication +01capacity/permissions. Own1.909GB private test
+> build/cache/source removed;12HK+5SGP runtime tuples unchanged/restarts0.
+> No source-connected acceptance or runtime activation.05…11 await named approval.
+> 01capacity is still pending;
 > logical02 closure does not waive it.
 > No runtime activation. Four owner-supplied guides
 > are linked and pinned there; earlier acceptance is not new upgrade evidence.

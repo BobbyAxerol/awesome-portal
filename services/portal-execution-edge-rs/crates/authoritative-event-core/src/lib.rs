@@ -17,6 +17,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use thiserror::Error;
 
+pub mod bootstrap;
+
 pub const EDS09_SCHEMA_VERSION: &str = "portal.execution.eds09.snapshot-tail.v1";
 pub const EDS09_ADMISSION_SCHEMA_VERSION: &str = "portal.execution.eds09.source-admission.v1";
 pub const MAX_FRAME_EVENTS: usize = 1_000;
@@ -1053,12 +1055,11 @@ impl SnapshotTailCoordinator {
         {
             return Err(CoreError::DurableReceiptMismatch);
         }
-        let snapshot_complete =
-            pending.frame.lane == FrameLane::HistoryBackfill && pending.frame.complete;
+        let tail_ready = pending.frame.lane != FrameLane::HistoryBackfill || pending.frame.complete;
         self.committed_position = Some(receipt.committed_position);
         self.committed_revision = receipt.committed_revision;
         self.pending = None;
-        self.state = if snapshot_complete {
+        self.state = if tail_ready {
             SnapshotTailState::TailReady
         } else {
             SnapshotTailState::SnapshotBackfill
@@ -1547,6 +1548,45 @@ mod tests {
             coordinator.durable_checkpoint().unwrap().committed_position,
             Some(position(11))
         );
+    }
+
+    #[test]
+    fn consecutive_live_and_current_acks_remain_tail_ready() {
+        let mut coordinator =
+            SnapshotTailCoordinator::new(admission(true), IngestBounds::default()).unwrap();
+        coordinator.begin_snapshot(boundary()).unwrap();
+        coordinator
+            .prepare_append(frame(
+                FrameLane::HistoryBackfill,
+                None,
+                vec![
+                    event(8, EventOperation::Upsert),
+                    event(9, EventOperation::Upsert),
+                    event(10, EventOperation::Upsert),
+                ],
+                true,
+            ))
+            .unwrap();
+        commit(&mut coordinator, 1);
+        for (sequence, lane) in [
+            (11, FrameLane::LiveTail),
+            (12, FrameLane::Current),
+            (13, FrameLane::LiveTail),
+        ] {
+            coordinator
+                .prepare_append(frame(
+                    lane,
+                    Some(position(sequence - 1)),
+                    vec![event(sequence, EventOperation::Upsert)],
+                    false,
+                ))
+                .unwrap();
+            commit(&mut coordinator, sequence - 9);
+            assert_eq!(coordinator.state(), SnapshotTailState::TailReady);
+            let checkpoint = coordinator.durable_checkpoint().unwrap();
+            assert!(checkpoint.tail_ready);
+            assert_eq!(checkpoint.committed_position, Some(position(sequence)));
+        }
     }
 
     #[test]

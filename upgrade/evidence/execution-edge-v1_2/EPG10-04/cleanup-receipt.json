@@ -1,0 +1,23 @@
+{
+  "at_utc": "2026-10-16T04:53:59.177437+00:00",
+  "buildkit_pruned": false,
+  "deleted_contents": "Owned private Rust source copy, Cargo target/dependency cache, synthetic test logs and temporary receipts only; sanitized metadata retained in feature evidence",
+  "disk_available_after": 168646864896,
+  "disk_available_before": 166738206720,
+  "images_built": 0,
+  "images_pulled": 0,
+  "images_removed": 0,
+  "operational_containers_removed": 0,
+  "owned_containers_after": 0,
+  "owned_containers_before": 0,
+  "owned_lock_released": true,
+  "owner": "codex-epg10-04-36f25242fb7b",
+  "raw_runner_receipt_sha256": "66c41e552c9df4dc150aede5ecdb3a274e13f585222514dc6d63bd4778bd968a",
+  "retention": "All pre-existing active/operational/rollback images, containers, shared BuildKit cache, networks, volumes, releases, checkouts and peer worktrees untouched; no shared prune authorized",
+  "schema": "epg10.exact-cleanup.v1",
+  "shared_disk_delta_not_exclusive_reclaim": true,
+  "target": "/tmp/epg10-04-7XkoBkLq",
+  "target_absent_after": true,
+  "target_allocated_bytes_before": 1908666368,
+  "volumes_removed": 0
+}

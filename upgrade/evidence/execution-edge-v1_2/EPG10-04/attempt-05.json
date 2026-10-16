@@ -1,0 +1,183 @@
+{
+  "at_utc": "2026-10-16T04:42:43.629198+00:00",
+  "bootstrap_tests": {
+    "failed": 0,
+    "filtered_out": 0,
+    "ignored": 0,
+    "measured": 0,
+    "passed": 21,
+    "passed_per_binary": [
+      21
+    ],
+    "test_binaries": 1
+  },
+  "cleanup": {
+    "errors": [],
+    "images_built": 0,
+    "images_pulled": 0,
+    "owned_container_removed": true,
+    "private_build_dir_pending_removal": "/tmp/epg10-04-7XkoBkLq",
+    "resource_sampler_stopped_before_container_cleanup": true,
+    "volumes_created": 0,
+    "volumes_removed": 0
+  },
+  "clippy": {
+    "owned_warnings": [],
+    "upstream_advisory_warnings": 0
+  },
+  "database_test_stage_seconds_observational": {
+    "bootstrap_tests": 25.783,
+    "unit_tests": 60.641
+  },
+  "dependency_fetch_allowed_during_compile_only": false,
+  "disk_after_container": 166829608960,
+  "disk_before": 166991646720,
+  "elapsed_seconds_observational": 106.395,
+  "error_type": "ValueError",
+  "expected_bootstrap_tests": 21,
+  "failed_stage": "clippy",
+  "foreign_test_metadata_before": [],
+  "input_manifest_sha256": "9996f6abc38a4522c18d39f781e52d9cf54d72d74d1a1151841f6486b75cb118",
+  "limitation": "CORRECTNESS_ONLY_SHARED_HOST_NOT_CAPACITY_OR_PRODUCTION_PROOF",
+  "lock_window_seconds": 1500,
+  "performance_acceptance": false,
+  "pg_image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+  "postgresql_observation": {
+    "duration_seconds_observational": 94.148648,
+    "interval_seconds": 1,
+    "limitations": [
+      "SHARED_HOST_NOT_CAPACITY_OR_PERFORMANCE_ACCEPTANCE",
+      "SAMPLED_MAXIMUM_NOT_INSTANTANEOUS_PEAK",
+      "PROCESS_RSS_SUM_CAN_DOUBLE_COUNT_SHARED_PAGES",
+      "ONLY_TEST_POSTGRESQL_CGROUP_NOT_CARGO_WORKER_RESOURCES"
+    ],
+    "maximum_samples": 1500,
+    "maximum_sampling_gap_seconds": 1.003873,
+    "postgresql": {
+      "anonymous_max_bytes": 16818176,
+      "average_cores": 0.327119,
+      "cpu_core_seconds": 30.797828,
+      "io_delta": {
+        "rbytes": 73728,
+        "rios": 6,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 132927488,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 60284928,
+      "name": "epg10-04-pg-36f25242fb7b",
+      "network_delta": {
+        "rx_bytes": 2802342,
+        "tx_bytes": 18124020
+      },
+      "pids_max": 10,
+      "sampled_memory_max_bytes": 484073472,
+      "throttled_usec": 30351052
+    },
+    "process_rss_sum_sampled_max_bytes": 163168256,
+    "sample_count": 95,
+    "status": "PASS_OBSERVATION_ONLY",
+    "tainted_for_capacity": true
+  },
+  "production_mutations": 0,
+  "provenance": "TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL",
+  "resources": {
+    "cargo_cpu_affinity": [
+      0
+    ],
+    "cargo_jobs": 1,
+    "cargo_nice": 15,
+    "pg_cpu_limit": 0.5,
+    "pg_max_connections": 24,
+    "pg_memory_limit_bytes": 805306368,
+    "pg_pids_limit": 128,
+    "pg_tmpfs_limit_bytes": 536870912,
+    "private_log_limit_bytes_per_stage": 8388608
+  },
+  "runner_hashes": {
+    "epg03_run.py": "99ad890f0243fa0c2c0d07f48d5d30f897aef04e76a0254e34d4f79acba1b298",
+    "execution_edge_observe.py": "cde8804626aec22bdddfdaec86b39b18e473314eddef9932c58a9f75f4120569",
+    "run.py": "2c2feca804fceffc21c2614d5036bfa37bd0af6f9f3fc7bf19e6cb618e2e419c",
+    "test_run.py": "4b1011a86ae7304c3e8991fed962a3c4919c85afd35a75a623e85aecd8f9ddbf"
+  },
+  "runner_safety_tests": {
+    "failed": 0,
+    "passed": 26,
+    "skipped": 0
+  },
+  "runtime_activation": false,
+  "rustfmt": "PASS",
+  "schema": "epg10.bootstrap-correctness.v1",
+  "source_requests": 0,
+  "source_revision": "fd41382716f39aeed8b680c4689afa177f009d79",
+  "stages": {
+    "bootstrap_tests": {
+      "elapsed_seconds": 25.783,
+      "private_log_bytes": 2290,
+      "returncode": 0
+    },
+    "clippy": {
+      "elapsed_seconds": 7.609,
+      "private_log_bytes": 237521,
+      "returncode": 101
+    },
+    "compile": {
+      "elapsed_seconds": 5.909,
+      "private_log_bytes": 405,
+      "returncode": 0
+    },
+    "runner_safety_tests": {
+      "elapsed_seconds": 0.149,
+      "private_log_bytes": 2194,
+      "returncode": 0
+    },
+    "rustfmt": {
+      "elapsed_seconds": 0.853,
+      "private_log_bytes": 0,
+      "returncode": 0
+    },
+    "unit_tests": {
+      "elapsed_seconds": 60.641,
+      "private_log_bytes": 5072,
+      "returncode": 0
+    }
+  },
+  "status": "FAIL",
+  "tainted_for_capacity": true,
+  "test_database_counts": {
+    "basis": "POST_SUITE_REMAINING_TEST_STATE_NOT_TOTAL_LIFECYCLE_FACTS",
+    "query_seconds_observational": 0.108558,
+    "tainted_for_capacity": true,
+    "values": {
+      "committed_groups": 18,
+      "current_rows": 483,
+      "database": "portal_projection_test_epg10_04",
+      "database_size_bytes": 11705367,
+      "dataset_checkpoints": 126,
+      "generations": 42,
+      "immutable_facts": 37,
+      "pending_chunks": 14,
+      "tombstoned_current_rows": 2,
+      "visible_current_rows": 481
+    }
+  },
+  "unit_tests": {
+    "failed": 0,
+    "filtered_out": 0,
+    "ignored": 0,
+    "measured": 0,
+    "passed": 51,
+    "passed_per_binary": [
+      31,
+      20
+    ],
+    "test_binaries": 2
+  }
+}

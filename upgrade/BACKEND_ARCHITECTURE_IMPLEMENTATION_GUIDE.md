@@ -680,7 +680,13 @@ deep-dive → ADR → slice → evidence discipline documented above.
   **exit NOT_MET**. Reproduced TS generic publisher-generation fence gap;
   single TS/PM return packet linked in03. No all-writer or external N03/runtime
   acceptance; exact owned1.315GB temporary test/build/cache cleaned.
-  04…11 await named approval.01capacity exit remains unmet, not waived.
+  **04 approved/in progress (§23.13), owned implementation tested/source-dark:**
+  scoped Rust bootstrap/delta, atomic projection/checkpoints/generation pointer;
+  99automated PASS,0FAIL/skip, fmt/strict clippy PASS;8formal cases PASS isolated.
+  Full connected exit NOT_MET for existing03publication +01capacity/permissions,
+  no owned defect waived. Own1.909GB source/target/cache and test PG/lock cleaned;
+  12HK+5SGP runtime tuples unchanged/restarts0.05…11 await named approval.
+  01capacity exit remains unmet, not waived.
   No operational runtime/source/credential change, push or merge. Only owned
   test containers/private fixture/tempfiles removed; no image build/pull/prune.
 

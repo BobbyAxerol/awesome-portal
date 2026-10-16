@@ -1,0 +1,51 @@
+{
+  "attempt": 1,
+  "status": "FAIL",
+  "at_utc": "2026-10-16T04:20:54.667801+00:00",
+  "failed_stage": "unit_tests",
+  "error_type": "CalledProcessError",
+  "reason": "Legacy test reset requires portal_projection_test-prefixed disposable DB name; corrected only harness target, no production impact.",
+  "source_revision": "fd41382716f39aeed8b680c4689afa177f009d79",
+  "input_manifest_sha256": "e068a6d47b72ef7081f07a866e29ecee19f8b953bcaf821fefd54a11e606f22a",
+  "runner_hashes": {
+    "epg03_run.py": "99ad890f0243fa0c2c0d07f48d5d30f897aef04e76a0254e34d4f79acba1b298",
+    "execution_edge_observe.py": "cde8804626aec22bdddfdaec86b39b18e473314eddef9932c58a9f75f4120569",
+    "run.py": "e0020fa3a2675ddf89ccb1a636fe18cc534b03c598560cd1a4976083b6639f63",
+    "test_run.py": "2d80a29d5578f3f615c50916f838717ea54065558a0382262af5b3eee0236aea"
+  },
+  "runner_safety_tests": {
+    "failed": 0,
+    "passed": 17,
+    "skipped": 0
+  },
+  "rustfmt": "PASS",
+  "stages": {
+    "compile": {
+      "elapsed_seconds": 186.697,
+      "private_log_bytes": 10353,
+      "returncode": 0
+    },
+    "runner_safety_tests": {
+      "elapsed_seconds": 0.173,
+      "private_log_bytes": 1412,
+      "returncode": 0
+    },
+    "rustfmt": {
+      "elapsed_seconds": 0.887,
+      "private_log_bytes": 0,
+      "returncode": 0
+    }
+  },
+  "cleanup": {
+    "errors": [],
+    "images_built": 0,
+    "images_pulled": 0,
+    "owned_container_removed": true,
+    "private_build_dir_pending_removal": "/tmp/epg10-04-7XkoBkLq",
+    "volumes_created": 0,
+    "volumes_removed": 0
+  },
+  "production_mutations": 0,
+  "source_requests": 0,
+  "performance_acceptance": false
+}

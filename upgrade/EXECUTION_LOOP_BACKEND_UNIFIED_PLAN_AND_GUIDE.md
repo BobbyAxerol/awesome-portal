@@ -9368,10 +9368,12 @@ CI failures reached `main` in this release.
 Bobby approved EPG10-00 after the documentation package; its six offline metadata
 cases PASS and its inventory exit gate passes with explicitly owned UNKNOWNs.
 This is not runtime qualification. EPG10-01 is now **IN_PROGRESS / BOBBY_APPROVED**;
-02 is **COMPLETED_CONTRACT_ONLY**;03 is **IN_PROGRESS / BOBBY_APPROVED**
-(2026-10-16);04…11 await named approval.02's11 logical cases pass;03's real
-capture cases are pending its own receipt. No production migration, credential
-change, source/service mutation or new activation is authorized by03.
+02 is **COMPLETED_CONTRACT_ONLY**;03 and04 are **IN_PROGRESS / BOBBY_APPROVED**
+(2026-10-16);05…11 await named approval.02's11 logical cases pass;03's isolated
+capture proof and actual publisher-fence dependency are recorded in§23.12.
+04's scoped bootstrap implementation/verification is recorded in§23.13.
+No production migration, credential change, source/service mutation or new
+activation is authorized by03/04.
 
 This section is the single active sequencing/journal for the Edge v1.2 campaign.
 Earlier EDS/N/EX-DP/R3/A4 records remain historical evidence with their original
@@ -9582,7 +9584,7 @@ no test images/cache/containers created by this package.
 
 EPG10-00 is **COMPLETED_INVENTORY_ONLY / BOBBY_APPROVED** (2026-10-15);
 01 is **IN_PROGRESS / BOBBY_APPROVED**,02 is **COMPLETED_CONTRACT_ONLY**,
-03 is **IN_PROGRESS / BOBBY_APPROVED**,04–11 remain
+03 is **IN_PROGRESS / BOBBY_APPROVED**,04 is **IN_PROGRESS / BOBBY_APPROVED**,05–11 remain
 **PLANNED / AWAITING_BOBBY_APPROVAL**. Until a phase receipt records execution,
 test counts are required case identities, **not executed tests**. Test bodies are preserved in each detailed
 phase block and the pinned Edge guide; partner ELP2/PM cases are not double-counted.
@@ -9873,8 +9875,10 @@ production source publication or a rewrite of TS/PM writers.
 <a id="epg10-04-plan"></a>
 #### EPG10-04 Bootstrap delta và atomic projection
 
-**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
-**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+**Status:** IN_PROGRESS / OWNED_IMPLEMENTATION_TESTED_SOURCE_DARK — **Approval:** BOBBY_APPROVED (2026-10-16).
+**Tests:** 99PASS / 0FAIL / 0SKIP; fmt/strict clippy PASS;8formal cases PASS in isolated scope only.
+**Exit:** NOT_MET_SOURCE_CONNECTED_DEPENDENCIES (03 publication + 01 capacity/permissions).
+**Runtime activation:** NOT_AUTHORIZED / NOT_PERFORMED.
 
 **Guide chi tiết bắt buộc:** [EDGE / EPG10-04](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-04-bootstrap-delta-và-atomic-projection);
 [BE §§6.3–6.6, 8; ELP2-06/09](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§8.1, 8.6, 11.4](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
@@ -9895,12 +9899,12 @@ Record phase approval, exact affected datasets/operations/profiles and partner r
 
 **Checklist:**
 
-- [ ] Chốt barrier/overlap algorithm theo source guarantee; snapshot lifetime và vacuum cost bounded.
-- [ ] Stage pages, digest/uniqueness/referential checks; không giữ TS transaction mở theo browser.
-- [ ] Atomic apply+dedup+checkpoint; ACK sau commit; group completeness giữ provisional views.
-- [ ] Xử lý tombstone, late correction, duplicate replay và aborted/expired snapshot.
-- [ ] Resync generation mới, atomic pointer swap và rollback-compatible old projection.
-- [ ] History backfill tách quota, không starve fresh deltas; checkpoints per dataset/consistency group.
+- [ ] Certify actual source barrier/overlap, snapshot lifetime/vacuum and full authorised history: blocked by existing03/01 dependencies. Isolated immutable-manifest algorithm implemented/tested; not source proof.
+- [x] Isolated: stage pages, digest/uniqueness/referential checks; không giữ TS transaction mở theo browser.
+- [x] Isolated: atomic apply+dedup+checkpoint; ACK sau commit; group completeness giữ provisional views.
+- [x] Isolated: tombstone, late correction, duplicate replay và aborted/expired snapshot.
+- [x] Isolated: resync generation mới, atomic pointer swap và rollback-compatible old projection.
+- [x] Isolated: history backfill quota/yield to fresh deltas; checkpoints per dataset/consistency group.
 
 **Tests và fixtures:** `EPG10-T04-01` F-CATALOG mutation/delete trong bootstrap không hole hoặc resurrection; `T04-02` crash trước/sau projection commit và trước ACK converges same digest; `T04-03` expired cursor tạo resync, không partial continuation disguised complete; `T04-04` cross-dataset group không visible half-state; `T04-05` generation switch đang query không mix epochs; `T04-06/07/08` scoped hidden skips, true visible loss và scope-change cursors theo 5.7.
 
@@ -9916,7 +9920,8 @@ namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not exe
 **Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
 actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
 source/runtime/retention tuple; remaining gate owner and next independently runnable
-scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+scope. **Current execution:** §23.13; approved isolated implementation/real disposable
+DB proof only, no new source-connected certification or runtime activation.
 
 <a id="epg10-05-plan"></a>
 #### EPG10-05 Tích hợp query history và realtime fanout
@@ -11218,6 +11223,306 @@ PM/retention and cleanup findings; no producer-source edits. Whole-monorepo
 verification/build is NOT_RUN in this scoped slice, and no heavy HK check is
 started under the new foreign measurement lock. Commit this tested package with
 configured Bobby identity on the feature branch only; no push/merge/deploy.
+
+### 23.13 EPG10-04 bootstrap, delta and atomic projection — 2026-10-16
+
+**Pre-code approval / scope / goal:** Bobby approved04 after the explicit
+isolated-vs-connected dependency clarification. Read04 and linked EDGE§5.2–5.7,
+BE§6.3–6.6/8/ELP2-06/09, SCORE§8.1/8.6/11.4, REVIEW§4.3/9 and campaign rules.
+Implement/test complete scoped bootstrap+delta/group/checkpoint/generation behavior
+in the existing Rust core/store, without modifying TS/PM/DL/Research peer trees,
+business ledgers, routes, auth material or running services. Existing legacy
+EDS09 dense sequence API stays compatible; do not feed filtered source IDs or
+invented filler events into it. Add a versioned scoped protocol only for its
+missing manifest/page/certified-scan/group/generation semantics; reuse canonical
+digests, IDs, event validation, existing PG pool/migrator and transaction boundary.
+No new service/dependency/financial calculator or second authority ledger.
+
+**Source truth / design boundary:** TS native checkpoint is journal-prefix, not
+arbitrary current-state snapshot; semantic group is not necessarily a whole PG
+commit. Source epoch, consumer CAS generation and projection generation differ.
+No source adapter is activated here. Typed authenticated-input verifier boundary
+must fail closed without an independent source proof; fixture verifier is TEST_ONLY.
+Snapshot manifest pins source cut/overlap/catchup, schema/dataset set, policy,
+principal/query/consumer and immutable page digests; no inferred source completeness.
+Source completeness stays separate from local reconstructed-state completeness.
+
+**Implementation transaction / affected files:** additive scoped-bootstrap module
+in authoritative-event-core, additive methods/migration/tests in projection-store-pg;
+fix any in-scope coordinator correctness defects found by04 regression. Root owns
+store/integration/runner/evidence/journal; a delegated core slice may own only its
+new module/tests, with root review and one coordinated test window. Read-only
+specialists refresh TS/DL, PM and SGP/Research at every coherent round. Never
+cherry-pick/merge or edit partner worktrees.
+
+**Invariants / tests:** T04-01…08; exact snapshot+overlap mutation/delete convergence,
+immutable correction lineage, source-declared revision order (never compare opaque
+legacy versions), page digest/uniqueness/reference coverage and expiry; bounded
+staging, complete cross-dataset groups, atomic facts/current/checkpoint/receipt,
+ACK-after-commit and ambiguity retry; fenced local writer generation, retained
+old projection/read pin, hidden-only scan progress, real visible loss detection,
+scope/policy/epoch/generation cursor invalidation. No amount arithmetic or command
+replay. Bound pages/groups and fresh-vs-history work; no hidden total-row cap or
+claim that serial correctness tests are capacity/production evidence.
+
+**Execution/resource boundary:** HK foreign lock claude-burst-b16 until06:30:29Z;
+no HK cargo/pytest/build/container/load. SGP lock absent but peer ELP204 disposable
+tests exist; do read-only design/code first, schedule correctness Rust+real PG only
+after checking foreign jobs and obtaining an atomic own lock. Existing exact PG16.15
+image only/no pull/build; independent loopback-only disposable PG/tmpfs, bounded
+CPU/RAM/pids/time/connections, private source/target/cache outside checkouts. Record
+input/config/test hashes, actual PASS/FAIL/SKIP and timing/resource limitations.
+
+**Rollback / cleanup:** no operational rollout to undo. Source change rollback is
+reviewed commit revert; owned harness removes only exact labelled immutable-ID PG
+and validated private temporary directory, releases only own lock, captures pre/post
+disk and unchanged operational runtime/config/restarts. Preserve active/rollback
+images/cache/volumes and all peer worktrees; no broad prune. No push/merge/deploy.
+
+**Decision / exit:** implement and test every independently runnable owned04 path;
+do not stop at a generic approval gate.03 publisher fence/selected writer publication,
+01 production capacity/permissions and real source/auth proofs remain exact
+connected-acceptance dependencies, not missing owned code or invented new phase.
+Record isolated results separately; no integration/full-authorized-history PASS
+from synthetic fixtures. At start: NOT_RUN, no04 test resources created.
+
+**Implementation round1,04:15UTC (not yet test evidence):** additive core/store
+and migration0019 now implement invisible page chains, immutable facts/current
+rows, per-dataset checkpoint, atomic group marker/pointer and private post-COMMIT
+receipts. Persisted limits and manifest digest fence resume; strict decimal-string
+ordinals do not order opaque versions. Recovery review corrected idempotent
+snapshot-finish, expired READY-handle resume, committed chunk/group retry leakage,
+CONTROL value/context matching and tombstone revision guards. Legacy dense-tail
+ACK state regression fixed without admitting source-dark input. Whole operation
+deadline5s includes pool/COMMIT ambiguity; statement2s/lock250ms/idle3s are separate
+safety ceilings, not approved production SLOs. History writes facts only, at most
+64events/one-quarter page bytes, and yields to pending fresh work. A current row
+does NOT prove predecessor lineage: authenticated history must supply it, otherwise
+fail closed/rebootstrap rather than invent an original fact.
+
+SGP04:08/04:15 has no foreign measurement lock, but Research ELP204 test containers
+are active. A single CPU-affinity/nice15 Cargo job plus .5CPU/768MiB disposable PG
+is bounded correctness-only work; every elapsed value is observational and marked
+`tainted_for_capacity=true`, never PASS performance/coexistence evidence. No HK
+test/build/container start. Private target allocated `/tmp/epg10-04-7XkoBkLq`;
+no PG/container created yet. Runner reuses03 immutable-ID/owner cleanup and01 atomic
+lock helper rather than duplicating their safety mechanism. TS/PM/DL/Research
+round2 read-only repin is underway; peer runtime remains untouched. Tests NOT_RUN.
+
+**Tested slice1 / review corrections,04:29UTC:** SGP runner safety17PASS,
+workspace fmt PASS and both targeted Rust crate test binaries compile successfully
+(locked dependencies, one CPU-affinity job). First real-PG attempt FAILED before
+12legacy test bodies: their existing safety reset correctly requires a database
+name beginning `portal_projection_test`. Fixed only the isolated runner/fixture
+target to `portal_projection_test_epg10_04`; never weaken the legacy guard. Exact
+owned PG removed, no cleanup errors, own lock released; failed receipt retained
+as [attempt01](evidence/execution-edge-v1_2/EPG10-04/attempt-01.json).
+
+Independent review also caught/fixed pre-snapshot checkpoint minting an ACK,
+incoming JSONB expansion escaping pending-byte admission, and historical
+same-revision payload conflicts once CURRENT advances. Immutable REVISION digest
+receipts reuse the existing input-receipt table for snapshot/history/delta; no
+second financial ledger or additional service. Corrections require authenticated
+earlier same-entity predecessor; snapshot-already-corrected overlap no-ops when
+version/payload/live-state match. Full-group source positions are ordered but may
+be sparse. Add regressions for every finding and rerun the whole scoped package,
+not just the previously failing cases. New private PG1Hz/RSS/IO observer and fixed
+readonly test-DB counts will record cost with explicit shared-host limitations.
+Current code remains NOT_YET_QUALIFIED; no product/runtime activation.
+
+**Parallel round2 pins:** TS`3d9582de9a9daea8b293d966165114d1b1fb5bf5`
+and clean PM`d16aa2b5f251596e469807f57e81fe14cdc7e763` unchanged; audited
+capture/export/P13/P16/schema bytes equal03tested source. DL advances to
+`e95532404ac9499b692416d13e87c9a5d4e497ba` with dry-run Kafka decision-B
+tooling only; no source publication/admission implied. Research dirty-draft HEAD
+`c1d6b2dc53f1f80ac44cdfd9d96d159c4e9aae64` evolves independently while shared
+foundation schema/fixture/read-publication pins remain unchanged. Both-host
+before snapshots linked in04evidence; actual03 publisher fence and PM coverage
+return remain external, not an invented new phase/approval.
+
+**Tested slice2 / round3 review:** second attempt:26 runner safety and51 Rust
+unit tests PASS;19/20 PG integration cases PASS, one predecessor fixture FAIL
+because its authenticated v1 history disagreed with its v1 snapshot baseline.
+Keep the correct revision-integrity guard; fix only that fixture to use matching
+baseline/history bytes. Failed [attempt02](evidence/execution-edge-v1_2/EPG10-04/attempt-02.json)
+retains exact input digest and cleanup, no rows/credentials. Both owned PG and
+lock removed without error. Full rerun underway. Read-only review also identified
+JSONB negative-zero normalization: add post-storage canonical digest equality
+for snapshot payload and immutable event JSON, with real-PG regression; never
+silently accept payload drift. This remains owned04 correctness, not debt.
+
+Round3 TS moves to`c2035b41700c27ce810406a59dffeb259c621ea0` (market-data
+review journal only), PM unchanged, DL to`18c888fa6a568c66fb62606d882e34352973e8f7`
+(dry-run tooling). Capture/export/P13/P16/coverage bytes and03 dependencies unchanged.
+
+**Tested slice3:** all20 PG integration cases,51unit and26runner safety PASS;
+strict lint rejects two owned core diagnostics (documentation code markup and
+Serde's required scalar-reference serializer callback). Corrected documentation
+and added one narrowly justified callback lint annotation, not a broader waiver.
+Retain [attempt03](evidence/execution-edge-v1_2/EPG10-04/attempt-03.json).
+Added post-JSONB canonical equality for snapshot/current payload and immutable
+event storage, plus21st real-PG regression proving numeric normalization rolls
+back without advancing page/facts/checkpoint. Running full package again.
+Research round3 foundation/publication/history unchanged; peer read-scope draft
+hash`1fa1b57baf301efd28682feb1f184809fda796f135c6af9fa38f791237266f2a`
+is observed but not adopted or edited. All5SGP protected runtime tuples unchanged.
+
+**Tested slice4:**21/21 real-PG integration,51/51 unit and26/26 runner safety
+PASS, including actual JSONB normalization rollback. Strict lint then reached
+store and found naming, eager-option construction and102-line helper diagnostics.
+Fixed these without changing transactions/limits; reuse one encoded-length helper
+instead of duplicated serialization. [Attempt04](evidence/execution-edge-v1_2/EPG10-04/attempt-04.json)
+records the failed lint verdict and zero cleanup errors. Test fixtures also use
+borrowed one-row slices rather than unnecessary cloning. No behavioral waiver;
+full final test/lint receipt remains pending. No source/runtime mutation.
+
+**Tested slice5:** same98 automated cases PASS; strict lint now passes product
+core/store and reaches test-only documentation/or-pattern/Copy-clone and long
+scenario diagnostics. Consolidated repeated authenticated-history setup into
+one fixture helper (no removed assertions/cases), corrected markup/pattern and
+unnecessary copy clone. [Attempt05](evidence/execution-edge-v1_2/EPG10-04/attempt-05.json)
+retains FAIL lint and successful teardown. Full98-case/fmt/clippy rerun underway;
+do not count earlier test passes as final-source qualification.
+
+**Tested slice6:** all98 cases and fmt PASS; only one102-line test lint remains,
+not a correctness failure. Reduced one assertion's formatting to keep the exact
+same case/assertions under the existing100-line ceiling; no lint suppression.
+[Attempt06](evidence/execution-edge-v1_2/EPG10-04/attempt-06.json) retains the
+actual failure and clean teardown. Final exact-source rerun underway.
+
+**Tested slice7:** formatting check correctly rejects the attempted assertion
+compaction; no PG/container started. [Attempt07](evidence/execution-edge-v1_2/EPG10-04/attempt-07.json)
+preserves FAIL. Split corrected-overlap and invalid-predecessor subcases into
+two focused tests instead, preserving every assertion and normal rustfmt;22PG
+tests/99total distinct automated cases expected in the final exact-source run.
+No runtime/source gate or safety test weakened.
+
+**Tested slice8:**99/99 cases and fmt PASS; final all-targets lint reaches core
+unit fixtures and rejects three test-only naming/documentation diagnostics.
+Rename proof-checker locals and correct markup, no product change or lint waiver.
+[Attempt08](evidence/execution-edge-v1_2/EPG10-04/attempt-08.json) records FAIL.
+Strengthen the equal-revision predecessor fixture with identical payload bytes
+so rejection proves lineage ordering, not an earlier payload-conflict guard.
+Rerun all99 cases, fmt and strict lint against final exact inputs; no peer edits.
+
+#### Final owned package / receipt — 04:54UTC
+
+**Recorded status:** `IN_PROGRESS / OWNED_IMPLEMENTATION_TESTED_SOURCE_DARK`;
+**full phase exit NOT_MET** only for the previously declared03 and01 connected
+dependencies. All independently runnable owned code/tests/cleanup are complete;
+no known owned defect, failed gate or unfinished test is labelled technical debt.
+No production activation, TS/PM/DL/Research mutation or new approval gate.
+
+**Delivered:** additive scoped manifest/page/group/proof protocol in
+`authoritative-event-core::bootstrap`; migration0019 and bounded transactional
+bootstrap/read/history/recovery API in`projection-store-pg::bootstrap`.
+Invisible staging, complete group validation, immutable facts/revision guards,
+current upsert/tombstone, all dataset checkpoints and pointer/receipt are one
+COMMIT boundary. Durable local writer fencing differs from the still-missing
+TS producer fence. Corrected legacy LiveTail/Current ACK regression; no dense
+source-admission weakening, financial arithmetic, command replay or new service.
+See [protocol/algorithm/limits/reproduction](evidence/execution-edge-v1_2/EPG10-04/BOOTSTRAP_PROTOCOL_AND_ACCEPTANCE.md)
+and [machine verdict](evidence/execution-edge-v1_2/EPG10-04/verification.json).
+
+**Final commands actually run on isolated SGP:**
+
+```text
+EPG10_PORTAL_REVISION=fd41382716f39aeed8b680c4689afa177f009d79 EPG10_EXPECT_BOOTSTRAP_TESTS=22 python3 -B run.py
+python3 -B -m unittest -v test_run
+cargo fmt --all -- --check
+cargo test --locked -p authoritative-event-core -p projection-store-pg --lib --no-run
+cargo test --offline --locked -p authoritative-event-core -p projection-store-pg --lib -- --test-threads=1
+cargo test --offline --locked -p projection-store-pg --test epg10_04_bootstrap -- --nocapture --test-threads=1
+cargo clippy --offline --locked -p authoritative-event-core -p projection-store-pg --all-targets --message-format=json
+```
+
+**Actual result:**31core unit +20PG unit +22disposable-real-PG scenarios +26runner
+safety = **99distinct PASS,0FAIL/ignored/filtered/skipped**; fmt PASS; strict
+clippy exit0 and0owned/upstream warnings. Formal T04-01…08 map to these cases,
+not eight additional tests. Real-PG migration is called twice per setup; no
+missing-URL silent skip in new tests, and legacy tests receive the disposable URL.
+Recovery covers exact writer-backend termination before COMMIT, retry after
+COMMIT/lost ACK and new store reconnect; not an OS/node/HA crash claim.
+Negative cases include missing lineage, expired/stale scope/pins, invisible
+partial groups, same-revision conflicts after CURRENT advances, JSONB byte
+expansion and numeric-normalization rollback,5s whole-operation timeout.
+
+The [full final receipt](evidence/execution-edge-v1_2/EPG10-04/pg-receipt.json)
+pins386Rust input files plus4runner/helper hashes. All390were matched back to
+the local feature source after the run; input manifest
+`cce2cd94fc62cd6df617fba6b54f3ba8062ad463b7a90a7421291d2a618f1812`.
+Parent SHA is not falsely called the tested dirty source. Four governing guides
+remain byte-identical. [Attempt history](evidence/execution-edge-v1_2/EPG10-04/attempt-summary.json)
+retains earlier failures/fixes honestly; final source passes every scoped gate.
+[Artifact checksum manifest](evidence/execution-edge-v1_2/EPG10-04/artifact-digests.sha256)
+pins the complete owned package/evidence and unchanged four-guide bundle.
+Whole-monorepo verify/frontend/build/operational tests NOT_RUN, outside this
+two-crate scope; no HK job under the foreign measurement lock.
+
+**Observed cost, not capacity acceptance:** final bootstrap suite22.530s;
+85PG samples/83.909207s, sampled PG-cgroup maximum483,762,176bytes,
+process-RSS sum maximum163,950,592bytes (shared pages can double-count),
+29.595273CPU-core-seconds, no OOM/kills. One CPU-affinity Cargo job/nice15,
+.5CPU/768MiB PG and tmpfs512MiB. Whole-worker RSS/production throughput,
+source vacuum, contention, outage runway and SLO remain unqualified. Every
+elapsed/resource value is `tainted_for_capacity=true`; no performance PASS.
+Post-suite remaining-state counts include intentional rejected pending groups,
+not leaked operational rows or total lifecycle fact counts; entire test DB removed.
+
+**Final parallel reconciliation:** [partner rounds](evidence/execution-edge-v1_2/EPG10-04/partner-source-review.json),
+[HK04:54:28](evidence/execution-edge-v1_2/EPG10-04/hk-source-runtime-final.json)
+and [SGP04:54:32](evidence/execution-edge-v1_2/EPG10-04/sgp-source-runtime-final.json).
+TS`c2035b41700c27ce810406a59dffeb259c621ea0`, clean PM
+`d16aa2b5f251596e469807f57e81fe14cdc7e763`, clean DL
+`18c888fa6a568c66fb62606d882e34352973e8f7`; relevant capture/export inputs
+unchanged from03. Research HEAD`c1d6b2dc53f1f80ac44cdfd9d96d159c4e9aae64`
+now has peer-staged draft digest`af795e2d94b8d57ef2ebb7a574cf45ee07a16a5d974a894b1bd81ea11c529e0e`;
+not adopted, modified or treated as publication. Shared foundation/publication
+contract hashes remain unchanged. No new authenticated TS/PM current snapshot,
+complete writer/export coverage or publisher fence has appeared.
+
+**Runtime/source/release inventory:** canonical HK checkout
+`/home/bobby/.worktrees/portal-execution-manager-v2`,
+`feat/manager-v2-paper-read@54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4`;
+active feature`/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2` on
+`feat/execution-edge-upgrade-v1_2`. Six active/peer worktrees and branch/commit
+tuples are enumerated in HK final audit, not removed by this phase. Stable SGP
+source`/home/bobby/portal-main-release`, clean
+`main@533162635f56584d630e3d971d77d50860595f15`.
+HK stable runtime location`/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy`;
+SGP stable runtime`/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose`.
+All12HK and5SGP selected image/config/revision/release/restart tuples equal
+before; all restart counters0. Edge/worker image
+`sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e`,
+OCI source`8814cd2a5f66aeac0828812dbb8340c4f0a4adbb`; Source Proxy
+`sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b`.
+Exact standard service sets/config revisions and other images are in the two
+audit receipts. None is the newly tested feature code. No rollout or rollback
+was performed; pre-existing operational/rollback release/image artifacts retained,
+not requalified or expanded by this phase.
+
+**Cleanup/C4:** [receipt](evidence/execution-edge-v1_2/EPG10-04/cleanup-receipt.json).
+Removed only owner-checked immutable-ID test PG on every attempt and exact
+0700owned`/tmp/epg10-04-7XkoBkLq` after storing its sanitized PASS receipt.
+Private source/target/Cargo cache/logs allocated**1,908,666,368bytes** removed;
+SGP free disk**166,738,206,720→168,646,864,896bytes**, shared-host delta not
+claimed as exclusive reclaim. Own PG/lock remaining0;0images built/pulled/removed,
+0volumes/networks/operational containers removed. HK inventory126images/34.69GB,
+398BuildKit/27.92GB; SGP328images/88.82GB,3,776BuildKit/195.9GB. These are
+pre-existing shared resources, not phase artifacts; broad prune intentionally
+deferred because ownership/quiet-maintenance approval is absent and HK has a
+foreign active lock. No owned image/cache remains; C4 owned decision
+`NO_FURTHER_ACTION`. No peer checkout/branch/source/runtime/secret was removed.
+
+**Next permitted step / exact gap:** TS/PM owners return the existing
+[single03 producer packet](evidence/execution-edge-v1_2/EPG10-03/CAPTURE_CONTRACT_AND_OWNER_RETURN.md#single-producer-action-packet--existing03-scope-no-new-phase),
+then rerun the same03 and source-connected04 with01capacity/permissions and
+authenticated source proofs. No new phase or repeat blanket04approval needed.
+Until then04full connected exit stays NOT_MET, not an implementation-debt waiver.
+EPG10-05 may begin isolated contract/query work when Bobby names it; no automatic
+05 start, no source-connected/realtime/full-history or production claim.
+Commit this coherent tested package with configured Bobby identity on the
+feature branch only; no push, merge, deployment or source admission.
 
 
 

@@ -1,0 +1,59 @@
+{
+  "schema": "epg10.bootstrap-attempt-history.v1",
+  "final": "pg-receipt.json",
+  "earlier_failed_attempts": 8,
+  "final_status": "PASS_ISOLATED_CORRECTNESS_ONLY",
+  "failures": [
+    {
+      "attempt": 1,
+      "receipt": "attempt-01.json",
+      "reason": "Disposable database name failed existing legacy reset safety guard; fixed target name only;17runner+fmt+compile passed;12PG tests failed before body."
+    },
+    {
+      "attempt": 2,
+      "receipt": "attempt-02.json",
+      "reason": "51unit+26runner pass;19/20PG pass. Same-revision snapshot/history fixture conflict correctly rejected; align fixture bytes."
+    },
+    {
+      "attempt": 3,
+      "receipt": "attempt-03.json",
+      "reason": "51unit+20PG+26runner+fmt pass; core doc/scalar-Serde-callback strict lint failed."
+    },
+    {
+      "attempt": 4,
+      "receipt": "attempt-04.json",
+      "reason": "51unit+21PG+26runner+fmt pass; store similar-name/102line/then closure strict lint failed; corrected."
+    },
+    {
+      "attempt": 5,
+      "receipt": "attempt-05.json",
+      "reason": "51unit+21PG+26runner+fmt pass; test markup/or-pattern/Copy clone/long scenario lint failed; refactored fixtures without assertions removed."
+    },
+    {
+      "attempt": 6,
+      "receipt": "attempt-06.json",
+      "reason": "51unit+21PG+26runner+fmt pass; one102line test lint remained."
+    },
+    {
+      "attempt": 7,
+      "receipt": "attempt-07.json",
+      "reason": "26runner pass; fmt rejects assertion compaction. No PG started. Split focused test scenarios instead."
+    },
+    {
+      "attempt": 8,
+      "receipt": "attempt-08.json",
+      "reason": "51unit+22PG+26runner+fmt pass; final core-unit fixture naming/doc lint failed. Fixed and isolated equal-revision lineage fixture from payload conflict."
+    }
+  ],
+  "final_result": {
+    "distinct_cases": 99,
+    "failed": 0,
+    "ignored": 0,
+    "filtered_out": 0,
+    "skipped": 0,
+    "fmt": "PASS",
+    "strict_clippy": "PASS_ZERO_WARNINGS",
+    "source_inputs_immutable": true
+  },
+  "cleanup": "Every attempted PG removed with zero cleanup errors; no PG started in attempt07; all owned locks released. Final private1,908,666,368byte source/target/cache removed, sanitized metadata only retained."
+}

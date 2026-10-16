@@ -8,14 +8,14 @@ Chúng không thay thế phase hoặc exit gate trong
 ## Active deep dives
 
 - [Execution Edge v1.2 — EPG10-00…11 detailed plan](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)
-  — **EPG10-00 completed inventory;01 in progress;02 completed contract-only;03 approved/in progress;04…11 approval pending**. Six offline
+  — **EPG10-00 completed inventory;01 in progress;02 completed contract-only;03/04 approved/in progress;05…11 approval pending**. Six offline
   metadata cases PASS, with source/runtime/TLS and owned unknowns recorded in
   §23.9 and its manifest. No activation/runtime acceptance. The campaign starts
   from current `origin/dev`, keeps the complete four-file owner guide bundle under
   `upgrade/upgrade_v1.2`, and links Edge, Portal contracts, scoring and PM R2 inputs.
   Goals, scope, source pins, invariants, tests, exit gates, rollback, resource and
   debt/owner tracking are recorded per phase. No product/runtime acceptance implied;
-  04…11 are not started.01 available-source continuation now has53offline tests
+  05…11 are not started.01 available-source continuation now has53offline tests
   plus six00metadata PASS, both-host120s observations, two real+two isolated
   retained repository runs (20subcases PASS), native schema idempotency and
   six-table3,623row exact parity. Isolated target cleaned; narrow numeric
@@ -34,6 +34,12 @@ Chúng không thay thế phase hoặc exit gate trong
   no all-writer/external N03/runtime acceptance. The single linked producer
   packet defines the TS/PM return and same-phase rerun, not a new generic gate.
   Owned1.315GB private build/cache/fixture removed; operational state untouched.
+  **04 (§23.13), owned implementation tested/source-dark:** scoped Rust bootstrap,
+  delta and atomic projection/checkpoint/generation package;99automated PASS,
+  0FAIL/skip, fmt/strict clippy PASS;8formal cases PASS isolated. Full connected
+  exit NOT_MET for actual03publication +01capacity/permissions, never fixture
+  authority. Owned1.909GB private build/cache/source removed and own PG/lock0;
+  12HK+5SGP runtime tuples unchanged/restarts0. No source grant/route/deploy.
 
 - [Official Trading System owner request — Portal Execution capability campaign](./TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md)
   — **the governing owner request.** It consolidates N02/N03 incremental

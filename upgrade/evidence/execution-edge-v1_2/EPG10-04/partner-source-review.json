@@ -1,0 +1,78 @@
+{
+  "schema": "epg10.partner-source-review.v1",
+  "phase": "EPG10-04",
+  "peer_edits": 0,
+  "heavy_peer_jobs": 0,
+  "rounds": [
+    {
+      "round": 2,
+      "at_utc": "2026-10-16T04:15:00Z",
+      "ts": {
+        "head": "3d9582de9a9daea8b293d966165114d1b1fb5bf5",
+        "unstaged_sha256": "3029230b3d6f5684e65a24af6b856d84302209fa93bb59c373f651ddda204fb1",
+        "journal_sha256": "05a0e474636bf8d930baa7a1507d15aa877045062c888aed09f0e55f1d773ac8"
+      },
+      "pm": {
+        "head": "d16aa2b5f251596e469807f57e81fe14cdc7e763",
+        "clean": true
+      },
+      "dl": {
+        "head": "e95532404ac9499b692416d13e87c9a5d4e497ba",
+        "journal_sha256": "db0f55f44a3b63045d821c90fa90fc30fc8b087005ad1094d8a310489e5f2433"
+      }
+    },
+    {
+      "round": 3,
+      "at_utc": "2026-10-16T04:34:41Z",
+      "ts": {
+        "head": "c2035b41700c27ce810406a59dffeb259c621ea0",
+        "change": "market-data review journal only; capture/export authority bytes unchanged",
+        "unstaged_sha256": "6cde02a0e1990df480287911b2e6343294a1de0d50697830356712b59e61c438",
+        "journal_sha256": "77bf6666f2aa8a5c9d2598bb5be56218716e55e2d07cb8e002cf0aa5161dd935",
+        "untracked_paths_sha256": "0f5ccc3e62adf3367f549fa8fc2ab99b763ff0c1580f8bbc0fef1ba4b1d800e2"
+      },
+      "pm": {
+        "head": "d16aa2b5f251596e469807f57e81fe14cdc7e763",
+        "clean": true,
+        "journal_sha256": "96ee825d90a33f3cab614b8c7053408fc34b6ae965db867e6efc33ef769735fd"
+      },
+      "dl": {
+        "head": "18c888fa6a568c66fb62606d882e34352973e8f7",
+        "clean": true,
+        "change": "Kafka dry-run tooling; no runtime capacity acceptance",
+        "journal_sha256": "db0f55f44a3b63045d821c90fa90fc30fc8b087005ad1094d8a310489e5f2433"
+      }
+    },
+    {
+      "round": 3,
+      "at_utc": "2026-10-16T04:37:10Z",
+      "research": {
+        "head": "c1d6b2dc53f1f80ac44cdfd9d96d159c4e9aae64",
+        "branch": "docs/research-loop-plan",
+        "unstaged_sha256": "33bc5f7cbe4ee7fd236c91375964a8dd39651502c764ae27cf182729fba8567d",
+        "untracked_count": 65,
+        "untracked_paths_sha256": "44a28fa92d970eeee1bcf00e5b025896a37c3ab3f1a25efa00825800e152540e",
+        "foundation_schema_fixture_publication_unchanged": true,
+        "read_scope_draft_sha256": "1fa1b57baf301efd28682feb1f184809fda796f135c6af9fa38f791237266f2a",
+        "draft_adopted": false
+      },
+      "sgp_protected_runtime": {
+        "unchanged_tuples": 5,
+        "restarts": 0,
+        "canonical_tuple_sha256": "ed206f78f766db0f38ab8944a075ea245c145b0d78e2c94bc8b6db9da76401af"
+      }
+    }
+  ],
+  "authority_ruling": {
+    "native_capture_inputs_equal_phase03_tested_ts": "bdf7685e166d1bdb94edf45d356c298c427a4db4",
+    "generic_publisher_generation_fence": "ABSENT_COUNTEREXAMPLE_REPRODUCED_IN_03",
+    "coverage_tested_methods": 52,
+    "coverage_exclusions": 16,
+    "n03": "SOURCE_DARK",
+    "p13_p16": "SOURCE_ONLY_QUALIFIED_NOT_RUNTIME_ADVERTISED",
+    "snapshot": "JOURNAL_PREFIX_NOT_ARBITRARY_CURRENT_STATE_BASELINE",
+    "group": "SEMANTIC_GROUP_NOT_AUTOMATICALLY_WHOLE_POSTGRESQL_COMMIT",
+    "new_source_publication": false
+  },
+  "next_review": "Before any connected rerun or phase05 adoption, refresh these pins and inspect ongoing Research read-scope draft; do not treat peer HEAD or dirty files as publication."
+}

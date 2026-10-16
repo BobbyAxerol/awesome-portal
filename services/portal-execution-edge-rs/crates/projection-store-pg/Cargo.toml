@@ -22,10 +22,8 @@ sha2.workspace = true
 shared-consumer-core = { path = "../shared-consumer-core" }
 sqlx.workspace = true
 thiserror.workspace = true
-uuid.workspace = true
-
-[dev-dependencies]
 tokio.workspace = true
+uuid.workspace = true
 
 [lints]
 workspace = true
