@@ -7,6 +7,7 @@ import { LocalRealtimeError } from "./profile-realtime.service";
 import { AuthorizedExecutionReadScope, ExecutionReadScopes, ExecutionReadScopeError,
   scopeAllowsField, scopeReadPopulation, ReadScopePrincipal, ReadScopeRequirement } from "../execution-v2/read-scope";
 import { projectionRowVisible } from "../execution-v2/read-projection";
+import { managerTimestamp } from "./manager-timestamp";
 
 /** Internal adapters share one publication identity. This is never accepted
  * from a browser, and the source revision is not returned as a scoped digest. */
@@ -153,7 +154,10 @@ export async function retainedOperationPage(config: ControlApiConfig,
     }
     const identity = operation.identityFields.map(name => {
       if (values[name] === null || values[name] === undefined) throw new RetainedOperationError(scoped ? "EXECUTION_READ_FIELD_POLICY_PENDING" : "UDB_RETAINED_ROW_IDENTITY_NOT_CAPTURED", 503);
-      return `${name}\u0000${String(values[name])}`;
+      const kind = operation.fields.find(f => f.name === name)?.kind;
+      const key = kind === "TIMESTAMP" ? managerTimestamp(item.fields[name])?.identity : String(values[name]);
+      if (key === undefined) throw new RetainedOperationError("UDB_RETAINED_SCALAR_CONTRACT_REJECTED", 503);
+      return `${name}\u0000${key}`;
     });
     return { resource_id: `por1_${createHash("sha256").update(`${operation.operationId}\u0000${identity.join("\u0001")}`).digest("hex")}`, values };
   }).sort((a, b) => a.resource_id.localeCompare(b.resource_id));
@@ -208,7 +212,7 @@ function invalidCursor() { return new RetainedOperationError("UDB_RETAINED_CURSO
 function scalar(kind: ManagerRelationScalarKind, value: ProjectionScalar): string | number | boolean | null {
   if (value === null) return null;
   if (kind === "TIMESTAMP" && typeof value === "string") {
-    const ms = Date.parse(value); if (Number.isSafeInteger(ms)) return ms;
+    const clock = managerTimestamp(value); if (clock) return clock.milliseconds;
   }
   if (kind === "TEXT" && typeof value === "string" && Buffer.byteLength(value) <= 4096) return value;
   if (kind === "BOOLEAN" && typeof value === "boolean") return value;

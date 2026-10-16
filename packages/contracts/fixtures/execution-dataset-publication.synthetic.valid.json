@@ -1,0 +1,68 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.dataset-publication.v1",
+    "family_id": "fills",
+    "catalogue_digest": "sha256:9257ebb0a3935bf58e6fe4858298bf4536cca2081e61f9c4543a82645a4f8c67",
+    "state": "ACTIVE",
+    "purpose": "BUSINESS",
+    "environment": "paper",
+    "profile_id": "test-only:paper",
+    "issued_at_ms": 1000,
+    "expires_at_ms": 3000,
+    "source_as_of_ms": 1500,
+    "observed_at_ms": 1800,
+    "history_capability": "SNAPSHOT_TAIL",
+    "source_read": {
+      "qualification": "TEST_ONLY",
+      "receipt_ref": "test-only:proof-not-product-evidence"
+    },
+    "transport_trust": {
+      "qualification": "TEST_ONLY",
+      "receipt_ref": "test-only:proof-not-product-evidence"
+    },
+    "privacy": {
+      "qualification": "TEST_ONLY",
+      "receipt_ref": "test-only:proof-not-product-evidence"
+    },
+    "field_policy": {
+      "qualification": "TEST_ONLY",
+      "receipt_ref": "test-only:proof-not-product-evidence"
+    },
+    "barrier": {
+      "source_continuity_epoch": "test-only:epoch1",
+      "projection_generation": "test-only:g1",
+      "partition_id": "test-only:paper-fills",
+      "snapshot_id": "test-only:snapshot1",
+      "snapshot_sequence": "9007199254740993",
+      "first_tail_sequence": "9007199254740994",
+      "retention_floor_sequence": "0",
+      "snapshot_receipt_ref": "test-only:snapshot-proof",
+      "ordering_receipt_ref": "test-only:ordering-proof",
+      "correction_receipt_ref": "test-only:correction-proof",
+      "source_writer_fence_receipt_ref": "test-only:fence-proof"
+    },
+    "authority": {
+      "workspace_id": "test-only:workspace",
+      "environment": "paper",
+      "profile_id": "test-only:paper",
+      "qualification": "TEST_ONLY",
+      "publication_revision": "test-only:publication1",
+      "binding": {
+        "dataset_id": "fills",
+        "source_revision": "test-only:source-v1",
+        "catalogue_revision": "test-only:catalogue-v1",
+        "projection_generation": "test-only:g1",
+        "window": {
+          "from_ms": 1000,
+          "to_ms": 2000
+        }
+      },
+      "population_coverage": "COMPLETE_FOR_DATASET_WINDOW",
+      "provenance_ref": "test-only:fixture",
+      "current_linkage": null,
+      "resources": [],
+      "tuples": []
+    }
+  }
+}

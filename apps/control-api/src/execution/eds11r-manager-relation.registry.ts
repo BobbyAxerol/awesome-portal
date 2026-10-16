@@ -3,6 +3,7 @@ import type {
 } from "./current-source.proxy";
 import { EDS11R_MANAGER_RELATION_REGISTRY_SOURCE } from "./eds11r-manager-relation-registry.generated";
 import { MAXIMUM_DATA_INTAKE_V1, MaximumDataEnvironment } from "./maximum-data-intake";
+import { assertPublicationFieldName, browserPublicationCatalogue } from "../execution-v2/publication-catalogue";
 
 export type ManagerRelationScalarKind =
   | "BOOLEAN"
@@ -101,6 +102,7 @@ function compileOperation(value: GeneratedOperation): ManagerRelationOperation {
     throw new Error(`EDS11R generated registry operation is invalid: ${value.operation_id}`);
   }
   const fields = value.fields.map((field) => {
+    assertPublicationFieldName(field.name);
     if (
       !/^[a-z][a-z0-9_]{0,127}$/.test(field.name) ||
       !["BOOLEAN", "INTEGER", "DECIMAL", "TEXT", "TIMESTAMP"].includes(field.kind)
@@ -214,6 +216,7 @@ export function browserManagerRelationOperationManifest() {
       fields: operation.fields.map((field) => ({ name: field.name, kind: field.kind })),
       screen_ids: operation.screenIds,
     })),
+    publication_catalogue: browserPublicationCatalogue(),
   };
 }
 

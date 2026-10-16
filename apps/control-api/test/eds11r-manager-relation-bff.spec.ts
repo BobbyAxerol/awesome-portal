@@ -166,7 +166,10 @@ describe("EDS-11R1 generated named Manager relation authority", () => {
       screen_bound_relation_count: 54,
       non_browser_classification_counts: { projectionInput: 16, auditOnly: 13, internalOnly: 13 },
     });
-    const serialized = JSON.stringify(manifest);
+    // Preserve the legacy no-transport oracle on the original operation DTO.
+    // The additive static catalogue has a logical family named
+    // sync_health_cursor_retention, not a source cursor or selector.
+    const serialized = JSON.stringify({ ...manifest, publication_catalogue: undefined });
     for (const forbidden of ["public.", "source_id", "manager.current.", "relation\"", "cursor", "mtls", "jwt", "account_balances"]) {
       expect(serialized.toLowerCase()).not.toContain(forbidden.toLowerCase());
     }

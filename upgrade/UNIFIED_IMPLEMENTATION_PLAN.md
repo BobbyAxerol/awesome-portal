@@ -9363,7 +9363,7 @@ Không copy lại toàn guide hoặc mở implementation từ việc nhận tài
 
 | Track | Detailed authority | Disposition hiện tại |
 | --- | --- | --- |
-| Portal ELP2-00…11 | [BE guide v1.2](./execution_loop/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md) | 00 audit delivered;01/02/03 local backend checkpoints landed;04 scoped reader/contract repairs implemented, History26/26 and Manager+analytics35/35/restore PASS, [coherent landing gate and remaining source/consumer dependencies](./execution_loop/evidence/ELP2-04/closeout-2026-10-16.md);05…11 NOT_STARTED. No shared-runtime activation |
+| Portal ELP2-00…11 | [BE guide v1.2](./execution_loop/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md) | 00 audit delivered;01–04 landed,04=`2ec5924d`, final hook contracts574/API3,306 PASS+3 existing skips/restore PASS.05 explicitly assigned: [catalogue/publication delivery and selected-source gates](./execution_loop/evidence/ELP2-05/README.md).06…11 NOT_STARTED; no shared-runtime activation |
 | Edge EPG10-00…11 | [Edge guide v1.2](./execution_loop/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md) | GUIDE_READ; HK inspection READ_ONLY; no Edge source/runtime changes |
 | Claude UXM-00…10 | [UX guide v1.1](./execution_loop/EXECUTION_LOOP_MANAGER_UX_DESIGN_GUIDE_v1.1_VI.md) | RULES_READY; browser audit/new design/implementation not performed in this package |
 | Shared score / Regime | [FINAL v1.1](./execution_loop/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md) | Formula/weights/bands selected; runtime calibration/config still pending; no new calculator/test run |
@@ -9574,6 +9574,11 @@ block only dependent activation. Existing Research/Governance evidence preserved
 
 ### ELP2-05 — Nối catalogue và TS publication
 
+- **Current return2026-10-16:** [packet and canonical gate/debt matrix](./execution_loop/evidence/ELP2-05/README.md),
+  [read-only HK pins](./execution_loop/evidence/ELP2-05/source-alignment.md),
+  [42-family/31-field inventory and Claude handoff](./execution_loop/evidence/ELP2-05/coverage-and-handoff.md).
+  Technical contract/adapter work is distinct from real publication certification;
+  new Edge exports stay unavailable while selected writer/trust gates are open.
 - **Goal/dependency:** 01; selected Edge family publication, không chờ mọi endpoint của track khác.
 - **To-do:** family/field/source manifest, grain/writer/schema/source clock/quality; named BFF adapters bounded rows/bytes/cursors; snapshot barrier/tail/correction evidence theo family; economic inputs NAV/flows/costs/notional; giữ nguồn chưa đủ typed absence.
 - **Claude:** mapping source availability, freshness và read-only fixture, không tự direct upstream.
@@ -10379,3 +10384,41 @@ failures and receipts above stay intact. Source is still
   ELP2-05 catalogue/publication is the proposed next dependency step, only
   after Bobby assigns it. No source/SSE/Live/policy activation, push, dev/main
   merge or release accompanies this closeout.
+
+<a id="elp2-05-current-return"></a>
+
+### 14.10 ELP2-05 — explicitly assigned catalogue/publication return, 2026-10-16
+
+Bobby assigned05 separately after04 landed at `2ec5924d`. Current technical
+delivery: [gate/receipt/debt matrix](./execution_loop/evidence/ELP2-05/README.md),
+[source pins](./execution_loop/evidence/ELP2-05/source-alignment.md),
+[coverage + Claude handoff](./execution_loop/evidence/ELP2-05/coverage-and-handoff.md).
+This supersedes older05 NOT_STARTED text, not historical evidence/failed attempts.
+
+- Pinned Edge EPG10-02 source contracts at `e77a8ed0`:42 logical families/31 fields,
+  all new exports explicitly unqualified. Existing54 named current-page adapters
+  stay separate. The existing operations GET gains additive safe generated
+  catalogue metadata, not a generic proxy or permission to query new families.
+- Strict qualified provider input composes current identity/policy, purpose and
+  exact dataset/profile/window/revision; no fallback/cache. TEST_ONLY continuity
+  tests bind W/W+1, epoch/generation/partition/snapshot; production new exports
+  remain closed. No claim source ordering/durable ACK from parser tests.
+- Fixed request-limit enforcement and continuation pre-persistence byte bound;
+  strict RFC3339 accepts real Manager microseconds while exposing only UTC-ms.
+  Canonical private timestamp identity now preserves sub-ms source grain across
+  current/retained named aliases; exact-ms IDs unchanged, no replay claim.
+  Focused API131/131 plus one added manifest-schema check and contract7/7 PASS
+  (publication rerun25/25 overlaps24 prior cases). Normal-hook commit is the technical
+  landing gate; terminal log/cleanup is referenced by the packet.
+- Full05 real-source exit **NOT_MET**: source-connected selected publication,
+  trust/coverage/history receipts are absent; EPG10-03 source generation fence
+  has a documented counterexample. New request05-001 owns that exact source gap;
+  inherited00-003 retains custody/trust ownership. Do not fabricate activation.
+- Backend next:06 design/fixtures or independently qualified scoped readers,
+  **only after separate assignment**. Actual new-family projection depends on
+  selected-source proof, not every unrelated endpoint in TS/Edge.
+- Claude next:05-002 generated catalogue consumer review; read handoff and04
+  cursor/permission semantics, no direct upstream/new UI authority. Frontend
+  NOT_STARTED_BY_OWNER_DIRECTION; AWAITING_CONSUMER_REVIEW. No acknowledgement
+  or product acceptance invented. No goal/runtime/remote/frontend change,
+  push, dev/main merge, release or06 work accompanies this delivery.

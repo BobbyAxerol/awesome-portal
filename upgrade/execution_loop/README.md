@@ -1,26 +1,17 @@
 # Execution Loop Portal V2 — entry point
 
-Ngày ghi: 2026-10-15 (Asia/Saigon). Phạm vi onboarding ban đầu là đọc guide,
-đối chiếu source chỉ đọc và chuẩn hóa rules/handoff. **Current update2026-10-16:**
-ELP2-00 audit delivered;01/02/03 local backend checkpoints landed ở `700aa6a4`,
-`b448c0be` và `c1d6b2dc`;03 normal hook/PG restore PASS (contracts425,
-API2,758 PASS/3 skipped);04 has uncommitted scope/query and initial History
-wiring, not mounted-reader certified. Xem
-[điểm tiếp tục hiện hành](../UNIFIED_IMPLEMENTATION_PLAN.md#elp2-batch-current-resume).
-Latest cell D: build PASS,277/279 tests PASS; two History cases FAIL (authority/
-cursor404 and source-cutover500 vs expected409), restore/tracking NOT_RUN.
-History contract artifacts exist but the new contract suite is NOT_RUN; the
-post-copy History regex tightening has no D receipt. Next: diagnose those
-failures, run only impacted tests, then complete other reader/delivery surfaces
-and whole04 gates. This is not route or full04 acceptance. Drafts remain
-uncommitted. [Exact result](evidence/ELP2-04/README.md#elp2-04-history-cell-d).
-At the latest plan review the goal service reports no active goal; Bobby has
-asked to arrange the next assignment, not restart implementation. Use the
-[current four-phase assignment card](../UNIFIED_IMPLEMENTATION_PLAN.md#elp2-batch-next-assignment).
-Earlier ACTIVE/PLAN_ONLY paragraphs below are historical;01–03 are reused,04
-is unfinished, frontend is still unassigned.
-Frontend chưa được giao; không có shared-runtime/Edge activation. Các đoạn
-onboarding/PLAN_ONLY bên dưới giữ lịch sử, không ghi đè current return này.
+Ngày ghi: 2026-10-15 (Asia/Saigon). **Current return2026-10-16:**01–04 đã land;
+04 ở `2ec5924d`, normal hook contracts574/API3,306 PASS,3 existing API skips,
+build và scoped PostgreSQL restore PASS. Các cell D/failed attempts giữ trong
+packet lịch sử, không còn là current pending bug.
+
+Bobby đã giao riêng [ELP2-05](evidence/ELP2-05/README.md): pin catalogue/publication,
+42 logical families/31 fields, giữ54 named legacy current operations riêng,
+siết rows/bytes/clock/cursor và publish handoff. [Unified current journal](../UNIFIED_IMPLEMENTATION_PLAN.md#elp2-05-current-return)
+phân biệt technical delivery với selected-source runtime gate còn thiếu.
+Không bật goal, không tự mở06+, không push/deploy hoặc sửa frontend/Edge/TS.
+Frontend vẫn NOT_STARTED_BY_OWNER_DIRECTION; handoff AWAITING_CONSUMER_REVIEW.
+Các đoạn onboarding/PLAN_ONLY bên dưới giữ lịch sử, không ghi đè current return.
 
 [ELP2-00 packet](evidence/ELP2-00/README.md) có baseline manifest mới nhất,
 112-route census,14family/11XLC/15decision map,8audit checks và backend/Claude

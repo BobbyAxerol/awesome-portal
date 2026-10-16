@@ -1,5 +1,15 @@
 # Portal Contracts — canonical schema authority (U09 / BAR-06)
 
+ELP2-05 publication inventory: `npm run generate:execution-publication` pins the
+three committed Edge logical manifests in `fixtures/execution-publication-source/`
+and generates `execution-publication-catalogue.d.ts`. The existing authenticated
+`GET /api/v1/execution/manager/operations` now includes `publication_catalogue`.
+Its42 families and31 fields are **source contracts, not42 enabled exports**.
+Existing named current-page reads keep their own authority; no stable snapshot,
+event replay, certified return history, new grants or runtime activation follows
+from catalogue metadata. The dataset-publication synthetic fixture is TEST_ONLY;
+the qualified provider port is internal and remains unmounted/default-denied.
+
 `packages/contracts/` is the source-controlled canonical contract workspace:
 IDs, timestamps, decimals, RFC 7807 problem documents, command envelopes
 (idempotency + optimistic concurrency) and event envelopes (§6.7 of the v0.4

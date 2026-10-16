@@ -26,6 +26,11 @@ import {
   managerRelationOperationByRelation,
 } from "./eds11r-manager-relation.registry";
 import { MAXIMUM_DATA_INTAKE_V1, MaximumDataEnvironment } from "./maximum-data-intake";
+import { managerTimestamp } from "./manager-timestamp";
+
+// The continuation repository emits mdc1. plus a UUID (41 ASCII bytes).
+// Reserve exactly that public size before persisting a private source cursor.
+const CONTINUATION_SIZE_PLACEHOLDER = "mdc1.00000000-0000-4000-8000-000000000000";
 
 const SOURCE_AVAILABILITY = new Set(["AVAILABLE", "UNAVAILABLE"]);
 const SOURCE_FRESHNESS = new Set([
@@ -219,14 +224,12 @@ export class MaximumDataOperationService {
     if (relation.schema !== operation.schema || relation.relation !== operation.relation) {
       throw sourceContractRejected();
     }
-    if (!Array.isArray(data.items) || data.items.length > operation.pageBounds.maximumRows) {
+    if (!Array.isArray(data.items) || data.items.length > query.limit || data.items.length > operation.pageBounds.maximumRows) {
       throw sourceContractRejected();
     }
     const records = data.items.map((item) => deploymentRecord(item));
     const sourceCursor = optionalCursor(data.next_cursor, operation.pageBounds.maximumCursorBytes);
-    const nextCursor = sourceCursor
-      ? await this.continuations.issue(scope, sourceCursor)
-      : null;
+    const nextCursor = sourceCursor ? CONTINUATION_SIZE_PLACEHOLDER : null;
     const state = pageState(freshness, completeness, records.length);
 
     const result = {
@@ -262,6 +265,10 @@ export class MaximumDataOperationService {
       state,
       records,
     };
+    if (Buffer.byteLength(JSON.stringify(result), "utf8") > operation.pageBounds.maximumResponseBytes) {
+      throw new MaximumDataOperationError("EDS01_RESPONSE_TOO_LARGE", 502);
+    }
+    if (sourceCursor) result.page.next_cursor = await this.continuations.issue(scope, sourceCursor);
     if (Buffer.byteLength(JSON.stringify(result), "utf8") > operation.pageBounds.maximumResponseBytes) {
       throw new MaximumDataOperationError("EDS01_RESPONSE_TOO_LARGE", 502);
     }
@@ -310,14 +317,12 @@ export class MaximumDataOperationService {
     if (relation.schema !== operation.schema || relation.relation !== operation.relation) {
       throw relationSourceContractRejected();
     }
-    if (!Array.isArray(data.items) || data.items.length > MAXIMUM_DATA_INTAKE_V1.pageBounds.maximumRows) {
+    if (!Array.isArray(data.items) || data.items.length > query.limit || data.items.length > MAXIMUM_DATA_INTAKE_V1.pageBounds.maximumRows) {
       throw relationSourceContractRejected();
     }
     const records = data.items.map((item) => managerRelationRecord(item, operation));
     const sourceCursor = optionalCursor(data.next_cursor, MAXIMUM_DATA_INTAKE_V1.pageBounds.maximumCursorBytes);
-    const nextCursor = sourceCursor
-      ? await this.continuations.issue(scope, sourceCursor)
-      : null;
+    const nextCursor = sourceCursor ? CONTINUATION_SIZE_PLACEHOLDER : null;
     const state = pageState(freshness, completeness, records.length);
     const result = {
       schema_version: "portal.execution.eds11r.manager-relation-page.v1",
@@ -353,6 +358,10 @@ export class MaximumDataOperationService {
       state,
       records,
     };
+    if (Buffer.byteLength(JSON.stringify(result), "utf8") > MAXIMUM_DATA_INTAKE_V1.pageBounds.maximumResponseBytes) {
+      throw new MaximumDataOperationError("EDS11R_RESPONSE_TOO_LARGE", 502);
+    }
+    if (sourceCursor) result.page.next_cursor = await this.continuations.issue(scope, sourceCursor);
     if (Buffer.byteLength(JSON.stringify(result), "utf8") > MAXIMUM_DATA_INTAKE_V1.pageBounds.maximumResponseBytes) {
       throw new MaximumDataOperationError("EDS11R_RESPONSE_TOO_LARGE", 502);
     }
@@ -414,7 +423,10 @@ function managerRelationRecord(
   const identity = operation.identityFields.map((field) => {
     const value = values[field];
     if (value === undefined || value === null) throw relationSourceContractRejected();
-    return `${field}\u0000${String(value)}`;
+    const kind = operation.fields.find(f => f.name === field)?.kind;
+    const key = kind === "TIMESTAMP" ? managerTimestamp(asRelationObject(fields[field]).value)?.identity : String(value);
+    if (key === undefined) throw relationSourceContractRejected();
+    return `${field}\u0000${key}`;
   });
   return {
     // This Portal-generated digest is not the raw Manager `record_key`. It is
@@ -533,10 +545,7 @@ function pageState(
 }
 
 function timestampMilliseconds(value: unknown): number | null {
-  if (typeof value !== "string") return null;
-  const parsed = Date.parse(value);
-  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 8_640_000_000_000_000) return null;
-  return parsed;
+  return managerTimestamp(value)?.milliseconds ?? null;
 }
 
 function asObject(value: unknown): Record<string, unknown> {

@@ -419,6 +419,14 @@ TRACKED = (
     "fixtures/execution-analytics.correlation.valid.json",
     "fixtures/execution-analytics.capital-ledger.valid.json",
     "fixtures/execution-analytics.binding-exposure.valid.json",
+    "schemas/execution-publication-catalogue.v1.schema.json",
+    "openapi/execution-publication-catalogue.openapi.json",
+    "generated/execution-publication-catalogue.d.ts",
+    "fixtures/execution-publication-catalogue.source.valid.json",
+    "fixtures/execution-dataset-publication.synthetic.valid.json",
+    "fixtures/execution-publication-source/registry.json",
+    "fixtures/execution-publication-source/field-dictionary.json",
+    "fixtures/execution-publication-source/metric-dependencies.json",
     "package.json",
 )
 
