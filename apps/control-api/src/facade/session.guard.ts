@@ -16,6 +16,7 @@ import { retainedReview, coreExecutionRead } from "../execution/retained-read-pr
 import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {isReadStoreUnavailable} from "../db/read-unavailable";
+import { CurrentHumanWorkspaceProvisioner } from "../execution-v2/current-human-workspace";
 
 /**
  * Authenticated-session guard for façade routes. Attaches the portal user
@@ -28,6 +29,8 @@ export class SessionGuard implements CanActivate {
     @Inject(AuthService) private readonly auth: AuthService,
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
     @Optional() @Inject(CONTROL_API_CONFIG) private readonly config?: ControlApiConfig,
+    @Optional() @Inject(CurrentHumanWorkspaceProvisioner)
+    private readonly currentHumanWorkspace?: CurrentHumanWorkspaceProvisioner,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -57,7 +60,10 @@ export class SessionGuard implements CanActivate {
     if (!user || user.status !== "ACTIVE" || user.mustChangePassword) {
       throw new UnauthorizedException("Invalid session.");
     }
-    let workspaceId = await this.workspaces.ensurePersonal(user.userId, user.username);
+    let workspaceId = this.currentHumanWorkspace
+      ? await this.currentHumanWorkspace.ensure({ user_id: user.userId,
+          session_id: session.sessionId, session_generation: session.sessionVersion })
+      : await this.workspaces.ensurePersonal(user.userId, user.username);
     const viewerWorkspaceId = workspaceId;
     if (retainedReview(this.config) && executionRead) {
       if (request.method !== "GET" && request.method !== "HEAD") throw new ForbiddenException("UDB_RETAINED_REVIEW_MUTATION_DISABLED");

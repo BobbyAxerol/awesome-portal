@@ -8,7 +8,7 @@ import { CurrentHumanCandidate, CurrentHumanLeaseError } from "./current-human-c
 const text = z.string().min(1).max(128).regex(/^[^\u0000-\u001f\u007f]+$/);
 const hash = z.string().regex(/^sha256:[a-f0-9]{64}$/);
 const mutationBinding = z.object({
-  family: z.enum(["ACCOUNT_LIFECYCLE", "GOVERNANCE_GRANT", "EXECUTION_ACCESS", "AUTH_SESSION"]),
+  family: z.enum(["ACCOUNT_LIFECYCLE", "GOVERNANCE_GRANT", "EXECUTION_ACCESS", "AUTH_SESSION", "WORKSPACE_PROVISIONING"]),
   operation: text, actor_id: text, session_id: text, session_revision: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
   key_digest: hash, request_digest: hash, target_id: text.nullable(),
 }).strict().refine(value => ({
@@ -16,6 +16,7 @@ const mutationBinding = z.object({
   GOVERNANCE_GRANT: ["GRANT", "REVOKE"],
   EXECUTION_ACCESS: ["INSTALL_POLICY", "PROPOSE_GRANT", "ACCEPT_RECEIPT", "REVOKE_GRANT", "ROOT_RECEIPT"],
   AUTH_SESSION: ["CHANGE_PASSWORD", "LOGOUT", "REVOKE_SESSION"],
+  WORKSPACE_PROVISIONING: ["ENSURE_PERSONAL"],
 })[value.family].includes(value.operation), "CURRENT_HUMAN_MUTATION_OPERATION_INVALID");
 export type CurrentHumanMutationBinding = z.infer<typeof mutationBinding>;
 export type CurrentHumanRecoveryAttempt = Awaited<ReturnType<CurrentHumanCandidate["recoverableAttempts"]>>[number];

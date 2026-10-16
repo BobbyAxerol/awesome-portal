@@ -9860,6 +9860,36 @@ unconfirmed same-key retry, no UI redesign/newscreen. Actual trust/providers,
 approved budgets/calibration and allocated coexistence/G2 remain OPEN;
 full10NOT_MET,11not started and no push/deploy/dev/main.
 
+**21:19UTC terminal + current-workspace follow-through:** follow-up
+`31c2322c8049b1fc74c87a8521579b41afb41c9c` landed through its normal hook:
+691contracts/4207API PASS,3pre-existingSKIP, build and scoped-access restore
+PASS; eight runtimes unchanged, zero owned resources and own lock released.
+Exact `atomicity-land-205454` controller/hash,10files+658/−21 and source readback
+are recorded in the [canonical commissioning packet](./execution_loop/evidence/ELP2-10/commissioning-followthrough.md).
+The latest observed owner PMde1f75d2 still declares runtime/trust/provider/
+production-authority false; Edgeec5c6c2f has14/14approval refs and32/32numeric
+baseline/bounds null. Those are actual missing inputs, not another formula vote.
+
+The next bounded same-phase batch composes actual SessionGuard personal
+workspace creation with current actor/session/generation and the existing
+durable coordinator. Existing owned workspaces stay DB-only reads; pending
+intent recovery and FINISHED replay must not regrant membership. Candidate
+schema family only, no numbered migration/runtime mount, frontend change or
+public field. Its tests are NOT_RUN until its own frozen normal-hook receipt;
+31c's PASS is not reused for changed code. The legacy Proxy helper has no
+callers and remains maintenance, not a second mounted writer.
+
+Read-only issuance review also identifies a concrete one-view decision: current
+login stores session/CSRF hashes and has no stable browser attempt contract;
+after restart it cannot recover old cookies. A separate verified-issuance actor
+must not invent a prior session or store bearer/password material. Owner answer
+for explicit lost-response/consumed-activation semantics is requested in the
+same packet. This boundary does not block the independent workspace repair.
+Actual selected trust/provider, numeric approval/calibration and allocated
+source-connected coexistence/original performanceG2 remain OPEN; Claude's six
+Manager/360 consumers remain AWAITING_CONSUMER_REVIEW. Full10NOT_MET;
+11/dev/main/push/release/deploy/Live are not started.
+
 <a id="elp2-11"></a>
 
 ### ELP2-11 — Migration tích hợp và bàn giao release

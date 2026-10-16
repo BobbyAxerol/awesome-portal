@@ -207,6 +207,7 @@ import { ResearchReleaseCandidatePublicationController } from "./research/releas
 import { ResearchReleaseCandidatePublicationRepository } from "./research/release-candidate-publication.repository";
 import { ResearchReleaseCandidatePublicationService } from "./research/release-candidate-publication.service";
 import { P22PublicationBridgeService } from "./research/p22-publication-bridge.service";
+import { CurrentHumanWorkspaceProvisioner } from "./execution-v2/current-human-workspace";
 
 /** Internal composition seam, never populated from request headers/body or
  * runtime environment flags. TEST_ONLY authority cannot enter a non-test app. */
@@ -234,6 +235,8 @@ export class AppModule {
     const domainPool = executionPool ?? (config.EXECUTION_DATABASE_URL ? buildExecutionPool(config) : pool);
     const managerRuntime = new ExecutionManagerRuntime(domainPool,dependencies.executionManagerRuntime);
     const accessTrust = managerRuntime.accessTrust(dependencies.executionAccessTrust);
+    const workspaceProvisioner = dependencies.currentHumanMutations
+      ? new CurrentHumanWorkspaceProvisioner(pool, dependencies.currentHumanMutations) : undefined;
     return {
       module: AppModule,
       controllers: [
@@ -545,7 +548,7 @@ export class AppModule {
         {
           provide: SessionGuard,
           useFactory: (auth: AuthService, workspaces: WorkspacesRepository, config: ControlApiConfig) =>
-            new SessionGuard(auth, workspaces, config),
+            new SessionGuard(auth, workspaces, config, workspaceProvisioner),
           inject: [AuthService, WorkspacesRepository, CONTROL_API_CONFIG],
         },
         AdminGuard,

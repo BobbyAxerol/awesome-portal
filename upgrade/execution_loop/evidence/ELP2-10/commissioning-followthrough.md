@@ -515,6 +515,71 @@ success or mint a new key automatically. No layout/token/baseline or new screen
 is assigned. Existing six Manager/360 consumers remain AWAITING_CONSUMER_REVIEW.
 No runtime consumer acceptance is inferred from this synthetic refusal fixture.
 
+### Atomicity terminal receipt — 21:19:38UTC
+
+The preparation-time PENDING above is superseded by actual terminal receipt,
+not erased: `31c2322c8049b1fc74c87a8521579b41afb41c9c`,10files+658/−21.
+`/home/bobby/.local/state/portal-execution-elp210/20261016/atomicity-land-205454/controller.json`
+is PASS:691contract cases/63files;4207API PASS/3pre-existingSKIP across328files,
+API1058.10s; build and actual PostgreSQL scoped-access backup/restore with four
+row digests PASS. Controller SHA256
+`e41b350121cbb61471da4a2fd8f44719752df27a910c2c2c1c8a3ca2c77ff482`,
+gate log `2b8d3f0c38547cc08248558c0b0f8fa17f9eba82c4f40583af357c96f4ca7835`.
+Eight runtime tuples unchanged, zero owned leftovers, own reservation released.
+Earlier failed sandbox/controller attempts remain in private receipts and are
+not coverage. The post-gate capacity snapshot is not a peak/capacity claim.
+
+Private `closeout.json` in the same directory has exact diff grouping, cleanup,
+debt and Claude handoff; SHA256
+`0da40ef893315c82aabdb04c3f808688c30f0391c172d4f7aa0e74aa422d071a`.
+Source `source-readback.json` SHA256
+`3447445e47e359d042326ad53c8566f01c8c695d7572c1e27905e11814470ed3`
+pins PMde1f75d23bd98b6065ddedf882ef8f2f81dca5c5 and
+Edgeec5c6c2f575546e547f520cd23e5a279fd283a20 at21:13:36UTC.
+PM handoff `pma11-03-human-tls-handoff.json` still reports all actual runtime,
+installed trust grants/provider and production-authority flags false. PM
+concurrency readiness is DRAFT_NOT_APPROVED_FOR_EXECUTION with actual numeric
+inputs null; Edge measurement plan has14/14approval references and32/32numeric
+baselines/bounds null. No source edit/load or repeated SSH polling follows.
+
+## Next bounded writer composition — current personal workspace
+
+Entry31c2322c is clean; the previous coherent delivery is concrete PROGRESS,
+not full commissioning. Its terminal normal hook has691contract/4207API PASS,
+3pre-existing skips, build/scoped restore PASS, eight runtimes unchanged and
+zero owned leftovers. Do not rerun those unchanged gates for this entry note.
+
+The next independently implementable seam is the actual SessionGuard personal
+workspace writer. It already has the real authenticated actor/session/generation;
+no new login purpose, source operator or invented prior session is necessary.
+The old `PortalProxyService.ensureWorkspace` has no source callers and remains
+an internal maintenance helper, not a second mounted request ingress. Preserve
+the historical writer census above; this narrower call-graph finding refines it.
+
+Approved scope remains ELP2-10 only: an optional private provisioning adapter,
+same bounded Core pool and durable coordinator, exact current actor and retry
+binding, no source I/O under Core locks, no orphan adoption or restored grants.
+Existing owned workspaces are read without opening a global drain. A real
+provisioning attempt must lock/recheck current user/session before and after its
+DB-only mutation. Uncertain source outcome stays pending; no new key on retry.
+Finished replay cannot recreate deleted/revoked membership. Default runtime
+composition, maintenance API, frontend, business permissions and schema migration
+installation stay unchanged. The unmounted candidate family gains only this
+explicit current-session purpose; no general operator or credential bypass.
+
+Task map before delegation: primary owns candidate schema/binding, AppModule/
+SessionGuard integration, canonical docs and the single normal-hook resource
+window. Writer agent may own only new private `current-human-workspace.ts` and
+`elp210-workspace-authority.spec.ts`; no Git/runtime/tests/build independently.
+Source agent reviews the separate login/verified-proof decision boundary read-only;
+no new SSH is needed after the unchanged21:13artifact readback. Primary reviews
+all returned patches and batches affected correctness tests once. Resource
+envelope remains4CPU/4GiB/8GiB, one heavy lane and no source capacity claim.
+Risk/rollback: keep optional adapter unmounted; preserve users, workspaces,
+immutable receipts and revoked membership. Actual selected trust/provider,
+numeric approval/calibration and allocated coexistence/G2 remain separate OPEN
+gates; consumer/browser remains owner-held. Validation is NOT_RUN at entry.
+
 Backend next remains ELP2-10: the purpose-specific writer seams in the table,
 selected actual issuer/audience/keys/CA/leaf/current providers/grants, approved
 numeric calibration/14-group budget artifacts and allocated paired coexistence/
@@ -522,3 +587,90 @@ original performanceG2. Those missing facts/decisions cannot be derived from
 fixture constants. Full10 remains NOT_MET;11, push/dev/main/release/deploy/Live
 are not started. Rollback removes only unmounted candidate composition; retain
 all identities, immutable history, denied/revoked rights and original receipts.
+
+### Verified issuance review — separate one-view decision, not fabricated proof
+
+Read-only review locators: `auth.controller.ts` login request passes request ID
+only to audit; `apps/portal/frontend/src/auth/authApi.ts` has no caller-attempt
+idempotency contract; `auth.service.ts` creates independent random session and
+CSRF, and `repos/sessions.ts` stores only their hashes. Verified identity fields
+carry issuer/subject/audience/authentication/expiry but no unique browser login
+attempt. Preview synthesizes a new authentication time per request. Therefore
+identity+credential-generation is not a legitimate permanent login key, and a
+caller key alone cannot reconstruct hash-only cookies after restart.
+
+Existing verified identity/password/activation plus user/generation/binding facts
+can support a **separate pre-session issuance purpose**. They cannot honestly
+populate the current-session writer's session_id. A future implementation must
+recheck locked current credential/binding/user/generation and commit activation,
+binding, session and audit atomically; no password/assertion/bearer/CSRF stored
+in the coordinator. Same-process lost-ACK verification may use secrets still
+in memory, not turn a later terminal reference into usable cookies.
+
+Owner question sent once, answer PENDING at preparation: retain one-view session
+credentials, resolve lost-response COMMIT/ROLLBACK without claiming authenticated
+success when cookies are lost, require fresh password login, and recover consumed
+activation only through the existing authorized reissue flow; or explicitly
+design a new attempt/reissue contract. No activation reuse, deterministic bearer,
+password fingerprint persistence or fake existing session is inferred. This is
+a concrete local contract decision, distinct from missing actual PM trust.
+No frontend edit or new consumer field is delivered by this review.
+
+### Workspace batch frozen for validation
+
+Implementation owner handoff: `current-human-workspace.ts` plus its actual-PG
+test; primary owns family/installer, AppModule/SessionGuard, synthetic guard
+tests and docs. Independent source reviewer ACCEPT, no remaining static
+must-fix; this is review, **not test PASS**. No duplicate ownership/line count.
+
+- New private `CurrentHumanWorkspaceProvisioner` rejects a different Core pool,
+  detaches a strict actor before awaiting, derives a domain-separated key from
+  the actual user/session/generation, and reads the username from locked Core.
+  No caller username, source authority or manufactured prior session.
+- Existing genuinely owned workspace reads open no drain. A prior intent must
+  still use its exact recovery/receipt path, even if owned rows now exist.
+  New provisioning uses the paired repository CTE inside the coordinator's
+  transaction; terminal receipt/workspace pair/drain completion are atomic.
+- Current status/archive/password/session/generation and DB clock are checked
+  under row locks before and after mutation. This is the locked post-mutation
+  linearization, **not physical COMMIT-deadline proof**. Unexpected DB errors
+  propagate to the existing safe500 rather than becoming fake pending success.
+- Actual source UNKNOWN remains503/pending beyond expiry; source recovery may
+  borrow the sole Core connection because no Core transaction survives it.
+  Exact FINISHED replay may read only: deleted membership remains deleted;
+  no orphan adoption or ownership restoration. Permanent receipt conflict409,
+  invalid current session401; neither falls back to the legacy writer.
+- Invalid actor encountered inside the adapter still reaches the coordinator's
+  exact-bound abort-only recovery before401, never application. If SessionGuard
+  already denied the expired session, the **existing private**
+  `CurrentHumanMutations.recoverAbandoned(stored_mutation_id)` is required;
+  this has no browser route, never reconstructs actor/secrets/payload, and may
+  clear/refuse only after actual signed terminal source readback. No timer or
+  acknowledgement substitutes for that proof. Actual operator installation
+  remains a commissioning input, not claimed as an automatic background task.
+- AppModule injection is optional and same-pool; default `main.ts` remains
+  unmounted. No frontend/public schema/generated file, numbered migration,
+  profile, source/runtime grant or credential changes. Retained viewer/source
+  workspace separation and all existing request guards remain unchanged.
+
+Planned gate:20 new real disposable-PG cases plus6 synthetic SessionGuard
+composition cases in the mandatory normal hook. Actual two-connection retry
+contention is separate from the single-connection recovery test; no fake
+parallelism from a max1 pool. Cases include signed recovery/restart/UNKNOWN,
+expired/revoked/cross-user/generation denial, paired failure+valid retry,
+post-mutation expiry+abort-only recovery, lost actual COMMIT ACK and replay
+without regrant. All results **PENDING_NORMAL_HOOK** at freeze.
+The controller uses `workspace-land-HHMMSS` under the existing private evidence
+root and the same terminal receipt/unchanged-eight-runtimes/zero-owned-resources
+acceptance rule. Do not rerun an identical full hook just to copy that terminal
+result into this preparation-time prose. No source load/calibration/browser
+or capacity suite is rerun; normal hook remains mandatory and unbypassed.
+
+Claude: no new public type/field or layout task. The existing503 same-key,
+not-confirmed handling and six Manager/360 handoffs remain as previously
+published, AWAITING_CONSUMER_REVIEW. No new bidirectional frontend request after
+this comparison. Backend next is still ELP2-10 only: separate verified issuance
+one-view decision; operator/artifact and source-receipt purpose adapters;
+actual selected trust/provider installation; approved numeric budget/calibration;
+allocated paired coexistence/original G2. None is replaced by this correctness
+receipt; full10NOT_MET,11not started.
