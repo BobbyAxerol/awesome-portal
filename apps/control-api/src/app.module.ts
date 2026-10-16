@@ -12,6 +12,7 @@ import { ExecutionCommandService } from "./execution-v2/command.service";
 import { ExecutionCommandController } from "./execution-v2/command.controller";
 import type { CommandTrust } from "./execution-v2/command-trust";
 import type { AccessTrustProvider } from "./execution-v2/access-trust";
+import { ExecutionManagerRuntime, type ManagerRuntimeInstallation } from "./execution-v2/manager-runtime";
 import { ExecutionReadScopes } from "./execution-v2/read-scope";
 import { AuthService } from "./auth/auth.service";
 import { Argon2CredentialService } from "./auth/argon";
@@ -212,6 +213,7 @@ export interface ControlApiDependencies {
   executionCommandTrust?: CommandTrust;
   executionAccessTrust?: AccessTrustProvider;
   allowTestOnlyExecutionAccess?: boolean;
+  executionManagerRuntime?: ManagerRuntimeInstallation;
 }
 
 @Module({})
@@ -221,7 +223,11 @@ export class AppModule {
     if (dependencies.allowTestOnlyExecutionAccess && config.NODE_ENV !== "test")
       throw new Error("TEST_ONLY Execution authority requires an isolated test application.");
     const ownsExecutionPool = !executionPool && !!config.EXECUTION_DATABASE_URL;
+    if (dependencies.executionManagerRuntime && (executionPool === pool || !executionPool && !config.EXECUTION_DATABASE_URL))
+      throw new Error("MANAGER_RUNTIME_EXECUTION_POOL_REQUIRED");
     const domainPool = executionPool ?? (config.EXECUTION_DATABASE_URL ? buildExecutionPool(config) : pool);
+    const managerRuntime = new ExecutionManagerRuntime(domainPool,dependencies.executionManagerRuntime);
+    const accessTrust = managerRuntime.accessTrust(dependencies.executionAccessTrust);
     return {
       module: AppModule,
       controllers: [
@@ -299,6 +305,7 @@ export class AppModule {
         ResearchAlphaVersionPublicationController,
       ],
       providers: [
+        { provide: ExecutionManagerRuntime, useValue: managerRuntime },
         ExecutionLocalReadAuthority,
         { provide: CONTROL_API_CONFIG, useValue: config },
         { provide: CONTROL_API_POOL, useValue: pool },
@@ -341,7 +348,7 @@ export class AppModule {
         {
           provide: ExecutionAccessService,
           useFactory: (db:Pool,auth:AuthService)=>new ExecutionAccessService(db,auth,
-            dependencies.executionAccessTrust, dependencies.allowTestOnlyExecutionAccess === true),
+            accessTrust, dependencies.allowTestOnlyExecutionAccess === true),
           inject: [CONTROL_API_POOL,AuthService],
         },
         {

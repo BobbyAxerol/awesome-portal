@@ -334,30 +334,120 @@ export interface components {
             statement_scope: "AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS";
             scores: {
                 raw: {
-                    value: null;
-                    /** @constant */
-                    status: "policy_pending";
+                    value: string | null;
+                    /** @enum {string} */
+                    status: "policy_pending" | "available" | "provisional" | "unbound" | "invalid_data" | "stale" | "partial_costs" | "partial_components" | "insufficient_data";
                 };
                 composition: {
-                    value: null;
-                    /** @constant */
-                    status: "policy_pending";
+                    value: string | null;
+                    /** @enum {string} */
+                    status: "policy_pending" | "available" | "provisional" | "unbound" | "invalid_data" | "stale" | "partial_costs" | "partial_components" | "insufficient_data";
                 };
                 direct_nav: {
-                    value: null;
-                    /** @constant */
-                    status: "policy_pending";
+                    value: string | null;
+                    /** @enum {string} */
+                    status: "policy_pending" | "available" | "provisional" | "unbound" | "invalid_data" | "stale" | "partial_costs" | "partial_components" | "insufficient_data";
                 };
                 regime: {
                     value: null;
                     /** @constant */
                     status: "unavailable";
                 };
-                /** @constant */
-                reason_code: "RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED";
+                /** @enum {string} */
+                reason_code: "RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED" | "QUALIFIED_PRECOMPUTED_SCORE";
                 /** @constant */
                 calculation_path: "PRECOMPUTED_ONLY";
             };
+            score_details?: {
+                /** @enum {string} */
+                slot: "RAW" | "DIRECT_NAV";
+                quality: {
+                    /** @constant */
+                    formula_id: "qbts_prb_v1_1";
+                    /** @enum {string} */
+                    qualification: "RUNTIME_APPROVED" | "TEST_ONLY" | "UNQUALIFIED";
+                    /** @enum {string} */
+                    status: "available" | "provisional" | "policy_pending" | "unbound" | "invalid_data" | "stale" | "partial_costs" | "partial_components" | "insufficient_data";
+                    reason_codes: string[];
+                    value: string | null;
+                    band_code: ("weak" | "neutral" | "fair" | "good" | "very_good") | null;
+                    components: {
+                        P: string | null;
+                        R: string | null;
+                        B: string | null;
+                    } | null;
+                    normalized_points: {
+                        net_excess_twr: string | null;
+                        sharpe_period: string | null;
+                        mdd: string | null;
+                        add: string | null;
+                        positive_block_ratio: string | null;
+                        stress_excess_twr: string | null;
+                    } | null;
+                    atomic_contributions: {
+                        net_excess_twr: string | null;
+                        sharpe_period: string | null;
+                        mdd: string | null;
+                        add: string | null;
+                        positive_block_ratio: string | null;
+                        stress_excess_twr: string | null;
+                    } | null;
+                    bounds: {
+                        lower: string;
+                        upper: string;
+                    } | null;
+                    policy_id: string | null;
+                    policy_hash: string | null;
+                    approved_policy_id: string | null;
+                    comparable_basis_id: string;
+                    individual_evidence_binding_id: string | null;
+                };
+                raw_metrics: {
+                    net_excess_twr: string | null;
+                    sharpe_period: string | null;
+                    mdd: string | null;
+                    add: string | null;
+                    positive_block_ratio: string | null;
+                    stress_excess_twr: string | null;
+                } | null;
+                provenance: {
+                    scope: {
+                        workspace_id: string;
+                        /** @enum {string} */
+                        environment: "paper" | "sandbox" | "live";
+                        profile_id: string;
+                        catalogue_digest: string;
+                    };
+                    binding: {
+                        /** @enum {string} */
+                        subject_type: "alpha" | "deployment" | "account" | "portfolio" | "manager_book";
+                        subject_id: string;
+                        tuple_population_digest: string;
+                        partition_digest: string;
+                        stage_filter: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+                        window_start_ms: number;
+                        window_end_ms: number;
+                        comparable_basis_id: string;
+                        individual_evidence_binding_id: string;
+                    };
+                    source_revision: string;
+                    source_set_digest: string;
+                    /** @enum {string} */
+                    source_qualification: "SOURCE_VERIFIED" | "TEST_ONLY";
+                    input_digest: string;
+                    calculation_revision: string;
+                    computed_at_ms: number;
+                    source_as_of_ms: number;
+                    policy_id: string | null;
+                    policy_hash: string | null;
+                    policy_revision: string | null;
+                    config_hash: string | null;
+                    formula_hash: string | null;
+                    approval_ref: string | null;
+                    approved_at_ms: number | null;
+                    policy_valid_until_ms: number | null;
+                };
+            }[];
             funding_bucket_pnl: {
                 value: null;
                 /** @constant */
@@ -520,6 +610,96 @@ export interface components {
                     };
                 };
             }[];
+        };
+        ManagerScorePublication: {
+            /** @enum {string} */
+            slot: "RAW" | "DIRECT_NAV";
+            quality: {
+                /** @constant */
+                formula_id: "qbts_prb_v1_1";
+                /** @enum {string} */
+                qualification: "RUNTIME_APPROVED" | "TEST_ONLY" | "UNQUALIFIED";
+                /** @enum {string} */
+                status: "available" | "provisional" | "policy_pending" | "unbound" | "invalid_data" | "stale" | "partial_costs" | "partial_components" | "insufficient_data";
+                reason_codes: string[];
+                value: string | null;
+                band_code: ("weak" | "neutral" | "fair" | "good" | "very_good") | null;
+                components: {
+                    P: string | null;
+                    R: string | null;
+                    B: string | null;
+                } | null;
+                normalized_points: {
+                    net_excess_twr: string | null;
+                    sharpe_period: string | null;
+                    mdd: string | null;
+                    add: string | null;
+                    positive_block_ratio: string | null;
+                    stress_excess_twr: string | null;
+                } | null;
+                atomic_contributions: {
+                    net_excess_twr: string | null;
+                    sharpe_period: string | null;
+                    mdd: string | null;
+                    add: string | null;
+                    positive_block_ratio: string | null;
+                    stress_excess_twr: string | null;
+                } | null;
+                bounds: {
+                    lower: string;
+                    upper: string;
+                } | null;
+                policy_id: string | null;
+                policy_hash: string | null;
+                approved_policy_id: string | null;
+                comparable_basis_id: string;
+                individual_evidence_binding_id: string | null;
+            };
+            raw_metrics: {
+                net_excess_twr: string | null;
+                sharpe_period: string | null;
+                mdd: string | null;
+                add: string | null;
+                positive_block_ratio: string | null;
+                stress_excess_twr: string | null;
+            } | null;
+            provenance: {
+                scope: {
+                    workspace_id: string;
+                    /** @enum {string} */
+                    environment: "paper" | "sandbox" | "live";
+                    profile_id: string;
+                    catalogue_digest: string;
+                };
+                binding: {
+                    /** @enum {string} */
+                    subject_type: "alpha" | "deployment" | "account" | "portfolio" | "manager_book";
+                    subject_id: string;
+                    tuple_population_digest: string;
+                    partition_digest: string;
+                    stage_filter: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+                    window_start_ms: number;
+                    window_end_ms: number;
+                    comparable_basis_id: string;
+                    individual_evidence_binding_id: string;
+                };
+                source_revision: string;
+                source_set_digest: string;
+                /** @enum {string} */
+                source_qualification: "SOURCE_VERIFIED" | "TEST_ONLY";
+                input_digest: string;
+                calculation_revision: string;
+                computed_at_ms: number;
+                source_as_of_ms: number;
+                policy_id: string | null;
+                policy_hash: string | null;
+                policy_revision: string | null;
+                config_hash: string | null;
+                formula_hash: string | null;
+                approval_ref: string | null;
+                approved_at_ms: number | null;
+                policy_valid_until_ms: number | null;
+            };
         };
     };
     responses: never;

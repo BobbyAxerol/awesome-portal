@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { Pool } from "pg";
 import { CONTROL_API_CONFIG, EXECUTION_DATA_POOL } from "../tokens";
 import { ControlApiConfig, querySigningKeys } from "../config";
@@ -8,6 +8,8 @@ import { ExecutionReadScopes, ExecutionReadScopeError, scopeReadPopulation, type
 import { managerModelQuery } from "./manager-model.contract";
 import { ManagerModelRepository } from "./manager-model.store";
 import { queryManagerModel, type ManagerSurface } from "./manager-model";
+import { ExecutionManagerRuntime } from "./manager-runtime";
+import type { ManagerScorePublication } from "./manager-score-publication.contract";
 
 @Injectable()
 export class ManagerModelService {
@@ -15,7 +17,8 @@ export class ManagerModelService {
   private readonly codec: KeysetCursorCodec;
   constructor(@Inject(EXECUTION_DATA_POOL) pool: Pool,
     @Inject(ExecutionReadScopes) private readonly scopes: ExecutionReadScopes,
-    @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig) {
+    @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() @Inject(ExecutionManagerRuntime) private readonly runtime?: ExecutionManagerRuntime) {
     this.repository = new ManagerModelRepository(pool);
     this.codec = new KeysetCursorCodec({ activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
       keys: querySigningKeys(config), ttlSeconds: config.QUERY_CURSOR_TTL_SECONDS });
@@ -49,17 +52,28 @@ export class ManagerModelService {
       if (scope.mode !== "SCOPED_V2" || !head) throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
       if (surface === "DEPLOYMENT" && !scopeReadPopulation(scope).allowedTuples.some(t => t.deployment_id === id))
         throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
-      return await this.scopes.deliver(scope, async () => {
+      const acceptedScores: ManagerScorePublication[]=[];
+      const result = await this.scopes.deliver(scope, async () => {
         const doc = await this.repository.document(principal.workspaceId, env, profile, head.revision);
         // TEST_ONLY rows can be exercised through the pure component in a
         // disposable cell, never served by a product constructor/environment flag.
         if (!doc || doc.qualification !== "SOURCE_VERIFIED") throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
-        const response = queryManagerModel(scope, doc, q, this.codec, surface, id);
+        const response = queryManagerModel(scope, doc, q, this.codec, surface, id, this.runtime ? {accepts:score=>{
+          if(!this.runtime!.scoreFence.accepts(score))return false;
+          acceptedScores.push(score);return true;
+        }} : undefined);
         const current = await this.repository.head(principal.workspaceId, env, profile);
         if (current?.payload_digest !== head.payload_digest || current.revision !== head.revision)
           throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+        if(acceptedScores.some(score=>!this.runtime?.scoreFence.accepts(score)))
+          throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED",409);
         return response;
       });
+      // deliver itself awaits the final current authority publication. A policy
+      // expiry/revoke during that I/O must not return an earlier numeric score.
+      if(acceptedScores.some(score=>!this.runtime?.scoreFence.accepts(score)))
+        throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED",409);
+      return result;
     } catch (error) {
       if (error instanceof ExecutionReadScopeError) throw error;
       if (error instanceof QueryContractError) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 400);

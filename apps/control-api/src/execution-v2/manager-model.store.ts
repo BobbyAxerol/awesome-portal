@@ -1,7 +1,7 @@
 import type { Pool, PoolClient } from "pg";
 import { accessDigest } from "./access-policy";
 import { managerModelDocument, type ManagerModelDocument } from "./manager-model.contract";
-import { qualifyDatasetPublication, type PublicationContinuity } from "./publication-adapter";
+import { qualifyDatasetPublication, type PublicationContinuity, type PublicationCommissioning } from "./publication-adapter";
 import { type DatasetPublication } from "./publication.contract";
 import { dedupeManagerFacts } from "./manager-model";
 import { fenceManagerProjection, type ManagerProjectionLease } from "./manager-lease";
@@ -14,6 +14,7 @@ export interface PreparedManagerProjection { readonly document: ManagerModelDocu
  * cannot commission a source or turn fixture receipt strings into authority. */
 export function prepareManagerProjection(input: unknown, publication: DatasetPublication,
   options: { nowMs: number; allowTestOnly?: boolean; expectedContinuity?: PublicationContinuity;
+    commissioning?: PublicationCommissioning;
     lease?: ManagerProjectionLease;
     rebuild?: { expected_revision: string; receipt_ref: string } }): PreparedManagerProjection {
   const document = managerModelDocument.parse(input);

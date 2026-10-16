@@ -32,13 +32,17 @@ export class ManagerProjectionLeases {
       RETURNING ${returning}`, [...keys(s), holder, ttlMs, randomUUID(), randomUUID()]);
     return result.rows[0] ? detached(result.rows[0]) : null;
   }
-  async renew(input: ManagerProjectionLease, ttlMs: number): Promise<boolean> {
+  async renew(input: ManagerProjectionLease, ttlMs: number, notAfterMs?: number): Promise<boolean> {
     const l = lease.parse(input); duration(ttlMs);
+    if (notAfterMs !== undefined && (!Number.isSafeInteger(notAfterMs) || notAfterMs < 0))
+      throw new Error("MANAGER_LEASE_EXPIRY_INVALID");
     return (await this.pool.query(`UPDATE execution_manager_consumer_fences
-      SET expires_at=clock_timestamp()+($7::bigint*interval '1 millisecond')
+      SET expires_at=LEAST(clock_timestamp()+($7::bigint*interval '1 millisecond'),
+        COALESCE(to_timestamp($8::double precision/1000),'infinity'::timestamptz))
       WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND holder_id=$4
-        AND fencing_token=$5::bigint AND lease_epoch=$6 AND expires_at>clock_timestamp()`,
-    [...keys(l), l.holder_id, l.fencing_token, l.lease_epoch, ttlMs])).rowCount === 1;
+        AND fencing_token=$5::bigint AND lease_epoch=$6 AND expires_at>clock_timestamp()
+        AND ($8::double precision IS NULL OR to_timestamp($8::double precision/1000)>clock_timestamp())`,
+    [...keys(l), l.holder_id, l.fencing_token, l.lease_epoch, ttlMs, notAfterMs ?? null])).rowCount === 1;
   }
   async release(input: ManagerProjectionLease): Promise<boolean> {
     const l = lease.parse(input);

@@ -1,5 +1,16 @@
 # ELP2-10 — Performance, quality và coexistence
 
+**Latest commissioning return2026-10-16:**
+[implementation, tests, current source pins and consolidated action packet](commissioning.md)
+supersedes the historical “unmounted consumer / no Score runtime DTO” statements
+below. Registered fail-closed lifecycle, bounded lease/fenced consumer, ACK after
+commit, immutable lost-ACK Score reuse, exact pinned policy loader and additive
+generated precomputed-Score contract are now implemented. Default source provider
+is still absent: no timer/activation or human/source authority invented. Local
+normal-hook landing receipt is linked there. **Full10 NOT_MET** until the real
+qualified provider, approved budgets/calibration, paired coexistence and assigned
+browser acceptance; source-connected tests are not replaced by fixtures.
+
 ## Entry / assigned scope
 
 Bobby assigned ELP2-10 on2026-10-16. Repo `/home/bobby/portal-research`,

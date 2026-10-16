@@ -1,5 +1,37 @@
 # ELP2-10 — quality/performance consumer handoff and open ledger
 
+## Latest additive commissioning handoff — 2026-10-16
+
+[Full implementation/source/test return](commissioning.md) supersedes the
+historical byte-identical/no-runtime statements below, without deleting them.
+Producer is the coherent normal-hook commit containing this addendum, parent
+630eafc5; actual SHA/result/hashes are in the linked private terminal receipt.
+Same six operation IDs, now additive `ManagerDataset.score_details?` and named
+`ManagerScorePublication`; raw/direct summary supports full canonical typed
+absence statuses. Zod/schema/OpenAPI/generated types and snapshot regenerated.
+Fixture `execution-manager-score.synthetic.valid.json` is TEST_ONLY, not runtime
+approval. No query input, route, page cap, UI, current grant or migration changed.
+
+Read-side exact population/stage/partition/window/policy matching and final
+current-authority fence precede returned numeric data. No request-time compute,
+child average or composition substitute. See commissioning section “Contract
+impact and Claude handoff” for field mapping and acceptance prompt. When assigned,
+Claude can consume canonical value/band/P/R/B/raw metrics/provenance and typed
+absence; no fixture number becomes production. Status remains
+**NOT_STARTED_BY_OWNER_DIRECTION / AWAITING_CONSUMER_REVIEW**.
+
+Canonical debt refinement:06-002 local writer/lifecycle/loader/result wiring is
+implemented, remaining acceptance needs real reviewed source provider and its
+receipt pins;00-005 needs approved calibration, not a second formula choice;
+05-001 actual normalized publication authority still absent;10-002 approved
+budget/paired coexistence still absent;10-001 six Manager consumers/browser
+still await assignment. One concrete source/config action bundle is in
+commissioning.md, not a duplicate request. Source reviewer confirmed Edge strict
+TLS owner repair but PM current human provider/export still unavailable.
+No new FE request arrived. No source activation, UI build or ELP2-11 started.
+
+## Historical handoff before commissioning continuation
+
 Producer: normal-hook commit containing this packet, parent
 `e6620f416e43bc8c18a044339a598c436d8556ba`; `docs/research-loop-plan`.
 Code delivery is not runtime qualification or consumer acceptance. No frontend

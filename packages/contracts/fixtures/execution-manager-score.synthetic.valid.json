@@ -1,0 +1,47 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "slot": "RAW",
+    "quality": {
+      "formula_id": "qbts_prb_v1_1",
+      "qualification": "RUNTIME_APPROVED",
+      "status": "provisional",
+      "reason_codes": ["SYNTHETIC_MATURITY_LIMITED"],
+      "value": "73.3",
+      "band_code": "fair",
+      "components": {"P":"80","R":"66","B":"70"},
+      "normalized_points": {"net_excess_twr":"80","sharpe_period":"80","mdd":"60","add":"75","positive_block_ratio":"75","stress_excess_twr":"65"},
+      "atomic_contributions": {"net_excess_twr":"25.2","sharpe_period":"10.8","mdd":"10.8","add":"9","positive_block_ratio":"9.375","stress_excess_twr":"8.125"},
+      "bounds": null,
+      "policy_id": "SYNTHETIC:policy",
+      "policy_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "approved_policy_id": "SYNTHETIC_NOT_OWNER_APPROVAL",
+      "comparable_basis_id": "SYNTHETIC:basis",
+      "individual_evidence_binding_id": "SYNTHETIC:ledger"
+    },
+    "raw_metrics": {"net_excess_twr":"0.06","sharpe_period":"0.12","mdd":"0.04","add":"0.01","positive_block_ratio":"0.75","stress_excess_twr":"0.045"},
+    "provenance": {
+      "scope": {"workspace_id":"SYNTHETIC:workspace","environment":"paper","profile_id":"SYNTHETIC:paper","catalogue_digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+      "binding": {
+        "subject_type":"alpha","subject_id":"SYNTHETIC:alpha",
+        "tuple_population_digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "partition_digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "stage_filter":["PAPER"],"window_start_ms":100,"window_end_ms":1000,
+        "comparable_basis_id":"SYNTHETIC:basis","individual_evidence_binding_id":"SYNTHETIC:ledger"
+      },
+      "source_revision":"SYNTHETIC:r1",
+      "source_set_digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "source_qualification":"SOURCE_VERIFIED",
+      "input_digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "calculation_revision":"SYNTHETIC:calc",
+      "computed_at_ms":1100,"source_as_of_ms":1000,
+      "policy_id":"SYNTHETIC:policy",
+      "policy_hash":"sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "policy_revision":"SYNTHETIC:policy-r1",
+      "config_hash":"sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "formula_hash":"sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "approval_ref":"SYNTHETIC_NOT_OWNER_APPROVAL",
+      "approved_at_ms":50,"policy_valid_until_ms":10000
+    }
+  }
+}

@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, it } from "vitest";
-import { managerDatasetResponse, managerMetric, managerModelQuery } from "../../../apps/control-api/src/execution-v2/manager-model.contract";
+import { managerDatasetResponse, managerMetric, managerModelQuery, managerScorePublication } from "../../../apps/control-api/src/execution-v2/manager-model.contract";
 const root = resolve(__dirname,"..");
 const load = (file:string) => JSON.parse(readFileSync(resolve(root,file),"utf8"));
 const api = load("openapi/execution-manager-models.openapi.json");
@@ -11,6 +11,22 @@ const fixture = load("fixtures/execution-manager-dataset.synthetic.valid.json");
 const ajv = new Ajv2020({strict:true,allErrors:true});
 const validate = ajv.compile(schema);
 describe("ELP2-06 generated named Manager BFF contract",()=>{
+  it("publishes precomputed score details with explicit binding, components and null semantics",()=>{
+    const sample=load("fixtures/execution-manager-score.synthetic.valid.json");
+    expect(sample.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
+    const check=ajv.compile(api.components.schemas.ManagerScorePublication);
+    expect(check(sample.value),JSON.stringify(check.errors)).toBe(true);
+    expect(managerScorePublication.parse(sample.value)).toEqual(sample.value);
+    const response={...structuredClone(fixture.value),score_details:[sample.value]};
+    response.scores.raw={value:"73.3",status:"provisional"};
+    expect(validate(response),JSON.stringify(validate.errors)).toBe(true);
+    expect(managerDatasetResponse.safeParse(response).success).toBe(true);
+    const invalid=structuredClone(sample.value);invalid.quality.value="100.0000000000000000000001";
+    expect(managerScorePublication.safeParse(invalid).success).toBe(false);
+    invalid.quality.value=null;expect(managerScorePublication.safeParse(invalid).success).toBe(false);
+    invalid.quality.status="partial_components";invalid.quality.band_code=null;
+    expect(managerScorePublication.safeParse(invalid).success).toBe(true);
+  });
   it("publishes exactly six named reads and one identical Zod/public DTO",()=>{
     expect(Object.keys(api.paths)).toHaveLength(6);
     expect(new Set(Object.values(api.paths).map((p:any)=>p.get.operationId)).size).toBe(6);

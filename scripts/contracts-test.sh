@@ -112,9 +112,13 @@ cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/read-publication.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/publication.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-model.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-score-publication.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-score.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/publication-catalogue.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/publication-source.generated.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/execution-v2/"
+cp -a "${ROOT_DIR}/apps/control-api/src/research/exact-decimal.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/research/"
 # ELP2-04 parser parity stays pure; no Nest services or application runtime
 # dependencies are copied into the networkless contract verification cell.
 cp -a "${ROOT_DIR}/apps/control-api/src/manager-lists/scoped-manager.contract.ts" \

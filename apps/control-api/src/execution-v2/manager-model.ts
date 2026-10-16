@@ -4,6 +4,7 @@ import { assertExecutionReadScope, ExecutionReadScopeError, scopeAllowsField, sc
 import { projectionRowVisible } from "./read-projection";
 import { KeysetCursorCodec } from "../query/cursor";
 import { sumExactDecimals } from "../research/exact-decimal";
+import { selectManagerScorePublications, type ManagerScoreReadFence } from "./manager-score-publication";
 import { managerModelDocument, managerModelQuery, managerDatasetResponse, MANAGER_SCALARS, managerMoneyFields, managerStatementFields,
   type ManagerMember, type ManagerFact, type ManagerMetric, type ManagerModelDocument, type ManagerModelQuery } from "./manager-model.contract";
 
@@ -195,7 +196,7 @@ function rootFlows(facts: ManagerFact[], surface: ManagerSurface) {
  * not called here. Current policy filters tuples/fields before joins or totals.
  * This function still requires scopes.deliver at its service boundary. */
 export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: unknown, rawQuery: unknown,
-  codec: KeysetCursorCodec, surface: ManagerSurface = "FLEET", resourceId?: string) {
+  codec: KeysetCursorCodec, surface: ManagerSurface = "FLEET", resourceId?: string, scoreFence?: ManagerScoreReadFence) {
   assertExecutionReadScope(scope);
   if (scope.mode !== "SCOPED_V2") fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED");
   const doc = managerModelDocument.parse(input), query = managerModelQuery.parse(rawQuery);
@@ -220,6 +221,37 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
   if (facts.length && ["currency", "profile_id", "provenance_ref"].some(field => !scopeAllowsField(scope, field)))
     fail("EXECUTION_READ_FIELD_POLICY_PENDING");
   const allRows = rowsFor(members, facts, query, scope);
+  // No score computation on this read path. Exact authorized population and
+  // economic partition must match a separately precomputed, current-policy result.
+  if (scopeAllowsField(scope, "score")) for (const row of allRows) {
+    const rowMembers = members.filter(m => managerRowKey(m) === row.row_key);
+    const partition = query.economic_partition ?? (row.economic_partitions.length === 1 ? row.economic_partitions[0].partition : null);
+    if (!partition) continue;
+    const values = selectManagerScorePublications(doc, rowMembers, { type: "alpha", id: row.alpha_id }, accessDigest(partition), scoreFence)
+      .filter(s => s.slot === "RAW");
+    if (values.length === 1) {
+      const s = values[0], ready = s.quality.value !== null;
+      const reason = s.quality.reason_codes[0] ?? `SCORE_${s.quality.status.toUpperCase()}`;
+      row.metrics.score = { ...absent(reason), value: s.quality.value,
+        unit: "SCORE", basis: s.provenance.binding.comparable_basis_id,
+        window: {from_ms:s.provenance.binding.window_start_ms,to_ms:s.provenance.binding.window_end_ms},
+        methodology_ref: s.quality.formula_id, availability: ready ? "AVAILABLE" : "UNAVAILABLE", reason_code: ready ? null : reason,
+        quality: { completeness: ready ? "COMPLETE" : "UNRESOLVED", freshness: s.quality.status === "stale" ? "STALE" : "FRESH", reasons: s.quality.reason_codes },
+        source_confidence: s.quality.status === "provisional" ? "PROVISIONAL" : "VERIFIED",
+        provenance_refs: [s.provenance.input_digest], calculation_revision: s.provenance.calculation_revision,
+        policy_revision: s.provenance.policy_revision! };
+    }
+  }
+  const subjectType = ({ FUND:"manager_book", PORTFOLIO:"portfolio", ALPHA:"alpha", ACCOUNT:"account", DEPLOYMENT:"deployment" } as const)[surface as Exclude<ManagerSurface,"FLEET">];
+  const partitionsForScore = [...new Set(facts.map(f => accessDigest(f.partition)))];
+  const details = scopeAllowsField(scope,"score") && subjectType && partitionsForScore.length === 1 ?
+    selectManagerScorePublications(doc,members,{type:subjectType,id:resourceId ?? scope.workspaceId},
+      query.economic_partition ? accessDigest(query.economic_partition) : partitionsForScore[0],scoreFence) : [];
+  const summary = (slot:"RAW"|"DIRECT_NAV") => {
+    const s = details.filter(s => s.slot === slot);
+    return s.length === 1 ? {value:s[0].quality.value,status:s[0].quality.status} :
+      {value:null,status:"policy_pending" as const};
+  };
   const rows = allRows.filter(row => filtered(row, query));
   rows.sort((a, b) => {
     for (const order of query.sort) {
@@ -231,7 +263,8 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
     return lexical(a.row_key, b.row_key);
   });
   const queryId = accessDigest({ scope: scope.fingerprint, source: doc.revision, generation: doc.projection_generation,
-    surface, resourceId: resourceId ?? null, query: { ...query, after: undefined, before: undefined } });
+    surface, resourceId: resourceId ?? null, scores:accessDigest({details,rows:allRows.map(r => r.metrics.score)}),
+    query: { ...query, after: undefined, before: undefined } });
   const cursorContext = { resourceId: `manager-model:${surface}`, workspaceId: scope.workspaceId, queryFingerprint: queryId };
   const encode = (row: ManagerDatasetRow, direction: "after" | "before") => codec.encode({ resource_id: cursorContext.resourceId,
     workspace_id: scope.workspaceId, query_fingerprint: queryId, direction, boundary: [row.row_key] });
@@ -274,9 +307,11 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
       previous_cursor: start > 0 && items.length ? encode(items[0], "before") : null },
     items, groups: groupOutput, capital_statements: statement,
     statement_scope: "AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS" as const,
-    scores: { raw: { value: null, status: "policy_pending" as const }, composition: { value: null, status: "policy_pending" as const },
-      direct_nav: { value: null, status: "policy_pending" as const }, regime: { value: null, status: "unavailable" as const },
-      reason_code: "RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED" as const, calculation_path: "PRECOMPUTED_ONLY" as const },
+    scores: { raw: summary("RAW"), composition: { value: null, status: "policy_pending" as const },
+      direct_nav: summary("DIRECT_NAV"), regime: { value: null, status: "unavailable" as const },
+      reason_code: details.some(s => s.quality.value !== null) ? "QUALIFIED_PRECOMPUTED_SCORE" as const : "RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED" as const,
+      calculation_path: "PRECOMPUTED_ONLY" as const },
+    ...(doc.precomputed_scores !== undefined ? {score_details:details} : {}),
     funding_bucket_pnl: { value: null, reason_code: "LOT_ATTRIBUTION_METHOD_NOT_APPROVED" as const },
     lineage: { reducer_revision: "manager-model.v1" as const, source_set_ref: accessDigest(facts.map(f => [f.fact_id, f.revision]).sort()),
       revision: accessDigest({ scope: scope.fingerprint, source: doc.revision }), supersedes_revision: doc.supersedes_revision ? accessDigest({ scope: scope.fingerprint, source: doc.supersedes_revision }) : null },

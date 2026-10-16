@@ -54,7 +54,7 @@ export function buildExecutionPool(config: ControlApiConfig): Pool {
   if (!config.EXECUTION_DATABASE_URL) throw new Error("EXECUTION_DATABASE_URL_REQUIRED");
   const pool = new Pool({ connectionString: config.EXECUTION_DATABASE_URL,
     max: config.EXECUTION_DATABASE_POOL_MAX, idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 2_000, statement_timeout: 5_000,
+    connectionTimeoutMillis: 2_000, statement_timeout: 5_000, query_timeout: 6_000,
     idle_in_transaction_session_timeout: 5_000, application_name: "portal-execution-data" });
   const originalConnect = pool.connect.bind(pool);
   // pg.query uses the callback form; repositories use the Promise form.
