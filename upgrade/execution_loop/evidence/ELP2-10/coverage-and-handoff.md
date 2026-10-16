@@ -6,6 +6,15 @@ Code delivery is not runtime qualification or consumer acceptance. No frontend
 changes. Claude remains **NOT_STARTED_BY_OWNER_DIRECTION**;
 handoff **AWAITING_CONSUMER_REVIEW**.
 
+**Qualification continuation2026-10-16:** producer landed169195ca with terminal
+hook PASS. [Fresh qualification return](qualification-continuation.md) supersedes
+expired-TLS/old-lock blockers and separates actual Portal commissioning gaps:
+trust adapter not installed, normalized writer not mounted, Score result
+publication not implemented, six Manager consumers not implemented. Browser
+observed four healthy old-preview cells but six V2 probes404; that does not
+close10-001. Existing request IDs below remain canonical, with these refined
+done-when criteria; no new generic “waiting TS” request.
+
 ## Contract and compatibility
 
 All six named ELP2-06 Manager operations/types stay identical. Use
@@ -44,7 +53,7 @@ no live DB migration occurred. Do not copy private lease table into Core identit
 | ID / sender → owner | Locator / observed vs expected / impact | Done-when / delivery / consumer status |
 | --- | --- | --- |
 |ELP2-REQ-10-001 Codex→Claude|This handoff; UXM-08/10 Manager dependent absence and capacity. Fixture delivered, FE on owner hold|When assigned acknowledge producer SHA/type/fixture, bind null/zero/methodology states, independently measure approved build at1280/660, keyboard/overflow/a11y/context/error/idle fanout. **AWAITING_CONSUMER_REVIEW**, not consumer-complete|
-|ELP2-REQ-10-002 Codex→Portal/Edge operations and capacity owner|Manifest per-family42×3 budgets null, source14groups null, source audit§2; no paired B0/B1/B2 or actual shared-host resource/coexistence receipt. Affects full10/11, not independent local backend delivery|Freeze approved numeric/profile/workload/placement envelope and test window after exact source qualification; measure source/BFF/TS/DL/Research and applicable performanceG2. **BLOCKED_BUDGET_AND_SOURCE_EVIDENCE**. No generic source gap duplicated: use05-001/06-002/07-001 below|
+|ELP2-REQ-10-002 Codex→Portal/Edge operations and capacity owner|Manifest per-family42×3 budgets null, source14groups null; fresh10Qrepin confirms no paired B0/B1/B2 or actual shared-host resource/coexistence receipt. TLS repaired by source owner; foreign lock absent, neither supplies a new load allocation. Affects full10/11, not independent local backend delivery|Freeze approved numeric/profile/workload/placement envelope and test window after exact source qualification; measure source/BFF/TS/DL/Research and applicable performanceG2. **BLOCKED_BUDGET_AND_SOURCE_EVIDENCE**. Portal adapter/writer/Score work is specifically06-002/00-005, not hidden in this external request; see qualification-continuation§5|
 
 Inherited canonical dependencies, **not new duplicate requests**:
 

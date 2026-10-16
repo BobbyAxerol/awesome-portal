@@ -57,6 +57,17 @@ log digests, source manifest and teardown verification are recorded separately
 at `/home/bobby/.local/state/portal-execution-elp210/20261016/landing-receipt.json`.
 No planned/future hook is recorded as already PASS here.
 
+**Terminal correction / qualification continuation:** this backend slice landed
+as `169195ca534462dd07376bcc5872b474ba366567`. Its actual normal-hook exit0:
+677contract tests;3886API tests +3existing skips; build and scoped-policy
+dump/restore PASS. Source hashes in the terminal receipt bind those results;
+future-tense entries below describe the original pre-landing packet, not a
+currently pending hook. See [remaining operational qualification](qualification-continuation.md)
+for the new assignment, fresh PM/Edge/TLS pins, actual old-preview browser
+observations, nine distinct prerequisites and test58/58. **Full10 remains
+NOT_MET**: trusted adapter/writer/Score publication and new Manager consumers
+are not installed; this is not only a missing external measurement.
+
 Inputs and evidence:
 [current HK source pins/budgets/measurement lock](source-alignment.md),
 [independent review including C1/C2 fixes](reuse-review.md),

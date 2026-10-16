@@ -9705,6 +9705,30 @@ Next: selected10 operational proof after prerequisites;11 only on separate
 assignment with mandatory dependencies, no silent PASS or activation.
 No goal/push/dev/main/release/deploy or UI changes.
 
+**ELP2-10 operational continuation2026-10-16, latest:** Bobby assigned remaining
+qualification; [actual return / action packet](./execution_loop/evidence/ELP2-10/qualification-continuation.md)
+and [observed selected-input manifest](./execution_loop/evidence/ELP2-10/qualification-input.observed.json).
+Original local slice **169195ca** terminal normal hook PASS:677contracts,
+3886API tests +3existing skips, build and scoped-policy restore. Application,
+schema and dependency hashes unchanged here; reuse, not extra coverage.
+Fresh source PM **c401a023**, Edge **efa89e34**: owner-reported connected strict
+TLS nowPASS, old expired-TLS and13:48foreign-lock blockers superseded. Actual
+PM providers still unconfigured, identity/fields/current native authority
+owner-deferred. **Concrete Portal work remains**, not just external evidence:
+trusted publication adapter not installed; normalized materializer not mounted;
+runtime Score loader/calculation/result DTO not published (pure calculator
+exists); six new Manager operations lack FE consumers. Canonical05-001,
+06-002,00-005,10-001 refined, not duplicated.14source budgets/calibration/
+paired coexistence still missing. New offline eligibility checker **58/58**
+focused tests; observed input returnsBLOCKED with nine named prerequisites,
+never runtime authority. Real old-preview browser4cells1280/660,0overflow/
+a11y/page errors, idle16s0API, logout201;6V2 GETs404 on old5ca9d167build.
+These are **not** V2positive/UXM10acceptance. Full10**NOT_MET**, no HKload,
+runtime build/migration/activation, frontend change, push or11start. Backend
+next is the same10selected commissioning action packet§5; Claude can map
+named types/fixtures when assigned, actual runtime acceptance waits on its
+real qualified source/build.10-001 remainsAWAITING_CONSUMER_REVIEW.
+
 <a id="elp2-11"></a>
 
 ### ELP2-11 — Migration tích hợp và bàn giao release

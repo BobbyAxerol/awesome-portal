@@ -1,0 +1,36 @@
+{
+  "schema_version": "portal.elp2-10.qualification-input.v1",
+  "scope_status": "SELECTED_PAPER_REVIEW_TARGET_NOT_ACTIVATED",
+  "selection": {
+    "workspace_id": "research-workspace",
+    "environment": "paper",
+    "profile_id": "PAPER_BINANCE_USDM",
+    "catalogue_sha256": "sha256:9257ebb0a3935bf58e6fe4858298bf4536cca2081e61f9c4543a82645a4f8c67",
+    "schema_sha256": "sha256:5f605db57b9d0695de68e81202f24f60259529abee0b06273189d6b2eb9d0164",
+    "source_commit": "169195ca534462dd07376bcc5872b474ba366567",
+    "dependency_hashes": {
+      "apps/control-api/src/main.ts": "sha256:d9383c44b73cbd6eaccfe986a1737487611c8d032f7f64df1227274a39738b34",
+      "apps/control-api/src/app.module.ts": "sha256:49bc66f405fe53b9edc7a32a87d4ba1309cd19d94936db9551376f435421209c",
+      "apps/control-api/src/execution-v2/access-trust.ts": "sha256:14a1d3210f0d633ae5e11bdb1e57c6e6a7611429a58bec94428b6fe7cc9ed59a",
+      "apps/control-api/src/execution-v2/publication-adapter.ts": "sha256:cc092b1602e06ae897ca4c857dc0d39b6bce28d130b0a2f7a54cb38da682975f",
+      "apps/control-api/src/execution-v2/manager-model.store.ts": "sha256:e7a39a39e2a1b48ed79c6e00edaad2b01e760282f73dec5c39a52644fdfaa4a6",
+      "apps/control-api/src/execution-v2/manager-model.ts": "sha256:5115135780f5e52e3b5376ca4a090758429cf1a46122cc8de4636fdec9798b6d",
+      "apps/control-api/src/execution-v2/manager-model.contract.ts": "sha256:e5a69a6ea546205ca9c54a9e71a52fbc33aded2c28ae93c7cd114e24e0dd029d",
+      "apps/control-api/src/execution-v2/manager-score.ts": "sha256:152fcc02c10726f4870aa1238a2142f35cc187b60e3bd49cd915f803c8734193",
+      "packages/contracts/schemas/execution-manager-dataset.v1.schema.json": "sha256:5f605db57b9d0695de68e81202f24f60259529abee0b06273189d6b2eb9d0164",
+      "packages/contracts/generated/execution-manager-models.d.ts": "sha256:3a3958a5677966a0110d91f1c650b9044a0402121a3d78563081121bb814aa8f"
+    }
+  },
+  "records": {},
+  "absence_evidence": {
+    "qualified_source": "EPG10-03 source-fence missing; PM current authority owner-deferred; source qualified export not returned",
+    "trust_adapter": "main.ts creates app without the private executionAccessTrust dependency; no production provider",
+    "writer": "prepareManagerProjection has only test callers; existing projection worker supplies no Manager model",
+    "score_publication": "No runtime Score calculation/config loader caller; current public DTO intentionally null-only",
+    "calibration": "Approved horizon/stress/block/grid/maturity artifact not supplied; formula/weights/bands already selected",
+    "budgets": "Current Edge01 all14 groups retain null approval_ref, baseline and approved_bound",
+    "source_window": "HK foreign lock absent, but no Portal measurement allocation supplied",
+    "coexistence": "No matched source-connected B0/B1/B2 receipt; local PG coalescing is not coexistence",
+    "consumer": "No six-operation Manager consumer in source; old preview lacks compiled V2 modules; six GET probes return404"
+  }
+}
