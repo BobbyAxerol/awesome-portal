@@ -15,10 +15,13 @@ import type { AccessAction, AccessResource, ReviewedAccessPolicy, ResourceSelect
 import { accessDigest, type AccessRelations } from "../src/execution-v2/access-policy";
 import { AccessRepository } from "../src/execution-v2/access.repository";
 import { ExecutionAccessService } from "../src/execution-v2/access.service";
+import { ScopedReplayCursorCodec,ScopedReplayHub,scopedNoticeGuard } from "../src/execution-v2/realtime";
+import type { ScopedRealtimeFrame } from "../src/execution-v2/realtime.contract";
 import type { AccessTrustProvider, ReviewedPolicyArtifact } from "../src/execution-v2/access-trust";
 import { readPublication, type ExecutionReadPublication, type ExecutionReadPublicationRequest } from "../src/execution-v2/read-publication";
 import { assertExecutionReadScope, ExecutionReadScopeError, ExecutionReadScopes,
   scopeAllowsField, scopeAllowsQueryField, scopeResources, scopeTuples, scopeReadPopulation,
+  scopeRealtimeIdentity,
   type AuthorizedExecutionReadScope, type ReadScopeBinding,
   type ReadScopePrincipal, type ReadScopeRequirement } from "../src/execution-v2/read-scope";
 import { OwnerAccessRepository } from "../src/repos/owner-access";
@@ -229,6 +232,109 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 TEST_ONLY scoped reads with real Postgre
   it("T04-11 raw stream stays legacy-only even with full business permission", async () => {
     const f = await fixture({ full: true });
     await expect(f.scopes.assertLegacyStream(f.p)).rejects.toMatchObject({ code: "EXECUTION_SCOPED_STREAM_NOT_COMMISSIONED", status: 503 });
+  });
+
+  it("T09 current read permission never substitutes for exact stream capability", async () => {
+    const f=await fixture();const emit=vi.fn(()=>true);
+    await expect(f.scopes.deliverRealtime(await f.authorize(),OWN,emit)).rejects.toMatchObject({code:"ACCESS_DENIED"});
+    expect(emit).not.toHaveBeenCalled();
+    await f.addGrant("stream.subscribe",{kind:"OWN_ALPHA"});
+    expect(await f.scopes.deliverRealtime(await f.authorize(),OWN,emit)).toBe(true);
+    expect(emit).toHaveBeenCalledOnce();
+  });
+
+  it("T09 replay identity survives document advancement, not changed authorization", async () => {
+    const f=await fixture();const before=await f.authorize();
+    const request=structuredClone(f.requirement);request.dataset!.source_revision="TEST_ONLY-source-r2";
+    f.trust.publication.binding=structuredClone(request.dataset!);
+    f.trust.publication.publication_revision="TEST_ONLY-publication-r2";
+    const after=await f.authorize(request);
+    expect(after.fingerprint).not.toBe(before.fingerprint);
+    expect(scopeRealtimeIdentity(after)).toBe(scopeRealtimeIdentity(before));
+    f.trust.rootResources.push({kind:"ALPHA",id:"TEST_ONLY:hidden-addition"});
+    expect(scopeRealtimeIdentity(await f.authorize(request))).toBe(scopeRealtimeIdentity(after));
+    f.trust.relationRevision="TEST_ONLY-current-authority-r2";
+    expect(scopeRealtimeIdentity(await f.authorize(request))).not.toBe(scopeRealtimeIdentity(after));
+  });
+
+  it("T09 revoke between prefetch and synchronous delivery emits no bytes", async () => {
+    const f=await fixture();await f.addGrant("stream.subscribe",{kind:"OWN_ALPHA"});
+    const scope=await f.authorize(),emit=vi.fn(()=>true);
+    await revoke(f);
+    await expect(f.scopes.deliverRealtime(scope,OWN,emit)).rejects.toBeDefined();
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it("T09 revoke while source publication is pending wins the final delivery fence", async () => {
+    const f=await fixture();await f.addGrant("stream.subscribe",{kind:"OWN_ALPHA"});
+    const scope=await f.authorize(),emit=vi.fn(()=>true),entered=deferred(),release=deferred();
+    f.trust.beforePublication=async()=>{entered.resolve();await release.promise;};
+    const result=f.scopes.deliverRealtime(scope,OWN,emit);
+    const refused=expect(result).rejects.toBeDefined();
+    await entered.promise;await revoke(f);release.resolve();await refused;
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it("T09 local replay race: committed app revoke purges a prefetched batch before any protected write", async () => {
+    const f=await fixture();await f.addGrant("stream.subscribe",{kind:"OWN_ALPHA"});
+    const scope=await f.authorize(),entered=deferred(),release=deferred(),frames:ScopedRealtimeFrame[]=[];
+    const now=Date.now();
+    const hub=new ScopedReplayHub({read:async()=>{entered.resolve();await release.promise;
+      return{notices:[{resume_cursor:"TEST_ONLY.scan2",projection_generation:"TEST_ONLY:g1",quality:{
+        completeness:"PARTIAL",freshness:"UNKNOWN",coverage:"AUTHORIZED_ONLY",source_as_of_ms:null,
+        portal_observed_at_ms:now,source_set_ref:"TEST_ONLY:source",confidence:"PROVISIONAL",reasons:["TEST_ONLY"]}}],
+        next_cursor:"TEST_ONLY.scan2",caught_up:true};}},
+      new ScopedReplayCursorCodec("test",{test:"TEST_ONLY-not-a-runtime-key-".repeat(3)},60000),
+      {maximumClients:2,maximumEntriesPerClient:4,maximumFrameBytes:8192,maximumClientBytes:32768,
+        maximumTotalBytes:65536,maximumNoticesPerRead:4,readTimeoutMs:5000});
+    try{
+      await hub.subscribe({binding:{workspace_id:f.workspace,environment:"paper",profile_id:BINDING.profileId,
+        principal_scope_digest:scopeRealtimeIdentity(scope),app_policy_revision:f.policy.revision,
+        field_policy_revision:f.policy.researcher_fields.policy_ref!,model_revision:"TEST_ONLY:model",
+        schema_revision:"portal.execution.scoped-realtime.v1",dataset:"alpha_fleet_overview",query_digest:"TEST_ONLY:query",
+        source_set_digest:"TEST_ONLY:source",source_continuity_epoch:"TEST_ONLY:epoch",projection_generation:"TEST_ONLY:g1",
+        snapshot_id:"TEST_ONLY:snapshot",window:DATASET.window},baselineCursor:"TEST_ONLY.scan1",
+        guard:scopedNoticeGuard(f.scopes,()=>f.authorize(),OWN),write:frame=>{frames.push(frame);return true;}});
+      const work=hub.poll();await entered.promise;
+      await revoke(f);const revokedAt=Date.now(),start=process.hrtime.bigint();
+      release.resolve();await work;
+      const elapsed=Number(process.hrtime.bigint()-start)/1e6;
+      expect(frames.map(v=>v.event_type)).toEqual(["access_revoked"]);
+      expect(frames[0]).toMatchObject({resume_cursor:null,projection_generation:null,quality:null});
+      expect(hub.diagnostics()).toMatchObject({clients:0,queued_bytes:0});
+      // Measured local DB race only: no cross-host propagation/SLA assertion.
+      console.info(JSON.stringify({proof:"ELP2_09_LOCAL_APP_REVOKE",revoked_at_ms:revokedAt,
+        terminal_after_ms:elapsed,protected_writes_after_revoke:0,source:"TEST_ONLY_NOTICE_ADAPTER"}));
+    }finally{release.resolve();hub.stop();}
+  });
+
+  it("T09 expiry of stream-only grant is checked after a valid business scope", async () => {
+    const f=await fixture();const grant=await f.addGrant("stream.subscribe",{kind:"OWN_ALPHA"});
+    const scope=await f.authorize(),emit=vi.fn(()=>true);
+    await new AccessRepository(ctx.pool).saveGrant({...grant,valid_until_ms:Date.now()-1,revision:next("expired")});
+    await expect(f.scopes.deliverRealtime(scope,OWN,emit)).rejects.toBeDefined();
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it("T09 deactivated session cannot emit even with retained scope and stream grant", async () => {
+    const f=await fixture();await f.addGrant("stream.subscribe",{kind:"OWN_ALPHA"});
+    const scope=await f.authorize(),emit=vi.fn(()=>true);
+    await ctx.pool.query("UPDATE auth_sessions SET state='REVOKED' WHERE session_id=$1",[f.p.session.sessionId]);
+    await expect(f.scopes.deliverRealtime(scope,OWN,emit)).rejects.toBeDefined();
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it("T09 pending app-revoke lock prevents a delivery; ingestion is a separate authority", async () => {
+    const f=await fixture();await f.addGrant("stream.subscribe",{kind:"OWN_ALPHA"});
+    const scope=await f.authorize(),emit=vi.fn(()=>true),client=await ctx.pool.connect();
+    try{
+      await client.query("BEGIN");
+      await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[`portal-access-v2:${f.workspace}`]);
+      await expect(f.scopes.deliverRealtime(scope,OWN,emit)).rejects.toMatchObject({code:"ACCESS_RETRY_REQUIRED"});
+      expect(emit).not.toHaveBeenCalled();
+    }finally{await client.query("ROLLBACK");client.release();}
+    expect(await f.scopes.deliverRealtime(await f.authorize(),OWN,emit)).toBe(true);
+    expect(emit).toHaveBeenCalledOnce();
   });
 
   it("policy mode selection is sticky routing, never a minted read capability", async () => {

@@ -82,6 +82,27 @@ export function scopeAllowsField(scope:AuthorizedExecutionReadScope,field:string
 /** Hidden values must not become a filter, sort, group or ranking oracle. */
 export const scopeAllowsQueryField = scopeAllowsField;
 
+/** Stable *authorization* identity for a named replay query. Unlike the page
+ * fingerprint it excludes a document's changing source revision. It retains
+ * current visible tuples, fields, actor/session, policy, lineage and generation;
+ * hidden source offsets/population counts are never returned to the browser. */
+export function scopeRealtimeIdentity(scope:AuthorizedExecutionReadScope):string {
+  assertExecutionReadScope(scope);const s=minted.get(scope)!;
+  const dataset=s.requirement.dataset;
+  return accessDigest({mode:scope.mode,actor:s.principal.user.userId,session:s.principal.session.sessionId,
+    session_generation:s.principal.session.sessionVersion,workspace:scope.workspaceId,viewer:scope.viewerWorkspaceId,
+    binding:s.binding,action:s.requirement.action,resource:s.requirement.resource??null,
+    dataset:dataset&&{...dataset,source_revision:undefined},authority:s.context&&{
+      db:s.context.authority_fingerprint,role:s.context.actor_role,policy:s.context.policy,
+      grants:s.context.grants.map(g=>[g,grantCurrent(g,s.context!)]),active:[...s.context.active_principals].sort(),
+      // Population is bound BELOW, after authorization. A hidden-only change
+      // in a provider's root directory must not change this visible identity.
+      relations:[...new Set(s.context.grants.flatMap(g=>[g.subject_user_id,g.issued_by]).concat(s.context.principal_id))].sort()
+        .map(id=>{const r=s.context!.relationsFor(id);return[id,r.qualified,r.revision,r.membership];})},
+    tuples:s.tuples,resources:s.resources,fields:s.fields,field_policy:scope.fieldPolicyRef,
+    strategy:s.strategyPairs,bindings:s.bindingPairs});
+}
+
 const contextProof=(context:AccessEvaluationContext)=>({
   db:context.authority_fingerprint??null,role:context.actor_role??null,policy:context.policy,
   grants:context.grants.map(g=>[g,grantCurrent(g,context)]),active:[...context.active_principals].sort(),
@@ -414,5 +435,23 @@ export class ExecutionReadScopes {
     const result=await read();
     await this.revalidate(scope);
     return result;
+  }
+
+  /** Notice-only V2 bridge; no route/adapter is commissioned by calling this.
+   * Requires BOTH the minted business read scope and exact stream capability. */
+  async deliverRealtime<T>(scope:AuthorizedExecutionReadScope,resource:AccessResource,write:()=>T):Promise<T> {
+    assertExecutionReadScope(scope);const state=minted.get(scope)!;
+    if(state.issuer!==this||scope.mode!=="SCOPED_V2"||!businessReads.has(state.requirement.action)||!state.requirement.dataset)
+      fail("EXECUTION_SCOPED_STREAM_NOT_COMMISSIONED",503);
+    if(!state.resources.some(r=>exactKey(r)===exactKey(resource))&&
+      (!state.requirement.resource||exactKey(state.requirement.resource)!==exactKey(resource)))
+      fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    const current=await this.authorize(state.principal,state.binding,state.requirement);
+    if(current.fingerprint!==scope.fingerprint)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    const fresh=minted.get(current)!;
+    if(!fresh.context)fail("EXECUTION_SCOPED_STREAM_NOT_COMMISSIONED",503);
+    return this.access.realtimeDeliveryBoundary({user_id:state.principal.user.userId,
+      session_id:state.principal.session.sessionId,session_generation:state.principal.session.sessionVersion},
+      scope.workspaceId,fresh.context,resource,scope.environment,write);
   }
 }

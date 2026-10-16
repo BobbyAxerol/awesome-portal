@@ -100,6 +100,30 @@ export class ExecutionAccessService {
     return await this.trust.readPublication?.(request)??null;
   }
 
+  /** ELP2-09: one synchronous downstream write, linearized against app revoke
+   * and session/lifecycle changes. Resolve all source/publication I/O BEFORE
+   * this boundary. Never hold these locks while awaiting sockets or adapters.
+   * Bytes already accepted by a socket cannot be recalled after revocation. */
+  async realtimeDeliveryBoundary<T>(actor:AccessActor,workspace:string,expected:AccessEvaluationContext,
+    resource:AccessResource,environment:"paper"|"sandbox"|"live",write:()=>T):Promise<T> {
+    if(expected.principal_id!==actor.user_id||expected.workspace_id!==workspace||!expected.authority_fingerprint)
+      throw new AccessPolicyError("CURRENT_ACTOR_AUTHORITY_REQUIRED");
+    return this.transaction(workspace,actor,false,async tx=>{
+      tx.recheck(()=>{
+        if(accessDigest([tx.context.policy,tx.context.grants,[...tx.context.active_principals].sort(),tx.context.actor_role])!==
+          accessDigest([expected.policy,expected.grants,[...expected.active_principals].sort(),expected.actor_role]))
+          throw new AccessPolicyError("ACCESS_RETRY_REQUIRED",409);
+        tx.context.now_ms=Math.max(tx.context.now_ms,Date.now());
+        if(!evaluateAccess(tx.context,"stream.subscribe",resource,environment).allowed)
+          throw new AccessPolicyError("ACCESS_DENIED");
+      });
+      const result=write();
+      if(result&&typeof (result as {then?:unknown}).then==="function")
+        throw new Error("REALTIME_WRITE_MUST_BE_SYNCHRONOUS");
+      return result;
+    },[],expected);
+  }
+
   /** Internal only. Human mapping is source-verified, never supplied by UI. */
   async commandHumanMapping(actor:AccessActor,workspace:string) {
     return this.trust.verifiedHumanMapping(actor.user_id,workspace);
@@ -158,7 +182,7 @@ export class ExecutionAccessService {
         for(const id of principals) relationMap.set(id,captured?captured.relationsFor(id!):await this.trust.relations(id!,workspace));
         const now=await this.now(db);
         const context:AccessEvaluationContext={principal_id:actor.user_id,workspace_id:workspace,now_ms:now,
-          actor_current:true,policy,grants,active_principals:active,allow_test_only:this.allowTestOnly,
+          actor_current:true,actor_role:user.role,policy,grants,active_principals:active,allow_test_only:this.allowTestOnly,
           relationsFor:id=>relationMap.get(id)??{qualified:false,revision:"UNQUALIFIED",own_alpha_ids:[],member_portfolio_ids:[],roots:{},membership:null}};
         const checks:Array<()=>void>=[];
         const result=await fn({db,repo,context,recheck:check=>{check();checks.push(check);}});

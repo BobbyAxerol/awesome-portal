@@ -1,0 +1,152 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "production_config": false,
+  "cases": [
+    {
+      "id": "N09-REVALIDATE",
+      "schema": "ScopedRealtimeFrame",
+      "response": {
+        "schema_version": "portal.execution.scoped-realtime.v1",
+        "semantics": "NOTIFICATION_ONLY",
+        "terminal": false,
+        "reconnect_required": false,
+        "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+        "projection_generation": "TEST_ONLY:g1",
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "TEST_ONLY:source-set",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "TEST_ONLY_NOT_SOURCE_QUALIFICATION"
+          ]
+        },
+        "reason_code": null,
+        "event_type": "revalidate",
+        "next_action": "READ_NAMED_SNAPSHOT"
+      }
+    },
+    {
+      "id": "N09-HEARTBEAT",
+      "schema": "ScopedRealtimeFrame",
+      "response": {
+        "schema_version": "portal.execution.scoped-realtime.v1",
+        "semantics": "NOTIFICATION_ONLY",
+        "terminal": false,
+        "reconnect_required": false,
+        "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+        "projection_generation": "TEST_ONLY:g1",
+        "quality": null,
+        "reason_code": null,
+        "event_type": "heartbeat",
+        "next_action": "RESUME_PORTAL_CURSOR"
+      }
+    },
+    {
+      "id": "N09-RESYNC_REQUIRED",
+      "schema": "ScopedRealtimeFrame",
+      "response": {
+        "schema_version": "portal.execution.scoped-realtime.v1",
+        "semantics": "NOTIFICATION_ONLY",
+        "terminal": true,
+        "reconnect_required": true,
+        "resume_cursor": null,
+        "projection_generation": null,
+        "quality": null,
+        "reason_code": "GENERATION_CHANGED",
+        "event_type": "resync_required",
+        "next_action": "READ_NAMED_SNAPSHOT"
+      }
+    },
+    {
+      "id": "N09-ACCESS_REVOKED",
+      "schema": "ScopedRealtimeFrame",
+      "response": {
+        "schema_version": "portal.execution.scoped-realtime.v1",
+        "semantics": "NOTIFICATION_ONLY",
+        "terminal": true,
+        "reconnect_required": false,
+        "resume_cursor": null,
+        "projection_generation": null,
+        "quality": null,
+        "reason_code": "ACCESS_CHANGED",
+        "event_type": "access_revoked",
+        "next_action": "SIGN_IN_OR_REQUEST_ACCESS"
+      }
+    },
+    {
+      "id": "N09-UNAVAILABLE",
+      "schema": "ScopedRealtimeFrame",
+      "response": {
+        "schema_version": "portal.execution.scoped-realtime.v1",
+        "semantics": "NOTIFICATION_ONLY",
+        "terminal": true,
+        "reconnect_required": false,
+        "resume_cursor": null,
+        "projection_generation": null,
+        "quality": null,
+        "reason_code": "SOURCE_UNAVAILABLE",
+        "event_type": "unavailable",
+        "next_action": "WAIT"
+      }
+    },
+    {
+      "id": "N09-SOURCE-NOTICE",
+      "schema": "EdgeScopedNotice",
+      "response": {
+        "resume_cursor": "TEST_ONLY-private-cursor-opaque",
+        "projection_generation": "TEST_ONLY:g1",
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "TEST_ONLY:source-set",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "TEST_ONLY_NOT_SOURCE_QUALIFICATION"
+          ]
+        }
+      }
+    },
+    {
+      "id": "N09-SOURCE-COALESCED",
+      "schema": "EdgeScopedNoticeBatch",
+      "response": {
+        "notices": [
+          {
+            "resume_cursor": "TEST_ONLY-private-cursor-opaque",
+            "projection_generation": "TEST_ONLY:g1",
+            "quality": {
+              "completeness": "PARTIAL",
+              "freshness": "UNKNOWN",
+              "coverage": "AUTHORIZED_ONLY",
+              "source_as_of_ms": null,
+              "portal_observed_at_ms": 1800000000000,
+              "source_set_ref": "TEST_ONLY:source-set",
+              "confidence": "PROVISIONAL",
+              "reasons": [
+                "TEST_ONLY_NOT_SOURCE_QUALIFICATION"
+              ]
+            }
+          }
+        ],
+        "next_cursor": "TEST_ONLY-private-cursor-opaque",
+        "caught_up": true
+      }
+    },
+    {
+      "id": "N09-SOURCE-HIDDEN-ONLY",
+      "schema": "EdgeScopedNoticeBatch",
+      "response": {
+        "notices": [],
+        "next_cursor": "TEST_ONLY-hidden-scan-end",
+        "caught_up": true
+      }
+    }
+  ]
+}

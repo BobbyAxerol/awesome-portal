@@ -38,6 +38,18 @@ source adapter, UI or runtime was activated. Full08 still needs source/design/
 browser acceptance; frontend remains on owner hold.09 next only after assignment.
 This supersedes only the earlier “08 not assigned” statements, not source gates.
 
+**Subsequent assignment2026-10-16:** Bobby assigned [ELP2-09](evidence/ELP2-09/README.md)
+on `daf43487`. Exact notification-only scoped notice contracts, encrypted
+snapshot-bound cursors, current per-write authority fence, bounded fanout/
+pending admission and post-durable-commit local ACK are delivered as unmounted
+backend components; [Claude handoff / source gaps](evidence/ELP2-09/coverage-and-handoff.md)
+and [runbook](evidence/ELP2-09/replay-runbook.md) accompany14gate disposition.
+Focused contract25/pure68 and isolated PG206 PASS at their recorded freezes;
+final normal hook is landing gate. Full09 still needs qualified source coverage,
+trust/TLS/propagation and browser acceptance; retained preview stays no-stream.
+Frontend remains NOT_STARTED_BY_OWNER_DIRECTION / AWAITING_CONSUMER_REVIEW.
+10 next-ready only after separate assignment; no goal/push/dev/main/activation.
+
 [ELP2-00 packet](evidence/ELP2-00/README.md) có baseline manifest mới nhất,
 112-route census,14family/11XLC/15decision map,8audit checks và backend/Claude
 handoff. Pins cũ dưới đây giữ lịch sử, không ghi đè runtime/source snapshot mới.

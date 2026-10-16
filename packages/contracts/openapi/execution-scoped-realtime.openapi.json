@@ -1,0 +1,428 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Execution scoped notifications — schema-only handoff, no mounted SSE API",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Quality": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "completeness": {
+            "type": "string",
+            "enum": [
+              "COMPLETE",
+              "PARTIAL",
+              "UNRESOLVED"
+            ]
+          },
+          "freshness": {
+            "type": "string",
+            "enum": [
+              "FRESH",
+              "STALE",
+              "UNKNOWN"
+            ]
+          },
+          "coverage": {
+            "type": "string",
+            "enum": [
+              "AUTHORIZED_ONLY",
+              "CURRENT_PAGE_ONLY",
+              "RETAINED_OBSERVATIONS"
+            ]
+          },
+          "source_as_of_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "portal_observed_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "source_set_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "VERIFIED",
+              "PROVISIONAL",
+              "UNKNOWN"
+            ]
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "maxItems": 32
+          }
+        },
+        "required": [
+          "completeness",
+          "freshness",
+          "coverage",
+          "source_as_of_ms",
+          "portal_observed_at_ms",
+          "source_set_ref",
+          "confidence",
+          "reasons"
+        ]
+      },
+      "EdgeScopedNotice": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "resume_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "pattern": "^[A-Za-z0-9._~-]+$(?![\\s\\S])"
+          },
+          "projection_generation": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/Quality"
+          }
+        },
+        "required": [
+          "resume_cursor",
+          "projection_generation",
+          "quality"
+        ]
+      },
+      "EdgeScopedNoticeBatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "notices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EdgeScopedNotice"
+            },
+            "maxItems": 200
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096,
+                "pattern": "^[A-Za-z0-9._~-]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "caught_up": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "notices",
+          "next_cursor",
+          "caught_up"
+        ],
+        "description": "Server-private Edge transport batch. caught_up is a transport hint, not economic completeness or source-loss proof. Never expose this object to the browser."
+      },
+      "ScopedRealtimeFrame": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.scoped-realtime.v1"
+          },
+          "semantics": {
+            "const": "NOTIFICATION_ONLY"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "revalidate",
+              "heartbeat",
+              "resync_required",
+              "access_revoked",
+              "unavailable"
+            ]
+          },
+          "terminal": {
+            "type": "boolean"
+          },
+          "reconnect_required": {
+            "type": "boolean"
+          },
+          "resume_cursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096,
+                "pattern": "^[A-Za-z0-9._~-]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "projection_generation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quality": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Quality"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next_action": {
+            "type": "string",
+            "enum": [
+              "READ_NAMED_SNAPSHOT",
+              "RESUME_PORTAL_CURSOR",
+              "SIGN_IN_OR_REQUEST_ACCESS",
+              "WAIT"
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "SNAPSHOT_REQUIRED",
+                  "CURSOR_INVALID_OR_EXPIRED",
+                  "SCOPE_CHANGED",
+                  "GENERATION_CHANGED",
+                  "SOURCE_COVERAGE_UNPROVED",
+                  "SOURCE_UNAVAILABLE",
+                  "SLOW_CLIENT",
+                  "ACCESS_CHANGED",
+                  "RECONNECT_LIMIT",
+                  "STOPPED"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "schema_version",
+          "semantics",
+          "event_type",
+          "terminal",
+          "reconnect_required",
+          "resume_cursor",
+          "projection_generation",
+          "quality",
+          "next_action",
+          "reason_code"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "event_type": {
+                  "enum": [
+                    "resync_required",
+                    "access_revoked",
+                    "unavailable"
+                  ]
+                }
+              },
+              "required": [
+                "event_type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "terminal": {
+                  "const": true
+                },
+                "resume_cursor": {
+                  "type": "null"
+                },
+                "projection_generation": {
+                  "type": "null"
+                },
+                "quality": {
+                  "type": "null"
+                },
+                "reason_code": {
+                  "type": "string"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "terminal": {
+                  "const": false
+                },
+                "resume_cursor": {
+                  "type": "string"
+                },
+                "projection_generation": {
+                  "type": "string"
+                },
+                "reason_code": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "event_type": {
+                  "const": "revalidate"
+                }
+              },
+              "required": [
+                "event_type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "next_action": {
+                  "const": "READ_NAMED_SNAPSHOT"
+                },
+                "reconnect_required": {
+                  "const": false
+                },
+                "quality": {
+                  "$ref": "#/components/schemas/Quality"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "event_type": {
+                  "const": "heartbeat"
+                }
+              },
+              "required": [
+                "event_type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "next_action": {
+                  "const": "RESUME_PORTAL_CURSOR"
+                },
+                "reconnect_required": {
+                  "const": false
+                },
+                "quality": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "event_type": {
+                  "const": "resync_required"
+                }
+              },
+              "required": [
+                "event_type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "next_action": {
+                  "const": "READ_NAMED_SNAPSHOT"
+                },
+                "reconnect_required": {
+                  "const": true
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "event_type": {
+                  "const": "access_revoked"
+                }
+              },
+              "required": [
+                "event_type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "next_action": {
+                  "const": "SIGN_IN_OR_REQUEST_ACCESS"
+                },
+                "reconnect_required": {
+                  "const": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "event_type": {
+                  "const": "unavailable"
+                }
+              },
+              "required": [
+                "event_type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "next_action": {
+                  "const": "WAIT"
+                },
+                "reconnect_required": {
+                  "const": false
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

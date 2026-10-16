@@ -11,6 +11,7 @@ import { EXECUTION_PUBLICATION_CATALOGUE } from "../src/execution-v2/publication
 import type { ManagerModelDocument } from "../src/execution-v2/manager-model.contract";
 import { ManagerModelRepository, persistManagerProjection, prepareManagerProjection,
   type PreparedManagerProjection } from "../src/execution-v2/manager-model.store";
+import { commitManagerProjectionThenAcknowledge } from "../src/execution-v2/realtime-commit";
 import { EXECUTION_STORE_VERSION, migrateExecutionStore } from "../src/execution/store-schema";
 import { ExecutionProfileProjectionRepository, type ProfileProjectionDocument } from "../src/execution/profile-projection.repository";
 
@@ -154,6 +155,16 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-06 actual PostgreSQL Manag
     expect(restated.as_of_ms).toBe(asPublished.as_of_ms); expect(restated.recorded_through_ms).toBeGreaterThan(asPublished.recorded_through_ms);
     expect((await repository.head(...key))!.source_sequence).toBe("9007199254740994");
   });
+  it("T09-02 replacement removal preserves the prior fact without resurrecting it on replay", async () => {
+    const first=prepare(document());await apply(first);
+    const removed=successor(first.document,"TEST_ONLY:removed-current-fact");removed.facts=[];
+    // Full qualified document replacement, not an invented TS tombstone event.
+    await commitManagerProjectionThenAcknowledge(store,prepare(removed),async()=>undefined);
+    expect((await repository.document(...key,removed.revision))!.facts).toEqual([]);
+    expect((await repository.document(...key,first.document.revision))!.facts).toHaveLength(1);
+    await expect(apply(first)).rejects.toThrow("MANAGER_HISTORICAL_REVISION_NOT_CURRENT");
+    expect((await repository.head(...key))!.revision).toBe(removed.revision);
+  });
   it("T06-07 refuses checkpoint gaps, wrong predecessor and noninitial initial revision", async () => {
     const initial = document(); const wrongInitial = { ...initial, supersedes_revision: "TEST_ONLY:unknown" };
     await expect(apply(prepare(wrongInitial))).rejects.toThrow("MANAGER_INITIAL_REVISION_INVALID");
@@ -205,6 +216,75 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-06 actual PostgreSQL Manag
     expect(result.map(value => value.state).sort()).toEqual(["APPLIED_IN_TRANSACTION", "DUPLICATE_CURRENT"]);
     expect(await count()).toBe(1); expect((await repository.head(...key))!.payload_digest).toBe(prepared.digest);
   });
+  it("T09-01 ACK observes a committed document and checkpoint through an independent PostgreSQL client", async () => {
+    // Local TEST_ONLY projection acknowledgement, not a TS event/source ACK.
+    const prepared = prepare(document()), observer = await store.connect();
+    let acknowledgements = 0;
+    try {
+      const result = await commitManagerProjectionThenAcknowledge(store, prepared, async receipt => {
+        acknowledgements++;
+        expect(receipt).toEqual({ revision: prepared.document.revision, digest: prepared.digest });
+        const row = (await observer.query(`SELECT h.revision,h.source_sequence::text,h.payload_digest,r.payload
+          FROM execution_manager_model_heads h JOIN execution_manager_model_revisions r
+            USING(workspace_id,environment,profile_id,revision)
+          WHERE h.workspace_id=$1 AND h.environment=$2 AND h.profile_id=$3`, [...key])).rows[0];
+        expect(row).toEqual({ revision: prepared.document.revision, source_sequence: "9007199254740993",
+          payload_digest: prepared.digest, payload: prepared.document });
+      });
+      expect(result).toMatchObject({ state: "APPLIED_IN_TRANSACTION", acknowledged: true });
+    } finally { observer.release(); }
+    expect(acknowledgements).toBe(1); expect(await count()).toBe(1);
+  });
+  it("T09-01/02 lost local ACK preserves commit and retry acknowledges the same one retained revision", async () => {
+    const prepared = prepare(document());
+    const receipts: Array<{ revision: string; digest: string }> = [];
+    await expect(commitManagerProjectionThenAcknowledge(store, prepared, async receipt => {
+      receipts.push(receipt); throw new Error("TEST_ONLY_ACK_RESPONSE_LOST");
+    })).rejects.toThrow("TEST_ONLY_ACK_RESPONSE_LOST");
+    expect(await repository.head(...key)).toMatchObject({ revision: prepared.document.revision, payload_digest: prepared.digest });
+    expect(await repository.document(...key, prepared.document.revision)).toEqual(prepared.document);
+    expect(await count()).toBe(1);
+    expect(await commitManagerProjectionThenAcknowledge(store, prepared, async receipt => { receipts.push(receipt); }))
+      .toMatchObject({ state: "DUPLICATE_CURRENT", revision: prepared.document.revision, digest: prepared.digest, acknowledged: true });
+    expect(receipts).toEqual(Array.from({ length: 2 }, () => ({ revision: prepared.document.revision, digest: prepared.digest })));
+    expect(await count()).toBe(1);
+  });
+  it("T09-01/10 persistence gap failure never ACKs or advances the committed revision/checkpoint", async () => {
+    const original = document(), prepared = prepare(original); await apply(prepared);
+    const before = await repository.head(...key), gap = successor(original, "TEST_ONLY:ack-gap");
+    gap.source_sequence = (BigInt(original.source_sequence) + 2n).toString();
+    let acknowledgements = 0;
+    await expect(commitManagerProjectionThenAcknowledge(store, prepare(gap), async () => { acknowledgements++; }))
+      .rejects.toThrow("MANAGER_CHECKPOINT_GAP");
+    expect(acknowledgements).toBe(0); expect(await count()).toBe(1);
+    expect(await repository.head(...key)).toEqual(before);
+    expect(await repository.document(...key, original.revision)).toEqual(original);
+    expect(await repository.document(...key, gap.revision)).toBeNull();
+  });
+  it("T09-08 releases the only pool connection before awaiting a slow local ACK", async () => {
+    const single = new Pool({ connectionString: connection(storeDb), max: 1, connectionTimeoutMillis: 2000 });
+    const prepared = prepare(document());
+    let releaseAck!: () => void, ackStarted!: () => void, completed = false;
+    const pendingAck = new Promise<void>(resolve => { releaseAck = resolve; });
+    const started = new Promise<void>(resolve => { ackStarted = resolve; });
+    const operation = commitManagerProjectionThenAcknowledge(single, prepared, async () => {
+      ackStarted(); await pendingAck;
+    }).then(result => { completed = true; return result; });
+    try {
+      // An early database failure rejects this race rather than leaving the
+      // test indefinitely awaiting a callback that was never entered.
+      await Promise.race([started, operation.then(() => { throw new Error("TEST_ONLY_ACK_DID_NOT_WAIT"); })]);
+      expect(single.idleCount).toBe(1); expect(completed).toBe(false);
+      const head = await new ManagerModelRepository(single).head(...key);
+      expect(head).toMatchObject({ revision: prepared.document.revision, payload_digest: prepared.digest });
+      expect(completed).toBe(false); expect(single.waitingCount).toBe(0);
+      releaseAck();
+      expect(await operation).toMatchObject({ state: "APPLIED_IN_TRANSACTION", acknowledged: true });
+      expect(await count()).toBe(1);
+    } finally {
+      releaseAck(); await operation.catch(() => undefined); await single.end();
+    }
+  }, 10_000);
   it("isolates profile/workspace heads and returns no historical document across their keys", async () => {
     const doc = document(); await apply(prepare(doc));
     const other = { ...structuredClone(doc), workspace_id: "TEST_ONLY:other-workspace", profile_id: "TEST_ONLY:other-profile" };

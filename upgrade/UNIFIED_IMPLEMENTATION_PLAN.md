@@ -9651,6 +9651,27 @@ Old entry/planning statements elsewhere are retained history, not current08.
 - **Tests/exit:** T09-01…14; visible-hidden-visible không false gap/leak, actual loss vẫn detected, revoke mid-replay, filter/model scope mismatch, reconnect bounds.
 - **Guide:** Portal §15 ELP2-09; Edge EPG10-03…05/08/09. Rollback stream/sends off, retain safe snapshot/ingestion/status phù hợp authority.
 
+**Current backend return2026-10-16 — riêng assignment ELP2-09:**
+[packet /14-gate disposition](./execution_loop/evidence/ELP2-09/README.md),
+[generated contract / Claude handoff / canonical request ledger](./execution_loop/evidence/ELP2-09/coverage-and-handoff.md),
+[replay/revoke runbook](./execution_loop/evidence/ELP2-09/replay-runbook.md).
+Edge current source is **NOTIFICATION_ONLY**: snapshot barrier→notice→fresh
+authorized named BFF, not financial-event replay. Added encrypted scope/policy/
+field/model/epoch/generation cursors, per-write app/session/stream fence,
+bounded active+pending subscriptions/bytes/coalescing/timeouts, and reused135
+durable projection with post-COMMIT/release ACK. No migration/new ledger/public
+SSE route/source activation/FE change. Focused25contract and68pure PASS;
+canonical isolated PG focused206PASS/build+restorePASS at then-frozen source;
+later local revoke trace/removal regressions are in the final normal hook,
+not added to the earlier count. Terminal hook/landing receipt is required;
+no prewritten full-suite PASS. Source pin audit ends at Edge `f10c15f6`, PM R2
+`d16aa2b5`; implementation presence is not deployed evidence.
+**Full09 NOT_MET_SOURCE_PROPAGATION_BROWSER**: inherit05-001/06-002/07 source/
+trust/coverage debts, no fake remote SLA or export receipt.09-001 consumer
+AWAITING_CONSUMER_REVIEW; frontend NOT_STARTED_BY_OWNER_DIRECTION.
+Backend10 selected performance/coexistence is next-ready only after separate
+assignment. No goal/push/dev/main/release/deploy started by this return.
+
 <a id="elp2-10"></a>
 
 ### ELP2-10 — Performance, quality và coexistence

@@ -120,6 +120,7 @@ cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
 cp -a "${ROOT_DIR}/apps/control-api/src/manager-lists/scoped-manager.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/manager-lists/"
 cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/command.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/realtime.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/workflow.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/workflow.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/execution-v2/"

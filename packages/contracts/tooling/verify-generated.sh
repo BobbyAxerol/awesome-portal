@@ -34,6 +34,8 @@ node tooling/generate-execution-trusted-commands.mjs --check
 generate_and_compare openapi/execution-trusted-commands.openapi.json generated/execution-trusted-commands.d.ts
 node tooling/generate-execution-workflows.mjs --check
 generate_and_compare openapi/execution-workflows.openapi.json generated/execution-workflows.d.ts
+node tooling/generate-execution-scoped-realtime.mjs --check
+generate_and_compare openapi/execution-scoped-realtime.openapi.json generated/execution-scoped-realtime.d.ts
 node tooling/generate-execution-history.mjs --check
 node tooling/generate-execution-manager-scoped.mjs --check
 node tooling/generate-execution-scoped-records.mjs --check
